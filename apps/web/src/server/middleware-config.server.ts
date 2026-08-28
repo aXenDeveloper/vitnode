@@ -3,9 +3,12 @@ import type { middlewareModule } from '@vitnode/core/api/modules/middleware/midd
 
 import { clientModule } from '@vitnode/core/lib/fetcher-client'
 
-import type { MiddlewareConfig } from '#/lib/middleware-config'
+import type { MiddlewareConfigState } from '#/lib/middleware-config'
 
-import { ANONYMOUS_MIDDLEWARE_CONFIG } from '#/lib/middleware-config'
+import {
+  knownMiddlewareConfig,
+  UNKNOWN_MIDDLEWARE_CONFIG,
+} from '#/lib/middleware-config'
 import { fetcherServer } from '#/server/fetcher.server'
 
 /**
@@ -24,7 +27,7 @@ import { fetcherServer } from '#/server/fetcher.server'
 const middleware = clientModule<typeof middlewareModule>('@vitnode/core')
 
 export const fetchMiddlewareConfigOnServer =
-  async (): Promise<MiddlewareConfig> => {
+  async (): Promise<MiddlewareConfigState> => {
     try {
       const response = await fetcherServer(middleware, {
         method: 'get',
@@ -32,18 +35,23 @@ export const fetchMiddlewareConfigOnServer =
         path: '/',
       })
 
-      if (response.status !== 200) return ANONYMOUS_MIDDLEWARE_CONFIG
+      if (response.status !== 200) return UNKNOWN_MIDDLEWARE_CONFIG
 
-      return await response.json()
+      return knownMiddlewareConfig(await response.json())
     } catch (error) {
       // `rawApiFetch` throws on a 500 with the failing URL and the server's error
       // text in the message, and an unreachable API throws too. Neither belongs in
       // front of a visitor, and neither should blank the login form: without this
       // configuration the page still renders, minus the provider buttons and the
       // reset-password link.
+      //
+      // The fallback carries `isKnown: false`, which is what stops that
+      // degradation from spreading to the screens it would be wrong for -
+      // password recovery must not read an outage as "this deployment sends no
+      // email" and answer 404.
       // eslint-disable-next-line no-console
       console.error('[auth] middleware configuration unavailable', error)
 
-      return ANONYMOUS_MIDDLEWARE_CONFIG
+      return UNKNOWN_MIDDLEWARE_CONFIG
     }
   }

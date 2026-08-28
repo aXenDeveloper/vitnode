@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEVICE_TYPES,
-  DEVICES_QUERY_KEY,
+  devicesQueryKey,
   devicesQueryOptions,
   devicesRequest,
   DevicesRequestError,
@@ -50,32 +50,82 @@ describe("the request the API is asked for", () => {
   });
 });
 
-describe("one list, one cache entry", () => {
-  it("is keyed by nothing at all, because the request is", () => {
-    expect(DEVICES_QUERY_KEY).toEqual(["devices", "me"]);
+describe("one list per visitor, one cache entry each", () => {
+  it("is keyed by the owner, under the devices domain", () => {
+    expect(devicesQueryKey(10)).toEqual(["devices", "user", 10]);
   });
 
   it("is the same entry however many times it is asked for", () => {
     // The loader and the component both call the factory, and they have to land
     // in the same entry or the loader fills one while the component reads the
     // other.
-    expect(hashKey(devicesQueryOptions().queryKey)).toBe(
+    expect(hashKey(devicesQueryOptions({ userId: 10 }).queryKey)).toBe(
       hashKey(
         devicesQueryOptions({
           fetchDevices: async () => Promise.resolve({ devices: [] }),
+          userId: 10,
         }).queryKey,
       ),
+    );
+  });
+
+  /**
+   * The privacy invariant, as the key contract rather than as a browser test.
+   *
+   * The browser's `QueryClient` outlives a sign-out, so one document can hold
+   * two visitors. Under the `["devices", "me"]` this replaces, B's loader asked
+   * for the entry A had already filled - and with `refetchOnMount` off, nothing
+   * refetched it, so no request was made and Hono never saw the read it would
+   * have refused.
+   */
+  it("gives two visitors two entries, so one can never read the other's", () => {
+    expect(devicesQueryKey(10)).not.toEqual(devicesQueryKey(20));
+    expect(hashKey(devicesQueryKey(10))).not.toBe(hashKey(devicesQueryKey(20)));
+  });
+
+  it("is what a revoke invalidates, so one visitor's refresh is their own", () => {
+    // Query matches by prefix, and this key has no sub-keys - so it is both the
+    // entry and the family, and invalidating it cannot reach visitor 20.
+    expect(devicesQueryOptions({ userId: 10 }).queryKey).toEqual(
+      devicesQueryKey(10),
     );
   });
 
   it("does not share a prefix with the session entry", () => {
     // Query matches keys by prefix, so a revoke invalidating this key must not
     // reach `['vitnode', 'session']` - the one entry a route guard reads.
-    expect(DEVICES_QUERY_KEY[0]).not.toBe("vitnode");
+    expect(devicesQueryKey(10)[0]).not.toBe("vitnode");
   });
 
   it("asks once, because every failure it can have is worse when repeated", () => {
-    expect(devicesQueryOptions().retry).toBe(false);
+    expect(devicesQueryOptions({ userId: 10 }).retry).toBe(false);
+  });
+});
+
+/**
+ * The other half of the same rule: the id is a cache address, not a claim.
+ *
+ * If it ever reached the wire it would stop being a cache key and become an
+ * access-control parameter supplied by the browser - so the request is asserted
+ * to be exactly what it was before the key gained an owner.
+ */
+describe("the owner never leaves the browser", () => {
+  it("sends no arguments at all on the list request", () => {
+    // Not "no user id" - no arguments whatsoever. There is nowhere for one to
+    // travel, which is a stronger statement than any absence check.
+    expect(devicesRequest()).not.toHaveProperty("args");
+    expect(Object.keys(devicesRequest()).sort()).toEqual([
+      "method",
+      "module",
+      "path",
+    ]);
+  });
+
+  it("sends the device's public id on a revoke and nothing else", () => {
+    const request = revokeDeviceRequest({ publicId: "a1b2c3" });
+
+    expect(request.args).toEqual({ params: { publicId: "a1b2c3" } });
+    expect(Object.keys(request.args.params)).toEqual(["publicId"]);
   });
 });
 

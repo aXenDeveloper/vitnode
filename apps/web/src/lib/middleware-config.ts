@@ -22,11 +22,48 @@ import { fetchMiddlewareConfigOnServer } from '#/server/middleware-config.server
 export type MiddlewareConfig = z.infer<typeof routeMiddlewareSchema>
 
 /**
- * What the login page renders when the configuration cannot be read: the email
- * and password fields, and nothing that depends on a configured adapter.
+ * The configuration, plus the one thing the configuration itself cannot say:
+ * whether it was actually read.
+ *
+ * A single flag rather than a wrapper, and that is a decision about the four
+ * consumers. `/login`, `/register` and the SSO callback all want the *fields* -
+ * `config.captcha`, `config.isEmail`, `ssoProvidersOf(config)` - and are
+ * indifferent to where they came from; only password recovery has to tell the
+ * two apart. Wrapping the config in a `{ status, config }` result would make all
+ * four unwrap it to serve one, so the flag rides alongside the fields and the
+ * screens that do not care never mention it.
+ *
+ * ## Why the distinction has to exist at all
+ *
+ * A failed read degrades to {@link UNKNOWN_MIDDLEWARE_CONFIG}, which says
+ * `isEmail: false` - and for `/login` that is exactly right, a reduced form
+ * rather than no form. But `isEmail: false` is also what a deployment with no
+ * email adapter genuinely looks like, and `/login/reset-password` answers that
+ * with `notFound()`. Collapsed together, an API outage made password recovery
+ * return **404**: the app claiming a route does not exist because it could not
+ * reach its own API. See `passwordRecoveryAvailability`.
+ */
+export interface MiddlewareConfigState extends MiddlewareConfig {
+  /**
+   * `true` when these fields are the API's answer, `false` when they are the
+   * fallback below.
+   *
+   * Not part of the API schema - it is this app's record of whether the read
+   * succeeded, so a consumer can distinguish "configured off" from "unknown".
+   */
+  isKnown: boolean
+}
+
+/**
+ * What a screen renders when the configuration cannot be read: the email and
+ * password fields, and nothing that depends on a configured adapter.
  *
  * Shared by both transports so a failure looks the same during SSR and after
  * hydration, rather than the page changing shape when it rehydrates.
+ *
+ * `isKnown: false` is the load-bearing field. Every other value here is a
+ * *guess* chosen to degrade safely, and a consumer that must not guess reads
+ * this one first.
  *
  * ## What it costs the screens that need a captcha
  *
@@ -39,10 +76,16 @@ export type MiddlewareConfig = z.infer<typeof routeMiddlewareSchema>
  * and nothing is claimed to have been. The alternative would be inventing a
  * configuration, which is how a form ends up looking solved when it is not.
  */
-export const ANONYMOUS_MIDDLEWARE_CONFIG: MiddlewareConfig = Object.freeze({
+export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   isEmail: false,
+  isKnown: false,
   sso: [],
 })
+
+/** The API's answer, marked as one. */
+export const knownMiddlewareConfig = (
+  config: MiddlewareConfig,
+): MiddlewareConfigState => ({ ...config, isKnown: true })
 
 const middleware = clientModule<typeof middlewareModule>('@vitnode/core')
 
@@ -52,21 +95,22 @@ const middleware = clientModule<typeof middlewareModule>('@vitnode/core')
  * Core's own browser fetcher, which is what the Next.js app's client components
  * use - so a hydrated page and a Next.js page make the identical request.
  */
-const fetchMiddlewareConfigInBrowser = async (): Promise<MiddlewareConfig> => {
-  try {
-    const response = await fetcherClient(middleware, {
-      method: 'get',
-      module: 'middleware',
-      path: '/',
-    })
+const fetchMiddlewareConfigInBrowser =
+  async (): Promise<MiddlewareConfigState> => {
+    try {
+      const response = await fetcherClient(middleware, {
+        method: 'get',
+        module: 'middleware',
+        path: '/',
+      })
 
-    if (response.status !== 200) return ANONYMOUS_MIDDLEWARE_CONFIG
+      if (response.status !== 200) return UNKNOWN_MIDDLEWARE_CONFIG
 
-    return await response.json()
-  } catch {
-    return ANONYMOUS_MIDDLEWARE_CONFIG
+      return knownMiddlewareConfig(await response.json())
+    } catch {
+      return UNKNOWN_MIDDLEWARE_CONFIG
+    }
   }
-}
 
 /**
  * The transport boundary, and the reason one query definition works in a loader
@@ -114,6 +158,11 @@ export const middlewareConfigQueryOptions = () =>
  * Core's own normaliser - the one the Next.js provider row uses - so a provider
  * missing a name, or listed twice, produces the same button row in both
  * frameworks.
+ *
+ * Takes the bare {@link MiddlewareConfig}, so it reads a
+ * {@link MiddlewareConfigState} without caring which one it is: an unread
+ * configuration has no providers, and an empty provider row is the correct
+ * degraded rendering. Nothing here needs to know the difference.
  */
 export const ssoProvidersOf = (config: MiddlewareConfig): SSOProvider[] =>
   normalizeSSOProviders(config.sso)

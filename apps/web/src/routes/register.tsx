@@ -176,6 +176,26 @@ export const Route = createFileRoute('/register')({
 })
 
 function RegisterRoute() {
+  /**
+   * The deployment configuration, and a deliberate decision not to branch on
+   * whether it was actually read.
+   *
+   * `config.isKnown` is available here - the same certainty flag password
+   * recovery acts on - and registration keeps its degraded rendering anyway: on
+   * an outage the card still shows the fields, minus the captcha widget and the
+   * provider row. That is a real cost on a captcha-configured deployment, where
+   * the submit then carries an empty token and the API answers `400`, which the
+   * form raises as the internal-error toast. Degraded, but never wrong: nothing
+   * is created and nothing is claimed to have been.
+   *
+   * It stays that way because the alternative is worse for the same visitor. A
+   * hard error would take registration down for every deployment - captcha or
+   * not - because one optional read failed, and most VitNode installs configure
+   * no captcha at all, so their signup would work perfectly if only it rendered.
+   * Password recovery is different in kind rather than in degree: there the
+   * fallback does not degrade a screen, it *asserts a fact* - "this deployment
+   * sends no email" - and turns that into a 404.
+   */
   const { data: config } = useSuspenseQuery(middlewareConfigQueryOptions())
 
   /**

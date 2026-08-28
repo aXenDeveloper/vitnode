@@ -106,10 +106,29 @@ export const SESSION_QUERY_KEY = ['vitnode', 'session'] as const
  * this function cannot create a session, end one, or redirect, because it cannot
  * do anything at all.
  *
- * `user === null` is the only test for "signed out", because that is the only
- * thing the API promises: no cookie, an expired session and a rate-limited
- * response all arrive as `{ user: null }` - see `lib/session.ts`, which
- * normalises the non-200 case so callers never have to narrow.
+ * `user === null` is the only test for "signed out", and it means exactly one
+ * thing: **the API answered, and nobody is signed in.** No cookie and an expired
+ * session both arrive that way, because both are a successful read of "there is
+ * no session here".
+ *
+ * ## A failed read never reaches this function
+ *
+ * It used to. `lib/session.ts` once returned `{ ai: { models: [] }, user: null }`
+ * for every non-200, so a `429` from the rate limiter, a `500` or an unreachable
+ * API arrived here indistinguishable from a guest - and `canAccessAuthenticatedRoute`
+ * dutifully signed a signed-in visitor out of a page they were entitled to.
+ *
+ * Stage 6 removed that normalisation deliberately. `getSession` now *rejects*
+ * when the session could not be read, which propagates through
+ * `ensureAuthState` and out of the guard's `beforeLoad` as an ordinary route
+ * error - so the visitor stays where they are and sees a failure, rather than
+ * being told they are anonymous. There is no third {@link AuthState} for "we
+ * could not find out", and there must not be one: the two states below are both
+ * answers, and an outage is not an answer.
+ *
+ * So this function is total over what it can actually receive - every
+ * `SessionApi` value is a session the API returned - and a caller must never
+ * read a rejection as a guest.
  */
 export const authStateFromSession = (session: SessionApi): AuthState => {
   const { user } = session

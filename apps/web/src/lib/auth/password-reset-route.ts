@@ -143,24 +143,64 @@ export const passwordResetNamespaces = (
     : PASSWORD_RESET_BASE_NAMESPACES
 
 /**
- * Whether this deployment has password recovery at all.
+ * Whether this deployment has password recovery - and the third answer, which is
+ * the point of this function existing.
  *
  * The API sends the reset link through the configured email adapter, so with no
- * adapter there is no flow - and the Next.js view answers `notFound()` rather
- * than rendering a form whose submit could never arrive. Preserved here as a
- * named predicate over the deployment configuration, so the route reads as the
- * rule rather than as a negated flag.
+ * adapter there is no flow, and the Next.js view answers `notFound()` rather
+ * than rendering a form whose submit could never arrive. That much is preserved
+ * exactly.
  *
- * Note what `isEmail: false` covers: it is also what
- * `ANONYMOUS_MIDDLEWARE_CONFIG` says when the configuration could not be read at
- * all. On this route that means an API outage renders the 404 rather than an
- * error screen - a degradation, but the safe direction, and one that follows
- * from Stage 6's decision that a failed configuration read must not blank the
- * auth pages. Changing it would mean teaching that read to distinguish "no
- * adapter" from "we could not ask".
+ * What is *not* preserved is the collapse underneath it. `isEmail: false` is two
+ * different facts wearing one value:
+ *
+ *     the API answered, and no email adapter is configured   -> disabled
+ *     the API could not be reached, so this is the fallback   -> unknown
+ *
+ * and the fallback says `isEmail: false` because that is the safe guess for the
+ * login form. Read as a boolean, an API outage therefore made this route answer
+ * **404** - the app claiming password recovery does not exist because it could
+ * not reach its own configuration. A visitor holding a valid recovery link, on a
+ * deployment that does send email, was told the page was not there.
+ *
+ * So the answer is three-valued, and the route acts on each differently:
+ * `notFound()` only for `disabled`, an error for `unknown`. `isKnown` is the
+ * whole of the distinction - see `MiddlewareConfigState`.
  */
-export const hasPasswordRecovery = ({
+export type PasswordRecoveryAvailability = 'available' | 'disabled' | 'unknown'
+
+export const passwordRecoveryAvailability = ({
   isEmail,
+  isKnown,
 }: {
   isEmail: boolean
-}): boolean => isEmail
+  isKnown: boolean
+}): PasswordRecoveryAvailability => {
+  if (!isKnown) return 'unknown'
+
+  return isEmail ? 'available' : 'disabled'
+}
+
+/**
+ * The deployment configuration could not be read, so whether recovery exists is
+ * not known.
+ *
+ * Thrown out of the route's `beforeLoad`, where it takes TanStack Router's
+ * ordinary error path - the same one any failing loader takes - rather than the
+ * not-found path. That is the entire behavioural difference and it is the
+ * correct one: a `404` is a statement about this application's routes, and this
+ * is a statement about its API being unreachable.
+ *
+ * A named class rather than a bare `Error` so the route's intent is legible at
+ * the throw site and this suite can assert on it without matching English.
+ * Deliberately not a new error *screen*: the router already renders one, and
+ * inventing a degraded-configuration UX is not this stage's work.
+ */
+export class PasswordRecoveryUnknownError extends Error {
+  constructor() {
+    super(
+      'The deployment configuration could not be read, so whether password recovery is available is unknown.',
+    )
+    this.name = 'PasswordRecoveryUnknownError'
+  }
+}

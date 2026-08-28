@@ -9,7 +9,7 @@ import type {
 import { useQueryClient } from '@tanstack/react-query'
 import { createIsomorphicFn } from '@tanstack/react-start'
 import {
-  DEVICES_QUERY_KEY,
+  devicesQueryKey,
   devicesQueryOptions,
   fetchDevicesInBrowser,
 } from '@vitnode/core/views/auth/settings/devices/devices-query'
@@ -34,8 +34,8 @@ import { fetchDevicesOnServer } from '#/server/devices.server'
  * query cache instead of `revalidatePath`.
  *
  * The same shape as `#/lib/files/my-files`, deliberately - see the long note
- * there. What is different is only that this list has no parameters, so there is
- * one cache entry rather than a family.
+ * there. What is different is only that this list has no parameters, so one
+ * visitor has one cache entry rather than a family of pages and sorts.
  */
 
 /**
@@ -70,23 +70,36 @@ const fetchDevices: DevicesFetcher = createIsomorphicFn()
 /**
  * The devices list, as the one query definition every caller shares.
  *
- *     loader:     context.queryClient.ensureQueryData(devicesQuery())
- *     component:  useSuspenseQuery(devicesQuery())
- *     after a revoke: invalidate, and the component above refetches
+ *     loader:     context.queryClient.ensureQueryData(devicesQuery(userId))
+ *     component:  useSuspenseQuery(devicesQuery(userId))
+ *     after a revoke: invalidate that visitor's entry, and it refetches
+ *
+ * `userId` is the *cache* owner and nothing more. It comes from
+ * `context.auth.user.id` - the `_authenticated` boundary's own state, read from
+ * the one canonical session query rather than from a second source - and it
+ * never reaches the API: `GET /users/devices` takes no arguments at all and
+ * derives the owner from the session cookie. See `devicesQueryKey` in core for
+ * why the entry has to be partitioned, and what went wrong when it was not.
  *
  * No `initialData`: the loader has already put the list in the entry this key
  * names and the SSR pass dehydrates it, so passing it again would be a second
  * copy of the same bytes that can disagree with the first.
  */
-export const devicesQuery = () => devicesQueryOptions({ fetchDevices })
+export const devicesQuery = (userId: number) =>
+  devicesQueryOptions({ fetchDevices, userId })
 
 /**
- * Marks the cached devices list stale.
+ * Marks one visitor's cached devices list stale.
  *
  * One entry, named exactly - not `queryClient.invalidateQueries()` with no key.
  * The session, the messages and every other list this app holds are unaffected by
  * a device being signed out, and refetching them because of it is the blunt
  * version of the `revalidatePath('/[locale]/(main)', 'layout')` this replaces.
+ *
+ * Scoped to `userId` for the same reason the key is. A long-lived browser client
+ * can still hold a previous visitor's partition; it is unreachable - every
+ * authenticated route builds its key from the current session - and refetching it
+ * would be a request on behalf of somebody who has signed out.
  *
  * The session entry in particular is deliberately left alone, and that is a
  * finding rather than an omission: the API refuses to revoke the current device
@@ -102,8 +115,9 @@ export const devicesQuery = () => devicesQueryOptions({ fetchDevices })
  */
 export const invalidateDevices = async (
   queryClient: QueryClient,
+  userId: number,
 ): Promise<void> =>
-  await queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY })
+  await queryClient.invalidateQueries({ queryKey: devicesQueryKey(userId) })
 
 /**
  * Signs one device out, then refreshes the list if the list is now wrong.
@@ -117,28 +131,38 @@ export const invalidateDevices = async (
  */
 export const revokeDevice = async (
   queryClient: QueryClient,
+  userId: number,
   args: RevokeDeviceArgs,
 ): Promise<RevokeDeviceResult> => {
   const result = await revokeDeviceInBrowser(args)
 
-  if (shouldRefreshAfterRevoke(result)) await invalidateDevices(queryClient)
+  if (shouldRefreshAfterRevoke(result)) {
+    await invalidateDevices(queryClient, userId)
+  }
 
   return result
 }
 
 /**
- * The one callback `DevicesContent` takes, bound to this router's cache.
+ * The one callback `DevicesContent` takes, bound to this router's cache and to
+ * the visitor whose partition of it the revoke may refresh.
+ *
+ * `userId` is taken as an argument rather than read here: the route reads
+ * `context.auth.user.id` once in its loader and hands the same value to the
+ * query options and to this hook, so the entry the loader filled is the entry a
+ * revoke marks stale. It scopes an invalidation and nothing else - the revoke
+ * request carries a device's `publicId` and no owner.
  *
  * Memoised, which is the only reason this is a hook rather than a call at the
  * point of use: it is a prop on a list that re-renders on every navigation, and a
  * new function identity would remount the confirm dialog mid-revoke.
  */
-export const useRevokeDeviceCallback = (): RevokeDevice => {
+export const useRevokeDeviceCallback = (userId: number): RevokeDevice => {
   const queryClient = useQueryClient()
 
   return React.useMemo(
     () => async (args: RevokeDeviceArgs) =>
-      await revokeDevice(queryClient, args),
-    [queryClient],
+      await revokeDevice(queryClient, userId, args),
+    [queryClient, userId],
   )
 }

@@ -30,14 +30,29 @@ import { loadSettingsPanel, settingsPanelHead } from '#/lib/settings/panel'
  *
  * ## One query contract, one cache entry
  *
- *     loader:     ensureQueryData(devicesQuery())
- *     component:  useSuspenseQuery(devicesQuery())
+ *     loader:     ensureQueryData(devicesQuery(userId))
+ *     component:  useSuspenseQuery(devicesQuery(userId))
  *     after a revoke: invalidate that one entry, and the component refetches
  *
  * Same key, same request, same refusal handling - so the list the server rendered
  * is the list the browser reads. There is no `initialData`: the loader has already
  * put it in the entry the component reads and the SSR pass dehydrates it, so a
  * second copy of those bytes could only disagree with the first.
+ *
+ * ## Whose devices, in the cache as well as at the API
+ *
+ * The entry is keyed by the visitor - `["devices", "user", <id>]` - because the
+ * browser's `QueryClient` outlives a sign-out. Under the single
+ * `["devices", "me"]` it replaces, a second visitor signing in on the same
+ * document would have found that entry already populated, made no request, and
+ * been shown the first visitor's operating systems, browsers and IP addresses.
+ * Hono cannot refuse a read nobody performs.
+ *
+ * The id comes from `context.auth.user.id`, which is `_authenticated`'s own state
+ * from the one canonical session query - not a second session read. It is taken
+ * **once**, in the loader, and returned, so the loader, the component and the
+ * revoke callback all use the identical value. It addresses a cache entry and
+ * nothing else: `GET /users/devices` takes no arguments at all.
  *
  * ## What a revoke does *not* invalidate
  *
@@ -65,12 +80,19 @@ export const Route = createFileRoute('/_main/_authenticated/settings/devices')({
    * the `getDevicesApi()` this replaces did.
    */
   loader: async ({ context }) => {
+    /*
+      The visitor, from the guard that let this panel load. `context.auth` is
+      `_authenticated`'s `beforeLoad` return, already narrowed to the signed-in
+      half of the union, so `auth.user` needs no check here.
+    */
+    const userId = context.auth.user.id
+
     const [panel] = await Promise.all([
       loadSettingsPanel(context, 'devices'),
-      context.queryClient.ensureQueryData(devicesQuery()),
+      context.queryClient.ensureQueryData(devicesQuery(userId)),
     ])
 
-    return panel
+    return { ...panel, userId }
   },
   /**
    * The tab title and nothing else - `robots` is the layout's, declared once for
@@ -134,8 +156,9 @@ function DevicesPending() {
 }
 
 function DevicesRoute() {
-  const { data } = useSuspenseQuery(devicesQuery())
-  const onRevoke = useRevokeDeviceCallback()
+  const { userId } = Route.useLoaderData()
+  const { data } = useSuspenseQuery(devicesQuery(userId))
+  const onRevoke = useRevokeDeviceCallback(userId)
 
   return (
     <>

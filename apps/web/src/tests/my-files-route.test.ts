@@ -9,7 +9,7 @@ import {
 } from '@vitnode/core/components/table/url-state'
 import {
   MY_FILES_MAX_PAGE_SIZE,
-  MY_FILES_QUERY_ROOT,
+  myFilesQueryRoot,
 } from '@vitnode/core/views/files/my-files-query'
 import { describe, expect, it } from 'vitest'
 
@@ -48,10 +48,17 @@ import { getRouter } from '#/router'
 const searchFor = (query: string) =>
   normalizeMyFilesRouteSearch(defaultParseSearch(query))
 
-/** The cache entry one URL lands in. */
-const keyFor = (query: string) =>
+/** The visitor these tests are signed in as, wherever an owner is needed. */
+const USER = 10
+
+/** Another visitor, for the entries that must never be shared with them. */
+const OTHER_USER = 20
+
+/** The cache entry one URL lands in, for one visitor. */
+const keyFor = (query: string, userId: number = USER) =>
   hashKey(
-    myFilesQuery({ params: myFilesRouteParams(searchFor(query)) }).queryKey,
+    myFilesQuery({ params: myFilesRouteParams(searchFor(query)), userId })
+      .queryKey,
   )
 
 describe('the route schema reads a table request out of the URL', () => {
@@ -210,12 +217,28 @@ describe('one URL, one cache entry', () => {
   })
 
   it('hangs off the root a delete invalidates', () => {
+    const root = myFilesQueryRoot(USER)
+
     expect(
-      myFilesQuery({ params: myFilesRouteParams({}) }).queryKey.slice(
-        0,
-        MY_FILES_QUERY_ROOT.length,
-      ),
-    ).toEqual([...MY_FILES_QUERY_ROOT])
+      myFilesQuery({
+        params: myFilesRouteParams({}),
+        userId: USER,
+      }).queryKey.slice(0, root.length),
+    ).toEqual([...root])
+  })
+
+  /**
+   * The privacy invariant at this route's own seam.
+   *
+   * The key contract is core's and is asserted there; what is asserted here is
+   * that *this route's* query definition carries the owner through, so the entry
+   * a loader fills for one visitor cannot be the entry another visitor's loader
+   * reads. Same URL, same normalised parameters, two visitors, two entries.
+   */
+  it('gives two visitors two entries for the identical URL', () => {
+    for (const query of ['', 'orderBy=name&order=asc', 'search=logo']) {
+      expect(keyFor(query, USER)).not.toBe(keyFor(query, OTHER_USER))
+    }
   })
 })
 
@@ -356,17 +379,27 @@ describe('a delete makes the visitor’s files stale, and only those', () => {
     const queryClient = new QueryClient()
     const firstPage = myFilesQuery({
       params: myFilesRouteParams(searchFor('')),
+      userId: USER,
     })
     const sorted = myFilesQuery({
       params: myFilesRouteParams(searchFor('orderBy=name&order=asc')),
+      userId: USER,
+    })
+    // A partition left behind by a visitor who signed out on this browser. It is
+    // unreachable - every authenticated route builds its key from the current
+    // session - and a delete must not reach it either.
+    const otherVisitor = myFilesQuery({
+      params: myFilesRouteParams(searchFor('')),
+      userId: OTHER_USER,
     })
     const session = ['vitnode', 'session'] as const
 
     queryClient.setQueryData(firstPage.queryKey, { edges: [], pageInfo: {} })
     queryClient.setQueryData(sorted.queryKey, { edges: [], pageInfo: {} })
-    queryClient.setQueryData(session, { user: { id: 1 } })
+    queryClient.setQueryData(otherVisitor.queryKey, { edges: [], pageInfo: {} })
+    queryClient.setQueryData(session, { user: { id: USER } })
 
-    return { firstPage, queryClient, session, sorted }
+    return { firstPage, otherVisitor, queryClient, session, sorted }
   }
 
   const isStale = (queryClient: QueryClient, queryKey: readonly unknown[]) =>
@@ -377,10 +410,21 @@ describe('a delete makes the visitor’s files stale, and only those', () => {
     // pressing a button - and reads from the cache - are wrong too.
     const { firstPage, queryClient, sorted } = seed()
 
-    void invalidateMyFiles(queryClient)
+    void invalidateMyFiles(queryClient, USER)
 
     expect(isStale(queryClient, firstPage.queryKey)).toBe(true)
     expect(isStale(queryClient, sorted.queryKey)).toBe(true)
+  })
+
+  it('leaves a previous visitor’s partition untouched', () => {
+    // Prefix matching is the whole of it: `['files','user',10]` is not a prefix
+    // of `['files','user',20,...]`, so one visitor's delete cannot refetch a
+    // list on behalf of somebody who has signed out.
+    const { otherVisitor, queryClient } = seed()
+
+    void invalidateMyFiles(queryClient, USER)
+
+    expect(isStale(queryClient, otherVisitor.queryKey)).toBe(false)
   })
 
   it('leaves everything else in the cache alone', () => {
@@ -388,7 +432,7 @@ describe('a delete makes the visitor’s files stale, and only those', () => {
     // messages have not changed because a file was deleted.
     const { queryClient, session } = seed()
 
-    void invalidateMyFiles(queryClient)
+    void invalidateMyFiles(queryClient, USER)
 
     expect(isStale(queryClient, session)).toBe(false)
   })
@@ -398,7 +442,7 @@ describe('a delete makes the visitor’s files stale, and only those', () => {
     // dialog that is still open.
     const { firstPage, queryClient } = seed()
 
-    void invalidateMyFiles(queryClient)
+    void invalidateMyFiles(queryClient, USER)
 
     expect(queryClient.getQueryData(firstPage.queryKey)).toBeDefined()
   })

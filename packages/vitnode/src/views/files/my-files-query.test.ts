@@ -1,3 +1,4 @@
+import { hashKey } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
@@ -12,8 +13,8 @@ import {
   describeMyFilesParams,
   isMyFilesRequestError,
   MY_FILES_MAX_PAGE_SIZE,
-  MY_FILES_QUERY_ROOT,
   myFilesQueryKey,
+  myFilesQueryRoot,
   myFilesRequest,
   MyFilesRequestError,
   normalizeMyFilesParams,
@@ -167,20 +168,22 @@ describe("myFilesRequest", () => {
 });
 
 describe("myFilesQueryKey", () => {
-  it("hangs off the root an invalidation can name", () => {
-    expect(myFilesQueryKey(normalizeMyFilesParams()).slice(0, 2)).toEqual([
-      ...MY_FILES_QUERY_ROOT,
-    ]);
+  const keyFor = (
+    userId: number,
+    raw?: Parameters<typeof normalizeMyFilesParams>[0],
+  ) => myFilesQueryKey({ params: normalizeMyFilesParams(raw), userId });
+
+  it("hangs off the owner's own root, which an invalidation can name", () => {
+    expect(keyFor(10).slice(0, 3)).toEqual([...myFilesQueryRoot(10)]);
+    expect(myFilesQueryRoot(10)).toEqual(["files", "user", 10]);
   });
 
   it("is the same key for two spellings of the same request", () => {
-    expect(myFilesQueryKey(normalizeMyFilesParams({ search: "" }))).toEqual(
-      myFilesQueryKey(normalizeMyFilesParams({ first: "10" })),
-    );
+    expect(keyFor(10, { search: "" })).toEqual(keyFor(10, { first: "10" }));
   });
 
   it("is a different key for everything that changes the rows", () => {
-    const base = myFilesQueryKey(normalizeMyFilesParams());
+    const base = keyFor(10);
     const differing = [
       { first: "40" },
       { cursor: "abc" },
@@ -191,16 +194,64 @@ describe("myFilesQueryKey", () => {
     ];
 
     for (const raw of differing) {
-      expect(myFilesQueryKey(normalizeMyFilesParams(raw))).not.toEqual(base);
+      expect(keyFor(10, raw)).not.toEqual(base);
     }
+  });
+
+  /**
+   * The privacy invariant, as the key contract rather than as a browser test.
+   *
+   * The browser's `QueryClient` is created once per document and outlives a
+   * sign-out, so one document can hold two visitors. Under the
+   * `["files", "me", params]` this replaces, B's loader asked for the entry A
+   * had already filled - and with `refetchOnMount` and `refetchOnWindowFocus`
+   * both off, nothing refetched it. No request was made, so Hono never saw the
+   * read it would have refused, and B was shown A's file names.
+   */
+  it("gives two visitors two keys for identical parameters", () => {
+    const params = normalizeMyFilesParams({ first: "10" });
+
+    expect(myFilesQueryKey({ params, userId: 10 })).not.toEqual(
+      myFilesQueryKey({ params, userId: 20 }),
+    );
+    expect(hashKey(myFilesQueryKey({ params, userId: 10 }))).not.toBe(
+      hashKey(myFilesQueryKey({ params, userId: 20 })),
+    );
+  });
+
+  it("keeps one visitor's pages, sorts and searches under one root", () => {
+    // What a delete invalidates: the family, so every page and sort of *this*
+    // visitor's files goes stale rather than only the one on screen.
+    const root = myFilesQueryRoot(10);
+
+    for (const raw of [
+      { cursor: "abc" },
+      { orderBy: "name" },
+      { search: "x" },
+    ]) {
+      expect(keyFor(10, raw).slice(0, root.length)).toEqual([...root]);
+    }
+  });
+
+  it("puts another visitor outside that root, so a delete cannot reach them", () => {
+    // Query matches by prefix, so this is the whole of "invalidate only mine".
+    const root = myFilesQueryRoot(10);
+
+    expect(keyFor(20).slice(0, root.length)).not.toEqual([...root]);
   });
 
   it("does not vary by language, because the rows do not", () => {
     // Only the column headings are translated, and the renderer resolves those.
     // A locale in the key would refetch an identical list on every switch.
+    expect(JSON.stringify(keyFor(10))).not.toContain("locale");
+  });
+
+  it("sends no owner to the API, which reads it from the session cookie", () => {
+    // The id addresses a cache slot. If it reached the wire it would become an
+    // access-control parameter the browser supplies.
     expect(
-      JSON.stringify(myFilesQueryKey(normalizeMyFilesParams())),
-    ).not.toContain("locale");
+      myFilesRequest(normalizeMyFilesParams()).args.query,
+    ).not.toHaveProperty("userId");
   });
 });
 

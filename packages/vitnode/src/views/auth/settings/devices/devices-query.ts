@@ -91,8 +91,13 @@ export interface DevicesApi {
  * The list, as arguments to whichever fetcher is carrying it.
  *
  * No parameters at all: the route takes none, and derives whose devices these
- * are from the session cookie. That is also why the cache key below has nothing
- * in it.
+ * are from the session cookie.
+ *
+ * Worth reading against {@link devicesQueryKey}, which *does* carry a user id.
+ * The two are not in tension - the key says which cache slot an answer is filed
+ * under, this says what is asked for, and only the cookie says whose devices
+ * come back. Adding an owner here would move authorization onto a value the
+ * browser supplies.
  */
 export const devicesRequest = () =>
   ({
@@ -169,15 +174,26 @@ export const fetchDevicesInBrowser: DevicesFetcher = async () => {
 };
 
 /**
- * The cache entry this list reads and writes, and the root an invalidation
- * names.
+ * The cache entry one visitor's list reads and writes, and the target an
+ * invalidation names.
  *
- * One key with nothing in it, because the request has nothing in it: the route
- * takes no parameters and answers with whichever user the cookie identifies. A
- * user id here would be a second source of truth for something the cookie
- * already decides, and the QueryClient it lives in is per request on the server
- * and per browser on the client, so there is no client holding two visitors'
- * lists.
+ * A factory over the owner's id rather than the constant `["devices", "me"]` it
+ * replaces. The reasoning was wrong in one specific way and it is worth keeping
+ * the correction visible: it argued that the request carries no user, so the key
+ * needs none, and that "the QueryClient is per request on the server and per
+ * browser on the client, so there is no client holding two visitors' lists".
+ *
+ * The last clause is the mistake. *Per browser* is not per visitor - the browser
+ * client is created once per document and outlives a sign-out:
+ *
+ *     A signs in  -> /settings/devices -> ["devices","me"] holds A's devices
+ *     A signs out
+ *     B signs in  -> /settings/devices -> the loader asks for the same entry
+ *
+ * which is already populated, and with `refetchOnMount` off nothing refetches
+ * it. B would be shown A's operating systems, browsers and IP addresses without
+ * a single request being made - so Hono never sees the read it would have
+ * refused. Keyed by owner, B's entry is empty and the fetch happens.
  *
  * The locale is deliberately absent. Operating system, browser, IP address and
  * both timestamps are the same data in every language; the only translated
@@ -185,25 +201,42 @@ export const fetchDevicesInBrowser: DevicesFetcher = async () => {
  * resolves from the provider it is under. A locale in the key would mean a
  * language switch silently refetched a list that had not changed.
  *
- * Exported as the invalidation target too - there is exactly one entry, so the
- * key and the family are the same value.
+ * ## The id addresses a cache, it does not identify a caller
+ *
+ * `GET /users/devices` still takes no parameters and still derives the user from
+ * the session cookie - {@link devicesRequest} is unchanged. So this id decides
+ * which cache slot the answer is filed under and authorizes nothing; sending it
+ * would turn a cache key into an access-control parameter, which is the one
+ * thing it must never become.
+ *
+ * There is one entry per visitor and it has no sub-keys, so this is both the key
+ * and the family an invalidation names.
  */
-export const DEVICES_QUERY_KEY = ["devices", "me"] as const;
+export const devicesQueryKey = (userId: number) =>
+  ["devices", "user", userId] as const;
 
 /**
  * The visitor's devices, as the one query definition every caller shares.
  *
  * A route loader warms it before the component renders:
  *
- *     context.queryClient.ensureQueryData(devicesQueryOptions({ fetchDevices }))
+ *     context.queryClient.ensureQueryData(
+ *       devicesQueryOptions({ fetchDevices, userId }),
+ *     )
  *
  * and the component reads the very same options back:
  *
- *     const { data } = useSuspenseQuery(devicesQuery())
+ *     const { data } = useSuspenseQuery(devicesQuery(userId))
  *
  * Same key, same request, same status checking - so the loader's list is the
  * list the component renders, and a revoke that invalidates
- * {@link DEVICES_QUERY_KEY} refetches through the identical contract.
+ * {@link devicesQueryKey} refetches through the identical contract.
+ *
+ * `userId` addresses the cache and nothing else - see {@link devicesQueryKey}.
+ * It is required, and the whole parameter object with it, because there is no
+ * honest default: falling back to a shared entry is the bug this closes. Both
+ * callers take it from the one place that knows it, the `_authenticated` route
+ * context, so the loader and the component cannot land on two partitions.
  *
  * `fetchDevices` is the seam. It defaults to the browser's fetcher, which is what
  * a hydrated page wants; an app that also fetches during SSR passes one that can
@@ -226,12 +259,16 @@ export const DEVICES_QUERY_KEY = ["devices", "me"] as const;
  */
 export const devicesQueryOptions = ({
   fetchDevices = fetchDevicesInBrowser,
+  userId,
 }: {
   fetchDevices?: DevicesFetcher;
-} = {}) =>
+  userId: number;
+}) =>
   queryOptions({
+    // `userId` is deliberately absent from the request: the owner comes from
+    // the session cookie, on the server, on every call.
     queryFn: async () => await fetchDevices(),
-    queryKey: DEVICES_QUERY_KEY,
+    queryKey: devicesQueryKey(userId),
     retry: false,
   });
 

@@ -218,6 +218,14 @@ export const Route = createFileRoute('/login')({
 
 function LoginRoute() {
   const { returnTo } = Route.useSearch()
+  /**
+   * The deployment configuration. This screen deliberately ignores
+   * `config.isKnown`: a failed read degrades to no provider row and no
+   * reset-password link, and the email and password fields - which are the
+   * whole of signing in on most installs - still render. Making the login page
+   * unavailable because an optional read failed would be a far larger outage
+   * than the one that caused it.
+   */
   const { data: config } = useSuspenseQuery(middlewareConfigQueryOptions())
   const signIn = useSignInAction(() => postAuthDestination(returnTo))
 

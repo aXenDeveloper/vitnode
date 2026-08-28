@@ -2,7 +2,7 @@ import type * as DevicesRevokeModule from '@vitnode/core/views/auth/settings/dev
 import type { RevokeDeviceResult } from '@vitnode/core/views/auth/settings/devices/devices-revoke'
 
 import { hashKey, QueryClient } from '@tanstack/react-query'
-import { DEVICES_QUERY_KEY } from '@vitnode/core/views/auth/settings/devices/devices-query'
+import { devicesQueryKey } from '@vitnode/core/views/auth/settings/devices/devices-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -37,6 +37,12 @@ vi.mock(
 const { devicesQuery, invalidateDevices, revokeDevice } =
   await import('#/lib/devices/devices')
 
+/** The visitor these tests are signed in as. */
+const USER = 10
+
+/** Another visitor, whose partition must survive this one's revoke untouched. */
+const OTHER_USER = 20
+
 /** The two entries a devices invalidation must tell apart. */
 const SESSION_KEY = ['vitnode', 'session'] as const
 const MESSAGES_KEY = ['intl', 'en', 'core.global'] as const
@@ -44,8 +50,10 @@ const MESSAGES_KEY = ['intl', 'en', 'core.global'] as const
 const seed = () => {
   const queryClient = new QueryClient()
 
-  queryClient.setQueryData(devicesQuery().queryKey, { devices: [] })
-  queryClient.setQueryData(SESSION_KEY, { user: { id: 1 } })
+  queryClient.setQueryData(devicesQuery(USER).queryKey, { devices: [] })
+  // A partition left behind by a visitor who signed out on this browser.
+  queryClient.setQueryData(devicesQuery(OTHER_USER).queryKey, { devices: [] })
+  queryClient.setQueryData(SESSION_KEY, { user: { id: USER } })
   queryClient.setQueryData(MESSAGES_KEY, { messages: {} })
 
   return queryClient
@@ -62,17 +70,35 @@ describe('this app asks for core’s devices list, not its own', () => {
   it('lands in the canonical entry', () => {
     // The loader and the component both call `devicesQuery()`, and it has to be
     // the entry core's own invalidation names or a revoke would refresh nothing.
-    expect(hashKey(devicesQuery().queryKey)).toBe(hashKey(DEVICES_QUERY_KEY))
+    expect(hashKey(devicesQuery(USER).queryKey)).toBe(
+      hashKey(devicesQueryKey(USER)),
+    )
   })
 
   it('carries no locale, because the data is the same in every language', () => {
     // An OS name, a browser, an IP address and two timestamps do not change with
     // the language. A locale in the key would refetch on every language switch.
-    expect(devicesQuery().queryKey).toEqual(['devices', 'me'])
+    expect(devicesQuery(USER).queryKey).toEqual(['devices', 'user', USER])
   })
 
   it('asks once, so a 429 is not answered by two more requests', () => {
-    expect(devicesQuery().retry).toBe(false)
+    expect(devicesQuery(USER).retry).toBe(false)
+  })
+
+  /**
+   * The privacy invariant at this route's own seam.
+   *
+   * The browser's `QueryClient` is created once per document and outlives a
+   * sign-out, so `["devices", "me"]` was only unique for as long as "me" was:
+   * the second visitor to sign in on one browser would have found the entry
+   * already filled, made no request, and been shown the first visitor's
+   * operating systems, browsers and IP addresses. No request means Hono never
+   * saw the read it would have refused, which is why the key is the fix.
+   */
+  it('gives two visitors two entries, so one cannot read the other’s', () => {
+    expect(hashKey(devicesQuery(USER).queryKey)).not.toBe(
+      hashKey(devicesQuery(OTHER_USER).queryKey),
+    )
   })
 })
 
@@ -80,9 +106,9 @@ describe('a revoke makes the devices list stale, and only that', () => {
   it('marks the list stale when a device actually went', async () => {
     const queryClient = seed()
 
-    await invalidateDevices(queryClient)
+    await invalidateDevices(queryClient, USER)
 
-    expect(isStale(queryClient, DEVICES_QUERY_KEY)).toBe(true)
+    expect(isStale(queryClient, devicesQueryKey(USER))).toBe(true)
   })
 
   it('leaves everything else in the cache alone', async () => {
@@ -92,7 +118,7 @@ describe('a revoke makes the devices list stale, and only that', () => {
     // of the `revalidatePath` this replaces.
     const queryClient = seed()
 
-    await invalidateDevices(queryClient)
+    await invalidateDevices(queryClient, USER)
 
     expect(isStale(queryClient, SESSION_KEY)).toBe(false)
     expect(isStale(queryClient, MESSAGES_KEY)).toBe(false)
@@ -103,9 +129,19 @@ describe('a revoke makes the devices list stale, and only that', () => {
     // dialog that is still closing.
     const queryClient = seed()
 
-    await invalidateDevices(queryClient)
+    await invalidateDevices(queryClient, USER)
 
-    expect(queryClient.getQueryData(DEVICES_QUERY_KEY)).toBeDefined()
+    expect(queryClient.getQueryData(devicesQueryKey(USER))).toBeDefined()
+  })
+
+  it('leaves a previous visitor’s partition untouched', async () => {
+    // Prefix matching is the whole of it: one visitor's revoke names their own
+    // entry and cannot refetch a list on behalf of somebody who signed out.
+    const queryClient = seed()
+
+    await revokeDevice(queryClient, USER, { publicId: 'a1b2c3' })
+
+    expect(isStale(queryClient, devicesQueryKey(OTHER_USER))).toBe(false)
   })
 
   it('does not invalidate the session, because the current device cannot be revoked', async () => {
@@ -115,7 +151,7 @@ describe('a revoke makes the devices list stale, and only that', () => {
     // authenticated - which is why this invalidation is one key rather than two.
     const queryClient = seed()
 
-    await revokeDevice(queryClient, { publicId: 'a1b2c3' })
+    await revokeDevice(queryClient, USER, { publicId: 'a1b2c3' })
 
     expect(isStale(queryClient, SESSION_KEY)).toBe(false)
   })
@@ -126,9 +162,9 @@ describe('the revoke refreshes on exactly the statuses that changed something', 
     const queryClient = seed()
     nextRevokeResult = { data: true }
 
-    await revokeDevice(queryClient, { publicId: 'a1b2c3' })
+    await revokeDevice(queryClient, USER, { publicId: 'a1b2c3' })
 
-    expect(isStale(queryClient, DEVICES_QUERY_KEY)).toBe(true)
+    expect(isStale(queryClient, devicesQueryKey(USER))).toBe(true)
   })
 
   it.each([404, 400])(
@@ -137,9 +173,9 @@ describe('the revoke refreshes on exactly the statuses that changed something', 
       const queryClient = seed()
       nextRevokeResult = { error: { status } }
 
-      await revokeDevice(queryClient, { publicId: 'a1b2c3' })
+      await revokeDevice(queryClient, USER, { publicId: 'a1b2c3' })
 
-      expect(isStale(queryClient, DEVICES_QUERY_KEY)).toBe(true)
+      expect(isStale(queryClient, devicesQueryKey(USER))).toBe(true)
     },
   )
 
@@ -152,9 +188,9 @@ describe('the revoke refreshes on exactly the statuses that changed something', 
       const queryClient = seed()
       nextRevokeResult = { error: { status } }
 
-      await revokeDevice(queryClient, { publicId: 'a1b2c3' })
+      await revokeDevice(queryClient, USER, { publicId: 'a1b2c3' })
 
-      expect(isStale(queryClient, DEVICES_QUERY_KEY)).toBe(false)
+      expect(isStale(queryClient, devicesQueryKey(USER))).toBe(false)
     },
   )
 
@@ -162,7 +198,9 @@ describe('the revoke refreshes on exactly the statuses that changed something', 
     const queryClient = seed()
     nextRevokeResult = { error: { status: 429 } }
 
-    expect(await revokeDevice(queryClient, { publicId: 'a1b2c3' })).toEqual({
+    expect(
+      await revokeDevice(queryClient, USER, { publicId: 'a1b2c3' }),
+    ).toEqual({
       error: { status: 429 },
     })
   })

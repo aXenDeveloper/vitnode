@@ -52,9 +52,9 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  * The table is `myFilesQuery` and nothing else, in the loader and in the
  * component:
  *
- *     loader:     ensureQueryData(myFilesQuery({ params }))
- *     component:  useSuspenseQuery(myFilesQuery({ params }))
- *     after a delete: invalidate the family, and the component refetches
+ *     loader:     ensureQueryData(myFilesQuery({ params, userId }))
+ *     component:  useSuspenseQuery(myFilesQuery({ params, userId }))
+ *     after a delete: invalidate that visitor's family, and it refetches
  *
  * Same key, same request, same refusal handling - so the page the server rendered
  * is the page the browser reads, and there is no `initialData` anywhere: the
@@ -65,6 +65,27 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  * `params` is the *normalised* request from `loaderDeps`, handed to the component
  * through the loader rather than derived a second time, so the two cannot drift
  * apart through a difference in how each computed it.
+ *
+ * ## Whose files, in the cache as well as at the API
+ *
+ * `userId` is handed through the same way and for a sharper reason. The browser's
+ * `QueryClient` is created once per document and survives a sign-out, so a key of
+ * `["files", "me", params]` is only unique for as long as "me" is: after A signs
+ * out and B signs in, B's loader would `ensureQueryData` an entry A had already
+ * filled, find it populated, make no request, and render A's file names. Hono
+ * cannot refuse a request nobody sent.
+ *
+ * So the key carries the owner - `["files", "user", <id>, params]` - and the id
+ * comes from `context.auth.user.id`, which is `_authenticated`'s own state from
+ * the one canonical session query. It is read **once**, in the loader, and
+ * returned; the component and the delete callbacks take it from `loaderData`
+ * rather than reading it again, so there is exactly one answer per render pass
+ * and no way for the loader to fill one partition while the component reads
+ * another.
+ *
+ * It addresses a cache entry and nothing else. `GET /users/files` takes no owner
+ * and derives one from the session cookie on every request, exactly as before -
+ * see `myFilesQueryRoot` in `@vitnode/core`.
  */
 
 /**
@@ -118,6 +139,14 @@ export const Route = createFileRoute('/_main/_authenticated/files')({
    * uploaded, which is the one thing this must never look like.
    */
   loader: async ({ context, deps }) => {
+    /*
+      The visitor, from the guard that let this route load. `context.auth` is
+      `_authenticated`'s `beforeLoad` return, already narrowed to the signed-in
+      half of the union - so `auth.user` needs no check, and this cannot disagree
+      with the rule that admitted the navigation.
+    */
+    const userId = context.auth.user.id
+
     const [intl] = await Promise.all([
       context.queryClient.ensureQueryData(
         intlQueryOptions({
@@ -126,7 +155,7 @@ export const Route = createFileRoute('/_main/_authenticated/files')({
         }),
       ),
       context.queryClient.ensureQueryData(
-        myFilesQuery({ params: deps.params }),
+        myFilesQuery({ params: deps.params, userId }),
       ),
     ])
 
@@ -150,7 +179,12 @@ export const Route = createFileRoute('/_main/_authenticated/files')({
       namespace: 'core.files',
     })
 
-    return { description: t('desc'), params: deps.params, title: t('title') }
+    return {
+      description: t('desc'),
+      params: deps.params,
+      title: t('title'),
+      userId,
+    }
   },
   /**
    * The page's metadata, in the language the request resolved to.
@@ -190,11 +224,11 @@ export const Route = createFileRoute('/_main/_authenticated/files')({
 })
 
 function MyFilesRoute() {
-  const { description, params, title } = Route.useLoaderData()
+  const { description, params, title, userId } = Route.useLoaderData()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
-  const { data } = useSuspenseQuery(myFilesQuery({ params }))
-  const { onDeleteFile, onDeleteFiles } = useMyFilesDeleteCallbacks()
+  const { data } = useSuspenseQuery(myFilesQuery({ params, userId }))
+  const { onDeleteFile, onDeleteFiles } = useMyFilesDeleteCallbacks(userId)
 
   /**
    * The one thing the shared table cannot decide for itself: how to change a URL.

@@ -5,12 +5,16 @@ import {
 import { describe, expect, it } from 'vitest'
 
 import {
-  hasPasswordRecovery,
   normalizePasswordResetSearch,
+  passwordRecoveryAvailability,
   passwordResetMode,
   passwordResetNamespaces,
 } from '#/lib/auth/password-reset-route'
 import { postAuthDestination } from '#/lib/auth/redirects'
+import {
+  knownMiddlewareConfig,
+  UNKNOWN_MIDDLEWARE_CONFIG,
+} from '#/lib/middleware-config'
 import { getRouter } from '#/router'
 
 /**
@@ -179,10 +183,67 @@ describe('the namespaces each recovery screen needs', () => {
   })
 })
 
+/**
+ * Whether this deployment has password recovery, and the third answer.
+ *
+ * The decision layer only - what the route *does* with each answer is asserted
+ * nowhere here, because that would mean rendering a router. What matters is that
+ * three inputs produce three answers rather than two, since the bug this closes
+ * was exactly two answers where three were needed.
+ */
 describe('whether this deployment has password recovery at all', () => {
-  it('follows the email adapter', () => {
-    expect(hasPasswordRecovery({ isEmail: true })).toBe(true)
-    expect(hasPasswordRecovery({ isEmail: false })).toBe(false)
+  it('follows the email adapter when the configuration was read', () => {
+    expect(passwordRecoveryAvailability({ isEmail: true, isKnown: true })).toBe(
+      'available',
+    )
+    expect(
+      passwordRecoveryAvailability({ isEmail: false, isKnown: true }),
+    ).toBe('disabled')
+  })
+
+  /**
+   * The regression. The fallback the config query degrades to says
+   * `isEmail: false` - the right guess for the login form, which still renders
+   * its fields - and reading that as a boolean made an API outage answer 404 on
+   * this route: the application asserting the page does not exist because it
+   * could not reach its own API.
+   */
+  it('does not read an unreadable configuration as "disabled"', () => {
+    expect(passwordRecoveryAvailability(UNKNOWN_MIDDLEWARE_CONFIG)).toBe(
+      'unknown',
+    )
+    expect(passwordRecoveryAvailability(UNKNOWN_MIDDLEWARE_CONFIG)).not.toBe(
+      'disabled',
+    )
+  })
+
+  it('is unknown whatever the fallback happens to guess', () => {
+    // `isKnown` decides on its own: even were the fallback to start guessing
+    // `isEmail: true`, an unread configuration still may not answer "available".
+    expect(
+      passwordRecoveryAvailability({ isEmail: true, isKnown: false }),
+    ).toBe('unknown')
+  })
+
+  it('marks a configuration the API actually answered as known', () => {
+    // The other half of the contract: a real read must not look like an outage,
+    // or a deployment with no email adapter would stop answering 404.
+    expect(knownMiddlewareConfig({ isEmail: false, sso: [] }).isKnown).toBe(
+      true,
+    )
+    expect(
+      passwordRecoveryAvailability(
+        knownMiddlewareConfig({ isEmail: false, sso: [] }),
+      ),
+    ).toBe('disabled')
+  })
+
+  it('leaves the fallback usable as a login configuration', () => {
+    // The degradation password recovery must not inherit, kept deliberately: an
+    // outage still renders a login form, with no providers and no captcha.
+    expect(UNKNOWN_MIDDLEWARE_CONFIG.isEmail).toBe(false)
+    expect(UNKNOWN_MIDDLEWARE_CONFIG.sso).toEqual([])
+    expect(UNKNOWN_MIDDLEWARE_CONFIG.captcha).toBeUndefined()
   })
 })
 

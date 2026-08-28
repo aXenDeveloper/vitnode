@@ -16,8 +16,9 @@ import {
   requestPasswordResetAction,
 } from '#/lib/auth/actions'
 import {
-  hasPasswordRecovery,
   normalizePasswordResetSearch,
+  passwordRecoveryAvailability,
+  PasswordRecoveryUnknownError,
   passwordResetMode,
   passwordResetNamespaces,
 } from '#/lib/auth/password-reset-route'
@@ -109,13 +110,23 @@ const translateTitle = (locale: string, messages: AbstractIntlMessages) =>
 export const Route = createFileRoute('/login_/reset-password')({
   validateSearch: normalizePasswordResetSearch,
   /**
-   * Password recovery only exists on a deployment that can send email.
+   * Password recovery only exists on a deployment that can send email - and
+   * "we could not find out" is a third answer, not a fourth spelling of no.
    *
    * The API mails the reset link through the configured email adapter, so with
-   * no adapter the form's submit could never arrive - which is why the Next.js
+   * no adapter the form's submit could never arrive, which is why the Next.js
    * view answers `notFound()` rather than rendering it. Preserved exactly, in
    * this framework's own vocabulary: `notFound()` from TanStack Router rather
    * than `next/navigation`'s.
+   *
+   * What is *not* preserved is answering the same way when the configuration
+   * could not be read. The fallback the config query degrades to says
+   * `isEmail: false` - correct for the login form, which still renders its email
+   * and password fields - and reading that as a boolean here turned an API
+   * outage into a **404**: this application asserting the page does not exist
+   * because it could not reach its own API, to a visitor holding a valid
+   * recovery link. `passwordRecoveryAvailability` separates the two, and the
+   * outage takes the router's ordinary error path instead.
    *
    * ## The status is decided before anything renders
    *
@@ -124,21 +135,24 @@ export const Route = createFileRoute('/login_/reset-password')({
    * status depends on a read only the API can answer, and a page that committed
    * a 200 and then discovered it had nothing to show would leave crawlers,
    * caches and monitoring with a successful reset-password page. Thrown here,
-   * the router's server pass resolves the not-found boundary before the stream
-   * opens and answers **404** (`applyFailure` in `@tanstack/router-core`), so the
-   * status is right without this route setting one by hand.
-   *
-   * `hasPasswordRecovery` also reads `false` when the configuration could not be
-   * read at all - see its own note, which owns that trade-off.
+   * the router's server pass resolves the boundary before the stream opens and
+   * answers **404** for a genuinely disabled deployment (`applyFailure` in
+   * `@tanstack/router-core`), so the status is right without this route setting
+   * one by hand - and an outage never reaches that path at all.
    */
   beforeLoad: async ({ context }) => {
     const config = await context.queryClient.ensureQueryData(
       middlewareConfigQueryOptions(),
     )
 
+    const availability = passwordRecoveryAvailability(config)
+
+    // Not a 404: the route exists, the API could not say whether the flow does.
+    if (availability === 'unknown') throw new PasswordRecoveryUnknownError()
+
     // TanStack Router's own control-flow signal, like `redirect()`.
     // eslint-disable-next-line @typescript-eslint/only-throw-error
-    if (!hasPasswordRecovery(config)) throw notFound()
+    if (availability === 'disabled') throw notFound()
   },
   /**
    * The loader re-runs when the *mode* changes, and only then.

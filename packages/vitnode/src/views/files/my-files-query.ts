@@ -303,19 +303,45 @@ export const fetchMyFilesPageInBrowser: MyFilesPageFetcher = async params => {
 };
 
 /**
- * The root every cache entry for this list hangs off.
+ * The root every cache entry for one visitor's files hangs off.
  *
- * Exported so an invalidation can name the whole family - one delete makes every
- * page, sort and search of the visitor's own files stale, not just the one they
- * are looking at. TanStack Query matches keys by prefix, so this invalidates
- * exactly those and nothing else.
+ * A factory over the owner's id rather than the constant `["files", "me"]` it
+ * replaces, and the difference is a privacy one rather than a tidiness one.
+ *
+ * ## Why `"me"` was unsafe
+ *
+ * `"me"` is only stable for as long as "me" is. The browser's `QueryClient` is
+ * created once per document and outlives a sign-out, so one browser can hold two
+ * visitors in one session:
+ *
+ *     A signs in  -> /files      -> ["files","me",params] holds A's file names
+ *     A signs out
+ *     B signs in  -> /files      -> the loader asks for ["files","me",params]
+ *
+ * and that entry is already populated. With `refetchOnMount` and
+ * `refetchOnWindowFocus` both off in VitNode's client defaults, nothing would
+ * have refetched it, so B would read A's private data with no API request made
+ * at all - which is exactly why Hono cannot defend against it. There is no
+ * request for it to authorize.
+ *
+ * Keyed by owner the two visitors address different entries, B's is empty, the
+ * fetch happens, and the API answers it from B's own session cookie.
+ *
+ * ## The id is a cache address, never a claim
+ *
+ * Nothing about this reaches the network. {@link myFilesRequest} takes no owner
+ * and `GET /users/files` derives it from the session cookie, exactly as before -
+ * so a tampered id partitions a cache differently and authorizes nothing. Were
+ * it ever sent, this would stop being a cache key and become an access-control
+ * parameter, which is the one thing it must not be.
  */
-export const MY_FILES_QUERY_ROOT = ["files", "me"] as const;
+export const myFilesQueryRoot = (userId: number) =>
+  ["files", "user", userId] as const;
 
 /**
- * The cache entry one page of the list reads and writes.
+ * The cache entry one page of one visitor's list reads and writes.
  *
- * The normalised parameters, and only those. Everything that changes which rows
+ * The owner, then the normalised parameters. Everything that changes which rows
  * come back is in there - page, size, sort, search - and nothing that does not.
  *
  * The locale is deliberately absent. File names, folders, sizes and metadata are
@@ -327,23 +353,37 @@ export const MY_FILES_QUERY_ROOT = ["files", "me"] as const;
  * An object in a key is safe - Query hashes keys structurally rather than by
  * identity - which is exactly why the object has to be the *normalised* one.
  */
-export const myFilesQueryKey = (params: MyFilesParams) =>
-  [...MY_FILES_QUERY_ROOT, params] as const;
+export const myFilesQueryKey = ({
+  params,
+  userId,
+}: {
+  params: MyFilesParams;
+  userId: number;
+}) => [...myFilesQueryRoot(userId), params] as const;
 
 /**
  * The visitor's files, as the one query definition every caller shares.
  *
  * A route loader warms it before the component renders:
  *
- *     context.queryClient.ensureQueryData(myFilesQueryOptions({ params }))
+ *     context.queryClient.ensureQueryData(
+ *       myFilesQueryOptions({ params, userId }),
+ *     )
  *
  * and the component reads the very same options back:
  *
- *     const { data } = useQuery(myFilesQueryOptions({ params }))
+ *     const { data } = useQuery(myFilesQueryOptions({ params, userId }))
  *
  * Same key, same request, same status checking - so the loader's page is the
  * page the component renders, and a delete that invalidates
- * {@link MY_FILES_QUERY_ROOT} refetches through the identical contract.
+ * {@link myFilesQueryRoot} refetches through the identical contract.
+ *
+ * `userId` addresses the cache and nothing else - see {@link myFilesQueryRoot}.
+ * It is required rather than defaulted because there is no honest default: a
+ * fallback would be one shared entry again, which is the bug the parameter
+ * exists to close. Both callers take it from the one place that knows it, the
+ * `_authenticated` route context, so the loader and the component cannot drift
+ * onto two different partitions.
  *
  * `fetchPage` is the seam. It defaults to the browser's fetcher, which is what a
  * hydrated page wants; an app that also fetches during SSR passes one that can
@@ -368,13 +408,17 @@ export const myFilesQueryKey = (params: MyFilesParams) =>
 export const myFilesQueryOptions = ({
   fetchPage = fetchMyFilesPageInBrowser,
   params,
+  userId,
 }: {
   fetchPage?: MyFilesPageFetcher;
   params: MyFilesParams;
+  userId: number;
 }) =>
   queryOptions({
+    // `userId` is deliberately absent from the request: the owner comes from
+    // the session cookie, on the server, on every call.
     queryFn: async () => await fetchPage(params),
-    queryKey: myFilesQueryKey(params),
+    queryKey: myFilesQueryKey({ params, userId }),
     retry: false,
   });
 
