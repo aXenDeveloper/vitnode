@@ -361,8 +361,8 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/lib/auth/redirects.ts',
     'apps/web/src/lib/auth/screens.ts',
     'apps/web/src/lib/middleware-config.ts',
-    'apps/web/src/routes/_authenticated.tsx',
-    'apps/web/src/routes/_authenticated/account.tsx',
+    'apps/web/src/routes/_main/_authenticated.tsx',
+    'apps/web/src/routes/_main/_authenticated/account.tsx',
     'apps/web/src/routes/login.tsx',
     'apps/web/src/routes/login_.sso.$providerId.tsx',
     // Stage 7. `/files` renders the whole data table - eight columns, the
@@ -372,7 +372,7 @@ describe('the whole graph this app imports stays Next-free', () => {
     // `React.lazy`, so it is exactly the graph worth walking here.
     'apps/web/src/lib/files/my-files-route.ts',
     'apps/web/src/lib/files/my-files.ts',
-    'apps/web/src/routes/_authenticated/files.tsx',
+    'apps/web/src/routes/_main/_authenticated/files.tsx',
     'apps/web/src/server/my-files.server.ts',
     'apps/web/src/lib/i18n/client.ts',
     'apps/web/src/lib/i18n/query.ts',
@@ -383,9 +383,12 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/lib/search/search-request.ts',
     'apps/web/src/router.tsx',
     'apps/web/src/routes/__root.tsx',
-    'apps/web/src/routes/discover.tsx',
-    'apps/web/src/routes/index.tsx',
-    'apps/web/src/routes/search.tsx',
+    // Stage 8. The main shell, and with it the header and breadcrumb slots the
+    // pages under it render inside.
+    'apps/web/src/routes/_main.tsx',
+    'apps/web/src/routes/_main/discover.tsx',
+    'apps/web/src/routes/_main/index.tsx',
+    'apps/web/src/routes/_main/search.tsx',
     'apps/web/src/server/search-feed.server.ts',
     'apps/web/src/server/locale.server.ts',
     'apps/web/src/server/messages.server.ts',
@@ -443,7 +446,7 @@ describe('the whole graph this app imports stays Next-free', () => {
    * failure names the specifier rather than "something in this list".
    */
   describe('the /discover runtime graph reaches no Next.js', () => {
-    const DISCOVER = ['apps/web/src/routes/discover.tsx']
+    const DISCOVER = ['apps/web/src/routes/_main/discover.tsx']
 
     it('walks into the shared components the route renders', () => {
       // Without this the assertions below would pass on a graph that stopped at
@@ -504,7 +507,7 @@ describe('the whole graph this app imports stays Next-free', () => {
    * that reason until the controls became `SearchControlsContent`.
    */
   describe('the /search runtime graph reaches no Next.js', () => {
-    const SEARCH = ['apps/web/src/routes/search.tsx']
+    const SEARCH = ['apps/web/src/routes/_main/search.tsx']
 
     it('walks into the shared controls the route renders', () => {
       // Without this the assertions below would pass on a graph that stopped at
@@ -574,7 +577,7 @@ describe('the whole graph this app imports stays Next-free', () => {
    * was visible from the route file.
    */
   describe('the /files runtime graph reaches no Next.js', () => {
-    const FILES = ['apps/web/src/routes/_authenticated/files.tsx']
+    const FILES = ['apps/web/src/routes/_main/_authenticated/files.tsx']
 
     it('walks into the table and the dialogs the route renders', () => {
       // Without this the assertions below would pass on a graph that stopped at

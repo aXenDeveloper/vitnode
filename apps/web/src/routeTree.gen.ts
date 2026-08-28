@@ -9,28 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as MainRouteImport } from './routes/_main'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
-import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/files'
+import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as MainAuthenticatedRouteImport } from './routes/_main/_authenticated'
+import { Route as MainDiscoverRouteImport } from './routes/_main/discover'
+import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as MainAuthenticatedAccountRouteImport } from './routes/_main/_authenticated/account'
+import { Route as MainAuthenticatedFilesRouteImport } from './routes/_main/_authenticated/files'
 import { Route as LoginSsoProviderIdRouteImport } from './routes/login_.sso.$providerId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DiscoverRoute = DiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
+const MainRoute = MainRouteImport.update({
+  id: '/_main',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -38,25 +29,40 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SearchRoute = SearchRouteImport.update({
+const MainIndexRoute = MainIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainAuthenticatedRoute = MainAuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainDiscoverRoute = MainDiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainSearchRoute = MainSearchRouteImport.update({
   id: '/search',
   path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedFilesRoute = AuthenticatedFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => AuthenticatedRoute,
+  getParentRoute: () => MainRoute,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MainAuthenticatedAccountRoute =
+  MainAuthenticatedAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => MainAuthenticatedRoute,
+  } as any)
+const MainAuthenticatedFilesRoute = MainAuthenticatedFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => MainAuthenticatedRoute,
 } as any)
 const LoginSsoProviderIdRoute = LoginSsoProviderIdRouteImport.update({
   id: '/login_/sso/$providerId',
@@ -65,102 +71,87 @@ const LoginSsoProviderIdRoute = LoginSsoProviderIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/discover': typeof DiscoverRoute
+  '/': typeof MainIndexRoute
   '/login': typeof LoginRoute
-  '/search': typeof SearchRoute
-  '/account': typeof AuthenticatedAccountRoute
-  '/files': typeof AuthenticatedFilesRoute
+  '/discover': typeof MainDiscoverRoute
+  '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/account': typeof MainAuthenticatedAccountRoute
+  '/files': typeof MainAuthenticatedFilesRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
-  '/search': typeof SearchRoute
-  '/account': typeof AuthenticatedAccountRoute
-  '/files': typeof AuthenticatedFilesRoute
+  '/': typeof MainIndexRoute
+  '/discover': typeof MainDiscoverRoute
+  '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/account': typeof MainAuthenticatedAccountRoute
+  '/files': typeof MainAuthenticatedFilesRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/discover': typeof DiscoverRoute
+  '/_main': typeof MainRouteWithChildren
   '/login': typeof LoginRoute
-  '/search': typeof SearchRoute
-  '/_authenticated/account': typeof AuthenticatedAccountRoute
-  '/_authenticated/files': typeof AuthenticatedFilesRoute
+  '/_main/_authenticated': typeof MainAuthenticatedRouteWithChildren
+  '/_main/discover': typeof MainDiscoverRoute
+  '/_main/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/_main/': typeof MainIndexRoute
+  '/_main/_authenticated/account': typeof MainAuthenticatedAccountRoute
+  '/_main/_authenticated/files': typeof MainAuthenticatedFilesRoute
   '/login_/sso/$providerId': typeof LoginSsoProviderIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/discover'
     | '/login'
+    | '/discover'
     | '/search'
+    | '/api/$'
     | '/account'
     | '/files'
-    | '/api/$'
     | '/login/sso/$providerId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/login'
     | '/'
     | '/discover'
-    | '/login'
     | '/search'
+    | '/api/$'
     | '/account'
     | '/files'
-    | '/api/$'
     | '/login/sso/$providerId'
   id:
     | '__root__'
-    | '/'
-    | '/_authenticated'
-    | '/discover'
+    | '/_main'
     | '/login'
-    | '/search'
-    | '/_authenticated/account'
-    | '/_authenticated/files'
+    | '/_main/_authenticated'
+    | '/_main/discover'
+    | '/_main/search'
     | '/api/$'
+    | '/_main/'
+    | '/_main/_authenticated/account'
+    | '/_main/_authenticated/files'
     | '/login_/sso/$providerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  DiscoverRoute: typeof DiscoverRoute
+  MainRoute: typeof MainRouteWithChildren
   LoginRoute: typeof LoginRoute
-  SearchRoute: typeof SearchRoute
   ApiSplatRoute: typeof ApiSplatRoute
   LoginSsoProviderIdRoute: typeof LoginSsoProviderIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
+    '/_main': {
+      id: '/_main'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/discover': {
-      id: '/discover'
-      path: '/discover'
-      fullPath: '/discover'
-      preLoaderRoute: typeof DiscoverRouteImport
+      preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -170,26 +161,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/search': {
-      id: '/search'
+    '/_main/': {
+      id: '/_main/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof MainIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/_authenticated': {
+      id: '/_main/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MainAuthenticatedRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/discover': {
+      id: '/_main/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof MainDiscoverRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/search': {
+      id: '/_main/search'
       path: '/search'
       fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/account': {
-      id: '/_authenticated/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AuthenticatedAccountRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/files': {
-      id: '/_authenticated/files'
-      path: '/files'
-      fullPath: '/files'
-      preLoaderRoute: typeof AuthenticatedFilesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      preLoaderRoute: typeof MainSearchRouteImport
+      parentRoute: typeof MainRoute
     }
     '/api/$': {
       id: '/api/$'
@@ -197,6 +195,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/$'
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_main/_authenticated/account': {
+      id: '/_main/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof MainAuthenticatedAccountRouteImport
+      parentRoute: typeof MainAuthenticatedRoute
+    }
+    '/_main/_authenticated/files': {
+      id: '/_main/_authenticated/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof MainAuthenticatedFilesRouteImport
+      parentRoute: typeof MainAuthenticatedRoute
     }
     '/login_/sso/$providerId': {
       id: '/login_/sso/$providerId'
@@ -208,26 +220,38 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedRouteChildren {
-  AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
-  AuthenticatedFilesRoute: typeof AuthenticatedFilesRoute
+interface MainAuthenticatedRouteChildren {
+  MainAuthenticatedAccountRoute: typeof MainAuthenticatedAccountRoute
+  MainAuthenticatedFilesRoute: typeof MainAuthenticatedFilesRoute
 }
 
-const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAccountRoute: AuthenticatedAccountRoute,
-  AuthenticatedFilesRoute: AuthenticatedFilesRoute,
+const MainAuthenticatedRouteChildren: MainAuthenticatedRouteChildren = {
+  MainAuthenticatedAccountRoute: MainAuthenticatedAccountRoute,
+  MainAuthenticatedFilesRoute: MainAuthenticatedFilesRoute,
 }
 
-const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
-  AuthenticatedRouteChildren,
-)
+const MainAuthenticatedRouteWithChildren =
+  MainAuthenticatedRoute._addFileChildren(MainAuthenticatedRouteChildren)
+
+interface MainRouteChildren {
+  MainAuthenticatedRoute: typeof MainAuthenticatedRouteWithChildren
+  MainDiscoverRoute: typeof MainDiscoverRoute
+  MainSearchRoute: typeof MainSearchRoute
+  MainIndexRoute: typeof MainIndexRoute
+}
+
+const MainRouteChildren: MainRouteChildren = {
+  MainAuthenticatedRoute: MainAuthenticatedRouteWithChildren,
+  MainDiscoverRoute: MainDiscoverRoute,
+  MainSearchRoute: MainSearchRoute,
+  MainIndexRoute: MainIndexRoute,
+}
+
+const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  DiscoverRoute: DiscoverRoute,
+  MainRoute: MainRouteWithChildren,
   LoginRoute: LoginRoute,
-  SearchRoute: SearchRoute,
   ApiSplatRoute: ApiSplatRoute,
   LoginSsoProviderIdRoute: LoginSsoProviderIdRoute,
 }

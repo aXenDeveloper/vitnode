@@ -9,6 +9,7 @@ import { isTanStackOwnedPath } from './lib/migration-navigation'
 import { pluginRouteSpecs, withPluginRoutes } from './lib/plugin-routes'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
 import { pluginRouteModules } from './plugin-routes.gen'
+import { Route as mainShellRoute } from './routes/_main'
 import { routeTree as fileRouteTree } from './routeTree.gen'
 
 /**
@@ -22,10 +23,23 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
  * The plugin half comes from two generated files and is joined by route id. No
  * plugin page is copied into `src/routes`, no route path is written by hand, and
  * nothing here knows which plugins are installed - see `lib/plugin-routes.ts`.
+ *
+ * They mount under `_main` rather than under the root, which is the whole of
+ * what "a plugin route renders in the application shell" amounts to here: a
+ * plugin declares `area: "main"`, `_main` is the route that renders the main
+ * shell, and being a child of it is what gives `/example` the header, the
+ * breadcrumb area and the one `<main>` that `/discover` has. No new field, no
+ * per-route layout metadata, and no second copy of the shell - route
+ * composition, which the area declaration already described.
+ *
+ * `_main` is imported for its route object, and it is the same object the
+ * generated tree holds: `createFileRoute` produces one instance per module and
+ * `routeTree.gen.ts` mutates it in place.
  */
 const routeTree = withPluginRoutes(
   fileRouteTree,
   pluginRouteSpecs(pluginRouteManifest, pluginRouteModules),
+  mainShellRoute,
 )
 
 /**

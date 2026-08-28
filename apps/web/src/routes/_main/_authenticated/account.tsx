@@ -35,7 +35,7 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  *
  * Delete it when a real account page arrives.
  */
-export const Route = createFileRoute('/_authenticated/account')({
+export const Route = createFileRoute('/_main/_authenticated/account')({
   // No loader and no `RouteMessages`: everything this page renders comes from
   // `core.global`, which the root route already warms and provides.
   head: () => ({
@@ -58,7 +58,7 @@ function AccountRoute() {
   const signOut = useSignOutAction()
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">
           {auth.user.name}
@@ -98,6 +98,6 @@ function AccountRoute() {
           </Button>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

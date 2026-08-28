@@ -48,7 +48,7 @@ import { canAccessAuthenticatedRoute } from '#/lib/auth/shared'
  * decided on, from the same cache entry, so a page cannot disagree with the
  * guard that let it render.
  */
-export const Route = createFileRoute('/_authenticated')({
+export const Route = createFileRoute('/_main/_authenticated')({
   beforeLoad: async ({ context, location }) => {
     const auth = await ensureAuthState(context.queryClient)
 

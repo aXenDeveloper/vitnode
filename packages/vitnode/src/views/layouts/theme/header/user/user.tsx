@@ -1,38 +1,23 @@
-import { getTranslations } from "next-intl/server";
-
-import { buttonVariants } from "@/components/ui/button";
 import { getSessionApi } from "@/lib/api/get-session-api";
-import { Link } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
 
-import { AuthUserHeader } from "./auth/auth";
+import { NextUserHeader } from "./next-user-header";
 
+/**
+ * The user area of the main header, in the Next.js app.
+ *
+ * A Server Component whose whole job is the session: it is `await`ed here, once,
+ * and handed down as data. `getSessionApi()` is wrapped in React's `cache()`, so
+ * the layout, this header and the page share one round trip - and there is
+ * deliberately no second read further down, which is what the old
+ * `AuthUserHeader` did.
+ *
+ * Everything rendered is {@link NextUserHeader}'s, and everything *visible* is
+ * the shared `UserHeaderContent`'s. `HeaderLayout` wraps this in a `<Suspense>`
+ * whose fallback is that component's own `UserHeaderSkeleton`, so the header
+ * reserves the right width before the session arrives.
+ */
 export const UserHeader = async () => {
-  const [t, session] = await Promise.all([
-    getTranslations("core.global"),
-    getSessionApi(),
-  ]);
+  const { user } = await getSessionApi();
 
-  if (!session.user) {
-    return (
-      <>
-        <Link
-          className={cn(
-            buttonVariants({
-              variant: "ghost",
-            }),
-          )}
-          href="/login"
-        >
-          {t("login")}
-        </Link>
-
-        <Link className={cn(buttonVariants())} href="/register">
-          {t("register")}
-        </Link>
-      </>
-    );
-  }
-
-  return <AuthUserHeader />;
+  return <NextUserHeader user={user} />;
 };

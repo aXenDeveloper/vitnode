@@ -12,9 +12,17 @@
  * It exports a default component because that is how every VitNode plugin page
  * already exports itself, and because a default export is the one name a
  * generated registry can rely on without being told.
+ *
+ * No `<main>`, and that is part of the contract rather than a style choice. A
+ * plugin route declares `area: "main"`, which puts it inside the application
+ * shell - and the shell renders the document's one `<main>` landmark. A page
+ * that renders its own produces `<main><main>`: invalid HTML, and two "main"
+ * landmarks for a screen reader to choose between. A plugin page owns its
+ * container - its width, its padding, its vertical rhythm - and nothing above
+ * it.
  */
 const ExamplePage = () => (
-  <main className="container mx-auto flex max-w-2xl flex-col gap-4 p-4">
+  <div className="container mx-auto flex max-w-2xl flex-col gap-4 p-4">
     <h1 className="text-2xl font-semibold tracking-tight text-balance">
       Example plugin route
     </h1>
@@ -25,7 +33,7 @@ const ExamplePage = () => (
       generated a literal import for it from the plugin&apos;s route manifest,
       and the bundler put it in its own chunk.
     </p>
-  </main>
+  </div>
 );
 
 export default ExamplePage;

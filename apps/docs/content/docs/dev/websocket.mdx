@@ -367,3 +367,32 @@ export const NotificationListener = () => {
   one are all built in. A user only receives notifications while signed in - a
   guest connection has no one to deliver to.
 </Callout>
+
+## Follow sign-in and sign-out
+
+A connection learns who it belongs to exactly once, during its opening
+handshake, from the sign-in cookie the browser sent with it. Nothing afterwards
+can change the server's mind - so when someone signs in or out, the socket has
+to be re-opened to say hello again as the new person.
+
+`WebSocketAuthSync` does that for you, and it is already mounted in the default
+layout. You only need it if you build your own shell:
+
+```tsx title="your layout"
+import { WebSocketAuthSync } from "@vitnode/core/views/layouts/theme/web-socket-auth-sync";
+
+// `userId` is the signed-in user's id, or `null` for a guest.
+<WebSocketAuthSync userId={userId} />;
+```
+
+It renders nothing and holds no state. Hand it the id, and it re-opens the
+shared connection whenever that id changes - guest to user, user to guest, or
+one account to another.
+
+<Callout type="info">
+  If your app reads the session in the browser rather than on the server, pass
+  `undefined` until you actually know the answer. `undefined` means "still
+  asking" and is left alone; `null` means "definitely nobody" and counts as a
+  sign-out. Collapsing the two would re-open the connection on every page load,
+  which the socket would find quite rude.
+</Callout>

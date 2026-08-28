@@ -17,6 +17,10 @@ const ENV_FILE = [
 const TOUCHED = [
   'CRON_SECRET',
   'NEXT_PUBLIC_API_URL',
+  // Published to the client bundle like the two below, so it has to be cleared
+  // like them: left alone, a developer's own `.env` decides whether the define
+  // map this file asserts on says `undefined` or their legacy origin.
+  'NEXT_PUBLIC_LEGACY_WEB_URL',
   'NEXT_PUBLIC_UNLISTED',
   'NEXT_PUBLIC_WEB_URL',
   'POSTGRES_URL',

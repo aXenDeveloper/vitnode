@@ -2,7 +2,7 @@ import { formatPageTitle, titleTemplate } from '@vitnode/core/lib/metadata'
 import { describe, expect, it } from 'vitest'
 
 import { Route as RootRoute } from '#/routes/__root'
-import { Route as IndexRoute } from '#/routes/index'
+import { Route as IndexRoute } from '#/routes/_main/index'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 type HeadTag = Record<string, string | undefined>

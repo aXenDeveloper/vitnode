@@ -83,7 +83,7 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  */
 const FILES_NAMESPACES = ['core.files', 'core.global'] as const
 
-export const Route = createFileRoute('/_authenticated/files')({
+export const Route = createFileRoute('/_main/_authenticated/files')({
   component: MyFilesRoute,
   /**
    * The request, as the only thing the loader re-runs for.
@@ -230,7 +230,7 @@ function MyFilesRoute() {
 
   return (
     <RouteMessages namespaces={FILES_NAMESPACES}>
-      <main className="container mx-auto flex flex-col gap-6 p-4">
+      <div className="container mx-auto flex flex-col gap-6 p-4">
         <HeaderContent desc={description} h1={title} />
 
         <DataTableNavigationProvider value={navigation}>
@@ -255,7 +255,7 @@ function MyFilesRoute() {
             onDeleteFiles={onDeleteFiles}
           />
         </DataTableNavigationProvider>
-      </main>
+      </div>
     </RouteMessages>
   )
 }

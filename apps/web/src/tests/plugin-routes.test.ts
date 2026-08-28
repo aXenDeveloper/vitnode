@@ -343,6 +343,9 @@ describe('fileRoutePaths', () => {
   })
 })
 
+/** The pathless route that renders the main application shell. */
+const MAIN_SHELL_ROUTE_ID = '/_main'
+
 describe("the app's real route tree", () => {
   /**
    * The exit criterion, asserted against what the app actually ships rather than
@@ -359,7 +362,27 @@ describe("the app's real route tree", () => {
 
     expect(
       router.matchRoutes('/example', undefined).map((match) => match.routeId),
-    ).toContain(`/${PLUGIN_ROUTES_ROUTE_ID}/example`)
+    ).toContain(`${MAIN_SHELL_ROUTE_ID}/${PLUGIN_ROUTES_ROUTE_ID}/example`)
+  })
+
+  /**
+   * Stage 8. A plugin route declares `area: "main"`, and this is what that
+   * declaration buys: the page renders inside the same shell `/discover` does -
+   * the header, the breadcrumb area and the one `<main>` - because the plugin
+   * container is a child of the `_main` route rather than of the root.
+   *
+   * Asserted as route *structure*, which is what decides it. Nothing renders
+   * here; the parent chain is the whole claim.
+   */
+  it('renders the example plugin’s page inside the main shell', () => {
+    const matched = getRouter()
+      .matchRoutes('/example', undefined)
+      .map((match) => match.routeId)
+
+    expect(matched).toContain(MAIN_SHELL_ROUTE_ID)
+    expect(matched.indexOf(MAIN_SHELL_ROUTE_ID)).toBeLessThan(
+      matched.findIndex((id) => id.endsWith('/example')),
+    )
   })
 
   /**

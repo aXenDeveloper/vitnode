@@ -429,15 +429,16 @@ describe('`/files` is this app’s route now', () => {
     expect(isTanStackOwnedPath(router, '/files/12')).toBe(false)
   })
 
-  it('sits under the pathless guard rather than at the top of the tree', () => {
+  it('sits under the main shell and the pathless guard, not at the top of the tree', () => {
     const matched = router.matchRoutes('/files', undefined) as {
       routeId: string
     }[]
 
     expect(matched.map((match) => match.routeId)).toEqual([
       '__root__',
-      '/_authenticated',
-      '/_authenticated/files',
+      '/_main',
+      '/_main/_authenticated',
+      '/_main/_authenticated/files',
     ])
   })
 })

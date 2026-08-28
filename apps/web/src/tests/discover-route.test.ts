@@ -119,8 +119,17 @@ const createSearchApi = () => {
     return c.json(answerFeed(url.searchParams))
   })
 
+  // The main shell's header reads the session, so a document render asks for it
+  // whether or not the page under the header cares. Answered as a guest, which
+  // is what `/discover` is rendered as here - and answered at all, because a
+  // fixture that 404s it is modelling an API outage rather than a page load, and
+  // the header would render its placeholder for the whole document.
+  const core = new Hono()
+  core.get('/users/session', (c) => c.json({ ai: { models: [] }, user: null }))
+
   const app = new Hono().basePath('/api')
   app.route(`/${PLUGIN_ID}`, plugin)
+  app.route('/@vitnode/core', core)
 
   return app
 }
@@ -144,12 +153,33 @@ const h1Of = (html: string): string | undefined =>
 const titleOf = (html: string): string | undefined =>
   /<title[^>]*>([^<]*)</.exec(html)?.[1]
 
+/** Everything before `</head>`, for assertions about document metadata. */
+const headOf = (html: string): string => html.split('</head>')[0]
+
 const metaOf = (html: string, name: string): string | undefined =>
   new RegExp(`<meta content="([^"]*)" name="${name}"`).exec(html)?.[1]
 
-/** Every internal href the document rendered, in order. */
+/**
+ * The path of every href the document rendered, in order.
+ *
+ * Paths rather than whole hrefs, because what the assertions below are about is
+ * the locale prefix, and that is a fact about the path. A search result points
+ * at `/blog/post-30`, which the Next.js app still serves - so with
+ * `NEXT_PUBLIC_LEGACY_WEB_URL` configured `MigrationLink` renders it absolute,
+ * against the legacy origin, and without it renders it relative. Both are
+ * correct, the prefix rule is the same either way, and reading whole hrefs made
+ * this file's result depend on whether the developer running it had that
+ * variable set.
+ */
 const hrefsOf = (html: string): string[] =>
-  [...html.matchAll(/href="(\/[^"]*)"/g)].map(([, href]) => href)
+  [...html.matchAll(/href="([^"]*)"/g)].flatMap(([, href]) => {
+    try {
+      return [new URL(href, 'https://vitnode.invalid').pathname]
+    } catch {
+      // Not a URL at all - `href="#"` and friends. Nothing to say about a path.
+      return []
+    }
+  })
 
 /**
  * Runs `handler` inside a request the way the server runtime does, so the
@@ -205,7 +235,7 @@ describe('one route serves both public URLs', () => {
       id.includes('discover'),
     )
 
-    expect(ids).toEqual(['/discover'])
+    expect(ids).toEqual(['/_main/discover'])
   })
 
   it('answers both URLs with the page rather than a 404', async () => {
@@ -338,10 +368,16 @@ describe('the metadata is the request’s language', () => {
     )
   })
 
-  it('leaves one title in the document, not the shell’s as well', async () => {
+  it('leaves one title in the head, not the shell’s as well', async () => {
     const { html } = await renderDiscover('/discover')
 
-    expect(html.match(/<title/g)).toHaveLength(1)
+    // Counted in the head rather than the whole document, because the document
+    // legitimately holds another one: the header's logo is an inline `<svg>`,
+    // and `<title>` is how an inline SVG gets an accessible name. What this
+    // guards against is the route's title and the root's default *both* being
+    // emitted - the failure `formatPageTitle` exists to prevent - which is a
+    // question about the head.
+    expect(headOf(html).match(/<title/g)).toHaveLength(1)
   })
 
   it('asks to be indexed and followed, in both languages', async () => {
@@ -536,7 +572,7 @@ describe('switching language stays on the page', () => {
     // Internally it never moved: `/discover` and `/pl/discover` are one route,
     // which is why the switch is an `invalidate` rather than a navigation.
     expect(router.state.location.pathname).toBe('/discover')
-    expect(router.state.matches.at(-1)?.routeId).toBe('/discover')
+    expect(router.state.matches.at(-1)?.routeId).toBe('/_main/discover')
   })
 
   it('brings the loader context in step with the new URL', async () => {

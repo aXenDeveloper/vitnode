@@ -64,7 +64,7 @@ const DiscoverFeedLink = ({
   </MigrationLink>
 )
 
-export const Route = createFileRoute('/discover')({
+export const Route = createFileRoute('/_main/discover')({
   component: DiscoverRoute,
   /**
    * Both things this page needs, fetched in parallel before it renders.
@@ -156,7 +156,7 @@ function DiscoverRoute() {
 
   return (
     <RouteMessages namespaces={DISCOVER_NAMESPACES}>
-      <main className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
+      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
         <HeaderContent desc={description} h1={title} />
 
         {/*
@@ -171,7 +171,7 @@ function DiscoverRoute() {
           queryOptions={discoverFeedQueryOptions({ locale })}
           variant="timeline"
         />
-      </main>
+      </div>
     </RouteMessages>
   )
 }

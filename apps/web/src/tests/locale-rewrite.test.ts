@@ -45,7 +45,7 @@ describe('one route tree, two public URL shapes', () => {
     expect(router.latestLocation.publicHref).toBe(publicHref)
     expect(
       router.matchRoutes(router.latestLocation.pathname).at(-1)?.routeId,
-    ).toBe('/')
+    ).toBe('/_main/')
     expect(router.state.location.pathname).toBe(pathname)
     // The locale the rest of the app reads, from the same location.
     expect(

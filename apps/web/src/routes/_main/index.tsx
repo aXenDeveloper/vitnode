@@ -24,7 +24,7 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  *
  * It is a scaffold. Stage 4 replaces it with the real homepage.
  */
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_main/')({
   component: Home,
   // Per-route metadata, through the same title rule Next.js applies through
   // `title.template`: "Stage 3 - VitNode".
@@ -68,7 +68,7 @@ function Home() {
   const { isFetching } = useQuery(intlQueryOptions({ locale }))
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">
           {vitNodeShellConfig.metadata.title} on TanStack Start
@@ -144,6 +144,6 @@ function Home() {
           </TooltipWithContent>
         </Row>
       </section>
-    </main>
+    </div>
   )
 }

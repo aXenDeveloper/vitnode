@@ -152,3 +152,30 @@ export const invalidateSession = async (
   queryClient: QueryClient,
 ): Promise<void> =>
   await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+
+/**
+ * Fill the session entry without letting a failed read take the page down.
+ *
+ * What a layout loader calls so the header renders the visitor on the *first*
+ * paint. `ensureAuthState` is the wrong tool for that job in one specific way:
+ * it rejects when the session cannot be read, which is exactly right for a guard
+ * - an outage must not sign anybody out - and exactly wrong for a shell, where
+ * the same rejection would replace every page on the site with an error screen
+ * because the header could not name the visitor.
+ *
+ * `prefetchQuery` is the difference: same query definition, same key, same single
+ * in-flight request, and a failure is recorded in the cache entry instead of
+ * thrown. So the shell renders, the SSR pass dehydrates whatever was learned, and
+ * the header reads it back through `useQuery` - `data` when the read worked,
+ * `isError` when it did not, and `userHeaderState` decides what that looks like.
+ *
+ * Deliberately not a second query. Anything that guards a route still goes
+ * through {@link ensureAuthState}, and both reach the one entry this module owns
+ * - so a page under `_authenticated` and the header above it cannot disagree
+ * about who is signed in.
+ */
+export const prefetchSession = async (
+  queryClient: QueryClient,
+): Promise<void> => {
+  await queryClient.prefetchQuery(sessionQueryOptions())
+}

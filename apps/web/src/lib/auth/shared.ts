@@ -31,9 +31,14 @@ import type { SessionApi } from '#/lib/session'
  * role`). So there is no moderator authorization to model yet, and this state
  * exposes no `isModerator` flag: a guard written against one would read as
  * enforcement while being a constant, and would silently start granting access
- * the day the API begins answering `true`. The field stays reachable as
- * `auth.user.isModerator` for the shared header, which uses it to decide whether
- * to draw a link - see `views/layouts/theme/header/user/auth/client.tsx`.
+ * the day the API begins answering `true`.
+ *
+ * Nothing renders it either, as of Stage 8. The user menu used to draw a
+ * `/mod_cp` link behind that flag, pointing at a page neither application
+ * serves; `userHeaderMenu` in
+ * `views/layouts/theme/header/user/user-header-model.ts` branches on `isAdmin`
+ * alone. The field stays reachable as `auth.user.isModerator` for whoever
+ * implements the role.
  */
 
 /**

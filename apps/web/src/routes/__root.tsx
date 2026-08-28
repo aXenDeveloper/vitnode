@@ -16,6 +16,7 @@ import { VitNodeWebSocketProvider } from '@vitnode/core/ws/provider'
 import { IntlProvider as NextIntlProvider } from 'next-intl'
 import { IntlProvider } from 'use-intl'
 
+import { RealtimeListeners } from '#/components/realtime-listeners'
 import { publicPathnameOf, resolveLocale, useLocale } from '#/lib/i18n/client'
 import { intlQueryOptions } from '#/lib/i18n/query'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
@@ -122,6 +123,15 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
  *
  * The QueryClient is deliberately absent: the router owns it and the SSR
  * integration mounts its provider above this tree.
+ *
+ * ## Why `RealtimeListeners` is here rather than in the shell
+ *
+ * It is the one non-provider in this tree, and it is here for the same reason
+ * every provider is: its lifetime is the WebSocket connection's, not any route's.
+ * The main shell is not mounted on `/login`, so a sync that lived there would
+ * miss the sign-in that happens on it - see the long note in
+ * `#/components/realtime-listeners`, which owns that argument. Inside the
+ * provider, because that is the context it reads.
  */
 function RootComponent() {
   const locale = useLocale()
@@ -137,6 +147,7 @@ function RootComponent() {
       <NextIntlProvider {...intlProps}>
         <VitNodeProviders config={{ debug, locales: i18n.locales, theme }}>
           <VitNodeWebSocketProvider>
+            <RealtimeListeners />
             <Outlet />
           </VitNodeWebSocketProvider>
         </VitNodeProviders>

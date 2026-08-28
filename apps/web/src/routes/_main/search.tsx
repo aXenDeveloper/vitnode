@@ -82,7 +82,7 @@ const SearchFeedLink = ({ children, className, href }: SearchFeedLinkProps) => (
   </MigrationLink>
 )
 
-export const Route = createFileRoute('/search')({
+export const Route = createFileRoute('/_main/search')({
   component: SearchRoute,
   /**
    * The loader re-runs when the term in the URL changes, and only then.
@@ -182,7 +182,7 @@ function SearchRoute() {
 
   return (
     <RouteMessages namespaces={SEARCH_NAMESPACES}>
-      <main className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
+      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
         <HeaderContent desc={description} h1={title} />
 
         {/*
@@ -207,7 +207,7 @@ function SearchRoute() {
           LinkComponent={SearchFeedLink}
           variant="timeline"
         />
-      </main>
+      </div>
     </RouteMessages>
   )
 }

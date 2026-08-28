@@ -43,11 +43,11 @@ import {
  *
  * Pathless, so it contributes no URL segment: a plugin route at `/example` is
  * served at `/example`, not at `/_plugins/example`. It earns its place by making
- * the composition below **idempotent** - the plugin subtree is one child of the
- * root, identifiable by this id, so re-running the composition replaces it
- * instead of appending a second copy of every route. That is not a theoretical
- * concern: in dev, Vite re-evaluates this module without re-evaluating
- * `routeTree.gen.ts`, and the root route it mutates is the same object.
+ * the composition below **idempotent** - the plugin subtree is one child of its
+ * mount point, identifiable by this id, so re-running the composition replaces
+ * it instead of appending a second copy of every route. That is not a
+ * theoretical concern: in dev, Vite re-evaluates this module without
+ * re-evaluating `routeTree.gen.ts`, and the route it mutates is the same object.
  *
  * It also gives the whole plugin subtree one name in the router devtools, and
  * one place for a future stage to hang something every plugin page needs.
@@ -241,27 +241,43 @@ const assertNoAppCollision = (
  * Mounts the plugin routes on a route tree, and hands the same tree back.
  *
  * `addChildren` **replaces** a route's children and mutates the route in place,
- * so the plugin subtree is rebuilt from the root's current children with any
- * previous copy of itself removed. Calling this twice on one tree is therefore
- * the same as calling it once, which is what makes it safe in a dev server that
- * re-evaluates this module while `routeTree.gen.ts` stays cached.
+ * so the plugin subtree is rebuilt from the mount point's current children with
+ * any previous copy of itself removed. Calling this twice on one tree is
+ * therefore the same as calling it once, which is what makes it safe in a dev
+ * server that re-evaluates this module while `routeTree.gen.ts` stays cached.
  *
  * The route's component is a `lazyRouteComponent` over the registry's loader,
  * which is the supported way to code-split a code-based route: the plugin's page
  * gets its own Rollup chunk, stays out of the initial bundle, and the router
  * awaits `component.preload()` before it renders the match - so SSR and
  * hydration both have the module in hand rather than suspending on it.
+ *
+ * ## `mountUnder`
+ *
+ * Which route the subtree hangs from, defaulting to the tree's root - and the
+ * only reason it is a parameter is the application shell. Every plugin route
+ * declares `area: "main"` (see `@vitnode/core/routing`), which is a statement
+ * about *layout*: this page belongs on the public site, with the header and the
+ * breadcrumb area a page of the site has. In a router, a layout is a parent -
+ * so honouring that declaration is choosing a parent, and `src/router.tsx`
+ * passes the `_main` route.
+ *
+ * Nothing about the path changes: `_main` is pathless, so `/example` stays
+ * `/example`. And the collision check below still walks the whole tree from its
+ * root, because what a plugin route may not shadow is *any* URL the app answers,
+ * wherever in the tree it was declared.
  */
 export const withPluginRoutes = <TRouteTree extends AnyRoute>(
   routeTree: TRouteTree,
   specs: PluginRouteSpec[],
+  mountUnder: AnyRoute = routeTree,
 ): TRouteTree => {
   if (specs.length === 0) return routeTree
 
   assertNoAppCollision(specs, fileRoutePaths(routeTree))
 
   const container = createRoute({
-    getParentRoute: () => routeTree,
+    getParentRoute: () => mountUnder,
     id: PLUGIN_ROUTES_ROUTE_ID,
   })
 
@@ -277,11 +293,11 @@ export const withPluginRoutes = <TRouteTree extends AnyRoute>(
     ),
   )
 
-  const siblings: AnyRoute[] = (routeTree.children ?? []).filter(
+  const siblings: AnyRoute[] = (mountUnder.children ?? []).filter(
     (child: AnyRoute) => declaredOptions(child).id !== PLUGIN_ROUTES_ROUTE_ID,
   )
 
-  routeTree.addChildren([...siblings, container])
+  mountUnder.addChildren([...siblings, container])
 
   return routeTree
 }

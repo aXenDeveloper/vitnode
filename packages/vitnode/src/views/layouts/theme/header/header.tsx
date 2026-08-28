@@ -4,58 +4,56 @@ import React from "react";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { LanguageSwitcher } from "@/components/switchers/langs/language-switcher";
-import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
-import { buttonVariants } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
 
+import { HEADER_NAV_MESSAGE_KEYS, headerNavItems } from "./header-nav";
+import { NextHeaderContent } from "./header-next";
 import { UserHeader } from "./user/user";
+import { UserHeaderSkeleton } from "./user/user-header-content";
 
+/**
+ * The main header on Next.js.
+ *
+ * The markup moved to {@link HeaderLayoutContent}, which `apps/web` renders too.
+ * What is left here is the half only a Next.js request can produce:
+ *
+ * - **The nav labels**, through `getTranslations`. Resolved on the server, so
+ *   `core.search` never has to be shipped to the client provider for the sake of
+ *   two words - which is why the nav is passed as data rather than translated
+ *   inside the shared header.
+ * - **The user slot**, an async Server Component streaming inside its own
+ *   `<Suspense>`, exactly as before. The fallback is the shared header's own
+ *   skeleton, so the space it reserves is the size of what replaces it.
+ * - **The language switcher**, or nothing at all when the deployment serves one
+ *   language.
+ */
 export const HeaderLayout = async ({
   logo,
-  className,
   vitNodeConfig,
   ...props
-}: React.ComponentProps<"header"> & {
+}: Omit<React.ComponentProps<"header">, "children"> & {
   logo: React.ReactNode;
   vitNodeConfig: VitNodeConfig;
 }) => {
   const t = await getTranslations("core.search");
 
   return (
-    <header
-      className={cn("sticky top-0 z-20 w-full sm:top-2 sm:mb-2", className)}
+    <NextHeaderContent
       {...props}
-    >
-      <div className="dark:bg-background/75 bg-card/75 container mx-auto flex h-14 items-center border-b px-4 py-2 backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
-        <Link href="/">{logo}</Link>
-
-        <nav className="ms-4 hidden items-center gap-1 sm:flex">
-          <Link
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-            href="/discover"
-          >
-            {t("nav.discover")}
-          </Link>
-          <Link
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-            href="/search"
-          >
-            {t("nav.search")}
-          </Link>
-        </nav>
-
-        <div className="ml-auto flex items-center gap-2">
-          {vitNodeConfig.i18n.locales.length > 1 && (
-            <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
-          )}
-          <ThemeSwitcher />
-          <React.Suspense fallback={<Skeleton className="h-9 w-32" />}>
-            <UserHeader />
-          </React.Suspense>
-        </div>
-      </div>
-    </header>
+      languageSwitcher={
+        vitNodeConfig.i18n.locales.length > 1 ? (
+          <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+        ) : null
+      }
+      logo={logo}
+      navigation={headerNavItems({
+        discover: t(HEADER_NAV_MESSAGE_KEYS.discover),
+        search: t(HEADER_NAV_MESSAGE_KEYS.search),
+      })}
+      user={
+        <React.Suspense fallback={<UserHeaderSkeleton />}>
+          <UserHeader />
+        </React.Suspense>
+      }
+    />
   );
 };
