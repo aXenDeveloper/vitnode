@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@vitnode/core/components/ui/button'
 import { formatPageTitle } from '@vitnode/core/lib/metadata'
 import { useTranslations } from 'use-intl'
@@ -55,7 +55,6 @@ function AccountRoute() {
    */
   const { auth } = Route.useRouteContext()
   const t = useTranslations('core.global')
-  const router = useRouter()
   const signOut = useSignOutAction()
 
   return (
@@ -89,8 +88,9 @@ function AccountRoute() {
 
           <Button
             onClick={async () => {
+              // No `router.invalidate()` here: `useSignOutAction` already does
+              // it, and the guard above is what notices.
               await signOut()
-              await router.invalidate()
             }}
             variant="outline"
           >

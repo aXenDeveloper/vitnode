@@ -79,6 +79,21 @@ export const sessionQueryOptions = () =>
  * `redirect()` here on purpose: where a blocked visitor is sent is a property of
  * the route that blocked them, so it belongs in the route tree - which is also
  * the only layer that should be importing the router.
+ *
+ * ## It resolves only when the session is actually known
+ *
+ * An {@link AuthState} is returned when - and only when - the session query
+ * succeeded. `getSession` rejects if the session could not be read at all (a
+ * 429, a 500, an unreachable API), so `ensureQueryData` rejects and so does
+ * this. That is deliberate and it is the whole point of the contract:
+ * `authStateFromSession` describes two *known* states, and there is no third
+ * value for "we could not find out".
+ *
+ * A caller must therefore not treat a rejection as "signed out". Only
+ * `auth.isAuthenticated === false` means that. A rejection propagating out of a
+ * `beforeLoad` is an ordinary route error and takes the router's normal error
+ * path, which is what leaves a signed-in visitor on the page they asked for
+ * instead of bouncing them to the login form during an outage.
  */
 export const ensureAuthState = async (
   queryClient: QueryClient,

@@ -5,7 +5,7 @@ import type { PluginRoute } from '@vitnode/core/routing'
 import { createRootRoute, createRoute } from '@tanstack/react-router'
 import { describe, expect, it } from 'vitest'
 
-import { isTanStackOwnedPath } from '#/components/migration-link'
+import { isTanStackOwnedPath } from '#/lib/migration-navigation'
 import {
   assertPluginRouteModule,
   fileRoutePaths,

@@ -23,6 +23,15 @@ import { canAccessAuthenticatedRoute } from '#/lib/auth/shared'
  * visible flicker and, on the server, protected markup already written into the
  * stream.
  *
+ * ## A failed session read is not a signed-out visitor
+ *
+ * `ensureAuthState` rejects when the session could not be read - a rate limit, a
+ * 500, an API that is not listening - and that rejection is deliberately left to
+ * propagate. Only `canAccessAuthenticatedRoute` answering `false`, on a session
+ * the API actually returned, sends anybody to the login page. Catching the
+ * rejection and redirecting would sign a visitor out because of an outage, which
+ * is precisely the bug this shape exists to prevent.
+ *
  * ## What it is not
  *
  * A navigation guard, and only that. Every private read is authorized by Hono

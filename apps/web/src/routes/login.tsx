@@ -13,16 +13,17 @@ import { MigrationLink } from '#/components/migration-link'
 import { RouteMessages } from '#/components/route-messages'
 import { startSsoAction, useSignInAction } from '#/lib/auth/actions'
 import { ensureAuthState } from '#/lib/auth/query'
-import {
-  parseInternalDestination,
-  postAuthDestination,
-} from '#/lib/auth/redirects'
+import { postAuthDestination } from '#/lib/auth/redirects'
 import { canAccessGuestRoute } from '#/lib/auth/shared'
 import { intlQueryOptions } from '#/lib/i18n/query'
 import {
   middlewareConfigQueryOptions,
   ssoProvidersOf,
 } from '#/lib/middleware-config'
+import {
+  migrationNavigateOptions,
+  resolveMigrationDestination,
+} from '#/lib/migration-navigation'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 /**
@@ -107,24 +108,54 @@ export const Route = createFileRoute('/login')({
    * Guest-only, decided before anything renders.
    *
    * A signed-in visitor never sees the form - not for a frame - because the
-   * decision happens in `beforeLoad` rather than in the component. `redirect`
-   * with `to`/`search` rather than `href`: a redirect carrying `href` is used
-   * verbatim and never reaches `buildLocation`, so it would skip the locale
-   * rewrite and drop a Polish visitor on the English page.
+   * decision happens in `beforeLoad` rather than in the component.
    *
-   * `ensureAuthState` reads the one canonical session entry, so a guard that
-   * runs on hover (`defaultPreload: 'intent'`) shares its request with the one
-   * the navigation itself makes, and cannot create or end a session.
+   * ## Where they are sent, and how
+   *
+   * `?returnTo=` names wherever they were heading, and during the migration most
+   * of those places are still the Next.js app's. So the destination goes through
+   * the same rule `MigrationLink` applies, and produces one of two redirects:
+   *
+   *     owned      redirect({ to, search, hash })   client-side, in-app
+   *     not owned  redirect({ href, reloadDocument }) full document, legacy app
+   *
+   * Both work in both environments, which is the reason it is expressed as
+   * redirect *options* rather than as a navigation: on the server the router
+   * turns either into an HTTP redirect - to a path, or to the legacy public URL -
+   * and in the browser into a client navigation or a document load. Nothing here
+   * touches `window`, which a `beforeLoad` running during SSR does not have.
+   *
+   * **`to` rather than `href` for the owned branch.** A redirect carrying `href`
+   * is used verbatim by `Router.resolveRedirect` - it never reaches
+   * `buildLocation`, so it would skip the locale rewrite and drop a Polish
+   * visitor on the English page. The legacy branch wants exactly that verbatim
+   * behaviour, and gets the locale from `buildLegacyHref` instead.
+   *
+   * ## A failed session read is not a guest
+   *
+   * `ensureAuthState` rejects when the session could not be read at all, and
+   * that rejection propagates: only a session the API actually answered can send
+   * anybody anywhere. It reads the one canonical entry, so a guard that runs on
+   * hover (`defaultPreload: 'intent'`) shares its request with the one the
+   * navigation itself makes, and cannot create or end a session.
    */
   beforeLoad: async ({ context, search }) => {
     const auth = await ensureAuthState(context.queryClient)
 
     if (!canAccessGuestRoute(auth)) {
+      const href = postAuthDestination(search.returnTo)
+
       // TanStack Router's own control-flow signal - see the note in
       // `routes/_authenticated.tsx`.
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect(
-        parseInternalDestination(postAuthDestination(search.returnTo)),
+        migrationNavigateOptions(
+          resolveMigrationDestination({
+            href,
+            isOwned: context.ownsPath(href),
+            locale: context.locale,
+          }),
+        ),
       )
     }
   },

@@ -5,6 +5,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import { createVitNodeQueryClient } from '@vitnode/core/lib/query-client'
 
 import { createLocaleRewrite } from './lib/i18n/client'
+import { isTanStackOwnedPath } from './lib/migration-navigation'
 import { pluginRouteSpecs, withPluginRoutes } from './lib/plugin-routes'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
 import { pluginRouteModules } from './plugin-routes.gen'
@@ -67,7 +68,26 @@ export function getRouter() {
   const holder: { current?: AnyRouter } = {}
 
   const router = createTanStackRouter({
-    context: { queryClient },
+    context: {
+      /**
+       * The route tree asked about itself, for the code that cannot ask
+       * directly.
+       *
+       * `beforeLoad` receives no router, and the login guard needs the same
+       * answer `MigrationLink` gets: is this destination one this app serves, or
+       * one the Next.js app still does? Handing the question through the context
+       * keeps the route tree as the single source of truth - there is still no
+       * list of migrated routes anywhere - and it is one boolean, not a
+       * navigation layer.
+       *
+       * `holder` again, for the same reason `rewrite` uses it: the context is
+       * built before the router exists, and this is only ever called from a
+       * `beforeLoad`, which is long afterwards.
+       */
+      ownsPath: (href: string) =>
+        holder.current ? isTanStackOwnedPath(holder.current, href) : false,
+      queryClient,
+    },
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
     rewrite: createLocaleRewrite(() => holder.current),

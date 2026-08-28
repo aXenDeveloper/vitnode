@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   completeSsoResultFromStatus,
   isProviderRedirectUrl,
+  isUsableSessionStatus,
   parseSsoCallback,
   providerIdSchema,
   shouldSaveApiCookies,
@@ -294,4 +295,25 @@ describe('SSO callback input normalisation', () => {
 
     expect(ssoCallbackInputSchema.safeParse(parsed.params).success).toBe(true)
   })
+})
+
+/**
+ * The distinction the auth stack got wrong for a whole stage.
+ *
+ * `200 + { user: null }` is a visitor who is genuinely nobody. Every other
+ * answer means the session could not be *evaluated*, and reading that as
+ * "anonymous" is what signed people out during a rate-limit spike. There is no
+ * third status the session route declares, so `200` is the whole rule.
+ */
+describe('reading a session response status', () => {
+  it('treats 200 as a session that can be read', () => {
+    expect(isUsableSessionStatus(200)).toBe(true)
+  })
+
+  it.each([204, 400, 401, 403, 404, 429, 500, 502, 503])(
+    'treats %i as a failed read rather than as an anonymous visitor',
+    (status) => {
+      expect(isUsableSessionStatus(status)).toBe(false)
+    },
+  )
 })

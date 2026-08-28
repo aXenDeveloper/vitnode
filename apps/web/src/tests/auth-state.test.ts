@@ -29,6 +29,17 @@ import {
  * function or the fetcher it reaches for.
  */
 
+/**
+ * A visitor who is genuinely nobody: the API answered `200`, and there is no
+ * user in the answer.
+ *
+ * That is now the *only* thing `user: null` can mean. `getSession` used to
+ * synthesize this exact object for any non-200 - a 429, a 500, an unreachable
+ * API - which made an outage indistinguishable from a sign-out and bounced
+ * signed-in visitors to the login page. It rejects instead, so a failed read
+ * cannot reach `authStateFromSession` at all; `isUsableSessionStatus` in
+ * `auth-contract.test.ts` pins the rule that decides it.
+ */
 const anonymousSession: SessionApi = { ai: { models: [] }, user: null }
 
 /** A signed-in visitor, exactly as `users/session.route.ts` describes one. */
@@ -54,6 +65,16 @@ const sessionFor = (user: AuthUser): SessionApi => ({
 })
 
 describe('a session becomes an auth state', () => {
+  it('decides on the user and on nothing else', () => {
+    // The union has two members and no third for "we could not find out", which
+    // is why this is total: every session the API can answer with maps to one
+    // of them, and everything else is an error before it gets here.
+    expect(authStateFromSession(anonymousSession).isAuthenticated).toBe(false)
+    expect(
+      authStateFromSession(sessionFor(userFixture())).isAuthenticated,
+    ).toBe(true)
+  })
+
   it('reads a null user as a guest', () => {
     const auth = authStateFromSession(anonymousSession)
 

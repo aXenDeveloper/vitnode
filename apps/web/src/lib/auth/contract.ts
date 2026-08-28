@@ -138,6 +138,26 @@ export const shouldSaveApiCookies = (status: number): boolean =>
   status >= 200 && status < 300
 
 /**
+ * Whether a session response can be read as a session at all.
+ *
+ * The distinction this app got wrong for a whole stage, and the reason it is a
+ * named function rather than an inline `!== 200`. Two things arrive on the same
+ * wire and mean opposite things:
+ *
+ *     200 + { user: null }   the visitor is genuinely nobody
+ *     429, 500, unreachable  we do not know who the visitor is
+ *
+ * Collapsing the second into the first signs people out during a rate-limit
+ * spike: the guard on a protected route reads `user: null`, believes it, and
+ * redirects a signed-in visitor to the login page. So anything that is not a
+ * `200` is a *failed read*, which the caller has to raise rather than answer.
+ *
+ * `200` is the session route's only declared success (`users/session.route.ts`
+ * documents exactly one response), so this is the whole rule.
+ */
+export const isUsableSessionStatus = (status: number): boolean => status === 200
+
+/**
  * The sign-in route answers `201` with the session cookie attached, `403` when
  * the address is unknown or the password is wrong, and nothing else on purpose.
  * Everything unexpected - a 429 from the rate limiter, a 500 - is one

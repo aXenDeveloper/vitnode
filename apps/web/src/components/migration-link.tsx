@@ -1,10 +1,8 @@
-import type { AnyRouter } from '@tanstack/react-router'
-
 import { Link, useRouter } from '@tanstack/react-router'
 
 import { useLocale } from '#/lib/i18n/client'
-import { localeRouting } from '#/lib/i18n/shared'
 import { buildLegacyHref, legacyWebOrigin } from '#/lib/legacy-app'
+import { isTanStackOwnedPath } from '#/lib/migration-navigation'
 
 /**
  * Linking to a VitNode page while half of VitNode still runs on Next.js.
@@ -29,79 +27,12 @@ import { buildLegacyHref, legacyWebOrigin } from '#/lib/legacy-app'
  * answering `true` for it, and nothing here changes. Stage 5 is the proof: a
  * plugin declared `/example`, `lib/plugin-routes.ts` mounted it on the same tree,
  * and this file was not touched.
+ *
+ * The rule itself lives in `#/lib/migration-navigation`, because a link is not
+ * the only thing that has to make it: an auth flow finishing a sign-in navigates
+ * to wherever the visitor was heading, and has to ask exactly the same question.
+ * One answer, two callers.
  */
-
-/**
- * The API mount is not a page.
- *
- * `/api/$` is a real route in the generated tree - it is how Hono is mounted -
- * so it matches, and without this a search result pointing into `/api` would be
- * handed to the router as a client-side navigation to a route that renders
- * nothing. Matched by route id rather than by a hardcoded pathname, so it stays
- * correct if the mount ever moves.
- */
-const isApiRouteId = (routeId: string): boolean =>
-  routeId === '/api' || routeId.startsWith('/api/')
-
-/** A trailing slash is not a different page. `/` stays `/`. */
-const trimTrailingSlash = (pathname: string): string =>
-  pathname.length > 1 && pathname.endsWith('/')
-    ? pathname.replace(/\/+$/, '')
-    : pathname
-
-/**
- * Whether this app's route tree can render `href` itself.
- *
- * Four things have to happen before the answer is trusted, and each one is a way
- * this returned the wrong answer while it was being written:
- *
- * 1. **Strip the query and hash.** `matchRoutes` takes a *pathname*;
- *    `/discover?a=1` matches nothing.
- * 2. **De-localize.** The route tree has no locale in it - that is the whole of
- *    Stage 3 - so `/pl/discover` matches nothing until the prefix comes off.
- * 3. **Reject the API mount.** See {@link isApiRouteId}.
- * 4. **Insist the deepest match consumed the whole path.** See below.
- *
- * ## Why "something matched" is not enough
- *
- * `matchRoutes` matches a *branch*, not a leaf: given a path it cannot fully
- * resolve, it answers with the deepest ancestor that does match and leaves the
- * rest unconsumed. So `/login/reset-password` comes back as a match on `/login`,
- * and `/discover/anything` as a match on `/discover` - and under the old
- * "matched.length > 0" rule both looked owned. That is not a cosmetic
- * difference: `MigrationLink` would hand a page the Next.js app still serves to
- * this router as a client-side navigation, turning a working password reset into
- * a TanStack not-found.
- *
- * Comparing the deepest match's own `pathname` to the requested one is the whole
- * fix, and it is the router's own answer rather than a second opinion: a real
- * match consumed the path (`/login/sso/google` matches at `/login/sso/google`),
- * a partial one did not (`/login/reset-password` matches at `/login`). A path
- * nothing matched resolves to the root alone, at `/`, and fails the same test.
- *
- * `src/tests/plugin-routes.test.ts` pins every one of these cases.
- */
-export const isTanStackOwnedPath = (
-  router: AnyRouter,
-  href: string,
-): boolean => {
-  // The same rule `rewrite.input` applies, from the same Stage 3 helper - the
-  // rewrite is `deLocalizeUrl` and nothing else, so this is one rule, not a copy.
-  const { pathname } = localeRouting.deLocalizeUrl(
-    new URL(href, 'https://vitnode.invalid'),
-  )
-
-  const matches = router.matchRoutes(pathname, undefined) as {
-    pathname: string
-    routeId: string
-  }[]
-  const deepest = matches.at(-1)
-
-  if (!deepest || deepest.routeId === '__root__') return false
-  if (matches.some((match) => isApiRouteId(match.routeId))) return false
-
-  return trimTrailingSlash(deepest.pathname) === trimTrailingSlash(pathname)
-}
 
 /**
  * A link to anywhere in VitNode, migrated or not.

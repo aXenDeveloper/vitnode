@@ -27,12 +27,18 @@ const { debug, i18n, metadata, theme } = vitNodeShellConfig
 /**
  * What the router itself provides, before any route has run.
  *
- * Just the QueryClient. `beforeLoad` below adds `locale` on top, so what a
- * loader actually receives is `{ queryClient, locale }` - the language included,
- * because a loader that fetches anything user-facing needs to know which one it
- * is fetching.
+ * The QueryClient, and the route tree's answer to "do I serve this path?".
+ * `beforeLoad` below adds `locale` on top, so what a loader actually receives is
+ * `{ ownsPath, queryClient, locale }` - the language included, because a loader
+ * that fetches anything user-facing needs to know which one it is fetching.
+ *
+ * `ownsPath` is here rather than derived per route because `beforeLoad` receives
+ * no router, and the login guard has to make the same migration decision
+ * `MigrationLink` makes for a rendered link. See `src/router.tsx`, which wires
+ * it, and `#/lib/migration-navigation`, which owns the rule.
  */
 export interface RootRouterContext {
+  ownsPath: (href: string) => boolean
   queryClient: QueryClient
 }
 

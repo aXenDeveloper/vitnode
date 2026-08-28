@@ -1,0 +1,167 @@
+import { describe, expect, it } from 'vitest'
+
+import {
+  migrationDestination,
+  migrationNavigateOptions,
+} from '#/lib/migration-navigation'
+
+/**
+ * Where a validated internal path actually leads while half of VitNode still
+ * runs on Next.js.
+ *
+ * The decision only - `isOwned` is an argument here, exactly as it is in the
+ * function, because answering it needs a live router and this rule has to be
+ * makeable on the server as well as in the browser. What the route tree answers
+ * for a given URL is pinned in `plugin-routes.test.ts`.
+ *
+ * Two questions are kept apart on purpose, and this file only exercises the
+ * second one:
+ *
+ *     safe   - may this app send a browser here?     `auth-return-to.test.ts`
+ *     owned  - which application serves it?          here
+ */
+
+const LEGACY_ORIGIN = 'http://localhost:3000'
+
+describe('a destination this app owns', () => {
+  it('becomes a router navigation, with no locale of its own', () => {
+    // Un-prefixed on purpose: `rewrite.output` writes the locale when the
+    // location is built, so `/pl/pl/discover` is not a shape this can produce.
+    expect(
+      migrationDestination({
+        href: '/discover',
+        isOwned: true,
+        legacyOrigin: LEGACY_ORIGIN,
+        locale: 'pl',
+      }),
+    ).toEqual({ destination: { to: '/discover' }, type: 'tanstack' })
+  })
+
+  it('preserves the search parameters', () => {
+    expect(
+      migrationDestination({
+        href: '/discover?sort=new',
+        isOwned: true,
+        locale: 'en',
+      }),
+    ).toEqual({
+      destination: { search: { sort: 'new' }, to: '/discover' },
+      type: 'tanstack',
+    })
+  })
+
+  it('preserves the hash', () => {
+    expect(
+      migrationDestination({
+        href: '/discover?sort=new#feed',
+        isOwned: true,
+        locale: 'en',
+      }),
+    ).toEqual({
+      destination: {
+        hash: 'feed',
+        search: { sort: 'new' },
+        to: '/discover',
+      },
+      type: 'tanstack',
+    })
+  })
+})
+
+describe('a destination the legacy application still serves', () => {
+  it('becomes a full URL at the legacy origin, localized exactly once', () => {
+    expect(
+      migrationDestination({
+        href: '/settings/security?tab=devices',
+        isOwned: false,
+        legacyOrigin: LEGACY_ORIGIN,
+        locale: 'pl',
+      }),
+    ).toEqual({
+      href: 'http://localhost:3000/pl/settings/security?tab=devices',
+      type: 'legacy',
+    })
+  })
+
+  it('takes no prefix for the default locale', () => {
+    expect(
+      migrationDestination({
+        href: '/settings/security',
+        isOwned: false,
+        legacyOrigin: LEGACY_ORIGIN,
+        locale: 'en',
+      }),
+    ).toEqual({
+      href: 'http://localhost:3000/settings/security',
+      type: 'legacy',
+    })
+  })
+
+  it('preserves the hash', () => {
+    expect(
+      migrationDestination({
+        href: '/blog/post-1#comments',
+        isOwned: false,
+        legacyOrigin: LEGACY_ORIGIN,
+        locale: 'en',
+      }),
+    ).toEqual({
+      href: 'http://localhost:3000/blog/post-1#comments',
+      type: 'legacy',
+    })
+  })
+
+  it('stays relative when no legacy origin is configured', () => {
+    // The deployment where a proxy in front of both apps routes by path. The
+    // navigation still has to leave this router, which is what
+    // `migrationNavigateOptions` insists on below.
+    expect(
+      migrationDestination({
+        href: '/settings',
+        isOwned: false,
+        locale: 'pl',
+      }),
+    ).toEqual({ href: '/pl/settings', type: 'legacy' })
+  })
+
+  it('never takes an origin from the path it was given', () => {
+    // The origin is application configuration. `sanitizeReturnTo` has already
+    // refused anything that could name one, and this is the second lock: a path
+    // is resolved *against* the configured origin, never trusted to supply one.
+    const { href } = migrationDestination({
+      href: '/settings',
+      isOwned: false,
+      legacyOrigin: LEGACY_ORIGIN,
+      locale: 'en',
+    }) as { href: string }
+
+    expect(new URL(href).origin).toBe(LEGACY_ORIGIN)
+  })
+})
+
+describe('turning a destination into redirect or navigate options', () => {
+  it('hands an owned destination straight through', () => {
+    expect(
+      migrationNavigateOptions({
+        destination: { search: { sort: 'new' }, to: '/discover' },
+        type: 'tanstack',
+      }),
+    ).toEqual({ search: { sort: 'new' }, to: '/discover' })
+  })
+
+  /**
+   * `reloadDocument` is set rather than inferred. An absolute href infers it on
+   * its own, but a relative legacy href - the no-configured-origin deployment -
+   * would not, and inferring nothing there turns the one navigation that must
+   * leave this router into a client-side one to a route it cannot render.
+   */
+  it.each(['http://localhost:3000/pl/settings', '/pl/settings'])(
+    'always leaves the router for the legacy href %s',
+    (href) => {
+      expect(migrationNavigateOptions({ href, type: 'legacy' })).toEqual({
+        href,
+        reloadDocument: true,
+      })
+    },
+  )
+})

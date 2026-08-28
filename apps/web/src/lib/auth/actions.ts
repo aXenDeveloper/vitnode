@@ -13,13 +13,13 @@ import {
   sessionQueryOptions,
   setSessionData,
 } from '#/lib/auth/query'
-import { parseInternalDestination } from '#/lib/auth/redirects'
 import {
   anonymousSession,
   signInFormResult,
   ssoCallbackResult,
   ssoStartFeedback,
 } from '#/lib/auth/screens'
+import { useMigrationNavigate } from '#/lib/migration-navigation'
 
 /**
  * The four things a visitor can do to their own session, as this app's only
@@ -55,10 +55,17 @@ import {
  * only that it worked - the session body comes from the next read, which the
  * destination's guard performs through the one query definition. Doing it before
  * navigating is what makes that read see the new cookie.
+ *
+ * The navigation goes through `useMigrationNavigate` rather than
+ * `router.navigate`, because `?returnTo=` names somewhere the visitor was
+ * heading and most of VitNode has not moved yet. `/discover` is a client-side
+ * navigation; `/settings/security?tab=devices` is a full-document load into the
+ * Next.js app that still serves it. The route tree decides which - there is no
+ * list of migrated auth destinations anywhere.
  */
 export const useSignInAction = (destination: () => string): SignInSubmit => {
   const queryClient = useQueryClient()
-  const router = useRouter()
+  const navigate = useMigrationNavigate()
 
   return async (values) => {
     const result = await signIn({ data: values })
@@ -66,7 +73,7 @@ export const useSignInAction = (destination: () => string): SignInSubmit => {
     if (!result.ok) return signInFormResult(result)
 
     await invalidateSession(queryClient)
-    await router.navigate(parseInternalDestination(destination()))
+    await navigate(destination())
 
     return undefined
   }
