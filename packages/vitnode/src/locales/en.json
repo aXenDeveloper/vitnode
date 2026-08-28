@@ -58,6 +58,7 @@
       "empty": "Nothing found yet.",
       "loadMore": "Load more",
       "loading": "Loading…",
+      "sortBy": "Sort by",
       "sort": {
         "relevance": "Relevance",
         "newest": "Newest",

@@ -385,6 +385,25 @@ describe("the app's real route tree", () => {
     // Behind `_authenticated`, which is pathless: the guard adds no segment, so
     // the page is owned at its own path and the boundary is invisible here.
     ['/account', true],
+    // Stage 7. `/search` is a plain route; `/files` is a second page behind the
+    // pathless guard, so owning it must still be decided at `/files` and not at
+    // the boundary above it.
+    ['/search', true],
+    ['/pl/search', true],
+    ['/files', true],
+    ['/pl/files', true],
+    // A data table never navigates without a query string, and `matchRoutes`
+    // takes a pathname - so a table URL is the shape that would break if the
+    // query were not stripped before matching.
+    ['/files?orderBy=name&order=asc&first=20', true],
+    // Still the Next.js app's, and the case a migrated `/files` most easily
+    // annexes by accident: `/settings` is a sibling of nothing here, so a
+    // prefix-matching rule would answer for it. `/settings/security` is the
+    // nested one - see the `/login` note below for why that distinction is
+    // load-bearing rather than decorative.
+    ['/settings', false],
+    ['/settings/security', false],
+    ['/pl/settings/security', false],
   ])('answers %s as owned: %s', (href, owned) => {
     expect(isTanStackOwnedPath(getRouter(), href)).toBe(owned)
   })

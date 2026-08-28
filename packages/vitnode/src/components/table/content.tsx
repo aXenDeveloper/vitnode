@@ -4,9 +4,9 @@ import { useTranslations } from "next-intl";
 import type {
   AlignDataTable,
   ColumnDef,
-  DataTable,
+  DataTableProps,
   DataTableTMin,
-} from "./data-table";
+} from "./data-table-content";
 
 import { cn } from "../../lib/utils";
 import {
@@ -46,7 +46,7 @@ export function ContentDataTable<T extends DataTableTMin>({
   searchPlaceholder,
   filters,
   ...props
-}: React.ComponentProps<typeof DataTable<T>>) {
+}: DataTableProps<T>) {
   const t = useTranslations("core.global");
   const hasToolbar = Boolean(search) || Boolean(filters?.length);
   const allColumns: ColumnDef<T>[] = bulkActions

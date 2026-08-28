@@ -32,7 +32,7 @@ import { fetcherServer, saveApiCookies } from '#/server/fetcher.server'
  *                   browser <- saveApiCookies <- Set-Cookie
  *
  * Split out of `#/lib/auth/mutations` for the same reason
- * `discover-feed.server.ts` is split out of `lib/search/discover-feed.ts`: that
+ * `search-feed.server.ts` is split out of `lib/search/feed.ts`: that
  * module is imported by the browser bundle, and this one imports the request
  * scope (`getRequestHeaders`, `setCookie`) and the `server-only` marker above.
  * Reached only from inside a `createServerFn` handler, which is what keeps it -

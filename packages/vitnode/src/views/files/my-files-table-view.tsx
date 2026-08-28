@@ -1,38 +1,51 @@
-import { FileIcon, FolderIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { userFilesModule } from "@/api/modules/users/files/files.module";
-import { DateFormat } from "@/components/date-format";
-import { FilePreview } from "@/components/files/file-preview";
-import { MetadataCell } from "@/components/files/metadata-cell";
-import {
-  DataTable,
-  type SearchParamsDataTable,
-} from "@/components/table/data-table";
+import { NextDataTableNavigation } from "@/components/table/navigation-next";
 import { fetcher } from "@/lib/fetcher";
-import { formatBytes } from "@/lib/format-bytes";
 
-import { MyFileRowActions } from "./actions/file-row-actions";
-import { MyFilesBulkActions } from "./actions/files-bulk-actions";
+import type { RawMyFilesParams } from "./my-files-query";
 
+import {
+  deleteMyFileAction,
+  deleteMyFilesAction,
+} from "./actions/delete-action.server";
+import { myFilesRequest, normalizeMyFilesParams } from "./my-files-query";
+import { MyFilesTableContent } from "./my-files-table-content";
+
+/**
+ * The Next.js half of `/files`: read the page, then hand it to the shared table.
+ *
+ * Everything Next.js about the feature is in this file. It is a Server
+ * Component, so it fetches with `fetcher()` - which reads the visitor's cookies
+ * through `next/headers` - and answers a refusal with `notFound()`, which only
+ * exists here. The two delete callbacks are the server actions, unchanged: they
+ * end in `revalidatePath`, which is how a Next.js page refreshes and is the one
+ * step that cannot be shared.
+ *
+ * The request itself is *not* Next.js's. `normalizeMyFilesParams` and
+ * `myFilesRequest` are the same two functions the TanStack Start loader calls,
+ * so a URL means the same thing in both apps rather than in two places that
+ * merely look alike.
+ *
+ * `NextDataTableNavigation` is mounted here rather than inherited from
+ * `DataTable`, because the shared table renders `ContentDataTable` - the half
+ * that has no idea how to change a URL. This is the same provider `DataTable`
+ * mounts, so sorting, paging and searching behave exactly as they did.
+ */
 export const MyFilesTableView = async ({
   searchParams,
 }: {
-  searchParams: Promise<SearchParamsDataTable>;
+  /**
+   * `RawMyFilesParams` rather than `SearchParamsDataTable`, which is what this
+   * used to say and which has no `search` key - the search box has always
+   * written one, and it reached the API only because Next.js hands the whole
+   * query string over at runtime whatever the type claims.
+   */
+  searchParams: Promise<RawMyFilesParams>;
 }) => {
-  const query = await searchParams;
-  const [t, res] = await Promise.all([
-    getTranslations("core.files"),
-    fetcher(userFilesModule, {
-      path: "/",
-      method: "get",
-      module: "files",
-      prefixPath: "/users",
-      args: { query },
-      withPagination: true,
-    }),
-  ]);
+  const params = normalizeMyFilesParams(await searchParams);
+  const res = await fetcher(userFilesModule, myFilesRequest(params));
 
   if (res.status !== 200) {
     return notFound();
@@ -41,98 +54,12 @@ export const MyFilesTableView = async ({
   const data = await res.json();
 
   return (
-    <DataTable
-      bulkActions={<MyFilesBulkActions />}
-      columns={[
-        {
-          accessorKey: "url",
-          header: t("list.preview"),
-          className: "w-16",
-          cell: ({ row }) => (
-            <FilePreview
-              mimeType={row.mimeType}
-              name={row.name}
-              url={row.url}
-            />
-          ),
-        },
-        {
-          accessorKey: "name",
-          header: t("list.name"),
-          cell: ({ row }) => (
-            <div className="flex max-w-xs flex-col">
-              <span className="truncate">{row.name}</span>
-              <p className="text-muted-foreground truncate text-sm">
-                {row.mimeType ?? row.folder}
-              </p>
-            </div>
-          ),
-        },
-        {
-          accessorKey: "folder",
-          header: t("list.folder"),
-          cell: ({ row }) => (
-            <div className="text-muted-foreground flex items-center gap-2">
-              <FolderIcon className="size-4 shrink-0" />
-              <span className="truncate">{row.folder}</span>
-            </div>
-          ),
-        },
-        {
-          accessorKey: "size",
-          header: t("list.size"),
-          cell: ({ row }) => formatBytes(row.size),
-        },
-        {
-          accessorKey: "dimensions",
-          header: t("list.dimensions"),
-          cell: ({ row }) =>
-            row.dimensions ? (
-              `${row.dimensions.width}x${row.dimensions.height}`
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            ),
-        },
-        {
-          accessorKey: "metadata",
-          header: t("list.metadata"),
-          cell: ({ row }) => (
-            <MetadataCell
-              emptyLabel={t("metadata.empty")}
-              metadata={row.metadata}
-              title={t("metadata.title")}
-            />
-          ),
-        },
-        {
-          accessorKey: "createdAt",
-          header: t("list.createdAt"),
-          cell: ({ row }) => <DateFormat date={row.createdAt} />,
-        },
-        {
-          id: "actions",
-          header: "",
-          align: "right",
-          className: "w-10",
-          cell: ({ row }) => <MyFileRowActions id={row.id} name={row.name} />,
-        },
-      ]}
-      customNoResults={{
-        title: t("noResults.title"),
-        description: t("noResults.description"),
-        icon: <FileIcon />,
-      }}
-      edges={data.edges}
-      id="my-files-table"
-      order={{
-        columns: ["name", "size", "createdAt"],
-        defaultOrder: {
-          column: "createdAt",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-      search
-    />
+    <NextDataTableNavigation>
+      <MyFilesTableContent
+        data={data}
+        onDeleteFile={deleteMyFileAction}
+        onDeleteFiles={deleteMyFilesAction}
+      />
+    </NextDataTableNavigation>
   );
 };

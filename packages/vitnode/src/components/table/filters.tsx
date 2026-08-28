@@ -2,11 +2,9 @@
 
 import { CheckIcon, PlusCircleIcon, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 
-import { usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 import { Badge } from "../ui/badge";
@@ -23,6 +21,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Separator } from "../ui/separator";
 import { Spinner } from "../ui/spinner";
+import { useDataTableUrl } from "./navigation";
+import { readTableFilter, withTableFilter } from "./url-state";
 
 export interface FilterOption {
   keywords?: string[];
@@ -39,18 +39,13 @@ export interface FilterDataTable {
 
 function FilterItem({ filter }: { filter: FilterDataTable }) {
   const t = useTranslations("core.global");
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const { push } = useRouter();
-  const [isPending, startTransition] = React.useTransition();
+  const { isPending, navigate, searchParams } = useDataTableUrl();
 
   const isAsync = Boolean(filter.onSearch);
   const [asyncOptions, setAsyncOptions] = React.useState<FilterOption[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
 
-  const selected = (searchParams.get(filter.id)?.split(",") ?? []).filter(
-    Boolean,
-  );
+  const selected = readTableFilter(searchParams, filter.id);
   const selectedSet = new Set(selected);
   const options = isAsync ? asyncOptions : (filter.options ?? []);
 
@@ -76,21 +71,7 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
   };
 
   const applySelection = (values: string[]) => {
-    startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-
-      if (values.length) {
-        params.set(filter.id, values.join(","));
-      } else {
-        params.delete(filter.id);
-      }
-
-      params.delete("cursor");
-      params.delete("first");
-      params.delete("last");
-
-      push(`${pathname}?${params.toString()}`, { scroll: false });
-    });
+    navigate(withTableFilter(searchParams, { id: filter.id, values }));
   };
 
   const toggle = (value: string) => {

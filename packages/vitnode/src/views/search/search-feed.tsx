@@ -21,8 +21,13 @@ export type { SearchFeedParams, SearchFeedVariant };
  *
  * Declared at module scope rather than inline, so it is the same component type
  * on every render and React reconciles rather than remounting each result.
+ *
+ * Exported for `search-controls.tsx`, which renders the shared controls rather
+ * than this wrapper and so needs the same link: two copies would be two
+ * component types, and the search page would remount its whole result list on
+ * every keystroke.
  */
-const NextSearchFeedLink = ({
+export const NextSearchFeedLink = ({
   children,
   className,
   href,

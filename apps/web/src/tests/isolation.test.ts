@@ -365,16 +365,28 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/routes/_authenticated/account.tsx',
     'apps/web/src/routes/login.tsx',
     'apps/web/src/routes/login_.sso.$providerId.tsx',
+    // Stage 7. `/files` renders the whole data table - eight columns, the
+    // bulk-action bar and both confirm dialogs - which is the deepest this app
+    // reaches into the design system after the auth screens. That graph was
+    // Next-only until `next/dynamic` inside `ConfirmActionAlertDialog` became
+    // `React.lazy`, so it is exactly the graph worth walking here.
+    'apps/web/src/lib/files/my-files-route.ts',
+    'apps/web/src/lib/files/my-files.ts',
+    'apps/web/src/routes/_authenticated/files.tsx',
+    'apps/web/src/server/my-files.server.ts',
     'apps/web/src/lib/i18n/client.ts',
     'apps/web/src/lib/i18n/query.ts',
     'apps/web/src/lib/i18n/shared.ts',
     'apps/web/src/lib/search/discover-feed.ts',
     'apps/web/src/lib/search/discover-request.ts',
+    'apps/web/src/lib/search/feed.ts',
+    'apps/web/src/lib/search/search-request.ts',
     'apps/web/src/router.tsx',
     'apps/web/src/routes/__root.tsx',
     'apps/web/src/routes/discover.tsx',
     'apps/web/src/routes/index.tsx',
-    'apps/web/src/server/discover-feed.server.ts',
+    'apps/web/src/routes/search.tsx',
+    'apps/web/src/server/search-feed.server.ts',
     'apps/web/src/server/locale.server.ts',
     'apps/web/src/server/messages.server.ts',
     'apps/web/src/start.ts',
@@ -476,6 +488,171 @@ describe('the whole graph this app imports stays Next-free', () => {
       // The one that made `HeaderContent` Next-only. `Link` now arrives as a
       // prop, from whichever router the app happens to have.
       const reached = [...reachableExternals(DISCOVER).externals.keys()]
+
+      expect(reached.filter((one) => one.includes('navigation'))).toEqual([])
+    })
+  })
+
+  /**
+   * `/search`, on its own.
+   *
+   * Stated separately from `/discover` because it renders strictly more of the
+   * shared stack: the same feed, plus the controls above it - an input group, a
+   * native select, a row of buttons and a debounced callback. That is the design
+   * system, and the design system is where a stray `next/dynamic` or
+   * `next-intl/navigation` hides. `SearchControls` was Next-only for exactly
+   * that reason until the controls became `SearchControlsContent`.
+   */
+  describe('the /search runtime graph reaches no Next.js', () => {
+    const SEARCH = ['apps/web/src/routes/search.tsx']
+
+    it('walks into the shared controls the route renders', () => {
+      // Without this the assertions below would pass on a graph that stopped at
+      // the route file - which is exactly the graph that cannot break.
+      const reached = [...reachableExternals(SEARCH).visited]
+
+      expect(
+        reached.some((path) => path.includes('search-controls-content')),
+      ).toBe(true)
+      expect(reached.some((path) => path.includes('search-feed-content'))).toBe(
+        true,
+      )
+      expect(reached.some((path) => path.includes('input-group'))).toBe(true)
+    })
+
+    it('never reaches the Next wrapper the shared controls were split from', () => {
+      // `search-controls.tsx` resolves the locale through `next-intl` and takes
+      // its link from `@/lib/navigation`. Reaching it from here would mean the
+      // route imported the wrapper rather than the shared component.
+      const reached = [...reachableExternals(SEARCH).visited]
+
+      expect(
+        reached.filter((path) => /search-(controls|feed)\.js$/.test(path)),
+      ).toEqual([])
+    })
+
+    it.each([
+      'next',
+      'next/cache',
+      'next/dynamic',
+      'next/server',
+      'next-intl/navigation',
+      'next-intl/server',
+      'server-only',
+    ])('never reaches %s', (forbidden) => {
+      expect(offenders(SEARCH, [forbidden])).toEqual([])
+    })
+
+    it('takes its translations from use-intl', () => {
+      const reached = [...reachableExternals(SEARCH).externals.keys()]
+
+      expect(reached).toContain('use-intl')
+    })
+
+    it("only ever reaches next-intl's framework-free root entry", () => {
+      const reached = [...reachableExternals(SEARCH).externals.keys()]
+
+      expect(reached.filter((one) => one.startsWith('next-intl/'))).toEqual([])
+    })
+
+    it('never reaches a locale-aware navigation module', () => {
+      const reached = [...reachableExternals(SEARCH).externals.keys()]
+
+      expect(reached.filter((one) => one.includes('navigation'))).toEqual([])
+    })
+  })
+
+  /**
+   * `/files`, on its own.
+   *
+   * The deepest graph this app has after the auth screens, and the one with the
+   * most ways to go wrong: the data table, its four URL controls, the bulk
+   * action bar, the row menu and both confirm dialogs. Three separate imports
+   * kept it Next-only until Stage 7 - `next/dynamic` inside
+   * `ConfirmActionAlertDialog`, `@/lib/navigation` inside four table controls,
+   * and a `"use server"` module behind the delete button - and none of the three
+   * was visible from the route file.
+   */
+  describe('the /files runtime graph reaches no Next.js', () => {
+    const FILES = ['apps/web/src/routes/_authenticated/files.tsx']
+
+    it('walks into the table and the dialogs the route renders', () => {
+      // Without this the assertions below would pass on a graph that stopped at
+      // the route file - which is exactly the graph that cannot break.
+      const reached = [...reachableExternals(FILES).visited]
+
+      expect(
+        reached.some((path) => path.includes('my-files-table-content')),
+      ).toBe(true)
+      expect(reached.some((path) => path.includes('table/content'))).toBe(true)
+      expect(
+        reached.some((path) => path.includes('confirm-action-alert-dialog')),
+      ).toBe(true)
+    })
+
+    it('never reaches the Next wrappers the shared halves were split from', () => {
+      // `my-files-table-view` fetches through `next/headers` and imports the
+      // server actions; `data-table` mounts `NextDataTableNavigation`. Reaching
+      // either would mean the route imported a wrapper rather than the shared
+      // component.
+      const reached = [...reachableExternals(FILES).visited]
+
+      expect(
+        reached.filter((path) =>
+          /(my-files-table-view|table\/data-table|navigation-next)\.js$/.test(
+            path,
+          ),
+        ),
+      ).toEqual([])
+    })
+
+    it("never reaches the core package's delete server action", () => {
+      // Importing a `"use server"` module pulls the fetcher, `next/headers` and
+      // the whole API module graph in behind it. Both deletes are props.
+      //
+      // Note this is not a blanket ban on `*.server`: the route legitimately
+      // reaches `apps/web/src/server/my-files.server.ts`, which is this app's
+      // own SSR transport behind `createIsomorphicFn`. The two conventions share
+      // a suffix and nothing else.
+      const reached = [...reachableExternals(FILES).visited]
+
+      expect(
+        reached.filter((path) => path.includes('delete-action.server')),
+      ).toEqual([])
+    })
+
+    it.each([
+      'next',
+      'next/cache',
+      'next/dynamic',
+      'next/headers',
+      'next/navigation',
+      'next/server',
+      'next-intl/navigation',
+      'next-intl/server',
+      'server-only',
+    ])('never reaches %s', (forbidden) => {
+      expect(offenders(FILES, [forbidden])).toEqual([])
+    })
+
+    it('never reaches the API the table is authorized by', () => {
+      // `my-files-query.ts` imports the files module as a *type* only, so the
+      // route literals still infer while Hono, Drizzle and `@/database` stay out
+      // of the bundle. A value import here is a server framework in the browser.
+      const reached = [...reachableExternals(FILES).externals.keys()]
+
+      expect(reached).not.toContain('drizzle-orm')
+      expect(reached.filter((one) => one.startsWith('hono'))).toEqual([])
+    })
+
+    it("only ever reaches next-intl's framework-free root entry", () => {
+      const reached = [...reachableExternals(FILES).externals.keys()]
+
+      expect(reached.filter((one) => one.startsWith('next-intl/'))).toEqual([])
+    })
+
+    it('never reaches a locale-aware navigation module', () => {
+      const reached = [...reachableExternals(FILES).externals.keys()]
 
       expect(reached.filter((one) => one.includes('navigation'))).toEqual([])
     })

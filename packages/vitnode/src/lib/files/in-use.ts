@@ -1,6 +1,33 @@
-import type { StorageFileInUseBody } from "@/api/models/storage";
+/**
+ * Why {@link StorageModel.deleteFile} refused.
+ *
+ * Declared here rather than in `@/api/models/storage`, which is where it used to
+ * live and which still re-exports it, because {@link readFileInUse} runs in a
+ * browser. Importing the constant from the storage model pulled Hono, Drizzle
+ * and the whole `@/database` tree into the client bundle of every surface that
+ * deletes a file - a value import is a value import, however small the value.
+ * This module now has no runtime imports at all, which is the property that
+ * makes it safe from either framework.
+ */
+export const STORAGE_FILE_IN_USE = "FILE_IN_USE";
 
-import { STORAGE_FILE_IN_USE } from "@/api/models/storage";
+/**
+ * The body of that refusal, and the reason it is not just a code.
+ *
+ * "In use" covers two situations a person has to act on differently: content
+ * that would break, and history that would merely lose a restore. `content` is
+ * the one that is final; `revisions` is how many retained revisions hold the
+ * file, so a client can offer to force past them and say how much it is giving
+ * up.
+ */
+export interface StorageFileInUseBody {
+  code: typeof STORAGE_FILE_IN_USE;
+  /** A live content column or gallery row still points at this file. */
+  content: boolean;
+  id: number;
+  /** Retained revisions pinning it - releasable with `force`. */
+  revisions: number;
+}
 
 /**
  * What a refused file delete was blocked by, as the two surfaces need it.
@@ -15,7 +42,15 @@ export interface FileInUse {
   revisions: number;
 }
 
-/** What both file-delete server actions return. */
+/**
+ * What every file-delete path returns - the Next.js server actions and the
+ * browser mutation the TanStack Start app calls.
+ *
+ * A closed result rather than a thrown error, because all three refusals are
+ * ordinary answers a person acts on: `409` is offered as a confirmation, `404`
+ * is "already gone", and anything else is "try again". Only a transport failure
+ * rejects.
+ */
 export interface DeleteFileResult {
   data?: true;
   error?: {

@@ -29,10 +29,11 @@ config change followed by a rebuild.
 ## Indexing content
 
 <Callout type="info" title="Using the Content Engine?">
-  A content type only needs a
-  [`search` block](/docs/dev/content-engine/public-api-and-caching#2-full-text-search-indexing) - publishing, editing,
-  unpublishing and deleting a record then keep its document in step
-  automatically, and it joins the rebuild without any of the wiring below.
+  A content type only needs a [`search`
+  block](/docs/dev/content-engine/public-api-and-caching#2-full-text-search-indexing)
+  - publishing, editing, unpublishing and deleting a record then keep its
+  document in step automatically, and it joins the rebuild without any of the
+  wiring below.
 </Callout>
 
 Any API handler can (re)index or remove an item through `c.get("search")`. It is
@@ -93,8 +94,8 @@ agnostic** and match every locale, so single-language plugins need no changes.
 
 <Callout type="info">
   Postgres full-text ranking picks a text-search configuration per locale
-  (`polish` for `pl`, `german` for `de`, and so on), falling back to `simple` for
-  a locale with no bundled dictionary - and for a document with no
+  (`polish` for `pl`, `german` for `de`, and so on), falling back to `simple`
+  for a locale with no bundled dictionary - and for a document with no
   `languageCode`, which matches every locale. Matching works across languages
   either way; only stemming and stop-words differ.
 </Callout>
@@ -146,8 +147,8 @@ documents (one per language) or none at all (a row that cannot be projected).
 <Callout type="warn" title="Never page by document count">
   Returning `documents.length` as `itemsRead`, or ending the loop on an empty
   `documents` array, silently truncates the index: a page whose rows all fail to
-  project would stop the rebuild before the valid rows behind it. Report the rows
-  you read.
+  project would stop the rebuild before the valid rows behind it. Report the
+  rows you read.
 </Callout>
 
 ### The older array result
@@ -230,18 +231,18 @@ A collection is **unmanaged by the rebuild system** when documents for its
 `itemType` are in the index but no `SearchIndexer` is registered for it.
 
 <Callout type="info" title="Unmanaged is not abandoned">
-  It does **not** prove the plugin is uninstalled or inactive. A live-only plugin
-  looks exactly the same from the index's point of view, and may be keeping the
-  collection completely up to date. All VitNode can tell is that it has no way to
-  rebuild it.
+  It does **not** prove the plugin is uninstalled or inactive. A live-only
+  plugin looks exactly the same from the index's point of view, and may be
+  keeping the collection completely up to date. All VitNode can tell is that it
+  has no way to rebuild it.
 </Callout>
 
-**AdminCP → Advanced → Search** labels those rows *Unmanaged*, shows the plugin
+**AdminCP → Advanced → Search** labels those rows _Unmanaged_, shows the plugin
 stored on their documents, and says no rebuild indexer is registered. Coverage is
 left blank rather than calculated: with no indexer there is no source count, and
 `11 / 11` would claim a collection nothing can rebuild is fully covered.
 
-*Reindex* is replaced by **Remove documents**, behind a confirmation. It deletes
+_Reindex_ is replaced by **Remove documents**, behind a confirmation. It deletes
 what is currently indexed and rebuilds nothing - but it does not stop anything
 either, so a live-writing plugin may recreate those documents on its next write.
 It is a way to clear a stale indexed state, not a way to uninstall a collection.
@@ -254,6 +255,44 @@ row becomes an ordinary one.
 Result cards look up an icon and label by `itemType`. Add an entry to the render
 registry (`@vitnode/core/views/search/registry`); unknown types fall back to a
 generic renderer, so nothing breaks if an entry is missing.
+
+## Rendering search in your own app
+
+The search UI ships in three framework-neutral pieces, so a Next.js page and a
+TanStack Start route render the same components:
+
+| Module                                               | What it is                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `@vitnode/core/views/search/search-params`           | Pure functions: normalise a term from a URL, pick the default sort, build the feed's parameters. |
+| `@vitnode/core/views/search/search-feed-query`       | The feed as one query definition - request, page size, cursor rule, response check, cache key.   |
+| `@vitnode/core/views/search/search-controls-content` | The search box, type filters, sort and results, ready to mount.                                  |
+
+Two things are injected, because they are the only two a shared component cannot
+answer for itself: how a page is fetched, and how an internal link becomes a
+navigation.
+
+```tsx title="A search page, in any framework"
+import { SearchControlsContent } from "@vitnode/core/views/search/search-controls-content";
+import { searchFeedQueryOptions } from "@vitnode/core/views/search/search-feed-query";
+import { searchFeedParamsFor } from "@vitnode/core/views/search/search-params";
+
+<SearchControlsContent
+  defaultParams={searchFeedParamsFor({ search: termFromTheUrl })}
+  feedQuery={params => searchFeedQueryOptions({ locale, params })}
+  LinkComponent={MyLink}
+  variant="timeline"
+/>;
+```
+
+<Callout type="info">
+  Warm the *same* `searchFeedQueryOptions` in your loader
+  (`ensureInfiniteQueryData`) and the first page is already in the cache when
+  the component mounts - no `initialData`, no second copy of the same bytes.
+</Callout>
+
+Only the term belongs in the URL. The sort and the type filters are controls the
+visitor drives after the page loads, so they stay component state - and a
+malformed `?search=` normalises to the browse feed rather than breaking the page.
 
 ## Choosing the engine
 

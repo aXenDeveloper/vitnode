@@ -13,7 +13,12 @@ import {
 import { fetcherServer } from '#/server/fetcher.server'
 
 /**
- * One page of the Discover feed, fetched during SSR.
+ * One page of a search feed, fetched during SSR.
+ *
+ * Every feed this app renders on the server comes through here - `/discover`
+ * browsing newest-first, `/search` with a term - because they are one request
+ * with different parameters. There is deliberately no per-route copy: the whole
+ * point of `searchFeedRequest` is that the request is decided once.
  *
  * The request and the response check are core's - the same two the browser
  * fetcher uses, so a page fetched here and a page fetched by `fetchNextPage()`
@@ -28,11 +33,11 @@ import { fetcherServer } from '#/server/fetcher.server'
  * reads those for the rate-limit bucket and the audit IP, and a render that
  * sends none of them puts every visitor in one bucket.
  *
- * Only ever reached through the isomorphic transport in
- * `#/lib/search/discover-feed`, which is what keeps this module - and the
- * `server-only` import above - out of the browser bundle.
+ * Only ever reached through the isomorphic transport in `#/lib/search/feed`,
+ * which is what keeps this module - and the `server-only` import above - out of
+ * the browser bundle.
  */
-export const fetchDiscoverFeedPageOnServer: SearchFeedPageFetcher = async (
+export const fetchSearchFeedPageOnServer: SearchFeedPageFetcher = async (
   args: SearchFeedPageArgs,
 ) => {
   const response = await fetcherServer(searchModuleRef, searchFeedRequest(args))

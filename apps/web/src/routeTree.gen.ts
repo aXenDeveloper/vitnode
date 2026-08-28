@@ -13,7 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
+import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/files'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as LoginSsoProviderIdRouteImport } from './routes/login_.sso.$providerId'
 
@@ -36,9 +38,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedFilesRoute = AuthenticatedFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -56,7 +68,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/search': typeof SearchRoute
   '/account': typeof AuthenticatedAccountRoute
+  '/files': typeof AuthenticatedFilesRoute
   '/api/$': typeof ApiSplatRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
 }
@@ -64,7 +78,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/search': typeof SearchRoute
   '/account': typeof AuthenticatedAccountRoute
+  '/files': typeof AuthenticatedFilesRoute
   '/api/$': typeof ApiSplatRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
 }
@@ -74,7 +90,9 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/search': typeof SearchRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
+  '/_authenticated/files': typeof AuthenticatedFilesRoute
   '/api/$': typeof ApiSplatRoute
   '/login_/sso/$providerId': typeof LoginSsoProviderIdRoute
 }
@@ -84,7 +102,9 @@ export interface FileRouteTypes {
     | '/'
     | '/discover'
     | '/login'
+    | '/search'
     | '/account'
+    | '/files'
     | '/api/$'
     | '/login/sso/$providerId'
   fileRoutesByTo: FileRoutesByTo
@@ -92,7 +112,9 @@ export interface FileRouteTypes {
     | '/'
     | '/discover'
     | '/login'
+    | '/search'
     | '/account'
+    | '/files'
     | '/api/$'
     | '/login/sso/$providerId'
   id:
@@ -101,7 +123,9 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/discover'
     | '/login'
+    | '/search'
     | '/_authenticated/account'
+    | '/_authenticated/files'
     | '/api/$'
     | '/login_/sso/$providerId'
   fileRoutesById: FileRoutesById
@@ -111,6 +135,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   DiscoverRoute: typeof DiscoverRoute
   LoginRoute: typeof LoginRoute
+  SearchRoute: typeof SearchRoute
   ApiSplatRoute: typeof ApiSplatRoute
   LoginSsoProviderIdRoute: typeof LoginSsoProviderIdRoute
 }
@@ -145,11 +170,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/account': {
       id: '/_authenticated/account'
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/files': {
+      id: '/_authenticated/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof AuthenticatedFilesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/api/$': {
@@ -171,10 +210,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
+  AuthenticatedFilesRoute: typeof AuthenticatedFilesRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
+  AuthenticatedFilesRoute: AuthenticatedFilesRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -186,6 +227,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   DiscoverRoute: DiscoverRoute,
   LoginRoute: LoginRoute,
+  SearchRoute: SearchRoute,
   ApiSplatRoute: ApiSplatRoute,
   LoginSsoProviderIdRoute: LoginSsoProviderIdRoute,
 }

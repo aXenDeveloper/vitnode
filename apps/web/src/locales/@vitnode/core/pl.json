@@ -8,11 +8,20 @@
       "theme_switcher": "Zmień motyw"
     },
     "search": {
+      "title": "Szukaj",
+      "desc": "Przeszukaj wszystko w społeczności.",
       "discoverTitle": "Odkrywaj",
       "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
+      "placeholder": "Szukaj…",
       "empty": "Nic tu jeszcze nie ma.",
       "loadMore": "Wczytaj więcej",
       "loading": "Wczytywanie…",
+      "sortBy": "Sortuj według",
+      "sort": {
+        "relevance": "Trafność",
+        "newest": "Najnowsze",
+        "oldest": "Najstarsze"
+      },
       "types": {
         "blog_post": "Wpis",
         "unknown": "Treść"

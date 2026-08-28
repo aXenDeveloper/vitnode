@@ -500,6 +500,76 @@ That pruning is also what makes a partly-successful action readable: revalidate 
   so a run that partly succeeded can say so.
 </Callout>
 
+## URL State
+
+Every control on the table is really a URL editor. Sorting writes `?orderBy=` and `?order=`, paging writes `?first=`/`?last=` and `?cursor=`, the search box writes `?search=`, and each filter writes its own parameter. Nothing is kept in React state, which is why a table link can be bookmarked, shared, or opened in a new tab and show the same rows.
+
+The rules those controls follow live in one framework-free module, so you can reuse them - or test them - without a router:
+
+```ts
+import {
+  readTableOrder,
+  readTablePageSize,
+  readTableSearch,
+  toggleTableOrder,
+  withTableFilter,
+  withTableOrder,
+  withTablePage,
+  withTablePageSize,
+  withTableSearch,
+} from "@vitnode/core/components/table/url-state";
+
+withTableSearch("page=3&tab=media", "vitnode");
+// → "page=3&tab=media&search=vitnode"
+```
+
+Each `with*` helper takes the current query string (or a `URLSearchParams`) and returns a new one. They never mutate what you hand them, they always keep parameters they don't own - your own `?tab=` survives a sort click - and they remove a parameter rather than leaving it empty. Filtering and changing the page size drop the pagination cursor, because the rows underneath it changed; sorting and searching leave it alone.
+
+### Using the table outside Next.js
+
+`DataTable` is the Next.js binding: it supplies the current search parameters and a locale-aware, scroll-free push, and every page in this documentation uses it. Under it sits the same table with that one decision taken as an argument, which is all another router needs to render it.
+
+Give `DataTableNavigationProvider` where you are and how to move, and render `ContentDataTable` inside it:
+
+```tsx
+import { ContentDataTable } from "@vitnode/core/components/table/content";
+import { DataTableNavigationProvider } from "@vitnode/core/components/table/navigation";
+
+<DataTableNavigationProvider
+  value={{
+    navigate: nextSearch => router.navigate({ search: nextSearch }),
+    searchParams: new URLSearchParams(location.searchStr),
+  }}
+>
+  <ContentDataTable
+    id="users-table"
+    columns={columns}
+    edges={data.edges}
+    pageInfo={data.pageInfo}
+    order={{ defaultOrder: { column: "createdAt", order: "desc" } }}
+  />
+</DataTableNavigationProvider>;
+```
+
+<TypeTable
+  type={{
+    navigate: {
+      description:
+        "Goes to a query string with no leading '?', exactly as URLSearchParams.toString() produces it. Must not scroll - somebody sorting the last column is looking at the header they clicked. Return the router's promise if it has one and the pending spinner will last as long as the navigation does.",
+      required: true,
+      type: "(nextSearch: string) => Promise<void> | void",
+    },
+    searchParams: {
+      description:
+        "The query string the table is currently rendering. Never mutated.",
+      required: true,
+      type: "URLSearchParams",
+    },
+  }}
+/>
+
+The types, and the `DataTableSkeleton` you render as a loading fallback, come from `@vitnode/core/components/table/data-table-content` - importing them from `data-table` would pull Next.js in behind them.
+
 ## Complete Example
 
 Here's a complete example showing how to use the `DataTable` component in a page:

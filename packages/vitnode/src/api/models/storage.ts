@@ -3,6 +3,8 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import type { StorageFileInUseBody } from "@/lib/files/in-use";
+
 import { core_content_file_refs } from "@/database/content";
 import { core_files } from "@/database/files";
 import { isPgReferenceViolation } from "@/lib/api/pg-error";
@@ -11,6 +13,7 @@ import {
   generateStorageFileName,
   replaceFileExtension,
 } from "@/lib/api/upload";
+import { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 import { formatBytes } from "@/lib/format-bytes";
 
 const DEFAULT_IMAGE_QUALITY = 85;
@@ -58,26 +61,16 @@ export interface StorageFileUploadResult extends StorageUploadResult {
   size: number;
 }
 
-/** Why {@link StorageModel.deleteFile} refused. */
-export const STORAGE_FILE_IN_USE = "FILE_IN_USE";
-
 /**
- * The body of that refusal, and the reason it is not just a code.
+ * Why {@link StorageModel.deleteFile} refused, and the body it refuses with.
  *
- * "In use" covers two situations a person has to act on differently: content
- * that would break, and history that would merely lose a restore. `content` is
- * the one that is final; `revisions` is how many retained revisions hold the
- * file, so a client can offer to force past them and say how much it is giving
- * up.
+ * Defined in `@/lib/files/in-use` and re-exported here, so every existing
+ * importer keeps working. The definition had to move because the browser reads
+ * the same code off the same 409 - and importing it from this module dragged
+ * Hono, Drizzle and `@/database` into the client bundle behind one string.
  */
-export interface StorageFileInUseBody {
-  code: typeof STORAGE_FILE_IN_USE;
-  /** A live content column or gallery row still points at this file. */
-  content: boolean;
-  id: number;
-  /** Retained revisions pinning it - releasable with `force`. */
-  revisions: number;
-}
+export type { StorageFileInUseBody } from "@/lib/files/in-use";
+export { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 
 export interface StorageDeleteFileOptions {
   /**

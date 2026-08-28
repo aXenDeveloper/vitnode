@@ -1,32 +1,34 @@
 "use client";
 
-import { SearchIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-import React from "react";
-import { useDebouncedCallback } from "use-debounce";
+import { useLocale } from "next-intl";
 
-import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
-
-import type { SearchFeedParams } from "./search-feed";
+import type { SearchFeedParams } from "./search-feed-query";
 import type { SearchFeedPage } from "./types";
 
-import { getSearchTypeRenderer, searchTypeKeys } from "./registry";
-import { SearchFeed } from "./search-feed";
+import { SearchControlsContent } from "./search-controls-content";
+import { NextSearchFeedLink } from "./search-feed";
+import { searchFeedQueryOptions } from "./search-feed-query";
 
-type SortValue = "newest" | "oldest" | "relevance";
-
-const SORT_VALUES: SortValue[] = ["relevance", "newest", "oldest"];
-const MIN_TERM_LENGTH = 3;
-
+/**
+ * {@link SearchControlsContent}, wired to Next.js.
+ *
+ * Everything the search page *does* lives in the shared component; this supplies
+ * the three things that cannot be shared, and the props are unchanged, so
+ * `SearchView` sees exactly the component it always did.
+ *
+ * - **The locale**, which `next-intl` reads from Next's request scope.
+ * - **A `Link`** that knows how to write a locale prefix into an internal href -
+ *   the same one `SearchFeed` hands the feed.
+ * - **The query**, built from `searchFeedQueryOptions` per set of parameters, on
+ *   the browser's transport. That is the default and the right one here: this is
+ *   a client component, and `fetchNextPage` runs in the browser either way.
+ *
+ * `initialData` stays supported because Next.js has nowhere else to put a page it
+ * already fetched: `SearchView` renders the first page in a Server Component and
+ * hands it down, with no Query cache to hydrate from. An app that *does* hydrate
+ * one must not use it - see `searchFeedQueryOptions`, and `routes/search.tsx` in
+ * `apps/web` for the shape that does.
+ */
 export const SearchControls = ({
   defaultParams,
   initialData,
@@ -34,87 +36,16 @@ export const SearchControls = ({
   defaultParams: SearchFeedParams;
   initialData?: SearchFeedPage;
 }) => {
-  const t = useTranslations("core.search");
-  const [term, setTerm] = React.useState(defaultParams.search ?? "");
-  const [appliedTerm, setAppliedTerm] = React.useState(
-    defaultParams.search ?? "",
-  );
-  const [types, setTypes] = React.useState<string[]>(
-    defaultParams.types ? defaultParams.types.split(",") : [],
-  );
-  const [sort, setSort] = React.useState<SortValue>(
-    defaultParams.sort ?? "newest",
-  );
-
-  const applyTerm = useDebouncedCallback((value: string) => {
-    if (value.length >= MIN_TERM_LENGTH) {
-      setAppliedTerm(value);
-      setSort(prev => (prev === "newest" ? "relevance" : prev));
-    } else if (value.length === 0) {
-      setAppliedTerm("");
-    }
-  }, 500);
-
-  const toggleType = (key: string) => {
-    setTypes(prev =>
-      prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key],
-    );
-  };
-
-  const params: SearchFeedParams = {
-    search: appliedTerm || undefined,
-    types: types.length ? types.join(",") : undefined,
-    sort,
-  };
+  const locale = useLocale();
 
   return (
-    <div className="flex flex-col gap-4">
-      <InputGroup>
-        <InputGroupInput
-          onChange={e => {
-            setTerm(e.target.value);
-            applyTerm(e.target.value);
-          }}
-          placeholder={t("placeholder")}
-          type="search"
-          value={term}
-        />
-        <InputGroupAddon>
-          <SearchIcon />
-        </InputGroupAddon>
-      </InputGroup>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {searchTypeKeys.map(key => (
-          <Button
-            key={key}
-            onClick={() => toggleType(key)}
-            size="sm"
-            variant={types.includes(key) ? "default" : "outline"}
-          >
-            {t(getSearchTypeRenderer(key).labelKey)}
-          </Button>
-        ))}
-
-        <NativeSelect
-          className="ms-auto"
-          onChange={e => setSort(e.target.value as SortValue)}
-          size="sm"
-          value={sort}
-        >
-          {SORT_VALUES.map(value => (
-            <NativeSelectOption key={value} value={value}>
-              {t(`sort.${value}`)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </div>
-
-      <SearchFeed
-        initialData={initialData}
-        params={params}
-        variant="timeline"
-      />
-    </div>
+    <SearchControlsContent
+      defaultParams={defaultParams}
+      feedQuery={params =>
+        searchFeedQueryOptions({ initialData, locale, params })
+      }
+      LinkComponent={NextSearchFeedLink}
+      variant="timeline"
+    />
   );
 };

@@ -1,0 +1,109 @@
+import type {
+  SearchFeedPageArgs,
+  SearchFeedPageFetcher,
+  SearchFeedParams,
+} from '@vitnode/core/views/search/search-feed-query'
+
+import { createIsomorphicFn } from '@tanstack/react-start'
+import {
+  fetchSearchFeedPageInBrowser,
+  searchFeedQueryKey,
+  searchFeedQueryOptions,
+} from '@vitnode/core/views/search/search-feed-query'
+
+import type { Locale } from '#/lib/i18n/shared'
+
+import { fetchSearchFeedPageOnServer } from '#/server/search-feed.server'
+
+/**
+ * The search feed, as this app's one query definition.
+ *
+ * Everything about *what* a feed page is - the request, the page size, the
+ * cursor rule, what counts as a failure, the cache entry it lands in - comes
+ * from `@vitnode/core/views/search/search-feed-query`, which is also what the
+ * mounted `SearchFeedContent` runs. This module supplies only the one thing core
+ * cannot know: how to reach the API from a server that is rendering a request.
+ *
+ * Every feed in the app is built from here - `/discover` browsing newest-first,
+ * `/search` with a term and filters, and whatever comes next - because they are
+ * the same query with different parameters. A route that bound its own transport
+ * would be a second definition of a feed that agreed with this one only until it
+ * didn't.
+ */
+
+/**
+ * The transport boundary, and the reason one query definition works in a loader
+ * and in a component.
+ *
+ * Both branches call the Hono API directly - the server one from inside the
+ * request being rendered, the browser one over the network to the same origin.
+ * There is deliberately no `createServerFn` in between: a server function is a
+ * `POST` back to this app that then calls Hono, so every scroll of the feed and
+ * every keystroke in the search box would cost two round trips to fetch a
+ * public, anonymous read that the API is already the boundary for.
+ *
+ * `createIsomorphicFn` is what makes that safe rather than merely tidy. The
+ * Start compiler keeps only the branch belonging to the bundle it is building
+ * and drops the other's import with it, so `search-feed.server.ts` - and the
+ * `server-only` marker at the top of it - never reaches the browser. The client
+ * branch is core's own browser fetcher, so a hydrated page and a Next.js page
+ * fetch through exactly the same code.
+ *
+ * Un-compiled (tests, plain Node) the stub falls back to the server branch,
+ * which is the right default off a browser.
+ */
+export const fetchSearchFeedPage: SearchFeedPageFetcher = createIsomorphicFn()
+  .server(fetchSearchFeedPageOnServer)
+  .client(fetchSearchFeedPageInBrowser)
+
+/**
+ * The cache entry one feed lives in.
+ *
+ * Core's key, not one of this app's devising. `SearchFeedContent` runs the
+ * mounted `useInfiniteQuery` and stores its pages here; a key invented locally
+ * would be a *second* entry holding the same feed, so the loader would fill one,
+ * the component would miss the other, and every visit would render a skeleton
+ * and fetch page one again from the browser.
+ *
+ * The locale is in it, which is the whole contract: `/discover` and
+ * `/pl/discover` are two feeds over two sets of documents, so they get two
+ * entries. A language switch changes the key rather than the value under it.
+ */
+export const feedQueryKey = ({
+  locale,
+  params,
+}: {
+  locale: Locale
+  params: SearchFeedParams
+}) => searchFeedQueryKey({ locale, params })
+
+/**
+ * One feed, as the one query definition every caller shares.
+ *
+ *     loader:     context.queryClient.ensureInfiniteQueryData(options)
+ *     component:  <SearchFeedContent queryOptions={options} />
+ *     load more:  fetchNextPage()   // the same queryFn, cursor rule and checks
+ *
+ * No `initialData`. A route loader has already put page one in the entry this
+ * key names and the SSR pass dehydrates it, so passing it again would be a
+ * second copy of the same bytes that can disagree with the first.
+ *
+ * No `staleTime` either. Freshness is whatever the API's own caching gives, plus
+ * VitNode's client defaults (`refetchOnMount` and `refetchOnWindowFocus` both
+ * off), so a hydrated feed is not refetched behind the reader. Deciding a cache
+ * lifetime belongs to the caching stage, with the API and Redis in the same view.
+ */
+export const feedQueryOptions = ({
+  locale,
+  params,
+}: {
+  locale: Locale
+  params: SearchFeedParams
+}) =>
+  searchFeedQueryOptions({
+    fetchPage: fetchSearchFeedPage,
+    locale,
+    params,
+  })
+
+export type { SearchFeedPageArgs, SearchFeedParams }

@@ -109,14 +109,20 @@ describe('the Query SSR integration is installed', () => {
 describe('nothing but the router creates a query client', () => {
   const appFiles = [
     'routes/__root.tsx',
+    'routes/_authenticated/files.tsx',
     'routes/discover.tsx',
     'routes/index.tsx',
+    'routes/search.tsx',
     'components/route-messages.tsx',
+    'lib/files/my-files-route.ts',
+    'lib/files/my-files.ts',
     'lib/i18n/client.ts',
     'lib/i18n/query.ts',
     'lib/i18n/shared.ts',
     'lib/search/discover-feed.ts',
     'lib/search/discover-request.ts',
+    'lib/search/feed.ts',
+    'lib/search/search-request.ts',
   ]
 
   it.each(appFiles)('%s mounts no QueryClientProvider', (file) => {

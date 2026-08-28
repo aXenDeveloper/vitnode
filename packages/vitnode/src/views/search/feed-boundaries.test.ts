@@ -11,6 +11,18 @@ const SHARED_ENTRY = join(here, "search-feed-content.tsx");
 const NEXT_WRAPPER = join(here, "search-feed.tsx");
 
 /**
+ * The search page's controls, and the Next wrapper they were split out of.
+ *
+ * The same boundary as the feed's, one level up and with more at stake: the
+ * controls render an input group, a native select and a row of buttons, so this
+ * is where a stray Next.js import inside the *design system* would show up. That
+ * is not hypothetical - `HeaderContent` was Next-only for one back button, and
+ * `use-captcha` made every `AutoForm` Next-only for one navigation import.
+ */
+const SHARED_CONTROLS = join(here, "search-controls-content.tsx");
+const NEXT_CONTROLS = join(here, "search-controls.tsx");
+
+/**
  * The other half of what a migrated feed page renders.
  *
  * Scanned here rather than in a file of its own because it is the same boundary
@@ -210,6 +222,55 @@ describe("the shared header is framework-neutral", () => {
   });
 });
 
+describe("the shared search controls are framework-neutral", () => {
+  it("reaches nothing from next/* or server-only", () => {
+    expect(offenders(SHARED_CONTROLS, NEXT_ONLY)).toEqual([]);
+  });
+
+  it("reaches none of next-intl's Next-only entrypoints", () => {
+    expect(offenders(SHARED_CONTROLS, NEXT_INTL_RUNTIME)).toEqual([]);
+  });
+
+  it("never reaches the locale-aware navigation module", () => {
+    const reached = [...externalGraph(SHARED_CONTROLS).keys()];
+
+    expect(reached.some(one => one.includes("navigation"))).toBe(false);
+  });
+
+  it("takes its translations from use-intl, not from next-intl", () => {
+    const imports = runtimeImports(SHARED_CONTROLS);
+
+    expect(imports).toContain("use-intl");
+    expect(imports).not.toContain("next-intl");
+  });
+
+  it("walks into the design system it renders", () => {
+    // Otherwise the assertions above would pass on a graph that stopped at the
+    // controls themselves - which is exactly the graph that cannot break.
+    const reached = [...externalGraph(SHARED_CONTROLS).keys()];
+    const visited = runtimeImports(SHARED_CONTROLS);
+
+    expect(visited).toContain("@/components/ui/input-group");
+    expect(reached).toContain("lucide-react");
+  });
+
+  it("takes its query and its link as props rather than building either", () => {
+    const code = readFileSync(SHARED_CONTROLS, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    // Neither a locale nor a transport: the whole request is `feedQuery`'s, and
+    // `feedQuery` comes from whichever app is rendering this.
+    expect(code).not.toContain("useLocale");
+    expect(code).not.toContain("searchFeedQueryOptions");
+    expect(code).toContain("feedQuery: SearchFeedQueryFactory;");
+    expect(code).toContain("LinkComponent: SearchFeedLinkComponent;");
+    // One feed, and it is the shared one. A second renderer here is the drift
+    // this boundary exists to prevent.
+    expect(code.match(/<SearchFeedContent/g)).toHaveLength(1);
+  });
+});
+
 describe("the Next wrapper keeps the Next-only pieces", () => {
   it("is the only one of the two that knows about next-intl navigation", () => {
     expect(offenders(NEXT_WRAPPER, ["next-intl/navigation"])).not.toEqual([]);
@@ -218,5 +279,21 @@ describe("the Next wrapper keeps the Next-only pieces", () => {
 
   it("resolves the locale itself", () => {
     expect(readFileSync(NEXT_WRAPPER, "utf8")).toContain("useLocale()");
+  });
+
+  it("is where the search controls' Next-only half lives too", () => {
+    // The control for the suite above: `search-controls.tsx` provably imports
+    // what `search-controls-content.tsx` must not.
+    expect(offenders(NEXT_CONTROLS, NEXT_INTL_RUNTIME)).not.toEqual([]);
+    expect(readFileSync(NEXT_CONTROLS, "utf8")).toContain("useLocale()");
+  });
+
+  it("hands the shared controls the same link the feed gets", () => {
+    // Two copies would be two component types, and the search page would
+    // remount its whole result list on every keystroke.
+    expect(runtimeImports(NEXT_CONTROLS)).toContain("./search-feed");
+    expect(readFileSync(NEXT_WRAPPER, "utf8")).toContain(
+      "export const NextSearchFeedLink",
+    );
   });
 });
