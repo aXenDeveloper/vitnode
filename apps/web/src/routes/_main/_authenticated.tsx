@@ -9,10 +9,15 @@ import { canAccessAuthenticatedRoute } from '#/lib/auth/shared'
  *
  * Pathless - the leading underscore means it contributes no URL segment - so a
  * route joins it by *where its file lives*, not by remembering to call a guard:
- * `routes/_authenticated/settings.tsx` is `/settings`, guarded, and the guard is
- * this file. That is the whole point of introducing it now, with nothing under
- * it yet: Stage 8 moves `/settings/*` here and inherits the rule rather than
- * writing a second copy of it.
+ * `routes/_main/_authenticated/settings.tsx` is `/settings`, guarded, and the
+ * guard is this file. That is what it buys, and Stage 9 is where it pays: the
+ * settings layout and its four panels moved under here and inherited the rule
+ * rather than writing a second copy of it, and neither the layout nor any panel
+ * contains the word "session".
+ *
+ * Three pages sit under it today - `/files`, `/settings` and the settings
+ * subtree - and none of them checks a session. That is the invariant
+ * `src/tests/settings-routes.test.ts` pins by scanning for the absence.
  *
  * ## Why the check is in `beforeLoad`
  *

@@ -362,9 +362,29 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/lib/auth/screens.ts',
     'apps/web/src/lib/middleware-config.ts',
     'apps/web/src/routes/_main/_authenticated.tsx',
-    'apps/web/src/routes/_main/_authenticated/account.tsx',
     'apps/web/src/routes/login.tsx',
     'apps/web/src/routes/login_.sso.$providerId.tsx',
+    // Stage 9. Registration reaches deeper still than the login card: the same
+    // `AutoForm` stack plus the captcha widget, the password checklist tooltip
+    // and the confirmation screen. Password recovery adds core's shared error
+    // screen on top. Both were Next-only until Stage 9 split their views.
+    'apps/web/src/lib/auth/password-reset-route.ts',
+    'apps/web/src/routes/register.tsx',
+    'apps/web/src/routes/login_.reset-password.tsx',
+    // Stage 9. The settings subtree, which is the first *nested layout* this app
+    // renders and the first place the shared settings frame - the navigation
+    // card, the mobile back link, the panel card - is mounted outside Next.js.
+    // The devices panel is the one with data, so its graph reaches core's list,
+    // its revoke and the confirm dialog behind the revoke button.
+    'apps/web/src/components/layout/settings-breadcrumb.tsx',
+    'apps/web/src/lib/devices/devices.ts',
+    'apps/web/src/lib/settings/panel.ts',
+    'apps/web/src/routes/_main/_authenticated/settings.tsx',
+    'apps/web/src/routes/_main/_authenticated/settings/devices.tsx',
+    'apps/web/src/routes/_main/_authenticated/settings/index.tsx',
+    'apps/web/src/routes/_main/_authenticated/settings/overview.tsx',
+    'apps/web/src/routes/_main/_authenticated/settings/security.tsx',
+    'apps/web/src/server/devices.server.ts',
     // Stage 7. `/files` renders the whole data table - eight columns, the
     // bulk-action bar and both confirm dialogs - which is the deepest this app
     // reaches into the design system after the auth screens. That graph was

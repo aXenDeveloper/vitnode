@@ -11,14 +11,20 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as MainAuthenticatedRouteImport } from './routes/_main/_authenticated'
 import { Route as MainDiscoverRouteImport } from './routes/_main/discover'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
-import { Route as MainAuthenticatedAccountRouteImport } from './routes/_main/_authenticated/account'
+import { Route as LoginResetPasswordRouteImport } from './routes/login_.reset-password'
 import { Route as MainAuthenticatedFilesRouteImport } from './routes/_main/_authenticated/files'
+import { Route as MainAuthenticatedSettingsRouteImport } from './routes/_main/_authenticated/settings'
 import { Route as LoginSsoProviderIdRouteImport } from './routes/login_.sso.$providerId'
+import { Route as MainAuthenticatedSettingsIndexRouteImport } from './routes/_main/_authenticated/settings/index'
+import { Route as MainAuthenticatedSettingsDevicesRouteImport } from './routes/_main/_authenticated/settings/devices'
+import { Route as MainAuthenticatedSettingsOverviewRouteImport } from './routes/_main/_authenticated/settings/overview'
+import { Route as MainAuthenticatedSettingsSecurityRouteImport } from './routes/_main/_authenticated/settings/security'
 
 const MainRoute = MainRouteImport.update({
   id: '/_main',
@@ -27,6 +33,11 @@ const MainRoute = MainRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MainIndexRoute = MainIndexRouteImport.update({
@@ -53,95 +64,160 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MainAuthenticatedAccountRoute =
-  MainAuthenticatedAccountRouteImport.update({
-    id: '/account',
-    path: '/account',
-    getParentRoute: () => MainAuthenticatedRoute,
-  } as any)
+const LoginResetPasswordRoute = LoginResetPasswordRouteImport.update({
+  id: '/login_/reset-password',
+  path: '/login/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MainAuthenticatedFilesRoute = MainAuthenticatedFilesRouteImport.update({
   id: '/files',
   path: '/files',
   getParentRoute: () => MainAuthenticatedRoute,
 } as any)
+const MainAuthenticatedSettingsRoute =
+  MainAuthenticatedSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => MainAuthenticatedRoute,
+  } as any)
 const LoginSsoProviderIdRoute = LoginSsoProviderIdRouteImport.update({
   id: '/login_/sso/$providerId',
   path: '/login/sso/$providerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MainAuthenticatedSettingsIndexRoute =
+  MainAuthenticatedSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => MainAuthenticatedSettingsRoute,
+  } as any)
+const MainAuthenticatedSettingsDevicesRoute =
+  MainAuthenticatedSettingsDevicesRouteImport.update({
+    id: '/devices',
+    path: '/devices',
+    getParentRoute: () => MainAuthenticatedSettingsRoute,
+  } as any)
+const MainAuthenticatedSettingsOverviewRoute =
+  MainAuthenticatedSettingsOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => MainAuthenticatedSettingsRoute,
+  } as any)
+const MainAuthenticatedSettingsSecurityRoute =
+  MainAuthenticatedSettingsSecurityRouteImport.update({
+    id: '/security',
+    path: '/security',
+    getParentRoute: () => MainAuthenticatedSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/discover': typeof MainDiscoverRoute
   '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
-  '/account': typeof MainAuthenticatedAccountRoute
+  '/login/reset-password': typeof LoginResetPasswordRoute
   '/files': typeof MainAuthenticatedFilesRoute
+  '/settings': typeof MainAuthenticatedSettingsRouteWithChildren
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
+  '/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
+  '/settings/security': typeof MainAuthenticatedSettingsSecurityRoute
+  '/settings/': typeof MainAuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/': typeof MainIndexRoute
   '/discover': typeof MainDiscoverRoute
   '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
-  '/account': typeof MainAuthenticatedAccountRoute
+  '/login/reset-password': typeof LoginResetPasswordRoute
   '/files': typeof MainAuthenticatedFilesRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
+  '/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
+  '/settings/security': typeof MainAuthenticatedSettingsSecurityRoute
+  '/settings': typeof MainAuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_main': typeof MainRouteWithChildren
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/_main/_authenticated': typeof MainAuthenticatedRouteWithChildren
   '/_main/discover': typeof MainDiscoverRoute
   '/_main/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/login_/reset-password': typeof LoginResetPasswordRoute
   '/_main/': typeof MainIndexRoute
-  '/_main/_authenticated/account': typeof MainAuthenticatedAccountRoute
   '/_main/_authenticated/files': typeof MainAuthenticatedFilesRoute
+  '/_main/_authenticated/settings': typeof MainAuthenticatedSettingsRouteWithChildren
   '/login_/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/_main/_authenticated/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
+  '/_main/_authenticated/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
+  '/_main/_authenticated/settings/security': typeof MainAuthenticatedSettingsSecurityRoute
+  '/_main/_authenticated/settings/': typeof MainAuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/register'
     | '/discover'
     | '/search'
     | '/api/$'
-    | '/account'
+    | '/login/reset-password'
     | '/files'
+    | '/settings'
     | '/login/sso/$providerId'
+    | '/settings/devices'
+    | '/settings/overview'
+    | '/settings/security'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/register'
     | '/'
     | '/discover'
     | '/search'
     | '/api/$'
-    | '/account'
+    | '/login/reset-password'
     | '/files'
     | '/login/sso/$providerId'
+    | '/settings/devices'
+    | '/settings/overview'
+    | '/settings/security'
+    | '/settings'
   id:
     | '__root__'
     | '/_main'
     | '/login'
+    | '/register'
     | '/_main/_authenticated'
     | '/_main/discover'
     | '/_main/search'
     | '/api/$'
+    | '/login_/reset-password'
     | '/_main/'
-    | '/_main/_authenticated/account'
     | '/_main/_authenticated/files'
+    | '/_main/_authenticated/settings'
     | '/login_/sso/$providerId'
+    | '/_main/_authenticated/settings/devices'
+    | '/_main/_authenticated/settings/overview'
+    | '/_main/_authenticated/settings/security'
+    | '/_main/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  LoginResetPasswordRoute: typeof LoginResetPasswordRoute
   LoginSsoProviderIdRoute: typeof LoginSsoProviderIdRoute
 }
 
@@ -159,6 +235,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_main/': {
@@ -196,18 +279,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_main/_authenticated/account': {
-      id: '/_main/_authenticated/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof MainAuthenticatedAccountRouteImport
-      parentRoute: typeof MainAuthenticatedRoute
+    '/login_/reset-password': {
+      id: '/login_/reset-password'
+      path: '/login/reset-password'
+      fullPath: '/login/reset-password'
+      preLoaderRoute: typeof LoginResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_main/_authenticated/files': {
       id: '/_main/_authenticated/files'
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof MainAuthenticatedFilesRouteImport
+      parentRoute: typeof MainAuthenticatedRoute
+    }
+    '/_main/_authenticated/settings': {
+      id: '/_main/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof MainAuthenticatedSettingsRouteImport
       parentRoute: typeof MainAuthenticatedRoute
     }
     '/login_/sso/$providerId': {
@@ -217,17 +307,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginSsoProviderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_main/_authenticated/settings/': {
+      id: '/_main/_authenticated/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof MainAuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof MainAuthenticatedSettingsRoute
+    }
+    '/_main/_authenticated/settings/devices': {
+      id: '/_main/_authenticated/settings/devices'
+      path: '/devices'
+      fullPath: '/settings/devices'
+      preLoaderRoute: typeof MainAuthenticatedSettingsDevicesRouteImport
+      parentRoute: typeof MainAuthenticatedSettingsRoute
+    }
+    '/_main/_authenticated/settings/overview': {
+      id: '/_main/_authenticated/settings/overview'
+      path: '/overview'
+      fullPath: '/settings/overview'
+      preLoaderRoute: typeof MainAuthenticatedSettingsOverviewRouteImport
+      parentRoute: typeof MainAuthenticatedSettingsRoute
+    }
+    '/_main/_authenticated/settings/security': {
+      id: '/_main/_authenticated/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof MainAuthenticatedSettingsSecurityRouteImport
+      parentRoute: typeof MainAuthenticatedSettingsRoute
+    }
   }
 }
 
+interface MainAuthenticatedSettingsRouteChildren {
+  MainAuthenticatedSettingsDevicesRoute: typeof MainAuthenticatedSettingsDevicesRoute
+  MainAuthenticatedSettingsOverviewRoute: typeof MainAuthenticatedSettingsOverviewRoute
+  MainAuthenticatedSettingsSecurityRoute: typeof MainAuthenticatedSettingsSecurityRoute
+  MainAuthenticatedSettingsIndexRoute: typeof MainAuthenticatedSettingsIndexRoute
+}
+
+const MainAuthenticatedSettingsRouteChildren: MainAuthenticatedSettingsRouteChildren =
+  {
+    MainAuthenticatedSettingsDevicesRoute:
+      MainAuthenticatedSettingsDevicesRoute,
+    MainAuthenticatedSettingsOverviewRoute:
+      MainAuthenticatedSettingsOverviewRoute,
+    MainAuthenticatedSettingsSecurityRoute:
+      MainAuthenticatedSettingsSecurityRoute,
+    MainAuthenticatedSettingsIndexRoute: MainAuthenticatedSettingsIndexRoute,
+  }
+
+const MainAuthenticatedSettingsRouteWithChildren =
+  MainAuthenticatedSettingsRoute._addFileChildren(
+    MainAuthenticatedSettingsRouteChildren,
+  )
+
 interface MainAuthenticatedRouteChildren {
-  MainAuthenticatedAccountRoute: typeof MainAuthenticatedAccountRoute
   MainAuthenticatedFilesRoute: typeof MainAuthenticatedFilesRoute
+  MainAuthenticatedSettingsRoute: typeof MainAuthenticatedSettingsRouteWithChildren
 }
 
 const MainAuthenticatedRouteChildren: MainAuthenticatedRouteChildren = {
-  MainAuthenticatedAccountRoute: MainAuthenticatedAccountRoute,
   MainAuthenticatedFilesRoute: MainAuthenticatedFilesRoute,
+  MainAuthenticatedSettingsRoute: MainAuthenticatedSettingsRouteWithChildren,
 }
 
 const MainAuthenticatedRouteWithChildren =
@@ -252,7 +393,9 @@ const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   ApiSplatRoute: ApiSplatRoute,
+  LoginResetPasswordRoute: LoginResetPasswordRoute,
   LoginSsoProviderIdRoute: LoginSsoProviderIdRoute,
 }
 export const routeTree = rootRouteImport

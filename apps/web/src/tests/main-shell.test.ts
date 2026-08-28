@@ -40,8 +40,15 @@ describe('the main shell is what a public page renders inside', () => {
     ['/', 'the front page'],
     ['/discover', 'the discover feed'],
     ['/search', 'the search page'],
-    ['/account', 'a page behind the session guard'],
-    ['/files', 'the files table, behind the same guard'],
+    ['/files', 'the files table, behind the session guard'],
+    // Stage 9. The settings subtree joins the shell rather than bringing a
+    // second header of its own: the layout is a child of the guard, which is a
+    // child of the shell, so a panel gets the header, the breadcrumb area, the
+    // `<main>` landmark and the guard from where its file lives.
+    ['/settings', 'the settings root, behind the same guard'],
+    ['/settings/overview', 'a settings panel'],
+    ['/settings/devices', 'the devices panel'],
+    ['/settings/security', 'the security panel'],
     ['/example', "a plugin's page, mounted by area rather than by file"],
   ])('%s renders in the shell (%s)', (pathname) => {
     expect(matchedIds(pathname)).toContain(MAIN_SHELL_ROUTE_ID)
@@ -50,12 +57,17 @@ describe('the main shell is what a public page renders inside', () => {
   /**
    * An auth screen is a full-height card on an otherwise empty document, and the
    * header it would render has one interesting control on it: "sign in". Keeping
-   * these out is what makes the shell something routes opt into - and it is the
-   * shape `/register` and the password-reset screens will want when they move.
+   * these out is what makes the shell something routes opt into.
+   *
+   * Stage 9 is what makes that a policy rather than an accident of what had been
+   * migrated: registration and password recovery moved in, and they moved in
+   * *here* - outside the shell, alongside `/login` - rather than under `_main`.
    */
   it.each([
     ['/login', 'the login screen'],
     ['/login/sso/google', 'the SSO callback'],
+    ['/register', 'the registration screen'],
+    ['/login/reset-password', 'the password-recovery screens'],
   ])('%s renders outside it (%s)', (pathname) => {
     expect(matchedIds(pathname)).not.toContain(MAIN_SHELL_ROUTE_ID)
   })
@@ -132,12 +144,21 @@ describe('the shell owns the main landmark', () => {
    * them, a login screen with no `<main>` is a document with no main landmark at
    * all.
    */
-  it.each(['login.tsx', 'login_.sso.$providerId.tsx'])(
-    '%s renders exactly one <main> of its own',
-    (name) => {
-      expect(landmarks(withoutComments(join(routesDir, name)))).toHaveLength(1)
-    },
-  )
+  it.each([
+    ['login.tsx', 1],
+    ['login_.sso.$providerId.tsx', 1],
+    // Stage 9. Registration and password recovery join the blank-auth area, so
+    // they own their landmark for the same reason.
+    ['register.tsx', 1],
+    // Two, and both correct: the page body and the route's own
+    // `notFoundComponent`, which replaces it on an install with no email
+    // adapter. They are alternatives, so a document still renders exactly one.
+    ['login_.reset-password.tsx', 2],
+  ] as const)('%s renders %i <main> of its own', (name, count) => {
+    expect(landmarks(withoutComments(join(routesDir, name)))).toHaveLength(
+      count,
+    )
+  })
 
   /**
    * The same rule, for the pages this app does not own.

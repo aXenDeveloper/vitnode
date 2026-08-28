@@ -34,9 +34,13 @@ export type AuthLinkComponent = (props: AuthLinkProps) => React.ReactNode;
  *
  * Ordinary data rather than a route table: a caller that mounts the login card
  * somewhere else overrides the one href it moved, and nothing here has to know
- * about it. None of these routes is migrated in this stage - in TanStack Start
- * they are reached through the migration link, which loads the Next.js app that
- * still serves them.
+ * about it.
+ *
+ * Nothing here records which application serves any of them either, and that is
+ * the point rather than an omission. All three were Next.js pages when this was
+ * written and all three are TanStack Start routes now; in that app they are
+ * reached through the migration link, which asks the route tree per href, so the
+ * change was route files and no edit to this record.
  */
 export const AUTH_HREF = {
   resetPassword: "/login/reset-password",

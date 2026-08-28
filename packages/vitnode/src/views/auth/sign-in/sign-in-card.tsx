@@ -18,7 +18,10 @@ import { SignInContent } from "./sign-in-content";
  * browser while the two things that need a request keep streaming in from the
  * server, exactly as they did before.
  *
- * `/register` is not migrated in this stage and is not touched here.
+ * The "create an account" link points at `/register`, which is served by both
+ * applications now. This wrapper is the Next.js one, so it links to the Next.js
+ * page as it always has; the TanStack Start route hands `SignInContent` its own
+ * link component instead. See `AUTH_HREF` in `../auth-link.ts`.
  */
 export const SignInCard = ({
   form,

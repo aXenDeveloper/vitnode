@@ -94,11 +94,17 @@ export type UserHeaderState =
  * Where the header links to.
  *
  * Ordinary data, not a route table - nothing here knows or cares which
- * application currently serves a path. During the migration `/files` and
- * `/login` are rendered by TanStack Start and `/settings`, `/register`,
- * `/admin` and the profile page by Next.js, and the *link component* is what
- * decides that, per href, by asking the route tree. So a route that moves needs
- * no edit here.
+ * application currently serves a path. During the migration some of these are
+ * rendered by TanStack Start and some still by Next.js, and the *link component*
+ * is what decides which, per href, by asking the route tree. So a route that
+ * moves needs no edit here.
+ *
+ * That is a claim worth having been tested rather than asserted, and it has
+ * been: `/settings` and `/register` were Next.js pages when this record was
+ * written and are TanStack Start routes now, and the change that moved them
+ * added route files and touched neither this file nor `MigrationLink`. The
+ * AdminCP and the profile page are still the other application's.
+ * `apps/web/src/tests/header-navigation.test.ts` pins both halves.
  */
 export const USER_HEADER_HREF = {
   adminCp: "/admin",

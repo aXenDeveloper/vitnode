@@ -85,6 +85,21 @@ import { socketUserIdFromSession } from '#/lib/realtime'
  * from it, and the identity change is what re-opens the socket so the server
  * re-reads the cookie on a fresh handshake. Which is what stops the previous
  * visitor's notifications from reaching this browser, with no page reload.
+ *
+ * ## No route guard depends on this being mounted
+ *
+ * Worth stating because for a while one silently did. The observer below is an
+ * *active* one, and `invalidateQueries` refetches active queries - so while a
+ * guard read the session through `ensureQueryData`, which ignores invalidation
+ * entirely, the refetch performed for **this** component was the only thing
+ * making a post-sign-in navigation see the new visitor. Moving this into the
+ * shell's `listeners` slot, or gating it, would have turned every sign-in into a
+ * bounce back to the login page, in a file neither change mentions.
+ *
+ * `ensureAuthState` reads through `fetchQuery` now, which consults the mark
+ * itself, so the guards are correct with nothing observing the entry at all.
+ * What this component is still responsible for is its own job: the socket's
+ * identity. Move it freely on those grounds.
  */
 export const RealtimeListeners = () => {
   const { data: session } = useQuery(sessionQueryOptions())

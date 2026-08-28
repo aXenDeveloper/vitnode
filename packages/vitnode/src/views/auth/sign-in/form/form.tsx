@@ -16,9 +16,10 @@ import { SignInFormContent } from "./sign-in-form-content";
  *   APIs, and all three of which stay on this side of the boundary. `isAdmin`
  *   travels with it because the mutation is the only thing that ever cared:
  *   it decides which layout to revalidate and where to land.
- * - **A `Link`** that knows how to write a locale prefix into an internal href.
- *   `/login/reset-password` is not migrated in this stage and is not touched
- *   here.
+ * - **A `Link`** that knows how to write a locale prefix into an internal href -
+ *   the "forgot your password" link, which points at `/login/reset-password`.
+ *   That route is served by both applications now, and this wrapper is the
+ *   Next.js one, so it links to the Next.js page as it always has.
  */
 export const FormSignIn = ({
   isAdmin,

@@ -1,3 +1,5 @@
+import { RATE_LIMIT_STATUS } from '@vitnode/core/lib/fetcher/rate-limit'
+import { signUpConflictReason } from '@vitnode/core/views/auth/sign-up/form/schema'
 import { z } from 'zod'
 
 /**
@@ -291,3 +293,289 @@ export const parseSsoCallback = ({
 
   return { ok: true, params: params.data }
 }
+
+/**
+ * ## Registration and password recovery
+ *
+ * Three more mutations, and the same shape as the four above: a schema for what
+ * a browser may send, and a total function from an HTTP status to a finite
+ * result. What is new is that two of them carry a captcha token and one of them
+ * can mint a session, so the notes below are about those two facts.
+ */
+
+/**
+ * A solved captcha token, as it arrives from the widget.
+ *
+ * `""` is accepted and meaningful: `useCaptcha` reports itself ready with no
+ * token when this deployment has no captcha configured, and the API's
+ * `captchaMiddleware` is a no-op in exactly that case. So an empty string is
+ * "there was nothing to solve", and it is the transport's job to send no header
+ * rather than an empty one.
+ *
+ * The cap is generous because the tokens are: a Turnstile response is around
+ * 2 KB and a reCAPTCHA v3 one is longer still. It exists so a crafted call
+ * cannot make this server forward an unbounded header.
+ */
+const captchaTokenSchema = z.string().max(8192).default('')
+
+/**
+ * What registration accepts.
+ *
+ * The API's own rules, restated rather than imported, for the reason the sign-in
+ * schema gives: `users/routes/sign-up.route.ts` pulls in `UserModel`,
+ * `PasswordModel` and the Hono runtime with them, and this module is reachable
+ * from the browser bundle. Every bound here is the API's:
+ *
+ *     email       z.email().toLowerCase()          identical
+ *     name        min 3, no doubled spaces, and the character class from
+ *                 `nameRegex` - `[\p{L}\p{N}._@ -]`
+ *     password    min 8 (the *form* asks for more; see
+ *                 `createPasswordZodSchema` in @vitnode/core)
+ *     newsletter  optional boolean
+ *
+ * The maxima are this layer's own and have no counterpart on the API, which
+ * bounds none of these: 32 characters of name because that is what the
+ * registration form allows, and 1024 of password so a submission cannot ask this
+ * server to hash an unbounded string.
+ */
+export const signUpInputSchema = z.object({
+  captchaToken: captchaTokenSchema,
+  email: z.email().toLowerCase(),
+  name: z
+    .string()
+    .min(3)
+    .max(32)
+    .regex(/^(?!.* {2})[\p{L}\p{N}._@ -]*$/u),
+  newsletter: z.boolean().optional(),
+  password: z.string().min(8).max(1024),
+})
+
+export type SignUpInput = z.infer<typeof signUpInputSchema>
+
+/**
+ * The `201` body, validated rather than trusted.
+ *
+ * Two reasons it is a schema and not a cast. It decides whether the visitor is
+ * now signed in - `emailVerified` is what the API branched on when it chose to
+ * mint a session - so a missing or wrongly-typed field must not read as `false`
+ * by accident. And the sign-up route declares its `400` and `409` without a
+ * `content` block, which makes the fetcher's inferred `json()` type `unknown`;
+ * parsing is how that becomes a shape rather than an assertion.
+ */
+const signUpSuccessSchema = z.object({
+  email: z.string(),
+  emailVerified: z.boolean(),
+})
+
+/**
+ * What a reset request accepts. One address and the captcha the route requires.
+ */
+export const passwordResetRequestInputSchema = z.object({
+  captchaToken: captchaTokenSchema,
+  email: z.email().toLowerCase(),
+})
+
+export type PasswordResetRequestInput = z.infer<
+  typeof passwordResetRequestInputSchema
+>
+
+/**
+ * What a password change accepts.
+ *
+ * The link's two values *and* a password, validated here even though
+ * `parseRecoveryLink` in `@vitnode/core` already judged the first two on the way
+ * out of the URL. That is not redundancy: a server function is a public
+ * same-origin endpoint, so its input is whatever a caller posts, and the
+ * component that parsed the URL is not in the call path. The bounds match that
+ * parser's - a base64url token, a safe-integer id - so a link this app was
+ * willing to render a form for is a link this schema accepts.
+ */
+export const changePasswordInputSchema = z.object({
+  password: z.string().min(8).max(1024),
+  token: z
+    .string()
+    .min(16)
+    .max(512)
+    .regex(/^[A-Za-z0-9_-]+$/),
+  userId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+})
+
+export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>
+
+/**
+ * ## The three results
+ *
+ *     signUp                 { ok: true, email, emailVerified }
+ *                            { reason: 'email_exists' | 'name_exists' }  -> mark a field
+ *                            { reason: 'conflict' }                      -> a 409 we
+ *                                                                           could not
+ *                                                                           classify
+ *                            { reason: 'invalid' }                       -> the API
+ *                                                                           refused the
+ *                                                                           body or the
+ *                                                                           captcha
+ *                            { reason: 'rate_limited' | 'server_error' }
+ *
+ *     requestPasswordReset   { ok: true }
+ *                            { reason: 'invalid' | 'rate_limited' | 'server_error' }
+ *
+ *     changePasswordFromReset  { ok: true }
+ *                              { reason: 'invalid_token' }               -> ask for a
+ *                                                                           fresh link
+ *                              { reason: 'rate_limited' | 'server_error' }
+ *
+ * `rate_limited` is kept apart from `server_error` even though today's screens
+ * render both the same way. The API answers `429` with a `Retry-After` header,
+ * and `notifyRateLimited` - the toast the browser fetcher raises - is a no-op on
+ * a server, so a mutation that goes through a server function is the *only* place
+ * that fact can be observed. Collapsing it here would make it unobservable
+ * anywhere.
+ *
+ * `email` and `emailVerified` come back from sign-up because the caller needs
+ * both: the address is printed on the "check your email" screen, and the flag is
+ * the difference between a visitor who now holds a session cookie and one who
+ * does not. See {@link shouldRefreshSessionAfterSignUp}.
+ */
+export type SignUpResult =
+  | { email: string; emailVerified: boolean; ok: true }
+  | {
+      ok: false
+      reason:
+        | 'conflict'
+        | 'email_exists'
+        | 'invalid'
+        | 'name_exists'
+        | 'rate_limited'
+        | 'server_error'
+    }
+
+export type PasswordResetRequestResult =
+  | { ok: false; reason: 'invalid' | 'rate_limited' | 'server_error' }
+  | { ok: true }
+
+export type ChangePasswordResult =
+  | { ok: false; reason: 'invalid_token' | 'rate_limited' | 'server_error' }
+  | { ok: true }
+
+/**
+ * A registration attempt, from the status and whatever body came with it.
+ *
+ * `201` is the route's only success, and it is the one status whose body is
+ * read - through {@link signUpSuccessSchema}, so a `201` the API answered with
+ * something unexpected is a `server_error` rather than a visitor who is
+ * mysteriously signed in or not.
+ *
+ * `400` is `invalid`, and it covers two things the API spells the same way: a
+ * body its schema refused, and a captcha `captchaMiddleware` refused
+ * (`"Captcha token is required"`, `"Captcha validation failed"` - both `400`).
+ * Neither message travels; a caller that wants to distinguish them would need
+ * the API to say so, which today it does not.
+ *
+ * `409` goes through core's `signUpConflictReason`, the single classifier both
+ * frontends use, so `"Email already exists"` becomes `email_exists` here and in
+ * the Next.js server action from the same code. A `409` whose body matches
+ * neither known message is `conflict`: still a conflict, just not one that can be
+ * pinned to a field.
+ */
+export const signUpResultFromStatus = (
+  status: number,
+  { body, conflict }: { body?: unknown; conflict?: string } = {},
+): SignUpResult => {
+  if (status === 201) {
+    const parsed = signUpSuccessSchema.safeParse(body)
+
+    if (!parsed.success) return { ok: false, reason: 'server_error' }
+
+    return {
+      email: parsed.data.email,
+      emailVerified: parsed.data.emailVerified,
+      ok: true,
+    }
+  }
+
+  if (status === 400) return { ok: false, reason: 'invalid' }
+  if (status === 409) {
+    const reason = signUpConflictReason(conflict ?? '')
+
+    return {
+      ok: false,
+      reason: reason === 'unknown' ? 'conflict' : reason,
+    }
+  }
+  if (status === RATE_LIMIT_STATUS) return { ok: false, reason: 'rate_limited' }
+
+  return { ok: false, reason: 'server_error' }
+}
+
+/**
+ * A reset request's outcome.
+ *
+ * `201` is the route's only declared response, and the API answers it whether or
+ * not the address belongs to an account and whether or not it decided to skip
+ * the send because one was requested in the last five minutes. That is the
+ * product's anti-enumeration behaviour and this function preserves it exactly:
+ * there is no reason in {@link PasswordResetRequestResult} that could mean "no
+ * such account", so no caller can accidentally reveal one.
+ *
+ * `400` is `invalid` - a malformed address, or a captcha the middleware refused.
+ * It says nothing about whether the address exists.
+ */
+export const passwordResetRequestResultFromStatus = (
+  status: number,
+): PasswordResetRequestResult => {
+  if (status === 201) return { ok: true }
+  if (status === 400) return { ok: false, reason: 'invalid' }
+  if (status === RATE_LIMIT_STATUS) return { ok: false, reason: 'rate_limited' }
+
+  return { ok: false, reason: 'server_error' }
+}
+
+/**
+ * A password change's outcome.
+ *
+ * `400` is the one a visitor can act on. The API looks the recovery row up by
+ * `userId` *and* `token` *and* an unexpired `expiresAt`, and answers
+ * `400 "Invalid token"` when any of the three does not match - so a wrong link, a
+ * spent link and a link older than thirty minutes are one status, and "ask for a
+ * fresh one" is the answer to all of them.
+ *
+ * Nothing here signs anybody in, because the route mints no session: it hashes
+ * the new password, writes it, and deletes the recovery row. A caller must not
+ * invent a session refresh around it.
+ */
+export const changePasswordResultFromStatus = (
+  status: number,
+): ChangePasswordResult => {
+  if (status === 201) return { ok: true }
+  if (status === 400) return { ok: false, reason: 'invalid_token' }
+  if (status === RATE_LIMIT_STATUS) return { ok: false, reason: 'rate_limited' }
+
+  return { ok: false, reason: 'server_error' }
+}
+
+/**
+ * Whether registration produced a session the canonical session query has to go
+ * and read.
+ *
+ * The one decision that connects sign-up to the rest of the app, written as a
+ * function so it is stated once and tested without a browser.
+ *
+ * `true` only for a successful sign-up with `emailVerified`. That is precisely
+ * when the API called `createSessionByUserId` on the same request, which means
+ * the `201` carried a `Set-Cookie`, which means `saveApiCookies` put it on the
+ * response the browser is reading - so the *next* read of `/users/session`
+ * answers with the new visitor and the cached one is stale.
+ *
+ * `false` for an unverified account, and that matters more than it looks:
+ * inventing a refresh there would replace a known-anonymous session with another
+ * known-anonymous session and, worse, invite a caller to navigate as though the
+ * visitor were signed in. They are not - the account is waiting on a
+ * confirmation link the API does not send yet (`// TODO: Send verification
+ * email`), and the screen for that is the confirmation view.
+ *
+ * There is deliberately no equivalent for the two recovery mutations: neither
+ * mints a session, so neither has a session to refresh.
+ */
+export const shouldRefreshSessionAfterSignUp = (
+  result: SignUpResult,
+): boolean => result.ok && result.emailVerified

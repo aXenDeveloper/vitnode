@@ -40,16 +40,21 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  * three things a shared component cannot resolve for itself - a `Link`, a way to
  * sign in, and a way to start an SSO flow.
  *
- * ## What is deliberately *not* migrated
+ * ## Where the card's two other links go
  *
- * `/register` and `/login/reset-password` stay on Next.js. They are reached
- * through `MigrationLink`, which asks the route tree whether this app owns a
- * destination and falls back to a document load into the legacy app - so
- * nothing here hardcodes a second origin, and the day either route is migrated
- * this file does not change. `src/tests/plugin-routes.test.ts` pins the other
- * half of that: owning `/login` must not make `/login/reset-password` look
- * owned, which is why the SSO callback is a *non-nested* sibling
- * (`login_.sso.$providerId.tsx`) rather than a child.
+ * `/register` and `/login/reset-password`, and Stage 9 migrated both - which is
+ * the interesting part, because this file did not change when it happened. The
+ * links are `MigrationLink`, which asks the route tree whether this app owns a
+ * destination and otherwise falls back to a document load into the legacy app,
+ * so the day a route moves it silently becomes a client-side navigation and
+ * nothing here hardcodes a second origin or a list of what has moved.
+ *
+ * `src/tests/plugin-routes.test.ts` pins the half that is easy to get wrong in
+ * the other direction: owning `/login` must not make `/login/anything` look
+ * owned. That is why both the SSO callback and the recovery screens are
+ * *non-nested* siblings (`login_.sso.$providerId.tsx`,
+ * `login_.reset-password.tsx`) rather than children - and, for recovery, why it
+ * must not inherit this route's guest-only guard.
  */
 
 /**

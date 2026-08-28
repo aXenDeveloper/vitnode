@@ -1,53 +1,31 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useRouter } from "@/lib/navigation";
 
-import { AutoForm } from "@/components/form/auto-form";
-import {
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import type { RecoveryLink } from "../recovery-link";
 
-import { PasswordInput } from "../../sign-up/components/password-input";
-import { useForm } from "./use-form";
+import { AUTH_HREF } from "../../auth-link";
+import { ChangePasswordFormContent } from "./change-password-form-content";
+import { mutationApi } from "./mutation-api.server";
 
-export const ChangePasswordForm = (props: {
-  token: string;
-  userId: string;
-}) => {
-  const t = useTranslations("core.auth.change_password");
-  const tSignUp = useTranslations("core.auth.sign_up");
-  const { formSchema, onSubmit } = useForm(props);
+/**
+ * {@link ChangePasswordFormContent}, wired to Next.js.
+ *
+ * Two props, both Next-only: the server action, and `next-intl`'s locale-aware
+ * `replace` for the trip to the login page once the password has changed. The
+ * API mints no session on that change, so leaving for the login form is the
+ * whole of the success path.
+ */
+export const ChangePasswordForm = ({ link }: { link: RecoveryLink }) => {
+  const { replace } = useRouter();
 
   return (
-    <>
-      <CardHeader className="text-center">
-        <CardTitle>
-          <h1>{t("title")}</h1>
-        </CardTitle>
-        <CardDescription>{t("desc")}</CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <AutoForm
-          fields={[
-            {
-              id: "password",
-              component: props => (
-                <PasswordInput label={tSignUp("password.label")} {...props} />
-              ),
-            },
-          ]}
-          formSchema={formSchema}
-          onSubmit={onSubmit}
-          submitButtonProps={{
-            className: "w-full",
-            children: t("submit"),
-          }}
-        />
-      </CardContent>
-    </>
+    <ChangePasswordFormContent
+      link={link}
+      onChanged={() => {
+        replace(AUTH_HREF.signIn);
+      }}
+      onChangePassword={mutationApi}
+    />
   );
 };

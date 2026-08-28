@@ -1,15 +1,21 @@
 import { createServerFn } from '@tanstack/react-start'
 
 import {
+  changePasswordInputSchema,
+  passwordResetRequestInputSchema,
   signInInputSchema,
   signOutInputSchema,
+  signUpInputSchema,
   ssoCallbackInputSchema,
   ssoStartInputSchema,
 } from '#/lib/auth/contract'
 import {
+  changePasswordFromResetOnApi,
   completeSsoOnApi,
+  requestPasswordResetOnApi,
   signInOnApi,
   signOutOnApi,
+  signUpOnApi,
   startSsoOnApi,
 } from '#/server/auth.server'
 
@@ -96,3 +102,51 @@ export const startSso = createServerFn({ method: 'POST' })
 export const completeSso = createServerFn({ method: 'POST' })
   .validator(ssoCallbackInputSchema)
   .handler(async ({ data }) => await completeSsoOnApi(data))
+
+/**
+ * Registers a new account.
+ *
+ * A server function for three reasons, all of which a browser fetch would fail
+ * at: the reply may carry a session `Set-Cookie` that has to be copied onto the
+ * response the browser is reading, the API wants the visitor's `user-agent` and
+ * forwarded IP for the device record and the rate limiter, and the captcha token
+ * travels as a header the API reads rather than as part of the body.
+ *
+ * `{ ok: true, emailVerified: true }` means the session cookie is on the response
+ * this call is answering with - the caller must refresh the canonical session
+ * before it navigates, and {@link shouldRefreshSessionAfterSignUp} is the rule.
+ * `{ ok: true, emailVerified: false }` means the account exists and the visitor is
+ * still anonymous.
+ */
+export const signUp = createServerFn({ method: 'POST' })
+  .validator(signUpInputSchema)
+  .handler(async ({ data }) => await signUpOnApi(data))
+
+/**
+ * Asks for a password-reset link to be emailed.
+ *
+ * A server function for the captcha header and the forwarded request state, not
+ * for a cookie - this one mints nothing. The result says only whether the request
+ * was accepted, which is all the API says: it answers the same `201` for an
+ * address with an account and one without, and nothing here may add a distinction
+ * the API deliberately withholds.
+ */
+export const requestPasswordReset = createServerFn({ method: 'POST' })
+  .validator(passwordResetRequestInputSchema)
+  .handler(async ({ data }) => await requestPasswordResetOnApi(data))
+
+/**
+ * Sets a new password from a recovery link.
+ *
+ * The `token` and `userId` are validated here rather than taken on trust, and
+ * that is the point of the validator: they reach this endpoint as whatever a
+ * caller posted, not as whatever the recovery URL contained. `parseRecoveryLink`
+ * in `@vitnode/core` judges the URL on the way *into* the screen; this judges the
+ * call on the way *out* of the browser, and the two are different boundaries.
+ *
+ * Deliberately does not sign anybody in, because the API does not: it changes the
+ * password and deletes the recovery row. The visitor goes to the login page.
+ */
+export const changePasswordFromReset = createServerFn({ method: 'POST' })
+  .validator(changePasswordInputSchema)
+  .handler(async ({ data }) => await changePasswordFromResetOnApi(data))

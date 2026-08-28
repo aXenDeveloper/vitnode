@@ -41,7 +41,11 @@ import { authStateFromSession, SESSION_QUERY_KEY } from './shared'
  * page whose data the API then refuses; it cannot cost private data, because the
  * API is the boundary and it re-reads the cookie every time.
  *
- * Sign-in and sign-out do not wait this out - they replace the value outright.
+ * Sign-in and sign-out do not wait this out. Sign-out replaces the value
+ * outright ({@link setSessionData}); the rest mark the entry invalidated, which
+ * {@link ensureAuthState}'s read treats as stale whatever the clock says. So
+ * this window governs only the passage of time, never a mutation this app
+ * performed.
  */
 const SESSION_STALE_TIME = 30_000
 
@@ -88,28 +92,65 @@ export const sessionQueryOptions = () =>
   })
 
 /**
- * The auth state, fetching the session first if this client has not read it yet.
+ * The auth state, reading the session first if what is cached cannot be trusted.
  *
  * What a route's `beforeLoad` calls, and the only function it needs. It is safe
- * to call on a preload: `ensureQueryData` is a read that fills a cache entry -
- * it cannot create or end a session, and the API call behind it is a `GET` whose
+ * to call on a preload: this is a read that fills a cache entry - it cannot
+ * create or end a session, and the API call behind it is a `GET` whose
  * `Set-Cookie` this app deliberately does not save (`saveApiCookies` is for
  * responses to sign-in, not to a session read). Two routes guarding themselves
- * during one navigation share the single in-flight request.
+ * during one navigation share the single in-flight request, because
+ * `query.fetch()` returns the promise already in flight rather than starting a
+ * second one.
  *
  * Returns the decision material and leaves the decision to the caller. No
  * `redirect()` here on purpose: where a blocked visitor is sent is a property of
  * the route that blocked them, so it belongs in the route tree - which is also
  * the only layer that should be importing the router.
  *
+ * ## Why `fetchQuery` and not `ensureQueryData`
+ *
+ * They differ in exactly one case, and it is the case a guard exists for.
+ * `ensureQueryData` returns whatever is cached the moment anything is cached:
+ *
+ *     if (cachedData !== undefined) return Promise.resolve(cachedData)
+ *
+ * - no staleness check, and **no check of whether the entry was invalidated**.
+ * So a guard reading through it could not see a sign-in that had just happened.
+ * {@link invalidateSession} marks the entry, `ensureQueryData` ignores the mark,
+ * and the guard decides on the previous visitor.
+ *
+ * That was survivable only by accident. `invalidateQueries` ends in
+ * `refetchQueries({ type: 'active' })`, so the refetch that actually kept this
+ * correct was the one performed for the session observer `RealtimeListeners`
+ * mounts at the root - a component mounted for the WebSocket's sake, whose
+ * removal or relocation into the shell would have silently turned every
+ * post-sign-in navigation into a bounce back to the login page. A guard must not
+ * depend on an unrelated component being mounted.
+ *
+ * `fetchQuery` asks the query itself, through `isStaleByTime`:
+ *
+ *     invalidated                  -> read again      (a sign-in just happened)
+ *     older than SESSION_STALE_TIME -> read again      (the window has passed)
+ *     otherwise                     -> the cached value, no round trip
+ *
+ * which is precisely what {@link SESSION_STALE_TIME} is documented to buy, and
+ * the preload behaviour that motivates it is unchanged: hovering a guarded link
+ * inside the window still costs nothing.
+ *
  * ## It resolves only when the session is actually known
  *
  * An {@link AuthState} is returned when - and only when - the session query
  * succeeded. `getSession` rejects if the session could not be read at all (a
- * 429, a 500, an unreachable API), so `ensureQueryData` rejects and so does
- * this. That is deliberate and it is the whole point of the contract:
+ * 429, a 500, an unreachable API), so `fetchQuery` rejects and so does this.
+ * That is deliberate and it is the whole point of the contract:
  * `authStateFromSession` describes two *known* states, and there is no third
  * value for "we could not find out".
+ *
+ * `fetchQuery` rather than `prefetchQuery` matters here too - the latter is the
+ * same read with `.catch(noop)` on the end, which would turn an outage into a
+ * silently stale answer. See {@link prefetchSession}, which wants exactly that
+ * and is the only caller allowed to.
  *
  * A caller must therefore not treat a rejection as "signed out". Only
  * `auth.isAuthenticated === false` means that. A rejection propagating out of a
@@ -120,7 +161,7 @@ export const sessionQueryOptions = () =>
 export const ensureAuthState = async (
   queryClient: QueryClient,
 ): Promise<AuthState> =>
-  authStateFromSession(await queryClient.ensureQueryData(sessionQueryOptions()))
+  authStateFromSession(await queryClient.fetchQuery(sessionQueryOptions()))
 
 /**
  * Replace the cached session with one the server just answered with.
@@ -140,13 +181,32 @@ export const setSessionData = (
 }
 
 /**
- * Mark the cached session stale and let the next reader fetch the truth.
+ * Mark the cached session stale, so the next reader fetches the truth.
  *
  * The other half of the pair above, for the cases where the client cannot know
- * the new session: an SSO callback, a profile change, a sign-out whose response
- * only says it worked. Invalidating rather than clearing keeps the current
- * answer on screen while the fresh one is fetched, instead of blanking every
- * component that reads the session.
+ * the new session: a sign-in, a verified sign-up, an SSO callback, a sign-out
+ * whose response only says it worked. Invalidating rather than clearing keeps
+ * the current answer on screen while the fresh one is fetched, instead of
+ * blanking every component that reads the session.
+ *
+ * ## What "the next reader" means, exactly
+ *
+ * Two different things, and both have to hold or a sign-in navigates as the
+ * previous visitor:
+ *
+ * - **A guard.** {@link ensureAuthState} goes through `fetchQuery`, which asks
+ *   `isStaleByTime` - and an invalidated entry is stale by definition. So the
+ *   mark is what the guard acts on, with no observer involved. That is the half
+ *   this used to get wrong; see the long note there.
+ * - **A component.** `invalidateQueries` also ends in
+ *   `refetchQueries({ type: 'active' })`, so anything currently observing the
+ *   entry - the header, the WebSocket identity sync - refetches. Awaiting this
+ *   call is therefore how a caller knows the header has caught up too, which is
+ *   why every auth action awaits it before it navigates.
+ *
+ * The first is a correctness property and the second is a rendering one. They
+ * are easy to conflate because until Stage 9 only the second was actually
+ * running.
  */
 export const invalidateSession = async (
   queryClient: QueryClient,

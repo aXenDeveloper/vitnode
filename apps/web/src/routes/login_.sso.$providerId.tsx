@@ -1,13 +1,10 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Button, buttonVariants } from '@vitnode/core/components/ui/button'
-import { cn } from '@vitnode/core/lib/utils'
 import { SSOCallbackContent } from '@vitnode/core/views/auth/sso/callback/sso-callback-content'
 import { useSSOCallback } from '@vitnode/core/views/auth/sso/callback/use-sso-callback'
-import { ArrowLeft, HomeIcon } from 'lucide-react'
-import { useTranslations } from 'use-intl'
 import { z } from 'zod'
 
+import { ErrorActions } from '#/components/error-actions'
 import { MigrationLink } from '#/components/migration-link'
 import { RouteMessages } from '#/components/route-messages'
 import { useCompleteSsoAction } from '#/lib/auth/actions'
@@ -43,10 +40,13 @@ import {
  *    guard, a signed-in visitor arriving with a valid `code` would be bounced
  *    away before the exchange ran, abandoning a half-finished OAuth round trip.
  *    An unfinished flow is finished here, whoever is asking.
- * 2. **`/login` must stay an exact match.** A `/login` route with children is a
- *    route that matches `/login/reset-password` too, and `isTanStackOwnedPath`
- *    would then hand that legacy URL to this router as a client-side navigation
- *    to a page it cannot render. Two leaves, no shared parent.
+ * 2. **`/login` must stay an exact match.** A `/login` route with children
+ *    matches every path beneath it, so `isTanStackOwnedPath` would answer
+ *    "owned" for URLs no route declares and hand a page the Next.js app still
+ *    serves to this router as a client-side navigation it cannot render. Stage 9
+ *    added a third leaf for the same reason - `/login/reset-password` is a
+ *    sibling too, and must be, because it is *not* guest-only. Three leaves, no
+ *    shared parent.
  *
  * The exchange itself is unchanged and stays on the server: the API verifies
  * `state` against the cookie it minted, deletes it, trades the `code` with the
@@ -97,42 +97,6 @@ export const Route = createFileRoute('/login_/sso/$providerId')({
   component: SsoCallbackRoute,
 })
 
-/**
- * "Go back" and "go home", for the two screens that end in a dead end.
- *
- * The TanStack half of what `ErrorViewActions` renders in Next.js: the same two
- * buttons and the same two strings, with this framework's navigation behind
- * them. `errorActions` is a slot on the shared screen precisely because this is
- * the part that cannot be shared - `router.history.back()` here,
- * `next-intl`'s `useRouter().back()` there.
- *
- * Declared at module scope so it is the same component type on every render.
- */
-const CallbackErrorActions = () => {
-  const router = useRouter()
-  const t = useTranslations('core.global')
-
-  return (
-    <>
-      <Button
-        onClick={() => {
-          router.history.back()
-        }}
-        size="lg"
-        variant="ghost"
-      >
-        <ArrowLeft />
-        {t('go_back')}
-      </Button>
-
-      <MigrationLink className={cn(buttonVariants({ size: 'lg' }))} href="/">
-        <HomeIcon />
-        {t('back_home')}
-      </MigrationLink>
-    </>
-  )
-}
-
 function SsoCallbackRoute() {
   const { providerId } = Route.useParams()
   const search = Route.useSearch()
@@ -180,7 +144,7 @@ function SsoCallbackRoute() {
     <RouteMessages namespaces={CALLBACK_NAMESPACES}>
       <main>
         <SSOCallbackContent
-          errorActions={<CallbackErrorActions />}
+          errorActions={<ErrorActions />}
           LinkComponent={MigrationLink}
           providerId={providerId}
           providers={ssoProvidersOf(config)}

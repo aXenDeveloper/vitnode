@@ -19,16 +19,26 @@ import { prefetchSession } from '#/lib/auth/query'
  *
  * ## What is deliberately outside it
  *
- * `/login` and `/login/sso/$providerId`. An auth screen is a full-height card on
- * an otherwise empty document, and the header it would render is a header whose
- * only interesting control is "sign in". Keeping them out is what makes this a
- * shell that routes opt into rather than one every route is subject to - and it
- * is what `/register` and the password-reset screens will want when they move.
+ * The four auth screens: `/login`, `/login/sso/$providerId`, `/register` and
+ * `/login/reset-password`. An auth screen is a full-height card on an otherwise
+ * empty document, and the header it would render is a header whose only
+ * interesting control is "sign in". Keeping them out is what makes this a shell
+ * that routes opt into rather than one every route is subject to.
  * `routes/api/$` is outside for a different reason: it is a server route and
  * renders no document at all.
  *
- * Note this is a visual difference from the Next.js app, where `/login` sits
- * inside `(main)` and does render the header.
+ * Note this is a visual difference from the Next.js app, where all four sit
+ * inside `(main)` and do render the header.
+ *
+ * ## What Stage 9 put *under* it
+ *
+ * The settings subtree, and that direction is the point: `/settings` and its
+ * panels are pages on the public site that happen to need a session, so they go
+ * under this shell and then under `_authenticated`, and inherit the header, the
+ * breadcrumb area, the `<main>` landmark and the guard from where their files
+ * live. Nothing in `routes/_main/_authenticated/settings*` renders a header, a
+ * landmark or a session check of its own. `src/tests/main-shell.test.ts` asserts
+ * both halves - the settings paths inside, the four auth screens outside.
  *
  * ## The slots
  *

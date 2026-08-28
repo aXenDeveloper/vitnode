@@ -1,4 +1,7 @@
+import type { ChangePasswordSubmit } from '@vitnode/core/views/auth/password-reset/change-password-form/change-password-form-content'
+import type { PasswordResetSubmit } from '@vitnode/core/views/auth/password-reset/form/password-reset-form-content'
 import type { SignInSubmit } from '@vitnode/core/views/auth/sign-in/form/sign-in-form-content'
+import type { SignUpSubmit } from '@vitnode/core/views/auth/sign-up/form/sign-up-form-content'
 import type { SSOSelectProvider } from '@vitnode/core/views/auth/sso/buttons/sso-buttons-content'
 import type { SSOCallbackResult } from '@vitnode/core/views/auth/sso/callback/sso-callback-result'
 
@@ -7,7 +10,16 @@ import { useRouter } from '@tanstack/react-router'
 
 import type { SsoCallbackInput } from '#/lib/auth/contract'
 
-import { completeSso, signIn, signOut, startSso } from '#/lib/auth/mutations'
+import { shouldRefreshSessionAfterSignUp } from '#/lib/auth/contract'
+import {
+  changePasswordFromReset,
+  completeSso,
+  requestPasswordReset,
+  signIn,
+  signOut,
+  signUp,
+  startSso,
+} from '#/lib/auth/mutations'
 import {
   invalidateSession,
   sessionQueryOptions,
@@ -15,7 +27,10 @@ import {
 } from '#/lib/auth/query'
 import {
   anonymousSession,
+  changePasswordFormResult,
+  passwordResetFormResult,
   signInFormResult,
+  signUpFormResult,
   ssoCallbackResult,
   ssoStartFeedback,
 } from '#/lib/auth/screens'
@@ -55,6 +70,13 @@ import { useMigrationNavigate } from '#/lib/migration-navigation'
  * only that it worked - the session body comes from the next read, which the
  * destination's guard performs through the one query definition. Doing it before
  * navigating is what makes that read see the new cookie.
+ *
+ * The guard notices because `ensureAuthState` reads through `fetchQuery`, and an
+ * invalidated entry is stale to `isStaleByTime`. It is worth being exact about
+ * that rather than trusting "invalidate then read": `ensureQueryData` - the
+ * obvious call, and the one this used - returns cached data without consulting
+ * the mark at all, so the guard would have decided on the anonymous session and
+ * bounced a visitor who had just signed in. See the note on `ensureAuthState`.
  *
  * The navigation goes through `useMigrationNavigate` rather than
  * `router.navigate`, because `?returnTo=` names somewhere the visitor was
@@ -141,9 +163,14 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
  * visitor sitting on a page behind `_authenticated` is redirected out of it by
  * the guard that owns that rule, rather than by anything here.
  *
- * Exported for the shell migration that will mount the header. Nothing in this
- * app renders a sign-out control yet, and adding one would mean migrating the
- * header, which is a different stage.
+ * The header's user menu is what calls it (`#/components/layout/user-header`),
+ * and it is the only sign-out control this app renders - which is what let Stage
+ * 9 delete the `/account` scaffold that existed to exercise this before there
+ * was a header.
+ *
+ * The failure is *reported* rather than thrown, and the caller decides: the
+ * header raises the internal-error toast and stays signed in, which is honest -
+ * a session that could not be ended is still a session.
  */
 export const useSignOutAction = () => {
   const queryClient = useQueryClient()
@@ -163,3 +190,92 @@ export const useSignOutAction = () => {
     return result
   }
 }
+
+/**
+ * Registering, in the shape `SignUpFormContent` submits.
+ *
+ * The one action here with two success paths, and the ordering in the verified
+ * one is the whole reason it is a hook:
+ *
+ *     signUp()                    the API mints the session, saveApiCookies puts
+ *                                 the cookie on this response
+ *     invalidateSession()         the canonical entry every guard reads is marked
+ *                                 stale, and every component observing it
+ *                                 refetches before this resolves
+ *     navigate(destination())     and arrives as the new visitor
+ *
+ * Navigating first would arrive at a guard still holding the anonymous session
+ * and bounce a freshly-registered visitor to the login page. The guard sees the
+ * mark because `ensureAuthState` reads through `fetchQuery` rather than
+ * `ensureQueryData`, which would have ignored it - see the note there.
+ *
+ * `shouldRefreshSessionAfterSignUp` decides which path this is, rather than an
+ * inline `result.emailVerified`: an unverified account is *not* a session, so the
+ * cache must not be touched and the form must not be told to stand down. It gets
+ * `{ emailConfirmation }` instead and swaps itself for the "check your email"
+ * screen.
+ *
+ * There is no second auth store. This writes to the one entry `#/lib/auth/query`
+ * owns, exactly as the sign-in action does.
+ *
+ * `destination` is a thunk for the same reason as on the login page: where to
+ * land can depend on a search parameter that changes under the form, and reading
+ * it at submit time rather than at mount time is what keeps the two in step. It
+ * goes through `useMigrationNavigate`, so a destination this app does not own yet
+ * becomes a document load into the Next.js app rather than a client navigation to
+ * a route that cannot render.
+ */
+export const useSignUpAction = (destination: () => string): SignUpSubmit => {
+  const queryClient = useQueryClient()
+  const navigate = useMigrationNavigate()
+
+  return async (values) => {
+    const result = await signUp({ data: values })
+
+    if (shouldRefreshSessionAfterSignUp(result)) {
+      await invalidateSession(queryClient)
+      await navigate(destination())
+    }
+
+    return signUpFormResult(result)
+  }
+}
+
+/**
+ * Asking for a password-reset link, in the shape `PasswordResetFormContent`
+ * submits.
+ *
+ * A plain function rather than a hook: nothing about it touches the session, the
+ * router or any cached state. It cannot - the API mints no session here, and the
+ * visitor stays exactly where they are while the form swaps itself for the
+ * confirmation screen.
+ *
+ * The result says only whether the request was accepted. An address with an
+ * account and one without produce the identical `{ ok: true }`, because the API
+ * answers the identical `201`, and nothing in this path may add a distinction it
+ * withholds.
+ */
+export const requestPasswordResetAction: PasswordResetSubmit = async (values) =>
+  passwordResetFormResult(await requestPasswordReset({ data: values }))
+
+/**
+ * Setting a new password from a recovery link, in the shape
+ * `ChangePasswordFormContent` submits.
+ *
+ * Also a plain function, and deliberately so: the API changes the password and
+ * deletes the recovery row without minting a session, so there is nothing to
+ * refresh and nobody to sign in. Inventing either here would be this app
+ * asserting an authentication the server never performed.
+ *
+ * The link travels as an already-parsed `RecoveryLink` - the route reads it
+ * out of the URL through `parseRecoveryLink` - so `userId` is a number by the time
+ * it reaches here, and the server function validates it again on arrival because
+ * its input is whatever a caller posts.
+ *
+ * Where the visitor goes afterwards is `onChanged` on the shared form, not this:
+ * the destination is the login page, and moving the router belongs to the route
+ * that has one.
+ */
+export const changePasswordFromResetAction: ChangePasswordSubmit = async (
+  values,
+) => changePasswordFormResult(await changePasswordFromReset({ data: values }))

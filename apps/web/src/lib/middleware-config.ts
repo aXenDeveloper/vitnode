@@ -27,6 +27,17 @@ export type MiddlewareConfig = z.infer<typeof routeMiddlewareSchema>
  *
  * Shared by both transports so a failure looks the same during SSR and after
  * hydration, rather than the page changing shape when it rehydrates.
+ *
+ * ## What it costs the screens that need a captcha
+ *
+ * `captcha` is absent here, and it cannot be otherwise - a widget needs a site
+ * key, and the read that would have supplied one is the read that failed. So on
+ * a deployment *with* a captcha configured, a registration or reset-password
+ * form rendered from this fallback shows no widget, submits an empty token, and
+ * the API answers `400` - which reaches the visitor as the internal-error toast
+ * rather than as a silent success. Degraded, but not wrong: nothing is created
+ * and nothing is claimed to have been. The alternative would be inventing a
+ * configuration, which is how a form ends up looking solved when it is not.
  */
 export const ANONYMOUS_MIDDLEWARE_CONFIG: MiddlewareConfig = Object.freeze({
   isEmail: false,

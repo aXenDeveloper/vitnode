@@ -1,15 +1,17 @@
-import { MonitorIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+"use client";
 
-import type { DevicesApi } from "@/lib/api/get-devices-api";
+import { MonitorIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
+import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-import { RevokeDeviceButton } from "./revoke-device-button";
+import type { Device } from "./devices-query";
+import type { RevokeDevice } from "./devices-revoke";
 
-type Device = DevicesApi["devices"][number];
+import { isRevokableDevice } from "./devices-revoke";
+import { RevokeDeviceButton } from "./revoke-device-button";
 
 const icons = {
   desktop: MonitorIcon,
@@ -17,25 +19,36 @@ const icons = {
   tablet: TabletIcon,
 } as const;
 
-export const DeviceItem = async ({
-  browser,
-  deviceType,
-  expiresAt,
-  ipAddress,
-  isCurrent,
-  lastSeen,
-  os,
-  publicId,
-}: Device) => {
-  const t = await getTranslations("core.auth.settings.devices");
-  const Icon = icons[deviceType];
+/**
+ * One device, as a card both frameworks render.
+ *
+ * Everything that used to make this a Next.js Server Component has been taken
+ * out: it no longer awaits `getTranslations`, and the revoke it offers arrives as
+ * a prop instead of being imported. What is left is the part that was always
+ * worth sharing - the icon, the current-device badge, the relative last-seen
+ * date, the three details and the layout of all of it.
+ *
+ * The row is handed over whole rather than spread as eight props, which is what
+ * lets `isRevokableDevice` read it: the rule about the current device is one
+ * statement in `devices-revoke.ts` and this is the only place it is applied to a
+ * button.
+ */
+export const DeviceItem = ({
+  device,
+  onRevoke,
+}: {
+  device: Device;
+  onRevoke: RevokeDevice;
+}) => {
+  const t = useTranslations("core.auth.settings.devices");
+  const Icon = icons[device.deviceType];
 
   const details = [
-    { label: t("browser"), value: browser },
-    { label: t("ip_address"), value: ipAddress },
+    { label: t("browser"), value: device.browser },
+    { label: t("ip_address"), value: device.ipAddress },
     {
       label: t("session_expires"),
-      value: <DateFormat date={expiresAt} showFullDate />,
+      value: <DateFormat date={device.expiresAt} showFullDate />,
     },
   ];
 
@@ -48,15 +61,27 @@ export const DeviceItem = async ({
 
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">{os}</span>
-            {isCurrent && <Badge>{t("current_device")}</Badge>}
+            <span className="font-semibold">{device.os}</span>
+            {device.isCurrent && <Badge>{t("current_device")}</Badge>}
           </div>
           <p className="text-muted-foreground text-sm">
-            {t("last_active")}: <DateFormat date={lastSeen} />
+            {t("last_active")}: <DateFormat date={device.lastSeen} />
           </p>
         </div>
 
-        {!isCurrent && <RevokeDeviceButton os={os} publicId={publicId} />}
+        {/*
+          No button on the current device, because the API refuses to revoke it -
+          `DELETE /users/devices/{publicId}` answers 400 for the id matching the
+          requester's own device cookie. Offering it would put a refusal behind a
+          button whose only outcome is an error toast.
+        */}
+        {isRevokableDevice(device) && (
+          <RevokeDeviceButton
+            onRevoke={onRevoke}
+            os={device.os}
+            publicId={device.publicId}
+          />
+        )}
       </div>
 
       <Separator className="my-4" />

@@ -398,19 +398,25 @@ describe("the app's real route tree", () => {
     ['/discover', true],
     ['/blog/post-30', false],
     ['/api/core/members', false],
-    // Stage 6. `/login` is migrated; the two auth routes nested *under* it are
-    // not, and owning the parent must not make them look owned - see below.
+    // Stage 6. `/login` is migrated, and so are its two siblings - none of them
+    // nested under it, which is what keeps ownership a per-leaf answer.
     ['/login', true],
     ['/pl/login', true],
     ['/login/sso/google', true],
-    ['/login/reset-password', false],
-    ['/register', false],
-    // Behind `_authenticated`, which is pathless: the guard adds no segment, so
-    // the page is owned at its own path and the boundary is invisible here.
-    ['/account', true],
-    // Stage 7. `/search` is a plain route; `/files` is a second page behind the
-    // pathless guard, so owning it must still be decided at `/files` and not at
-    // the boundary above it.
+    // Stage 9. Registration and password recovery, both outside the main shell
+    // and both non-nested siblings of `/login` - see `src/tests/auth-routes.test.ts`
+    // for why recovery in particular must not sit under it.
+    ['/register', true],
+    ['/pl/register', true],
+    ['/login/reset-password', true],
+    ['/pl/login/reset-password', true],
+    // The case owning `/login` most easily annexes by accident: a path below it
+    // that nobody has migrated. `matchRoutes` answers with `/login` and leaves
+    // the rest unconsumed - see the note below.
+    ['/login/something-else', false],
+    // Stage 7. `/search` is a plain route; `/files` is a page behind the
+    // pathless `_authenticated` guard - which adds no URL segment - so owning it
+    // must still be decided at `/files` and not at the boundary above it.
     ['/search', true],
     ['/pl/search', true],
     ['/files', true],
@@ -419,30 +425,47 @@ describe("the app's real route tree", () => {
     // takes a pathname - so a table URL is the shape that would break if the
     // query were not stripped before matching.
     ['/files?orderBy=name&order=asc&first=20', true],
-    // Still the Next.js app's, and the case a migrated `/files` most easily
-    // annexes by accident: `/settings` is a sibling of nothing here, so a
-    // prefix-matching rule would answer for it. `/settings/security` is the
-    // nested one - see the `/login` note below for why that distinction is
-    // load-bearing rather than decorative.
-    ['/settings', false],
-    ['/settings/security', false],
-    ['/pl/settings/security', false],
+    // Stage 9. `/settings` is a nested *layout* route with an index child, and
+    // each panel is a page two segments deep beneath it - so owning one is
+    // decided at its own path, and neither the pathless guard above nor the
+    // layout itself answers for it. `/settings` is owned because of the index
+    // child, not because the layout matched.
+    ['/settings', true],
+    ['/pl/settings', true],
+    ['/settings/overview', true],
+    ['/settings/devices', true],
+    ['/pl/settings/devices', true],
+    ['/settings/security', true],
+    ['/pl/settings/security', true],
+    // The case a migrated `/settings` most easily annexes by accident: a panel
+    // that does not exist. The layout matches `/settings` and leaves the rest
+    // unconsumed, so a prefix-matching rule would hand a page the Next.js app
+    // still serves to this router - see the `/login` note below for why that
+    // distinction is load-bearing rather than decorative.
+    ['/settings/notifications', false],
+    ['/pl/settings/notifications', false],
   ])('answers %s as owned: %s', (href, owned) => {
     expect(isTanStackOwnedPath(getRouter(), href)).toBe(owned)
   })
 
   /**
-   * Owning `/login` must not quietly annex the legacy routes beneath it.
+   * Owning `/login` must not quietly annex the paths beneath it.
    *
-   * If the SSO callback were a *child* of `/login`, that route would match
-   * `/login/reset-password` as a prefix too, and `MigrationLink` would hand a
-   * page the Next.js app still serves to this router as a client-side
-   * navigation - a working password reset turning into a TanStack not-found.
-   * The callback is therefore a non-nested sibling
-   * (`routes/login_.sso.$providerId.tsx`), which is what these two assertions
-   * pin: two exact leaves, no shared parent.
+   * If the SSO callback or the reset-password page were *children* of `/login`,
+   * that route would match every path below it as a prefix, and `MigrationLink`
+   * would hand a page the Next.js app still serves to this router as a
+   * client-side navigation - a working page turning into a TanStack not-found.
+   * All three are therefore non-nested siblings (`login.tsx`,
+   * `login_.sso.$providerId.tsx`, `login_.reset-password.tsx`), which is what
+   * these assertions pin: exact leaves, no shared parent.
+   *
+   * `/login/something-else` is the case that still exercises it now that both
+   * real siblings are migrated - `matchRoutes` answers with the deepest
+   * *ancestor* it can match and leaves the rest unconsumed, which is exactly why
+   * `isTanStackOwnedPath` compares the matched pathname to the requested one
+   * instead of counting matches.
    */
-  it('keeps /login an exact match, so the legacy routes under it stay legacy', () => {
+  it('keeps /login an exact match, so unmigrated paths under it stay legacy', () => {
     const router = getRouter()
     const deepest = (pathname: string) =>
       router.matchRoutes(pathname, undefined).at(-1) as {
@@ -456,16 +479,13 @@ describe("the app's real route tree", () => {
       routeId: '/login',
     })
 
-    // `/login/reset-password` resolves to `/login` as well - `matchRoutes`
-    // answers with the deepest *ancestor* it can match and leaves the rest
-    // unconsumed. Which is exactly why `isTanStackOwnedPath` compares the
-    // matched pathname to the requested one instead of counting matches: the
-    // route id alone says "owned" here, and it is not.
-    expect(deepest('/login/reset-password')).toMatchObject({
+    // A path below it that no route declares resolves to `/login` - the route id
+    // alone says "owned" here, and it is not.
+    expect(deepest('/login/something-else')).toMatchObject({
       pathname: '/login',
       routeId: '/login',
     })
-    expect(isTanStackOwnedPath(router, '/login/reset-password')).toBe(false)
+    expect(isTanStackOwnedPath(router, '/login/something-else')).toBe(false)
   })
 
   /**

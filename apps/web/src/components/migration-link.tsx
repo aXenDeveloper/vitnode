@@ -7,14 +7,14 @@ import { isTanStackOwnedPath } from '#/lib/migration-navigation'
 /**
  * Linking to a VitNode page while half of VitNode still runs on Next.js.
  *
- * This app owns four routes today - `/`, `/discover`, the `/api/*` mount and the
- * `@vitnode/example` plugin's `/example` - and search results point at all of the
- * ones it does not: `/blog/post-30`,
- * `/files/...`, `/admin/...`, whatever a plugin indexed. Handing every
- * internal-looking path to `<Link>` routes those into *this* router, which has
- * nothing to match them with, so a perfectly good blog post becomes a TanStack
- * not-found page. During a strangler migration a full document load to the
- * running Next.js app is the correct answer, not a fallback.
+ * The set this app owns grows every stage - the front page, `/discover`,
+ * `/search`, the auth screens, `/files`, `/settings/*`, the `/api/*` mount and
+ * whatever a plugin declares - and links point at plenty of routes it still does
+ * not: `/blog/post-30`, `/admin/...`, `/users/<code>`, whatever a plugin indexed.
+ * Handing every internal-looking path to `<Link>` routes those into *this*
+ * router, which has nothing to match them with, so a perfectly good blog post
+ * becomes a TanStack not-found page. During a strangler migration a full document
+ * load to the running Next.js app is the correct answer, not a fallback.
  *
  * So: ask the router what it owns, and let it answer.
  *
@@ -26,7 +26,11 @@ import { isTanStackOwnedPath } from '#/lib/migration-navigation'
  * `/blog` is migrated it appears in the route tree, `isTanStackOwnedPath` starts
  * answering `true` for it, and nothing here changes. Stage 5 is the proof: a
  * plugin declared `/example`, `lib/plugin-routes.ts` mounted it on the same tree,
- * and this file was not touched.
+ * and this file was not touched. Stage 9 is the second proof and the louder one:
+ * `/register` and `/settings` are in the *header's* own link record
+ * (`user-header-model.ts`), they were document loads into the Next.js app the day
+ * before, and migrating them added route files and edited neither this component
+ * nor that record. `src/tests/header-navigation.test.ts` pins it.
  *
  * The rule itself lives in `#/lib/migration-navigation`, because a link is not
  * the only thing that has to make it: an auth flow finishing a sign-in navigates

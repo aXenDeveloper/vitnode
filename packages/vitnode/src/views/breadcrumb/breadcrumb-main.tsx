@@ -1,28 +1,15 @@
-import { BreadcrumbRender } from "./breadcrumb-render";
-import { resolveMainBreadcrumb } from "./resolve-main-breadcrumb";
+import { Link } from "@/lib/navigation";
 
-export interface BreadcrumbMainProps {
-  labels?: Record<string, string>;
-  overrideLastLabel?: string;
-  segments: string[];
-}
+import type { BreadcrumbMainContentProps } from "./breadcrumb-main-content";
 
-export const BreadcrumbMain = ({
-  segments,
-  labels,
-  overrideLastLabel,
-}: BreadcrumbMainProps) => {
-  const crumbs = resolveMainBreadcrumb(segments, labels);
+import { BreadcrumbMainContent } from "./breadcrumb-main-content";
 
-  if (crumbs.length === 0) return null;
+export type BreadcrumbMainProps = Omit<
+  BreadcrumbMainContentProps,
+  "LinkComponent"
+>;
 
-  if (overrideLastLabel) {
-    crumbs[crumbs.length - 1].label = overrideLastLabel;
-  }
-
-  return (
-    <div className="container mx-auto p-4">
-      <BreadcrumbRender crumbs={crumbs} />
-    </div>
-  );
-};
+/** {@link BreadcrumbMainContent}, wired to `next-intl`'s locale-aware `Link`. */
+export const BreadcrumbMain = (props: BreadcrumbMainProps) => (
+  <BreadcrumbMainContent {...props} LinkComponent={Link} />
+);

@@ -6,30 +6,42 @@ import React from "react";
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 
 import { I18nProvider } from "@/components/i18n-provider";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 
 import { ChangePasswordForm } from "./change-password-form/form";
 import { PasswordResetForm } from "./form/form";
+import {
+  PasswordResetContent,
+  PasswordResetSkeleton,
+} from "./password-reset-content";
+import { parseRecoveryLink } from "./recovery-link";
 
 type Captcha = z.infer<typeof routeMiddlewareSchema>["captcha"];
 
-const PasswordResetContent = async ({
+/**
+ * Which of the two recovery screens this URL asks for.
+ *
+ * `parseRecoveryLink` rather than `if (token && userId)`: the query comes out of
+ * an email and anyone can craft one, so a `?token=%20&userId=0` must render the
+ * request form rather than a change-password form that can only fail. The rule
+ * is shared with the TanStack Start route, which reads the same parameters
+ * through its own search schema.
+ */
+const PasswordResetRouteContent = async ({
   captcha,
   searchParams,
 }: {
   captcha: Captcha;
-  searchParams: Promise<{ token: string; userId: string }>;
+  searchParams: Promise<{ token?: string; userId?: string }>;
 }) => {
-  const { token, userId } = await searchParams;
+  const link = parseRecoveryLink(await searchParams);
 
-  if (token && userId) {
+  if (link) {
     return (
       <I18nProvider
         namespaces={["core.auth.sign_up", "core.auth.change_password"]}
       >
-        <ChangePasswordForm token={token} userId={userId} />
+        <ChangePasswordForm link={link} />
       </I18nProvider>
     );
   }
@@ -43,36 +55,22 @@ const PasswordResetContent = async ({
   );
 };
 
-const PasswordResetContentSkeleton = () => (
-  <>
-    <CardHeader className="flex flex-col items-center space-y-2 text-center">
-      <Skeleton className="h-6 w-48" />
-      <Skeleton className="h-4 w-64" />
-    </CardHeader>
-
-    <CardContent className="space-y-2">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-9 w-full" />
-      <Skeleton className="mt-4 h-9 w-full" />
-    </CardContent>
-  </>
-);
-
 export const PasswordResetView = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ token: string; userId: string }>;
+  searchParams: Promise<{ token?: string; userId?: string }>;
 }) => {
-  const { isEmail, captcha } = await getMiddlewareApi();
+  const { captcha, isEmail } = await getMiddlewareApi();
   if (!isEmail) notFound();
 
   return (
-    <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 md:min-h-[calc(100vh-4rem)]">
-      <Card>
-        <React.Suspense fallback={<PasswordResetContentSkeleton />}>
-          <PasswordResetContent captcha={captcha} searchParams={searchParams} />
-        </React.Suspense>
-      </Card>
-    </div>
+    <PasswordResetContent>
+      <React.Suspense fallback={<PasswordResetSkeleton />}>
+        <PasswordResetRouteContent
+          captcha={captcha}
+          searchParams={searchParams}
+        />
+      </React.Suspense>
+    </PasswordResetContent>
   );
 };

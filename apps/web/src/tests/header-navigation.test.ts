@@ -3,6 +3,11 @@ import {
   HEADER_HREF,
   headerNavItems,
 } from '@vitnode/core/views/layouts/theme/header/header-nav'
+import {
+  USER_HEADER_HREF,
+  userHeaderMenu,
+  userProfileHref,
+} from '@vitnode/core/views/layouts/theme/header/user/user-header-model'
 import { describe, expect, it } from 'vitest'
 
 import { switchLocaleOn } from '#/lib/i18n/client'
@@ -60,6 +65,89 @@ describe('every header link is a client-side navigation', () => {
     // satisfy every assertion above - and would turn a working blog post into a
     // TanStack not-found.
     expect(isTanStackOwnedPath(routerAt('/'), '/blog/post-30')).toBe(false)
+  })
+})
+
+/**
+ * The user area of the header, which is the part of it that spans the migration.
+ *
+ * `USER_HEADER_HREF` is ordinary data in `@vitnode/core` - a record of five
+ * paths, shared verbatim with the Next.js header - and it says nothing about
+ * which application serves any of them. That is the property worth pinning here
+ * rather than the individual answers: the header points at a mixture of migrated
+ * and unmigrated routes, `MigrationLink` asks the route tree per href, and the
+ * *model* needs no edit when a route moves.
+ *
+ * Stage 9 is the proof. `/settings` and `/register` were full document loads
+ * into the Next.js app when Stage 8 mounted this header; they are client-side
+ * navigations now, and the diff that did it added route files and touched
+ * neither `user-header-model.ts` nor `migration-link.tsx`.
+ */
+describe('the user menu navigates by what the route tree serves', () => {
+  const owns = (href: string): boolean =>
+    isTanStackOwnedPath(routerAt('/'), href)
+
+  /**
+   * The guest controls and the account links, split by which application renders
+   * them today. Both halves matter: the first is what Stage 9 changed, and the
+   * second is what stops "owned" from being the answer to everything.
+   */
+  it.each([
+    [USER_HEADER_HREF.files, true],
+    [USER_HEADER_HREF.settings, true],
+    [USER_HEADER_HREF.signIn, true],
+    [USER_HEADER_HREF.signUp, true],
+    // The AdminCP runs on its own session with its own sign-in and has not been
+    // migrated at all, so this must stay a document load - a client-side
+    // navigation would be a TanStack not-found where a working panel is.
+    [USER_HEADER_HREF.adminCp, false],
+  ])('%s is served by this route tree: %s', (href, expected) => {
+    expect(owns(href)).toBe(expected)
+  })
+
+  it('leaves the profile page to the application that has one', () => {
+    // `/users/<code>` is not a route in this tree, and a name code is not a
+    // shape this app should start claiming by prefix.
+    expect(owns(userProfileHref('test-1'))).toBe(false)
+  })
+
+  /**
+   * Every item the menu actually renders, rather than every key the record
+   * holds - `userHeaderMenu` is what decides which of them a given visitor sees,
+   * and an item added to it without a route behind it is a link to a 404 in one
+   * application or a not-found in the other.
+   */
+  it('resolves every menu item a signed-in admin is shown', () => {
+    const items = userHeaderMenu({
+      avatarColor: '#000000',
+      isAdmin: true,
+      name: 'Test',
+      nameCode: 'test-1',
+    }).flat()
+
+    expect(items.map((item) => item.key)).toEqual([
+      'my_profile',
+      'files',
+      'settings',
+      'admin_cp',
+    ])
+
+    // Owned or not, every destination is an application-relative path with no
+    // locale in it: the prefix is `MigrationLink`'s to write, on whichever
+    // branch it takes.
+    for (const { href } of items) {
+      expect(href.startsWith('/')).toBe(true)
+      expect(href).not.toMatch(/^\/[a-z]{2}\//)
+    }
+  })
+
+  it('keeps the migrated ones owned when locale-prefixed', () => {
+    // A header rendered on `/pl` builds `/pl/settings`, and the prefix comes off
+    // before matching - otherwise reading Polish would silently move the whole
+    // user menu back onto the Next.js app.
+    for (const href of [USER_HEADER_HREF.settings, USER_HEADER_HREF.signUp]) {
+      expect(isTanStackOwnedPath(routerAt('/pl'), `/pl${href}`)).toBe(true)
+    }
   })
 })
 
