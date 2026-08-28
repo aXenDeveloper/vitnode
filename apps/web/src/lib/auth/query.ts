@@ -57,11 +57,33 @@ const SESSION_STALE_TIME = 30_000
  * times: directly during SSR, and over same-origin RPC on client navigation,
  * which is what carries the visitor's cookies to a place that may read them.
  * The browser never talks to the session endpoint itself.
+ *
+ * ## It asks once
+ *
+ * `retry: false`, which is a deliberate departure from Query's default of three
+ * attempts with backoff. This read is a route guard, not background content: it
+ * runs inside `beforeLoad`, and a navigation is blocked for as long as it takes.
+ *
+ * Retrying makes every failure worse in the same way. A `429` from the rate
+ * limiter is answered by sending the same request two more times, which is the
+ * thing the limiter is asking this app to stop doing; a `500` turns one round
+ * trip into three before the route can show anything, so a navigation appears to
+ * hang rather than to fail. Neither retry can succeed at anything the first one
+ * could not - the session is whatever the cookie says, and asking again does not
+ * change it.
+ *
+ * So one attempt, and a failure surfaces immediately as a query error, which the
+ * route's error path already handles. The visitor retries by reloading or
+ * navigating again, which is a decision they can make and a rate limiter can see
+ * coming. This is emphatically *not* a return to reading a failure as
+ * `user: null` - see `#/lib/session`, which rejects rather than inventing a
+ * guest.
  */
 export const sessionQueryOptions = () =>
   queryOptions({
     queryFn: async () => await getSession(),
     queryKey: SESSION_QUERY_KEY,
+    retry: false,
     staleTime: SESSION_STALE_TIME,
   })
 

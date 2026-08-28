@@ -48,6 +48,28 @@ import { buildLegacyHref, legacyWebOrigin } from '#/lib/legacy-app'
  * stage starts being navigated to client-side without this file changing.
  */
 
+/**
+ * A base for parsing an href that carries no origin. Never requested, and never
+ * rendered - only `pathname`, `search` and `hash` are ever read back off it.
+ */
+const RELATIVE_BASE = 'https://vitnode.invalid'
+
+/**
+ * An href as the route tree sees it: the locale prefix removed, everything else
+ * untouched.
+ *
+ * Stage 3's own rule and nothing else - `deLocalizeUrl` rewrites the pathname
+ * and leaves the query and hash alone, and it already knows which paths carry no
+ * locale at all (`/admin`, `/api`). Writing a prefix check here instead would be
+ * a second copy of that rule, and the two would disagree the first time a
+ * language was added.
+ *
+ * Shared by the two questions that both need the internal spelling: whether this
+ * app owns a path, and what to hand the router once it does.
+ */
+const deLocalizeHref = (href: string): URL =>
+  localeRouting.deLocalizeUrl(new URL(href, RELATIVE_BASE))
+
 /** The API mount is not a page. */
 const isApiRouteId = (routeId: string): boolean =>
   routeId === '/api' || routeId.startsWith('/api/')
@@ -95,9 +117,7 @@ export const isTanStackOwnedPath = (
 ): boolean => {
   // The same rule `rewrite.input` applies, from the same Stage 3 helper - the
   // rewrite is `deLocalizeUrl` and nothing else, so this is one rule, not a copy.
-  const { pathname } = localeRouting.deLocalizeUrl(
-    new URL(href, 'https://vitnode.invalid'),
-  )
+  const { pathname } = deLocalizeHref(href)
 
   const matches = router.matchRoutes(pathname, undefined) as {
     pathname: string
@@ -125,6 +145,13 @@ export type MigrationDestination =
   | { destination: InternalDestination; type: 'tanstack' }
   | { href: string; type: 'legacy' }
 
+/** A validated href in the spelling the route tree uses, query and hash intact. */
+const internalHref = (href: string): string => {
+  const { hash, pathname, search } = deLocalizeHref(href)
+
+  return `${pathname}${search}${hash}`
+}
+
 /**
  * The decision, with nothing environment-specific in it.
  *
@@ -132,10 +159,21 @@ export type MigrationDestination =
  * answering it needs a live router, and this function is called from a
  * `beforeLoad` on the server as well as from the browser.
  *
- * The locale is applied on exactly one branch. A TanStack destination stays
- * un-prefixed and the router's `rewrite.output` adds it when the location is
- * built; a legacy href gets it from `buildLegacyHref`, which uses the same Stage
- * 3 rule and is idempotent. Prefixing here as well would produce `/pl/pl/...`.
+ * ## The locale is handled on exactly one branch, in opposite directions
+ *
+ * **Owned: strip it.** The route tree has no locale in it, so what the router is
+ * handed must not either - and then `rewrite.output` writes the prefix back when
+ * the location is built. That matters because `href` is user-supplied:
+ * `returnTo` is produced from an internal path in the normal flow, but nothing
+ * stops somebody visiting `/pl/login?returnTo=/pl/discover`, and
+ * `sanitizeReturnTo` accepts it because it is a perfectly safe application path.
+ * Passing `/pl/discover` through as `to` would ask the router to navigate to a
+ * route that does not exist under that name.
+ *
+ * **Legacy: keep it.** `buildLegacyHref` localizes the path itself, with the
+ * same Stage 3 rule, and that rule is idempotent - so an href that already
+ * carries a prefix keeps exactly one and `/pl/pl/...` is not a shape this can
+ * produce. De-localizing first would be work that function immediately undoes.
  */
 export const migrationDestination = ({
   href,
@@ -149,7 +187,10 @@ export const migrationDestination = ({
   locale: Locale
 }): MigrationDestination =>
   isOwned
-    ? { destination: parseInternalDestination(href), type: 'tanstack' }
+    ? {
+        destination: parseInternalDestination(internalHref(href)),
+        type: 'tanstack',
+      }
     : { href: buildLegacyHref({ href, legacyOrigin, locale }), type: 'legacy' }
 
 /**

@@ -66,6 +66,65 @@ describe('a destination this app owns', () => {
       type: 'tanstack',
     })
   })
+
+  /**
+   * The route tree has no locale in it, so what the router is handed must not
+   * either - `rewrite.output` writes the prefix back when the location is built.
+   *
+   * The normal flow already produces an internal path: `returnTo` is built from
+   * `location.pathname`, which the rewrite has already stripped. This is about
+   * the spelling nothing stops a visitor from typing -
+   * `/pl/login?returnTo=/pl/discover` - which `sanitizeReturnTo` accepts because
+   * it is a perfectly safe application path. Handing `/pl/discover` to the
+   * router as `to` would name a route that does not exist.
+   */
+  it('strips a locale prefix somebody put in the returnTo', () => {
+    expect(
+      migrationDestination({
+        href: '/pl/discover',
+        isOwned: true,
+        locale: 'pl',
+      }),
+    ).toEqual({ destination: { to: '/discover' }, type: 'tanstack' })
+  })
+
+  it('strips the prefix and keeps the search and hash', () => {
+    expect(
+      migrationDestination({
+        href: '/pl/discover?sort=new#feed',
+        isOwned: true,
+        locale: 'pl',
+      }),
+    ).toEqual({
+      destination: {
+        hash: 'feed',
+        search: { sort: 'new' },
+        to: '/discover',
+      },
+      type: 'tanstack',
+    })
+  })
+
+  /**
+   * Stage 3's own rule, not a prefix check written here: `/admin` carries no
+   * locale in the first place, so there is nothing to strip and a segment that
+   * merely looks like one is left alone.
+   */
+  it('leaves a path outside the localized URL space alone', () => {
+    expect(
+      migrationDestination({
+        href: '/admin/core',
+        isOwned: true,
+        locale: 'pl',
+      }),
+    ).toEqual({ destination: { to: '/admin/core' }, type: 'tanstack' })
+  })
+
+  it('does not mistake an unrelated first segment for a locale', () => {
+    expect(
+      migrationDestination({ href: '/plugins', isOwned: true, locale: 'pl' }),
+    ).toEqual({ destination: { to: '/plugins' }, type: 'tanstack' })
+  })
 })
 
 describe('a destination the legacy application still serves', () => {
@@ -107,6 +166,23 @@ describe('a destination the legacy application still serves', () => {
       }),
     ).toEqual({
       href: 'http://localhost:3000/blog/post-1#comments',
+      type: 'legacy',
+    })
+  })
+
+  it('keeps exactly one prefix on an href that already carries it', () => {
+    // `buildLegacyHref` localizes with the same Stage 3 rule, and that rule is
+    // idempotent - so the legacy branch deliberately does *not* de-localize
+    // first. `/pl/pl/...` is not a shape this can produce.
+    expect(
+      migrationDestination({
+        href: '/pl/settings/security',
+        isOwned: false,
+        legacyOrigin: LEGACY_ORIGIN,
+        locale: 'pl',
+      }),
+    ).toEqual({
+      href: 'http://localhost:3000/pl/settings/security',
       type: 'legacy',
     })
   })
