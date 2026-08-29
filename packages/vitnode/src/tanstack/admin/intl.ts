@@ -1,5 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import { normalizeNamespaceList } from "@/routing";
+
 import { intlQueryOptions } from "../i18n/query";
 
 /**
@@ -52,9 +54,42 @@ import { intlQueryOptions } from "../i18n/query";
  */
 export const ADMIN_SHELL_NAMESPACES = ["core.global", "admin.global"] as const;
 
+/**
+ * The shell's own namespaces, plus whatever this installation's navigation needs.
+ *
+ * The sidebar is the one part of the chrome whose strings are not knowable in
+ * advance: core's entries are `admin.global`, and a plugin group's heading, its
+ * content types' nouns and its declared entries are all under that plugin's own
+ * id. `adminNavNamespaces` computes that set from the declarations themselves -
+ * see `views/admin/layouts/sidebar/nav/nav-model` - and this is where it joins
+ * the two the shell always needs.
+ *
+ * One function, called by both the loader that warms these and the provider that
+ * mounts them, for the same reason the constant above is one list: a loader that
+ * warmed a different set fills an entry the provider never looks at, and the
+ * first paint costs a round trip anyway.
+ *
+ * Normalised, so `["core.global","admin.global"]` and the same pair in the other
+ * order are one cache entry rather than two holding identical bytes.
+ */
+export const adminShellNamespaces = (
+  navNamespaces: readonly string[] = [],
+): string[] =>
+  normalizeNamespaceList([...ADMIN_SHELL_NAMESPACES, ...navNamespaces]);
+
 /** The narrowest slice of a route's context the admin loaders read. */
 export interface AdminLoaderContext {
   locale: string;
+  /**
+   * The namespaces this installation's AdminCP navigation renders from, from
+   * `adminNavBundle(...)`.
+   *
+   * The host's, because the navigation is: a package cannot know which plugins
+   * an application configured, and the projection that answers that is generated
+   * per application. Omitted - a host with core's navigation only - the shell's
+   * own two namespaces are the whole set, which is what Stage 12 shipped with.
+   */
+  namespaces?: readonly string[];
   queryClient: QueryClient;
 }
 
@@ -72,9 +107,13 @@ export interface AdminLoaderContext {
  */
 export const loadAdminMessages = async ({
   locale,
+  namespaces,
   queryClient,
 }: AdminLoaderContext): Promise<void> => {
   await queryClient.ensureQueryData(
-    intlQueryOptions({ locale, namespaces: ADMIN_SHELL_NAMESPACES }),
+    intlQueryOptions({
+      locale,
+      namespaces: adminShellNamespaces(namespaces),
+    }),
   );
 };

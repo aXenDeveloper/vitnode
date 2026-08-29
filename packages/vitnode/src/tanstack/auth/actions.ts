@@ -10,7 +10,7 @@ import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-r
 
 import type { SsoCallbackInput } from "./contract";
 
-import { removeAdminSession } from "../admin/state";
+import { removeAdminIdentityQueries } from "../admin/queries";
 import { shouldRefreshSessionAfterSignUp } from "./contract";
 import {
   anonymousSession,
@@ -113,11 +113,11 @@ export const useSignInAction = ({
     if (!result.ok) return signInFormResult(result);
 
     // Somebody has just identified themselves, and it may not be whoever this
-    // browser held an admin answer for. Dropping the entry costs nothing when
+    // browser held privileged AdminCP data for. Dropping it costs nothing when
     // there is none - which is the usual case on the public login page - and
-    // forces the answer to be re-derived from the cookie when there is. See the
-    // long note on `useSignOutAction`.
-    removeAdminSession(queryClient);
+    // forces every admin answer to be re-derived from the cookie when there is.
+    // See the long note on `useSignOutAction`.
+    removeAdminIdentityQueries(queryClient);
 
     await invalidateSession(queryClient);
     await navigate(destination());
@@ -166,7 +166,14 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
 
     const result = await authTransport().completeSso(params);
 
-    if (result.ok) await invalidateSession(queryClient);
+    if (result.ok) {
+      // The same identity boundary the password sign-in above crosses, reached
+      // by a different door: a provider has just told this application who the
+      // visitor is. Whatever privileged AdminCP data the tab was holding
+      // belonged to whoever was here before them.
+      removeAdminIdentityQueries(queryClient);
+      await invalidateSession(queryClient);
+    }
 
     return ssoCallbackResult(result);
   };
@@ -195,22 +202,27 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
  * header raises the internal-error toast and stays signed in, which is honest -
  * a session that could not be ended is still a session.
  *
- * ## The admin session is dropped either way
+ * ## Everything privileged the AdminCP held is dropped either way
  *
  * `isAdmin` picks which cookie the API deletes, but the *cache* is cleared for
  * both, and `removeQueries` rather than an invalidation. Two reasons, and the
  * second is the one that is easy to miss:
  *
- * - **`isAdmin: true`** is the AdminCP's own sign-out. Marking the entry stale
- *   would leave this administrator's permission set in the browser, rendered by
- *   anything still mounted, until a refetch returned. Since the next person at
- *   this browser may be a different administrator signing in, "until a refetch"
- *   is a window where one admin sees another's sidebar.
+ * - **`isAdmin: true`** is the AdminCP's own sign-out. Marking the entries stale
+ *   would leave this administrator's permission set - and their screens - in the
+ *   browser, rendered by anything still mounted, until a refetch returned. Since
+ *   the next person at this browser may be a different administrator signing in,
+ *   "until a refetch" is a window where one admin sees another's panel.
  * - **`isAdmin: false`** does not touch the admin cookie at all - but it does
  *   mean the person in front of the browser has stated they are leaving. The
  *   right response to "who is this?" becoming uncertain is to re-derive the
- *   answer from the cookie rather than to reuse the last one, and the admin
- *   query costs one request to do that.
+ *   answer from the cookie rather than to reuse the last one.
+ *
+ * `removeAdminIdentityQueries` is the whole of it - the session entry *and*
+ * every AdminCP screen family - because a sign-out that dropped only the
+ * permission set would leave the palette's user lookups and the dashboard layout
+ * behind for whoever signs in next. `tanstack/admin/queries` owns that list, and
+ * it is the only place it is written down.
  *
  * Neither is a security property: the admin cookie is what authorizes an admin
  * API call, and Hono re-reads it every time. This is about what the *browser*
@@ -228,7 +240,7 @@ export const useSignOutAction = () => {
     const current = queryClient.getQueryData(sessionQueryOptions().queryKey);
     if (current) setSessionData(queryClient, anonymousSession(current));
 
-    removeAdminSession(queryClient);
+    removeAdminIdentityQueries(queryClient);
 
     await invalidateSession(queryClient);
     await router.invalidate();
@@ -259,7 +271,9 @@ export const useSignOutAction = () => {
  * inline `result.emailVerified`: an unverified account is *not* a session, so the
  * cache must not be touched and the form must not be told to stand down. It gets
  * `{ emailConfirmation }` instead and swaps itself for the "check your email"
- * screen.
+ * screen. That is also why the AdminCP cleanup sits inside the branch rather
+ * than above it - nothing has changed about who this browser holds data for
+ * until a session actually exists.
  *
  * There is no second auth store. This writes to the one entry `./session-query`
  * owns, exactly as the sign-in action does.
@@ -284,6 +298,12 @@ export const useSignUpAction = ({
     const result = await authTransport().signUp(values);
 
     if (shouldRefreshSessionAfterSignUp(result)) {
+      // A verified sign-up mints a session, so somebody new is now the visitor
+      // this tab belongs to - the same identity boundary the login form crosses,
+      // and the same response. The unverified path deliberately does not reach
+      // here: no session was minted, so nothing about who this browser holds
+      // data for has changed.
+      removeAdminIdentityQueries(queryClient);
       await invalidateSession(queryClient);
       await navigate(destination());
     }

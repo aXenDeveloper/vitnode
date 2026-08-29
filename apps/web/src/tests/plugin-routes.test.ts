@@ -299,19 +299,21 @@ describe('the shells plugin routes mount under', () => {
   })
 
   /**
-   * And today, the honest state of it: the public shell has a plugin subtree
-   * because `@vitnode/example` ships a page, and the AdminCP has none because no
-   * plugin ships an admin one. A container appearing under `_admin` without a
-   * manifest entry to explain it would mean the composition ran on something
-   * this app did not declare.
+   * Both shells have a plugin subtree, because `@vitnode/example` ships a page
+   * in each area - and the AdminCP's is the whole of what Stage 12's `area:
+   * "admin"` amounts to at runtime. A container appearing under a shell without
+   * a manifest entry to explain it would mean the composition ran on something
+   * this app did not declare; a container *missing* under `_admin` while the
+   * manifest declares an admin route would mean the area was silently ignored.
    */
-  it('has a plugin subtree in the main shell and none in the AdminCP', () => {
+  it('has a plugin subtree in each shell a plugin declared a page for', () => {
     // Widened deliberately. The generated file is a `satisfies` literal, so
-    // `area` narrows to the areas actually installed - which today is `'main'`
-    // alone, and makes `=== 'admin'` a type error rather than a false answer.
+    // `area` narrows to the areas actually installed, which would make a
+    // comparison against an absent one a type error rather than a false answer.
     const areas: string[] = pluginRouteManifest.map((route) => route.area)
 
-    expect(areas).not.toContain('admin')
+    expect(areas).toContain('admin')
+    expect(areas).toContain('main')
 
     const shells = (getRouter().routeTree.children ?? []) as {
       children?: { id?: string }[]
@@ -323,6 +325,59 @@ describe('the shells plugin routes mount under', () => {
       )
 
     expect(containersUnder(MAIN_SHELL_ROUTE_ID)).toHaveLength(1)
-    expect(containersUnder('/_admin')).toHaveLength(0)
+    expect(containersUnder('/_admin')).toHaveLength(1)
+  })
+
+  /**
+   * The representative admin route, end to end through this app's own wiring.
+   *
+   * Everything between a plugin's declaration and a URL is generated or
+   * composed, and every step of it is invisible until the last one fails. So
+   * each is named: the manifest entry says `admin` and spells the URL in full,
+   * the registry has a literal import for the same route id, and the route ends
+   * up under `_admin` rather than under the public shell - which is what puts
+   * the session guard, the sidebar and the breadcrumb around it.
+   */
+  it('mounts the example plugin admin page under the AdminCP shell', () => {
+    const declared = pluginRouteManifest.find(
+      (route) => route.id === '@vitnode/example:admin-overview',
+    )
+
+    expect(declared).toMatchObject({
+      area: 'admin',
+      kind: 'page',
+      // The area chose the shell; the `/admin` came from the path.
+      path: '/admin/example',
+    })
+    expect(Object.keys(pluginRouteModules)).toContain(
+      '@vitnode/example:admin-overview',
+    )
+
+    const shells = (getRouter().routeTree.children ?? []) as {
+      children?: { children?: { id?: string; path?: string }[]; id?: string }[]
+      id?: string
+    }[]
+    const adminContainer = (
+      shells.find((shell) => shell.id === '/_admin')?.children ?? []
+    ).find((child) => child.id?.endsWith(`/${PLUGIN_ROUTES_ROUTE_ID}`))
+
+    // The router trims the leading slash off a non-root route's own `path` when
+    // it initialises the tree; the URL it composes to is asserted below.
+    expect((adminContainer?.children ?? []).map((child) => child.path)).toEqual(
+      ['admin/example'],
+    )
+  })
+
+  /**
+   * And the boundary Stage 13 owns is untouched by any of it: an admin *plugin*
+   * route is one URL, not a claim on the area. `/admin/content/*` stays the
+   * legacy application's, so its sidebar entries stay document loads.
+   */
+  it('claims no part of the Content Engine URLs', () => {
+    const router = getRouter()
+
+    expect(isTanStackOwnedPath(router, '/admin/example')).toBe(true)
+    expect(isTanStackOwnedPath(router, '/admin/content')).toBe(false)
+    expect(isTanStackOwnedPath(router, '/admin/content/blog/posts')).toBe(false)
   })
 })

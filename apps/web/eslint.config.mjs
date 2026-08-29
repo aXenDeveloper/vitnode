@@ -20,6 +20,7 @@ export default [
       "src/routeTree.gen.ts",
       "src/plugin-routes.gen.ts",
       "src/plugin-route-manifest.gen.ts",
+      "src/admin-nav.gen.ts",
       "prettier.config.js",
     ],
   },

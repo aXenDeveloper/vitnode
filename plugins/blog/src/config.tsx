@@ -1,14 +1,12 @@
 import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
-import { ListIcon, NotebookPenIcon } from "lucide-react";
 
 import { CONFIG_PLUGIN } from "@/const";
-import { blogCategoryContentType } from "@/content/category";
-import { blogPostContentType } from "@/content/post";
 import { BlogArticleEditorField } from "@/views/admin/article/editor-field";
 import { BlogArticleFormLayout } from "@/views/admin/article/form-layout";
 import { BlogCategoryColorCell } from "@/views/admin/category/color-cell";
 import { BlogCategoryColorField } from "@/views/admin/category/color-field";
 
+import { blogCategoryNav, blogPostNav } from "./admin/nav";
 import messages from "./locales";
 
 /**
@@ -22,6 +20,12 @@ import messages from "./locales";
  * The overrides are the two escape hatches, one of each kind. `fields` replaces
  * an input, `columns` replaces a table cell, and `forms.layout` replaces the
  * arrangement of a whole form - never its behaviour.
+ *
+ * What each content type *is* - its definition and its sidebar icon - is spread
+ * in from `./admin/nav` rather than written here. That module is browser-safe
+ * and is what an application which cannot import this file reads to draw the
+ * blog's sidebar entries; keeping the pairs there and the overrides here is what
+ * stops the two AdminCPs disagreeing about which icon a screen has.
  */
 export const blogPlugin = () => {
   return buildPlugin({
@@ -29,8 +33,7 @@ export const blogPlugin = () => {
     messages,
     contentTypes: [
       contentTypeAdmin({
-        definition: blogPostContentType,
-        icon: <NotebookPenIcon />,
+        ...blogPostNav,
         fields: {
           // The Tiptap editor, inside the same AutoForm as everything else.
           content: { component: BlogArticleEditorField },
@@ -42,8 +45,7 @@ export const blogPlugin = () => {
         },
       }),
       contentTypeAdmin({
-        definition: blogCategoryContentType,
-        icon: <ListIcon />,
+        ...blogCategoryNav,
         fields: {
           color: { component: BlogCategoryColorField },
         },

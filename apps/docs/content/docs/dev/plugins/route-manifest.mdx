@@ -441,6 +441,10 @@ put `/admin` in front of your path - you still write the whole URL yourself. It
 would have been easy to make VitNode prepend it for you, and then nobody could
 read a manifest and know where a page actually lives. Write the full path.
 
+Because the frame is pathless, an area is not part of a URL and so it is not
+part of a collision either: an admin page at `/reports` competes with a public
+page at `/reports`, and the build refuses the pair.
+
 **Everything else works exactly as it does for a public page.** Same `kind`, same
 `parentId`, same `namespaces`, same route module with the same `route` export, the
 same breadcrumb and metadata APIs. A layout with pages inside it nests in the
@@ -533,9 +537,11 @@ Loudly, at build time, naming your plugin - never as a silent default:
   other one: a page framed by the wrong shell renders outside the guards and
   chrome its area was the whole statement about.
 
-Two routes that spell the same path in _different_ areas are not a collision.
-`main /reports` and `admin /reports` are two URLs in two shells, and the build
-treats them as such.
+Two routes that spell the same path in _different_ areas **are** a collision.
+Both shells are pathless - they frame a page, they don't move it - so
+`main /reports` and `admin /reports` are one URL claimed twice, and the build
+says so. `main /reports` beside `admin /admin/reports` is fine: those are two
+URLs, and the `/admin` came from the path.
 
 And at runtime, if a module doesn't export a component as its default export, the
 error names your plugin route rather than surfacing as React's "type is invalid"

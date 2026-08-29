@@ -300,22 +300,27 @@ export const buildPluginRouteManifest = (
 
       // Keyed on the URLs the route matches rather than on its text, so
       // `/blog/:slug` and `/blog/:postId` collide - they are one route spelled
-      // twice. Area-scoped, because the same pathname in two different shells
-      // is two different URLs: an `admin` route's path is `/admin/…` and a
-      // `main` one's is not, so text they happen to share is not a clash. Two
-      // routes compete only when they answer one URL in one shell.
+      // twice.
       //
-      // Scoped by kind as well, and that is what nesting costs. A layout claims
-      // no URL, so a layout at `/settings` and the index page inside it both
-      // spell `/settings` and are not a collision - they are the two halves of
-      // one screen. Two *pages* there still are one, and so are two layouts,
-      // which would be two frames competing for one subtree.
-      const pathKey = `${route.kind} ${route.area} ${routeMatchKey(route.segments)}`;
+      // **`area` is deliberately not part of this key.** Both shells a host
+      // mounts these under are *pathless* - `_main` and `_admin` contribute no
+      // segment - so an area changes which frame draws the page and never which
+      // URL it answers. `main /reports` and `admin /reports` are therefore one
+      // URL claimed twice, and keying by area would have let the router's own
+      // ranking decide which of them a browser reaches. An admin route's
+      // `/admin` comes from its `path`, which the manifest spells out in full.
+      //
+      // Scoped by kind, and that is what nesting costs. A layout claims no URL,
+      // so a layout at `/settings` and the index page inside it both spell
+      // `/settings` and are not a collision - they are the two halves of one
+      // screen. Two *pages* there still are one, and so are two layouts, which
+      // would be two frames competing for one subtree.
+      const pathKey = `${route.kind} ${routeMatchKey(route.segments)}`;
       const existingByPath = byPath.get(pathKey);
 
       if (existingByPath) {
         throw new PluginRouteError(
-          `Plugin route path collision on "${route.path}" (${route.area}): ${existingByPath.pluginId} already owns "${existingByPath.path}" as "${existingByPath.id}", and ${pluginId} declares "${route.path}" as "${route.id}". Two plugins cannot serve the same path - rename one of them.`,
+          `Plugin route path collision on "${route.path}" (${route.area}): ${existingByPath.pluginId} already owns "${existingByPath.path}" as "${existingByPath.id}" (${existingByPath.area}), and ${pluginId} declares "${route.path}" as "${route.id}". Both match the same URLs - a shell is pathless, so an area frames a page rather than moving it - and VitNode will not let a router's ordering decide which one answers. Rename one of them.`,
           {
             code: "duplicate-path",
             conflictsWith: {

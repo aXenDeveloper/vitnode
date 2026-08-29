@@ -29,6 +29,7 @@ import type {
  * consumer's `await load()` is typed by the module it loaded.
  */
 export const pluginRouteModules = {
+  '@vitnode/example:admin-overview': () => import('@vitnode/example/routes/admin-example-page'),
   '@vitnode/example:example-page': () => import('@vitnode/example/routes/example-page'),
   '@vitnode/example:guide': () => import('@vitnode/example/routes/guide-layout'),
   '@vitnode/example:guide-index': () => import('@vitnode/example/routes/guide-index-page'),
@@ -47,6 +48,13 @@ export type PluginRouteKey = keyof typeof pluginRouteModules
  * `pluginId` and `routeId`, and look the loader up by `key`.
  */
 export const pluginRouteEntries = [
+  {
+    entry: 'routes/admin-example-page',
+    key: '@vitnode/example:admin-overview',
+    pluginId: '@vitnode/example',
+    routeId: 'admin-overview',
+    specifier: '@vitnode/example/routes/admin-example-page',
+  },
   {
     entry: 'routes/example-page',
     key: '@vitnode/example:example-page',

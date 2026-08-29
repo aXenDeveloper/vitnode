@@ -10,7 +10,7 @@ import { UserBarAdminContent } from "@/views/admin/layouts/user-bar/user-bar-con
 
 import { useSignOutAction } from "../auth/actions";
 import { useAdminUser } from "./permissions";
-import { removeAdminShellQueries } from "./queries";
+import { removeAdminIdentityQueries } from "./queries";
 
 /**
  * The AdminCP user menu, on TanStack Start.
@@ -31,16 +31,18 @@ import { removeAdminShellQueries } from "./queries";
  *
  *     DELETE /sign_out, admin cookie cleared   the shared action -> the API
  *     public session reset to anonymous        the shared action
- *     admin session + permissions dropped      the shared action (removeAdminSession)
+ *     everything privileged this admin held    the shared action
+ *                                              (removeAdminIdentityQueries)
  *     leaves the protected AdminCP             router.invalidate() -> _admin's guard
- *     no private data left from this identity  removeAdminShellQueries, below
+ *     nothing re-created during the teardown   the second sweep below
  *
- * Only the last is this component's, and only because the cache it clears is the
- * shell's own. The action removes the *session* entry; it does not know that the
- * command palette holds a previous administrator's user-lookup results. Those
- * outlive a sign-out in memory, so a second administrator signing in on the same
- * tab without a reload would be served the first one's matches. Dropping them
- * before the navigation is what closes that.
+ * The action owns the cleanup - the session entry *and* every AdminCP screen
+ * family, through the one canonical list in `./queries`. This component adds a
+ * second sweep after the sign-out has resolved, and only because of *when* it
+ * runs: the action clears before `router.invalidate()`, while the panel is still
+ * mounted, so an observer that re-renders in that window can put an entry back
+ * before the guard redirects. Sweeping again once the action has finished is
+ * what stops one of those surviving into the next administrator's session.
  *
  * None of this is a security boundary. The admin cookie is what authorizes an
  * admin read, and Hono re-checks it on every request whatever this cache says.
@@ -91,7 +93,7 @@ export const AdminUserBar = ({
       return;
     }
 
-    removeAdminShellQueries(queryClient);
+    removeAdminIdentityQueries(queryClient);
   };
 
   return (

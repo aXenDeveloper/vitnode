@@ -3,11 +3,17 @@ import type { QueryClient } from "@tanstack/react-query";
 import { ADMIN_SEARCH_USERS_QUERY_KEY } from "@/views/admin/layouts/search/search-users";
 import { ADMIN_QUERY_ROOT } from "@/views/admin/table/query";
 
+import { removeAdminSession } from "./state";
+
 /**
  * Every cache entry the AdminCP shell owns, dropped.
  *
- * Called on sign-out, alongside - not instead of - the canonical
- * `removeAdminSession`. The two are separate because they answer to different
+ * The canonical list, and the only one: nothing else in VitNode enumerates the
+ * privileged AdminCP query roots. Callers that mean "this browser is now a
+ * different person" want {@link removeAdminIdentityQueries} below, which is this
+ * plus the session entry.
+ *
+ * Kept separate from `removeAdminSession` because the two answer to different
  * owners: the session entry belongs to the admin auth layer, and these belong to
  * the shell, which is the only thing that knows it has them.
  *
@@ -42,4 +48,51 @@ import { ADMIN_QUERY_ROOT } from "@/views/admin/table/query";
 export const removeAdminShellQueries = (queryClient: QueryClient): void => {
   queryClient.removeQueries({ queryKey: ADMIN_SEARCH_USERS_QUERY_KEY });
   queryClient.removeQueries({ queryKey: ADMIN_QUERY_ROOT });
+};
+
+/**
+ * Everything privileged this browser holds about *the previous administrator*,
+ * dropped - the admin session and every AdminCP screen entry, in one call.
+ *
+ * What an **identity boundary** calls: a successful admin sign-in, either
+ * sign-out, a public sign-in, a finished SSO exchange, a verified sign-up. Each
+ * of those is a moment where the person at the keyboard may have changed, and
+ * the correct response is to re-derive everything privileged from the cookie the
+ * browser now holds rather than to reuse the last answer.
+ *
+ * ## A sign-in is an identity boundary too, and that was the bug
+ *
+ * `removeAdminSession` alone was not enough. It drops
+ * `["vitnode","admin-session"]` - the permission set - and leaves every AdminCP
+ * *screen* entry where it was: the user-lookup results the palette cached, the
+ * file table, the cron list, the dashboard layout. So Admin A could use the
+ * panel, have their session expire or be revoked without ever signing out, and
+ * Admin B could sign in on that same tab and be handed A's screens from memory.
+ * The dashboard is the sharpest case, because its stored layout is
+ * administrator-specific and its key is not scoped by identity.
+ *
+ * ## Removal, and before the navigation
+ *
+ * `removeQueries` throughout, never `invalidateQueries`. Invalidation keeps the
+ * value and marks it stale, so the next render still paints the previous
+ * administrator's data until a refetch returns. The whole point is that Admin B
+ * must not see Admin A's cached value for even one frame, so the value has to be
+ * gone rather than doubted.
+ *
+ * And it runs *before* whatever navigates. The AdminCP's guard reads the session
+ * entry in `beforeLoad`; dropping it first is what makes that guard perform a
+ * real read instead of deciding on what was already there.
+ *
+ * ## What it does not touch
+ *
+ * A list of AdminCP-owned prefixes, deliberately, and never
+ * `queryClient.clear()`. The public session, the message catalogues and a
+ * plugin's own entries are not this function's to throw away, and clearing them
+ * would turn a sign-in into a full-cache eviction that re-fetches the whole
+ * application. The public session has its own lifecycle in `tanstack/auth`,
+ * which is the layer that knows what a public identity change means.
+ */
+export const removeAdminIdentityQueries = (queryClient: QueryClient): void => {
+  removeAdminSession(queryClient);
+  removeAdminShellQueries(queryClient);
 };

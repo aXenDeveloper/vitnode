@@ -29,6 +29,19 @@ import type { PluginRoute } from '@vitnode/core/routing'
  */
 export const pluginRouteManifest = [
   {
+    area: 'admin',
+    entry: 'routes/admin-example-page',
+    id: '@vitnode/example:admin-overview',
+    kind: 'page',
+    namespaces: ['@vitnode/example.admin.overview'],
+    parentId: null,
+    path: '/admin/example',
+    pluginId: '@vitnode/example',
+    requires: null,
+    routeId: 'admin-overview',
+    segments: [{ kind: 'static', value: 'admin' }, { kind: 'static', value: 'example' }],
+  },
+  {
     area: 'main',
     entry: 'routes/example-page',
     id: '@vitnode/example:example-page',

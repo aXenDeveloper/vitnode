@@ -108,4 +108,32 @@ export const routes: PluginRouteDefinition[] = [
     parentId: "guide",
     path: "/example/guide/:topic",
   },
+
+  /**
+   * A page in the **AdminCP**, and the whole of what that costs: one field.
+   *
+   * `area: "admin"` names the shell the page is framed by - the sidebar, the
+   * breadcrumb area, the command palette and the admin session guard - and the
+   * host mounts it under whichever route renders that shell. It does *not* put
+   * `/admin` in front of the path: both shells are pathless, so an area frames a
+   * page rather than moving it, and the URL below is written out in full. That
+   * is also why `main /admin/example` would be a collision with this rather than
+   * a second page - one URL is one URL whichever frame draws it.
+   *
+   * `requires` is absent and may not be present: it is about the *public*
+   * session, and this page is already behind the AdminCP's own, under its own
+   * cookie. A staff permission gates the page's content, inside the module.
+   *
+   * The entry is `routes/admin-example-page` rather than anything under
+   * `routes/admin/`, which during the migration is where a plugin's **Next.js**
+   * admin pages live and is copied wholesale into any Next.js app that installs
+   * this plugin. A module in both places would be copied *and* bundled.
+   */
+  {
+    area: "admin",
+    entry: "routes/admin-example-page",
+    id: "admin-overview",
+    namespaces: ["@vitnode/example.admin.overview"],
+    path: "/admin/example",
+  },
 ];

@@ -3,6 +3,7 @@ import type { AdminUserSearch } from '@vitnode/core/tanstack/admin'
 import { AdminShellContent } from '@vitnode/core/tanstack/admin'
 import { LanguageSwitcher } from '@vitnode/core/tanstack/layout'
 
+import { adminNav } from '#/lib/admin-nav'
 import { adminUserSearchFn } from '#/lib/admin-search'
 import { MigrationLink } from '#/migration/link'
 import { useMigrationNavigate } from '#/migration/navigation'
@@ -19,6 +20,7 @@ import { useMigrationNavigate } from '#/migration/navigation'
  *     onNavigate      useMigrationNavigate   the same decision, without a click
  *     searchUsers     adminUserSearchFn      this app's own server function
  *     languageSwitcher  <LanguageSwitcher/>  the router's, not next-intl's
+ *     nav             adminNav               the plugins *this* app configured
  *
  * ## Why the link seam matters more in the AdminCP than anywhere else
  *
@@ -36,19 +38,20 @@ import { useMigrationNavigate } from '#/migration/navigation'
  * the table - so migrating a screen in a later stage changes a route file and
  * not this component.
  *
- * ## `declarations` is deliberately not passed
+ * ## `nav` is a projection, not the plugin registry
  *
- * `AdminShellContent` falls back to core's own navigation, which is correct for
- * this app today: `src/vitnode.config.ts` registers its plugins by id and
- * messages only - no content types and no `admin.nav` - and the config itself is
- * server-side, deliberately kept out of the browser bundle by
- * `vitnode.shell.config.ts`. So there are no plugin nav entries to declare yet,
- * and passing `{ plugins: [] }` explicitly would say the same thing twice.
+ * `src/vitnode.config.ts` is server-side and registers the *full* plugin
+ * frontends, whose content types carry their editing screens - a graph this
+ * application cannot bundle while the Content Engine is still Next's. So the
+ * sidebar is built from `#/lib/admin-nav`, which reads the generated
+ * browser-safe projection: ids, hrefs, permissions, icons and content type
+ * definitions, and nothing that renders a screen.
  *
- * When plugin AdminCP registration moves over, this is the one line that
- * changes: pass `adminNavDeclarations(<browser-safe plugin declarations>)` and
- * the plugin groups appear. Nothing in the shell has to change with it, and no
- * navigation is derived from the route manifest.
+ * It carries the message namespaces with it, because a plugin group's headings
+ * live under that plugin's own id and the shell would otherwise render them as
+ * dotted identifiers. `_admin`'s loader warms the same list.
+ *
+ * No navigation is derived from the route manifest, in either direction.
  */
 const searchUsers: AdminUserSearch = async (search) =>
   await adminUserSearchFn({ data: { search } })
@@ -60,6 +63,7 @@ export const AdminShell = ({ children }: { children: React.ReactNode }) => {
     <AdminShellContent
       languageSwitcher={<LanguageSwitcher />}
       LinkComponent={MigrationLink}
+      nav={adminNav}
       onNavigate={(href) => {
         void navigate(href)
       }}

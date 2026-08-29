@@ -42,11 +42,16 @@ import { useAdminPermissions } from "./permissions";
  *
  * That is why `declarations` is a prop rather than something this reads from
  * `getVitNodeConfig()`. A host with no browser-side plugin registry passes
- * nothing and gets core's own navigation; a host that has one - or that has
- * projected its plugins' nav declarations into browser-safe data - passes them
- * and the plugin groups appear. Nothing here has to change either way, and no
- * navigation is derived from the route manifest: routes and navigation stay
- * separate concepts.
+ * nothing and gets core's own navigation; a host that has projected its plugins'
+ * navigation into browser-safe data passes that instead and the plugin groups
+ * appear. `apps/web` does the second: `@vitnode/core/framework/admin-nav` writes
+ * one literal import per configured plugin that exports an `admin/nav` module,
+ * and `adminNavBundle` turns those into declarations plus the message namespaces
+ * they need. Nothing here changes either way.
+ *
+ * No navigation is derived from the route manifest: routes and navigation stay
+ * separate concepts, and a nav entry may point at a plugin route, at a screen
+ * another application serves, or at another origin entirely.
  */
 interface AdminNavValue {
   nav: NavAdminParent[];

@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouterState } from "@tanstack/react-router";
+import React from "react";
 
 import type { AdminUserSearch } from "@/views/admin/layouts/search/search-users";
-import type { AdminNavGroupDeclaration } from "@/views/admin/layouts/sidebar/nav/nav-model";
+import type { AdminNavBundle } from "@/views/admin/layouts/sidebar/nav/nav-model";
 import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { Separator } from "@/components/ui/separator";
@@ -18,7 +19,7 @@ import { SidebarAdminContent } from "@/views/admin/layouts/sidebar/sidebar-conte
 import { RouteMessages } from "../i18n/route-messages";
 import { RouterLink } from "../layout/router-link";
 import { useAdminBreadcrumb } from "./breadcrumb";
-import { ADMIN_SHELL_NAMESPACES } from "./intl";
+import { adminShellNamespaces } from "./intl";
 import { AdminNavProvider, useAdminNav } from "./nav";
 import { AdminPermissionsProvider } from "./permissions";
 import { AdminSearch } from "./search";
@@ -44,27 +45,34 @@ import { AdminUserBar } from "./user-bar";
  *
  * ## What the shell mounts, in order, and why
  *
- *     RouteMessages              the shell's own strings (`core.global`, `admin.global`)
+ *     RouteMessages              the shell's strings, plus the navigation's
  *     AdminPermissionsProvider   the resolved permission set
  *     AdminNavProvider           one navigation, read by sidebar + palette + trail
  *     SidebarProvider            the open/collapsed state and the mobile drawer
  *
  * `RouteMessages` is outermost, and it is the shell's own provider rather than
- * something a page can be relied on to bring. Everything the chrome renders -
- * the sidebar group headings, each nav entry's title, the palette's label, the
- * user menu - is an `admin.global` key, and the root route provides
- * `core.global` alone. Without a provider here `useTranslations` in
- * `AdminNavProvider` finds no message for `admin.global.nav.core` and renders
- * the key itself, so the whole sidebar reads as dotted identifiers in every
- * language. A page's own `RouteMessages` cannot cover it: the pages mount
- * *below* `{children}` and the chrome is above them.
+ * something a page can be relied on to bring. Most of what the chrome renders -
+ * the palette's label, the user menu, core's own sidebar entries - is an
+ * `admin.global` key, and the root route provides `core.global` alone. Without a
+ * provider here `useTranslations` in `AdminNavProvider` finds no message for
+ * `admin.global.nav.core` and renders the key itself, so the whole sidebar reads
+ * as dotted identifiers in every language. A page's own `RouteMessages` cannot
+ * cover it: the pages mount *below* `{children}` and the chrome is above them.
+ *
+ * The rest is the navigation's, and it is why {@link AdminShellContent} takes a
+ * `nav` bundle rather than bare declarations. A plugin group's heading is
+ * `{pluginId}.title`, a content type's noun is under `{pluginId}.content.…`, and
+ * a declared entry is under `{pluginId}.admin.nav` - none of which a package can
+ * know in advance. `adminNavBundle` derives that list from the same declarations
+ * the sidebar is built from, so the two cannot disagree, and `adminShellNamespaces`
+ * joins it to the shell's own two.
  *
  * It reads rather than fetches - `_admin`'s loader has already warmed the
  * identical `intlQueryOptions` through `loadAdminMessages`, from the same
- * {@link ADMIN_SHELL_NAMESPACES} list - so nothing suspends here. A screen still
- * mounts its own with its feature namespace, which replaces this one for its
- * subtree; both lists start with `core.global`, so nothing a page renders loses
- * the design system's strings.
+ * namespace list - so nothing suspends here. A screen still mounts its own with
+ * its feature namespace, which replaces this one for its subtree; both lists
+ * start with `core.global`, so nothing a page renders loses the design system's
+ * strings.
  *
  * The permission provider is outermost of the two data providers because the
  * navigation is a function of what it holds. Neither suspends by the time this
@@ -79,8 +87,9 @@ import { AdminUserBar } from "./user-bar";
  * Only what a package cannot answer: how a path becomes a navigation
  * (`LinkComponent` / `onNavigate`, which during the migration decide per href
  * between this router and the legacy application), which language switcher to
- * render, how to look a user up, and - if it has plugins registered in the
- * browser - their navigation declarations.
+ * render, how to look a user up, and its own AdminCP navigation - the
+ * declarations *and* the namespaces they need - built from the plugins that
+ * application actually configured.
  *
  * Sign-out is deliberately **not** on that list. It is the canonical action plus
  * the shell's own cache clearing, and a host that could replace it could replace
@@ -88,36 +97,54 @@ import { AdminUserBar } from "./user-bar";
  */
 export const AdminShellContent = ({
   children,
-  declarations,
   languageSwitcher,
   LinkComponent = RouterLink,
+  nav,
   onNavigate,
   searchUsers,
 }: {
   children: React.ReactNode;
-  /** Plugin-inclusive nav declarations. Omitted, the shell renders core's own. */
-  declarations?: AdminNavGroupDeclaration[];
   /** The host's language switcher, or nothing on a single-language install. */
   languageSwitcher?: React.ReactNode;
   LinkComponent?: AuthLinkComponent;
+  /**
+   * This installation's AdminCP navigation, from `adminNavBundle(...)`.
+   *
+   * The declarations and the namespaces they render from, together, because
+   * passing one without the other is a sidebar of dotted identifiers rather than
+   * an error. Omitted, the shell renders core's own navigation and loads only
+   * its own strings - which is exactly right for an application with no plugin
+   * navigation to declare.
+   */
+  nav?: AdminNavBundle;
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;
-}) => (
-  <RouteMessages namespaces={ADMIN_SHELL_NAMESPACES}>
-    <AdminPermissionsProvider>
-      <AdminNavProvider declarations={declarations}>
-        <AdminShellFrame
-          languageSwitcher={languageSwitcher}
-          LinkComponent={LinkComponent}
-          onNavigate={onNavigate}
-          searchUsers={searchUsers}
-        >
-          {children}
-        </AdminShellFrame>
-      </AdminNavProvider>
-    </AdminPermissionsProvider>
-  </RouteMessages>
-);
+}) => {
+  // Memoised on the bundle rather than recomputed per render: this list is the
+  // `RouteMessages` query's input, and a host holds its bundle at module scope,
+  // so one array identity per bundle is one provider that never re-mounts.
+  const namespaces = React.useMemo(
+    () => adminShellNamespaces(nav?.namespaces),
+    [nav],
+  );
+
+  return (
+    <RouteMessages namespaces={namespaces}>
+      <AdminPermissionsProvider>
+        <AdminNavProvider declarations={nav?.declarations}>
+          <AdminShellFrame
+            languageSwitcher={languageSwitcher}
+            LinkComponent={LinkComponent}
+            onNavigate={onNavigate}
+            searchUsers={searchUsers}
+          >
+            {children}
+          </AdminShellFrame>
+        </AdminNavProvider>
+      </AdminPermissionsProvider>
+    </RouteMessages>
+  );
+};
 
 /**
  * The frame, split from the providers so it can read them.

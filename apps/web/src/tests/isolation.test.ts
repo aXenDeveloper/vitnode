@@ -441,6 +441,7 @@ describe('the whole graph this app imports stays Next-free', () => {
     // it", the screen was migrated, and the exclusion quietly became cover.
     'apps/web/src/migration/admin-shell.tsx',
     'apps/web/src/lib/admin-auth.ts',
+    'apps/web/src/lib/admin-nav.ts',
     'apps/web/src/lib/admin-search.ts',
     'apps/web/src/routes/admin.index.tsx',
     'apps/web/src/routes/_admin.tsx',
@@ -924,5 +925,118 @@ describe('the locale layer keeps its halves apart', () => {
     )
 
     expect(copies.map((path) => relative(repoRoot, path))).toEqual([])
+  })
+})
+
+/**
+ * The AdminCP navigation projection, as an import boundary.
+ *
+ * The sidebar has to name every plugin the installation configured, and the
+ * obvious way to do that - read `vitnode.config.ts` - is the one thing this
+ * application cannot do: those registrations carry each content type's editing
+ * screens, which reach core's form stack and from there `next/dynamic`. So a
+ * plugin ships a second, browser-safe module (`admin/nav`) with the ids, hrefs,
+ * permissions, icons and content type definitions in it, and the build writes
+ * one literal import per configured plugin into `src/admin-nav.gen.ts`.
+ *
+ * What is asserted here is that the split is real rather than intended: the
+ * navigation graph reaches each plugin's nav module and *not* its `config`.
+ * Without the second half this test would pass on a projection that had quietly
+ * started importing the whole plugin - which would not fail anything else until
+ * a production build tried to bundle Tiptap into a TanStack Start app.
+ */
+describe('the admin navigation projection stays out of the plugin runtime', () => {
+  const NAV_ENTRY = 'apps/web/src/lib/admin-nav.ts'
+
+  const walked = () => {
+    const visited = new Set<string>()
+    const walk = (path: string) => {
+      if (visited.has(path)) return
+      visited.add(path)
+
+      for (const specifier of importsFrom(path)) {
+        const target = resolveNavSpecifier(specifier, path)
+        if (target) walk(target)
+      }
+    }
+
+    const entry = resolveNavFile(join(repoRoot, NAV_ENTRY))
+    expect(entry, `${NAV_ENTRY} exists`).not.toBeNull()
+    if (entry) walk(entry)
+
+    return [...visited].map((path) => relative(repoRoot, path))
+  }
+
+  const DIST_OF: Record<string, string> = {
+    '@vitnode/blog': join(repoRoot, 'plugins/blog/dist/src'),
+    '@vitnode/core': join(repoRoot, 'packages/vitnode/dist/src'),
+    '@vitnode/example': join(repoRoot, 'plugins/example/dist/src'),
+  }
+  const appSrc = join(repoRoot, 'apps/web/src')
+  const CANDIDATES = [
+    '',
+    '.ts',
+    '.tsx',
+    '.js',
+    '/index.ts',
+    '/index.tsx',
+    '/index.js',
+  ]
+
+  const resolveNavFile = (base: string): null | string => {
+    for (const suffix of CANDIDATES) {
+      const path = `${base}${suffix}`
+      if (existsSync(path) && statSync(path).isFile()) return path
+    }
+
+    return null
+  }
+
+  const resolveNavSpecifier = (
+    specifier: string,
+    importer: string,
+  ): null | string => {
+    if (specifier.startsWith('.')) {
+      return resolveNavFile(resolve(dirname(importer), specifier))
+    }
+    if (specifier.startsWith('#/')) {
+      return resolveNavFile(join(appSrc, specifier.slice(2)))
+    }
+
+    const pkg = Object.keys(DIST_OF).find(
+      (name) => specifier === name || specifier.startsWith(`${name}/`),
+    )
+    if (!pkg) return null
+
+    return resolveNavFile(join(DIST_OF[pkg], specifier.slice(pkg.length + 1)))
+  }
+
+  it('reaches every configured plugin&apos;s nav module', () => {
+    const files = walked()
+
+    expect(files).toContain('plugins/blog/dist/src/admin/nav.js')
+    expect(files).toContain('plugins/example/dist/src/admin/nav.js')
+  })
+
+  it('never reaches a plugin&apos;s frontend registration', () => {
+    const files = walked()
+
+    expect(files).not.toContain('plugins/blog/dist/src/config.js')
+    expect(files).not.toContain('plugins/example/dist/src/config.js')
+  })
+
+  /**
+   * Nor any of a plugin's own views. Core's admin components are legitimately in
+   * this graph - `lib/admin-nav.ts` imports `adminNavBundle` from the same
+   * barrel the shell comes from - but a *plugin's* screens are exactly what the
+   * projection exists to leave behind: the Tiptap field, the form layout, the
+   * colour cell.
+   */
+  it('never reaches a plugin&apos;s own screens', () => {
+    expect(
+      walked().filter((path) =>
+        /^plugins\/[^/]+\/dist\/src\/views\//.test(path),
+      ),
+    ).toEqual([])
   })
 })

@@ -313,11 +313,14 @@ export const hasAdminPermission = <TSession extends { permissions: unknown }>(
  * to render from and must ask the API, which reads the cookie the browser now
  * holds.
  *
- * Called on both sign-out flavours and after an admin sign-in. The public
- * sign-out is included on purpose even though it does not touch the admin
- * cookie: the person in front of the browser may have changed, and the correct
- * response to "who is this?" becoming uncertain is to re-derive the answer from
- * the cookie rather than to reuse the last one.
+ * Reached through `removeAdminIdentityQueries` in `./queries` rather than called
+ * directly: every identity boundary - both sign-out flavours, both sign-ins, a
+ * finished SSO exchange - has to drop the AdminCP's *screen* entries as well as
+ * this one, and one call that does both is what stops a caller doing half of it.
+ * The public flows are included on purpose even though they do not touch the
+ * admin cookie: the person in front of the browser may have changed, and the
+ * correct response to "who is this?" becoming uncertain is to re-derive the
+ * answer from the cookie rather than to reuse the last one.
  */
 export const removeAdminSession = (queryClient: QueryClient): void => {
   queryClient.removeQueries({ queryKey: ADMIN_SESSION_QUERY_KEY });

@@ -1,6 +1,20 @@
 {
   "@vitnode/example": {
     "title": "Example",
+    "admin": {
+      "nav": {
+        "overview": "Overview"
+      },
+      "overview": {
+        "title": "Example plugin",
+        "desc": "A plugin page inside the AdminCP, shipped by @vitnode/example and served by the app that installed it.",
+        "points": {
+          "shell": "The sidebar, the breadcrumb and the admin session guard around this page are the AdminCP's - the route declared area: \"admin\" and nothing else.",
+          "path": "The URL is the one the route manifest spells out in full. An area chooses the frame; it never adds a prefix.",
+          "nav": "The sidebar entry that led here is a separate declaration. A plugin page may have no entry, and an entry may point anywhere."
+        }
+      }
+    },
     "content": {
       "article": {
         "label": "{count, plural, one {Article} other {Articles}}",

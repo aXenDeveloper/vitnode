@@ -8,6 +8,7 @@ import {
   loadAdminMessages,
 } from '@vitnode/core/tanstack/admin'
 
+import { adminNav } from '#/lib/admin-nav'
 import { pageHead } from '#/lib/page-head'
 import { AdminShell } from '#/migration/admin-shell'
 import { ErrorActions } from '#/migration/error-actions'
@@ -95,8 +96,19 @@ export const Route = createFileRoute('/_admin')({
     // a page cannot disagree with the guard that let it render.
     return { adminAccess: access }
   },
+  /**
+   * The shell's strings, warmed before React renders.
+   *
+   * `adminNav.namespaces` is the same array `AdminShell` hands the shell, and it
+   * has to be: the provider reads back the identical `intlQueryOptions` entry
+   * this fills, so warming a different namespace set would fill an entry nobody
+   * looks at and cost a round trip on the first paint anyway. It is not a fixed
+   * list because it cannot be - a plugin group's headings live under that
+   * plugin's own id, and which plugins this installation configured is decided
+   * in `src/admin-nav.gen.ts`.
+   */
   loader: async ({ context }) => {
-    await loadAdminMessages(context)
+    await loadAdminMessages({ ...context, namespaces: adminNav.namespaces })
   },
   /**
    * Stated once for the whole panel rather than on each screen.

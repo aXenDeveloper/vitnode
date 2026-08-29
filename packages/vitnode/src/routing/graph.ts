@@ -354,10 +354,17 @@ export const buildPluginRouteGraph = (
   // In this pass rather than in the manifest builder so it also holds for a
   // manifest nobody built here - the generated file is a literal, and the
   // runtime rebuilds the graph from it with this same function.
+  //
+  // Keyed on the URL alone, with no `area` in it, for the reason the manifest
+  // builder states: every shell a host mounts these under is *pathless*, so an
+  // area chooses the frame around a page and never the URL it answers. A layout
+  // in the AdminCP and a page on the public site that spell one pathname are two
+  // routes competing for one URL, and only the router's ranking would separate
+  // them.
   const byMatchKey = new Map<string, PluginRouteNode[]>();
 
   for (const node of byId.values()) {
-    const key = `${node.route.area} ${routeMatchKey(node.route.segments)}`;
+    const key = routeMatchKey(node.route.segments);
 
     byMatchKey.set(key, [...(byMatchKey.get(key) ?? []), node]);
   }
@@ -386,7 +393,7 @@ export const buildPluginRouteGraph = (
     fail(
       "duplicate-path",
       second.route,
-      `Plugin route path collision on "${second.route.path}" (${second.route.area}): ${first.route.pluginId} already owns "${first.route.path}" as a ${first.route.kind} ("${first.route.id}"), and ${second.route.pluginId} declares it as a ${second.route.kind} ("${second.route.id}"). Both match the same URLs, and VitNode will not let a router's ordering decide which one answers - rename one of them. Only a layout and the index page inside it may share a path.`,
+      `Plugin route path collision on "${second.route.path}" (${second.route.area}): ${first.route.pluginId} already owns "${first.route.path}" as a ${first.route.kind} ("${first.route.id}", ${first.route.area}), and ${second.route.pluginId} declares it as a ${second.route.kind} ("${second.route.id}"). Both match the same URLs - a shell is pathless, so an area frames a page rather than moving it - and VitNode will not let a router's ordering decide which one answers. Rename one of them. Only a layout and the index page inside it may share a path.`,
       first.route,
     );
   }

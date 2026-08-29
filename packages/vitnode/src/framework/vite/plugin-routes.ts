@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 
 import type { PluginRouteDefinition } from "@/routing";
 
+import type { ResolvedAdminNavModule } from "../admin-nav";
 import type {
   HostRoutePath,
   LegacyRoutePath,
@@ -22,6 +23,7 @@ import type {
   ResolvedPluginRouteModule,
 } from "../plugin-routes";
 
+import { generateAdminNavSource } from "../admin-nav";
 import {
   compilePluginRoutes,
   hostRoutePathsFromFiles,
@@ -39,6 +41,20 @@ import {
  * failing the build of every app that installs one.
  */
 const MANIFEST_SUBPATH = "routes/manifest";
+
+/**
+ * Where a plugin declares its AdminCP navigation, as a package export subpath.
+ *
+ * Optional in exactly the way the route manifest is: a plugin that does not
+ * export it contributes no sidebar entries, which is the right answer for most
+ * plugins and must not fail the build of every app that installs one.
+ *
+ * A **browser-safe** module by contract - ids, hrefs, permissions, icons and
+ * content type definitions, and nothing that renders a screen. It is imported by
+ * the application's bundle rather than read here, so what this pass does with it
+ * is only ask whether it resolves.
+ */
+const ADMIN_NAV_SUBPATH = "admin/nav";
 
 const ERROR_PREFIX = "[VitNode plugin routes]";
 
@@ -86,6 +102,14 @@ const pathsFor = (appRoot: string) => ({
    * imported, as one literal `import()` per route. The host's router joins them
    * by route id and is the only place that knows about TanStack.
    */
+  /**
+   * The AdminCP navigation projection: one literal import per configured plugin
+   * that has navigation to declare. Committed and rewritten like the other two,
+   * and written from the same pass over the same configured plugin list - so a
+   * plugin removed from the config loses its sidebar entries and its routes in
+   * one step rather than two.
+   */
+  adminNav: join(appRoot, "src", "admin-nav.gen.ts"),
   manifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
   /** The file-based router's config, read only for where the routes are. */
@@ -422,6 +446,44 @@ const readLegacyAdminRoutes = (appRoot: string): LegacyRoutePath[] => {
 };
 
 /**
+ * Which configured plugins have AdminCP navigation to declare.
+ *
+ * Resolution *is* the discovery: a plugin appears in the projection by exporting
+ * `admin/nav` and is silently absent otherwise, which is the same contract the
+ * route manifest has and for the same reason - most plugins contribute neither,
+ * and an app that installs one must not fail to build over it.
+ *
+ * Nothing is imported here. The module is browser-safe by contract but it is
+ * also React, and a build tool has no business evaluating it: what the generated
+ * file needs is a specifier, and a specifier is a string. The file itself is
+ * returned for the dev server to watch, so a plugin *gaining* navigation while
+ * the server runs regenerates rather than requiring a restart.
+ *
+ * Ordered by the configured plugin list, and re-sorted by
+ * `generateAdminNavSource` - so the bytes depend on which plugins are configured
+ * and on nothing else.
+ */
+const readAdminNavModules = (
+  pluginIds: readonly string[],
+  resolvePackageFile: (specifier: string) => null | string,
+): { modules: ResolvedAdminNavModule[]; watch: string[] } => {
+  const modules: ResolvedAdminNavModule[] = [];
+  const watch: string[] = [];
+
+  for (const pluginId of pluginIds) {
+    const specifier = `${pluginId}/${ADMIN_NAV_SUBPATH}`;
+    const file = resolvePackageFile(specifier);
+
+    if (file === null) continue;
+
+    modules.push({ pluginId, specifier });
+    watch.push(file);
+  }
+
+  return { modules, watch };
+};
+
+/**
  * Fails the build for a route module the app cannot import.
  *
  * The alternative is a generated `import()` of a specifier that does not
@@ -469,8 +531,12 @@ const discover = async (
       readPluginRoutes(pluginId, resolvePackageFile),
     ),
   );
+  const adminNav = readAdminNavModules(pluginIds, resolvePackageFile);
 
-  const watch = loaded.flatMap(({ watch: file }) => file ?? []);
+  const watch = [
+    ...loaded.flatMap(({ watch: file }) => file ?? []),
+    ...adminNav.watch,
+  ];
 
   onLoaded?.(watch);
 
@@ -487,7 +553,7 @@ const discover = async (
     assertImportable(module, resolvePackageFile);
   });
 
-  return { compiled, watch };
+  return { adminNav: adminNav.modules, compiled, watch };
 };
 
 /**
@@ -504,18 +570,19 @@ const writeIfChanged = async (path: string, source: string): Promise<void> => {
   if (current !== source) await writeFile(path, source, "utf8");
 };
 
-/** Both generated files, from one discovery pass. */
+/** All three generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
 ): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { compiled } = await discover(appRoot, options, onLoaded);
+  const { adminNav, compiled } = await discover(appRoot, options, onLoaded);
 
   await Promise.all([
     writeIfChanged(paths.manifest, compiled.manifestSource),
     writeIfChanged(paths.registry, compiled.registrySource),
+    writeIfChanged(paths.adminNav, generateAdminNavSource(adminNav)),
   ]);
 };
 
@@ -529,11 +596,17 @@ const writeGenerated = async (
  *   manifests from `node_modules`, check every entry resolves to a real file,
  *   validate every route, reject two plugins claiming one URL and a plugin
  *   claiming one of the app's own, then write `src/plugin-route-manifest.gen.ts`
- *   and `src/plugin-routes.gen.ts`.
- * - **In the browser.** Import those two files. They contain literal data and
- *   literal `import()` calls and nothing else - no `node:fs`, no package
- *   resolution, no validation to repeat and no specifier built from a variable,
- *   and so nothing a bundler cannot follow.
+ *   and `src/plugin-routes.gen.ts` - and, from the same configured plugin list,
+ *   `src/admin-nav.gen.ts`, one literal import per plugin that exports an
+ *   `admin/nav` module.
+ * - **In the browser.** Import those three files. They contain literal data,
+ *   literal `import()` calls and literal specifiers and nothing else - no
+ *   `node:fs`, no package resolution, no validation to repeat and no specifier
+ *   built from a variable, and so nothing a bundler cannot follow.
+ *
+ * Routes and navigation are discovered in one pass and stay separate concepts:
+ * neither generated file is derived from the other, and a plugin may have a
+ * sidebar entry with no route, a route with no entry, or both.
  *
  * Nothing is copied. The plugin's page stays in the plugin, compiled in its own
  * `dist`, and the app holds one generated line of registration per route.

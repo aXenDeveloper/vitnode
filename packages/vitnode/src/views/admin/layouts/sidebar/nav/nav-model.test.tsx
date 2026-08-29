@@ -8,7 +8,9 @@ import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
 import type { AdminNavTranslator } from "./nav-model";
 
 import {
+  adminNavBundle,
   adminNavDeclarations,
+  adminNavNamespaces,
   buildAdminNav,
   resolveAdminNav,
 } from "./nav-model";
@@ -329,10 +331,12 @@ describe("the two stages", () => {
     const declarations = adminNavDeclarations(config());
 
     expect(declarations.map(group => group.id)).toEqual(["core"]);
-    // Untranslated: a key, not a string a reader would see.
+    // Untranslated: a key and where to load it from, not a string a reader
+    // would see.
     expect(declarations[0].title).toEqual({
       key: "admin.global.nav.core",
       kind: "key",
+      namespace: "admin.global",
     });
   });
 
@@ -421,5 +425,147 @@ describe("the two stages", () => {
     const [, example] = buildAdminNav({ permissions: root, t, vitNodeConfig });
 
     expect(example.items[0].title).toBe("Article");
+  });
+});
+
+/**
+ * Which strings the navigation needs, as data the declarations already carry.
+ *
+ * The AdminCP shell mounts one message provider above the whole panel. Before
+ * Stage 12 connected plugin navigation to it, that provider named the shell's
+ * own two namespaces and nothing else - which is right for a sidebar with only
+ * core in it, and renders a plugin group's headings as dotted identifiers the
+ * moment one appears.
+ *
+ * What is pinned here is the middle of that: the declarations know enough to
+ * say what they need, so a host never has to inspect a message tree to find out
+ * and never has to ship one to be safe.
+ */
+describe("the namespaces a navigation needs", () => {
+  const contentType = (id = "example.article", path = "example/articles") => ({
+    definition: {
+      admin: { navigation: { enabled: true }, path },
+      id,
+      permissionModule: "content_example_article",
+    },
+  });
+
+  const plugin = (
+    pluginId: string,
+    extra: Record<string, unknown> = {},
+  ): VitNodeConfig["plugins"][number] => ({ pluginId, ...extra });
+
+  it("asks for the shell's own namespace and nothing else for core", () => {
+    expect(adminNavNamespaces(adminNavDeclarations(config()))).toEqual([
+      "admin.global",
+    ]);
+  });
+
+  /**
+   * A plugin group costs three namespaces at most: its heading, one branch per
+   * content type it puts in the sidebar, and one for every entry it declared by
+   * hand. Never the plugin's whole tree.
+   */
+  it("asks for a leaf for the group heading, not the plugin's tree", () => {
+    const namespaces = adminNavNamespaces(
+      adminNavDeclarations(
+        config([plugin("@vitnode/example", { contentTypes: [contentType()] })]),
+      ),
+    );
+
+    expect(namespaces).toContain("@vitnode/example.title");
+    expect(namespaces).not.toContain("@vitnode/example");
+  });
+
+  it("asks for the branch a content type's noun is in", () => {
+    expect(
+      adminNavNamespaces(
+        adminNavDeclarations(
+          config([
+            plugin("@vitnode/example", { contentTypes: [contentType()] }),
+          ]),
+        ),
+      ),
+    ).toContain("@vitnode/example.content.article");
+  });
+
+  it("asks for one namespace for every hand-declared entry", () => {
+    const namespaces = adminNavNamespaces(
+      adminNavDeclarations(
+        config([
+          plugin("@vitnode/example", {
+            admin: {
+              nav: [
+                { href: "/admin/example", id: "overview" },
+                {
+                  href: "/admin/example/reports",
+                  id: "reports",
+                  items: [{ href: "/admin/example/reports/new", id: "new" }],
+                },
+              ],
+            },
+          }),
+        ]),
+      ),
+    );
+
+    expect(
+      namespaces.filter(namespace =>
+        namespace.startsWith("@vitnode/example.admin"),
+      ),
+    ).toEqual(["@vitnode/example.admin.nav"]);
+  });
+
+  /**
+   * De-duplicated and sorted, so two hosts with the same navigation ask for one
+   * cache entry rather than two holding identical bytes - and so a generated
+   * projection produces the same bytes on every machine.
+   */
+  it("is deduplicated and deterministically ordered", () => {
+    const declarations = adminNavDeclarations(
+      config([
+        plugin("@vitnode/blog", {
+          contentTypes: [contentType("blog.post", "blog/posts")],
+        }),
+        plugin("@vitnode/example", {
+          admin: { nav: [{ href: "/admin/example", id: "overview" }] },
+          contentTypes: [
+            contentType(),
+            contentType("example.category", "example/categories"),
+          ],
+        }),
+      ]),
+    );
+
+    expect(adminNavNamespaces(declarations)).toEqual([
+      "@vitnode/blog.content.post",
+      "@vitnode/blog.title",
+      "@vitnode/example.admin.nav",
+      "@vitnode/example.content.article",
+      "@vitnode/example.content.category",
+      "@vitnode/example.title",
+      "admin.global",
+    ]);
+
+    // Order in, order out: the same set whichever way the plugins were listed.
+    expect(adminNavNamespaces([...declarations].reverse())).toEqual(
+      adminNavNamespaces(declarations),
+    );
+  });
+
+  /**
+   * One value rather than two arguments that have to agree - a host cannot pass
+   * a sidebar with a plugin group in it and forget the strings that group needs.
+   */
+  it("bundles the declarations with the namespaces they need", () => {
+    const bundle = adminNavBundle(
+      config([plugin("@vitnode/example", { contentTypes: [contentType()] })]),
+    );
+
+    expect(bundle.declarations.map(group => group.id)).toEqual([
+      "core",
+      "@vitnode/example",
+    ]);
+    expect(bundle.namespaces).toEqual(adminNavNamespaces(bundle.declarations));
   });
 });

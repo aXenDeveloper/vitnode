@@ -294,11 +294,34 @@ describe("plugin route areas", () => {
   });
 
   /**
-   * `main` and `admin` at one pathname are two different URLs, because the
-   * AdminCP shell's own routes are the ones that put `/admin` in front. The
-   * manifest lets both exist; this is where they end up in two places.
+   * `main` and `admin` at one pathname are **one URL claimed twice**, and this
+   * composition never gets to see them.
+   *
+   * Both shells are pathless - neither contributes a segment - so mounting two
+   * routes under different frames does not put them in different pathname
+   * spaces: `/reports` would match both, and the router's own ranking would pick
+   * one. `pluginRouteSpecs` rebuilds the graph before anything is mounted, which
+   * is where that is refused, so the two areas cannot be separated *here* by
+   * mounting them somewhere clever.
    */
-  it("keeps two areas that share a pathname apart", () => {
+  it("refuses two areas that claim one pathname", () => {
+    const reports = { kind: "static", value: "reports" } as const;
+
+    expect(() =>
+      pluginRouteSpecs(
+        [
+          route({ path: "/reports", segments: [reports] }),
+          adminRoute({ path: "/reports", segments: [reports] }),
+        ],
+        registryOf("plugin:page", "plugin:reports"),
+      ),
+    ).toThrow(/collision on "\/reports"/);
+  });
+
+  /**
+   * The pair a plugin actually writes: two areas, two URLs, two shells.
+   */
+  it("mounts two areas whose paths genuinely differ", () => {
     const { admin, main, tree } = shells();
 
     withPluginRoutes(
@@ -309,10 +332,7 @@ describe("plugin route areas", () => {
             path: "/reports",
             segments: [{ kind: "static", value: "reports" }],
           }),
-          adminRoute({
-            path: "/reports",
-            segments: [{ kind: "static", value: "reports" }],
-          }),
+          adminRoute(),
         ],
         registryOf("plugin:page", "plugin:reports"),
       ),
@@ -320,7 +340,7 @@ describe("plugin route areas", () => {
     );
 
     expect(mountedPaths(main)).toEqual(["/reports"]);
-    expect(mountedPaths(admin)).toEqual(["/reports"]);
+    expect(mountedPaths(admin)).toEqual(["/admin/reports"]);
   });
 
   /**

@@ -19,6 +19,56 @@ interface AdminNavItem extends Pick<
   permission?: AdminNavPermission;
 }
 
+/**
+ * One hand-declared AdminCP sidebar entry, with whatever sits under it.
+ *
+ * Named rather than written inline on {@link BuildPluginReturn} because
+ * {@link AdminNavPluginSource} needs the same shape: a plugin declares its
+ * navigation once, and both the full registration and the browser-safe
+ * projection read that one declaration.
+ */
+export type AdminNavDeclaration = AdminNavItem & {
+  items?: Omit<AdminNavItem, "icon">[];
+};
+
+/** A content type, as much of it as the sidebar reads: what it is, and its icon. */
+export type AdminNavContentType = Pick<
+  ContentTypeFrontendRegistration,
+  "definition" | "icon"
+>;
+
+/**
+ * A plugin's AdminCP navigation, and nothing else about the plugin.
+ *
+ * What a plugin exports from `admin/nav` - a **browser-safe** module - so an
+ * application can put its sidebar entries on screen without importing the
+ * plugin's frontend registration. That distinction is the whole reason this type
+ * exists: `blogPlugin()` registers content types *with their editing screens*
+ * attached - a Tiptap field, a form layout, a table cell - which reach core's
+ * form stack and, today, `next/dynamic`. A TanStack Start application cannot
+ * hold that graph, and it does not need to in order to draw a list of links.
+ *
+ * So the two are separated by what they carry rather than by a build flag:
+ *
+ *     config.tsx     the whole registration - screens, field overrides, widgets
+ *     admin/nav      the ids, hrefs, permissions, icons and content definitions
+ *
+ * A content type definition is client-safe by construction (zod and plain data,
+ * no Drizzle, no components), and an icon is an element from an icon set. That
+ * is the entire payload.
+ *
+ * Structurally a {@link BuildPluginReturn}, so `adminNavDeclarations` reads a
+ * list of these exactly as it reads a list of configured plugins - one
+ * navigation model, one set of rules, whichever door the data came through.
+ * A plugin writes it once and spreads it into its own `buildPlugin` call, which
+ * is what stops the two lists drifting.
+ */
+export interface AdminNavPluginSource {
+  admin?: { nav?: AdminNavDeclaration[] };
+  contentTypes?: AdminNavContentType[];
+  pluginId: string;
+}
+
 export type AdminDashboardWidgetSpan = 1 | 2 | 3;
 export type AdminDashboardWidgetRows = 1 | 2 | 3;
 export type AdminDashboardWidgetSettings = Record<string, unknown>;
@@ -176,9 +226,7 @@ export interface BuildPluginReturn<P extends string = string> {
     dashboard?: {
       widgets?: AdminDashboardWidget[];
     };
-    nav?: (AdminNavItem & {
-      items?: Omit<AdminNavItem, "icon">[];
-    })[];
+    nav?: AdminNavDeclaration[];
   };
   contentTypes?: ContentTypeFrontendRegistration[];
   messages?: LocaleMessagesMap;

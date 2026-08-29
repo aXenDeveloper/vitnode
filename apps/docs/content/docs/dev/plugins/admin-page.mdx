@@ -208,6 +208,76 @@ VitNode automatically uses the `id` as translation key for the navigation item.
   
 </Steps>
 
+## Sharing navigation with a non-Next app
+
+Everything above lives in your plugin config, which is fine for a Next.js app:
+the config is only ever read on the server, so importing your content types -
+and the editor fields, form layouts and table cells attached to them - costs the
+browser nothing.
+
+An app built on TanStack Start has no such boundary. Anything its shell imports
+is in the browser bundle, so it can't reach for your config just to draw a list
+of links. Move the navigation half into a **browser-safe** module and spread it
+back into your config, and both kinds of app get the same sidebar from one
+declaration:
+
+```tsx title="plugins/{plugin_name}/src/admin/nav.tsx"
+import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
+
+import { SettingsIcon } from "lucide-react";
+
+import { blogPostContentType } from "@/content/post";
+import { CONFIG_PLUGIN } from "@/const";
+
+export const blogPostNav = {
+  definition: blogPostContentType,
+  icon: <SettingsIcon />,
+};
+
+export const adminNav = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  contentTypes: [blogPostNav],
+  admin: {
+    nav: [{ id: "settings", href: "/admin/blog/settings", icon: <SettingsIcon /> }],
+  },
+} satisfies AdminNavPluginSource;
+```
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
+
+import { adminNav, blogPostNav } from "./admin/nav"; // [!code highlight]
+import messages from "./locales";
+
+export const blogPlugin = () =>
+  buildPlugin({
+    ...adminNav, // [!code highlight]
+    messages,
+    contentTypes: [
+      // Keep your field, column and form overrides here - only the definition
+      // and the icon come from the nav module.
+      contentTypeAdmin({ ...blogPostNav, forms: { layout: BlogPostForm } }),
+    ],
+  });
+```
+
+Nothing else to do. An app that installs your plugin discovers this module at
+build time - it writes one literal import per configured plugin into
+`src/admin-nav.gen.ts` - and works out which message namespaces your entries
+need from the entries themselves.
+
+<Callout type="warn" title="Keep it plain">
+  `admin/nav` is imported by the browser bundle. Ids, hrefs, permissions, icons
+  and content type definitions only. A screen, a form field, a table cell or
+  anything that reaches `next/*` belongs in `config.tsx`, which is exactly what
+  the split is for.
+</Callout>
+
+<Callout>
+  A plugin that ships no `admin/nav` simply contributes no sidebar entries to
+  such an app - it isn't an error, and Next.js apps are unaffected either way.
+</Callout>
+
 ## Learn More
 
 <Cards>

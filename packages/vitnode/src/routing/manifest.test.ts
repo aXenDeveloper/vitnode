@@ -371,8 +371,9 @@ describe("malformed declarations", () => {
  * this layer.
  *
  * An area chooses a shell and never rewrites a path, which is what every
- * assertion here is ultimately about: an admin route says `/admin/…` in full,
- * two areas at one pathname are two URLs, and a subtree renders in one shell.
+ * assertion here is ultimately about: an admin route says `/admin/…` in full, a
+ * subtree renders in one shell, and two areas at one pathname are one URL
+ * claimed twice - because both shells are pathless.
  */
 describe("the admin area", () => {
   const one = (route: Partial<PluginRouteDefinition>) =>
@@ -415,16 +416,70 @@ describe("the admin area", () => {
     });
   });
 
-  it("does not collide with the same pathname in another area", () => {
+  /**
+   * The rule an earlier draft of this stage had backwards.
+   *
+   * Both shells a host mounts plugin routes under are *pathless*: `_main` and
+   * `_admin` contribute no segment, so they frame a page rather than moving it.
+   * `main /reports` and `admin /reports` are therefore one URL claimed twice,
+   * and a browser asking for `/reports` would reach whichever of them the
+   * router ranked first - which is precisely the outcome this layer exists to
+   * make impossible.
+   */
+  it("collides with the same pathname in another area", () => {
+    const error = thrownBy(() =>
+      buildPluginRouteManifest([
+        example(
+          { area: "admin", entry: "routes/a", id: "a", path: "/reports" },
+          { entry: "routes/b", id: "b", path: "/reports" },
+        ),
+      ]),
+    );
+
+    expect(error.code).toBe("duplicate-path");
+  });
+
+  /**
+   * And the same across two plugins, spelled differently.
+   *
+   * `/member/:id` and `/member/:slug` match the same URLs whatever their
+   * parameters are called, so putting them in two areas cannot separate them
+   * either - the key is the URL space, and a parameter's name is not part of a
+   * URL.
+   */
+  it("collides across areas on two spellings of one dynamic URL", () => {
+    const error = thrownBy(() =>
+      buildPluginRouteManifest([
+        example({ entry: "routes/a", id: "a", path: "/member/:id" }),
+        blog({
+          area: "admin",
+          entry: "routes/b",
+          id: "b",
+          path: "/member/:slug",
+        }),
+      ]),
+    );
+
+    expect(error.code).toBe("duplicate-path");
+    expect(error.message).toContain("@vitnode/example");
+    expect(error.message).toContain("@vitnode/blog");
+  });
+
+  /**
+   * Distinct URLs stay distinct, which is the other half of the same rule: an
+   * admin route earns its `/admin` from its own `path`, so a plugin that writes
+   * one is not competing with its own public page.
+   */
+  it("accepts two areas whose canonical paths actually differ", () => {
     const manifest = buildPluginRouteManifest([
       example(
-        { area: "admin", entry: "routes/a", id: "a", path: "/reports" },
+        { area: "admin", entry: "routes/a", id: "a", path: "/admin/reports" },
         { entry: "routes/b", id: "b", path: "/reports" },
       ),
     ]);
 
     expect(manifest.map(route => [route.area, route.path])).toEqual([
-      ["admin", "/reports"],
+      ["admin", "/admin/reports"],
       ["main", "/reports"],
     ]);
   });

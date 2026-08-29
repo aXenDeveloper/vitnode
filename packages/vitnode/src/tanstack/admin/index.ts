@@ -24,7 +24,8 @@
  *     ./breadcrumb      the trail, from each match's `staticData`
  *     ./search          the command palette
  *     ./user-bar        the user menu, and the sign-out that clears the cache
- *     ./queries         every cache entry the shell owns, dropped on sign-out
+ *     ./queries         every privileged AdminCP cache entry, and the one call
+ *                       an identity boundary makes to drop all of it
  *     ./not-found       the AdminCP's 404
  *     ./screen          `requireAdminPermission`, and what a screen loader reads
  *     ./table-search    the search contract every AdminCP list route validates
@@ -78,7 +79,7 @@ export * from "./intl";
 export { AdminNavProvider, useAdminNav, useAdminSearchNavItems } from "./nav";
 export { AdminNotFound } from "./not-found";
 export * from "./permissions";
-export { removeAdminShellQueries } from "./queries";
+export { removeAdminIdentityQueries, removeAdminShellQueries } from "./queries";
 export * from "./return-to";
 export type { AdminScreenContext } from "./screen";
 export { requireAdminPermission } from "./screen";
@@ -150,6 +151,7 @@ export type {
   AdminUserSearch,
 } from "@/views/admin/layouts/search/search-users";
 export type {
+  AdminNavBundle,
   AdminNavConfig,
   AdminNavGroupDeclaration,
   AdminNavItem,
@@ -162,7 +164,9 @@ export type {
 } from "@/views/admin/layouts/sidebar/nav/nav-model";
 
 export {
+  adminNavBundle,
   adminNavDeclarations,
+  adminNavNamespaces,
   buildAdminNav,
   resolveAdminNav,
 } from "@/views/admin/layouts/sidebar/nav/nav-model";

@@ -23,12 +23,15 @@
  * that makes this manifest reviewable: that the URL a plugin claims is legible
  * in the diff that claims it, and that two routes colliding look like it.
  *
- * ## Areas do not collide with each other
+ * ## An area is not part of a URL, so it is not part of a collision either
  *
- * `main /foo` and `admin /foo` are different URLs - the second is under an
- * AdminCP shell whose own route contributes `/admin` - so every collision check
- * in this layer keys on `${area} ${matchKey}` rather than on the path alone.
- * Two routes only compete when they would answer the same URL in the same shell.
+ * `main /foo` and `admin /foo` are **one URL claimed twice**, and the manifest
+ * refuses them. The shells are pathless routes - `_main` and `_admin` contribute
+ * no segment - so mounting two routes under different frames does not put them
+ * in different pathname spaces: a browser asking for `/foo` would reach whichever
+ * one the router happened to rank first. Every collision check in this layer
+ * therefore keys on the match key alone, and an admin route's `/admin` comes
+ * from its own `path`.
  *
  * Keeping the list *here* rather than letting every route invent its own string
  * is the point: an area is a statement about layout, and a layout is a parent.

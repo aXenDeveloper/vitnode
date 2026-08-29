@@ -1,10 +1,17 @@
 import type { StaffPermissionSet } from '@vitnode/core/api/lib/permission-staff'
 import type { AdminNavTranslator } from '@vitnode/core/tanstack/admin'
 
-import { buildAdminNav, flattenAdminNav } from '@vitnode/core/tanstack/admin'
+import { EMPTY_STAFF_PERMISSION_SET } from '@vitnode/core/api/lib/staff-permission'
+import {
+  adminNavNamespaces,
+  buildAdminNav,
+  flattenAdminNav,
+  resolveAdminNav,
+} from '@vitnode/core/tanstack/admin'
 import { isExternalHref } from '@vitnode/core/views/admin/layouts/normalize-url'
 import { describe, expect, it } from 'vitest'
 
+import { adminNav } from '#/lib/admin-nav'
 import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
 
@@ -240,5 +247,166 @@ describe('external navigation is not a route question at all', () => {
 
   it('still owns an ordinary internal path', () => {
     expect(owns('/discover')).toBe(true)
+  })
+})
+
+/**
+ * The sidebar this application actually renders.
+ *
+ * Everything above builds navigation from literals, which is the right way to
+ * pin the *rules*. This block asks a different question, and it is the one Stage
+ * 12 shipped wrong: does the navigation this app hands its shell contain the
+ * plugins this app configured? Before the projection existed, `AdminShell`
+ * passed nothing and the shell fell back to core's own groups - so every plugin
+ * entry and every content type entry the legacy AdminCP shows was simply absent,
+ * with no error anywhere to say so.
+ *
+ * It reads `#/lib/admin-nav`, which is the same object the shell is given, so
+ * there is nothing here that could agree with a test and disagree with a
+ * browser.
+ */
+const resolvedFor = (permissions: StaffPermissionSet) =>
+  resolveAdminNav({ declarations: adminNav.declarations, permissions, t })
+
+describe('the navigation this app hands its shell', () => {
+  it('still has core, and has a group per configured plugin', () => {
+    expect(adminNav.declarations.map((group) => group.id)).toEqual([
+      'core',
+      '@vitnode/blog',
+      '@vitnode/example',
+    ])
+  })
+
+  /**
+   * A hand-declared `plugin.admin.nav` entry, on screen. The example plugin's
+   * overview is the representative one: it names a plugin route in the admin
+   * area, which is a coincidence rather than a mechanism - the two lists are
+   * independent.
+   */
+  it('offers a plugin&apos;s own admin nav entry', () => {
+    expect(
+      flattenAdminNav(resolvedFor(root)).map((item) => item.href),
+    ).toContain('/admin/example')
+  })
+
+  /**
+   * And the content type entries, which are the ones a naive reading of "Stage
+   * 13 owns the Content Engine" would have dropped. Stage 13 owns *rendering*
+   * `/admin/content/*`; whether the sidebar links to it is this stage's.
+   */
+  it('offers every configured content type, pointing at the legacy screens', () => {
+    const hrefs = flattenAdminNav(resolvedFor(root)).map((item) => item.href)
+
+    expect(hrefs).toContain('/admin/content/blog/articles')
+    expect(hrefs).toContain('/admin/content/example/articles')
+    expect(hrefs).toContain('/admin/content/example/categories')
+  })
+
+  it('routes those content entries to the legacy application', () => {
+    expect(owns('/admin/content/blog/articles')).toBe(false)
+    expect(owns('/admin/content/example/articles')).toBe(false)
+  })
+
+  it('serves the plugin admin route it names', () => {
+    expect(owns('/admin/example')).toBe(true)
+  })
+
+  /**
+   * Permission filtering is `resolveAdminNav`'s and stays there - this app runs
+   * no second filter of its own. An administrator with nothing granted sees the
+   * core entries that need no permission, and no plugin group at all: a group
+   * whose every entry was hidden is dropped rather than left as an empty
+   * heading.
+   */
+  it('hides a plugin group from an admin who may not view any of it', () => {
+    const groups = resolvedFor(EMPTY_STAFF_PERMISSION_SET).map(
+      (group) => group.id,
+    )
+
+    expect(groups).toContain('core')
+    expect(groups).not.toContain('@vitnode/blog')
+  })
+
+  /**
+   * The example plugin's group survives an empty permission set, because its
+   * overview entry deliberately declares no permission - it is open to anybody
+   * the AdminCP's own session guard has already let in. Its content entries do
+   * not survive with it.
+   */
+  it('keeps an unpermissioned entry and drops the permissioned ones beside it', () => {
+    const hrefs = flattenAdminNav(resolvedFor(EMPTY_STAFF_PERMISSION_SET)).map(
+      (item) => item.href,
+    )
+
+    expect(hrefs).toContain('/admin/example')
+    expect(hrefs).not.toContain('/admin/content/example/articles')
+  })
+
+  /**
+   * Search is *derived* from the filtered navigation rather than assembled
+   * again, which is what stops a hidden screen reappearing in the palette. The
+   * shell builds its index with `flattenAdminNav(nav)` over the same resolved
+   * tree, so a href search can offer is a href the filter admitted.
+   */
+  it('cannot surface through search anything the filter removed', () => {
+    const visible = flattenAdminNav(
+      resolvedFor(EMPTY_STAFF_PERMISSION_SET),
+    ).map((item) => item.href)
+    const everything = flattenAdminNav(resolvedFor(root)).map(
+      (item) => item.href,
+    )
+
+    expect(everything).toContain('/admin/content/blog/articles')
+    expect(visible).not.toContain('/admin/content/blog/articles')
+  })
+})
+
+/**
+ * Which strings the shell has to load to render the above.
+ *
+ * Carried by the bundle rather than worked out by the shell, because a plugin's
+ * group heading, its content nouns and its declared entries all live under that
+ * plugin's own message id - and the failure mode of getting it wrong is not an
+ * error but a sidebar of dotted identifiers.
+ */
+describe('the namespaces that navigation needs', () => {
+  it('names one for each thing the sidebar renders, and nothing broader', () => {
+    expect(adminNav.namespaces).toEqual([
+      '@vitnode/blog.content.category',
+      '@vitnode/blog.content.post',
+      '@vitnode/blog.title',
+      '@vitnode/example.admin.nav',
+      '@vitnode/example.content.article',
+      '@vitnode/example.content.category',
+      '@vitnode/example.title',
+      'admin.global',
+    ])
+  })
+
+  it('never asks for a whole plugin tree', () => {
+    expect(adminNav.namespaces).not.toContain('@vitnode/blog')
+    expect(adminNav.namespaces).not.toContain('@vitnode/example')
+  })
+
+  /**
+   * Deduplicated and sorted, so the loader that warms these and the provider
+   * that reads them land on one cache entry - and so the list is the same on
+   * every machine.
+   */
+  it('is deduplicated, sorted and derived from the declarations', () => {
+    expect(adminNav.namespaces).toEqual([...new Set(adminNav.namespaces)])
+    expect(adminNav.namespaces).toEqual([...adminNav.namespaces].sort())
+    expect(adminNav.namespaces).toEqual(
+      adminNavNamespaces(adminNav.declarations),
+    )
+  })
+
+  /**
+   * Small enough to ask for in one request. `MAX_NAMESPACES` caps the i18n
+   * server function at 16, and the shell adds `core.global` and `admin.global`
+   * on top of this list.
+   */
+  it('leaves room for the shell&apos;s own two', () => {
+    expect(adminNav.namespaces.length).toBeLessThanOrEqual(14)
   })
 })

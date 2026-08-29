@@ -475,26 +475,61 @@ describe("two routes answering one URL", () => {
   });
 
   /**
-   * The cross-kind clash is area-scoped too. A layout in the AdminCP and a page
-   * on the public site that happen to spell one pathname are framed by different
-   * shells, so they are different URLs and neither is competing for anything.
+   * The cross-kind clash does **not** stop at an area boundary, and an earlier
+   * draft of Stage 12 believed it did.
+   *
+   * A layout in the AdminCP and a page on the public site that spell one
+   * pathname are framed by different shells - and both of those shells are
+   * *pathless*, so neither of them moves a URL. `/foo` is one URL claimed by two
+   * routes, and only the router's own ranking would decide which of them a
+   * browser reaches. The legal pairing is still exactly one: a layout and the
+   * index page inside it.
    */
-  it("lets a layout and a page share a pathname across two areas", () => {
+  it("refuses a layout and a page sharing a pathname across two areas", () => {
+    const error = thrownBy(() =>
+      buildPluginRouteGraph(
+        manifestOf(
+          example(
+            layout("frame", "/foo", { area: "admin" }),
+            page("inside", "/foo/bar", { area: "admin", parentId: "frame" }),
+          ),
+          blog(page("post", "/foo")),
+        ),
+      ),
+    );
+
+    expect(error.code).toBe("duplicate-path");
+    // A diagnostic still names both areas, even though neither decides the
+    // collision - it is the first thing an author checks.
+    expect(error.message).toContain("(admin)");
+    expect(error.message).toContain("main");
+    expect(error.message).toContain("@vitnode/blog");
+    expect(error.message).toContain("@vitnode/example");
+  });
+
+  /**
+   * The same tree, moved to the URL an admin page would actually claim.
+   *
+   * Nothing about the areas changed; the paths did, which is the only thing that
+   * ever decided this.
+   */
+  it("accepts the same tree once the admin routes claim /admin paths", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
         example(
-          layout("frame", "/foo", { area: "admin" }),
-          page("inside", "/foo/bar", { area: "admin", parentId: "frame" }),
+          layout("frame", "/admin/foo", { area: "admin" }),
+          page("inside", "/admin/foo/bar", {
+            area: "admin",
+            parentId: "frame",
+          }),
         ),
         blog(page("post", "/foo")),
       ),
     );
 
-    // Both claim `/foo`, so the comparator's id tiebreak decides the order -
-    // which is what makes it the same on every machine.
     expect(graph.roots.map(root => root.route.id)).toEqual([
-      "@vitnode/blog:post",
       "@vitnode/example:frame",
+      "@vitnode/blog:post",
     ]);
   });
 

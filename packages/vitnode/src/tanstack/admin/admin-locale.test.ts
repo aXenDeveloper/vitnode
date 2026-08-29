@@ -178,9 +178,13 @@ describe("the shell provides the strings its chrome renders", () => {
   const shell = readFileSync(join(here, "shell.tsx"), "utf8");
 
   it("mounts RouteMessages for the namespaces the loader warms", () => {
-    expect(shell).toMatch(
-      /<RouteMessages\s+namespaces=\{ADMIN_SHELL_NAMESPACES\}>/,
-    );
+    // The same list, computed the same way: `adminShellNamespaces` is what the
+    // loader passes through too, so the entry this provider reads back is the
+    // one `loadAdminMessages` filled. It takes an argument now because the
+    // navigation's namespaces are not knowable in advance - a plugin group's
+    // headings live under that plugin's own id.
+    expect(shell).toMatch(/<RouteMessages\s+namespaces=\{namespaces\}>/);
+    expect(shell).toContain("adminShellNamespaces(nav?.namespaces)");
   });
 
   it("mounts it above the navigation, which is what translates", () => {

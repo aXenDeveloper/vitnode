@@ -16,11 +16,13 @@ import type { VitNodeConfig } from "@/vitnode.config";
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { CONFIG_PLUGIN } from "@/config";
 import {
+  contentEntityKey,
   type ContentLabelTranslator,
   contentNouns,
 } from "@/content/admin/labels";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref } from "@/content/registry";
+import { normalizeNamespaceList } from "@/routing";
 
 /**
  * The AdminCP sidebar, as a pure function of configuration, permissions and
@@ -99,7 +101,28 @@ export type AdminNavTranslator = ContentLabelTranslator;
  */
 export type AdminNavTitle =
   | { contentTypeId: string; kind: "content"; pluginId: string }
-  | { key: string; kind: "key" };
+  | {
+      key: string;
+      kind: "key";
+      /**
+       * The message namespace this key's string lives in.
+       *
+       * Carried on the declaration rather than derived from the key, and that is
+       * the point: a namespace is a *path into the merged message tree*, and
+       * which prefix of a key is one cannot be worked out by looking at the key.
+       * `admin.global` is the namespace of `admin.global.nav.core`;
+       * `@vitnode/blog.admin.nav` is the namespace of
+       * `@vitnode/blog.admin.nav.reports`; and `@vitnode/blog.title` is a
+       * namespace that *is* a leaf, because loading a whole plugin tree to
+       * render one group heading would ship every AdminCP string it has.
+       *
+       * A rule that sniffed at key shapes would get one of those three wrong,
+       * silently, and the symptom would be a sidebar rendering dotted
+       * identifiers. So the stage that knows - the one that builds the
+       * declaration - writes it down. See {@link adminNavNamespaces}.
+       */
+      namespace: string;
+    };
 
 /** A sub-item as declared: a destination, a permission, an un-translated title. */
 export interface AdminNavSubItemDeclaration {
@@ -198,8 +221,18 @@ export const filterNavItems = (
   return result;
 };
 
-/** A message key, in the shape a declaration carries titles. */
-const key = (value: string): AdminNavTitle => ({ key: value, kind: "key" });
+/**
+ * A message key, in the shape a declaration carries titles.
+ *
+ * `namespace` defaults to the AdminCP shell's own, which is where every core
+ * entry's strings are and which the shell loads regardless - so core's group
+ * below says nothing about namespaces and a plugin's entries always do.
+ */
+const key = (value: string, namespace = "admin.global"): AdminNavTitle => ({
+  key: value,
+  kind: "key",
+  namespace,
+});
 
 /** A core permission tuple, which is every tuple in the group below. */
 const core = (
@@ -344,7 +377,10 @@ const declaredNavItems = (
     href: item.href,
     icon: item.icon,
     isOpenInNewTab: item.isOpenInNewTab,
-    title: key(`${plugin.pluginId}.admin.nav.${item.id}`),
+    title: key(
+      `${plugin.pluginId}.admin.nav.${item.id}`,
+      `${plugin.pluginId}.admin.nav`,
+    ),
     permission: item.permission
       ? { plugin: plugin.pluginId, ...item.permission }
       : undefined,
@@ -352,7 +388,10 @@ const declaredNavItems = (
       item.items?.map(subItem => ({
         href: subItem.href,
         isOpenInNewTab: subItem.isOpenInNewTab,
-        title: key(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
+        title: key(
+          `${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`,
+          `${plugin.pluginId}.admin.nav`,
+        ),
         permission: subItem.permission
           ? { plugin: plugin.pluginId, ...subItem.permission }
           : undefined,
@@ -381,10 +420,100 @@ export const adminNavDeclarations = (
   coreNavGroup(),
   ...vitNodeConfig.plugins.map(plugin => ({
     id: plugin.pluginId,
-    title: key(`${plugin.pluginId}.title`),
+    // The namespace is the key itself - a leaf. `pickMessages` copies a leaf as
+    // readily as a branch, and asking for `@vitnode/blog` instead would ship
+    // every string that plugin has in order to render one heading.
+    title: key(`${plugin.pluginId}.title`, `${plugin.pluginId}.title`),
     items: [...contentNavItems(plugin), ...declaredNavItems(plugin)],
   })),
 ];
+
+/**
+ * The namespace one title's string is loaded from.
+ *
+ * Two rules, one per shape of {@link AdminNavTitle}, and both of them are
+ * *stated* rather than guessed. A key carries its own namespace, because nothing
+ * about the string `@vitnode/blog.admin.nav.reports` says where the namespace
+ * ends and the key continues. A content noun does not need to, because its
+ * lookup is `contentI18nKeys`' - `{pluginId}.content.{entity}.title` and
+ * `.label` - and the branch holding both is exactly what a screen already loads
+ * for that content type.
+ */
+const titleNamespace = (title: AdminNavTitle): string =>
+  title.kind === "key"
+    ? title.namespace
+    : `${title.pluginId}.content.${contentEntityKey(title.contentTypeId)}`;
+
+/**
+ * Every message namespace a set of declarations needs, and not one more.
+ *
+ * The AdminCP shell mounts one message provider above the whole panel, and that
+ * provider has to name every namespace anything it renders reads from -
+ * `core.global` and `admin.global` for the chrome, plus whatever the navigation
+ * itself resolves. Before Stage 12 wired plugin navigation in, the second half
+ * was empty and the question did not arise; a sidebar with a plugin group in it
+ * that loads only the shell's two namespaces renders that group's headings as
+ * dotted identifiers.
+ *
+ * The alternative - load every plugin's whole message tree - is what the
+ * namespace mechanism exists to avoid: the merged catalogue holds every screen's
+ * copy for every plugin, and shipping all of it to draw a list of links is a
+ * screen's worth of strings per screen nobody is looking at. So this walks the
+ * declarations and asks each title where *its* string is, which is the smallest
+ * set that renders them.
+ *
+ * De-duplicated and sorted by `normalizeNamespaceList`, the same normalisation a
+ * plugin route's namespaces go through, so two callers with the same navigation
+ * ask for one cache entry rather than two holding identical bytes.
+ *
+ * Note the budget: `MAX_NAMESPACES` caps a single request at 16, which is the
+ * shell's two plus roughly three per plugin that contributes navigation - a
+ * heading, its content types and its declared entries. An installation large
+ * enough to exceed that wants a coarser projection, and it will be told so
+ * rather than quietly served half a sidebar.
+ */
+export const adminNavNamespaces = (
+  declarations: readonly AdminNavGroupDeclaration[],
+): string[] =>
+  normalizeNamespaceList(
+    declarations.flatMap(group => [
+      titleNamespace(group.title),
+      ...group.items.flatMap(item => [
+        titleNamespace(item.title),
+        ...(item.items ?? []).map(subItem => titleNamespace(subItem.title)),
+      ]),
+    ]),
+  );
+
+/**
+ * The navigation a shell is handed: what to render, and what to render it with.
+ *
+ * One value rather than two arguments that have to agree. The declarations and
+ * the namespaces are derived from the same walk, so a host cannot pass a sidebar
+ * with a plugin group in it and forget the strings that group needs - which is a
+ * failure that shows up as a working panel full of dotted identifiers rather
+ * than as an error.
+ */
+export interface AdminNavBundle {
+  declarations: AdminNavGroupDeclaration[];
+  namespaces: string[];
+}
+
+/**
+ * Declarations and their namespaces, from configured plugins.
+ *
+ * Stage one of the model, packaged for a host: pure, config-only, no admin and
+ * no language, so it runs wherever a host's plugin data actually lives - which
+ * in a TanStack Start application is a generated browser-safe projection rather
+ * than the full plugin registry. See `AdminNavPluginSource` in `lib/plugin`.
+ */
+export const adminNavBundle = (
+  vitNodeConfig: AdminNavConfig,
+): AdminNavBundle => {
+  const declarations = adminNavDeclarations(vitNodeConfig);
+
+  return { declarations, namespaces: adminNavNamespaces(declarations) };
+};
 
 /**
  * Declarations plus an admin plus a language, as the navigation to render.

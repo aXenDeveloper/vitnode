@@ -384,15 +384,36 @@ describe("the admin area", () => {
     );
   });
 
-  it("keeps an admin route and a public route at one pathname apart", () => {
-    expect(
+  /**
+   * An area frames a page; it does not move it. Both shells are pathless, so an
+   * admin route and a public route spelling one pathname are one URL claimed
+   * twice - and the compiler refuses it with both plugins and both manifests
+   * named, which is the whole value of catching it here rather than in a router.
+   */
+  it("refuses an admin route and a public route at one pathname", () => {
+    expect(() =>
       compile(
         example(
           { area: "admin", entry: "routes/a", id: "a", path: "/reports" },
           { entry: "routes/b", id: "b", path: "/reports" },
         ),
-      ).manifest.map(route => route.area),
-    ).toEqual(["admin", "main"]);
+      ),
+    ).toThrow(/collision on "\/reports"/);
+  });
+
+  /** The pair that is actually two URLs, and is accepted. */
+  it("keeps an admin route and a public route with different paths", () => {
+    expect(
+      compile(
+        example(
+          { area: "admin", entry: "routes/a", id: "a", path: "/admin/reports" },
+          { entry: "routes/b", id: "b", path: "/reports" },
+        ),
+      ).manifest.map(route => [route.area, route.path]),
+    ).toEqual([
+      ["admin", "/admin/reports"],
+      ["main", "/reports"],
+    ]);
   });
 });
 
