@@ -2,6 +2,8 @@ import { hashKey, QueryClient } from "@tanstack/react-query";
 import { defaultParseSearch } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
+import type { MyFilesPage } from "@/views/files/my-files-query";
+
 import {
   DEFAULT_TABLE_PAGE_SIZE,
   toggleTableOrder,
@@ -377,6 +379,27 @@ describe("the table changes the URL through the route, not around it", () => {
   });
 });
 
+/**
+ * A page of no files, as `MyFilesPage` rather than as an approximation of it.
+ *
+ * `setQueryData` is typed from the query's own options, so what these tests seed
+ * has to be a real page - and it is worth it being one. What they assert is
+ * which *entries* a delete invalidates, so the contents are irrelevant, but a
+ * fixture that drifts from the type would mean the keys were being checked
+ * against a cache shape the application never stores.
+ */
+const emptyPage = (): MyFilesPage => ({
+  edges: [],
+  pageInfo: {
+    count: 0,
+    endCursor: null,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    startCursor: null,
+    totalCount: 0,
+  },
+});
+
 describe("a delete makes the visitor's files stale, and only those", () => {
   const seed = () => {
     const queryClient = new QueryClient();
@@ -397,12 +420,9 @@ describe("a delete makes the visitor's files stale, and only those", () => {
     });
     const session = ["vitnode", "session"] as const;
 
-    queryClient.setQueryData(firstPage.queryKey, { edges: [], pageInfo: {} });
-    queryClient.setQueryData(sorted.queryKey, { edges: [], pageInfo: {} });
-    queryClient.setQueryData(otherVisitor.queryKey, {
-      edges: [],
-      pageInfo: {},
-    });
+    queryClient.setQueryData(firstPage.queryKey, emptyPage());
+    queryClient.setQueryData(sorted.queryKey, emptyPage());
+    queryClient.setQueryData(otherVisitor.queryKey, emptyPage());
     queryClient.setQueryData(session, { user: { id: USER } });
 
     return { firstPage, otherVisitor, queryClient, session, sorted };

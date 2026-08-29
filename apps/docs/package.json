@@ -29,6 +29,7 @@
   "dependencies": {
     "@hono/zod-openapi": "^1.5.1",
     "@hono/zod-validator": "^0.9.0",
+    "@tanstack/react-query": "^5.101.4",
     "@vitnode/blog": "workspace:*",
     "@vitnode/example": "workspace:*",
     "@vitnode/core": "workspace:*",

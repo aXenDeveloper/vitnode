@@ -90,6 +90,40 @@ const offendersIn = (files: string[], forbidden: string[]): string[] =>
 const TANSTACK_RUNTIME = ["@tanstack/react-router", "@tanstack/react-start"];
 
 /**
+ * Every TanStack runtime this package expects the *host* to own, rather than
+ * carrying its own copy of.
+ *
+ * A superset of {@link TANSTACK_RUNTIME}, and the extra entry is the reason the
+ * two lists are not one. `@tanstack/react-query` is not confined to this
+ * namespace and must not be: `views/layouts/provider` mounts the
+ * `QueryClientProvider` that *both* frontends render under, and the AutoForm
+ * fields, the AdminCP search dialog and the shared feature queries all read it
+ * from a Next.js render. So it belongs on the dependency-policy list and not on
+ * the import-isolation list above - adding it there would forbid the imports the
+ * Next.js surface is built on.
+ *
+ * What it shares with the other two is the failure it prevents. This package
+ * calls `useQueryClient`, `useQuery` and `useSuspenseQuery`; the application
+ * mounts the provider. Resolve two copies of React Query and those are two React
+ * contexts: the provider the host mounted is invisible to the hook inside a core
+ * component, which throws "No QueryClient set" - or, worse, silently reads an
+ * empty second cache, so a loader's `ensureQueryData` warms an entry the
+ * component never sees. A peer dependency is what makes that arrangement
+ * impossible rather than merely unlikely, because a peer resolves to the
+ * consumer's copy by definition.
+ *
+ * Optional, because a consumer can legitimately have none of them: `apps/api`
+ * installs this package for its Hono modules and renders nothing at all.
+ * "Optional" here means "not every install needs one", never "core works
+ * without it once you render" - an app that mounts VitNode's provider tree has
+ * to supply React Query, which is why `apps/docs` declares it too.
+ */
+const TANSTACK_PEER_RUNTIME = [
+  ...TANSTACK_RUNTIME,
+  "@tanstack/react-query",
+].sort((a, b) => a.localeCompare(b));
+
+/**
  * The Start compiler's own entry points.
  *
  * `createServerFn` and `createMiddleware` need the module they sit in to be
@@ -233,6 +267,7 @@ describe("the export map publishes the namespace", () => {
   const manifest = JSON.parse(
     readFileSync(join(packageRoot, "package.json"), "utf8"),
   ) as {
+    dependencies?: Record<string, string>;
     exports: Record<string, Record<string, string> | string>;
     peerDependencies: Record<string, string>;
     peerDependenciesMeta?: Record<string, { optional?: boolean }>;
@@ -265,10 +300,23 @@ describe("the export map publishes the namespace", () => {
     expect(keys.indexOf("./tanstack/*")).toBeLessThan(keys.indexOf("./*"));
   });
 
-  it.each(TANSTACK_RUNTIME)("declares %s as an optional peer", name => {
+  it.each(TANSTACK_PEER_RUNTIME)("declares %s as an optional peer", name => {
     expect(manifest.peerDependencies[name]).toBeDefined();
     expect(manifest.peerDependenciesMeta?.[name]?.optional).toBe(true);
   });
+
+  it.each(TANSTACK_PEER_RUNTIME)(
+    "does not also carry %s as a private dependency",
+    name => {
+      // The half that actually prevents the second copy. A peer entry alongside
+      // a `dependencies` entry is not a contract - npm and pnpm both install the
+      // dependency, so the package gets its own copy regardless of what the host
+      // has, and the peer declaration becomes decoration. React Query is the one
+      // this test was extended for: it was a plain dependency, which in a
+      // published install is two `QueryClient` contexts waiting to happen.
+      expect(manifest.dependencies?.[name]).toBeUndefined();
+    },
+  );
 });
 
 describe("every feature in the namespace has the entry points it claims", () => {

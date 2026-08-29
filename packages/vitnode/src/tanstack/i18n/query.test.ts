@@ -59,6 +59,27 @@ afterEach(() => {
   resetIntlRuntime();
 });
 
+/**
+ * The query as an application actually runs it.
+ *
+ * Not `options.queryFn()`. That property is typed optional and takes a
+ * `QueryFunctionContext`, so calling it bare is both a type error and a fiction
+ * - nothing in a VitNode app invokes it. A route loader calls
+ * `ensureQueryData` and `RouteMessages` calls `useSuspenseQuery`; both reach the
+ * host's fetcher through a `QueryClient`, exactly as this does, so what these
+ * two tests assert is the contract rather than an internal.
+ *
+ * `retry: false` because one of them asserts a *rejection*: under the default
+ * three retries and their backoff, a test pinning the error message would sit
+ * through the same failure four times before seeing it.
+ */
+const fetchThrough = async (
+  options: ReturnType<typeof intlQueryOptions>,
+): Promise<IntlMessages> =>
+  await new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  }).fetchQuery(options);
+
 describe("the query key names the language", () => {
   it("carries the locale", () => {
     expect(intlQueryOptions({ locale: "pl" }).queryKey).toEqual([
@@ -94,10 +115,12 @@ describe("the query key names the language", () => {
   });
 
   it("asks the host's fetcher for exactly what the key says", async () => {
-    await intlQueryOptions({
-      locale: "pl",
-      namespaces: ["core.search", "core.global"],
-    }).queryFn();
+    await fetchThrough(
+      intlQueryOptions({
+        locale: "pl",
+        namespaces: ["core.search", "core.global"],
+      }),
+    );
 
     expect(fetched).toEqual([
       { locale: "pl", namespaces: ["core.global", "core.search"] },
@@ -249,9 +272,9 @@ describe("using the runtime before an app configured it", () => {
     // Not on building the options - the key is pure and a route may well
     // describe a query before anything runs. The read happens where the answer
     // is actually needed, which is the fetch and the input boundary.
-    await expect(intlQueryOptions({ locale: "en" }).queryFn()).rejects.toThrow(
-      /configureIntl/,
-    );
+    await expect(
+      fetchThrough(intlQueryOptions({ locale: "en" })),
+    ).rejects.toThrow(/configureIntl/);
     expect(() => validateIntlInput({ locale: "en", namespaces: [] })).toThrow(
       /configureIntl/,
     );

@@ -22,6 +22,7 @@
     "@hono/zod-openapi": "^1.0.x",
     "@swc/cli": "^0.7.0 || ^0.8.0",
     "@swc/core": "^1.15.0",
+    "@tanstack/react-query": "^5.101.x",
     "@tanstack/react-router": "^1.170.x",
     "@tanstack/react-start": "^1.168.x",
     "@types/react": "^19.1.x",
@@ -46,6 +47,7 @@
     "@react-email/ui": "^6.9.0",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.46",
+    "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-start": "^1.168.49",
     "@testing-library/dom": "^10.4.1",
@@ -177,7 +179,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hono/swagger-ui": "^0.6.1",
     "@inquirer/prompts": "^8.5.2",
-    "@tanstack/react-query": "^5.101.4",
     "@tiptap/extension-text-align": "^3.28.0",
     "@tiptap/pm": "^3.28.0",
     "@tiptap/react": "^3.28.0",
@@ -211,6 +212,9 @@
     "vaul": "^1.1.2"
   },
   "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
     "@tanstack/react-router": {
       "optional": true
     },
