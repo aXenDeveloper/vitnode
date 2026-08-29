@@ -1,7 +1,7 @@
 import type { AnyRoute } from "@tanstack/react-router";
 
 import { createRootRoute, createRoute } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PluginRouteModuleRegistry } from "@/framework/plugin-routes";
 import type { PluginRoute } from "@/routing";
@@ -471,5 +471,94 @@ describe("fileRoutePaths", () => {
         ),
       ),
     ).toThrow(/conflicts with application route/);
+  });
+});
+
+/**
+ * What the loader hands a plugin, asserted by calling it.
+ *
+ * A plain function call, not a rendered route: the loader is where two of this
+ * runtime's promises are actually kept, and neither is visible in the route
+ * tree's shape. Nothing here mounts a router or renders a component.
+ */
+describe("a plugin route's loader", () => {
+  /** The host's context. Its `queryClient` is unused: no route here declares namespaces. */
+  const context = {
+    locale: "pl",
+    queryClient: undefined as never,
+  };
+
+  const loaderOf = (module: Record<string, unknown>) => {
+    const root = createRootRoute();
+    const tree = mount(
+      root.addChildren([
+        createRoute({ getParentRoute: () => root, path: "/" }),
+      ]),
+      pluginRouteSpecs([route()], {
+        "plugin:page": async () => Promise.resolve(module),
+      }),
+    );
+
+    const container = (tree.children ?? []).find(
+      (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
+    );
+    const loader = (container?.children?.[0] as AnyRoute).options.loader as (
+      args: unknown,
+    ) => Promise<{ data: unknown; search: unknown }>;
+
+    return async (deps: Record<string, unknown>) =>
+      await loader({ context, deps, params: { slug: "hello" } });
+  };
+
+  /**
+   * `parseSearch` is applied here rather than registered on the route, because
+   * the module is lazy and a router's own `validateSearch` runs before any chunk
+   * is fetched. What it returns is what `load` sees, and - through the envelope -
+   * what `head` and the component see.
+   */
+  it("applies `parseSearch` and hands the result to `load`", async () => {
+    const load = vi.fn(() => "loaded");
+    const result = await loaderOf({
+      default: () => null,
+      route: {
+        load,
+        parseSearch: (input: unknown) => ({
+          from: (input as { from?: unknown }).from === "index" ? "index" : "",
+        }),
+      },
+    })({ from: "index", junk: "dropped" });
+
+    expect(result.search).toEqual({ from: "index" });
+    expect(result.data).toBe("loaded");
+    expect(load).toHaveBeenCalledWith(
+      expect.objectContaining({ search: { from: "index" } }),
+    );
+  });
+
+  it("hands a module with no `parseSearch` an empty search", async () => {
+    const result = await loaderOf({ default: () => null, route: {} })({
+      from: "index",
+    });
+
+    expect(result.search).toEqual({});
+  });
+
+  /**
+   * The context boundary, from the runtime's side. `PluginRouteContext` is the
+   * whole of what a plugin is promised, so the host's own context - which holds
+   * this app's `QueryClient` - is projected rather than forwarded. Handing it
+   * over whole would make every field on it public plugin API by accident.
+   */
+  it("projects the public context, and does not forward the host's", async () => {
+    const load = vi.fn(() => null);
+
+    await loaderOf({ default: () => null, route: { load } })({});
+
+    const [args] = load.mock.calls[0] as unknown as [
+      { context: Record<string, unknown> },
+    ];
+
+    expect(args.context).toEqual({ locale: "pl" });
+    expect(args.context).not.toHaveProperty("queryClient");
   });
 });

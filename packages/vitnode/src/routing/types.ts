@@ -97,7 +97,7 @@ export type PluginRouteSegment =
 /**
  * A page route contributed by a plugin, as the plugin declares it.
  *
- * Eight fields, four of which are optional and default to "the simple case", so
+ * Eight fields, five of which are optional and default to "the simple case", so
  * the prototype's declaration still says exactly what it used to:
  *
  *     { entry: "routes/example-page", id: "example-page", path: "/example" }

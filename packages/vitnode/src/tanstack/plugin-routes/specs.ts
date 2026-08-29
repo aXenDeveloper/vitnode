@@ -28,7 +28,7 @@ import { pluginRouteModuleRef } from "./module-ref";
  * the runtime must have in order to decide whether to fetch the chunk at all.
  *
  * The one thing that is *not* here is behaviour. A `head`, a `load` and a
- * `validateSearch` live in the module and arrive with it - see `./module-ref`.
+ * `parseSearch` live in the module and arrive with it - see `./module-ref`.
  */
 export interface PluginRouteSpec {
   /**
@@ -122,7 +122,7 @@ const breadcrumbChainOf = (node: PluginRouteNode): string[] => {
 /**
  * What a plugin route re-runs its loader for.
  *
- * A plugin route registers no `validateSearch` of its own - see
+ * A plugin route registers no router-level `validateSearch` of its own - see
  * `./mount`, which explains why it cannot - so the search a match carries is
  * whatever was in the query string. This turns that into something a match id
  * can be built from without depending on the order somebody happened to type

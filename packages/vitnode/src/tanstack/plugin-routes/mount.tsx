@@ -54,8 +54,17 @@ import { pluginRouteSearchDeps } from "./specs";
  * per language.
  */
 
-/** The narrowest slice of a host's route context a plugin route reads. */
-export interface PluginRouteContext {
+/**
+ * What this runtime has on hand when a plugin route loads - the *host's*
+ * context, not the plugin's.
+ *
+ * Named apart from `@vitnode/core/routing`'s `PluginRouteContext` on purpose:
+ * that one is the public promise, this one is whatever the TanStack host
+ * happens to hold. The two must not converge. A plugin's `load` is handed a
+ * projection of this - see `pluginRouteLoader` - so a `QueryClient` living here
+ * never becomes something a plugin may compile against.
+ */
+export interface PluginRouteRuntimeContext {
   locale: string;
   queryClient: QueryClient;
 }
@@ -144,24 +153,27 @@ const pluginRouteHead =
  * lived inside the code could only be read after downloading the page it
  * describes, making two requests into a waterfall.
  *
- * ## Why the search contract is applied here
+ * ## Why `parseSearch` is applied here
  *
- * A route's `validateSearch` normally runs during path matching, which is
- * *before* any chunk is fetched - that is why TanStack's own lazy route files
- * may not contain one, and it is why a plugin route registers none. Applying it
- * here is what keeps both promises: the page's code is still split, and nothing
- * downstream of the module ever sees a raw query parameter. `load` is handed the
- * validated value, and so - through the envelope this returns - is `head`.
+ * A route's `validateSearch` runs during path matching, which is *before* any
+ * chunk is fetched - that is why TanStack's own lazy route files may not contain
+ * one, and it is why a plugin route registers none. A plugin's module is lazy,
+ * so there is nothing to ask at matching time. Applying `parseSearch` in the
+ * loader is what keeps both promises: the page's code is still split, and
+ * nothing downstream of the module ever sees a raw query parameter. `load` is
+ * handed the parsed value, and so - through the envelope this returns - is
+ * `head`.
  *
- * The consequence, stated plainly: a plugin route's `search` is a *loader*
- * contract, not a URL contract. Links the router builds to a plugin route carry
- * whatever they were given.
+ * The consequence, and the reason the option is not called `validateSearch`: a
+ * plugin route's `search` is a *loader* contract, not a URL one. The router's own
+ * search type for the route is untouched, links it builds to a plugin route
+ * carry whatever they were given, and no URL is ever rejected.
  *
  * The query string reaches a loader as `deps`, never as `search` - a router
  * loader is not handed the search directly, which is what `loaderDeps` is for.
  * That works in this runtime's favour: `deps` is the normalised query string,
- * so the value the search contract is applied to is by construction the same
- * value the loader re-runs for.
+ * so the value `parseSearch` is applied to is by construction the same value the
+ * loader re-runs for.
  */
 const pluginRouteLoader =
   (spec: PluginRouteSpec) =>
@@ -170,7 +182,7 @@ const pluginRouteLoader =
     deps,
     params,
   }: {
-    context: PluginRouteContext;
+    context: PluginRouteRuntimeContext;
     deps: Record<string, unknown>;
     params: Readonly<Record<string, string>>;
   }): Promise<PluginRouteLoaderData> => {
@@ -186,13 +198,22 @@ const pluginRouteLoader =
           ),
     ]);
 
-    const validated = route.validateSearch ? route.validateSearch(deps) : {};
+    const search = route.parseSearch ? route.parseSearch(deps) : {};
 
     return {
       data: route.load
-        ? await route.load({ context, params, search: validated })
+        ? // Projected, never forwarded. `context` here is the host's - it holds
+          // this app's `QueryClient` - and handing it over whole would make
+          // every field on it public plugin API by accident, compiling today and
+          // arriving `undefined` on a host that has no such field. What crosses
+          // the boundary is `PluginRouteContext` and only that.
+          await route.load({
+            context: { locale: context.locale },
+            params,
+            search,
+          })
         : undefined,
-      search: validated,
+      search,
     };
   };
 
@@ -232,11 +253,12 @@ const pluginRouteOptions = (
      * What the loader re-runs for.
      *
      * The query string, normalised - because a plugin route registers no
-     * `validateSearch`, the runtime cannot know before the chunk loads whether
-     * this route has a search contract at all, so it assumes one. A route whose
-     * module declares `validateSearch` therefore re-runs `load` whenever the
-     * search changes, which is the contract; a route that declares none pays for
-     * it with a re-run on a query parameter it does not read.
+     * `validateSearch` of the router's own, the runtime cannot know before the
+     * chunk loads whether this route reads the query string at all, so it
+     * assumes it does. A route whose module declares `parseSearch` therefore
+     * re-runs `load` whenever the query string changes, which is the contract; a
+     * route that declares none pays for it with a re-run on a query parameter it
+     * does not read.
      */
     loaderDeps: ({ search }: { search: unknown }) =>
       pluginRouteSearchDeps(search),

@@ -100,8 +100,13 @@ export const route = definePluginRoute({
    * rendered anyway - throwing here turns `?from=whatever` into a router error
    * screen. It returns only what this route recognises, so nothing else is
    * carried forward.
+   *
+   * It normalises the query string for `load`, `head` and the component, and it
+   * is not the router's `validateSearch`: this module is lazy, so by the time it
+   * exists the URL has long since been matched. No link is checked against this
+   * and no URL is rejected by it.
    */
-  validateSearch: (input: unknown): TopicSearch => {
+  parseSearch: (input: unknown): TopicSearch => {
     const from = (input as null | Partial<TopicSearch>)?.from;
 
     return { from: from === "index" ? "index" : "" };

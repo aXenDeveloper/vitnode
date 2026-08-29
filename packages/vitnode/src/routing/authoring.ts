@@ -1,5 +1,4 @@
 import type {
-  PluginRouteContextBase,
   PluginRouteHead,
   PluginRouteHeadArgs,
   PluginRouteLoadArgs,
@@ -20,7 +19,7 @@ import type {
  *
  * `route` is the exception, and a genuine one rather than a matter of taste.
  * {@link PluginRouteOptions} is generic in what the loader returns and in what
- * `validateSearch` accepts, and those two types are what `head`, `load` and the
+ * `parseSearch` returns, and those two types are what `head`, `load` and the
  * component all read. A `satisfies` clause has to *name* them, because
  * `satisfies` checks a value against a type and never infers that type's
  * arguments from the value:
@@ -92,9 +91,11 @@ type UnknownLoaderData =
  * order stops mattering:
  *
  * - `TData` from what `load` returns. `head` only reads it.
- * - `TSearch` from what `validateSearch` returns. `head` and `load` only read it.
- * - `TContext` from `load`'s own parameter, which is how a plugin needing more
- *   than the locale asks for it.
+ * - `TSearch` from what `parseSearch` returns. `head` and `load` only read it.
+ *
+ * There is deliberately no `TContext`. What a plugin's `load` is handed is
+ * {@link PluginRouteContext} and only that - see `./module` for why a contract
+ * the consumer can widen is not a contract.
  *
  * Derived with `Omit` rather than re-declared member by member, so a member
  * added to the contract arrives here without an edit. `authoring.test-d.ts`
@@ -102,16 +103,15 @@ type UnknownLoaderData =
  * a `head` or `load` that got renamed, leaving an `Omit` that quietly removes
  * nothing.
  */
-type AuthoredPluginRouteOptions<
-  TContext extends PluginRouteContextBase,
-  TData,
-  TSearch,
-> = Omit<PluginRouteOptions<TContext, TData, TSearch>, "head" | "load"> & {
+type AuthoredPluginRouteOptions<TData, TSearch> = Omit<
+  PluginRouteOptions<TData, TSearch>,
+  "head" | "load"
+> & {
   head?: (
     args: PluginRouteHeadArgs<NoInfer<TData>, NoInfer<TSearch>>,
   ) => PluginRouteHead;
   load?: (
-    args: PluginRouteLoadArgs<TContext, NoInfer<TSearch>>,
+    args: PluginRouteLoadArgs<NoInfer<TSearch>>,
   ) => Promise<TData> | TData;
 };
 
@@ -130,15 +130,13 @@ type AuthoredPluginRouteOptions<
  *       breadcrumb: () => <span>{useTranslations("my-plugin")("title")}</span>,
  *     });
  *
- * A plugin that needs more of the host's context than the locale annotates the
- * parameter, and the constraint keeps that honest:
- *
- *     load: ({ context }: PluginRouteLoadArgs<HostContext>) => ...
+ * `context` is {@link PluginRouteContext} - the locale - and there is no way to
+ * ask for a wider one. Annotating `load`'s parameter with a bigger shape is a
+ * type error rather than a promise nobody made.
  */
 export const definePluginRoute = <
   TData = UnknownLoaderData,
   TSearch = Record<string, never>,
-  TContext extends PluginRouteContextBase = PluginRouteContextBase,
 >(
-  options: AuthoredPluginRouteOptions<TContext, TData, TSearch>,
-): PluginRouteOptions<TContext, TData, TSearch> => options;
+  options: AuthoredPluginRouteOptions<TData, TSearch>,
+): PluginRouteOptions<TData, TSearch> => options;

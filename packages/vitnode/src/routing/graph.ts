@@ -103,7 +103,9 @@ const fail = (
  *   contract does not have; said plainly rather than half-supported.
  * - **A layout with no children**, which is a route nothing can ever match.
  * - **An unsatisfiable requirement** - a guest-only page inside a subtree that
- *   requires a signed-in visitor, which no visitor could ever reach.
+ *   requires a signed-in visitor, which no visitor could ever reach. Checked
+ *   against the whole ancestor chain, not the immediate parent: a neutral layout
+ *   in between forwards the requirement above it rather than clearing it.
  * - **Two routes answering one URL**, in the one shape the flat list cannot
  *   judge: a layout shares its path with its own index child and with nothing
  *   else, so a page and somebody else's layout at that path are two routes
@@ -204,33 +206,54 @@ export const buildPluginRouteGraph = (
   // only from roots, it cannot enter the cycle to loop in it.
   const reached = new Set<PluginRouteNode>();
 
-  const walk = (node: PluginRouteNode, depth: number): void => {
+  /**
+   * The requirement in force, and which ancestor declared it.
+   *
+   * The whole ancestor chain rather than the immediate parent, because a guard
+   * is a guard wherever it sits: every matched route's `beforeLoad` runs, so a
+   * `guest` page under a *neutral* layout under an `authenticated` one is still
+   * a page no visitor can reach - the outer guard turns a guest away and the
+   * inner one turns everybody else away. Compared only against the nearest
+   * ancestor, that tree passed validation and 404'd for every human being.
+   *
+   * A node is carried rather than a bare requirement so a diagnostic can name
+   * the route that actually imposed it, which is not necessarily the parent.
+   */
+  const walk = (
+    node: PluginRouteNode,
+    depth: number,
+    inheritedFrom: null | PluginRouteNode,
+  ): void => {
     node.depth = depth;
     reached.add(node);
 
-    const inherited = node.parent?.route.requires ?? null;
+    const declared = node.route.requires;
+    const inherited = inheritedFrom?.route.requires ?? null;
 
-    if (
-      inherited !== null &&
-      node.route.requires !== null &&
-      node.route.requires !== inherited
-    ) {
+    if (inherited !== null && declared !== null && declared !== inherited) {
       fail(
         "conflicting-requires",
         node.route,
-        `Plugin route "${node.route.id}" requires "${node.route.requires}" but sits inside "${node.parent?.route.id}", which requires "${inherited}". No visitor could ever reach it.`,
-        node.parent?.route,
+        `Plugin route "${node.route.id}" requires "${declared}" but sits inside "${inheritedFrom?.route.id}", which requires "${inherited}". No visitor could ever reach it.`,
+        inheritedFrom?.route,
       );
     }
 
+    // The *effective* requirement, passed down and never written back onto the
+    // route: a manifest says what its plugin declared, and what a nested route
+    // inherits is this graph's reading of it. A node that declares nothing
+    // forwards its ancestor's, which is what makes a neutral layout transparent
+    // rather than a reset.
+    const source = declared === null ? inheritedFrom : node;
+
     node.children.sort((a, b) => comparePluginRoutes(a.route, b.route));
 
-    for (const child of node.children) walk(child, depth + 1);
+    for (const child of node.children) walk(child, depth + 1, source);
   };
 
   roots.sort((a, b) => comparePluginRoutes(a.route, b.route));
 
-  for (const root of roots) walk(root, 0);
+  for (const root of roots) walk(root, 0, null);
 
   for (const node of byId.values()) {
     if (reached.has(node)) continue;

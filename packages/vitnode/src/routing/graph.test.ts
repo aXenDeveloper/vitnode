@@ -520,6 +520,134 @@ describe("requirements", () => {
     expect(error.code).toBe("conflicting-requires");
     expect(error.message).toContain("No visitor could ever reach it");
   });
+
+  /**
+   * The rule read down the *whole* chain rather than one link of it.
+   *
+   * A neutral layout between the two is the case that matters, because it is
+   * the one that used to pass: compared only against its immediate parent, the
+   * page below declared `guest` inside something declaring nothing, and nothing
+   * conflicts with nothing. At runtime every matched route's guard runs, so the
+   * `authenticated` layout further up turned guests away and the `guest` page
+   * turned everybody else away - a route that 404'd for every human being and
+   * validated cleanly.
+   */
+  it.each([
+    ["authenticated", "guest"],
+    ["guest", "authenticated"],
+  ] as const)(
+    "refuses a %s subtree with a %s page under a neutral layout",
+    (outer, inner) => {
+      const error = thrownBy(() =>
+        buildPluginRouteGraph(
+          manifestOf(
+            example(
+              layout("outer", "/a", { requires: outer }),
+              layout("middle", "/a/b", { parentId: "outer" }),
+              page("leaf", "/a/b/c", { parentId: "middle", requires: inner }),
+            ),
+          ),
+        ),
+      );
+
+      expect(error.code).toBe("conflicting-requires");
+      // The route that actually imposed it, which is not the parent.
+      expect(error.message).toContain("@vitnode/example:outer");
+    },
+  );
+
+  it("refuses a conflict several neutral layouts deep", () => {
+    const error = thrownBy(() =>
+      buildPluginRouteGraph(
+        manifestOf(
+          example(
+            layout("outer", "/a", { requires: "authenticated" }),
+            layout("mid1", "/a/b", { parentId: "outer" }),
+            layout("mid2", "/a/b/c", { parentId: "mid1" }),
+            page("leaf", "/a/b/c/d", { parentId: "mid2", requires: "guest" }),
+          ),
+        ),
+      ),
+    );
+
+    expect(error.code).toBe("conflicting-requires");
+  });
+
+  it("accepts a page restating the requirement through a neutral layout", () => {
+    expect(() =>
+      buildPluginRouteGraph(
+        manifestOf(
+          example(
+            layout("outer", "/a", { requires: "authenticated" }),
+            layout("middle", "/a/b", { parentId: "outer" }),
+            page("leaf", "/a/b/c", {
+              parentId: "middle",
+              requires: "authenticated",
+            }),
+          ),
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  it("accepts a neutral page under a neutral layout under a guarded one", () => {
+    expect(() =>
+      buildPluginRouteGraph(
+        manifestOf(
+          example(
+            layout("outer", "/a", { requires: "authenticated" }),
+            layout("middle", "/a/b", { parentId: "outer" }),
+            page("leaf", "/a/b/c", { parentId: "middle" }),
+          ),
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  /**
+   * A requirement first declared *below* an unguarded root is not in conflict
+   * with anything - there is nothing above it to disagree with.
+   */
+  it("accepts a requirement introduced part-way down an open subtree", () => {
+    expect(() =>
+      buildPluginRouteGraph(
+        manifestOf(
+          example(
+            layout("outer", "/a"),
+            layout("middle", "/a/b", {
+              parentId: "outer",
+              requires: "authenticated",
+            }),
+            page("leaf", "/a/b/c", { parentId: "middle" }),
+          ),
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  /**
+   * The manifest keeps saying what the plugin wrote. Inheritance is this
+   * graph's reading of the tree, never written back onto a route - a generated
+   * manifest that had absorbed it would no longer round-trip to the plugin's
+   * own declaration.
+   */
+  it("leaves an inheriting route's own `requires` null", () => {
+    const graph = buildPluginRouteGraph(
+      manifestOf(
+        example(
+          layout("outer", "/a", { requires: "authenticated" }),
+          layout("middle", "/a/b", { parentId: "outer" }),
+          page("leaf", "/a/b/c", { parentId: "middle" }),
+        ),
+      ),
+    );
+
+    expect(nodeOf(graph, "@vitnode/example:middle").route.requires).toBeNull();
+    expect(nodeOf(graph, "@vitnode/example:leaf").route.requires).toBeNull();
+    expect(nodeOf(graph, "@vitnode/example:outer").route.requires).toBe(
+      "authenticated",
+    );
+  });
 });
 
 describe("pluginRouteNamespaces", () => {

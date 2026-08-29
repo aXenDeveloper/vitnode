@@ -20,7 +20,7 @@
  * neither of which a plugin can name - so a router upgrade would be a breaking
  * change for every plugin in the ecosystem, and a VitNode app on any other
  * router could not load one at all. What is here instead is a VitNode-owned
- * shape: five optional members, all of them things a plugin page provably needs,
+ * shape: four optional members, all of them things a plugin page provably needs,
  * none of them a re-export.
  *
  * ## Import-free, and how
@@ -88,30 +88,37 @@ export interface PluginRouteHead {
 }
 
 /**
- * The least a host promises a plugin route's loader.
+ * Everything a host promises a plugin route's loader - the whole of it, and not
+ * a base somebody extends.
  *
  * The locale, because a loader that fetches anything user-facing needs to know
  * which language it is fetching, and because the public URL is the only place
  * that answer comes from.
  *
- * A host extends this - a TanStack Start app adds the `QueryClient` its loader
- * reads through and the auth state its guard already resolved - and binds the
- * generic below to the extended shape. It is a base rather than the whole thing
- * because those additions are typed by packages this layer may not import.
+ * **Closed on purpose.** This used to be a `PluginRouteContextBase` that a
+ * plugin could widen by annotating its own `load` parameter, which let a plugin
+ * compile against a host property nobody had promised it - `context.database`
+ * type-checks, then arrives `undefined` in a browser. A public contract that
+ * can be widened from the consumer's side is not a contract. What a host has
+ * internally is its own business: the TanStack runtime holds a `QueryClient` and
+ * a resolved session, and *projects* this shape out of them before calling a
+ * plugin's `load`.
+ *
+ * Adding a member here is therefore a deliberate act with a cost: it has to be
+ * something every VitNode host can promise, in Node and in a browser, whichever
+ * router it runs. A plugin that needs data reaches for a shared query contract
+ * or a framework-neutral API, not for a wider context.
  */
-export interface PluginRouteContextBase {
+export interface PluginRouteContext {
   locale: string;
 }
 
 /** What a plugin route's `load` is handed. */
-export interface PluginRouteLoadArgs<
-  TContext extends PluginRouteContextBase = PluginRouteContextBase,
-  TSearch = unknown,
-> {
-  context: TContext;
+export interface PluginRouteLoadArgs<TSearch = unknown> {
+  context: PluginRouteContext;
   /** The route's own dynamic segments, e.g. `{ slug: "hello" }`. */
   params: Readonly<Record<string, string>>;
-  /** Whatever `validateSearch` returned, or `{}` if the route declares none. */
+  /** Whatever `parseSearch` returned, or `{}` if the route declares none. */
   search: TSearch;
 }
 
@@ -131,22 +138,29 @@ export interface PluginRouteHeadArgs<TData = unknown, TSearch = unknown> {
 /**
  * The behaviour a plugin route module may declare, and the whole of it.
  *
- * Five members, every one optional, every one traced to something a migrated
+ * Four members, every one optional, every one traced to something a migrated
  * VitNode page does today.
  */
-export interface PluginRouteOptions<
-  TContext extends PluginRouteContextBase = PluginRouteContextBase,
-  TData = unknown,
-  TSearch = unknown,
-> {
+export interface PluginRouteOptions<TData = unknown, TSearch = unknown> {
   /**
    * What this route contributes to the shell's breadcrumb area.
    *
-   * A **component**, not an element, because the label is translated and on a
-   * dynamic route comes from the loader - so it has to be able to use hooks, and
-   * the runtime is the only thing that can decide where to mount it. The deepest
-   * matched route that declares one wins, which is Stage 8's rule
-   * (`breadcrumbOf`) and therefore the same rule the host's own routes follow.
+   * A **component**, not an element, because the label is translated - so it has
+   * to be able to call `useTranslations` from `use-intl`, through the namespaces
+   * its route declared - and because the runtime is the only thing that can
+   * decide where in the shell to mount it. The deepest matched route that
+   * declares one wins, which is Stage 8's rule (`breadcrumbOf`) and therefore
+   * the same rule the host's own routes follow.
+   *
+   * **It is handed no props.** No `loaderData`, no `params`, no `search`: a
+   * crumb is rendered from the route's own module and its namespaces, and
+   * nothing else. That is enough for a translated, route-owned label, which is
+   * what every crumb in this repository is; it is not enough for "the article's
+   * own title", and this contract does not pretend otherwise. A plugin route
+   * module is framework-neutral and so cannot reach for `useLoaderData` to close
+   * the gap itself. Giving a crumb its route's data is a future extension - a
+   * typed `PluginRouteBreadcrumbProps<TData, TSearch>` - not something to work
+   * around here.
    *
    * There is deliberately no pathname-to-label registry anywhere: a route
    * declares its own crumb, next to its own component.
@@ -163,10 +177,15 @@ export interface PluginRouteOptions<
    *
    * Runs before React, on the server and in the browser, so a page that awaits
    * its data here is a page whose first byte of HTML already contains it. Reuse
-   * the canonical query contracts - `context.queryClient.ensureQueryData(...)`
-   * against the same options the component reads back - rather than fetching
-   * into local state: a loader that warms a different key than its component
-   * reads is a render that starts empty and fills in a round trip later.
+   * a shared query contract - the same options object the component reads back -
+   * rather than fetching into local state: a loader that warms a different key
+   * than its component reads is a render that starts empty and fills in a round
+   * trip later.
+   *
+   * What it is handed is {@link PluginRouteContext} and nothing more, which is
+   * the deliberate limit rather than an omission: a host's own `QueryClient` is
+   * a host implementation detail, and a plugin that compiled against one would
+   * be installable into exactly the hosts that happen to have it.
    *
    * The host's API boundary is unchanged. A plugin's reads go to Hono the way
    * every other read does; this is where they are *awaited*, not a second
@@ -175,11 +194,20 @@ export interface PluginRouteOptions<
    * Its return type flows into `head`'s `loaderData` and into the component's
    * props, so one object serves all three.
    */
-  load?: (
-    args: PluginRouteLoadArgs<TContext, TSearch>,
-  ) => Promise<TData> | TData;
+  load?: (args: PluginRouteLoadArgs<TSearch>) => Promise<TData> | TData;
   /**
-   * The route's URL contract: what this page will accept in its query string.
+   * Normalises the query string into the `search` this route's `load`, `head`
+   * and component are handed.
+   *
+   * **Not a URL schema, and named to stop it reading as one.** It is *not*
+   * TanStack Router's `validateSearch`: it does not shape the router's own
+   * search type, does not validate a `<Link>`, and cannot reject a URL. It
+   * cannot be any of those, and the reason is the property this whole layer is
+   * arranged around - a route's real `validateSearch` runs during path matching,
+   * which is *before* any chunk is fetched, and a plugin's module is lazy. The
+   * router matches the route without it; this runs in the loader, once the
+   * module has arrived. So the raw query string is what the router sees, and
+   * this is what everything downstream of the module sees.
    *
    * **Must be total.** It normalises, it does not reject - a hand-edited or
    * pasted query string should render the page it would have rendered anyway,
@@ -187,12 +215,16 @@ export interface PluginRouteOptions<
    * only parameters this route recognises; anything else must not be carried
    * forward into a request.
    *
-   * When a route declares one, the runtime re-runs `load` whenever the validated
-   * search changes. That is deliberately not configurable: a loader that did not
+   *     parseSearch: input => ({
+   *       from: (input as { from?: unknown }).from === "index" ? "index" : "",
+   *     })
+   *
+   * When a route declares one, the runtime re-runs `load` whenever the query
+   * string changes. That is deliberately not configurable: a loader that did not
    * re-run would serve the first result set forever, and the cost of an extra
    * cached read is smaller than the cost of a stale page.
    */
-  validateSearch?: (input: unknown) => TSearch;
+  parseSearch?: (input: unknown) => TSearch;
 }
 
 /**
@@ -228,16 +260,12 @@ export interface PluginRoutePageProps<
   loaderData: TData;
   /** The route's own dynamic segments, e.g. `{ slug: "hello" }`. */
   params: Readonly<Record<string, string>>;
-  /** Whatever `validateSearch` returned - never raw query parameters. */
+  /** Whatever `parseSearch` returned - never raw query parameters. */
   search: TSearch;
 }
 
 /** A plugin route module that renders a page - `kind: "page"`. */
-export interface PluginRoutePageModule<
-  TContext extends PluginRouteContextBase = PluginRouteContextBase,
-  TData = unknown,
-  TSearch = unknown,
-> {
+export interface PluginRoutePageModule<TData = unknown, TSearch = unknown> {
   /**
    * The page.
    *
@@ -250,15 +278,11 @@ export interface PluginRoutePageModule<
    * its container - width, padding, vertical rhythm - and nothing above it.
    */
   default: React.FunctionComponent<PluginRoutePageProps<TData, TSearch>>;
-  route?: PluginRouteOptions<TContext, TData, TSearch>;
+  route?: PluginRouteOptions<TData, TSearch>;
 }
 
 /** A plugin route module that renders a frame - `kind: "layout"`. */
-export interface PluginRouteLayoutModule<
-  TContext extends PluginRouteContextBase = PluginRouteContextBase,
-  TData = unknown,
-  TSearch = unknown,
-> {
+export interface PluginRouteLayoutModule<TData = unknown, TSearch = unknown> {
   /**
    * The frame, which renders its children where they belong.
    *
@@ -271,7 +295,7 @@ export interface PluginRouteLayoutModule<
   default: React.FunctionComponent<
     PluginRoutePageProps<TData, TSearch> & { children: React.ReactNode }
   >;
-  route?: PluginRouteOptions<TContext, TData, TSearch>;
+  route?: PluginRouteOptions<TData, TSearch>;
 }
 
 /**
@@ -281,13 +305,9 @@ export interface PluginRouteLayoutModule<
  * must be is decided by its route's `kind` - which the runtime knows before it
  * loads the module.
  */
-export type PluginRouteModule<
-  TContext extends PluginRouteContextBase = PluginRouteContextBase,
-  TData = unknown,
-  TSearch = unknown,
-> =
-  | PluginRouteLayoutModule<TContext, TData, TSearch>
-  | PluginRoutePageModule<TContext, TData, TSearch>;
+export type PluginRouteModule<TData = unknown, TSearch = unknown> =
+  | PluginRouteLayoutModule<TData, TSearch>
+  | PluginRoutePageModule<TData, TSearch>;
 
 /**
  * A module's declared behaviour, once it has been checked rather than trusted.
@@ -303,7 +323,7 @@ export interface CheckedPluginRouteOptions {
   breadcrumb?: React.FunctionComponent;
   head?: (args: PluginRouteHeadArgs) => PluginRouteHead;
   load?: (args: PluginRouteLoadArgs) => unknown;
-  validateSearch?: (input: unknown) => unknown;
+  parseSearch?: (input: unknown) => unknown;
 }
 
 /** A loaded plugin route module, checked. */
@@ -335,7 +355,7 @@ const OPTION_KEYS = [
   "breadcrumb",
   "head",
   "load",
-  "validateSearch",
+  "parseSearch",
 ] as const satisfies readonly (keyof CheckedPluginRouteOptions)[];
 
 /**

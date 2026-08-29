@@ -17,7 +17,7 @@ import type { PluginRoutePageProps } from "@/routing";
 export interface PluginRouteLoaderData {
   /** Whatever the module's `load` returned, or `undefined` if it declares none. */
   data: unknown;
-  /** The module's `validateSearch` applied to the query string, or `{}`. */
+  /** The module's `parseSearch` applied to the query string, or `{}`. */
   search: unknown;
 }
 
@@ -27,7 +27,7 @@ export interface PluginRouteLoaderData {
  * `PluginRoutePageProps` is the contract's own - `@vitnode/core/routing` - and
  * the whole of what this alias adds is the two type arguments a runtime cannot
  * know: what a *particular* plugin's loader returned, and what its
- * `validateSearch` accepted, are the plugin's business and were checked on the
+ * `parseSearch` returned, are the plugin's business and were checked on the
  * plugin's side. Naming the shared type rather than restating its three fields
  * is what keeps the props a plugin declares and the props this runtime passes
  * provably the same object.

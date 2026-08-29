@@ -174,12 +174,12 @@ export const route = definePluginRoute({
 export default PostPage;
 ```
 
-| Member           | What it does                                                                                               |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| `load`           | Everything the route needs before it renders. Runs on the server and in the browser, before React.         |
-| `head`           | The page's `title`, `description` and `robots` - usually read off `loaderData`.                            |
-| `breadcrumb`     | A component contributing to the shell's breadcrumb area. The deepest matched route that declares one wins. |
-| `validateSearch` | What this page accepts in its query string.                                                                |
+| Member        | What it does                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `load`        | Everything the route needs before it renders. Runs on the server and in the browser, before React.         |
+| `head`        | The page's `title`, `description` and `robots` - usually read off `loaderData`.                            |
+| `breadcrumb`  | A component contributing to the shell's breadcrumb area. The deepest matched route that declares one wins. |
+| `parseSearch` | Normalises the query string into the `search` your `load`, `head` and component are handed.                |
 
 <Callout type="warn" title="Write `load` above `head`">
   TypeScript resolves an object literal's members in order, so `head`'s
@@ -200,7 +200,7 @@ Your component is handed the same three names `load` and `head` receive:
 interface PluginRoutePageProps<TData, TSearch> {
   loaderData: TData; // exactly what `load` returned
   params: Readonly<Record<string, string>>;
-  search: TSearch; // your `validateSearch` applied - never raw query params
+  search: TSearch; // your `parseSearch` applied - never raw query params
 }
 ```
 
@@ -213,12 +213,33 @@ doesn't render until it has.
   outside its own route's content. VitNode still gives it your route's declared
   `namespaces`, so `useTranslations` works there exactly as it does in the page
   - you don't have to pass the label down or provide anything yourself.
+
+A `breadcrumb` is handed **no props** - no `loaderData`, no `params`, no
+`search`. It renders a translated, route-owned label. If you need the crumb to
+say "the article's title", put that title in the page instead for now.
+
 </Callout>
 
-<Callout type="info">
-  `validateSearch` **must be total**. It normalises, it does not reject - a
-  pasted or hand-edited query string should render the page it would have
-  rendered anyway, because throwing turns `?first=abc` into an error screen.
+<Callout type="warn" title="`parseSearch` is not `validateSearch`">
+  It does **not** shape TanStack Router's own search schema for the route, does
+  not validate a `<Link>`, and cannot reject a URL. It cannot: a router's real
+  `validateSearch` runs while the URL is being matched, which is *before* your
+  page's chunk has been fetched, and a plugin route module is lazy on purpose.
+  `parseSearch` runs in the loader instead, once your module has arrived, and
+  normalises the query string for your `load`, `head` and component.
+
+So it **must be total**. It normalises, it does not reject - a pasted or
+hand-edited query string should render the page it would have rendered anyway,
+because throwing turns `?first=abc` into an error screen.
+
+```ts
+parseSearch: input => {
+  const { from } = input as { from?: unknown };
+
+  return { from: from === "index" ? "index" : "" };
+},
+```
+
 </Callout>
 
 ## Layouts and nesting

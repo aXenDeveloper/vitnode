@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from "vitest";
 
 import type {
+  PluginRouteContext,
   PluginRouteLayoutModule,
   PluginRouteLoadArgs,
   PluginRouteOptions,
@@ -39,11 +40,11 @@ describe("definePluginRoute", () => {
     });
   });
 
-  it("flows `validateSearch`'s return type into `load` and `head`", () => {
+  it("flows `parseSearch`'s return type into `load` and `head`", () => {
     definePluginRoute({
-      // Order-independent, unlike `load`: `validateSearch` annotates its own
-      // parameter, so TypeScript reads it before any context-sensitive member.
-      validateSearch: (): { section: string } => ({ section: "" }),
+      // Order-independent, unlike `load`: `parseSearch` annotates its own
+      // return type, so TypeScript reads it before any context-sensitive member.
+      parseSearch: (): { section: string } => ({ section: "" }),
       load: ({ search }) => {
         expectTypeOf(search).toEqualTypeOf<{ section: string }>();
 
@@ -67,21 +68,45 @@ describe("definePluginRoute", () => {
     });
   });
 
-  it("takes a wider context from an annotated `load`", () => {
-    // How a plugin asks for more than the base: the host's own args type on the
-    // parameter, which the constraint still holds to `PluginRouteContextBase`.
-    interface HostContext {
+  /**
+   * The boundary, asserted from the plugin's side.
+   *
+   * `PluginRouteContext` used to be a *base* a plugin could widen by annotating
+   * its own `load` parameter - which meant a plugin could compile against a
+   * property no host had promised, and find it `undefined` at runtime. What the
+   * host holds internally is `PluginRouteRuntimeContext`
+   * (`@vitnode/core/tanstack/plugin-routes`), and only the locale is projected
+   * out of it.
+   */
+  it("promises the loader the public context, and nothing more", () => {
+    definePluginRoute({
+      load: ({ context }) => {
+        expectTypeOf(context).toEqualTypeOf<PluginRouteContext>();
+        expectTypeOf(context).toEqualTypeOf<{ locale: string }>();
+
+        return null;
+      },
+    });
+  });
+
+  it("refuses a `load` that asks for a context the host never promised", () => {
+    interface WiderContext {
       locale: string;
       queryClient: { key: string };
     }
 
     definePluginRoute({
-      load: ({ context }: PluginRouteLoadArgs<HostContext>) => {
-        expectTypeOf(context.queryClient.key).toEqualTypeOf<string>();
-
-        return null;
-      },
+      // @ts-expect-error A plugin may not widen the context it is handed.
+      load: ({ context }: { context: WiderContext }) => context.queryClient.key,
     });
+  });
+
+  it("has no context type argument to bind", () => {
+    // `PluginRouteLoadArgs` is generic in the *search* only, so there is nowhere
+    // left to name a wider context even deliberately.
+    expectTypeOf<
+      PluginRouteLoadArgs<{ section: string }>["context"]
+    >().toEqualTypeOf<PluginRouteContext>();
   });
 
   it("rejects a `head` that reads a field the loader does not return", () => {
@@ -138,15 +163,13 @@ describe("a plugin route module's default export", () => {
     }: PluginRoutePageProps<Topic, unknown>) =>
       `${loaderData.title}${params.topic}`;
 
-    // Both type arguments, because the two types default `TSearch` differently:
-    // `PluginRoutePageProps` to `Record<string, never>` so an author writing a
-    // page with no search contract gets an empty object rather than `unknown`,
-    // and the module interfaces to `unknown` for a consumer that has not looked
-    // at the route yet. Props are contravariant, so a page cannot be checked
-    // against a module type without saying which of the two it means.
-    expectTypeOf(Page).toExtend<
-      PluginRoutePageModule<never, Topic>["default"]
-    >();
+    // `PluginRoutePageProps` is given its `TSearch` explicitly above, because
+    // the two types default it differently: the props to `Record<string, never>`
+    // so an author writing a page with no `parseSearch` gets an empty object
+    // rather than `unknown`, and the module interface to `unknown` for a
+    // consumer that has not looked at the route yet. Props are contravariant, so
+    // a page cannot be checked against a module type without the two agreeing.
+    expectTypeOf(Page).toExtend<PluginRoutePageModule<Topic>["default"]>();
   });
 
   it("accepts a layout that declares only its children", () => {

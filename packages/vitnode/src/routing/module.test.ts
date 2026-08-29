@@ -18,7 +18,7 @@ describe("readPluginRouteModule", () => {
   it("keeps every declared option, and only the declared ones", () => {
     const head = () => ({ title: "Post" });
     const load = () => ({ title: "Post" });
-    const validateSearch = () => ({});
+    const parseSearch = () => ({});
     const breadcrumb = () => null;
 
     const checked = readPluginRouteModule(
@@ -27,12 +27,12 @@ describe("readPluginRouteModule", () => {
         // Not part of the contract, and not an error: a module is free to
         // export helpers, constants and its own types beside the two names.
         POST_SIZE: 20,
-        route: { breadcrumb, head, load, validateSearch },
+        route: { breadcrumb, head, load, parseSearch },
       },
       "p:page",
     );
 
-    expect(checked.route).toEqual({ breadcrumb, head, load, validateSearch });
+    expect(checked.route).toEqual({ breadcrumb, head, load, parseSearch });
   });
 
   it("ignores an option that is explicitly undefined", () => {
@@ -69,7 +69,7 @@ describe("readPluginRouteModule", () => {
     ).toThrow(/exports a `route` that is not an object/);
   });
 
-  it.each(["breadcrumb", "head", "load", "validateSearch"])(
+  it.each(["breadcrumb", "head", "load", "parseSearch"])(
     "refuses a non-function `route.%s`",
     key => {
       expect(() =>

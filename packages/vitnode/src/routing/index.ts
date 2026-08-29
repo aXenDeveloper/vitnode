@@ -34,7 +34,7 @@ export { buildPluginRouteManifest, pluginRouteId } from "./manifest";
 export type {
   CheckedPluginRouteModule,
   CheckedPluginRouteOptions,
-  PluginRouteContextBase,
+  PluginRouteContext,
   PluginRouteHead,
   PluginRouteHeadArgs,
   PluginRouteLayoutModule,
