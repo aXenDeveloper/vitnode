@@ -1,8 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import {
   RATE_LIMIT_EVENT,

@@ -60,9 +60,13 @@ describe('SSR serves one page in two languages', () => {
   })
 
   it('falls back to English for a key Polish does not translate', async () => {
+    // The rule this pins is that a language may be incomplete: `toggle_sidebar`
+    // is AdminCP copy the Polish override does not carry, and it renders in
+    // English on a page whose every other string is Polish. A translation is
+    // merged key by key over the default locale, never all-or-nothing.
     const { html } = await renderPage(at('/pl'))
 
-    expect(testId(html, 'loading')).toBe('Loading...')
+    expect(testId(html, 'fallback')).toBe('Toggle Sidebar')
   })
 
   it('gives the two URLs the same route and different public hrefs', async () => {

@@ -36,7 +36,22 @@ const filesUnder = (directory: string): string[] => {
 }
 
 /**
- * Every specifier a file imports.
+ * Type-only statements, which the compiler erases and no bundler ever follows.
+ *
+ * Dropped before the scan because this file walks the *runtime* graph, and the
+ * app's own source - unlike the `dist` it walks into - still has its `import
+ * type` lines in it. `lib/session.ts` names the API's users module purely so the
+ * route literals infer; following it would report Hono, Drizzle and the whole
+ * API tree as things a login screen loads.
+ */
+const withoutTypeImports = (source: string): string =>
+  source.replace(
+    /(?:^|\n)\s*(?:import|export)\s+type\s[\s\S]*?\sfrom\s*["'][^"']+["']/g,
+    '\n',
+  )
+
+/**
+ * Every specifier a file imports at runtime.
  *
  * Written to tolerate compiled output as well as source: a package's `dist` is
  * minified onto one line, so `from"./x.js"` carries no whitespace and its
@@ -45,7 +60,7 @@ const filesUnder = (directory: string): string[] => {
  */
 const importsFrom = (path: string): string[] =>
   [
-    ...readFileSync(path, 'utf8').matchAll(
+    ...withoutTypeImports(readFileSync(path, 'utf8')).matchAll(
       /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']/g,
     ),
   ]
@@ -208,22 +223,20 @@ describe('the TanStack Start application stays Next-free', () => {
     expect(offendersIn(webFiles(), NEXT_INTL_RUNTIME)).toEqual([])
   })
 
-  it('reaches for use-intl directly everywhere but the provider bridge', () => {
-    // `next-intl` stays a dependency because `@vitnode/core`'s shared components
-    // import its root entry, which is `use-intl` re-exported - and under
-    // `vite dev` that is a second module record, so the root has to mount its
-    // provider as well as `use-intl`'s (see `intl-provider.test.ts`). That one
-    // file is the whole of the exception: no other module here may reach for
-    // next-intl, and none may reach for anything but its root entry.
-    // Runtime files only: `intl-provider.test.ts` asserts *about* that import,
-    // so it necessarily contains the specifier the scanner is looking for.
+  it('reaches for use-intl directly, and never for next-intl', () => {
+    // There is no exception left. The root used to import `next-intl`'s
+    // `IntlProvider` to cover the second module record core's components read
+    // under `vite dev` (see `intl-provider.test.ts`); it now imports that record
+    // from the package that owns it, `@vitnode/core/lib/i18n/provider`. The two
+    // resolve to the same file today, and only one of them says why.
+    //
+    // Runtime files only: `intl-provider.test.ts` asserts *about* these imports,
+    // so it necessarily contains the specifiers the scanner is looking for.
     const runtime = webFiles().filter(
       (path) => !path.includes(`${sep}tests${sep}`),
     )
 
-    expect(offendersIn(runtime, ['next-intl'])).toEqual([
-      'apps/web/src/routes/__root.tsx',
-    ])
+    expect(offendersIn(runtime, ['next-intl'])).toEqual([])
   })
 
   it('depends on use-intl at the same version next-intl resolves', () => {
@@ -678,6 +691,86 @@ describe('the whole graph this app imports stays Next-free', () => {
       const reached = [...reachableExternals(FILES).externals.keys()]
 
       expect(reached.filter((one) => one.includes('navigation'))).toEqual([])
+    })
+  })
+
+  /**
+   * Every migrated screen at once: the shared client contract is `use-intl`.
+   *
+   * The per-route blocks above ban `next-intl`'s *subpaths*, which reach Next's
+   * request scope and simply do not resolve here. This bans the root entry too,
+   * across everything this app renders, and that is a different bug it is
+   * closing.
+   *
+   * `next-intl`'s root re-exports `use-intl/react`, so a shared component that
+   * imports it *does* read the context core's provider supplies - today. It is
+   * a coincidence of how one package re-exports another, and it held only
+   * because every design-system component that reached for it happened to read
+   * `core.global`, which the root provides to every page. A component that read
+   * a route's own namespace through a second record would render the root's
+   * messages instead: no error, no missing key, just a page in the wrong
+   * language below a shell in the right one. That is the failure this asserts
+   * away, rather than trusting the re-export to keep pointing where it does.
+   *
+   * `routes/api/$` is deliberately not in the list. It mounts the Hono API,
+   * which renders emails with `createTranslator` from `next-intl`'s root - the
+   * framework-free half, on a server, in a graph that renders no React. The
+   * boundary here is about what the *browser* and the SSR pass render.
+   */
+  describe('every migrated screen takes its translations from use-intl', () => {
+    /** One entry per route file the router can render, plus the shell slots. */
+    const RENDERED = [
+      'apps/web/src/routes/__root.tsx',
+      'apps/web/src/routes/_main.tsx',
+      'apps/web/src/routes/_main/index.tsx',
+      'apps/web/src/routes/_main/discover.tsx',
+      'apps/web/src/routes/_main/search.tsx',
+      'apps/web/src/routes/_main/_authenticated.tsx',
+      'apps/web/src/routes/_main/_authenticated/files.tsx',
+      'apps/web/src/routes/_main/_authenticated/settings.tsx',
+      'apps/web/src/routes/_main/_authenticated/settings/index.tsx',
+      'apps/web/src/routes/_main/_authenticated/settings/overview.tsx',
+      'apps/web/src/routes/_main/_authenticated/settings/devices.tsx',
+      'apps/web/src/routes/_main/_authenticated/settings/security.tsx',
+      'apps/web/src/routes/login.tsx',
+      'apps/web/src/routes/login_.reset-password.tsx',
+      'apps/web/src/routes/login_.sso.$providerId.tsx',
+      'apps/web/src/routes/register.tsx',
+      'apps/web/src/components/header.tsx',
+      'apps/web/src/components/layout/main-breadcrumb.tsx',
+      'apps/web/src/components/layout/main-header.tsx',
+      'apps/web/src/components/layout/settings-breadcrumb.tsx',
+      'apps/web/src/components/layout/user-header.tsx',
+      'apps/web/src/components/route-messages.tsx',
+    ]
+
+    it('walks into the design system, where the imports it bans live', () => {
+      // Without this the assertion below would pass on a graph that stopped at
+      // the route files - which is exactly the graph that cannot break. These
+      // four are the components that reached for `next-intl` before this stage.
+      const reached = [...reachableExternals(RENDERED).visited]
+
+      for (const module of [
+        'components/form/auto-form',
+        'components/table/content',
+        'components/ui/button-client',
+        'components/confirm-action/confirm-action-alert-dialog',
+      ]) {
+        expect(
+          reached.some((path) => path.includes(module)),
+          module,
+        ).toBe(true)
+      }
+    })
+
+    it('reaches use-intl', () => {
+      expect([...reachableExternals(RENDERED).externals.keys()]).toContain(
+        'use-intl',
+      )
+    })
+
+    it('never reaches next-intl, root entry included', () => {
+      expect(offenders(RENDERED, ['next-intl'])).toEqual([])
     })
   })
 })

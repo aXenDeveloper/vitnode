@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAnimate, useReducedMotion } from "motion/react";
-import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import {
   type ControllerRenderProps,
@@ -14,6 +13,7 @@ import {
   type UseFormReturn,
   useFormState,
 } from "react-hook-form";
+import { useTranslations } from "use-intl";
 import z from "zod";
 
 import type { routeMiddlewareSchema } from "../../api/modules/middleware/route";

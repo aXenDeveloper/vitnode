@@ -172,6 +172,32 @@ describe('the sets a client is holding', () => {
     ])
   })
 
+  it('maps every mounted set onto the target language, and nothing else', () => {
+    // The warming step of a language switch, as the pure transform it is: the
+    // sets on screen in the current language become the same sets in the new
+    // one, read off the cache rather than from a list anybody maintains.
+    //
+    // Two sets are mounted on every page under the shell - the header's and the
+    // route's - and warming only the first is the bug this pins. The second
+    // provider would then suspend on a key nobody fetched, and a suspend caused
+    // by a store update cannot be deferred: the page blanks for a round trip.
+    const queryClient = clientHolding([
+      { locale: 'en' },
+      { locale: 'en', namespaces: [GLOBAL_NAMESPACE, 'core.search'] },
+      { locale: 'en', namespaces: ['core.auth.settings', GLOBAL_NAMESPACE] },
+    ])
+
+    const warmed = loadedIntlNamespaces(queryClient, 'en').map(
+      (namespaces) => intlQueryOptions({ locale: 'pl', namespaces }).queryKey,
+    )
+
+    expect(warmed).toEqual([
+      ['vitnode', 'intl', 'pl', GLOBAL_NAMESPACE],
+      ['vitnode', 'intl', 'pl', GLOBAL_NAMESPACE, 'core.search'],
+      ['vitnode', 'intl', 'pl', 'core.auth.settings', GLOBAL_NAMESPACE],
+    ])
+  })
+
   it('falls back to the global set on an empty cache', () => {
     // A switch made before anything has loaded still has to warm the one set
     // every page needs.

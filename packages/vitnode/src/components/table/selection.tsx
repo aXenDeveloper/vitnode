@@ -2,9 +2,9 @@
 
 import { XIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "use-intl";
 
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";

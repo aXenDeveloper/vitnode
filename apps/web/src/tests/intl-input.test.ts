@@ -200,7 +200,11 @@ describe('hardening did not change what a valid request returns', () => {
 
     expect(locale).toBe('pl')
     expect(messages).toHaveProperty('core.global.close', 'Zamknij')
-    expect(messages).toHaveProperty('core.global.loading', 'Loading...')
+    // `toggle_sidebar` is AdminCP copy the Polish override does not carry.
+    expect(messages).toHaveProperty(
+      'core.global.toggle_sidebar',
+      'Toggle Sidebar',
+    )
   })
 
   it('still ships only the namespaces that were asked for', async () => {

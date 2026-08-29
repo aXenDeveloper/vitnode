@@ -11,9 +11,9 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ThemeScript } from '@vitnode/core/components/theme-script'
+import { IntlProvider as CoreIntlProvider } from '@vitnode/core/lib/i18n/provider'
 import { VitNodeProviders } from '@vitnode/core/views/layouts/providers'
 import { VitNodeWebSocketProvider } from '@vitnode/core/ws/provider'
-import { IntlProvider as NextIntlProvider } from 'next-intl'
 import { IntlProvider } from 'use-intl'
 
 import { RealtimeListeners } from '#/components/realtime-listeners'
@@ -93,30 +93,37 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
  *
  * ## Why the provider is mounted twice
  *
- * `IntlProvider` is one component - `next-intl` re-exports `use-intl`'s, and
- * `NextIntlClientProvider` is that same component with a `locale` guard in front
- * of it. What differs is the *module record* it was loaded from. This app's
- * source goes through Vite's SSR module runner; `@vitnode/core` is external
- * (`vite.config.ts`) and so is loaded by Node, and the `use-intl` it reaches
- * through `next-intl` is a second instance with its own React context. Proven by
- * identity, in a dev render:
+ * `IntlProvider` is one component, imported from two places, and under
+ * `vite dev` those are two *module records* with two React contexts. This app's
+ * source goes through Vite's SSR module runner, which resolves `use-intl` with
+ * the `development` export condition; `@vitnode/core` is external
+ * (`vite.config.ts`) and so is loaded by Node, which resolves the same package
+ * to its `default` (production) build. Same version, same `node_modules` entry,
+ * two files - and `createContext` runs once per file. Proven by identity, in a
+ * dev render:
  *
- *     IntlProvider (use-intl) === IntlProvider (use-intl/react)  -> true
- *     IntlProvider (use-intl) === IntlProvider (next-intl)       -> false
+ *     IntlProvider (use-intl)      === IntlProvider (use-intl/react)  -> true
+ *     IntlProvider (use-intl)      === IntlProvider (core's provider) -> false
+ *     IntlProvider (core provider) === the record core's components read -> true
  *
- * So core's 151 shared components - every `useTranslations` in the design
- * system - look for a context this app would otherwise never have provided, and
- * the first of them to render throws. A production build happens to bundle both
- * into one chunk and collapse the two into one, which is exactly what made this
- * a `vite dev`-only 500 that the built server never showed.
+ * So core's shared components - every `useTranslations` in the design system -
+ * look for a context this app would otherwise never have provided, and the
+ * first of them to render throws. A production build bundles both into one
+ * chunk and collapses the two into one, which is exactly what made this a
+ * `vite dev`-only 500 that the built server never showed.
  *
- * Both records therefore get the same locale and the same messages. The cost is
- * one extra context; the alternative is the app's own code importing from
- * `next-intl`, which is the dependency this stage is meant to be shedding.
+ * The inner one is core's own export rather than `next-intl`'s. Both resolve to
+ * the same record today - `next-intl` re-exports `use-intl/react`'s provider
+ * verbatim - but only one of them *says* so: `@vitnode/core/lib/i18n/provider`
+ * is loaded by whatever loaded the package, which is by construction the record
+ * core's components read. Reaching through `next-intl` for it was a coincidence
+ * that happened to hold, and it is the dependency this migration is shedding -
+ * no module this app renders imports `next-intl` any more.
  *
- * **Stage 4 deletes the inner one**, once `@vitnode/core` imports `use-intl`
- * directly and there is only one record left to provide.
- * `src/tests/intl-provider.test.ts` fails if it is removed early.
+ * Both records get the same locale and the same messages, from one object.
+ * `RouteMessages` mounts the same pair for a route's own namespaces, for the
+ * same reason. `src/tests/intl-provider.test.ts` fails if either is removed
+ * while two records still exist.
  *
  * Because the locale comes from router state, changing language re-renders this:
  * new locale, new query key, new messages, no page reload.
@@ -144,14 +151,14 @@ function RootComponent() {
 
   return (
     <IntlProvider {...intlProps}>
-      <NextIntlProvider {...intlProps}>
+      <CoreIntlProvider {...intlProps}>
         <VitNodeProviders config={{ debug, locales: i18n.locales, theme }}>
           <VitNodeWebSocketProvider>
             <RealtimeListeners />
             <Outlet />
           </VitNodeWebSocketProvider>
         </VitNodeProviders>
-      </NextIntlProvider>
+      </CoreIntlProvider>
     </IntlProvider>
   )
 }

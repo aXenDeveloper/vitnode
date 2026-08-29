@@ -2,8 +2,8 @@
 
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-import { useLocale, useTranslations } from "next-intl";
 import React from "react";
+import { useLocale, useTranslations } from "use-intl";
 
 import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 import type { LocaleConfig } from "@/vitnode.config";

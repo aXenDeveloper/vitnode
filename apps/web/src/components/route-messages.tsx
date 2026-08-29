@@ -26,16 +26,22 @@ import { intlQueryOptions } from '#/lib/i18n/query'
  * ## Why two providers
  *
  * One component, two module records. `@vitnode/core` is external to Vite's SSR
- * pass and therefore loaded by Node, while this app's source runs through
- * Vite's module runner - so `use-intl` imported here and `use-intl` imported
- * inside a core component can be two records with two React contexts. The
- * outer one covers this app's own code; the inner comes from core itself
+ * pass and therefore loaded by Node, which resolves `use-intl` to its `default`
+ * (production) build, while this app's source runs through Vite's module
+ * runner, which resolves the same package to its `development` build - two
+ * files, two `createContext` calls, two React contexts. The outer one covers
+ * this app's own code; the inner comes from core itself
  * (`@vitnode/core/lib/i18n/provider`) and so is by construction the record
- * every shared component reads. See the long note in `routes/__root.tsx`, which
- * has the same shape for the same reason.
+ * every shared component reads - including the design-system components that
+ * used to reach it through `next-intl`, which now import `use-intl` directly.
+ * See the long note in `routes/__root.tsx`, which mounts the same pair for
+ * `core.global` for the same reason.
  *
  * Both get the same props from one object: two providers that disagreed would
- * render half a page in the wrong language.
+ * render half a page in the wrong language. This is also why the pair belongs
+ * *here*, at the route boundary, rather than around each component that
+ * translates - a leaf that mounted its own would be the one place the route's
+ * namespaces could go missing.
  */
 export const RouteMessages = ({
   children,

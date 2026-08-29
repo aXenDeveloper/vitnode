@@ -13,16 +13,20 @@ import { intlQueryOptions } from '#/lib/i18n/query'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 /**
- * The Stage 3 verification page, and nothing more.
+ * The locale-runtime verification page, and nothing more.
  *
- * No VitNode feature route is migrated yet - `/discover`, search, auth and the
- * AdminCP all still live in the Next.js app. What this renders is the shell and
- * the locale runtime under it: the same page at `/` and at `/pl`, one route
- * file, the language taken from the URL, `<html lang>` following it, the two
- * languages' messages sitting side by side in one cache, and a switcher that
- * moves between them without a reload.
+ * What it renders is the shell and the locale runtime under it: the same page
+ * at `/` and at `/pl`, one route file, the language taken from the URL,
+ * `<html lang>` following it, the two languages' messages sitting side by side
+ * in one cache, and a switcher that moves between them without a reload.
  *
- * It is a scaffold. Stage 4 replaces it with the real homepage.
+ * It reads only `core.global`, from the root's provider, and mounts no
+ * `RouteMessages` of its own - which is the one thing that makes it *not* a
+ * proof that i18n works. A route's own namespaces are a separate contract, and
+ * `/discover` and `/search` are the pages that exercise it. This page passing
+ * while those failed is exactly the shape the Stage 9 i18n regression took.
+ *
+ * It is a scaffold, and the real homepage replaces it when one is designed.
  */
 export const Route = createFileRoute('/_main/')({
   component: Home,
@@ -75,8 +79,8 @@ function Home() {
         </h1>
 
         <p className="text-muted-foreground leading-relaxed text-pretty">
-          The VitNode application shell, rendering outside Next.js. Stage 3 is
-          the locale runtime - no feature route has moved yet.
+          The VitNode application shell, rendering outside Next.js. This page is
+          the locale runtime on its own - the feature routes prove the rest.
         </p>
       </header>
 
@@ -103,9 +107,18 @@ function Home() {
           </span>
         </Row>
 
-        <Row label="Fallback - core.global.loading, untranslated in Polish">
-          <span className="text-sm" data-testid="loading">
-            {t('loading')}
+        {/*
+          Per-key fallback, kept visible. `toggle_sidebar` is AdminCP copy, so
+          the Polish override deliberately does not carry it and this row stays
+          English while everything above it turns. That is the rule VitNode
+          relies on - a half-translated language degrades one string at a time
+          rather than rendering raw keys - and it needs a key that is not going
+          to be translated out from under it, which is why it is not one of the
+          shell strings the migrated routes render.
+        */}
+        <Row label="Fallback - core.global.toggle_sidebar, untranslated in Polish">
+          <span className="text-sm" data-testid="fallback">
+            {t('toggle_sidebar')}
           </span>
         </Row>
 

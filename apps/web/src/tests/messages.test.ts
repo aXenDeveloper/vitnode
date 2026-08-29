@@ -65,15 +65,20 @@ describe('loading one language for one set of namespaces', () => {
   })
 
   it('falls back to the default locale key by key', async () => {
-    // Polish translates five strings. Everything else has to keep rendering
-    // English rather than degrading to `core.global.loading`.
+    // Polish translates what the migrated routes render and nothing else.
+    // `toggle_sidebar` is AdminCP copy it deliberately leaves out, and it has
+    // to keep rendering English rather than degrading to
+    // `core.global.toggle_sidebar`. A language is never all-or-nothing.
     const { messages } = await loadIntlMessages({
       locale: 'pl',
       namespaces: ['core.global'],
     })
 
     expect(messages).toHaveProperty('core.global.save', 'Zapisz')
-    expect(messages).toHaveProperty('core.global.loading', 'Loading...')
+    expect(messages).toHaveProperty(
+      'core.global.toggle_sidebar',
+      'Toggle Sidebar',
+    )
   })
 
   it('merges app overrides on top of what the package ships', async () => {

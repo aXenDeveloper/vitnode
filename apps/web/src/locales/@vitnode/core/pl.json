@@ -1,17 +1,103 @@
 {
   "core": {
     "global": {
+      "back_home": "Wróć na stronę główną",
       "cancel": "Anuluj",
+      "clear_filters": "Wyczyść filtry",
       "close": "Zamknij",
+      "confirm": "Potwierdź",
+      "confirm_action": {
+        "cancel": "Anuluj",
+        "confirm": "Tak, potwierdzam",
+        "desc": "Tej operacji nie można cofnąć.",
+        "title": "Czy na pewno?"
+      },
+      "current_page": "Bieżąca strona",
+      "data_table": {
+        "clear_selection": "Wyczyść zaznaczenie",
+        "select_all": "Zaznacz wszystkie wiersze",
+        "select_row": "Zaznacz wiersz"
+      },
+      "errors": {
+        "400": {
+          "desc": "Nie udało się przetworzyć żądania - jego parametry są nieprawidłowe.",
+          "title": "Nieprawidłowe żądanie"
+        },
+        "403": {
+          "desc": "Nie masz uprawnień do tego zasobu.",
+          "title": "Brak dostępu"
+        },
+        "404": {
+          "desc": "Ups! Strona, której szukasz, nie istnieje.",
+          "title": "Nie znaleziono strony"
+        },
+        "409": {
+          "desc": "Nie udało się ukończyć żądania z powodu konfliktu z bieżącym stanem zasobu.",
+          "title": "Konflikt"
+        },
+        "429": {
+          "desc": "Robisz to zbyt szybko. Zwolnij i spróbuj ponownie za chwilę.",
+          "retry": "Robisz to zbyt szybko. Spróbuj ponownie za {seconds, plural, one {# sekundę} few {# sekundy} many {# sekund} other {# sekundy}}.",
+          "title": "Zbyt wiele żądań"
+        },
+        "500": {
+          "desc": "Przepraszamy, mamy chwilowe problemy techniczne po naszej stronie.",
+          "title": "Wewnętrzny błąd serwera"
+        },
+        "captcha_internal_error": "Weryfikacja captcha nie powiodła się. Spróbuj ponownie później.",
+        "field_min_length": "To pole musi mieć co najmniej {min, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}}.",
+        "field_required": "To pole jest wymagane.",
+        "internal_server_error": "Wewnętrzny błąd serwera.",
+        "reference": "Numer błędu: {digest}",
+        "title": "Ups! Coś poszło nie tak.",
+        "try_again": "Spróbuj ponownie"
+      },
+      "go_back": "Wróć",
+      "go_to_next_page": "Przejdź do następnej strony",
+      "go_to_page": "Przejdź do strony",
+      "go_to_prev_page": "Przejdź do poprzedniej strony",
       "language_switcher": "Zmień język",
+      "loading": "Ładowanie...",
+      "login": "Zaloguj się",
+      "next": "Dalej",
+      "next_page": "Następna strona",
+      "no_results": {
+        "desc": "Spróbuj zmienić wyszukiwanie lub filtry.",
+        "title": "Brak wyników"
+      },
+      "optional": "Opcjonalne",
+      "or": "lub",
+      "previous": "Wstecz",
+      "previous_page": "Poprzednia strona",
+      "register": "Zarejestruj się",
+      "remove": "Usuń",
+      "results_not_found": "Brak wyników",
       "save": "Zapisz",
-      "theme_switcher": "Zmień motyw"
+      "search_placeholder": "Szukaj...",
+      "select_language": "Wybierz język",
+      "select_option": "Wybierz opcję",
+      "select_options": "Wybierz opcje",
+      "selected_count": "Zaznaczono: {count}",
+      "submit": "Wyślij",
+      "theme_switcher": "Zmień motyw",
+      "user_bar": {
+        "admin_cp": "Panel administratora",
+        "files": "Moje pliki",
+        "log_out": "Wyloguj się",
+        "mod_cp": "Panel moderatora",
+        "my_profile": "Mój profil",
+        "settings": "Ustawienia"
+      }
     },
     "search": {
       "title": "Szukaj",
       "desc": "Przeszukaj wszystko w społeczności.",
       "discoverTitle": "Odkrywaj",
       "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
+      "nav": {
+        "discover": "Odkrywaj",
+        "search": "Szukaj"
+      },
       "placeholder": "Szukaj…",
       "empty": "Nic tu jeszcze nie ma.",
       "loadMore": "Wczytaj więcej",
@@ -26,6 +112,178 @@
         "blog_post": "Wpis",
         "unknown": "Treść"
       }
+    },
+    "auth": {
+      "sign_in": {
+        "desc": "Witaj ponownie! Zaloguj się na swoje konto.",
+        "do_not_have_account": "Nie masz konta? <link>Zarejestruj się</link>.",
+        "email": {
+          "invalid": "Nieprawidłowy adres e-mail.",
+          "label": "Adres e-mail"
+        },
+        "errors": {
+          "access_denied": {
+            "desc": "Adres e-mail lub hasło są nieprawidłowe. Spróbuj ponownie i sprawdź, czy nie masz włączonego Caps Locka.",
+            "title": "Nieprawidłowe dane logowania"
+          }
+        },
+        "password": {
+          "label": "Hasło",
+          "required": "Hasło jest wymagane.",
+          "reset": "Nie pamiętasz hasła?"
+        },
+        "submit": "Zaloguj się"
+      },
+      "sign_up": {
+        "already_have_account": "Masz już konto? <link>Zaloguj się</link>.",
+        "desc": "Cześć! Załóż konto, aby zacząć.",
+        "email": {
+          "exists": "Ten adres e-mail jest już zajęty.",
+          "invalid": "Nieprawidłowy adres e-mail.",
+          "label": "Adres e-mail"
+        },
+        "email_confirmation": {
+          "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem.",
+          "desc": "Wysłaliśmy link potwierdzający na Twój adres e-mail",
+          "title": "Sprawdź swoją skrzynkę"
+        },
+        "newsletter": {
+          "desc": "Otrzymuj najnowsze informacje i aktualizacje.",
+          "label": "Newsletter"
+        },
+        "password": {
+          "invalid": "Hasło jest zbyt słabe.",
+          "label": "Hasło",
+          "requirements": {
+            "label": "Hasło powinno zawierać:",
+            "min_length": "Co najmniej 8 znaków",
+            "number": "Co najmniej jedną cyfrę",
+            "special_char": "Co najmniej jeden znak specjalny",
+            "uppercase": "Co najmniej jedną wielką literę"
+          }
+        },
+        "submit": "Zarejestruj się",
+        "terms": {
+          "desc": "Akceptujesz nasze <link>dokumenty prawne i polityki</link>.",
+          "label": "Akceptuję regulamin",
+          "required": "Musisz zaakceptować regulamin."
+        },
+        "username": {
+          "exists": "Ta nazwa użytkownika jest już zajęta.",
+          "label": "Nazwa użytkownika",
+          "max_length": "Nazwa użytkownika może mieć najwyżej 32 znaki.",
+          "min_length": "Nazwa użytkownika musi mieć co najmniej 3 znaki.",
+          "your_user_code": "Twój kod użytkownika: <code></code>"
+        }
+      },
+      "sso": {
+        "access_denied": "Odmówiono dostępu do aplikacji lub żądanie wygasło. Spróbuj ponownie.",
+        "email_exists": {
+          "desc": "Konto z tym adresem e-mail już istnieje. Zaloguj się inną metodą i połącz konto <provider></provider> w ustawieniach profilu.",
+          "sign_in": "Przejdź do logowania",
+          "title": "Nie możesz zalogować się przez <provider></provider>"
+        },
+        "or": "Lub kontynuuj przez"
+      },
+      "reset_password": {
+        "confirmation": {
+          "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem.",
+          "desc": "Wysłaliśmy link do zresetowania hasła na Twój adres e-mail:",
+          "title": "Sprawdź swoją skrzynkę"
+        },
+        "desc": "Podaj swój adres e-mail, aby otrzymać link do zresetowania hasła.",
+        "submit": "Wyślij link resetujący",
+        "title": "Resetowanie hasła"
+      },
+      "change_password": {
+        "desc": "Podaj poniżej swoje nowe hasło.",
+        "submit": "Zmień hasło",
+        "success": {
+          "desc": "Możesz teraz zalogować się nowym hasłem.",
+          "title": "Hasło zostało zmienione"
+        },
+        "title": "Zmiana hasła"
+      },
+      "settings": {
+        "desc": "Zarządzaj profilem, bezpieczeństwem i preferencjami konta.",
+        "devices": {
+          "browser": "Przeglądarka",
+          "current_device": "To urządzenie",
+          "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",
+          "empty": "Brak aktywnych urządzeń.",
+          "ip_address": "Adres IP",
+          "last_active": "Ostatnia aktywność",
+          "revoke": {
+            "action": "Wyloguj urządzenie",
+            "confirm": "Wyloguj",
+            "desc": "Zostaniesz wylogowany z urządzenia {os}. Aby wrócić, trzeba będzie zalogować się na nim ponownie.",
+            "success": "Urządzenie zostało wylogowane.",
+            "title": "Wylogować to urządzenie?"
+          },
+          "session_expires": "Sesja wygasa",
+          "title": "Urządzenia"
+        },
+        "nav": {
+          "devices": "Urządzenia",
+          "overview": "Przegląd",
+          "security": "Bezpieczeństwo"
+        },
+        "title": "Ustawienia"
+      }
+    },
+    "files": {
+      "actions": {
+        "delete": "Usuń",
+        "download": "Pobierz"
+      },
+      "bulk_delete": {
+        "confirm": "Usuń",
+        "desc": "{count, plural, one {Czy na pewno chcesz usunąć ten plik? Zostanie trwale usunięty i nie będzie można tego cofnąć.} other {Czy na pewno chcesz usunąć te # pliki? Zostaną trwale usunięte i nie będzie można tego cofnąć.}}",
+        "in_use": {
+          "content": "{count, plural, one {# plik jest nadal używany przez treść, więc został zachowany. Usuń go najpierw w treści.} few {# pliki są nadal używane przez treść, więc zostały zachowane. Usuń je najpierw w treści.} many {# plików jest nadal używanych przez treść, więc zostały zachowane. Usuń je najpierw w treści.} other {# pliku jest nadal używane przez treść, więc zostało zachowane. Usuń je najpierw w treści.}}",
+          "revisions": {
+            "confirm": "Usuń mimo to",
+            "desc": "{count, plural, one {# plik nie jest już nigdzie wyświetlany, ale zapisane wersje nadal go zachowują. Po usunięciu przywrócenie tych wersji nie przywróci pliku.} few {# pliki nie są już nigdzie wyświetlane, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.} many {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.} other {# pliku nie jest już nigdzie wyświetlane, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.}} Tej operacji nie można cofnąć."
+          }
+        },
+        "success": "{count, plural, one {Usunięto # plik.} few {Usunięto # pliki.} many {Usunięto # plików.} other {Usunięto # pliku.}}",
+        "title": "{count, plural, one {Usuń # plik} few {Usuń # pliki} many {Usuń # plików} other {Usuń # pliku}}"
+      },
+      "delete": {
+        "confirm": "Usuń",
+        "desc": "Czy na pewno chcesz usunąć ten plik? Zostanie trwale usunięty i nie będzie można tego cofnąć.",
+        "in_use": {
+          "content": "Ten plik jest nadal używany przez treść, więc po usunięciu ta treść wskazywałaby na nic. Usuń go najpierw w treści.",
+          "revisions": {
+            "confirm": "Usuń mimo to",
+            "desc": "Ten plik nie jest już nigdzie wyświetlany, ale nadal zachowuje go {count, plural, one {# zapisana wersja} few {# zapisane wersje} many {# zapisanych wersji} other {# zapisanej wersji}}. Po usunięciu przywrócenie tych wersji nie przywróci pliku. Tej operacji nie można cofnąć."
+          }
+        },
+        "success": "Plik został usunięty.",
+        "title": "Usuń plik"
+      },
+      "desc": "Pliki przesłane na Twoje konto.",
+      "download": {
+        "error": "Nie udało się pobrać pliku."
+      },
+      "list": {
+        "createdAt": "Przesłano",
+        "dimensions": "Wymiary",
+        "folder": "Folder",
+        "metadata": "Metadane",
+        "name": "Nazwa",
+        "preview": "Podgląd",
+        "size": "Rozmiar"
+      },
+      "metadata": {
+        "empty": "—",
+        "title": "Metadane"
+      },
+      "noResults": {
+        "description": "Przesłane pliki pojawią się tutaj.",
+        "title": "Brak plików"
+      },
+      "title": "Moje pliki"
     }
   }
 }
