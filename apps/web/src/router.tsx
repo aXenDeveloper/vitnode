@@ -88,7 +88,7 @@ const routeTree = withPluginRoutes(
  * `rewrite` is what makes one route tree serve two public URL shapes: `/pl/...`
  * arrives, `/...` is matched, and every link the router builds gets the prefix
  * back. No route file mentions a locale, so nothing here has to be duplicated
- * per language - see `lib/i18n/client.ts`.
+ * per language - see `@vitnode/core/tanstack/i18n`.
  */
 export function getRouter() {
   const queryClient = createVitNodeQueryClient()

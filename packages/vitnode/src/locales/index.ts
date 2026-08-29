@@ -6,12 +6,16 @@ import type { LocaleMessagesMap } from "@/lib/i18n/types";
  * Server-only strings (emails) live in the sibling `api/` barrel instead, so an
  * API-only app never loads the admin UI's messages.
  *
- * Only `en` is complete. Every other file translates the strings VitNode's own
- * pages render and deliberately stops there - `loadMessages` puts the default
- * locale underneath as a per-key fallback, so a half-translated language renders
+ * Only `en` is complete, and no other file has to be. `loadMessages` puts the
+ * default locale underneath as a per-key fallback, so a partial language renders
  * English for the keys it leaves out rather than showing `core.global.close`.
- * An installation reworded a string by overriding it in its own `src/locales`,
- * not by completing a file here.
+ *
+ * These are the *canonical* translations, which is the whole reason they live
+ * here rather than in each app: an app that carries its own copy of a language
+ * this package already ships is an app whose Polish silently diverges from
+ * everyone else's, and while two VitNode frontends run side by side that
+ * divergence is visible in one product. An installation reworders a string by
+ * overriding that one key in its own `src/locales`, never by forking a file.
  *
  * The annotation is deliberate - inferring it would inline the whole message
  * tree into the emitted `.d.ts`. Key-level types come from the `next-intl`

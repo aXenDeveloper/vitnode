@@ -206,7 +206,7 @@ describe('where the language of a request comes from', () => {
   it('can negotiate Accept-Language, which this runtime deliberately does not', () => {
     // The shared helper supports it because another runtime may want it. The
     // TanStack runtime does not wire it up - see the block at the end of this
-    // file, and the note in `lib/i18n/client.ts`.
+    // file, and the note in `@vitnode/core/tanstack/i18n/locale.ts`.
     expect(resolveLocale('/admin', { acceptLanguage: 'pl;q=0.9' })).toBe('pl')
   })
 })

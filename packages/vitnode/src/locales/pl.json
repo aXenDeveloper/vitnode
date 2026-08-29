@@ -1,102 +1,58 @@
 {
+  "@vitnode/core": {
+    "title": "Rdzeń"
+  },
+  "@vitnode/core:dashboard": "Pulpit",
+  "@vitnode/core:dashboard:can_view": "Wyświetlanie własnego układu pulpitu",
+  "@vitnode/core:dashboard:can_edit": "Dostosowywanie własnego układu pulpitu",
+  "@vitnode/core:users": "Użytkownicy",
+  "@vitnode/core:users:can_view": "Wyświetlanie listy użytkowników",
+  "@vitnode/core:users:can_create": "Tworzenie użytkowników",
+  "@vitnode/core:users:can_edit": "Edytowanie użytkowników",
+  "@vitnode/core:users:can_edit_admin": "Edytowanie użytkowników z uprawnieniami administratora",
+  "@vitnode/core:roles": "Role",
+  "@vitnode/core:roles:can_view": "Wyświetlanie listy ról",
+  "@vitnode/core:roles:can_create": "Tworzenie ról",
+  "@vitnode/core:roles:can_edit": "Edytowanie ról",
+  "@vitnode/core:roles:can_edit_admin": "Edytowanie ról z uprawnieniami administratora",
+  "@vitnode/core:roles:can_delete": "Usuwanie ról",
+  "@vitnode/core:roles:can_delete_admin": "Usuwanie ról z uprawnieniami administratora",
+  "@vitnode/core:debug": "Panel debugowania",
+  "@vitnode/core:debug:can_view": "Wyświetlanie panelu debugowania",
+  "@vitnode/core:debug:can_clear_cache": "Czyszczenie pamięci podręcznej",
+  "@vitnode/core:system": "System",
+  "@vitnode/core:system:can_view": "Wyświetlanie integracji",
+  "@vitnode/core:system:can_send_test_email": "Wysyłanie testowej wiadomości e-mail",
+  "@vitnode/core:system:can_test_storage": "Testowanie magazynu plików",
+  "@vitnode/core:system:can_test_ai": "Testowanie AI",
+  "@vitnode/core:files": "Pliki",
+  "@vitnode/core:files:can_view": "Wyświetlanie przesłanych plików",
+  "@vitnode/core:files:can_download": "Pobieranie plików",
+  "@vitnode/core:files:can_delete": "Usuwanie plików",
+  "@vitnode/core:queue": "Zadania w kolejce",
+  "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
+  "@vitnode/core:cron": "Zadania Cron",
+  "@vitnode/core:cron:can_view": "Wyświetlanie zadań cron",
+  "@vitnode/core:cron:can_run": "Uruchamianie zadań cron",
+  "@vitnode/core:staff_moderators": "Zespół: Moderatorzy",
+  "@vitnode/core:staff_moderators:can_view": "Wyświetlanie listy moderatorów",
+  "@vitnode/core:staff_moderators:can_create": "Tworzenie moderatorów",
+  "@vitnode/core:staff_moderators:can_edit": "Edytowanie uprawnień moderatorów",
+  "@vitnode/core:staff_moderators:can_delete": "Usuwanie moderatorów",
+  "@vitnode/core:staff_admins": "Zespół: Administratorzy",
+  "@vitnode/core:staff_admins:can_view": "Wyświetlanie listy administratorów",
+  "@vitnode/core:staff_admins:can_create": "Tworzenie administratorów",
+  "@vitnode/core:staff_admins:can_edit": "Edytowanie uprawnień administratorów",
+  "@vitnode/core:staff_admins:can_delete": "Usuwanie administratorów",
   "core": {
-    "global": {
-      "back_home": "Wróć na stronę główną",
-      "cancel": "Anuluj",
-      "clear_filters": "Wyczyść filtry",
-      "close": "Zamknij",
-      "confirm": "Potwierdź",
-      "confirm_action": {
-        "cancel": "Anuluj",
-        "confirm": "Tak, potwierdzam",
-        "desc": "Tej operacji nie można cofnąć.",
-        "title": "Czy na pewno?"
-      },
-      "current_page": "Bieżąca strona",
-      "data_table": {
-        "clear_selection": "Wyczyść zaznaczenie",
-        "select_all": "Zaznacz wszystkie wiersze",
-        "select_row": "Zaznacz wiersz"
-      },
-      "errors": {
-        "400": {
-          "desc": "Nie udało się przetworzyć żądania - jego parametry są nieprawidłowe.",
-          "title": "Nieprawidłowe żądanie"
-        },
-        "403": {
-          "desc": "Nie masz uprawnień do tego zasobu.",
-          "title": "Brak dostępu"
-        },
-        "404": {
-          "desc": "Ups! Strona, której szukasz, nie istnieje.",
-          "title": "Nie znaleziono strony"
-        },
-        "409": {
-          "desc": "Nie udało się ukończyć żądania z powodu konfliktu z bieżącym stanem zasobu.",
-          "title": "Konflikt"
-        },
-        "429": {
-          "desc": "Robisz to zbyt szybko. Zwolnij i spróbuj ponownie za chwilę.",
-          "retry": "Robisz to zbyt szybko. Spróbuj ponownie za {seconds, plural, one {# sekundę} few {# sekundy} many {# sekund} other {# sekundy}}.",
-          "title": "Zbyt wiele żądań"
-        },
-        "500": {
-          "desc": "Przepraszamy, mamy chwilowe problemy techniczne po naszej stronie.",
-          "title": "Wewnętrzny błąd serwera"
-        },
-        "captcha_internal_error": "Weryfikacja captcha nie powiodła się. Spróbuj ponownie później.",
-        "field_min_length": "To pole musi mieć co najmniej {min, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}}.",
-        "field_required": "To pole jest wymagane.",
-        "internal_server_error": "Wewnętrzny błąd serwera.",
-        "reference": "Numer błędu: {digest}",
-        "title": "Ups! Coś poszło nie tak.",
-        "try_again": "Spróbuj ponownie"
-      },
-      "go_back": "Wróć",
-      "go_to_next_page": "Przejdź do następnej strony",
-      "go_to_page": "Przejdź do strony",
-      "go_to_prev_page": "Przejdź do poprzedniej strony",
-      "language_switcher": "Zmień język",
-      "loading": "Ładowanie...",
-      "login": "Zaloguj się",
-      "next": "Dalej",
-      "next_page": "Następna strona",
-      "no_results": {
-        "desc": "Spróbuj zmienić wyszukiwanie lub filtry.",
-        "title": "Brak wyników"
-      },
-      "optional": "Opcjonalne",
-      "or": "lub",
-      "previous": "Wstecz",
-      "previous_page": "Poprzednia strona",
-      "register": "Zarejestruj się",
-      "remove": "Usuń",
-      "results_not_found": "Brak wyników",
-      "save": "Zapisz",
-      "search_placeholder": "Szukaj...",
-      "select_language": "Wybierz język",
-      "select_option": "Wybierz opcję",
-      "select_options": "Wybierz opcje",
-      "selected_count": "Zaznaczono: {count}",
-      "submit": "Wyślij",
-      "theme_switcher": "Zmień motyw",
-      "user_bar": {
-        "admin_cp": "Panel administratora",
-        "files": "Moje pliki",
-        "log_out": "Wyloguj się",
-        "mod_cp": "Panel moderatora",
-        "my_profile": "Mój profil",
-        "settings": "Ustawienia"
-      }
-    },
     "search": {
       "title": "Szukaj",
       "desc": "Przeszukaj wszystko w społeczności.",
       "discoverTitle": "Odkrywaj",
       "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
       "nav": {
-        "discover": "Odkrywaj",
-        "search": "Szukaj"
+        "search": "Szukaj",
+        "discover": "Odkrywaj"
       },
       "placeholder": "Szukaj…",
       "empty": "Nic tu jeszcze nie ma.",
@@ -111,179 +67,964 @@
       "types": {
         "blog_post": "Wpis",
         "unknown": "Treść"
+      },
+      "userTab": {
+        "overview": "Przegląd",
+        "timeline": "Oś czasu"
+      },
+      "admin": {
+        "title": "Szukaj",
+        "desc": "Silnik wyszukiwania treści i status indeksu.",
+        "healthy": "Działa",
+        "unhealthy": "Niedostępny",
+        "never": "Nigdy",
+        "rebuild": "Przebuduj indeks",
+        "rebuilding": "Kolejkowanie…",
+        "rebuildQueued": "Zlecono przebudowę indeksu wyszukiwania.",
+        "rebuildError": "Nie udało się zlecić przebudowy.",
+        "reindex": "Przeindeksuj",
+        "reindexQueued": "Przeindeksowanie dla {collection} zostało dodane do kolejki.",
+        "cron": {
+          "title": "Zadania w tle wymagają skonfigurowanego adaptera cron",
+          "desc": "Przebudowa nie zostanie uruchomiona, dopóki cron nie będzie aktywny. Skonfiguruj adapter w Integracjach, aby włączyć zaplanowane ponowne indeksowanie.",
+          "dismiss": "Odrzuć"
+        },
+        "stats": {
+          "status": "Status",
+          "statusHealthy": "Wszystkie systemy działają poprawnie",
+          "statusUnhealthy": "Wyszukiwarka niedostępna",
+          "engine": "Silnik",
+          "engineDesc": "Adapter wyszukiwania pełnotekstowego",
+          "indexed": "Zindeksowane elementy",
+          "indexedDesc": "W {count, plural, =0 {brak kolekcji} one {# kolekcji} few {# kolekcjach} many {# kolekcjach} other {# kolekcji}}",
+          "lastIndexed": "Ostatnio zindeksowane",
+          "lastIndexedNever": "Brak zindeksowanych treści"
+        },
+        "collections": {
+          "title": "Zindeksowane kolekcje",
+          "desc": "Pokrycie i świeżość dla każdego typu treści. Filtruj, aby podejrzeć, co znajdują użytkownicy.",
+          "count": "{shown} z {total}",
+          "searchPlaceholder": "Przeszukaj kolekcje…",
+          "columns": {
+            "collection": "Kolekcja",
+            "items": "Elementy",
+            "coverage": "Pokrycie",
+            "lastIndexed": "Ostatnio zindeksowane"
+          },
+          "status": {
+            "indexed": "Zindeksowane",
+            "stale": "Nieaktualne",
+            "empty": "Niezindeksowane"
+          },
+          "empty": "Nie znaleziono kolekcji",
+          "emptyDesc": "Żaden element nie pasuje do wyszukiwania. Spróbuj użyć innego terminu."
+        }
+      }
+    },
+    "global": {
+      "close": "Zamknij",
+      "confirm": "Potwierdź",
+      "previous": "Wstecz",
+      "next": "Dalej",
+      "current_page": "Bieżąca strona",
+      "go_to_page": "Przejdź do strony",
+      "previous_page": "Poprzednia strona",
+      "next_page": "Następna strona",
+      "remove": "Usuń",
+      "editor": {
+        "undo": "Cofnij",
+        "redo": "Ponów",
+        "paragraph": "Akapit",
+        "heading": "Nagłówek {level}",
+        "bold": "Pogrubienie",
+        "italic": "Kursywa",
+        "underline": "Podkreślenie",
+        "ordered_list": "Lista numerowana",
+        "bullet_list": "Lista punktowana",
+        "text_format_more": {
+          "label": "Więcej formatów tekstu",
+          "strike": "Przekreślenie"
+        },
+        "alignments": {
+          "left": "Wyrównaj do lewej",
+          "center": "Wyśrodkuj",
+          "right": "Wyrównaj do prawej",
+          "justify": "Wyjustuj"
+        }
+      },
+      "theme_switcher": "Zmień motyw",
+      "language_switcher": "Zmień język",
+      "toggle_sidebar": "Przełącz pasek boczny",
+      "no_results": {
+        "title": "Brak wyników",
+        "desc": "Spróbuj zmienić wyszukiwanie lub filtry."
+      },
+      "are_you_sure_want_to_leave_form": {
+        "title": "Czy na pewno chcesz opuścić ten formularz?",
+        "desc": "Twoje zmiany nie zostaną zapisane.",
+        "cancel": "Anuluj",
+        "confirm": "Tak, opuść"
+      },
+      "confirm_action": {
+        "title": "Czy na pewno?",
+        "desc": "Tej operacji nie można cofnąć.",
+        "cancel": "Anuluj",
+        "confirm": "Tak, potwierdzam"
+      },
+      "search_placeholder": "Szukaj...",
+      "results_not_found": "Brak wyników",
+      "selected_count": "Zaznaczono: {count}",
+      "clear_filters": "Wyczyść filtry",
+      "data_table": {
+        "select_all": "Zaznacz wszystkie wiersze",
+        "select_row": "Zaznacz wiersz",
+        "clear_selection": "Wyczyść zaznaczenie"
+      },
+      "date": "{date, date}",
+      "date_medium": "{date, date, medium}",
+      "date_short": "{date, date, short}",
+      "register": "Zarejestruj się",
+      "login": "Zaloguj się",
+      "save": "Zapisz",
+      "submit": "Wyślij",
+      "cancel": "Anuluj",
+      "optional": "Opcjonalne",
+      "loading": "Ładowanie...",
+      "or": "lub",
+      "back_home": "Wróć na stronę główną",
+      "go_back": "Wróć",
+      "select_option": "Wybierz opcję",
+      "select_options": "Wybierz opcje",
+      "select_language": "Wybierz język",
+      "pick_color": "Wybierz kolor",
+      "file": {
+        "any_format": "Dowolny typ pliku",
+        "max_size": "Maksymalny rozmiar pliku: {size}",
+        "drop": "Przeciągnij plik tutaj",
+        "choose": "Wybierz plik",
+        "replace": "Zmień plik",
+        "remove": "Usuń plik",
+        "uploading": "Przesyłanie...",
+        "errors": {
+          "too_large": "Ten plik ma {size}. Maksimum to {max}.",
+          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}."
+        }
+      },
+      "go_to_prev_page": "Przejdź do poprzedniej strony",
+      "go_to_next_page": "Przejdź do następnej strony",
+      "errors": {
+        "400": {
+          "title": "Nieprawidłowe żądanie",
+          "desc": "Nie udało się przetworzyć żądania - jego parametry są nieprawidłowe."
+        },
+        "403": {
+          "title": "Brak dostępu",
+          "desc": "Nie masz uprawnień do tego zasobu."
+        },
+        "404": {
+          "title": "Nie znaleziono strony",
+          "desc": "Ups! Strona, której szukasz, nie istnieje."
+        },
+        "409": {
+          "title": "Konflikt",
+          "desc": "Nie udało się ukończyć żądania z powodu konfliktu z bieżącym stanem zasobu."
+        },
+        "429": {
+          "title": "Zbyt wiele żądań",
+          "desc": "Robisz to zbyt szybko. Zwolnij i spróbuj ponownie za chwilę.",
+          "retry": "Robisz to zbyt szybko. Spróbuj ponownie za {seconds, plural, one {# sekundę} few {# sekundy} many {# sekund} other {# sekundy}}."
+        },
+        "500": {
+          "title": "Wewnętrzny błąd serwera",
+          "desc": "Przepraszamy, mamy chwilowe problemy techniczne po naszej stronie."
+        },
+        "title": "Ups! Coś poszło nie tak.",
+        "try_again": "Spróbuj ponownie",
+        "reference": "Numer błędu: {digest}",
+        "internal_server_error": "Wewnętrzny błąd serwera.",
+        "field_required": "To pole jest wymagane.",
+        "field_min_length": "To pole musi mieć co najmniej {min, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}}.",
+        "captcha_internal_error": "Weryfikacja captcha nie powiodła się. Spróbuj ponownie później."
+      },
+      "user_bar": {
+        "my_profile": "Mój profil",
+        "log_out": "Wyloguj się",
+        "mod_cp": "Panel moderatora",
+        "admin_cp": "Panel administratora",
+        "settings": "Ustawienia",
+        "files": "Moje pliki"
+      }
+    },
+    "files": {
+      "title": "Moje pliki",
+      "desc": "Pliki przesłane na Twoje konto.",
+      "list": {
+        "preview": "Podgląd",
+        "name": "Nazwa",
+        "folder": "Folder",
+        "size": "Rozmiar",
+        "dimensions": "Wymiary",
+        "metadata": "Metadane",
+        "createdAt": "Przesłano"
+      },
+      "metadata": {
+        "title": "Metadane",
+        "empty": "—"
+      },
+      "actions": {
+        "download": "Pobierz",
+        "delete": "Usuń"
+      },
+      "download": {
+        "error": "Nie udało się pobrać pliku."
+      },
+      "delete": {
+        "title": "Usuń plik",
+        "desc": "Czy na pewno chcesz usunąć ten plik? Zostanie trwale usunięty i nie będzie można tego cofnąć.",
+        "confirm": "Usuń",
+        "success": "Plik został usunięty.",
+        "in_use": {
+          "content": "Ten plik jest nadal używany przez treść, więc po usunięciu ta treść wskazywałaby na nic. Usuń go najpierw w treści.",
+          "revisions": {
+            "desc": "Ten plik nie jest już nigdzie wyświetlany, ale nadal zachowuje go {count, plural, one {# zapisana wersja} few {# zapisane wersje} many {# zapisanych wersji} other {# zapisanej wersji}}. Po usunięciu przywrócenie tych wersji nie przywróci pliku. Tej operacji nie można cofnąć.",
+            "confirm": "Usuń mimo to"
+          }
+        }
+      },
+      "bulk_delete": {
+        "title": "{count, plural, one {Usuń # plik} few {Usuń # pliki} many {Usuń # plików} other {Usuń # pliku}}",
+        "desc": "{count, plural, one {Czy na pewno chcesz usunąć ten plik? Zostanie trwale usunięty i nie będzie można tego cofnąć.} other {Czy na pewno chcesz usunąć te # pliki? Zostaną trwale usunięte i nie będzie można tego cofnąć.}}",
+        "confirm": "Usuń",
+        "success": "{count, plural, one {Usunięto # plik.} few {Usunięto # pliki.} many {Usunięto # plików.} other {Usunięto # pliku.}}",
+        "in_use": {
+          "content": "{count, plural, one {# plik jest nadal używany przez treść, więc został zachowany. Usuń go najpierw w treści.} few {# pliki są nadal używane przez treść, więc zostały zachowane. Usuń je najpierw w treści.} many {# plików jest nadal używanych przez treść, więc zostały zachowane. Usuń je najpierw w treści.} other {# pliku jest nadal używane przez treść, więc zostało zachowane. Usuń je najpierw w treści.}}",
+          "revisions": {
+            "desc": "{count, plural, one {# plik nie jest już nigdzie wyświetlany, ale zapisane wersje nadal go zachowują. Po usunięciu przywrócenie tych wersji nie przywróci pliku.} few {# pliki nie są już nigdzie wyświetlane, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.} many {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.} other {# pliku nie jest już nigdzie wyświetlane, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.}} Tej operacji nie można cofnąć.",
+            "confirm": "Usuń mimo to"
+          }
+        }
+      },
+      "noResults": {
+        "title": "Brak plików",
+        "description": "Przesłane pliki pojawią się tutaj."
       }
     },
     "auth": {
+      "sso": {
+        "or": "Lub kontynuuj przez",
+        "access_denied": "Odmówiono dostępu do aplikacji lub żądanie wygasło. Spróbuj ponownie.",
+        "email_exists": {
+          "title": "Nie możesz zalogować się przez <provider></provider>",
+          "desc": "Konto z tym adresem e-mail już istnieje. Zaloguj się inną metodą i połącz konto <provider></provider> w ustawieniach profilu.",
+          "sign_in": "Przejdź do logowania"
+        }
+      },
+      "sign_up": {
+        "desc": "Cześć! Załóż konto, aby zacząć.",
+        "already_have_account": "Masz już konto? <link>Zaloguj się</link>.",
+        "submit": "Zarejestruj się",
+        "username": {
+          "label": "Nazwa użytkownika",
+          "min_length": "Nazwa użytkownika musi mieć co najmniej 3 znaki.",
+          "max_length": "Nazwa użytkownika może mieć najwyżej 32 znaki.",
+          "exists": "Ta nazwa użytkownika jest już zajęta.",
+          "your_user_code": "Twój kod użytkownika: <code></code>"
+        },
+        "email": {
+          "label": "Adres e-mail",
+          "invalid": "Nieprawidłowy adres e-mail.",
+          "exists": "Ten adres e-mail jest już zajęty."
+        },
+        "password": {
+          "label": "Hasło",
+          "invalid": "Hasło jest zbyt słabe.",
+          "requirements": {
+            "label": "Hasło powinno zawierać:",
+            "min_length": "Co najmniej 8 znaków",
+            "uppercase": "Co najmniej jedną wielką literę",
+            "number": "Co najmniej jedną cyfrę",
+            "special_char": "Co najmniej jeden znak specjalny"
+          }
+        },
+        "terms": {
+          "label": "Akceptuję regulamin",
+          "required": "Musisz zaakceptować regulamin.",
+          "desc": "Akceptujesz nasze <link>dokumenty prawne i polityki</link>."
+        },
+        "newsletter": {
+          "label": "Newsletter",
+          "desc": "Otrzymuj najnowsze informacje i aktualizacje."
+        },
+        "email_confirmation": {
+          "title": "Sprawdź swoją skrzynkę",
+          "desc": "Wysłaliśmy link potwierdzający na Twój adres e-mail",
+          "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem."
+        }
+      },
       "sign_in": {
         "desc": "Witaj ponownie! Zaloguj się na swoje konto.",
         "do_not_have_account": "Nie masz konta? <link>Zarejestruj się</link>.",
         "email": {
-          "invalid": "Nieprawidłowy adres e-mail.",
-          "label": "Adres e-mail"
-        },
-        "errors": {
-          "access_denied": {
-            "desc": "Adres e-mail lub hasło są nieprawidłowe. Spróbuj ponownie i sprawdź, czy nie masz włączonego Caps Locka.",
-            "title": "Nieprawidłowe dane logowania"
-          }
+          "label": "Adres e-mail",
+          "invalid": "Nieprawidłowy adres e-mail."
         },
         "password": {
           "label": "Hasło",
           "required": "Hasło jest wymagane.",
           "reset": "Nie pamiętasz hasła?"
         },
-        "submit": "Zaloguj się"
-      },
-      "sign_up": {
-        "already_have_account": "Masz już konto? <link>Zaloguj się</link>.",
-        "desc": "Cześć! Załóż konto, aby zacząć.",
-        "email": {
-          "exists": "Ten adres e-mail jest już zajęty.",
-          "invalid": "Nieprawidłowy adres e-mail.",
-          "label": "Adres e-mail"
-        },
-        "email_confirmation": {
-          "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem.",
-          "desc": "Wysłaliśmy link potwierdzający na Twój adres e-mail",
-          "title": "Sprawdź swoją skrzynkę"
-        },
-        "newsletter": {
-          "desc": "Otrzymuj najnowsze informacje i aktualizacje.",
-          "label": "Newsletter"
-        },
-        "password": {
-          "invalid": "Hasło jest zbyt słabe.",
-          "label": "Hasło",
-          "requirements": {
-            "label": "Hasło powinno zawierać:",
-            "min_length": "Co najmniej 8 znaków",
-            "number": "Co najmniej jedną cyfrę",
-            "special_char": "Co najmniej jeden znak specjalny",
-            "uppercase": "Co najmniej jedną wielką literę"
+        "errors": {
+          "access_denied": {
+            "title": "Nieprawidłowe dane logowania",
+            "desc": "Adres e-mail lub hasło są nieprawidłowe. Spróbuj ponownie i sprawdź, czy nie masz włączonego Caps Locka."
           }
         },
-        "submit": "Zarejestruj się",
-        "terms": {
-          "desc": "Akceptujesz nasze <link>dokumenty prawne i polityki</link>.",
-          "label": "Akceptuję regulamin",
-          "required": "Musisz zaakceptować regulamin."
-        },
-        "username": {
-          "exists": "Ta nazwa użytkownika jest już zajęta.",
-          "label": "Nazwa użytkownika",
-          "max_length": "Nazwa użytkownika może mieć najwyżej 32 znaki.",
-          "min_length": "Nazwa użytkownika musi mieć co najmniej 3 znaki.",
-          "your_user_code": "Twój kod użytkownika: <code></code>"
-        }
-      },
-      "sso": {
-        "access_denied": "Odmówiono dostępu do aplikacji lub żądanie wygasło. Spróbuj ponownie.",
-        "email_exists": {
-          "desc": "Konto z tym adresem e-mail już istnieje. Zaloguj się inną metodą i połącz konto <provider></provider> w ustawieniach profilu.",
-          "sign_in": "Przejdź do logowania",
-          "title": "Nie możesz zalogować się przez <provider></provider>"
-        },
-        "or": "Lub kontynuuj przez"
+        "submit": "Zaloguj się"
       },
       "reset_password": {
-        "confirmation": {
-          "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem.",
-          "desc": "Wysłaliśmy link do zresetowania hasła na Twój adres e-mail:",
-          "title": "Sprawdź swoją skrzynkę"
-        },
+        "title": "Resetowanie hasła",
         "desc": "Podaj swój adres e-mail, aby otrzymać link do zresetowania hasła.",
         "submit": "Wyślij link resetujący",
-        "title": "Resetowanie hasła"
+        "confirmation": {
+          "title": "Sprawdź swoją skrzynkę",
+          "desc": "Wysłaliśmy link do zresetowania hasła na Twój adres e-mail:",
+          "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem."
+        }
       },
       "change_password": {
+        "title": "Zmiana hasła",
         "desc": "Podaj poniżej swoje nowe hasło.",
         "submit": "Zmień hasło",
         "success": {
-          "desc": "Możesz teraz zalogować się nowym hasłem.",
-          "title": "Hasło zostało zmienione"
-        },
-        "title": "Zmiana hasła"
+          "title": "Hasło zostało zmienione",
+          "desc": "Możesz teraz zalogować się nowym hasłem."
+        }
       },
       "settings": {
+        "title": "Ustawienia",
         "desc": "Zarządzaj profilem, bezpieczeństwem i preferencjami konta.",
-        "devices": {
-          "browser": "Przeglądarka",
-          "current_device": "To urządzenie",
-          "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",
-          "empty": "Brak aktywnych urządzeń.",
-          "ip_address": "Adres IP",
-          "last_active": "Ostatnia aktywność",
-          "revoke": {
-            "action": "Wyloguj urządzenie",
-            "confirm": "Wyloguj",
-            "desc": "Zostaniesz wylogowany z urządzenia {os}. Aby wrócić, trzeba będzie zalogować się na nim ponownie.",
-            "success": "Urządzenie zostało wylogowane.",
-            "title": "Wylogować to urządzenie?"
-          },
-          "session_expires": "Sesja wygasa",
-          "title": "Urządzenia"
-        },
         "nav": {
-          "devices": "Urządzenia",
           "overview": "Przegląd",
+          "devices": "Urządzenia",
           "security": "Bezpieczeństwo"
         },
-        "title": "Ustawienia"
+        "devices": {
+          "title": "Urządzenia",
+          "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",
+          "current_device": "To urządzenie",
+          "last_active": "Ostatnia aktywność",
+          "browser": "Przeglądarka",
+          "ip_address": "Adres IP",
+          "session_expires": "Sesja wygasa",
+          "empty": "Brak aktywnych urządzeń.",
+          "revoke": {
+            "action": "Wyloguj urządzenie",
+            "title": "Wylogować to urządzenie?",
+            "desc": "Zostaniesz wylogowany z urządzenia {os}. Aby wrócić, trzeba będzie zalogować się na nim ponownie.",
+            "confirm": "Wyloguj",
+            "success": "Urządzenie zostało wylogowane."
+          }
+        }
+      }
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "dev_mode": "Tryb deweloperski",
+      "version": "Wersja: {version}",
+      "widgets": {
+        "edit": "Edytuj układ",
+        "drag_handle": "Przenieś {title}",
+        "remove": "Usuń {title}",
+        "drop_here": "Upuść tutaj widżet",
+        "empty_title": "Twój pulpit jest pusty",
+        "empty_desc": "Dodaj widżety, aby mieć ważne dane zawsze pod ręką.",
+        "error_title": "Nie udało się zapisać pulpitu",
+        "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
+        "refresh_error": "Nie udało się odświeżyć tego widżetu. Odśwież stronę, aby zobaczyć zmiany.",
+        "panel": {
+          "title": "Dostępne widżety",
+          "desc": "Przeciągnij widżet na swój pulpit.",
+          "search": "Szukaj widżetu",
+          "empty_title": "Wszystko jest już na pulpicie",
+          "empty_desc": "Usuń widżet, aby wrócił na tę listę.",
+          "no_results_title": "Brak pasujących widżetów",
+          "no_results_desc": "Nic tutaj nie nazywa się \"{query}\". Spróbuj innego słowa."
+        },
+        "size": {
+          "title": "Szerokość",
+          "small": "Mała",
+          "medium": "Średnia",
+          "large": "Duża"
+        },
+        "settings": {
+          "open": "Skonfiguruj {title}",
+          "title": "Skonfiguruj {title}",
+          "desc": "Te ustawienia dotyczą tylko tej karty - inni administratorzy mają swoje własne.",
+          "error_title": "Nie udało się zapisać ustawień",
+          "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
+          "load_error": "Nie udało się wczytać tych ustawień. Zamknij i spróbuj ponownie."
+        },
+        "notes": {
+          "title": "Notatki",
+          "desc": "Prywatny notatnik. Widzisz go tylko Ty.",
+          "placeholder": "Wszystko, co warto zapamiętać...",
+          "saving": "Zapisywanie...",
+          "saved": "Zapisano",
+          "error": "Nie zapisano - pisz dalej, aby spróbować ponownie"
+        },
+        "send-notification": {
+          "title": "Wyślij powiadomienie",
+          "desc": "Wysyła powiadomienie do użytkownika w czasie rzeczywistym, na każdej przeglądarce, na której jest zalogowany.",
+          "user_id": "ID użytkownika",
+          "message": "Tytuł",
+          "submit": "Wyślij powiadomienie",
+          "success": "Powiadomienie wysłane",
+          "error": "Nie udało się wysłać powiadomienia",
+          "default_message": "Wiadomość od administratora 👋",
+          "settings": {
+            "message": "Domyślny tytuł",
+            "message_desc": "Treść, od której zaczyna pole Tytuł przy każdym wczytaniu pulpitu. Zostaw puste, aby wrócić do wbudowanego powitania."
+          }
+        }
       }
     },
-    "files": {
-      "actions": {
-        "delete": "Usuń",
-        "download": "Pobierz"
-      },
-      "bulk_delete": {
-        "confirm": "Usuń",
-        "desc": "{count, plural, one {Czy na pewno chcesz usunąć ten plik? Zostanie trwale usunięty i nie będzie można tego cofnąć.} other {Czy na pewno chcesz usunąć te # pliki? Zostaną trwale usunięte i nie będzie można tego cofnąć.}}",
-        "in_use": {
-          "content": "{count, plural, one {# plik jest nadal używany przez treść, więc został zachowany. Usuń go najpierw w treści.} few {# pliki są nadal używane przez treść, więc zostały zachowane. Usuń je najpierw w treści.} many {# plików jest nadal używanych przez treść, więc zostały zachowane. Usuń je najpierw w treści.} other {# pliku jest nadal używane przez treść, więc zostało zachowane. Usuń je najpierw w treści.}}",
-          "revisions": {
-            "confirm": "Usuń mimo to",
-            "desc": "{count, plural, one {# plik nie jest już nigdzie wyświetlany, ale zapisane wersje nadal go zachowują. Po usunięciu przywrócenie tych wersji nie przywróci pliku.} few {# pliki nie są już nigdzie wyświetlane, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.} many {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.} other {# pliku nie jest już nigdzie wyświetlane, ale zapisane wersje nadal je zachowują. Po usunięciu przywrócenie tych wersji nie przywróci plików.}} Tej operacji nie można cofnąć."
-          }
+    "global": {
+      "nav": {
+        "core": "Rdzeń",
+        "dashboard": "Pulpit",
+        "users": {
+          "title": "Użytkownicy",
+          "list": "Lista użytkowników",
+          "roles": "Role"
         },
-        "success": "{count, plural, one {Usunięto # plik.} few {Usunięto # pliki.} many {Usunięto # plików.} other {Usunięto # pliku.}}",
-        "title": "{count, plural, one {Usuń # plik} few {Usuń # pliki} many {Usuń # plików} other {Usuń # pliku}}"
+        "staff": {
+          "title": "Zespół",
+          "moderators": "Moderatorzy",
+          "admins": "Administratorzy"
+        },
+        "user_bar": {
+          "home_page": "Strona główna",
+          "debug": "Panel debugowania",
+          "log_out": "Wyloguj się"
+        },
+        "system": {
+          "title": "System",
+          "integrations": "Integracje",
+          "files": "Pliki"
+        },
+        "advanced": {
+          "title": "Zaawansowane",
+          "cron": "Zadania cron",
+          "queue": "Zadania w kolejce",
+          "search": "Szukaj"
+        }
+      },
+      "search": {
+        "title": "Wyszukiwanie w panelu",
+        "desc": "Szukaj stron panelu i użytkowników lub przejdź od razu do profilu.",
+        "placeholder": "Szukaj stron i użytkowników...",
+        "hint": "Wpisz co najmniej {count} znaki, aby wyszukać użytkowników."
+      }
+    },
+    "advanced": {
+      "cron": {
+        "title": "Zadania cron",
+        "desc": "Zarządzaj i monitoruj zaplanowane zadania.",
+        "list": {
+          "name": "Nazwa",
+          "pluginId": "ID wtyczki",
+          "module": "Moduł",
+          "schedule": "Harmonogram",
+          "lastRun": {
+            "title": "Ostatnie uruchomienie",
+            "never": "Nigdy"
+          },
+          "nextRun": {
+            "title": "Następne uruchomienie",
+            "never": "Nigdy"
+          },
+          "actions": {
+            "runNow": {
+              "label": "Uruchom zadanie teraz",
+              "success": "Zadanie cron zostało pomyślnie wykonane."
+            }
+          }
+        }
+      },
+      "queue": {
+        "title": "Zadania w kolejce",
+        "desc": "Monitoruj zadania w tle oczekujące na przetworzenie przez proces cron.",
+        "list": {
+          "name": "Zadanie",
+          "queue": "Kolejka",
+          "status": "Status",
+          "attempts": "Próby",
+          "availableAt": "Dostępne od",
+          "createdAt": "Utworzono",
+          "lastError": "Ostatni błąd",
+          "statusFilter": "Status"
+        },
+        "status": {
+          "pending": "Oczekujące",
+          "processing": "Przetwarzanie",
+          "completed": "Ukończone",
+          "failed": "Nieudane"
+        }
+      }
+    },
+    "user": {
+      "list": {
+        "desc": "Zarządzaj użytkownikami swojej aplikacji.",
+        "user": "Użytkownik",
+        "createdAt": "Utworzono",
+        "emailNotVerified": "E-mail niezweryfikowany",
+        "edit": "Edytuj profil",
+        "roles": "Role",
+        "email": "Adres e-mail",
+        "searchPlaceholder": "Szukaj użytkowników po adresie e-mail lub nazwie...",
+        "noResults": {
+          "title": "Nie znaleziono użytkowników",
+          "description": "Spróbuj zmienić kryteria wyszukiwania."
+        }
+      },
+      "show": {
+        "title": "Profil użytkownika",
+        "joined": "Dołączył",
+        "emailNotVerified": "E-mail niezweryfikowany",
+        "coverPlaceholder": "Brak obrazu tła",
+        "editCover": "Edytuj obraz tła",
+        "editAvatar": "Edytuj awatar",
+        "editName": "Edytuj nazwę użytkownika",
+        "editEmail": "Edytuj adres e-mail",
+        "uploadImage": "Prześlij obraz",
+        "removeImage": "Usuń obraz",
+        "goToProfile": "Przejdź do profilu publicznego",
+        "updateSuccess": "Profil został zaktualizowany.",
+        "editNameCode": "Edytuj kod nazwy",
+        "editNameCodeDesc": "Kod nazwy to unikalny identyfikator używany w adresie URL profilu tego użytkownika oraz w oznaczeniach @wzmianka.",
+        "editNameCodeWarningTitle": "Ta zmiana uszkodzi istniejące linki",
+        "editNameCodeWarning": "Zmiana kodu nazwy uszkodzi istniejące linki @wzmianek i zmieni adres URL profilu publicznego. Osoby korzystające ze starego linku nie dotrą już do tego profilu.",
+        "newNameCode": "Nowy kod nazwy",
+        "confirmNameCode": "Wpisz <bold>bieżący kod nazwy</bold> (<nameCode></nameCode>), aby potwierdzić",
+        "nameCodeInvalid": "Dozwolone są tylko litery, cyfry i myślniki.",
+        "nameCodeSame": "Nowy kod nazwy musi różnić się od bieżącego.",
+        "nameCodeConfirmMismatch": "To nie zgadza się z bieżącym kodem nazwy.",
+        "nameCodeExists": "Ten kod nazwy jest już zajęty.",
+        "saveNameCode": "Zmień kod nazwy",
+        "rolesTitle": "Role",
+        "primaryRole": "Rola główna",
+        "secondaryRoles": "Role dodatkowe",
+        "editRoles": "Edytuj role",
+        "editRolesDesc": "Ustaw rolę główną tego użytkownika oraz dowolne role dodatkowe. Rola główna jest unikalna, natomiast role dodatkowe można łączyć.",
+        "selectRole": "Wybierz rolę",
+        "addSecondaryRole": "Dodaj rolę",
+        "removeRole": "Usuń rolę",
+        "saveRoles": "Zapisz role"
+      },
+      "verify_email": {
+        "label": "Zweryfikuj adres e-mail",
+        "success": "Adres e-mail został zweryfikowany."
+      },
+      "create": {
+        "title": "Dodaj użytkownika",
+        "desc": "Utwórz nowe konto dla użytkownika.",
+        "name": {
+          "label": "Nazwa użytkownika",
+          "min_length": "Nazwa użytkownika musi mieć co najmniej 3 znaki.",
+          "max_length": "Nazwa użytkownika może mieć maksymalnie 32 znaki.",
+          "exists": "Ta nazwa użytkownika jest już zajęta."
+        },
+        "email": {
+          "label": "Adres e-mail",
+          "invalid": "Wprowadź prawidłowy adres e-mail.",
+          "exists": "Ten adres e-mail jest już zarejestrowany."
+        },
+        "password": {
+          "label": "Hasło",
+          "invalid": "Hasło musi mieć co najmniej 8 znaków."
+        },
+        "submit": "Utwórz użytkownika",
+        "success": "Użytkownik „{name}” został utworzony."
+      }
+    },
+    "role": {
+      "list": {
+        "desc": "Zarządzaj rolami w swojej aplikacji.",
+        "role": "Rola",
+        "usersCount": "Liczba użytkowników",
+        "updatedAt": "Zaktualizowano",
+        "searchPlaceholder": "Szukaj ról po nazwie...",
+        "openUsersTooltip": "Wyświetl użytkowników z tą rolą",
+        "noResults": {
+          "title": "Nie znaleziono ról",
+          "description": "Spróbuj zmienić kryteria wyszukiwania."
+        }
+      },
+      "create": {
+        "title": "Utwórz rolę",
+        "desc": "Dodaj nową rolę do swojej aplikacji.",
+        "submit": "Utwórz",
+        "success": "Utworzono rolę"
+      },
+      "edit": {
+        "title": "Edytuj rolę",
+        "submit": "Zapisz zmiany",
+        "success": "Zaktualizowano rolę"
       },
       "delete": {
-        "confirm": "Usuń",
-        "desc": "Czy na pewno chcesz usunąć ten plik? Zostanie trwale usunięty i nie będzie można tego cofnąć.",
-        "in_use": {
-          "content": "Ten plik jest nadal używany przez treść, więc po usunięciu ta treść wskazywałaby na nic. Usuń go najpierw w treści.",
-          "revisions": {
-            "confirm": "Usuń mimo to",
-            "desc": "Ten plik nie jest już nigdzie wyświetlany, ale nadal zachowuje go {count, plural, one {# zapisana wersja} few {# zapisane wersje} many {# zapisanych wersji} other {# zapisanej wersji}}. Po usunięciu przywrócenie tych wersji nie przywróci pliku. Tej operacji nie można cofnąć."
+        "title": "Usuń rolę",
+        "desc": "Czy na pewno chcesz usunąć rolę „{name}”? Tej czynności nie można cofnąć.",
+        "descWithUsers": "Rola „{name}” jest przypisana do {count, plural, one {# użytkownika} few {# użytkowników} many {# użytkowników} other {# użytkowników}}. Wybierz inną rolę, do której chcesz ich przenieść przed usunięciem. Tej czynności nie można cofnąć.",
+        "moveToLabel": "Przenieś użytkowników do",
+        "selectRole": "Wybierz rolę...",
+        "confirm": "Usuń rolę",
+        "cancel": "Anuluj",
+        "success": "Usunięto rolę",
+        "successDesc": "Rola została trwale usunięta.",
+        "successDescMoved": "{count, plural, one {# użytkownik został} few {# użytkowników zostało} many {# użytkowników zostało} other {# użytkowników zostało}} przeniesionych do „{name}”, a rola została trwale usunięta."
+      },
+      "tabs": {
+        "general": "Ogólne",
+        "content": "Treść"
+      },
+      "form": {
+        "name": "Nazwa",
+        "color": "Kolor",
+        "upload": {
+          "allow": "Zezwól na przesyłanie plików",
+          "total_max_storage": "Całkowity maks. rozmiar pamięci",
+          "max_storage_for_submit": "Maks. rozmiar pamięci dla przesłania",
+          "max_storage_for_submit_desc": "Jeśli ustawisz 1000, użytkownik może przesłać tylko 1 plik o rozmiarze 1000 kB lub 2 pliki o rozmiarze 500 kB dla każdego przesłania.",
+          "in_unit": "w kB",
+          "or": "lub",
+          "unlimited": "Bez limitu"
+        }
+      }
+    },
+    "staff": {
+      "title": "Zespół",
+      "desc": "Zarządzaj zespołem swojej aplikacji.",
+      "protected": "Chroniony",
+      "self": "Nie możesz edytować własnych uprawnień",
+      "delete": {
+        "title": "Usunąć członka zespołu?",
+        "desc": "Spowoduje to odebranie przyznanego dostępu do zespołu. Tej akcji nie można cofnąć.",
+        "confirm": "Tak, usuń",
+        "success": "Członek zespołu został usunięty."
+      },
+      "tabs": {
+        "moderators": "Moderatorzy",
+        "admins": "Administratorzy"
+      },
+      "table": {
+        "role": "Rola",
+        "user": "Użytkownik",
+        "permissions": "Uprawnienia",
+        "unrestricted": "Bez ograniczeń",
+        "restricted": "Ograniczone",
+        "updatedAt": "Zaktualizowano",
+        "edit": "Edytuj uprawnienia"
+      },
+      "edit": {
+        "title": "Edytuj uprawnienia",
+        "subject": "Dla",
+        "back": "Wstecz",
+        "save": "Zapisz zmiany",
+        "success": "Uprawnienia zostały pomyślnie zaktualizowane.",
+        "error": "Nie udało się zaktualizować uprawnień.",
+        "protected": "Ten wpis jest chroniony i jego uprawnień nie można edytować.",
+        "self": "Nie możesz edytować własnych uprawnień zespołu, w tym wpisu dla swojej roli głównej.",
+        "no_permissions": "Żadna wtyczka nie zadeklarowała jeszcze uprawnień zespołu.",
+        "select_all": "Włącz wszystkie",
+        "clear_all": "Wyłącz wszystkie",
+        "search_plugins": "Szukaj wtyczek",
+        "search_empty": "Żadna wtyczka nie pasuje do wyszukiwania.",
+        "granted": "przyznano {granted}/{total}",
+        "requires": "Wymaga {permission}",
+        "mode": {
+          "label": "Poziom dostępu",
+          "unrestricted": {
+            "label": "Bez ograniczeń",
+            "desc": "Przyznaj wszystkie uprawnienia, w tym te dodane w przyszłości."
+          },
+          "restricted": {
+            "label": "Ograniczone",
+            "desc": "Wybierz dokładnie, które uprawnienia mają obowiązywać."
+          }
+        }
+      },
+      "create": {
+        "admins": "Dodaj administratora",
+        "moderators": "Dodaj moderatora",
+        "desc": "Przyznaj dostęp do zespołu roli lub konkretnemu użytkownikowi.",
+        "button": "Dodaj członka",
+        "back": "Wstecz",
+        "assign_to": "Przypisz do",
+        "tabs": {
+          "role": "Rola",
+          "role_desc": "Przyznaj dostęp do zespołu wszystkim osobom z daną rolą.",
+          "user": "Użytkownik",
+          "user_desc": "Przyznaj dostęp do zespołu jednej osobie."
+        },
+        "select_role": "Wybierz rolę",
+        "search_user": "Szukaj po nazwie lub adresie e-mail",
+        "submit": "Dodaj członka",
+        "success": "Członek zespołu został dodany.",
+        "error": "Nie udało się dodać członka zespołu.",
+        "already_exists": "Ta rola lub ten użytkownik jest już członkiem zespołu."
+      },
+      "moderators": {
+        "title": "Moderatorzy",
+        "desc": "Zarządzaj moderatorami swojej aplikacji.",
+        "create": "Dodaj moderatora",
+        "noResults": {
+          "title": "Nie znaleziono moderatorów",
+          "description": "Przypisz rolę lub użytkownika, aby przyznać uprawnienia moderatora."
+        }
+      },
+      "admins": {
+        "title": "Administratorzy",
+        "desc": "Zarządzaj administratorami swojej aplikacji.",
+        "create": "Dodaj administratora",
+        "noResults": {
+          "title": "Nie znaleziono administratorów",
+          "description": "Przypisz rolę lub użytkownika, aby przyznać uprawnienia administratora."
+        }
+      }
+    },
+    "system": {
+      "integrations": {
+        "title": "Integracje",
+        "desc": "Status podstawowych usług obsługujących tę instancję.",
+        "read_more": "Czytaj więcej",
+        "status": {
+          "active": "Aktywna",
+          "inactive": "Nieaktywna",
+          "warning": "Nieosiągalna"
+        },
+        "ai": {
+          "title": "AI",
+          "desc": "Generowanie tekstu, uporządkowane dane wyjściowe i osadzenia dzięki Vercel AI SDK.",
+          "models": "{count, plural, =0 {Brak modeli} one {# model} few {# modele} many {# modeli} other {# modeli}}",
+          "test": {
+            "label": "Testuj AI",
+            "title": "Testuj AI",
+            "desc": "Wyślij zapytanie do skonfigurowanego modelu i przesyłaj odpowiedź strumieniowo, aby potwierdzić, że konfiguracja AI działa.",
+            "model": "Model",
+            "prompt": "Zapytanie",
+            "prompt_placeholder": "Zapytaj model o cokolwiek…",
+            "submit": "Wyślij zapytanie",
+            "cancel": "Anuluj",
+            "ask_again": "Zapytaj ponownie",
+            "try_again": "Spróbuj ponownie"
           }
         },
-        "success": "Plik został usunięty.",
-        "title": "Usuń plik"
+        "websocket": {
+          "title": "WebSocket",
+          "desc": "Aktualizacje na żywo i powiadomienia wysyłane do połączonych klientów w czasie rzeczywistym."
+        },
+        "redis": {
+          "title": "Redis",
+          "desc": "Współdzielona pamięć podręczna i magazyn ogranicznika żądań. Przy wyłączeniu przechodzi na pamięć wewnętrzną.",
+          "down": "Skonfigurowany, ale nieosiągalny - sprawdź połączenie z Redis."
+        },
+        "email": {
+          "title": "E-mail",
+          "desc": "Wiadomości transakcyjne, takie jak potwierdzenia rejestracji i resetowanie hasła.",
+          "test": {
+            "label": "Testowa wiadomość e-mail",
+            "title": "Wyślij testową wiadomość e-mail",
+            "desc": "Wyślij wiadomość e-mail na dowolny adres, aby potwierdzić, że adapter e-mail działa.",
+            "info": {
+              "title": "Jak zweryfikować konfigurację",
+              "desc": "Jeśli wiadomość dotrze do skrzynki odbiorczej, adapter e-mail jest skonfigurowany poprawnie. Jeśli się nie pojawi, sprawdź ustawienia adaptera oraz logi systemowe."
+            },
+            "to": {
+              "label": "Odbiorca",
+              "invalid": "Wprowadź prawidłowy adres e-mail."
+            },
+            "subject": {
+              "label": "Temat",
+              "default": "Testowa wiadomość e-mail VitNode"
+            },
+            "content": {
+              "label": "Treść",
+              "default": "To jest testowa wiadomość e-mail wysłana z panelu administracyjnego VitNode."
+            },
+            "submit": "Wyślij testową wiadomość e-mail",
+            "success": "Testowa wiadomość e-mail została wysłana. Sprawdź skrzynkę odbiorczą odbiorcy, aby potwierdzić konfigurację."
+          }
+        },
+        "storage": {
+          "title": "Magazyn",
+          "desc": "Przesyłanie plików, takich jak awatary i załączniki, przechowywanych za pomocą adaptera magazynu.",
+          "test": {
+            "label": "Testuj magazyn",
+            "title": "Testuj magazyn plików",
+            "desc": "Prześlij plik i wykonaj test pełnego obiegu, aby potwierdzić, że adapter magazynu działa.",
+            "info": {
+              "title": "Jak zweryfikować konfigurację",
+              "desc": "Prześlij testowy obraz. Jeśli operacja się powiedzie, adapter magazynu jest skonfigurowany poprawnie. Jeśli się nie powiedzie, sprawdź ustawienia adaptera oraz logi systemowe."
+            },
+            "upload": {
+              "label": "Prześlij testowy obraz",
+              "desc": "Kliknij, aby wybrać obraz",
+              "pending": "Przesyłanie…",
+              "done": "Przesłano",
+              "error": "Przesyłanie nie powiodło się - spróbuj ponownie",
+              "success": "Obraz został przesłany - jest przechowywany w Twoim adapterze."
+            }
+          }
+        },
+        "captcha": {
+          "title": "Captcha",
+          "desc": "Ochrona przed botami w publicznych formularzach, takich jak rejestracja i resetowanie hasła.",
+          "type": {
+            "cloudflare_turnstile": "Cloudflare Turnstile",
+            "recaptcha_v3": "reCAPTCHA v3"
+          }
+        },
+        "cron": {
+          "title": "Zadania cron",
+          "desc": "Zaplanowane zadania w tle, takie jak czyszczenie wygasłych sesji i tokenów.",
+          "insecure": "Używany jest domyślny CRON_SECRET - ustaw bezpieczny w środowisku produkcyjnym.",
+          "not_configured": "Nie skonfigurowano adaptera cron - zadania nie będą uruchamiać się automatycznie.",
+          "stale": "Żadne zadanie nie zostało uruchomione od ponad 6 godzin - cron może być źle skonfigurowany lub zatrzymany. Sprawdź konfigurację cron.",
+          "jobs": "{count, plural, =0 {Brak zaplanowanych zadań} one {# zaplanowane zadanie} few {# zaplanowane zadania} many {# zaplanowanych zadań} other {# zaplanowanych zadań}}"
+        },
+        "queue": {
+          "title": "Zadania w kolejce",
+          "desc": "Zadania w tle umieszczone w kolejce w bazie danych i przetwarzane przez proces cron.",
+          "tasks": "{count, plural, =0 {Brak zarejestrowanych zadań} one {# zarejestrowane zadanie} few {# zarejestrowane zadania} many {# zarejestrowanych zadań} other {# zarejestrowanych zadań}}",
+          "queued": "{pending} oczekujących · {processing} uruchomionych",
+          "cron_stale": "Offline - proces cron przetwarzający kolejkę nie działa. Napraw zadania cron, aby wznowić przetwarzanie."
+        }
       },
-      "desc": "Pliki przesłane na Twoje konto.",
-      "download": {
-        "error": "Nie udało się pobrać pliku."
+      "files": {
+        "title": "Pliki",
+        "desc": "Przeglądaj, pobieraj i usuwaj pliki przesłane do tej instancji.",
+        "list": {
+          "preview": "Podgląd",
+          "name": "Nazwa",
+          "folder": "Folder",
+          "size": "Rozmiar",
+          "dimensions": "Wymiary",
+          "uploadedBy": "Przesłane przez",
+          "metadata": "Metadane",
+          "createdAt": "Przesłano",
+          "no_preview": "Brak podglądu"
+        },
+        "anonymous": "—",
+        "metadata": {
+          "empty": "—",
+          "title": "Metadane"
+        },
+        "actions": {
+          "download": "Pobierz",
+          "delete": "Usuń"
+        },
+        "download": {
+          "error": "Nie udało się pobrać pliku."
+        },
+        "delete": {
+          "title": "Usuń plik",
+          "desc": "Czy na pewno chcesz usunąć ten plik? Spowoduje to jego trwałe usunięcie z magazynu i nie można tego cofnąć.",
+          "confirm": "Usuń",
+          "success": "Plik został usunięty.",
+          "in_use": {
+            "content": "Ten plik jest nadal używany przez treść, więc jego usunięcie sprawiłoby, że ta treść wskazywałaby na nic. Najpierw usuń go z treści.",
+            "revisions": {
+              "desc": "Nic już nie wyświetla tego pliku, ale {count, plural, one {# zapisana wersja nadal go przechowuje} few {# zapisane wersje nadal go przechowują} many {# zapisanych wersji nadal go przechowuje} other {# zapisanych wersji nadal go przechowuje}}. Po usunięciu przywrócenie tych wersji nie odzyska już tego pliku. Tej operacji nie można cofnąć.",
+              "confirm": "Usuń mimo to"
+            }
+          }
+        },
+        "bulk_delete": {
+          "title": "Usuń {count, plural, one {# plik} few {# pliki} many {# plików} other {# plików}}",
+          "desc": "{count, plural, one {Czy na pewno chcesz usunąć ten plik? Spowoduje to jego trwałe usunięcie} few {Czy na pewno chcesz usunąć te # pliki? Spowoduje to ich trwałe usunięcie} many {Czy na pewno chcesz usunąć tych # plików? Spowoduje to ich trwałe usunięcie} other {Czy na pewno chcesz usunąć tych # plików? Spowoduje to ich trwałe usunięcie}} z magazynu i nie można tego cofnąć.",
+          "confirm": "Usuń",
+          "success": "Usunięto {count, plural, one {# plik} few {# pliki} many {# plików} other {# plików}}.",
+          "in_use": {
+            "content": "{count, plural, one {# plik jest nadal używany przez treść, więc został zachowany. Najpierw usuń go z treści.} few {# pliki są nadal używane przez treść, więc zostały zachowane. Najpierw usuń je z treści.} many {# plików jest nadal używanych przez treść, więc zostały zachowane. Najpierw usuń je z treści.} other {# plików jest nadal używanych przez treść, więc zostały zachowane. Najpierw usuń je z treści.}}",
+            "revisions": {
+              "desc": "{count, plural, one {# plik nie jest już nigdzie wyświetlany, ale zapisane wersje nadal go przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tego pliku.} few {# pliki nie są już nigdzie wyświetlane, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.} many {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.} other {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.}} Tej operacji nie można cofnąć.",
+              "confirm": "Usuń mimo to"
+            }
+          }
+        },
+        "noResults": {
+          "title": "Nie przesłano żadnych plików",
+          "description": "Pliki przesłane w obrębie witryny pojawią się tutaj."
+        }
+      }
+    },
+    "debug": {
+      "title": "Panel debugowania",
+      "desc": "Sprawdzaj logi, błędy i inne informacje debugowania.",
+      "queue": {
+        "title": "Zadania w kolejce",
+        "empty": "Brak aktywnych zadań w kolejce.",
+        "counts": {
+          "pending": "Oczekujące",
+          "processing": "Przetwarzanie",
+          "completed": "Ukończone",
+          "failed": "Nieudane"
+        },
+        "list": {
+          "name": "Zadanie",
+          "queue": "Kolejka",
+          "status": "Status",
+          "attempts": "Próby",
+          "availableAt": "Dostępne od"
+        }
       },
-      "list": {
-        "createdAt": "Przesłano",
-        "dimensions": "Wymiary",
-        "folder": "Folder",
-        "metadata": "Metadane",
-        "name": "Nazwa",
-        "preview": "Podgląd",
-        "size": "Rozmiar"
+      "actions": {
+        "clear_cache": {
+          "label": "Wyczyść pamięć podręczną",
+          "title": "Czy na pewno chcesz wyczyścić pamięć podręczną?",
+          "desc": "Ta akcja usunie wszystkie dane z pamięci podręcznej, co może tymczasowo wpłynąć na wydajność.",
+          "success": "Pamięć podręczna została pomyślnie wyczyszczona.",
+          "confirm": "Tak, wyczyść pamięć podręczną"
+        }
       },
-      "metadata": {
-        "empty": "—",
-        "title": "Metadane"
-      },
-      "noResults": {
-        "description": "Przesłane pliki pojawią się tutaj.",
-        "title": "Brak plików"
-      },
-      "title": "Moje pliki"
+      "logs": {
+        "title": "Logi systemowe",
+        "created_at": "Utworzono",
+        "plugin": "Wtyczka",
+        "content": "Treść",
+        "type": "Typ",
+        "types": {
+          "warn": "Ostrzeżenie",
+          "error": "Błąd",
+          "debug": "Debug"
+        },
+        "status_code": "Kod statusu",
+        "more": {
+          "title": "Więcej szczegółów",
+          "desc": "ID logu: <logId></logId>",
+          "log_overview": {
+            "title": "Przegląd logu",
+            "log_type": "Typ logu",
+            "status_code": "Kod statusu",
+            "log_id": "ID logu",
+            "created_at": "Utworzono",
+            "plugin": "Wtyczka",
+            "user": "Użytkownik"
+          },
+          "request_information": {
+            "title": "Informacje o żądaniu",
+            "ip_address": "Adres IP",
+            "request_method": "Metoda żądania",
+            "request_url": "Adres URL żądania",
+            "user_agent": "Agent użytkownika"
+          },
+          "log_content": {
+            "title": "Treść logu",
+            "full_log": "Pełna treść logu"
+          }
+        }
+      }
     }
   }
 }

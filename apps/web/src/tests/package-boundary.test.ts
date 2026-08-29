@@ -328,3 +328,56 @@ describe('the namespace holds nothing the Start compiler has to see twice', () =
     expect(hostSource).toContain('createFileRoute(')
   })
 })
+
+describe('a route reaches VitNode through the namespace, not past it', () => {
+  /**
+   * `@vitnode/core/views/*` is where VitNode's own page implementations live,
+   * and they are framework-neutral - which is exactly what makes this worth
+   * pinning. A route file *can* import one directly and it will work, so nothing
+   * about a green build says which spelling was used. Two of them did:
+   *
+   *     import { OverviewSettings } from '@vitnode/core/views/auth/settings/overview/overview'
+   *     import { OverviewSettings } from '@vitnode/core/tanstack/settings'
+   *
+   * One feature, two entry points, and only the second is a subpath the tests
+   * above can check - a deep `views/` path resolves through the package-wide
+   * `./*` pattern, where nothing states what a route may reach for. So the
+   * namespace re-exports the panels and this keeps routes pointed at it.
+   *
+   * `components/` is deliberately not on this list. That is the design system -
+   * a `Button`, a `Tooltip`, the theme script - and an application renders those
+   * directly in both frameworks. The rule is about VitNode's *pages*: a route
+   * that needs one is asking for a feature, and a feature has a namespace.
+   */
+  const routeFiles = () => {
+    const routes = join(appSrc, 'routes')
+
+    return filesUnder(routes, /\.tsx?$/)
+  }
+
+  it('has route files to check', () => {
+    expect(routeFiles().length).toBeGreaterThan(5)
+  })
+
+  it('never imports @vitnode/core/views/* from a route file', () => {
+    const offenders = routeFiles().flatMap((path) =>
+      importsFrom(path)
+        .filter((specifier) => specifier.startsWith('@vitnode/core/views/'))
+        .map((specifier) => `${specifier} from ${relative(repoRoot, path)}`),
+    )
+
+    expect(offenders).toEqual([])
+  })
+
+  it('still lets a route render the design system directly', () => {
+    // The control, and the boundary restated: this is a rule about VitNode's
+    // pages, not a ban on importing from the package outside one namespace.
+    const componentImports = routeFiles().flatMap((path) =>
+      importsFrom(path).filter((specifier) =>
+        specifier.startsWith('@vitnode/core/components/'),
+      ),
+    )
+
+    expect(componentImports).not.toEqual([])
+  })
+})

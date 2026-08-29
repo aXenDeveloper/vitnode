@@ -226,11 +226,13 @@ describe('the TanStack Start application stays Next-free', () => {
   it('reaches for use-intl directly, and never for next-intl', () => {
     // There is no exception left. The root used to import `next-intl`'s
     // `IntlProvider` to cover the second module record core's components read
-    // under `vite dev` (see `intl-provider.test.ts`); it now imports that record
-    // from the package that owns it, `@vitnode/core/lib/i18n/provider`. The two
-    // resolve to the same file today, and only one of them says why.
+    // under `vite dev`; Stage 10 moved that whole arrangement into the package,
+    // and `lib/i18n/runtime.ts` now hands this app's own `use-intl` record over
+    // as `configureIntl({ hostIntlProvider })` for `RouteMessages` to mount. See
+    // `packages/vitnode/src/tanstack/i18n/provider-records.test.ts`, which is
+    // where the three-provider rule is pinned.
     //
-    // Runtime files only: `intl-provider.test.ts` asserts *about* these imports,
+    // Runtime files only: `intl-runtime.test.ts` asserts *about* these imports,
     // so it necessarily contains the specifiers the scanner is looking for.
     const runtime = webFiles().filter(
       (path) => !path.includes(`${sep}tests${sep}`),

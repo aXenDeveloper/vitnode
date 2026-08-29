@@ -8,7 +8,7 @@ import {
   SETTINGS_NAV_ITEMS,
   SETTINGS_ROOT_HREF,
   settingsNavHref,
-} from '@vitnode/core/views/auth/settings/settings-nav'
+} from '@vitnode/core/tanstack/settings'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'

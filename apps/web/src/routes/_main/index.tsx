@@ -111,17 +111,21 @@ function Home() {
         </Row>
 
         {/*
-          Per-key fallback, kept visible. `toggle_sidebar` is AdminCP copy, so
-          the Polish override deliberately does not carry it and this row stays
-          English while everything above it turns. That is the rule VitNode
-          relies on - a half-translated language degrades one string at a time
-          rather than rendering raw keys - and it needs a key that is not going
-          to be translated out from under it, which is why it is not one of the
-          shell strings the migrated routes render.
+          Per-key fallback, kept visible. `core.global.file.stored` is
+          AutoForm's multi-file field copy - a form this app has no page for -
+          so VitNode's Polish does not carry it and this row stays English while
+          everything above it turns. That is the rule VitNode relies on: a
+          partly translated language degrades one string at a time rather than
+          rendering raw keys.
+
+          It needs a key that is not going to be translated out from under it,
+          which is why it is not one of the shell strings the migrated routes
+          render. `toggle_sidebar` was the previous choice and Stage 10
+          translated it.
         */}
-        <Row label="Fallback - core.global.toggle_sidebar, untranslated in Polish">
+        <Row label="Fallback - core.global.file.stored, untranslated in Polish">
           <span className="text-sm" data-testid="fallback">
-            {t('toggle_sidebar')}
+            {t('file.stored')}
           </span>
         </Row>
 

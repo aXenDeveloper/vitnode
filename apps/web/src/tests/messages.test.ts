@@ -65,20 +65,23 @@ describe('loading one language for one set of namespaces', () => {
   })
 
   it('falls back to the default locale key by key', async () => {
-    // Polish translates what the migrated routes render and nothing else.
-    // `toggle_sidebar` is AdminCP copy it deliberately leaves out, and it has
-    // to keep rendering English rather than degrading to
-    // `core.global.toggle_sidebar`. A language is never all-or-nothing.
+    // Polish is a partial translation, and has to stay usable as one.
+    // `core.global.file.stored` is AutoForm's multi-file field copy, which
+    // VitNode's Polish does not carry, and it has to keep rendering English
+    // rather than degrading to `core.global.file.stored`. A language is never
+    // all-or-nothing.
+    //
+    // The probe has to be a key nothing is about to translate. It used to be
+    // `toggle_sidebar`, and Stage 10 translated it - so if this fails again,
+    // the fix is a new probe from `en.json` minus `pl.json`, not a new
+    // expectation.
     const { messages } = await loadIntlMessages({
       locale: 'pl',
       namespaces: ['core.global'],
     })
 
     expect(messages).toHaveProperty('core.global.save', 'Zapisz')
-    expect(messages).toHaveProperty(
-      'core.global.toggle_sidebar',
-      'Toggle Sidebar',
-    )
+    expect(messages).toHaveProperty('core.global.file.stored', 'Stored file')
   })
 
   it('merges app overrides on top of what the package ships', async () => {

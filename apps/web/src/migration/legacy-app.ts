@@ -18,8 +18,9 @@ import type { Locale } from '#/lib/i18n/shared'
  *
  * Read through a getter rather than captured at module load, matching how
  * `CONFIG` reads its own values: the browser gets this inlined at build time
- * (see `CLIENT_ENV_KEYS` in `vitnode-env.ts`) and the server reads the live
- * environment, so a built server can be repointed by its host.
+ * (`vitNodeEnv({ clientEnv: [...] })` in `vite.config.ts` - the one key this app
+ * adds to the package's list) and the server reads the live environment, so a
+ * built server can be repointed by its host.
  */
 export const legacyWebOrigin = (): string | undefined => {
   const configured = process.env.NEXT_PUBLIC_LEGACY_WEB_URL

@@ -1,134 +1,87 @@
-import { mkdtempSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
 
-import { vitNodeEnv } from '../../vitnode-env'
+import { withoutComments } from './source'
 
-const ENV_FILE = [
-  'NEXT_PUBLIC_API_URL=https://api.example.test',
-  'NEXT_PUBLIC_WEB_URL=https://web.example.test',
-  'NEXT_PUBLIC_UNLISTED=also-public-by-name',
-  'POSTGRES_URL=postgresql://root:hunter2@db.internal:5432/vitnode',
-  'CRON_SECRET=super-secret',
-  'REDIS_PASSWORD=another-secret',
-].join('\n')
+/**
+ * What this application publishes to its own browser bundle, and nothing else.
+ *
+ * How `vitNodeEnv` *behaves* - that it loads the whole `.env` for the server,
+ * that a platform variable beats a file, that an unset key is defined as
+ * `undefined` rather than left as a read that throws, that a secret cannot
+ * arrive by having a public-looking name - is the package's, and is tested there
+ * (`packages/vitnode/src/framework/vite/env.test.ts`). Repeating any of it here
+ * would be a second copy of an argument that has one home.
+ *
+ * What is left is the only part this app decides: which key it adds to the
+ * package's list. That is a security-relevant line in `vite.config.ts` - every
+ * name on it is compiled into JavaScript anyone can read - so it is worth a test
+ * that fails when somebody adds a second one without meaning to.
+ */
+const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+const read = (path: string) => readFileSync(join(appRoot, path), 'utf8')
 
-const TOUCHED = [
-  'CRON_SECRET',
-  'NEXT_PUBLIC_API_URL',
-  // Published to the client bundle like the two below, so it has to be cleared
-  // like them: left alone, a developer's own `.env` decides whether the define
-  // map this file asserts on says `undefined` or their legacy origin.
-  'NEXT_PUBLIC_LEGACY_WEB_URL',
-  'NEXT_PUBLIC_UNLISTED',
-  'NEXT_PUBLIC_WEB_URL',
-  'POSTGRES_URL',
-  'REDIS_PASSWORD',
-]
+/**
+ * The one key beyond the package's two.
+ *
+ * Temporary migration infrastructure: the origin still serving the routes this
+ * app has not taken over. It is inlined because `src/migration/legacy-app.ts`
+ * reads it in the browser, and it goes away with the last legacy route - at
+ * which point this list is empty and the argument comes off the call entirely.
+ */
+const APP_CLIENT_ENV = ['NEXT_PUBLIC_LEGACY_WEB_URL']
 
-/** Calls the plugin's `config` hook the way Vite calls it. */
-const runConfig = async (root: string) => {
-  const { config } = vitNodeEnv()
-  if (typeof config !== 'function') throw new Error('expected a config hook')
+describe('the environment this app publishes to the browser', () => {
+  const config = () => withoutComments(join(appRoot, 'vite.config.ts'))
 
-  return config.call(
-    // The hook only reads `root` and only returns config, so the plugin context
-    // Vite would pass is not involved.
-    undefined as never,
-    { root },
-    { command: 'build', mode: 'production' },
-  )
-}
-
-const clientDefine = (
-  result: Awaited<ReturnType<typeof runConfig>>,
-): Record<string, string> =>
-  (result?.environments?.client?.define ?? {}) as Record<string, string>
-
-describe('vitNodeEnv', () => {
-  let root: string
-  const saved = new Map<string, string | undefined>()
-
-  beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'vitnode-env-'))
-    writeFileSync(join(root, '.env'), ENV_FILE)
-    for (const key of TOUCHED) {
-      saved.set(key, process.env[key])
-      delete process.env[key]
-    }
+  it('takes both plugins from the package rather than owning copies', () => {
+    // They used to be `apps/web/vitnode-env.ts` and
+    // `apps/web/vitnode-plugin-routes.ts` - 397 lines of framework every VitNode
+    // app on Vite would have had to copy and then keep in step.
+    expect(config()).toContain("from '@vitnode/core/framework/vite'")
   })
 
-  afterEach(() => {
-    for (const [key, value] of saved) {
-      if (value === undefined) delete process.env[key]
-      else process.env[key] = value
-    }
-    saved.clear()
-  })
+  it('adds exactly the keys this list names', () => {
+    const call = /vitNodeEnv\(\{\s*clientEnv:\s*\[([^\]]*)\]/.exec(config())
 
-  it('loads the whole .env into process.env for the server', async () => {
-    await runConfig(root)
+    expect(
+      call,
+      'vite.config.ts calls vitNodeEnv({ clientEnv: [...] })',
+    ).not.toBeNull()
 
-    // Including the values only the API needs - it runs in this process.
-    expect(process.env.POSTGRES_URL).toBe(
-      'postgresql://root:hunter2@db.internal:5432/vitnode',
+    const named = [...(call?.[1] ?? '').matchAll(/'([^']+)'/g)].map(
+      (match) => match[1],
     )
-    expect(process.env.NEXT_PUBLIC_API_URL).toBe('https://api.example.test')
+
+    expect(named).toStrictEqual(APP_CLIENT_ENV)
   })
 
-  it('lets a real environment variable win over the .env file', async () => {
-    process.env.NEXT_PUBLIC_API_URL = 'https://from-the-platform.test'
+  it('names nothing that is not a public key', () => {
+    // `NEXT_PUBLIC_*` is the naming convention `CONFIG` and Next.js both use for
+    // "this is readable by anybody who opens devtools". A key without the prefix
+    // on this list is either a mistake or a secret.
+    for (const key of APP_CLIENT_ENV) {
+      expect(key.startsWith('NEXT_PUBLIC_')).toBe(true)
+    }
+  })
 
-    await runConfig(root)
-
-    expect(process.env.NEXT_PUBLIC_API_URL).toBe(
-      'https://from-the-platform.test',
+  it('publishes the migration key because something in the browser reads it', () => {
+    // The other half of the justification. A published key nothing reads is a
+    // key that should not be published, and this one is read by the module that
+    // builds an href into the application still serving the un-migrated routes.
+    expect(read('src/migration/legacy-app.ts')).toContain(
+      'process.env.NEXT_PUBLIC_LEGACY_WEB_URL',
     )
   })
 
-  it('inlines the API and web URLs into the client bundle', async () => {
-    expect(clientDefine(await runConfig(root))).toStrictEqual({
-      'process.env.NEXT_PUBLIC_API_URL': '"https://api.example.test"',
-      // Temporary migration infrastructure, unset in this fixture. See
-      // `src/migration/legacy-app.ts`; it goes away with the last legacy route.
-      'process.env.NEXT_PUBLIC_LEGACY_WEB_URL': 'undefined',
-      'process.env.NEXT_PUBLIC_WEB_URL': '"https://web.example.test"',
-    })
-  })
-
-  it('publishes nothing to the client beyond the two listed keys', async () => {
-    // The point of an explicit list. A secret reaching a browser bundle is not
-    // recoverable by rotating a build, and `NEXT_PUBLIC_UNLISTED` shows that
-    // even a public-looking name is not enough to get there.
-    const define = clientDefine(await runConfig(root))
-
-    for (const secret of ['POSTGRES_URL', 'CRON_SECRET', 'REDIS_PASSWORD']) {
-      expect(define).not.toHaveProperty(`process.env.${secret}`)
-    }
-    expect(define).not.toHaveProperty('process.env.NEXT_PUBLIC_UNLISTED')
-    expect(JSON.stringify(define)).not.toContain('hunter2')
-  })
-
-  it('leaves the server bundle reading the live environment', async () => {
-    // Nothing is defined for `ssr`, so `CONFIG`'s lazy getters keep reading
-    // `process.env` at request time and a built server can be pointed at a
-    // different API by its host.
-    const result = await runConfig(root)
-
-    expect(result?.define).toBeUndefined()
-    expect(result?.environments?.ssr).toBeUndefined()
-  })
-
-  it('replaces an unset key with undefined rather than leaving the read in', async () => {
-    writeFileSync(join(root, '.env'), 'POSTGRES_URL=postgresql://only/this')
-
-    // Left in place, `process.env.NEXT_PUBLIC_API_URL` throws in a browser
-    // instead of falling through to the default the core config has for it.
-    expect(clientDefine(await runConfig(root))).toStrictEqual({
-      'process.env.NEXT_PUBLIC_API_URL': 'undefined',
-      'process.env.NEXT_PUBLIC_LEGACY_WEB_URL': 'undefined',
-      'process.env.NEXT_PUBLIC_WEB_URL': 'undefined',
-    })
+  it('hands the plugin routes generator this app’s own root', () => {
+    // A Vite config is loaded with the working directory set to wherever the
+    // command ran, which in this monorepo is regularly the repository root - so
+    // the generator is told where the app is rather than guessing.
+    expect(config()).toMatch(
+      /vitNodePluginRoutes\(\{\s*appRoot:\s*import\.meta\.dirname\s*\}\)/,
+    )
   })
 })

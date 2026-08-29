@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { SecuritySettings } from '@vitnode/core/views/auth/settings/security/security'
+import { SecuritySettings } from '@vitnode/core/tanstack/settings'
 
 import { loadSettingsPanel, settingsPanelHead } from '#/lib/settings/panel'
 import { SettingsBreadcrumb } from '#/migration/settings-breadcrumb'

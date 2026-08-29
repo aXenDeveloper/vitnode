@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import {
   loadSsoCallbackRoute,
+  normalizeSsoCallbackSearch,
   SsoCallbackRouteContent,
 } from '@vitnode/core/tanstack/auth'
-import { z } from 'zod'
 
 import { ErrorActions } from '#/migration/error-actions'
 import { MigrationLink } from '#/migration/link'
@@ -34,24 +34,20 @@ import { MigrationLink } from '#/migration/link'
  * `@vitnode/core/tanstack/auth`.
  */
 
-/**
- * What a provider may put in the callback URL.
- *
- * Everything optional and nothing constrained, because which half arrives is the
- * provider's decision - `code` and `state` when the visitor approved, `error`
- * when they did not - and a schema that demanded either would turn a legitimate
- * denial into a router error. The values are judged by `parseSsoCallback`, which
- * bounds their length, classifies the error rather than carrying it through, and
- * is where the whole rule lives.
- */
-const callbackSearchSchema = z.object({
-  code: z.string().optional(),
-  error: z.string().optional(),
-  state: z.string().optional(),
-})
-
 export const Route = createFileRoute('/login_/sso/$providerId')({
-  validateSearch: callbackSearchSchema,
+  /**
+   * What a provider may put in the callback URL - the package's contract, not
+   * this application's.
+   *
+   * Which half arrives is the provider's decision, so nothing is required, and
+   * nothing is coerced: an all-digit `state` reaches `validateSearch` as a
+   * number, and the `z.string()` this replaced threw on it, rendering an error
+   * boundary in the middle of a sign-in the visitor had already approved. The
+   * values are judged by `parseSsoCallback`, which bounds their length,
+   * classifies the error rather than carrying it through, and is where the whole
+   * rule lives.
+   */
+  validateSearch: normalizeSsoCallbackSearch,
   loader: async ({ context }) => await loadSsoCallbackRoute(context),
   component: SsoCallbackRoute,
 })

@@ -721,6 +721,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      jiti:
+        specifier: ^2.7.0
+        version: 2.7.0
       motion:
         specifier: ^12.42.2
         version: 12.42.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -836,9 +839,6 @@ importers:
       hono:
         specifier: ^4.12.31
         version: 4.12.31
-      jiti:
-        specifier: ^2.7.0
-        version: 2.7.0
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1

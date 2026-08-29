@@ -9,7 +9,7 @@ import { normalizeSearchTerm, searchFeedParamsFor } from "./search-params";
  * handed to the controls as `initialData`.
  *
  * The term and the sort it implies come from `./search-params`, which is also
- * what the TanStack Start route at `apps/web/src/routes/search.tsx` reads its
+ * what the TanStack Start route at `apps/web/src/routes/_main/search.tsx` reads its
  * own search schema through - so `/search?search=hello` means the same request
  * in both applications rather than in two hand-written approximations of it.
  */

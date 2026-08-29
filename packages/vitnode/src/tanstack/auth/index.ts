@@ -18,6 +18,8 @@
  *                         speak
  *     ./recovery          which password-recovery screen a URL asks for, and
  *                         whether this deployment has the flow at all
+ *     ./route-search      what `/login` and the SSO callback read out of their
+ *                         URLs, as normalisers a crafted link cannot break
  *     ./middleware-config what this installation has configured: SSO adapters,
  *                         an email adapter, a captcha site key
  *     ./actions           the client orchestration - mutate, then bring the one
@@ -38,10 +40,11 @@
  *   function silently resolves to `undefined` during SSR. The host declares
  *   eight one-line wrappers over `./server` and registers them; see
  *   `./transport`.
- * - **The route tree.** Guards, redirects and search schemas are route
- *   composition. This package hands them the decisions (`canAccessGuestRoute`,
- *   `postAuthDestination`, `normalizePasswordResetSearch`) and never a
- *   `createFileRoute`.
+ * - **The route tree.** Guards and redirects are route composition. This package
+ *   hands them the decisions (`canAccessGuestRoute`, `postAuthDestination`,
+ *   `normalizeLoginSearch`) and never a `createFileRoute`. A route's *search
+ *   contract* is not composition and is not left to the host: it describes what
+ *   a stranger may put in that URL, which is the same question on every install.
  * - **Navigation.** `useSignInAction` and `useSignUpAction` take a `navigate`,
  *   because during the Next.js migration a post-login destination may still
  *   belong to the other application.
@@ -82,6 +85,7 @@ export {
   RegisterRouteContent,
 } from "./register-route";
 export * from "./return-to";
+export * from "./route-search";
 export * from "./screens";
 export type { SessionApi } from "./session-api";
 export * from "./session-query";

@@ -17,7 +17,7 @@ const WEB_ORIGIN = 'https://web.test'
  *
  * These tests are about what crosses the wire, so they call routes the fixture
  * below defines rather than the real ones, and the route-literal inference is
- * out of the way. `src/lib/session.ts` is where that inference is exercised for
+ * out of the way. `@vitnode/core/tanstack/auth/server` is where that inference is exercised for
  * real - it only compiles if the module, path and method line up.
  */
 const callFetcher = fetcherServer as unknown as (

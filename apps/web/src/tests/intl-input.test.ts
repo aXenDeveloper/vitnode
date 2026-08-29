@@ -205,11 +205,9 @@ describe('hardening did not change what a valid request returns', () => {
 
     expect(locale).toBe('pl')
     expect(messages).toHaveProperty('core.global.close', 'Zamknij')
-    // `toggle_sidebar` is AdminCP copy the Polish override does not carry.
-    expect(messages).toHaveProperty(
-      'core.global.toggle_sidebar',
-      'Toggle Sidebar',
-    )
+    // `core.global.file.stored` is AutoForm copy VitNode's Polish does not
+    // carry - see the note in `messages.test.ts` on choosing this probe.
+    expect(messages).toHaveProperty('core.global.file.stored', 'Stored file')
   })
 
   it('still ships only the namespaces that were asked for', async () => {

@@ -62,7 +62,7 @@ const NextLanguageSwitcher = ({
  * `useTransition` lives out here, above the boundary, so the spinner survives the
  * navigation it is reporting on.
  *
- * The TanStack Start half is `apps/web/src/components/language-switcher.tsx`,
+ * The TanStack Start half is `src/tanstack/layout/language-switcher.tsx`,
  * over Stage 3's `useSwitchLocale` - which needs no boundary, because the router
  * it reads is not Next's.
  */

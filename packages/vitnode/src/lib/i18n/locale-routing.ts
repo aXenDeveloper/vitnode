@@ -83,7 +83,7 @@ export interface LocaleRouting {
    * The single authoritative answer to "which language is this request in?".
    *
    * A runtime supplies whichever sources it can honour. The TanStack Start app
-   * passes only `cookieLocale` on purpose - see `apps/web/src/lib/i18n/client.ts`
+   * passes only `cookieLocale` on purpose - see `src/tanstack/i18n/locale.ts`
    * - because an `Accept-Language` answer the browser cannot reproduce is a
    * hydration mismatch waiting to happen. Both sources are kept here for a
    * runtime that has somewhere hydration-safe to put the negotiated result.

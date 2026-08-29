@@ -2,11 +2,9 @@ import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
+import { vitNodeEnv, vitNodePluginRoutes } from '@vitnode/core/framework/vite'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
-
-import { vitNodeEnv } from './vitnode-env'
-import { vitNodePluginRoutes } from './vitnode-plugin-routes'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
@@ -56,8 +54,23 @@ const config = defineConfig({
     external: ['@vitnode/core', '@vitnode/blog', '@vitnode/example'],
   },
   plugins: [
-    vitNodeEnv(),
-    vitNodePluginRoutes(),
+    /**
+     * Both from `@vitnode/core/framework/vite`, and what they take is the whole
+     * of what is this application's rather than VitNode's.
+     *
+     * `NEXT_PUBLIC_LEGACY_WEB_URL` is the origin still serving the routes this
+     * app has not taken over. It is inlined into the browser bundle because
+     * `src/migration/legacy-app.ts` reads it there - and it is passed in rather
+     * than living on the package's own list because "there is a second, older
+     * application" is true for the length of this migration and false before and
+     * after it.
+     *
+     * `appRoot` is `import.meta.dirname` because a Vite config is loaded with the
+     * working directory set to wherever the command ran, which in this monorepo
+     * is regularly the repository root.
+     */
+    vitNodeEnv({ clientEnv: ['NEXT_PUBLIC_LEGACY_WEB_URL'] }),
+    vitNodePluginRoutes({ appRoot: import.meta.dirname }),
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
     tailwindcss(),

@@ -4,9 +4,9 @@ import {
   ensureAuthState,
   loadLoginRoute,
   LoginRouteContent,
+  normalizeLoginSearch,
   postAuthDestination,
 } from '@vitnode/core/tanstack/auth'
-import { z } from 'zod'
 
 import { pageHead } from '#/lib/page-head'
 import { MigrationLink } from '#/migration/link'
@@ -40,19 +40,18 @@ import {
  * must not inherit this route's guest-only guard.
  */
 
-/**
- * Where a visitor was heading before the guard sent them here.
- *
- * Accepted as any string and judged where it is used, never here: whether a
- * target is somewhere this app may navigate to is `sanitizeReturnTo`'s single
- * answer, and duplicating it in a schema would be a second rule that can
- * disagree with the first. Rejecting it at parse time would also turn a crafted
- * link into a broken login page rather than an ordinary one.
- */
-const loginSearchSchema = z.object({ returnTo: z.string().optional() })
-
 export const Route = createFileRoute('/login')({
-  validateSearch: loginSearchSchema,
+  /**
+   * Where a visitor was heading before the guard sent them here.
+   *
+   * `normalizeLoginSearch` is the package's, like every other route's search
+   * contract: what a stranger may put in `?returnTo=` is the same question on
+   * every VitNode install, and the answer is not this application's topology.
+   * It keeps whatever arrived and judges nothing - `sanitizeReturnTo` is the
+   * single answer to whether a target is somewhere this app may navigate to, and
+   * it is applied where the value is *used*.
+   */
+  validateSearch: normalizeLoginSearch,
   /**
    * Guest-only, decided before anything renders - so a signed-in visitor never
    * sees the form, not for a frame.
