@@ -114,16 +114,8 @@ describe('nothing but the router creates a query client', () => {
     'routes/_main/discover.tsx',
     'routes/_main/index.tsx',
     'routes/_main/search.tsx',
-    'components/route-messages.tsx',
-    'lib/files/my-files-route.ts',
-    'lib/files/my-files.ts',
-    'lib/i18n/client.ts',
-    'lib/i18n/query.ts',
+    'lib/i18n/runtime.ts',
     'lib/i18n/shared.ts',
-    'lib/search/discover-feed.ts',
-    'lib/search/discover-request.ts',
-    'lib/search/feed.ts',
-    'lib/search/search-request.ts',
   ]
 
   it.each(appFiles)('%s mounts no QueryClientProvider', (file) => {

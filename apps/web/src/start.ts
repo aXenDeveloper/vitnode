@@ -3,8 +3,9 @@ import {
   createMiddleware,
   createStart,
 } from '@tanstack/react-start'
+import { handleLocaleRequest } from '@vitnode/core/tanstack/i18n/server'
 
-import { handleLocaleRequest } from '#/server/locale.server'
+import { localeRouting } from '#/lib/i18n/runtime'
 
 /**
  * Locale routing, as the first thing that happens to a request.
@@ -21,12 +22,18 @@ import { handleLocaleRequest } from '#/server/locale.server'
  * `/api/*` reaches here too and is deliberately ignored by
  * `handleLocaleRequest`, so the Stage 1 Hono bridge sees the request exactly as
  * the client sent it.
+ *
+ * `localeRouting` is handed in rather than read from the package's registered
+ * runtime: Start runs request middleware before route matching, so this is the
+ * one caller that cannot assume the router entry has been evaluated. Importing
+ * it from `#/lib/i18n/runtime` is also what guarantees this app's i18n is
+ * configured before the first request touches it.
  */
 const localeMiddleware = createMiddleware().server(
   async ({ handlerType, next, request }) => {
     if (handlerType !== 'router') return await next()
 
-    const { redirect, setCookie } = handleLocaleRequest(request)
+    const { redirect, setCookie } = handleLocaleRequest(request, localeRouting)
     if (redirect) return redirect
 
     const result = await next()

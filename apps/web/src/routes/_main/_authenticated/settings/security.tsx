@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SecuritySettings } from '@vitnode/core/views/auth/settings/security/security'
 
-import { SettingsBreadcrumb } from '#/components/layout/settings-breadcrumb'
 import { loadSettingsPanel, settingsPanelHead } from '#/lib/settings/panel'
+import { SettingsBreadcrumb } from '#/migration/settings-breadcrumb'
 
 /**
  * `/settings/security` - the security panel.

@@ -40,9 +40,9 @@ const filesUnder = (directory: string): string[] => {
  *
  * Dropped before the scan because this file walks the *runtime* graph, and the
  * app's own source - unlike the `dist` it walks into - still has its `import
- * type` lines in it. `lib/session.ts` names the API's users module purely so the
- * route literals infer; following it would report Hono, Drizzle and the whole
- * API tree as things a login screen loads.
+ * type` lines in it. `@vitnode/core/tanstack/auth/server` names the API's users
+ * module purely so the route literals infer; following it would report Hono,
+ * Drizzle and the whole API tree as things a login screen loads.
  */
 const withoutTypeImports = (source: string): string =>
   source.replace(
@@ -362,18 +362,20 @@ describe('the whole graph this app imports stays Next-free', () => {
 
   /** Everything the app reaches, from every entry point it has. */
   const ENTRIES = [
-    'apps/web/src/components/language-switcher.tsx',
-    'apps/web/src/components/migration-link.tsx',
-    'apps/web/src/components/route-messages.tsx',
+    'apps/web/src/migration/main-header.tsx',
+    'apps/web/src/migration/link.tsx',
     // Stage 6. The auth surface reaches deepest into `@vitnode/core` of
     // anything this app renders - the shared login card pulls in `AutoForm`,
     // and with it the whole form and design-system stack. That graph was
     // Next-only until `hooks/use-captcha.ts` stopped importing
     // `@/lib/navigation`, so it is exactly the graph worth walking here.
-    'apps/web/src/lib/auth/actions.ts',
-    'apps/web/src/lib/auth/redirects.ts',
-    'apps/web/src/lib/auth/screens.ts',
-    'apps/web/src/lib/middleware-config.ts',
+    //
+    // Stage 10 moved the auth implementation itself into
+    // `@vitnode/core/tanstack/auth`, which is why there are no `lib/auth/*`
+    // entries left: the routes below reach all of it - the actions, the screen
+    // mappings, the deployment configuration - through the package, and walking
+    // from a route is what proves that graph is still Next-free.
+    'apps/web/src/lib/auth.ts',
     'apps/web/src/routes/_main/_authenticated.tsx',
     'apps/web/src/routes/login.tsx',
     'apps/web/src/routes/login_.sso.$providerId.tsx',
@@ -381,7 +383,6 @@ describe('the whole graph this app imports stays Next-free', () => {
     // `AutoForm` stack plus the captcha widget, the password checklist tooltip
     // and the confirmation screen. Password recovery adds core's shared error
     // screen on top. Both were Next-only until Stage 9 split their views.
-    'apps/web/src/lib/auth/password-reset-route.ts',
     'apps/web/src/routes/register.tsx',
     'apps/web/src/routes/login_.reset-password.tsx',
     // Stage 9. The settings subtree, which is the first *nested layout* this app
@@ -389,31 +390,30 @@ describe('the whole graph this app imports stays Next-free', () => {
     // card, the mobile back link, the panel card - is mounted outside Next.js.
     // The devices panel is the one with data, so its graph reaches core's list,
     // its revoke and the confirm dialog behind the revoke button.
-    'apps/web/src/components/layout/settings-breadcrumb.tsx',
-    'apps/web/src/lib/devices/devices.ts',
+    'apps/web/src/migration/settings-breadcrumb.tsx',
     'apps/web/src/lib/settings/panel.ts',
     'apps/web/src/routes/_main/_authenticated/settings.tsx',
     'apps/web/src/routes/_main/_authenticated/settings/devices.tsx',
     'apps/web/src/routes/_main/_authenticated/settings/index.tsx',
     'apps/web/src/routes/_main/_authenticated/settings/overview.tsx',
     'apps/web/src/routes/_main/_authenticated/settings/security.tsx',
-    'apps/web/src/server/devices.server.ts',
     // Stage 7. `/files` renders the whole data table - eight columns, the
     // bulk-action bar and both confirm dialogs - which is the deepest this app
     // reaches into the design system after the auth screens. That graph was
     // Next-only until `next/dynamic` inside `ConfirmActionAlertDialog` became
     // `React.lazy`, so it is exactly the graph worth walking here.
-    'apps/web/src/lib/files/my-files-route.ts',
-    'apps/web/src/lib/files/my-files.ts',
+    //
+    // Stage 10 moved the query definition, the URL contract and the SSR
+    // transport into `@vitnode/core/tanstack/files`, so the route file is the
+    // only entry left - and walking it still reaches all three, because the walk
+    // follows the package's own `dist` out of the barrel it imports.
     'apps/web/src/routes/_main/_authenticated/files.tsx',
-    'apps/web/src/server/my-files.server.ts',
-    'apps/web/src/lib/i18n/client.ts',
-    'apps/web/src/lib/i18n/query.ts',
+    // Stage 10. The i18n runtime moved into `@vitnode/core/tanstack/i18n`;
+    // what is left here is the app's language list and the one server function
+    // a package may not declare. Walking it still reaches the whole runtime,
+    // because the walk follows the package's `dist` out of the barrel.
+    'apps/web/src/lib/i18n/runtime.ts',
     'apps/web/src/lib/i18n/shared.ts',
-    'apps/web/src/lib/search/discover-feed.ts',
-    'apps/web/src/lib/search/discover-request.ts',
-    'apps/web/src/lib/search/feed.ts',
-    'apps/web/src/lib/search/search-request.ts',
     'apps/web/src/router.tsx',
     'apps/web/src/routes/__root.tsx',
     // Stage 8. The main shell, and with it the header and breadcrumb slots the
@@ -422,8 +422,6 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/routes/_main/discover.tsx',
     'apps/web/src/routes/_main/index.tsx',
     'apps/web/src/routes/_main/search.tsx',
-    'apps/web/src/server/search-feed.server.ts',
-    'apps/web/src/server/locale.server.ts',
     'apps/web/src/server/messages.server.ts',
     'apps/web/src/start.ts',
     'apps/web/src/vitnode.config.ts',
@@ -647,9 +645,9 @@ describe('the whole graph this app imports stays Next-free', () => {
       // the whole API module graph in behind it. Both deletes are props.
       //
       // Note this is not a blanket ban on `*.server`: the route legitimately
-      // reaches `apps/web/src/server/my-files.server.ts`, which is this app's
-      // own SSR transport behind `createIsomorphicFn`. The two conventions share
-      // a suffix and nothing else.
+      // reaches `@vitnode/core/tanstack/files/server`, the SSR transport behind
+      // `createIsomorphicFn`. The two conventions share a suffix and nothing
+      // else.
       const reached = [...reachableExternals(FILES).visited]
 
       expect(
@@ -736,12 +734,8 @@ describe('the whole graph this app imports stays Next-free', () => {
       'apps/web/src/routes/login_.reset-password.tsx',
       'apps/web/src/routes/login_.sso.$providerId.tsx',
       'apps/web/src/routes/register.tsx',
-      'apps/web/src/components/header.tsx',
-      'apps/web/src/components/layout/main-breadcrumb.tsx',
-      'apps/web/src/components/layout/main-header.tsx',
-      'apps/web/src/components/layout/settings-breadcrumb.tsx',
-      'apps/web/src/components/layout/user-header.tsx',
-      'apps/web/src/components/route-messages.tsx',
+      'apps/web/src/migration/main-header.tsx',
+      'apps/web/src/migration/settings-breadcrumb.tsx',
     ]
 
     it('walks into the design system, where the imports it bans live', () => {
@@ -776,29 +770,31 @@ describe('the whole graph this app imports stays Next-free', () => {
 })
 
 /**
- * The shared / client / server split inside the locale layer.
+ * The client / server split inside the locale layer.
  *
  * The rules that decide which language a URL is in have to be usable from four
  * places that cannot import each other's runtimes - the server middleware, the
- * router rewrite, the browser, and a plain test. That only holds while the
- * shared half stays framework-free, and "framework-free" is not something a
- * reviewer can be relied on to notice slipping.
+ * router rewrite, the browser, and a plain test. Stage 10 moved the layer into
+ * `@vitnode/core/tanstack/i18n`, so the split is now a property of the package's
+ * two barrels: `index.ts` is imported by route components and is therefore in
+ * every browser bundle, and `server.ts` must never be.
  */
 describe('the locale layer keeps its halves apart', () => {
   const appSrc = join(repoRoot, 'apps/web/src')
+  const layer = join(repoRoot, 'packages/vitnode/src/tanstack/i18n')
   const read = (file: string) => readFileSync(join(appSrc, file), 'utf8')
+  const readLayer = (file: string) => readFileSync(join(layer, file), 'utf8')
 
-  it('has the three modules it claims to', () => {
-    for (const file of [
-      'lib/i18n/shared.ts',
-      'lib/i18n/client.ts',
-      'server/locale.server.ts',
-    ]) {
-      expect(existsSync(join(appSrc, file)), file).toBe(true)
+  it('has the modules it claims to', () => {
+    for (const file of ['index.ts', 'server.ts', 'request.ts', 'runtime.ts']) {
+      expect(existsSync(join(layer, file)), file).toBe(true)
     }
+    // What this app kept: its language list, and the server function a package
+    // may not declare.
+    expect(existsSync(join(appSrc, 'lib/i18n/runtime.ts'))).toBe(true)
   })
 
-  it('keeps the shared half free of every framework', () => {
+  it('keeps the app half free of every framework but the compiler seam', () => {
     const shared = [join(appSrc, 'lib/i18n/shared.ts')]
 
     expect(offendersIn(shared, TANSTACK_ONLY)).toEqual([])
@@ -806,7 +802,7 @@ describe('the locale layer keeps its halves apart', () => {
     expect(offendersIn(shared, ['next-intl', 'use-intl'])).toEqual([])
   })
 
-  it('keeps the shared half free of the DOM and of request handling', () => {
+  it('keeps the app half free of the DOM and of request handling', () => {
     // Comments stripped: this file is largely prose about `Request`s and
     // cookies, and the point is that none of it is code.
     const code = read('lib/i18n/shared.ts')
@@ -820,14 +816,19 @@ describe('the locale layer keeps its halves apart', () => {
     expect(code).not.toContain('cookie')
   })
 
-  it('keeps request and cookie handling on the server side', () => {
-    // `locale.server.ts` is the only module that takes a `Request`, and the
+  it('keeps request and cookie handling behind the server barrel', () => {
+    // `request.ts` is the only module that takes a `Request`, and the
     // `server-only` import at the top of it is what turns "somebody imported
     // this from a component" into a build error.
-    expect(read('server/locale.server.ts')).toContain(
-      "import '@tanstack/react-start/server-only'",
+    expect(readLayer('request.ts')).toContain(
+      'import "@tanstack/react-start/server-only"',
     )
-    expect(read('lib/i18n/client.ts')).not.toContain('handleLocaleRequest')
+    expect(readLayer('server.ts')).toContain(
+      'import "@tanstack/react-start/server-only"',
+    )
+    // The client-safe barrel is in every browser bundle that renders a route.
+    expect(readLayer('index.ts')).not.toContain('handleLocaleRequest')
+    expect(readLayer('index.ts')).not.toContain('./messages')
   })
 
   it('leaves the locale rules in core, not copied into the app', () => {

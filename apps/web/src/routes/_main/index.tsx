@@ -4,12 +4,15 @@ import { ThemeSwitcher } from '@vitnode/core/components/switchers/themes/theme-s
 import { Button } from '@vitnode/core/components/ui/button'
 import { TooltipWithContent } from '@vitnode/core/components/ui/tooltip'
 import { formatPageTitle } from '@vitnode/core/lib/metadata'
+import {
+  intlQueryOptions,
+  publicPathnameOf,
+  useLocale,
+} from '@vitnode/core/tanstack/i18n'
+import { LanguageSwitcher } from '@vitnode/core/tanstack/layout'
 import { toast } from 'sonner'
 import { useTranslations } from 'use-intl'
 
-import { LanguageSwitcher } from '#/components/language-switcher'
-import { publicPathnameOf, useLocale } from '#/lib/i18n/client'
-import { intlQueryOptions } from '#/lib/i18n/query'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 /**

@@ -1,3 +1,6 @@
+import type { BreadcrumbMatch } from '@vitnode/core/tanstack/breadcrumb'
+
+import { breadcrumbOf } from '@vitnode/core/tanstack/breadcrumb'
 import {
   activeSettingsNavKey,
   isSettingsNavItemActive,
@@ -10,10 +13,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import type { BreadcrumbMatch } from '#/lib/breadcrumb'
-
-import { breadcrumbOf } from '#/lib/breadcrumb'
-import { isTanStackOwnedPath } from '#/lib/migration-navigation'
+import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
 
 import { withoutComments } from './source'
@@ -245,7 +245,7 @@ describe('a settings panel owns only its own contents', () => {
 /**
  * The breadcrumb, as the data each route declares rather than as rendered markup.
  *
- * `breadcrumbOf` is already covered in `main-shell.test.ts`; what is new here is
+ * `breadcrumbOf` is the package's rule and is covered there; what is new here is
  * that this is the first subtree to use it for a *nested* trail, so the question
  * worth asking is which route declares what.
  */

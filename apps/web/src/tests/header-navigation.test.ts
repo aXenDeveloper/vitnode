@@ -1,4 +1,5 @@
 import { createMemoryHistory } from '@tanstack/react-router'
+import { switchLocaleOn } from '@vitnode/core/tanstack/i18n'
 import {
   HEADER_HREF,
   headerNavItems,
@@ -10,8 +11,7 @@ import {
 } from '@vitnode/core/views/layouts/theme/header/user/user-header-model'
 import { describe, expect, it } from 'vitest'
 
-import { switchLocaleOn } from '#/lib/i18n/client'
-import { isTanStackOwnedPath } from '#/lib/migration-navigation'
+import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
 
 /**
@@ -81,7 +81,7 @@ describe('every header link is a client-side navigation', () => {
  * Stage 9 is the proof. `/settings` and `/register` were full document loads
  * into the Next.js app when Stage 8 mounted this header; they are client-side
  * navigations now, and the diff that did it added route files and touched
- * neither `user-header-model.ts` nor `migration-link.tsx`.
+ * neither `user-header-model.ts` nor `migration/link.tsx`.
  */
 describe('the user menu navigates by what the route tree serves', () => {
   const owns = (href: string): boolean =>

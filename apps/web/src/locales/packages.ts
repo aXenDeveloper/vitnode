@@ -46,6 +46,7 @@ export const packageMessages: Record<string, LocaleMessagesMap> = {
   },
   [CORE.pluginId]: {
     en: async () => await import('@vitnode/core/locales/en.json'),
+    pl: async () => await import('@vitnode/core/locales/pl.json'),
   },
   [EXAMPLE.pluginId]: {
     en: async () => await import('@vitnode/example/locales/en.json'),

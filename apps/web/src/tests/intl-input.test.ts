@@ -1,11 +1,16 @@
-import { afterEach, describe, expect, it } from 'vitest'
-
 import {
   MAX_NAMESPACE_DEPTH,
   MAX_NAMESPACE_LENGTH,
   MAX_NAMESPACES,
   validateIntlInput,
-} from '#/lib/i18n/query'
+} from '@vitnode/core/tanstack/i18n'
+import { afterEach, describe, expect, it } from 'vitest'
+
+// Imported for its module-scope `configureIntl`, which is what teaches the
+// package which languages *this* app serves - the whole subject of the locale
+// cases below. In the running app the router entry does it; here the import is
+// the equivalent, and without it every call throws rather than answering.
+import '#/lib/i18n/runtime'
 import { loadIntlMessages } from '#/server/messages.server'
 
 const validate = (input: unknown) => validateIntlInput(input)

@@ -1,12 +1,14 @@
 import { requestHandler } from '@tanstack/react-start/server'
 import { buildApiUrl } from '@vitnode/core/lib/fetcher/raw'
+import {
+  fetcherServer,
+  resolveApiOrigin,
+} from '@vitnode/core/tanstack/fetcher/server'
 import { Hono } from 'hono'
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-import { fetcherServer, resolveApiOrigin } from '#/server/fetcher.server'
 
 import { API_BASE, PLUGIN_ID } from './api-bridge-contract'
 

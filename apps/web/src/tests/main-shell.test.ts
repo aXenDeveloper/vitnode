@@ -3,16 +3,15 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import type { BreadcrumbMatch } from '#/lib/breadcrumb'
-
-import { breadcrumbOf } from '#/lib/breadcrumb'
 import { getRouter } from '#/router'
 
 import { withoutComments } from './source'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const routesDir = resolve(here, '../routes')
-const pluginsDir = resolve(here, '../../../../plugins')
+const repoRoot = resolve(here, '../../../..')
+const coreTanstackDir = resolve(repoRoot, 'packages/vitnode/src/tanstack')
+const pluginsDir = resolve(repoRoot, 'plugins')
 
 /** The pathless route that renders the header, the breadcrumb area and `<main>`. */
 const MAIN_SHELL_ROUTE_ID = '/_main'
@@ -140,25 +139,33 @@ describe('the shell owns the main landmark', () => {
   })
 
   /**
-   * The routes outside the shell own theirs, and must: without a shell above
+   * The screens outside the shell own theirs, and must: without a shell above
    * them, a login screen with no `<main>` is a document with no main landmark at
    * all.
+   *
+   * Stage 10 moved those screens into `@vitnode/core/tanstack/auth`, so the
+   * landmark moved with them - the route files below are now topology and
+   * nothing else, which the second assertion pins.
    */
   it.each([
-    ['login.tsx', 1],
-    ['login_.sso.$providerId.tsx', 1],
+    ['auth/login-route.tsx', 'login.tsx', 1],
+    ['auth/sso-route.tsx', 'login_.sso.$providerId.tsx', 1],
     // Stage 9. Registration and password recovery join the blank-auth area, so
     // they own their landmark for the same reason.
-    ['register.tsx', 1],
-    // Two, and both correct: the page body and the route's own
-    // `notFoundComponent`, which replaces it on an install with no email
-    // adapter. They are alternatives, so a document still renders exactly one.
-    ['login_.reset-password.tsx', 2],
-  ] as const)('%s renders %i <main> of its own', (name, count) => {
-    expect(landmarks(withoutComments(join(routesDir, name)))).toHaveLength(
-      count,
-    )
-  })
+    ['auth/register-route.tsx', 'register.tsx', 1],
+    // Two, and both correct: the page body and the `notFoundComponent` the route
+    // mounts, which replaces it on an install with no email adapter. They are
+    // alternatives, so a document still renders exactly one.
+    ['auth/recovery-route.tsx', 'login_.reset-password.tsx', 2],
+  ] as const)(
+    '%s renders %i <main>, and its route file none',
+    (module, route, count) => {
+      expect(
+        landmarks(withoutComments(join(coreTanstackDir, module))),
+      ).toHaveLength(count)
+      expect(landmarks(withoutComments(join(routesDir, route)))).toEqual([])
+    },
+  )
 
   /**
    * The same rule, for the pages this app does not own.
@@ -184,47 +191,14 @@ describe('the shell owns the main landmark', () => {
 })
 
 /**
- * The breadcrumb rule, as a function over plain data.
+ * The breadcrumb rule itself is not tested here any more.
  *
- * Deepest declaring match wins, which is the same answer Next's `@breadcrumb`
- * slot gives: the deepest folder with a `page.tsx`, with everything above it
- * falling through. Tested without a router because it *is* a function over
- * `{ staticData }` - see `#/lib/breadcrumb`.
+ * It moved with the component that applies it: `breadcrumbOf` is
+ * `@vitnode/core/tanstack/breadcrumb`'s, and `model.test.ts` in that package
+ * covers the fold - deepest declaration wins, `undefined` falls through, `null`
+ * clears. What is still this app's to state is which of *its* routes declare
+ * one, which `settings-routes.test.ts` asserts against the real route tree.
  */
-describe('a route declares its own breadcrumb, and the deepest one wins', () => {
-  const root = 'root crumb'
-  const leaf = 'leaf crumb'
-
-  const match = (...declared: React.ReactNode[]): BreadcrumbMatch => ({
-    // Spread rather than an optional parameter, so "declared `null`" and
-    // "declared nothing" are two different calls rather than one value.
-    staticData: declared.length > 0 ? { breadcrumb: declared[0] } : {},
-  })
-
-  it('takes the deepest declaration, not the first', () => {
-    expect(breadcrumbOf([match(root), match(), match(leaf)])).toBe(leaf)
-  })
-
-  it('falls back to an ancestor when the leaf declares nothing', () => {
-    expect(breadcrumbOf([match(root), match(), match()])).toBe(root)
-  })
-
-  /**
-   * The legacy slot's `page.tsx` returning `null` - `/` has one, so that a
-   * client-side navigation home clears the crumb the previous page rendered.
-   */
-  it('lets a child clear an ancestor’s crumb by declaring null', () => {
-    expect(breadcrumbOf([match(root), match(null)])).toBeNull()
-  })
-
-  it('answers with nothing when no match declares one', () => {
-    expect(breadcrumbOf([match(), match()])).toBeNull()
-  })
-
-  it('answers with nothing for no matches at all', () => {
-    expect(breadcrumbOf([])).toBeNull()
-  })
-})
 
 /**
  * What the shell warms before it renders, and why each one is the call it is.
@@ -246,10 +220,22 @@ describe('a route declares its own breadcrumb, and the deepest one wins', () => 
  * down.
  */
 describe('the shell warms what the header reads', () => {
-  // The prose in that file discusses `ensureAuthState` at length in order to
+  // The prose in that module discusses `ensureAuthState` at length in order to
   // explain why it is the wrong call here, so a scan that read the comments
   // would find the very thing it is asserting the absence of.
-  const shell = withoutComments(join(routesDir, '_main.tsx'))
+  //
+  // Stage 10 moved the shell's loader into the module that owns both reads,
+  // which is what makes the first two assertions structural rather than
+  // stylistic: the loader and the header are now the same file.
+  const shell = withoutComments(join(coreTanstackDir, 'layout/header.tsx'))
+
+  it('is the loader the shell route actually uses', () => {
+    // Without this the assertions below are about a function nobody calls.
+    expect(withoutComments(join(routesDir, '_main.tsx'))).toContain(
+      'loadMainShell(context)',
+    )
+    expect(shell).toContain('export const loadMainShell')
+  })
 
   it('ensures the header’s messages, whose absence would suspend the document', () => {
     expect(shell).toContain('headerIntlQueryOptions')
@@ -259,9 +245,7 @@ describe('the shell warms what the header reads', () => {
   it('takes the message options from the header rather than restating them', () => {
     // The namespace list is part of the query key, so a loader that spelled its
     // own out would warm a key the header never reads.
-    expect(shell).toContain(
-      "import { headerIntlQueryOptions } from '#/components/header'",
-    )
+    expect(shell).toContain('headerIntlQueryOptions({ locale })')
   })
 
   it('prefetches the session rather than ensuring it', () => {

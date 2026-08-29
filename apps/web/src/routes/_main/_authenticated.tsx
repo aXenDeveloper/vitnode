@@ -1,8 +1,10 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-
-import { ensureAuthState } from '#/lib/auth/query'
-import { LOGIN_PATH, returnToFor } from '#/lib/auth/redirects'
-import { canAccessAuthenticatedRoute } from '#/lib/auth/shared'
+import {
+  canAccessAuthenticatedRoute,
+  ensureAuthState,
+  LOGIN_PATH,
+  returnToFor,
+} from '@vitnode/core/tanstack/auth'
 
 /**
  * The boundary every page that requires a signed-in visitor sits under.
@@ -43,7 +45,7 @@ import { canAccessAuthenticatedRoute } from '#/lib/auth/shared'
  * from the session cookie, in the API's own handlers - so a visitor who edits
  * this app's cached session in devtools gets a page shell and an API that still
  * refuses them. Nothing here is, or may become, the security boundary. See the
- * long note in `#/lib/auth/shared`.
+ * long note on `authStateFromSession` in `@vitnode/core/tanstack/auth`.
  *
  * ## What children receive
  *

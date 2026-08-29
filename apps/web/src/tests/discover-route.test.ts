@@ -4,17 +4,16 @@ import type { SearchFeedPage } from '@vitnode/core/views/search/types'
 import { QueryClient } from '@tanstack/react-query'
 import { createMemoryHistory } from '@tanstack/react-router'
 import { requestHandler } from '@tanstack/react-start/server'
+import { intlQueryOptions, switchLocaleOn } from '@vitnode/core/tanstack/i18n'
+import {
+  DISCOVER_FEED_PARAMS,
+  discoverFeedQueryKey,
+  discoverFeedQueryOptions,
+} from '@vitnode/core/tanstack/search'
 import { searchFeedRequest } from '@vitnode/core/views/search/search-feed-query'
 import { Hono } from 'hono'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { switchLocaleOn } from '#/lib/i18n/client'
-import { intlQueryOptions } from '#/lib/i18n/query'
-import {
-  discoverFeedQueryKey,
-  discoverFeedQueryOptions,
-} from '#/lib/search/discover-feed'
-import { DISCOVER_FEED_PARAMS } from '#/lib/search/discover-request'
 import { getRouter } from '#/router'
 
 import { PLUGIN_ID } from './api-bridge-contract'

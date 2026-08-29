@@ -1,7 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { useSuspenseQuery } from '@tanstack/react-query'
 import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
 import {
   createRootRouteWithContext,
@@ -11,14 +10,16 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ThemeScript } from '@vitnode/core/components/theme-script'
-import { IntlProvider as CoreIntlProvider } from '@vitnode/core/lib/i18n/provider'
-import { VitNodeProviders } from '@vitnode/core/views/layouts/providers'
-import { VitNodeWebSocketProvider } from '@vitnode/core/ws/provider'
-import { IntlProvider } from 'use-intl'
+import {
+  intlQueryOptions,
+  publicPathnameOf,
+  resolveLocale,
+  useLocale,
+} from '@vitnode/core/tanstack/i18n'
+import { VitNodeRootProviders } from '@vitnode/core/tanstack/layout'
 
-import { RealtimeListeners } from '#/components/realtime-listeners'
-import { publicPathnameOf, resolveLocale, useLocale } from '#/lib/i18n/client'
-import { intlQueryOptions } from '#/lib/i18n/query'
+import type { Locale } from '#/lib/i18n/shared'
+
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 import appCss from '../styles.css?url'
@@ -36,7 +37,7 @@ const { debug, i18n, metadata, theme } = vitNodeShellConfig
  * `ownsPath` is here rather than derived per route because `beforeLoad` receives
  * no router, and the login guard has to make the same migration decision
  * `MigrationLink` makes for a rendered link. See `src/router.tsx`, which wires
- * it, and `#/lib/migration-navigation`, which owns the rule.
+ * it, and `#/migration/navigation`, which owns the rule.
  */
 export interface RootRouterContext {
   ownsPath: (href: string) => boolean
@@ -53,7 +54,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
    * invalidates the router to bring this back in step.
    */
   beforeLoad: ({ location }) => ({
-    locale: resolveLocale(publicPathnameOf(location)),
+    locale: resolveLocale<Locale>(publicPathnameOf(location)),
   }),
   component: RootComponent,
   head: () => ({
@@ -83,83 +84,25 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
 })
 
 /**
- * The VitNode provider tree.
+ * The VitNode provider tree, mounted once above every route.
  *
- * Every provider here is shared with the Next.js app - `VitNodeProviders` is the
- * same module `apps/docs` mounts - except the intl provider, which is where the
- * two frameworks meet their own halves of `use-intl`. This app resolves the
- * locale from the URL and hands it straight to `use-intl`; Next.js gets it from
- * its request scope through `next-intl`. Same library, same messages.
+ * Every provider in it is shared with the Next.js app - the theme, the toaster,
+ * the tooltip provider, the WebSocket - plus the pair of `use-intl` records that
+ * only a package can name. `VitNodeRootProviders` owns all of it, including the
+ * argument for why the realtime listeners are inside it rather than in the main
+ * shell.
  *
- * ## Why the provider is mounted twice
- *
- * `IntlProvider` is one component, imported from two places, and under
- * `vite dev` those are two *module records* with two React contexts. This app's
- * source goes through Vite's SSR module runner, which resolves `use-intl` with
- * the `development` export condition; `@vitnode/core` is external
- * (`vite.config.ts`) and so is loaded by Node, which resolves the same package
- * to its `default` (production) build. Same version, same `node_modules` entry,
- * two files - and `createContext` runs once per file. Proven by identity, in a
- * dev render:
- *
- *     IntlProvider (use-intl)      === IntlProvider (use-intl/react)  -> true
- *     IntlProvider (use-intl)      === IntlProvider (core's provider) -> false
- *     IntlProvider (core provider) === the record core's components read -> true
- *
- * So core's shared components - every `useTranslations` in the design system -
- * look for a context this app would otherwise never have provided, and the
- * first of them to render throws. A production build bundles both into one
- * chunk and collapses the two into one, which is exactly what made this a
- * `vite dev`-only 500 that the built server never showed.
- *
- * The inner one is core's own export rather than `next-intl`'s. Both resolve to
- * the same record today - `next-intl` re-exports `use-intl/react`'s provider
- * verbatim - but only one of them *says* so: `@vitnode/core/lib/i18n/provider`
- * is loaded by whatever loaded the package, which is by construction the record
- * core's components read. Reaching through `next-intl` for it was a coincidence
- * that happened to hold, and it is the dependency this migration is shedding -
- * no module this app renders imports `next-intl` any more.
- *
- * Both records get the same locale and the same messages, from one object.
- * `RouteMessages` mounts the same pair for a route's own namespaces, for the
- * same reason. `src/tests/intl-provider.test.ts` fails if either is removed
- * while two records still exist.
+ * What this route contributes is the two things an application owns: which
+ * languages it serves, and its theme defaults.
  *
  * Because the locale comes from router state, changing language re-renders this:
  * new locale, new query key, new messages, no page reload.
- *
- * The QueryClient is deliberately absent: the router owns it and the SSR
- * integration mounts its provider above this tree.
- *
- * ## Why `RealtimeListeners` is here rather than in the shell
- *
- * It is the one non-provider in this tree, and it is here for the same reason
- * every provider is: its lifetime is the WebSocket connection's, not any route's.
- * The main shell is not mounted on `/login`, so a sync that lived there would
- * miss the sign-in that happens on it - see the long note in
- * `#/components/realtime-listeners`, which owns that argument. Inside the
- * provider, because that is the context it reads.
  */
 function RootComponent() {
-  const locale = useLocale()
-  const { data: intl } = useSuspenseQuery(intlQueryOptions({ locale }))
-  const intlProps = {
-    locale,
-    messages: intl.messages,
-    timeZone: i18n.timeZone,
-  }
-
   return (
-    <IntlProvider {...intlProps}>
-      <CoreIntlProvider {...intlProps}>
-        <VitNodeProviders config={{ debug, locales: i18n.locales, theme }}>
-          <VitNodeWebSocketProvider>
-            <RealtimeListeners />
-            <Outlet />
-          </VitNodeWebSocketProvider>
-        </VitNodeProviders>
-      </CoreIntlProvider>
-    </IntlProvider>
+    <VitNodeRootProviders config={{ debug, locales: i18n.locales, theme }}>
+      <Outlet />
+    </VitNodeRootProviders>
   )
 }
 

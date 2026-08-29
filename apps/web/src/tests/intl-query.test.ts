@@ -1,13 +1,13 @@
 import { QueryClient } from '@tanstack/react-query'
-import { describe, expect, it } from 'vitest'
-
-import type { Locale } from '#/lib/i18n/shared'
-
 import {
   GLOBAL_NAMESPACE,
   intlQueryOptions,
   loadedIntlNamespaces,
-} from '#/lib/i18n/query'
+} from '@vitnode/core/tanstack/i18n'
+import { describe, expect, it } from 'vitest'
+
+import type { Locale } from '#/lib/i18n/shared'
+
 import { loadIntlMessages } from '#/server/messages.server'
 
 /**

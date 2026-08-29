@@ -1,11 +1,11 @@
 import { createMemoryHistory } from '@tanstack/react-router'
-import { describe, expect, it } from 'vitest'
-
 import {
   publicPathnameOf,
   resolveLocale,
   switchLocaleOn,
-} from '#/lib/i18n/client'
+} from '@vitnode/core/tanstack/i18n'
+import { describe, expect, it } from 'vitest'
+
 import { getRouter } from '#/router'
 
 /**
@@ -176,7 +176,10 @@ describe('switching language moves the public URL and nothing else', () => {
   it('ignores a language this app does not serve', async () => {
     const router = routerAt('/')
 
-    await switchLocaleOn(router, 'xx' as never)
+    // No cast any more: the package types a locale as `string`, because it is
+    // installed by apps with different language lists. Which strings are real
+    // is `configureIntl`'s answer, and this asserts it is still enforced.
+    await switchLocaleOn(router, 'xx')
 
     expect(router.latestLocation.publicHref).toBe('/')
   })

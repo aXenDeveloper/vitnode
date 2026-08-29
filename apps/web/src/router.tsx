@@ -3,10 +3,27 @@ import type { AnyRouter } from '@tanstack/react-router'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { createVitNodeQueryClient } from '@vitnode/core/lib/query-client'
+import {
+  pluginRouteSpecs,
+  withPluginRoutes,
+} from '@vitnode/core/tanstack/plugin-routes'
 
-import { createLocaleRewrite } from './lib/i18n/client'
-import { isTanStackOwnedPath } from './lib/migration-navigation'
-import { pluginRouteSpecs, withPluginRoutes } from './lib/plugin-routes'
+/**
+ * The auth transport, registered by importing the module that declares it.
+ *
+ * `@vitnode/core/tanstack/auth` owns every auth decision this app makes but may
+ * not declare a `createServerFn` - uncompiled on the server, one silently
+ * resolves to `undefined` - so `lib/auth.ts` declares the eight wrappers and
+ * hands them over at module scope. A bare import because there is nothing to
+ * name: the registration *is* the module's effect.
+ *
+ * Here because a router is the one module both entry points load, so the
+ * registration has happened before any route, loader or component can reach for
+ * it, in the browser bundle and on the server alike.
+ */
+import './lib/auth'
+import { createLocaleRewrite } from './lib/i18n/runtime'
+import { isTanStackOwnedPath } from './migration/navigation'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
 import { pluginRouteModules } from './plugin-routes.gen'
 import { Route as mainShellRoute } from './routes/_main'
@@ -22,7 +39,8 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
  *
  * The plugin half comes from two generated files and is joined by route id. No
  * plugin page is copied into `src/routes`, no route path is written by hand, and
- * nothing here knows which plugins are installed - see `lib/plugin-routes.ts`.
+ * nothing here knows which plugins are installed - see
+ * `@vitnode/core/tanstack/plugin-routes`.
  *
  * They mount under `_main` rather than under the root, which is the whole of
  * what "a plugin route renders in the application shell" amounts to here: a

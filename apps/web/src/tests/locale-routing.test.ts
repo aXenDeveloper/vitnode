@@ -1,13 +1,21 @@
 import { LOCALE_COOKIE_NAME } from '@vitnode/core/lib/i18n/locale-cookie'
+import { resolveLocale as runtimeResolveLocale } from '@vitnode/core/tanstack/i18n'
+import { handleLocaleRequest as coreHandleLocaleRequest } from '@vitnode/core/tanstack/i18n/server'
 import { describe, expect, it } from 'vitest'
 
 import { i18n } from '#/i18n'
-import { resolveLocale as runtimeResolveLocale } from '#/lib/i18n/client'
 import { isLocale, localeRouting } from '#/lib/i18n/shared'
-import { handleLocaleRequest } from '#/server/locale.server'
 
 const request = (path: string, headers: Record<string, string> = {}) =>
   new Request(new URL(path, 'https://vitnode.test'), { headers })
+
+/**
+ * The package's request plan, bound to this app's languages - which is exactly
+ * what `src/start.ts` does with it. Bound here rather than passed at each call
+ * so every case below reads as a statement about a URL.
+ */
+const handleLocaleRequest = (value: Request) =>
+  coreHandleLocaleRequest(value, localeRouting)
 
 /**
  * The rules themselves live in `@vitnode/core` and are exhaustively tested

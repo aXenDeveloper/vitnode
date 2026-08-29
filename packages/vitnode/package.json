@@ -22,6 +22,8 @@
     "@hono/zod-openapi": "^1.0.x",
     "@swc/cli": "^0.7.0 || ^0.8.0",
     "@swc/core": "^1.15.0",
+    "@tanstack/react-router": "^1.170.x",
+    "@tanstack/react-start": "^1.168.x",
     "@types/react": "^19.1.x",
     "@types/react-dom": "^19.1.x",
     "drizzle-kit": "^1.0.0-rc.4",
@@ -43,6 +45,8 @@
     "@react-email/ui": "^6.9.0",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.46",
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-start": "^1.168.49",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.1",
@@ -120,6 +124,21 @@
       "types": "./dist/src/framework/plugin-routes/index.d.ts",
       "default": "./dist/src/framework/plugin-routes/index.js"
     },
+    "./tanstack/*": {
+      "import": "./dist/src/tanstack/*/index.js",
+      "types": "./dist/src/tanstack/*/index.d.ts",
+      "default": "./dist/src/tanstack/*/index.js"
+    },
+    "./tanstack/*/client": {
+      "import": "./dist/src/tanstack/*/client.js",
+      "types": "./dist/src/tanstack/*/client.d.ts",
+      "default": "./dist/src/tanstack/*/client.js"
+    },
+    "./tanstack/*/server": {
+      "import": "./dist/src/tanstack/*/server.js",
+      "types": "./dist/src/tanstack/*/server.d.ts",
+      "default": "./dist/src/tanstack/*/server.js"
+    },
     "./*": {
       "import": "./dist/src/*.js",
       "types": "./dist/src/*.d.ts",
@@ -183,5 +202,19 @@
     "use-debounce": "^10.1.1",
     "use-intl": "^4.13.7",
     "vaul": "^1.1.2"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "@tanstack/react-start": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "next-intl": {
+      "optional": true
+    }
   }
 }

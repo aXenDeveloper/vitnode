@@ -1,17 +1,11 @@
-import type { SearchFeedLinkProps } from '@vitnode/core/views/search/search-feed-content'
-
 import { createFileRoute } from '@tanstack/react-router'
-import { HeaderContent } from '@vitnode/core/components/ui/header-content'
-import { formatPageTitle } from '@vitnode/core/lib/metadata'
-import { SearchFeedContent } from '@vitnode/core/views/search/search-feed-content'
-import { createTranslator } from 'use-intl'
+import {
+  DiscoverRouteContent,
+  loadDiscoverRoute,
+} from '@vitnode/core/tanstack/search'
 
-import { MigrationLink } from '#/components/migration-link'
-import { RouteMessages } from '#/components/route-messages'
-import { useLocale } from '#/lib/i18n/client'
-import { intlQueryOptions } from '#/lib/i18n/query'
-import { discoverFeedQueryOptions } from '#/lib/search/discover-feed'
-import { vitNodeShellConfig } from '#/vitnode.shell.config'
+import { pageHead } from '#/lib/page-head'
+import { MigrationLink } from '#/migration/link'
 
 /**
  * Discover, the first VitNode route to render outside Next.js.
@@ -23,155 +17,37 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  * Next.js route at `packages/vitnode/src/routes/main/discover/page.tsx` is still
  * live and unchanged - this is a parallel slice until the cutover.
  *
- * Everything visible is shared: `HeaderContent` and `SearchFeedContent` are the
- * same modules the Next.js app renders, with the two things a shared component
- * cannot resolve for itself passed in - the locale, and a `Link`.
- */
-
-/**
- * What this page renders strings from.
+ * Everything the page *is* - which namespaces it warms, the feed it ensures, the
+ * two strings its heading and tab title share, and the markup below both - is
+ * `@vitnode/core/tanstack/search`. What is left here is this application's
+ * topology: where the route sits, and the one thing a package cannot answer,
+ * which is how to build a link while half of VitNode still runs on Next.js.
  *
- * `core.global` is the shell's, `core.search` is the feed's - its empty state,
- * its "load more", the label on every result type. One list, read by both the
- * loader that fetches them and the provider that mounts them, because they have
- * to be the same set or the provider suspends on a key nobody warmed.
+ * **`head` must be written after `loader`**: `loaderData`'s type is inferred
+ * from `loader` in the same object literal, and TypeScript reads a literal's
+ * members in order - put `head` first and `loaderData` is `never`. Neither error
+ * names the cause.
  */
-const DISCOVER_NAMESPACES = ['core.global', 'core.search'] as const
-
-/**
- * The feed's link.
- *
- * `MigrationLink` rather than the router's `Link` directly, because a search
- * result points wherever the indexed content lives and most of VitNode has not
- * moved yet. It asks the route tree whether this app can render the
- * destination: `/discover` is a client-side navigation, `/blog/post-30` is a
- * document load into the Next.js app that still serves it. Either way the
- * locale prefix is applied exactly once - by the router's rewrite on one branch
- * and by `localizeHref` on the other.
- *
- * Declared at module scope rather than inline, so it is the same component type
- * on every render and React reconciles the feed rather than remounting every
- * result. External and unsafe URLs never reach this: `SearchFeedContent`
- * classifies those and renders them itself.
- */
-const DiscoverFeedLink = ({
-  children,
-  className,
-  href,
-}: SearchFeedLinkProps) => (
-  <MigrationLink className={className} href={href}>
-    {children}
-  </MigrationLink>
-)
-
 export const Route = createFileRoute('/_main/discover')({
+  loader: async ({ context }) => await loadDiscoverRoute(context),
+  head: ({ loaderData }) =>
+    pageHead({ robots: 'index, follow', ...loaderData }),
   component: DiscoverRoute,
-  /**
-   * Both things this page needs, fetched in parallel before it renders.
-   *
-   * `context.locale` comes from the root route's `beforeLoad`, which resolved it
-   * from the public URL - so `/pl/discover` fetches Polish messages and a Polish
-   * feed, and the first byte of HTML is already in that language.
-   *
-   * Neither call is repeated by the component. The messages are read back by
-   * `RouteMessages` through the identical `intlQueryOptions`, and the feed by
-   * `SearchFeedContent` through the key `discoverFeedQueryOptions` warms - the
-   * key core itself exports for exactly this. A mismatch on either would show up
-   * as a render that starts empty and fills in a round trip later, which is the
-   * thing SSR is for.
-   *
-   * The strings the metadata needs are returned rather than looked up again:
-   * `createTranslator` is `use-intl`'s framework-free translator, over the
-   * messages just fetched.
-   */
-  loader: async ({ context }) => {
-    const [intl] = await Promise.all([
-      context.queryClient.ensureQueryData(
-        intlQueryOptions({
-          locale: context.locale,
-          namespaces: DISCOVER_NAMESPACES,
-        }),
-      ),
-      context.queryClient.ensureInfiniteQueryData(
-        discoverFeedQueryOptions({ locale: context.locale }),
-      ),
-    ])
-
-    const t = createTranslator({
-      locale: context.locale,
-      messages: intl.messages,
-      namespace: 'core.search',
-    })
-
-    return { description: t('discoverDesc'), title: t('discoverTitle') }
-  },
-  /**
-   * The page's metadata, in the language the request resolved to.
-   *
-   * **`head` must be written after `loader`.** `loaderData`'s type is inferred
-   * from `loader` in the same object literal, and TypeScript reads a literal's
-   * members in order - put `head` first and `loaderData` is `never`, while
-   * `Route.useLoaderData()` collapses to `undefined`. Neither error names the
-   * cause. It costs nothing to get right and half an hour to diagnose.
-   *
-   * `head` is synchronous here and reads the two strings out of `loaderData`,
-   * which is the smallest thing that works and the reason it is worth spelling
-   * out: `head` receives no router context, so it cannot resolve a locale, and
-   * translating inside it would mean a second lookup that could disagree with
-   * the `<h1>`. The loader translates once; the tab title and the heading are
-   * then the same string by construction, which is exactly what the Next.js
-   * route gets from calling `getTranslations` once per request.
-   *
-   * `formatPageTitle` applies the same `"<page> - <site>"` rule Next.js applies
-   * through `title.template`, so both frameworks produce the same title.
-   *
-   * This is deliberately route-local. A general answer - metadata declared once
-   * and translated for every route - is a pattern this stage does not yet have
-   * enough migrated routes to design.
-   */
-  head: ({ loaderData }) => ({
-    meta: [
-      // Indexable, and stated rather than assumed: TanStack Start emits no
-      // robots directive of its own, and the Next.js route sets
-      // `robots: { index: true, follow: true }` explicitly.
-      { content: 'index, follow', name: 'robots' },
-      ...(loaderData
-        ? [
-            {
-              title: formatPageTitle(
-                vitNodeShellConfig.metadata,
-                loaderData.title,
-              ),
-            },
-            { content: loaderData.description, name: 'description' },
-          ]
-        : []),
-    ],
-  }),
 })
 
+/**
+ * `MigrationLink` rather than the router's `Link`, because a search result
+ * points wherever the indexed content lives and most of VitNode has not moved
+ * yet. It asks the route tree whether this app can render the destination:
+ * `/discover` is a client-side navigation, `/blog/post-30` is a document load
+ * into the Next.js app that still serves it. Either way the locale prefix is
+ * applied exactly once.
+ */
 function DiscoverRoute() {
-  const locale = useLocale()
-  const { description, title } = Route.useLoaderData()
-
   return (
-    <RouteMessages namespaces={DISCOVER_NAMESPACES}>
-      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
-        <HeaderContent desc={description} h1={title} />
-
-        {/*
-          The same options object the loader ensured, so this is a cache read
-          rather than a fetch: no `initialData` and no Suspense boundary, both of
-          which would be admissions that the data is not here yet. `fetchNextPage`
-          then continues from the loader's cursor through the loader's own
-          request and status checking.
-        */}
-        <SearchFeedContent
-          LinkComponent={DiscoverFeedLink}
-          queryOptions={discoverFeedQueryOptions({ locale })}
-          variant="timeline"
-        />
-      </div>
-    </RouteMessages>
+    <DiscoverRouteContent
+      {...Route.useLoaderData()}
+      LinkComponent={MigrationLink}
+    />
   )
 }

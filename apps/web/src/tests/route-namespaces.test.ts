@@ -1,15 +1,28 @@
+import {
+  LOGIN_NAMESPACES,
+  passwordResetNamespaces,
+  REGISTER_NAMESPACES,
+  SSO_CALLBACK_NAMESPACES,
+} from '@vitnode/core/tanstack/auth'
+import { MY_FILES_NAMESPACES } from '@vitnode/core/tanstack/files'
+import { HEADER_NAMESPACES } from '@vitnode/core/tanstack/layout'
+import {
+  DISCOVER_NAMESPACES,
+  SEARCH_NAMESPACES,
+} from '@vitnode/core/tanstack/search'
+import { SETTINGS_NAMESPACES } from '@vitnode/core/tanstack/settings'
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import { HEADER_NAMESPACES } from '#/components/header'
-import { passwordResetNamespaces } from '#/lib/auth/password-reset-route'
-import { SETTINGS_NAMESPACES } from '#/lib/settings/panel'
 import { loadIntlMessages } from '#/server/messages.server'
 
 const appSrc = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const repoRoot = resolve(appSrc, '../../..')
 const read = (path: string) => readFileSync(join(appSrc, path), 'utf8')
+const readCore = (path: string) =>
+  readFileSync(join(repoRoot, 'packages/vitnode/src/tanstack', path), 'utf8')
 
 /**
  * The route → namespace audit, as a test rather than as a document.
@@ -29,88 +42,92 @@ const read = (path: string) => readFileSync(join(appSrc, path), 'utf8')
  * from the outside.
  *
  * The namespace lists below are the audit table. They are written out rather
- * than imported so that changing a route's set has to be a deliberate edit
- * here too.
+ * than taken from the constants so that changing a route's set has to be a
+ * deliberate edit here too.
+ *
+ * Stage 10 moved every one of these constants - and the loader and the provider
+ * that have to agree with it - into `@vitnode/core/tanstack/*`, which is why the
+ * source scans below read the package rather than `apps/web/src/routes`. The
+ * audit did not change; the address of the thing being audited did, and the
+ * route files that used to hold it are now four lines each.
  */
 
-/** Every namespace set a migrated route declares, spelled out. */
+/** Every namespace set a migrated route declares, and where it now lives. */
 const ROUTES = [
   {
     constant: 'DISCOVER_NAMESPACES',
-    file: 'routes/_main/discover.tsx',
+    declared: DISCOVER_NAMESPACES,
+    module: 'search/discover-route.tsx',
     namespaces: ['core.global', 'core.search'],
     route: '/discover',
   },
   {
     constant: 'SEARCH_NAMESPACES',
-    file: 'routes/_main/search.tsx',
+    declared: SEARCH_NAMESPACES,
+    module: 'search/search-route.tsx',
     namespaces: ['core.global', 'core.search'],
     route: '/search',
   },
   {
     constant: 'LOGIN_NAMESPACES',
-    file: 'routes/login.tsx',
+    declared: LOGIN_NAMESPACES,
+    module: 'auth/login-route.tsx',
     namespaces: ['core.global', 'core.auth.sign_in', 'core.auth.sso'],
     route: '/login',
   },
   {
     constant: 'REGISTER_NAMESPACES',
-    file: 'routes/register.tsx',
+    declared: REGISTER_NAMESPACES,
+    module: 'auth/register-route.tsx',
     namespaces: ['core.global', 'core.auth.sign_up', 'core.auth.sso'],
     route: '/register',
   },
   {
-    constant: 'CALLBACK_NAMESPACES',
-    file: 'routes/login_.sso.$providerId.tsx',
+    constant: 'SSO_CALLBACK_NAMESPACES',
+    declared: SSO_CALLBACK_NAMESPACES,
+    module: 'auth/sso-route.tsx',
     namespaces: ['core.global', 'core.auth.sso'],
     route: '/login/sso/$providerId',
   },
   {
-    constant: 'FILES_NAMESPACES',
-    file: 'routes/_main/_authenticated/files.tsx',
+    constant: 'MY_FILES_NAMESPACES',
+    declared: MY_FILES_NAMESPACES,
+    module: 'files/route.tsx',
     namespaces: ['core.files', 'core.global'],
     route: '/files',
   },
 ] as const
 
-/**
- * `const NAME = [...] as const`, read back out of the source.
- *
- * These are route-local by design - a route's namespaces are nobody else's
- * business - so there is nothing to import. Parsing them is what lets this test
- * compare the declared set against the table above without exporting a constant
- * purely so a test can see it.
- */
-const declaredNamespaces = (source: string, constant: string): string[] => {
-  const match = new RegExp(
-    `const ${constant} = \\[([\\s\\S]*?)\\] as const`,
-  ).exec(source)
-
-  expect(
-    match,
-    `${constant} is declared as an \`as const\` array`,
-  ).not.toBeNull()
-
-  return [...(match?.[1] ?? '').matchAll(/'([^']+)'/g)].map(
-    ([, value]) => value,
-  )
-}
-
 describe.each(ROUTES)('$route declares one namespace set', (entry) => {
-  const source = read(entry.file)
-
   it('declares the set this audit expects', () => {
-    expect(declaredNamespaces(source, entry.constant)).toEqual([
-      ...entry.namespaces,
-    ])
+    expect([...entry.declared]).toEqual([...entry.namespaces])
   })
 
   it('warms it in the loader and mounts the same constant', () => {
     // The same identifier in both places, not two lists that happen to match:
     // the namespace list is part of the query key, so a loader that warmed a
-    // different set warmed a key nobody reads.
-    expect(source).toContain(`namespaces: ${entry.constant},`)
-    expect(source).toContain(`<RouteMessages namespaces={${entry.constant}}>`)
+    // different set warmed a key nobody reads. Both halves are now in one
+    // module, which is most of why the route file no longer needs to know.
+    const source = readCore(entry.module)
+    const mount = `<RouteMessages namespaces={${entry.constant}}>`
+
+    expect(source, 'the provider mounts it').toContain(mount)
+
+    // What is left after the declaration and the mount are removed: the loader's
+    // own use of it. Asserted this way rather than by a literal `namespaces: X`
+    // because two of these routes hand the constant to a shared card loader
+    // instead of building the query options inline, and both spellings are the
+    // same guarantee.
+    const elsewhere = source
+      .replace(
+        new RegExp(
+          `export const ${entry.constant} = \\[[\\s\\S]*?\\] as const;`,
+        ),
+        '',
+      )
+      .replace(mount, '')
+
+    expect(elsewhere, 'the loader warms it').toContain(entry.constant)
   })
 
   it('always includes the global namespace', () => {
@@ -131,13 +148,18 @@ describe.each(ROUTES)('$route declares one namespace set', (entry) => {
 describe('the shared namespace sets', () => {
   it('gives the header and the shell one list', () => {
     // The shell's loader warms `headerIntlQueryOptions`, which is built from
-    // `HEADER_NAMESPACES`, which is what `Header` reads back. One export, so a
-    // loader that warmed a different set is not expressible.
+    // `HEADER_NAMESPACES`, which is what `Header` reads back. Both ends are
+    // `@vitnode/core/tanstack/layout`'s, and the options are exported rather
+    // than the list, so a loader that warmed a different set is not
+    // expressible. What is asserted here is the app's half - that the shell
+    // takes the options from the package instead of restating the namespaces.
     expect([...HEADER_NAMESPACES]).toEqual(['core.global', 'core.search'])
-    expect(read('routes/_main.tsx')).toContain('headerIntlQueryOptions({')
-    expect(read('components/header.tsx')).toContain(
-      'useSuspenseQuery(headerIntlQueryOptions({ locale }))',
-    )
+    // The shell's loader is `loadMainShell`, which warms
+    // `headerIntlQueryOptions` - built from `HEADER_NAMESPACES`, which is what
+    // `Header` reads back. Both ends are in one module, so a loader that warmed
+    // a different set is not expressible.
+    expect(readCore('layout/header.tsx')).toContain('headerIntlQueryOptions({')
+    expect(read('routes/_main.tsx')).toContain('loadMainShell(context)')
   })
 
   it('gives the settings layout, its panels and its breadcrumb one list', () => {
@@ -146,12 +168,12 @@ describe('the shared namespace sets', () => {
       'core.global',
     ])
 
-    for (const file of [
-      'routes/_main/_authenticated/settings.tsx',
-      'components/layout/settings-breadcrumb.tsx',
-    ]) {
-      expect(read(file), file).toContain('SETTINGS_NAMESPACES')
-    }
+    expect(read('migration/settings-breadcrumb.tsx')).toContain(
+      'SETTINGS_NAMESPACES',
+    )
+    expect(readCore('settings/layout.tsx')).toContain(
+      '<RouteMessages namespaces={SETTINGS_NAMESPACES}>',
+    )
   })
 
   it('gives password recovery a set per mode, from one function', () => {
@@ -169,7 +191,7 @@ describe('the shared namespace sets', () => {
       'core.auth.change_password',
     ])
 
-    const source = read('routes/login_.reset-password.tsx')
+    const source = readCore('auth/recovery-route.tsx')
 
     expect(source).toContain('const namespaces = passwordResetNamespaces(')
     expect(source).toContain('<RouteMessages namespaces={namespaces}>')
@@ -179,7 +201,7 @@ describe('the shared namespace sets', () => {
 /** Every namespace any migrated route mounts, de-duplicated. */
 const ALL_NAMESPACES = [
   ...new Set([
-    ...ROUTES.flatMap((entry) => entry.namespaces),
+    ...ROUTES.flatMap((entry) => [...entry.namespaces]),
     ...HEADER_NAMESPACES,
     ...SETTINGS_NAMESPACES,
     ...passwordResetNamespaces('change'),
@@ -192,16 +214,30 @@ const ALL_NAMESPACES = [
  * Which sets are on screen is the cache's answer, not a list. A namespace
  * literal appearing in the locale layer means somebody hard-coded one, and the
  * next route to declare its own would silently stop being warmed on a switch.
+ *
+ * The layer is `@vitnode/core/tanstack/i18n` now, so the check reads the
+ * package's source rather than this app's - and the rule got stronger in the
+ * move: a package cannot name one of *this* app's route namespaces even by
+ * accident, because it has never heard of them.
  */
 describe('the locale layer names no route namespace', () => {
-  it('keeps the switcher free of namespace literals', () => {
-    const client = read('lib/i18n/client.ts')
+  const localeLayer = readFileSync(
+    join(repoRoot, 'packages/vitnode/src/tanstack/i18n/switch-locale.ts'),
+    'utf8',
+  )
 
+  it('keeps the switcher free of namespace literals', () => {
     for (const namespace of ALL_NAMESPACES.filter(
       (one) => one !== 'core.global',
     )) {
-      expect(client, namespace).not.toContain(namespace)
+      expect(localeLayer, namespace).not.toContain(namespace)
     }
+  })
+
+  it('warms whatever the cache is holding instead', () => {
+    // The positive half: without this the assertion above is satisfied by a
+    // switcher that warms nothing at all.
+    expect(localeLayer).toContain('loadedIntlNamespaces')
   })
 })
 
@@ -238,11 +274,15 @@ describe('every namespace a migrated route renders has Polish', () => {
       namespaces: [namespace],
     })
     const pl = JSON.parse(
-      readFileSync(join(appSrc, 'locales/@vitnode/core/pl.json'), 'utf8'),
+      readFileSync(
+        join(repoRoot, 'packages/vitnode/src/locales/pl.json'),
+        'utf8',
+      ),
     ) as unknown
 
     // The merged tree always has the branch - English sits underneath it. What
-    // is being asserted is that the *override* carries one too.
+    // is being asserted is that the Polish file the package ships carries one
+    // too, rather than the branch being English all the way down.
     expect(translatedLeaves(branch(messages, namespace))).toBeGreaterThan(0)
     expect(translatedLeaves(branch(pl, namespace))).toBeGreaterThan(0)
   })

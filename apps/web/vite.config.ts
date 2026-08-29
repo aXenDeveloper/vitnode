@@ -35,6 +35,23 @@ const config = defineConfig({
      *
      * Vite treats workspace-linked packages as `noExternal` by default, which is
      * why they have to be named.
+     *
+     * This is also what decides the shape of `@vitnode/core/tanstack/*`, so it is
+     * worth naming the consequence rather than leaving it to be rediscovered.
+     * Externalised here, the package skips this pass entirely and Nitro's own
+     * Rollup run inlines its `dist` afterwards - and nothing in that path runs
+     * the TanStack Start compiler. The *client* build has no such gap: it inlines
+     * the package, so the compiler transforms it there. So package code reaches
+     * the browser compiled and the server un-compiled, which is exactly why the
+     * package may declare `createIsomorphicFn` (its stub falls back to the
+     * `.server()` branch, which is what a server wants) and may never declare
+     * `createServerFn` (un-compiled, its handler resolves to `undefined` with no
+     * error at all). `packages/vitnode/src/tanstack/boundary.test.ts` holds the
+     * package to that.
+     *
+     * Removing `@vitnode/core` from this list to close the gap was measured and
+     * does not work: the SSR pass then reaches the locale barrel above and the
+     * build fails on `Could not resolve './en.json'`.
      */
     external: ['@vitnode/core', '@vitnode/blog', '@vitnode/example'],
   },

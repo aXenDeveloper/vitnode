@@ -1,13 +1,12 @@
 import { requestHandler } from '@tanstack/react-start/server'
-import { Hono } from 'hono'
-import { deleteCookie } from 'hono/cookie'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-
 import {
   fetcherServer,
   getForwardedApiHeaders,
   saveApiCookies,
-} from '#/server/fetcher.server'
+} from '@vitnode/core/tanstack/fetcher/server'
+import { Hono } from 'hono'
+import { deleteCookie } from 'hono/cookie'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { API_BASE, PLUGIN_ID } from './api-bridge-contract'
 
