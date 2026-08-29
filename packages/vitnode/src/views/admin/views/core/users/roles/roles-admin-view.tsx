@@ -1,98 +1,29 @@
-import { ExternalLink, ShieldIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
-import { DateFormat } from "@/components/date-format";
-import { RoleFormat } from "@/components/role-format";
-import { DataTable } from "@/components/table/data-table";
-import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
-import { Link } from "@/lib/navigation";
 
-import { RowActions } from "./table/actions/row-actions";
+import { adminRolesRequest, normalizeAdminRolesParams } from "./roles-query";
+import { RolesAdminTableNext } from "./roles-table-next";
 
+/**
+ * The AdminCP roles list, as this application's Server Component.
+ *
+ * Reads the page with the request's own cookies and hands it to the shared
+ * table. The columns, the members link, the edit dialog and the whole delete
+ * flow are `RolesAdminTableContent`, which the TanStack AdminCP renders too.
+ */
 export const RolesAdminView = async ({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) => {
-  const t = await getTranslations("admin.role.list");
-  const query = await searchParams;
-  const res = await fetcher(adminModule, {
-    path: "/list",
-    method: "get",
-    module: "admin/roles",
-    args: {
-      query,
-    },
-    withPagination: true,
-  });
+  const params = normalizeAdminRolesParams(await searchParams);
+  const res = await fetcher(adminModule, adminRolesRequest(params));
 
   if (res.status !== 200) {
     return notFound();
   }
 
-  const data = await res.json();
-
-  return (
-    <DataTable
-      columns={[
-        {
-          accessorKey: "name",
-          header: t("role"),
-          cell: ({ row }) => <RoleFormat role={row} />,
-        },
-        {
-          accessorKey: "usersCount",
-          header: t("usersCount"),
-          cell: ({ row }) => {
-            if (row.usersCount === 0) {
-              return <span className="text-muted-foreground">0</span>;
-            }
-
-            return (
-              <TooltipWithContent text={t("openUsersTooltip")}>
-                <Link
-                  className="text-primary inline-flex items-center gap-2"
-                  href={`/admin/core/users?roleId=${row.id}`}
-                >
-                  {row.usersCount} <ExternalLink className="size-4" />
-                </Link>
-              </TooltipWithContent>
-            );
-          },
-        },
-        {
-          accessorKey: "updatedAt",
-          header: t("updatedAt"),
-          cell: ({ row }) => <DateFormat date={row.updatedAt} />,
-        },
-        {
-          id: "actions",
-          header: "",
-          align: "right",
-          className: "w-20",
-          cell: ({ row }) => <RowActions data={row} />,
-        },
-      ]}
-      customNoResults={{
-        title: t("noResults.title"),
-        description: t("noResults.description"),
-        icon: <ShieldIcon />,
-      }}
-      edges={data.edges}
-      id="roles-table"
-      order={{
-        columns: ["updatedAt"],
-        defaultOrder: {
-          column: "updatedAt",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-      search
-      searchPlaceholder={t("searchPlaceholder")}
-    />
-  );
+  return <RolesAdminTableNext data={await res.json()} />;
 };

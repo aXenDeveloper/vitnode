@@ -1,9 +1,9 @@
 "use client";
 
 import { Trash2Icon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 
@@ -11,9 +11,21 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import { useDataTableSelection } from "@/components/table/selection";
 import { Button } from "@/components/ui/button";
 
-import { deleteFilesAction } from "./delete-action.server";
+import type { DeleteAdminFiles } from "../files-delete";
 
-export const FilesBulkActions = () => {
+/**
+ * "Delete selected", over the rows the table has ticked.
+ *
+ * `onDeleteFiles` is the framework seam - a server action in Next.js, a browser
+ * call plus a query invalidation in TanStack Start. Everything else, including
+ * the two-step force pass for files only retained revisions are holding, is the
+ * same in both.
+ */
+export const FilesBulkActions = ({
+  onDeleteFiles,
+}: {
+  onDeleteFiles: DeleteAdminFiles;
+}) => {
   const t = useTranslations("admin.system.files");
   const tGlobal = useTranslations("core.global.errors");
   const { selected } = useDataTableSelection();
@@ -52,7 +64,7 @@ export const FilesBulkActions = () => {
         if (!open) setHeldByRevisions([]);
       }}
       onSubmit={async ({ onClose }) => {
-        const result = await deleteFilesAction({ force: isForcing, ids });
+        const result = await onDeleteFiles({ force: isForcing, ids });
         report(result);
 
         if (!isForcing && result.heldByRevisions.length > 0) {

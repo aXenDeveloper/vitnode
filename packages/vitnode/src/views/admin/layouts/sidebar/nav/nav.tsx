@@ -1,24 +1,28 @@
-import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-} from "@/components/ui/sidebar";
+"use client";
 
-import type { NavAdminParent } from "./get-admin-nav";
+import { Link, usePathname } from "@/lib/navigation";
 
-import { ItemNavAdmin } from "./item";
+import type { NavAdminParent } from "./nav-model";
 
-export type { NavAdminParent } from "./get-admin-nav";
+import { NavSidebarAdminContent } from "./nav-content";
 
+export type { NavAdminParent } from "./nav-model";
+
+/**
+ * {@link NavSidebarAdminContent}, wired to Next.js.
+ *
+ * A client component only because `usePathname` is one. The navigation itself is
+ * resolved on the server by `getAdminNav` and handed down as a prop, so no
+ * permission check and no session read crosses this boundary.
+ */
 export const NavSidebarAdmin = ({ nav }: { nav: NavAdminParent[] }) => {
-  return nav.map(parent => (
-    <SidebarGroup key={parent.title}>
-      <SidebarGroupLabel>{parent.title}</SidebarGroupLabel>
-      <SidebarMenu>
-        {parent.items.map(item => (
-          <ItemNavAdmin key={item.href} {...item} />
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
-  ));
+  const pathname = usePathname();
+
+  return (
+    <NavSidebarAdminContent
+      LinkComponent={Link}
+      nav={nav}
+      pathname={pathname}
+    />
+  );
 };

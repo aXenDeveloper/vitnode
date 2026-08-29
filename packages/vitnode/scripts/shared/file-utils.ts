@@ -18,10 +18,21 @@ import {
   sep,
 } from "node:path";
 
+/**
+ * `type` is optional, and leaving it out was a real bug rather than a nicety.
+ *
+ * A page written as `import type { X } from "@/views/..."` was copied into every
+ * Next.js app with its `@/` intact, where the alias points at the *app's* own
+ * `src/` - so the import resolved to nothing and the app stopped type-checking,
+ * with no error anywhere near the file somebody had actually edited. The
+ * clause matched `import type X from` (a default import) but not
+ * `import type { X } from`, because the named-binding alternative comes before
+ * the identifier one and `type` consumed it.
+ */
 const relativeImportRegex =
-  /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"]([./]+[^'"]*)['"]/g;
+  /import\s+(?:type\s+)?(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"]([./]+[^'"]*)['"]/g;
 const atImportRegex =
-  /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"](@\/[^'"]*)['"]/g;
+  /import\s+(?:type\s+)?(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"](@\/[^'"]*)['"]/g;
 const dynamicAtImportRegex = /import\s*\(\s*['"](@\/[^'"]*)['"]\s*\)/g;
 const jsExtensionRegex = /\.(js|jsx|ts|tsx)$/;
 const pageFileRegex = /^page\.(tsx|ts|jsx|js)$/i;

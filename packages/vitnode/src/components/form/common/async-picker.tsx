@@ -1,9 +1,15 @@
 "use client";
 
 import { ChevronsUpDownIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
+/**
+ * `use-intl` rather than `next-intl`, and it is the same context either way:
+ * `next-intl` is built on `use-intl`, and `NextIntlClientProvider` provides into
+ * exactly this. Importing it directly is what lets a picker be rendered by a
+ * TanStack Start route, where there is no `next-intl` at all.
+ */
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {

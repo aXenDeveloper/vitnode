@@ -10,6 +10,7 @@ import {
   comparePluginRoutes,
   pluginRouteId,
 } from "./manifest";
+import { PLUGIN_ROUTE_AREAS } from "./types";
 
 const route = (id: string, path: string): PluginRouteDefinition => ({
   entry: `routes/${id}`,
@@ -347,16 +348,168 @@ describe("malformed declarations", () => {
     }
   });
 
+  /**
+   * `blank`, `api`, `settings`, `moderator` - every area somebody might assume
+   * exists. Two do, and a member is added by a stage that has a shell to point
+   * it at, never by a plugin declaring one.
+   */
   it("rejects an unknown area", () => {
     const error = thrownBy(() =>
       build({
         pluginId: "@vitnode/example",
-        routes: [{ area: "admin", entry: "routes/x", id: "x", path: "/x" }],
+        routes: [{ area: "blank", entry: "routes/x", id: "x", path: "/x" }],
       }),
     );
 
     expect(error.code).toBe("invalid-area");
-    expect(error.message).toContain("main");
+    expect(error.message).toContain("admin, main");
+  });
+});
+
+/**
+ * The AdminCP, as a place a plugin may put a page - Stage 12's one addition to
+ * this layer.
+ *
+ * An area chooses a shell and never rewrites a path, which is what every
+ * assertion here is ultimately about: an admin route says `/admin/…` in full,
+ * two areas at one pathname are two URLs, and a subtree renders in one shell.
+ */
+describe("the admin area", () => {
+  const one = (route: Partial<PluginRouteDefinition>) =>
+    buildPluginRouteManifest([
+      {
+        pluginId: "@vitnode/example",
+        routes: [
+          { entry: "routes/x", id: "x", path: "/admin/reports", ...route },
+        ],
+      },
+    ])[0];
+
+  it("is an area a route may declare", () => {
+    expect(one({ area: "admin" })).toMatchObject({
+      area: "admin",
+      path: "/admin/reports",
+    });
+  });
+
+  /**
+   * The invariant the whole design rests on. Nothing prefixes a path from an
+   * area, so a manifest is readable - and a collision visible in a diff -
+   * without anybody walking a graph to find out where a page actually is.
+   */
+  it("does not prefix, rewrite or infer the path", () => {
+    expect(one({ area: "admin", path: "/admin/reports/:id" })).toMatchObject({
+      path: "/admin/reports/:id",
+      segments: [
+        { kind: "static", value: "admin" },
+        { kind: "static", value: "reports" },
+        { kind: "param", name: "id" },
+      ],
+    });
+
+    // And an admin-area route is not *made* to live under `/admin` either. The
+    // area names a shell; where that shell's own routes sit is the host's.
+    expect(one({ area: "admin", path: "/reports" })).toMatchObject({
+      area: "admin",
+      path: "/reports",
+    });
+  });
+
+  it("does not collide with the same pathname in another area", () => {
+    const manifest = buildPluginRouteManifest([
+      example(
+        { area: "admin", entry: "routes/a", id: "a", path: "/reports" },
+        { entry: "routes/b", id: "b", path: "/reports" },
+      ),
+    ]);
+
+    expect(manifest.map(route => [route.area, route.path])).toEqual([
+      ["admin", "/reports"],
+      ["main", "/reports"],
+    ]);
+  });
+
+  it("collides with another admin route at the same path", () => {
+    const error = thrownBy(() =>
+      buildPluginRouteManifest([
+        example({
+          area: "admin",
+          entry: "routes/a",
+          id: "a",
+          path: "/admin/reports",
+        }),
+        blog({
+          area: "admin",
+          entry: "routes/b",
+          id: "b",
+          path: "/admin/reports",
+        }),
+      ]),
+    );
+
+    expect(error.code).toBe("duplicate-path");
+    expect(error.message).toContain("(admin)");
+  });
+
+  /**
+   * `requires` is about the public session; the AdminCP runs on a second one
+   * under its own cookie, and an admin route is already behind that shell's
+   * guard. A field that reads as enforcement and enforces a different session's
+   * answer is worse than no field, so it is refused rather than ignored.
+   */
+  it.each(["authenticated", "guest"] as const)(
+    "refuses `requires: %s` on an admin route",
+    requires => {
+      const error = thrownBy(() => one({ area: "admin", requires }));
+
+      expect(error.code).toBe("requires-in-admin-area");
+      expect(error.message).toContain("public session");
+    },
+  );
+
+  it("still accepts `requires` in the main area", () => {
+    expect(one({ requires: "authenticated" })).toMatchObject({
+      area: "main",
+      requires: "authenticated",
+    });
+  });
+
+  /**
+   * The list is data that other layers iterate - a diagnostic lists it, and the
+   * TanStack runtime walks it to hang one subtree per shell - so its order is
+   * part of the contract rather than an artefact of how this file was edited.
+   *
+   * Two members, and only two. `blank`, `api`, `settings` and `moderator` are
+   * areas somebody will assume exist; a member is added by a stage that has a
+   * shell to point it at.
+   */
+  it("lists every area in a fixed order", () => {
+    expect(PLUGIN_ROUTE_AREAS).toEqual(["admin", "main"]);
+    expect([...PLUGIN_ROUTE_AREAS].sort()).toEqual(PLUGIN_ROUTE_AREAS);
+  });
+
+  /**
+   * Type-level, and checked by `tsc` rather than at runtime: an area is a closed
+   * union, so a plugin cannot invent one and have it merely fail validation
+   * later.
+   */
+  it("is a closed union at the type level", () => {
+    const admin = {
+      area: "admin",
+      entry: "routes/x",
+      id: "x",
+      path: "/admin/reports",
+    } satisfies PluginRouteDefinition;
+
+    const invalid = {
+      // @ts-expect-error - "blank" is not an area VitNode has.
+      area: "blank",
+      entry: "routes/x",
+      id: "x",
+      path: "/x",
+    } satisfies PluginRouteDefinition;
+
+    expect([admin.area, invalid.entry]).toEqual(["admin", "routes/x"]);
   });
 });
 

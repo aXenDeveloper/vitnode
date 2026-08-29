@@ -97,10 +97,16 @@ describe('the user menu navigates by what the route tree serves', () => {
     [USER_HEADER_HREF.settings, true],
     [USER_HEADER_HREF.signIn, true],
     [USER_HEADER_HREF.signUp, true],
-    // The AdminCP runs on its own session with its own sign-in and has not been
-    // migrated at all, so this must stay a document load - a client-side
-    // navigation would be a TanStack not-found where a working panel is.
-    [USER_HEADER_HREF.adminCp, false],
+    // Flipped by Stage 12, and the flip is the point: the AdminCP entrance is a
+    // route in this tree now (`routes/admin.index.tsx`), so the menu item is a
+    // client-side navigation rather than a document load. Nothing in
+    // `user-header-model.ts` or `migration/link.tsx` changed to do it - the
+    // route tree is the table, exactly as it was for `/settings` in Stage 9.
+    //
+    // Only the *entrance* moved, not the panel: `/admin/core` is served here
+    // too, while `/admin/content/*` and the rest of `/admin/*` stay unowned and
+    // keep loading into the Next.js app. `admin-routes.test.ts` pins that line.
+    [USER_HEADER_HREF.adminCp, true],
   ])('%s is served by this route tree: %s', (href, expected) => {
     expect(owns(href)).toBe(expected)
   })

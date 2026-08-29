@@ -1,13 +1,13 @@
 "use client";
 
 import { AlertTriangleIcon, CheckIcon, LoaderCircleIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-import { saveWidgetSettingsMutation } from "../save-widget-settings.server";
+import { saveWidgetSettingsInBrowser } from "../widget-mutations";
 
 const AUTOSAVE_DELAY = 1200;
 export const NOTES_MAX_LENGTH = 10_000;
@@ -32,7 +32,7 @@ export const NotesContent = ({
     const timeout = setTimeout(async () => {
       setStatus("saving");
       const pending = value;
-      const res = await saveWidgetSettingsMutation({
+      const res = await saveWidgetSettingsInBrowser({
         settings: { content: pending },
         widgetId,
       });

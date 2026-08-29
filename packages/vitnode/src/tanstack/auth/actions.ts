@@ -10,6 +10,7 @@ import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-r
 
 import type { SsoCallbackInput } from "./contract";
 
+import { removeAdminSession } from "../admin/state";
 import { shouldRefreshSessionAfterSignUp } from "./contract";
 import {
   anonymousSession,
@@ -111,6 +112,13 @@ export const useSignInAction = ({
 
     if (!result.ok) return signInFormResult(result);
 
+    // Somebody has just identified themselves, and it may not be whoever this
+    // browser held an admin answer for. Dropping the entry costs nothing when
+    // there is none - which is the usual case on the public login page - and
+    // forces the answer to be re-derived from the cookie when there is. See the
+    // long note on `useSignOutAction`.
+    removeAdminSession(queryClient);
+
     await invalidateSession(queryClient);
     await navigate(destination());
 
@@ -186,6 +194,27 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
  * The failure is *reported* rather than thrown, and the caller decides: the
  * header raises the internal-error toast and stays signed in, which is honest -
  * a session that could not be ended is still a session.
+ *
+ * ## The admin session is dropped either way
+ *
+ * `isAdmin` picks which cookie the API deletes, but the *cache* is cleared for
+ * both, and `removeQueries` rather than an invalidation. Two reasons, and the
+ * second is the one that is easy to miss:
+ *
+ * - **`isAdmin: true`** is the AdminCP's own sign-out. Marking the entry stale
+ *   would leave this administrator's permission set in the browser, rendered by
+ *   anything still mounted, until a refetch returned. Since the next person at
+ *   this browser may be a different administrator signing in, "until a refetch"
+ *   is a window where one admin sees another's sidebar.
+ * - **`isAdmin: false`** does not touch the admin cookie at all - but it does
+ *   mean the person in front of the browser has stated they are leaving. The
+ *   right response to "who is this?" becoming uncertain is to re-derive the
+ *   answer from the cookie rather than to reuse the last one, and the admin
+ *   query costs one request to do that.
+ *
+ * Neither is a security property: the admin cookie is what authorizes an admin
+ * API call, and Hono re-reads it every time. This is about what the *browser*
+ * renders between a sign-out and the next read.
  */
 export const useSignOutAction = () => {
   const queryClient = useQueryClient();
@@ -198,6 +227,8 @@ export const useSignOutAction = () => {
 
     const current = queryClient.getQueryData(sessionQueryOptions().queryKey);
     if (current) setSessionData(queryClient, anonymousSession(current));
+
+    removeAdminSession(queryClient);
 
     await invalidateSession(queryClient);
     await router.invalidate();

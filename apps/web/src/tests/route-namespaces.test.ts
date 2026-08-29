@@ -1,3 +1,20 @@
+import { ADMIN_CRON_NAMESPACES } from '@vitnode/core/tanstack/admin/cron'
+import { ADMIN_DASHBOARD_NAMESPACES } from '@vitnode/core/tanstack/admin/dashboard'
+import { ADMIN_DEBUG_NAMESPACES } from '@vitnode/core/tanstack/admin/debug'
+import { ADMIN_FILES_NAMESPACES } from '@vitnode/core/tanstack/admin/files'
+import { ADMIN_INTEGRATIONS_NAMESPACES } from '@vitnode/core/tanstack/admin/integrations'
+import { ADMIN_QUEUE_NAMESPACES } from '@vitnode/core/tanstack/admin/queue'
+import { ADMIN_ROLES_NAMESPACES } from '@vitnode/core/tanstack/admin/roles'
+import { ADMIN_SEARCH_INDEX_NAMESPACES } from '@vitnode/core/tanstack/admin/search-index'
+import {
+  ADMIN_STAFF_CREATE_NAMESPACES,
+  ADMIN_STAFF_EDIT_NAMESPACES,
+  ADMIN_STAFF_NAMESPACES,
+} from '@vitnode/core/tanstack/admin/staff'
+import {
+  ADMIN_USER_NAMESPACES,
+  ADMIN_USERS_NAMESPACES,
+} from '@vitnode/core/tanstack/admin/users'
 import {
   LOGIN_NAMESPACES,
   passwordResetNamespaces,
@@ -95,6 +112,132 @@ const ROUTES = [
     module: 'files/route.tsx',
     namespaces: ['core.files', 'core.global'],
     route: '/files',
+  },
+
+  // ------------------------------------------------------- AdminCP Wave 1 ---
+  // Every one of these mirrors the `<I18nProvider namespaces={...}>` its Next.js
+  // page declares, plus `core.global` - which that provider adds itself and
+  // `RouteMessages` does not, because it replaces the root's provider rather
+  // than adding to it.
+  {
+    constant: 'ADMIN_DASHBOARD_NAMESPACES',
+    declared: ADMIN_DASHBOARD_NAMESPACES,
+    module: 'admin/dashboard/route.tsx',
+    // `admin.global` is not the shell's copy leaking in: the widget resolver
+    // files an uncategorised widget under `admin.global.nav.core`, and this
+    // provider replaces the shell's, so the key has to be in *this* set.
+    namespaces: ['admin.dashboard', 'admin.global', 'core.global'],
+    route: '/admin/core',
+  },
+  {
+    constant: 'ADMIN_INTEGRATIONS_NAMESPACES',
+    declared: ADMIN_INTEGRATIONS_NAMESPACES,
+    module: 'admin/integrations/route.tsx',
+    namespaces: ['admin.system.integrations', 'core.global'],
+    route: '/admin/core/system/integrations',
+  },
+  {
+    constant: 'ADMIN_FILES_NAMESPACES',
+    declared: ADMIN_FILES_NAMESPACES,
+    module: 'admin/files/route.tsx',
+    namespaces: ['admin.system.files', 'core.global'],
+    route: '/admin/core/system/files',
+  },
+  {
+    constant: 'ADMIN_SEARCH_INDEX_NAMESPACES',
+    declared: ADMIN_SEARCH_INDEX_NAMESPACES,
+    module: 'admin/search-index/route.tsx',
+    // `core.search`, not an `admin.*` namespace: the search index's AdminCP copy
+    // lives under `core.search.admin.*`, beside the public feed's, because the
+    // collection labels and the result-type names are the same strings on both
+    // surfaces. The Next.js page declares the identical set.
+    namespaces: ['core.global', 'core.search'],
+    route: '/admin/core/advanced/search',
+  },
+  {
+    constant: 'ADMIN_CRON_NAMESPACES',
+    declared: ADMIN_CRON_NAMESPACES,
+    module: 'admin/cron/route.tsx',
+    namespaces: ['admin.advanced.cron', 'core.global'],
+    route: '/admin/core/advanced/cron',
+  },
+  {
+    constant: 'ADMIN_QUEUE_NAMESPACES',
+    declared: ADMIN_QUEUE_NAMESPACES,
+    module: 'admin/queue/route.tsx',
+    namespaces: ['admin.advanced.queue', 'core.global'],
+    route: '/admin/core/advanced/queue',
+  },
+  {
+    constant: 'ADMIN_DEBUG_NAMESPACES',
+    declared: ADMIN_DEBUG_NAMESPACES,
+    module: 'admin/debug/route.tsx',
+    // `admin.advanced.queue` is there for one component: the queue snapshot
+    // reuses `QueueStatusBadge` from the queue list, which reads
+    // `admin.advanced.queue.status.*`. The Next.js page names the same pair.
+    namespaces: ['admin.advanced.queue', 'admin.debug', 'core.global'],
+    route: '/admin/core/debug',
+  },
+
+  // ------------------------------------------------------- AdminCP Wave 2 ---
+  // Users, roles and staff. Same rule as Wave 1 - each mirrors the
+  // `<I18nProvider namespaces={...}>` its Next.js page declares, plus
+  // `core.global`.
+  {
+    constant: 'ADMIN_USERS_NAMESPACES',
+    declared: ADMIN_USERS_NAMESPACES,
+    module: 'admin/users/route.tsx',
+    // `admin.global` is not the shell's copy leaking in: the `<h1>` and the
+    // `<title>` are `admin.global.nav.users.list`, which is what the Next.js
+    // page's heading reads too - and this provider replaces the shell's, so the
+    // key has to be in *this* set.
+    namespaces: ['admin.global', 'admin.user', 'core.global'],
+    route: '/admin/core/users',
+  },
+  {
+    constant: 'ADMIN_USER_NAMESPACES',
+    declared: ADMIN_USER_NAMESPACES,
+    module: 'admin/users/detail-route.tsx',
+    // `core.search` is the timeline tab and the activity feed inside it - the
+    // Next.js page declares the same pair, for the same component.
+    namespaces: ['admin.user', 'core.global', 'core.search'],
+    route: '/admin/core/users/$id',
+  },
+  {
+    constant: 'ADMIN_ROLES_NAMESPACES',
+    declared: ADMIN_ROLES_NAMESPACES,
+    module: 'admin/roles/route.tsx',
+    // `admin.global` for the same reason as the users list: the heading is
+    // `admin.global.nav.users.roles`.
+    namespaces: ['admin.global', 'admin.role', 'core.global'],
+    route: '/admin/core/users/roles',
+  },
+  {
+    constant: 'ADMIN_STAFF_NAMESPACES',
+    declared: ADMIN_STAFF_NAMESPACES,
+    module: 'admin/staff/route.tsx',
+    namespaces: ['admin.staff', 'core.global'],
+    route: '/admin/core/staff/{admins,moderators}',
+  },
+  {
+    constant: 'ADMIN_STAFF_CREATE_NAMESPACES',
+    declared: ADMIN_STAFF_CREATE_NAMESPACES,
+    module: 'admin/staff/create-route.tsx',
+    namespaces: ['admin.staff', 'core.global'],
+    route: '/admin/core/staff/{admins,moderators}/create',
+  },
+  {
+    constant: 'ADMIN_STAFF_EDIT_NAMESPACES',
+    declared: ADMIN_STAFF_EDIT_NAMESPACES,
+    module: 'admin/staff/edit-route.tsx',
+    // Deliberately *not* the permission labels. Those are flat top-level message
+    // keys - `"@vitnode/core:users:can_view"` - one per permission, so a real
+    // catalog is forty-odd of them and the i18n runtime refuses more than
+    // `MAX_NAMESPACES` per request. `loadStaffPermissionLabels` fetches them as
+    // data instead, in chunks the runtime accepts, and hands the result to the
+    // pure model as a lookup. See `admin/staff/edit-route.tsx`.
+    namespaces: ['admin.staff', 'core.global'],
+    route: '/admin/core/staff/{admins,moderators}/edit/$id',
   },
 ] as const
 

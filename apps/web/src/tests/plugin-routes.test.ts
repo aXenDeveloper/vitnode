@@ -2,12 +2,19 @@ import {
   fileRoutePaths,
   PLUGIN_ROUTES_ROUTE_ID,
 } from '@vitnode/core/tanstack/plugin-routes'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import { isTanStackOwnedPath } from '#/migration/navigation'
 import { pluginRouteManifest } from '#/plugin-route-manifest.gen'
 import { pluginRouteModules } from '#/plugin-routes.gen'
 import { getRouter } from '#/router'
+
+import { withoutComments } from './source'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const srcDir = resolve(here, '..')
 
 /**
  * Plugin routes, as *this* application ships them.
@@ -247,5 +254,75 @@ describe("the app's real route tree", () => {
         path.includes('/pl/'),
       ),
     ).toBe(false)
+  })
+})
+
+/**
+ * Stage 12. Which shell a plugin page is framed by, as this app wires it.
+ *
+ * No plugin in this repository ships an AdminCP route yet, so there is nothing
+ * mounted to look at - which is exactly why the wiring is worth pinning now. The
+ * failure this guards against is silent and arrives later: an `admin` mount
+ * point that was never passed, or quietly dropped, would leave the first plugin
+ * to declare `area: "admin"` mounted on the public site, outside the admin
+ * session guard and wearing the site header.
+ *
+ * `withPluginRoutes` refuses that rather than falling back, so the real symptom
+ * would be a failed build - but a build that fails for the plugin's author, in
+ * their app, is a poor place to discover that this app forgot a line.
+ */
+describe('the shells plugin routes mount under', () => {
+  const routerSource = () => withoutComments(join(srcDir, 'router.tsx'))
+
+  it('names a mount point for every area VitNode has', () => {
+    const source = routerSource()
+
+    expect(source).toMatch(/mountUnder:\s*\{[^}]*\badmin:\s*adminShellRoute\b/)
+    expect(source).toMatch(/mountUnder:\s*\{[^}]*\bmain:\s*mainShellRoute\b/)
+  })
+
+  /**
+   * The shells are route *objects* off the generated tree, not ids looked up by
+   * string: `createFileRoute` produces one instance per module and
+   * `routeTree.gen.ts` mutates it in place, so importing the module is what
+   * makes the mount point the same object the router will hold.
+   */
+  it('takes both shells from the route modules themselves', () => {
+    const source = routerSource()
+
+    expect(source).toMatch(
+      /import\s*\{\s*Route as adminShellRoute\s*\}\s*from\s*'\.\/routes\/_admin'/,
+    )
+    expect(source).toMatch(
+      /import\s*\{\s*Route as mainShellRoute\s*\}\s*from\s*'\.\/routes\/_main'/,
+    )
+  })
+
+  /**
+   * And today, the honest state of it: the public shell has a plugin subtree
+   * because `@vitnode/example` ships a page, and the AdminCP has none because no
+   * plugin ships an admin one. A container appearing under `_admin` without a
+   * manifest entry to explain it would mean the composition ran on something
+   * this app did not declare.
+   */
+  it('has a plugin subtree in the main shell and none in the AdminCP', () => {
+    // Widened deliberately. The generated file is a `satisfies` literal, so
+    // `area` narrows to the areas actually installed - which today is `'main'`
+    // alone, and makes `=== 'admin'` a type error rather than a false answer.
+    const areas: string[] = pluginRouteManifest.map((route) => route.area)
+
+    expect(areas).not.toContain('admin')
+
+    const shells = (getRouter().routeTree.children ?? []) as {
+      children?: { id?: string }[]
+      id?: string
+    }[]
+    const containersUnder = (routeId: string) =>
+      (shells.find((shell) => shell.id === routeId)?.children ?? []).filter(
+        (child) => child.id?.endsWith(`/${PLUGIN_ROUTES_ROUTE_ID}`),
+      )
+
+    expect(containersUnder(MAIN_SHELL_ROUTE_ID)).toHaveLength(1)
+    expect(containersUnder('/_admin')).toHaveLength(0)
   })
 })

@@ -117,7 +117,35 @@ export const isTanStackOwnedPath = (
 ): boolean => {
   // The same rule `rewrite.input` applies, from the same Stage 3 helper - the
   // rewrite is `deLocalizeUrl` and nothing else, so this is one rule, not a copy.
-  const { pathname } = deLocalizeHref(href)
+  const url = deLocalizeHref(href)
+
+  /**
+   * An href that carries its own origin is not a path, and this function can
+   * only answer for paths.
+   *
+   * Without this guard the origin is silently discarded: `new URL(href, base)`
+   * resolves an absolute URL against *itself*, only `.pathname` is read back,
+   * and `https://status.example.com` arrives as `/` - which matches
+   * `_main/index`, consumes the whole path, and is reported as a route this
+   * application owns. `MigrationLink` would then render `<Link to="https://...">`
+   * and client-navigate to this app's front page instead of leaving for the site
+   * the href actually named. `https://elsewhere.test/discover` is worse: it is
+   * reported as owned because `/discover` happens to be a route here.
+   *
+   * It has been latent since Stage 6 rather than newly broken. Every caller
+   * until now passed a path that `sanitizeReturnTo` or `sanitizeAdminReturnTo`
+   * had already stripped an origin from, so nothing could reach it. Stage 12 is
+   * the first feature with a legitimate source of external hrefs: a plugin's
+   * `admin.nav` entry may point at a docs site or a status page.
+   *
+   * The AdminCP shell classifies these before it ever asks - see
+   * `adminLinkFor` in `@vitnode/core/views/admin/layouts/admin-link` - because a
+   * link component takes a path in every framework. This makes the seam itself
+   * honest about the same distinction.
+   */
+  if (url.origin !== RELATIVE_BASE) return false
+
+  const { pathname } = url
 
   const matches = router.matchRoutes(pathname, undefined) as {
     pathname: string

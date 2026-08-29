@@ -134,19 +134,33 @@ describe('every TanStack subpath this app imports resolves', () => {
     expect(namespaceImports().length).toBeGreaterThan(0)
   })
 
-  it('names only the three public spellings', () => {
-    // `<feature>`, `<feature>/client` and `<feature>/server` are the only
-    // subpaths the export map publishes. Anything deeper is a feature's
-    // internals, and reaching for one is the mistake this catches - it resolves
-    // to `<that path>/index.js`, which is a confusing "module not found" rather
+  it('names only the public spellings', () => {
+    // A *feature* is a directory with an entry point, and the export map
+    // publishes three spellings of one: `<feature>`, `<feature>/client` and
+    // `<feature>/server`. Anything else is a feature's internals, and reaching
+    // for one is the mistake this catches - it resolves to
+    // `<that path>/index.js`, which is a confusing "module not found" rather
     // than an obvious "that is private".
+    //
+    // A feature may be nested one level, and `tanstack/admin/*` is why: the
+    // AdminCP is one runtime - the session, the shell, the navigation - with a
+    // screen per subdirectory (`admin/users`, `admin/staff`, `admin/cron`).
+    // Flattening them would spell the panel's own name into a dozen top-level
+    // features (`admin-users`, `admin-staff`, ...) and lose the fact that they
+    // share a guard. `./tanstack/*` matches across a slash - Node's pattern
+    // wildcard does - so `admin/users` resolves to
+    // `dist/src/tanstack/admin/users/index.js` and the assertion below proves
+    // that file exists.
+    //
+    // Two segments is the bound, because a third would be a screen's internals
+    // rather than a screen.
     const offenders = namespaceImports().filter(({ specifier }) => {
       const rest = specifier.slice(NAMESPACE.length).split('/')
+      const feature = ['client', 'server'].includes(rest.at(-1) ?? '')
+        ? rest.slice(0, -1)
+        : rest
 
-      return (
-        rest.length > 2 ||
-        (rest.length === 2 && !['client', 'server'].includes(rest[1]))
-      )
+      return feature.length === 0 || feature.length > 2
     })
 
     expect(offenders).toEqual([])

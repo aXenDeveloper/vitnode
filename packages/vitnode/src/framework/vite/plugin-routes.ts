@@ -4,13 +4,20 @@ import { createJiti } from "jiti";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { join, relative, resolve as resolvePath, sep } from "node:path";
+import {
+  dirname,
+  join,
+  relative,
+  resolve as resolvePath,
+  sep,
+} from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { PluginRouteDefinition } from "@/routing";
 
 import type {
   HostRoutePath,
+  LegacyRoutePath,
   PluginRouteCompilerSource,
   ResolvedPluginRouteModule,
 } from "../plugin-routes";
@@ -18,6 +25,7 @@ import type {
 import {
   compilePluginRoutes,
   hostRoutePathsFromFiles,
+  legacyAdminRoutePathsFromFiles,
   pluginIdsFromLoadedConfig,
   routeDeclarationsFromManifest,
 } from "../plugin-routes";
@@ -350,6 +358,70 @@ const readHostRoutes = (
 };
 
 /**
+ * Where the Next.js AdminCP's pages are still shipped from.
+ *
+ * **Migration-only**, and self-disabling: the check it feeds is off whenever this
+ * directory is not there, which is exactly the state the cutover leaves behind
+ * when `src/routes/admin/` is deleted along with the copier. See
+ * `../plugin-routes/legacy-routes.ts`, which is the rest of the mechanism.
+ */
+const LEGACY_ADMIN_ROUTES_PACKAGE = "@vitnode/core";
+const LEGACY_ADMIN_ROUTES_DIR = join("src", "routes", "admin");
+
+/**
+ * Where a package might be installed, from the app outwards.
+ *
+ * Every `node_modules` between the app and the filesystem root, which is where a
+ * package manager may have put it: beside the app (pnpm's workspace link, and
+ * what `apps/web` has), or hoisted to the repository root. Deliberately not
+ * `createRequire`, because the thing being looked for is a *directory of source
+ * files* rather than a module - it has no export-map entry, and resolving one to
+ * walk up from would tie this to whichever subpath happened to be exported.
+ */
+const packageDirectoryCandidates = (
+  appRoot: string,
+  packageName: string,
+): string[] => {
+  const candidates: string[] = [];
+  const segments = packageName.split("/");
+  let current = resolvePath(appRoot);
+
+  for (;;) {
+    candidates.push(join(current, "node_modules", ...segments));
+
+    const parent = dirname(current);
+
+    if (parent === current) return candidates;
+
+    current = parent;
+  }
+};
+
+/**
+ * Every URL the Next.js application still answers under `/admin`, or none.
+ *
+ * Read off the same directory the legacy copier descends into, so there is no
+ * list to maintain: a screen that moves to TanStack stops being a `page.tsx`
+ * here in the same commit that makes it a route file there.
+ *
+ * Silently empty when the package or the directory is absent, which is the
+ * correct answer three times over - an app outside this monorepo, a published
+ * install that dropped the sources, and the cutover.
+ */
+const readLegacyAdminRoutes = (appRoot: string): LegacyRoutePath[] => {
+  const directory = packageDirectoryCandidates(
+    appRoot,
+    LEGACY_ADMIN_ROUTES_PACKAGE,
+  )
+    .map(candidate => join(candidate, LEGACY_ADMIN_ROUTES_DIR))
+    .find(existsSync);
+
+  if (directory === undefined) return [];
+
+  return legacyAdminRoutePathsFromFiles(filesUnder(directory));
+};
+
+/**
  * Fails the build for a route module the app cannot import.
  *
  * The alternative is a generated `import()` of a specifier that does not
@@ -407,6 +479,7 @@ const discover = async (
       appRoot,
       hostRoutesConfigFor(appRoot, options.hostRoutesDir),
     ),
+    legacyRoutes: readLegacyAdminRoutes(appRoot),
     sources: loaded.map(({ source }) => source),
   });
 

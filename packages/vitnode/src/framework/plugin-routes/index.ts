@@ -15,6 +15,11 @@ export {
   assertNoHostRouteCollision,
   hostRoutePathsFromFiles,
 } from "./host-routes.js";
+export type { LegacyRoutePath } from "./legacy-routes.js";
+export {
+  assertNoLegacyRouteCollision,
+  legacyAdminRoutePathsFromFiles,
+} from "./legacy-routes.js";
 export { generatePluginRouteManifestSource } from "./manifest-source.js";
 export { assertPluginRouteRegistryParity } from "./parity.js";
 
@@ -48,6 +53,7 @@ export {
  *     compilePluginRoutes
  *       ├─ buildPluginRouteManifest         @vitnode/core/routing validates
  *       ├─ assertNoHostRouteCollision       does a plugin shadow the app's own
+ *       ├─ assertNoLegacyRouteCollision     …or a URL Next.js still answers
  *       ├─ resolvePluginRouteModules        one import specifier per route
  *       ├─ assertPluginRouteRegistryParity  the two files describe one set
  *       ├─ generatePluginRouteManifestSource   the *what*

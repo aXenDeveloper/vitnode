@@ -14,14 +14,14 @@ import {
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import { Card } from "@/components/ui/card";
-import { useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
+import type { DashboardActions } from "../widgets/dashboard-actions";
 import type {
   DashboardLayoutItem,
   DashboardWidgetCatalogEntry,
@@ -31,14 +31,20 @@ import type {
 import type { DashboardLayoutAction } from "./layout-reducer";
 
 import { widgetIdOf } from "../widgets/instance-id";
-import { loadWidgetContentAction } from "../widgets/load-widget-content.server";
 import { DROP_END_ID } from "./drop-placeholder";
 import { dashboardLayoutReducer, isLayoutDirty } from "./layout-reducer";
 import { panelWidgetId } from "./panel-drag-id";
-import { saveDashboardLayoutMutation } from "./save-layout.server";
 import { WidgetCardContent } from "./widget-card";
 
 interface DashboardBoardContextProps {
+  /**
+   * The four things the board can do, handed down rather than imported.
+   *
+   * The settings dialog is three components below this provider and needs two of
+   * them; reading them from the board's own context is what stops
+   * `DashboardGrid` and `WidgetCard` having to carry props they do not use.
+   */
+  actions: DashboardActions;
   available: DashboardWidgetOption[];
   dispatch: React.Dispatch<DashboardLayoutAction>;
   isDirty: boolean;
@@ -72,6 +78,7 @@ const RefreshedWidgetContent = ({
 }): React.ReactNode => React.use(content);
 
 interface DashboardBoardProviderProps {
+  actions: DashboardActions;
   catalog: DashboardWidgetCatalogEntry[];
   children: React.ReactNode;
   content: Record<string, React.ReactNode>;
@@ -79,7 +86,19 @@ interface DashboardBoardProviderProps {
   managedIds: string[];
 }
 
+/**
+ * The board: its layout state, its drag-and-drop, and the four actions it can
+ * perform.
+ *
+ * Framework-free since Stage 12. What used to be imported here - two server
+ * actions and `next-intl`'s router - arrives as {@link DashboardActions}, whose
+ * two saves are responsible for refreshing on success (`revalidatePath` in
+ * Next.js, a query invalidation in TanStack Start). Everything else about the
+ * board is unchanged, including the reducer, the drag sensors and the rule that
+ * a stored layout resets the working copy when it comes back changed.
+ */
 export const DashboardBoardProvider = ({
+  actions,
   catalog,
   children,
   content,
@@ -87,7 +106,6 @@ export const DashboardBoardProvider = ({
   managedIds,
 }: DashboardBoardProviderProps) => {
   const t = useTranslations("admin.dashboard.widgets");
-  const router = useRouter();
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [activeId, setActiveId] = React.useState<null | string>(null);
@@ -208,9 +226,11 @@ export const DashboardBoardProvider = ({
 
   const refreshWidget = React.useCallback(
     (instanceId: string) => {
-      const content = loadWidgetContentAction({ widgetId: instanceId }).catch(
-        () => <p className="text-destructive text-sm">{t("refresh_error")}</p>,
-      );
+      const content = actions
+        .loadWidgetContent(instanceId)
+        .catch(() => (
+          <p className="text-destructive text-sm">{t("refresh_error")}</p>
+        ));
 
       setRefreshed(current => ({
         ...current,
@@ -220,7 +240,7 @@ export const DashboardBoardProvider = ({
         },
       }));
     },
-    [t],
+    [actions, t],
   );
 
   const onCancel = () => {
@@ -230,7 +250,7 @@ export const DashboardBoardProvider = ({
 
   const onSave = () => {
     startTransition(async () => {
-      const res = await saveDashboardLayoutMutation({
+      const res = await actions.saveLayout({
         managed: managedIds,
         widgets: items,
       });
@@ -242,13 +262,13 @@ export const DashboardBoardProvider = ({
       }
 
       setIsEditing(false);
-      router.refresh();
     });
   };
 
   return (
     <DashboardBoardContext.Provider
       value={{
+        actions,
         available,
         dispatch,
         isDirty: isLayoutDirty(items, layout),

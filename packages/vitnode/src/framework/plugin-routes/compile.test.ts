@@ -298,6 +298,102 @@ describe("collisions", () => {
     expect(message).toContain('claims "/search"');
     expect(message).toContain("src/routes/_main/search.tsx");
   });
+
+  /**
+   * Migration-only, and off unless a caller supplies the legacy routes - which
+   * is why the wiring is worth one test of its own. `assertNoHostRouteCollision`
+   * cannot see this case: `/admin/content/*` is not one of the host's route
+   * files, it is a page in the Next.js application beside it.
+   */
+  it("rejects a plugin route that takes a URL Next.js still answers", () => {
+    const message = messageOf(() =>
+      compilePluginRoutes({
+        legacyRoutes: [
+          {
+            file: "src/routes/admin/content/[...slug]/page.tsx",
+            key: "/admin/content",
+            path: "/admin/content/[...slug]",
+            subtree: true,
+          },
+        ],
+        sources: [
+          example({
+            area: "admin",
+            entry: "routes/posts",
+            id: "posts",
+            path: "/admin/content/blog",
+          }),
+        ],
+      }),
+    );
+
+    expect(message).toContain('claims "/admin/content/blog"');
+    expect(message).toContain("src/routes/admin/content/[...slug]/page.tsx");
+  });
+
+  it("compiles the same route when no legacy routes are supplied", () => {
+    expect(
+      compile(
+        example({
+          area: "admin",
+          entry: "routes/posts",
+          id: "posts",
+          path: "/admin/content/blog",
+        }),
+      ).manifest,
+    ).toHaveLength(1);
+  });
+});
+
+/**
+ * The AdminCP as a destination for a plugin page, through the whole compiler.
+ *
+ * The unit rules are `routing/manifest.test.ts`'s and `routing/graph.test.ts`'s.
+ * What is asserted here is that an admin route survives the parts a build adds -
+ * the generated literal, the registry, the parity check - unchanged.
+ */
+describe("the admin area", () => {
+  const reports = (): PluginRouteCompilerSource =>
+    example({
+      area: "admin",
+      entry: "routes/reports",
+      id: "reports",
+      namespaces: ["@vitnode/example.admin"],
+      path: "/admin/reports",
+    });
+
+  it("carries the area into the generated manifest", () => {
+    const { manifest, manifestSource } = compile(reports());
+
+    expect(manifest[0]).toMatchObject({
+      area: "admin",
+      path: "/admin/reports",
+    });
+    expect(manifestSource).toContain("area: 'admin'");
+    expect(manifestSource).toContain("path: '/admin/reports'");
+  });
+
+  /**
+   * The generated registry is the *how*, and an area is not part of it: a module
+   * is imported the same way wherever its page is framed. One literal `import()`
+   * per route, exactly as Stage 11 emits for a public page.
+   */
+  it("generates the same one literal import a public route gets", () => {
+    expect(compile(reports()).registrySource).toContain(
+      "'@vitnode/example:reports': () => import('@vitnode/example/routes/reports'),",
+    );
+  });
+
+  it("keeps an admin route and a public route at one pathname apart", () => {
+    expect(
+      compile(
+        example(
+          { area: "admin", entry: "routes/a", id: "a", path: "/reports" },
+          { entry: "routes/b", id: "b", path: "/reports" },
+        ),
+      ).manifest.map(route => route.area),
+    ).toEqual(["admin", "main"]);
+  });
 });
 
 describe("hierarchy", () => {

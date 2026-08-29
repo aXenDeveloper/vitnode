@@ -1,30 +1,36 @@
 "use client";
 
 import { RefreshCwIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import { useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
-import { rebuildSearchIndexMutation } from "./mutation-api.server";
+import type { RebuildSearchIndex } from "./search-index-mutations";
 
+/**
+ * "Reindex", on the row of a collection that has an indexer.
+ *
+ * The same mutation the header's button calls, narrowed to one item type - and
+ * the same seam, carrying its own refresh.
+ */
 export const ReindexCollectionAction = ({
   itemType,
   label,
+  onRebuild,
 }: {
   itemType: string;
   label: string;
+  onRebuild: RebuildSearchIndex;
 }) => {
   const t = useTranslations("core.search");
-  const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
   const onClick = () => {
     startTransition(async () => {
-      const result = await rebuildSearchIndexMutation(itemType);
+      const result = await onRebuild(itemType);
 
       if (result.error) {
         toast.error(t("admin.rebuildError"));
@@ -33,7 +39,6 @@ export const ReindexCollectionAction = ({
       }
 
       toast.success(t("admin.reindexQueued", { collection: label }));
-      router.refresh();
     });
   };
 

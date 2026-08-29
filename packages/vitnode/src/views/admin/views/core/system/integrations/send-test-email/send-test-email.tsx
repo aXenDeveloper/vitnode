@@ -1,8 +1,8 @@
 "use client";
 
 import { SendIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,13 +15,15 @@ import {
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 
+import type { SendTestEmail } from "./send-test-email-mutation";
+
 const ContentSendTestEmail = React.lazy(async () =>
   import("./content").then(module => ({
     default: module.ContentSendTestEmail,
   })),
 );
 
-export const SendTestEmailAction = () => {
+export const SendTestEmailAction = ({ onSend }: { onSend: SendTestEmail }) => {
   const t = useTranslations("admin.system.integrations.email.test");
 
   return (
@@ -41,7 +43,7 @@ export const SendTestEmailAction = () => {
         </DialogHeader>
 
         <React.Suspense fallback={<Loader />}>
-          <ContentSendTestEmail />
+          <ContentSendTestEmail onSend={onSend} />
         </React.Suspense>
       </DialogContent>
     </Dialog>

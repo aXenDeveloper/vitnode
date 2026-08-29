@@ -9,6 +9,7 @@ import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
 import { CONFIG_PLUGIN } from "@vitnode/core/config";
 import { ClearCacheAction } from "@vitnode/core/views/admin/views/core/debug/actions/clear-cache/clear-cache";
+import { clearCacheMutation } from "@vitnode/core/views/admin/views/core/debug/actions/clear-cache/mutation-api.server";
 
 const SystemLogsView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/debug/system-logs/system-logs-view").then(
@@ -47,7 +48,7 @@ export default async function Page(
             permission="can_clear_cache"
             plugin={CONFIG_PLUGIN.pluginId}
           >
-            <ClearCacheAction />
+            <ClearCacheAction onClearCache={clearCacheMutation} />
           </AdminStaffPermissionGate>
         </HeaderContent>
 

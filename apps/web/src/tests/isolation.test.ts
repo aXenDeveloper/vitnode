@@ -428,6 +428,25 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/start.ts',
     'apps/web/src/vitnode.config.ts',
     'apps/web/src/vitnode.shell.config.ts',
+    // Stage 12. The AdminCP: the guard and shell, the sign-in screen, and the
+    // two server functions the panel's session and palette run on.
+    //
+    // The screens themselves are **derived** below rather than listed. Every
+    // other entry in this array was chosen by hand for reaching deepest, and
+    // that is fine for a surface that stopped growing - but `_admin/` gains a
+    // file every time a screen migrates, and a hand-picked list is a list
+    // somebody has to remember. It was exactly that kind of list, in
+    // `screen-boundaries.test.ts`, that let the roles screen ship reaching
+    // `next-intl`: the note excluding it said "whoever migrates it will meet
+    // it", the screen was migrated, and the exclusion quietly became cover.
+    'apps/web/src/migration/admin-shell.tsx',
+    'apps/web/src/lib/admin-auth.ts',
+    'apps/web/src/lib/admin-search.ts',
+    'apps/web/src/routes/admin.index.tsx',
+    'apps/web/src/routes/_admin.tsx',
+    ...filesUnder(join(repoRoot, 'apps/web/src/routes/_admin'))
+      .map((path) => relative(repoRoot, path))
+      .sort(),
   ]
 
   it('needs the packages to be built to mean anything', () => {
@@ -462,6 +481,67 @@ describe('the whole graph this app imports stays Next-free', () => {
 
   it("reaches none of next-intl's Next-only entries", () => {
     expect(offenders(ENTRIES, NEXT_INTL_RUNTIME)).toEqual([])
+  })
+
+  /**
+   * The *rendered* graph reaches no `next-intl` at all - not even its bare
+   * client entry, which the list above deliberately omits.
+   *
+   * ## Why the bare specifier is worth forbidding even though it works
+   *
+   * `next-intl`'s root entry is not Next-only at runtime: its client
+   * `useTranslations` is a two-line wrapper over `use-intl`'s, resolving the
+   * same module and therefore the same React context, and it re-exports
+   * `createTranslator` from `use-intl/core` verbatim. That is exactly why
+   * `components/ui/color-picker.tsx` reached it for a whole stage without
+   * anything failing - and why the roles screen shipped with it in its graph.
+   *
+   * What it costs is not a render, it is the boundary: a component in the shared
+   * tree that reads `next-intl` is one a framework-neutral package cannot claim
+   * to be framework-neutral about, and every such reach is invisible because it
+   * works. So the rule for anything React renders in this application is
+   * `use-intl`, directly.
+   *
+   * ## Why the API mount is not in this walk
+   *
+   * `routes/api/$.ts` mounts Hono, whose graph reaches core's server-side
+   * `createTranslator` calls - the locale negotiator and the reset-password
+   * email - and those still read `next-intl` **on purpose**.
+   * `packages/vitnode/src/lib/i18n/rsc-boundaries.test.ts` requires it: those
+   * same modules are rendered on the server by `apps/docs`, where reading
+   * `use-intl` is the mistake, and it holds the scar from `ContentDataTable` to
+   * prove the cost. Two halves, two rules, and this app is the one that has to
+   * hold both - so this walks the half the rule applies to rather than
+   * pretending there is one rule.
+   *
+   * It follows that `apps/web` still legitimately depends on `next-intl`, and
+   * the assertion above about `apps/web/src` naming it is what keeps that
+   * dependency purely transitive.
+   */
+  const RENDERED_ENTRIES = ENTRIES.filter(
+    (entry) => !entry.startsWith('apps/web/src/routes/api/'),
+  ).concat('apps/web/src/routes/_admin.tsx')
+
+  it('renders nothing that reaches next-intl', () => {
+    // `router.tsx` pulls the generated route tree, which pulls the API mount, so
+    // the walk is seeded from the shells and screens rather than from the router.
+    const rendered = RENDERED_ENTRIES.filter(
+      (entry) => !entry.endsWith('router.tsx'),
+    )
+
+    expect(offenders(rendered, ['next-intl'])).toEqual([])
+  })
+
+  it('still reaches the AdminCP shell from that walk, so it is not vacuous', () => {
+    const reached = [...reachableExternals(RENDERED_ENTRIES).visited]
+
+    expect(reached.some((path) => path.includes('tanstack/admin/shell'))).toBe(
+      true,
+    )
+    expect(
+      reached.some((path) => path.includes('ui/color-picker')),
+      'the roles screen reaches the colour picker that used to read next-intl',
+    ).toBe(true)
   })
 
   /**

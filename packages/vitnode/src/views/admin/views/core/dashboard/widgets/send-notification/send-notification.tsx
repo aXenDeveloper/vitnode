@@ -1,14 +1,14 @@
 "use client";
 
 import { SendIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { sendNotificationMutation } from "./mutation-api.server";
+import { sendNotificationInBrowser } from "../widget-mutations";
 
 export const SendNotificationAction = ({
   defaultTitle,
@@ -26,7 +26,7 @@ export const SendNotificationAction = ({
 
   const onSend = () => {
     startTransition(async () => {
-      const res = await sendNotificationMutation({
+      const res = await sendNotificationInBrowser({
         title,
         type: "info",
         userId: Number(userId),

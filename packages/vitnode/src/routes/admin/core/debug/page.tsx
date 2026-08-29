@@ -9,6 +9,7 @@ import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
 import { CONFIG_PLUGIN } from "@/config";
 import { ClearCacheAction } from "@/views/admin/views/core/debug/actions/clear-cache/clear-cache";
+import { clearCacheMutation } from "@/views/admin/views/core/debug/actions/clear-cache/mutation-api.server";
 
 const SystemLogsView = dynamic(async () =>
   import("@/views/admin/views/core/debug/system-logs/system-logs-view").then(
@@ -47,7 +48,7 @@ export default async function Page(
             permission="can_clear_cache"
             plugin={CONFIG_PLUGIN.pluginId}
           >
-            <ClearCacheAction />
+            <ClearCacheAction onClearCache={clearCacheMutation} />
           </AdminStaffPermissionGate>
         </HeaderContent>
 

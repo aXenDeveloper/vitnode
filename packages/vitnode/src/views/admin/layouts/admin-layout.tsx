@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import type { StaffPermissionSet } from "@/api/lib/permission-staff";
 
+import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
 import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -36,7 +37,7 @@ export interface AdminLayoutProps {
 const getAdminPermissions = async (): Promise<StaffPermissionSet> => {
   const session = await getSessionAdminApi();
 
-  return session?.permissions ?? { root: false, permissions: [] };
+  return session?.permissions ?? EMPTY_STAFF_PERMISSION_SET;
 };
 
 const NavSidebarAdminSession = async ({

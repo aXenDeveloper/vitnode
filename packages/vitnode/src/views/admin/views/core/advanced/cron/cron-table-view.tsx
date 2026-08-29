@@ -1,102 +1,50 @@
-import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
+
+import type { RawAdminTableParams } from "@/views/admin/table/params";
 
 import { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
-import { DateFormat } from "@/components/date-format";
-import {
-  DataTable,
-  type SearchParamsDataTable,
-} from "@/components/table/data-table";
+import { NextDataTableNavigation } from "@/components/table/navigation-next";
 import { fetcher } from "@/lib/fetcher";
+import { normalizeAdminTableParams } from "@/views/admin/table/params";
 
-import { RunActionCronTable } from "./run-action/run-action";
+import { CRON_TABLE_CONTRACT, cronRequest } from "./cron-query";
+import { CronTableContent } from "./cron-table-content";
+import { mutationApi } from "./run-action/mutation-api.server";
 
+/**
+ * The Next.js half of `/admin/core/advanced/cron`: read the page, then hand it
+ * to the shared table.
+ *
+ * Everything Next.js about the screen is in this file. It is a Server Component,
+ * so it fetches with `fetcher()` - which reads the admin cookie through
+ * `next/headers` - and the run is the server action, unchanged: it ends in
+ * `revalidatePath`, which is how a Next.js page refreshes and is the one step
+ * that cannot be shared.
+ *
+ * The request itself is *not* Next.js's. `normalizeAdminTableParams` and
+ * `cronRequest` are the same two functions the TanStack Start loader calls, so
+ * a URL means the same thing in both apps.
+ */
 export const CronTableView = async ({
   searchParams,
 }: {
-  searchParams: Promise<SearchParamsDataTable>;
+  searchParams: Promise<RawAdminTableParams>;
 }) => {
-  const query = await searchParams;
-  const res = await fetcher(cronAdminModule, {
-    path: "/",
-    method: "get",
-    module: "cron",
-    prefixPath: "/admin/advanced",
-    args: {
-      query,
-    },
-    withPagination: true,
-  });
+  const params = normalizeAdminTableParams(
+    await searchParams,
+    CRON_TABLE_CONTRACT,
+  );
+  const res = await fetcher(cronAdminModule, cronRequest(params));
 
-  const [data, t] = await Promise.all([
-    res.json(),
-    getTranslations("admin.advanced.cron"),
-  ]);
+  if (res.status !== 200) {
+    return notFound();
+  }
+
+  const data = await res.json();
 
   return (
-    <DataTable
-      columns={[
-        {
-          accessorKey: "name",
-          header: t("list.name"),
-          cell: ({ row }) => (
-            <div className="flex max-w-sm flex-col">
-              <span className="truncate">{row.name}</span>
-              <p
-                className="text-muted-foreground line-clamp-2 text-sm whitespace-normal"
-                title={row.description ?? undefined}
-              >
-                {row.description}
-              </p>
-            </div>
-          ),
-        },
-        { accessorKey: "pluginId", header: t("list.pluginId") },
-        { accessorKey: "module", header: t("list.module") },
-        {
-          accessorKey: "schedule",
-          header: t("list.schedule"),
-        },
-        {
-          accessorKey: "lastRun",
-          header: t("list.lastRun.title"),
-          cell: ({ row }) =>
-            row.lastRun ? (
-              <DateFormat date={row.lastRun} />
-            ) : (
-              <span className="text-muted-foreground italic">
-                {t("list.lastRun.never")}
-              </span>
-            ),
-        },
-        {
-          accessorKey: "nextRun",
-          header: t("list.nextRun.title"),
-          cell: ({ row }) =>
-            row.nextRun ? (
-              <DateFormat date={row.nextRun} showFullDate />
-            ) : (
-              <span className="text-muted-foreground italic">
-                {t("list.nextRun.never")}
-              </span>
-            ),
-        },
-        {
-          id: "actions",
-          header: "",
-          align: "right",
-          cell: ({ row }) => <RunActionCronTable id={row.id} />,
-        },
-      ]}
-      edges={data.edges}
-      id="cron-table"
-      order={{
-        columns: ["lastRun", "createdAt", "nextRun"],
-        defaultOrder: {
-          column: "lastRun",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-    />
+    <NextDataTableNavigation>
+      <CronTableContent data={data} onRun={mutationApi} />
+    </NextDataTableNavigation>
   );
 };

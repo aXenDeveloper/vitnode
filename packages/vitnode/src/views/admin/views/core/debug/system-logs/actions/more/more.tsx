@@ -1,9 +1,8 @@
 "use client";
 
 import { SearchIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-import dynamic from "next/dynamic";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +16,13 @@ import {
 import { Loader } from "@/components/ui/loader";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
-const ContentMoreActionSystemLogs = dynamic(async () =>
+/**
+ * `React.lazy` rather than `next/dynamic`, so this dialog renders in both
+ * applications. The two do the same thing here - split the chunk and load it on
+ * first render - and the `<React.Suspense>` below was always the boundary either
+ * of them suspends against.
+ */
+const ContentMoreActionSystemLogs = React.lazy(async () =>
   import("./content").then(module => ({
     default: module.ContentMoreActionSystemLogs,
   })),

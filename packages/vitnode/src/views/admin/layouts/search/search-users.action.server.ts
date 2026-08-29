@@ -3,15 +3,9 @@
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { fetcher } from "@/lib/fetcher";
 
-import { MAX_SEARCH_RESULTS } from "./constants";
+import type { AdminSearchUser } from "./search-users";
 
-export interface AdminSearchUser {
-  avatarColor: string;
-  email: string;
-  id: number;
-  name: string;
-  nameCode: string;
-}
+import { MAX_SEARCH_RESULTS } from "./constants";
 
 export const searchUsersForAdminPalette = async (
   search: string,

@@ -1,65 +1,41 @@
-import { BugIcon } from "lucide-react";
 import { createTranslator } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import "server-only";
 
-import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+import type { StaffPermissionSet } from "@/api/lib/permission-staff";
 import type { VitNodeConfig } from "@/vitnode.config";
 
-import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
+import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
+import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { loadMessages } from "@/lib/i18n/load-messages";
 import { buildMessagesSources } from "@/lib/i18n/sources";
 
-import type { AdminNavTranslator } from "../sidebar/nav/get-admin-nav";
-import type { NavAdminParent } from "../sidebar/nav/get-admin-nav";
+import type { AdminNavTranslator } from "../sidebar/nav/nav-model";
+import type { NavAdminParent } from "../sidebar/nav/nav-model";
 import type { AdminSearchNavItem } from "./flatten-nav";
 
 import { normalizeUrl } from "../normalize-url";
 import { getAdminNav } from "../sidebar/nav/get-admin-nav";
 import { buildSearchText, flattenAdminNav } from "./flatten-nav";
+import { adminSearchOnlyItems } from "./search-only-pages";
 
-interface SearchOnlyPage {
-  href: string;
-  icon: React.ReactNode;
-  permission: Omit<PermissionsStaffArgs, "plugin">;
-  titleKey: string;
-}
-
-const SEARCH_ONLY_PAGES: SearchOnlyPage[] = [
-  {
-    href: "/admin/core/debug",
-    icon: <BugIcon />,
-    permission: { module: "debug", permission: "can_view" },
-    titleKey: "admin.global.nav.user_bar.debug",
-  },
-];
-
-const getPermittedSearchOnlyPages = async (): Promise<SearchOnlyPage[]> => {
-  const allowed = await Promise.all(
-    SEARCH_ONLY_PAGES.map(
-      async page => await checkAdminPermissionApi(page.permission),
-    ),
-  );
-
-  return SEARCH_ONLY_PAGES.filter((_, index) => allowed[index]);
-};
-
-const toSearchItems = (
-  pages: SearchOnlyPage[],
-  t: AdminNavTranslator,
-): AdminSearchNavItem[] =>
-  pages.map(page => {
-    const groupTitle = t("admin.global.nav.core");
-    const title = t(page.titleKey);
-
-    return {
-      groupTitle,
-      href: page.href,
-      icon: page.icon,
-      searchText: buildSearchText([title, groupTitle]),
-      title,
-    };
-  });
+/**
+ * The AdminCP command palette's index, for Next.js.
+ *
+ * The palette is the navigation, flattened - so an entry is findable only if it
+ * survived the permission filter - plus the handful of real pages deliberately
+ * kept out of the sidebar, each gated on its own permission. Both halves are the
+ * shared model's (`flattenAdminNav`, `adminSearchOnlyItems`); what is here is
+ * the part that needs a server.
+ *
+ * ## Every enabled language, not just the active one
+ *
+ * The whole tree is resolved once per enabled locale and the results are merged
+ * into each item's `searchText`, so an admin reading Polish can still find
+ * "Users" by typing its English name - which is what somebody who learned the
+ * panel in one language and switched actually does. Only the *text* is merged;
+ * the titles rendered stay the active locale's.
+ */
 
 const getEnabledLocales = (vitNodeConfig: VitNodeConfig): string[] =>
   vitNodeConfig.i18n.locales
@@ -68,11 +44,11 @@ const getEnabledLocales = (vitNodeConfig: VitNodeConfig): string[] =>
 
 const getItemsForLocale = async ({
   locale,
-  searchOnlyPages,
+  permissions,
   vitNodeConfig,
 }: {
   locale: string;
-  searchOnlyPages: SearchOnlyPage[];
+  permissions: StaffPermissionSet;
   vitNodeConfig: VitNodeConfig;
 }): Promise<AdminSearchNavItem[]> => {
   const messages = await loadMessages({
@@ -90,7 +66,7 @@ const getItemsForLocale = async ({
 
   return [
     ...flattenAdminNav(await getAdminNav({ translator, vitNodeConfig })),
-    ...toSearchItems(searchOnlyPages, translator),
+    ...adminSearchOnlyItems({ permissions, t: translator }),
   ];
 };
 
@@ -101,12 +77,13 @@ export const getSearchNavItems = async ({
   nav: NavAdminParent[];
   vitNodeConfig: VitNodeConfig;
 }): Promise<AdminSearchNavItem[]> => {
-  const searchOnlyPages = await getPermittedSearchOnlyPages();
+  const session = await getSessionAdminApi();
+  const permissions = session?.permissions ?? EMPTY_STAFF_PERMISSION_SET;
   const activeTranslator =
     (await getTranslations()) as unknown as AdminNavTranslator;
   const items = [
     ...flattenAdminNav(nav),
-    ...toSearchItems(searchOnlyPages, activeTranslator),
+    ...adminSearchOnlyItems({ permissions, t: activeTranslator }),
   ];
   const activeLocale = await getLocale();
   const otherLocales = getEnabledLocales(vitNodeConfig).filter(
@@ -118,7 +95,7 @@ export const getSearchNavItems = async ({
   const translated = await Promise.all(
     otherLocales.map(
       async locale =>
-        await getItemsForLocale({ locale, searchOnlyPages, vitNodeConfig }),
+        await getItemsForLocale({ locale, permissions, vitNodeConfig }),
     ),
   );
 

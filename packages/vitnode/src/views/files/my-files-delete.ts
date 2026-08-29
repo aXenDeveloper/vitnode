@@ -2,7 +2,10 @@ import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 import type { DeleteFileResult } from "@/lib/files/in-use";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { runBulkFileDelete } from "@/lib/files/bulk-delete";
+import {
+  runBulkFileDelete,
+  shouldRefreshAfterBulkDelete,
+} from "@/lib/files/bulk-delete";
 import { readFileInUse } from "@/lib/files/in-use";
 
 import { userFilesModuleRef } from "./my-files-query";
@@ -133,20 +136,11 @@ export const deleteMyFilesInBrowser: DeleteMyFiles = async ({
   );
 
 /**
- * Whether a bulk run changed anything the table is showing.
- *
- * The rule the Next.js action already applies before it calls `revalidatePath`,
- * lifted out so the TanStack Start app applies the identical one before it
- * invalidates. A run that was refused outright leaves the page exactly as it
- * was, and refetching would drop the selection that is showing which rows were
- * kept - which is the only thing telling the person what to do next.
- *
- * Deliberately not "did anything happen": files blocked by content and files
- * held by revisions are both *unchanged*, and both are reported in the dialog
- * rather than by the table reloading underneath it.
+ * Re-exported rather than declared: the rule now lives beside
+ * {@link runBulkFileDelete} in `lib/files/bulk-delete`, because the AdminCP's
+ * file table applies the identical one and reaching into this module - which is
+ * about the *visitor's own* files - to get it would be the wrong dependency.
  */
-export const shouldRefreshAfterBulkDelete = (
-  result: BulkDeleteFilesResult,
-): boolean => result.deleted > 0;
+export { shouldRefreshAfterBulkDelete };
 
 export type { BulkDeleteFilesResult, DeleteFileResult };

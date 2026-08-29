@@ -1,153 +1,50 @@
-import { ExternalLinkIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { hasStaffPermission } from "@/api/lib/staff-permission";
+import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
 import { adminModule } from "@/api/modules/admin/admin.module";
-import { Avatar } from "@/components/avatar";
-import { DateFormat } from "@/components/date-format";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { CONFIG_PLUGIN } from "@/config";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
-import { Link } from "@/lib/navigation";
-import { SearchFeed } from "@/views/search/search-feed";
 
-import { EditImageButton } from "./edit-buttons";
-import { EditUserField } from "./edit-field";
-import { EditNameCode } from "./edit-name-code";
-import { RolesUserAdmin } from "./roles/roles";
-import { UserAdminTabs } from "./tabs";
+import { UserDetailNext } from "../detail/user-detail-next";
+import {
+  adminUserRequest,
+  canEditAdminUser,
+  normalizeAdminUserId,
+} from "../detail/user-query";
 
-export const ShowUserAdminView = async ({ id }: { id: string }) => {
-  const t = await getTranslations("admin.user.show");
-  const res = await fetcher(adminModule, {
-    path: "/{id}",
-    method: "get",
-    module: "admin/users",
-    args: {
-      params: { id },
-    },
-  });
+/**
+ * The AdminCP user page, as this application's Server Component.
+ *
+ * Three things happen here and nothing else does: the id is normalised, the user
+ * is read with the request's own cookies, and `canEdit` is decided. The page
+ * itself - the profile card, the in-place editors, the roles dialog and the
+ * timeline tab - is `UserDetailContent`, which the TanStack AdminCP renders too.
+ *
+ * `canEditAdminUser` is the same predicate on both sides, so `users.can_edit`
+ * plus `users.can_edit_admin` for an administrator target is one rule rather
+ * than two that happen to agree. The API enforces it again on every write
+ * (`assertCanEditAdminTarget`), which is what makes this a display decision.
+ */
+export const ShowUserAdminView = async ({ id: raw }: { id: string }) => {
+  const id = normalizeAdminUserId(raw);
+  if (id === null) {
+    notFound();
+  }
 
+  const res = await fetcher(adminModule, adminUserRequest(id));
   if (res.status !== 200) {
     notFound();
   }
 
-  const user = await res.json();
-
-  const session = await getSessionAdminApi();
-  const canEdit =
-    !!session &&
-    hasStaffPermission(session.permissions, {
-      plugin: CONFIG_PLUGIN.pluginId,
-      module: "users",
-      permission: "can_edit",
-    }) &&
-    (user.isAdmin
-      ? hasStaffPermission(session.permissions, {
-          plugin: CONFIG_PLUGIN.pluginId,
-          module: "users",
-          permission: "can_edit_admin",
-        })
-      : true);
+  const [user, session] = await Promise.all([res.json(), getSessionAdminApi()]);
 
   return (
-    <UserAdminTabs
-      overview={
-        <div className="flex w-full flex-col gap-4">
-          <Card className="w-full overflow-hidden pt-0">
-            <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
-              <span className="sr-only">{t("coverPlaceholder")}</span>
-              {canEdit && (
-                <div className="absolute inset-e-3 top-3">
-                  <EditImageButton label={t("editCover")} />
-                </div>
-              )}
-            </div>
-
-            <CardContent className="flex flex-col">
-              <div className="-mt-16 mb-4 flex justify-center">
-                <div className="relative">
-                  <Avatar
-                    className="border-card size-32 border-4"
-                    size={128}
-                    user={user}
-                  />
-                  {canEdit && (
-                    <div className="absolute inset-e-0 bottom-0 translate-y-1/4">
-                      <EditImageButton label={t("editAvatar")} />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <EditUserField
-                as="h2"
-                canEdit={canEdit}
-                field="name"
-                id={user.id}
-                label={t("editName")}
-                showUnverified={!user.emailVerified}
-                value={user.name}
-                valueClassName="text-foreground truncate text-2xl font-bold"
-              />
-
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground truncate text-sm">
-                  @{user.nameCode}
-                </span>
-                {canEdit && (
-                  <EditNameCode id={user.id} nameCode={user.nameCode} />
-                )}
-              </div>
-
-              <div className="mt-3">
-                <EditUserField
-                  canEdit={canEdit}
-                  field="email"
-                  id={user.id}
-                  label={t("editEmail")}
-                  type="email"
-                  value={user.email}
-                  valueClassName="text-foreground truncate font-medium"
-                />
-              </div>
-
-              <p className="text-muted-foreground mt-1 text-sm">
-                {t("joined")} <DateFormat date={user.createdAt} />
-              </p>
-
-              <div className="mt-6">
-                <Button
-                  className="w-full"
-                  nativeButton={false}
-                  render={
-                    <Link href={`/profile/${user.nameCode}`} target="_blank" />
-                  }
-                  variant="ghost"
-                >
-                  {t("goToProfile")} <ExternalLinkIcon />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <RolesUserAdmin
-            canEdit={canEdit}
-            id={user.id}
-            role={user.role}
-            secondaryRoles={user.secondaryRoles}
-          />
-        </div>
-      }
-      timeline={
-        <SearchFeed
-          params={{ authorId: String(user.id), sort: "newest" }}
-          variant="timeline"
-        />
-      }
+    <UserDetailNext
+      canEdit={canEditAdminUser(
+        session?.permissions ?? EMPTY_STAFF_PERMISSION_SET,
+        { isAdmin: user.isAdmin },
+      )}
+      user={user}
     />
   );
 };

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { cleanupDeletedFiles } from "./file-utils";
+import { cleanupDeletedFiles, transformFileImports } from "./file-utils";
 
 describe("cleanupDeletedFiles", () => {
   let root: string;
@@ -139,5 +139,58 @@ describe("cleanupDeletedFiles", () => {
     cleanupDeletedFiles(sourceDir, destinationDir, remove);
 
     expect(removed).toEqual([]);
+  });
+});
+
+/**
+ * What a route file's imports become on their way into a Next.js app.
+ *
+ * `src/routes/**` in a plugin (core included) is the source of truth, and this
+ * is what rewrites its imports so the copy resolves from the app: `@/x` and
+ * `../x` both become `<package>/x`. A specifier this misses is copied through
+ * untouched, where `@/` points at the *app's* own `src/` - so it resolves to
+ * nothing, and the error appears in a generated file nobody edited.
+ */
+describe("transformFileImports", () => {
+  const transform = (code: string) =>
+    transformFileImports(code, "@vitnode/core");
+
+  it("rewrites a named value import", () => {
+    expect(
+      transform('import { HeaderContent } from "@/components/ui/x";'),
+    ).toBe('import { HeaderContent } from "@vitnode/core/components/ui/x";');
+  });
+
+  it("rewrites a named *type* import", () => {
+    // The case that broke: the named-binding alternative came before the bare
+    // identifier one, so `type` was consumed as the identifier and the clause
+    // then failed to find `from`.
+    expect(
+      transform('import type { Params } from "@/views/admin/table/x";'),
+    ).toBe('import type { Params } from "@vitnode/core/views/admin/table/x";');
+  });
+
+  it("rewrites a default type import", () => {
+    expect(transform('import type Params from "@/views/admin/table/x";')).toBe(
+      'import type Params from "@vitnode/core/views/admin/table/x";',
+    );
+  });
+
+  it("rewrites relative imports the same way", () => {
+    expect(transform('import type { A } from "../../lib/a";')).toBe(
+      'import type { A } from "@vitnode/core/lib/a";',
+    );
+  });
+
+  it("rewrites a lazy import's specifier", () => {
+    expect(transform('const X = React.lazy(() => import("@/views/x"));')).toBe(
+      'const X = React.lazy(() => import("@vitnode/core/views/x"));',
+    );
+  });
+
+  it("leaves a package specifier alone", () => {
+    const code = 'import type { Metadata } from "next";';
+
+    expect(transform(code)).toBe(code);
   });
 });

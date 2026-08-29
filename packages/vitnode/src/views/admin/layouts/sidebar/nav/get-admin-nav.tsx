@@ -1,106 +1,39 @@
-import {
-  FileTextIcon,
-  LayoutDashboardIcon,
-  ServerIcon,
-  ShieldUserIcon,
-  UsersRoundIcon,
-  WrenchIcon,
-} from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
-import type {
-  PermissionsStaffArgs,
-  StaffPermissionSet,
-} from "@/api/lib/permission-staff";
+import type { StaffPermissionSet } from "@/api/lib/permission-staff";
 import type { VitNodeConfig } from "@/vitnode.config";
 
-import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
-import {
-  type ContentLabelTranslator,
-  contentNouns,
-} from "@/content/admin/labels";
-import { CONTENT_PERMISSIONS } from "@/content/const";
-import { contentAdminHref } from "@/content/registry";
+import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { getVitNodeConfig } from "@/vitnode.config";
 
-import type { ItemNavAdmin } from "./item";
+import type { AdminNavTranslator, NavAdminParent } from "./nav-model";
 
-export interface NavAdminParent {
-  id: string;
-  items: React.ComponentProps<typeof ItemNavAdmin>[];
-  title: string;
-}
+import { buildAdminNav } from "./nav-model";
 
-export type AdminNavTranslator = (key: string) => string;
+export type {
+  AdminNavItem,
+  AdminNavSubItem,
+  AdminNavTranslator,
+  NavAdminParent,
+} from "./nav-model";
 
-interface NavSubItemConfig {
-  href: string;
-  isOpenInNewTab?: boolean;
-  permission?: PermissionsStaffArgs;
-  title: string;
-}
-
-interface NavItemConfig {
-  href: string;
-  icon?: React.ReactNode;
-  isOpenInNewTab?: boolean;
-  items?: NavSubItemConfig[];
-  permission?: PermissionsStaffArgs;
-  title: string;
-}
-
-interface NavGroupConfig {
-  id: string;
-  items: NavItemConfig[];
-  title: string;
-}
-
-const isAllowed = (
-  permission: PermissionsStaffArgs | undefined,
-  set: StaffPermissionSet,
-): boolean => !permission || hasStaffPermission(set, permission);
-
-const filterNavItems = (
-  items: NavItemConfig[],
-  set: StaffPermissionSet,
-): React.ComponentProps<typeof ItemNavAdmin>[] => {
-  const result: React.ComponentProps<typeof ItemNavAdmin>[] = [];
-
-  for (const item of items) {
-    if (!isAllowed(item.permission, set)) continue;
-
-    if (item.items && item.items.length > 0) {
-      const visibleSubItems = item.items.filter(subItem =>
-        isAllowed(subItem.permission, set),
-      );
-      if (visibleSubItems.length === 0) continue;
-
-      result.push({
-        href: item.href,
-        icon: item.icon,
-        isOpenInNewTab: item.isOpenInNewTab,
-        title: item.title,
-        items: visibleSubItems.map(subItem => ({
-          href: subItem.href,
-          isOpenInNewTab: subItem.isOpenInNewTab,
-          title: subItem.title,
-        })),
-      });
-    } else {
-      result.push({
-        href: item.href,
-        icon: item.icon,
-        isOpenInNewTab: item.isOpenInNewTab,
-        title: item.title,
-      });
-    }
-  }
-
-  return result;
-};
-
+/**
+ * {@link buildAdminNav}, wired to Next.js.
+ *
+ * The rules live in `./nav-model`, which is pure and shared. What is left here
+ * is the two answers only this framework can give: the active request's
+ * translator (`next-intl/server`) and the signed-in admin's permission set
+ * (`getSessionAdminApi`, memoised per render pass).
+ *
+ * `translator` stays overridable because the AdminCP search index builds the nav
+ * once per enabled locale, to make a page findable by its name in any of them -
+ * see `../../search/get-search-nav-items`.
+ *
+ * A session that could not be read yields no permissions rather than throwing,
+ * which is the same fallback the layout applies: the sidebar renders empty, and
+ * the page it frames is the one that reports the failure.
+ */
 export const getAdminNav = async ({
   translator,
   vitNodeConfig = getVitNodeConfig(),
@@ -109,198 +42,10 @@ export const getAdminNav = async ({
   vitNodeConfig?: VitNodeConfig;
 } = {}): Promise<NavAdminParent[]> => {
   const activeTranslator = await getTranslations();
-  const t = (translator ?? activeTranslator) as typeof activeTranslator;
+  const t = translator ?? (activeTranslator as unknown as AdminNavTranslator);
   const session = await getSessionAdminApi();
-  const permissions: StaffPermissionSet = session?.permissions ?? {
-    root: false,
-    permissions: [],
-  };
+  const permissions: StaffPermissionSet =
+    session?.permissions ?? EMPTY_STAFF_PERMISSION_SET;
 
-  const core: NavGroupConfig = {
-    id: "core",
-    title: t("admin.global.nav.core"),
-    items: [
-      {
-        href: "/admin/core/",
-        icon: <LayoutDashboardIcon />,
-        title: t("admin.global.nav.dashboard"),
-      },
-      {
-        href: "/admin/core/system",
-        title: t("admin.global.nav.system.title"),
-        icon: <ServerIcon />,
-        items: [
-          {
-            title: t("admin.global.nav.system.integrations"),
-            href: "/admin/core/system/integrations",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "system",
-              permission: "can_view",
-            },
-          },
-          {
-            title: t("admin.global.nav.system.files"),
-            href: "/admin/core/system/files",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "files",
-              permission: "can_view",
-            },
-          },
-        ],
-      },
-      {
-        href: "/admin/core/users",
-        title: t("admin.global.nav.users.title"),
-        icon: <UsersRoundIcon />,
-        items: [
-          {
-            title: t("admin.global.nav.users.list"),
-            href: "/admin/core/users",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "users",
-              permission: "can_view",
-            },
-          },
-          {
-            title: t("admin.global.nav.users.roles"),
-            href: "/admin/core/users/roles",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "roles",
-              permission: "can_view",
-            },
-          },
-        ],
-      },
-      {
-        href: "/admin/core/staff",
-        title: t("admin.global.nav.staff.title"),
-        icon: <ShieldUserIcon />,
-        items: [
-          {
-            title: t("admin.global.nav.staff.moderators"),
-            href: "/admin/core/staff/moderators",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "staff_moderators",
-              permission: "can_view",
-            },
-          },
-          {
-            title: t("admin.global.nav.staff.admins"),
-            href: "/admin/core/staff/admins",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "staff_admins",
-              permission: "can_view",
-            },
-          },
-        ],
-      },
-      {
-        href: "/admin/core/advanced",
-        title: t("admin.global.nav.advanced.title"),
-        icon: <WrenchIcon />,
-        items: [
-          {
-            title: t("admin.global.nav.advanced.search"),
-            href: "/admin/core/advanced/search",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "system",
-              permission: "can_view",
-            },
-          },
-          {
-            title: t("admin.global.nav.advanced.cron"),
-            href: "/admin/core/advanced/cron",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "cron",
-              permission: "can_view",
-            },
-          },
-          {
-            title: t("admin.global.nav.advanced.queue"),
-            href: "/admin/core/advanced/queue",
-            permission: {
-              plugin: CONFIG_PLUGIN.pluginId,
-              module: "queue",
-              permission: "can_view",
-            },
-          },
-        ],
-      },
-    ],
-  };
-
-  // Content types get a nav item for free. `admin.navigation.enabled: false`
-  // opts out, and the usual permission filter hides anything the admin cannot
-  // view.
-  const contentNavItems = (
-    plugin: (typeof vitNodeConfig.plugins)[number],
-  ): NavItemConfig[] =>
-    (plugin.contentTypes ?? [])
-      .filter(({ definition }) => definition.admin.navigation.enabled)
-      .map(({ definition, icon }) => ({
-        href: contentAdminHref(definition),
-        icon: icon ?? <FileTextIcon />,
-        permission: {
-          module: definition.permissionModule,
-          permission: CONTENT_PERMISSIONS.view,
-          plugin: plugin.pluginId,
-        },
-        // The same resolution the screen's own heading uses, so the sidebar and
-        // the page it opens cannot disagree about what the records are called.
-        title: contentNouns(
-          definition,
-          plugin.pluginId,
-          t as unknown as ContentLabelTranslator,
-        ).title,
-      }));
-
-  const declaredNavItems = (
-    plugin: (typeof vitNodeConfig.plugins)[number],
-  ): NavItemConfig[] =>
-    (plugin.admin?.nav ?? []).map(item => ({
-      href: item.href,
-      icon: item.icon,
-      isOpenInNewTab: item.isOpenInNewTab,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      title: t(`${plugin.pluginId}.admin.nav.${item.id}`),
-      permission: item.permission
-        ? { plugin: plugin.pluginId, ...item.permission }
-        : undefined,
-      items:
-        item.items?.map(subItem => ({
-          href: subItem.href,
-          isOpenInNewTab: subItem.isOpenInNewTab,
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-expect-error
-          title: t(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
-          permission: subItem.permission
-            ? { plugin: plugin.pluginId, ...subItem.permission }
-            : undefined,
-        })) ?? [],
-    }));
-
-  const pluginNav: NavGroupConfig[] = vitNodeConfig.plugins.map(plugin => ({
-    id: plugin.pluginId,
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    title: t(`${plugin.pluginId}.title`),
-    items: [...contentNavItems(plugin), ...declaredNavItems(plugin)],
-  }));
-
-  return [core, ...pluginNav]
-    .map(group => ({
-      id: group.id,
-      title: group.title,
-      items: filterNavItems(group.items, permissions),
-    }))
-    .filter(group => group.items.length > 0);
+  return buildAdminNav({ permissions, t, vitNodeConfig });
 };

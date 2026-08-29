@@ -118,6 +118,29 @@ The `role` prop has the following shape:
   exactly this shape.
 </Callout>
 
+### Formatting a role anywhere
+
+`RoleFormatContent` is the same component without the Server Component part. It
+reads the locale from `use-intl`'s context instead of the request, so it works in
+a client component, in a table cell, and in an application that is not Next.js -
+which is why every AdminCP table renders roles through it.
+
+```tsx title="role-badge.tsx"
+"use client";
+
+import { RoleFormatContent } from "@vitnode/core/components/role-format-content";
+
+<RoleFormatContent role={role} />;
+```
+
+Same props, same output. Pick `RoleFormat` when you are already in a Server
+Component and `RoleFormatContent` everywhere else.
+
+If you only need the string, `resolveRoleName(role, locale)` from
+`@vitnode/core/components/role-name` is the rule both components share: the
+reader's language, then the first translation, then the id. It is a pure
+function, so it works in a loader or a test.
+
 <Callout type="info" title="Exposing role metadata">
   Role details such as `color` and its flags live in the `core_roles` table on
   the backend. To display them on the frontend, return the data you need from a

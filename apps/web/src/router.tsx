@@ -22,11 +22,21 @@ import {
  * it, in the browser bundle and on the server alike.
  */
 import './lib/auth'
+/**
+ * The admin transport, registered the same way and for the same reason.
+ *
+ * One server function rather than eight, reading the AdminCP's own session under
+ * its own cookie. It is a separate registration from the auth one on purpose:
+ * they are two sessions, two cookies and two cache entries, and nothing in
+ * VitNode may let the public session answer an admin question.
+ */
+import './lib/admin-auth'
 import { createLocaleRewrite } from './lib/i18n/runtime'
 import { pageHead } from './lib/page-head'
 import { isTanStackOwnedPath } from './migration/navigation'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
 import { pluginRouteModules } from './plugin-routes.gen'
+import { Route as adminShellRoute } from './routes/_admin'
 import { Route as mainShellRoute } from './routes/_main'
 import { routeTree as fileRouteTree } from './routeTree.gen'
 
@@ -43,17 +53,24 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
  * nothing here knows which plugins are installed - see
  * `@vitnode/core/tanstack/plugin-routes`.
  *
- * They mount under `_main` rather than under the root, which is the whole of
- * what "a plugin route renders in the application shell" amounts to here: a
- * plugin declares `area: "main"`, `_main` is the route that renders the main
- * shell, and being a child of it is what gives `/example` the header, the
- * breadcrumb area and the one `<main>` that `/discover` has. No new field, no
- * per-route layout metadata, and no second copy of the shell - route
- * composition, which the area declaration already described.
+ * `mountUnder` names one route per shell, which is the whole of what "a plugin
+ * route renders in the application shell" amounts to here. A plugin declares
+ * `area: "main"` or `area: "admin"`; `_main` is the route that renders the
+ * public shell and `_admin` the one that renders the AdminCP, and being a child
+ * of one of them is what gives `/example` the header and the one `<main>` that
+ * `/discover` has, or gives `/admin/reports` the sidebar, the breadcrumb area
+ * and the admin session guard that `/admin/core` has. No new field, no per-route
+ * layout metadata and no second copy of either shell - route composition, which
+ * the area declaration already described.
  *
- * `_main` is imported for its route object, and it is the same object the
- * generated tree holds: `createFileRoute` produces one instance per module and
- * `routeTree.gen.ts` mutates it in place.
+ * Neither shell changes a path: both are pathless, so `/example` stays
+ * `/example` and an admin plugin route's `/admin/…` is the path its manifest
+ * spells out in full. An area VitNode knows and this app has not named here
+ * fails the composition rather than being mounted under the other one.
+ *
+ * `_main` and `_admin` are imported for their route objects, and they are the
+ * same objects the generated tree holds: `createFileRoute` produces one instance
+ * per module and `routeTree.gen.ts` mutates it in place.
  *
  * `pageHead` is this app's own `createRouteHead(metadata)` binding, handed over
  * because a package cannot know the site's name: a plugin page's `<title>` goes
@@ -63,7 +80,7 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
 const routeTree = withPluginRoutes(
   fileRouteTree,
   pluginRouteSpecs(pluginRouteManifest, pluginRouteModules),
-  { mountUnder: mainShellRoute, pageHead },
+  { mountUnder: { admin: adminShellRoute, main: mainShellRoute }, pageHead },
 )
 
 /**

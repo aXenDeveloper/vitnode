@@ -9,8 +9,8 @@ import { AdminStaffPermissionGate } from "@vitnode/core/components/staff-permiss
 import { AdminPermissionRequired } from "@vitnode/core/components/staff-permission/required";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
-import { CONFIG_PLUGIN } from "@vitnode/core/config";
-import { ActionsRolesAdmin } from "@vitnode/core/views/admin/views/core/users/roles/actions/actions";
+import { ADMIN_ROLE_PERMISSIONS } from "@vitnode/core/views/admin/views/core/shared/admin-permissions";
+import { CreateRoleAdmin } from "@vitnode/core/views/admin/views/core/users/roles/roles-table-next";
 
 const RolesAdminView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/users/roles/roles-admin-view").then(
@@ -40,17 +40,13 @@ export default async function Page(
     <I18nProvider namespaces="admin.role">
       <div className="p-4">
         <HeaderContent desc={t("desc")} h1={tNav("roles")}>
-          <AdminStaffPermissionGate
-            module="roles"
-            permission="can_create"
-            plugin={CONFIG_PLUGIN.pluginId}
-          >
-            <ActionsRolesAdmin />
+          <AdminStaffPermissionGate {...ADMIN_ROLE_PERMISSIONS.create}>
+            <CreateRoleAdmin />
           </AdminStaffPermissionGate>
         </HeaderContent>
 
         <React.Suspense fallback={<DataTableSkeleton columns={2} toolbar />}>
-          <AdminPermissionRequired module="roles" permission="can_view">
+          <AdminPermissionRequired {...ADMIN_ROLE_PERMISSIONS.view}>
             <RolesAdminView {...props} />
           </AdminPermissionRequired>
         </React.Suspense>

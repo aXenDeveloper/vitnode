@@ -162,7 +162,7 @@ describe("withPluginRoutes", () => {
     const tree = withPluginRoutes(
       root.addChildren([shell]),
       pluginRouteSpecs([route()], registryOf("plugin:page")),
-      { mountUnder: shell, pageHead },
+      { mountUnder: { main: shell }, pageHead },
     );
 
     expect(containerOf(tree)).toBeUndefined();
@@ -190,6 +190,219 @@ describe("withPluginRoutes", () => {
         ),
       ),
     ).toThrow(/discover/);
+  });
+});
+
+/**
+ * Which shell a plugin page is framed by, as the only thing an `area` decides.
+ *
+ * The declaration is a statement about layout, a layout is a parent, and this is
+ * where the two meet: one subtree per shell, hung from the route the host named
+ * for it. Nothing here rewrites a path - an admin route's `/admin/…` is the path
+ * its manifest spells out in full, and both shells are pathless.
+ */
+describe("plugin route areas", () => {
+  const adminRoute = (overrides: Partial<PluginRoute> = {}): PluginRoute =>
+    route({
+      area: "admin",
+      id: "plugin:reports",
+      path: "/admin/reports",
+      routeId: "reports",
+      segments: [
+        { kind: "static", value: "admin" },
+        { kind: "static", value: "reports" },
+      ],
+      ...overrides,
+    });
+
+  /** A root with both shells, each already holding a page of the app's own. */
+  const shells = () => {
+    const root = createRootRoute();
+    const main = createRoute({ getParentRoute: () => root, id: "_main" });
+    const admin = createRoute({ getParentRoute: () => root, id: "_admin" });
+
+    main.addChildren([createRoute({ getParentRoute: () => main, path: "/" })]);
+    admin.addChildren([
+      createRoute({ getParentRoute: () => admin, path: "/admin/core" }),
+    ]);
+
+    return { admin, main, tree: root.addChildren([admin, main]) };
+  };
+
+  const containersOf = (parent: AnyRoute): AnyRoute[] =>
+    (parent.children ?? []).filter(
+      (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
+    );
+
+  const containerOf = (parent: AnyRoute): AnyRoute | undefined =>
+    containersOf(parent)[0];
+
+  const mountedPaths = (parent: AnyRoute): (string | undefined)[] =>
+    (containerOf(parent)?.children ?? []).map(
+      (child: AnyRoute) => optionsOf(child).path,
+    );
+
+  it("mounts each route under the shell its area names", () => {
+    const { admin, main, tree } = shells();
+
+    withPluginRoutes(
+      tree,
+      pluginRouteSpecs(
+        [route({ path: "/example" }), adminRoute()],
+        registryOf("plugin:page", "plugin:reports"),
+      ),
+      { mountUnder: { admin, main }, pageHead },
+    );
+
+    expect(mountedPaths(main)).toEqual(["/page"]);
+    expect(mountedPaths(admin)).toEqual(["/admin/reports"]);
+    // Neither shell lost the page it already had.
+    expect(main.children).toHaveLength(2);
+    expect(admin.children).toHaveLength(2);
+  });
+
+  /**
+   * The whole reason `mountUnder` is a record rather than one route.
+   *
+   * Falling back to the other shell would put an AdminCP page on the public
+   * site: outside the admin session guard, wearing the site header, and looking
+   * for all the world like it had worked. So it fails, and the message names the
+   * route that asked and the area it asked for.
+   */
+  it("refuses a route whose area this application has not named", () => {
+    const { main, tree } = shells();
+
+    expect(() =>
+      withPluginRoutes(
+        tree,
+        pluginRouteSpecs([adminRoute()], registryOf("plugin:reports")),
+        { mountUnder: { main }, pageHead },
+      ),
+    ).toThrow(/plugin:reports.*"admin" area.*no mount point/s);
+  });
+
+  it("still refuses it when the host named no shells at all", () => {
+    const { tree } = shells();
+
+    expect(() =>
+      withPluginRoutes(
+        tree,
+        pluginRouteSpecs([adminRoute()], registryOf("plugin:reports")),
+        { pageHead },
+      ),
+    ).toThrow(/"admin" area/);
+  });
+
+  /**
+   * `main` and `admin` at one pathname are two different URLs, because the
+   * AdminCP shell's own routes are the ones that put `/admin` in front. The
+   * manifest lets both exist; this is where they end up in two places.
+   */
+  it("keeps two areas that share a pathname apart", () => {
+    const { admin, main, tree } = shells();
+
+    withPluginRoutes(
+      tree,
+      pluginRouteSpecs(
+        [
+          route({
+            path: "/reports",
+            segments: [{ kind: "static", value: "reports" }],
+          }),
+          adminRoute({
+            path: "/reports",
+            segments: [{ kind: "static", value: "reports" }],
+          }),
+        ],
+        registryOf("plugin:page", "plugin:reports"),
+      ),
+      { mountUnder: { admin, main }, pageHead },
+    );
+
+    expect(mountedPaths(main)).toEqual(["/reports"]);
+    expect(mountedPaths(admin)).toEqual(["/reports"]);
+  });
+
+  /**
+   * Idempotence, per shell.
+   *
+   * The tree a second pass is handed is the one the first already mutated, so
+   * the AdminCP's container has to come off when its last plugin route goes -
+   * and the public one has to survive that, having lost nothing.
+   */
+  it("clears one shell's subtree without touching the other's", () => {
+    const { admin, main, tree } = shells();
+    const specs = (...ids: string[]) =>
+      pluginRouteSpecs(
+        [route({ path: "/example" }), adminRoute()].filter(candidate =>
+          ids.includes(candidate.id),
+        ),
+        registryOf(...ids),
+      );
+
+    withPluginRoutes(tree, specs("plugin:page", "plugin:reports"), {
+      mountUnder: { admin, main },
+      pageHead,
+    });
+    expect(containerOf(admin)).toBeDefined();
+
+    withPluginRoutes(tree, specs("plugin:page"), {
+      mountUnder: { admin, main },
+      pageHead,
+    });
+
+    expect(containerOf(admin)).toBeUndefined();
+    expect(admin.children).toHaveLength(1);
+    expect(mountedPaths(main)).toEqual(["/page"]);
+  });
+
+  /**
+   * A host may render two areas in one place - an app whose AdminCP is not a
+   * separate shell, say. Two containers under one parent would be two children
+   * with one id, which is a router invariant failure rather than a diagnostic.
+   */
+  it("shares one container when two areas name the same route", () => {
+    const { main, tree } = shells();
+
+    withPluginRoutes(
+      tree,
+      pluginRouteSpecs(
+        [route({ path: "/example" }), adminRoute()],
+        registryOf("plugin:page", "plugin:reports"),
+      ),
+      { mountUnder: { admin: main, main }, pageHead },
+    );
+
+    expect(containersOf(main)).toHaveLength(1);
+    expect(mountedPaths(main)).toEqual(["/admin/reports", "/page"]);
+  });
+
+  /**
+   * The collision check walks the tree from its root, so it sees the AdminCP's
+   * own pages as readily as the public ones - which is what stops a plugin
+   * taking `/admin/core` from the screens Stage 12 migrated.
+   */
+  it("refuses an admin route that shadows one of the AdminCP's own pages", () => {
+    const { admin, main, tree } = shells();
+
+    expect(() =>
+      withPluginRoutes(
+        tree,
+        pluginRouteSpecs(
+          [
+            adminRoute({
+              path: "/admin/core",
+              segments: [
+                { kind: "static", value: "admin" },
+                { kind: "static", value: "core" },
+              ],
+            }),
+          ],
+          registryOf("plugin:reports"),
+        ),
+        { mountUnder: { admin, main }, pageHead },
+      ),
+    ).toThrow(/\/admin\/core/);
   });
 });
 

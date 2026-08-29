@@ -1,38 +1,27 @@
 "use client";
 
-import type { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
+import { Link } from "@/lib/navigation";
+import { logOutMutationApi } from "@/views/layouts/theme/header/user/auth/log-out-mutation-api.server";
 
-import { Avatar } from "@/components/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import type { AdminUserBarUser } from "./user-bar-content";
 
-import { ClientUserBarAdmin } from "./client";
+import { UserBarAdminContent } from "./user-bar-content";
 
-export const UserBarAdmin = ({
-  user,
-}: Pick<
-  NonNullable<Awaited<ReturnType<typeof getSessionAdminApi>>>,
-  "user"
->) => {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button aria-label={user.name} size="icon" variant="ghost" />}
-      >
-        <Avatar size={24} user={user} />
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        className="w-(--anchor-width) min-w-56 rounded-lg"
-        side="bottom"
-        sideOffset={4}
-      >
-        <ClientUserBarAdmin user={user} />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
+/**
+ * {@link UserBarAdminContent}, wired to Next.js.
+ *
+ * The two framework answers: `next-intl`'s locale-aware `Link`, and the
+ * `"use server"` sign-out this application has always used. A TanStack Start
+ * host passes `useSignOutAction()` instead, which additionally resets the
+ * canonical session cache - a Server Action has no cache to reset, because the
+ * page it lands on is rendered fresh.
+ */
+export const UserBarAdmin = ({ user }: { user: AdminUserBarUser }) => (
+  <UserBarAdminContent
+    LinkComponent={Link}
+    onSignOut={async () => {
+      await logOutMutationApi({ isAdmin: true });
+    }}
+    user={user}
+  />
+);

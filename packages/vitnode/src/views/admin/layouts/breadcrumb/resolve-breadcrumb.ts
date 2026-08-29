@@ -1,6 +1,6 @@
 import { type BreadcrumbCrumb, humanize } from "@/views/breadcrumb/crumb";
 
-import type { NavAdminParent } from "../sidebar/nav/get-admin-nav";
+import type { NavAdminParent } from "../sidebar/nav/nav-model";
 
 import { normalizeUrl } from "../normalize-url";
 

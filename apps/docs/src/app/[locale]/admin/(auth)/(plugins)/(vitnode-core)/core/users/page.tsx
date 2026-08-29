@@ -9,8 +9,8 @@ import { AdminStaffPermissionGate } from "@vitnode/core/components/staff-permiss
 import { AdminPermissionRequired } from "@vitnode/core/components/staff-permission/required";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
-import { CONFIG_PLUGIN } from "@vitnode/core/config";
-import { CreateUserAdmin } from "@vitnode/core/views/admin/views/core/users/actions/create/create";
+import { ADMIN_USER_PERMISSIONS } from "@vitnode/core/views/admin/views/core/shared/admin-permissions";
+import { CreateUserAdmin } from "@vitnode/core/views/admin/views/core/users/list/create-user-next";
 
 const UsersAdminView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/users/users-admin-view").then(module => ({
@@ -38,17 +38,13 @@ export default async function Page(
     <I18nProvider namespaces="admin.user">
       <div className="p-4">
         <HeaderContent desc={t("desc")} h1={tNav("list")}>
-          <AdminStaffPermissionGate
-            module="users"
-            permission="can_create"
-            plugin={CONFIG_PLUGIN.pluginId}
-          >
+          <AdminStaffPermissionGate {...ADMIN_USER_PERMISSIONS.create}>
             <CreateUserAdmin />
           </AdminStaffPermissionGate>
         </HeaderContent>
 
         <React.Suspense fallback={<DataTableSkeleton columns={2} toolbar />}>
-          <AdminPermissionRequired module="users" permission="can_view">
+          <AdminPermissionRequired {...ADMIN_USER_PERMISSIONS.view}>
             <UsersAdminView {...props} />
           </AdminPermissionRequired>
         </React.Suspense>

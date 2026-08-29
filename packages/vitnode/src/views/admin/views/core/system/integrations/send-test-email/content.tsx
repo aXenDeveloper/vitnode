@@ -1,18 +1,20 @@
 "use client";
 
 import { MailCheckIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+import type { SendTestEmail } from "./send-test-email-mutation";
+
 import { useFormSendTestEmail } from "./use-form";
 
-export const ContentSendTestEmail = () => {
+export const ContentSendTestEmail = ({ onSend }: { onSend: SendTestEmail }) => {
   const t = useTranslations("admin.system.integrations.email.test");
-  const { onSubmit, formSchema } = useFormSendTestEmail();
+  const { onSubmit, formSchema } = useFormSendTestEmail(onSend);
 
   return (
     <div className="flex flex-col gap-4">

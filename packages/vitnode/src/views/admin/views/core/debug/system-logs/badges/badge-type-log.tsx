@@ -1,5 +1,5 @@
 import { TriangleAlertIcon, XIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 import { Badge } from "@/components/ui/badge";
 

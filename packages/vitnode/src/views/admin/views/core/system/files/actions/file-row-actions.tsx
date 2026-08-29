@@ -1,31 +1,47 @@
 "use client";
 
 import { DownloadIcon, LoaderCircleIcon, Trash2Icon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
-import type { filesAdminModule } from "@/api/modules/admin/files/files.admin.module";
 import type { FileInUse } from "@/lib/files/in-use";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
+import { fetcherClient } from "@/lib/fetcher-client";
 
-import { deleteFileAction } from "./delete-action.server";
+import type { DeleteAdminFile } from "../files-delete";
 
+import { filesAdminModuleRef } from "../files-query";
+
+/**
+ * Download and delete, on one row of the AdminCP file table.
+ *
+ * `onDelete` is the one thing it cannot decide for itself: in Next.js the delete
+ * ends in `revalidatePath` and so has to be a server action, and in TanStack
+ * Start it is a browser call followed by a query invalidation. Both are
+ * `DeleteAdminFile`, so the row takes one and stops caring - see
+ * `../files-delete.ts`.
+ *
+ * The *download* is not a seam. It is already a browser fetch that turns the
+ * response into an object URL and clicks an anchor at it, which is the only way
+ * to do it in either framework: a server action cannot hand a browser a file to
+ * save.
+ */
 export const FileRowActions = ({
   canDelete,
   canDownload,
   id,
   name,
+  onDelete,
 }: {
   canDelete: boolean;
   canDownload: boolean;
   id: number;
   name: string;
+  onDelete: DeleteAdminFile;
 }) => {
   const t = useTranslations("admin.system.files");
   const tGlobal = useTranslations("core.global.errors");
@@ -36,17 +52,14 @@ export const FileRowActions = ({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const res = await fetcherClient(
-        clientModule<typeof filesAdminModule>(CONFIG_PLUGIN.pluginId),
-        {
-          prefixPath: "/admin",
-          module: "files",
-          path: "/{id}/download",
-          method: "get",
-          args: { params: { id: String(id) } },
-          options: { credentials: "include" },
-        },
-      );
+      const res = await fetcherClient(filesAdminModuleRef, {
+        prefixPath: "/admin",
+        module: "files",
+        path: "/{id}/download",
+        method: "get",
+        args: { params: { id: String(id) } },
+        options: { credentials: "include" },
+      });
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
@@ -104,7 +117,7 @@ export const FileRowActions = ({
             if (!open) setHeldByRevisions(null);
           }}
           onSubmit={async ({ onClose }) => {
-            const result = await deleteFileAction({
+            const result = await onDelete({
               force: heldByRevisions !== null,
               id,
             });

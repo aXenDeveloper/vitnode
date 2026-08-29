@@ -2,10 +2,18 @@
  * The one place the two plugin routing paths can collide, and a warning for it.
  *
  * **Migration-only. Delete this file at the Next.js cutover**, together with
- * `prepare-plugins-files.ts`, which is the only thing that imports it. Nothing
- * in `@vitnode/core/routing`, `@vitnode/core/framework/*` or
- * `@vitnode/core/tanstack/*` knows this exists, and nothing in the TanStack
- * runtime depends on it - that separation is the point, not an accident.
+ * `prepare-plugins-files.ts`, which is the only thing that imports it, and with
+ * `src/framework/plugin-routes/legacy-routes.ts`, which is the other half of
+ * this problem: this warns about a plugin route *module* landing where the
+ * copier will find it, that one refuses a plugin route *path* that a Next.js
+ * page still answers. Nothing in `@vitnode/core/routing` or
+ * `@vitnode/core/tanstack/*` knows either exists, and nothing in the TanStack
+ * runtime depends on them - that separation is the point, not an accident.
+ *
+ * Stage 12 made this warning far more likely to fire, and worth reading twice:
+ * a plugin may now declare `area: "admin"`, and the obvious place to put that
+ * module is `src/routes/admin/` - which is precisely the directory the copier
+ * claims. `routes/admin-reports` is free; `routes/admin/reports` is not.
  *
  * ## The collision
  *

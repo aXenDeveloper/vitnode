@@ -330,26 +330,34 @@ When the set of options is small and known ahead of time, pass them directly via
 
 ### Async filters
 
-When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server. Use a [Server Action](https://react.dev/reference/rsc/server-functions) so the lookup runs server-side:
+When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server.
 
-```tsx title="search-roles.action.tsx"
-"use server";
+The filter is a client component, so `onSearch` is an ordinary function. Read the API directly with `fetcherClient`:
+
+```tsx title="search-roles.tsx"
+"use client";
 
 import type { FilterOption } from "@vitnode/core/components/table/filters";
 
-import { adminModule } from "@/api/modules/admin/admin.module";
-import { RoleFormat } from "@vitnode/core/components/role-format";
-import { fetcher } from "@vitnode/core/lib/fetcher";
+import type { adminModule } from "@/api/modules/admin/admin.module";
+
+import { RoleFormatContent } from "@vitnode/core/components/role-format-content";
+import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client";
+
+// The module is imported as a *type*, so the response still infers while the
+// browser bundle carries only a plugin id.
+const admin = clientModule<typeof adminModule>("@vitnode/core");
 
 export const searchRoles = async (search: string): Promise<FilterOption[]> => {
-  const res = await fetcher(adminModule, {
+  const res = await fetcherClient(admin, {
     path: "/list",
     method: "get",
     module: "admin/roles",
     args: {
       query: { search, first: "20" },
     },
-    withPagination: true,
+    // The session is a cookie, and the API may be on another origin.
+    options: { credentials: "include" },
   });
 
   if (res.status !== 200) {
@@ -360,11 +368,20 @@ export const searchRoles = async (search: string): Promise<FilterOption[]> => {
 
   return data.edges.map(role => ({
     value: String(role.id),
-    label: <RoleFormat role={role} />,
+    label: <RoleFormatContent role={role} />,
     keywords: role.name.map(item => item.name),
   }));
 };
 ```
+
+<Callout type="info" title="A Server Action works too, with one catch">
+  `onSearch` accepts any function returning a promise, so a [Server
+  Action](https://react.dev/reference/rsc/server-functions) is a valid answer
+  when the lookup genuinely needs a server-only secret. It is the wrong default
+  for a read the browser can already make: it is a `POST` back to your app that
+  then calls the API - two round trips instead of one - and a Server Action
+  cannot be called from an application that is not Next.js.
+</Callout>
 
 ```tsx
 filters={[

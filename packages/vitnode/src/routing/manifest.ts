@@ -179,6 +179,29 @@ const readDefinition = (
     );
   }
 
+  // `requires` is about the public session; the AdminCP runs on a second one
+  // under its own cookie. An `admin` route already sits behind the shell's own
+  // guard, so `requires: "authenticated"` here is at best a restatement of
+  // something composition already provides - and `requires: "guest"` is a page
+  // no human being could reach, since the two guards would turn away everybody
+  // between them.
+  //
+  // Refused rather than ignored, because the field would read as enforcement
+  // while enforcing a different session's answer. The thing an author actually
+  // wants - "only staff with this permission" - is not this field in either
+  // area: it gates a page's *content*, through the same components the AdminCP's
+  // own screens use, and the API refuses the data regardless.
+  if (
+    requires !== undefined &&
+    requires !== null &&
+    (area ?? "main") === "admin"
+  ) {
+    throw new PluginRouteError(
+      `Plugin route "${id}" from ${pluginId} is in the "admin" area and declares \`requires: ${JSON.stringify(requires)}\`. \`requires\` is about the public session, and the AdminCP has its own - a route in the admin area is already behind the AdminCP's session guard, so drop the field. To gate the page on a staff permission, gate its content inside the route module instead.`,
+      { code: "requires-in-admin-area", pluginId, routeId: id },
+    );
+  }
+
   if (typeof path !== "string") {
     throw new PluginRouteError(
       `Plugin route "${id}" from ${pluginId} declares no path (got ${JSON.stringify(path)}).`,
@@ -277,8 +300,10 @@ export const buildPluginRouteManifest = (
 
       // Keyed on the URLs the route matches rather than on its text, so
       // `/blog/:slug` and `/blog/:postId` collide - they are one route spelled
-      // twice. Area-scoped, because the same pathname under two different
-      // layouts would be two different URLs; only one area exists today.
+      // twice. Area-scoped, because the same pathname in two different shells
+      // is two different URLs: an `admin` route's path is `/admin/…` and a
+      // `main` one's is not, so text they happen to share is not a clash. Two
+      // routes compete only when they answer one URL in one shell.
       //
       // Scoped by kind as well, and that is what nesting costs. A layout claims
       // no URL, so a layout at `/settings` and the index page inside it both

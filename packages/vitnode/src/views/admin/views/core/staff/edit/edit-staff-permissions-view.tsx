@@ -4,33 +4,60 @@ import { notFound } from "next/navigation";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
-import { staffPermissionKey } from "@/api/lib/staff-permission";
 import { adminModule } from "@/api/modules/admin/admin.module";
-import { staffPermissionModuleByType } from "@/api/modules/admin/staff/lib/schema";
-import { RoleFormat } from "@/components/role-format";
+import { RoleFormatContent } from "@/components/role-format-content";
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
+import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 
-import { StaffUserFormat } from "../table/staff-user-format";
-import { EditStaffPermissionsForm } from "./form";
+import {
+  buildStaffPermissionGroups,
+  grantedStaffPermissionKeys,
+  normalizeStaffEntryId,
+  staffListHref,
+} from "../staff-model";
+import {
+  adminStaffCatalogRequest,
+  adminStaffEntryRequest,
+} from "../staff-query";
+import { StaffUserFormatContent } from "../table/staff-user-format-content";
+import { EditStaffPermissionsForm } from "./edit-staff-form-next";
 
-interface EditStaffPermissionsViewProps {
+/**
+ * Choosing what a staff entry may do, as this application's Server Component.
+ *
+ * The two reads and the permission check are here; the permission *tree* is
+ * built by `buildStaffPermissionGroups`, which is pure and shared with the
+ * TanStack AdminCP - so the checkbox tree, the dependency locks and the set that
+ * is finally submitted are one implementation rather than two.
+ *
+ * Labels come from the root translator, because a permission label is a *flat*
+ * top-level message key (`"@vitnode/core:users:can_view"`) that a plugin ships
+ * in its own locale file. Next.js can read the whole merged tree, so it simply
+ * asks; the TanStack route has to fetch those keys in chunks, because its i18n
+ * runtime takes namespaces and bounds how many. Two mechanisms, one lookup
+ * signature - `StaffLabelLookup`.
+ */
+export const EditStaffPermissionsView = async ({
+  id: raw,
+  type,
+}: {
   id: string;
   type: PermissionStaffType;
-}
+}) => {
+  // The same normalisation the TanStack loader applies, and for the same reason:
+  // `Number("abc")` is `NaN`, and `?id=NaN` is a request nobody meant to make.
+  const id = normalizeStaffEntryId(raw);
+  if (id === null) {
+    notFound();
+  }
 
-export const EditStaffPermissionsView = async ({
-  type,
-  id,
-}: EditStaffPermissionsViewProps) => {
-  const canEdit = await checkAdminPermissionApi({
-    module: staffPermissionModuleByType[type],
-    permission: "can_edit",
-  });
-
+  const canEdit = await checkAdminPermissionApi(
+    adminStaffPermissions(type).edit,
+  );
   if (!canEdit) {
     notFound();
   }
@@ -38,82 +65,27 @@ export const EditStaffPermissionsView = async ({
   const t = await getTranslations("admin.staff.edit");
   const tRoot = (await getTranslations()) as unknown as ((
     key: string,
-  ) => string) & {
-    has: (key: string) => boolean;
-  };
+  ) => string) & { has: (key: string) => boolean };
 
   const [catalogRes, entryRes] = await Promise.all([
-    fetcher(adminModule, {
-      path: "/permission-catalog",
-      method: "get",
-      module: "admin/staff",
-    }),
-    fetcher(adminModule, {
-      path: "/entry/{type}/{id}",
-      method: "get",
-      module: "admin/staff",
-      args: { params: { type, id } },
-    }),
+    fetcher(adminModule, adminStaffCatalogRequest()),
+    fetcher(adminModule, adminStaffEntryRequest(type, id)),
   ]);
 
   if (entryRes.status !== 200 || catalogRes.status !== 200) {
     notFound();
   }
 
-  const catalog = await catalogRes.json();
-  const entry = await entryRes.json();
+  const [catalog, entry] = await Promise.all([
+    catalogRes.json(),
+    entryRes.json(),
+  ]);
 
-  const granted = new Set(
-    entry.permissions.map(permission => staffPermissionKey(permission)),
-  );
-
-  const plugins = catalog
-    .map(plugin => {
-      const modules = Object.entries(plugin[type])
-        .map(([module, permissions]) => ({
-          module,
-          label: tRoot.has(`${plugin.pluginId}:${module}`)
-            ? tRoot(`${plugin.pluginId}:${module}`)
-            : module,
-          permissions: permissions.map(entry => {
-            const args = {
-              plugin: plugin.pluginId,
-              module,
-              permission: entry.permission,
-            };
-            const key = staffPermissionKey(args);
-
-            return {
-              ...args,
-              key,
-              checked: granted.has(key),
-              label: tRoot.has(key) ? tRoot(key) : entry.permission,
-              dependsOn: entry.dependsOn.map(dependency =>
-                staffPermissionKey({
-                  plugin: plugin.pluginId,
-                  module,
-                  permission: dependency,
-                }),
-              ),
-            };
-          }),
-        }))
-        .filter(module => module.permissions.length > 0);
-
-      return {
-        pluginId: plugin.pluginId,
-        label: tRoot.has(`${plugin.pluginId}.title`)
-          ? tRoot(`${plugin.pluginId}.title`)
-          : plugin.pluginId,
-        modules,
-      };
-    })
-    .filter(plugin => plugin.modules.length > 0);
-
-  const backHref =
-    type === "admin"
-      ? "/admin/core/staff/admins"
-      : "/admin/core/staff/moderators";
+  const plugins = buildStaffPermissionGroups({
+    catalog,
+    label: key => (tRoot.has(key) ? tRoot(key) : undefined),
+    type,
+  });
 
   return (
     <>
@@ -122,9 +94,9 @@ export const EditStaffPermissionsView = async ({
           <div className="flex items-center gap-2">
             {t("subject")}
             {entry.role ? (
-              <RoleFormat role={entry.role} />
+              <RoleFormatContent role={entry.role} />
             ) : entry.user ? (
-              <StaffUserFormat user={entry.user} />
+              <StaffUserFormatContent user={entry.user} />
             ) : null}
           </div>
         }
@@ -132,7 +104,7 @@ export const EditStaffPermissionsView = async ({
       >
         <Button
           nativeButton={false}
-          render={<Link href={backHref} />}
+          render={<Link href={staffListHref(type)} />}
           variant="outline"
         >
           <ArrowLeftIcon />
@@ -146,6 +118,7 @@ export const EditStaffPermissionsView = async ({
         <p className="text-muted-foreground">{t("self")}</p>
       ) : (
         <EditStaffPermissionsForm
+          grantedKeys={[...grantedStaffPermissionKeys(entry.permissions)]}
           id={id}
           plugins={plugins}
           type={type}

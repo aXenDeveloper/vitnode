@@ -1,9 +1,9 @@
 "use client";
 
 import { Settings2Icon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +18,7 @@ import { Loader } from "@/components/ui/loader";
 
 import type { DashboardWidgetView } from "../widgets/types";
 
-import { loadWidgetSettingsAction } from "../widgets/load-widget-settings.server";
-import { saveWidgetSettingsMutation } from "../widgets/save-widget-settings.server";
+import { useDashboardBoard } from "./board-provider";
 
 interface WidgetSettingsDialogContextProps {
   close: () => void;
@@ -52,6 +51,16 @@ const WidgetSettingsForm = ({
   form: Promise<React.ReactNode>;
 }): React.ReactNode => React.use(form);
 
+/**
+ * One widget's settings, in a dialog.
+ *
+ * The form itself is not shipped with the board: it is loaded on first open, so
+ * an ordinary dashboard load pays for no settings form at all. Both the load and
+ * the save come from the board's `actions` - in Next.js they are server actions
+ * that render the widget's `settingsComponent` on the server and end in
+ * `revalidatePath`; in TanStack Start they are a browser render and a call to
+ * the same Hono route. See `../widgets/dashboard-actions.ts`.
+ */
 export const WidgetSettingsDialog = ({
   onSaved,
   widget,
@@ -60,6 +69,7 @@ export const WidgetSettingsDialog = ({
   widget: DashboardWidgetView;
 }) => {
   const t = useTranslations("admin.dashboard.widgets");
+  const { actions } = useDashboardBoard();
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
   const [form, setForm] = React.useState<null | Promise<React.ReactNode>>(null);
@@ -75,9 +85,11 @@ export const WidgetSettingsDialog = ({
     if (!next || form) return;
 
     setForm(
-      loadWidgetSettingsAction({ widgetId: widget.instanceId }).catch(() => (
-        <p className="text-destructive text-sm">{t("settings.load_error")}</p>
-      )),
+      actions
+        .loadWidgetSettings(widget.instanceId)
+        .catch(() => (
+          <p className="text-destructive text-sm">{t("settings.load_error")}</p>
+        )),
     );
   };
 
@@ -88,7 +100,7 @@ export const WidgetSettingsDialog = ({
       new Promise<void>(resolve => {
         startTransition(async () => {
           try {
-            const res = await saveWidgetSettingsMutation({
+            const res = await actions.saveWidgetSettings({
               settings,
               widgetId: widget.instanceId,
             });
@@ -108,7 +120,7 @@ export const WidgetSettingsDialog = ({
           }
         });
       }),
-    [onSaved, t, widget.instanceId],
+    [actions, onSaved, t, widget.instanceId],
   );
 
   const value = React.useMemo(

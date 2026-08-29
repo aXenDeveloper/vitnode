@@ -1,97 +1,37 @@
-import { getTranslations } from "next-intl/server";
+import type { RawAdminTableParams } from "@/views/admin/table/params";
 
 import { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
-import { DateFormat } from "@/components/date-format";
-import { DataTable } from "@/components/table/data-table";
+import { NextDataTableNavigation } from "@/components/table/navigation-next";
 import { fetcher } from "@/lib/fetcher";
+import { Link } from "@/lib/navigation";
+import { normalizeAdminTableParams } from "@/views/admin/table/params";
 
-import { MoreActionSystemLogs } from "./actions/more/more";
-import { BadgeStatus } from "./badges/badge-status";
-import { BadgeTypeLog } from "./badges/badge-type-log";
+import { DEBUG_LOGS_TABLE_CONTRACT, debugLogsRequest } from "../debug-query";
+import { SystemLogsContent } from "./system-logs-content";
 
-export const getSystemLogsData = async (
-  query: Record<string, string | string[] | undefined>,
-) => {
-  const res = await fetcher(debugAdminModule, {
-    prefixPath: "/admin",
-    path: "/logs",
-    method: "get",
-    module: "debug",
-    args: {
-      query,
-    },
-    withPagination: true,
-  });
-
-  return await res.json();
-};
-
+/**
+ * The Next.js half of the system log: read the page, then hand it to the shared
+ * table.
+ *
+ * A Server Component, so `fetcher()` reads the admin cookie through
+ * `next/headers`. The request is not Next.js's: `normalizeAdminTableParams` and
+ * `debugLogsRequest` are the same two functions the TanStack Start loader calls.
+ */
 export const SystemLogsView = async ({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<RawAdminTableParams>;
 }) => {
-  const [t, query] = await Promise.all([
-    getTranslations("admin.debug.logs"),
-    searchParams,
-  ]);
-  const data = await getSystemLogsData(query);
+  const params = normalizeAdminTableParams(
+    await searchParams,
+    DEBUG_LOGS_TABLE_CONTRACT,
+  );
+  const res = await fetcher(debugAdminModule, debugLogsRequest(params));
+  const data = await res.json();
 
   return (
-    <DataTable
-      columns={[
-        {
-          accessorKey: "pluginId",
-          header: t("plugin"),
-          className: "w-48",
-        },
-        {
-          accessorKey: "type",
-          header: t("type"),
-          cell: ({ row }) => <BadgeTypeLog type={row.type} />,
-        },
-        {
-          accessorKey: "statusCode",
-          header: t("status_code"),
-          className: "w-26",
-          cell: ({ row }) => <BadgeStatus statusCode={row.statusCode} />,
-        },
-        {
-          accessorKey: "createdAt",
-          header: t("created_at"),
-          cell: ({ row }) => <DateFormat date={row.createdAt} />,
-        },
-        {
-          accessorKey: "content",
-          header: t("content"),
-          cell: ({ row }) => {
-            const CHARACTERS = 50;
-            const content = row.content;
-            const isLong = content.length > CHARACTERS;
-            const displayContent = isLong
-              ? `${content.slice(0, CHARACTERS)}...`
-              : content;
-
-            return <span>{displayContent}</span>;
-          },
-        },
-        {
-          id: "actions",
-          header: "",
-          align: "right",
-          cell: ({ row }) => <MoreActionSystemLogs {...row} />,
-        },
-      ]}
-      edges={data.edges.map(edge => ({ ...edge }))}
-      id="system-logs-table"
-      order={{
-        columns: ["createdAt", "pluginId", "type"],
-        defaultOrder: {
-          column: "createdAt",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-    />
+    <NextDataTableNavigation>
+      <SystemLogsContent data={data} LinkComponent={Link} />
+    </NextDataTableNavigation>
   );
 };

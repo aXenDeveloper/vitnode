@@ -44,16 +44,16 @@ export const routes: PluginRouteDefinition[] = [
 Three fields have no default. The other five describe the cases beyond one flat
 public page:
 
-| Field        | What it is                                                                                                            |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `id`         | Stable name for the page, unique inside your plugin. Name it after the page, not the URL - it survives a path change. |
-| `path`       | The public URL, in VitNode's canonical spelling (below). Always the **full** path, even for a nested route.           |
-| `entry`      | Package export subpath of the module that renders it - `"routes/post-page"`, no file extension.                       |
-| `kind`       | `"page"` (default) or `"layout"`. A layout claims no URL of its own.                                                  |
-| `parentId`   | Another route's `id` **from the same plugin** that this one renders inside.                                           |
-| `namespaces` | The message namespaces this route renders, fetched alongside its code rather than after it.                           |
-| `requires`   | `"authenticated"` or `"guest"`. A navigation rule, never the security boundary.                                       |
-| `area`       | `"main"` is the default and, for now, the only one. The AdminCP keeps its own routing.                                |
+| Field        | What it is                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | Stable name for the page, unique inside your plugin. Name it after the page, not the URL - it survives a path change.                 |
+| `path`       | The public URL, in VitNode's canonical spelling (below). Always the **full** path, even for a nested route.                           |
+| `entry`      | Package export subpath of the module that renders it - `"routes/post-page"`, no file extension.                                       |
+| `kind`       | `"page"` (default) or `"layout"`. A layout claims no URL of its own.                                                                  |
+| `parentId`   | Another route's `id` **from the same plugin** that this one renders inside.                                                           |
+| `namespaces` | The message namespaces this route renders, fetched alongside its code rather than after it.                                           |
+| `requires`   | `"authenticated"` or `"guest"`. A navigation rule, never the security boundary.                                                       |
+| `area`       | Which shell frames the page: `"main"` (the default, the public site) or `"admin"` (the AdminCP). See [AdminCP pages](#admincp-pages). |
 
 Then hand the same array to `buildPlugin`, so an app that registers your plugin
 the usual way declares the same routes:
@@ -415,6 +415,99 @@ separate route tree for plugins.
 Everything the app's own pages get, because your page is in the same route tree:
 locale prefixes, client-side navigation, and lazy loading per the chunk above.
 
+## AdminCP pages
+
+Most plugins want a public page, which is why `area` has a default and you have
+read this far without meeting it. If your plugin needs a screen in the **AdminCP**
+instead - a settings panel, a moderation queue, a dashboard of its own - say so:
+
+```ts title="plugins/blog/src/routes/manifest.ts"
+export const routes: PluginRouteDefinition[] = [
+  {
+    area: "admin", // [!code highlight]
+    entry: "routes/admin-reports",
+    id: "reports",
+    namespaces: ["@vitnode/blog.admin"],
+    path: "/admin/blog/reports", // [!code highlight]
+  },
+];
+```
+
+Two things about that, and the second one surprises people:
+
+**`area` picks the frame, not the URL.** Setting `area: "admin"` gives your page
+the AdminCP's sidebar, its breadcrumb area and its session guard. It does **not**
+put `/admin` in front of your path - you still write the whole URL yourself. It
+would have been easy to make VitNode prepend it for you, and then nobody could
+read a manifest and know where a page actually lives. Write the full path.
+
+**Everything else works exactly as it does for a public page.** Same `kind`, same
+`parentId`, same `namespaces`, same route module with the same `route` export, the
+same breadcrumb and metadata APIs. A layout with pages inside it nests in the
+AdminCP the way it nests on the public site. There is no `defineAdminPluginRoute`,
+because there is nothing an admin page needs that a page doesn't.
+
+### Permissions
+
+`requires` is for the **public** session, so an admin route may not declare it -
+the build says so if you try. The AdminCP has its own session under its own
+cookie, and your page is already behind its guard by virtue of being in the area.
+
+To gate on a **staff permission**, gate the page's _content_, the same way every
+AdminCP screen already does:
+
+```tsx title="plugins/blog/src/routes/admin-reports.tsx"
+import { AdminStaffPermissionGate } from "@vitnode/core/components/staff-permission/provider";
+
+const ReportsPage = () => (
+  <AdminStaffPermissionGate
+    module="reports"
+    permission="can_view"
+    plugin="@vitnode/blog" // [!code highlight]
+  >
+    <ReportsTable />
+  </AdminStaffPermissionGate>
+);
+
+export default ReportsPage;
+```
+
+Name your own `pluginId` in `plugin`. A permission is a `plugin` / `module` /
+`permission` triple, so `reports.can_view` granted under core is a different
+permission from yours and does not open your page.
+
+That component reads the AdminCP's permission set from context, which both the
+Next.js and the TanStack AdminCP provide - so your page renders identically in
+either, which is the whole reason to import it from `components/` rather than
+from a host-specific module.
+
+<Callout type="warn" title="A hidden link is not a locked door">
+  Hiding a nav entry or a button hides a *link*. The page is still reachable by
+  URL, and it must be - your API is the boundary. Every admin endpoint re-checks
+  the staff tables on the server, on every request, so an administrator who
+  edits their cached permissions in devtools gets a visible button and an API
+  that still refuses them. Keep it that way.
+</Callout>
+
+### The sidebar is a separate list
+
+A route in the admin area does not appear in the AdminCP sidebar on its own, and
+that is deliberate. `admin.nav` and `routes` are independent: a nav entry may
+point at one of your admin routes, at an external URL or at another application,
+and an admin route may deliberately have no sidebar entry at all - a detail page
+you only ever reach from a table, say. Declare both if you want both.
+
+<Callout
+  type="info"
+  title="Name the module something other than routes/admin/…"
+>
+  During the migration, `src/routes/admin/` is where a plugin's **Next.js**
+  pages live, and VitNode copies everything in it into any Next.js app that
+  installs your plugin. An `entry` in there gets copied *and* bundled, which is
+  confusing rather than broken - `vitnode dev` warns about it.
+  `routes/admin-reports` is free; so is any other name.
+</Callout>
+
 ## What the build catches
 
 Loudly, at build time, naming your plugin - never as a silent default:
@@ -431,6 +524,18 @@ Loudly, at build time, naming your plugin - never as a silent default:
   `/users/$id` and your plugin declares `/users/:userId`, that's one URL claimed
   twice. `/users/new` beside `/users/:id` is fine - a router tells a static
   segment from a dynamic one.
+- An `area` VitNode doesn't have. There are two, and a page in `"admin"` whose
+  `parentId` points at a layout in `"main"` (or the other way round) - nesting is
+  how a shell is chosen, so the two have to agree.
+- `requires` on an admin route. It's about the public session, and the AdminCP
+  has its own.
+- An area the **application** hasn't given a shell to. Nothing falls back to the
+  other one: a page framed by the wrong shell renders outside the guards and
+  chrome its area was the whole statement about.
+
+Two routes that spell the same path in _different_ areas are not a collision.
+`main /reports` and `admin /reports` are two URLs in two shells, and the build
+treats them as such.
 
 And at runtime, if a module doesn't export a component as its default export, the
 error names your plugin route rather than surfacing as React's "type is invalid"
@@ -447,6 +552,15 @@ The two paths are independent. The manifest is never consulted by the copier, an
 the copier is never consulted by an app that serves routes from the manifest - so
 a plugin can do both at once during the migration, and dropping the Next.js half
 later removes files rather than changing anything.
+
+There is one place they can trip over each other, and the build stops you: while
+half the AdminCP is still served by Next.js, a manifest route may not claim a URL
+that half still answers. `/admin/content/*` is the big one - that's the Content
+Engine, and it hasn't moved yet. Declare an `admin` route at `/admin/content/blog`
+and the build refuses it, naming the Next.js page that already answers, rather
+than letting your page quietly take over a working screen. The list is read off
+those pages, so it shrinks by itself as they migrate, and disappears when the
+last one does.
 
 <Callout type="warn" title="Those four directory names are taken">
   Don't put a manifest `entry` under `routes/main/`, `routes/admin/`,

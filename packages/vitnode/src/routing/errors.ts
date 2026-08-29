@@ -1,6 +1,7 @@
 export type PluginRouteErrorCode =
   | "childless-layout"
   | "conflicting-requires"
+  | "cross-area-parent"
   | "cross-plugin-parent"
   | "duplicate-id"
   | "duplicate-path"
@@ -17,6 +18,7 @@ export type PluginRouteErrorCode =
   | "invalid-requires"
   | "malformed-route"
   | "parent-cycle"
+  | "requires-in-admin-area"
   | "unknown-parent";
 
 export interface PluginRouteErrorDetails {

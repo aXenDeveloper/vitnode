@@ -264,6 +264,55 @@ describe("a hierarchy that does not hold together", () => {
     expect(error.code).toBe("cross-plugin-parent");
   });
 
+  /**
+   * Nesting *is* how a shell is chosen: a nested route mounts under its layout,
+   * and the layout mounts under its area's shell - so a child's own `area` is
+   * never consulted again once it has a parent.
+   *
+   * Which makes a mismatch a declaration that does not describe where the page
+   * renders, and silently in the worst direction: a route marked `admin` under a
+   * `main` layout would come out on the public site, outside the AdminCP session
+   * guard. Refused rather than inherited from the parent, because filling the
+   * field in would make the manifest that reads wrong behave like the one that
+   * reads right, and the wrong one is what a reviewer sees.
+   */
+  it.each([
+    ["an admin page under a main layout", "main", "admin"],
+    ["a main page under an admin layout", "admin", "main"],
+  ] as const)("refuses %s", (_label, parentArea, childArea) => {
+    const error = thrownBy(() =>
+      buildPluginRouteGraph(
+        manifestOf(
+          example(
+            layout("frame", "/x", { area: parentArea }),
+            page("child", "/x/y", { area: childArea, parentId: "frame" }),
+          ),
+        ),
+      ),
+    );
+
+    expect(error.code).toBe("cross-area-parent");
+    expect(error.message).toContain(`"${childArea}" area`);
+  });
+
+  it("allows a subtree that stays in one area", () => {
+    const graph = buildPluginRouteGraph(
+      manifestOf(
+        example(
+          layout("frame", "/admin/reports", { area: "admin" }),
+          page("index", "/admin/reports", {
+            area: "admin",
+            parentId: "frame",
+          }),
+        ),
+      ),
+    );
+
+    expect(nodeOf(graph, "@vitnode/example:index").parent?.route.id).toBe(
+      "@vitnode/example:frame",
+    );
+  });
+
   it("refuses a parent that is a page", () => {
     const error = thrownBy(() =>
       buildPluginRouteGraph(
@@ -423,6 +472,30 @@ describe("two routes answering one URL", () => {
     expect(error.code).toBe("duplicate-path");
     expect(error.message).toContain("@vitnode/example");
     expect(error.message).toContain("@vitnode/blog");
+  });
+
+  /**
+   * The cross-kind clash is area-scoped too. A layout in the AdminCP and a page
+   * on the public site that happen to spell one pathname are framed by different
+   * shells, so they are different URLs and neither is competing for anything.
+   */
+  it("lets a layout and a page share a pathname across two areas", () => {
+    const graph = buildPluginRouteGraph(
+      manifestOf(
+        example(
+          layout("frame", "/foo", { area: "admin" }),
+          page("inside", "/foo/bar", { area: "admin", parentId: "frame" }),
+        ),
+        blog(page("post", "/foo")),
+      ),
+    );
+
+    // Both claim `/foo`, so the comparator's id tiebreak decides the order -
+    // which is what makes it the same on every machine.
+    expect(graph.roots.map(root => root.route.id)).toEqual([
+      "@vitnode/blog:post",
+      "@vitnode/example:frame",
+    ]);
   });
 
   /**

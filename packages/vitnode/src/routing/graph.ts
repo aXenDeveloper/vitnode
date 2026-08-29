@@ -96,6 +96,9 @@ const fail = (
  *   plugins happen to be installed beside it.
  * - **A parent that is not a layout.** A page has no children; a route under one
  *   would never render.
+ * - **A parent in another area.** Nesting is how a shell is chosen, so a route
+ *   whose `area` disagrees with its layout's is a declaration that does not
+ *   describe where the page actually renders.
  * - **A cycle**, including a route that is its own parent.
  * - **A child whose path is not the parent's path or an extension of it** - a
  *   manifest that lies about where its pages are.
@@ -192,6 +195,27 @@ export const buildPluginRouteGraph = (
         "invalid-parent-kind",
         route,
         `Plugin route "${route.id}" declares the parent "${parentId}", which is a ${parent.route.kind} rather than a layout. Only a layout can have routes inside it.`,
+        parent.route,
+      );
+    }
+
+    // A subtree renders in one shell, because nesting *is* how a shell is
+    // chosen: a nested route is mounted under its layout, and its layout is
+    // mounted under its area's shell. So a child's declared area is never
+    // consulted again once it has a parent - which means a mismatch here is not
+    // a route in two shells, it is a route whose `area` says one thing and does
+    // another. Silently, and in the direction that matters most: a page marked
+    // `admin` under a `main` layout would render on the public site, outside the
+    // AdminCP session guard, wearing the site header.
+    //
+    // Refused rather than inherited. Filling the field in from the parent would
+    // make two manifests that read differently behave identically, and the one
+    // that reads wrong is the one somebody will review.
+    if (parent.route.area !== route.area) {
+      fail(
+        "cross-area-parent",
+        route,
+        `Plugin route "${route.id}" is in the "${route.area}" area but declares the parent "${parentId}", which is in "${parent.route.area}". A nested route renders in the shell its layout renders in, so the two have to agree - change one of them.`,
         parent.route,
       );
     }

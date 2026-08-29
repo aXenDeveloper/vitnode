@@ -1,24 +1,49 @@
 /**
- * Where a plugin route mounts in the application.
+ * Which of an application's shells a plugin route renders inside.
  *
- * One member, on purpose, and Stage 11 audited that decision rather than
- * inheriting it. The legacy route-copying pipeline
- * (`scripts/prepare-plugins-files.ts`) knew three destinations - `main`, `admin`
- * and `blank` - and the only one a plugin has ever shipped a public page into is
- * `main`. `admin` is the AdminCP, which has its own layout, its own second
- * session and its own staff permissions, and moves in Stage 12; `blank` is a
- * page rendered without the site chrome, used once by a core test page and by no
- * plugin, so there is nothing to preserve and no way to get it wrong later - the
- * shell a route renders in is chosen by which route it is mounted under, and
- * adding a member here is what a second shell would cost.
+ * Two members, and each was earned by a stage rather than inherited from the
+ * legacy route-copying pipeline (`scripts/prepare-plugins-files.ts`), which knew
+ * three destinations. `main` is the public site. `admin` is the AdminCP, and
+ * Stage 12 is where it arrives: it has its own layout, its own second session
+ * under its own cookie, and its own staff permissions. `blank` - a page rendered
+ * without the site chrome - is still absent, because it was used once by a core
+ * test page and by no plugin, and a member here has to be a shell some route
+ * actually renders in.
+ *
+ * ## An area chooses a parent. It never rewrites a path
+ *
+ * This is the invariant the whole layer rests on, and adding a second member is
+ * what makes it worth stating: a route in the `admin` area declares
+ * `path: "/admin/reports"` **in full**. Nothing prefixes it, and nothing infers
+ * `/admin` from the area. The area says which shell the page is framed by - and
+ * in a router a shell is a parent route, so honouring it means choosing a parent
+ * (`@vitnode/core/tanstack/plugin-routes`'s `mountUnder`) and nothing else.
+ *
+ * A hidden prefix would buy one saved word per declaration and cost the property
+ * that makes this manifest reviewable: that the URL a plugin claims is legible
+ * in the diff that claims it, and that two routes colliding look like it.
+ *
+ * ## Areas do not collide with each other
+ *
+ * `main /foo` and `admin /foo` are different URLs - the second is under an
+ * AdminCP shell whose own route contributes `/admin` - so every collision check
+ * in this layer keys on `${area} ${matchKey}` rather than on the path alone.
+ * Two routes only compete when they would answer the same URL in the same shell.
  *
  * Keeping the list *here* rather than letting every route invent its own string
  * is the point: an area is a statement about layout, and a layout is a parent.
  */
-export type PluginRouteArea = "main";
+export type PluginRouteArea = "admin" | "main";
 
-/** Every area a route may declare. */
-export const PLUGIN_ROUTE_AREAS: PluginRouteArea[] = ["main"];
+/**
+ * Every area a route may declare, in a fixed order.
+ *
+ * Sorted, and depended upon: it is what a diagnostic lists when a route names an
+ * area that does not exist, and what the TanStack runtime iterates when it hangs
+ * one subtree per area off the tree. An order that came out of declaration
+ * sequence would make a build's output depend on how this file was edited.
+ */
+export const PLUGIN_ROUTE_AREAS: PluginRouteArea[] = ["admin", "main"];
 
 /**
  * What a route *is* in the route tree, as opposed to where it is.
@@ -67,10 +92,15 @@ export const PLUGIN_ROUTE_KINDS: PluginRouteKind[] = ["layout", "page"];
  * - `guest` - a signed-out visitor. A signed-in one is sent to their
  *   destination instead, which is what `/login` and `/register` do.
  *
- * Permissions are deliberately absent. The AdminCP's staff permission model is
- * Stage 12's, and moderator semantics are a hardcoded `false` in the session API
- * today - a route requirement written against either would read as enforcement
- * while being a constant.
+ * Permissions are deliberately absent, and stayed absent when Stage 12 brought
+ * the AdminCP in. This field is about the **public** session - the cookie
+ * `/login` sets - and the AdminCP runs on a second session under a second
+ * cookie, so the two are not the same question asked at different volumes. An
+ * `admin` route inherits its requirement from the shell it mounts under, whose
+ * guard reads that other session; declaring one here as well is refused rather
+ * than ignored, because a field that reads as enforcement and enforces nothing
+ * is worse than no field. Staff permissions gate a page's *content*, through the
+ * same components the AdminCP's own screens use.
  */
 export type PluginRouteRequirement = "authenticated" | "guest";
 
@@ -117,7 +147,12 @@ export type PluginRouteSegment =
  * here at all (`requires`).
  */
 export interface PluginRouteDefinition {
-  /** Defaults to `"main"`. */
+  /**
+   * Which shell frames this page. Defaults to `"main"`.
+   *
+   * It chooses a parent, never a prefix: an `admin` route still writes its full
+   * `/admin/…` path below. See {@link PluginRouteArea}.
+   */
   area?: PluginRouteArea;
   /**
    * Package export subpath of the module that renders this route, e.g.

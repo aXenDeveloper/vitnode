@@ -3,12 +3,12 @@ import { Suspense } from "react";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { BreadcrumbRender } from "@/views/breadcrumb/breadcrumb-render";
+import { Link } from "@/lib/navigation";
 
-import type { NavAdminParent } from "../sidebar/nav/get-admin-nav";
+import type { NavAdminParent } from "../sidebar/nav/nav-model";
 
 import { getAdminNav } from "../sidebar/nav/get-admin-nav";
-import { resolveBreadcrumb } from "./resolve-breadcrumb";
+import { BreadcrumbAdminContent } from "./breadcrumb-admin-content";
 
 export interface BreadcrumbAdminProps {
   labels?: Record<string, string>;
@@ -18,34 +18,29 @@ export interface BreadcrumbAdminProps {
   vitNodeConfig?: VitNodeConfig;
 }
 
+/**
+ * {@link BreadcrumbAdminContent}, wired to Next.js.
+ *
+ * Resolves the navigation on the server - the labels come from it, and it is
+ * already filtered by the signed-in admin's permissions - and supplies
+ * `next-intl`'s locale-aware `Link`. Rendered by the `@breadcrumb` parallel
+ * route whose folder matches the page.
+ */
 const BreadcrumbAdminResolved = async ({
   segments,
   vitNodeConfig,
   overrideLastLabel,
   labels,
   nav,
-}: BreadcrumbAdminProps) => {
-  const crumbs = resolveBreadcrumb(
-    nav ?? (await getAdminNav({ vitNodeConfig })),
-    segments,
-  );
-
-  if (labels) {
-    for (const crumb of crumbs) {
-      const label = labels[crumb.href];
-      if (label !== undefined) {
-        crumb.label = label;
-        crumb.isLink = !crumb.isCurrent;
-      }
-    }
-  }
-
-  if (overrideLastLabel && crumbs.length > 0) {
-    crumbs[crumbs.length - 1].label = overrideLastLabel;
-  }
-
-  return <BreadcrumbRender crumbs={crumbs} scrollable />;
-};
+}: BreadcrumbAdminProps) => (
+  <BreadcrumbAdminContent
+    labels={labels}
+    LinkComponent={Link}
+    nav={nav ?? (await getAdminNav({ vitNodeConfig }))}
+    overrideLastLabel={overrideLastLabel}
+    segments={segments}
+  />
+);
 
 export const BreadcrumbAdmin = (props: BreadcrumbAdminProps) => (
   <Suspense fallback={<Skeleton className="h-4 w-40" />}>

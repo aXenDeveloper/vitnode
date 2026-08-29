@@ -2,18 +2,28 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { HeaderContent } from "@/components/ui/header-content";
 import { fetcher } from "@/lib/fetcher";
 
-import type {
-  DashboardHeaderContent,
-  DashboardWidgetCatalogEntry,
-} from "./widgets/types";
+import type { DashboardHeaderContent } from "./widgets/types";
 
-import { DashboardBoardProvider } from "./grid/board-provider";
+import { DashboardBoardProviderNext } from "./grid/board-provider-next";
 import { DashboardGrid } from "./grid/dashboard-grid";
 import { DashboardEditActions } from "./grid/edit-actions";
+import { buildDashboardBoard } from "./widgets/build-board";
 import { getDashboardWidgets } from "./widgets/get-dashboard-widgets";
-import { widgetIdOf } from "./widgets/instance-id";
-import { normalizeLayout } from "./widgets/normalize-layout";
 
+/**
+ * The Next.js half of the dashboard board: read the widgets and the stored
+ * layout, then hand the assembled board to the shared provider.
+ *
+ * A Server Component, so `getDashboardWidgets()` reads the app config and the
+ * admin session through the request scope, and every widget's `component` is
+ * rendered *here* - which is what lets a widget be a Server Component.
+ * `buildDashboardBoard` is the shared arithmetic, and `DashboardBoardProviderNext`
+ * binds the four actions.
+ *
+ * A failed layout read falls back to no stored layout rather than erroring, and
+ * that is deliberate: `dashboard.can_view` gates the read, and an admin without
+ * it should still get the default board rather than a broken page.
+ */
 export const DashboardBoard = async ({
   header,
 }: {
@@ -29,57 +39,13 @@ export const DashboardBoard = async ({
   ]);
 
   const saved = res.ok ? (await res.json()).widgets : [];
-  const layout = normalizeLayout({ saved, widgets });
-
-  const widgetIds = new Set(widgets.map(({ id }) => id));
-  const managedIds = [
-    ...new Set([
-      ...saved
-        .filter(item => widgetIds.has(widgetIdOf(item.id)))
-        .map(item => item.id),
-      ...layout.map(item => item.id),
-    ]),
-  ];
-
-  const placedWidgetIds = new Set(layout.map(item => widgetIdOf(item.id)));
-  const content: Record<string, React.ReactNode> = {};
-
-  for (const item of layout) {
-    const widget = widgets.find(({ id }) => id === widgetIdOf(item.id));
-    if (!widget) continue;
-
-    const Widget = widget.component;
-    content[item.id] = (
-      <Widget settings={item.settings ?? {}} widgetId={item.id} />
-    );
-  }
-
-  const catalog: DashboardWidgetCatalogEntry[] = widgets.map(widget => {
-    const Widget = widget.component;
-    const needsStandIn =
-      !!widget.allowMultiple || !placedWidgetIds.has(widget.id);
-
-    return {
-      id: widget.id,
-      title: widget.title,
-      desc: widget.desc,
-      icon: widget.icon,
-      category: widget.category,
-      allowMultiple: widget.allowMultiple,
-      minSpan: widget.minSpan,
-      defaultSpan: widget.defaultSpan,
-      defaultRows: widget.defaultRows,
-
-      content: needsStandIn ? (
-        <Widget settings={{}} widgetId={widget.id} />
-      ) : null,
-
-      hasSettings: !!widget.settingsComponent,
-    };
+  const { catalog, content, layout, managedIds } = buildDashboardBoard({
+    saved,
+    widgets,
   });
 
   return (
-    <DashboardBoardProvider
+    <DashboardBoardProviderNext
       catalog={catalog}
       content={content}
       layout={layout}
@@ -90,6 +56,6 @@ export const DashboardBoard = async ({
       </HeaderContent>
 
       <DashboardGrid />
-    </DashboardBoardProvider>
+    </DashboardBoardProviderNext>
   );
 };
