@@ -1,12 +1,23 @@
 export type PluginRouteErrorCode =
+  | "childless-layout"
+  | "conflicting-requires"
+  | "cross-plugin-parent"
   | "duplicate-id"
   | "duplicate-path"
   | "invalid-area"
   | "invalid-entry"
   | "invalid-id"
+  | "invalid-kind"
+  | "invalid-namespace"
+  | "invalid-parent"
+  | "invalid-parent-kind"
+  | "invalid-parent-path"
   | "invalid-path"
   | "invalid-plugin-id"
-  | "malformed-route";
+  | "invalid-requires"
+  | "malformed-route"
+  | "parent-cycle"
+  | "unknown-parent";
 
 export interface PluginRouteErrorDetails {
   code: PluginRouteErrorCode;

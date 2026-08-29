@@ -23,12 +23,21 @@ const filesUnder = (directory: string): string[] => {
   return entries;
 };
 
+/**
+ * A file with its comments removed.
+ *
+ * These modules document themselves at length, and `./module` shows a plugin
+ * author the import they are meant to write - which the scan below would
+ * otherwise read as an import *this* layer makes. Stripping comments first is
+ * what keeps the rule about code.
+ */
+const codeOf = (path: string): string =>
+  readFileSync(path, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
 const importsFrom = (path: string): string[] =>
-  [
-    ...readFileSync(path, "utf8").matchAll(
-      /from\s+"([^"]+)"|import\s+"([^"]+)"/g,
-    ),
-  ]
+  [...codeOf(path).matchAll(/from\s+"([^"]+)"|import\s+"([^"]+)"/g)]
     .map(match => match[1] ?? match[2])
     .filter((specifier): specifier is string => Boolean(specifier));
 
@@ -45,7 +54,12 @@ const importsFrom = (path: string): string[] =>
  * packages, because a list is something somebody has to remember to extend.
  */
 describe("the routing layer is framework-neutral", () => {
-  const files = filesUnder(here).filter(path => !/\.test\.tsx?$/.test(path));
+  // `.test-d.ts` as well as `.test.ts`: a type test asserts against `vitest`'s
+  // `expectTypeOf` and is erased before anything runs, so its import is not one
+  // this layer makes.
+  const files = filesUnder(here).filter(
+    path => !/\.test(-d)?\.tsx?$/.test(path),
+  );
 
   it("has files to check", () => {
     // Every assertion below is vacuously true against an empty list.

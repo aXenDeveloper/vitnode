@@ -55,6 +55,16 @@ export const routeHead = (
 });
 
 /**
+ * What a route's `head` returns - the shape {@link routeHead} produces.
+ *
+ * Named so that code which *takes* a bound `pageHead` can say so without
+ * restating the array literal. `@vitnode/core/tanstack/plugin-routes` is the one
+ * that needs it: a plugin route's metadata goes through the host's own binding,
+ * because the site's name is the one thing a package cannot know.
+ */
+export type RouteHeadResult = ReturnType<typeof routeHead>;
+
+/**
  * {@link routeHead}, bound to one app's metadata.
  *
  * The app's name is the one thing a package cannot know, and binding it once in

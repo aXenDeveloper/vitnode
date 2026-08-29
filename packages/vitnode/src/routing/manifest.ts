@@ -2,13 +2,22 @@ import type {
   PluginRoute,
   PluginRouteDefinition,
   PluginRouteManifest,
-  PluginRouteSegment,
   PluginRouteSource,
 } from "./types";
 
 import { PluginRouteError } from "./errors";
+import { buildPluginRouteGraph } from "./graph";
+import { namespaceProblem, normalizeNamespaceList } from "./namespaces";
+import { comparePluginRoutes } from "./order";
 import { parseRoutePath, routeMatchKey } from "./path";
-import { PLUGIN_ROUTE_AREAS, PLUGIN_ROUTE_ID_SEPARATOR } from "./types";
+import {
+  PLUGIN_ROUTE_AREAS,
+  PLUGIN_ROUTE_ID_SEPARATOR,
+  PLUGIN_ROUTE_KINDS,
+  PLUGIN_ROUTE_REQUIREMENTS,
+} from "./types";
+
+export { comparePluginRoutes };
 
 /**
  * A `/`-separated identifier, and nothing that could escape a string literal.
@@ -32,52 +41,6 @@ const ENTRY_EXTENSION = /\.[cm]?[jt]sx?$/;
  */
 export const pluginRouteId = (pluginId: string, routeId: string): string =>
   `${pluginId}${PLUGIN_ROUTE_ID_SEPARATOR}${routeId}`;
-
-/**
- * The order routes are declared in must not decide which one wins.
- *
- * Compared segment by segment: a static segment sorts before a parameter at the
- * same depth, so `/blog/new` precedes `/blog/:slug` no matter who registered
- * first; equal kinds compare by their text, and a shorter path precedes a longer
- * one that starts the same way. Comparison is by code unit rather than
- * `localeCompare`, because a route table that reorders itself on a machine with
- * a different locale is a bug that only reproduces on someone else's laptop.
- *
- * The id breaks the remaining tie, and ids are unique, so the order is total.
- */
-const compareSegments = (
-  a: PluginRouteSegment[],
-  b: PluginRouteSegment[],
-): number => {
-  const shared = Math.min(a.length, b.length);
-
-  for (let index = 0; index < shared; index += 1) {
-    const left = a[index];
-    const right = b[index];
-
-    if (left.kind !== right.kind) {
-      return left.kind === "static" ? -1 : 1;
-    }
-
-    const leftText = left.kind === "static" ? left.value : left.name;
-    const rightText = right.kind === "static" ? right.value : right.name;
-
-    if (leftText !== rightText) {
-      return leftText < rightText ? -1 : 1;
-    }
-  }
-
-  return a.length - b.length;
-};
-
-export const comparePluginRoutes = (a: PluginRoute, b: PluginRoute): number => {
-  const bySegments = compareSegments(a.segments, b.segments);
-
-  if (bySegments !== 0) return bySegments;
-  if (a.id === b.id) return 0;
-
-  return a.id < b.id ? -1 : 1;
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -109,6 +72,63 @@ const readEntry = (
   return entry;
 };
 
+/**
+ * A declared `parentId`, as the global id the built route carries.
+ *
+ * The namespacing is the enforcement: a plugin writes its own local id and this
+ * puts its own plugin's name in front of it, so there is no spelling of this
+ * field that reaches another plugin's route. Cross-plugin nesting is not
+ * forbidden by a check here - it is unrepresentable.
+ */
+const readParentId = (
+  parentId: unknown,
+  pluginId: string,
+  routeId: string,
+): null | string => {
+  if (parentId === undefined || parentId === null) return null;
+
+  if (typeof parentId !== "string" || !SEGMENTED.test(parentId)) {
+    throw new PluginRouteError(
+      `Plugin route "${routeId}" from ${pluginId} declares an invalid parentId ${JSON.stringify(parentId)}. A parentId is another route's own \`id\` from the same plugin - not a path, and not a "<plugin>:<route>" pair.`,
+      { code: "invalid-parent", pluginId, routeId },
+    );
+  }
+
+  return pluginRouteId(pluginId, parentId);
+};
+
+const readNamespaces = (
+  namespaces: unknown,
+  pluginId: string,
+  routeId: string,
+): string[] => {
+  if (namespaces === undefined) return [];
+
+  if (!Array.isArray(namespaces)) {
+    throw new PluginRouteError(
+      `Plugin route "${routeId}" from ${pluginId} declares \`namespaces\` that is not an array.`,
+      { code: "invalid-namespace", pluginId, routeId },
+    );
+  }
+
+  // `Array.from` rather than `map`: `map` skips holes in a sparse array, so an
+  // entry could reach normalisation without ever being checked.
+  const checked = Array.from(namespaces, (value: unknown, index) => {
+    const problem = namespaceProblem(value);
+
+    if (problem) {
+      throw new PluginRouteError(
+        `Plugin route "${routeId}" from ${pluginId} declares namespaces[${index}] that ${problem}`,
+        { code: "invalid-namespace", pluginId, routeId },
+      );
+    }
+
+    return value as string;
+  });
+
+  return normalizeNamespaceList(checked);
+};
+
 const readDefinition = (
   definition: unknown,
   pluginId: string,
@@ -124,7 +144,7 @@ const readDefinition = (
   // The only cast in the module. `routes` is typed, but a plugin is JavaScript
   // by the time it is registered and its config is written by hand, so the
   // fields are read defensively and the types are re-established here.
-  const { area, entry, id, path } =
+  const { area, entry, id, kind, namespaces, parentId, path, requires } =
     definition as Partial<PluginRouteDefinition>;
 
   if (typeof id !== "string" || !SEGMENTED.test(id)) {
@@ -138,6 +158,24 @@ const readDefinition = (
     throw new PluginRouteError(
       `Plugin route "${id}" from ${pluginId} declares the unknown area ${JSON.stringify(area)}. Known areas: ${PLUGIN_ROUTE_AREAS.join(", ")}.`,
       { code: "invalid-area", pluginId, routeId: id },
+    );
+  }
+
+  if (kind !== undefined && !PLUGIN_ROUTE_KINDS.includes(kind)) {
+    throw new PluginRouteError(
+      `Plugin route "${id}" from ${pluginId} declares the unknown kind ${JSON.stringify(kind)}. Known kinds: ${PLUGIN_ROUTE_KINDS.join(", ")}.`,
+      { code: "invalid-kind", pluginId, routeId: id },
+    );
+  }
+
+  if (
+    requires !== undefined &&
+    requires !== null &&
+    !PLUGIN_ROUTE_REQUIREMENTS.includes(requires)
+  ) {
+    throw new PluginRouteError(
+      `Plugin route "${id}" from ${pluginId} declares the unknown requirement ${JSON.stringify(requires)}. Known requirements: ${PLUGIN_ROUTE_REQUIREMENTS.join(", ")}.`,
+      { code: "invalid-requires", pluginId, routeId: id },
     );
   }
 
@@ -161,8 +199,12 @@ const readDefinition = (
     area: area ?? "main",
     entry: readEntry(entry, pluginId, id),
     id: pluginRouteId(pluginId, id),
+    kind: kind ?? "page",
+    namespaces: readNamespaces(namespaces, pluginId, id),
+    parentId: readParentId(parentId, pluginId, id),
     path: parsed.path,
     pluginId,
+    requires: requires ?? null,
     routeId: id,
     segments: parsed.segments,
   };
@@ -176,6 +218,13 @@ const readDefinition = (
  * plugin, the route and - on a collision - both sides of it. There is no third
  * outcome where a route is quietly dropped, because a page that silently stops
  * existing is the failure mode this whole function is for.
+ *
+ * Two kinds of check, in two places, because they answer different questions.
+ * Here: is each route legal on its own, and does any two of them claim one URL.
+ * In `buildPluginRouteGraph`, which this calls last: does the hierarchy they
+ * describe hold together. Keeping the second in the graph is what lets the
+ * runtime re-derive the tree from the generated manifest with the same function
+ * that validated it.
  *
  * Registration order affects nothing but which plugin an error message calls
  * "first".
@@ -230,7 +279,13 @@ export const buildPluginRouteManifest = (
       // `/blog/:slug` and `/blog/:postId` collide - they are one route spelled
       // twice. Area-scoped, because the same pathname under two different
       // layouts would be two different URLs; only one area exists today.
-      const pathKey = `${route.area} ${routeMatchKey(route.segments)}`;
+      //
+      // Scoped by kind as well, and that is what nesting costs. A layout claims
+      // no URL, so a layout at `/settings` and the index page inside it both
+      // spell `/settings` and are not a collision - they are the two halves of
+      // one screen. Two *pages* there still are one, and so are two layouts,
+      // which would be two frames competing for one subtree.
+      const pathKey = `${route.kind} ${route.area} ${routeMatchKey(route.segments)}`;
       const existingByPath = byPath.get(pathKey);
 
       if (existingByPath) {
@@ -255,5 +310,13 @@ export const buildPluginRouteManifest = (
     });
   }
 
-  return routes.sort(comparePluginRoutes);
+  const manifest = routes.sort(comparePluginRoutes);
+
+  // Last, and for its exceptions rather than for its result: a manifest whose
+  // hierarchy does not hold together is not a manifest, and the build has to
+  // stop here rather than in a browser. The tree itself is rebuilt from this
+  // list by whatever mounts it, with this same function.
+  buildPluginRouteGraph(manifest);
+
+  return manifest;
 };

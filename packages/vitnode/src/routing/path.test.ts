@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatRoutePath,
   parseRoutePath,
+  relativeRouteSegments,
   routeMatchKey,
   routeMatchKeyFromTanStackPath,
   toNextRoutePath,
@@ -328,5 +329,56 @@ describe("the URLs a TanStack path matches", () => {
     expect(key("/Users/$id")).toBe(
       routeMatchKey(parse("/users/:userId").segments),
     );
+  });
+});
+
+describe("relativeRouteSegments", () => {
+  const relative = (parent: string, child: string) =>
+    relativeRouteSegments(parse(parent).segments, parse(child).segments);
+
+  const asPath = (parent: string, child: string) => {
+    const segments = relative(parent, child);
+
+    return segments === null ? null : formatRoutePath(segments);
+  };
+
+  it("removes the parent's prefix", () => {
+    expect(asPath("/settings", "/settings/security")).toBe("/security");
+    expect(asPath("/a", "/a/b/c")).toBe("/b/c");
+  });
+
+  /** A layout's index route, and a success rather than a failure. */
+  it("answers an empty list when the paths are the same", () => {
+    expect(relative("/settings", "/settings")).toEqual([]);
+    expect(asPath("/settings", "/settings")).toBe("/");
+  });
+
+  it("carries a parameter through from the parent", () => {
+    expect(asPath("/blog/:slug", "/blog/:slug/comments")).toBe("/comments");
+    expect(relative("/blog/:slug", "/blog/:slug")).toEqual([]);
+  });
+
+  it("refuses a child that is not under the parent", () => {
+    expect(relative("/settings", "/account")).toBeNull();
+    expect(relative("/settings/security", "/settings")).toBeNull();
+    expect(relative("/a", "/ab/c")).toBeNull();
+  });
+
+  /**
+   * The parent named that segment, so a child that renames it reads a parameter
+   * that never exists - `params.postId` would be silently `undefined`.
+   */
+  it("refuses a child that renames the parent's parameter", () => {
+    expect(relative("/blog/:slug", "/blog/:postId/comments")).toBeNull();
+  });
+
+  it("refuses a child that swaps a static segment for a parameter", () => {
+    expect(relative("/blog/:slug", "/blog/hello")).toBeNull();
+    expect(relative("/blog/hello", "/blog/:slug")).toBeNull();
+  });
+
+  it("treats the root as the parent of everything", () => {
+    expect(asPath("/", "/blog")).toBe("/blog");
+    expect(relative("/", "/")).toEqual([]);
   });
 });

@@ -39,6 +39,10 @@ describe("generatePluginRouteManifestSource", () => {
     expect(source).toContain("id: '@vitnode/example:route-0',");
     expect(source).toContain("path: '/example/:slug',");
     expect(source).toContain("pluginId: '@vitnode/example',");
+    expect(source).toContain("kind: 'page',");
+    expect(source).toContain("namespaces: [],");
+    expect(source).toContain("parentId: null,");
+    expect(source).toContain("requires: null,");
     expect(source).toContain("routeId: 'route-0',");
     expect(source).toContain(
       "segments: [{ kind: 'static', value: 'example' }, { kind: 'param', name: 'slug' }],",
@@ -103,13 +107,18 @@ describe("generatePluginRouteManifestSource", () => {
         area: "main",
         entry: "routes/x",
         id: "p:x",
+        kind: "page",
+        namespaces: ["it's"],
+        parentId: null,
         path: "/x",
         pluginId: "p",
+        requires: null,
         routeId: "x",
         segments: [{ kind: "static", value: "it's" }],
       },
     ]);
 
     expect(source).toContain("{ kind: 'static', value: 'it\\'s' }");
+    expect(source).toContain("namespaces: ['it\\'s'],");
   });
 });

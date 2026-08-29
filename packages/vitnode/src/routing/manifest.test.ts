@@ -110,8 +110,12 @@ describe("normalising a declaration", () => {
       area: "main",
       entry: "routes/x",
       id: "@vitnode/example:x",
+      kind: "page",
+      namespaces: [],
+      parentId: null,
       path: "/example/x",
       pluginId: "@vitnode/example",
+      requires: null,
       routeId: "x",
       segments: [
         { kind: "static", value: "example" },
@@ -353,5 +357,169 @@ describe("malformed declarations", () => {
 
     expect(error.code).toBe("invalid-area");
     expect(error.message).toContain("main");
+  });
+});
+
+describe("the fields Stage 11 added", () => {
+  const one = (route: Partial<PluginRouteDefinition>) =>
+    buildPluginRouteManifest([
+      {
+        pluginId: "@vitnode/example",
+        routes: [{ entry: "routes/x", id: "x", path: "/x", ...route }],
+      },
+    ])[0];
+
+  /**
+   * The prototype's three-field declaration still says exactly what it used to,
+   * and every new field arrives with its default already filled in - so nothing
+   * downstream re-implements "and if it is missing, it means".
+   */
+  it("defaults every new field", () => {
+    expect(one({})).toEqual({
+      area: "main",
+      entry: "routes/x",
+      id: "@vitnode/example:x",
+      kind: "page",
+      namespaces: [],
+      parentId: null,
+      path: "/x",
+      pluginId: "@vitnode/example",
+      requires: null,
+      routeId: "x",
+      segments: [{ kind: "static", value: "x" }],
+    });
+  });
+
+  /**
+   * A plugin names its own route, and this puts its own plugin's id in front of
+   * it - so there is no spelling of `parentId` that reaches another plugin.
+   * Cross-plugin nesting is not forbidden by a check, it is unrepresentable.
+   */
+  it("namespaces a parentId with the declaring plugin", () => {
+    const manifest = buildPluginRouteManifest([
+      {
+        pluginId: "@vitnode/example",
+        routes: [
+          { entry: "routes/f", id: "frame", kind: "layout", path: "/f" },
+          {
+            entry: "routes/x",
+            id: "x",
+            parentId: "frame",
+            path: "/f/x",
+          },
+        ],
+      },
+    ]);
+
+    expect(manifest.map(route => route.parentId)).toEqual([
+      null,
+      "@vitnode/example:frame",
+    ]);
+  });
+
+  it("de-duplicates and sorts declared namespaces", () => {
+    expect(
+      one({ namespaces: ["core.search", "core.global", "core.search"] })
+        .namespaces,
+    ).toEqual(["core.global", "core.search"]);
+  });
+
+  it.each([
+    ["kind", "section", "invalid-kind"],
+    ["requires", "admin", "invalid-requires"],
+    ["parentId", "@vitnode/blog:frame", "invalid-parent"],
+    ["parentId", "/frame", "invalid-parent"],
+    ["namespaces", "core.global", "invalid-namespace"],
+    ["namespaces", ["core..global"], "invalid-namespace"],
+    ["namespaces", ["__proto__"], "invalid-namespace"],
+  ])("rejects %s: %s", (field, value, code) => {
+    expect(thrownBy(() => one({ [field]: value })).code).toBe(code);
+  });
+
+  /**
+   * A layout claims no URL, so a layout at `/settings` and the index page inside
+   * it both spell `/settings` and are the two halves of one screen rather than a
+   * collision. Two *pages* there still are one.
+   */
+  it("lets a layout and its index route share a path", () => {
+    expect(() =>
+      buildPluginRouteManifest([
+        {
+          pluginId: "@vitnode/example",
+          routes: [
+            {
+              entry: "routes/settings",
+              id: "settings",
+              kind: "layout",
+              path: "/settings",
+            },
+            {
+              entry: "routes/settings-index",
+              id: "index",
+              parentId: "settings",
+              path: "/settings",
+            },
+          ],
+        },
+      ]),
+    ).not.toThrow();
+  });
+
+  it("still refuses two pages at one path", () => {
+    expect(
+      thrownBy(() =>
+        buildPluginRouteManifest([
+          example(route("a", "/same")),
+          blog(route("b", "/same")),
+        ]),
+      ).code,
+    ).toBe("duplicate-path");
+  });
+
+  it("refuses two layouts at one path", () => {
+    expect(
+      thrownBy(() =>
+        buildPluginRouteManifest([
+          {
+            pluginId: "@vitnode/example",
+            routes: [
+              {
+                entry: "routes/a",
+                id: "a",
+                kind: "layout",
+                path: "/f",
+              },
+              {
+                entry: "routes/b",
+                id: "b",
+                kind: "layout",
+                path: "/f",
+              },
+              { entry: "routes/x", id: "x", parentId: "a", path: "/f/x" },
+            ],
+          },
+        ]),
+      ).code,
+    ).toBe("duplicate-path");
+  });
+
+  /**
+   * The hierarchy is validated here rather than only where it is used, so a
+   * broken `parentId` stops a build instead of producing a generated manifest
+   * that fails in a browser.
+   */
+  it("fails the build on a hierarchy that does not hold together", () => {
+    expect(
+      thrownBy(() =>
+        buildPluginRouteManifest([
+          example({
+            entry: "routes/x",
+            id: "x",
+            parentId: "ghost",
+            path: "/x",
+          }),
+        ]),
+      ).code,
+    ).toBe("unknown-parent");
   });
 });

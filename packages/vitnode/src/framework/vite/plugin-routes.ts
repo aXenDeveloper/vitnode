@@ -1,23 +1,24 @@
 import type { Plugin } from "vite";
 
 import { createJiti } from "jiti";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { join, relative } from "node:path";
+import { join, relative, resolve as resolvePath, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { PluginRouteDefinition } from "@/routing";
 
-import { buildPluginRouteManifest } from "@/routing";
-
-import type { ResolvedPluginRouteModule } from "../plugin-routes";
+import type {
+  HostRoutePath,
+  PluginRouteCompilerSource,
+  ResolvedPluginRouteModule,
+} from "../plugin-routes";
 
 import {
-  generatePluginRouteManifestSource,
-  generatePluginRouteRegistrySource,
+  compilePluginRoutes,
+  hostRoutePathsFromFiles,
   pluginIdsFromLoadedConfig,
-  resolvePluginRouteModules,
   routeDeclarationsFromManifest,
 } from "../plugin-routes";
 
@@ -32,6 +33,9 @@ import {
 const MANIFEST_SUBPATH = "routes/manifest";
 
 const ERROR_PREFIX = "[VitNode plugin routes]";
+
+/** Where a file-based router keeps an app's own route files, by convention. */
+const DEFAULT_HOST_ROUTES_DIR = join("src", "routes");
 
 export interface VitNodePluginRoutesOptions {
   /**
@@ -48,6 +52,15 @@ export interface VitNodePluginRoutesOptions {
    *     vitNodePluginRoutes({ appRoot: import.meta.dirname })
    */
   appRoot: string;
+  /**
+   * Where this app's own route files live, for the collision check.
+   *
+   * Defaults to the file-based router's own answer: `routesDirectory` from
+   * `tsr.config.json` if the app has one, and `src/routes` otherwise. Pass a
+   * path to override it, or `null` to turn the build-time check off - the
+   * runtime one, which reads the real route tree, is unaffected either way.
+   */
+  hostRoutesDir?: null | string;
 }
 
 /** Everything the plugin reads and writes, derived from the app root. */
@@ -67,6 +80,8 @@ const pathsFor = (appRoot: string) => ({
    */
   manifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
+  /** The file-based router's config, read only for where the routes are. */
+  routerConfig: join(appRoot, "tsr.config.json"),
 });
 
 /**
@@ -113,6 +128,23 @@ const resolverFor = (appRoot: string) => {
  *
  * Rooted at the app's `package.json`, for the same reason the resolver above is:
  * the config's own imports have to resolve the way they will for the app.
+ *
+ * ## Why the module cache is off
+ *
+ * The same trap `readPluginRoutes` below busts with a versioned URL, one layer
+ * up and with a worse symptom. `jiti`'s module cache is keyed by filename and
+ * shared across instances, so a *fresh* `createJiti` per pass is not a fresh
+ * read: the second regeneration of a dev-server session gets back the config
+ * Node evaluated when the server started. Editing `vitnode.config.ts` then does
+ * nothing at all - and because the plugin list is what decides *which* manifests
+ * are read, a plugin removed from the config keeps its routes in both generated
+ * files, and in the running route tree, until the server is restarted.
+ *
+ * `moduleCache: false` is the whole fix. It costs a re-execution of the config
+ * and its imports on every pass - about 3ms here, against a watcher event rather
+ * than a request - because `fsCache` still keeps the transpilation. A versioned
+ * specifier like the one below is not available: jiti resolves a path, not a
+ * URL, so there is nowhere to hang the version.
  */
 const readConfiguredPluginIds = async (
   appRoot: string,
@@ -120,6 +152,7 @@ const readConfiguredPluginIds = async (
 ): Promise<string[]> => {
   const jiti = createJiti(pathToFileURL(join(appRoot, "package.json")).href, {
     interopDefault: true,
+    moduleCache: false,
   });
 
   return pluginIdsFromLoadedConfig(
@@ -135,13 +168,12 @@ const readConfiguredPluginIds = async (
  * plugin's build output in Node - no React, no router and no app code is
  * evaluated to find out which routes exist.
  *
- * Loaded once and read twice, by the two layers that each own their own half of
- * what a route is. `routeDeclarationsFromManifest` takes the `{ id, entry }` the
- * registry generator needs and rejects anything else; `definitions` is the same
- * array handed on untouched for `buildPluginRouteManifest`, which validates
- * every field it reads - the path, the area, the entry, the ids - and is the
- * only thing that decides whether a route is legal. Two readers rather than one
- * shared narrowed shape, so neither layer has to know what the other requires.
+ * `routeDeclarationsFromManifest` checks the *module* is a route manifest at all
+ * - it exports a `routes` array of records - and names the specifier when it is
+ * not. What each record then means is `buildPluginRouteManifest`'s to decide, and
+ * the array is handed on untouched for it: it validates every field it reads,
+ * defensively, from `unknown`. Two readers rather than one shared narrowed shape,
+ * so neither layer has to know what the other requires.
  *
  * ## Why the URL carries an mtime
  *
@@ -157,8 +189,7 @@ const readConfiguredPluginIds = async (
  * untouched manifest keeps its cache entry across regenerations rather than
  * leaking a new one, and it is read off disk rather than invented, so two builds
  * of the same tree ask for the same URL. It never reaches the generated output -
- * only `id`, `entry`, `path` and `area` are read from what comes back - so the
- * generated bytes stay a function of the declarations alone, and the browser
+ * the generated bytes are a function of the declarations alone - so the browser
  * never sees any of this.
  *
  * Size as well as mtime, because mtime alone is only as fine-grained as the
@@ -172,28 +203,150 @@ const readConfiguredPluginIds = async (
 const readPluginRoutes = async (
   pluginId: string,
   resolvePackageFile: (specifier: string) => null | string,
-) => {
+): Promise<{ source: PluginRouteCompilerSource; watch: null | string }> => {
   const specifier = `${pluginId}/${MANIFEST_SUBPATH}`;
   const file = resolvePackageFile(specifier);
 
-  if (file === null) return { declarations: [], definitions: [], watch: null };
+  if (file === null) return { source: { pluginId, routes: [] }, watch: null };
 
   const { mtimeMs, size } = statSync(file);
   const url = pathToFileURL(file);
   url.searchParams.set("v", `${size}-${mtimeMs}`);
 
   const loaded = await import(url.href);
-  const declarations = routeDeclarationsFromManifest(loaded, specifier);
+
+  routeDeclarationsFromManifest(loaded, specifier);
 
   return {
-    declarations,
-    // Safe by the line above: it threw unless `routes` is an array of records
-    // with a string `id` and `entry`. Everything past that - and there is no
-    // `path` in a declaration - is `buildPluginRouteManifest`'s to check, which
-    // it does defensively, from `unknown`.
-    definitions: (loaded as { routes: PluginRouteDefinition[] }).routes,
+    source: {
+      manifestSpecifier: specifier,
+      pluginId,
+      // Safe by the line above: it threw unless `routes` is an array of records
+      // with a string `id` and `entry`. Everything past that is
+      // `buildPluginRouteManifest`'s to check, which it does from `unknown`.
+      routes: (loaded as { routes: PluginRouteDefinition[] }).routes,
+    },
     watch: file,
   };
+};
+
+/** Where an app's own route files are, and which of them are not routes. */
+interface HostRoutesConfig {
+  dir: null | string;
+  /** The router's own `routeFileIgnorePattern`, if it declares one. */
+  ignore: null | RegExp;
+}
+
+/**
+ * Where the app's own route files are, as its file-based router sees it.
+ *
+ * `tsr.config.json` is read rather than assumed, and both of the fields that
+ * decide *which files are routes* are honoured, because a check that disagreed
+ * with the router about that would fail a build over a file the router never
+ * turned into a route. `routeFileIgnorePattern` in particular is what an app
+ * reaches for when something that is not a page ends up in its routes directory.
+ *
+ * A malformed or absent config is not an error here - it means "the default",
+ * which is what a router without one would do too.
+ */
+const hostRoutesConfigFor = (
+  appRoot: string,
+  configured: null | string | undefined,
+): HostRoutesConfig => {
+  if (configured === null) return { dir: null, ignore: null };
+
+  const declared = ((): { ignore?: unknown; routes?: unknown } => {
+    try {
+      const parsed: unknown = JSON.parse(
+        readFileSync(pathsFor(appRoot).routerConfig, "utf8"),
+      );
+
+      if (typeof parsed !== "object" || parsed === null) return {};
+
+      const config = parsed as {
+        routeFileIgnorePattern?: unknown;
+        routesDirectory?: unknown;
+      };
+
+      return {
+        ignore: config.routeFileIgnorePattern,
+        routes: config.routesDirectory,
+      };
+    } catch {
+      // No `tsr.config.json`, or one that is not JSON.
+      return {};
+    }
+  })();
+
+  const ignore = ((): null | RegExp => {
+    if (typeof declared.ignore !== "string" || declared.ignore.length === 0) {
+      return null;
+    }
+
+    try {
+      return new RegExp(declared.ignore);
+    } catch {
+      // Not a pattern this build can compile. The router will complain about it
+      // in its own words; refusing to check anything here would be worse.
+      return null;
+    }
+  })();
+
+  if (configured !== undefined) {
+    return { dir: resolvePath(appRoot, configured), ignore };
+  }
+
+  return {
+    dir:
+      typeof declared.routes === "string" && declared.routes.length > 0
+        ? resolvePath(appRoot, declared.routes)
+        : join(appRoot, DEFAULT_HOST_ROUTES_DIR),
+    ignore,
+  };
+};
+
+/** Every file under a directory, relative to it, in a deterministic order. */
+const filesUnder = (directory: string, prefix = ""): string[] => {
+  const entries = readdirSync(directory, { withFileTypes: true }).sort(
+    (a, b) => (a.name < b.name ? -1 : 1),
+  );
+
+  return entries.flatMap(entry => {
+    if (entry.name.startsWith(".") || entry.name === "node_modules") return [];
+
+    const here = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+
+    return entry.isDirectory()
+      ? filesUnder(join(directory, entry.name), here)
+      : [here];
+  });
+};
+
+/**
+ * Every URL this application's own route files claim, or none.
+ *
+ * Read from the file *names* - nothing is imported and no router is loaded - and
+ * silently empty when the app has no such directory, which is the correct answer
+ * for a VitNode app on Vite that is not using a file-based router at all.
+ */
+const readHostRoutes = (
+  appRoot: string,
+  { dir, ignore }: HostRoutesConfig,
+): HostRoutePath[] => {
+  if (dir === null || !existsSync(dir)) return [];
+
+  const prefix = relative(appRoot, dir).replaceAll(sep, "/");
+  const files = filesUnder(dir).filter(
+    file =>
+      ignore === null || !(ignore.test(file) || ignore.test(join(dir, file))),
+  );
+
+  return hostRoutePathsFromFiles(files).map(hostRoute => ({
+    ...hostRoute,
+    // Relative to the app root, because that is the path an author would type
+    // to open the file the diagnostic is telling them about.
+    file: prefix === "" ? hostRoute.file : `${prefix}/${hostRoute.file}`,
+  }));
 };
 
 /**
@@ -210,7 +363,7 @@ const assertImportable = (
   if (resolvePackageFile(module.specifier) !== null) return;
 
   throw new Error(
-    `${ERROR_PREFIX} "${module.key}" declares the entry "${module.entry}", which cannot be imported as "${module.specifier}". Check that ${module.pluginId} exports "./${module.entry}" and that its build output is up to date.`,
+    `${ERROR_PREFIX} Plugin "${module.pluginId}", route "${module.routeId}", declares the entry "${module.entry}", which cannot be imported as "${module.specifier}". Check that ${module.pluginId} exports "./${module.entry}" and that its build output is up to date.`,
   );
 };
 
@@ -218,51 +371,50 @@ const assertImportable = (
  * Everything the generated files are built from, discovered at build time only.
  *
  * `Promise.all` over the configured ids keeps the result independent of which
- * manifest happens to load first, and both generators sort on top of that - so
- * the bytes depend on the configuration and nothing else.
+ * manifest happens to load first, and the compiler sorts on top of that - so the
+ * bytes depend on the configuration and nothing else.
  *
- * This is also where a plugin route stops being able to fail quietly, and the
- * order matters. `resolvePluginRouteModules` rejects an id or an entry that
- * cannot be written into an import; `assertImportable` rejects an entry that
- * does not resolve to a real file; `buildPluginRouteManifest` rejects a path it
- * cannot parse and - the one no other layer can see - **two configured plugins
- * claiming the same URL**, naming both sides. All three throw out of Vite's
- * `config` hook, so `vite dev` and `vite build` stop rather than starting an app
- * whose route table depends on which plugin was registered first.
+ * The split here is the one this whole layer is arranged around: *this* function
+ * owns the filesystem - the config, the plugin manifests, the app's own route
+ * files, package resolution - and `compilePluginRoutes` owns every decision made
+ * from what it finds. Which is why the only thing left below it is the one check
+ * that cannot be pure: does each entry resolve to a file that exists.
+ *
+ * `onLoaded` is called with the files this pass read *before* anything can fail,
+ * so a dev server watching them still learns about a manifest that threw - which
+ * is exactly the one an author is about to edit again.
  */
-const discover = async (appRoot: string) => {
+const discover = async (
+  appRoot: string,
+  options: VitNodePluginRoutesOptions,
+  onLoaded?: (watch: string[]) => void,
+) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
   const pluginIds = await readConfiguredPluginIds(appRoot, paths.config);
   const loaded = await Promise.all(
-    pluginIds.map(async pluginId => ({
-      pluginId,
-      ...(await readPluginRoutes(pluginId, resolvePackageFile)),
-    })),
+    pluginIds.map(async pluginId =>
+      readPluginRoutes(pluginId, resolvePackageFile),
+    ),
   );
 
-  const modules = resolvePluginRouteModules(
-    loaded.map(({ declarations, pluginId }) => ({
-      pluginId,
-      routes: declarations,
-    })),
-  );
-  modules.forEach(module => {
+  const watch = loaded.flatMap(({ watch: file }) => file ?? []);
+
+  onLoaded?.(watch);
+
+  const compiled = compilePluginRoutes({
+    hostRoutes: readHostRoutes(
+      appRoot,
+      hostRoutesConfigFor(appRoot, options.hostRoutesDir),
+    ),
+    sources: loaded.map(({ source }) => source),
+  });
+
+  compiled.modules.forEach(module => {
     assertImportable(module, resolvePackageFile);
   });
 
-  const manifest = buildPluginRouteManifest(
-    loaded.map(({ definitions, pluginId }) => ({
-      pluginId,
-      routes: definitions,
-    })),
-  );
-
-  return {
-    manifest: generatePluginRouteManifestSource(manifest),
-    registry: generatePluginRouteRegistrySource(modules),
-    watch: loaded.flatMap(({ watch }) => watch ?? []),
-  };
+  return { compiled, watch };
 };
 
 /**
@@ -280,16 +432,18 @@ const writeIfChanged = async (path: string, source: string): Promise<void> => {
 };
 
 /** Both generated files, from one discovery pass. */
-const writeGenerated = async (appRoot: string): Promise<string[]> => {
+const writeGenerated = async (
+  appRoot: string,
+  options: VitNodePluginRoutesOptions,
+  onLoaded?: (watch: string[]) => void,
+): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { manifest, registry, watch } = await discover(appRoot);
+  const { compiled } = await discover(appRoot, options, onLoaded);
 
   await Promise.all([
-    writeIfChanged(paths.manifest, manifest),
-    writeIfChanged(paths.registry, registry),
+    writeIfChanged(paths.manifest, compiled.manifestSource),
+    writeIfChanged(paths.registry, compiled.registrySource),
   ]);
-
-  return watch;
 };
 
 /**
@@ -300,8 +454,9 @@ const writeGenerated = async (appRoot: string): Promise<string[]> => {
  *
  * - **Here, at build time.** Read the configured plugins, load their route
  *   manifests from `node_modules`, check every entry resolves to a real file,
- *   validate every route and reject two plugins claiming one URL, then write
- *   `src/plugin-route-manifest.gen.ts` and `src/plugin-routes.gen.ts`.
+ *   validate every route, reject two plugins claiming one URL and a plugin
+ *   claiming one of the app's own, then write `src/plugin-route-manifest.gen.ts`
+ *   and `src/plugin-routes.gen.ts`.
  * - **In the browser.** Import those two files. They contain literal data and
  *   literal `import()` calls and nothing else - no `node:fs`, no package
  *   resolution, no validation to repeat and no specifier built from a variable,
@@ -314,62 +469,97 @@ const writeGenerated = async (appRoot: string): Promise<string[]> => {
  * it ships here rather than being a file each one keeps a copy of. The only
  * thing an application supplies is where it lives.
  */
-export const vitNodePluginRoutes = ({
-  appRoot,
-}: VitNodePluginRoutesOptions): Plugin => {
+export const vitNodePluginRoutes = (
+  options: VitNodePluginRoutesOptions,
+): Plugin => {
+  const { appRoot } = options;
   const configPath = pathsFor(appRoot).config;
+  const routesDir = hostRoutesConfigFor(appRoot, options.hostRoutesDir).dir;
 
   return {
     config: async () => {
-      await writeGenerated(appRoot);
+      await writeGenerated(appRoot, options);
     },
     /**
      * Regenerates while the dev server runs, so editing a plugin's manifest is
      * enough. Adding or removing a plugin in `vitnode.config.ts` is picked up
-     * too; a manifest that did not exist when the server started is not, because
-     * there is no file to watch yet - restart for that, exactly as installing a
-     * plugin already requires.
+     * too, and so is adding one of the app's own route files - which is the
+     * event that can turn a legal plugin route into a collision.
+     *
+     * A manifest that did not exist when the server started is not watched,
+     * because there is no file to watch yet; restart for that, exactly as
+     * installing a plugin already requires. A manifest that existed and was
+     * *replaced* - which is what rebuilding a plugin does to its `dist` - is,
+     * because a file this pass has ever read stays watched even after it is
+     * deleted.
      */
     configureServer: server => {
-      let watched = new Set<string>();
+      const watched = new Set<string>([configPath]);
 
       /**
-       * The tail of the regeneration chain.
+       * The regeneration chain, and the one pass allowed to be waiting on it.
        *
        * Regeneration is asynchronous - it resolves several manifests and writes
-       * two files - and the watcher can fire twice before the first pass
+       * two files - and the watcher can fire many times before the first pass
        * finishes. Run concurrently, two passes interleave and the *older* one can
        * perform the last write, leaving generated files that describe a manifest
        * that no longer exists until something else happens to touch it.
        *
-       * Chaining rather than a queue: each pass waits for the previous one, so
-       * the last event to arrive is the last to write. A pass re-reads everything
-       * from disk when it starts, so a run queued behind three others simply sees
-       * the final state - no coalescing needed, and nothing to keep in sync.
+       * So passes are chained rather than parallel, and at most one is queued
+       * behind the running one: a pass re-reads everything from disk when it
+       * starts, so the queued one will see the final state whether it was asked
+       * for once or forty times. That is what keeps a `dist` rebuild - which
+       * rewrites every file a plugin has - from queueing a pass per file.
        */
       let chain: Promise<void> = Promise.resolve();
+      let queued = false;
 
       const regenerate = (): void => {
+        if (queued) return;
+
+        queued = true;
         chain = chain.then(async () => {
+          queued = false;
+
           try {
-            watched = new Set(await writeGenerated(appRoot));
-            server.watcher.add([...watched]);
+            await writeGenerated(appRoot, options, files => {
+              files.forEach(file => watched.add(file));
+              server.watcher.add(files);
+            });
           } catch (error) {
             server.config.logger.error(String(error));
           }
         });
       };
 
-      const onChange = (file: string) => {
-        if (file !== configPath && !watched.has(file)) return;
+      /**
+       * Whether a file this pass sees can change what the generated files say.
+       *
+       * The config and any manifest ever read, for the obvious reason. Route
+       * *files* of the app only by their existence - a route file's contents
+       * cannot move the URL it claims, which is in its name - so a change to one
+       * is ignored and an add or a delete is not.
+       */
+      const isRelevant = (file: string, existenceOnly: boolean): boolean => {
+        if (watched.has(file)) return true;
+        if (!existenceOnly || routesDir === null) return false;
 
-        regenerate();
+        return (
+          file.startsWith(`${routesDir}${sep}`) && /\.[cm]?[jt]sx?$/.test(file)
+        );
+      };
+
+      const onExistenceChange = (file: string) => {
+        if (isRelevant(file, true)) regenerate();
       };
 
       server.watcher.add(configPath);
       regenerate();
-      server.watcher.on("change", onChange);
-      server.watcher.on("unlink", onChange);
+      server.watcher.on("add", onExistenceChange);
+      server.watcher.on("unlink", onExistenceChange);
+      server.watcher.on("change", file => {
+        if (isRelevant(file, false)) regenerate();
+      });
     },
     name: "vitnode:plugin-routes",
   };

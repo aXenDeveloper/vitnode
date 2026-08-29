@@ -23,6 +23,7 @@ import {
  */
 import './lib/auth'
 import { createLocaleRewrite } from './lib/i18n/runtime'
+import { pageHead } from './lib/page-head'
 import { isTanStackOwnedPath } from './migration/navigation'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
 import { pluginRouteModules } from './plugin-routes.gen'
@@ -53,11 +54,16 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
  * `_main` is imported for its route object, and it is the same object the
  * generated tree holds: `createFileRoute` produces one instance per module and
  * `routeTree.gen.ts` mutates it in place.
+ *
+ * `pageHead` is this app's own `createRouteHead(metadata)` binding, handed over
+ * because a package cannot know the site's name: a plugin page's `<title>` goes
+ * through the same `"<page> - <site>"` rule every other VitNode page's does,
+ * rather than through a second one the plugin invented.
  */
 const routeTree = withPluginRoutes(
   fileRouteTree,
   pluginRouteSpecs(pluginRouteManifest, pluginRouteModules),
-  mainShellRoute,
+  { mountUnder: mainShellRoute, pageHead },
 )
 
 /**

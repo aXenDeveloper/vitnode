@@ -1,3 +1,4 @@
+import type { PluginRoute } from "../../routing/types.js";
 import type {
   PluginRouteEntryDeclaration,
   PluginRouteEntrySource,
@@ -5,15 +6,7 @@ import type {
 } from "./types.js";
 
 import { pluginRouteId } from "../../routing/manifest.js";
-
-/**
- * What every error from this module is prefixed with.
- *
- * These are build-time failures - a plugin declared a route the app cannot
- * import - and they surface in a Vite config hook, where the stack is all
- * bundler internals. The prefix is what makes the message findable.
- */
-const ERROR_PREFIX = "[VitNode plugin routes]";
+import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "./diagnostics.js";
 
 /**
  * A plugin id, which in VitNode is also the package name the route module is
@@ -258,4 +251,37 @@ export const sortAndAssertUnique = (
   }
 
   return sorted;
+};
+
+/**
+ * A built manifest, as the per-plugin declarations the registry resolves from.
+ *
+ * The join between the two generated files, made structural. The manifest is the
+ * resolved snapshot of what routes exist; this turns it back into the shape
+ * {@link resolvePluginRouteModules} takes, so the registry's entries are
+ * *derived* from the manifest's routes rather than read from a second pass over
+ * the plugins - and a route can only get a module import by having survived
+ * validation.
+ *
+ * `id` is the route's plugin-local `routeId`, because that is what a declaration
+ * carries and what `pluginRouteId` namespaces; the global id the manifest
+ * already holds is rebuilt from it, so the two are the same string by
+ * construction rather than by agreement.
+ *
+ * Deterministic without sorting: a manifest is already ordered, and the resolver
+ * sorts by key on top of that.
+ */
+export const pluginRouteEntrySources = (
+  manifest: readonly PluginRoute[],
+): PluginRouteEntrySource[] => {
+  const byPlugin = new Map<string, PluginRouteEntryDeclaration[]>();
+
+  for (const route of manifest) {
+    const declarations = byPlugin.get(route.pluginId) ?? [];
+
+    declarations.push({ entry: route.entry, id: route.routeId });
+    byPlugin.set(route.pluginId, declarations);
+  }
+
+  return [...byPlugin].map(([pluginId, routes]) => ({ pluginId, routes }));
 };

@@ -20,6 +20,7 @@ export const versionsPackageJson = {
   reactDom: "^19.2",
   nextSingle: "16.3.1",
   nextIntl: "^4.13.7",
+  useIntl: "^4.13.7",
   rhf: "^7",
   rhfResolvers: "^5.1.1",
   lucide: "^1.21",

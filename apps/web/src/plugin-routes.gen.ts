@@ -30,6 +30,9 @@ import type {
  */
 export const pluginRouteModules = {
   '@vitnode/example:example-page': () => import('@vitnode/example/routes/example-page'),
+  '@vitnode/example:guide': () => import('@vitnode/example/routes/guide-layout'),
+  '@vitnode/example:guide-index': () => import('@vitnode/example/routes/guide-index-page'),
+  '@vitnode/example:guide-topic': () => import('@vitnode/example/routes/guide-topic-page'),
 } satisfies PluginRouteModuleRegistry
 
 /** Every key in {@link pluginRouteModules}, as a union. */
@@ -50,5 +53,26 @@ export const pluginRouteEntries = [
     pluginId: '@vitnode/example',
     routeId: 'example-page',
     specifier: '@vitnode/example/routes/example-page',
+  },
+  {
+    entry: 'routes/guide-layout',
+    key: '@vitnode/example:guide',
+    pluginId: '@vitnode/example',
+    routeId: 'guide',
+    specifier: '@vitnode/example/routes/guide-layout',
+  },
+  {
+    entry: 'routes/guide-index-page',
+    key: '@vitnode/example:guide-index',
+    pluginId: '@vitnode/example',
+    routeId: 'guide-index',
+    specifier: '@vitnode/example/routes/guide-index-page',
+  },
+  {
+    entry: 'routes/guide-topic-page',
+    key: '@vitnode/example:guide-topic',
+    pluginId: '@vitnode/example',
+    routeId: 'guide-topic',
+    specifier: '@vitnode/example/routes/guide-topic-page',
   },
 ] as const satisfies readonly ResolvedPluginRouteModule[]

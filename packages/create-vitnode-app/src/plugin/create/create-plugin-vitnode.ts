@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { cp, mkdir, rename } from "fs/promises";
+import { cp, mkdir, rename, writeFile } from "fs/promises";
 import ora from "ora";
 import { dirname, join } from "path";
 import color from "picocolors";
@@ -12,6 +12,45 @@ import { installDependencies } from "../../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../../helpers/is-folder-empty.js";
 import { addPluginToWorkspace } from "./add-plugin-to-workspace.js";
 import { createPluginPackageJSON } from "./create-package-json.js";
+import { pluginRouteScaffold } from "./route-templates.js";
+
+/**
+ * The plugin's own source: one public page, its strings, and the config that
+ * registers both.
+ *
+ * Written rather than copied, because every one of these files names the plugin
+ * - the manifest names the module it imports, the page names the message
+ * namespace it renders, the config names the id both are keyed by - and a static
+ * template under `copy-of-vitnode-plugin/` cannot. What each file contains is
+ * `route-templates.ts`, which is pure and asserted byte for byte; this is only
+ * the part that has a disk.
+ *
+ * Nothing here touches the application. A new plugin is registered by adding it
+ * to an app's `src/vitnode.config.ts`, and its page reaches the browser from its
+ * own `dist` - so there is no generated file to edit, no route to copy and
+ * nothing in `apps/*` for a plugin author to know about.
+ */
+const writePluginRouteScaffold = async ({
+  pluginName,
+  pluginPath,
+}: {
+  pluginName: string;
+  pluginPath: string;
+}) => {
+  const files = pluginRouteScaffold(pluginName);
+
+  await Promise.all(
+    Object.keys(files).map(async file =>
+      mkdir(dirname(join(pluginPath, file)), { recursive: true }),
+    ),
+  );
+
+  await Promise.all(
+    Object.entries(files).map(async ([file, contents]) =>
+      writeFile(join(pluginPath, file), contents, "utf-8"),
+    ),
+  );
+};
 
 export const createPluginVitNode = async ({
   pluginPath,
@@ -60,6 +99,9 @@ export const createPluginVitNode = async ({
   if (existsSync(npmIgnoreTemplatePath)) {
     await rename(npmIgnoreTemplatePath, dotNpmIgnorePath);
   }
+
+  spinner.text = "Writing the plugin's first route...";
+  await writePluginRouteScaffold({ pluginName, pluginPath });
 
   spinner.text = "Creating package.json...";
   await createPluginPackageJSON({

@@ -5,6 +5,7 @@ import type { PackageJSON } from "../../helpers/packages-json.js";
 import { versionsPackageJson } from "../../create/package-versions.js";
 import { getVitnodePackageVersion } from "../../helpers/get-vitnode-package-version.js";
 import { withIf } from "../../helpers/with-If.js";
+import { pluginPackageExports } from "./route-templates.js";
 
 const writeJson = async (path: string, data: unknown) =>
   writeFile(path, JSON.stringify(data, null, 2));
@@ -34,13 +35,7 @@ export const createPluginPackageJSON = async ({
         "lint:fix": "turbo lint:fix",
       }),
     },
-    exports: {
-      "./*": {
-        import: "./dist/src/*.js",
-        types: "./dist/src/*.d.ts",
-        default: "./dist/src/*.js",
-      },
-    },
+    exports: pluginPackageExports(),
     dependencies: {
       "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
       "@vitnode/core": vitnodeVersionRange,
@@ -55,6 +50,7 @@ export const createPluginPackageJSON = async ({
       "react-email": versionsPackageJson.reactEmail,
       "react-hook-form": versionsPackageJson.rhf,
       sonner: versionsPackageJson.sonner,
+      "use-intl": versionsPackageJson.useIntl,
       zod: versionsPackageJson.zod,
     },
     devDependencies: {

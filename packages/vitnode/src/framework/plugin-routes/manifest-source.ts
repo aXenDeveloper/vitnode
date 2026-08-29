@@ -4,7 +4,7 @@ import type {
   PluginRouteSegment,
 } from "../../routing/types.js";
 
-import { comparePluginRoutes } from "../../routing/manifest.js";
+import { comparePluginRoutes } from "../../routing/order.js";
 import { toSingleQuotedLiteral } from "./resolve.js";
 
 /** Where the generated file imports its type from. */
@@ -56,14 +56,30 @@ const segmentLiteral = (segment: PluginRouteSegment): string =>
     ? `{ kind: 'param', name: ${toSingleQuotedLiteral(segment.name)} }`
     : `{ kind: 'static', value: ${toSingleQuotedLiteral(segment.value)} }`;
 
+/**
+ * A value that is either a string literal or `null`.
+ *
+ * `parentId` and `requires` are both "declared, or not" - and both are emitted
+ * as `null` rather than left out. A missing field would still satisfy
+ * `PluginRoute` if the type ever loosened, and the whole reason the built type
+ * has no optional members is so that a generator which forgets one is a compile
+ * error rather than a route that silently loses its parent.
+ */
+const optionalLiteral = (value: null | string): string =>
+  value === null ? "null" : toSingleQuotedLiteral(value);
+
 const routeLiteral = (route: PluginRoute): string =>
   [
     "  {",
     `    area: ${toSingleQuotedLiteral(route.area)},`,
     `    entry: ${toSingleQuotedLiteral(route.entry)},`,
     `    id: ${toSingleQuotedLiteral(route.id)},`,
+    `    kind: ${toSingleQuotedLiteral(route.kind)},`,
+    `    namespaces: [${route.namespaces.map(toSingleQuotedLiteral).join(", ")}],`,
+    `    parentId: ${optionalLiteral(route.parentId)},`,
     `    path: ${toSingleQuotedLiteral(route.path)},`,
     `    pluginId: ${toSingleQuotedLiteral(route.pluginId)},`,
+    `    requires: ${optionalLiteral(route.requires)},`,
     `    routeId: ${toSingleQuotedLiteral(route.routeId)},`,
     `    segments: [${route.segments.map(segmentLiteral).join(", ")}],`,
     "  },",

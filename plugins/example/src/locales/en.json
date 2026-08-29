@@ -27,6 +27,21 @@
           "createdAt": "Created"
         }
       }
+    },
+    "guide": {
+      "title": "Plugin routing guide",
+      "desc": "A nested route shipped by @vitnode/example, served by the app that installed it.",
+      "index": {
+        "intro": "This page and the frame around it are two routes declared in one plugin manifest. Neither was copied into the application - both are lazily imported from the plugin's own build output.",
+        "points": {
+          "nested": "A layout claims no URL; this index page claims the layout's.",
+          "messages": "The layout declares the messages both pages render in, so they are warmed alongside the code.",
+          "breadcrumb": "The breadcrumb above comes from the layout, next to the component that needs it."
+        }
+      },
+      "topic": {
+        "from_index": "You arrived here from the guide index - the route's search contract recognised it, and everything else in the query string was dropped."
+      }
     }
   },
   "@vitnode/example:article": "Articles",

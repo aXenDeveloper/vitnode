@@ -43,6 +43,48 @@ describe("the app's real route tree", () => {
   })
 
   /**
+   * Stage 11. A plugin's own hierarchy, as real parent and child routes.
+   *
+   * `/example/guide` is a `layout` and an index `page` at the same path - the
+   * `layout.tsx` / `page.tsx` pair, said as manifest data - and `:topic` is a
+   * dynamic child one segment deeper. What is asserted is that the router
+   * matches them as a *chain*: the layout, then the page inside it. A flattened
+   * subtree would match one route where there should be two, and the frame would
+   * be drawn by each page rather than once around all of them.
+   */
+  it('matches a plugin layout and the page inside it as a chain', () => {
+    const router = getRouter()
+    const pluginRouteIds = (pathname: string) =>
+      router
+        .matchRoutes(pathname, undefined)
+        .map((match) => match.routeId)
+        .filter((id) => id.includes(`/${PLUGIN_ROUTES_ROUTE_ID}/`))
+
+    // The layout claims no URL of its own, so `/example/guide` is answered by
+    // the index route *inside* it - two matches, not one.
+    expect(pluginRouteIds('/example/guide')).toEqual([
+      `${MAIN_SHELL_ROUTE_ID}/${PLUGIN_ROUTES_ROUTE_ID}/example/guide`,
+      `${MAIN_SHELL_ROUTE_ID}/${PLUGIN_ROUTES_ROUTE_ID}/example/guide/`,
+    ])
+
+    expect(pluginRouteIds('/example/guide/manifest')).toEqual([
+      `${MAIN_SHELL_ROUTE_ID}/${PLUGIN_ROUTES_ROUTE_ID}/example/guide`,
+      `${MAIN_SHELL_ROUTE_ID}/${PLUGIN_ROUTES_ROUTE_ID}/example/guide/$topic`,
+    ])
+  })
+
+  /**
+   * The dynamic segment is the router's, not a string the manifest wrote: a
+   * plugin declares `:topic` and the runtime converts it, so the parameter
+   * arrives in the loader under the name the plugin gave it.
+   */
+  it('parses a plugin route’s dynamic segment', () => {
+    expect(
+      getRouter().matchRoutes('/example/guide/namespaces', undefined).at(-1),
+    ).toMatchObject({ params: { topic: 'namespaces' } })
+  })
+
+  /**
    * Stage 8. A plugin route declares `area: "main"`, and this is what that
    * declaration buys: the page renders inside the same shell `/discover` does -
    * the header, the breadcrumb area and the one `<main>` - because the plugin
@@ -72,6 +114,17 @@ describe("the app's real route tree", () => {
     ['/example', true],
     ['/pl/example', true],
     ['/example?from=search#top', true],
+    // Stage 11. A nested plugin subtree: the layout's index page, a dynamic
+    // child, and a topic the plugin does not know - which is still this app's
+    // route, because `:topic` matches any single segment.
+    ['/example/guide', true],
+    ['/pl/example/guide', true],
+    ['/example/guide/manifest', true],
+    ['/pl/example/guide/manifest', true],
+    ['/example/guide/anything', true],
+    // One segment too deep: the layout matches `/example/guide` and leaves the
+    // rest unconsumed, exactly as `/settings/notifications` does.
+    ['/example/guide/manifest/extra', false],
     ['/discover', true],
     ['/blog/post-30', false],
     ['/api/core/members', false],

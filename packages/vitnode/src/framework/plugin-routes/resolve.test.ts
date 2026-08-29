@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import type { PluginRoute } from "../../routing/types.js";
 import type { PluginRouteEntrySource } from "./types.js";
 
 import { pluginRouteId } from "../../routing/manifest.js";
 import {
   pluginIdsFromLoadedConfig,
+  pluginRouteEntrySources,
   resolvePluginRouteModules,
   routeDeclarationsFromManifest,
   sortAndAssertUnique,
@@ -341,5 +343,57 @@ describe("routeDeclarationsFromManifest", () => {
     expect(() =>
       routeDeclarationsFromManifest(loaded, "@x/y/routes/manifest"),
     ).toThrow(message);
+  });
+});
+
+describe("pluginRouteEntrySources", () => {
+  const built = (pluginId: string, routeId: string): PluginRoute => ({
+    area: "main",
+    entry: `routes/${routeId}`,
+    id: `${pluginId}:${routeId}`,
+    kind: "page",
+    namespaces: [],
+    parentId: null,
+    path: `/${routeId}`,
+    pluginId,
+    requires: null,
+    routeId,
+    segments: [{ kind: "static", value: routeId }],
+  });
+
+  it("turns a built manifest back into per-plugin declarations", () => {
+    expect(
+      pluginRouteEntrySources([
+        built("@vitnode/example", "a"),
+        built("@vitnode/blog", "b"),
+        built("@vitnode/example", "c"),
+      ]),
+    ).toEqual([
+      {
+        pluginId: "@vitnode/example",
+        routes: [
+          { entry: "routes/a", id: "a" },
+          { entry: "routes/c", id: "c" },
+        ],
+      },
+      { pluginId: "@vitnode/blog", routes: [{ entry: "routes/b", id: "b" }] },
+    ]);
+  });
+
+  it("rebuilds the global id the manifest already gave the route", () => {
+    // The join between the two generated files: a module is registered under
+    // exactly the id the manifest addresses the route by, by construction
+    // rather than by two layers agreeing on a format.
+    const manifest = [built("@vitnode/example", "a")];
+
+    expect(
+      resolvePluginRouteModules(pluginRouteEntrySources(manifest)).map(
+        module => module.key,
+      ),
+    ).toEqual(manifest.map(route => route.id));
+  });
+
+  it("has nothing to say about a manifest with no routes", () => {
+    expect(pluginRouteEntrySources([])).toEqual([]);
   });
 });

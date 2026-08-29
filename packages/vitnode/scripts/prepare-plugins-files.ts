@@ -5,6 +5,10 @@ import { join, relative } from "node:path";
 
 import { getConfig } from "./get-config.js";
 import {
+  legacyRouteOverlaps,
+  legacyRouteOverlapWarning,
+} from "./legacy-route-overlap.js";
+import {
   buildInitialRouteMap,
   copyDirectoryRecursive,
   findLocaleRoot,
@@ -38,7 +42,12 @@ export const preparePluginsFiles = async (flag?: string) => {
   const hasWebConfig = existsSync(join(cwd, "src", "vitnode.config.ts"));
   const hasApiConfig = existsSync(join(cwd, "src", "vitnode.api.config.ts"));
 
-  let config: { plugins: { pluginId: string }[] };
+  let config: {
+    plugins: {
+      pluginId: string;
+      routes?: { entry?: unknown; id?: unknown }[];
+    }[];
+  };
 
   if (flag === "--api" && hasApiConfig) {
     // Force API config when --api flag is used
@@ -56,6 +65,17 @@ export const preparePluginsFiles = async (flag?: string) => {
     // No config found, use empty plugins array
     config = { plugins: [] };
   }
+
+  // Migration-only, and it warns rather than throws. A plugin whose route
+  // manifest points at `src/routes/{main,admin,blank,breadcrumb}/…` has its
+  // module copied into every Next.js app as well as bundled from its own dist,
+  // which is confusing rather than broken. Deleted with this whole file at the
+  // cutover; see `legacy-route-overlap.ts`.
+  const overlapWarning = legacyRouteOverlapWarning(
+    legacyRouteOverlaps(config.plugins),
+  );
+
+  if (overlapWarning) console.warn(`\x1b[33m${overlapWarning}\x1b[0m`);
 
   const plugins: string[] = [
     ...config.plugins.map(plugin => plugin.pluginId),

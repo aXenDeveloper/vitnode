@@ -277,3 +277,45 @@ export const routeMatchKeyFromTanStackPath = (path: string): string => {
     })
     .join("/")}`;
 };
+
+/**
+ * The child's path with its parent's prefix removed, or `null` if the child is
+ * not under the parent at all.
+ *
+ * The whole of what "a nested route declares its full path" costs, and the
+ * reason it is worth paying: a manifest that spells `/settings/security` out is
+ * readable and greppable and collides visibly, and this is the one function that
+ * has to turn it back into the `/security` a router composes.
+ *
+ * Segments are compared by *identity*, not just by shape - a parameter's name
+ * has to match too. A layout at `/blog/:slug` with a child declaring
+ * `/blog/:postId/comments` would compose to `/blog/$slug/comments`, and the
+ * child's `:postId` would never exist: the parent named that segment. Rejecting
+ * it here is what turns a page whose `params.postId` is silently `undefined`
+ * into a build error.
+ *
+ * An empty result is the child claiming exactly its parent's URL - a layout's
+ * index route - and is a success, not a failure. `null` is the only failure.
+ */
+export const relativeRouteSegments = (
+  parent: readonly PluginRouteSegment[],
+  child: readonly PluginRouteSegment[],
+): null | PluginRouteSegment[] => {
+  if (child.length < parent.length) return null;
+
+  for (let index = 0; index < parent.length; index += 1) {
+    const here = parent[index];
+    const there = child[index];
+
+    if (here.kind !== there.kind) return null;
+
+    if (here.kind === "static") {
+      if (there.kind !== "static" || here.value !== there.value) return null;
+      continue;
+    }
+
+    if (there.kind !== "param" || here.name !== there.name) return null;
+  }
+
+  return child.slice(parent.length);
+};

@@ -46,6 +46,32 @@ npx create-vitnode-app@canary --plugin
 
 </Tabs>
 
+### What you get
+
+A plugin with one public page, already wired:
+
+```txt
+plugins/my-vitnode-plugin/
+└── src/
+    ├── config.tsx              registers the plugin with VitNode
+    ├── locales/
+    │   ├── en.json             the strings the page renders
+    │   └── index.ts            the barrel config.tsx registers
+    └── routes/
+        ├── manifest.ts         declares one route at /my-vitnode-plugin
+        └── home-page.tsx       what it renders
+```
+
+Add it to your app's `src/vitnode.config.ts` `plugins` array and the page is
+live. There is nothing else to edit - no application route file, no generated
+file. Read [Route Manifest](/docs/dev/plugins/route-manifest) for what those two
+files in `routes/` can say.
+
+<Callout title="Turborepo Only (Monorepo)" type="info">
+  The generator adds your plugin to the workspace and to every package that
+  depends on `@vitnode/core`, which is why it has to run from the monorepo root.
+</Callout>
+
 ## Add Translations
 
 VitNode is i18n-first: render user-facing text through translations rather than hardcoding it. Your plugin owns its languages and hands them to VitNode - apps never copy them.

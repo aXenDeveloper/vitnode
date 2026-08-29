@@ -2,7 +2,23 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { queryOptions } from "@tanstack/react-query";
 
+import {
+  MAX_NAMESPACE_DEPTH,
+  MAX_NAMESPACE_LENGTH,
+  MAX_NAMESPACES,
+  namespaceProblem,
+} from "@/routing";
+
 import { getIntlRuntime } from "./runtime";
+
+/**
+ * Re-exported rather than declared: what makes a namespace legal is now
+ * `@vitnode/core/routing`'s, because a plugin *declares* namespaces in its route
+ * manifest at build time and a browser *asks* for them at runtime, and two
+ * copies of that rule is how the manifest ends up accepting something the server
+ * refuses. The names stay here so nothing that imports them has to move.
+ */
+export { MAX_NAMESPACE_DEPTH, MAX_NAMESPACE_LENGTH, MAX_NAMESPACES };
 
 /** The strings every page needs, whatever else it renders. */
 export const GLOBAL_NAMESPACE = "core.global";
@@ -36,67 +52,22 @@ const normalizeNamespaces = (namespaces: readonly string[]): string[] =>
   [...new Set(namespaces)].sort((a, b) => a.localeCompare(b));
 
 /**
- * More than any page has ever needed, and few enough that a caller asking for
- * thousands is refused rather than served.
- */
-export const MAX_NAMESPACES = 16;
-
-/** `@vitnode/some-plugin.a.b.c` is four; nothing real goes deeper. */
-export const MAX_NAMESPACE_DEPTH = 8;
-
-/** Comfortably longer than the longest plugin id plus a namespace path. */
-export const MAX_NAMESPACE_LENGTH = 128;
-
-/**
- * Segments that must never reach `pickMessages`.
- *
- * `__proto__`, `constructor` and `prototype` are the three steps of prototype
- * pollution. `pickMessages` refuses them too - it is a shared utility and does
- * not get to assume its caller checked - but they are rejected here rather than
- * quietly dropped, because a request asking for one is not a request with a
- * typo in it.
- */
-const UNSAFE_NAMESPACE_SEGMENTS: ReadonlySet<string> = new Set([
-  "__proto__",
-  "constructor",
-  "prototype",
-]);
-
-/**
  * One namespace, or an error.
+ *
+ * The rule is `namespaceProblem`'s, in the routing layer, and all this adds is
+ * the subject of the sentence - `namespaces[0] must be a string.` - so a message
+ * a build shows about a plugin's manifest and a message this server function
+ * logs about a request say the same thing about the same value.
  *
  * Deliberately says *what* was wrong and not *what was sent*: the value is
  * attacker-controlled and this message ends up in a server log.
  */
 const assertNamespace = (value: unknown, index: number): string => {
-  const at = `namespaces[${index}]`;
+  const problem = namespaceProblem(value);
 
-  if (typeof value !== "string") throw new Error(`${at} must be a string.`);
-  if (value.length === 0) throw new Error(`${at} must not be empty.`);
-  if (value.length > MAX_NAMESPACE_LENGTH) {
-    throw new Error(
-      `${at} must be at most ${MAX_NAMESPACE_LENGTH} characters.`,
-    );
-  }
+  if (problem) throw new Error(`namespaces[${index}] ${problem}`);
 
-  const segments = value.split(".");
-
-  if (segments.length > MAX_NAMESPACE_DEPTH) {
-    throw new Error(`${at} must be at most ${MAX_NAMESPACE_DEPTH} segments.`);
-  }
-
-  for (const segment of segments) {
-    // `core..global`, a leading dot, a trailing dot - all malformed, and all
-    // of them paths that would walk somewhere nobody meant.
-    if (segment.length === 0) {
-      throw new Error(`${at} must not contain an empty segment.`);
-    }
-    if (UNSAFE_NAMESPACE_SEGMENTS.has(segment)) {
-      throw new Error(`${at} contains a forbidden segment.`);
-    }
-  }
-
-  return value;
+  return value as string;
 };
 
 /**

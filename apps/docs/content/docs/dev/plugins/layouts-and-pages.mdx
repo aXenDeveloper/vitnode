@@ -10,6 +10,18 @@ Building layouts and pages in VitNode is just like Next.js - if you know Next.js
   directory to the main application. No extra setup needed!
 </Callout>
 
+<Callout type="warn" title="This is the Next.js path, and it still works">
+  Everything on this page describes how a plugin ships pages to a **Next.js**
+  app: you write Next.js route files, and VitNode copies them in. Nothing here
+  has been removed or deprecated out from under you.
+
+It is not how a plugin ships a page to a VitNode app that isn't Next.js. For
+that - and for a page that is imported from your plugin rather than copied out
+of it - see [Route Manifest](/docs/dev/plugins/route-manifest). A plugin can do
+both at once during the migration; the two paths never read each other.
+
+</Callout>
+
 <Callout type="info">
   VitNode is **i18n-first** - render all user-facing text with translations
   instead of hardcoded strings: `getTranslations` in Server Components and
