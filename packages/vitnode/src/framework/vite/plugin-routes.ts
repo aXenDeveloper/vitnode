@@ -489,8 +489,24 @@ const readLegacyAdminRoutes = (appRoot: string): LegacyRoutePath[] => {
  *
  * Ordered by the configured plugin list, and re-sorted by each generator - so
  * the bytes depend on which plugins are configured and on nothing else.
+ *
+ * ## The two subpaths are discovered independently, and that is the contract
+ *
+ * One call per projection, each asking only whether *its own* module resolves.
+ * A plugin may export `admin/nav` and not `admin/content` - an AdminCP settings
+ * screen that registers no content types - or `admin/content` and no navigation
+ * beyond the entries its content types already imply, or neither. None of those
+ * is a misconfiguration, and nothing anywhere compares the two resulting lists:
+ * navigation describes what exists, a content registration describes how it is
+ * edited, and they are separate concepts that happen to be discovered in one
+ * pass over one configured plugin list.
+ *
+ * Exported for `./plugin-routes.test.ts`, which drives it with a synthetic
+ * resolver - the only way to state the independence above without inventing two
+ * fixture packages. Deliberately absent from `./index.ts`: this is not part of
+ * `@vitnode/core/framework/vite`'s public surface.
  */
-const readOptionalPluginModules = <
+export const readOptionalPluginModules = <
   T extends { pluginId: string; specifier: string },
 >(
   pluginIds: readonly string[],

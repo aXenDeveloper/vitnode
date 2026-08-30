@@ -4,15 +4,12 @@ import { useTranslations } from "use-intl";
 
 import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
-import {
-  CONTENT_ADMIN_CREATE_SEGMENT,
-  CONTENT_ADMIN_EDIT_SEGMENT,
-} from "@/content/index";
-
+import type { ContentBreadcrumbModel } from "./breadcrumb-model";
 import type { ContentAdminRouteData } from "./route";
 
 import { RouteMessages } from "../../i18n/route-messages";
 import { AdminBreadcrumb } from "../breadcrumb";
+import { contentBreadcrumbModel } from "./breadcrumb-model";
 
 /**
  * The trail above a Content Engine screen.
@@ -70,71 +67,57 @@ export interface ContentAdminBreadcrumbProps extends Partial<
   LinkComponent?: AuthLinkComponent;
 }
 
-/** The same props, once the loader is known to have resolved. */
-type ResolvedCrumbProps = ContentAdminBreadcrumbProps &
-  Pick<ContentAdminRouteData, "adminPath" | "labels">;
-
-/** `/admin/content/blog/articles` - the list URL the trail passes through. */
-const listHref = (adminPath: string): string => `/admin/content/${adminPath}`;
-
-const ContentListCrumb = ({
-  adminPath,
-  labels,
+export const ContentAdminBreadcrumbContent = ({
   LinkComponent,
-}: ResolvedCrumbProps) => (
-  <AdminBreadcrumb
-    LinkComponent={LinkComponent}
-    overrideLastLabel={labels.title}
-    segments={["content", ...adminPath.split("/")]}
-  />
-);
+  namespaces,
+  ...route
+}: ContentAdminBreadcrumbProps) => {
+  const model = contentBreadcrumbModel(route);
 
+  // The loader did not resolve - see the note above. Nothing below this line
+  // has a content type to name, and `RouteMessages` has no namespaces to mount.
+  if (model.kind === "none") return null;
+
+  return (
+    <RouteMessages namespaces={namespaces ?? []}>
+      {model.kind === "list" ? (
+        <AdminBreadcrumb
+          LinkComponent={LinkComponent}
+          overrideLastLabel={model.title}
+          segments={model.segments}
+        />
+      ) : (
+        <ContentFormCrumb LinkComponent={LinkComponent} model={model} />
+      )}
+    </RouteMessages>
+  );
+};
+
+/**
+ * The create and edit trails, which are the only ones that translate anything.
+ *
+ * Its own component because `useTranslations` is a hook and the list branch has
+ * no use for one. Everything it does not translate - the segments, the list href
+ * it labels, the nouns - is {@link contentBreadcrumbModel}'s and arrives decided.
+ */
 const ContentFormCrumb = ({
-  action,
-  adminPath,
-  labels,
   LinkComponent,
-}: ResolvedCrumbProps) => {
+  model,
+}: {
+  LinkComponent?: AuthLinkComponent;
+  model: Extract<ContentBreadcrumbModel, { kind: "form" }>;
+}) => {
   const t = useTranslations("core.content");
 
   return (
     <AdminBreadcrumb
-      labels={{ [listHref(adminPath)]: labels.title }}
+      labels={{ [model.listHref]: model.title }}
       LinkComponent={LinkComponent}
       overrideLastLabel={t(
-        action === "create" ? "create.title" : "edit.title",
-        { name: labels.singular },
+        model.action === "create" ? "create.title" : "edit.title",
+        { name: model.singular },
       )}
-      segments={[
-        "content",
-        ...adminPath.split("/"),
-        action === "create"
-          ? CONTENT_ADMIN_CREATE_SEGMENT
-          : CONTENT_ADMIN_EDIT_SEGMENT,
-      ]}
+      segments={model.segments}
     />
-  );
-};
-
-export const ContentAdminBreadcrumbContent = ({
-  adminPath,
-  labels,
-  namespaces,
-  ...props
-}: ContentAdminBreadcrumbProps) => {
-  // The loader did not resolve - see the note above. Nothing below this line
-  // has a content type to name, and `RouteMessages` has no namespaces to mount.
-  if (adminPath === undefined || labels === undefined) return null;
-
-  const resolved = { ...props, adminPath, labels };
-
-  return (
-    <RouteMessages namespaces={namespaces ?? []}>
-      {props.action === "list" ? (
-        <ContentListCrumb {...resolved} />
-      ) : (
-        <ContentFormCrumb {...resolved} />
-      )}
-    </RouteMessages>
   );
 };

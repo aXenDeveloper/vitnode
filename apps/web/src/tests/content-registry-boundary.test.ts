@@ -162,22 +162,123 @@ describe('the generated content registry', () => {
   })
 
   /**
-   * Navigation and content registration are written from one pass over one
-   * configured plugin list, so a plugin that has both must appear in both. The
-   * two projections carry different payloads - links versus screens - and are
-   * deliberately not derived from each other, which is exactly why they are
-   * worth checking against each other.
+   * Sorted by plugin id, which is what makes the file reviewable: it is
+   * committed, so a generator that reordered itself would produce a diff on
+   * somebody else's machine and none on the author's.
    */
-  it('lists the same plugins as the navigation projection', () => {
-    const nav = readFileSync(join(appSrc, 'admin-nav.gen.ts'), 'utf8')
-    const navPlugins = [...nav.matchAll(/from '([^']+)\/admin\/nav'/g)].map(
-      (match) => match[1],
-    )
-    const contentPlugins = generatedSpecifiers().map((specifier) =>
-      specifier.slice(0, -'/admin/content'.length),
-    )
+  it('is deterministic', () => {
+    expect(generatedSpecifiers()).toEqual([...generatedSpecifiers()].sort())
+  })
+})
 
-    expect(contentPlugins).toEqual(navPlugins)
+/**
+ * Navigation and content registration are **independent optional exports**, and
+ * this is where that is checked against the real workspace.
+ *
+ * A plugin opts into each by exporting it. `admin/nav` is what the sidebar is
+ * drawn from - ids, hrefs, permissions, icons - and `admin/content` is how those
+ * content types are *edited*: the field, cell and layout components. A plugin
+ * may legitimately have one and not the other, and neither generator consults
+ * the other's output.
+ *
+ * An earlier version of this suite asserted the two lists were equal. They are,
+ * in this repository - both installed plugins export both subpaths - so the
+ * assertion passed while stating something the architecture does not promise,
+ * and the first plugin to ship an AdminCP settings screen with no content types
+ * would have failed the build for it. The asymmetric cases cannot be shown from
+ * this workspace at all, so they are stated where they can be:
+ * `packages/vitnode/src/framework/vite/plugin-routes.test.ts` drives the same
+ * discovery function with a synthetic resolver.
+ *
+ * What is left for *this* file is the half that needs the real `node_modules`:
+ * that each projection contains exactly the configured plugins which really do
+ * resolve that subpath.
+ */
+describe('the two projections are discovered independently', () => {
+  const navGenerated = readFileSync(join(appSrc, 'admin-nav.gen.ts'), 'utf8')
+
+  const pluginsIn = (source: string, subpath: string): string[] =>
+    [...source.matchAll(new RegExp(`from '([^']+)/${subpath}'`, 'g'))]
+      .map((match) => match[1])
+      .sort()
+
+  /** Every plugin this app configures, from the one list that names them all. */
+  const configuredPlugins = (): string[] =>
+    Object.keys(
+      (
+        JSON.parse(
+          readFileSync(join(repoRoot, 'apps/web/package.json'), 'utf8'),
+        ) as { dependencies: Record<string, string> }
+      ).dependencies,
+    )
+      .filter(
+        (name) => name.startsWith('@vitnode/') && name !== '@vitnode/core',
+      )
+      .sort()
+
+  const resolves = (specifier: string): boolean => {
+    try {
+      requireFromApp.resolve(specifier)
+
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  it('has plugins to check', () => {
+    // Vacuously true against an empty dependency list, so the absence of one
+    // has to fail here rather than pass everything below.
+    expect(configuredPlugins().length).toBeGreaterThan(0)
+  })
+
+  it('puts exactly the plugins that export admin/content in the content registry', () => {
+    expect(pluginsIn(generated, 'admin/content')).toEqual(
+      configuredPlugins().filter((id) => resolves(`${id}/admin/content`)),
+    )
+  })
+
+  it('puts exactly the plugins that export admin/nav in the navigation', () => {
+    expect(pluginsIn(navGenerated, 'admin/nav')).toEqual(
+      configuredPlugins().filter((id) => resolves(`${id}/admin/nav`)),
+    )
+  })
+
+  /**
+   * Every entry belongs to a plugin this app actually installed. The generator
+   * walks the configured ids and nothing else, so an entry naming anything else
+   * would mean a second source of truth had appeared.
+   */
+  it('generates no entry for a plugin this app does not configure', () => {
+    expect(
+      pluginsIn(generated, 'admin/content').filter(
+        (id) => !configuredPlugins().includes(id),
+      ),
+    ).toEqual([])
+    expect(
+      pluginsIn(navGenerated, 'admin/nav').filter(
+        (id) => !configuredPlugins().includes(id),
+      ),
+    ).toEqual([])
+  })
+
+  /**
+   * And neither projection is derived from the other: a plugin absent from one
+   * is not thereby absent from the other. Stated as a resolution check rather
+   * than as a comparison of the two lists, because comparing them is precisely
+   * the assertion that was wrong.
+   */
+  it('decides each projection from its own subpath alone', () => {
+    configuredPlugins().forEach((id) => {
+      expect(
+        pluginsIn(generated, 'admin/content').includes(id),
+        `${id} content`,
+      ).toBe(resolves(`${id}/admin/content`))
+      expect(
+        pluginsIn(navGenerated, 'admin/nav').includes(id),
+        `${id} nav`,
+      ).toBe(resolves(`${id}/admin/nav`))
+    })
   })
 })
 

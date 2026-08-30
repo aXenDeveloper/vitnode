@@ -58,11 +58,18 @@ export interface ContentFrontendRegistry {
 /**
  * Builds the registry from a list of plugin sources.
  *
- * The one place a plugin list becomes a registry. `validateContentTypes` is the
- * same check the API side runs, which is what catches a content type registered
- * on only one of the two sides - and what turns two plugins claiming
- * `blog/articles` into a `ContentEngineError` naming both, rather than a screen
- * that silently belongs to whichever loaded first.
+ * The one place a plugin list becomes a registry. It applies the same Content
+ * Engine definition rules the API registry applies - `validateContentTypes`,
+ * the identical function - to the registrations *it is given*, which is what
+ * turns two plugins claiming `blog/articles` into a `ContentEngineError` naming
+ * both rather than a screen that silently belongs to whichever loaded first.
+ *
+ * It does **not** compare this registry against the running API's. Nothing here
+ * can see what Hono registered, so a content type present on one side and absent
+ * from the other is not detected here and would surface where it actually bites:
+ * a screen whose requests 404, or an API route with no AdminCP. There is no
+ * frontend/API handshake in VitNode today, and this comment previously claimed
+ * one.
  *
  * Order in does not affect order out: the entries are sorted by content type id,
  * so the same configuration produces the same registry whichever order the

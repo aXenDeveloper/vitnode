@@ -5,6 +5,7 @@ import {
   realpathSync,
   statSync,
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -229,6 +230,53 @@ describe('the built package keeps TanStack behind the namespace', () => {
    */
   it('reaches no TanStack runtime from anything a Next.js app imports', () => {
     expect(reaching(distFilesOutsideNamespace())).toEqual([])
+  })
+})
+
+/**
+ * `@vitnode/core/content/fingerprint`, which is a subpath with no file behind
+ * it any more.
+ *
+ * `content/fingerprint.ts` became `content/hash.ts` in Stage 13, because
+ * ad-blocking filter lists match request paths against `fingerprint*.js` and
+ * Vite serves modules by their real filename in dev - so the old name came back
+ * from the dev server as `net::ERR_BLOCKED_BY_CLIENT` and took the whole client
+ * entry down with it.
+ *
+ * The rename is public API, though: the package-wide `./*` wildcard used to make
+ * `@vitnode/core/content/fingerprint` a legal import for anybody outside this
+ * repository. So an explicit export key restores that spelling and points it at
+ * `hash.js`.
+ *
+ * Asserted through Node's own resolver rather than by re-reading the manifest,
+ * which `packages/vitnode/src/content/hash.test.ts` already does. What this adds
+ * is the half only a built package can answer: that the target exists, and that
+ * a consumer following the old spelling is handed a real file.
+ */
+describe('the content/fingerprint compatibility subpath', () => {
+  const requireFromApp = createRequire(join(repoRoot, 'apps/web/package.json'))
+
+  it('resolves the old spelling to the hash module', () => {
+    expect(requireFromApp.resolve('@vitnode/core/content/fingerprint')).toBe(
+      join(coreDist, 'content/hash.js'),
+    )
+  })
+
+  it('ships no module named fingerprint', () => {
+    // The regression: a forwarding `fingerprint.ts` would satisfy the import
+    // above and put the blocked filename straight back into the dev graph.
+    expect(existsSync(join(coreDist, 'content/fingerprint.js'))).toBe(false)
+    expect(
+      filesUnder(coreDist, /\.js$/).filter((path) =>
+        path.includes('fingerprint'),
+      ),
+    ).toEqual([])
+  })
+
+  it('leaves the canonical barrel where it was', () => {
+    expect(requireFromApp.resolve('@vitnode/core/content')).toBe(
+      join(coreDist, 'content/index.js'),
+    )
   })
 })
 

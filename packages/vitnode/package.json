@@ -112,6 +112,11 @@
       "types": "./dist/src/views/admin/views/content/form/index.d.ts",
       "default": "./dist/src/views/admin/views/content/form/index.js"
     },
+    "./content/fingerprint": {
+      "import": "./dist/src/content/hash.js",
+      "types": "./dist/src/content/hash.d.ts",
+      "default": "./dist/src/content/hash.js"
+    },
     "./routing": {
       "import": "./dist/src/routing/index.js",
       "types": "./dist/src/routing/index.d.ts",

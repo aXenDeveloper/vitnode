@@ -6,6 +6,13 @@ icon: Layout
 
 Content Engine automatically builds interactive management screens in the VitNode AdminCP without requiring you to write Next.js page components or custom form components.
 
+<Callout title="Where these registrations live">
+  This page is about *what* each override does. Which module you declare it in -
+  `admin/nav`, `admin/content` or `config.tsx` - is
+  [Plugin Frontend Modules](/docs/dev/content-engine/plugin-registration), and the
+  short answer is `admin/content`.
+</Callout>
+
 ## Prerequisites & Context
 
 AdminCP UI generation requires registering your content definition in `src/config.tsx` using `contentTypeAdmin`:
@@ -269,7 +276,7 @@ import {
   ContentFormStatus,
 } from "@vitnode/core/content/admin-form";
 import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
-import { useTranslations } from "next-intl"; // [!code ++]
+import { useTranslations } from "use-intl"; // [!code ++]
 
 export const ArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
   const t = useTranslations("@vitnode/example.admin.article.form"); // [!code ++]
