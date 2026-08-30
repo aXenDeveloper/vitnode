@@ -1,8 +1,8 @@
 "use client";
 
 import { EyeOffIcon, SendIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CONTENT_PERMISSIONS } from "@/content/const";
+import { contentPublicationTransition } from "@/content/publication";
 
 import { contentErrorKey } from "../lib/mutation-feedback";
 import {
@@ -51,9 +52,10 @@ export const PublishContentAction = ({
 
   if (!canPublish) return null;
 
-  const published = status === "published";
+  const { action, destructive: published } =
+    contentPublicationTransition(status);
   const t = published ? tUnpublish : tPublish;
-  const label = tActions(published ? "unpublish" : "publish");
+  const label = tActions(action);
   const Icon = published ? EyeOffIcon : SendIcon;
 
   return (

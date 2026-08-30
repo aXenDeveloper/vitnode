@@ -1,17 +1,26 @@
-"use client";
-
+// No "use client": reached only from `delivery-action`, which is a client entry.
+import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, LinkIcon, XIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-import React from "react";
+import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
 
-import type { ContentDeliveryPanelData } from "../delivery-api.server";
+import { contentDeliveryLocaleQueryKey } from "../editorial-query";
+import { useContentEditorialTransport } from "../editorial-transport";
 
-import { readContentDeliveryAction } from "../delivery-api.server";
-
+/**
+ * One record's canonical address and the ones it used to answer to.
+ *
+ * Read-only, and deliberately so: this screen manages nothing. There is no
+ * `can_manage_redirects` because there is nothing here to manage - the URL
+ * history is written by the mutation that moved a slug, inside the same
+ * transaction, and the panel only reports it.
+ *
+ * `locale` names the **translation** whose address is being asked about, not the
+ * language the AdminCP is being read in. See `contentDeliveryRequestLocale`.
+ */
 export const DeliveryPanel = ({
   contentTypeId,
   id,
@@ -22,41 +31,26 @@ export const DeliveryPanel = ({
   locale?: string;
 }) => {
   const t = useTranslations("core.content.delivery");
-  const [state, setState] = React.useState<
-    | { data: ContentDeliveryPanelData; status: "ready" }
-    | { message: string; status: "error" }
-    | { status: "loading" }
-  >({ status: "loading" });
+  const transport = useContentEditorialTransport();
+  const { data, isPending } = useQuery({
+    queryFn: async () =>
+      await transport.readDelivery(contentTypeId, id, locale),
+    queryKey: contentDeliveryLocaleQueryKey(contentTypeId, id, locale),
+  });
 
-  React.useEffect(() => {
-    let active = true;
+  if (isPending) return <Loader />;
 
-    void readContentDeliveryAction(contentTypeId, id, locale).then(result => {
-      if (!active) return;
-
-      setState(
-        result.data
-          ? { data: result.data, status: "ready" }
-          : { message: result.error ?? t("load_failed"), status: "error" },
-      );
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [contentTypeId, id, locale, t]);
-
-  if (state.status === "loading") return <Loader />;
-
-  if (state.status === "error") {
+  if (!data?.data) {
     return (
       <p className="text-destructive text-sm leading-relaxed">
-        {state.message}
+        {data?.error !== undefined && data.error !== ""
+          ? data.error
+          : t("load_failed")}
       </p>
     );
   }
 
-  const { canonicalPath, history, isPublic } = state.data;
+  const { canonicalPath, history, isPublic } = data.data;
   const historical = history.filter(entry => entry.retiredAt !== null);
 
   return (

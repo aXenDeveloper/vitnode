@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { FormControl, FormMessage } from "@/components/ui/form";
 import {

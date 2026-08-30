@@ -182,12 +182,13 @@ describe('content navigation during Stage 12', () => {
   })
 
   /**
-   * And that entry is a document load, which is the whole of "content stays
-   * legacy-owned in Stage 12". No route was added to make the nav easier, and
-   * none may be.
+   * And that entry is a client-side navigation, which is the whole of "Stage 13
+   * owns the Content Engine". It flipped from a document load into the legacy
+   * app the moment `/admin/content/$` existed - from the route tree, with no
+   * list of migrated paths anywhere and no change to the navigation.
    */
-  it('routes that entry to the legacy application', () => {
-    expect(owns('/admin/content/blog/posts')).toBe(false)
+  it('routes that entry into this router', () => {
+    expect(owns('/admin/content/blog/posts')).toBe(true)
   })
 })
 
@@ -290,11 +291,12 @@ describe('the navigation this app hands its shell', () => {
   })
 
   /**
-   * And the content type entries, which are the ones a naive reading of "Stage
-   * 13 owns the Content Engine" would have dropped. Stage 13 owns *rendering*
-   * `/admin/content/*`; whether the sidebar links to it is this stage's.
+   * And the content type entries. The hrefs are unchanged by Stage 13 - they
+   * were always `/admin/content/…` - which is the point: navigation describes
+   * what exists, and only *how a click travels* moved when this router took the
+   * namespace over.
    */
-  it('offers every configured content type, pointing at the legacy screens', () => {
+  it('offers every configured content type, pointing at the screens this app now serves', () => {
     const hrefs = flattenAdminNav(resolvedFor(root)).map((item) => item.href)
 
     expect(hrefs).toContain('/admin/content/blog/articles')
@@ -302,9 +304,9 @@ describe('the navigation this app hands its shell', () => {
     expect(hrefs).toContain('/admin/content/example/categories')
   })
 
-  it('routes those content entries to the legacy application', () => {
-    expect(owns('/admin/content/blog/articles')).toBe(false)
-    expect(owns('/admin/content/example/articles')).toBe(false)
+  it('routes those content entries into this router', () => {
+    expect(owns('/admin/content/blog/articles')).toBe(true)
+    expect(owns('/admin/content/example/articles')).toBe(true)
   })
 
   it('serves the plugin admin route it names', () => {

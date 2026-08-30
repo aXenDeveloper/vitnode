@@ -1,27 +1,28 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-import dynamic from "next/dynamic";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
-import { Link } from "@/lib/navigation";
 
 import type { ContentFormProps } from "./content-form";
 
-// The form pulls in AutoForm and every field component, so it only loads once
-// the dialog is actually opened.
-const ContentForm = dynamic(async () =>
+import { useContentFormNavigation } from "../form/navigation";
+import { ContentFormDialog } from "./form-dialog";
+import { ContentLinkButton } from "./link-button";
+
+/**
+ * The form pulls in AutoForm and every field component, so it only loads once
+ * the dialog is actually opened.
+ *
+ * `React.lazy` rather than `next/dynamic`, which is what this used to be. The
+ * two do the same thing here - this is a client component and
+ * `ContentFormDialog` renders the form inside a `<React.Suspense>` - but only
+ * one of them resolves outside a Next.js application, and this button is on
+ * every content list.
+ */
+const ContentForm = React.lazy(async () =>
   import("./content-form").then(mod => ({ default: mod.ContentForm })),
 );
 
@@ -31,33 +32,27 @@ export const CreateContentAction = ({
   ...props
 }: Omit<ContentFormProps, "data"> & { href?: string }) => {
   const t = useTranslations("core.content.create");
+  const { LinkComponent } = useContentFormNavigation();
 
   if (href) {
     return (
-      <Button nativeButton={false} render={<Link href={href} />}>
+      <ContentLinkButton href={href} LinkComponent={LinkComponent}>
         <PlusIcon />
         {t("title", { name: singular })}
-      </Button>
+      </ContentLinkButton>
     );
   }
 
   return (
-    <Dialog>
-      <DialogTrigger render={<Button />}>
+    <ContentFormDialog
+      description={t("desc", { name: singular })}
+      form={<ContentForm singular={singular} {...props} />}
+      title={t("title", { name: singular })}
+    >
+      <Button>
         <PlusIcon />
         {t("title", { name: singular })}
-      </DialogTrigger>
-
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("title", { name: singular })}</DialogTitle>
-          <DialogDescription>{t("desc", { name: singular })}</DialogDescription>
-        </DialogHeader>
-
-        <React.Suspense fallback={<Loader />}>
-          <ContentForm singular={singular} {...props} />
-        </React.Suspense>
-      </DialogContent>
-    </Dialog>
+      </Button>
+    </ContentFormDialog>
   );
 };

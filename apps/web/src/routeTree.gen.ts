@@ -23,6 +23,7 @@ import { Route as LoginResetPasswordRouteImport } from './routes/login_.reset-pa
 import { Route as MainAuthenticatedFilesRouteImport } from './routes/_main/_authenticated/files'
 import { Route as MainAuthenticatedSettingsRouteImport } from './routes/_main/_authenticated/settings'
 import { Route as LoginSsoProviderIdRouteImport } from './routes/login_.sso.$providerId'
+import { Route as AdminAdminContentSplatRouteImport } from './routes/_admin/admin.content.$'
 import { Route as AdminAdminCoreIndexRouteImport } from './routes/_admin/admin.core.index'
 import { Route as AdminAdminCoreDebugRouteImport } from './routes/_admin/admin.core.debug'
 import { Route as MainAuthenticatedSettingsIndexRouteImport } from './routes/_main/_authenticated/settings/index'
@@ -111,6 +112,11 @@ const LoginSsoProviderIdRoute = LoginSsoProviderIdRouteImport.update({
   id: '/login_/sso/$providerId',
   path: '/login/sso/$providerId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAdminContentSplatRoute = AdminAdminContentSplatRouteImport.update({
+  id: '/admin/content/$',
+  path: '/admin/content/$',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminAdminCoreIndexRoute = AdminAdminCoreIndexRouteImport.update({
   id: '/admin/core/',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/files': typeof MainAuthenticatedFilesRoute
   '/settings': typeof MainAuthenticatedSettingsRouteWithChildren
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/admin/content/$': typeof AdminAdminContentSplatRoute
   '/admin/core/debug': typeof AdminAdminCoreDebugRoute
   '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
   '/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/files': typeof MainAuthenticatedFilesRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/admin/content/$': typeof AdminAdminContentSplatRoute
   '/admin/core/debug': typeof AdminAdminCoreDebugRoute
   '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
   '/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
@@ -311,6 +319,7 @@ export interface FileRoutesById {
   '/_main/_authenticated/files': typeof MainAuthenticatedFilesRoute
   '/_main/_authenticated/settings': typeof MainAuthenticatedSettingsRouteWithChildren
   '/login_/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/_admin/admin/content/$': typeof AdminAdminContentSplatRoute
   '/_admin/admin/core/debug': typeof AdminAdminCoreDebugRoute
   '/_main/_authenticated/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
   '/_main/_authenticated/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
@@ -346,6 +355,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/settings'
     | '/login/sso/$providerId'
+    | '/admin/content/$'
     | '/admin/core/debug'
     | '/settings/devices'
     | '/settings/overview'
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/files'
     | '/login/sso/$providerId'
+    | '/admin/content/$'
     | '/admin/core/debug'
     | '/settings/devices'
     | '/settings/overview'
@@ -414,6 +425,7 @@ export interface FileRouteTypes {
     | '/_main/_authenticated/files'
     | '/_main/_authenticated/settings'
     | '/login_/sso/$providerId'
+    | '/_admin/admin/content/$'
     | '/_admin/admin/core/debug'
     | '/_main/_authenticated/settings/devices'
     | '/_main/_authenticated/settings/overview'
@@ -546,6 +558,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login/sso/$providerId'
       preLoaderRoute: typeof LoginSsoProviderIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_admin/admin/content/$': {
+      id: '/_admin/admin/content/$'
+      path: '/admin/content/$'
+      fullPath: '/admin/content/$'
+      preLoaderRoute: typeof AdminAdminContentSplatRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/_admin/admin/core/': {
       id: '/_admin/admin/core/'
@@ -691,6 +710,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAdminContentSplatRoute: typeof AdminAdminContentSplatRoute
   AdminAdminCoreDebugRoute: typeof AdminAdminCoreDebugRoute
   AdminAdminCoreIndexRoute: typeof AdminAdminCoreIndexRoute
   AdminAdminCoreAdvancedCronRoute: typeof AdminAdminCoreAdvancedCronRoute
@@ -710,6 +730,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminContentSplatRoute: AdminAdminContentSplatRoute,
   AdminAdminCoreDebugRoute: AdminAdminCoreDebugRoute,
   AdminAdminCoreIndexRoute: AdminAdminCoreIndexRoute,
   AdminAdminCoreAdvancedCronRoute: AdminAdminCoreAdvancedCronRoute,

@@ -2,8 +2,8 @@
 // none: this is only reached from a client entry, and declaring it again would
 // make it a nested one that `next/dynamic` cannot resolve from a package.
 import { TriangleAlertIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
 

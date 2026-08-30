@@ -3,7 +3,7 @@
 import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/auto-form";
 
 import { AutoFormColor } from "@vitnode/core/components/form/fields/color";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 export const BlogCategoryColorField = (props: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog.admin.category");

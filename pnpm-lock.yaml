@@ -944,6 +944,9 @@ importers:
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      use-intl:
+        specifier: ^4.13.7
+        version: 4.13.7(react@19.2.8)
       zod:
         specifier: ^4.4.3
         version: 4.4.3

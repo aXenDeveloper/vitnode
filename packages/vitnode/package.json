@@ -127,6 +127,11 @@
       "types": "./dist/src/framework/admin-nav/index.d.ts",
       "default": "./dist/src/framework/admin-nav/index.js"
     },
+    "./framework/content-registry": {
+      "import": "./dist/src/framework/content-registry/index.js",
+      "types": "./dist/src/framework/content-registry/index.d.ts",
+      "default": "./dist/src/framework/content-registry/index.js"
+    },
     "./framework/plugin-routes": {
       "import": "./dist/src/framework/plugin-routes/index.js",
       "types": "./dist/src/framework/plugin-routes/index.d.ts",

@@ -12,6 +12,7 @@ import type { ContentLabels } from "@/content/server/service";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
+import { isContentPublished } from "@/content/publication";
 
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
@@ -132,7 +133,7 @@ export const ContentCell = ({
       return <span className="tabular-nums">{asText(value)}</span>;
 
     case "publication": {
-      const published = value === "published";
+      const published = isContentPublished(value);
 
       return (
         <Badge variant={published ? "default" : "secondary"}>

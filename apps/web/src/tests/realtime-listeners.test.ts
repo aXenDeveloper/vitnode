@@ -54,8 +54,12 @@ describe('the realtime listeners are mounted by the root, not by the shell', () 
   )
 
   it('mounts them at the root', () => {
-    expect(root).toContain(
-      "import { VitNodeRootProviders } from '@vitnode/core/tanstack/layout'",
+    // The symbol and the module it comes from, rather than the whole import
+    // line: the root legitimately imports more than one thing from that barrel
+    // (`NotFound`, for the 404 it renders), and a punctuation change is not a
+    // change to where the provider tree lives.
+    expect(root).toMatch(
+      /import \{[^}]*\bVitNodeRootProviders\b[^}]*\} from '@vitnode\/core\/tanstack\/layout'/,
     )
     expect(root).toContain('<VitNodeRootProviders')
     expect(providers).toContain('<RealtimeListeners />')

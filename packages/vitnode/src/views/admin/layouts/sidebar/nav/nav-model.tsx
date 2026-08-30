@@ -336,11 +336,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
  * Content types get one for free. `admin.navigation.enabled: false` opts out,
  * and the usual permission filter hides anything the admin cannot view.
  *
- * Every href here points into `/admin/content/*`, which the Content Engine owns
- * and which Stage 13 migrates - so during Stage 12 these are links into the
- * legacy application. That is a decision for whatever renders the sidebar, not
- * for this model: it produces hrefs, and the link component decides how to get
- * there.
+ * Every href here points into `/admin/content/*`, the namespace the Content
+ * Engine owns, and it has spelled exactly that in both AdminCPs throughout the
+ * migration. Which application actually serves one is a decision for whatever
+ * renders the sidebar, not for this model: it produces hrefs, and the link
+ * component decides how to get there.
  */
 const contentNavItems = (
   plugin: VitNodeConfig["plugins"][number],

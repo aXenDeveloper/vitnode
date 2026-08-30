@@ -369,15 +369,32 @@ describe('the shells plugin routes mount under', () => {
   })
 
   /**
-   * And the boundary Stage 13 owns is untouched by any of it: an admin *plugin*
-   * route is one URL, not a claim on the area. `/admin/content/*` stays the
-   * legacy application's, so its sidebar entries stay document loads.
+   * And the boundary is untouched by any of it: an admin *plugin* route is one
+   * URL, not a claim on the area.
+   *
+   * Stage 13 moved `/admin/content/*` into this router, so ownership is no
+   * longer what separates the two - both are owned now. What still separates
+   * them is *which route serves them*, and that is what this asserts: a content
+   * URL is served by the Content Engine's own splat and never by the plugin
+   * container, which would otherwise be a plugin quietly answering for every
+   * content type in the installation.
    */
-  it('claims no part of the Content Engine URLs', () => {
+  it('serves no part of the Content Engine URLs', () => {
     const router = getRouter()
+    const matchedIds = (pathname: string): string[] =>
+      router.matchRoutes(pathname, undefined).map((match) => match.routeId)
 
     expect(isTanStackOwnedPath(router, '/admin/example')).toBe(true)
-    expect(isTanStackOwnedPath(router, '/admin/content')).toBe(false)
-    expect(isTanStackOwnedPath(router, '/admin/content/blog/posts')).toBe(false)
+    expect(matchedIds('/admin/example')).toContain(
+      `/_admin/${PLUGIN_ROUTES_ROUTE_ID}/admin/example`,
+    )
+
+    for (const pathname of ['/admin/content', '/admin/content/blog/posts']) {
+      expect(matchedIds(pathname)).toContain('/_admin/admin/content/$')
+      expect(
+        matchedIds(pathname).some((id) => id.includes(PLUGIN_ROUTES_ROUTE_ID)),
+        pathname,
+      ).toBe(false)
+    }
   })
 })

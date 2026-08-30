@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 

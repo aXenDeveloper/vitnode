@@ -10,14 +10,13 @@ import { categoryContentType } from "@/content/category";
  * Everything this plugin puts in the AdminCP sidebar, and nothing that renders a
  * screen.
  *
- * The **browser-safe** half of the frontend registration, split out so an
+ * The narrowest of the plugin's three frontend modules, split out so an
  * application can draw the sidebar without importing the other half.
- * `config.tsx` registers content types *with their editing screens* attached -
- * which for a plugin with field overrides means a form stack that still reaches
- * `next/dynamic` today - and a TanStack Start application cannot hold that graph
- * while the Content Engine is still Next's. A list of links does not need it: an
- * href is a string, a permission is three strings, a content type definition is
- * zod and plain data, and an icon is an element from an icon set.
+ * `./content` registers content types *with their editing screens* attached -
+ * for a plugin with field overrides, a whole form stack - and a list of links
+ * does not need any of it: an href is a string, a permission is three strings, a
+ * content type definition is zod and plain data, and an icon is an element from
+ * an icon set.
  *
  * There is no second list. `config.tsx` spreads this straight into
  * `buildPlugin`, so the navigation a Next.js app renders and the navigation a
@@ -32,9 +31,10 @@ import { categoryContentType } from "@/content/category";
  * `overview` below points at `/admin/example`, which this plugin also declares
  * as an admin-area route in `routes/manifest.ts` - but neither list is derived
  * from the other, and neither has to be complete for the other to work. The
- * content type entries here point into `/admin/content/*`, which the Content
- * Engine owns and no plugin route claims; and `guide-topic` over in the manifest
- * is a page reached from a link on another page, with no sidebar entry at all.
+ * content type entries here point into `/admin/content/*`, the namespace the
+ * Content Engine owns outright and no plugin route may claim; and `guide-topic`
+ * over in the manifest is a page reached from a link on another page, with no
+ * sidebar entry at all.
  */
 
 /** The article content type, as the sidebar reads it. */

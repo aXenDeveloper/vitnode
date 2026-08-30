@@ -30,14 +30,19 @@ import { normalizeAdminTableParams } from "@/views/admin/table/params";
  */
 
 /**
- * The page size the URL does not need to mention.
+ * The page size the URL does not need to mention, for one table.
  *
  * `DEFAULT_TABLE_PAGE_SIZE` is what every `DataTable` falls back to, and what
  * the Next.js fetcher's `withPagination` writes, so `?first=10` and no `first`
  * are the same request spelled two ways - and the shorter spelling is the one
  * these routes settle on.
+ *
+ * A screen whose API defaults to a different size declares it on its contract;
+ * read from there rather than fixed, so the size a request carries and the size
+ * the URL omits are one value.
  */
-const DEFAULT_PAGE_SIZE = String(DEFAULT_TABLE_PAGE_SIZE);
+const defaultPageSizeOf = (contract: { defaultPageSize?: number }): string =>
+  String(contract.defaultPageSize ?? DEFAULT_TABLE_PAGE_SIZE);
 
 /**
  * A route's validated search - the URL contract, and nothing else.
@@ -154,7 +159,7 @@ export const normalizeAdminTableSearch = <TOrderBy extends string>(
   return {
     ...(cursor === undefined ? {} : { cursor }),
     // See above: the default page size is the URL saying nothing.
-    ...(first === undefined || first === DEFAULT_PAGE_SIZE
+    ...(first === undefined || first === defaultPageSizeOf(contract)
       ? {}
       : { first: Number(first) }),
     // `last` is never dropped: paging *backwards* at the default size is a

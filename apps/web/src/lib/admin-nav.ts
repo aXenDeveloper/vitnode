@@ -18,12 +18,12 @@ import { pluginAdminNav } from '#/admin-nav.gen'
  * ## Why it is not read from `vitnode.config.ts`
  *
  * That config is server-side on purpose (`vitnode.shell.config.ts` explains the
- * split), and the plugin registrations in it are the *full* frontend
- * registrations - content types with their editing screens attached, which reach
- * core's form stack and from there `next/dynamic`. A sidebar needs the ids, the
- * hrefs, the permissions, the icons and the content type definitions, all of
- * which are plain data. The generated projection is exactly that half, so the
- * browser gets the navigation without the Content Engine's UI.
+ * split): it carries message loaders and API wiring, which a browser bundle has
+ * no business holding. A sidebar needs the ids, the hrefs, the permissions, the
+ * icons and the content type definitions, all of which are plain data. The
+ * generated projection is exactly that half, so the browser gets the navigation
+ * without the Content Engine's UI - which arrives, when a content screen
+ * actually renders, through `src/lib/content-registry.ts` instead.
  *
  * ## Module scope, and why that matters twice
  *
@@ -32,13 +32,13 @@ import { pluginAdminNav } from '#/admin-nav.gen'
  * messages from the same `namespaces` array the shell then reads - so a stable
  * value here is what makes those one cache entry rather than two.
  *
- * ## Content entries still point at the legacy application
+ * ## Content entries were never rewritten, and that is the point
  *
- * A content type's entry is `/admin/content/…`, which the Content Engine owns
- * and Stage 13 migrates. That href is correct now and stays correct after the
- * migration; what changes is only how a click travels, which `MigrationLink`
- * decides per href by asking this router. Routes and navigation are separate
- * concepts, and a nav entry for a screen this router cannot match is the normal
- * case during the migration rather than a fault.
+ * A content type's entry is `/admin/content/…`, and it said exactly that while
+ * the Next.js application served those screens and still says it now that this
+ * one does. Only *how a click travels* changed, and `MigrationLink` decides that
+ * per href by asking the router rather than by consulting any list here. Routes
+ * and navigation are separate concepts: a nav entry naming a screen this router
+ * cannot match is the normal case during the migration rather than a fault.
  */
 export const adminNav = adminNavBundle({ plugins: pluginAdminNav })

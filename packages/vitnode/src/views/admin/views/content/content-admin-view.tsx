@@ -13,12 +13,7 @@ import {
   findFrontendContentType,
   findFrontendContentTypeByAdminPath,
 } from "@/content/admin/config";
-import {
-  contentI18nKeys,
-  type ContentLabelTranslator,
-  contentNouns,
-  humanizeFieldName,
-} from "@/content/admin/labels";
+import { type ContentLabelTranslator } from "@/content/admin/labels";
 import { resolveContentAdminRoute } from "@/content/admin/route";
 import {
   buildContentColumnSpec,
@@ -29,6 +24,8 @@ import { contentCreateHref } from "@/content/registry";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 
 import { CreateContentAction } from "./actions/create-action";
+import { contentLabelsFrom } from "./content-labels";
+import { NextContentFormHost } from "./form/host-next";
 import { ContentCreatePageView, ContentEditPageView } from "./page/page-views";
 import { ContentTableView } from "./table/content-table-view";
 
@@ -71,41 +68,14 @@ export const resolveContentType = async (
  * Every key is optional: a plugin that translates nothing still gets readable
  * labels from the definition itself and from humanised field names.
  */
-export const getContentLabels = async (
-  entry: RegisteredFrontendContentType,
-) => {
-  const { definition, pluginId } = entry;
-  const keys = contentI18nKeys(definition, pluginId);
-  // Cast once, here, where the translator enters: every key below is assembled
-  // from the content type id at runtime, which the generated key union cannot
-  // describe. Nothing is read without `has` first.
-  const t = (await getTranslations()) as unknown as ContentLabelTranslator;
-
-  return {
-    desc: t.has(keys.desc) ? t(keys.desc) : undefined,
-    labelEnum: (field: string, value: string) => {
-      const key = keys.enumValue(field, value);
-
-      return t.has(key) ? t(key) : humanizeFieldName(value);
-    },
-    labelField: (name: string) => {
-      const key = keys.field(name);
-
-      return t.has(key) ? t(key) : humanizeFieldName(name);
-    },
-    labelSection: (name: string) => {
-      const section = keys.section(name);
-
-      return {
-        desc: t.has(section.desc) ? t(section.desc) : undefined,
-        title: t.has(section.title)
-          ? t(section.title)
-          : humanizeFieldName(name),
-      };
-    },
-    ...contentNouns(definition, pluginId, t),
-  };
-};
+export const getContentLabels = async (entry: RegisteredFrontendContentType) =>
+  // Cast once, here, where the translator enters: every key the resolver reads
+  // is assembled from the content type id at runtime, which the generated key
+  // union cannot describe. Nothing is read without `has` first.
+  contentLabelsFrom(
+    entry,
+    (await getTranslations()) as unknown as ContentLabelTranslator,
+  );
 
 const ContentListView = async ({
   entry,
@@ -200,13 +170,25 @@ export const ContentAdminView = async ({
       namespaces={["core.content"]}
       runtimeNamespaces={[route.entry.pluginId]}
     >
-      {route.action === "list" ? (
-        <ContentListView entry={route.entry} searchParams={searchParams} />
-      ) : route.action === "create" ? (
-        <ContentCreatePageView entry={route.entry} />
-      ) : (
-        <ContentEditPageView entry={route.entry} itemId={route.itemId ?? 0} />
-      )}
+      {/*
+       * Every content screen's mutations and navigation, mounted once.
+       *
+       * Here rather than in each of the three screens below because all three
+       * need it and only one of them is on screen at a time: the list's create
+       * button and its rows' edit dialogs open the same form the two page views
+       * render, and a form is the thing that writes. `ContentAdminView` is the
+       * one place all three meet, and the *only* module under `content/` that
+       * still reaches Next.js from the client is the one it mounts.
+       */}
+      <NextContentFormHost>
+        {route.action === "list" ? (
+          <ContentListView entry={route.entry} searchParams={searchParams} />
+        ) : route.action === "create" ? (
+          <ContentCreatePageView entry={route.entry} />
+        ) : (
+          <ContentEditPageView entry={route.entry} itemId={route.itemId ?? 0} />
+        )}
+      </NextContentFormHost>
     </I18nProvider>
   );
 };

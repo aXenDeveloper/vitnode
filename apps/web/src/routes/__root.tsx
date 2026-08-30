@@ -16,10 +16,11 @@ import {
   resolveLocale,
   useLocale,
 } from '@vitnode/core/tanstack/i18n'
-import { VitNodeRootProviders } from '@vitnode/core/tanstack/layout'
+import { NotFound, VitNodeRootProviders } from '@vitnode/core/tanstack/layout'
 
 import type { Locale } from '#/lib/i18n/shared'
 
+import { ErrorActions } from '#/migration/error-actions'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 import appCss from '../styles.css?url'
@@ -80,8 +81,53 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       intlQueryOptions({ locale: context.locale }),
     )
   },
+  /**
+   * Every URL this application does not serve.
+   *
+   * The last resort, and until now there was none: a path that matched no route
+   * at all fell through to TanStack Router's own `<p>Not Found</p>` - no shell,
+   * no strings, no way back - and the router warned about the missing option on
+   * every such navigation. `/admin/contents` and a hand-typed `/blog/post-30`
+   * both landed there.
+   *
+   * ## What reaches it, and what does not
+   *
+   * Only a path **no route matched**. A route that matched and then answered
+   * `notFound()` from its own loader is caught by the nearest
+   * `notFoundComponent` above it, which is why `/admin/content/nope` and
+   * `/admin/content/blog/articles/999999/edit` render the AdminCP's 404 inside
+   * the panel rather than this - see `_admin`'s, which mounts the shell around
+   * the same message.
+   *
+   * ## It is a 404, not a redirect to the other application
+   *
+   * During the migration plenty of unmatched paths *are* served by the Next.js
+   * app, and bouncing every one of them at `NEXT_PUBLIC_LEGACY_WEB_URL` was
+   * considered and rejected: it would hide a genuinely missing page behind a hop
+   * to a second application that 404s it anyway, and it degrades badly at the
+   * cutover, when there is no legacy origin left to bounce to. Links are already
+   * routed correctly - `MigrationLink` asks the route tree per href - so what
+   * reaches here is a URL somebody typed or a stale bookmark, and saying so is
+   * the honest answer. Which application serves a path is a deployment question,
+   * and a proxy in front of both answers it better than this route can.
+   *
+   * `ErrorActions` rather than core's default, for the reason it exists: `/` is
+   * this app on some installs and the Next.js one on others, and only the route
+   * tree knows which.
+   */
+  notFoundComponent: RootNotFound,
   shellComponent: RootDocument,
 })
+
+/**
+ * Rendered inside `RootComponent`, which is what makes the strings work: the
+ * providers it mounts include `RouteMessages` with `core.global`, and that is
+ * the namespace `NotFound` reads its two lines from. The root's loader has
+ * already warmed that entry, so nothing suspends.
+ */
+function RootNotFound() {
+  return <NotFound actions={<ErrorActions />} />
+}
 
 /**
  * The VitNode provider tree, mounted once above every route.

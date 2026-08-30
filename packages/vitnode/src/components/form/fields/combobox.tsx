@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { useTranslations } from "use-intl";
 
 import {
   Combobox,

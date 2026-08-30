@@ -16,7 +16,7 @@ import {
   isLocalizableFieldKind,
 } from "./const";
 import { ContentEngineError } from "./errors";
-import { clampWithFingerprint } from "./fingerprint";
+import { clampWithFingerprint } from "./hash";
 import { resolveContentTranslationIndexes } from "./indexes";
 import { contentStorageColumns, isContentCollectionField } from "./paths";
 

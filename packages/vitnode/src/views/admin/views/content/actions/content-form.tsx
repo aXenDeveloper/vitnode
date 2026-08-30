@@ -1,10 +1,11 @@
 // No "use client" here on purpose: this module is only reached from
-// `create-action`/`edit-action`, which are already client entries. Declaring
-// it again would make this a nested client entry, and `next/dynamic` cannot
-// resolve one from inside a published package - the dialog spins forever.
-import { useLocale, useTranslations } from "next-intl";
+// `create-action`/`edit-action`, which are already client entries. Declaring it
+// again would make this a nested client entry, which neither `next/dynamic` nor
+// `React.lazy` can resolve from inside a published package - the dialog spins
+// forever.
 import React from "react";
 import { toast } from "sonner";
+import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
@@ -19,60 +20,32 @@ import {
   buildFormSchemaFromSpec,
   contentFormInitialValues,
   contentFormValuesToPayload,
-  contentFormValuesToTranslations,
   contentLocalizedFieldNames,
   contentTitleFromValues,
-  isCollectionFieldSpec,
 } from "@/content/admin/spec";
 import { uploadContentFile } from "@/content/admin/upload";
 import { CONTENT_PERMISSIONS } from "@/content/const";
-import { usePathname, useRouter } from "@/lib/navigation";
 
+import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
+import type { ContentOptionsLoader } from "../lib/field-component";
 import type { ContentConflictState } from "./conflict-notice";
-import type { TranslationRow } from "./translation-api.server";
 
 import { ContentFormProvider } from "../form/context";
+import {
+  contentSharedChanged,
+  contentTranslationDiff,
+  missingContentCollections,
+} from "../form/diff";
+import { useContentFormNavigation } from "../form/navigation";
 import { ContentFormHeader } from "../form/primitives";
 import { ContentFormPublication } from "../form/publication-status";
 import { ContentFormSections } from "../form/sections";
+import { useContentFormTransport } from "../form/transport";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
 import { ConflictNotice } from "./conflict-notice";
-import {
-  createContentAction,
-  createLocalizedContentAction,
-  editContentAction,
-  editLocalizedContentAction,
-  loadContentOptionsAction,
-  publishContentAction,
-  reloadContentRowAction,
-  unpublishContentAction,
-} from "./mutation-api.server";
-import { listContentTranslationsAction } from "./translation-api.server";
-
-/**
- * The collection fields of a row that are not on it.
- *
- * A repeatable, a to-many reference and a gallery are all stored on tables of
- * their own, so the admin *list* deliberately leaves them off its rows -
- * carrying them would cost queries per page for values no column renders. A
- * dialog-mode form is handed one of those rows, and a form that opened on the
- * empty set for each would show an article with no categories, no gallery, and
- * then **save it that way**.
- *
- * Empty for a page-mode form, whose server component read the record's detail
- * and already has them - so the common case costs no request at all.
- */
-const missingCollections = (
-  spec: ContentFormSpec,
-  data: Record<string, unknown>,
-): string[] =>
-  spec.fields
-    .filter(isCollectionFieldSpec)
-    .map(field => field.name)
-    .filter(name => !Array.isArray(data[name]));
 
 export interface ContentFormProps {
   data?: Record<string, unknown> & { id: number };
@@ -97,6 +70,7 @@ export const ContentForm = ({
   translations,
   ...props
 }: ContentFormProps) => {
+  const transport = useContentFormTransport();
   const localized = spec.defaultLocale !== null;
   const [loaded, setLoaded] = React.useState<null | readonly TranslationRow[]>(
     translations ?? (localized && data ? null : []),
@@ -106,7 +80,7 @@ export const ContentForm = ({
     row: NonNullable<ContentFormProps["data"]>;
   }>(null);
   const row: ContentFormProps["data"] =
-    data === undefined || missingCollections(spec, data).length === 0
+    data === undefined || missingContentCollections(spec, data).length === 0
       ? data
       : reloaded?.for === data
         ? reloaded.row
@@ -121,34 +95,30 @@ export const ContentForm = ({
 
     let active = true;
 
-    void listContentTranslationsAction(contentTypeId, itemId).then(
-      ({ edges }) => {
-        if (active) setLoaded(edges);
-      },
-    );
+    void transport.listTranslations(contentTypeId, itemId).then(({ edges }) => {
+      if (active) setLoaded(edges);
+    });
 
     return () => {
       active = false;
     };
-  }, [contentTypeId, itemId, loaded]);
+  }, [contentTypeId, itemId, loaded, transport]);
 
   React.useEffect(() => {
     if (!pendingRow || data === undefined) return;
 
     let active = true;
 
-    void reloadContentRowAction(contentTypeId, data.id).then(
-      ({ row: fresh }) => {
-        if (active) {
-          setReloaded({ for: data, row: fresh ? { ...data, ...fresh } : data });
-        }
-      },
-    );
+    void transport.reloadRow(contentTypeId, data.id).then(({ row: fresh }) => {
+      if (active) {
+        setReloaded({ for: data, row: fresh ? { ...data, ...fresh } : data });
+      }
+    });
 
     return () => {
       active = false;
     };
-  }, [contentTypeId, data, pendingRow]);
+  }, [contentTypeId, data, pendingRow, transport]);
 
   if (loaded === null || pendingRow) return <Loader />;
 
@@ -179,8 +149,8 @@ const ContentFormFields = ({
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
   const { setOpen } = useDialog();
-  const { push } = useRouter();
-  const pathname = usePathname();
+  const { LinkComponent, refresh } = useContentFormNavigation();
+  const transport = useContentFormTransport();
   const locale = useLocale();
   const invalidateOptions = useInvalidateContentOptions();
   const canPublish = useAdminStaffPermission({
@@ -226,8 +196,23 @@ const ContentFormFields = ({
     [spec, values],
   );
 
+  /**
+   * How every picker in this form fetches its options.
+   *
+   * One callback for the whole form rather than one per field, and memoised on
+   * purpose: `useReferenceOptions` and `ContentUserField` both list it in an
+   * effect's dependencies, so a fresh function each render would re-enter those
+   * effects on every keystroke. The content type is closed over, which is what
+   * stops one form ever asking another content type for its rows.
+   */
+  const loadOptions = React.useCallback<ContentOptionsLoader>(
+    async ({ field, ids, search }) =>
+      await transport.loadOptions(spec.contentTypeId, field, search, ids),
+    [spec.contentTypeId, transport],
+  );
+
   const onReload = async () => {
-    const { row } = await reloadContentRowAction(
+    const { row } = await transport.reloadRow(
       spec.contentTypeId,
       data?.id ?? 0,
     );
@@ -240,65 +225,16 @@ const ContentFormFields = ({
     if (typeof row.version === "number") setExpectedVersion(row.version);
   };
 
-  const translationPayload = (submitted: Record<string, unknown>) => {
-    const byLocale = contentFormValuesToTranslations(spec, submitted);
-    const entries: {
-      expectedVersion?: number;
-      locale: string;
-      values: Record<string, unknown>;
-    }[] = [];
-
-    for (const [code, next] of Object.entries(byLocale)) {
-      const existing = opened.find(
-        row => row.locale.toLowerCase() === code.toLowerCase(),
-      );
-
-      if (!existing) {
-        entries.push({ locale: code, values: next });
-        continue;
-      }
-
-      const changed = Object.fromEntries(
-        Object.entries(next).filter(
-          ([name, value]) => existing.values[name] !== value,
-        ),
-      );
-      if (Object.keys(changed).length === 0) continue;
-
-      entries.push({
-        expectedVersion: existing.version,
-        locale: existing.locale,
-        values: changed,
-      });
-    }
-
-    return entries;
-  };
-
-  const sharedChanged = (payload: Record<string, unknown>): boolean => {
-    if (!data) return true;
-
-    return Object.entries(payload).some(([name, value]) => {
-      const before = data[name];
-
-      if (Array.isArray(before) && Array.isArray(value)) {
-        return (
-          before.length !== value.length ||
-          before.some((item, index) => item !== value[index])
-        );
-      }
-
-      return before !== value;
-    });
-  };
+  const translationPayload = (submitted: Record<string, unknown>) =>
+    contentTranslationDiff(spec, submitted, opened);
 
   const transition = async (action: "publish" | "unpublish") => {
     if (!data) return false;
 
     const mutation =
       action === "publish"
-        ? await publishContentAction(spec.contentTypeId, data.id)
-        : await unpublishContentAction(spec.contentTypeId, data.id);
+        ? await transport.publish(spec.contentTypeId, data.id)
+        : await transport.unpublish(spec.contentTypeId, data.id);
 
     if (mutation.error !== undefined) {
       const errorKey = contentErrorKey(mutation.status, mutation);
@@ -317,7 +253,7 @@ const ContentFormFields = ({
     toast.success(t(`${action}.success`, { name: singular }), {
       description: title,
     });
-    push(pathname);
+    refresh();
 
     return true;
   };
@@ -331,26 +267,26 @@ const ContentFormFields = ({
 
     const mutation = localized
       ? data
-        ? await editLocalizedContentAction(
+        ? await transport.editLocalized(
             spec.contentTypeId,
             data.id,
-            sharedChanged(payload) ? payload : undefined,
+            contentSharedChanged(data, payload) ? payload : undefined,
             translationPayload(submitted),
             expectedVersion,
           )
-        : await createLocalizedContentAction(
+        : await transport.createLocalized(
             spec.contentTypeId,
             payload,
             translationPayload(submitted),
           )
       : data
-        ? await editContentAction(
+        ? await transport.edit(
             spec.contentTypeId,
             data.id,
             payload,
             expectedVersion,
           )
-        : await createContentAction(spec.contentTypeId, payload);
+        : await transport.create(spec.contentTypeId, payload);
 
     if (mutation.error !== undefined) {
       if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
@@ -399,7 +335,7 @@ const ContentFormFields = ({
       publication &&
       canPublish &&
       mutation.id !== undefined
-        ? await publishContentAction(spec.contentTypeId, mutation.id)
+        ? await transport.publish(spec.contentTypeId, mutation.id)
         : null;
 
     if (published?.error !== undefined) {
@@ -435,13 +371,13 @@ const ContentFormFields = ({
       }
 
       setOpened(mutation.translations ?? opened);
-      push(pathname);
+      refresh();
 
       return;
     }
 
     setOpen?.(false);
-    push(pathname);
+    refresh();
   };
 
   const fields = spec.fields.map(
@@ -469,14 +405,7 @@ const ContentFormFields = ({
         return (
           <ContentField
             files={files}
-            loadOptions={async ({ field, ids, search }) =>
-              await loadContentOptionsAction(
-                spec.contentTypeId,
-                field,
-                search,
-                ids,
-              )
-            }
+            loadOptions={loadOptions}
             spec={fieldSpec}
             uploadFile={async ({ field, file }) =>
               await uploadContentFile({ field, file, spec })
@@ -511,6 +440,11 @@ const ContentFormFields = ({
           <ContentFormProvider
             value={{
               fieldNames: spec.fields.map(field => field.name),
+              // A plugin's own form layout renders `ContentFormHeader` and
+              // `ContentFormActions`, whose two links have to be the host's.
+              // Injected rather than imported by the primitives, so the same
+              // layout renders under a router that is not Next's.
+              LinkComponent,
               fields: renderedFields,
               header: presentation === "page" ? header : undefined,
               localizedFieldNames: localizedFields,

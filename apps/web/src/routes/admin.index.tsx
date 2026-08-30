@@ -26,11 +26,13 @@ import {
  *    guard in front of the page that exists to create a session. Same shape as
  *    `/login` against `_authenticated`, for the same reason.
  * 2. `isTanStackOwnedPath` requires the deepest match to consume the *whole*
- *    path. As a leaf, `/admin` matches `/admin` and nothing else - so
- *    `/admin/content/blog/posts` matches nothing here, `MigrationLink` renders
- *    it as a document navigation, and every Content Engine screen keeps working
- *    on the Next.js app. Making this a nested layout is one careless index route
- *    away from claiming that whole subtree and turning it into a not-found.
+ *    path. As a leaf, `/admin` matches `/admin` and nothing else, so every URL
+ *    below it is answered by whichever route actually declares it -
+ *    `/admin/content/blog/posts` by the Content Engine's splat under `_admin`,
+ *    `/admin/core/users` by its own file, and an unmigrated one by nothing at
+ *    all, which is what keeps `MigrationLink` sending it to the Next.js app.
+ *    Making this a nested layout is one careless index route away from claiming
+ *    the whole subtree and turning every unmigrated screen into a not-found.
  *
  * No locale prefix, in any language. `DEFAULT_IGNORED_LOCALE_PATHS` lists
  * `/admin` with its descendants, so the rewrite neither strips nor writes one,

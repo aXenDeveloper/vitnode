@@ -1,7 +1,7 @@
 import type { ContentLocalizationFallback } from "./types";
 
 import { CONTENT_CACHE_TAG_MAX_LENGTH } from "./const";
-import { clampWithFingerprint } from "./fingerprint";
+import { clampWithFingerprint } from "./hash";
 import { contentLocalesMatch, normalizeContentLocale } from "./locale";
 
 /**

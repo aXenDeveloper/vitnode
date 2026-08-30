@@ -30,14 +30,19 @@ import { ErrorActions } from '#/migration/error-actions'
  * not use - and `AuthState.isAdmin`, which lives on the *public* session, means
  * "may be offered the AdminCP", not "is inside it". Two cookies, two questions.
  *
- * ## Nothing may add a splat or catch-all under here
+ * ## Exactly one splat may live under here, and nothing wider
  *
- * `$.tsx`, `$slug.tsx` or any other catch-all child would consume
- * `/admin/content/*`, which the Content Engine still serves from the Next.js
- * app. `isTanStackOwnedPath` would start answering `true` for it, `MigrationLink`
- * would render a client navigation, and every working content screen would
- * become a TanStack not-found. `src/tests/admin-routes.test.ts` pins that
- * `/admin/content/<anything>` is not owned by this router.
+ * `admin.content.$.tsx` claims `/admin/content/*` - the Content Engine's own
+ * namespace, which Stage 13 moved into this router. That one is deliberate and
+ * narrow; a second is how the AdminCP breaks.
+ *
+ * `$.tsx`, `admin.$.tsx` or any other catch-all beside it would consume every
+ * *remaining* admin URL, including the ones the Next.js application still
+ * serves. `isTanStackOwnedPath` would start answering `true` for them,
+ * `MigrationLink` would render a client navigation, and an unmigrated screen
+ * would become a TanStack not-found reached from a working sidebar link -
+ * silently, and all at once. `src/tests/admin-routes.test.ts` pins both halves:
+ * that the content splat sits at exactly that path, and that it is the only one.
  *
  * ## Why the check is in `beforeLoad`
  *
@@ -128,16 +133,20 @@ export const Route = createFileRoute('/_admin')({
    * gives in the Next.js AdminCP. Declared here rather than per screen so every
    * one of them answers a missing permission identically.
    *
-   * A URL under `/admin` that matches no screen at all does *not* reach this
-   * one: with no splat under `_admin` - and there must not be one, see above -
-   * such a path matches no route in this subtree, and the router falls back to
+   * A content URL that resolves to no content type reaches it too, and by the
+   * same route: `loadContentAdminRoute` throws `notFound()` for a splat its
+   * registry cannot name, which is the answer the Next.js catch-all's
+   * `notFound()` gives one navigation later.
+   *
+   * A URL under `/admin` that matches no route at all does *not* reach this one.
+   * Outside `/admin/content`, `_admin` has only declared children - see above -
+   * so such a path matches nothing in this subtree and the router falls back to
    * its own not-found at the root. That is the correct trade, and the cost is
-   * paid deliberately: rendering an unmigrated admin URL inside this shell
-   * would mean claiming it, and claiming `/admin/content/*` is precisely the
-   * failure this stage is shaped to avoid. (The root has no
-   * `notFoundComponent` of its own yet, so that fallback is currently the
-   * router's bare one - for every unmatched URL in this application, not only
-   * admin ones. Giving the root a real 404 page is its own piece of work.)
+   * paid deliberately: rendering an unmigrated admin URL inside this shell would
+   * mean claiming it. (The root has no `notFoundComponent` of its own yet, so
+   * that fallback is currently the router's bare one - for every unmatched URL
+   * in this application, not only admin ones. Giving the root a real 404 page is
+   * its own piece of work.)
    */
   notFoundComponent: AdminNotFoundScreen,
   component: AdminLayout,

@@ -5,13 +5,6 @@ import { z } from "zod";
 
 import type { ContentPublicLocaleState } from "@/content/cache";
 import type { ContentDeliveryInvalidation } from "@/content/cache";
-import type {
-  ContentConflict,
-  ContentDeliveryConflict,
-  ContentScheduleRejection,
-  ContentTranslationConflict,
-  ContentUnprocessable,
-} from "@/content/conflicts";
 import type { ContentInvalidationMode } from "@/content/next/revalidate.server";
 import type {
   ContentRevisionDetail,
@@ -36,7 +29,11 @@ import {
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
 import { revalidateContent } from "@/content/next/revalidate.server";
 
-import type { TranslationRow } from "./translation-api.server";
+import type {
+  ContentMutationResult,
+  ContentTranslationInput,
+  TranslationRow,
+} from "../content-mutation";
 
 import {
   invalidateContentLocales,
@@ -50,76 +47,15 @@ import {
 const CONTENT_PAGE_PATH =
   "/[locale]/admin/(auth)/(plugins)/(vitnode-core)/content/[...slug]";
 
-interface MutationResult {
-  /**
-   * The structured reason an editorial write was refused, when the API sent
-   * one. `CONTENT_VERSION_CONFLICT` is the interesting case: the dialog reloads
-   * the newer record and offers to overwrite it, which it cannot do from a
-   * sentence.
-   */
-  conflict?: ContentConflict;
-  /**
-   * `CONTENT_DELIVERY_SLUG_RESERVED`, naming the address and its locale.
-   *
-   * Its own field rather than a third arm of `conflict`, because the two share a
-   * status and need different words: a unique clash is "another record holds that
-   * address now", and this is "another record used to hold it and it still
-   * redirects there".
-   */
-  delivery?: ContentDeliveryConflict;
-  error?: string;
-  /**
-   * The identifier of a newly created record.
-   *
-   * Only set by `createContentAction`, and only on success - a page-mode create
-   * navigates to the record's own edit page, and guessing at the id would open
-   * the wrong one.
-   */
-  id?: number;
-  /** Why a schedule was refused, when the API said. */
-  rejection?: ContentScheduleRejection;
-  /** Lets the UI tell a restricted delete (409) from a generic failure. */
-  status?: number;
-  /**
-   * The same, for the language half of a composite save.
-   *
-   * Its own field rather than a second arm of `conflict`, because the two need
-   * different words and point at different things: one says the record moved,
-   * the other says one language of it did - and names which.
-   */
-  translationConflict?: ContentTranslationConflict;
-  /**
-   * Every translation as it stands **after** a composite save.
-   *
-   * The form keeps editing after a page-mode save, and its next save needs each
-   * language's new version - reusing the ones it opened with would lose to the
-   * write it just made.
-   */
-  translations?: TranslationRow[];
-  /**
-   * Nothing moved, so nothing was sent.
-   *
-   * Its own field rather than silence, because "saved" and "there was nothing
-   * to save" are different things to the person who pressed the button - and
-   * reporting the first for the second is how a form that is quietly failing
-   * looks exactly like one that is working.
-   */
-  unchanged?: boolean;
-  /** `CONTENT_REVISION_NOT_RESTORABLE`, naming the fields that no longer fit. */
-  unprocessable?: ContentUnprocessable;
-  /**
-   * The version the record holds **after** this write.
-   *
-   * Read back so a form that stays open - page mode - can guard its next save on
-   * the version it just created rather than on the one it opened with. Without
-   * it, the second save of a session sends a version the record left behind and
-   * gets a conflict banner naming an editor who does not exist.
-   *
-   * The translation half of the same problem was already handled by
-   * `translations`; this is the base row's.
-   */
-  version?: number;
-}
+/**
+ * What an editorial write answers with.
+ *
+ * The shape moved to `../content-mutation` in Stage 13 - unchanged, member for
+ * member - because a TanStack Start form returns exactly this and cannot import
+ * it from a `"use server"` module. This alias is what keeps the rest of this
+ * file reading as it did.
+ */
+type MutationResult = ContentMutationResult;
 
 /**
  * The version off a mutation response, when the row carries one.
@@ -129,6 +65,22 @@ interface MutationResult {
  */
 const versionOf = (row?: Record<string, unknown>): number | undefined =>
   typeof row?.version === "number" ? row.version : undefined;
+
+/**
+ * Whether a response is one a write may act on.
+ *
+ * The status **and** the absence of an error. The second half was missing until
+ * Stage 13 and is not redundant: `contentApiFetch` reports a body the content
+ * type's schema does not describe as an error while keeping the status the API
+ * sent, so a create whose `201` carried an unreadable body read as a success
+ * with no identifier - and a page-mode create then navigated to record `0`. The
+ * browser transport in `form/mutations-api.ts` reads it the same way, which is
+ * the point: the two AdminCPs must not disagree about what a write answered.
+ */
+const succeeded = (
+  result: { error?: string; status: number },
+  status: number,
+): boolean => result.status === status && result.error === undefined;
 
 /** Reads whatever structured error the API sent, if any. */
 const failure = (result: {
@@ -353,7 +305,7 @@ export const createContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 201) return failure(result);
+  if (!succeeded(result, 201)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   const created = result.data?.id ?? 0;
@@ -397,7 +349,7 @@ export const editContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   invalidate(definition, id, before, result.data, {
@@ -407,14 +359,6 @@ export const editContentAction = async (
 
   return { version: versionOf(result.data) };
 };
-
-/** One language's half of a composite save, as the form assembled it. */
-export interface ContentTranslationInput {
-  /** Absent when this language had no translation when the form opened. */
-  expectedVersion?: number;
-  locale: string;
-  values: Record<string, unknown>;
-}
 
 /**
  * Reads every translation back after a composite save.
@@ -467,7 +411,7 @@ export const createLocalizedContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 201) return failure(result);
+  if (!succeeded(result, 201)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   const created = result.data?.id ?? 0;
@@ -528,7 +472,7 @@ export const editLocalizedContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   invalidate(definition, id, before, result.data, {
@@ -669,7 +613,7 @@ export const restoreContentRevisionAction = async (
     schema: z.object({ changed: z.boolean(), row: zodRow }),
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   // A restore never moves `status`, so visibility is unchanged - but the slug
@@ -794,7 +738,7 @@ export const scheduleContentAction = async (
     schema: z.object({ id: z.number() }),
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 
@@ -816,7 +760,7 @@ export const cancelContentScheduleAction = async (
     schema: z.object({ cancelled: z.boolean() }),
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 
@@ -855,7 +799,7 @@ export const deleteContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 
@@ -930,7 +874,7 @@ const publicationAction = async (
     schema: zodPublicationResult,
   });
 
-  if (result.status !== 200) return failure(result);
+  if (!succeeded(result, 200)) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 

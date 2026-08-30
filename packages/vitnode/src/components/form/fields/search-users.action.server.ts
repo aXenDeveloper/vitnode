@@ -3,16 +3,15 @@
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { fetcher } from "@/lib/fetcher";
 
-/** The columns a user picker needs: enough to identify a person on sight. */
-export interface UserOption {
-  avatarColor: string;
-  id: number;
-  name: string;
-  nameCode: string;
-}
+import type { UserOption } from "./input-users";
 
 /**
- * The default search behind {@link AutoFormUser}.
+ * The AdminCP users list, as a search {@link AutoFormUser} can take.
+ *
+ * Passed in rather than defaulted to, since Stage 13: this module is Next-only
+ * - `"use server"`, and the typed fetcher reads `next/headers` - so a picker
+ * that imported it merely to have a fallback made its whole screen Next-only.
+ * `input-users.tsx` owns {@link UserOption} for the same reason.
  *
  * Reads the AdminCP users list, so it answers with whatever that route lets the
  * calling admin see - the permission check lives there and is not repeated here.

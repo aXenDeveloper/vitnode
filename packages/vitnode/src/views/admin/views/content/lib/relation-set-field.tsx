@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
@@ -26,6 +26,7 @@ export const ContentRelationSetField = ({
   ...props
 }: ContentRelationSetFieldProps) => {
   const t = useTranslations("core.content.form");
+  const locale = useLocale();
   const selected = Array.isArray(field.value) ? (field.value as number[]) : [];
   const { known, pending, remember } = useReferenceOptions({
     field: spec.name,
@@ -58,7 +59,7 @@ export const ContentRelationSetField = ({
       label={spec.label}
       multiple
       placeholder={t("relation.placeholder")}
-      queryKey={contentOptionsQueryKey(spec)}
+      queryKey={contentOptionsQueryKey(spec, locale)}
       renderChip={item =>
         isPending(Number(item.value)) ? (
           <ContentReferenceChipSkeleton />

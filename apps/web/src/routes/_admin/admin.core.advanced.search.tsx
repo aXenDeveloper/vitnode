@@ -20,13 +20,16 @@ import { pageHead } from '#/lib/page-head'
  * arrives at once. So typing in the search box changes the URL and re-renders,
  * and does not re-run the loader.
  *
- * `collectionLabels` is not passed, and that is this app's answer rather than an
- * omission: the names for Content Engine collections come from the frontend
- * content-type registry, which is server-side config kept out of the browser
- * bundle by `vitnode.shell.config.ts`, and this app registers no content types
- * at all (see `src/vitnode.config.ts`). It is the same seam `AdminShell` leaves
- * open for `declarations`, and it changes here when plugin AdminCP registration
- * moves over.
+ * `collectionLabels` is still not passed. The names for Content Engine
+ * collections are the plural nouns a content type's own messages spell, and
+ * until Stage 13 this app had no content-type registry at all to read them from.
+ * It has one now - `src/lib/content-registry.ts` - so the remaining cost is the
+ * strings: resolving those nouns means warming every configured plugin's content
+ * namespaces on a screen that renders none of them otherwise, which is a
+ * decision for whoever picks this up rather than part of moving the Content
+ * Engine. Without them a content collection falls back to the search renderer's
+ * own label and still shows its `itemType`, so nothing is hidden - it is named
+ * less well.
  */
 export const Route = createFileRoute('/_admin/admin/core/advanced/search')({
   // `head` after `loader`, always - see the note in `_main/discover.tsx`.

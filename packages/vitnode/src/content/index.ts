@@ -16,6 +16,31 @@ export {
 } from "./admin/labels";
 export type { ContentLabelTranslator } from "./admin/labels";
 export {
+  buildContentFrontendRegistry,
+  CONTENT_FRONTEND_REGISTRY_MISSING,
+  contentFrontendRegistry,
+  hasContentFrontendRegistry,
+  setContentFrontendRegistry,
+} from "./admin/registry";
+export type {
+  ContentFrontendRegistry,
+  RegisteredFrontendContentType,
+} from "./admin/registry";
+/**
+ * The AdminCP route resolver, and the lookup a registry satisfies.
+ *
+ * Here rather than only in `content/admin/` because it is pure and
+ * framework-neutral - it maps a slug onto a content type and one of three
+ * screens, over a predicate `ContentFrontendRegistry.lookup` provides - and a
+ * host that owns `/admin/content/*` cannot use the registry without it.
+ */
+export { resolveContentAdminRoute } from "./admin/route";
+export type {
+  ContentAdminAction,
+  ContentAdminRoute,
+  ContentTypeLookup,
+} from "./admin/route";
+export {
   buildContentColumnSpec,
   buildContentFormSpec,
   buildFormSchemaFromSpec,
@@ -86,6 +111,8 @@ export type {
 } from "./conflicts";
 export {
   CONTENT_ACTOR_TYPES,
+  CONTENT_ADMIN_CREATE_SEGMENT,
+  CONTENT_ADMIN_EDIT_SEGMENT,
   CONTENT_CACHE_TAG_MAX_LENGTH,
   CONTENT_CONFLICT_CODES,
   CONTENT_DEFAULT_PAGE_SIZE,
@@ -239,7 +266,7 @@ export type {
   ContentFileFieldValue,
   ContentFileRejection,
 } from "./files";
-export { clampWithFingerprint, fingerprint } from "./fingerprint";
+export { clampWithFingerprint, fingerprint } from "./hash";
 export {
   contentIndexName,
   contentTranslationPrimaryKeyName,
@@ -263,6 +290,18 @@ export {
   resolveContentLocalization,
 } from "./localization";
 export type { ContentFieldPartition } from "./localization";
+export {
+  CONTENT_DEFAULT_PUBLICATION_STATUS,
+  CONTENT_PUBLICATION_ACTIONS,
+  contentPublicationStatus,
+  contentPublicationTransition,
+  hasContentPublication,
+  isContentPublished,
+} from "./publication";
+export type {
+  ContentPublicationAction,
+  ContentPublicationTransition,
+} from "./publication";
 export {
   CONTENT_EDIT_HREF_PLACEHOLDER,
   contentAdminHref,

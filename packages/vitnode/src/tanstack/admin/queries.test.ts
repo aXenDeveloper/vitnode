@@ -6,6 +6,11 @@ import { describe, expect, it } from "vitest";
 
 import { ADMIN_SEARCH_USERS_QUERY_KEY } from "@/views/admin/layouts/search/search-users";
 import { adminQueryRoot } from "@/views/admin/table/query";
+import {
+  contentItemQueryKey,
+  contentListQueryKey,
+  contentOptionsQueryKey,
+} from "@/views/admin/views/content/content-query";
 
 import { removeAdminIdentityQueries, removeAdminShellQueries } from "./queries";
 import { ADMIN_SESSION_QUERY_KEY } from "./state";
@@ -33,6 +38,26 @@ const ADMIN_SCREEN = [...adminQueryRoot("files"), { page: 1 }];
 const ADMIN_DASHBOARD = [...adminQueryRoot("dashboard-layout")];
 
 /**
+ * The Content Engine, one key per level of its family.
+ *
+ * Built by the real key builders rather than written out, because the property
+ * being checked is that *those* stay under the AdminCP root - a key spelled by
+ * hand here would keep passing after `content-query.ts` moved the family
+ * somewhere this cleanup cannot reach.
+ *
+ * There is deliberately no `removeContentQueries` beside the two functions under
+ * test. `contentQueryRoot()` is `["vitnode","admin","content"]`, so the existing
+ * prefix removal already collects every content type an installation has and
+ * every one a plugin adds later. A second per-feature cleanup list would be one
+ * more thing to remember and one more thing to forget.
+ */
+const CONTENT_LIST = [...contentListQueryKey("blog.post", { first: "25" })];
+const CONTENT_ITEM = [...contentItemQueryKey("blog.post", 42)];
+const CONTENT_OPTIONS = [
+  ...contentOptionsQueryKey("blog.category", "category", "en"),
+];
+
+/**
  * Entries that belong to other layers, and must survive.
  *
  * The public session is the pointed one: it is a different cookie answering a
@@ -52,6 +77,9 @@ const seeded = (): QueryClient => {
     ADMIN_SEARCH_USERS,
     ADMIN_SCREEN,
     ADMIN_DASHBOARD,
+    CONTENT_LIST,
+    CONTENT_ITEM,
+    CONTENT_OPTIONS,
     PUBLIC_SESSION,
     INTL,
     PLUGIN,
@@ -119,6 +147,29 @@ describe("removeAdminIdentityQueries", () => {
     removeAdminIdentityQueries(queryClient);
 
     expect(held(queryClient, ADMIN_SEARCH_USERS)).toBe(false);
+  });
+
+  /**
+   * The Content Engine, which the AdminCP started rendering itself in Stage 13
+   * and which added no cleanup of its own.
+   *
+   * That is the claim worth pinning: a content list is rows an administrator was
+   * allowed to read, a record is one of them in full, and a reference picker is
+   * a searchable index of another content type - all of it privileged, none of
+   * it collected by anything but the prefix already removed above. The
+   * reference-picker entry is the pointed one: it cached itself under the bare
+   * string `"content-options"` before this stage, outside `["vitnode","admin"]`
+   * and outside every removal, so one administrator's picker results were served
+   * to the next person to sign in on that tab.
+   */
+  it("drops the Content Engine's lists, records and pickers", () => {
+    const queryClient = seeded();
+
+    removeAdminIdentityQueries(queryClient);
+
+    expect(held(queryClient, CONTENT_LIST)).toBe(false);
+    expect(held(queryClient, CONTENT_ITEM)).toBe(false);
+    expect(held(queryClient, CONTENT_OPTIONS)).toBe(false);
   });
 
   /**

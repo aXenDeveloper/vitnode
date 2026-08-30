@@ -1,21 +1,11 @@
 "use client";
 
 import { PencilIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-import dynamic from "next/dynamic";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
 import {
   Tooltip,
   TooltipContent,
@@ -23,11 +13,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CONTENT_PERMISSIONS } from "@/content/const";
-import { Link } from "@/lib/navigation";
 
 import type { ContentFormProps } from "./content-form";
 
-const ContentForm = dynamic(async () =>
+import { useContentFormNavigation } from "../form/navigation";
+import { ContentFormDialog } from "./form-dialog";
+import { ContentLinkButton } from "./link-button";
+
+/** Lazily, for the reason `create-action` gives at length. */
+const ContentForm = React.lazy(async () =>
   import("./content-form").then(mod => ({ default: mod.ContentForm })),
 );
 
@@ -44,6 +38,7 @@ export const EditContentAction = ({
 }) => {
   const t = useTranslations("core.content.edit");
   const label = useTranslations("core.content.actions")("edit");
+  const { LinkComponent } = useContentFormNavigation();
   const canEdit = useAdminStaffPermission({
     module: permissionModule,
     permission: CONTENT_PERMISSIONS.edit,
@@ -58,15 +53,15 @@ export const EditContentAction = ({
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button
+              <ContentLinkButton
                 aria-label={label}
-                nativeButton={false}
-                render={<Link href={href} />}
+                href={href}
+                LinkComponent={LinkComponent}
                 size="icon"
                 variant="ghost"
               >
                 <PencilIcon className="size-4" />
-              </Button>
+              </ContentLinkButton>
             }
           />
 
@@ -79,32 +74,19 @@ export const EditContentAction = ({
   return (
     <TooltipProvider>
       <Tooltip>
-        <Dialog>
+        <ContentFormDialog
+          description={t("desc", { name: singular })}
+          form={<ContentForm singular={singular} {...props} />}
+          title={t("title", { name: singular })}
+        >
           <TooltipTrigger
             render={
-              <DialogTrigger
-                render={
-                  <Button aria-label={label} size="icon" variant="ghost">
-                    <PencilIcon className="size-4" />
-                  </Button>
-                }
-              />
+              <Button aria-label={label} size="icon" variant="ghost">
+                <PencilIcon className="size-4" />
+              </Button>
             }
           />
-
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("title", { name: singular })}</DialogTitle>
-              <DialogDescription>
-                {t("desc", { name: singular })}
-              </DialogDescription>
-            </DialogHeader>
-
-            <React.Suspense fallback={<Loader />}>
-              <ContentForm singular={singular} {...props} />
-            </React.Suspense>
-          </DialogContent>
-        </Dialog>
+        </ContentFormDialog>
 
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>

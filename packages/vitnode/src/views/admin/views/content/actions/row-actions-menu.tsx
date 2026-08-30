@@ -30,25 +30,38 @@ import {
 } from "@/components/ui/tooltip";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 
+import type { ContentRowActionId } from "./row-actions-model";
+
 import { DeleteContentPanel } from "./delete-action";
 import { DeliveryContentPanel } from "./delivery-action";
 import { HistoryContentPanel } from "./history-action";
 import { PreviewContentPanel } from "./preview-action";
+import {
+  contentRowActionIds,
+  contentRowActionsAreInline,
+  isDestructiveContentRowAction,
+} from "./row-actions-model";
 import { ScheduleContentPanel } from "./schedule-action";
 
 /** The row actions that live behind the ⋯ button. */
-type PanelId = "delete" | "delivery" | "history" | "preview" | "schedule";
+type PanelId = ContentRowActionId;
 
-const INLINE_ACTION_LIMIT = 3;
-
-/** One entry in the menu, in the order the list declares it. */
+/** One entry in the menu, in the order {@link contentRowActionIds} declares it. */
 interface RowAction {
-  available: boolean;
   destructive?: boolean;
   icon: React.ReactNode;
   id: PanelId;
   label: string;
 }
+
+/** The icon each action wears. The order and the gating are the shared model's. */
+const ACTION_ICONS: Record<PanelId, React.ReactNode> = {
+  delete: <Trash2Icon />,
+  delivery: <LinkIcon />,
+  history: <HistoryIcon />,
+  preview: <EyeIcon />,
+  schedule: <CalendarClockIcon />,
+};
 
 export const ContentRowActionsMenu = ({
   contentTypeId,
@@ -104,40 +117,20 @@ export const ContentRowActionsMenu = ({
     plugin: pluginId,
   });
 
-  const actions: RowAction[] = [
-    {
-      available: preview && canView,
-      icon: <EyeIcon />,
-      id: "preview",
-      label: t("actions.preview"),
-    },
-    {
-      available: scheduling && canPublish,
-      icon: <CalendarClockIcon />,
-      id: "schedule",
-      label: t("actions.schedule"),
-    },
-    {
-      available: editorial && canView,
-      icon: <HistoryIcon />,
-      id: "history",
-      label: t("actions.history"),
-    },
-    {
-      available: delivery && canView,
-      icon: <LinkIcon />,
-      id: "delivery",
-      label: t("actions.delivery"),
-    },
-    {
-      available: canDelete,
-      destructive: true,
-      icon: <Trash2Icon />,
-      id: "delete",
-      label: t("actions.delete"),
-    },
-  ];
-  const items = actions.filter(action => action.available);
+  const items: RowAction[] = contentRowActionIds({
+    canDelete,
+    canPublish,
+    canView,
+    delivery,
+    editorial,
+    preview,
+    scheduling,
+  }).map(id => ({
+    ...(isDestructiveContentRowAction(id) ? { destructive: true } : {}),
+    icon: ACTION_ICONS[id],
+    id,
+    label: t(`actions.${id}`),
+  }));
 
   if (items.length === 0) return null;
 
@@ -157,7 +150,7 @@ export const ContentRowActionsMenu = ({
 
   return (
     <>
-      {items.length <= INLINE_ACTION_LIMIT ? (
+      {contentRowActionsAreInline(items.length) ? (
         items.map(item => (
           <TooltipProvider key={item.id}>
             <Tooltip>

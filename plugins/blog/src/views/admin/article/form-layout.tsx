@@ -12,7 +12,7 @@ import {
   ContentFormSidebar,
   ContentFormStatus,
 } from "@vitnode/core/content/admin-form";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 export const BlogArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
   const t = useTranslations("@vitnode/blog.admin.article.form");

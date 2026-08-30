@@ -1,9 +1,9 @@
 "use client";
 
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
+import { useTranslations } from "use-intl";
 
 import { cn } from "@/lib/utils";
 

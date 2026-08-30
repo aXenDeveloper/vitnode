@@ -83,6 +83,20 @@ export type RawAdminTableParams = Partial<
 
 /** What a screen declares about its own table. */
 export interface AdminTableContract<TOrderBy extends string = string> {
+  /**
+   * The page size this table asks for when the URL does not.
+   *
+   * Defaults to {@link DEFAULT_TABLE_PAGE_SIZE}, which is what the four core
+   * admin tables use and what `DataTable` falls back to. A screen overrides it
+   * when its API has a different default of its own: a Content Engine list route
+   * answers `CONTENT_DEFAULT_PAGE_SIZE` records when asked for no size, so
+   * sending `first=10` would silently change what every content list shows.
+   *
+   * It is the size the normaliser *omits* from the URL as well as the one it
+   * sends, so the two cannot drift: `?first=<default>` and no `first` stay one
+   * request and one cache entry.
+   */
+  defaultPageSize?: number;
   /** The columns this list may be sorted by - the route's `orderBy` enum. */
   orderBy: readonly TOrderBy[];
   /** Whether the table renders a search box the API reads. */
@@ -159,7 +173,7 @@ export const normalizeAdminTableParams = <TOrderBy extends string>(
   if (first !== undefined) {
     params.first = first;
   } else if (last === undefined) {
-    params.first = String(DEFAULT_TABLE_PAGE_SIZE);
+    params.first = String(contract.defaultPageSize ?? DEFAULT_TABLE_PAGE_SIZE);
   } else {
     params.last = last;
   }

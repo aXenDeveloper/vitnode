@@ -468,12 +468,56 @@ describe('the whole graph this app imports stays Next-free', () => {
     ).toBeGreaterThan(5)
   })
 
-  it('finds Next.js in a plugin frontend entry, which is why one is not imported', () => {
-    // The control, and the reason `vitnode.config.ts` registers plugins by id
-    // and messages instead of calling `blogPlugin()`.
+  it('finds Next.js where Next.js really is', () => {
+    // The control: proof the walk detects what it claims to, so
+    // "reaches no next/*" below cannot pass because nothing was walked.
+    //
+    // Stage 12 used `plugins/blog/dist/src/config.js` for this, because a
+    // plugin's frontend registration was Next-bound and that was the reason
+    // `vitnode.config.ts` registered plugins by id instead of calling
+    // `blogPlugin()`. Stage 13 made that false - see below - so the specimen
+    // moved to a module that is Next-only *by design* and will stay that way:
+    // the Content Engine's server-side fetch, which carries `server-only` and
+    // reads `next/headers`.
     expect(
-      offenders(['plugins/blog/dist/src/config.js'], NEXT_ONLY),
+      offenders(
+        ['packages/vitnode/dist/src/content/admin/fetch.server.js'],
+        [...NEXT_ONLY],
+      ),
     ).not.toEqual([])
+  })
+
+  /**
+   * Stage 13. A plugin's whole frontend registration is now Next-free.
+   *
+   * This is the inversion of the Stage 12 control above, and it is what the
+   * generated content registry rests on: `config.js` reaches
+   * `admin/content.js`, which reaches every override the blog ships - the Tiptap
+   * editor field, the colour field, the colour cell and the article form layout
+   * - and none of that graph names Next any more. The editor's toolbar moved to
+   * `use-intl`, the field's lazy boundary moved to `React.lazy`, and the form
+   * layout's two links became an injected component.
+   *
+   * Asserted on `config.js` rather than on `admin/content.js` because it is the
+   * stronger claim: `config.js` is the whole plugin - the registration, the
+   * overrides and the messages - so nothing a plugin ships to a frontend is
+   * Next-bound any more.
+   *
+   * `vitnode.config.ts` still registers plugins by id and messages rather than
+   * calling `blogPlugin()`, and that is now a scope decision rather than a
+   * compatibility one - see the note there. This is what makes it a decision:
+   * the option exists, and it is declined.
+   */
+  it('finds no Next.js in a plugin frontend registration', () => {
+    expect(
+      offenders(
+        [
+          'plugins/blog/dist/src/config.js',
+          'plugins/example/dist/src/config.js',
+        ],
+        [...NEXT_ONLY, ...NEXT_INTL_RUNTIME],
+      ),
+    ).toEqual([])
   })
 
   it('reaches no next/* and no server-only', () => {

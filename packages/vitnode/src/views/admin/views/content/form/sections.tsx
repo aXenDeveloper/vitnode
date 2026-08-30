@@ -1,7 +1,7 @@
 // No "use client": reached only from `content-form`, which is already a client
 // entry - the same reason the primitives beside it declare none.
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { ContentFormSectionSpec } from "@/content/admin/spec";
 

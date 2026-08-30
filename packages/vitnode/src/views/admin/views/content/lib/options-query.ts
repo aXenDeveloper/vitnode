@@ -3,36 +3,55 @@ import React from "react";
 
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
 
-/**
- * The cache namespace every `relation`/`user` picker fetches under.
- *
- * Its own prefix so a mutation can expire pickers and nothing else - the query
- * client is one client for the whole AdminCP, and a broad invalidation would
- * take every list and count on the screen with it.
- */
-const NAMESPACE = "content-options";
+import {
+  CONTENT_USER_TARGET,
+  contentOptionsQueryKey as contentOptionsKeyFor,
+  contentOptionsQueryRoot,
+} from "../content-query";
+
+/** What a picker offers: a content type's rows, or people. */
+export const contentOptionsTarget = (spec: ContentFormFieldSpec): string =>
+  spec.targetContentTypeId ?? CONTENT_USER_TARGET;
 
 /**
- * The bucket a `user` picker's options sit in.
+ * Where one `relation`/`user` picker's options are cached.
  *
- * People are not a content type, so a `user` field has no `targetContentTypeId`
- * - and giving it a token of its own rather than falling back to the field name
- * is what keeps a content mutation from ever matching one: no content type is
- * called this, so `useInvalidateContentOptions` cannot reach it.
- */
-const USERS = "core.users";
-
-/**
- * Where one picker's options are cached.
+ * The key itself lives in `../content-query`, with the rest of the Content
+ * Engine's family; this is the spec-shaped door onto it, because a field
+ * component has a {@link ContentFormFieldSpec} in hand rather than a target id
+ * and a field name. It resolves the target and forwards - it does not spell a
+ * second key, which is how the family stayed reachable by one prefix.
  *
- * Keyed by **what it offers** before what it is called, so every field pointing
- * at the same content type shares a prefix and one mutation expires all of them.
- * The field name stays on the end because two fields onto the same target can
- * still be searched independently.
+ *     [...contentOptionsQueryRoot(target), field, locale]   ← this
+ *                                                 + {search}  ← the combobox
+ *
+ * Why the locale is in it and the search is not is the key's own business, and
+ * `contentOptionsQueryKey` in `../content-query` states both. What this door
+ * adds is the one decision a spec makes: a `user` field has no target content
+ * type, so it goes to {@link CONTENT_USER_TARGET} rather than falling back to
+ * the field name - a token no content type id can collide with, which is what
+ * stops a content mutation ever matching a people picker.
+ *
+ * The locale it costs: a content type whose labels are *not* localized gets one
+ * cache entry per AdminCP language holding identical options. That is the cheap
+ * side of the trade - the alternative is a picker showing names in a language
+ * the rest of the screen is not - and a field spec carries nothing that could
+ * tell the two cases apart.
+ *
+ * ## This family used to sit outside the AdminCP cache root
+ *
+ * It was `["content-options", target, field]` - a bare string matching no prefix
+ * anything drops. `removeAdminShellQueries` clears `["vitnode","admin"]` on
+ * sign-out and never collected these, so one administrator's picker results
+ * stayed in memory and were served to the next person to sign in on that tab.
+ * Moving the family under the admin root fixes that with no list for anybody to
+ * remember, which is the only kind of fix that stays fixed.
  */
 export const contentOptionsQueryKey = (
   spec: ContentFormFieldSpec,
-): unknown[] => [NAMESPACE, spec.targetContentTypeId ?? USERS, spec.name];
+  locale: string,
+): readonly unknown[] =>
+  contentOptionsKeyFor(contentOptionsTarget(spec), spec.name, locale);
 
 /**
  * Every picker that offers rows of one content type.
@@ -41,10 +60,9 @@ export const contentOptionsQueryKey = (
  * Query matches keys by prefix, so this reaches the category picker on an
  * article without either screen having to know the other exists.
  */
-export const contentOptionsQueryKeyFor = (contentTypeId: string): unknown[] => [
-  NAMESPACE,
-  contentTypeId,
-];
+export const contentOptionsQueryKeyFor = (
+  contentTypeId: string,
+): readonly unknown[] => contentOptionsQueryRoot(contentTypeId);
 
 /**
  * Drops the cached options of every picker that offers rows of one content
@@ -70,7 +88,7 @@ export const useInvalidateContentOptions = (): ((
   return React.useCallback(
     (contentTypeId: string) => {
       queryClient.removeQueries({
-        queryKey: contentOptionsQueryKeyFor(contentTypeId),
+        queryKey: contentOptionsQueryRoot(contentTypeId),
       });
     },
     [queryClient],

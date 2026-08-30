@@ -52,6 +52,7 @@
     "react-email": "^6.9.0",
     "react-hook-form": "^7.82.0",
     "sonner": "^2.0.7",
+    "use-intl": "^4.13.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {

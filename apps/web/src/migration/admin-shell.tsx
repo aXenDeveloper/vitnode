@@ -24,28 +24,31 @@ import { useMigrationNavigate } from '#/migration/navigation'
  *
  * ## Why the link seam matters more in the AdminCP than anywhere else
  *
- * Stage 12 moved `/admin` and `/admin/core/*` here; `/admin/content/*` - the
- * whole Content Engine - is still the Next.js application's and is Stage 13's to
- * move. The sidebar links to both, because the navigation model is complete
- * regardless of which application currently renders a destination: routes and
- * navigation are separate concepts, and a nav entry naming a screen this router
- * cannot match is the normal case here rather than an error.
+ * Stage 12 moved `/admin` and `/admin/core/*` here and Stage 13 added
+ * `/admin/content/*`, the whole Content Engine. The sidebar has linked to all of
+ * it throughout, because the navigation model is complete regardless of which
+ * application currently renders a destination: routes and navigation are
+ * separate concepts, and a nav entry naming a screen this router cannot match is
+ * the normal case here rather than an error.
  *
  * `MigrationLink` is what makes that work. It asks the route tree per href, so
- * `/admin/core/users` is a client navigation and
- * `/admin/content/blog/articles` is a document load into the legacy app. There
- * is no list of migrated admin routes here or anywhere else - the route tree is
- * the table - so migrating a screen in a later stage changes a route file and
- * not this component.
+ * `/admin/core/users` and `/admin/content/blog/articles` are client navigations
+ * and an admin screen no route declares is a document load into the legacy app.
+ * There is no list of migrated admin routes here or anywhere else - the route
+ * tree is the table - which is why Stage 13 flipped every content link to a
+ * client navigation by adding one route file and editing neither this component
+ * nor the navigation it is handed.
  *
  * ## `nav` is a projection, not the plugin registry
  *
- * `src/vitnode.config.ts` is server-side and registers the *full* plugin
- * frontends, whose content types carry their editing screens - a graph this
- * application cannot bundle while the Content Engine is still Next's. So the
- * sidebar is built from `#/lib/admin-nav`, which reads the generated
- * browser-safe projection: ids, hrefs, permissions, icons and content type
- * definitions, and nothing that renders a screen.
+ * `src/vitnode.config.ts` is server-side and carries message loaders, which a
+ * browser bundle has no business holding. So the sidebar is built from
+ * `#/lib/admin-nav`, which reads the generated browser-safe projection: ids,
+ * hrefs, permissions, icons and content type definitions, and nothing that
+ * renders a screen. The screens have a projection of their own - see
+ * `#/lib/content-registry`, which the content route imports so that a plugin's
+ * editor fields and form layouts land in that route's chunk rather than in the
+ * shell's.
  *
  * It carries the message namespaces with it, because a plugin group's headings
  * live under that plugin's own id and the shell would otherwise render them as

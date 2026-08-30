@@ -16,25 +16,28 @@ import { PLUGIN_ROUTES_ERROR_PREFIX } from "./diagnostics.js";
  *
  * ## The hole it closes
  *
- * During the strangler migration two applications serve one site. `apps/web`
- * (TanStack) owns `/admin` and `/admin/core/*`; the Next.js app still owns
- * `/admin/content/*`, which is the Content Engine and is Stage 13's to move.
- * Nothing joins them but `MigrationLink`, which asks the TanStack router whether
- * it owns a path and renders a document navigation when it does not.
+ * During the strangler migration two applications serve one site, and a URL a
+ * plugin route claims is a URL some page in one of them already answers.
+ * Nothing joins the two but `MigrationLink`, which asks the TanStack router
+ * whether it owns a path and renders a document navigation when it does not -
+ * so the route tree is what decides, and a plugin route is a way to change it.
  *
- * That question is answered by the route tree, which is exactly why a plugin
- * route can break it. A plugin declaring
+ * A plugin declaring
  *
  *     { area: "admin", id: "posts", path: "/admin/content/blog" }
  *
- * creates a real TanStack route at that URL. `isTanStackOwnedPath` starts
- * answering `true`, `MigrationLink` renders a client navigation, and a working
- * content screen becomes a TanStack not-found - with no error anywhere, because
- * every layer did precisely what it was told.
+ * creates a real TanStack route at that URL, and it breaks whichever
+ * application owns that namespace. Before Stage 13 it stole a working Next.js
+ * content screen: `isTanStackOwnedPath` began answering `true`,
+ * `MigrationLink` rendered a client navigation, and the screen became a
+ * TanStack not-found. Since Stage 13 it collides with the Content Engine's own
+ * splat instead, which is no better - two routes matching one path, and no
+ * error anywhere, because every layer did precisely what it was told.
  *
- * `assertNoHostRouteCollision` cannot see it: it compares against the *host's
- * own route files*, and `/admin/content/*` is not one of them. It is a page in a
- * different application.
+ * `assertNoHostRouteCollision` cannot see either case: it compares against a
+ * host's *own route files*, and the pages that claim `/admin/content/*` are a
+ * package's - shipped into a Next.js app by the copier, and mounted in a
+ * TanStack app under one splat.
  *
  * ## Derived, never listed
  *

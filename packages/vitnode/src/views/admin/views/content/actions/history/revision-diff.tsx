@@ -1,7 +1,7 @@
 // No "use client": reached only from `history-action`, which is a client entry.
 import { ArrowRightIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type {

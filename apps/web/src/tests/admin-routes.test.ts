@@ -14,6 +14,8 @@ const routesDir = resolve(here, '../routes')
 /** The `/admin` sign-in screen, and the pathless shell everything else sits in. */
 const ADMIN_ENTRY_ROUTE_ID = '/admin/'
 const ADMIN_SHELL_ROUTE_ID = '/_admin'
+/** The Content Engine's one splat - Stage 13's whole route surface. */
+const CONTENT_ROUTE_ID = '/_admin/admin/content/$'
 
 const matchedIds = (pathname: string): string[] =>
   getRouter()
@@ -65,34 +67,56 @@ describe('the AdminCP entrance', () => {
  * The single most breakable thing in this stage.
  *
  * `/admin/content/*` is the Content Engine, and it is still served by the
- * Next.js application. With `/admin` a leaf and only declared routes under
- * `_admin`, a request for a content screen matches nothing that consumes it,
- * `isTanStackOwnedPath` answers `false`, and `MigrationLink` renders a document
- * navigation into the app that serves it. No list of migrated routes is involved
- * anywhere.
+ * Next.js application until Stage 13, which moved it here - and the boundary
+ * between "this router owns it" and "the legacy app does" is still decided by
+ * the route tree alone, with no list of migrated paths anywhere.
  *
- * A splat under `_admin`, or making `/admin` a nested layout, breaks all of it
- * at once - and breaks it silently, as a working content screen turning into a
- * TanStack not-found.
+ * Stage 13 added exactly one splat, `/_admin/admin/content/$`, and the whole of
+ * this suite is about how narrow it is. A splat one level up - `_admin/$`, or
+ * `/_admin/admin/$`, or making `/admin` a nested layout - would consume every
+ * AdminCP URL this app has *not* migrated, `isTanStackOwnedPath` would start
+ * answering `true` for them, `MigrationLink` would render a client navigation,
+ * and every unmigrated screen would become a TanStack not-found reached from a
+ * working sidebar link. Silently, and all at once.
  */
-describe('the Content Engine keeps its URLs', () => {
+describe('the Content Engine owns its namespace', () => {
   it.each([
-    '/admin/content',
     '/admin/content/blog',
     '/admin/content/blog/posts',
     '/admin/content/blog/posts/create',
+    '/admin/content/blog/posts/42/edit',
     '/admin/content/anything/at/all',
-  ])('%s is not owned by this router', (pathname) => {
-    expect(owns(pathname)).toBe(false)
+  ])('%s is served by this router', (pathname) => {
+    expect(owns(pathname)).toBe(true)
+    expect(matchedIds(pathname)).toContain(ADMIN_SHELL_ROUTE_ID)
+    expect(matchedIds(pathname)).toContain(CONTENT_ROUTE_ID)
   })
 
+  /**
+   * The bare namespace matches the splat too, with nothing in it.
+   *
+   * Owned, and then answered by the loader rather than the router: the resolver
+   * returns `undefined` for an empty segment list, so `/admin/content` is the
+   * AdminCP's not-found. There is no index screen listing every content type,
+   * and inventing one here would be a URL the Next.js AdminCP never served.
+   */
+  it('claims /admin/content itself, and resolves it to nothing', () => {
+    expect(matchedIds('/admin/content')).toContain(CONTENT_ROUTE_ID)
+  })
+
+  /**
+   * The half that must not regress. Everything under `/admin` that this stage
+   * has *not* migrated keeps answering `false`, or the AdminCP loses the screens
+   * it has not moved yet.
+   */
   it.each([
     '/admin/nonexistent',
     '/admin/core/not-migrated-yet',
     '/admin/some/plugin/screen',
+    // Adjacent to the namespace on both sides, and neither is inside it.
+    '/admin/contents',
+    '/admin/content-types',
   ])('%s is left to the legacy app rather than claimed', (pathname) => {
-    // Everything under `/admin` that this stage has not migrated must keep
-    // answering `false`, or the AdminCP loses the screens it has not moved yet.
     expect(owns(pathname)).toBe(false)
   })
 
@@ -178,16 +202,40 @@ describe('nothing may claim the admin subtree by accident', () => {
   }
 
   /**
-   * A catch-all child of `_admin` - `$.tsx`, `$slug.tsx` - consumes
-   * `/admin/content/*` and every other unmigrated admin URL. The route file
-   * naming is the whole mechanism, so the file names are what this checks.
+   * The Content Engine's splat, and no other.
+   *
+   * A catch-all child of `_admin` consumes every unmigrated admin URL, so the
+   * route file naming is the whole mechanism and the file names are what this
+   * checks. Stage 13 adds exactly one - `/admin/content/$`, the namespace the
+   * Content Engine owns outright - and this is the assertion that keeps it the
+   * only one.
+   *
+   * Written as an allowlist of one rather than as "no splats", because the
+   * failure it guards against did not go away when a legitimate splat appeared:
+   * `$.tsx` or `admin.$.tsx` beside it would still swallow the whole AdminCP.
    */
-  it('declares no splat or catch-all under the admin shell', () => {
-    const offenders = adminRouteFiles().filter((name) =>
+  const CONTENT_SPLAT_FILE = 'admin.content.$.tsx'
+
+  it("declares exactly one splat under the admin shell, and it is the Content Engine's", () => {
+    const splats = adminRouteFiles().filter((name) =>
       /(^|[./])\$(\.|$)/.test(name),
     )
 
-    expect(offenders).toEqual([])
+    expect(splats).toEqual([CONTENT_SPLAT_FILE])
+  })
+
+  /**
+   * A splat is only as narrow as its path. The file name above could sit at
+   * `/admin/content/$` or - one careless rename later - somewhere far wider, and
+   * the name alone would not say which, so the route id is asserted too.
+   */
+  it('mounts that splat at the Content Engine namespace and nowhere wider', () => {
+    const ids = Object.keys(getRouter().routesById)
+    const splatIds = ids.filter(
+      (id) => id.startsWith('/_admin') && id.endsWith('/$'),
+    )
+
+    expect(splatIds).toEqual([CONTENT_ROUTE_ID])
   })
 
   /**

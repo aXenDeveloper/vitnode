@@ -1,12 +1,6 @@
-import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
+import { buildPlugin } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
-import { BlogArticleEditorField } from "@/views/admin/article/editor-field";
-import { BlogArticleFormLayout } from "@/views/admin/article/form-layout";
-import { BlogCategoryColorCell } from "@/views/admin/category/color-cell";
-import { BlogCategoryColorField } from "@/views/admin/category/color-field";
-
-import { blogCategoryNav, blogPostNav } from "./admin/nav";
+import { adminContent } from "./admin/content";
 import messages from "./locales";
 
 /**
@@ -17,42 +11,21 @@ import messages from "./locales";
  * and the delete confirmation are all generated. No page under
  * `src/routes/admin` renders a table any more, and no view calls a mutation.
  *
- * The overrides are the two escape hatches, one of each kind. `fields` replaces
- * an input, `columns` replaces a table cell, and `forms.layout` replaces the
- * arrangement of a whole form - never its behaviour.
+ * None of it is written here. `./admin/content` is the canonical declaration -
+ * the content types with their overrides - and this spreads it, so the two
+ * AdminCPs read one list through two doors:
  *
- * What each content type *is* - its definition and its sidebar icon - is spread
- * in from `./admin/nav` rather than written here. That module is browser-safe
- * and is what an application which cannot import this file reads to draw the
- * blog's sidebar entries; keeping the pairs there and the overrides here is what
- * stops the two AdminCPs disagreeing about which icon a screen has.
+ *     admin/nav.tsx      browser-safe   what exists: definitions and icons
+ *     admin/content.tsx  browser-safe   how it edits: fields, columns, layouts
+ *     config.tsx         server         the whole plugin: the above, plus messages
+ *
+ * A Next.js application registers this file and walks the registry in its render
+ * pass. A TanStack Start application cannot - its config is server-side on
+ * purpose - so it imports `admin/content` through a generated registry of
+ * literal specifiers instead. Same declarations, same components, two doors.
  */
-export const blogPlugin = () => {
-  return buildPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+export const blogPlugin = () =>
+  buildPlugin({
+    ...adminContent,
     messages,
-    contentTypes: [
-      contentTypeAdmin({
-        ...blogPostNav,
-        fields: {
-          // The Tiptap editor, inside the same AutoForm as everything else.
-          content: { component: BlogArticleEditorField },
-        },
-        forms: {
-          // One layout for both actions - they are the same screen, and writing
-          // it twice is how two screens drift apart.
-          layout: BlogArticleFormLayout,
-        },
-      }),
-      contentTypeAdmin({
-        ...blogCategoryNav,
-        fields: {
-          color: { component: BlogCategoryColorField },
-        },
-        columns: {
-          color: { cell: BlogCategoryColorCell },
-        },
-      }),
-    ],
   });
-};

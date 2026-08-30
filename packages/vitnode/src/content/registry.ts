@@ -12,9 +12,11 @@ import {
   CONTENT_PERMISSIONS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
+  isFilterableFieldKind,
   RESERVED_FILTER_KEYS,
 } from "./const";
 import { ContentEngineError } from "./errors";
+import { partitionContentFields } from "./localization";
 
 /** A definition plus the plugin that registered it. */
 export interface RegisteredContentType {
@@ -462,6 +464,48 @@ export const orderableColumns = (
   ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
   ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
 ];
+
+/**
+ * Query-string keys the generated **admin list** route accepts as filters.
+ *
+ * The client-side reading of `filterShape(writableFields)` in
+ * `content/schemas.ts`, and it has to stay the client-side reading of *that*
+ * rather than a rule of its own. Two things depend on getting it right, and they
+ * fail in opposite directions:
+ *
+ * - Claim a key the route ignores and it is carried in the URL and folded into
+ *   a cache key, so two identical requests become two entries.
+ * - Miss a key the route honours and a filter silently stops filtering - the
+ *   list renders every record and nothing says why.
+ *
+ * Three rules, each mirroring one line of the schema:
+ *
+ * - **A filterable kind.** `CONTENT_FILTERABLE_FIELD_KINDS`, the same list the
+ *   query builder branches on. A `group`, a `repeatable`, a `date` and a `file`
+ *   have no filter and never did.
+ * - **Not localized.** The schema filters `writableFields`, which is the shared
+ *   and collection halves - a localized `slug` or `text` lives on the
+ *   translation table and has no column on the row being filtered.
+ * - **Plus `status`**, for a content type with publication. It is not a declared
+ *   field, so nothing above would find it, and it is the one filter the AdminCP
+ *   list actually uses in practice.
+ *
+ * Sorted, so the set is deterministic wherever it is compared or serialised.
+ */
+export const contentFilterableFields = (
+  definition: AnyContentTypeDefinition,
+): string[] => {
+  const { collectionFields, sharedFields } = partitionContentFields(
+    definition.fields,
+  );
+
+  return [
+    ...Object.entries({ ...sharedFields, ...collectionFields })
+      .filter(([, field]) => isFilterableFieldKind(field.kind))
+      .map(([name]) => name),
+    ...(definition.publication.enabled ? ["status"] : []),
+  ].sort((a, b) => a.localeCompare(b));
+};
 
 /**
  * Column names the *public* list route may order by.

@@ -6,8 +6,8 @@ import {
   TriangleAlertIcon,
   UploadIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { FileRejectionReason } from "@/lib/file-constraints";
 

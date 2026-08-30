@@ -22,6 +22,8 @@ import {
   parseContentUnprocessable,
 } from "@/content/conflicts";
 
+import type { TranslationRow } from "../content-mutation";
+
 import {
   invalidateContentLocales,
   readContentPublicLocales,
@@ -119,16 +121,16 @@ const zodRevisionList = z.object({
   }),
 });
 
-/** One locale's row, as the tab strip and the panel read it. */
-export interface TranslationRow {
-  itemId: number;
-  languageId: number;
-  locale: string;
-  publishedAt?: null | string;
-  status?: string;
-  values: Record<string, unknown>;
-  version: number;
-}
+/**
+ * One locale's row, as the tab strip and the panel read it.
+ *
+ * Declared in `../content-mutation` since Stage 13 and re-exported here, so the
+ * name every existing caller imports still resolves. A `"use server"` module is
+ * Next-only by construction, and a TanStack Start form needs this type without
+ * the module it used to live in - a type re-export is erased, so this line costs
+ * that graph nothing.
+ */
+export type { TranslationRow };
 
 /**
  * The cache work one translation mutation owes, taken as a before-and-after pair.

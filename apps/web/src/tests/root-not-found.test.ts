@@ -1,0 +1,69 @@
+import { describe, expect, it } from 'vitest'
+
+import { getRouter } from '#/router'
+
+/**
+ * What a URL nothing matched gets.
+ *
+ * There are two 404s in this application and they are answered in different
+ * places, which is the whole of what this file pins:
+ *
+ *     matched, then `notFound()`   the nearest `notFoundComponent` above it
+ *     matched nothing at all       the root's
+ *
+ * The second had no answer until now. TanStack Router falls back to its own bare
+ * `<p>Not Found</p>` when neither the root route nor `createRouter` declares
+ * one, and warns about it on every such navigation - so `/admin/contents`, a
+ * stale bookmark and any path the Next.js application still serves all landed on
+ * an unstyled page with no way back.
+ *
+ * `matchRoutes` is the router's own answer and runs no loader, so what is
+ * asserted here is the *tree*: which routes a path resolves to, and whether the
+ * deepest of them consumed it.
+ */
+
+const matchedIds = (pathname: string): string[] =>
+  getRouter()
+    .matchRoutes(pathname, undefined)
+    .map((match) => match.routeId)
+
+describe('the root route answers for everything unmatched', () => {
+  it('declares a notFoundComponent', () => {
+    // The option itself, because its absence is not a failure anywhere else:
+    // the router renders *something* either way, and the difference only shows
+    // up as an unstyled page and a console warning.
+    expect(
+      getRouter().routesById.__root__.options.notFoundComponent,
+    ).toBeDefined()
+  })
+
+  it.each([
+    // Adjacent to a namespace this app owns, and inside neither.
+    '/admin/contents',
+    '/admin/core/not-migrated-yet',
+    // Pages the Next.js application still serves. A link to one of these is a
+    // document navigation - `MigrationLink` asks the route tree - so what
+    // reaches the root is somebody typing or a stale bookmark.
+    '/blog/post-30',
+    '/users/aXen',
+    '/nope',
+  ])('%s resolves to the root and nothing else', (pathname) => {
+    expect(matchedIds(pathname)).toEqual(['__root__'])
+  })
+
+  /**
+   * The half that must not regress with it.
+   *
+   * `/admin/content/nope` names no content type, but it *matches* - the Content
+   * Engine owns the whole namespace - so its loader answers `notFound()` and
+   * `_admin`'s component renders the message inside the panel. Sending it to the
+   * root instead would drop an administrator out of the AdminCP for a typo.
+   */
+  it.each(['/admin/content/nope', '/admin/content/blog/articles/9999/edit'])(
+    '%s stays inside the admin shell',
+    (pathname) => {
+      expect(matchedIds(pathname)).toContain('/_admin')
+      expect(matchedIds(pathname)).not.toEqual(['__root__'])
+    },
+  )
+})

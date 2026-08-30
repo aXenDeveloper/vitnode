@@ -1,8 +1,6 @@
 "use client";
 
-import { useTranslations } from "use-intl";
-
-import { ErrorContent } from "@/views/error/error-content";
+import { NotFound } from "../layout/not-found";
 
 /**
  * The AdminCP's 404 - the answer a screen this administrator may not open gets,
@@ -24,22 +22,14 @@ import { ErrorContent } from "@/views/error/error-content";
  * message, and the shell needs a link component and a user lookup that only a
  * host can supply.
  *
- * `core.global` carries the two strings below. Both the host's root and the
- * shell provide it, so this renders correctly either way.
+ * ## It is `NotFound`, and the difference is where it is mounted
  *
- * `actions` is a slot for the same reason `ErrorContent` takes one: "go back"
- * and "go home" are navigation, and during the migration only the host knows
- * which application serves `/`.
+ * The message is identical to the one the root route renders for a URL nothing
+ * matched, so it is the same component rather than a second copy of the same
+ * three lines - a 404 that read differently inside the AdminCP would be a
+ * distinction without a reason. What is admin-specific is the *mounting* rule
+ * above, which is the host route's, and the `actions` this is handed.
  */
-export const AdminNotFound = ({ actions }: { actions?: React.ReactNode }) => {
-  const t = useTranslations("core.global");
-
-  return (
-    <ErrorContent
-      actions={actions}
-      code={404}
-      description={t("errors.404.desc")}
-      title={t("errors.404.title")}
-    />
-  );
-};
+export const AdminNotFound = ({ actions }: { actions?: React.ReactNode }) => (
+  <NotFound actions={actions} />
+);

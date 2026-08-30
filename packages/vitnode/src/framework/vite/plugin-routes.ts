@@ -16,6 +16,7 @@ import { pathToFileURL } from "node:url";
 import type { PluginRouteDefinition } from "@/routing";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
+import type { ResolvedContentRegistryModule } from "../content-registry";
 import type {
   HostRoutePath,
   LegacyRoutePath,
@@ -24,6 +25,7 @@ import type {
 } from "../plugin-routes";
 
 import { generateAdminNavSource } from "../admin-nav";
+import { generateContentRegistrySource } from "../content-registry";
 import {
   compilePluginRoutes,
   hostRoutePathsFromFiles,
@@ -55,6 +57,22 @@ const MANIFEST_SUBPATH = "routes/manifest";
  * is only ask whether it resolves.
  */
 const ADMIN_NAV_SUBPATH = "admin/nav";
+
+/**
+ * Where a plugin declares its Content Engine frontend registrations, as a
+ * package export subpath.
+ *
+ * Optional in exactly the way `admin/nav` is, and absent for the same reason:
+ * most plugins register no content types, and a missing module has to mean
+ * "none" rather than failing the build of every app that installs one.
+ *
+ * A **browser-safe** module by contract - content type definitions, icons, and
+ * the components that override a generated field, table cell or form layout. It
+ * carries React components, which is precisely why the generated file imports it
+ * by a literal specifier instead of serialising anything: this pass only ever
+ * asks whether it resolves.
+ */
+const ADMIN_CONTENT_SUBPATH = "admin/content";
 
 const ERROR_PREFIX = "[VitNode plugin routes]";
 
@@ -110,6 +128,14 @@ const pathsFor = (appRoot: string) => ({
    * one step rather than two.
    */
   adminNav: join(appRoot, "src", "admin-nav.gen.ts"),
+  /**
+   * The Content Engine frontend registry: one literal import per configured
+   * plugin that registers content types. Written from the same pass over the
+   * same configured plugin list as the other three, so a plugin removed from
+   * the config loses its routes, its sidebar entries and its content screens in
+   * one step rather than three.
+   */
+  contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
   manifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
   /** The file-based router's config, read only for where the routes are. */
@@ -446,37 +472,41 @@ const readLegacyAdminRoutes = (appRoot: string): LegacyRoutePath[] => {
 };
 
 /**
- * Which configured plugins have AdminCP navigation to declare.
+ * Which configured plugins export an optional browser-safe subpath.
  *
- * Resolution *is* the discovery: a plugin appears in the projection by exporting
- * `admin/nav` and is silently absent otherwise, which is the same contract the
- * route manifest has and for the same reason - most plugins contribute neither,
- * and an app that installs one must not fail to build over it.
+ * Resolution *is* the discovery: a plugin appears in a projection by exporting
+ * the module and is silently absent otherwise, which is the same contract the
+ * route manifest has and for the same reason - most plugins contribute neither
+ * navigation nor content types, and an app that installs one must not fail to
+ * build over it.
  *
- * Nothing is imported here. The module is browser-safe by contract but it is
- * also React, and a build tool has no business evaluating it: what the generated
- * file needs is a specifier, and a specifier is a string. The file itself is
- * returned for the dev server to watch, so a plugin *gaining* navigation while
- * the server runs regenerates rather than requiring a restart.
+ * Nothing is imported here. Both modules are browser-safe by contract but both
+ * are also React - `admin/content` carries a plugin's editor fields and form
+ * layouts outright - and a build tool has no business evaluating them: what a
+ * generated file needs is a specifier, and a specifier is a string. The resolved
+ * files are returned for the dev server to watch, so a plugin *gaining* one
+ * while the server runs regenerates rather than requiring a restart.
  *
- * Ordered by the configured plugin list, and re-sorted by
- * `generateAdminNavSource` - so the bytes depend on which plugins are configured
- * and on nothing else.
+ * Ordered by the configured plugin list, and re-sorted by each generator - so
+ * the bytes depend on which plugins are configured and on nothing else.
  */
-const readAdminNavModules = (
+const readOptionalPluginModules = <
+  T extends { pluginId: string; specifier: string },
+>(
   pluginIds: readonly string[],
+  subpath: string,
   resolvePackageFile: (specifier: string) => null | string,
-): { modules: ResolvedAdminNavModule[]; watch: string[] } => {
-  const modules: ResolvedAdminNavModule[] = [];
+): { modules: T[]; watch: string[] } => {
+  const modules: T[] = [];
   const watch: string[] = [];
 
   for (const pluginId of pluginIds) {
-    const specifier = `${pluginId}/${ADMIN_NAV_SUBPATH}`;
+    const specifier = `${pluginId}/${subpath}`;
     const file = resolvePackageFile(specifier);
 
     if (file === null) continue;
 
-    modules.push({ pluginId, specifier });
+    modules.push({ pluginId, specifier } as T);
     watch.push(file);
   }
 
@@ -531,11 +561,22 @@ const discover = async (
       readPluginRoutes(pluginId, resolvePackageFile),
     ),
   );
-  const adminNav = readAdminNavModules(pluginIds, resolvePackageFile);
+  const adminNav = readOptionalPluginModules<ResolvedAdminNavModule>(
+    pluginIds,
+    ADMIN_NAV_SUBPATH,
+    resolvePackageFile,
+  );
+  const contentRegistry =
+    readOptionalPluginModules<ResolvedContentRegistryModule>(
+      pluginIds,
+      ADMIN_CONTENT_SUBPATH,
+      resolvePackageFile,
+    );
 
   const watch = [
     ...loaded.flatMap(({ watch: file }) => file ?? []),
     ...adminNav.watch,
+    ...contentRegistry.watch,
   ];
 
   onLoaded?.(watch);
@@ -553,7 +594,12 @@ const discover = async (
     assertImportable(module, resolvePackageFile);
   });
 
-  return { adminNav: adminNav.modules, compiled, watch };
+  return {
+    adminNav: adminNav.modules,
+    compiled,
+    contentRegistry: contentRegistry.modules,
+    watch,
+  };
 };
 
 /**
@@ -570,19 +616,27 @@ const writeIfChanged = async (path: string, source: string): Promise<void> => {
   if (current !== source) await writeFile(path, source, "utf8");
 };
 
-/** All three generated files, from one discovery pass. */
+/** All four generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
 ): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { adminNav, compiled } = await discover(appRoot, options, onLoaded);
+  const { adminNav, compiled, contentRegistry } = await discover(
+    appRoot,
+    options,
+    onLoaded,
+  );
 
   await Promise.all([
     writeIfChanged(paths.manifest, compiled.manifestSource),
     writeIfChanged(paths.registry, compiled.registrySource),
     writeIfChanged(paths.adminNav, generateAdminNavSource(adminNav)),
+    writeIfChanged(
+      paths.contentRegistry,
+      generateContentRegistrySource(contentRegistry),
+    ),
   ]);
 };
 

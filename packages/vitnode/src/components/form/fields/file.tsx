@@ -2,8 +2,8 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { RotateCcwIcon, XIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { AttachmentAction } from "@/components/ui/attachment";
 import { FormControl, FormMessage } from "@/components/ui/form";

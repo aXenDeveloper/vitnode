@@ -170,6 +170,38 @@ export interface ContentTypeFrontendRegistration {
   icon?: React.ReactNode;
 }
 
+/**
+ * A plugin's Content Engine frontend registration, and nothing else about the
+ * plugin.
+ *
+ * What a plugin exports from `admin/content` - a **browser-safe** module - so an
+ * application can render the generated content screens without importing the
+ * plugin's whole `buildPlugin` call. The same split {@link AdminNavPluginSource}
+ * makes, one level further in:
+ *
+ *     admin/nav       ids, hrefs, permissions, icons, content definitions
+ *     admin/content   the above, plus field, column and form-layout overrides
+ *     config.tsx      the whole plugin - messages, routes, API wiring
+ *
+ * The difference between the first two is what a screen needs over what a link
+ * needs. A sidebar entry is a string and an icon; a content *screen* is those
+ * plus the components that replace a generated input, a generated table cell and
+ * a generated form layout. Both are browser-safe, and neither is the server
+ * config: `vitnode.config.ts` carries message loaders and API plugins, which a
+ * browser bundle has no business holding.
+ *
+ * Structurally a subset of {@link BuildPluginReturn}, deliberately, and that is
+ * what stops the two lists drifting: a plugin writes its registrations once
+ * here, `config.tsx` spreads them into `buildPlugin`, and the Next.js
+ * application and the TanStack Start application read the same declarations
+ * through two doors. A `BuildPluginReturn[]` also satisfies
+ * `ContentFrontendPluginSource[]`, so one registry builder serves both.
+ */
+export interface ContentFrontendPluginSource {
+  contentTypes?: ContentTypeFrontendRegistration[];
+  pluginId: string;
+}
+
 interface TypedContentTypeRegistration<
   TDefinition extends AnyContentTypeDefinition,
 > {

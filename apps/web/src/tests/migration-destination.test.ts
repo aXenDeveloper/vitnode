@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -7,6 +7,8 @@ import {
   migrationDestination,
   migrationNavigateOptions,
 } from '#/migration/navigation'
+
+import { withoutComments } from './source'
 
 /**
  * Where a validated internal path actually leads while half of VitNode still
@@ -282,11 +284,16 @@ describe('the migration layer stays in one place', () => {
   })
 
   it('is the only place that knows about the legacy application', () => {
-    // The env var and the origin it names. A second reader of it is a second
-    // thing to find at cutover.
+    // The env var and the origin it names. A second *reader* of it is a second
+    // thing to find at cutover - which is why the scan is over code with the
+    // comments stripped. A route that names the variable in prose to explain why
+    // it deliberately does not read it (`__root__`, on why an unmatched URL is a
+    // 404 rather than a bounce to the other app) is the opposite of an offender,
+    // and `source.ts` exists for exactly this: the explanations in this codebase
+    // name the things a raw scan is looking for.
     const offenders = outside.filter((path) =>
       /NEXT_PUBLIC_LEGACY_WEB_URL|legacyWebOrigin|buildLegacyHref/.test(
-        readFileSync(path, 'utf8'),
+        withoutComments(path),
       ),
     )
 
@@ -299,7 +306,7 @@ describe('the migration layer stays in one place', () => {
         !path.startsWith(join(appSrc, 'routes')) &&
         path !== join(appSrc, 'router.tsx') &&
         /from '#\/migration\/|from '\.\/migration\//.test(
-          readFileSync(path, 'utf8'),
+          withoutComments(path),
         ),
     )
 
