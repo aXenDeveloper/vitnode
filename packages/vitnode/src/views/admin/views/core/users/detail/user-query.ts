@@ -15,6 +15,7 @@ import type { AdminUserRole } from "@/views/admin/views/core/users/list/users-qu
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 import {
@@ -130,6 +131,8 @@ export const adminUserQueryOptions = ({
     queryFn: async () => await fetchUser(id),
     queryKey: adminUserQueryKey({ adminUserId, id }),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - One member's record, changed by whoever last edited it. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /**

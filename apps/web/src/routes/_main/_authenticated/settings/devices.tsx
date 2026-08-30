@@ -62,7 +62,10 @@ export const Route = createFileRoute('/_main/_authenticated/settings/devices')({
 
     const [panel] = await Promise.all([
       loadSettingsPanel(context, 'devices'),
-      context.queryClient.ensureQueryData(devicesQuery(userId)),
+      context.queryClient.ensureQueryData({
+        ...devicesQuery(userId),
+        revalidateIfStale: true,
+      }),
     ])
 
     return { ...panel, userId }

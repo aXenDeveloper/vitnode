@@ -64,7 +64,10 @@ export const loadAdminIntegrationsRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_INTEGRATIONS_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(integrationsQuery()),
+    queryClient.ensureQueryData({
+      ...integrationsQuery(),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

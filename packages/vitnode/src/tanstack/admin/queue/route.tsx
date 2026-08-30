@@ -66,7 +66,10 @@ export const loadAdminQueueRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_QUEUE_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(queueQuery({ params })),
+    queryClient.ensureQueryData({
+      ...queueQuery({ params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

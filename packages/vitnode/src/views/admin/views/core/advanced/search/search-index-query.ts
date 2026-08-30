@@ -3,6 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import { adminModuleRef, AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
 
@@ -88,4 +89,6 @@ export const searchIndexQueryOptions = ({
     queryFn: async () => await fetchStatus(),
     queryKey: searchIndexQueryKey,
     retry: false,
+    /** {@link OPERATIONAL_STALE_TIME} - A re-index makes progress on its own, which is the whole thing this screen reports. */
+    staleTime: OPERATIONAL_STALE_TIME,
   });

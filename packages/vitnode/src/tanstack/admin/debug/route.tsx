@@ -84,8 +84,14 @@ export const loadAdminDebugRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_DEBUG_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(debugQueueQuery()),
-    queryClient.ensureQueryData(debugLogsQuery({ params })),
+    queryClient.ensureQueryData({
+      ...debugQueueQuery(),
+      revalidateIfStale: true,
+    }),
+    queryClient.ensureQueryData({
+      ...debugLogsQuery({ params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

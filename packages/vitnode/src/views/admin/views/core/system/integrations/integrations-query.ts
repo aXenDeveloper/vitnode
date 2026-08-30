@@ -3,6 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { adminModuleRef, AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
 
@@ -110,4 +111,6 @@ export const integrationsQueryOptions = ({
     queryFn: async () => await fetchIntegrations(),
     queryKey: integrationsQueryKey,
     retry: false,
+    /** {@link RECORD_STALE_TIME} - An integration changes when an administrator configures it. */
+    staleTime: RECORD_STALE_TIME,
   });

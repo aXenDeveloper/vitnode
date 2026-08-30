@@ -87,7 +87,10 @@ export const loadMyFilesRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: MY_FILES_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(myFilesQuery({ params, userId })),
+    queryClient.ensureQueryData({
+      ...myFilesQuery({ params, userId }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

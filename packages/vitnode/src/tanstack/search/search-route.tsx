@@ -59,7 +59,10 @@ export const loadSearchRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: SEARCH_NAMESPACES }),
     ),
-    queryClient.ensureInfiniteQueryData(feedQueryOptions({ locale, params })),
+    queryClient.ensureInfiniteQueryData({
+      ...feedQueryOptions({ locale, params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

@@ -8,6 +8,7 @@ import type {
 } from "@/views/admin/table/params";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import {
   adminModuleRef,
   AdminRequestError,
@@ -139,4 +140,6 @@ export const queueQueryOptions = ({
     queryFn: async () => await fetchPage(params),
     queryKey: queueQueryKey(params),
     retry: false,
+    /** {@link OPERATIONAL_STALE_TIME} - Jobs drain while the screen is open; a revisit should not show a queue that has already emptied. */
+    staleTime: OPERATIONAL_STALE_TIME,
   });

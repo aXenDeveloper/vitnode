@@ -79,7 +79,10 @@ export const loadAdminStaffRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_STAFF_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(adminStaffQuery({ adminUserId, params, type })),
+    queryClient.ensureQueryData({
+      ...adminStaffQuery({ adminUserId, params, type }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

@@ -9,6 +9,7 @@ import type {
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import {
   AdminRequestError,
   describeAdminParams,
@@ -149,6 +150,8 @@ export const adminRolesQueryOptions = ({
     queryFn: async () => await fetchPage(params),
     queryKey: adminRolesQueryKey({ adminUserId, params }),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - Roles change when somebody edits them, and rarely. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /* -------------------------------------------------------------------------- */

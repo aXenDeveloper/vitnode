@@ -8,6 +8,7 @@ import type {
 } from "@/views/admin/table/params";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import {
   adminModuleRef,
   AdminRequestError,
@@ -162,4 +163,6 @@ export const cronQueryOptions = ({
     queryFn: async () => await fetchPage(params),
     queryKey: cronQueryKey(params),
     retry: false,
+    /** {@link OPERATIONAL_STALE_TIME} - A cron job's next run and last result move without anybody pressing anything. */
+    staleTime: OPERATIONAL_STALE_TIME,
   });

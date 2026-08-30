@@ -4,6 +4,7 @@ import type { searchModule } from "@/api/modules/search/search.module";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { SearchFeedPage } from "./types";
 
@@ -265,6 +266,20 @@ export const searchFeedQueryOptions = ({
     queryFn: async ({ pageParam, signal }) =>
       await fetchPage({ cursor: pageParam, locale, params }, { signal }),
     queryKey: searchFeedQueryKey({ locale, params }),
+    /**
+     * {@link RECORD_STALE_TIME} - a feed changes when somebody publishes, which
+     * is an edit like any other, just made by a stranger rather than a colleague.
+     *
+     * This is the definition `feedQueryOptions` and therefore Discover both
+     * delegate to, so the window covers `/search` and `/discover` at once - which
+     * is the point of there being one definition.
+     *
+     * Only the *first* page carries it in practice: `fetchNextPage` appends and
+     * is driven by the reader, and a revalidation of an infinite query refetches
+     * the pages already loaded rather than resetting the list somebody is part
+     * way down.
+     */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /**

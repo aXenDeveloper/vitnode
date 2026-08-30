@@ -4,6 +4,7 @@ import type { usersModule } from "@/api/modules/users/users.module";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 /**
  * The devices the signed-in visitor is logged in on, as one query definition.
@@ -286,6 +287,8 @@ export const devicesQueryOptions = ({
     queryFn: async () => await fetchDevices(),
     queryKey: devicesQueryKey(userId),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - A sign-in on another device adds a row this screen would otherwise never show. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /**

@@ -5,6 +5,7 @@ import type { AdminDashboardWidgetLayoutItem } from "@/database/dashboard";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { adminModuleRef } from "@/views/admin/admin-request";
 import {
   ADMIN_DASHBOARD_SCREEN,
@@ -103,6 +104,8 @@ export const dashboardLayoutQueryOptions = ({
   queryOptions({
     queryFn: async () => await fetchLayout(),
     queryKey: dashboardLayoutQueryKey(adminUserId),
+    /** {@link RECORD_STALE_TIME} - One administrator's own board, which they may have rearranged in a second tab. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /**

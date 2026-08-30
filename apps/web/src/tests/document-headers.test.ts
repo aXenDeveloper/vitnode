@@ -72,15 +72,41 @@ describe('a rendered document', () => {
   })
 
   /**
-   * A default, not an override. A route that has decided its own caching keeps
-   * that decision; this exists for the documents that said nothing.
+   * An invariant, not a default - and this is the assertion that says so.
+   *
+   * A route setting `public, max-age=60` is not expressing a preference this
+   * module should weigh; it is expressing a belief about the body that is false.
+   * The dehydrated session is put into the stream by the SSR/Query integration,
+   * not by the route, so the route is opting out on behalf of a payload it does
+   * not know is there. Overwriting is the only correct answer.
    */
-  it('leaves a directive a route already chose', () => {
+  it('overrides a route that asked to be publicly cached', () => {
     const response = html({ 'cache-control': 'public, max-age=60' })
 
     applyDocumentCacheControl(response)
 
-    expect(cacheControl(response)).toBe('public, max-age=60')
+    expect(cacheControl(response)).toBe(DOCUMENT_CACHE_CONTROL)
+  })
+
+  /**
+   * Including directives that already look cautious.
+   *
+   * `private, max-age=600` bars a shared cache but still lets the browser keep
+   * the document on disk for ten minutes, which is the half that matters on a
+   * shared machine. "Nearly right" is the case most likely to be written by
+   * somebody meaning well, so it is normalised like any other.
+   */
+  it.each([
+    ['private, max-age=600'],
+    ['no-cache'],
+    ['max-age=0, must-revalidate'],
+    ['s-maxage=30'],
+  ])('normalises %s to the invariant', (directive) => {
+    const response = html({ 'cache-control': directive })
+
+    applyDocumentCacheControl(response)
+
+    expect(cacheControl(response)).toBe(DOCUMENT_CACHE_CONTROL)
   })
 })
 
@@ -150,11 +176,32 @@ describe('a locale redirect', () => {
     expect(cacheControl(response)).toBe(DOCUMENT_CACHE_CONTROL)
   })
 
-  it('leaves a directive that is already there', () => {
+  /**
+   * A cookie-carrying redirect that also claims to be public is overwritten.
+   *
+   * What makes it unshareable is the `Set-Cookie` beside the directive, not the
+   * directive itself - so the directive does not get a vote.
+   */
+  it('overrides a public directive when it writes the locale cookie', () => {
     const response = redirect({
       'cache-control': 'public, max-age=3600',
       'set-cookie': 'vitnode-locale=pl; Path=/',
     })
+
+    applyRedirectCacheControl(response)
+
+    expect(cacheControl(response)).toBe(DOCUMENT_CACHE_CONTROL)
+  })
+
+  /**
+   * The cookie-less redirect keeps its existing semantics, directive and all.
+   *
+   * The narrower rule is the point: this one carries no private state, so there
+   * is nothing here to protect and nothing to override. A `308` that says it is
+   * cacheable for an hour goes on saying so.
+   */
+  it('leaves a cookie-less redirect and its directive untouched', () => {
+    const response = redirect({ 'cache-control': 'public, max-age=3600' })
 
     applyRedirectCacheControl(response)
 

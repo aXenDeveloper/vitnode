@@ -65,7 +65,10 @@ export const loadAdminSearchIndexRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_SEARCH_INDEX_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(searchIndexQuery()),
+    queryClient.ensureQueryData({
+      ...searchIndexQuery(),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

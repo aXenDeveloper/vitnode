@@ -8,6 +8,7 @@ import type {
 } from "@/views/admin/table/params";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import {
   adminModuleRef,
   AdminRequestError,
@@ -143,4 +144,6 @@ export const adminFilesQueryOptions = ({
     queryFn: async () => await fetchPage(params),
     queryKey: adminFilesQueryKey(params),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - Uploads and deletions are things people do; a local one already invalidates this family. */
+    staleTime: RECORD_STALE_TIME,
   });

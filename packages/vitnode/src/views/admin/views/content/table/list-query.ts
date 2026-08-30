@@ -6,6 +6,8 @@ import type {
   AdminTablePageInfo,
 } from "@/views/admin/table/params";
 
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+
 import type { ContentApiRequest, ContentApiTarget } from "../content-request";
 import type { ContentRowData } from "./cells";
 
@@ -253,4 +255,6 @@ export const contentListQueryOptions = ({
     queryFn: async ({ signal }) => await fetchPage(request, { signal }),
     queryKey: contentListRequestKey(request),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - Records are written by editors; a publish elsewhere is exactly what this catches. */
+    staleTime: RECORD_STALE_TIME,
   });

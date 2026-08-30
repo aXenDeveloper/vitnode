@@ -10,6 +10,7 @@ import type {
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import {
   AdminRequestError,
   adminModuleRef as buildAdminModuleRef,
@@ -275,6 +276,8 @@ export const adminUsersQueryOptions = ({
     queryFn: async ({ signal }) => await fetchPage(params, { signal }),
     queryKey: adminUsersQueryKey({ adminUserId, params }),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - Members are created, edited and verified by people; this window catches another administrator's edit. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /* -------------------------------------------------------------------------- */

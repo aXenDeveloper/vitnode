@@ -205,14 +205,15 @@ export const loadContentAdminRoute = async ({
   const [intl] = await Promise.all([
     queryClient.ensureQueryData(intlQueryOptions({ locale, namespaces })),
     listParams
-      ? queryClient.ensureQueryData(
-          contentListPageQuery({
+      ? queryClient.ensureQueryData({
+          ...contentListPageQuery({
             definition: entry.definition,
             locale,
             params: listParams,
             pluginId: entry.pluginId,
           }),
-        )
+          revalidateIfStale: true,
+        })
       : undefined,
   ]);
 

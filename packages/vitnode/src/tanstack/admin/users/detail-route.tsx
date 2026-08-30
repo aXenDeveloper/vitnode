@@ -106,7 +106,10 @@ export const loadAdminUserRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_USER_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(adminUserQuery({ adminUserId, id })),
+    queryClient.ensureQueryData({
+      ...adminUserQuery({ adminUserId, id }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

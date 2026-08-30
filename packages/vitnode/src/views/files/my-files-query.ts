@@ -5,6 +5,7 @@ import type { userFilesModule } from "@/api/modules/users/files/files.module";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 /**
  * The signed-in visitor's own files, as one query definition.
@@ -463,6 +464,8 @@ export const myFilesQueryOptions = ({
     queryFn: async ({ signal }) => await fetchPage(params, { signal }),
     queryKey: myFilesQueryKey({ params, userId }),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - A delete here invalidates immediately; this catches one performed on another device. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /**

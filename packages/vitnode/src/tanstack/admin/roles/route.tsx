@@ -69,7 +69,10 @@ export const loadAdminRolesRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_ROLES_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(adminRolesQuery({ adminUserId, params })),
+    queryClient.ensureQueryData({
+      ...adminRolesQuery({ adminUserId, params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const messages = intl.messages as {

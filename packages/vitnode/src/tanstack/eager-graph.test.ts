@@ -150,21 +150,106 @@ const loaderModules = walk(join(src, "tanstack")).filter(
 );
 
 /**
- * Libraries that only a rendered screen needs.
+ * Libraries that only a rendered screen needs, as *exact package names*.
  *
- * Each was measured in the client entry at the start of Stage 14 and is there
- * for a reason worth naming: `@tiptap` is the content editor, `react-hook-form`
- * and `@hookform` are the AutoForm stack, `@dnd-kit` is the dashboard's widget
- * grid and the form builder's field ordering, and `cmdk` is the AdminCP command
- * palette. None belongs on the path a visitor takes to `/`.
+ * Each was measured in the client entry at the start of Stage 14: `cmdk` is the
+ * AdminCP command palette and `react-hook-form` is the AutoForm stack's core.
+ * Neither belongs on the path a visitor takes to `/`.
  */
-const SCREEN_ONLY_PACKAGES = [
-  "@dnd-kit",
-  "@hookform",
-  "@tiptap",
-  "cmdk",
-  "react-hook-form",
-];
+const SCREEN_ONLY_PACKAGES = new Set(["cmdk", "react-hook-form"]);
+
+/**
+ * The same rule, for whole scopes - and the reason the two lists are separate.
+ *
+ * `reachableFrom` narrows a bare specifier to its package name, which for a
+ * scoped package is *scope and name* (`@tiptap/react`), never the scope alone.
+ * These entries used to sit in the list above and be checked with `Set.has`, so
+ * `has("@tiptap")` was asked of a set containing `@tiptap/react`, `@tiptap/core`
+ * and `@tiptap/starter-kit` - and answered `false` every time. The rule read as
+ * though it covered the content editor, the widget grid and the resolver layer,
+ * and covered none of them.
+ *
+ * Splitting them is what makes the distinction visible rather than implied: an
+ * entry here means "every package in this scope", and an entry above means "this
+ * package". A scope is written without a trailing slash and matched on the
+ * boundary, so `@tiptap` cannot also match a hypothetical `@tiptaphelper`.
+ *
+ * `@tiptap` is the content editor, `@dnd-kit` is the dashboard's widget grid and
+ * the form builder's field ordering, `@hookform` is the AutoForm resolver layer.
+ */
+const SCREEN_ONLY_SCOPES = new Set(["@dnd-kit", "@hookform", "@tiptap"]);
+
+/**
+ * Whether one package name is a screen-only library.
+ *
+ * Pure, and exported to its own describe block below, because the last version
+ * of this rule was wrong in a way no loader assertion could reveal: a matcher
+ * that silently matches nothing passes every "found nothing" test in the file.
+ */
+const isScreenOnlyPackage = (name: string): boolean =>
+  SCREEN_ONLY_PACKAGES.has(name) ||
+  (name.startsWith("@") && SCREEN_ONLY_SCOPES.has(name.split("/")[0]));
+
+/**
+ * The matcher itself, before it is trusted with the graph.
+ *
+ * Every assertion in the suite below is a "found nothing" one, and a matcher
+ * that matches nothing satisfies all of them - which is precisely how the scope
+ * entries went unchecked. So the matcher is pinned directly, in both directions:
+ * what it must catch, and what it must not.
+ */
+describe("the screen-only matcher", () => {
+  it.each([
+    ["@tiptap/react", "@tiptap"],
+    ["@tiptap/core", "@tiptap"],
+    ["@tiptap/starter-kit", "@tiptap"],
+    ["@dnd-kit/core", "@dnd-kit"],
+    ["@dnd-kit/sortable", "@dnd-kit"],
+    ["@hookform/resolvers", "@hookform"],
+  ])("rejects %s by its scope %s", packageName => {
+    expect(isScreenOnlyPackage(packageName)).toBe(true);
+  });
+
+  it.each([["react-hook-form"], ["cmdk"]])(
+    "rejects %s by exact name",
+    packageName => {
+      expect(isScreenOnlyPackage(packageName)).toBe(true);
+    },
+  );
+
+  /** A scope root on its own, in case a specifier ever arrives narrowed to one. */
+  it.each([["@tiptap"], ["@dnd-kit"], ["@hookform"]])(
+    "rejects the bare scope %s",
+    scope => {
+      expect(isScreenOnlyPackage(scope)).toBe(true);
+    },
+  );
+
+  it.each([
+    ["@tanstack/react-router"],
+    ["@tanstack/react-query"],
+    ["use-intl"],
+    ["react"],
+    ["zod"],
+  ])("allows %s", packageName => {
+    expect(isScreenOnlyPackage(packageName)).toBe(false);
+  });
+
+  /**
+   * The boundary a prefix match would get wrong.
+   *
+   * `@tiptapx/thing` shares five characters with a forbidden scope and is not in
+   * it. Matching on the scope segment rather than on `startsWith` is what makes
+   * that distinction, and it is worth an assertion because the naive spelling is
+   * the one somebody reaches for when fixing this kind of bug.
+   */
+  it.each([["@tiptapx/thing"], ["@dnd-kitten/core"], ["react-hook-form-x"]])(
+    "does not reject %s on a partial name match",
+    packageName => {
+      expect(isScreenOnlyPackage(packageName)).toBe(false);
+    },
+  );
+});
 
 describe("route loader modules", () => {
   it("exist, so a rename cannot silently empty this suite", () => {
@@ -191,10 +276,31 @@ describe("route loader modules", () => {
     expect(components).toEqual([]);
   });
 
+  /**
+   * The control for the assertion below.
+   *
+   * `expect(offenders).toEqual([])` is satisfied just as well by a walk that
+   * reaches no packages at all as by one that reaches only permitted ones - and a
+   * silently empty walk is exactly the failure this file has already had once.
+   * So: the loaders do reach bare packages, and `@tanstack/react-router` is one
+   * of them, because every one of these modules is a route.
+   */
+  it("reaches real packages, so the rule below is not vacuous", () => {
+    const reached = loaderModules.flatMap(file => [
+      ...reachableFrom(file).packages,
+    ]);
+
+    expect(reached).toContain("@tanstack/react-router");
+    expect(reached.some(name => name.startsWith("@"))).toBe(true);
+  });
+
   it.each(loaderModules)("%s pulls in no screen-only library", file => {
     const { packages } = reachableFrom(file);
 
-    expect(SCREEN_ONLY_PACKAGES.filter(name => packages.has(name))).toEqual([]);
+    // Filtered from what was *reached* rather than from the forbidden list, so a
+    // failure names the specifier that is actually in the graph - `@tiptap/react`
+    // rather than `@tiptap` - which is the thing a reader has to go and remove.
+    expect([...packages].filter(isScreenOnlyPackage)).toEqual([]);
   });
 });
 

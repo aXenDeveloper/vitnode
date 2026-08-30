@@ -70,7 +70,10 @@ export const loadAdminFilesRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_FILES_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(adminFilesQuery({ params })),
+    queryClient.ensureQueryData({
+      ...adminFilesQuery({ params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

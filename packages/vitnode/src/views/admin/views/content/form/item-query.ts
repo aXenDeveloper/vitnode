@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import type { AnyContentTypeDefinition } from "@/content/types";
 
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+
 import type { TranslationRow } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
 
@@ -143,6 +145,8 @@ export const contentItemQueryOptions = ({
     queryFn: async () => await fetchItem(request),
     queryKey: contentItemQueryKey(request.contentTypeId, request.itemId),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - One record, whose version may have moved under a second editor. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /**

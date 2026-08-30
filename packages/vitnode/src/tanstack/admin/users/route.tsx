@@ -103,7 +103,10 @@ export const loadAdminUsersRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_USERS_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(adminUsersQuery({ adminUserId, params })),
+    queryClient.ensureQueryData({
+      ...adminUsersQuery({ adminUserId, params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const messages = intl.messages as {

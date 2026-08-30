@@ -97,7 +97,10 @@ export const loadAdminCronRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_CRON_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(cronQuery({ params })),
+    queryClient.ensureQueryData({
+      ...cronQuery({ params }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

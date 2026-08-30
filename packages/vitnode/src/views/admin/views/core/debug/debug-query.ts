@@ -9,6 +9,7 @@ import type {
 import type { QueueStatus } from "@/views/admin/views/core/advanced/queue/queue-query";
 
 import { fetcherClient } from "@/lib/fetcher-client";
+import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import {
   adminModuleRef,
   AdminRequestError,
@@ -121,6 +122,8 @@ export const debugLogsQueryOptions = ({
     queryFn: async () => await fetchPage(params),
     queryKey: debugLogsQueryKey(params),
     retry: false,
+    /** {@link OPERATIONAL_STALE_TIME} - Log lines arrive on their own; coming back to an empty log that has since filled is the failure. */
+    staleTime: OPERATIONAL_STALE_TIME,
   });
 
 // --------------------------------------------------------- queue snapshot ---
@@ -183,4 +186,6 @@ export const debugQueueQueryOptions = ({
     queryFn: async () => await fetchSnapshot(),
     queryKey: debugQueueQueryKey,
     retry: false,
+    /** {@link OPERATIONAL_STALE_TIME} - The queue snapshot is a live figure, not a record somebody edited. */
+    staleTime: OPERATIONAL_STALE_TIME,
   });

@@ -75,7 +75,10 @@ export const loadAdminDashboardRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_DASHBOARD_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(dashboardLayoutQuery(adminUserId)),
+    queryClient.ensureQueryData({
+      ...dashboardLayoutQuery(adminUserId),
+      revalidateIfStale: true,
+    }),
   ]);
 
   return {

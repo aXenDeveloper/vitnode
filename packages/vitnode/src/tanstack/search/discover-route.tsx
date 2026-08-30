@@ -58,7 +58,10 @@ export const loadDiscoverRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: DISCOVER_NAMESPACES }),
     ),
-    queryClient.ensureInfiniteQueryData(discoverFeedQueryOptions({ locale })),
+    queryClient.ensureInfiniteQueryData({
+      ...discoverFeedQueryOptions({ locale }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const t = createTranslator({

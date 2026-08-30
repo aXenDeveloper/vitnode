@@ -68,6 +68,7 @@ export {
   adminStaffPermissions,
   staffPermissionModuleFor,
 } from "@/views/admin/views/core/shared/admin-permissions";
+import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 /**
  * One page of a staff list.
@@ -200,6 +201,8 @@ export const adminStaffQueryOptions = ({
     queryFn: async ({ signal }) => await fetchPage(type, params, { signal }),
     queryKey: adminStaffQueryKey({ adminUserId, params, type }),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - Staff membership changes when somebody grants or revokes it. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /* -------------------------------------------------------------------------- */
@@ -251,6 +254,8 @@ export const adminStaffCatalogQueryOptions = ({
     queryFn: async () => await fetchCatalog(),
     queryKey: adminStaffCatalogQueryKey(adminUserId),
     retry: false,
+    /** {@link RECORD_STALE_TIME} - The catalogue of grantable roles and permissions, edited by hand. */
+    staleTime: RECORD_STALE_TIME,
   });
 
 /* -------------------------------------------------------------------------- */

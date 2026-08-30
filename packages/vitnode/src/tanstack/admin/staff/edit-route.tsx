@@ -161,10 +161,14 @@ export const loadAdminStaffEditRoute = async ({
     queryClient.ensureQueryData(
       intlQueryOptions({ locale, namespaces: ADMIN_STAFF_EDIT_NAMESPACES }),
     ),
-    queryClient.ensureQueryData(adminStaffCatalogQuery({ adminUserId })),
-    queryClient.ensureQueryData(
-      adminStaffEntryQuery({ adminUserId, id, type }),
-    ),
+    queryClient.ensureQueryData({
+      ...adminStaffCatalogQuery({ adminUserId }),
+      revalidateIfStale: true,
+    }),
+    queryClient.ensureQueryData({
+      ...adminStaffEntryQuery({ adminUserId, id, type }),
+      revalidateIfStale: true,
+    }),
   ]);
 
   const labels = await loadStaffPermissionLabels({

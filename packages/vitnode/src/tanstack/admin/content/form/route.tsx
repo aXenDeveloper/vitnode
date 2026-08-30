@@ -154,16 +154,18 @@ export const loadContentFormScreen = async ({
   };
 
   const [row, translations] = await Promise.all([
-    queryClient.ensureQueryData(
-      contentItemQueryOptions({ fetchItem: fetchContentItem, request }),
-    ),
+    queryClient.ensureQueryData({
+      ...contentItemQueryOptions({ fetchItem: fetchContentItem, request }),
+      revalidateIfStale: true,
+    }),
     entry.definition.localization.enabled
-      ? queryClient.ensureQueryData(
-          contentTranslationsQueryOptions({
+      ? queryClient.ensureQueryData({
+          ...contentTranslationsQueryOptions({
             fetchTranslations: fetchContentTranslations,
             request,
           }),
-        )
+          revalidateIfStale: true,
+        })
       : Promise.resolve<TranslationRow[]>([]),
   ]).catch(missingContentRecord);
 
