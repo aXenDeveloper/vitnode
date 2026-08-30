@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/_admin'
+import { Route as DocsRouteImport } from './routes/_docs'
 import { Route as MainRouteImport } from './routes/_main'
+import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
@@ -19,7 +21,10 @@ import { Route as MainDiscoverRouteImport } from './routes/_main/discover'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as LoginResetPasswordRouteImport } from './routes/login_.reset-password'
+import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
+import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
 import { Route as MainAuthenticatedFilesRouteImport } from './routes/_main/_authenticated/files'
 import { Route as MainAuthenticatedSettingsRouteImport } from './routes/_main/_authenticated/settings'
 import { Route as LoginSsoProviderIdRouteImport } from './routes/login_.sso.$providerId'
@@ -49,8 +54,17 @@ const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/_docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MainRoute = MainRouteImport.update({
   id: '/_main',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
+  id: '/llms-full.txt',
+  path: '/llms-full.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -92,10 +106,25 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsSearchRoute = DocsSearchRouteImport.update({
+  id: '/docs/search',
+  path: '/docs/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginResetPasswordRoute = LoginResetPasswordRouteImport.update({
   id: '/login_/reset-password',
   path: '/login/reset-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DocsDocsIndexRoute = DocsDocsIndexRouteImport.update({
+  id: '/docs/',
+  path: '/docs/',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsDocsSplatRoute = DocsDocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
+  getParentRoute: () => DocsRoute,
 } as any)
 const MainAuthenticatedFilesRoute = MainAuthenticatedFilesRouteImport.update({
   id: '/files',
@@ -238,16 +267,20 @@ const AdminAdminCoreStaffModeratorsEditIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/discover': typeof MainDiscoverRoute
   '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/docs/search': typeof DocsSearchRoute
   '/login/reset-password': typeof LoginResetPasswordRoute
   '/admin/': typeof AdminIndexRoute
+  '/docs/$': typeof DocsDocsSplatRoute
   '/files': typeof MainAuthenticatedFilesRoute
   '/settings': typeof MainAuthenticatedSettingsRouteWithChildren
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/docs/': typeof DocsDocsIndexRoute
   '/admin/content/$': typeof AdminAdminContentSplatRoute
   '/admin/core/debug': typeof AdminAdminCoreDebugRoute
   '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
@@ -272,15 +305,19 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/discover': typeof MainDiscoverRoute
   '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/docs/search': typeof DocsSearchRoute
   '/login/reset-password': typeof LoginResetPasswordRoute
   '/admin': typeof AdminIndexRoute
+  '/docs/$': typeof DocsDocsSplatRoute
   '/files': typeof MainAuthenticatedFilesRoute
   '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/docs': typeof DocsDocsIndexRoute
   '/admin/content/$': typeof AdminAdminContentSplatRoute
   '/admin/core/debug': typeof AdminAdminCoreDebugRoute
   '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
@@ -306,19 +343,24 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_admin': typeof AdminRouteWithChildren
+  '/_docs': typeof DocsRouteWithChildren
   '/_main': typeof MainRouteWithChildren
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_main/_authenticated': typeof MainAuthenticatedRouteWithChildren
   '/_main/discover': typeof MainDiscoverRoute
   '/_main/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
+  '/docs/search': typeof DocsSearchRoute
   '/login_/reset-password': typeof LoginResetPasswordRoute
   '/_main/': typeof MainIndexRoute
   '/admin/': typeof AdminIndexRoute
+  '/_docs/docs/$': typeof DocsDocsSplatRoute
   '/_main/_authenticated/files': typeof MainAuthenticatedFilesRoute
   '/_main/_authenticated/settings': typeof MainAuthenticatedSettingsRouteWithChildren
   '/login_/sso/$providerId': typeof LoginSsoProviderIdRoute
+  '/_docs/docs/': typeof DocsDocsIndexRoute
   '/_admin/admin/content/$': typeof AdminAdminContentSplatRoute
   '/_admin/admin/core/debug': typeof AdminAdminCoreDebugRoute
   '/_main/_authenticated/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
@@ -345,16 +387,20 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/llms-full.txt'
     | '/login'
     | '/register'
     | '/discover'
     | '/search'
     | '/api/$'
+    | '/docs/search'
     | '/login/reset-password'
     | '/admin/'
+    | '/docs/$'
     | '/files'
     | '/settings'
     | '/login/sso/$providerId'
+    | '/docs/'
     | '/admin/content/$'
     | '/admin/core/debug'
     | '/settings/devices'
@@ -379,15 +425,19 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/llms-full.txt'
     | '/login'
     | '/register'
     | '/discover'
     | '/search'
     | '/api/$'
+    | '/docs/search'
     | '/login/reset-password'
     | '/admin'
+    | '/docs/$'
     | '/files'
     | '/login/sso/$providerId'
+    | '/docs'
     | '/admin/content/$'
     | '/admin/core/debug'
     | '/settings/devices'
@@ -412,19 +462,24 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_admin'
+    | '/_docs'
     | '/_main'
+    | '/llms-full.txt'
     | '/login'
     | '/register'
     | '/_main/_authenticated'
     | '/_main/discover'
     | '/_main/search'
     | '/api/$'
+    | '/docs/search'
     | '/login_/reset-password'
     | '/_main/'
     | '/admin/'
+    | '/_docs/docs/$'
     | '/_main/_authenticated/files'
     | '/_main/_authenticated/settings'
     | '/login_/sso/$providerId'
+    | '/_docs/docs/'
     | '/_admin/admin/content/$'
     | '/_admin/admin/core/debug'
     | '/_main/_authenticated/settings/devices'
@@ -450,10 +505,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
+  DocsRoute: typeof DocsRouteWithChildren
   MainRoute: typeof MainRouteWithChildren
+  LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  DocsSearchRoute: typeof DocsSearchRoute
   LoginResetPasswordRoute: typeof LoginResetPasswordRoute
   AdminIndexRoute: typeof AdminIndexRoute
   LoginSsoProviderIdRoute: typeof LoginSsoProviderIdRoute
@@ -468,11 +526,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_docs': {
+      id: '/_docs'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_main': {
       id: '/_main'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof MainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms-full.txt': {
+      id: '/llms-full.txt'
+      path: '/llms-full.txt'
+      fullPath: '/llms-full.txt'
+      preLoaderRoute: typeof LlmsFullDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -531,12 +603,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/search': {
+      id: '/docs/search'
+      path: '/docs/search'
+      fullPath: '/docs/search'
+      preLoaderRoute: typeof DocsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login_/reset-password': {
       id: '/login_/reset-password'
       path: '/login/reset-password'
       fullPath: '/login/reset-password'
       preLoaderRoute: typeof LoginResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_docs/docs/': {
+      id: '/_docs/docs/'
+      path: '/docs'
+      fullPath: '/docs/'
+      preLoaderRoute: typeof DocsDocsIndexRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/_docs/docs/$': {
+      id: '/_docs/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsDocsSplatRouteImport
+      parentRoute: typeof DocsRoute
     }
     '/_main/_authenticated/files': {
       id: '/_main/_authenticated/files'
@@ -754,6 +847,18 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface DocsRouteChildren {
+  DocsDocsSplatRoute: typeof DocsDocsSplatRoute
+  DocsDocsIndexRoute: typeof DocsDocsIndexRoute
+}
+
+const DocsRouteChildren: DocsRouteChildren = {
+  DocsDocsSplatRoute: DocsDocsSplatRoute,
+  DocsDocsIndexRoute: DocsDocsIndexRoute,
+}
+
+const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
+
 interface MainAuthenticatedSettingsRouteChildren {
   MainAuthenticatedSettingsDevicesRoute: typeof MainAuthenticatedSettingsDevicesRoute
   MainAuthenticatedSettingsOverviewRoute: typeof MainAuthenticatedSettingsOverviewRoute
@@ -808,10 +913,13 @@ const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
+  DocsRoute: DocsRouteWithChildren,
   MainRoute: MainRouteWithChildren,
+  LlmsFullDottxtRoute: LlmsFullDottxtRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ApiSplatRoute: ApiSplatRoute,
+  DocsSearchRoute: DocsSearchRoute,
   LoginResetPasswordRoute: LoginResetPasswordRoute,
   AdminIndexRoute: AdminIndexRoute,
   LoginSsoProviderIdRoute: LoginSsoProviderIdRoute,

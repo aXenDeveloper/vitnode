@@ -1,0 +1,97 @@
+---
+title: Supabase Storage
+description: Store uploads in a Supabase Storage bucket.
+---
+
+| Cloud        | Self-Hosted  | Links                                                             |
+| ------------ | ------------ | ----------------------------------------------------------------- |
+| ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@supabase/storage-js) |
+
+## Usage
+
+<Steps>
+<Step>
+### Installation
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun i @vitnode/supabase-storage -D
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/supabase-storage -D
+```
+
+```bash tab="npm"
+npm i @vitnode/supabase-storage -D
+```
+
+</Tabs>
+
+</Step>
+<Step>
+### Import the adapter
+
+```ts title="vitnode.api.config.ts"
+// [!code ++]
+import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    // [!code ++:5]
+    adapter: SupabaseStorageAdapter({
+      url: process.env.SUPABASE_URL,
+      secretKey: process.env.SUPABASE_SECRET_KEY,
+      bucket: process.env.SUPABASE_STORAGE_BUCKET,
+    }),
+  },
+});
+```
+
+</Step>
+<Step>
+### Environment variables
+
+A **secret key** (`sb_secret_…`) is required so the server can write to the
+bucket. Keep it secret - never expose it to the client. Create one under
+**Project Settings → API Keys**.
+
+```bash title=".env"
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SECRET_KEY=sb_secret_...
+SUPABASE_STORAGE_BUCKET=your-bucket
+```
+
+<Callout type="warn" title="Public bucket for public URLs">
+  `getUrl` returns the bucket's public URL. Make the bucket public (or serve
+  through a CDN) if you want the returned URLs to be directly accessible.
+</Callout>
+
+</Step>
+</Steps>
+
+## Options
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    url: {
+      description: "Your Supabase project URL.",
+      type: "string",
+    },
+    secretKey: {
+      description:
+        "Supabase secret key `sb_secret_…` (server-side only). Replaces the legacy service role key.",
+      type: "string",
+    },
+    bucket: {
+      description: "Storage bucket name.",
+      type: "string",
+    },
+  }}
+/>

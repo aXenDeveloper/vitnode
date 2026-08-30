@@ -1,0 +1,124 @@
+---
+title: Custom Adapter
+description: Replace the in-process event transport with your own adapter, e.g. a message broker for cross-instance delivery.
+---
+
+The transport behind `c.get("events").emit()` is pluggable, following the same
+pattern as [search](/docs/dev/search), storage, and email adapters. The default
+**Local** adapter delivers in-process only; a custom adapter can publish events
+to a broker (Redis Streams, RabbitMQ, NATS, ...) so every instance can react.
+
+An adapter implements a single method:
+
+```ts
+import type { Context } from "hono";
+import type {
+  EventEnvelope,
+  EventEmitResult,
+} from "@vitnode/core/api/models/events";
+
+export interface EventsApiPlugin {
+  name: string;
+  publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>;
+}
+```
+
+## Usage
+
+<Steps>
+<Step>
+
+### Create your custom adapter
+
+As an example, an adapter that publishes every event to a message broker
+instead of running listeners in-process:
+
+```ts
+import type {
+  EventsApiPlugin,
+  EventEnvelope,
+} from "@vitnode/core/api/models/events";
+
+export const MyBrokerEventsAdapter = (): EventsApiPlugin => ({
+  name: "my-broker",
+  publish: async (c, envelope) => {
+    await broker.publish("vitnode:events", JSON.stringify(envelope)); // [!code ++]
+
+    // Delivery happens out-of-band - report "queued", not "delivered".
+    return {
+      eventId: envelope.eventId,
+      status: "queued",
+      delivered: 0,
+      failures: [],
+    };
+  },
+});
+```
+
+<Callout type="info" title="Report the right status">
+  A broker adapter returns `status: "queued"`: listeners run out-of-band, so
+  `delivered` and `failures` say nothing about them. The consumer side of your
+  broker is responsible for running the registered listeners
+  (`c.get("core").events.listeners`) on each instance.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Integrate the adapter into your application
+
+```ts title="src/vitnode.api.config.ts"
+import { MyBrokerEventsAdapter } from "./path/to/your/custom/events.adapter";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++]
+  events: { adapter: MyBrokerEventsAdapter() },
+});
+```
+
+</Step>
+
+<Step>
+
+### Restart server
+
+After making these changes, stop your server (if it's running) and restart it
+to apply the new configuration.
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Every `emit()` call in core and plugins now goes through your adapter - no emit
+site changes needed.
+
+</Step>
+
+</Steps>
+
+## Contract your adapter must keep
+
+- **Never let `publish` throw for expected failures** if you can help it - but
+  if it does, `emit()` still resolves: the model catches the error, logs it to
+  `core_logs`, and reports it in `result.failures`.
+- **Envelopes are JSON-serializable** by convention (payloads are documented as
+  plain JSON), so `JSON.stringify(envelope)` is safe; `emittedAt` serializes to
+  an ISO string.
+- **Preserve ordering per event name** if your listeners rely on it - the Local
+  adapter runs listeners sequentially in registration order, and listener code
+  written against it may assume that.

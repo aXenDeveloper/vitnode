@@ -12,7 +12,7 @@ export default [
     // Build output, not source. `eslint .` walks these otherwise and every file
     // in them fails to parse: they are outside `tsconfig.json`'s `include`.
     ignores: [
-      ".source",
+      ".source/**",
       ".nitro/**",
       ".output/**",
       ".tanstack/**",

@@ -1,0 +1,84 @@
+---
+title: Email
+description: How to use email functionality in your application.
+---
+
+## Adapters
+
+Before you can use email functionality, you need to provide an adapter to your application.
+
+<Cards>
+  <Card title="Resend" href="/docs/dev/email/resend" />
+  <Card title="Nodemailer" href="/docs/dev/email/nodemailer" />
+</Cards>
+
+or create your own [custom email adapter](/docs/dev/email/custom-adapter).
+
+## Usage
+
+To send an email, you can use the context `c.get('email').send()` in your route handler.
+
+```ts
+import { z } from "zod";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { UserModel } from "@vitnode/core/api/models/user";
+
+export const testRoute = buildRoute({
+  handler: async c => {
+    const user = await new UserModel().getUserById({
+      id: 3,
+      c,
+    });
+
+    if (!user) throw new Error("User not found");
+
+    // [!code ++:5]
+    await c.get("email").send({
+      subject: "Test Email",
+      content: () => "This is a test email.",
+      user,
+    });
+
+    return c.text("test");
+  },
+});
+```
+
+or if you don't want to use `user` then you can just pass `to` field with `locale`:
+
+```ts
+import { z } from "zod";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+
+export const testRoute = buildRoute({
+  handler: async c => {
+    // [!code ++:6]
+    await c.get("email").send({
+      to: "test@test.com",
+      subject: "Test Email",
+      content: () => "This is a test email.",
+      locale: "en",
+    });
+
+    return c.text("test");
+  },
+});
+```
+
+## Language
+
+An email renders in the recipient's language, not the sender's. Pass `user` and VitNode uses their `core_users.language`; pass a bare `to` and you supply `locale` yourself. Either way, a language your app doesn't list in `i18n.locales` falls back to `defaultLocale` - the request is never consulted, so mail cannot arrive in the language of whoever triggered the send.
+
+Templates get an `i18n` prop to turn into a translator:
+
+```tsx
+import { createTranslator } from "next-intl";
+
+export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
+  const t = createTranslator(i18n);
+
+  return <Text>{t("welcome.email.body")}</Text>;
+}
+```
+
+See [Server-side i18n](/docs/dev/i18n/server) for the full resolution order.

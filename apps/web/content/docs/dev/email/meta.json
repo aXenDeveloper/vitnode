@@ -1,0 +1,10 @@
+{
+  "title": "Email",
+  "pages": [
+    "templates",
+    "components",
+    "---Adapters---",
+    "...",
+    "custom-adapter"
+  ]
+}

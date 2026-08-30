@@ -1,0 +1,47 @@
+---
+title: Sheet
+description: A sheet component for displaying additional content in a modal-like overlay.
+---
+
+## Preview
+
+<Preview name="sheet" />
+
+## Usage
+
+```ts
+import { Button } from '@vitnode/core/components/ui/button';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@vitnode/core/components/ui/sheet';
+```
+
+```tsx
+<Sheet>
+  <SheetTrigger render={<Button variant="outline">Open</Button>} />
+  <SheetContent>
+    <SheetHeader>
+      <SheetTitle>Are you absolutely sure?</SheetTitle>
+      <SheetDescription>
+        This action cannot be undone. This will permanently delete your account
+        and remove your data from our servers.
+      </SheetDescription>
+    </SheetHeader>
+    <SheetFooter>
+      <Button variant="destructive">Yes, delete account</Button>
+      <SheetClose render={<Button variant="outline">Cancel</Button>} />
+    </SheetFooter>
+  </SheetContent>
+</Sheet>
+```
+
+## API Reference
+
+[Base UI - Dialog](https://base-ui.com/react/components/dialog#api-reference)

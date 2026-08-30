@@ -1,0 +1,130 @@
+---
+title: Create Plugins
+description: Learn how to create plugins for VitNode to extend its functionality.
+---
+
+<Callout type="warn" title="This documentation is under construction! 🚧">
+  We're working hard to bring you the best documentation experience.
+</Callout>
+
+In this section we'll guide you through the process of creating your first VitNode plugin. Whether you're building a simple feature or a complex application, VitNode's plugin system has got you covered.
+
+<Callout type="info" title="In a hurry?">
+  [Create your first plugin](/docs/dev/tanstack/plugin) is the same thing in one
+  page: scaffold, register, open the URL. This page is the longer version.
+</Callout>
+
+By creating a plugin, you can extend the functionality like:
+
+- **🚀 APIs**: Build your own RESTful,
+- **🧩 UI Components**: Create reusable components for your application,
+- **📄 Pages and Layouts**: Define custom pages and layouts for your application,
+- **⚡ Middleware**: Add custom middleware to handle requests and responses,
+- **🗄️ Database Models**: Define your own database models and schemas,
+- **🔗 Integrations**: Connect with third-party services and APIs.
+- **⚙️ Custom Logic**: Implement any custom logic you need for your application.
+- **🌟 And much more!**
+
+## Prerequisites
+
+<Callout title="Turborepo Only (Monorepo)" type="info">
+  To create a plugin, you need to have a Turborepo setup.
+</Callout>
+
+## Create a Plugin
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Create a Plugin'>
+
+```bash tab="bun"
+bun create vitnode-app@canary --plugin
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary --plugin
+```
+
+```bash tab="npm"
+npx create-vitnode-app@canary --plugin
+```
+
+</Tabs>
+
+### What you get
+
+A plugin with one public page, already wired:
+
+```txt
+plugins/my-vitnode-plugin/
+└── src/
+    ├── config.tsx              registers the plugin with VitNode
+    ├── locales/
+    │   ├── en.json             the strings the page renders
+    │   └── index.ts            the barrel config.tsx registers
+    └── routes/
+        ├── manifest.ts         declares one route at /my-vitnode-plugin
+        └── home-page.tsx       what it renders
+```
+
+Add it to your app's `src/vitnode.config.ts` `plugins` array and the page is
+live. There is nothing else to edit - no application route file, no generated
+file. Read [Route Manifest](/docs/dev/plugins/route-manifest) for what those two
+files in `routes/` can say.
+
+<Callout title="Turborepo Only (Monorepo)" type="info">
+  The generator adds your plugin to the workspace and to every package that
+  depends on `@vitnode/core`, which is why it has to run from the monorepo root.
+</Callout>
+
+## Add Translations
+
+VitNode is i18n-first: render user-facing text through translations rather than hardcoding it. Your plugin owns its languages and hands them to VitNode - apps never copy them.
+
+```json title="plugins/{your_plugin}/src/locales/en.json"
+{
+  "{your_plugin}": {
+    "hello": "Hello World"
+  }
+}
+```
+
+```ts title="plugins/{your_plugin}/src/locales/index.ts"
+import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+
+const messages: LocaleMessagesMap = {
+  en: async () => await import("./en.json", { with: { type: "json" } }),
+};
+
+export default messages;
+```
+
+Register that barrel in `config.tsx` (`buildPlugin`) with `messages`, and your strings show up on the frontend.
+
+<Callout title="Server strings live apart" type="info">
+  If your plugin sends email, its server strings go in a second tree,
+  `src/locales/api/`, registered with `buildApiPlugin` in `config.api.ts`. The
+  API loads only that tree, so an API-only app never pulls in your UI copy. See
+  [Server-side](/docs/dev/i18n/server).
+</Callout>
+
+Keys have to sit under your plugin's namespace, or they collide with core. The details are in [Namespaces](/docs/dev/i18n/namespaces) and [Server-side](/docs/dev/i18n/server).
+
+## If your app is Next.js
+
+A plugin's routes are read from `routes/manifest.ts` and imported from your
+package - nothing is copied, and there is no generated folder to know about.
+
+A **Next.js** host is the exception, and only for the Next.js route files a
+plugin may also ship (`src/routes/main`, `src/routes/admin`,
+`src/routes/blank`, `src/routes/breadcrumb`). Those are copied into the app, into
+`(plugins)` folders. They are generated output: don't edit them, and exclude them
+from your editor's search. VS Code gets that from `.vscode/settings.json` out of
+the box.
+
+<Callout type="info" title="Two paths, and they never read each other">
+  The copier never consults the manifest and the manifest never consults the
+  copier, so a plugin can ship both. See [Layouts and
+  Pages](/docs/dev/plugins/layouts-and-pages) for the Next.js files and [Route
+  Manifest](/docs/dev/plugins/route-manifest) for the host-neutral ones.
+</Callout>

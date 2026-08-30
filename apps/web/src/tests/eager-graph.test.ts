@@ -137,6 +137,56 @@ describe('route files', () => {
 })
 
 /**
+ * Fumadocs is documentation infrastructure, and it stays out of the entry.
+ *
+ * Stage 16 put a whole second design system in this application - the notebook
+ * layout, the MDX component map, the search client, Shiki's runtime - and route
+ * options are exactly where it would have leaked out of the documentation. A
+ * route's `loader` and `head` are evaluated in the client entry on *every* page:
+ * `_docs.tsx`'s loader naming `DocsShellContent`, or `docs.$.tsx`'s loader
+ * statically importing its MDX renderer, would put all of it in front of every
+ * visitor to the front page.
+ *
+ * Both routes are written to avoid that - the shell reaches Fumadocs only
+ * through `component`, and the page route preloads its body behind an
+ * `await import()` - and this is the rule rather than the two instances of it.
+ * The runtime half is `isolation.test.ts`, which walks the documentation's whole
+ * graph, and the measured half is a production build: the front page's 104
+ * preloaded modules contain no Fumadocs chunk.
+ */
+describe('the documentation runtime', () => {
+  it('is named by no route eager option', () => {
+    for (const path of routeFiles) {
+      expect(eagerSource(path), path).not.toMatch(/fumadocs/)
+    }
+  })
+
+  it('is reached by no route file outside the documentation', () => {
+    const offenders = routeFiles
+      .filter((path) => !/_docs|docs\.search/.test(path))
+      .filter((path) => /fumadocs|collections\//.test(withoutComments(path)))
+
+    expect(offenders).toEqual([])
+  })
+
+  /**
+   * And the two documentation routes really do reach it, so the rule above is
+   * not passing because nothing imports Fumadocs at all.
+   */
+  it('is reached by the documentation routes, through splittable options only', () => {
+    const shell = withoutComments(
+      routeFiles.find((path) => path.endsWith('_docs.tsx')) ?? '',
+    )
+
+    expect(shell).toMatch(/component:\s*DocsShell/)
+    expect(shell).toMatch(/DocsShellContent/)
+    expect(
+      eagerSource(routeFiles.find((path) => path.endsWith('_docs.tsx')) ?? ''),
+    ).not.toMatch(/DocsShellContent/)
+  })
+})
+
+/**
  * `staticData.breadcrumb` is eager, and that is what makes it dangerous.
  *
  * A crumb is declared as an *element* so it can use hooks, which means the
@@ -254,9 +304,29 @@ describe('SSR externalisation', () => {
   it('keeps the VitNode packages out of the SSR pass', () => {
     const config = withoutComments(resolve(here, '../../vite.config.ts'))
 
+    // The three packages, in order, and whatever else the list has grown -
+    // Stage 16 added `tslib`, for a reason the config states at length and which
+    // has nothing to do with these three.
     expect(config).toMatch(
-      /external:\s*\[\s*'@vitnode\/core',\s*'@vitnode\/blog',\s*'@vitnode\/example',?\s*\]/,
+      /external:\s*\[\s*'@vitnode\/core',\s*'@vitnode\/blog',\s*'@vitnode\/example',/,
     )
     expect(config).not.toMatch(/noExternal/)
+  })
+
+  /**
+   * `tslib`, which is on that list for a bundling bug rather than an
+   * architecture rule.
+   *
+   * Stated separately so the two reasons never get confused: the VitNode
+   * packages are external because externalising them is what makes
+   * `@vitnode/core/tanstack/*` work at all, and `tslib` is external because
+   * Rolldown's CJS interop gets it wrong. Removing either breaks a production
+   * build in a way no test but a rendered page would notice, so the entry is
+   * pinned rather than left to a comment.
+   */
+  it('keeps tslib out of it too, for the Radix stack behind Fumadocs', () => {
+    const config = withoutComments(resolve(here, '../../vite.config.ts'))
+
+    expect(config).toMatch(/external:\s*\[[^\]]*'tslib'/)
   })
 })

@@ -1,0 +1,83 @@
+---
+title: Custom Adapter
+description: Create your own custom cron adapter for VitNode.
+---
+
+VitNode supports custom cron adapters, allowing you to integrate with various scheduling libraries or services.
+
+## Usage
+
+<Steps>
+<Step>
+
+### Create your custom adapter
+
+As an example we will create a custom adapter using the popular `node-cron` library.
+
+```ts
+import { schedule } from "node-cron";
+import { type CronAdapter, handleCronJobs } from "@/api/lib/cron";
+
+export const NodeCronAdapter = (): CronAdapter => {
+  return {
+    schedule() {
+      schedule("*/1 * * * *", async () => {
+        await handleCronJobs(); // [!code ++]
+      });
+    },
+  };
+};
+```
+
+</Step>
+
+<Step>
+
+### Integrate the adapter into your application
+
+```ts title="src/vitnode.api.config.ts"
+import { NodeCronAdapter } from "./path/to/your/custom/node-cron.adapter";
+
+export const vitNodeApiConfig = buildApiConfig({
+  cron: NodeCronAdapter(),
+});
+```
+
+</Step>
+
+<Step>
+
+### Restart server
+
+After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+That's it - your app now has a built-in task scheduler, ready to handle cron jobs with standard cron expressions.
+
+</Step>
+<Step>
+
+### Check Your Cron Jobs
+
+You can check your cron jobs in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
+
+</Step>
+
+</Steps>

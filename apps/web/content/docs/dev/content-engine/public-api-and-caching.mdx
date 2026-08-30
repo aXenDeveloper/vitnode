@@ -1,0 +1,120 @@
+---
+title: Public API, Search & Caching
+description: Step-by-step guide to exposing public read-only endpoints, field allowlists, full-text search indexing, and SWR tag-based caching.
+icon: Globe
+---
+
+Content Engine allows exposing read-only endpoints to your web frontend while keeping administrative data private.
+
+## Prerequisites & Context
+
+Public read access requires a content type definition (e.g. `articleContentType` in `src/content/article.ts`) compiled into a server model `articleContent` in `src/database/articles.ts`:
+
+```ts title="src/database/articles.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+import { articleContentType } from "@/content/article";
+
+export const articleContent = createContentModel(articleContentType);
+```
+
+- **Field Allowlisting**: By default, no fields are exposed publicly. You must explicitly declare `publicApi.fields`.
+- **`buildContentPublicModule`**: An API plugin module from `@vitnode/core/content/server` that mounts public endpoints at `/api/{plugin}/{entity}`.
+
+---
+
+## Step-by-Step Implementation
+
+<Steps>
+
+<Step>
+### Step 1: Configure Public API Field Allowlist
+
+In `src/content/article.ts`, add `publicApi` and list fields allowed for public reads:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  publication: true,
+  publicApi: { // [!code ++]
+    fields: ["title", "code", "excerpt", "publishedAt", "author"], // [!code ++]
+  }, // [!code ++]
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+    excerpt: field.textarea({ nullable: true }),
+    adminNotes: field.textarea({ nullable: true }), // Excluded from public API
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 2: Register Public API Module
+
+Attach `buildContentPublicModule` at the root level of your API plugin configuration:
+
+```ts title="src/config.api.ts"
+import { buildContentPublicModule } from "@vitnode/core/content/server"; // [!code ++]
+import { articleContent } from "@/database/articles";
+
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [
+      adminModule,
+      buildContentPublicModule({ // [!code ++]
+        pluginId: CONFIG_PLUGIN.pluginId, // [!code ++]
+        contentTypes: [articleContent], // [!code ++]
+      }), // [!code ++]
+    ],
+  });
+```
+
+This creates:
+- `GET /api/example/articles`: Paginated list of published articles.
+- `GET /api/example/articles/[id]`: Single published article details.
+</Step>
+
+<Step>
+### Step 3: Enable Global Search Indexing
+
+Add `search` options to automatically sync items with the global search index:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  search: { // [!code ++]
+    titleField: "title", // [!code ++]
+    textField: "excerpt", // [!code ++]
+  }, // [!code ++]
+  fields: {
+    title: field.text({ required: true }),
+    excerpt: field.textarea({ nullable: true }),
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 4: Manage SWR Cache Tags in Server Actions
+
+Use VitNode's cache helpers to invalidate or revalidate tags inside Server Actions:
+
+```ts title="src/actions/update-article.ts"
+"use server";
+
+import { revalidateTag, updateTag } from "@vitnode/core/cache";
+
+export async function updateArticleAction(id: number, data: unknown) {
+  // Perform update...
+
+  // Revalidate SWR list and item tags
+  revalidateTag(`content-public-item-example-article-${id}`, "max");
+  updateTag(`user-${userId}`);
+}
+```
+</Step>
+
+</Steps>

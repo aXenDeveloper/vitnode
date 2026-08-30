@@ -1,6 +1,40 @@
-@import "tailwindcss";
-@import "shadcn/tailwind.css";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'shadcn/tailwind.css';
+@import 'tw-animate-css';
+
+/*
+ * Fumadocs' design system, in this stylesheet rather than in one the `/docs`
+ * route loads on its own.
+ *
+ * It was a second stylesheet, and that was measured and is wrong. Two facts make
+ * it impossible:
+ *
+ * 1. **A route stylesheet is never unloaded.** TanStack Router renders every
+ *    `rel="stylesheet"` link with React's `precedence` attribute (see `Asset.tsx`
+ *    in `@tanstack/react-router`), and React 19 hoists a stylesheet with a
+ *    precedence into `<head>` and leaves it there for the life of the document -
+ *    deliberately, so that navigating back does not flash unstyled content. So
+ *    "only `/docs` pays for it" is not a thing the framework can express: one
+ *    visit to the documentation and the sheet is on every page after it.
+ *
+ * 2. **Two Tailwind builds fight inside one `@layer utilities`.** The docs sheet
+ *    emitted 61 kB of utilities, 265 of whose class selectors also exist here.
+ *    Loaded second, every one of those 265 rules outranked this file's copy -
+ *    including its variants, because a variant is just a later rule in the same
+ *    layer. `.hidden` from the docs sheet beat `.sm:block` from this one, so
+ *    `LogoVitNodeBrand` - `hidden w-34 sm:block` - stayed hidden at every width
+ *    and the site header lost its wordmark, on the home page, but only after
+ *    somebody had visited `/docs` first.
+ *
+ * One Tailwind build per document is the fix, and it is not a compromise: the
+ * merged sheet is smaller than the two apart, because those 265 duplicates
+ * collapse. The cost is that a visitor who never opens the documentation still
+ * downloads its theme. That is a real cost and it is the smaller one.
+ *
+ * `src/tests/docs-route.test.ts` holds the line.
+ */
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
 
 /*
  * VitNode's components ship compiled, so Tailwind cannot find their classes by
@@ -18,10 +52,15 @@
  * `.w-34` was never generated, the wordmark had no width, and an `<svg>` with a
  * viewBox and no width collapses rather than falling back to its intrinsic size.
  * `src/tests/home-route.test.ts` pins this line for that reason.
+ *
+ * Fumadocs ships compiled too, and for the same reason: the documentation's
+ * chrome - the sidebar, the search dialog, the table of contents - is entirely
+ * its classes, and none of them is written in this repository.
  */
 @source "../node_modules/@vitnode/core/dist/src/components";
 @source "../node_modules/@vitnode/core/dist/src/tanstack";
 @source "../node_modules/@vitnode/core/dist/src/views";
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
 
 /*
  * The design tokens every VitNode component reads. `.dark` is what
@@ -145,6 +184,50 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Each documentation section's accent, applied by `DocsShellContent` as a class
+ * on the docs wrapper. `--color-fd-primary` is what Fumadocs paints the active
+ * sidebar entry, the tab underline and every link inside a document with.
+ *
+ * The values are the Next.js application's, unchanged - but the selectors are
+ * not: there they were `html.dev`, painted before first paint by an inline
+ * script because a Next.js layout could not read the slug without going dynamic.
+ * Here the shell has the router's location in hand and puts the class on its own
+ * wrapper, which is correct in the first byte of SSR and cannot leak onto a page
+ * outside the documentation. See `src/docs/section.ts`.
+ */
+:root:not(.dark) {
+  --dev-color: oklch(0.6 0.18 50);
+  --ui-color: oklch(0.65 0.18 170);
+  --guides-color: oklch(0.45 0.16 262.61);
+}
+
+.dark {
+  --dev-color: oklch(0.75 0.18 50);
+  --ui-color: oklch(0.7 0.18 170);
+  --guides-color: oklch(0.65 0.16 262.61);
+}
+
+.dev {
+  --color-fd-primary: var(--dev-color);
+}
+
+.guides {
+  --color-fd-primary: var(--guides-color);
+}
+
+.ui {
+  --color-fd-primary: var(--ui-color);
+}
+
+/*
+ * Last, and that is what makes it win.
+ *
+ * `fumadocs-ui/css/lib/base.css` sets `body { background-color:
+ * var(--color-fd-background) }` in this same layer, so a documentation page
+ * would otherwise quietly switch to Fumadocs' neutral palette while every other
+ * page used VitNode's.
+ */
 @layer base {
   * {
     @apply border-border outline-ring/50;

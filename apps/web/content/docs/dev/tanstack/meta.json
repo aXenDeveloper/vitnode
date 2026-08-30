@@ -1,0 +1,16 @@
+{
+  "title": "TanStack Start",
+  "description": "Build pages and plugins with VitNode's web runtime",
+  "icon": "Route",
+  "pages": [
+    "index",
+    "plugin",
+    "routing",
+    "metadata",
+    "data-loading",
+    "navigation",
+    "i18n",
+    "server-functions",
+    "admin"
+  ]
+}

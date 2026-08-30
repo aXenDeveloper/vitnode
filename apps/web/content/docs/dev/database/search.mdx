@@ -1,0 +1,176 @@
+---
+title: Search
+description: How to add type-safe, full-text-like search to paginated VitNode routes.
+---
+
+VitNode's `withPagination` helper accepts an optional `search` array that lets you search across one or more columns of a table. It plugs directly into the cursor-based [Pagination](/docs/dev/database/pagination) system and the [DataTable](/docs/ui/data-table) component, so the same route powers both paging and searching.
+
+## Backend Implementation
+
+Pass a `search` array of columns to `withPagination`. The term is read from the `search` query parameter and matched against every column you list using a case-insensitive `ILIKE`, combined with `OR`.
+
+### Basic Usage
+
+```ts
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@/api/lib/route";
+import {
+  withPagination,
+  zodPaginationPageInfo,
+  zodPaginationQuery,
+} from "@/api/lib/with-pagination";
+import { CONFIG_PLUGIN } from "@/config";
+import { core_users } from "@/database/users";
+
+export const listUsersAdminRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    description: "Get list of all users",
+    path: "/list",
+    request: {
+      query: zodPaginationQuery.extend({
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["name", "createdAt"]).optional(),
+        search: z.string().optional(), // [!code ++]
+      }),
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              edges: z.array(
+                z.object({
+                  id: z.number(),
+                  name: z.string(),
+                  email: z.string(),
+                  createdAt: z.date(),
+                }),
+              ),
+              pageInfo: zodPaginationPageInfo,
+            }),
+          },
+        },
+        description: "List of users",
+      },
+    },
+  },
+  handler: async c => {
+    const query = c.req.valid("query");
+    const data = await withPagination({
+      params: {
+        query,
+      },
+      search: [core_users.name, core_users.email], // [!code ++]
+      primaryCursor: core_users.id,
+      query: async ({ limit, where, orderBy }) =>
+        await c
+          .get("db")
+          .select({
+            id: core_users.id,
+            name: core_users.name,
+            email: core_users.email,
+            createdAt: core_users.createdAt,
+          })
+          .from(core_users)
+          .where(where)
+          .orderBy(orderBy)
+          .limit(limit),
+      table: core_users,
+      orderBy: {
+        column: query.orderBy
+          ? core_users[query.orderBy]
+          : core_users.createdAt,
+        order: query.order ?? "desc",
+      },
+      c,
+    });
+
+    return c.json(data);
+  },
+});
+```
+
+There are only two additions compared to a plain paginated route:
+
+1. Add `search: z.string().optional()` to the request `query` schema so the term is validated and forwarded.
+2. Pass the `search` array of columns to `withPagination`.
+
+### How It Works
+
+When a `search` term is present, `withPagination` builds the following condition and `AND`-combines it with any existing `where` clause:
+
+```sql
+WHERE (name ILIKE '%term%' OR email ILIKE '%term%')
+```
+
+A few details worth knowing:
+
+- The term is **trimmed**; an empty or whitespace-only value is ignored and no search filter is applied.
+- Matching is **case-insensitive** (`ILIKE`) and substring-based (`%term%`).
+- The filter is applied to the `totalCount` as well, so the pagination info reflects the filtered result set.
+- If you don't pass `search`, the route behaves exactly like a normal paginated route - the `search` query parameter is simply ignored.
+
+<Callout type="warn" title="Wildcards">
+  The term is interpolated into the `ILIKE` pattern, so `%` and `_` entered by
+  the user act as SQL wildcards. The value is still parameterized, so this is
+  not an injection risk - but escape those characters yourself if you need
+  literal matching.
+</Callout>
+
+### Search Parameters
+
+| Parameter | Type       | Description                                                                  |
+| --------- | ---------- | ---------------------------------------------------------------------------- |
+| `search`  | `Column[]` | Columns to search across. Must belong to the `table` passed to the function. |
+
+The term itself is read from `params.query.search`, which comes from the `search` query parameter on the request.
+
+## Frontend Implementation
+
+On the frontend, enable the search input by setting the `search` prop on the [DataTable](/docs/ui/data-table) component. You can optionally customize the placeholder.
+
+```tsx
+<DataTable
+  id="users-table"
+  // [!code ++]
+  search
+  // [!code ++]
+  searchPlaceholder="Search users..."
+  columns={[
+    { id: "name", label: "Name" },
+    { id: "email", label: "Email" },
+  ]}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{
+    defaultOrder: {
+      column: "name",
+      order: "asc",
+    },
+  }}
+/>
+```
+
+The input is debounced and writes the term to the `?search=` query parameter, then reloads the page.
+
+### Forwarding the Query
+
+The `search` term lives in the URL, so it arrives as part of the awaited `searchParams`. You **must** forward that `query` object to the fetcher's `args` for the term to reach the API - without it, the search parameter never gets sent.
+
+```tsx
+const query = await searchParams;
+const res = await fetcher(userModule, {
+  path: "/users",
+  method: "get",
+  module: "user",
+  args: {
+    // Forwards `search`, `cursor`, `order`, ...
+    query, // [!code highlight]
+  },
+  withPagination: true,
+});
+```
+
+Since `query` carries the pagination cursors and ordering as well, the same object powers searching, sorting, and paging at once.

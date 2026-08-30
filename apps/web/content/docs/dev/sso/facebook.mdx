@@ -1,0 +1,81 @@
+---
+title: Facebook
+description: Integrate Facebook Single Sign-On (SSO) in your application.
+---
+
+<Steps>
+<Step>
+
+## Sign in to Discord
+
+Go to [Facebook Developers](https://developers.facebook.com/) and sign in.
+
+</Step>
+<Step>
+
+## Create a new application
+
+Click on the `Create App` button to create a new application.
+
+</Step>
+<Step>
+
+## Add use cases
+
+Chose `Authenticate and request data from users with Facebook Login` as the use case.
+
+</Step>
+<Step>
+
+## Get the App ID and App Secret
+
+After creating the application, go to `Settings => Basic` to get the `App ID` and `App Secret`. Save them for later.
+
+</Step>
+<Step>
+
+## Environment Variables (.env)
+
+Add the `App ID` and `App Secret` to your `.env` file.
+
+```bash
+FACEBOOK_CLIENT_ID={app-id}
+FACEBOOK_CLIENT_SECRET={app-secret}
+```
+
+</Step>
+<Step>
+
+## Configuration in VitNode
+
+Add the Facebook SSO plugin to your API routes.
+
+```ts title="src/app/api/[...route]/route.ts"
+// [!code ++]
+import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
+
+VitNodeAPI({
+  app,
+  plugins: [],
+  // [!code ++]
+  authorization
+    // [!code ++]
+    ssoAdapters: [
+      // [!code ++]
+      new FacebookSSOApiPlugin({
+        // [!code ++]
+        clientId: process.env.FACEBOOK_CLIENT_ID,
+        // [!code ++]
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+        // [!code ++]
+      }),
+      // [!code ++]
+    ],
+    // [!code ++]
+  },
+});
+```
+
+</Step>
+
+</Steps>

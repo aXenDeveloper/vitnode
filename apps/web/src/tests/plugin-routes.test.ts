@@ -181,20 +181,31 @@ describe("the app's real route tree", () => {
     // distinction is load-bearing rather than decorative.
     ['/settings/notifications', false],
     ['/pl/settings/notifications', false],
-    // Stage 15. The front page is this application's, and the docs are not -
-    // and that pair is the whole navigation contract of the new homepage. Its
-    // primary call to action points at `/docs/dev`, so `MigrationLink` has to
-    // answer `false` here or the button becomes a not-found in this router
-    // instead of a document navigation to the Fumadocs application that serves
-    // it. When Stage 16 migrates the docs these three flip to `true` on their
-    // own, because the route tree is the table - nothing in the homepage, in
-    // `MigrationLink` or in this list is written per route.
+    // The front page and the documentation, which is the whole navigation
+    // contract of the homepage: its primary call to action points at
+    // `/docs/dev`.
+    //
+    // Stage 15 asserted these as `false` and said what would happen next: "when
+    // Stage 16 migrates the docs these three flip to `true` on their own,
+    // because the route tree is the table - nothing in the homepage, in
+    // `MigrationLink` or in this list is written per route". That is exactly
+    // what happened. Stage 16 added `routes/_docs/docs.$.tsx` and edited
+    // neither `hero.tsx` nor `MigrationLink`; the only change here is `false`
+    // becoming `true`, and it is the strongest evidence in the suite that the
+    // strangler seam works as designed. `home-route.test.ts` states the same
+    // claim from the homepage's side.
     ['/', true],
     ['/pl', true],
-    ['/docs', false],
-    ['/docs/dev', false],
-    ['/pl/docs/dev', false],
-    ['/docs/dev/email/overview', false],
+    ['/docs', true],
+    ['/docs/dev', true],
+    ['/pl/docs/dev', true],
+    ['/docs/dev/email/overview', true],
+    ['/docs/dev/plugins/route-manifest', true],
+    // The splat claims the documentation and stops there. A `/$` at the root
+    // would have answered `true` for every one of these.
+    ['/blog/post-30', false],
+    ['/documentation', false],
+    ['/docsomething', false],
   ])('answers %s as owned: %s', (href, owned) => {
     expect(isTanStackOwnedPath(getRouter(), href)).toBe(owned)
   })

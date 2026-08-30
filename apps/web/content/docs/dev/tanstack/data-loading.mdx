@@ -1,0 +1,94 @@
+---
+title: Data loading
+description: Route loader, TanStack Query, Hono - in that order.
+---
+
+Data flows one way:
+
+```txt
+route loader  ->  TanStack Query  ->  Hono API
+```
+
+The loader warms the cache before React runs, so the first byte of HTML already
+has the data in it. The component reads the same cache entry back.
+
+## Example
+
+```tsx title="apps/web/src/routes/_main/_authenticated/settings/devices.tsx"
+export const Route = createFileRoute("/_main/_authenticated/settings/devices")({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData({
+      ...devicesQuery(context.auth.user.id),
+      revalidateIfStale: true,
+    }),
+  component: DevicesRoute,
+});
+```
+
+and the component asks for the identical options object:
+
+```tsx
+const { data } = useSuspenseQuery(devicesQuery(userId));
+```
+
+Same key, same request, same error handling. A loader that warmed a *different*
+key than its component reads is a page that renders empty and fills in a round
+trip later - which looks like a slow API and is not one.
+
+## The query definition is the contract
+
+Keep the key, the request and the response shape in one module, and export it:
+
+```ts
+export const devicesQueryKey = (userId: number) =>
+  ["devices", "user", userId] as const;
+
+export const devicesQueryOptions = ({ userId }: { userId: number }) =>
+  queryOptions({
+    queryFn: async () => await fetchDevices(),
+    queryKey: devicesQueryKey(userId),
+    staleTime: RECORD_STALE_TIME,
+  });
+```
+
+`revalidateIfStale: true` on the loader means a navigation back to the page shows
+the cached rows immediately and refreshes them behind the scenes.
+
+## When to use it
+
+- **Query keys address a cache; they never authorize anything.** `userId` in the
+  key above decides which slot the answer is filed under. Whose devices come back
+  is decided by the session cookie, in Hono.
+- **Private reads must be identity-safe.** The browser's `QueryClient` outlives a
+  sign-out, so a shared key like `["devices", "me"]` would show the next person
+  the previous one's data without a single request being made. Partition by the
+  owner's id.
+- **Mutations invalidate the exact entry they changed**, not the whole cache.
+- **Reads go to Hono.** Not to a server function - see [Server
+  functions](/docs/dev/tanstack/server-functions).
+
+<Callout type="info" title="Plugin routes are the same, minus the client">
+  A plugin's `load` is handed `{ locale }` and no `QueryClient`, so it awaits its
+  own fetch and returns the result. Everything above still applies to the Hono
+  route it calls.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Fetcher"
+    description="How VitNode calls its own API, typed"
+    href="/docs/dev/fetcher"
+  />
+  <Card
+    title="Cache"
+    description="Tags, revalidation and freshness"
+    href="/docs/dev/cache"
+  />
+  <Card
+    title="Pagination"
+    description="Cursor pagination on the API side"
+    href="/docs/dev/database/pagination"
+  />
+</Cards>

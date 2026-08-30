@@ -445,6 +445,15 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/lib/admin-search.ts',
     'apps/web/src/routes/admin.index.tsx',
     'apps/web/src/routes/_admin.tsx',
+    // Stage 16. The documentation, which is the first thing this application
+    // renders out of a third-party UI library rather than out of
+    // `@vitnode/core` - and Fumadocs ships a Next.js integration in the same
+    // package as the framework-neutral one. `fumadocs-ui/provider/next` and
+    // `fumadocs-mdx/next` both resolve here and both would work in a type
+    // checker; only the runtime would notice.
+    'apps/web/src/routes/_docs.tsx',
+    'apps/web/src/routes/_docs/docs.$.tsx',
+    'apps/web/src/routes/_docs/docs.index.tsx',
     ...filesUnder(join(repoRoot, 'apps/web/src/routes/_admin'))
       .map((path) => relative(repoRoot, path))
       .sort(),
@@ -760,6 +769,92 @@ describe('the whole graph this app imports stays Next-free', () => {
       expect(rendering).toEqual([])
       // The editor and the drag-and-drop stack, which only a screen pulls in.
       expect(offenders(HOME, ['@tiptap/react', '@dnd-kit/core'])).toEqual([])
+    })
+  })
+
+  /**
+   * The documentation, on its own.
+   *
+   * Stage 16. Stated separately from every other route because the risk is a
+   * different one: this graph is mostly *Fumadocs*, and Fumadocs ships its
+   * Next.js integration in the same packages as its framework-neutral core.
+   * `fumadocs-ui/provider/next`, `fumadocs-mdx/next` and `fumadocs-core/framework/next`
+   * all resolve from here, all type-check, and each of them would drag `next`
+   * into a Next-free build the moment a page rendered.
+   *
+   * The walk follows dynamic `import()` as well as static imports, which matters
+   * here more than anywhere else: the page route reaches its MDX renderer, the
+   * source loader and the search index through `await import()`, and being lazy
+   * is a bundling decision rather than an exemption from the boundary.
+   */
+  describe('the documentation runtime graph reaches no Next.js', () => {
+    const DOCS = [
+      'apps/web/src/routes/_docs.tsx',
+      'apps/web/src/routes/_docs/docs.$.tsx',
+      'apps/web/src/routes/docs.search.ts',
+      'apps/web/src/routes/llms-full[.]txt.ts',
+    ]
+
+    it('walks into the documentation this application renders', () => {
+      // Without this the assertions below would pass on a graph that stopped at
+      // the route files - which is exactly the graph that cannot break.
+      const reached = [...reachableExternals(DOCS).visited]
+
+      expect(reached.some((path) => path.includes('docs/shell-content'))).toBe(
+        true,
+      )
+      expect(reached.some((path) => path.includes('docs/source.server'))).toBe(
+        true,
+      )
+      expect(
+        reached.some((path) => path.includes('docs/client-loader')),
+        'the lazily imported MDX renderer',
+      ).toBe(true)
+    })
+
+    it('really is a Fumadocs graph, so the bans below mean something', () => {
+      const reached = [...reachableExternals(DOCS).externals.keys()]
+
+      expect(reached.some((one) => one.startsWith('fumadocs-'))).toBe(true)
+    })
+
+    it.each([
+      'next',
+      'next/cache',
+      'next/dynamic',
+      'next/headers',
+      'next/image',
+      'next/link',
+      'next/navigation',
+      'next/server',
+      'next-intl/navigation',
+      'next-intl/server',
+      'server-only',
+    ])('never reaches %s', (forbidden) => {
+      expect(offenders(DOCS, [forbidden])).toEqual([])
+    })
+
+    it("never reaches Fumadocs' Next.js integrations", () => {
+      const reached = [...reachableExternals(DOCS).externals.keys()]
+
+      // Assembled rather than written out, so the scan below cannot match this
+      // file's own text if somebody points it at the test directory.
+      const nextEntries = ['provider', 'framework'].flatMap((part) => [
+        `fumadocs-ui/${part}/next`,
+        `fumadocs-core/${part}/next`,
+      ])
+
+      expect(
+        reached.filter(
+          (one) => nextEntries.includes(one) || one === 'fumadocs-mdx/next',
+        ),
+      ).toEqual([])
+    })
+
+    it('takes the Fumadocs provider from the TanStack entry', () => {
+      const reached = [...reachableExternals(DOCS).externals.keys()]
+
+      expect(reached).toContain('fumadocs-ui/provider/tanstack')
     })
   })
 

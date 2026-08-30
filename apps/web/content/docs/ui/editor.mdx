@@ -1,0 +1,154 @@
+---
+title: Editor
+description: Rich text editor built on TipTap for editing and rendering HTML content.
+---
+
+## Preview
+
+<Preview name="editor" />
+
+## Usage
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+```ts
+import { z } from "zod";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
+```
+
+```ts
+const formSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .default("<p>Write your content here...</p>"),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "content",
+      component: props => (
+        <AutoFormEditor
+          {...props}
+          description="Rich text content powered by the Editor."
+          label="Content"
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+
+```ts
+import { Editor } from "@vitnode/core/components/ui/editor";
+```
+
+The `Editor` is uncontrolled by default - pass `value` as the initial HTML and
+listen for changes with `onChange`, which receives the current HTML string:
+
+```tsx
+const [content, setContent] = useState("<p>Hello World! 🌎️</p>");
+
+<Editor value={content} onChange={setContent} />;
+```
+
+  </Tab>
+</Tabs>
+
+## Multi-language
+
+Set the `multiLang` prop to edit the content in every enabled language. A
+language **select** (shown only when more than one language is enabled) switches
+which language you are editing - it does **not** change the app-wide locale,
+only the content inside this editor.
+
+The value becomes an array matching the `core_languages_words` table:
+
+```ts
+[
+  { languageCode: "en", value: "<p>Hello</p>" },
+  { languageCode: "pl", value: "<p>Cześć</p>" },
+];
+```
+
+Declare the field with the `multiLangValueSchema` helper and enable `multiLang`:
+
+```ts
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+
+const formSchema = z.object({
+  content: multiLangValueSchema({ minLength: 1 }).min(1),
+});
+```
+
+```tsx
+{
+  id: "content",
+  component: props => <AutoFormEditor {...props} label="Content" multiLang />,
+}
+```
+
+Persist the array on the backend with `saveLanguageWords`. See
+[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
+
+## Rendering Content
+
+Use `EditorContent` to render the stored HTML as read-only content outside of
+the editor (e.g. on a public page):
+
+```ts
+import { EditorContent } from "@vitnode/core/components/ui/editor-content";
+```
+
+```tsx
+<EditorContent content="<h2>Title</h2><p>Hello World! 🌎️</p>" />
+```
+
+## Props
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    value: {
+      description: "Initial HTML content rendered inside the editor.",
+      type: "string",
+      default: '""',
+    },
+    onChange: {
+      description:
+        "Called on every change with the current content as an HTML string.",
+      type: "(value: string) => void",
+      default: "",
+    },
+    disableScroll: {
+      description:
+        "Disables the internal max-height scroll area so the editor grows with its content.",
+      type: "boolean",
+      default: "false",
+    },
+    className: {
+      description: "Additional classes applied to the editor wrapper.",
+      type: "string",
+      default: "",
+    },
+    multiLang: {
+      description:
+        "Edit the content per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
+      type: "boolean",
+      default: "false",
+    },
+  }}
+/>

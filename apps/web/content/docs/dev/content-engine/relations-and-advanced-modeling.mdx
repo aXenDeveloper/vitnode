@@ -1,0 +1,202 @@
+---
+title: Relations & Advanced Modeling
+description: Step-by-step guide to connecting content types with foreign key relations, relation pickers, JSON objects, and arrays.
+icon: Network
+---
+
+Content Engine provides relationship descriptors, structured JSON objects, and repeatable array fields for advanced data modeling.
+
+## Prerequisites & Context
+
+Relationships and complex fields are declared inside your client definition file `src/content/article.ts`.
+
+When using `field.relation()`, you must also supply a foreign key resolution thunk under `references` in `src/database/articles.ts` when calling `createContentModel`:
+
+- **`field.relation()`**: Specifies target content type and delete actions (`restrict`, `cascade`, `set null`).
+- **`references`**: A map supplied to `createContentModel` so Drizzle ORM can establish physical foreign keys in Postgres.
+
+---
+
+## Step-by-Step Implementation
+
+<Steps>
+
+<Step>
+### Step 1: Declare a Relation Field
+
+In your content definition, use `field.relation` and pass a thunk returning the target content type:
+
+```ts title="src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+import { categoryContentType } from "./category";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    category: field.relation({ // [!code ++]
+      required: true, // [!code ++]
+      onDelete: "restrict", // [!code ++]
+      target: () => categoryContentType, // [!code ++]
+    }), // [!code ++]
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 2: Map Database Foreign Keys
+
+In your database file, provide a thunk matching the relation field key under `references`:
+
+```ts title="src/database/articles.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+import { articleContentType } from "@/content/article";
+import { example_categories } from "./categories";
+
+export const articleContent = createContentModel(articleContentType, {
+  references: {
+    category: () => example_categories.id, // [!code ++]
+  },
+});
+```
+
+A **to-many** field needs its junction table exported too, or `drizzle-kit` will
+never see it and no migration will create it:
+
+```ts title="src/database/articles.ts"
+export const example_articles_categories = // [!code ++]
+  articleContent.advancedTables.junctions.categories; // [!code ++]
+```
+
+A to-many `field.user()` needs no `references` entry at all - the engine owns
+`core_users` and wires the junction's foreign key itself - but its junction table
+still has to be exported for the same reason.
+</Step>
+
+<Step>
+### Step 2b: Hold Many Targets, or Many People
+
+`multiple: true` moves a reference off the row and into a generated junction
+table with two foreign keys, a `position`, and a unique `(itemId, position)`.
+There is no comma-separated column and no JSON array anywhere in it, so
+`ON DELETE` still means something and "which articles is this category on" stays
+an indexed lookup:
+
+```ts title="src/content/article.ts"
+fields: {
+  // Many categories, at least one, unordered - a set of categories has no
+  // natural first member, so the engine stores it in ascending id order.
+  categories: field.relation({
+    min: 1,
+    multiple: true,
+    target: () => categoryContentType,
+  }),
+  // Many people, in the order of the byline. `field.user` takes exactly the
+  // same three arguments, because a set of people is stored the same way.
+  authors: field.user({ multiple: true, ordered: true }),
+}
+```
+
+Both read and write as a list of ids, through the same collection API:
+
+```ts
+const service = articleContent.service(c);
+
+await service.relations.categories.set(articleId, [4, 7]);
+await service.relations.authors.add(articleId, userId);
+await service.relations.authors.get(articleId); // [9, 3] - the byline order
+```
+
+<Callout type="info" title="A gallery is stored the same way">
+[`field.file({ multiple: true })`](/docs/dev/content-engine/fields) generates the
+same junction table with the same `position`, points its far side at `core_files`,
+and appears on the same `service.relations.<field>` API. What differs is the
+control the AdminCP renders - a multi-file uploader rather than a picker - and
+that `ordered` defaults to `true`, so the stored order is the order the files
+were **picked** in, whatever order their uploads finish in, and the editor can
+drag them into a different one.
+</Callout>
+
+<Callout type="info">
+A to-many reference cannot be a column in the AdminCP list (`admin.list.columns`)
+or an `orderBy` - it is on another table, and a list that loaded it would issue a
+query per row. It belongs on the **form**, where the AdminCP renders it as a
+multi-select combobox: what is chosen sits in the control as removable chips, and
+the same input searches for the next one. For an `ordered` field the chip order
+is the stored order, and a new choice is appended.
+</Callout>
+
+#### What an option looks like
+
+A picker reads its options from the **target's** own `admin` block: the name from
+`titleField` - resolved in the reader's language when that field is localized -
+and, when the target declares one, a colour swatch from `colorField`:
+
+```ts title="src/content/category.ts"
+export const categoryContentType = defineContentType({
+  id: "example.category",
+  tableName: "example_categories",
+  fields: {
+    name: field.text({ localized: true, required: true }),
+    color: field.text({ maxLength: 50, nullable: true }),
+  },
+  admin: {
+    titleField: "name",
+    colorField: "color", // [!code ++] a swatch beside the name, in every picker
+  },
+});
+```
+
+`colorField` must name a **shared column**: a colour is a property of the record
+rather than of the language somebody reads it in, so a localized one is a
+definition-time error. A row whose colour is null simply has no swatch.
+</Step>
+
+<Step>
+### Step 3: Add Structured JSON Objects
+
+Use `field.structured` to validate and store nested JSON objects in a Postgres `jsonb` column:
+
+```ts title="src/content/article.ts"
+import { z } from "zod";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    seoMeta: field.structured({ // [!code ++]
+      schema: z.object({ // [!code ++]
+        ogTitle: z.string().optional(), // [!code ++]
+        ogDescription: z.string().optional(), // [!code ++]
+      }), // [!code ++]
+    }), // [!code ++]
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 4: Add Repeatable JSON Arrays
+
+Use `field.repeatable` to store arrays of items in a Postgres `jsonb` column:
+
+```ts title="src/content/article.ts"
+import { z } from "zod";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    tags: field.repeatable({ // [!code ++]
+      schema: z.string().min(2), // [!code ++]
+    }), // [!code ++]
+  },
+});
+```
+</Step>
+
+</Steps>

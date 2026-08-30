@@ -1,0 +1,51 @@
+---
+title: Swagger
+description: Generate API documentation with OpenAPI.
+icon: ListCollapse
+---
+
+<Callout type="warn" title="This documentation is under construction! 🚧">
+  We're working hard to bring you the best documentation experience.
+</Callout>
+
+Swagger is a tool that helps you generate API documentation with OpenAPI. It's a powerful tool that can help you write documentation automatically and validate the request.
+
+## Usage
+
+To check documentation, open the following URL in your browser:
+
+[http://localhost:3000/api/swagger](http://localhost:3000/api/swagger)
+
+## Grouping
+
+Every route is tagged `(Plugin) - Module`, and that tag is the group Swagger UI
+puts it in. The plugin comes from `pluginId` with its npm scope dropped, the
+module from the `name` you gave `buildModule`:
+
+```ts
+buildModule({
+  pluginId: "@vitnode/core", // (Core)
+  name: "users", // - Users
+  routes: [sessionRoute],
+});
+```
+
+A nested module is named after its whole chain, so `(Core) - Admin / Users`
+stays a separate group from the top-level `(Core) - Users`:
+
+```ts
+buildModule({
+  pluginId: "@vitnode/core",
+  name: "admin",
+  routes: [],
+  modules: [usersAdminModule], // (Core) - Admin / Users
+});
+```
+
+The tags are declared on the document in the order each plugin declared its
+modules, which is the order the groups appear in.
+
+<Callout>
+  A route may add `tags` of its own - they are kept, after the generated one, so
+  the same operation can also show up under a tag you name yourself.
+</Callout>

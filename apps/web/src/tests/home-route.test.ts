@@ -175,23 +175,62 @@ describe('the front page links', () => {
   })
 })
 
-describe('the docs stay the legacy application own until Stage 16', () => {
-  it('has no /docs route in this route tree', () => {
+/**
+ * Stage 16 arrived, and the homepage did not change.
+ *
+ * This block replaced "the docs stay the legacy application's until Stage 16",
+ * which asserted that no route file mentioned `docs` and that nothing in this
+ * app imported Fumadocs. Both are now false by design, and what they were
+ * guarding is stated as the thing that actually matters: the front page's Get
+ * Started button became a client-side navigation **without the front page being
+ * edited**, and Fumadocs stayed inside the documentation.
+ */
+describe('the docs are this application own, and the homepage did not notice', () => {
+  it('has a /docs route in this route tree', () => {
     const routesDir = join(appSrc, 'routes')
-    const offenders = filesUnder(routesDir)
+    const docsRoutes = filesUnder(routesDir)
       .map((path) => relative(routesDir, path))
       .filter((path) => path.includes('docs'))
 
-    expect(offenders).toEqual([])
+    expect(docsRoutes.sort()).toEqual([
+      '_docs.tsx',
+      `_docs${sep}docs.$.tsx`,
+      `_docs${sep}docs.index.tsx`,
+      'docs.search.ts',
+    ])
   })
 
-  it('never imports Fumadocs, which is what a fake /docs route would need', () => {
+  it('still sends Get Started to /docs/dev through the same seam', () => {
+    // The whole proof. Stage 15 wrote this href and this component; Stage 16
+    // added route files and changed neither. `plugin-routes.test.ts` is the
+    // other half - the route tree now answers `true` for `/docs/dev`, so
+    // `MigrationLink` renders a `<Link>` rather than an `<a>`.
+    expect(code(HERO)).toMatch(/<LinkComponent[\s\S]*?href="\/docs\/dev"/)
+    expect(code(ROUTE)).toMatch(/from '#\/migration\/link'/)
+  })
+
+  it('keeps Fumadocs inside the documentation', () => {
     // `fumadocs-core/link` was the Next.js homepage's link component, and
-    // carrying it across was the single most likely way for this migration to
-    // start Stage 16 by accident.
+    // carrying it across was the single most likely way for Stage 15 to start
+    // Stage 16 by accident. The ban is now a boundary rather than a
+    // prohibition: Fumadocs belongs to `src/docs`, to the routes that render it
+    // and to the screenshot wrapper seven documents import by path - and to
+    // nothing else, least of all `#/site`.
+    const allowed = new Set([
+      `components${sep}fumadocs${sep}img.tsx`,
+      `routes${sep}_docs${sep}docs.$.tsx`,
+      `routes${sep}_docs.tsx`,
+      `routes${sep}docs.search.ts`,
+    ])
+
+    // Runtime files only: this suite and `docs-route.test.ts` both quote the
+    // specifiers they assert about, so scanning them would fail on the
+    // assertions' own text.
     const offenders = filesUnder(appSrc)
+      .filter((path) => !path.includes(`${sep}tests${sep}`))
       .filter((path) => /from\s*["']fumadocs/.test(read(path)))
       .map((path) => relative(appSrc, path))
+      .filter((path) => !path.startsWith(`docs${sep}`) && !allowed.has(path))
 
     expect(offenders).toEqual([])
   })
@@ -254,11 +293,25 @@ describe('Tailwind can see the classes the package renders', () => {
   it.each(['components', 'tanstack', 'views'])(
     'scans dist/src/%s of @vitnode/core',
     (directory) => {
-      expect(read(STYLES)).toContain(
-        `@source "../node_modules/@vitnode/core/dist/src/${directory}"`,
+      expect(read(STYLES)).toMatch(
+        new RegExp(
+          `@source\\s+['"]\\.\\./node_modules/@vitnode/core/dist/src/${directory}['"]`,
+        ),
       )
     },
   )
+
+  /**
+   * Fumadocs ships compiled for the same reason, so the documentation's chrome
+   * is in the same position: not one of its classes is written in this
+   * repository, and without this line the sidebar, the search dialog and the
+   * table of contents render as unstyled markup.
+   */
+  it('scans the Fumadocs build output', () => {
+    expect(read(STYLES)).toMatch(
+      /@source\s+['"]\.\.\/node_modules\/fumadocs-ui\/dist\/\*\*\/\*\.js['"]/,
+    )
+  })
 })
 
 describe('the VitNode mark', () => {

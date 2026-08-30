@@ -1,0 +1,398 @@
+---
+title: WebSocket
+description: Add real-time features - live updates and notifications - with one shared connection.
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+| Cloud            | Self-Hosted  | Links                                                            |
+| ---------------- | ------------ | ---------------------------------------------------------------- |
+| ❌ Not Supported | ✅ Supported | [Hono WebSocket Helper](https://hono.dev/docs/helpers/websocket) |
+
+A normal request works one way: the browser asks, the server answers, done. A
+**WebSocket** keeps the line open both ways, so the server can push data to the
+browser the moment something happens - no refreshing, no polling.
+
+Use it for things that should feel instant: live lists, presence, chat, and
+notifications.
+
+## How it works
+
+VitNode takes care of the tricky parts for you:
+
+- **One connection.** The browser opens a single socket at `/ws`, and every
+  feature shares it. You never manage sockets by hand.
+- **Channels.** Each message is tagged with a channel id so it reaches the
+  right place. An id looks like `{pluginId}_{module}_{name}`.
+- **Shared across tabs.** Open your app in five tabs and there is still just
+  **one** connection. One tab becomes the "leader" and the others ride along,
+  so every tab sees the same messages with no duplicates.
+- **Knows who is signed in.** The connection is tied to the logged-in user. It
+  automatically re-connects when they sign in or out, dropping to a "guest"
+  connection on sign-out.
+
+<Callout type="info">
+  The client provider is already mounted for you in the root layout, so the
+  connection is live on every page - there is nothing to wire up on the
+  frontend.
+</Callout>
+
+## Setup
+
+You only do this once, in your API entrypoint.
+
+<Steps>
+<Step>
+### Add the WebSocket server
+
+The socket is served by your runtime, so install it there.
+
+<Tabs groupId="runtime" persist items={["Node.js", "Bun"]}>
+
+<Tab value="Node.js">
+
+Install the `ws` package:
+
+```bash title="Terminal"
+pnpm add ws && pnpm add -D @types/ws
+```
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Terminal'>
+
+```bash tab="bun"
+bun i ws && bun i @types/ws -D
+```
+
+```bash tab="pnpm"
+pnpm i ws && pnpm i @types/ws -D
+```
+
+```bash tab="npm"
+npm i ws && npm i @types/ws -D
+```
+
+</Tabs>
+
+```ts title="src/index.ts"
+import { serve } from "@hono/node-server";
+import { WebSocketServer } from "ws";
+
+const wss = new WebSocketServer({ noServer: true });
+
+serve({
+  fetch: app.fetch,
+  port: 8000,
+  websocket: { server: wss }, // [!code ++]
+});
+```
+
+</Tab>
+
+<Tab value="Bun">
+
+Bun has WebSockets built in:
+
+```ts title="src/index.ts"
+import { websocket } from "hono/bun";
+
+export default {
+  fetch: app.fetch,
+  websocket, // [!code ++]
+};
+```
+
+</Tab>
+
+</Tabs>
+</Step>
+
+<Step>
+### Add the handler
+
+`handleVitNodeWebSocket` wires the connection into VitNode. It is the same on
+every runtime - only the `upgradeWebSocket` import differs.
+
+<Tabs groupId="runtime" persist items={["Node.js", "Bun"]}>
+
+```ts title="src/index.ts" tab="Node.js"
+import { serve, upgradeWebSocket } from "@hono/node-server"; // [!code ++]
+import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle"; // [!code ++]
+
+app.get("/ws", upgradeWebSocket(handleVitNodeWebSocket())); // [!code ++]
+```
+
+```ts title="src/index.ts" tab="Bun"
+import { upgradeWebSocket, websocket } from "hono/bun"; // [!code ++]
+import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle"; // [!code ++]
+
+app.get("/ws", upgradeWebSocket(handleVitNodeWebSocket())); // [!code ++]
+```
+
+</Tabs>
+
+That's it - your app now has real-time. Next, let's send a message.
+
+</Step>
+</Steps>
+
+## Send and receive
+
+Let's build a tiny **echo**: the client sends a message, the server sends it
+right back. It shows the full round-trip in four small steps.
+
+<Steps>
+<Step>
+### Describe the messages (the channel)
+
+A **channel** is a shared contract: it holds the id and the two message
+types - what the client **sends** and what it **receives**. Put it in its own
+file so both the server and the client can import it.
+
+```ts title="realtime/echo.channel.ts"
+import { createWebSocketChannel } from "@vitnode/core/ws/types";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+export interface EchoClientMessage {
+  message: string;
+}
+
+export interface EchoServerMessage {
+  reply: string;
+}
+
+// Full id: `@vitnode/blog_chat_echo`
+export const echoChannel = createWebSocketChannel<
+  EchoClientMessage, // what the client sends
+  EchoServerMessage // what the client gets back
+>({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  module: "chat",
+  id: "echo",
+});
+```
+
+</Step>
+<Step>
+### Handle it on the server
+
+`buildWebSocket` runs your `onMessage` whenever a client sends to this channel.
+You get `data` (already parsed and typed) and `send` to reply on the same
+channel. You also get `c` - the same context as a route, so you can reach the
+database, the user, the logger, and more.
+
+```ts title="api/modules/chat/echo.ws.ts"
+import { buildWebSocket } from "@vitnode/core/api/lib/websocket";
+
+import type {
+  EchoClientMessage,
+  EchoServerMessage,
+} from "@/realtime/echo.channel";
+
+export const echoWebSocket = buildWebSocket<
+  EchoClientMessage,
+  EchoServerMessage
+>({
+  id: "echo",
+  description: "Replies with whatever it receives.",
+  onMessage: ({ data, send }) => {
+    send({ reply: `You said: ${data.message}` });
+  },
+});
+```
+
+</Step>
+<Step>
+### Register it in a module
+
+Add it to the module's `webSockets`, the same way you add routes.
+
+```ts title="api/modules/chat/chat.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import { echoWebSocket } from "./echo.ws"; // [!code ++]
+
+export const chatModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "chat",
+  routes: [],
+  webSockets: [echoWebSocket], // [!code ++]
+});
+```
+
+</Step>
+<Step>
+### Use it in a component
+
+`useVitNodeWebSocket` connects the component to the channel. Because it knows
+the channel, `send` and the `onMessage` `data` are fully typed - no casting.
+
+```tsx title="views/echo.tsx"
+"use client";
+
+import { useVitNodeWebSocket } from "@vitnode/core/ws/use-websocket";
+import React from "react";
+
+import { echoChannel } from "@/realtime/echo.channel";
+
+export const Echo = () => {
+  const [reply, setReply] = React.useState("");
+
+  const { send, readyState } = useVitNodeWebSocket(echoChannel, {
+    onMessage: data => setReply(data.reply), // data is EchoServerMessage
+  });
+
+  return (
+    <button
+      disabled={readyState !== WebSocket.OPEN}
+      onClick={() => send({ message: "Hello!" })}
+      type="button"
+    >
+      {reply || "Say hello"}
+    </button>
+  );
+};
+```
+
+</Step>
+</Steps>
+
+<Callout type="info">
+  The subscription lives with the component: it starts on mount and stops on
+  unmount. So a view only receives messages while it is on screen - leave the
+  page and it goes quiet on its own.
+</Callout>
+
+## Broadcast to everyone
+
+Want to push the same update to **every** open browser? Use `broadcast` from any
+route or handler. A great use is keeping a list fresh: broadcast whenever the
+data changes, and every client refreshes.
+
+First, a "broadcast-only" channel. Since clients never send to it, its send type
+is `never`:
+
+```ts title="realtime/posts.channel.ts"
+import { createWebSocketChannel } from "@vitnode/core/ws/types";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+export interface PostsChange {
+  action: "created" | "deleted" | "updated";
+}
+
+export const postsChannel = createWebSocketChannel<never, PostsChange>({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  module: "posts",
+  id: "changes",
+});
+```
+
+Then broadcast after you change something. The payload is type-checked against
+the channel:
+
+```ts title="api/modules/posts/routes/create.route.ts"
+import { postsChannel } from "@/realtime/posts.channel";
+
+// ...inside the handler, after creating the post:
+c.get("realtime").broadcast(postsChannel, { action: "created" });
+```
+
+On the client, listen and refresh the page when it fires:
+
+```tsx title="views/live-posts.tsx"
+"use client";
+
+import { useRouter } from "@vitnode/core/lib/navigation";
+import { useVitNodeWebSocket } from "@vitnode/core/ws/use-websocket";
+
+import { postsChannel } from "@/realtime/posts.channel";
+
+export const LivePosts = () => {
+  const router = useRouter();
+
+  useVitNodeWebSocket(postsChannel, {
+    onMessage: () => router.refresh(),
+  });
+
+  return null;
+};
+```
+
+<Callout type="info">
+  `broadcast` reaches everyone, so use it only for non-sensitive signals like
+  "the list changed". For private data, send to one user instead (below).
+</Callout>
+
+## Send to one user
+
+To reach **one person** - on every browser where they are signed in - use
+`sendToUser`. VitNode knows which user owns each connection (from their sign-in
+cookie), so the message never leaks to anyone else.
+
+This powers the built-in notification system. Send one from any handler:
+
+```ts title="server: notify a user"
+import { notificationsChannel } from "@vitnode/core/ws/notifications";
+
+c.get("realtime").sendToUser(userId, notificationsChannel, {
+  title: "Welcome back 👋",
+  description: "You have 3 new messages.",
+  type: "info",
+});
+```
+
+Show it however you like - here as a toast with `sonner`:
+
+```tsx title="notification-listener.tsx"
+"use client";
+
+import { notificationsChannel } from "@vitnode/core/ws/notifications";
+import { useVitNodeWebSocket } from "@vitnode/core/ws/use-websocket";
+import { toast } from "sonner";
+
+export const NotificationListener = () => {
+  useVitNodeWebSocket(notificationsChannel, {
+    onMessage: n => toast(n.title, { description: n.description }),
+  });
+
+  return null;
+};
+```
+
+<Callout type="info">
+  The notification channel, this listener, and an admin dashboard button to send
+  one are all built in. A user only receives notifications while signed in - a
+  guest connection has no one to deliver to.
+</Callout>
+
+## Follow sign-in and sign-out
+
+A connection learns who it belongs to exactly once, during its opening
+handshake, from the sign-in cookie the browser sent with it. Nothing afterwards
+can change the server's mind - so when someone signs in or out, the socket has
+to be re-opened to say hello again as the new person.
+
+`WebSocketAuthSync` does that for you, and it is already mounted in the default
+layout. You only need it if you build your own shell:
+
+```tsx title="your layout"
+import { WebSocketAuthSync } from "@vitnode/core/views/layouts/theme/web-socket-auth-sync";
+
+// `userId` is the signed-in user's id, or `null` for a guest.
+<WebSocketAuthSync userId={userId} />;
+```
+
+It renders nothing and holds no state. Hand it the id, and it re-opens the
+shared connection whenever that id changes - guest to user, user to guest, or
+one account to another.
+
+<Callout type="info">
+  If your app reads the session in the browser rather than on the server, pass
+  `undefined` until you actually know the answer. `undefined` means "still
+  asking" and is left alone; `null` means "definitely nobody" and counts as a
+  sign-out. Collapsing the two would re-open the connection on every page load,
+  which the socket would find quite rude.
+</Callout>

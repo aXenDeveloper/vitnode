@@ -1,0 +1,47 @@
+---
+title: Namespaces
+description: Provide a way to get access to the translation strings in client components on frontend.
+---
+
+By default VitNode provide a way to get access to the translation strings only for `core.global` namespace. But sometimes you need to get access to the translation strings in other namespaces.
+
+For example, you have a component that needs to get access to the translation strings in the `core.global` and `welcome.home` namespaces.
+
+<Callout title="Client Component Only">
+  Provide namespaces into components is only for client components. If you want
+  to use translation strings in server components you can avoid this guide.
+</Callout>
+
+## Structuring
+
+A plugin's strings live in `src/locales/{locale}.json`, and every one of them belongs under the plugin's own namespace. A top-level key outside it collides with core and other plugins, so VitNode ignores it.
+
+```json title="plugins/{your_plugin}/src/locales/en.json"
+{
+  "{your_plugin}": {
+    "hello": "Hello World" // ✅ This will work
+  },
+  "world": "World" // ❌ This will not work
+}
+```
+
+See [Server-side](/docs/dev/i18n/server) for registering that file with your plugin.
+
+## Usage
+
+To get access to the translation strings in other namespaces you need to use the `I18nProvider` component.
+
+```tsx title="plugins/{your_plugin}/src/app/blog/layout.tsx"
+import { I18nProvider } from '@vitnode/core/components/i18n-provider';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <I18nProvider namespaces={['blog.home']}>{children}</I18nProvider>;
+}
+```
+
+Provide the list of namespaces that you want to get access to the translation strings in the `namespaces` prop.
+
+<Callout title="Global namespace">
+  You don't need to include the `core.global` namespace in the `namespaces`
+  prop. It's already included by default.
+</Callout>

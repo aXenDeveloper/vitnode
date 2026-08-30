@@ -1,0 +1,249 @@
+---
+title: Blog
+description: Articles, posts, and more! Create your own blog in VitNode.
+icon: BookText
+---
+
+<Callout type="warn" title="Work in Progress">
+  We're working on the blog plugin, so stay tuned for updates! 🚀
+</Callout>
+
+## Installation
+
+<Steps>
+<Step>
+
+### Install package from NPM
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun i @vitnode/blog@canary
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/blog@canary
+```
+
+```bash tab="npm"
+npm i @vitnode/blog@canary
+```
+
+</Tabs>
+</Step>
+<Step>
+
+### Connect plugin to config
+
+```ts title="src/vitnode.config.ts"
+import { blogPlugin } from "@vitnode/blog/config";
+```
+
+```ts title="src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  plugins: [blogPlugin()] // [!code highlight]
+});
+```
+
+</Step>
+<Step>
+
+### Connect plugin to API config
+
+```ts title="src/vitnode.api.config.ts"
+import { blogApiPlugin } from "@vitnode/blog/config.api";
+```
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [blogApiPlugin()] // [!code highlight]
+});
+```
+
+</Step>
+<Step>
+
+### Run dev server
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+</Steps>
+
+## How it is built
+
+The blog is the Content Engine's reference implementation. Two content types,
+three component overrides and one layout - and no CRUD of its own:
+
+```text
+plugins/blog/src/
+├── content/category.ts        Blog Category  (blog.category)
+├── content/post.ts            Blog Article   (blog.post)
+├── database/{categories,posts}.ts   createContentModel(...)
+├── config.tsx                 contentTypeAdmin(...) x2
+└── views/admin/
+    ├── category/color-field.tsx     AutoFormColor override
+    ├── category/color-cell.tsx      table cell override
+    ├── article/editor-field.tsx     AutoFormEditor override
+    └── article/form-layout.tsx      the editor screen
+```
+
+There is no `api/modules/admin/**`, no create/edit dialog, no manual validation,
+no manual search sync and no hand-written slug uniqueness check. The generated
+routes, forms, permissions, events, search documents and canonical URLs come
+from the two definitions.
+
+### Categories - the simple example
+
+Dialog create and edit, because a name and a colour do not need a page:
+
+```ts title="src/content/category.ts"
+export const blogCategoryContentType = defineContentType({
+  id: "blog.category",
+  tableName: "blog_categories",
+
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+
+  fields: {
+    color: field.text({ maxLength: 50, nullable: true }),
+    name: field.text({ localized: true, required: true, maxLength: 100 }),
+  },
+
+  admin: {
+    permissionModule: "categories",
+    path: "blog/categories",
+    titleField: "name",
+    create: { mode: "dialog" },
+    edit: { mode: "dialog" },
+    list: { columns: ["name", "color", "updatedAt"] },
+  },
+});
+```
+
+The colour is the AdminCP's own picker through a
+[field override](/docs/dev/content-engine/admincp#form-layout-customization),
+and the colour column is a swatch **plus** the value in words.
+
+`name` is localized and is still the list's first column and the content type's
+`titleField`. That is the split the engine draws: showing a localized value is a
+projection the AdminCP resolves in *your* language, while ordering and filtering
+stay on the base table. The list reads:
+
+```text
+Name              Color        Updated
+Aktualności       ● #3260c0    2 days ago
+Poradniki         ● #23a06b    a week ago
+```
+
+and the dialog is one form, with the switcher inside the field that needs one:
+
+```text
+Name           [ Aktualności ] [ PL ▾ ]
+
+Color          [ ● #3260c0   ]
+
+                       Cancel   Save
+```
+
+<Callout type="warn" title="The article's category picker still shows identifiers">
+  `titleField: "name"` fixes the list, the toasts and the page headings, because
+  the AdminCP resolves a localized title from the translation it already loaded.
+  The **relation picker** is a different query: a relation label is resolved from
+  a shared column on the target with a SQL join, and a localized content type has
+  none - so the article's category picker labels its options `#3` rather than
+  "Aktualności". Resolving one from the translation table is a Content Engine
+  change, not something a plugin should paper over.
+</Callout>
+
+### Articles - the rich example
+
+Page create and edit, a custom layout, `AutoFormEditor` for the body, a native
+relation to the category, an author, publication, editorial history, search and
+delivery:
+
+```text
+/admin/content/blog/articles            list
+/admin/content/blog/articles/create     create
+/admin/content/blog/articles/42/edit    edit
+```
+
+The id is still `blog.post` - the URL is `blog/articles` because
+[`admin.path`](/docs/dev/content-engine/admincp#the-url-says-what-the-screen-says)
+says so, and a screen called "Articles" should not live at an address that says
+`post`.
+
+```text
+┌───────────────────────────────────────────────────────┐
+│ Title                          │ Publish              │
+│ [............................] │ Status: Draft        │
+│                                │            [ Save ]  │
+│ Content                        ├──────────────────────┤
+│ ┌────────────────────────────┐ │ Article settings     │
+│ │      AutoFormEditor        │ │ Friendly URL         │
+│ └────────────────────────────┘ │ Category             │
+│                                │ Author               │
+└───────────────────────────────────────────────────────┘
+```
+
+Below `lg` it is a single column: body first, then metadata, then the actions.
+
+Articles are localized, and the layout does not know it. `title`, `content` and
+`friendlyUrl` are stored per language and `categoryId` and `authorId` are not -
+so the first three render their own small language switchers and the last two do
+not, from one `ContentFormField` call each:
+
+```text
+Title          [ Tytuł artykułu ] [ PL ▾ ]
+Content        [ AutoFormEditor ] [ PL ▾ ]
+Friendly URL   [ tytul-artykulu ] [ PL ▾ ]
+Category         Aktualności
+Author           Maciej
+```
+
+Everything opens in the language you are reading VitNode in - not in
+`defaultLocale` - and switching `Title` to English leaves the editor in Polish.
+One Save writes the base row and every changed language in one transaction.
+Per-language publish, history and delete live in the list's **Languages** row
+action.
+
+### Upgrading from an older blog
+
+Migration `0035_migrate_blog_to_content_engine.sql` is additive. No table is
+dropped and no record moves:
+
+- `blog_categories` and `blog_posts` keep their names, ids, colours, categories,
+  authors and timestamps.
+- The text moves out of `core_languages_words` and into
+  `blog_categories_translations` / `blog_posts_translations`, one row per
+  language that actually had a translation.
+- Every existing article becomes `published` with `publishedAt = createdAt` -
+  they were all publicly readable before, and that is the one publication fact
+  the old schema can prove. `version` starts at 1 and no revision history is
+  invented.
+- A record with no default-locale translation gets one built from a name it
+  already has, rather than being left unreadable.
+
+Two things do change, deliberately:
+
+| Was | Now |
+| --- | --- |
+| `GET /api/@vitnode/blog/posts` | `GET /api/@vitnode/blog/content/blog` |
+| `GET /api/@vitnode/blog/categories` | removed - categories have no public URL |
+| `/admin/blog/posts`, `/admin/blog/categories` | redirect to the generated screens |
+| `blog.post.deleted` carried `categoryId` | it does not; see [Built-in events](/docs/dev/events/built-in-events#blogpostdeleted) |

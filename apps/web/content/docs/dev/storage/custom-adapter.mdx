@@ -1,0 +1,78 @@
+---
+title: Custom Adapter
+description: Create your own custom storage adapter for VitNode.
+---
+
+Want to store files somewhere else? Implement the `StorageApiPlugin` interface.
+An adapter is a plain factory returning three methods - `upload`, `delete` and
+`getUrl` - plus an optional `static` descriptor for disk-backed adapters that
+serve files through Hono's `serveStatic`.
+
+## Usage
+
+<Steps>
+<Step>
+### Create the adapter
+
+```ts title="src/utils/storage/my-storage.ts"
+import type { StorageApiPlugin } from "@vitnode/core/api/models/storage";
+
+export const MyStorageAdapter = ({
+  bucket = "",
+}: {
+  bucket: string | undefined;
+}): StorageApiPlugin => {};
+```
+
+</Step>
+<Step>
+### Implement the methods
+
+- `upload({ key, body, contentType })` - persist the `Buffer` and return the
+  stored `key` and its public `url`.
+- `delete(key)` - remove a stored object.
+- `getUrl(key)` - build the public URL for a key.
+
+```ts title="src/utils/storage/my-storage.ts"
+import type {
+  StorageApiPlugin,
+  StorageUploadArgs,
+} from "@vitnode/core/api/models/storage";
+
+export const MyStorageAdapter = ({
+  bucket = "",
+}: {
+  bucket: string | undefined;
+}): StorageApiPlugin => {
+  const getUrl = (key: string) => `https://cdn.example.com/${bucket}/${key}`;
+
+  // [!code ++:12]
+  return {
+    getUrl,
+    upload: async ({ key, body, contentType }: StorageUploadArgs) => {
+      // ...persist `body` under `key`
+      return { key, url: getUrl(key) };
+    },
+    delete: async (key: string) => {
+      // ...remove `key`
+    },
+  };
+};
+```
+
+</Step>
+</Steps>
+
+<Callout type="info" title="Keys are pre-built for you">
+  The framework builds the `month_{month}_{year}/{folder}/<uuid>.<ext>` key
+  before calling `upload`, so an adapter just stores the `body` at the given
+  `key` - no path logic needed.
+</Callout>
+
+## Publish to NPM
+
+If you want to share your adapter, publish it as an NPM package. Reference
+implementations:
+
+- [S3 / R2 Adapter](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/s3)
+- [Supabase Storage Adapter](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/supabase-storage)

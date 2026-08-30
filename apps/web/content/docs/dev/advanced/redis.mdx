@@ -1,0 +1,407 @@
+---
+title: Redis
+description: Add a shared Redis cache to speed up your app and scale it across multiple instances.
+---
+
+VitNode can use [Redis](https://redis.io/) as a shared cache. Once configured,
+it is exposed on every request as `c.get("cache")`, speeds up authentication by
+caching session lookups, and backs the
+[rate limiter](/docs/dev/advanced/rate-limiter) so limits hold up when you run
+several instances behind a load balancer.
+
+Redis is **optional**. Without it, the cache safely degrades to no-ops (reads
+return `null`, `remember` just runs its loader) and the rate limiter falls back
+to in-memory storage. A Redis outage at runtime never breaks a request.
+
+## Setup
+
+<Steps>
+<Step>
+### Start Redis
+
+The development `docker-compose.yml` ships a `cache` service
+(`redis:8.8-alpine`). Start it (alongside the database) with:
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun docker:dev
+```
+
+```bash tab="pnpm"
+pnpm docker:dev
+```
+
+```bash tab="npm"
+npm run docker:dev
+```
+
+</Tabs>
+
+</Step>
+<Step>
+### Set the connection URL
+
+Add `REDIS_URL` and `REDIS_PASSWORD` to your `.env` file. `REDIS_PASSWORD` is the
+single source of truth for the password - the Docker container requires it and
+the app authenticates with it - so the URL itself carries no credentials:
+
+```bash title=".env"
+REDIS_URL=redis://localhost:6379
+
+# Password the Docker Redis container requires (and the app authenticates with)
+REDIS_PASSWORD=root
+```
+
+<Callout type="info" title="Both processes read these">
+  The API takes its connection from `vitnode.api.config.ts`, but the [Next.js cache
+  handlers](#caching-nextjs-output) read these variables directly. If you run the
+  web app and the API as separate services, set them on both.
+</Callout>
+
+<Callout type="warn" title="Change the password in production">
+  `root` is a convenience default for local development. Set a strong
+  `REDIS_PASSWORD` in production.
+</Callout>
+
+</Step>
+<Step>
+### Configure it
+
+Pass the `redis` object to `buildApiConfig`. Redis is **opt-in** - wire it up so
+it only turns on when `REDIS_URL` is set, so the app runs fine without Redis in
+environments where you don't need it:
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:3]
+  redis: process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
+    : undefined,
+});
+```
+
+<Callout type="info" title="No REDIS_URL, no Redis">
+  When `REDIS_URL` is unset, `redis` is `undefined` and VitNode skips Redis
+  entirely: the cache is a no-op, the rate limiter uses in-memory storage, and
+  WebSockets run in single-instance mode. Nothing connects to Redis.
+</Callout>
+
+</Step>
+</Steps>
+
+### Options
+
+The `redis` object is a
+[node-redis](https://github.com/redis/node-redis) `RedisClientOptions`.
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    url: {
+      description:
+        "The Redis connection string (redis:// or rediss://). When omitted, node-redis connects to localhost:6379 using the other options.",
+      type: "string",
+    },
+    password: {
+      description:
+        "Password used to authenticate. Pair it with username when your Redis uses ACL users.",
+      type: "string",
+    },
+    socket: {
+      description:
+        "Connection-level options: host, port, tls, connectTimeout, reconnectStrategy.",
+      type: "RedisSocketOptions",
+    },
+    "...RedisClientOptions": {
+      description:
+        "Any other node-redis option, e.g. database or name. disableOfflineQueue defaults to true so cache commands fail fast (and fall through) when Redis is unreachable - override it if you prefer queuing.",
+      type: "RedisClientOptions",
+    },
+  }}
+/>
+
+<Callout type="info" title="Connecting happens in the background">
+  VitNode opens the connection at boot without blocking startup, and node-redis
+  keeps retrying with an exponential backoff if Redis is unreachable. Requests
+  that land before the socket is ready behave exactly like a Redis outage: the
+  cache reports a miss and the request goes to the database.
+</Callout>
+
+## Using the cache
+
+Access the cache in any route or model with `c.get("cache")`.
+
+```ts title="plugins/{plugin_name}/src/routes/posts.route.ts"
+export const postsRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {},
+  handler: async c => {
+    const cache = c.get("cache");
+
+    await cache.set("hello", { world: true }, 60); // expires in 60s
+    const value = await cache.get<{ world: boolean }>("hello");
+
+    return c.json(value);
+  },
+});
+```
+
+<Callout type="info" title="Keys are namespaced per plugin">
+  You pass a short key like `hello`; VitNode automatically stores it under your
+  plugin's code - `vitnode:cache:{plugin_code}:hello`. So two plugins can both
+  use a `hello` key without clashing, and you never read another plugin's data
+  by accident. The plugin code is taken from the request context, so there is
+  nothing to prefix by hand.
+</Callout>
+
+### Methods
+
+<TypeTable
+  type={{
+    "get<T>(key)": {
+      description:
+        "Read a JSON value. Returns null on a miss, without Redis, or on error.",
+      type: "Promise<T | null>",
+    },
+    "set<T>(key, value, ttlSeconds?)": {
+      description:
+        "Write a JSON value. Provide ttlSeconds to set an expiry; omit it to keep the value until deleted or flushed.",
+      type: "Promise<void>",
+    },
+    "delete(key | key[])": {
+      description: "Remove one or more keys.",
+      type: "Promise<void>",
+    },
+    "has(key)": {
+      description: "Whether a key currently exists.",
+      type: "Promise<boolean>",
+    },
+    "remember<T>(key, ttlSeconds, loader)": {
+      description:
+        "Fetch-through: return the cached value, or run loader, cache its result, and return it.",
+      type: "Promise<T>",
+    },
+    "flush()": {
+      description:
+        "Delete every cache key for the current plugin (vitnode:cache:{plugin_code}:*). Other plugins' keys and unrelated data are left untouched.",
+      type: "Promise<void>",
+    },
+  }}
+/>
+
+## Caching database queries
+
+<Callout type="info" title="Two caches, one request">
+  This page covers the cache *inside* the API. The Next.js cache in front of it
+  stores whole responses and is expired differently. [Cache](/docs/dev/cache)
+  covers both and how to choose between them.
+</Callout>
+
+The most useful method is `remember` - it runs your loader only on a cache
+miss, which is perfect for hot, rarely-changing data. Good candidates are
+reference data such as role-name translations or resolved staff permissions.
+
+```ts title="Cache an expensive query"
+const roleNames = await c.get("cache").remember(
+  `role-names:${roleId}`,
+  // Cache for 5 minutes
+  60 * 5,
+  () => resolveRoleNames(c, [roleId]),
+);
+```
+
+<Callout type="warn" title="Remember to invalidate">
+  A cache is only correct if you clear stale entries. When the underlying data
+  changes (e.g. an admin edits a role), delete the affected key so the next read
+  reloads it:
+
+```ts
+await c.get("cache").delete(`role-names:${roleId}`);
+```
+
+Prefer a short TTL for data you cannot reliably invalidate. `null` results are
+never cached, so a loader that returns `null` runs every time.
+
+</Callout>
+
+## Session caching
+
+Every authenticated request has to resolve the current user from the session
+cookie - a session lookup plus a user lookup in the database. On a single page
+load that can be many requests, and therefore many repeated queries.
+
+**When `redis` is configured, VitNode caches that resolution for you** - there is
+nothing extra to enable. Subsequent requests read the user straight from Redis
+instead of hitting the database. This applies to both regular and admin
+sessions.
+
+The cached entry:
+
+- is scoped to the session's device, so it is never served to a different
+  device;
+- lives for at most 60 seconds, and never longer than the session's remaining
+  lifetime, so an expired session is never served from cache;
+- is cleared the instant the user signs out.
+
+Admin access is still re-checked against the database on every request, so
+revoking an admin takes effect immediately - not when the cache expires.
+
+<Callout type="info" title="Safe without Redis">
+  Without Redis - or if it becomes unreachable - every request falls back to the
+  database exactly as before. Session caching only ever removes database load;
+  it never changes what a request can see beyond the short TTL above.
+</Callout>
+
+## Staff permission caching
+
+Resolving what an admin or a moderator is allowed to do takes three queries: the
+user's roles, whether any of them is `root`, and the staff entries attached to
+that user or those roles. Every gated request runs it, and an AdminCP page that
+renders a dozen gated elements runs it a dozen times.
+
+**When `redis` is configured, VitNode caches the resolved set for you** - keyed
+per user and per kind, in the shared framework namespace, for at most 60 seconds.
+
+The TTL is a backstop rather than the mechanism: the routes that can change the
+answer expire the cache themselves, so a permission change is live immediately.
+
+- Editing a **staff entry attached to a user** clears that user's entry.
+- Editing a **role**, deleting one, or editing a **staff entry attached to a
+  role** moves a generation stamp that every key is built from, which expires
+  every user's cached set in a single write - the members of a role are not a set
+  a mutation can cheaply enumerate.
+- Changing a user's **primary or secondary roles** clears that user's entry.
+
+<Callout type="info" title="Safe without Redis">
+  Without Redis the read misses, the write is a no-op, and every request resolves
+  permissions from the database exactly as before.
+</Callout>
+
+## Caching Next.js output
+
+Everything above is the cache *inside* the API. Redis also backs the **Next.js**
+caches in the web process, so a cached page or `fetch` response is shared by
+every instance instead of being rebuilt once per container.
+
+**There is nothing to add to `next.config.ts`.** `vitNodeNextConfig` wires the
+handlers up when `REDIS_URL` is set - the same variable that turns Redis on for
+the API - because Next takes a cache handler as a module *path* and cannot be
+handed a config object:
+
+```ts title="src/next.config.ts"
+// Already all it takes - the handlers follow REDIS_URL.
+export default vitNodeNextConfig(nextConfig);
+```
+
+<Callout type="warn" title="The web process reads the environment directly">
+  The API gets its connection from `vitnode.api.config.ts`; the cache handlers
+  cannot - they are loaded by Next itself, outside your app's module graph. They
+  read `REDIS_URL` and `REDIS_PASSWORD` from the environment, so both must be set
+  wherever the **web** process runs, not only where the API runs. In a split
+  deployment that means adding them to the frontend service too.
+</Callout>
+
+### What each handler covers
+
+VitNode registers two, because Next has two caches and they are not the same one:
+
+<TypeTable
+  type={{
+    "cacheHandlers.default": {
+      description:
+        'Backs the `use cache` directive. Entries are stored whole in Redis, so they survive a restart and every instance reads the same one.',
+      type: "use cache",
+    },
+    cacheHandler: {
+      description:
+        "Backs the fetch Data Cache and the prerender store. `fetch` responses go to Redis; prerendered pages stay on each instance's disk, where the build put them.",
+      type: "Data Cache + ISR",
+    },
+  }}
+/>
+
+Prerendered pages are deliberately left on disk. A custom handler *replaces*
+Next's filesystem cache outright, and the pages `next build` produced only exist
+there - putting them in Redis would mean serving one deploy's HTML from another
+deploy's cache. Their payloads are also Next-internal structures that would need
+re-checking on every upgrade. The build output is identical on every instance
+anyway, so there is nothing to gain by sharing it.
+
+### Why it matters: shared invalidation
+
+The part that is genuinely broken without this is not speed, it is correctness.
+`updateTag` runs on whichever instance handled the Server Action. With per-process
+caches the other instances never hear about it and keep serving the old page until
+their own copies age out.
+
+Both handlers record every revalidation in Redis and check it on read, so an
+invalidation raised anywhere is seen everywhere - including for the prerendered
+pages that still live on local disk, which each instance then rebuilds for itself.
+
+### Behaviour and limits
+
+- **A cold start misses.** The connection is opened in the background and commands
+  fail fast until it is ready, so the first requests after a boot render normally.
+- **A Redis outage is a miss, never an error.** Reads fall through and writes are
+  dropped; pages render as if nothing were cached.
+- **Entries carry a TTL** so abandoned keys cannot accumulate: `use cache` entries
+  expire at their `cacheLife` `expire`, stored `fetch` responses after 7 days, and
+  revalidation markers after 30 days.
+- **Everything lives under `vitnode:next:`**, separate from the API's
+  `vitnode:cache:` namespace, so neither side can clear the other by accident.
+
+<Callout type="info" title="Opting out">
+  To use Redis for the API but keep Next on its built-in caches, override the two
+  keys after the wrapper: `vitNodeNextConfig({ cacheHandler: undefined, cacheHandlers: undefined })`.
+</Callout>
+
+## Rate limiting with Redis
+
+When `redis` is configured, the [rate limiter](/docs/dev/advanced/rate-limiter)
+automatically uses it as its store, so counters are shared across all
+instances. If Redis becomes unavailable, an in-memory insurance limiter keeps
+rate limiting working. There is nothing extra to enable.
+
+## Scaling WebSockets
+
+The [WebSocket](/docs/dev/websocket) connection registry lives in memory on each
+server process. So if you run **several instances** behind a load balancer, a
+`broadcast` or `sendToUser` would, on its own, only reach the clients connected
+to the same instance.
+
+**When `redis` is configured, VitNode bridges the instances for you** - there is
+nothing extra to enable. `broadcast` and `sendToUser` reach every matching
+client, no matter which instance they are connected to.
+
+### How it works
+
+Each instance keeps delivering to its own connected clients instantly, then
+publishes the message to a shared Redis pub/sub channel (`vitnode:ws`). Every
+other instance is subscribed, receives the message, and delivers it to its own
+clients:
+
+```text
+  realtime.broadcast(channel, data)   ← called on Instance A
+        │
+        ├─ 1. deliver to Instance A's own clients   (instant, local)
+        │
+        └─ 2. PUBLISH { id, data, origin: A } ─► Redis channel "vitnode:ws"
+                                                      │
+                                                      ▼  (all instances subscribe)
+                                        Instance A ── ignores its own echo (origin = A)
+                                        Instance B ── 3. deliver to Instance B's clients
+```
+
+Each message is tagged with the sending process's id, so an instance ignores the
+echo of its own messages (no double delivery).
+
+<Callout type="info" title="Requirements">
+  All instances must point at the **same** Redis. If Redis is unreachable,
+  realtime automatically falls back to single-instance delivery (local clients
+  still receive messages). This bridges message *delivery* only - each instance
+  still holds its own socket connections in memory.
+</Callout>

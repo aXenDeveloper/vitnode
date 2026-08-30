@@ -1,0 +1,204 @@
+---
+title: Contribution
+description: Help us make VitNode even better!
+icon: HeartHandshake
+---
+
+So, you want to help make VitNode even more awesome? That's great! Whether you're fixing bugs, adding features, or improving documentation, your contributions are welcome.
+
+## Prerequisites
+
+Before you start, make sure you have these installed:
+
+- [Node.js](https://nodejs.org/) _(minimum v20, recommended v22)_
+- [Docker](https://www.docker.com/) for local development
+- [pnpm](https://pnpm.io/) as the package manager
+- Your favorite code editor (we ❤️ VS Code)
+
+## Development Environment
+
+<Steps>
+  <Step>
+
+### Fork & Clone
+
+First, fork the VitNode repository, then clone your fork:
+
+```bash
+git clone https://github.com/{YOUR-USERNAME}/vitnode.git && cd vitnode
+```
+
+  </Step>
+  <Step>
+
+### Install Dependencies
+
+```bash
+pnpm install
+```
+
+  </Step>
+  <Step>
+
+### Start the Database
+
+We use Docker to make database setup painless:
+
+```bash
+pnpm docker:dev
+```
+
+This starts a PostgreSQL container configured for VitNode development.
+
+  </Step>
+  <Step>
+
+### Launch Developer Mode
+
+```bash
+pnpm dev
+```
+
+This command:
+
+1. Builds necessary scripts
+2. Starts the development server
+3. Watches for changes and hot reloads
+
+  </Step>
+</Steps>
+
+Voilà! Two servers come up:
+
+- **http://localhost:3001** - `apps/web`, the TanStack Start application. The
+  site, the AdminCP, the API at `/api/*` and the documentation at `/docs/*`.
+- **http://localhost:3000** - `apps/docs`, the Next.js application it is
+  replacing. Still running so the two can be compared side by side.
+
+## Project Structure
+
+VitNode is organized as a monorepo using Turborepo:
+
+```bash
+vitnode/
+├── apps/
+│   ├── web/          # The application: TanStack Start + Vite
+│   │   ├── src/routes/   # one file per URL, including /docs/*
+│   │   ├── src/docs/     # the documentation site implementation
+│   │   └── content/docs/ # the documentation itself, as MDX
+│   └── docs/         # The Next.js application being replaced
+├── packages/
+│   ├── vitnode/      # Core framework code
+│   ├── config/       # Shared ESLInt, TypeScript configs
+│   └── create-vitnode-app/ # CLI tool for creating new projects
+└── plugins/          # Official open-source plugins
+```
+
+<Callout type="info" title="Editing the documentation">
+  Every page you are reading lives in `apps/web/content/docs`. Edit the `.mdx`
+  file, and the page reloads. The "Open in" menu at the top of any page links
+  straight to its source on GitHub.
+</Callout>
+
+<Callout type="info" title="Monorepo Magic!">
+  VitNode uses Turborepo to keep everything organized. Apps, packages, and
+  plugins all live together in harmony!
+</Callout>
+
+## Coding Standards
+
+- We use TypeScript for type safety ([TypeScript Docs](https://www.typescriptlang.org/))
+- Follow ESM (ECMAScript Modules) conventions ([ESM Guide](https://nodejs.org/api/esm.html))
+- Respect the ESLint & Prettier configuration in each workspace ([ESLint](https://eslint.org/) & [Prettier](https://prettier.io/))
+- Write meaningful commit messages ([Conventional Commits](https://www.conventionalcommits.org/))
+
+## Database Changes
+
+If you make changes to the database schema:
+
+```bash
+pnpm db:migrate # Run migrations
+```
+
+<Callout title="Test your changes!!! <3" type="warn">
+  Always test your database changes thoroughly before submitting a PR!
+</Callout>
+
+## Contribution Workflow
+
+<Steps>
+  <Step>
+
+    ### Create a Branch
+
+    ```bash
+    git checkout -b feature/your-amazing-feature
+    # or
+    git checkout -b fix/issue-you-are-solving
+    ```
+
+  </Step>
+  <Step>
+
+    ### Make Your Changes
+
+    Follow our coding standards:
+
+    - TypeScript for type safety
+    - ESM module conventions
+    - Respect ESLint, Prettier rules in each workspace
+
+    <Callout type="warn">
+      Don't forget to test your changes locally! 🧪
+    </Callout>
+
+  </Step>
+  <Step>
+
+    ### Commit Your Changes
+
+    ```bash
+    git commit -m "feat: add cool new feature"
+    # or
+    git commit -m "fix: solve critical bug in authentication"
+    ```
+
+    We follow [Conventional Commits](https://www.conventionalcommits.org/) format.
+
+  </Step>
+  <Step>
+
+    ### Submit a Pull Request
+
+    Push your branch and create a PR on GitHub. Please include:
+
+    - What problem does it solve?
+    - How does it implement the solution? (Bonus points for screenshots or code snippets!)
+    - Any extra context or fun facts
+
+    <Callout type="info">
+      Screenshots, GIFs, and memes are always welcome in your PR description!
+    </Callout>
+
+  </Step>
+</Steps>
+
+---
+
+## Common Issues & FAQ
+
+- **Database won’t start?** Make sure Docker is running and try `pnpm docker:dev` again.
+- **Type errors everywhere?** Double-check your Node.js and TypeScript versions.
+- **Something else?** Ask in the community or check the docs!
+
+## Need Help?
+
+- Check the documentation
+- Look for similar issues in the issue tracker
+- Ask questions in the community
+
+Thank you for contributing to VitNode! 🚀
+
+<Callout title="You rock!">
+  Every contribution makes VitNode better. We appreciate you! 💜
+</Callout>

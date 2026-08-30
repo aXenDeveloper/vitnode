@@ -1,0 +1,257 @@
+---
+title: Queue Tasks
+description: Run one-off background work through a database-backed task queue, drained by cron, with retries and optional Redis coordination.
+---
+
+Cron jobs handle **recurring** work on a schedule. Queue tasks handle **one-off**
+background work you enqueue on demand - "send this email later", "process this
+import", "retry this webhook". Tasks are stored in the database (`core_queue`)
+and drained every minute by a built-in cron job, so a slow task never blocks the
+request that scheduled it.
+
+Queue tasks build on the [cron system](/docs/dev/cron): the `process-queue` job
+runs on the same per-minute tick, so **you need a cron adapter configured** (for
+example [Node CRON](/docs/dev/cron/node-cron)) for tasks to be processed
+automatically.
+
+## How it works
+
+```text
+c.get("queue").dispatch({ name, payload })  ─►  INSERT core_queue (status = pending)
+
+cron tick "* * * * *" ─► process-queue job
+   1. optional Redis lock - one instance drains per tick when Redis is configured
+   2. claim a batch  (UPDATE … status = processing … FOR UPDATE SKIP LOCKED)
+   3. run each task's handler, matched by pluginId:name
+   4. success → completed · error → retry with backoff → failed after maxAttempts
+   5. prune completed/failed rows older than 7 days
+```
+
+Concurrency is safe by default: batches are claimed with Postgres
+`FOR UPDATE SKIP LOCKED`, so many instances (or many ticks) can drain the queue
+at once without ever running the same task twice.
+
+## Defining a task
+
+A task is a named handler, registered like a cron job. The handler receives the
+request context and the JSON `payload` the task was dispatched with.
+
+<Steps>
+<Step>
+### Create the task file
+
+```ts title="modules/newsletter/tasks/send-digest.task.ts"
+import { buildQueueTask } from "@vitnode/core/api/lib/queue";
+
+export const sendDigestTask = buildQueueTask({
+  name: "send-digest",
+  description: "Send the weekly digest email to a user",
+  // Optional - defaults to 3
+  maxAttempts: 5,
+  handler: async (c, payload) => {
+    const { userId } = payload as { userId: number };
+
+    // ...do the work; throwing schedules a retry with backoff
+    await c.get("log").debug(`Sending digest to user ${userId}`);
+  },
+});
+```
+
+<Callout type="info" title="Payloads are plain JSON">
+  `payload` is typed as `Record<string, unknown>` because it round-trips through
+  the database as JSON. Narrow it inside the handler (a cast, or validate it with
+  zod) before use.
+</Callout>
+
+</Step>
+<Step>
+### Register it in a module
+
+Pass your tasks to `queueTasks` - the same module builder that carries
+`cronJobs`.
+
+```ts title="modules/newsletter/newsletter.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module";
+import { CONFIG_PLUGIN } from "@/config";
+
+// [!code ++]
+import { sendDigestTask } from "./tasks/send-digest.task";
+
+export const newsletterModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "newsletter",
+  routes: [],
+  // [!code ++]
+  queueTasks: [sendDigestTask],
+});
+```
+
+</Step>
+</Steps>
+
+## Enqueuing work
+
+Dispatch a task from any route or model with `c.get("queue")`. The `name` must
+match a registered task; the row is picked up on the next cron tick.
+
+```ts title="modules/newsletter/routes/subscribe.route.ts"
+export const subscribeRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {},
+  handler: async c => {
+    await c.get("queue").dispatch({
+      name: "send-digest",
+      payload: { userId: c.get("user")?.id },
+    });
+
+    return c.json({ queued: true });
+  },
+});
+```
+
+### dispatch options
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    name: {
+      description: "Name of a registered queue task to run.",
+      type: "string",
+    },
+    payload: {
+      description: "JSON data passed to the handler.",
+      type: "Record<string, unknown>",
+      default: "{}",
+    },
+    queue: {
+      description: "Logical queue/channel name, for grouping and filtering.",
+      type: "string",
+      default: '"default"',
+    },
+    priority: {
+      description: "Higher values are claimed first within a batch.",
+      type: "number",
+      default: "0",
+    },
+    maxAttempts: {
+      description: "How many times to try before marking the task failed.",
+      type: "number",
+      default: "3",
+    },
+    availableAt: {
+      description:
+        "Earliest time the task may run - set it in the future to delay work.",
+      type: "Date",
+      default: "now",
+    },
+    pluginId: {
+      description:
+        "Who owns the handler, when that is not the plugin handling the request. The worker resolves handlers by `${pluginId}:${name}`, so dispatching a core task from a plugin route needs this - otherwise nothing ever claims the row.",
+      type: "string",
+      default: "the requesting plugin, or @vitnode/core",
+    },
+    tx: {
+      description:
+        "Join an existing transaction instead of using the request handle. Needed whenever the row the task refers to is written in the same unit of work, or the queue row can commit while that row rolls back.",
+      type: "Transaction",
+    },
+  }}
+/>
+
+<Callout type="info" title="Both exist because of scheduled publishing">
+  The [Content Engine](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing) books a schedule row
+  and its queue task in one transaction, from a plugin's route, against a task
+  core registers. That needs `tx` for atomicity and `pluginId` so the worker can
+  find the handler - and it is a shape any plugin can reuse.
+</Callout>
+
+## Tasks core ships
+
+| Task | Attempts | What it does |
+| --- | --- | --- |
+| `send-email` | 3 | Delivers a rendered email through the configured provider |
+| `rebuild-search-index` | 3 | Clears and rebuilds the [search](/docs/dev/content-engine/public-api-and-caching#2-full-text-search-indexing) index, whole or per collection |
+| `content-schedule` | 3 | Runs one [scheduled publication](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing). A cancelled, rescheduled or already-executed schedule is a no-op |
+| `content-schedule-effects` | 5 | Emits the event, syncs search and expires the cache for a scheduled transition that has **already committed**. Never republishes |
+
+`content-schedule` is worth reading as a pattern: its payload is
+`{ scheduleId, generation }` and nothing else. Every real value is re-read from
+the row under `FOR UPDATE`, so a task left over from a plan that has since
+changed finds a mismatch and quietly does nothing - which is far more reliable
+than trying to delete a queued row. It holds that lock from the claim all the
+way to the commit, so a cancel arriving mid-flight waits and then honestly
+reports that the schedule already ran.
+
+### Why the effects are a second task
+
+The pair is worth reading as a pattern too, because splitting them is the whole
+point:
+
+```text
+content-schedule            claim → publish → revision → settle → enqueue effects
+                            ── one transaction ──────────────────────────────────
+content-schedule-effects    event → search → cache bridge
+```
+
+A transition is a database write that either committed or did not. Announcing it
+is three calls to systems a transaction cannot reach. Retrying them **together**
+would re-run a publish that is idempotent - so the second run finds nothing
+changed and skips the announcements entirely, which is how a scheduled unpublish
+ends up permanently serving a page it should have expired.
+
+The effects row is written inside the transition's transaction, so it exists if
+and only if the transition committed, and it carries everything frozen rather
+than re-reading a record that may have moved on.
+
+All three have to land for the task to succeed - a listener that threw, a search
+engine that refused the write, or any configured web origin that did not accept
+its invalidation each fail the run, and the reasons are combined into one
+`effectsError`. `EventsModel.emit()` never throws, so the task reads
+`EventEmitResult.failures` rather than waiting for an exception that is not
+coming.
+
+Delivery is at-least-once: the search write and the cache expiry are idempotent,
+but a listener can see one `published` twice, so a listener that must act once
+keys off the `scheduleId` in the payload.
+
+The event's envelope is stamped with the plugin that owns the **content type**,
+not with core. Core owns the handler; `content.example.article.published`
+belongs to the example plugin however it was triggered.
+
+<Callout type="info" title="An announcement failure is not a publication failure">
+  The schedule stays `completed` and the reason lands in `effectsError` on the
+  schedule row. Nothing is ever moved back to `pending` because an event
+  bounced - the record really did publish.
+</Callout>
+
+## Retries and backoff
+
+If a handler throws, the task is retried with an exponential backoff
+(`10s`, `20s`, `40s`, … capped at one hour) until `maxAttempts` is reached, after
+which its status becomes `failed` and the error is stored in `lastError`. A task
+with no registered handler fails immediately.
+
+Completed and failed rows are pruned automatically after 7 days, so the table
+does not grow without bound.
+
+## Optional: Redis coordination
+
+The queue works with just Postgres. When you run **multiple instances**, adding
+[Redis](/docs/dev/advanced/redis) lets a single instance drain the queue per
+tick (an advisory lock), which reduces database contention. Correctness never
+depends on it - `FOR UPDATE SKIP LOCKED` already prevents double processing.
+
+There is nothing extra to enable: set `REDIS_URL` (see the
+[Redis guide](/docs/dev/advanced/redis)) and the queue uses it automatically.
+Without Redis, every instance simply claims its own disjoint batch.
+
+## Monitoring in the AdminCP
+
+- **Core → Advanced → Queue Tasks** - the full, paginated list of tasks with a
+  status filter, attempt counts, and the last error. Requires the
+  `queue:can_view` staff permission.
+- **Debug Panel** - a live view of currently active (pending/processing) tasks
+  plus per-status counts.
+- **Core → System → Integrations** - a card summarizing registered task handlers
+  and the number of pending/running tasks.

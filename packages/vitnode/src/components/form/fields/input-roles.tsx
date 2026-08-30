@@ -14,9 +14,31 @@ import type { RoleOption } from "./search-roles.action.server";
 import { AsyncPicker } from "../common/async-picker";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
-import { searchRoles } from "./search-roles.action.server";
 
 export type { RoleOption };
+
+/**
+ * The default role search, imported when it is called rather than when this
+ * module is.
+ *
+ * `search-roles.action.server` is a `"use server"` module: it carries
+ * `server-only` and reaches Next's request scope through `fetcher`. Imported
+ * statically here - which it was - it put that marker in the module graph of
+ * every application that renders `AutoFormRoles`, whether or not the default was
+ * ever used. On a Next.js host that is invisible; on any other host it is a
+ * module that throws on import, and Stage 16 found it the moment the
+ * documentation's own `/docs/ui/roles` preview rendered outside Next.js.
+ *
+ * Deferred, the edge is gone and the behaviour is not: a Next.js app that omits
+ * `search` still gets exactly this action, resolved on the first keystroke. Every
+ * caller in this repository passes its own `search`, so nothing here reaches it -
+ * which is also why the static import was so easy to miss.
+ */
+const searchRolesLazily = async (search: string): Promise<RoleOption[]> => {
+  const { searchRoles } = await import("./search-roles.action.server");
+
+  return await searchRoles(search);
+};
 
 /**
  * A role's name in the reader's language.
@@ -43,7 +65,7 @@ export const AutoFormRoles = ({
   multiple = false,
   otherProps,
   placeholder,
-  search = searchRoles,
+  search = searchRolesLazily,
   searchPlaceholder,
   selected = [],
 }: ItemAutoFormComponentProps & {

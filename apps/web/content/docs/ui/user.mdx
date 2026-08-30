@@ -1,0 +1,129 @@
+---
+title: User
+description: Pick a person by name, with their avatar, for an Auto Form field.
+---
+
+## Preview
+
+<Preview name="user" />
+
+## Usage
+
+```ts
+import { z } from "zod";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormUser } from "@vitnode/core/components/form/fields/input-users";
+```
+
+The value is the **user id**, so the schema is a plain number and the payload
+needs no unwrapping:
+
+```ts
+const formSchema = z.object({
+  authorId: z.number(),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "authorId",
+      component: props => (
+        <AutoFormUser
+          {...props}
+          description="Search by name, pick one person."
+          label="Author"
+          placeholder="Select an author"
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+Out of the box it searches the AdminCP users list, which means it answers with
+whatever that route lets the signed-in admin see - the permission check lives
+there and is not repeated in the component.
+
+## Editing an existing record
+
+A picker cannot show a name it has never fetched. An edit form starts holding an
+id, so pass the person it already knows about as `selected`:
+
+```tsx
+<AutoFormUser
+  {...props}
+  label="Author"
+  selected={{
+    id: article.author.id,
+    name: article.author.name,
+    nameCode: article.author.nameCode,
+    avatarColor: article.author.avatarColor,
+  }}
+/>
+```
+
+Without it the field opens on the placeholder, as though nobody were chosen.
+Whatever the search returns afterwards is remembered on top of that, so a person
+picked a moment ago still reads as their name.
+
+<Callout type="info" title="Optional fields">
+  A nullable author is `z.number().nullable()`. The field renders the
+  placeholder for `null` and never invents a value - clearing one is up to your
+  own control, because "no author" and "author not chosen yet" are the same
+  state here.
+</Callout>
+
+## Searching somewhere else
+
+`search` replaces the lookup entirely - a plugin scoping to its own members, a
+different endpoint, or fixtures in a test:
+
+```tsx
+<AutoFormUser
+  {...props}
+  label="Reviewer"
+  search={async value => await searchReviewers(value)}
+/>
+```
+
+It runs on every open with an empty string, and again - debounced - as the
+person types. That is deliberate: the list is a live view of who exists, and a
+cached one offers somebody who was deleted since.
+
+## Props
+
+| Prop                | Type                                       | Default            | What it does                                     |
+| ------------------- | ------------------------------------------ | ------------------ | ------------------------------------------------ |
+| `label`             | `ReactNode`                                | -                  | Field label                                      |
+| `description`       | `ReactNode`                                | -                  | Help text under the control                      |
+| `placeholder`       | `string`                                   | `Select an option` | Shown while nothing is chosen                    |
+| `searchPlaceholder` | `string`                                   | `Search...`        | Placeholder inside the search box                |
+| `selected`          | `PartialUserOption \| null`                | -                  | The person the field opens on                    |
+| `search`            | `(value: string) => Promise<UserOption[]>` | AdminCP users list | Replaces the lookup                              |
+| `clearable`         | `boolean`                                  | `false`            | Adds a button that sets the field back to nobody |
+| `disabled`          | `boolean`                                  | `false`            | Blocks opening the picker                        |
+
+`UserOption` is `{ id, name, nameCode, avatarColor }` - the columns it takes to
+recognise a person on sight. `selected` accepts a **partial** one, because the
+caller often knows only an id and a name.
+
+A generated avatar needs a colour, and that is the column a caller who resolved
+only a _name_ does not have. Rather than invent one - the wrong colour reads as a
+different person - the field draws a neutral placeholder in the same box, so the
+name stays where it is when a search fills the real avatar in.
+
+## In the Content Engine
+
+A [`field.user()`](/docs/dev/content-engine/fields) renders this field
+automatically - the author picker on a blog post is this component. Its options
+come from the content type's own picker route rather than from the users list,
+so an editor who may write articles can choose an author without also being
+trusted to browse the member list.
+
+## See also
+
+- [Roles](/docs/ui/roles) - the same idea for roles, single or multiple.
+- [Combobox](/docs/ui/combobox) - when the options are strings rather than people.

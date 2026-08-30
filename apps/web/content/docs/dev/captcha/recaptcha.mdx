@@ -1,0 +1,72 @@
+---
+title: Google reCAPTCHA
+description: How to integrate Google reCAPTCHA in your application.
+---
+
+<Steps>
+<Step>
+
+## Sign in to Google reCAPTCHA
+
+Go into [Google reCAPTCHA](https://www.google.com/recaptcha/admin/) and sign in.
+
+</Step>
+
+<Step>
+
+## Register a new site
+
+Select `Create` button inside the `Register a new site` section.
+
+import homeRecaptcha from './recaptcha.png';
+
+import { ImgDocs } from '@/components/fumadocs/img';
+
+<ImgDocs
+  src={homeRecaptcha}
+  className="*:max-w-[75%]"
+  alt="Google reCAPTCHA Home"
+/>
+
+Add your domain and select the `reCAPTCHA v3` type.
+
+<Callout title="reCAPTCHA v2 is not supported!" type="error">
+  In VitNode, we want to move forward with the latest technologies and
+  standards. Therefore, we do not support reCAPTCHA v2.
+</Callout>
+
+</Step>
+
+<Step>
+
+## Add keys to .env
+
+Add the keys to your `.env` file.
+
+```bash
+RECAPTCHA_SITE_KEY=XXX
+RECAPTCHA_SECRET_KEY=XXX
+```
+
+</Step>
+
+<Step>
+
+## Provide keys to VitNode
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config';
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:5]
+  captcha: {
+    type: 'recaptcha_v3',
+    siteKey: process.env.RECAPTCHA_SITE_KEY,
+    secretKey: process.env.RECAPTCHA_SECRET_KEY,
+  },
+});
+```
+
+</Step>
+
+</Steps>

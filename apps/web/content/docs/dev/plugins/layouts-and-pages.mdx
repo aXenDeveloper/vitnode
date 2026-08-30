@@ -1,0 +1,299 @@
+---
+title: Layouts and Pages
+description: How a plugin ships Next.js route files to a Next.js host.
+---
+
+This page describes **one** of the two ways a plugin can ship a page: you write
+Next.js route files under `src/routes/main`, and VitNode copies them into any
+Next.js application that installs the plugin.
+
+<Callout type="warn" title="Start with the Route Manifest instead">
+  The host-neutral way to ship a page is
+  [`routes/manifest.ts`](/docs/dev/plugins/route-manifest): the page stays in
+  your package, the app imports it, and it renders on any VitNode host rather
+  than only on Next.js. [Routing](/docs/dev/tanstack/routing) is the short
+  version.
+
+Everything below still works and nothing has been deprecated out from under you
+- but if you are writing a new plugin, this is not the page you want.
+
+</Callout>
+
+<Callout>
+  Pages are React components in `page.tsx` files, and layouts wrap them. If you
+  know the Next.js App Router, you already know this part.
+</Callout>
+
+<Callout type="info">
+  VitNode is **i18n-first** - render all user-facing text with translations
+  instead of hardcoded strings: `getTranslations` in Server Components and
+  `useTranslations` in Client Components. See
+  [Messages](/docs/dev/i18n/messages) and
+  [Namespaces](/docs/dev/i18n/namespaces).
+</Callout>
+
+## Creating Pages
+
+Pages are React components that live in `page.tsx` files. Each page represents a unique URL route.
+
+### Basic Page
+
+Resolve text from your plugin's namespace with `getTranslations`:
+
+```tsx title="plugins/blog/src/routes/main/page.tsx"
+import { getTranslations } from "next-intl/server";
+
+export default async function BlogHomePage() {
+  const t = await getTranslations("@vitnode/blog"); // [!code highlight]
+
+  return (
+    <div className="py-12 text-center">
+      <h1 className="mb-4 text-4xl font-bold">{t("home.title")}</h1>
+      <p className="text-gray-600">{t("home.desc")}</p>
+    </div>
+  );
+}
+```
+
+Add the messages under your plugin's namespace:
+
+```json title="plugins/blog/src/locales/en.json"
+{
+  "@vitnode/blog": {
+    "home": {
+      "title": "Welcome to Our Blog! 🚀",
+      "desc": "Where awesome content lives"
+    }
+  }
+}
+```
+
+### Nested Routes
+
+Create folders to organize your routes:
+
+```tsx title="plugins/blog/src/routes/main/dashboard/page.tsx"
+import { getTranslations } from "next-intl/server";
+
+export default async function DashboardPage() {
+  const t = await getTranslations("@vitnode/blog");
+
+  return (
+    <div>
+      <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
+      <p>{t("dashboard.desc")}</p>
+    </div>
+  );
+}
+```
+
+This creates `/dashboard` route.
+
+### Dynamic Routes
+
+Use `[param]` for dynamic URLs. Pass dynamic values straight into the message:
+
+```tsx title="plugins/blog/src/routes/main/posts/[slug]/page.tsx"
+import { getTranslations } from "next-intl/server";
+
+interface PostPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function PostPage({ params }: PostPageProps) {
+  const { slug } = await params;
+  const t = await getTranslations("@vitnode/blog");
+
+  // en.json: "post": { "title": "Post: {slug}" }
+  return (
+    <div>
+      <h1>{t("post.title", { slug })}</h1>
+      <p>{t("post.desc")}</p>
+    </div>
+  );
+}
+```
+
+## Creating Layouts
+
+Layouts wrap your pages and provide shared UI elements like headers, navigation, and footers.
+
+### Basic Layout
+
+```tsx title="plugins/blog/src/routes/main/layout.tsx"
+import { getTranslations } from "next-intl/server";
+
+export default async function BlogLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const t = await getTranslations("@vitnode/blog");
+
+  return (
+    <div className="min-h-screen">
+      <header className="border-b bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <h1 className="text-2xl font-bold text-indigo-600">
+            {t("layout.title")}
+          </h1>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">{children}</main>
+
+      <footer className="bg-gray-900 py-8 text-white">
+        <div className="container mx-auto px-4 text-center">
+          <p>{t("layout.footer")}</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+```
+
+### Nested Layout for Specific Sections
+
+```tsx title="plugins/blog/src/routes/main/dashboard/layout.tsx"
+import { getTranslations } from "next-intl/server";
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const t = await getTranslations("@vitnode/blog");
+
+  return (
+    <div className="flex">
+      {/* Sidebar */}
+      <aside className="min-h-screen w-64 border-r bg-gray-50">
+        <nav className="p-6">
+          <h2 className="mb-4 font-semibold">{t("dashboard.nav.title")}</h2>
+          <ul className="space-y-2">
+            <li>
+              <a
+                href="/dashboard"
+                className="text-gray-700 hover:text-indigo-600"
+              >
+                {t("dashboard.nav.overview")}
+              </a>
+            </li>
+            <li>
+              <a
+                href="/dashboard/posts"
+                className="text-gray-700 hover:text-indigo-600"
+              >
+                {t("dashboard.nav.posts")}
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 p-8">{children}</div>
+    </div>
+  );
+}
+```
+
+<Callout title="Client Components">
+  In a Client Component (`'use client'`) use `useTranslations` instead of
+  `getTranslations`, and wrap it with `I18nProvider` to expose non-`core.global`
+  namespaces. See [Namespaces](/docs/dev/i18n/namespaces).
+</Callout>
+
+## Pages without a layout
+
+Files in `src/routes/main` are wrapped by the main site layout (header, footer). To render a page **without** that chrome - only the root providers - put it in `src/routes/blank` instead. Handy for full-screen views, embeds, or standalone screens.
+
+```tsx title="plugins/{plugin_name}/src/routes/blank/standalone/page.tsx"
+import { getTranslations } from "next-intl/server";
+
+export default async function StandalonePage() {
+  const t = await getTranslations("@vitnode/blog");
+
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <h1>{t("standalone.title")}</h1>
+    </div>
+  );
+}
+```
+
+This creates a `/standalone` route that renders on its own. Admin pages live in `src/routes/admin` (see [AdminCP Pages](/docs/dev/plugins/admin-page)).
+
+## Adding Metadata
+
+Improve SEO and social sharing with metadata - resolve the title/description from messages too:
+
+<Callout type="info" title="The host-neutral equivalent">
+  A manifest route declares `head` inside `definePluginRoute` instead, and gets
+  the same three fields on any host. See
+  [Metadata](/docs/dev/tanstack/metadata).
+</Callout>
+
+```tsx title="plugins/blog/src/routes/main/posts/[slug]/page.tsx"
+import { Metadata } from "next";
+import { getTranslations } from "next-intl/server"; // [!code highlight]
+
+interface PostPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+// [!code highlight:11]
+export async function generateMetadata({
+  params,
+}: PostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const t = await getTranslations("@vitnode/blog");
+
+  return {
+    title: t("post.meta.title", { slug }),
+    description: t("post.meta.desc", { slug }),
+  };
+}
+
+export default async function PostPage({ params }: PostPageProps) {
+  const { slug } = await params;
+  const t = await getTranslations("@vitnode/blog");
+
+  return (
+    <article>
+      <h1>{t("post.title", { slug })}</h1>
+      <p>{t("post.desc")}</p>
+    </article>
+  );
+}
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Messages"
+    description="Display, format and pluralize i18n text"
+    href="/docs/dev/i18n/messages"
+  />
+  <Card
+    title="Namespaces"
+    description="Use translations in Client Components"
+    href="/docs/dev/i18n/namespaces"
+  />
+  <Card
+    title="Route Manifest"
+    description="The host-neutral way to ship a page"
+    href="/docs/dev/plugins/route-manifest"
+  />
+  <Card
+    title="Next.js Pages"
+    description="Complete guide to creating pages"
+    href="https://nextjs.org/docs/app/api-reference/file-conventions/page"
+  />
+  <Card
+    title="Metadata API"
+    description="SEO and social sharing"
+    href="https://nextjs.org/docs/app/api-reference/functions/generate-metadata"
+  />
+</Cards>
