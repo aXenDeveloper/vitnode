@@ -25,7 +25,7 @@ import { Loader } from "@/components/ui/loader";
 import { contentScheduleTimingError } from "@/content/schedules";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
-import { contentSchedulesQueryKey } from "../editorial-query";
+import { contentSchedulesQueryOptions } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
 
 /**
@@ -143,10 +143,13 @@ export const SchedulePanel = ({
   const tContentErrors = useTranslations("core.content.errors");
   const transport = useContentEditorialTransport();
 
-  const schedules = useQuery({
-    queryFn: async () => await transport.listSchedules(contentTypeId, id),
-    queryKey: contentSchedulesQueryKey(contentTypeId, id),
-  });
+  const schedules = useQuery(
+    contentSchedulesQueryOptions({
+      contentTypeId,
+      itemId: id,
+      listSchedules: transport.listSchedules,
+    }),
+  );
 
   const settled = async () => {
     await transport.settled({

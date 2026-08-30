@@ -11,12 +11,8 @@
  * `@/views/admin/views/core/advanced/queue` by both applications.
  */
 export { queueQuery } from "./query";
-export type { AdminQueueRouteData, AdminQueueRouteProps } from "./route";
-export {
-  ADMIN_QUEUE_NAMESPACES,
-  AdminQueueRouteContent,
-  loadAdminQueueRoute,
-} from "./route";
+export type { AdminQueueRouteData } from "./route";
+export { ADMIN_QUEUE_NAMESPACES, loadAdminQueueRoute } from "./route";
 export type { QueueRouteSearch, UncheckedQueueSearch } from "./route-search";
 export {
   normalizeQueueRouteSearch,
@@ -24,6 +20,8 @@ export {
   queueSearchFrom,
   queueSearchParams,
 } from "./route-search";
+export type { AdminQueueRouteProps } from "./screen";
+export { AdminQueueRouteContent } from "./screen";
 
 export type {
   QueueOrderBy,

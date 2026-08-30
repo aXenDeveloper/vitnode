@@ -17,16 +17,13 @@ export {
   invalidateDashboardLayout,
   useDashboardActions,
 } from "./query";
+export type { AdminDashboardRouteData } from "./route";
+export { ADMIN_DASHBOARD_NAMESPACES, loadAdminDashboardRoute } from "./route";
 export type {
-  AdminDashboardRouteData,
   AdminDashboardRouteProps,
   DashboardPluginWidgets,
-} from "./route";
-export {
-  ADMIN_DASHBOARD_NAMESPACES,
-  AdminDashboardRouteContent,
-  loadAdminDashboardRoute,
-} from "./route";
+} from "./screen";
+export { AdminDashboardRouteContent } from "./screen";
 export { coreDashboardBrowserWidgets } from "./widgets";
 
 export type {

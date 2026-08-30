@@ -124,6 +124,38 @@ const TANSTACK_PEER_RUNTIME = [
 ].sort((a, b) => a.localeCompare(b));
 
 /**
+ * Anything that only resolves inside a Next.js application.
+ *
+ * The package name covers every subpath by the prefix rule in {@link matches} -
+ * `next/cache`, `next/headers`, `next/navigation`, `next/server`. Listed as the
+ * package rather than as a list of subpaths on purpose: a list of subpaths is a
+ * list somebody has to remember to extend, and the package itself is the
+ * boundary. `server-only` sits with it because it throws in exactly the same
+ * places for exactly the same reason.
+ *
+ * Not to be confused with `@tanstack/react-start/server-only`, which is a
+ * different package and is legitimately imported by each feature's
+ * `server.ts` in this namespace: the prefix rule matches `server-only` and `server-only/...`, never
+ * a specifier that merely ends in it.
+ */
+const NEXT_ONLY = ["next", "server-only"];
+
+/**
+ * next-intl's Next-only halves.
+ *
+ * The root entry is deliberately absent: it re-exports `use-intl`, which is
+ * framework-free and is what this namespace's components read. These four reach
+ * Next's request scope, its middleware or its build plugin, and none of them
+ * resolves in a TanStack Start host.
+ */
+const NEXT_INTL_RUNTIME = [
+  "next-intl/middleware",
+  "next-intl/navigation",
+  "next-intl/plugin",
+  "next-intl/server",
+];
+
+/**
  * The Start compiler's own entry points.
  *
  * `createServerFn` and `createMiddleware` need the module they sit in to be
@@ -181,6 +213,63 @@ describe("TanStack stays behind the tanstack/ namespace", () => {
     expect(
       offendersIn(runtimeFilesUnder(tanstackRoot), TANSTACK_RUNTIME),
     ).not.toEqual([]);
+  });
+});
+
+describe("the namespace reaches no Next.js runtime", () => {
+  /**
+   * The rule that keeps `@vitnode/core/tanstack/*` importable by a host that has
+   * no Next.js installed at all.
+   *
+   * `apps/web/src/tests/isolation.test.ts` already walks the *application's*
+   * graph and would catch a `next/cache` that a route actually reaches. This is
+   * the other half, and it is not redundant: that walk only sees a module once
+   * something imports it, so a new file added here reaching `next/cache` passes
+   * every test in the workspace until the day a route pulls it in - which is a
+   * production Nitro build failing on a package that does not resolve, not a red
+   * test. The namespace owns its own rule.
+   *
+   * `next/cache` is the specific one worth naming. It is the entry an author
+   * reaches for by reflex when they want a write to expire something - the Next
+   * halves of these same features call `revalidatePath` and `updateTag` all over
+   * `views/` - and it is exactly the wrong instinct here: a TanStack host expires
+   * a *TanStack Query* entry, and the server-side cache it might also want is the
+   * API's `c.get("cache")`, reached over HTTP rather than by import.
+   */
+  const NEXT_RUNTIME = [...NEXT_ONLY, ...NEXT_INTL_RUNTIME];
+
+  it("finds those imports where they are allowed, so the scan is real", () => {
+    // The control. Every assertion below is a "found nothing" one, which a
+    // scanner that silently matches nothing also satisfies. `content/next` is
+    // the layer that exists precisely to hold them.
+    expect(
+      offendersIn(
+        runtimeFilesUnder(join(packageRoot, "src/content/next")),
+        NEXT_RUNTIME,
+      ),
+    ).not.toEqual([]);
+  });
+
+  it.each(NEXT_RUNTIME)("never imports %s", forbidden => {
+    expect(offendersIn(runtimeFilesUnder(tanstackRoot), [forbidden])).toEqual(
+      [],
+    );
+  });
+
+  it("never imports the Next.js cache adapters by path either", () => {
+    // Belt and braces for the one module that is *not* an npm specifier. The
+    // handlers live in this package, so a relative or aliased import of them
+    // would satisfy the specifier scan above while still dragging Next's cache
+    // contract - and `redis` - into a browser bundle.
+    const offenders = runtimeFilesUnder(tanstackRoot)
+      .filter(path =>
+        importsFrom(path).some(specifier =>
+          specifier.includes("lib/next-cache"),
+        ),
+      )
+      .map(path => relative(packageRoot, path));
+
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -14,9 +14,9 @@ export { integrationsQuery, invalidateIntegrations } from "./query";
 export type { AdminIntegrationsRouteData } from "./route";
 export {
   ADMIN_INTEGRATIONS_NAMESPACES,
-  AdminIntegrationsRouteContent,
   loadAdminIntegrationsRoute,
 } from "./route";
+export { AdminIntegrationsRouteContent } from "./screen";
 
 export type {
   AdminIntegrationModel,

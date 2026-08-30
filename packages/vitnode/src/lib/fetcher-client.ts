@@ -57,7 +57,7 @@ export async function fetcherClient<
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     captchaToken?: string;
     formData?: FormData;
-    options?: Omit<RequestInit, "body">;
+    options?: Omit<RequestInit, "body" | "headers" | "method">;
     prefixPath?: string;
     withPagination?: boolean;
   },

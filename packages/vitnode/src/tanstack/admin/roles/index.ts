@@ -5,7 +5,10 @@ export type { AdminTableNavigate } from "../table-search";
  *     ./query         one query definition, and the three writes that invalidate
  *                     it - including the admin session, because a role carries
  *                     permissions
- *     ./route         the screen: namespaces, permission, loader, component
+ *     ./route         namespaces, permission and loader - the eager half a route
+ *                     file's `loader` imports, and deliberately free of the
+ *                     screen's component tree
+ *     ./screen        the rendered screen, reached only through `component:`
  *     ./route-search  the URL contract
  *     ./server        the SSR transport, reached only through `./query`
  *
@@ -17,20 +20,18 @@ export {
   invalidateAfterAdminRoleChange,
   useAdminRoleMutations,
 } from "./query";
-export type { AdminRolesRouteData, AdminRolesRouteProps } from "./route";
-export {
-  ADMIN_ROLES_NAMESPACES,
-  AdminRolesRouteContent,
-  loadAdminRolesRoute,
-} from "./route";
+export type { AdminRolesRouteData } from "./route";
+export { ADMIN_ROLES_NAMESPACES, loadAdminRolesRoute } from "./route";
 export type { RolesRouteSearch, UncheckedRolesSearch } from "./route-search";
-
 export {
   normalizeRolesRouteSearch,
   rolesRouteParams,
   rolesSearchFrom,
   rolesSearchParams,
 } from "./route-search";
+export type { AdminRolesRouteProps } from "./screen";
+
+export { AdminRolesRouteContent } from "./screen";
 
 export type { AdminRoleInput } from "@/views/admin/views/core/users/roles/roles-mutations";
 export {

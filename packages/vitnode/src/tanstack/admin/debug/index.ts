@@ -17,12 +17,8 @@ export {
   debugQueueQuery,
   useClearAdminCache,
 } from "./query";
-export type { AdminDebugRouteData, AdminDebugRouteProps } from "./route";
-export {
-  ADMIN_DEBUG_NAMESPACES,
-  AdminDebugRouteContent,
-  loadAdminDebugRoute,
-} from "./route";
+export type { AdminDebugRouteData } from "./route";
+export { ADMIN_DEBUG_NAMESPACES, loadAdminDebugRoute } from "./route";
 export type { DebugRouteSearch, UncheckedDebugSearch } from "./route-search";
 export {
   debugLogsRouteParams,
@@ -30,6 +26,8 @@ export {
   debugSearchParams,
   normalizeDebugRouteSearch,
 } from "./route-search";
+export type { AdminDebugRouteProps } from "./screen";
+export { AdminDebugRouteContent } from "./screen";
 
 export type {
   DebugLogRow,

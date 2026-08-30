@@ -12,7 +12,7 @@ import { AdminRequestError } from "@/views/admin/admin-request";
 import type { AdminScreenContext } from "../../screen";
 import type { ContentAdminRouteData } from "../route";
 
-import { loadContentFormScreen } from "./screen";
+import { loadContentFormScreen } from "./route";
 
 /**
  * What a page-mode form loader does with a read it could not complete.

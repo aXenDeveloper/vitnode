@@ -24,6 +24,8 @@
  *                         an email adapter, a captcha site key
  *     ./actions           the client orchestration - mutate, then bring the one
  *                         cache entry back in step, then navigate
+ *     ./queries           what an identity boundary drops: the private-user
+ *                         cache roots, the public half of the AdminCP's list
  *     ./transport         the eight server functions the host registers
  *
  * `@vitnode/core/tanstack/auth/server` is the other half: the request-scoped
@@ -56,44 +58,31 @@
 
 export * from "./actions";
 export * from "./contract";
-export type {
-  AuthLoaderContext,
-  AuthRouteData,
-  LoginRouteProps,
-} from "./login-route";
-export {
-  loadLoginRoute,
-  LOGIN_NAMESPACES,
-  LoginRouteContent,
-} from "./login-route";
+export type { AuthLoaderContext, AuthRouteData } from "./login-route";
+export { loadLoginRoute, LOGIN_NAMESPACES } from "./login-route";
+export type { LoginRouteProps } from "./login-screen";
+export { LoginRouteContent } from "./login-screen";
 export * from "./middleware-config";
+export { removeUserIdentityQueries } from "./queries";
 export * from "./recovery";
-export type {
-  PasswordResetRouteData,
-  PasswordResetRouteProps,
-} from "./recovery-route";
+export type { PasswordResetRouteData } from "./recovery-route";
+export { loadPasswordResetRoute } from "./recovery-route";
+export type { PasswordResetRouteProps } from "./recovery-screen";
 export {
-  loadPasswordResetRoute,
   PasswordRecoveryNotFound,
   PasswordResetRouteContent,
-} from "./recovery-route";
+} from "./recovery-screen";
 export * from "./redirects";
-export type { RegisterRouteProps } from "./register-route";
-export {
-  loadRegisterRoute,
-  REGISTER_NAMESPACES,
-  RegisterRouteContent,
-} from "./register-route";
+export { loadRegisterRoute, REGISTER_NAMESPACES } from "./register-route";
+export type { RegisterRouteProps } from "./register-screen";
+export { RegisterRouteContent } from "./register-screen";
 export * from "./return-to";
 export * from "./route-search";
 export * from "./screens";
 export type { SessionApi } from "./session-api";
 export * from "./session-query";
-export type { SsoCallbackRouteProps } from "./sso-route";
-export {
-  loadSsoCallbackRoute,
-  SSO_CALLBACK_NAMESPACES,
-  SsoCallbackRouteContent,
-} from "./sso-route";
+export { loadSsoCallbackRoute, SSO_CALLBACK_NAMESPACES } from "./sso-route";
+export type { SsoCallbackRouteProps } from "./sso-screen";
+export { SsoCallbackRouteContent } from "./sso-screen";
 export * from "./state";
 export * from "./transport";

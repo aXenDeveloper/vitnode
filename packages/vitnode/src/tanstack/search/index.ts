@@ -8,11 +8,8 @@ export type {
   DiscoverLoaderContext,
   DiscoverRouteData,
 } from "./discover-route";
-export {
-  DISCOVER_NAMESPACES,
-  DiscoverRouteContent,
-  loadDiscoverRoute,
-} from "./discover-route";
+export { DISCOVER_NAMESPACES, loadDiscoverRoute } from "./discover-route";
+export { DiscoverRouteContent } from "./discover-screen";
 export { feedQueryKey, feedQueryOptions, fetchSearchFeedPage } from "./feed";
 export type { SearchRouteSearch } from "./route-search";
 export {
@@ -20,11 +17,8 @@ export {
   searchRouteFeedParams,
 } from "./route-search";
 export type { SearchLoaderContext, SearchRouteData } from "./search-route";
-export {
-  loadSearchRoute,
-  SEARCH_NAMESPACES,
-  SearchRouteContent,
-} from "./search-route";
+export { loadSearchRoute, SEARCH_NAMESPACES } from "./search-route";
+export { SearchRouteContent } from "./search-screen";
 
 /**
  * `/search` and `/discover`, as everything a TanStack Start route needs.

@@ -12,6 +12,16 @@
  * whether there is a list at all. Two administrators asking the same question
  * get two different answers, so they must not share a cache entry.
  *
+ * The dashboard is here for a different reason, and it is worth stating because
+ * the two look alike and are not. Its layout is not *shaped* by permissions - it
+ * is simply somebody's property. `core_admin_dashboard` holds one row per
+ * administrator under a `UNIQUE` constraint on `userId`, and the handler scopes
+ * the read to the session's own id, so the answer is not a different view of one
+ * fact but a different fact entirely. That makes it the sharpest case on this
+ * list rather than the mildest: a shared key does not merely risk showing the
+ * wrong emphasis, it shows another person's board - and a save from that board
+ * writes their widget ids into the reader's row.
+ *
  *     ["vitnode", "admin", "users", 7, "list", { first: "10" }]
  *      \______________________________/  |  \__________________/
  *            the AdminCP root           |      the request
@@ -68,3 +78,4 @@ export const adminScopedQueryKey = (
 export const ADMIN_USERS_SCREEN = "users";
 export const ADMIN_ROLES_SCREEN = "roles";
 export const ADMIN_STAFF_SCREEN = "staff";
+export const ADMIN_DASHBOARD_SCREEN = "dashboard";

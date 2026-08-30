@@ -7,7 +7,7 @@ import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
 
-import { contentDeliveryLocaleQueryKey } from "../editorial-query";
+import { contentDeliveryQueryOptions } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
 
 /**
@@ -32,11 +32,14 @@ export const DeliveryPanel = ({
 }) => {
   const t = useTranslations("core.content.delivery");
   const transport = useContentEditorialTransport();
-  const { data, isPending } = useQuery({
-    queryFn: async () =>
-      await transport.readDelivery(contentTypeId, id, locale),
-    queryKey: contentDeliveryLocaleQueryKey(contentTypeId, id, locale),
-  });
+  const { data, isPending } = useQuery(
+    contentDeliveryQueryOptions({
+      contentTypeId,
+      itemId: id,
+      locale,
+      readDelivery: transport.readDelivery,
+    }),
+  );
 
   if (isPending) return <Loader />;
 

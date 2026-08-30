@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { normalizeNamespaceList } from "@/routing";
+
 import type { IntlMessages } from "./runtime";
 
 import {
@@ -112,6 +114,51 @@ describe("the query key names the language", () => {
         namespaces: ["core.search", "core.global", "core.search"],
       }).queryKey,
     ).toEqual(["vitnode", "intl", "en", "core.global", "core.search"]);
+  });
+
+  /**
+   * The key is built twice per page load in two different runtimes - once on the
+   * server, which dehydrates the entry into the stream, and once in the browser,
+   * which looks it up on hydration. So the comparator that orders the namespaces
+   * may not be one that asks the environment anything.
+   *
+   * `localeCompare` is exactly that comparator: it uses the runtime's default
+   * collator, which on the server comes from the server's environment and in a
+   * Node built without full ICU degrades to a code-point comparison outright,
+   * while the browser always has a real one set to the visitor's locale. The two
+   * disagree about case and about punctuation, so one list becomes two keys, the
+   * dehydrated entry is never found, and every page silently refetches its own
+   * messages after hydration.
+   *
+   * Both halves of VitNode now normalise a namespace list with the same
+   * function - `normalizeNamespaceList`, which sorts by code unit and is the
+   * one the route manifest is generated with. This pins that they agree: a
+   * manifest declaring namespaces at build time and a browser asking for them at
+   * runtime cannot spell one list two ways.
+   */
+  it("orders the namespaces the way a route manifest does", () => {
+    const declared = [
+      "core.search",
+      "Core.Global",
+      "core.global",
+      "core.files",
+    ];
+
+    expect(
+      intlQueryOptions({ locale: "en", namespaces: declared }).queryKey,
+    ).toEqual(["vitnode", "intl", "en", ...normalizeNamespaceList(declared)]);
+  });
+
+  it("orders them by code unit, so no environment can reorder the key", () => {
+    // Mixed case is where a collator and a code-unit comparison part company:
+    // `localeCompare` puts "core.global" before "Core.Global", code units put
+    // the capital first. Only one of the two is the same answer everywhere.
+    expect(
+      intlQueryOptions({
+        locale: "en",
+        namespaces: ["core.global", "Core.Global"],
+      }).queryKey,
+    ).toEqual(["vitnode", "intl", "en", "Core.Global", "core.global"]);
   });
 
   it("asks the host's fetcher for exactly what the key says", async () => {

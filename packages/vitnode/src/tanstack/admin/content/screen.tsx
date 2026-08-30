@@ -16,7 +16,7 @@ import type {
 import "./editorial";
 import { ContentFormScreen } from "./form";
 import { ContentListActions, ContentListScreen } from "./list";
-import { ContentAdminRouteContent } from "./route";
+import { ContentAdminRouteContent } from "./route-screen";
 
 /**
  * `/admin/content/*` - the whole screen, whichever of the three it is.

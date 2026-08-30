@@ -19,7 +19,7 @@ import { Loader } from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
-import { contentRevisionQueryKey } from "../editorial-query";
+import { contentRevisionQueryOptions } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
 import { RevisionActor } from "./revision-actor";
 import { RevisionDiff } from "./revision-diff";
@@ -94,10 +94,15 @@ const useRevisionSnapshot = ({
   const transport = useContentEditorialTransport();
 
   return useQuery({
+    ...contentRevisionQueryOptions({
+      contentTypeId,
+      getRevision: transport.getRevision,
+      itemId,
+      revisionId: revisionId ?? 0,
+    }),
+    // Whether this row has been expanded is the row's own state, so it stays
+    // here rather than inside the shared query definition.
     enabled: enabled && revisionId !== null,
-    queryFn: async () =>
-      await transport.getRevision(contentTypeId, itemId, revisionId ?? 0),
-    queryKey: contentRevisionQueryKey(contentTypeId, itemId, revisionId ?? 0),
   });
 };
 

@@ -99,15 +99,13 @@ export type {
 } from "./session-api";
 export * from "./session-query";
 export { AdminShellContent } from "./shell";
-export type {
-  AdminSignInRouteData,
-  AdminSignInRouteProps,
-} from "./sign-in-route";
+export type { AdminSignInRouteData } from "./sign-in-route";
 export {
   ADMIN_SIGN_IN_NAMESPACES,
-  AdminSignInRouteContent,
   loadAdminSignInRoute,
 } from "./sign-in-route";
+export type { AdminSignInRouteProps } from "./sign-in-screen";
+export { AdminSignInRouteContent } from "./sign-in-screen";
 
 export * from "./state";
 export type {

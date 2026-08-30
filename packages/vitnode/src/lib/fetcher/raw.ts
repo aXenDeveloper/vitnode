@@ -12,7 +12,16 @@ export interface RawApiFetchArgs {
   method: string;
   /** Module path under the plugin, e.g. `admin/content/articles`. */
   module: string;
-  options?: Omit<RequestInit, "body" | "headers"> & {
+  /**
+   * Extra `fetch` init, for the things a caller genuinely owns - `credentials`,
+   * and an {@link AbortSignal} from a cancellable read.
+   *
+   * `method` is omitted alongside `body` and `headers` because the spread below
+   * comes *last*: without it, an `options.method` would silently win over the
+   * `method` this call was built from, and a `get` would leave as a `post`. The
+   * three fields this function computes are the three it does not accept.
+   */
+  options?: Omit<RequestInit, "body" | "headers" | "method"> & {
     /**
      * Next's own `fetch` extension, for cache tags and revalidation.
      *
@@ -115,11 +124,16 @@ export const rawApiFetch = async ({
     ...additionalHeaders,
   });
 
+  // `options` first, so the three fields this function computes always win. It
+  // used to be spread last, which made `method` reachable from a caller reaching
+  // past the type - a `get` could leave as a `post`. `body` and `headers` were
+  // already protected by the `Omit`; `method` is now too, and the order here is
+  // what makes that true at runtime rather than only in the type.
   const response = await fetch(url, {
+    ...options,
     method: method.toUpperCase(),
     headers,
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
-    ...options,
   });
 
   if (response.status === 500) {

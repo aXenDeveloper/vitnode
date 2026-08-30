@@ -1,18 +1,8 @@
-"use client";
-
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { createTranslator } from "use-intl";
-
-import { HeaderContent } from "@/components/ui/header-content";
-import { CONFIG_PLUGIN } from "@/config";
-import { IntegrationsContent } from "@/views/admin/views/core/system/integrations/integrations-content";
-import { sendTestEmailInBrowser } from "@/views/admin/views/core/system/integrations/send-test-email/send-test-email-mutation";
 
 import type { AdminScreenContext } from "../screen";
 
 import { intlQueryOptions } from "../../i18n/query";
-import { RouteMessages } from "../../i18n/route-messages";
-import { useAdminPermission } from "../permissions";
 import { requireAdminPermission } from "../screen";
 import { integrationsQuery } from "./query";
 
@@ -41,7 +31,7 @@ export interface AdminIntegrationsRouteData {
 }
 
 /** The core plugin's `system` module, which all four tuples on this screen use. */
-const SYSTEM_MODULE = "system";
+export const SYSTEM_MODULE = "system";
 
 /**
  * The tuple `<AdminPermissionRequired module="system" permission="can_view">`
@@ -100,40 +90,3 @@ export const loadAdminIntegrationsRoute = async ({
  * The test-email mutation is the browser one. The Next.js page keeps its server
  * action, and both satisfy `SendTestEmail`, so the dialog is identical.
  */
-export const AdminIntegrationsRouteContent = ({
-  description,
-  title,
-}: AdminIntegrationsRouteData) => {
-  const { data } = useSuspenseQuery(integrationsQuery());
-  const canSendTestEmail = useAdminPermission({
-    module: SYSTEM_MODULE,
-    permission: "can_send_test_email",
-    plugin: CONFIG_PLUGIN.pluginId,
-  });
-  const canTestStorage = useAdminPermission({
-    module: SYSTEM_MODULE,
-    permission: "can_test_storage",
-    plugin: CONFIG_PLUGIN.pluginId,
-  });
-  const canTestAi = useAdminPermission({
-    module: SYSTEM_MODULE,
-    permission: "can_test_ai",
-    plugin: CONFIG_PLUGIN.pluginId,
-  });
-
-  return (
-    <RouteMessages namespaces={ADMIN_INTEGRATIONS_NAMESPACES}>
-      <div className="p-4">
-        <HeaderContent desc={description} h1={title} />
-
-        <IntegrationsContent
-          canSendTestEmail={canSendTestEmail}
-          canTestAi={canTestAi}
-          canTestStorage={canTestStorage}
-          data={data}
-          onSendTestEmail={sendTestEmailInBrowser}
-        />
-      </div>
-    </RouteMessages>
-  );
-};

@@ -45,7 +45,12 @@ interface CoreFetcherOptions<
   formData?: FormData;
   method: Method;
   module: ModuleName;
-  options?: Omit<RequestInit, "body" | "headers">;
+  /**
+   * Extra `fetch` init - `credentials`, an {@link AbortSignal}, Next's `next`
+   * extension. `method` is omitted with `body` and `headers` because
+   * `rawApiFetch` spreads this *after* the three it computes; see its own note.
+   */
+  options?: Omit<RequestInit, "body" | "headers" | "method">;
   /**
    * Origin to call, instead of the `NEXT_PUBLIC_API_URL` one. Set by a runtime
    * that serves the API itself and knows the origin only per request; see

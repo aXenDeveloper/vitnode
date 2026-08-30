@@ -33,6 +33,7 @@ import {
 } from "@/views/admin/views/core/users/users-mutations";
 
 import { useAdminIdentity } from "../identity";
+import { invalidateAdminSession } from "../session-query";
 import { fetchAdminUserOnServer, fetchAdminUsersPageOnServer } from "./server";
 
 /**
@@ -124,6 +125,42 @@ export const invalidateAdminUsers = async (
 };
 
 /**
+ * What changing *a user's roles* invalidates, and why it is two things.
+ *
+ * 1. **The users family**, because the roles rendered in the row and on the
+ *    detail screen are the thing that changed.
+ * 2. **The admin session**, because a role is a permission carrier - the same
+ *    reason `invalidateAfterAdminRoleChange` and `invalidateAfterStaffChange`
+ *    both name it. Granting an administrator a role, or taking one away, changes
+ *    what *they* may do, and the sidebar, every permission gate and every screen
+ *    guard in the panel are rendered from that one cached entry.
+ *
+ * The API already does the server half - the role branch of the user update
+ * route calls `invalidateStaffPermissionsForUser` - so without this the browser
+ * is the only thing still offering links the API has started refusing, until the
+ * next full page load.
+ *
+ * It matters even when the edited user is somebody else: an administrator can
+ * edit their own roles from this screen, and the cache has no way to tell the
+ * two cases apart without asking who the row is. Invalidating an entry that did
+ * not change costs one request; not invalidating one that did costs a panel that
+ * lies about what it may do.
+ *
+ * `invalidateAdminSession` rather than `removeAdminSession`: the identity has
+ * not changed, so the current sidebar stays on screen while the fresh answer
+ * arrives instead of the shell blanking under the toast.
+ */
+export const invalidateAfterAdminUserRolesChange = async (
+  queryClient: QueryClient,
+  adminUserId: AdminIdentity,
+): Promise<void> => {
+  await Promise.all([
+    invalidateAdminUsers(queryClient, adminUserId),
+    invalidateAdminSession(queryClient),
+  ]);
+};
+
+/**
  * The three user writes, bound to the mounted router's cache.
  *
  * Each refreshes only on success, for the same reason the Next.js actions only
@@ -157,7 +194,7 @@ export const useAdminUserMutations = (): {
       onUpdateRoles: async (id, input) => {
         const result = await updateAdminUserRoles(id, input);
         if ("data" in result) {
-          await invalidateAdminUsers(queryClient, adminUserId);
+          await invalidateAfterAdminUserRolesChange(queryClient, adminUserId);
         }
 
         return result;

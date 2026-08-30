@@ -18,11 +18,21 @@
     "typescript",
     "core"
   ],
+  "sideEffects": [
+    "*.css",
+    "**/*.css",
+    "**/server.js",
+    "**/*.server.js",
+    "./dist/src/tanstack/admin/content/editorial/index.js",
+    "./dist/src/tanstack/admin/content/form/index.js",
+    "./src/tanstack/admin/content/editorial/index.ts",
+    "./src/tanstack/admin/content/form/index.ts"
+  ],
   "peerDependencies": {
     "@hono/zod-openapi": "^1.0.x",
     "@swc/cli": "^0.7.0 || ^0.8.0",
     "@swc/core": "^1.15.0",
-    "@tanstack/react-query": "^5.101.x",
+    "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.x",
     "@tanstack/react-start": "^1.168.x",
     "@types/react": "^19.1.x",

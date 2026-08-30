@@ -50,8 +50,53 @@ import { adminTransport } from "./transport";
  * the tab is open, which is precisely the revocation hole this whole feature is
  * shaped to avoid. The cost is one request per admin navigation, against an
  * endpoint whose database work is already cached in Redis.
+ *
+ * *Per navigation.* That is the sentence this constant was always making, and
+ * until Stage 14 it was not the sentence the router was reading - see
+ * {@link ADMIN_SESSION_PRELOAD_STALE_TIME}.
  */
 const ADMIN_SESSION_STALE_TIME = 0;
+
+/**
+ * How long a *preload* may trust the cached admin session. Half a minute.
+ *
+ * The one place the zero above does not apply, and the reason it needs saying is
+ * that nothing was saying it. `defaultPreload: 'intent'` means hovering a link
+ * runs that route's whole `beforeLoad` chain, and unlike a loader a `beforeLoad`
+ * has no staleness gate of its own - router-core re-runs it from the top of the
+ * branch on every preload. So `_admin`'s guard fired on every hover, went
+ * through {@link ensureAdminAccess}, found `staleTime: 0`, and asked the API
+ * again. Moving a mouse across the AdminCP sidebar was one server-function POST
+ * and one Hono call per link it crossed.
+ *
+ * The public session has never had this problem, and its own 30-second window is
+ * documented as existing precisely to avoid it (`SESSION_STALE_TIME` in
+ * `tanstack/auth/session-query`). The admin session opted out of that reasoning
+ * without anybody writing down that it had. This is the same number for the same
+ * reason, applied to the same event.
+ *
+ * ## It does not weaken revocation, because revocation was never about hovering
+ *
+ * A hover renders nothing, admits nobody and shows no permission. Every property
+ * `ADMIN_SESSION_STALE_TIME` buys is a property of *entering* a screen, and
+ * entering one is a real navigation, where `beforeLoad` runs again with
+ * `preload: false` and reads through {@link ensureAdminAccess} at `staleTime: 0`
+ * exactly as before. Router-core guarantees the second run: a preloaded match's
+ * `beforeLoad` result is never adopted by a navigation (the only path that skips
+ * it is the hydration handoff, where the server already ran it), which is what
+ * makes a tolerant preload safe rather than merely cheap.
+ *
+ * So the worst case is that a hover warms a decision up to 30 seconds old, and
+ * an administrator whose access was revoked 5 seconds ago gets a preloaded
+ * component chunk they are then refused when they click. Which is what happens
+ * to an administrator who never hovers at all.
+ *
+ * Raising {@link ADMIN_SESSION_STALE_TIME} to get the same saving would have
+ * been the wrong fix and is explicitly out of bounds: it would apply the window
+ * to navigations too, which is the revocation hole. Two constants, because there
+ * are two events.
+ */
+const ADMIN_SESSION_PRELOAD_STALE_TIME = 30_000;
 
 /**
  * How long a *detached* entry lingers before Query collects it.
@@ -173,6 +218,36 @@ export const ensureAdminAccess = async (
   queryClient: QueryClient,
 ): Promise<AdminAccessState> =>
   await queryClient.fetchQuery(adminSessionQueryOptions());
+
+/**
+ * The same decision, for a `beforeLoad` that is only preloading.
+ *
+ * What `_admin`'s guard calls when the router hands it `preload: true` - a
+ * hover, a viewport prefetch, an abandoned intent. Same query definition, same
+ * key, same single in-flight request, same rejection on a read that produced no
+ * decision. One difference, and it is the whole point: the entry is trusted for
+ * {@link ADMIN_SESSION_PRELOAD_STALE_TIME} instead of not at all, so crossing a
+ * sidebar full of links costs one round trip rather than one per link.
+ *
+ * `fetchQuery` rather than `prefetchQuery`, deliberately, and it is the reason
+ * this is not simply {@link prefetchAdminAccess} under another name. That one is
+ * *tolerant* - it swallows a failed read so the sign-in form can still render -
+ * and tolerance is wrong here: a caller of this gets an `AdminAccessState` or a
+ * rejection, never `undefined` masquerading as an answer. A preload whose
+ * session read failed does nothing, exactly as it does today.
+ *
+ * The staleness override is passed per call rather than stored on the query.
+ * `fetchQuery` decides with the `staleTime` it was handed, so the next real
+ * navigation's {@link ensureAdminAccess} - which passes `0` - asks the API again
+ * whatever this left behind.
+ */
+export const preloadAdminAccess = async (
+  queryClient: QueryClient,
+): Promise<AdminAccessState> =>
+  await queryClient.fetchQuery({
+    ...adminSessionQueryOptions(),
+    staleTime: ADMIN_SESSION_PRELOAD_STALE_TIME,
+  });
 
 /**
  * Fill the admin session entry without letting a failed read take the page down.

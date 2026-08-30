@@ -14,10 +14,18 @@ const withNextIntl = createNextIntlPlugin("./src/vitnode.config.ts");
  * own URL rather than through the package name: the config is loaded from inside
  * the package, and locating a sibling file needs no export map, no resolution
  * conditions and no self-reference support.
+ *
+ * `lib/next-cache/` and not `lib/cache/`: these two files implement a *Next.js*
+ * contract and are reachable only from here. The API's own cache - the
+ * `c.get("cache")` a plugin uses - is `api/lib/cache.ts`, a different system with
+ * a different lifetime and a different Redis namespace. The directory name is
+ * what keeps the next reader from assuming there is one cache with two front
+ * doors, and it is what makes this whole tree a single deletion once the Next
+ * web runtime goes.
  */
 const handlerPath = (name: string): null | string => {
   const path = fileURLToPath(
-    new URL(`../dist/src/lib/cache/${name}.js`, import.meta.url),
+    new URL(`../dist/src/lib/next-cache/${name}.js`, import.meta.url),
   );
 
   return existsSync(path) ? path : null;

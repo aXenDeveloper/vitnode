@@ -20,20 +20,18 @@ export {
   runCron,
   useCronRunCallback,
 } from "./query";
-export type { AdminCronRouteData, AdminCronRouteProps } from "./route";
-export {
-  ADMIN_CRON_NAMESPACES,
-  AdminCronRouteContent,
-  loadAdminCronRoute,
-} from "./route";
+export type { AdminCronRouteData } from "./route";
+export { ADMIN_CRON_NAMESPACES, loadAdminCronRoute } from "./route";
 export type { CronRouteSearch, UncheckedCronSearch } from "./route-search";
-
 export {
   cronRouteParams,
   cronSearchFrom,
   cronSearchParams,
   normalizeCronRouteSearch,
 } from "./route-search";
+export type { AdminCronRouteProps } from "./screen";
+
+export { AdminCronRouteContent } from "./screen";
 
 export type {
   CronJobRow,

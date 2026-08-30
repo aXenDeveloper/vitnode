@@ -127,6 +127,10 @@ export const fetchContentTranslationsInBrowser: ContentTranslationsFetcher =
  * Both sides **must** build it from this function with the same request, or the
  * loader fills an entry the component never looks at and the first paint costs a
  * round trip that was already paid for.
+ *
+ * `retry: false`, the rule every AdminCP read follows: a `404` on a record
+ * somebody just deleted is an answer, a `403` is an answer, and a `429` is the
+ * limiter asking for fewer requests rather than three of them.
  */
 export const contentItemQueryOptions = ({
   fetchItem,
@@ -138,9 +142,14 @@ export const contentItemQueryOptions = ({
   queryOptions({
     queryFn: async () => await fetchItem(request),
     queryKey: contentItemQueryKey(request.contentTypeId, request.itemId),
+    retry: false,
   });
 
-/** Every language of one record. Only ever asked for a localized content type. */
+/**
+ * Every language of one record. Only ever asked for a localized content type.
+ *
+ * `retry: false`, for the reason {@link contentItemQueryOptions} gives.
+ */
 export const contentTranslationsQueryOptions = ({
   fetchTranslations,
   request,
@@ -154,6 +163,7 @@ export const contentTranslationsQueryOptions = ({
       request.contentTypeId,
       request.itemId,
     ),
+    retry: false,
   });
 
 /**

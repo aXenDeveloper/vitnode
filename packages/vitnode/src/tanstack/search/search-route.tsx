@@ -1,18 +1,10 @@
-"use client";
-
 import type { QueryClient } from "@tanstack/react-query";
 
 import { createTranslator } from "use-intl";
 
-import type { SearchFeedLinkComponent } from "@/views/search/search-feed-content";
 import type { SearchFeedParams } from "@/views/search/search-feed-query";
 
-import { HeaderContent } from "@/components/ui/header-content";
-import { SearchControlsContent } from "@/views/search/search-controls-content";
-
-import { useLocale } from "../i18n/locale";
 import { intlQueryOptions } from "../i18n/query";
-import { RouteMessages } from "../i18n/route-messages";
 import { feedQueryOptions } from "./feed";
 import { searchRouteFeedParams } from "./route-search";
 
@@ -96,29 +88,3 @@ export const loadSearchRoute = async ({
  * query, built from the same factory the loader used, so all of them share one
  * contract and one cache.
  */
-export const SearchRouteContent = ({
-  description,
-  LinkComponent,
-  params,
-  title,
-}: SearchRouteData & { LinkComponent: SearchFeedLinkComponent }) => {
-  const locale = useLocale();
-
-  return (
-    <RouteMessages namespaces={SEARCH_NAMESPACES}>
-      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
-        <HeaderContent desc={description} h1={title} />
-
-        <SearchControlsContent
-          defaultParams={params}
-          feedQuery={feedParams =>
-            feedQueryOptions({ locale, params: feedParams })
-          }
-          key={params.search ?? ""}
-          LinkComponent={LinkComponent}
-          variant="timeline"
-        />
-      </div>
-    </RouteMessages>
-  );
-};

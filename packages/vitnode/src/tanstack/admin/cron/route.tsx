@@ -1,25 +1,12 @@
-"use client";
-
-import { useSuspenseQuery } from "@tanstack/react-query";
-import React from "react";
 import { createTranslator } from "use-intl";
 
-import type { DataTableNavigation } from "@/components/table/navigation";
 import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-query";
 
-import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
-import { CronTableContent } from "@/views/admin/views/core/advanced/cron/cron-table-content";
-
 import type { AdminScreenContext } from "../screen";
-import type { AdminTableNavigate } from "../table-search";
-import type { CronRouteSearch, UncheckedCronSearch } from "./route-search";
 
 import { intlQueryOptions } from "../../i18n/query";
-import { RouteMessages } from "../../i18n/route-messages";
 import { requireAdminPermission } from "../screen";
-import { cronQuery, useCronRunCallback } from "./query";
-import { cronSearchFrom, cronSearchParams } from "./route-search";
+import { cronQuery } from "./query";
 
 /**
  * `/admin/core/advanced/cron`, as everything a TanStack Start route needs and
@@ -122,56 +109,4 @@ export const loadAdminCronRoute = async ({
   });
 
   return { description: t("desc"), params, title: t("title") };
-};
-
-export interface AdminCronRouteProps extends AdminCronRouteData {
-  navigate: AdminTableNavigate<CronRouteSearch>;
-  search: UncheckedCronSearch;
-}
-
-/**
- * `/admin/core/advanced/cron`, as everything below a route file's `component`.
- *
- * `navigate` and `search` come from the host because they are route-typed:
- * TanStack infers both from the `createFileRoute` path, which is an application
- * concern and stays in the application.
- *
- * The heading is outside the table on purpose, exactly as in the Next.js page:
- * it is rendered from the loader's own strings, so the `<h1>` and the `<title>`
- * are the same string by construction.
- */
-export const AdminCronRouteContent = ({
-  description,
-  navigate,
-  params,
-  search,
-  title,
-}: AdminCronRouteProps) => {
-  const { data } = useSuspenseQuery(cronQuery({ params }));
-  const onRun = useCronRunCallback();
-
-  const navigation = React.useMemo<DataTableNavigation>(
-    () => ({
-      navigate: async nextSearch => {
-        await navigate({
-          resetScroll: false,
-          search: cronSearchFrom(nextSearch),
-        });
-      },
-      searchParams: cronSearchParams(search),
-    }),
-    [navigate, search],
-  );
-
-  return (
-    <RouteMessages namespaces={ADMIN_CRON_NAMESPACES}>
-      <div className="p-4">
-        <HeaderContent desc={description} h1={title} />
-
-        <DataTableNavigationProvider value={navigation}>
-          <CronTableContent data={data} onRun={onRun} />
-        </DataTableNavigationProvider>
-      </div>
-    </RouteMessages>
-  );
 };

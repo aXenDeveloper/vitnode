@@ -177,9 +177,15 @@ export const searchFeedQueryKey = ({
   params: SearchFeedParams;
 }) => ["search", params, locale] as const;
 
-/** How a page is actually fetched. See {@link searchFeedQueryOptions}. */
+/**
+ * How a page is actually fetched. See {@link searchFeedQueryOptions}.
+ *
+ * The second argument is the read's cancellation, and it is optional so the SSR
+ * branch - handed no signal, deliberately - satisfies this with one parameter.
+ */
 export type SearchFeedPageFetcher = (
   args: SearchFeedPageArgs,
+  options?: { signal?: AbortSignal },
 ) => Promise<SearchFeedPage>;
 
 /**
@@ -189,17 +195,19 @@ export type SearchFeedPageFetcher = (
  * VitNode client call uses - same-origin, cookies attached by the browser
  * itself, and a 429 routed to the global rate-limit notice.
  */
-export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher =
-  async args => {
-    const response = await fetcherClient(
-      searchModuleRef,
-      searchFeedRequest(args),
-    );
+export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher = async (
+  args,
+  { signal } = {},
+) => {
+  const response = await fetcherClient(searchModuleRef, {
+    ...searchFeedRequest(args),
+    options: { signal },
+  });
 
-    assertSearchFeedResponse(response, args);
+  assertSearchFeedResponse(response, args);
 
-    return await response.json();
-  };
+  return await response.json();
+};
 
 /**
  * The feed, as the one query definition every caller shares.
@@ -249,8 +257,13 @@ export const searchFeedQueryOptions = ({
       ? { pageParams: [SEARCH_FEED_FIRST_PAGE], pages: [initialData] }
       : undefined,
     initialPageParam: SEARCH_FEED_FIRST_PAGE,
-    queryFn: async ({ pageParam }) =>
-      await fetchPage({ cursor: pageParam, locale, params }),
+    // Reads `signal`, which is the only thing that marks a query cancellable:
+    // a re-typed search term leaves one request in flight rather than one per
+    // keystroke. `assertSearchFeedResponse` throws on a refusal and the abort
+    // rejects earlier still, inside `fetch`, so neither can reach the feed as
+    // "no results" - which is what a search that found nothing looks like.
+    queryFn: async ({ pageParam, signal }) =>
+      await fetchPage({ cursor: pageParam, locale, params }, { signal }),
     queryKey: searchFeedQueryKey({ locale, params }),
   });
 

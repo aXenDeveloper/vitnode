@@ -174,6 +174,22 @@ export const fetchDevicesInBrowser: DevicesFetcher = async () => {
 };
 
 /**
+ * Every visitor's devices, as one prefix above the per-owner entries.
+ *
+ * {@link devicesQueryKey} is one owner's entry - the thing a revoke invalidates.
+ * This is the prefix above all of them, and its only caller is the public
+ * identity cleanup in `tanstack/auth/queries`: a sign-out cannot name whose
+ * partition to drop, because the point is that none of them stays behind.
+ *
+ * The entry it collects is the most sensitive private read in the public app -
+ * operating systems, browsers, IP addresses and sign-in times - so leaving one
+ * in a browser for `gcTime` after its owner signed out is exactly the residency
+ * the AdminCP has refused since Stage 12. Partitioning by owner (below) already
+ * stops the *next* visitor reading it; this is what stops it being there at all.
+ */
+export const DEVICES_IDENTITY_ROOT = ["devices", "user"] as const;
+
+/**
  * The cache entry one visitor's list reads and writes, and the target an
  * invalidation names.
  *
@@ -213,7 +229,7 @@ export const fetchDevicesInBrowser: DevicesFetcher = async () => {
  * and the family an invalidation names.
  */
 export const devicesQueryKey = (userId: number) =>
-  ["devices", "user", userId] as const;
+  [...DEVICES_IDENTITY_ROOT, userId] as const;
 
 /**
  * The visitor's devices, as the one query definition every caller shares.

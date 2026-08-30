@@ -193,22 +193,36 @@ export const contentListApiRequest = (
  */
 export type ContentListPageFetcher = (
   request: ContentListRequest,
+  /**
+   * The read's cancellation. Optional so the SSR branch - handed no signal,
+   * deliberately - satisfies this with one parameter.
+   */
+  options?: { signal?: AbortSignal },
 ) => Promise<ContentListPage>;
 
 /** What a failed read says it was reading. */
 export const describeContentList = (request: ContentListRequest): string =>
   `the ${request.contentTypeId} list`;
 
-/** One page, fetched from the browser against the same origin. */
-export const fetchContentListPageInBrowser: ContentListPageFetcher =
-  async request =>
-    await readContentApiJson(
-      await contentApiFetchInBrowser(contentListApiRequest(request)),
-      {
-        describe: describeContentList(request),
-        schema: zodContentListPage,
-      },
-    );
+/**
+ * One page, fetched from the browser against the same origin.
+ *
+ * `readContentApiJson` throws on a refusal and on a schema mismatch, and an
+ * abort throws earlier still - `fetch` rejects before there is a response to
+ * parse. So a cancelled sort cannot reach the table as a content type with no
+ * records in it, which is the one thing a list must never look like.
+ */
+export const fetchContentListPageInBrowser: ContentListPageFetcher = async (
+  request,
+  { signal } = {},
+) =>
+  await readContentApiJson(
+    await contentApiFetchInBrowser(contentListApiRequest(request), { signal }),
+    {
+      describe: describeContentList(request),
+      schema: zodContentListPage,
+    },
+  );
 
 /**
  * The list, as the query definition a loader warms and a component reads back.
@@ -216,6 +230,13 @@ export const fetchContentListPageInBrowser: ContentListPageFetcher =
  * Both sides **must** build it from this function with the same request, or the
  * loader fills an entry the component never looks at and the first paint costs a
  * round trip that was already paid for.
+ *
+ * `retry: false`, which is the rule every other AdminCP read follows and the one
+ * the Content Engine was missing. A `403` - this administrator lost `can_view`
+ * while the table was open - will not become a `200` because we asked twice
+ * more, and a `429` answered with two more requests is precisely what the
+ * limiter asked the application to stop doing. The failure belongs on screen
+ * immediately, not after three attempts and exponential backoff.
  */
 export const contentListQueryOptions = ({
   fetchPage,
@@ -225,6 +246,11 @@ export const contentListQueryOptions = ({
   request: ContentListRequest;
 }) =>
   queryOptions({
-    queryFn: async () => await fetchPage(request),
+    // Reads `signal`, which is the only thing that marks a query cancellable.
+    // Typing in the table's search box, or paging through it, leaves one request
+    // in flight rather than one per keystroke - and the abandoned ones reject
+    // rather than landing late over the rows being read.
+    queryFn: async ({ signal }) => await fetchPage(request, { signal }),
     queryKey: contentListRequestKey(request),
+    retry: false,
   });

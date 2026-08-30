@@ -13,9 +13,8 @@ import { CONTENT_PERMISSIONS } from "@/content/const";
 
 import { useContentFormNavigation } from "../../form/navigation";
 import {
-  contentHistoryListQueryKey,
+  contentRevisionHistoryQueryOptions,
   flattenContentRevisionPages,
-  nextContentRevisionCursor,
 } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
 import { RevisionRow } from "./revision-row";
@@ -72,13 +71,13 @@ export const RevisionHistory = ({
     plugin: pluginId,
   });
 
-  const history = useInfiniteQuery({
-    getNextPageParam: nextContentRevisionCursor,
-    initialPageParam: undefined as number | undefined,
-    queryFn: async ({ pageParam }) =>
-      await transport.listRevisions(contentTypeId, id, pageParam),
-    queryKey: contentHistoryListQueryKey(contentTypeId, id),
-  });
+  const history = useInfiniteQuery(
+    contentRevisionHistoryQueryOptions({
+      contentTypeId,
+      itemId: id,
+      listRevisions: transport.listRevisions,
+    }),
+  );
 
   if (history.isPending) {
     return (

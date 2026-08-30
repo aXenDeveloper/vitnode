@@ -220,9 +220,15 @@ export interface MyFilesPage {
   };
 }
 
-/** How a page is actually fetched. See {@link myFilesQueryOptions}. */
+/**
+ * How a page is actually fetched. See {@link myFilesQueryOptions}.
+ *
+ * The second argument is the read's cancellation, and it is optional so the SSR
+ * branch - handed no signal, deliberately - satisfies this with one parameter.
+ */
 export type MyFilesPageFetcher = (
   params: MyFilesParams,
+  options?: { signal?: AbortSignal },
 ) => Promise<MyFilesPage>;
 
 /** The `name` every {@link MyFilesRequestError} carries. See below. */
@@ -291,16 +297,42 @@ export const isMyFilesRequestError = (
  * cookie itself and a `429` is routed to the global rate-limit notice on the way
  * through.
  */
-export const fetchMyFilesPageInBrowser: MyFilesPageFetcher = async params => {
-  const response = await fetcherClient(
-    userFilesModuleRef,
-    myFilesRequest(params),
-  );
+export const fetchMyFilesPageInBrowser: MyFilesPageFetcher = async (
+  params,
+  { signal } = {},
+) => {
+  const response = await fetcherClient(userFilesModuleRef, {
+    ...myFilesRequest(params),
+    options: { signal },
+  });
 
   if (!response.ok) throw new MyFilesRequestError(response.status, params);
 
   return await response.json();
 };
+
+/**
+ * Every visitor's files, as one prefix above the per-owner partitions.
+ *
+ * {@link myFilesQueryRoot} narrows this to one owner and is what a *mutation*
+ * invalidates. This is the wider one, and it has exactly one caller: the public
+ * identity cleanup in `tanstack/auth/queries`, which runs when the person at the
+ * keyboard may have changed and therefore cannot name whose partition to drop -
+ * the point is that *no* previous visitor's rows stay in the browser, and the
+ * one being signed out is not necessarily the only one in there.
+ *
+ * Partitioning already stops B *reading* A's entry (see below). This is the
+ * other half, and it is the half the AdminCP has had since Stage 12: an entry
+ * nobody can read is still a copy of A's file names, folders and sizes sitting
+ * in the heap of a browser A has walked away from, for `gcTime` after they left.
+ * The two halves of the app should not disagree about whether that is acceptable.
+ *
+ * Written as its own constant rather than sliced off a key at the call site so
+ * that the prefix and the keys it must match are one edit: a partition scheme
+ * that changed here without changing {@link myFilesQueryRoot} would leave a
+ * cleanup that quietly collects nothing.
+ */
+export const MY_FILES_IDENTITY_ROOT = ["files", "user"] as const;
 
 /**
  * The root every cache entry for one visitor's files hangs off.
@@ -336,7 +368,7 @@ export const fetchMyFilesPageInBrowser: MyFilesPageFetcher = async params => {
  * parameter, which is the one thing it must not be.
  */
 export const myFilesQueryRoot = (userId: number) =>
-  ["files", "user", userId] as const;
+  [...MY_FILES_IDENTITY_ROOT, userId] as const;
 
 /**
  * The cache entry one page of one visitor's list reads and writes.
@@ -404,6 +436,17 @@ export const myFilesQueryKey = ({
  * VitNode's client defaults (`refetchOnMount` and `refetchOnWindowFocus` both
  * off), so a hydrated table is not refetched behind the reader; a delete is what
  * makes it stale, explicitly.
+ *
+ * ## And it can be given up on
+ *
+ * The `queryFn` **reads** `signal` off the context, which is the only thing that
+ * marks a query cancellable. Paging through a large library leaves one request
+ * in flight rather than one per press, and the abandoned ones reject rather than
+ * landing late on top of the page being read.
+ *
+ * Safe because the fetcher throws: the abort rejects inside `fetch`, so it can
+ * never arrive as `MyFilesRequestError` (a refusal), as an empty page (an
+ * account with nothing uploaded) or as a `401` (a session that ended).
  */
 export const myFilesQueryOptions = ({
   fetchPage = fetchMyFilesPageInBrowser,
@@ -417,7 +460,7 @@ export const myFilesQueryOptions = ({
   queryOptions({
     // `userId` is deliberately absent from the request: the owner comes from
     // the session cookie, on the server, on every call.
-    queryFn: async () => await fetchPage(params),
+    queryFn: async ({ signal }) => await fetchPage(params, { signal }),
     queryKey: myFilesQueryKey({ params, userId }),
     retry: false,
   });

@@ -50,8 +50,24 @@ export {
  * namespace itself, both to render the form screens and because importing it is
  * what registers the dialog slot.
  */
-export type { ContentFormScreenData } from "./form";
-export { loadContentFormScreen } from "./form";
+/**
+ * The form loader, reached past `./form` rather than through it.
+ *
+ * `./form/index.ts` registers the create/edit dialog as a module side effect -
+ * that is what makes a dialog-mode content type openable at all - so it is
+ * marked side-effectful in the package's `sideEffects` list and a bundler may
+ * never drop it. Which means every static edge into that barrel keeps
+ * `ContentAdminFormDialog` and the whole AutoForm stack behind it.
+ *
+ * A host's route file imports `loadContentFormScreen` from a `loader`, and a
+ * `loader` is evaluated in the client entry - so that edge put `react-hook-form`
+ * and `@hookform/resolvers` on the path to every page of the application.
+ * Importing the loader's own module instead keeps the eager half clear; the
+ * registration still happens, because `./screen` imports `./form` and that is
+ * the module a content screen actually renders through.
+ */
+export type { ContentFormScreenData } from "./form/route";
+export { loadContentFormScreen } from "./form/route";
 export type { ContentListScreenProps } from "./list";
 export { ContentListActions, ContentListScreen } from "./list";
 export type { ContentListQueryArgs, ContentRowWriteArgs } from "./query";
@@ -63,18 +79,15 @@ export {
   invalidateContentAfterWrite,
   setContentPublication,
 } from "./query";
-export type {
-  ContentAdminRouteData,
-  ContentAdminRouteProps,
-  ContentAdminScreen,
-} from "./route";
+export type { ContentAdminRouteData, ContentAdminScreen } from "./route";
 export {
-  ContentAdminRouteContent,
   contentPermissionFor,
   contentRouteSegments,
   loadContentAdminRoute,
   resolveContentAdminScreen,
 } from "./route";
+export type { ContentAdminRouteProps } from "./route-screen";
+export { ContentAdminRouteContent } from "./route-screen";
 export type {
   ContentListFilters,
   ContentListParams,

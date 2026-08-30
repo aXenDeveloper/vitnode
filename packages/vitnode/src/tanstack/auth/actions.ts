@@ -12,6 +12,7 @@ import type { SsoCallbackInput } from "./contract";
 
 import { removeAdminIdentityQueries } from "../admin/queries";
 import { shouldRefreshSessionAfterSignUp } from "./contract";
+import { removeUserIdentityQueries } from "./queries";
 import {
   anonymousSession,
   changePasswordFormResult,
@@ -113,11 +114,13 @@ export const useSignInAction = ({
     if (!result.ok) return signInFormResult(result);
 
     // Somebody has just identified themselves, and it may not be whoever this
-    // browser held privileged AdminCP data for. Dropping it costs nothing when
-    // there is none - which is the usual case on the public login page - and
-    // forces every admin answer to be re-derived from the cookie when there is.
-    // See the long note on `useSignOutAction`.
+    // browser held data for. Dropping it costs nothing when there is none -
+    // which is the usual case on the public login page - and forces every
+    // private answer to be re-derived from the cookie when there is. Both
+    // halves: the AdminCP's privileged entries, and this visitor's own files
+    // and devices. See the long note on `useSignOutAction`.
     removeAdminIdentityQueries(queryClient);
+    removeUserIdentityQueries(queryClient);
 
     await invalidateSession(queryClient);
     await navigate(destination());
@@ -169,9 +172,11 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
     if (result.ok) {
       // The same identity boundary the password sign-in above crosses, reached
       // by a different door: a provider has just told this application who the
-      // visitor is. Whatever privileged AdminCP data the tab was holding
-      // belonged to whoever was here before them.
+      // visitor is. Whatever the tab was holding - the AdminCP's privileged
+      // entries, and the previous visitor's own files and devices - belonged to
+      // whoever was here before them.
       removeAdminIdentityQueries(queryClient);
+      removeUserIdentityQueries(queryClient);
       await invalidateSession(queryClient);
     }
 
@@ -218,14 +223,26 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
  *   right response to "who is this?" becoming uncertain is to re-derive the
  *   answer from the cookie rather than to reuse the last one.
  *
- * `removeAdminIdentityQueries` is the whole of it - the session entry *and*
- * every AdminCP screen family - because a sign-out that dropped only the
- * permission set would leave the palette's user lookups and the dashboard layout
- * behind for whoever signs in next. `tanstack/admin/queries` owns that list, and
- * it is the only place it is written down.
+ * `removeAdminIdentityQueries` is the whole of the admin half - the session
+ * entry *and* every AdminCP screen family - because a sign-out that dropped only
+ * the permission set would leave the palette's user lookups and the dashboard
+ * layout behind for whoever signs in next. `tanstack/admin/queries` owns that
+ * list, and it is the only place it is written down.
  *
- * Neither is a security property: the admin cookie is what authorizes an admin
- * API call, and Hono re-reads it every time. This is about what the *browser*
+ * ## And the visitor's own private data, for the same reason
+ *
+ * `removeUserIdentityQueries` is the public half, added in Stage 14 because the
+ * two halves of the application disagreed: the AdminCP dropped its privileged
+ * entries at every identity boundary and the public app dropped none of its own.
+ * `["files","user"]` and `["devices","user"]` are keyed by owner, so the *next*
+ * visitor could never read the previous one's - but a shared browser held one
+ * person's file names, operating systems and IP addresses for the default
+ * five-minute `gcTime` after they had signed out and walked away. Residency
+ * rather than leakage, and exactly the residency the panel refuses.
+ * `tanstack/auth/queries` owns that list.
+ *
+ * Neither is a security property: the cookie is what authorizes an API call, and
+ * Hono re-reads it every time. This is about what the *browser* holds and
  * renders between a sign-out and the next read.
  */
 export const useSignOutAction = () => {
@@ -241,6 +258,7 @@ export const useSignOutAction = () => {
     if (current) setSessionData(queryClient, anonymousSession(current));
 
     removeAdminIdentityQueries(queryClient);
+    removeUserIdentityQueries(queryClient);
 
     await invalidateSession(queryClient);
     await router.invalidate();
@@ -300,10 +318,11 @@ export const useSignUpAction = ({
     if (shouldRefreshSessionAfterSignUp(result)) {
       // A verified sign-up mints a session, so somebody new is now the visitor
       // this tab belongs to - the same identity boundary the login form crosses,
-      // and the same response. The unverified path deliberately does not reach
-      // here: no session was minted, so nothing about who this browser holds
-      // data for has changed.
+      // and the same response, in both halves. The unverified path deliberately
+      // does not reach here: no session was minted, so nothing about who this
+      // browser holds data for has changed.
       removeAdminIdentityQueries(queryClient);
+      removeUserIdentityQueries(queryClient);
       await invalidateSession(queryClient);
       await navigate(destination());
     }

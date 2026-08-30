@@ -9,13 +9,8 @@ export type {
   MyFilesLoaderContext,
   MyFilesNavigate,
   MyFilesRouteData,
-  MyFilesRouteProps,
 } from "./route";
-export {
-  loadMyFilesRoute,
-  MY_FILES_NAMESPACES,
-  MyFilesRouteContent,
-} from "./route";
+export { loadMyFilesRoute, MY_FILES_NAMESPACES } from "./route";
 export type {
   MyFilesRouteSearch,
   UncheckedMyFilesSearch,
@@ -26,6 +21,8 @@ export {
   myFilesSearchParams,
   normalizeMyFilesRouteSearch,
 } from "./route-search";
+export type { MyFilesRouteProps } from "./screen";
+export { MyFilesRouteContent } from "./screen";
 
 export type {
   BulkDeleteFilesResult,

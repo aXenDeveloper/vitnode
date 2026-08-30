@@ -146,17 +146,21 @@ describe('the shell owns the main landmark', () => {
    * Stage 10 moved those screens into `@vitnode/core/tanstack/auth`, so the
    * landmark moved with them - the route files below are now topology and
    * nothing else, which the second assertion pins.
+   *
+   * Stage 14 then split each of those namespaces in two: `*-route.tsx` for the
+   * loader a route file imports eagerly, `*-screen.tsx` for the component. The
+   * landmark is part of the screen, so it is the screen half that is read here.
    */
   it.each([
-    ['auth/login-route.tsx', 'login.tsx', 1],
-    ['auth/sso-route.tsx', 'login_.sso.$providerId.tsx', 1],
+    ['auth/login-screen.tsx', 'login.tsx', 1],
+    ['auth/sso-screen.tsx', 'login_.sso.$providerId.tsx', 1],
     // Stage 9. Registration and password recovery join the blank-auth area, so
     // they own their landmark for the same reason.
-    ['auth/register-route.tsx', 'register.tsx', 1],
+    ['auth/register-screen.tsx', 'register.tsx', 1],
     // Two, and both correct: the page body and the `notFoundComponent` the route
     // mounts, which replaces it on an install with no email adapter. They are
     // alternatives, so a document still renders exactly one.
-    ['auth/recovery-route.tsx', 'login_.reset-password.tsx', 2],
+    ['auth/recovery-screen.tsx', 'login_.reset-password.tsx', 2],
   ] as const)(
     '%s renders %i <main>, and its route file none',
     (module, route, count) => {

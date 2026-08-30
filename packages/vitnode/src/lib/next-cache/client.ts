@@ -1,3 +1,38 @@
+/**
+ * The Redis connection behind VitNode's **Next.js** cache handlers.
+ *
+ * ## What this directory is
+ *
+ * Two adapters implementing two Next.js contracts - `"use cache"` and the
+ * incremental/Data Cache - plus the Redis client and tag markers they share.
+ * Nothing here is a VitNode abstraction: the key layout, the tag comparisons and
+ * the entry shapes are transcriptions of Next's own, and they are correct only
+ * because Next calls them the way Next does.
+ *
+ * ## What it is not
+ *
+ * It is **not** the framework-neutral cache. That is `api/lib/cache.ts` - the
+ * `c.get("cache")` a Hono route and a plugin use - which has its own client, its
+ * own `vitnode:cache:` namespace and its own lifetime. The two must never be
+ * merged behind one interface: this one caches *rendered output* on a schedule
+ * Next owns, and that one caches *domain values* on a schedule the API owns.
+ * Generalising either into the other would mean a Hono route inheriting Next's
+ * tag semantics, or a Next page inheriting the API's per-plugin flush.
+ *
+ * ## How it is reached
+ *
+ * Only by `config/next.config.ts`, which hands Next a **file path** - there is no
+ * import of this directory anywhere in the package, and no consumer through the
+ * export map. That is what makes it isolable: a TanStack Start host never loads
+ * it, because nothing in its graph names it.
+ *
+ * ## Deletion condition
+ *
+ * This whole directory goes when no Next.js web runtime remains - i.e. when
+ * `config/next.config.ts` no longer sets `cacheHandler` / `cacheHandlers`. It is
+ * a single `rm -r` plus one line there; `lib/next-cache/inventory.test.ts`
+ * enumerates it and fails if the tree and the inventory disagree.
+ */
 import type { RedisClientType } from "redis";
 
 import { createClient } from "redis";

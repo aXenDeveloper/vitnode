@@ -18,12 +18,8 @@ export {
   invalidateAdminFiles,
   useAdminFilesDeleteCallbacks,
 } from "./query";
-export type { AdminFilesRouteData, AdminFilesRouteProps } from "./route";
-export {
-  ADMIN_FILES_NAMESPACES,
-  AdminFilesRouteContent,
-  loadAdminFilesRoute,
-} from "./route";
+export type { AdminFilesRouteData } from "./route";
+export { ADMIN_FILES_NAMESPACES, loadAdminFilesRoute } from "./route";
 export type {
   AdminFilesRouteSearch,
   UncheckedAdminFilesSearch,
@@ -34,6 +30,8 @@ export {
   adminFilesSearchParams,
   normalizeAdminFilesRouteSearch,
 } from "./route-search";
+export type { AdminFilesRouteProps } from "./screen";
+export { AdminFilesRouteContent } from "./screen";
 
 export type {
   DeleteAdminFile,

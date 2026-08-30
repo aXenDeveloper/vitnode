@@ -42,6 +42,18 @@ const readCore = (path: string) =>
   readFileSync(join(repoRoot, 'packages/vitnode/src/tanstack', path), 'utf8')
 
 /**
+ * A namespace's loader module, paired with the screen it was split from.
+ *
+ * `route.tsx` holds the namespaces, the permission tuple and the loader - the
+ * half a host's route file imports, and therefore the half that is eager in the
+ * client entry. `screen.tsx` holds the component. See
+ * `packages/vitnode/src/tanstack/eager-graph.test.ts`, which enforces the split
+ * this derivation assumes.
+ */
+const screenModuleOf = (module: string): string =>
+  module.replace(/([/-])route\.tsx$/, '$1screen.tsx')
+
+/**
  * The route → namespace audit, as a test rather than as a document.
  *
  * Three separate things have to agree for one page to render in the language
@@ -249,26 +261,29 @@ describe.each(ROUTES)('$route declares one namespace set', (entry) => {
   it('warms it in the loader and mounts the same constant', () => {
     // The same identifier in both places, not two lists that happen to match:
     // the namespace list is part of the query key, so a loader that warmed a
-    // different set warmed a key nobody reads. Both halves are now in one
-    // module, which is most of why the route file no longer needs to know.
-    const source = readCore(entry.module)
+    // different set warmed a key nobody reads.
+    //
+    // Stage 14 put the two halves in two modules, and the constant is now the
+    // seam between them. A route file's `loader` is evaluated in the client
+    // entry - TanStack Start splits out `component` and leaves everything else
+    // behind - so a namespace module that also held its screen put that screen
+    // on every page of the application. `route.tsx` declares the constant and
+    // warms it; `screen.tsx` imports it back and mounts it. Reading the pair is
+    // what keeps this audit honest across that split.
+    const loader = readCore(entry.module)
+    const screen = readCore(screenModuleOf(entry.module))
     const mount = `<RouteMessages namespaces={${entry.constant}}>`
 
-    expect(source, 'the provider mounts it').toContain(mount)
+    expect(screen, 'the provider mounts it').toContain(mount)
 
-    // What is left after the declaration and the mount are removed: the loader's
-    // own use of it. Asserted this way rather than by a literal `namespaces: X`
-    // because two of these routes hand the constant to a shared card loader
-    // instead of building the query options inline, and both spellings are the
-    // same guarantee.
-    const elsewhere = source
-      .replace(
-        new RegExp(
-          `export const ${entry.constant} = \\[[\\s\\S]*?\\] as const;`,
-        ),
-        '',
-      )
-      .replace(mount, '')
+    // What is left after the declaration is removed: the loader's own use of it.
+    // Asserted this way rather than by a literal `namespaces: X` because two of
+    // these routes hand the constant to a shared card loader instead of building
+    // the query options inline, and both spellings are the same guarantee.
+    const elsewhere = loader.replace(
+      new RegExp(`export const ${entry.constant} = \\[[\\s\\S]*?\\] as const;`),
+      '',
+    )
 
     expect(elsewhere, 'the loader warms it').toContain(entry.constant)
   })
@@ -334,10 +349,12 @@ describe('the shared namespace sets', () => {
       'core.auth.change_password',
     ])
 
-    const source = readCore('auth/recovery-route.tsx')
-
-    expect(source).toContain('const namespaces = passwordResetNamespaces(')
-    expect(source).toContain('<RouteMessages namespaces={namespaces}>')
+    expect(readCore('auth/recovery-route.tsx')).toContain(
+      'const namespaces = passwordResetNamespaces(',
+    )
+    expect(readCore('auth/recovery-screen.tsx')).toContain(
+      '<RouteMessages namespaces={namespaces}>',
+    )
   })
 })
 

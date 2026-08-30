@@ -1,37 +1,18 @@
-"use client";
-
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
-import React from "react";
 import { createTranslator } from "use-intl";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
-import type { DataTableNavigation } from "@/components/table/navigation";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminStaffParams } from "@/views/admin/views/core/staff/staff-query";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
-import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
-import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { buttonVariants } from "@/components/ui/button";
-import { HeaderContent } from "@/components/ui/header-content";
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
-import {
-  STAFF_TYPE_SEGMENT,
-  staffCreateHref,
-} from "@/views/admin/views/core/staff/staff-model";
-import { StaffTableContent } from "@/views/admin/views/core/staff/table/staff-table-content";
+import { STAFF_TYPE_SEGMENT } from "@/views/admin/views/core/staff/staff-model";
 
 import type { AdminScreenContext } from "../screen";
-import type { AdminTableNavigate } from "../table-search";
-import type { StaffRouteSearch, UncheckedStaffSearch } from "./route-search";
 
 import { intlQueryOptions } from "../../i18n/query";
-import { RouteMessages } from "../../i18n/route-messages";
 import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
-import { adminStaffQuery, useStaffDeleteCallback } from "./query";
-import { staffSearchFrom, staffSearchParams } from "./route-search";
+import { adminStaffQuery } from "./query";
 
 /**
  * `/admin/core/staff/admins` and `/admin/core/staff/moderators` - one screen,
@@ -123,67 +104,4 @@ export const loadAdminStaffRoute = async ({
     title: t("title"),
     type,
   };
-};
-
-export interface AdminStaffRouteProps extends AdminStaffRouteData {
-  LinkComponent: AuthLinkComponent;
-  navigate: AdminTableNavigate<StaffRouteSearch>;
-  search: UncheckedStaffSearch;
-}
-
-export const AdminStaffRouteContent = ({
-  adminUserId,
-  createLabel,
-  description,
-  LinkComponent,
-  navigate,
-  params,
-  search,
-  title,
-  type,
-}: AdminStaffRouteProps) => {
-  const { data } = useSuspenseQuery(
-    adminStaffQuery({ adminUserId, params, type }),
-  );
-  const onDelete = useStaffDeleteCallback();
-
-  const navigation = React.useMemo<DataTableNavigation>(
-    () => ({
-      navigate: async nextSearch => {
-        await navigate({
-          resetScroll: false,
-          search: staffSearchFrom(nextSearch),
-        });
-      },
-      searchParams: staffSearchParams(search),
-    }),
-    [navigate, search],
-  );
-
-  return (
-    <RouteMessages namespaces={ADMIN_STAFF_NAMESPACES}>
-      <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
-          <AdminStaffPermissionGate {...adminStaffPermissions(type).create}>
-            <LinkComponent
-              className={buttonVariants()}
-              href={staffCreateHref(type)}
-            >
-              <PlusIcon />
-              {createLabel}
-            </LinkComponent>
-          </AdminStaffPermissionGate>
-        </HeaderContent>
-
-        <DataTableNavigationProvider value={navigation}>
-          <StaffTableContent
-            data={data}
-            LinkComponent={LinkComponent}
-            onDelete={onDelete}
-            type={type}
-          />
-        </DataTableNavigationProvider>
-      </div>
-    </RouteMessages>
-  );
 };

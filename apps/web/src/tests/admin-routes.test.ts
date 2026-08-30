@@ -312,6 +312,60 @@ describe('the admin guard', () => {
   })
 
   /**
+   * A hover is not a navigation, and Stage 14's F3 is that the guard had no way
+   * of telling them apart.
+   *
+   * `defaultPreload: 'intent'` runs this whole chain when a pointer rests on a
+   * sidebar link, and router-core re-runs `beforeLoad` from the top of the
+   * branch every time - it has no staleness gate, unlike a loader. So with
+   * `ADMIN_SESSION_STALE_TIME` at zero, crossing the sidebar was one
+   * server-function POST and one Hono call per link the mouse passed over.
+   *
+   * Source rather than behaviour, deliberately: reaching this line by driving
+   * the router would need a rendered app, a server function and a real hover,
+   * and the property is a two-line one that a reader can check by eye. What
+   * matters is that both branches exist and that the *navigation* one is still
+   * `ensureAdminAccess`.
+   */
+  it('reads tolerantly on a preload and strictly on a navigation', () => {
+    const source = guardSource()
+
+    expect(source).toMatch(/preload\s*\?/)
+    expect(source).toMatch(/preloadAdminAccess\(context\.queryClient\)/)
+    expect(source).toMatch(/ensureAdminAccess\(context\.queryClient\)/)
+  })
+
+  /**
+   * And takes the flag from the router rather than inferring it.
+   *
+   * `preload: boolean` is on the `beforeLoad` context router-core builds, beside
+   * `cause`. Deriving it from anything else - a location comparison, a module
+   * flag - would be a second answer to a question the router has already
+   * settled, and one that could disagree with it.
+   */
+  it('takes the preload flag from the router context', () => {
+    expect(guardSource()).toMatch(
+      /beforeLoad:\s*async\s*\(\{[^}]*\bpreload\b[^}]*\}\)/,
+    )
+  })
+
+  /**
+   * The revocation guarantee, stated as the thing that must not appear.
+   *
+   * The saving comes from a *second* stale time on the preload path, never from
+   * relaxing the one the navigation path reads. A `staleTime` written here - or
+   * a `preload: false` on the route, which gates the loader rather than
+   * `beforeLoad` and would throw away component-chunk preloading as well -
+   * would be the wrong fix wearing the right result.
+   */
+  it('does not relax the session policy to buy the saving', () => {
+    const source = guardSource()
+
+    expect(source).not.toMatch(/staleTime/)
+    expect(source).not.toMatch(/preload:\s*false/)
+  })
+
+  /**
    * The refusal keeps the panel.
    *
    * A `notFoundComponent` renders *instead of* the component of the route that

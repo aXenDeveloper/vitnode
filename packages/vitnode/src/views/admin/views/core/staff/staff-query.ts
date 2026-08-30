@@ -128,19 +128,34 @@ export interface AdminStaffRow {
 
 export type AdminStaffPage = AdminTablePage<AdminStaffRow>;
 
+/**
+ * How a page is actually fetched.
+ *
+ * The third argument is the read's cancellation, and it is optional so the SSR
+ * branch - handed no signal, deliberately - satisfies this with two parameters.
+ * See {@link adminStaffQueryOptions}.
+ */
 export type AdminStaffPageFetcher = (
   type: PermissionStaffType,
   params: AdminStaffParams,
+  options?: { signal?: AbortSignal },
 ) => Promise<AdminStaffPage>;
 
+/**
+ * One page, fetched from the browser.
+ *
+ * A refusal throws, and so does an abort: `fetch` rejects before there is a
+ * response, so a cancelled sort cannot arrive as an empty staff list.
+ */
 export const fetchAdminStaffPageInBrowser: AdminStaffPageFetcher = async (
   type,
   params,
+  { signal } = {},
 ) => {
-  const response = await fetcherClient(
-    adminModuleRef,
-    adminStaffRequest(type, params),
-  );
+  const response = await fetcherClient(adminModuleRef, {
+    ...adminStaffRequest(type, params),
+    options: { signal },
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(
@@ -179,7 +194,10 @@ export const adminStaffQueryOptions = ({
   type: PermissionStaffType;
 }) =>
   queryOptions({
-    queryFn: async () => await fetchPage(type, params),
+    // Reads `signal`, which is what makes the read cancellable: re-sorting the
+    // table leaves one request in flight rather than one per keystroke. Safe
+    // because the fetcher throws rather than degrading - see it above.
+    queryFn: async ({ signal }) => await fetchPage(type, params, { signal }),
     queryKey: adminStaffQueryKey({ adminUserId, params, type }),
     retry: false,
   });

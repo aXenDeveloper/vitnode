@@ -19,6 +19,9 @@ import {
 } from "@/views/admin/views/core/dashboard/widgets/layout-query";
 import { saveWidgetSettingsInBrowser } from "@/views/admin/views/core/dashboard/widgets/widget-mutations";
 
+import type { AdminIdentity } from "../identity";
+
+import { useAdminIdentity } from "../identity";
 import { fetchDashboardLayoutOnServer } from "./server";
 
 /**
@@ -33,9 +36,20 @@ const fetchDashboardLayout: DashboardLayoutFetcher = createIsomorphicFn()
   .server(fetchDashboardLayoutOnServer)
   .client(fetchDashboardLayoutInBrowser);
 
-/** The stored layout, as the one query definition every caller shares. */
-export const dashboardLayoutQuery = () =>
-  dashboardLayoutQueryOptions({ fetchLayout: fetchDashboardLayout });
+/**
+ * The stored layout, as the one query definition every caller shares.
+ *
+ * `adminUserId` travels with it because the entry is partitioned by identity -
+ * one board per administrator, one cache entry per administrator. The loader
+ * takes it from the session the guard already resolved; a component takes it
+ * from {@link useAdminIdentity}, which reads that same entry, so the two cannot
+ * disagree about whose board they are looking at.
+ */
+export const dashboardLayoutQuery = (adminUserId: AdminIdentity) =>
+  dashboardLayoutQueryOptions({
+    adminUserId,
+    fetchLayout: fetchDashboardLayout,
+  });
 
 /**
  * Marks the stored layout stale, so the board re-reads what a save changed.
@@ -47,8 +61,11 @@ export const dashboardLayoutQuery = () =>
  */
 export const invalidateDashboardLayout = async (
   queryClient: QueryClient,
+  adminUserId: AdminIdentity,
 ): Promise<void> =>
-  await queryClient.invalidateQueries({ queryKey: dashboardLayoutQueryKey });
+  await queryClient.invalidateQueries({
+    queryKey: dashboardLayoutQueryKey(adminUserId),
+  });
 
 /**
  * The four board actions, bound to the mounted router's cache and to the widget
@@ -82,11 +99,22 @@ export const useDashboardActions = (
   widgets: ResolvedDashboardWidget[],
 ): DashboardActions => {
   const queryClient = useQueryClient();
+  /**
+   * Whose board these actions read and write.
+   *
+   * From the `["vitnode","admin-session"]` entry the guard refreshes on every
+   * navigation, so an identity that changed under this tab - a second
+   * administrator signing in elsewhere in the browser - moves these actions onto
+   * the new key rather than leaving them writing into the previous one's row.
+   */
+  const adminUserId = useAdminIdentity();
 
   return React.useMemo<DashboardActions>(() => {
     /** The stored settings for one placed widget, read fresh. */
     const settingsFor = async (widgetId: string) => {
-      const saved = await queryClient.fetchQuery(dashboardLayoutQuery());
+      const saved = await queryClient.fetchQuery(
+        dashboardLayoutQuery(adminUserId),
+      );
 
       return saved.find(item => item.id === widgetId)?.settings ?? {};
     };
@@ -119,17 +147,19 @@ export const useDashboardActions = (
       saveLayout: async args => {
         const result = await saveDashboardLayoutInBrowser(args);
 
-        if (!result?.error) await invalidateDashboardLayout(queryClient);
+        if (!result?.error)
+          await invalidateDashboardLayout(queryClient, adminUserId);
 
         return result;
       },
       saveWidgetSettings: async args => {
         const result = await saveWidgetSettingsInBrowser(args);
 
-        if (!result?.error) await invalidateDashboardLayout(queryClient);
+        if (!result?.error)
+          await invalidateDashboardLayout(queryClient, adminUserId);
 
         return result;
       },
     };
-  }, [queryClient, widgets]);
+  }, [adminUserId, queryClient, widgets]);
 };

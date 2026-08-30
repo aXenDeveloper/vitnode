@@ -1,4 +1,16 @@
-import type { ContentRevisionMeta } from "@/content/revisions";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+
+import type {
+  ContentRevisionDetail,
+  ContentRevisionMeta,
+} from "@/content/revisions";
+
+import type {
+  ContentDeliveryPanelResult,
+  ContentRevisionPageResult,
+  ContentScheduleListResult,
+} from "./editorial-api";
+import type { ContentEditorialTransport } from "./editorial-transport";
 
 import {
   contentDeliveryQueryKey,
@@ -69,6 +81,119 @@ export const contentDeliveryLocaleQueryKey = (
 
 /** One record's schedules - re-exported so a panel has one import to reach for. */
 export { contentSchedulesQueryKey };
+
+/**
+ * The four panels' query definitions, next to the keys they cache under.
+ *
+ * Declared here rather than inline in each panel for one reason that is worth
+ * more than the tidiness: it makes the retry policy a **property of the family**
+ * rather than four literals in four components. The Content Engine was the only
+ * AdminCP screen group that inherited Query's default of three attempts with
+ * exponential backoff, so a `403` on a history dialog was three requests and a
+ * `429` was three more - and `editorial-query.test.ts` now asserts across these
+ * factories, so a fifth panel cannot be added without the rule.
+ *
+ * `retry: false` for the same reason it is spelled in `cron-query.ts`,
+ * `files-query.ts`, `users-query.ts` and the rest: none of the answers these
+ * reads get back are made better by asking again. A `403` is an authorization
+ * answer, a `404` is a record somebody deleted, and a `429` is the limiter
+ * asking for *fewer* requests.
+ *
+ * Each takes the transport method it calls rather than the whole transport, so
+ * the module stays a pure function of a fetcher - no React, no context, nothing
+ * a test has to render. The panels pass `transport.listSchedules` and friends.
+ *
+ * What is deliberately **not** here is `enabled`: whether a revision row has
+ * been expanded is the row's own state, so it stays at the call site with the
+ * rest of the UI's business.
+ */
+
+/** Every schedule on one record, and whether anything will run them. */
+export const contentSchedulesQueryOptions = ({
+  contentTypeId,
+  itemId,
+  listSchedules,
+}: {
+  contentTypeId: string;
+  itemId: number;
+  listSchedules: ContentEditorialTransport["listSchedules"];
+}) =>
+  queryOptions<ContentScheduleListResult>({
+    queryFn: async () => await listSchedules(contentTypeId, itemId),
+    queryKey: contentSchedulesQueryKey(contentTypeId, itemId),
+    retry: false,
+  });
+
+/**
+ * The revision timeline, newest first, paged by the cursor rule below.
+ *
+ * `initialPageParam` is `undefined` - the first page asks for no cursor at all -
+ * and {@link nextContentRevisionCursor} decides whether there is another.
+ */
+export const contentRevisionHistoryQueryOptions = ({
+  contentTypeId,
+  itemId,
+  listRevisions,
+}: {
+  contentTypeId: string;
+  itemId: number;
+  listRevisions: ContentEditorialTransport["listRevisions"];
+}) =>
+  infiniteQueryOptions<
+    ContentRevisionPageResult,
+    Error,
+    { pageParams: (number | undefined)[]; pages: ContentRevisionPageResult[] },
+    readonly unknown[],
+    number | undefined
+  >({
+    getNextPageParam: nextContentRevisionCursor,
+    initialPageParam: undefined,
+    queryFn: async ({ pageParam }) =>
+      await listRevisions(contentTypeId, itemId, pageParam),
+    queryKey: contentHistoryListQueryKey(contentTypeId, itemId),
+    retry: false,
+  });
+
+/**
+ * One revision's snapshot.
+ *
+ * `revisionId` is the row's, and a row with none has nothing to read - the panel
+ * gates that with `enabled`, which stays at the call site.
+ */
+export const contentRevisionQueryOptions = ({
+  contentTypeId,
+  getRevision,
+  itemId,
+  revisionId,
+}: {
+  contentTypeId: string;
+  getRevision: ContentEditorialTransport["getRevision"];
+  itemId: number;
+  revisionId: number;
+}) =>
+  queryOptions<{ error?: string; revision?: ContentRevisionDetail }>({
+    queryFn: async () => await getRevision(contentTypeId, itemId, revisionId),
+    queryKey: contentRevisionQueryKey(contentTypeId, itemId, revisionId),
+    retry: false,
+  });
+
+/** One record's delivery state, in one language. */
+export const contentDeliveryQueryOptions = ({
+  contentTypeId,
+  itemId,
+  locale,
+  readDelivery,
+}: {
+  contentTypeId: string;
+  itemId: number;
+  locale?: string;
+  readDelivery: ContentEditorialTransport["readDelivery"];
+}) =>
+  queryOptions<ContentDeliveryPanelResult>({
+    queryFn: async () => await readDelivery(contentTypeId, itemId, locale),
+    queryKey: contentDeliveryLocaleQueryKey(contentTypeId, itemId, locale),
+    retry: false,
+  });
 
 /**
  * The timeline, flattened out of the pages the cursor walked.

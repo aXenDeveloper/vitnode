@@ -182,8 +182,16 @@ export interface AdminUserRow {
 
 export type AdminUsersPage = AdminTablePage<AdminUserRow>;
 
+/**
+ * How a page is actually fetched.
+ *
+ * The second argument is the read's cancellation, and it is optional so the SSR
+ * branch - which is handed no signal, deliberately - satisfies this with one
+ * parameter. See {@link adminUsersQueryOptions}.
+ */
 export type AdminUsersPageFetcher = (
   params: AdminUsersParams,
+  options?: { signal?: AbortSignal },
 ) => Promise<AdminUsersPage>;
 
 /**
@@ -191,25 +199,30 @@ export type AdminUsersPageFetcher = (
  *
  * A refusal *throws*. An empty table is what an installation with no users looks
  * like, and a `403` - this administrator lost `users:can_view` while the page
- * was open - must never render as that.
+ * was open - must never render as that. An **abort** throws for the same reason
+ * and by the same route: `fetch` rejects before there is a response to read, so
+ * nothing below runs and no `catch` here turns a cancelled sort into an
+ * installation with no users.
  */
-export const fetchAdminUsersPageInBrowser: AdminUsersPageFetcher =
-  async params => {
-    const response = await fetcherClient(adminModuleRef, {
-      ...adminUsersRequest(params),
-      options: { credentials: "include" },
-    });
+export const fetchAdminUsersPageInBrowser: AdminUsersPageFetcher = async (
+  params,
+  { signal } = {},
+) => {
+  const response = await fetcherClient(adminModuleRef, {
+    ...adminUsersRequest(params),
+    options: { credentials: "include", signal },
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the users list",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the users list",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
+  return await response.json();
+};
 
 /**
  * Every page, sort and filter of the users list, for one administrator.
@@ -237,6 +250,17 @@ export const adminUsersQueryKey = ({
  *
  * `retry: false`: a `403` will not become a `200` because we asked again, and a
  * `429` is answered by sending the same request twice more.
+ *
+ * The `queryFn` **reads** `signal` off the context, which is what makes the read
+ * cancellable at all - Query marks a query cancellable only when its function
+ * actually touches that getter. Re-sorting the table three times now leaves one
+ * request in flight rather than three, and the two that lost reject with an
+ * `AbortError` rather than resolving late over the answer somebody is reading.
+ *
+ * It is safe here because the failure path throws: the abort rejects inside
+ * `fetch`, before there is a response to inspect, so it cannot be mistaken for
+ * an empty page or a refusal. A fetcher whose `catch` returns a fallback would
+ * have to re-throw the abort first; this one has no `catch` at all.
  */
 export const adminUsersQueryOptions = ({
   adminUserId,
@@ -248,7 +272,7 @@ export const adminUsersQueryOptions = ({
   params: AdminUsersParams;
 }) =>
   queryOptions({
-    queryFn: async () => await fetchPage(params),
+    queryFn: async ({ signal }) => await fetchPage(params, { signal }),
     queryKey: adminUsersQueryKey({ adminUserId, params }),
     retry: false,
   });

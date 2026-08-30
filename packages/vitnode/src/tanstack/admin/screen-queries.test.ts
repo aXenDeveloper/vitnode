@@ -48,9 +48,17 @@ const isUnder = (
   prefix: readonly unknown[],
 ): boolean => prefix.every((segment, index) => key[index] === segment);
 
+/**
+ * A sample administrator, for the screens whose keys are partitioned by identity.
+ *
+ * The assertions below are about *where* a screen's entries hang, and that is
+ * the same answer for every identity - so one stands in for all of them.
+ */
+const ADMIN_ID = 7;
+
 const ROOTS = {
   cron: cronQueryRoot,
-  dashboard: dashboardLayoutQueryKey,
+  dashboard: dashboardLayoutQueryKey(ADMIN_ID),
   "debug-logs": debugLogsQueryRoot,
   "debug-queue": debugQueueQueryKey,
   files: adminFilesQueryRoot,
@@ -80,6 +88,51 @@ describe("every screen hangs off the panel's one prefix", () => {
         expect(isUnder(other, root), `${otherName} under ${name}`).toBe(false);
       }
     }
+  });
+});
+
+/**
+ * The dashboard is the one screen whose entry belongs to *a person* rather than
+ * to the installation, so its key has to say which person.
+ *
+ * `core_admin_dashboard` stores one row per administrator under a `UNIQUE`
+ * constraint on `userId`. A key that omitted the id would mean two
+ * administrators sharing one entry - and because the AdminCP runs
+ * `refetchOnMount: false`, the second one would be *rendered* the first one's
+ * board rather than merely fetching it again, and a save from that board would
+ * write the first one's widget ids into the second one's row.
+ *
+ * Removal covers the boundaries this application performs itself, which is why
+ * this was never reachable through a sign-in. What partitioning adds is the case
+ * removal cannot see: an identity that changes without this tab running a
+ * sign-out - a second administrator signing in elsewhere in the same browser -
+ * where the guard re-reads the session but nothing drops the screen entries.
+ */
+describe("the dashboard is partitioned by administrator", () => {
+  it("gives two administrators two different entries", () => {
+    expect(JSON.stringify(dashboardLayoutQueryKey(1))).not.toBe(
+      JSON.stringify(dashboardLayoutQueryKey(2)),
+    );
+  });
+
+  it("carries the id, so neither can address the other's", () => {
+    expect(dashboardLayoutQueryKey(ADMIN_ID)).toContain(ADMIN_ID);
+  });
+
+  it("keeps a denied read out of every administrator's entry", () => {
+    // `null` is a real partition rather than a missing one: it is the key a read
+    // with no granted session uses, and it must collide with nobody.
+    expect(JSON.stringify(dashboardLayoutQueryKey(null))).not.toBe(
+      JSON.stringify(dashboardLayoutQueryKey(ADMIN_ID)),
+    );
+  });
+
+  it("stays inside the panel's prefix, so a sign-out still drops it", () => {
+    // Partitioning is the second mechanism, not a replacement for the first.
+    expect(isUnder(dashboardLayoutQueryKey(ADMIN_ID), ADMIN_QUERY_ROOT)).toBe(
+      true,
+    );
+    expect(isUnder(dashboardLayoutQueryKey(null), ADMIN_QUERY_ROOT)).toBe(true);
   });
 });
 

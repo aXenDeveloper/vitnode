@@ -7,6 +7,7 @@ import {
   MAX_NAMESPACE_LENGTH,
   MAX_NAMESPACES,
   namespaceProblem,
+  normalizeNamespaceList,
 } from "@/routing";
 
 import { getIntlRuntime } from "./runtime";
@@ -44,12 +45,31 @@ const intlQueryPrefix = (locale: string) => [...INTL_QUERY_SCOPE, locale];
  * are two cache entries holding the same bytes, fetched twice and invalidated
  * separately.
  *
+ * `normalizeNamespaceList` rather than a second copy of it, and the comparator
+ * is the reason. It sorts by **code unit**; this used to sort by
+ * `localeCompare`, which asks the runtime's default collator - and the runtime
+ * that builds this key during SSR is not the runtime that rebuilds it on
+ * hydration. Node's default locale comes from the server's environment and a
+ * build without full ICU degrades `localeCompare` to a code-point comparison
+ * outright, while the browser always has a real collator set to whatever the
+ * visitor's is. Two environments that disagree about the order produce two
+ * different keys for one list, so the entry dehydrated into the stream is not
+ * the entry the client looks up: every page refetches its own messages after
+ * hydration, and `loadedIntlNamespaces` searches a prefix nothing was stored
+ * under.
+ *
+ * The routing layer already says this in its own words - a namespace list is
+ * written into a generated file, and a manifest that reorders itself on a
+ * machine with a different locale is a diff that only appears on someone else's
+ * laptop. It is the same list and the same requirement, so it is now the same
+ * function: a manifest declaring namespaces at build time and a browser asking
+ * for them at runtime cannot spell one list two ways.
+ *
  * Normalisation only - it assumes strings, and says nothing about whether they
  * are acceptable. That is {@link assertNamespace}'s job, and it runs on the
  * server where the input is untrusted.
  */
-const normalizeNamespaces = (namespaces: readonly string[]): string[] =>
-  [...new Set(namespaces)].sort((a, b) => a.localeCompare(b));
+const normalizeNamespaces = normalizeNamespaceList;
 
 /**
  * One namespace, or an error.

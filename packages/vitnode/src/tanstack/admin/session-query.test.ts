@@ -8,6 +8,7 @@ import {
   ensureAdminAccess,
   invalidateAdminSession,
   prefetchAdminAccess,
+  preloadAdminAccess,
 } from "./session-query";
 import {
   ADMIN_SESSION_QUERY_KEY,
@@ -171,6 +172,95 @@ describe("what a read resolves to", () => {
     // The failing URL and the server's error text stay in the server log. This
     // sentence is rendered in a browser.
     expect((error as Error).message).not.toMatch(/http|:\/\/|\bat\b/i);
+  });
+});
+
+/**
+ * The preload path - the one place the zero stale time does not apply.
+ *
+ * `defaultPreload: 'intent'` runs a route's whole `beforeLoad` chain on a hover,
+ * and router-core has no staleness gate on `beforeLoad`, so before Stage 14 the
+ * guard asked the API once per link a mouse crossed. What is asserted here is
+ * the pair of properties that makes the fix safe rather than merely cheap: a
+ * hover reuses the answer, and a navigation still does not.
+ */
+describe("a hover reuses the answer a navigation would not", () => {
+  it("asks once for a run of preloads", async () => {
+    nextRead = adminA;
+    const queryClient = client();
+
+    await preloadAdminAccess(queryClient);
+    await preloadAdminAccess(queryClient);
+    await preloadAdminAccess(queryClient);
+
+    expect(reads).toBe(1);
+  });
+
+  it("still asks on the navigation that follows them", async () => {
+    nextRead = adminA;
+    const queryClient = client();
+
+    await preloadAdminAccess(queryClient);
+    expect(reads).toBe(1);
+
+    // The click. `_admin.beforeLoad` runs again with `preload: false`, and this
+    // is the read it makes - `staleTime: 0`, so the API is asked whatever the
+    // hover left in the cache. The whole revocation guarantee is this line.
+    await ensureAdminAccess(queryClient);
+
+    expect(reads).toBe(2);
+  });
+
+  it("does not leave its stale window behind on the entry", async () => {
+    nextRead = adminA;
+    const queryClient = client();
+
+    await preloadAdminAccess(queryClient);
+    await ensureAdminAccess(queryClient);
+    // Two navigations in a row still ask twice: the override travelled with the
+    // one call that wanted it rather than being written onto the query.
+    await ensureAdminAccess(queryClient);
+
+    expect(reads).toBe(3);
+  });
+
+  it("reads the same entry the guard and the shell read", async () => {
+    nextRead = adminA;
+    const queryClient = client();
+
+    await preloadAdminAccess(queryClient);
+
+    expect(queryClient.getQueryData(ADMIN_SESSION_QUERY_KEY)).toMatchObject({
+      status: "granted",
+    });
+  });
+
+  /**
+   * An unreadable session is still not a denial, on the preload path either.
+   *
+   * This is why the preload uses `fetchQuery` rather than the tolerant
+   * `prefetchAdminAccess`: a caller gets a decision or a rejection, never
+   * `undefined` wearing the shape of an answer.
+   */
+  it("rejects a failed read rather than answering with a denial", async () => {
+    nextRead = { status: "api_error" };
+    const queryClient = client();
+
+    await expect(preloadAdminAccess(queryClient)).rejects.toBeInstanceOf(
+      AdminSessionUnavailableError,
+    );
+  });
+
+  /** A sign-in drops the entry, so the next hover asks rather than reusing. */
+  it("asks again once the identity boundary has dropped the entry", async () => {
+    nextRead = adminA;
+    const queryClient = client();
+    await preloadAdminAccess(queryClient);
+
+    removeAdminSession(queryClient);
+    await preloadAdminAccess(queryClient);
+
+    expect(reads).toBe(2);
   });
 });
 

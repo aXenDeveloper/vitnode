@@ -91,10 +91,20 @@ export const contentApiFetchArgs = ({
  */
 export const contentApiFetchInBrowser = async (
   request: ContentApiRequest,
+  /**
+   * The read's cancellation, when it has one.
+   *
+   * Reaches `fetch` untouched, and an abort therefore rejects here rather than
+   * anywhere downstream: there is no response for `readContentApiJson` to
+   * inspect and no `catch` in the way, so a cancelled read cannot be mistaken
+   * for a refusal or for an empty list. Writes never pass one - a cancelled
+   * write leaves the server's state unknown and the cache un-invalidated.
+   */
+  { signal }: { signal?: AbortSignal } = {},
 ): Promise<Response> =>
   await rawApiFetch({
     ...contentApiFetchArgs(request),
-    options: { credentials: "include" },
+    options: { credentials: "include", signal },
   });
 
 /** A request paired with what it was for, so a failure can say. */

@@ -1,17 +1,8 @@
-"use client";
-
 import type { QueryClient } from "@tanstack/react-query";
 
 import { createTranslator } from "use-intl";
 
-import type { SearchFeedLinkComponent } from "@/views/search/search-feed-content";
-
-import { HeaderContent } from "@/components/ui/header-content";
-import { SearchFeedContent } from "@/views/search/search-feed-content";
-
-import { useLocale } from "../i18n/locale";
 import { intlQueryOptions } from "../i18n/query";
-import { RouteMessages } from "../i18n/route-messages";
 import { discoverFeedQueryOptions } from "./discover";
 
 /**
@@ -96,24 +87,3 @@ export const loadDiscoverRoute = async ({
  * `fetchNextPage` then continues from the loader's cursor through the loader's
  * own request and status checking.
  */
-export const DiscoverRouteContent = ({
-  description,
-  LinkComponent,
-  title,
-}: DiscoverRouteData & { LinkComponent: SearchFeedLinkComponent }) => {
-  const locale = useLocale();
-
-  return (
-    <RouteMessages namespaces={DISCOVER_NAMESPACES}>
-      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
-        <HeaderContent desc={description} h1={title} />
-
-        <SearchFeedContent
-          LinkComponent={LinkComponent}
-          queryOptions={discoverFeedQueryOptions({ locale })}
-          variant="timeline"
-        />
-      </div>
-    </RouteMessages>
-  );
-};

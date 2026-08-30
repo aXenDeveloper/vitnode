@@ -6,6 +6,7 @@ import {
   canEnterAdmin,
   ensureAdminAccess,
   loadAdminMessages,
+  preloadAdminAccess,
 } from '@vitnode/core/tanstack/admin'
 
 import { adminNav } from '#/lib/admin-nav'
@@ -52,6 +53,30 @@ import { ErrorActions } from '#/migration/error-actions'
  * check would render the page first and then take it away, which on the server
  * means admin markup already written into the stream.
  *
+ * ## A hover is not a navigation
+ *
+ * `defaultPreload: 'intent'` means the router runs this whole chain when a
+ * pointer rests on an admin link, and router-core has no staleness gate on
+ * `beforeLoad` the way it has on a loader - it re-runs it from the top of the
+ * branch every time. With `ADMIN_SESSION_STALE_TIME` at zero that made crossing
+ * the sidebar one server-function POST and one Hono call *per link the mouse
+ * passed over*, for a question nobody had asked yet.
+ *
+ * So the read is chosen by the `preload` flag the router already hands in.
+ * `preloadAdminAccess` is the same query, the same key and the same rejection
+ * behaviour, trusted for thirty seconds - the identical window the public
+ * session has always used for the identical reason. `ensureAdminAccess` and its
+ * `staleTime: 0` are untouched on the path that matters, and that is the whole
+ * of the revocation guarantee: entering a screen is a real navigation, this runs
+ * again with `preload: false`, and the API is asked. Router-core never lets a
+ * preloaded `beforeLoad` result stand in for a navigation's.
+ *
+ * The redirect below is deliberately *not* conditional on `preload`. It is not a
+ * navigation - `preloadClientRoute` catches it and preloads the sign-in page
+ * instead of moving anybody - and skipping it would leave a denied preload
+ * walking into the screen loaders underneath, which would then send admin
+ * requests the API is going to refuse.
+ *
  * ## A failed read is not a denial
  *
  * `ensureAdminAccess` resolves only for an answer the API actually gave - `200`
@@ -77,8 +102,10 @@ import { ErrorActions } from '#/migration/error-actions'
  * here is, or may become, the security boundary.
  */
 export const Route = createFileRoute('/_admin')({
-  beforeLoad: async ({ context, location }) => {
-    const access = await ensureAdminAccess(context.queryClient)
+  beforeLoad: async ({ context, location, preload }) => {
+    const access = preload
+      ? await preloadAdminAccess(context.queryClient)
+      : await ensureAdminAccess(context.queryClient)
 
     if (!canEnterAdmin(access)) {
       // TanStack Router's own control-flow signal: `redirect()` returns a typed
