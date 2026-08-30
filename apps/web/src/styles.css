@@ -6,9 +6,21 @@
  * VitNode's components ship compiled, so Tailwind cannot find their classes by
  * scanning this app's source. Pointing it at core's build output is what makes
  * the toaster, the tooltip and everything else that follows look like VitNode
- * instead of unstyled markup - the same two lines `apps/docs` needs.
+ * instead of unstyled markup - the two lines `apps/docs` needs, and a third that
+ * only a TanStack host does.
+ *
+ * `dist/src/tanstack` is that third, and leaving it off is what made the site
+ * header render with no logo. `@vitnode/core/tanstack/*` is markup as much as it
+ * is orchestration - the header bar, the language switcher, the debug ribbon,
+ * the not-found screen - and a class written *there* exists nowhere else: a
+ * Next.js app writes `w-34` in its own `layout.tsx`, where Tailwind finds it,
+ * while this app inherits the header's default and writes nothing at all. So
+ * `.w-34` was never generated, the wordmark had no width, and an `<svg>` with a
+ * viewBox and no width collapses rather than falling back to its intrinsic size.
+ * `src/tests/home-route.test.ts` pins this line for that reason.
  */
 @source "../node_modules/@vitnode/core/dist/src/components";
+@source "../node_modules/@vitnode/core/dist/src/tanstack";
 @source "../node_modules/@vitnode/core/dist/src/views";
 
 /*

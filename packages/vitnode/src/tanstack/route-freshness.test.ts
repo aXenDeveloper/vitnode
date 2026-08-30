@@ -89,14 +89,14 @@ describe("data that moves on its own takes the operational window", () => {
 describe("data a person edits takes the record window", () => {
   it.each([
     ["admin users", adminUsersQueryOptions({ adminUserId: 7, params: PARAMS })],
-    ["admin user detail", adminUserQueryOptions({ adminUserId: 7, id: 1 })],
+    ["admin user detail", adminUserQueryOptions({ adminUserId: 7, id: "1" })],
     ["admin roles", adminRolesQueryOptions({ adminUserId: 7, params: PARAMS })],
     [
       "admin staff",
       adminStaffQueryOptions({
         adminUserId: 7,
         params: PARAMS,
-        type: "admins",
+        type: "admin",
       }),
     ],
     ["admin files", adminFilesQueryOptions({ params: PARAMS })],
@@ -106,7 +106,7 @@ describe("data a person edits takes the record window", () => {
     ["devices", devicesQueryOptions({ userId: 1 })],
     [
       "search feed",
-      searchFeedQueryOptions({ locale: "en", params: { q: "x" } }),
+      searchFeedQueryOptions({ locale: "en", params: { search: "x" } }),
     ],
   ])("%s", (_name, options) => {
     expect(options.staleTime).toBe(RECORD_STALE_TIME);

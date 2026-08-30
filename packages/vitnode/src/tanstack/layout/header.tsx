@@ -7,7 +7,7 @@ import { createTranslator } from "use-intl";
 
 import type { HeaderLinkComponent } from "@/views/layouts/theme/header/header-nav";
 
-import { LogoVitNode } from "@/components/logo-vitnode";
+import { LogoVitNodeBrand } from "@/components/logo-vitnode";
 import { HeaderLayoutContent } from "@/views/layouts/theme/header/header-content";
 import {
   HEADER_NAV_MESSAGE_KEYS,
@@ -79,7 +79,7 @@ interface HeaderNavMessages {
  */
 export const Header = ({
   LinkComponent = RouterLink,
-  logo = <LogoVitNode className="w-34" />,
+  logo = <LogoVitNodeBrand />,
   user,
 }: {
   /**
@@ -90,7 +90,18 @@ export const Header = ({
    * navigation rather than a not-found in this one.
    */
   LinkComponent?: HeaderLinkComponent;
-  /** The application's mark. Defaults to VitNode's, as both Next.js apps use. */
+  /**
+   * The application's mark. Defaults to VitNode's own, responsively.
+   *
+   * The default is deliberately `LogoVitNodeBrand` rather than the
+   * `<LogoVitNode className="w-34" />` the Next.js layouts pass: a Next.js app
+   * writes that class in its own `layout.tsx`, where Tailwind scans it, and a
+   * TanStack host writes nothing - the class would exist only inside this
+   * package's compiled `dist`, which an app's `@source` list has to be told
+   * about. See `apps/web/src/styles.css`, which now is. The brand component also
+   * answers the question that class never did, which is what a 136px wordmark
+   * should do on a 320px-wide bar.
+   */
   logo?: React.ReactNode;
   /** The session slot - avatar and menu when signed in, sign-in button when not. */
   user?: React.ReactNode;

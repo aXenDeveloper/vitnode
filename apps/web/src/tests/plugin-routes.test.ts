@@ -181,6 +181,20 @@ describe("the app's real route tree", () => {
     // distinction is load-bearing rather than decorative.
     ['/settings/notifications', false],
     ['/pl/settings/notifications', false],
+    // Stage 15. The front page is this application's, and the docs are not -
+    // and that pair is the whole navigation contract of the new homepage. Its
+    // primary call to action points at `/docs/dev`, so `MigrationLink` has to
+    // answer `false` here or the button becomes a not-found in this router
+    // instead of a document navigation to the Fumadocs application that serves
+    // it. When Stage 16 migrates the docs these three flip to `true` on their
+    // own, because the route tree is the table - nothing in the homepage, in
+    // `MigrationLink` or in this list is written per route.
+    ['/', true],
+    ['/pl', true],
+    ['/docs', false],
+    ['/docs/dev', false],
+    ['/pl/docs/dev', false],
+    ['/docs/dev/email/overview', false],
   ])('answers %s as owned: %s', (href, owned) => {
     expect(isTanStackOwnedPath(getRouter(), href)).toBe(owned)
   })

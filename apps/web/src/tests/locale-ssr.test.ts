@@ -17,12 +17,33 @@ vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 })
 const ORIGIN = 'https://vitnode.test'
 const at = (path: string) => new URL(path, ORIGIN).href
 
-/** The value of a `data-testid` span in the rendered document. */
-const testId = (html: string, id: string): string | undefined =>
-  new RegExp(`data-testid="${id}"[^>]*>([^<]*)<`).exec(html)?.[1]
+/**
+ * Whether a string is rendered as text in the document.
+ *
+ * Stage 15 replaced the front page, and with it what this suite can observe.
+ * The Stage 3 scaffold rendered its own diagnostics into
+ * `data-testid` spans - the resolved locale, `core.global.close`, an
+ * untranslated probe key - and this file read them back. The real homepage
+ * renders none of that, and it should not: a production page carrying test
+ * hooks nobody looks at is how a diagnostic quietly stops being true.
+ *
+ * What is left is what a visitor actually sees, which turns out to be a
+ * stronger probe rather than a weaker one. The header's nav labels are real
+ * translated UI on every public page, so `Discover` / `Odkrywaj` proves the same
+ * thing the probe span did - the request's locale reached a component and it
+ * rendered that language - through the path a visitor uses.
+ *
+ * React inserts `<!-- -->` between adjacent text nodes, so this looks for the
+ * string inside a single element's text rather than anywhere in the markup.
+ */
+const hasText = (html: string, text: string): boolean =>
+  new RegExp(`>[^<]*${text}[^<]*<`).test(html)
 
 const langOf = (html: string): string | undefined =>
   /<html[^>]*\blang="([^"]*)"/.exec(html)?.[1]
+
+/** The header's nav labels, which every page under the main shell renders. */
+const NAV_DISCOVER = { en: 'Discover', pl: 'Odkrywaj' } as const
 
 /**
  * The real request path, end to end.
@@ -46,8 +67,9 @@ describe('SSR serves one page in two languages', () => {
 
     expect(status).toBe(200)
     expect(langOf(html)).toBe('en')
-    expect(testId(html, 'locale')).toBe('en')
-    expect(testId(html, 'close')).toBe('Close')
+    expect(hasText(html, NAV_DISCOVER.en)).toBe(true)
+    // The page itself, and not only the shell around it.
+    expect(hasText(html, 'Get Started')).toBe(true)
   })
 
   it('renders Polish at the prefixed URL - the same route', async () => {
@@ -55,19 +77,27 @@ describe('SSR serves one page in two languages', () => {
 
     expect(status).toBe(200)
     expect(langOf(html)).toBe('pl')
-    expect(testId(html, 'locale')).toBe('pl')
-    expect(testId(html, 'close')).toBe('Zamknij')
+    expect(hasText(html, NAV_DISCOVER.pl)).toBe(true)
+    expect(hasText(html, NAV_DISCOVER.en)).toBe(false)
   })
 
-  it('falls back to English for a key Polish does not translate', async () => {
-    // The rule this pins is that a language may be incomplete:
-    // `core.global.file.stored` is AutoForm copy VitNode's Polish does not
-    // carry, and it renders in English on a page whose every other string is
-    // Polish. A translation is merged key by key over the default locale, never
-    // all-or-nothing. See `messages.test.ts` on choosing this probe.
+  it('serves one page in a language it only partly has', async () => {
+    // The rule: a translation is merged over the default locale rather than
+    // chosen instead of it, so a page renders in the language its URL claims
+    // even where that language has nothing to say. `/pl` gets a Polish header
+    // over a front page whose own copy is English in the source - there is no
+    // `home` branch in `core/locales`, and Stage 15 deliberately did not invent
+    // one. Both halves are in the same document.
+    //
+    // The Stage 3 scaffold made this point with `core.global.file.stored`, a
+    // key VitNode's Polish does not carry, rendered into a probe span. That key
+    // is nowhere near the front page now, and the *per-key* half of the rule is
+    // pinned where it belongs, over the message record itself - see
+    // `messages.test.ts`, which asserts `pl` resolves it to `"Stored file"`.
     const { html } = await renderPage(at('/pl'))
 
-    expect(testId(html, 'fallback')).toBe('Stored file')
+    expect(hasText(html, NAV_DISCOVER.pl)).toBe(true)
+    expect(hasText(html, 'Get Started')).toBe(true)
   })
 
   it('gives the two URLs the same route and different public hrefs', async () => {
@@ -76,9 +106,13 @@ describe('SSR serves one page in two languages', () => {
       renderPage(at('/pl')),
     ])
 
-    // One route file, two public URLs. `/` and `/pl` are `/` internally.
-    expect(en.html).toContain('/<!-- --> \u2192 <!-- -->/')
-    expect(pl.html).toContain('/<!-- --> \u2192 <!-- -->/pl')
+    // One route file, two public URLs: the header's home link is built by the
+    // router from `to="/"` on both, and `rewrite.output` is what writes the
+    // prefix onto one of them. That the *internal* match is the same route is
+    // `locale-rewrite.test.ts`'s assertion; this is the rendered consequence.
+    expect(en.html).toMatch(/<a[^>]*href="\/"/)
+    expect(pl.html).toMatch(/<a[^>]*href="\/pl"/)
+    expect(pl.html).not.toMatch(/<a[^>]*href="\/pl\/pl"/)
   })
 
   it('prefixes the links it renders with the current locale', async () => {
@@ -96,7 +130,7 @@ describe('SSR serves one page in two languages', () => {
     })
 
     expect(langOf(html)).toBe('en')
-    expect(testId(html, 'close')).toBe('Close')
+    expect(hasText(html, NAV_DISCOVER.en)).toBe(true)
   })
 
   it('ignores Accept-Language on a public URL', async () => {
@@ -143,7 +177,11 @@ describe('SSR canonicalises the default locale away', () => {
     // No `{-$locale}` layout route exists to match this, which is the point:
     // there is nothing to accidentally render `/xx` as a valid page.
     expect(status).toBe(404)
-    expect(testId(html, 'locale')).toBeUndefined()
+    // Not the front page rendered under a strange URL: the root's not-found
+    // component sits above `_main`, so neither the homepage nor the shell's
+    // header is in this document.
+    expect(hasText(html, 'Get Started')).toBe(false)
+    expect(hasText(html, NAV_DISCOVER.en)).toBe(false)
   })
 })
 

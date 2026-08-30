@@ -2,6 +2,7 @@
 
 import type React from "react";
 
+import { LogoVitNode } from "@vitnode/core/components/logo-vitnode";
 import {
   Tooltip,
   TooltipContent,
@@ -22,7 +23,6 @@ import {
 } from "lucide-react";
 import { useRef } from "react";
 
-import { LogoVitNode } from "../logo-vitnode";
 import { AnimatedBeam } from "./animated-beam";
 
 const Circle = ({

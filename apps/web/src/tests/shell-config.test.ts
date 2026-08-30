@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Route as RootRoute } from '#/routes/__root'
 import { Route as IndexRoute } from '#/routes/_main/index'
+import { HOME_DESCRIPTION, HOME_TITLE } from '#/site/home/metadata'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 type HeadTag = Record<string, string | undefined>
@@ -73,8 +74,8 @@ describe('per-route titles follow the config short title', () => {
   it('renders "<page> - <shortTitle>"', () => {
     const { metadata } = vitNodeShellConfig
 
-    expect(formatPageTitle(metadata, 'Stage 3')).toBe(
-      `Stage 3 - ${metadata.shortTitle ?? metadata.title}`,
+    expect(formatPageTitle(metadata, HOME_TITLE)).toBe(
+      `${HOME_TITLE} - ${metadata.shortTitle ?? metadata.title}`,
     )
     expect(titleTemplate(metadata)).toBe(
       `%s - ${metadata.shortTitle ?? metadata.title}`,
@@ -85,8 +86,22 @@ describe('per-route titles follow the config short title', () => {
     const { meta } = await headTags(IndexRoute)
 
     expect(meta.map((tag) => tag.title)).toContain(
-      formatPageTitle(vitNodeShellConfig.metadata, 'Stage 3'),
+      formatPageTitle(vitNodeShellConfig.metadata, HOME_TITLE),
     )
+  })
+
+  it('describes the site rather than the page it replaced', async () => {
+    // Stage 15 replaced the Stage 3 scaffold, whose whole head was
+    // `title: "Stage 3 - VitNode"` and no description at all. The front page is
+    // the one page on the site a crawler is certain to read, so both are stated
+    // here rather than left to the root's default.
+    const { meta } = await headTags(IndexRoute)
+    const named = (name: string) =>
+      meta.find((tag) => tag.name === name)?.content
+
+    expect(named('description')).toBe(HOME_DESCRIPTION)
+    expect(named('robots')).toBe('index, follow')
+    expect(JSON.stringify(meta)).not.toMatch(/Stage 3/)
   })
 })
 

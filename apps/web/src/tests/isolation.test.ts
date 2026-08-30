@@ -655,6 +655,115 @@ describe('the whole graph this app imports stays Next-free', () => {
   })
 
   /**
+   * The front page, on its own.
+   *
+   * Stage 15. Stated separately because it is the one route whose graph is
+   * mostly *this application's own code* - the hero, the marquee, the AdminCP
+   * section, the beam - rather than `@vitnode/core`'s, and because of what the
+   * page it replaced was made of. The Next.js homepage rendered
+   * `fumadocs-core/link` for its "Get Started" button, `next/image` for the
+   * screenshot and `@vitnode/core/lib/navigation` - next-intl's navigation -
+   * for every logo in the marquee and every circle in the beam. Three separate
+   * framework couplings on one page, none of which can exist here.
+   *
+   * `fumadocs-core` is on the forbidden list rather than left to Stage 16: it is
+   * a Next.js library, `/docs` is not this application's until Stage 16, and a
+   * `fumadocs-core/link` copied across during this migration would compile,
+   * bundle and only fail once somebody clicked it.
+   *
+   * The walk follows dynamic `import()` as well as static imports, so the beam's
+   * `React.lazy` chunk is in this graph - lazy is a bundling decision, not an
+   * exemption from the boundary.
+   */
+  describe('the front page runtime graph reaches no Next.js', () => {
+    const HOME = ['apps/web/src/routes/_main/index.tsx']
+
+    it('walks into the page the route renders', () => {
+      // Without this the assertions below would pass on a graph that stopped at
+      // the route file - which is exactly the graph that cannot break.
+      const reached = [...reachableExternals(HOME).visited]
+
+      expect(
+        reached.some((path) => path.includes('site/home/home-content')),
+      ).toBe(true)
+      expect(
+        reached.some((path) => path.includes('site/home/sections/hero')),
+        'the hero, which carries the Get Started link',
+      ).toBe(true)
+      expect(
+        reached.some((path) => path.includes('animated-beam-home')),
+        'the lazily imported beam',
+      ).toBe(true)
+    })
+
+    it.each([
+      'next',
+      'next/image',
+      'next/link',
+      'next/navigation',
+      'next-intl/navigation',
+      'next-intl/server',
+      'fumadocs-core',
+      'fumadocs-ui',
+      'server-only',
+    ])('never reaches %s', (forbidden) => {
+      expect(offenders(HOME, [forbidden])).toEqual([])
+    })
+
+    it('never reaches a locale-aware navigation module', () => {
+      // What the marquee and the beam both used to import. Every internal link
+      // on the page is an injected component now.
+      const reached = [...reachableExternals(HOME).externals.keys()]
+
+      expect(reached.filter((one) => one.includes('navigation'))).toEqual([])
+    })
+
+    /**
+     * Stage 14's invariant, restated for the route it was measured on.
+     *
+     * The front page is marketing copy, and a barrel import that reached the
+     * AdminCP's shell, one of its screens, the Content Engine or Tiptap would
+     * put all of it in front of every first-time visitor. That is not
+     * hypothetical: Stage 14 found the users table, the roles table, the
+     * dashboard grid and `@dnd-kit` in the chunk that renders this page,
+     * because one namespace exported its loader and its screen together.
+     *
+     * ## What this page *does* legitimately reach, and why it is named
+     *
+     * Four AdminCP modules are in the graph, via `MigrationLink` ->
+     * `#/migration/navigation` -> `@vitnode/core/tanstack/auth` -> the auth
+     * barrel -> its actions: `tanstack/admin/state.js` and `queries.js`, and
+     * the two query-key leaves they read, `views/admin/table/query.js` and
+     * `views/admin/layouts/search/search-users.js`. Together they are under
+     * 2.5 kB of query keys, paths and permission predicates - the *state* half
+     * of exactly the split Stage 14 made, deliberately importable without the
+     * screen it belongs to. Reaching them is the split working.
+     *
+     * So the rule is not "no admin module": a path-prefix ban would fail on the
+     * design rather than on a regression, and a byte budget would fail on a
+     * dependency bump. It is **no admin module that renders** - nothing in that
+     * subtree may reach the JSX runtime, which is what separates a query key
+     * from a users table, and is the exact edge Stage 14's regression crossed.
+     */
+    it('does not drag the AdminCP screens or the Content Engine onto it', () => {
+      const ADMIN_OR_CONTENT =
+        /tanstack\/admin\/|dist\/src\/views\/admin\/|dist\/src\/content\//
+      const reached = [...reachableExternals(HOME).visited]
+
+      const rendering = reached
+        .filter((path) => ADMIN_OR_CONTENT.test(path))
+        .filter((path) =>
+          /react\/jsx-(?:dev-)?runtime/.test(readFileSync(path, 'utf8')),
+        )
+        .map((path) => relative(repoRoot, path))
+
+      expect(rendering).toEqual([])
+      // The editor and the drag-and-drop stack, which only a screen pulls in.
+      expect(offenders(HOME, ['@tiptap/react', '@dnd-kit/core'])).toEqual([])
+    })
+  })
+
+  /**
    * `/search`, on its own.
    *
    * Stated separately from `/discover` because it renders strictly more of the
