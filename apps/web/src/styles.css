@@ -40,7 +40,7 @@
  * VitNode's components ship compiled, so Tailwind cannot find their classes by
  * scanning this app's source. Pointing it at core's build output is what makes
  * the toaster, the tooltip and everything else that follows look like VitNode
- * instead of unstyled markup - the two lines `apps/docs` needs, and a third that
+ * instead of unstyled markup - the two lines `apps/web` needs, and a third that
  * only a TanStack host does.
  *
  * `dist/src/tanstack` is that third, and leaving it off is what made the site

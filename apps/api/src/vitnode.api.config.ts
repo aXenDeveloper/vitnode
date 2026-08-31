@@ -74,7 +74,7 @@ export const vitNodeApiConfig = buildApiConfig({
     logo: {
       text: "VitNode Email Test",
       // Served by the web app, not by this one. Stage 17 moved the file from
-      // `apps/docs/public` (which answered on 3000) to `apps/web/public`, and
+      // `apps/web/public` (which answered on 3000) to `apps/web/public`, and
       // `vite dev --port 3000` is where that is reachable.
       src: "http://localhost:3000/logo_vitnode_dark.png",
     },
@@ -103,7 +103,7 @@ export const vitNodeApiConfig = buildApiConfig({
   /**
    * Sign-in with Discord, Google and Facebook.
    *
-   * Carried over from `apps/docs` when Stage 17 deleted it: that application's
+   * Carried over from `apps/web` when Stage 17 deleted it: that application's
    * config was the only place in the repo registering these three adapters, and
    * `@vitnode/core/api/adapters/sso/*` would otherwise have had no consumer at
    * all - implementations behind a live route (`/login/sso/:providerId`) with
@@ -132,7 +132,7 @@ export const vitNodeApiConfig = buildApiConfig({
     ],
   },
   // Bot protection on the routes that declare `withCaptcha` - register, log in,
-  // reset password. Also carried over from `apps/docs`, and left commented for a
+  // reset password. Also carried over from `apps/web`, and left commented for a
   // reason worth knowing before uncommenting: unlike the SSO adapters above,
   // this one is *not* inert without its keys. Present-but-unconfigured means
   // every one of those routes posts `secret: undefined` to Cloudflare, gets
@@ -145,7 +145,7 @@ export const vitNodeApiConfig = buildApiConfig({
   //   secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
   // },
   //
-  // And the rate limit `apps/docs` ran with. Sensible in production, and left
+  // And the rate limit `apps/web` ran with. Sensible in production, and left
   // off here because 20 requests a minute is easy to hit by hand while
   // developing against this API.
   //

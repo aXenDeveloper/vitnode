@@ -10,7 +10,7 @@ import { withoutComments } from './source'
 /**
  * The documentation source, now that this application owns it.
  *
- * Stage 16 copied `apps/docs/content/docs` into `apps/web/content/docs` and made
+ * Stage 16 copied `apps/web/content/docs` into `apps/web/content/docs` and made
  * the TanStack app the runtime owner. What this file asserts is the half of that
  * which is easy to get half-right: that the content is actually here, that
  * nothing reaches back into the application Stage 17 deletes, and that a reader
@@ -79,7 +79,7 @@ describe('the documentation source lives in this application', () => {
   })
 
   /**
-   * The permanent boundary: `apps/web` does not read from `apps/docs`.
+   * The permanent boundary: `apps/web` does not read from `apps/web`.
    *
    * `home-route.test.ts` states it for import specifiers. This states it for the
    * documentation, where the likely mistake is different: not an import, but a
@@ -98,15 +98,15 @@ describe('the documentation source lives in this application', () => {
     // had to build while that stage was in review. Stage 17 deleted it, and this
     // is the assertion that replaced the one saying so: a second copy of the
     // documentation is how the two drift, and the deleted one is where every
-    // stale "the docs live in apps/docs" link used to point.
-    expect(existsSync(join(repoRoot, 'apps/docs'))).toBe(false)
+    // stale "the docs live in apps/web" link used to point.
+    expect(existsSync(join(repoRoot, 'apps/web'))).toBe(false)
   })
 })
 
 /**
  * Where "View source" sends a contributor.
  *
- * The Next.js page built this URL inline from `apps/docs/content/docs`. After
+ * The Next.js page built this URL inline from `apps/web/content/docs`. After
  * Stage 17 that directory does not exist, so every documentation page would have
  * carried a link to a deleted file - a 404 for exactly the reader most likely to
  * want to fix something.
@@ -130,7 +130,7 @@ describe('the GitHub source link', () => {
       (path) => /\.tsx?$/.test(path) && !path.includes(`${sep}tests${sep}`),
     )
     const offenders = runtime
-      .filter((path) => withoutComments(path).includes('apps/docs/content'))
+      .filter((path) => withoutComments(path).includes('apps/web/content'))
       .map((path) => relative(appSrc, path))
 
     expect(offenders).toEqual([])
@@ -143,9 +143,7 @@ describe('the GitHub source link', () => {
   it('is not what the documentation tells contributors either', () => {
     const offenders = filesUnder(contentRoot)
       .filter((path) => /\.mdx?$/.test(path))
-      .filter((path) =>
-        readFileSync(path, 'utf8').includes('apps/docs/content'),
-      )
+      .filter((path) => readFileSync(path, 'utf8').includes('apps/web/content'))
       .map((path) => relative(contentRoot, path))
 
     expect(offenders).toEqual([])

@@ -11,7 +11,7 @@ import type { AppMessagesMap } from '@vitnode/core/lib/i18n/types'
  *
  * `@vitnode/blog`'s `pl.json` was the last entry, and it was here for a reason
  * that has been fixed rather than a reason that stands: it arrived from
- * `apps/docs/src/i18n.ts` when Stage 17 deleted that application, and the plugin
+ * `apps/web/src/i18n.ts` when Stage 17 deleted that application, and the plugin
  * shipped no Polish of its own to fall back to. It does now
  * (`plugins/blog/src/locales/pl.json`), registered in the plugin's own locale
  * barrel and in `src/locales/packages.ts` beside its English - so the blog's

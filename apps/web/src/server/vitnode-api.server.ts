@@ -5,7 +5,7 @@ import { VitNodeAPI } from '@vitnode/core/api/config'
 import { createApiBridge } from '#/server/api-bridge'
 import { vitNodeApiConfig } from '#/vitnode.api.config'
 
-// The same two lines `apps/api` and `apps/docs` run. `basePath("/api")` is what
+// The same two lines `apps/api` and `apps/web` run. `basePath("/api")` is what
 // makes the mount point part of the API's own routing, so every path the plugins
 // register - `/api/@vitnode/core/...` - resolves identically here.
 const createVitNodeApi = () => {

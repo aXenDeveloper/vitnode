@@ -65,7 +65,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
        * request, because that request is a 404 in this application until the
        * file exists and a silently missing icon is exactly the class of thing
        * the missing header logo turned out to be. It is the same 32px `.ico`
-       * `apps/docs` serves - one VitNode, one mark - and it lives in `public/`
+       * `apps/web` serves - one VitNode, one mark - and it lives in `public/`
        * rather than being imported so that the URL is stable and the file is
        * still reachable at the well-known path browsers ask for unprompted.
        */

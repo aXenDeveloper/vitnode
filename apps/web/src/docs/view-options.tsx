@@ -18,7 +18,7 @@ import { ChevronDown, ExternalLinkIcon, MessageCircleIcon } from 'lucide-react'
  * **The GitHub link points at `apps/web/content/docs`.** That is
  * `src/docs/github.ts`, and it is the reason this component takes a finished
  * `githubUrl` rather than building one: after Stage 17 there is no
- * `apps/docs/content/docs` to edit, and a contributor following a stale link
+ * `apps/web/content/docs` to edit, and a contributor following a stale link
  * would be editing a deleted file.
  *
  * **It is not a client component, because there is no such thing here.** The

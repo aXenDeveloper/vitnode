@@ -12,7 +12,7 @@ import {
  * verbatim out of this repository at release time.
  *
  * Until Stage 17 this also seeded `copy-of-vitnode-app/root` and
- * `copy-of-vitnode-app/api-single-app` from `apps/docs`, whose Next.js App
+ * `copy-of-vitnode-app/api-single-app` from `apps/web`, whose Next.js App
  * Router tree (`src/app/[locale]/...`, `src/app/api/[...route]`) no longer
  * exists. Those template directories are now maintained in place rather than
  * generated; only the framework-neutral `apps/api` files are still mirrored.

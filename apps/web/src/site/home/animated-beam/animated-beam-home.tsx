@@ -72,7 +72,7 @@ const Circle = ({
  *   compiling: two of these circles point into `/docs`, and that is still the
  *   Next.js application's.
  * - **The mark.** `LogoVitNode` from `@vitnode/core`, rather than the byte-identical
- *   copy that sat in `apps/docs/src/components`. There is one VitNode logo.
+ *   copy that sat in `apps/web/src/components`. There is one VitNode logo.
  * - **The tooltip provider.** It was mounted per circle; `VitNodeRootProviders`
  *   mounts one above every route in this application, and a second provider
  *   inside it is eight extra React trees for no behaviour.

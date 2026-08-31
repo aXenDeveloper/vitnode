@@ -239,13 +239,13 @@ describe('the docs are this application own, and the homepage did not notice', (
 })
 
 describe('this application does not reach into the legacy one', () => {
-  it('imports no source file from apps/docs', () => {
-    // The mandatory boundary: `apps/docs` is deleted in Stage 17, and anything
+  it('imports no source file from apps/web', () => {
+    // The mandatory boundary: `apps/web` is deleted in Stage 17, and anything
     // here that read from it would be deleted with it. The homepage's
     // screenshot, its technology marks and its beam were all moved rather than
     // imported for exactly this reason.
     // Import specifiers over comment-stripped source: several modules in this
-    // application *name* `apps/docs` in prose - the API config explains which
+    // application *name* `apps/web` in prose - the API config explains which
     // origin the legacy app serves, `isolation.test.ts` walks it - and saying
     // where the other application is, is not reaching into it.
     const offenders = filesUnder(appSrc)
@@ -318,7 +318,7 @@ describe('Tailwind can see the classes the package renders', () => {
 
 describe('the VitNode mark', () => {
   it('is core own, and this app implements no second one', () => {
-    // One logo. `apps/docs` had a byte-identical copy of `LogoVitNode` in its
+    // One logo. `apps/web` had a byte-identical copy of `LogoVitNode` in its
     // own `src/components`; Stage 15 deleted it and repointed both importers at
     // the package. Nothing here may grow another.
     // Runtime files only: this suite necessarily quotes the two viewBoxes it is
@@ -380,7 +380,7 @@ describe('the VitNode mark', () => {
 
   it('needs no React hook, because Next renders it on the server', () => {
     // The AdminCP sidebar and the admin sign-in view are Server Components in
-    // `apps/docs`, and a `useId()` in here would throw in both. The uniqueness
+    // `apps/web`, and a `useId()` in here would throw in both. The uniqueness
     // is a prop for that reason, and this is what stops the reflex.
     expect(code(LOGO)).not.toMatch(/useId|useState|useEffect/)
   })

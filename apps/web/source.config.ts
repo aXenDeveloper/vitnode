@@ -5,7 +5,7 @@ import jsonSchema from 'fumadocs-mdx/plugins/json-schema'
  * The documentation collection, and the two capabilities the site is built on.
  *
  * `dir` is this application's own `content/docs`. Nothing here reads from
- * `apps/docs`: Stage 16 copied the source across, and `apps/web` owns it from
+ * `apps/web`: Stage 16 copied the source across, and `apps/web` owns it from
  * now on - see `src/tests/docs-source.test.ts`, which fails if a docs file ever
  * points a reader back at the directory Stage 17 deletes.
  *

@@ -15,7 +15,7 @@ import { apiBridge } from '#/server/vitnode-api.server'
  * `ANY` rather than a handler per method: routing, OpenAPI, middleware, auth,
  * plugin mounting and error handling all stay inside Hono, exactly as they are
  * when the same app runs standalone in `apps/api` or under the Next.js catch-all
- * in `apps/docs`. `ANY` is part of the framework's `RouteMethod` union and is
+ * in `apps/web`. `ANY` is part of the framework's `RouteMethod` union and is
  * what Start falls back to for any method it was given no handler for - `HEAD`
  * included, where it calls this handler and strips the response body itself.
  * So the API keeps answering for methods this file has never heard of, which is

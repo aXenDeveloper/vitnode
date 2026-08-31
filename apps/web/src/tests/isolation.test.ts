@@ -206,7 +206,7 @@ describe('adding TanStack Start does not reach the rest of the workspace', () =>
 })
 
 /**
- * There was a third party to this rule until Stage 17: `apps/docs`, the Next.js
+ * There was a third party to this rule until Stage 17: `apps/web`, the Next.js
  * application, which this suite held to the mirror-image promise of never
  * importing TanStack Start. It is deleted, so the promise has no subject and the
  * `describe` block that stated it is gone rather than adjusted - a scan over a
@@ -599,7 +599,7 @@ describe('the whole graph this app imports stays Next-free', () => {
    * `createTranslator` calls - the locale negotiator and the reset-password
    * email - and those still read `next-intl` **on purpose**.
    * `packages/vitnode/src/lib/i18n/rsc-boundaries.test.ts` requires it: those
-   * same modules are rendered on the server by `apps/docs`, where reading
+   * same modules are rendered on the server by `apps/web`, where reading
    * `use-intl` is the mistake, and it holds the scar from `ContentDataTable` to
    * prove the cost. Two halves, two rules, and this app is the one that has to
    * hold both - so this walks the half the rule applies to rather than

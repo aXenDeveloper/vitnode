@@ -107,7 +107,7 @@ describe('development configuration', () => {
 
   /**
    * There used to be a third assertion here: that this app's development origin
-   * did not collide with `apps/docs`, which served its own VitNode API on 3000
+   * did not collide with `apps/web`, which served its own VitNode API on 3000
    * under a Next.js catch-all. Colliding meant this app's calls were answered by
    * that one - a different database connection, a different session store, and
    * no error anywhere. Stage 17 deleted that application, so there is no second

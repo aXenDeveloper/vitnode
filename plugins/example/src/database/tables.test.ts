@@ -66,7 +66,7 @@ const uniqueIndexNames = (config: typeof articles) =>
     .filter(item => item.config.unique)
     .map(item => item.config.name);
 
-// `apps/api` owns the versioned migration history. It used to be `apps/docs`,
+// `apps/api` owns the versioned migration history. It used to be `apps/web`,
 // which Stage 17 deleted; the directory moved across as a pure rename, so every
 // tag `EXAMPLE_MIGRATIONS` names is the same file it always was.
 const MIGRATIONS_DIR = resolve(

@@ -1,7 +1,7 @@
 /**
  * Where a documentation page's source actually lives, so a reader can edit it.
  *
- * `apps/web/content/docs` and not `apps/docs/content/docs`. Stage 16 moved the
+ * `apps/web/content/docs` and not `apps/web/content/docs`. Stage 16 moved the
  * ownership of the documentation into this application; the Next.js copy is
  * still on disk only until Stage 17 deletes it, and a "View source" link
  * pointing at a file scheduled for deletion is a link that will 404 for every

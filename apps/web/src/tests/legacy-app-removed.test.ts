@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Stage 17: `apps/docs` is gone, and the things only it had are not.
+ * Stage 17: `apps/web` is gone, and the things only it had are not.
  *
  * The deletion itself is the easy half and needs one line to state. The half
- * worth a test file is the other one: `apps/docs` was a *whole VitNode
+ * worth a test file is the other one: `apps/web` was a *whole VitNode
  * application*, not a documentation folder, and four of the artefacts it carried
  * existed nowhere else in the repository. Each was moved rather than deleted,
  * and each is the kind of loss that is silent for weeks -
@@ -31,7 +31,7 @@ import { describe, expect, it } from 'vitest'
  * `apps/web/content/docs`, and that no page tells a contributor otherwise.
  *
  * Deliberately not asserted here: that no source file in the monorepo still
- * mentions `apps/docs` in a comment. Half the packages explain the migration in
+ * mentions `apps/web` in a comment. Half the packages explain the migration in
  * prose, which is worth keeping, and a scan that cannot tell an explanation from
  * a dependency is a test that punishes documentation.
  */
@@ -55,7 +55,7 @@ const manifest = (
 
 describe('the legacy Next.js application', () => {
   it('does not exist', () => {
-    expect(existsSync(join(repoRoot, 'apps/docs'))).toBe(false)
+    expect(existsSync(join(repoRoot, 'apps/web'))).toBe(false)
   })
 
   it('leaves two applications behind it, and neither is a docs site', () => {
@@ -110,7 +110,7 @@ describe('what only the deleted application had', () => {
   })
 
   it('has an application that can apply them', () => {
-    // `apps/docs` was the only workspace with a `db:migrate` script, so root
+    // `apps/web` was the only workspace with a `db:migrate` script, so root
     // `pnpm db:migrate` had no provider at all the moment it was deleted.
     expect(manifest('apps/api/package.json').scripts).toHaveProperty(
       'db:migrate',
@@ -130,7 +130,7 @@ describe('what only the deleted application had', () => {
     )
 
     // Postgres and Redis both, and the build context relative to the new
-    // location - `apps/api` is the same depth as `apps/docs` was, which is what
+    // location - `apps/api` is the same depth as `apps/web` was, which is what
     // makes `../../docker/postgres` still resolve.
     expect(compose).toContain('../../docker/postgres')
     expect(compose).toMatch(/redis:/)
@@ -147,7 +147,7 @@ describe('what only the deleted application had', () => {
   /**
    * And gave it to the plugin rather than to this app.
    *
-   * It landed in `apps/web/src/locales/@vitnode/blog/pl.json` when `apps/docs`
+   * It landed in `apps/web/src/locales/@vitnode/blog/pl.json` when `apps/web`
    * was deleted, registered as an *app override* - which is what an app writes
    * when it wants to reword a string a package already ships. This was not a
    * rewording: it was the only Polish the blog plugin had, so every other

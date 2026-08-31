@@ -167,10 +167,10 @@ const DEPENDENCY_FIELDS = [
 ] as const
 
 describe('the Next.js application is gone', () => {
-  it('has no apps/docs directory', () => {
+  it('has no apps/web directory', () => {
     // The Next.js host. Its documentation content moved to `apps/web/content`
     // in Stage 16 and its runtime was deleted in Stage 17.
-    expect(existsSync(join(repoRoot, 'apps/docs'))).toBe(false)
+    expect(existsSync(join(repoRoot, 'apps/web'))).toBe(false)
   })
 
   it('has no Next.js config file in any workspace package', () => {

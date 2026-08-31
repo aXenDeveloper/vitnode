@@ -3,7 +3,7 @@ import type { VitNodeI18nConfig } from '@vitnode/core/lib/i18n/types'
 /**
  * The languages this app serves.
  *
- * Its own module, the way `apps/docs` has one, so the web config and (later) the
+ * Its own module, the way `apps/web` has one, so the web config and (later) the
  * API config can point at the same object instead of drifting apart - the site
  * and the emails it sends have to agree on which languages exist.
  *

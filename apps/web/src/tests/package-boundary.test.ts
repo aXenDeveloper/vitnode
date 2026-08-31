@@ -222,7 +222,7 @@ describe('the built package keeps TanStack behind the namespace', () => {
   })
 
   /**
-   * The promise made to `apps/docs`, which is still Next.js and has no TanStack
+   * The promise made to `apps/web`, which is still Next.js and has no TanStack
    * dependency at all. A single import from `views/`, `components/` or `lib/`
    * would make `@tanstack/react-router` a hard requirement of every VitNode
    * install - which is exactly what declaring it an *optional* peer says it is
