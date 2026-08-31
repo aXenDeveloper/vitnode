@@ -4,6 +4,7 @@
 import { config } from "dotenv";
 
 import { buildPlugin } from "./build.js";
+import { parseCliArguments } from "./cli-arguments.js";
 import { devPlugin } from "./dev.js";
 import { i18nCheck } from "./i18n-check.js";
 import { i18nCreate } from "./i18n-create.js";
@@ -21,8 +22,24 @@ config({
 
 const initMessage = "\x1b[34m[VitNode]\x1b[0m";
 
-const command = process.argv[2];
-const flag = process.argv[3];
+/**
+ * The invocation, checked before anything can act on it.
+ *
+ * Above the `switch` and not inside it, because the guarantee is that an invalid
+ * `argv` performs *no* command side effect: nothing is generated, nothing is
+ * migrated, nothing is seeded and no compiler is started. `vitnode migrate
+ * --generat` used to reach `databaseBootstrap` - the mistyped flag simply failed
+ * an `=== "--generate"` test and fell through to the full run. It now exits 1
+ * here. See `./cli-arguments.ts`.
+ */
+const parsed = parseCliArguments(process.argv.slice(2));
+
+if (!parsed.ok) {
+  console.error(`${initMessage} \x1b[31m${parsed.message}\x1b[0m`);
+  process.exit(1);
+}
+
+const { args, command } = parsed;
 
 switch (command) {
   case "build":
@@ -71,8 +88,14 @@ switch (command) {
     devPlugin({ initMessage });
     break;
 
+  /**
+   * `--ci` is read off the validated arguments, so the only thing that can turn
+   * it on is that exact spelling. `--cii` no longer reaches this line at all -
+   * it used to arrive as an unrecognised `flag` and quietly produce a soft,
+   * zero-exit report for a CI job that had asked for a hard failure.
+   */
   case "i18n:check":
-    await i18nCheck(flag);
+    await i18nCheck(args.includes("--ci") ? "--ci" : undefined);
     break;
 
   case "i18n:create":
@@ -104,7 +127,7 @@ switch (command) {
    */
   case "migrate":
     try {
-      if (flag === "--generate") {
+      if (args.includes("--generate")) {
         await generateDatabaseMigrations();
         console.log(
           `${initMessage} \x1b[32mDatabase migrations generated successfully.\x1b[0m`,
@@ -125,10 +148,4 @@ switch (command) {
       process.exit(1);
     }
     break;
-
-  default:
-    console.log(
-      `${initMessage} \x1b[31mCommand not found: "${command ?? ""}"\x1b[0m`,
-    );
-    process.exit(1);
 }
