@@ -1,6 +1,6 @@
 import { useEditorState } from "@tiptap/react";
 import { RedoIcon, UndoIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";

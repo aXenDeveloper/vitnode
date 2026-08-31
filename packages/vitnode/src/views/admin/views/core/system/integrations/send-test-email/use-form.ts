@@ -1,14 +1,21 @@
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { useDialog } from "@/components/ui/dialog";
 
-import { sendTestEmailMutation } from "./mutation-api.server";
+import type { SendTestEmail } from "./send-test-email-mutation";
 
-export const useFormSendTestEmail = () => {
+/**
+ * The test-email form: its schema, and what submitting it does.
+ *
+ * `onSend` is the framework seam - the Next.js server action or the browser
+ * mutation - and everything else here is shared: the same three fields, the same
+ * validation messages, the same success toast and the same dialog closing.
+ */
+export const useFormSendTestEmail = (onSend: SendTestEmail) => {
   const t = useTranslations("admin.system.integrations.email.test");
   const tError = useTranslations("core.global.errors");
   const { setOpen, setIsDirty } = useDialog();
@@ -28,7 +35,7 @@ export const useFormSendTestEmail = () => {
   });
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    const mutation = await sendTestEmailMutation(values);
+    const mutation = await onSend(values);
 
     if (mutation.data) {
       setIsDirty?.(false);

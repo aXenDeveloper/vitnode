@@ -1,0 +1,244 @@
+@import 'tailwindcss';
+@import 'shadcn/tailwind.css';
+@import 'tw-animate-css';
+
+/*
+ * Fumadocs' design system, in this stylesheet rather than in one the `/docs`
+ * route loads on its own.
+ *
+ * It was a second stylesheet, and that was measured and is wrong. Two facts make
+ * it impossible:
+ *
+ * 1. **A route stylesheet is never unloaded.** TanStack Router renders every
+ *    `rel="stylesheet"` link with React's `precedence` attribute (see `Asset.tsx`
+ *    in `@tanstack/react-router`), and React 19 hoists a stylesheet with a
+ *    precedence into `<head>` and leaves it there for the life of the document -
+ *    deliberately, so that navigating back does not flash unstyled content. So
+ *    "only `/docs` pays for it" is not a thing the framework can express: one
+ *    visit to the documentation and the sheet is on every page after it.
+ *
+ * 2. **Two Tailwind builds fight inside one `@layer utilities`.** The docs sheet
+ *    emitted 61 kB of utilities, 265 of whose class selectors also exist here.
+ *    Loaded second, every one of those 265 rules outranked this file's copy -
+ *    including its variants, because a variant is just a later rule in the same
+ *    layer. `.hidden` from the docs sheet beat `.sm:block` from this one, so
+ *    `LogoVitNodeBrand` - `hidden w-34 sm:block` - stayed hidden at every width
+ *    and the site header lost its wordmark, on the home page, but only after
+ *    somebody had visited `/docs` first.
+ *
+ * One Tailwind build per document is the fix, and it is not a compromise: the
+ * merged sheet is smaller than the two apart, because those 265 duplicates
+ * collapse. The cost is that a visitor who never opens the documentation still
+ * downloads its theme. That is a real cost and it is the smaller one.
+ *
+ * `src/tests/docs-route.test.ts` holds the line.
+ */
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/*
+ * VitNode's components ship compiled, so Tailwind cannot find their classes by
+ * scanning this app's source. Pointing it at core's build output is what makes
+ * the toaster, the tooltip and everything else that follows look like VitNode
+ * instead of unstyled markup - the two lines `apps/docs` needs, and a third that
+ * only a TanStack host does.
+ *
+ * `dist/src/tanstack` is that third, and leaving it off is what made the site
+ * header render with no logo. `@vitnode/core/tanstack/*` is markup as much as it
+ * is orchestration - the header bar, the language switcher, the debug ribbon,
+ * the not-found screen - and a class written *there* exists nowhere else: a
+ * Next.js app writes `w-34` in its own `layout.tsx`, where Tailwind finds it,
+ * while this app inherits the header's default and writes nothing at all. So
+ * `.w-34` was never generated, the wordmark had no width, and an `<svg>` with a
+ * viewBox and no width collapses rather than falling back to its intrinsic size.
+ * `src/tests/home-route.test.ts` pins this line for that reason.
+ *
+ * Fumadocs ships compiled too, and for the same reason: the documentation's
+ * chrome - the sidebar, the search dialog, the table of contents - is entirely
+ * its classes, and none of them is written in this repository.
+ */
+@source "../node_modules/@vitnode/core/dist/src/components";
+@source "../node_modules/@vitnode/core/dist/src/tanstack";
+@source "../node_modules/@vitnode/core/dist/src/views";
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+
+/*
+ * The design tokens every VitNode component reads. `.dark` is what
+ * `ThemeScript` and `ThemeProvider` put on `<html>`, so the whole palette
+ * switches from that one class.
+ */
+:root:not(.dark) {
+  --background: oklch(0.97 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.51 0.16 262.61);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --warn: oklch(0.54 0.12 82.58);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+  --chart-1: oklch(0.871 0.006 286.286);
+  --chart-2: oklch(0.552 0.016 285.938);
+  --chart-3: oklch(0.442 0.017 285.786);
+  --chart-4: oklch(0.37 0.013 285.805);
+  --chart-5: oklch(0.274 0.006 286.033);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.21 0.006 285.885);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.705 0.015 286.067);
+}
+
+.dark {
+  --background: oklch(0.14 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.6 0.18 262.65);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --warn: oklch(0.76 0.18 81.84);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+  --chart-1: oklch(0.871 0.006 286.286);
+  --chart-2: oklch(0.552 0.016 285.938);
+  --chart-3: oklch(0.442 0.017 285.786);
+  --chart-4: oklch(0.37 0.013 285.805);
+  --chart-5: oklch(0.274 0.006 286.033);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.552 0.016 285.938);
+}
+
+:root {
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-warn: var(--warn);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Each documentation section's accent, applied by `DocsShellContent` as a class
+ * on the docs wrapper. `--color-fd-primary` is what Fumadocs paints the active
+ * sidebar entry, the tab underline and every link inside a document with.
+ *
+ * The values are the Next.js application's, unchanged - but the selectors are
+ * not: there they were `html.dev`, painted before first paint by an inline
+ * script because a Next.js layout could not read the slug without going dynamic.
+ * Here the shell has the router's location in hand and puts the class on its own
+ * wrapper, which is correct in the first byte of SSR and cannot leak onto a page
+ * outside the documentation. See `src/docs/section.ts`.
+ */
+:root:not(.dark) {
+  --dev-color: oklch(0.6 0.18 50);
+  --ui-color: oklch(0.65 0.18 170);
+  --guides-color: oklch(0.45 0.16 262.61);
+}
+
+.dark {
+  --dev-color: oklch(0.75 0.18 50);
+  --ui-color: oklch(0.7 0.18 170);
+  --guides-color: oklch(0.65 0.16 262.61);
+}
+
+.dev {
+  --color-fd-primary: var(--dev-color);
+}
+
+.guides {
+  --color-fd-primary: var(--guides-color);
+}
+
+.ui {
+  --color-fd-primary: var(--ui-color);
+}
+
+/*
+ * Last, and that is what makes it win.
+ *
+ * `fumadocs-ui/css/lib/base.css` sets `body { background-color:
+ * var(--color-fd-background) }` in this same layer, so a documentation page
+ * would otherwise quietly switch to Fumadocs' neutral palette while every other
+ * page used VitNode's.
+ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}

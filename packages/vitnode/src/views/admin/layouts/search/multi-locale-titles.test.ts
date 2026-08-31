@@ -1,4 +1,4 @@
-import { createTranslator } from "next-intl";
+import { createTranslator } from "use-intl";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CONFIG_PLUGIN } from "@/config";
@@ -84,9 +84,17 @@ describe("multi-locale nav titles", () => {
   it("falls back to the default locale key by key", async () => {
     const t = await buildTranslator("pl");
 
-    // Not translated above, so English shows through rather than a raw key.
+    // Translated neither by the inline override above nor by this package's
+    // own `pl.json`, so English shows through rather than a raw key. The probe
+    // has to be a key nothing is about to translate: it used to be
+    // `admin.global.nav.dashboard`, and shipping VitNode's full Polish
+    // translation covered it, so this now reaches for one of the few admin
+    // strings still untranslated. If it fails again, pick a new probe from
+    // `en.json` minus `pl.json` rather than changing the expectation.
     // @ts-expect-error - see above.
-    expect(t("admin.global.nav.dashboard")).toBe("Dashboard");
+    expect(t("admin.system.integrations.content_preview.title")).toBe(
+      "Content Preview",
+    );
   });
 
   it("still resolves English when that is the locale asked for", async () => {

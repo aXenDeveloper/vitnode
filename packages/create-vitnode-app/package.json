@@ -25,13 +25,15 @@
     "build:scripts": "tsc -p tsconfig.build.json && node dist/src/prepare/prepare.js",
     "start:scripts": "node dist/src/index.js",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "vitnode",
     "react",
     "hono.js",
-    "next.js",
+    "tanstack-start",
     "typescript"
   ],
   "dependencies": {
@@ -47,6 +49,7 @@
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
     "eslint": "^10.7.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -45,7 +45,18 @@ interface CoreFetcherOptions<
   formData?: FormData;
   method: Method;
   module: ModuleName;
-  options?: Omit<RequestInit, "body" | "headers">;
+  /**
+   * Extra `fetch` init - `credentials`, an {@link AbortSignal}, Next's `next`
+   * extension. `method` is omitted with `body` and `headers` because
+   * `rawApiFetch` spreads this *after* the three it computes; see its own note.
+   */
+  options?: Omit<RequestInit, "body" | "headers" | "method">;
+  /**
+   * Origin to call, instead of the `NEXT_PUBLIC_API_URL` one. Set by a runtime
+   * that serves the API itself and knows the origin only per request; see
+   * `RawApiFetchArgs["origin"]`.
+   */
+  origin?: string;
   path: SelectedPath;
   prefixPath?: string;
   withPagination?: boolean;
@@ -76,6 +87,7 @@ export async function coreFetcher<
     withPagination = false,
     prefixPath = "",
     formData,
+    origin,
   }: CoreFetcherOptions<M, Routes, Modules, ModuleName, SelectedPath, Method>,
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
@@ -87,6 +99,7 @@ export async function coreFetcher<
     method,
     module,
     options,
+    origin,
     params:
       args && "params" in args
         ? (args.params as Record<string, unknown>)

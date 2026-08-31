@@ -1,0 +1,81 @@
+---
+title: Server functions
+description: Why you almost certainly do not need one.
+---
+
+Most VitNode features need no server function. Hono is the API, and a page reads
+and writes through it like any other client.
+
+## Use Hono for
+
+- reading data,
+- mutating data,
+- authorization and permissions,
+- anything a mobile app or a script would also want.
+
+A Hono route is typed end to end through the [fetcher](/docs/dev/fetcher), runs
+in the API process, and works whether the caller is this app, `apps/api`, or
+someone's curl.
+
+## Use `createServerFn` for
+
+Host-local, request-bound work that has no business being a public API:
+
+- reading or writing a cookie on **this** response,
+- something that only exists inside this app's build.
+
+## Example
+
+```ts title="apps/web/src/lib/auth.ts"
+import { createServerFn } from "@tanstack/react-start";
+import { signInInputSchema } from "@vitnode/core/tanstack/auth";
+import { signInOnApi } from "@vitnode/core/tanstack/auth/server";
+
+export const signInFn = createServerFn({ method: "POST" })
+  .validator(signInInputSchema)
+  .handler(async ({ data }) => await signInOnApi(data));
+```
+
+Sign-in is the case that earns one: the handler calls the Hono API and then has
+to copy the `Set-Cookie` it answered with onto *this* document's response, which
+only something running in this request can do. The authorization still happens in
+Hono - the server function is a courier, not a decision.
+
+## Rules
+
+- **A server function is a public same-origin endpoint.** Give every one a
+  `validator`: its input is whatever a caller posts, not whatever your form
+  collected.
+- **`POST` for anything that changes state**, so CSRF middleware covers it.
+- **Keep them in the app.** The TanStack compiler has to transform the module
+  they are declared in, and `@vitnode/core` is externalised from the app's SSR
+  pass - a `createServerFn` declared in the package resolves to `undefined`
+  during SSR, with no error at all.
+- **Never for ordinary reads.** A server function that proxies a Hono `GET` adds
+  a hop, an endpoint and a second place to get authorization wrong.
+
+<Callout type="warn" title="A plugin cannot declare one">
+  Plugin modules are framework-neutral, and `createServerFn` is TanStack Start's.
+  A plugin's server-side work belongs in its Hono module - see [API
+  routes](/docs/dev/plugins/api/routes).
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Fetcher"
+    description="Calling the API, typed"
+    href="/docs/dev/fetcher"
+  />
+  <Card
+    title="API routes"
+    description="Adding routes to the Hono API from a plugin"
+    href="/docs/dev/plugins/api/routes"
+  />
+  <Card
+    title="Staff permissions"
+    description="Where authorization actually happens"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+</Cards>

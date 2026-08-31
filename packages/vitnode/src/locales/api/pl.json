@@ -1,0 +1,19 @@
+{
+  "core": {
+    "auth": {
+      "reset_password": {
+        "email": {
+          "subject": "Zresetuj swoje hasło",
+          "greeting": "Witaj {name}!",
+          "intro": "Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta.",
+          "button": "Zresetuj hasło",
+          "instructions": "Kliknij powyższy przycisk, aby zresetować hasło. Ze względów bezpieczeństwa link wygaśnie za 30 minut.",
+          "no_action": "Jeśli nie prosiłeś o zresetowanie hasła, możesz bezpiecznie zignorować tę wiadomość. Twoje hasło pozostanie bez zmian.",
+          "security_note": "Ze względów bezpieczeństwa: to żądanie zostało wysłane z adresu IP: {ip}",
+          "help": "Jeśli masz problem z powyższym przyciskiem, skopiuj i wklej poniższy adres URL do przeglądarki:",
+          "expire_time": "Ten link wygaśnie {date}"
+        }
+      }
+    }
+  }
+}

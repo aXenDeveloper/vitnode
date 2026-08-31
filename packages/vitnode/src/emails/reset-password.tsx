@@ -1,5 +1,5 @@
-import { createTranslator } from "next-intl";
 import { Hr, Link, Section, Text } from "react-email";
+import { createTranslator } from "use-intl";
 
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,

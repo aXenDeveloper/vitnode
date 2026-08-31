@@ -6,7 +6,9 @@ import {
   ServerIcon,
   UserIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
+
+import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
@@ -14,13 +16,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "@/lib/navigation";
 
-import type { getSystemLogsData } from "../../system-logs-view";
+import type { DebugLogRow } from "../../../debug-query";
 
 import { BadgeStatus } from "../../badges/badge-status";
 import { BadgeTypeLog } from "../../badges/badge-type-log";
 
+/**
+ * One log line, in full.
+ *
+ * `LinkComponent` is the one thing it cannot decide for itself: the only link on
+ * the dialog points at `/admin/core/users/{id}`, and turning that into a
+ * navigation is the question whose answer differs between the two frameworks -
+ * `next-intl`'s locale-aware `Link` in one, and in the other a link that asks
+ * the route tree whether this application can render the destination at all.
+ * During Stage 12 it cannot: the users screen is still the Next.js AdminCP's, so
+ * the host's migration link renders a document navigation to it.
+ */
 export const ContentMoreActionSystemLogs = ({
   content,
   ipAddress,
@@ -28,12 +40,13 @@ export const ContentMoreActionSystemLogs = ({
   createdAt,
   type,
   id,
+  LinkComponent,
   method,
   path,
   userAgent,
   statusCode,
   user,
-}: Awaited<ReturnType<typeof getSystemLogsData>>["edges"][number]) => {
+}: DebugLogRow & { LinkComponent: AuthLinkComponent }) => {
   const t = useTranslations("admin.debug.logs.more");
 
   return (
@@ -105,13 +118,13 @@ export const ContentMoreActionSystemLogs = ({
                   <UserIcon className="size-3" />
                   {t("log_overview.user")}
                 </Label>
-                <Link
+                <LinkComponent
                   className="border-input bg-background hover:bg-accent hover:text-accent-foreground block rounded-md border px-3 py-2 text-sm font-medium"
                   href={`/admin/core/users/${user.id}`}
                   id="user-link"
                 >
                   {user.name} (#{user.id})
-                </Link>
+                </LinkComponent>
               </div>
             )}
           </div>

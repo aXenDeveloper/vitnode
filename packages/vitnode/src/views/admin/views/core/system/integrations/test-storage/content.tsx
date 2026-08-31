@@ -7,9 +7,9 @@ import {
   LoaderCircleIcon,
   XIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
 

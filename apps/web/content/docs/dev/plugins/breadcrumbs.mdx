@@ -1,0 +1,94 @@
+---
+title: Breadcrumbs
+description: Learn how to add breadcrumbs to your plugin's admin pages for better navigation and user experience.
+---
+
+VitNode renders dynamic, localized breadcrumbs in two places:
+
+- **AdminCP** - in the header, next to the sidebar trigger.
+- **Main site** - below the header, on the public pages.
+
+In most cases they work automatically and you don't have to do anything: the
+AdminCP reuses your sidebar's translated titles, and the public site derives a
+trail from the URL.
+
+<Callout type="info" title="A crumb belongs to its route">
+  When the automatic label isn't enough, a route in your [route
+  manifest](/docs/dev/plugins/route-manifest) declares its own crumb as a
+  `breadcrumb` component inside `definePluginRoute`. It lives beside the page it
+  labels, so a route that moves takes its crumb with it.
+</Callout>
+
+## AdminCP
+
+AdminCP breadcrumbs are generated from your **sidebar navigation**. As soon as you add [navigation items](/docs/dev/plugins/admin-page#navigation-items) and their translations, the breadcrumb reuses the same translated titles - there is nothing extra to configure.
+
+Using the blog navigation from [AdminCP Pages](/docs/dev/plugins/admin-page#navigation-items), visiting `/admin/blog/settings` renders:
+
+```
+Blog / Settings
+```
+
+<Callout>
+  Labels come from the same translation keys as the sidebar nav. URL segments
+  that aren't part of the nav (for example a dynamic id) fall back to a
+  humanized version of the segment (`reset-password` → `Reset Password`).
+</Callout>
+
+## Main site
+
+On the public site the breadcrumb is derived from the URL. Each segment is humanized and links to its path, and the home page (`/`) shows no breadcrumb.
+
+```
+/login                ->  Login
+/account/settings     ->  Account / Settings
+```
+
+## Custom breadcrumbs
+
+Sometimes the automatic label isn't enough - you want a **translated** label for a public page, or a **real name resolved on the server** for a dynamic route (e.g. `/blog/posts/[id]` showing the post title instead of the id).
+
+On a manifest route, that is the `breadcrumb` member of `definePluginRoute`:
+
+```tsx title="plugins/blog/src/routes/post-page.tsx"
+import { definePluginRoute } from "@vitnode/core/routing";
+import { useTranslations } from "use-intl";
+
+const PostBreadcrumb = () => {
+  const t = useTranslations("@vitnode/blog");
+
+  return <span>{t("post.crumb")}</span>;
+};
+
+export const route = definePluginRoute({ breadcrumb: PostBreadcrumb });
+```
+
+It is handed no props - no `loaderData`, no `params` - so it renders a
+translated, route-owned label rather than the article's own title.
+
+A crumb component is handed no props, which is deliberate: it renders a
+translated, route-owned label rather than a record's own title. To put a
+**resolved name** in the trail - the post's title instead of its id - read it
+from the route's loader data in the page itself; the crumb names the *route*, the
+page names the *thing*.
+
+<Callout type="warn">
+  Only declare a `breadcrumb` on the route that needs one. Every other route
+  keeps the automatic label, which is derived from the URL on the public site and
+  from your sidebar's translated titles in the AdminCP.
+</Callout>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="AdminCP Pages"
+    description="Add navigation items that power AdminCP breadcrumbs"
+    href="/docs/dev/plugins/admin-page"
+  />
+  <Card
+    title="Route Manifest"
+    description="How a plugin declares the pages its crumbs label"
+    href="/docs/dev/plugins/route-manifest"
+  />
+</Cards>

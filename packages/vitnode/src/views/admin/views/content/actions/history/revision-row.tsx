@@ -1,12 +1,12 @@
 // No "use client": reached only from `history-action`, which is a client entry.
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, RotateCcwIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type {
-  ContentRevisionDetail,
   ContentRevisionMeta,
   ContentRevisionOperation,
 } from "@/content/revisions";
@@ -19,10 +19,8 @@ import { Loader } from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
-import {
-  getContentRevisionAction,
-  restoreContentRevisionAction,
-} from "../mutation-api.server";
+import { contentRevisionQueryOptions } from "../editorial-query";
+import { useContentEditorialTransport } from "../editorial-transport";
 import { RevisionActor } from "./revision-actor";
 import { RevisionDiff } from "./revision-diff";
 
@@ -73,6 +71,41 @@ const OperationBadge = ({
   );
 };
 
+/**
+ * One snapshot, read when a row is expanded and not before.
+ *
+ * `enabled` is the whole of the laziness: a 25-revision timeline is 25 of these
+ * mounted, and none of them requests anything until somebody opens it. Cached
+ * under `../editorial-query`'s per-revision key, so collapsing and reopening the
+ * same row is free - a revision's snapshot is immutable, and the only thing that
+ * can invalidate it is a restore, which expires the whole `history` root.
+ */
+const useRevisionSnapshot = ({
+  contentTypeId,
+  enabled,
+  itemId,
+  revisionId,
+}: {
+  contentTypeId: string;
+  enabled: boolean;
+  itemId: number;
+  revisionId: null | number;
+}) => {
+  const transport = useContentEditorialTransport();
+
+  return useQuery({
+    ...contentRevisionQueryOptions({
+      contentTypeId,
+      getRevision: transport.getRevision,
+      itemId,
+      revisionId: revisionId ?? 0,
+    }),
+    // Whether this row has been expanded is the row's own state, so it stays
+    // here rather than inside the shared query definition.
+    enabled: enabled && revisionId !== null,
+  });
+};
+
 export const RevisionRow = ({
   canRestore,
   contentTypeId,
@@ -91,7 +124,7 @@ export const RevisionRow = ({
   currentVersion: number;
   id: number;
   isCurrent: boolean;
-  onRestored: (nextVersion?: number) => void;
+  onRestored: () => void;
   previousId: null | number;
   revision: ContentRevisionMeta;
   singular: string;
@@ -101,45 +134,30 @@ export const RevisionRow = ({
   const t = useTranslations("core.content.history");
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
-  const [detail, setDetail] = React.useState<ContentRevisionDetail | null>(
-    null,
-  );
-  const [previous, setPrevious] = React.useState<ContentRevisionDetail | null>(
-    null,
-  );
-  const [settled, setSettled] = React.useState(false);
+  const transport = useContentEditorialTransport();
   const [open, setOpen] = React.useState(false);
 
   const hasChanges = revision.changedFields.length > 0;
 
-  React.useEffect(() => {
-    if (!open) return;
+  const current = useRevisionSnapshot({
+    contentTypeId,
+    enabled: open,
+    itemId: id,
+    revisionId: revision.id,
+  });
+  const earlier = useRevisionSnapshot({
+    contentTypeId,
+    enabled: open,
+    itemId: id,
+    revisionId: previousId,
+  });
 
-    const needsDetail = detail === null;
-    const needsPrevious = previousId !== null && previous?.id !== previousId;
-    if (!needsDetail && !needsPrevious) return;
-
-    let active = true;
-
-    void Promise.all([
-      needsDetail
-        ? getContentRevisionAction(contentTypeId, id, revision.id)
-        : null,
-      needsPrevious
-        ? getContentRevisionAction(contentTypeId, id, previousId)
-        : null,
-    ]).then(([current, earlier]) => {
-      if (!active) return;
-
-      if (current) setDetail(current.revision ?? null);
-      if (earlier) setPrevious(earlier.revision ?? null);
-      setSettled(true);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [contentTypeId, detail, id, open, previous?.id, previousId, revision.id]);
+  const detail = current.data?.revision ?? null;
+  // The diff needs *both* halves before it can be trusted: rendering as soon as
+  // the newer one lands would show every field as "added", because the older
+  // snapshot it is being compared against has not arrived yet.
+  const settled =
+    !current.isPending && (previousId === null || !earlier.isPending);
 
   return (
     <li className="group/revision flex gap-3">
@@ -202,7 +220,7 @@ export const RevisionRow = ({
                   version: revision.version,
                 })}
                 onSubmit={async ({ onClose }) => {
-                  const mutation = await restoreContentRevisionAction(
+                  const mutation = await transport.restoreRevision(
                     contentTypeId,
                     id,
                     revision.id,
@@ -221,13 +239,19 @@ export const RevisionRow = ({
                     return;
                   }
 
+                  await transport.settled({
+                    contentTypeId,
+                    itemId: id,
+                    scope: "record",
+                  });
+
                   toast.success(t("restore.success", { name: singular }), {
                     description: t("restore.success_desc", {
                       version: revision.version,
                     }),
                   });
                   onClose();
-                  onRestored(mutation.version);
+                  onRestored();
                 }}
                 textSubmit={t("restore.confirm")}
                 title={t("restore.title", { version: revision.version })}
@@ -259,7 +283,7 @@ export const RevisionRow = ({
             {detail ? (
               <RevisionDiff
                 after={detail.snapshot}
-                before={previous?.snapshot ?? null}
+                before={earlier.data?.revision?.snapshot ?? null}
                 spec={spec}
               />
             ) : settled ? (

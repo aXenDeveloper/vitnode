@@ -1,0 +1,225 @@
+---
+title: Plugin Frontend Modules
+description: How a plugin exposes AdminCP navigation and Content Engine screens through admin/nav, admin/content and config.tsx - three browser-safe layers, declared once.
+icon: Package
+---
+
+A plugin's frontend is read by two different applications for two different
+reasons: the AdminCP shell wants to draw a sidebar, and the Content Engine wants
+to render an editing screen. Those need very different amounts of code — a link
+is a string and an icon, an editor is Tiptap — so a plugin publishes them as
+separate modules and each application imports only the one it needs.
+
+Three modules, three questions:
+
+| Module              | Answers            | Carries                                            |
+| ------------------- | ------------------ | -------------------------------------------------- |
+| `admin/nav.tsx`     | *what exists*      | content definitions, icons, hand-declared nav entries |
+| `admin/content.tsx` | *how it is edited* | the above, plus field, column and form-layout overrides |
+| `config.tsx`        | *the whole plugin* | the above, plus messages and API wiring            |
+
+Each layer spreads the one below it, so every declaration is written once.
+
+---
+
+## `admin/nav` — the sidebar
+
+Browser-safe, and deliberately tiny. An application that only wants to draw
+navigation imports this and never pulls an editor into the AdminCP shell's
+bundle.
+
+```tsx title="src/admin/nav.tsx"
+import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
+
+import { NotebookPenIcon } from "lucide-react";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { articleContentType } from "@/content/article";
+
+/** Exported individually so `admin/content` can build on it. */
+export const articleNav = {
+  definition: articleContentType,
+  icon: <NotebookPenIcon />,
+};
+
+export const adminNav = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  contentTypes: [articleNav],
+} satisfies AdminNavPluginSource;
+```
+
+Each content type entry is exported on its own as well as in the list. That is
+what makes the single-source claim hold: `admin/content` spreads `articleNav`
+rather than retyping the definition and the icon.
+
+Hand-declared entries — an AdminCP screen your plugin routes itself — go in the
+same object under `admin: { nav: [...] }`.
+
+---
+
+## `admin/content` — the editing screens
+
+Also browser-safe, and this is where the three escape hatches live: `fields`
+replaces an input, `columns` replaces a table cell, and `forms.layout` replaces
+the arrangement of a whole form.
+
+```tsx title="src/admin/content.tsx"
+import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
+
+import { contentTypeAdmin } from "@vitnode/core/lib/plugin";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { ArticleEditorField } from "@/views/admin/article/editor-field";
+import { ArticleFormLayout } from "@/views/admin/article/form-layout";
+
+import { articleNav } from "./nav";
+
+export const adminContent = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  contentTypes: [
+    contentTypeAdmin({
+      ...articleNav,
+      fields: { content: { component: ArticleEditorField } },
+      forms: { layout: ArticleFormLayout },
+    }),
+  ],
+} satisfies ContentFrontendPluginSource;
+```
+
+An override is **presentation only**. The Content Engine still owns the schema,
+the validation, the defaults, the mutation, the version precondition, the
+structured errors, the toast and the cache invalidation. See
+[AdminCP Integration](/docs/dev/content-engine/admincp) for what each override
+receives.
+
+---
+
+## `config.tsx` — the plugin
+
+Spread `adminContent` rather than repeating it. One list, one place to change it.
+
+```tsx title="src/config.tsx"
+import { buildPlugin } from "@vitnode/core/lib/plugin";
+
+import { adminContent } from "./admin/content";
+import messages from "./locales";
+
+export const examplePlugin = () =>
+  buildPlugin({
+    ...adminContent,
+    messages,
+  });
+```
+
+<Callout title="Do not declare content types twice">
+  If `config.tsx` lists its own `contentTypes` *and* `admin/content` lists them
+  too, the two copies drift and the AdminCP shows whichever the host happened to
+  read. Spread, don't retype.
+</Callout>
+
+---
+
+## The generated registry
+
+An application discovers which of its configured plugins export `admin/content`
+and writes one **literal import** per plugin into `src/content-registry.gen.ts`:
+
+```ts title="apps/web/src/content-registry.gen.ts"
+import { adminContent as adminContent0 } from "@vitnode/blog/admin/content";
+
+export const pluginContentTypes = [
+  adminContent0, // @vitnode/blog
+] satisfies ContentFrontendPluginSource[];
+```
+
+Literal, because a bundler has to follow it without running anything — a registry
+reached through `` import(`${pluginId}/admin/content`) `` type-checks, works in
+dev, and ships a browser bundle with no plugin screens in it at all. Nothing is
+serialised either: a React component cannot cross a JSON boundary, so the
+components stay compiled in your plugin's own `dist`.
+
+<Callout type="warn" title="Generated file — do not edit">
+  `content-registry.gen.ts` and `admin-nav.gen.ts` are rewritten on every
+  `vite dev` and `vite build`. Add or remove a plugin in `src/vitnode.config.ts`
+  and they follow; edit them by hand and your change is gone on the next build.
+</Callout>
+
+---
+
+## The two modules are independent
+
+`admin/nav` and `admin/content` are **separate optional package exports**. A
+plugin exports whichever it has, and nothing compares the two lists:
+
+- an AdminCP settings screen with no content types exports `admin/nav` only;
+- a plugin whose whole AdminCP presence is its generated content screens can
+  export `admin/content` only;
+- most plugins export neither, and that is not an error.
+
+A missing module means *this plugin contributes nothing to that projection* — not
+a misconfiguration. Nothing requires you to export both.
+
+---
+
+## Browser-safe means browser-safe
+
+Everything reachable from `admin/nav` and `admin/content` is loaded in a browser,
+by applications that may not be Next.js. Nothing in that graph may import:
+
+- `next/*` — including `next/navigation`, `next/dynamic` and `next/cache`
+- `next-intl/server` and the other Next-bound `next-intl` entries
+- `server-only`
+- Node built-ins such as `node:fs`
+
+Use `use-intl` for translations, React for everything else, and the
+framework-neutral Content Engine APIs from `@vitnode/core/content/admin-form`.
+The full server config (`vitnode.config.ts`) carries message loaders and API
+wiring — it is not importable from here, and does not need to be.
+
+```tsx title="src/views/admin/article/color-cell.tsx"
+import { useTranslations } from "use-intl"; // not "next-intl"
+```
+
+---
+
+## Keep expensive editors lazy
+
+An application's generated registry imports `admin/content` **eagerly**, so
+anything it reaches lands in the bundle for every content screen — including the
+list of a content type that has no editor at all. Draw the boundary in your own
+module, so the registration is a label and a `lazy()` call:
+
+```tsx title="src/views/admin/article/editor-field.tsx"
+"use client";
+
+import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/auto-form";
+
+import { Loader } from "@vitnode/core/components/ui/loader";
+import React from "react";
+import { useTranslations } from "use-intl";
+
+const AutoFormEditor = React.lazy(
+  async () =>
+    await import("@vitnode/core/components/form/fields/editor").then((mod) => ({
+      default: mod.AutoFormEditor,
+    })),
+);
+
+export const ArticleEditorField = (props: ItemAutoFormComponentProps) => {
+  const t = useTranslations("@vitnode/example.admin.article");
+
+  return (
+    <React.Suspense fallback={<Loader />}>
+      <AutoFormEditor label={t("content.label")} {...props} />
+    </React.Suspense>
+  );
+};
+```
+
+`React.lazy` rather than `next/dynamic`: the two do the same job here, and only
+one of them exists outside Next.js.
+
+<Callout title="Never from admin/nav">
+  A sidebar does not need an editor. Keep Tiptap — and anything else of that size
+  — behind `admin/content`, so drawing navigation never fetches it.
+</Callout>

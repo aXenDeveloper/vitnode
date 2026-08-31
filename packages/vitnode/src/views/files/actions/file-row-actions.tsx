@@ -1,9 +1,9 @@
 "use client";
 
 import { DownloadIcon, LoaderCircleIcon, Trash2Icon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import type { userFilesModule } from "@/api/modules/users/files/files.module";
 import type { FileInUse } from "@/lib/files/in-use";
@@ -14,14 +14,31 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
 
-import { deleteMyFileAction } from "./delete-action.server";
+import type { DeleteMyFile } from "../my-files-delete";
 
+/**
+ * Download and delete, for one row of the visitor's files.
+ *
+ * The delete arrives as a prop. It used to import the Next.js server action
+ * directly, which is what made this component - and therefore the whole table -
+ * unrenderable outside Next.js: importing a `"use server"` module pulls the
+ * fetcher, `next/headers` and the entire API module graph in behind it. The two
+ * frameworks end a delete differently (`revalidatePath` against a query
+ * invalidation) and agree on everything before that, so the last step is the
+ * prop and the rest is `my-files-delete.ts`.
+ *
+ * The download is *not* a prop, and the asymmetry is deliberate: it is a
+ * same-origin `GET` whose body becomes a blob in this browser, so there is
+ * nothing a server could do with it and nothing to invalidate afterwards.
+ */
 export const MyFileRowActions = ({
   id,
   name,
+  onDelete,
 }: {
   id: number;
   name: string;
+  onDelete: DeleteMyFile;
 }) => {
   const t = useTranslations("core.files");
   const tGlobal = useTranslations("core.global.errors");
@@ -93,7 +110,7 @@ export const MyFileRowActions = ({
           if (!open) setHeldByRevisions(null);
         }}
         onSubmit={async ({ onClose }) => {
-          const result = await deleteMyFileAction({
+          const result = await onDelete({
             force: heldByRevisions !== null,
             id,
           });

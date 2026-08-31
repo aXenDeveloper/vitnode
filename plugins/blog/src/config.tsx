@@ -1,14 +1,6 @@
-import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
-import { ListIcon, NotebookPenIcon } from "lucide-react";
+import { buildPlugin } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
-import { blogCategoryContentType } from "@/content/category";
-import { blogPostContentType } from "@/content/post";
-import { BlogArticleEditorField } from "@/views/admin/article/editor-field";
-import { BlogArticleFormLayout } from "@/views/admin/article/form-layout";
-import { BlogCategoryColorCell } from "@/views/admin/category/color-cell";
-import { BlogCategoryColorField } from "@/views/admin/category/color-field";
-
+import { adminContent } from "./admin/content";
 import messages from "./locales";
 
 /**
@@ -19,38 +11,21 @@ import messages from "./locales";
  * and the delete confirmation are all generated. No page under
  * `src/routes/admin` renders a table any more, and no view calls a mutation.
  *
- * The overrides are the two escape hatches, one of each kind. `fields` replaces
- * an input, `columns` replaces a table cell, and `forms.layout` replaces the
- * arrangement of a whole form - never its behaviour.
+ * None of it is written here. `./admin/content` is the canonical declaration -
+ * the content types with their overrides - and this spreads it, so the two
+ * AdminCPs read one list through two doors:
+ *
+ *     admin/nav.tsx      browser-safe   what exists: definitions and icons
+ *     admin/content.tsx  browser-safe   how it edits: fields, columns, layouts
+ *     config.tsx         server         the whole plugin: the above, plus messages
+ *
+ * A host registers this file and walks the registry in its render
+ * pass. A TanStack Start application cannot - its config is server-side on
+ * purpose - so it imports `admin/content` through a generated registry of
+ * literal specifiers instead. Same declarations, same components, two doors.
  */
-export const blogPlugin = () => {
-  return buildPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+export const blogPlugin = () =>
+  buildPlugin({
+    ...adminContent,
     messages,
-    contentTypes: [
-      contentTypeAdmin({
-        definition: blogPostContentType,
-        icon: <NotebookPenIcon />,
-        fields: {
-          // The Tiptap editor, inside the same AutoForm as everything else.
-          content: { component: BlogArticleEditorField },
-        },
-        forms: {
-          // One layout for both actions - they are the same screen, and writing
-          // it twice is how two screens drift apart.
-          layout: BlogArticleFormLayout,
-        },
-      }),
-      contentTypeAdmin({
-        definition: blogCategoryContentType,
-        icon: <ListIcon />,
-        fields: {
-          color: { component: BlogCategoryColorField },
-        },
-        columns: {
-          color: { cell: BlogCategoryColorCell },
-        },
-      }),
-    ],
   });
-};

@@ -432,7 +432,8 @@ export interface ContentGroupField<
  *
  * Never nullable and never required: the value is an array, and the empty array
  * is the natural "nothing here". Never localized either - see
- * `apps/docs/.../repeatable-fields.mdx` for why that is a later stage.
+ * `apps/web/content/docs/dev/content-engine/repeatable-fields.mdx` for why that
+ * is a later stage.
  */
 export interface ContentRepeatableField<
   TFields = ContentLeafFieldMap,
@@ -1529,7 +1530,7 @@ export type ContentDeliveryNoIndexField<
  * `<title>` competes in a search result and an `og:title` competes in a chat
  * preview, and an author who wants them identical simply names the same field
  * twice. There is deliberately no `imageField` - see
- * `apps/docs/.../content-delivery-limitations.mdx`.
+ * `apps/web/content/docs/dev/content-engine/content-delivery-limitations.mdx`.
  */
 export interface ContentDeliveryOpenGraphConfig<
   TTitle extends string = string,

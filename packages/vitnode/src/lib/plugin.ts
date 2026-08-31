@@ -5,17 +5,77 @@ import type {
   ContentSelect,
   ContentSystemField,
 } from "../content/types";
-import type { ItemNavAdmin } from "../views/admin/layouts/sidebar/nav/item";
+import type { PluginRouteDefinition } from "../routing/types";
+import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { LocaleMessagesMap } from "./i18n/types";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
+/**
+ * Picked from the navigation *model* rather than from a component's props.
+ *
+ * The model is the framework-neutral declaration every host reads; a component
+ * is one host's way of drawing it. Picking from a component would put whichever
+ * host that component belongs to into the graph of `buildPlugin` - and this
+ * module is what every plugin imports, so that coupling would travel to all of
+ * them.
+ */
 interface AdminNavItem extends Pick<
-  React.ComponentProps<typeof ItemNavAdmin>,
+  ResolvedAdminNavItem,
   "href" | "icon" | "isOpenInNewTab"
 > {
   id: string;
   permission?: AdminNavPermission;
+}
+
+/**
+ * One hand-declared AdminCP sidebar entry, with whatever sits under it.
+ *
+ * Named rather than written inline on {@link BuildPluginReturn} because
+ * {@link AdminNavPluginSource} needs the same shape: a plugin declares its
+ * navigation once, and both the full registration and the browser-safe
+ * projection read that one declaration.
+ */
+export type AdminNavDeclaration = AdminNavItem & {
+  items?: Omit<AdminNavItem, "icon">[];
+};
+
+/** A content type, as much of it as the sidebar reads: what it is, and its icon. */
+export type AdminNavContentType = Pick<
+  ContentTypeFrontendRegistration,
+  "definition" | "icon"
+>;
+
+/**
+ * A plugin's AdminCP navigation, and nothing else about the plugin.
+ *
+ * What a plugin exports from `admin/nav` - a **browser-safe** module - so an
+ * application can put its sidebar entries on screen without importing the
+ * plugin's frontend registration. That distinction is the whole reason this type
+ * exists: `blogPlugin()` registers content types *with their editing screens*
+ * attached - a Tiptap field, a form layout, a table cell - which reach core's
+ * form stack and, today, `next/dynamic`. A TanStack Start application cannot
+ * hold that graph, and it does not need to in order to draw a list of links.
+ *
+ * So the two are separated by what they carry rather than by a build flag:
+ *
+ *     config.tsx     the whole registration - screens, field overrides, widgets
+ *     admin/nav      the ids, hrefs, permissions, icons and content definitions
+ *
+ * A content type definition is client-safe by construction (zod and plain data,
+ * no Drizzle, no components), and an icon is an element from an icon set. That
+ * is the entire payload.
+ *
+ * Structurally a {@link BuildPluginReturn}, so `adminNavDeclarations` reads a
+ * list of these exactly as it reads a list of configured plugins - one
+ * navigation model, one set of rules, whichever door the data came through.
+ * A plugin writes it once and spreads it into its own `buildPlugin` call, which
+ * is what stops the two lists drifting.
+ */
+export interface AdminNavPluginSource {
+  admin?: { nav?: AdminNavDeclaration[] };
+  contentTypes?: AdminNavContentType[];
+  pluginId: string;
 }
 
 export type AdminDashboardWidgetSpan = 1 | 2 | 3;
@@ -119,6 +179,38 @@ export interface ContentTypeFrontendRegistration {
   icon?: React.ReactNode;
 }
 
+/**
+ * A plugin's Content Engine frontend registration, and nothing else about the
+ * plugin.
+ *
+ * What a plugin exports from `admin/content` - a **browser-safe** module - so an
+ * application can render the generated content screens without importing the
+ * plugin's whole `buildPlugin` call. The same split {@link AdminNavPluginSource}
+ * makes, one level further in:
+ *
+ *     admin/nav       ids, hrefs, permissions, icons, content definitions
+ *     admin/content   the above, plus field, column and form-layout overrides
+ *     config.tsx      the whole plugin - messages, routes, API wiring
+ *
+ * The difference between the first two is what a screen needs over what a link
+ * needs. A sidebar entry is a string and an icon; a content *screen* is those
+ * plus the components that replace a generated input, a generated table cell and
+ * a generated form layout. Both are browser-safe, and neither is the server
+ * config: `vitnode.config.ts` carries message loaders and API plugins, which a
+ * browser bundle has no business holding.
+ *
+ * Structurally a subset of {@link BuildPluginReturn}, deliberately, and that is
+ * what stops the two lists drifting: a plugin writes its registrations once
+ * here, `config.tsx` spreads them into `buildPlugin`, and the Next.js
+ * application and the TanStack Start application read the same declarations
+ * through two doors. A `BuildPluginReturn[]` also satisfies
+ * `ContentFrontendPluginSource[]`, so one registry builder serves both.
+ */
+export interface ContentFrontendPluginSource {
+  contentTypes?: ContentTypeFrontendRegistration[];
+  pluginId: string;
+}
+
 interface TypedContentTypeRegistration<
   TDefinition extends AnyContentTypeDefinition,
 > {
@@ -175,13 +267,27 @@ export interface BuildPluginReturn<P extends string = string> {
     dashboard?: {
       widgets?: AdminDashboardWidget[];
     };
-    nav?: (AdminNavItem & {
-      items?: Omit<AdminNavItem, "icon">[];
-    })[];
+    nav?: AdminNavDeclaration[];
   };
   contentTypes?: ContentTypeFrontendRegistration[];
   messages?: LocaleMessagesMap;
   pluginId: P;
+  /**
+   * Public pages this plugin contributes, declared rather than shipped as a
+   * framework's route files.
+   *
+   * Optional: a plugin that contributes an API module, a content type or only
+   * strings declares no routes at all. `buildPluginRouteManifest` turns every
+   * plugin's list into the application's route manifest, which is compiled into
+   * a literal registry at build time.
+   *
+   * There was a second, older path until the Next.js cutover: a plugin could
+   * instead ship a `src/routes/{main,admin,blank,breadcrumb}/` tree of App Router
+   * pages, which a copier wrote into every Next.js app's `src/app/`. Nothing is
+   * copied anywhere now - a route module stays in this package's own `dist` and
+   * the app imports it from there. See `src/routing/`.
+   */
+  routes?: PluginRouteDefinition[];
 }
 
 export function buildPlugin<P extends string>(

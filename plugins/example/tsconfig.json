@@ -12,11 +12,6 @@
     "emitDeclarationOnly": true,
     "declaration": true,
     "declarationMap": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
       "@/*": ["./src/*"]
     }

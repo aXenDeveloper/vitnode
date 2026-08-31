@@ -1,41 +1,37 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 
-import { usePathname, useRouter } from "@/lib/navigation";
-
-import type { DataTable, DataTableTMin } from "./data-table";
+import type { DataTableProps, DataTableTMin } from "./data-table-content";
 
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
+import { useDataTableUrl } from "./navigation";
+import { readTableOrder, toggleTableOrder } from "./url-state";
 
 export function OrderTableHeadDataTable<T extends DataTableTMin>({
   id,
   children,
   order: { defaultOrder },
-}: Pick<React.ComponentProps<typeof DataTable<T>>, "order"> & {
+}: Pick<DataTableProps<T>, "order"> & {
   children: React.ReactNode;
   id: keyof T;
 }) {
-  const [isPending, startTransition] = React.useTransition();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const { push } = useRouter();
-
-  const currentOrderBy =
-    searchParams.get("orderBy") ?? defaultOrder.column.toString();
-  const currentOrder = searchParams.get("order") ?? defaultOrder.order;
-
-  const isActive = currentOrderBy === id.toString();
-  const nextOrder = isActive && currentOrder === "asc" ? "desc" : "asc";
+  const { isPending, navigate, searchParams } = useDataTableUrl();
+  const column = id.toString();
+  const fallback = {
+    column: defaultOrder.column.toString(),
+    order: defaultOrder.order,
+  };
+  const current = readTableOrder(searchParams, fallback);
+  const isActive = current.column === column;
 
   let icon: React.ReactNode;
   if (isPending) {
     icon = <Loader small />;
   } else if (isActive) {
-    icon = currentOrder === "asc" ? <ArrowUp /> : <ArrowDown />;
+    icon = current.order === "asc" ? <ArrowUp /> : <ArrowDown />;
   } else {
     icon = <ChevronsUpDown />;
   }
@@ -44,14 +40,9 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
     <Button
       className="[&_svg]:text-muted-foreground -ml-2 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 [&_svg]:size-4 [&_svg]:shrink-0"
       onClick={() => {
-        startTransition(() => {
-          const params = new URLSearchParams(searchParams.toString());
-          params.set("orderBy", id.toString());
-          params.set("order", nextOrder);
-          push(`${pathname}?${params.toString()}`, {
-            scroll: false,
-          });
-        });
+        navigate(
+          toggleTableOrder(searchParams, { column, defaultOrder: fallback }),
+        );
       }}
       size="sm"
       variant="ghost"

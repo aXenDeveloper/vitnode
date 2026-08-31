@@ -4,65 +4,54 @@ packages:
   - plugins/*
 
 allowBuilds:
-  '@parcel/watcher': true
-  '@swc/core': true
+  "@parcel/watcher": true
+  "@swc/core": true
   esbuild: true
   msw: true
   sharp: true
+  unrs-resolver: true
 
 ignoredBuiltDependencies:
-  - '@swc/core'
+  - "@swc/core"
   - esbuild
   - sharp
 
 minimumReleaseAgeExclude:
-  - '@base-ui/react@1.5.0'
-  - '@base-ui/utils@0.2.9'
-  - '@tanstack/query-core@5.100.11'
-  - '@tanstack/react-query@5.100.11'
-  - '@tiptap/core@3.23.5'
-  - '@tiptap/extension-blockquote@3.23.5'
-  - '@tiptap/extension-bold@3.23.5'
-  - '@tiptap/extension-bubble-menu@3.23.5'
-  - '@tiptap/extension-bullet-list@3.23.5'
-  - '@tiptap/extension-code-block@3.23.5'
-  - '@tiptap/extension-code@3.23.5'
-  - '@tiptap/extension-document@3.23.5'
-  - '@tiptap/extension-dropcursor@3.23.5'
-  - '@tiptap/extension-floating-menu@3.23.5'
-  - '@tiptap/extension-gapcursor@3.23.5'
-  - '@tiptap/extension-hard-break@3.23.5'
-  - '@tiptap/extension-heading@3.23.5'
-  - '@tiptap/extension-horizontal-rule@3.23.5'
-  - '@tiptap/extension-italic@3.23.5'
-  - '@tiptap/extension-link@3.23.5'
-  - '@tiptap/extension-list-item@3.23.5'
-  - '@tiptap/extension-list-keymap@3.23.5'
-  - '@tiptap/extension-list@3.23.5'
-  - '@tiptap/extension-ordered-list@3.23.5'
-  - '@tiptap/extension-paragraph@3.23.5'
-  - '@tiptap/extension-strike@3.23.5'
-  - '@tiptap/extension-text-align@3.23.5'
-  - '@tiptap/extension-text@3.23.5'
-  - '@tiptap/extension-underline@3.23.5'
-  - '@tiptap/extensions@3.23.5'
-  - '@tiptap/pm@3.23.5'
-  - '@tiptap/react@3.23.5'
-  - '@tiptap/starter-kit@3.23.5'
+  - "@base-ui/react@1.5.0"
+  - "@base-ui/utils@0.2.9"
+  - "@tanstack/query-core@5.100.11"
+  - "@tanstack/react-query@5.100.11"
+  - "@tiptap/core@3.23.5"
+  - "@tiptap/extension-blockquote@3.23.5"
+  - "@tiptap/extension-bold@3.23.5"
+  - "@tiptap/extension-bubble-menu@3.23.5"
+  - "@tiptap/extension-bullet-list@3.23.5"
+  - "@tiptap/extension-code-block@3.23.5"
+  - "@tiptap/extension-code@3.23.5"
+  - "@tiptap/extension-document@3.23.5"
+  - "@tiptap/extension-dropcursor@3.23.5"
+  - "@tiptap/extension-floating-menu@3.23.5"
+  - "@tiptap/extension-gapcursor@3.23.5"
+  - "@tiptap/extension-hard-break@3.23.5"
+  - "@tiptap/extension-heading@3.23.5"
+  - "@tiptap/extension-horizontal-rule@3.23.5"
+  - "@tiptap/extension-italic@3.23.5"
+  - "@tiptap/extension-link@3.23.5"
+  - "@tiptap/extension-list-item@3.23.5"
+  - "@tiptap/extension-list-keymap@3.23.5"
+  - "@tiptap/extension-list@3.23.5"
+  - "@tiptap/extension-ordered-list@3.23.5"
+  - "@tiptap/extension-paragraph@3.23.5"
+  - "@tiptap/extension-strike@3.23.5"
+  - "@tiptap/extension-text-align@3.23.5"
+  - "@tiptap/extension-text@3.23.5"
+  - "@tiptap/extension-underline@3.23.5"
+  - "@tiptap/extensions@3.23.5"
+  - "@tiptap/pm@3.23.5"
+  - "@tiptap/react@3.23.5"
+  - "@tiptap/starter-kit@3.23.5"
   - hono@4.12.21
   - react-email@6.1.5
   - tsx@4.22.3
-  - '@next/env@16.3.0-preview.9'
-  - '@next/swc-darwin-arm64@16.3.0-preview.9'
-  - '@next/swc-darwin-x64@16.3.0-preview.9'
-  - '@next/swc-linux-arm64-gnu@16.3.0-preview.9'
-  - '@next/swc-linux-arm64-musl@16.3.0-preview.9'
-  - '@next/swc-linux-x64-gnu@16.3.0-preview.9'
-  - '@next/swc-linux-x64-musl@16.3.0-preview.9'
-  - '@next/swc-win32-arm64-msvc@16.3.0-preview.9'
-  - '@next/swc-win32-x64-msvc@16.3.0-preview.9'
-  - next@16.3.0-preview.9
   - icu-minify@4.13.7
-  - next-intl-swc-plugin-extractor@4.13.7
-  - next-intl@4.13.7
   - use-intl@4.13.7

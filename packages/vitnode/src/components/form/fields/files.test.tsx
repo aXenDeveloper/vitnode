@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 import React from "react";
 import {
   type FieldValues,
@@ -8,6 +7,7 @@ import {
   useForm,
   type UseFormReturn,
 } from "react-hook-form";
+import { IntlProvider } from "use-intl";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { FormField } from "@/components/ui/form";
@@ -98,7 +98,7 @@ const field = (
     );
 
     return (
-      <NextIntlClientProvider locale="en" messages={messages}>
+      <IntlProvider locale="en" messages={messages}>
         <QueryClientProvider client={client}>
           <FormProvider {...form}>
             <FormField
@@ -141,7 +141,7 @@ const field = (
             />
           </FormProvider>
         </QueryClientProvider>
-      </NextIntlClientProvider>
+      </IntlProvider>
     );
   };
 

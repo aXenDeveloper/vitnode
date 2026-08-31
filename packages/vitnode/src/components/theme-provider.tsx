@@ -1,12 +1,11 @@
 "use client";
 
-import { useServerInsertedHTML } from "next/navigation";
 import React from "react";
 
 const MEDIA = "(prefers-color-scheme: dark)";
 const colorSchemes = ["light", "dark"];
 
-type Attribute = "class" | `data-${string}`;
+export type Attribute = "class" | `data-${string}`;
 
 export interface ThemeProviderProps {
   attribute?: Attribute | Attribute[];
@@ -16,6 +15,7 @@ export interface ThemeProviderProps {
   enableColorScheme?: boolean;
   enableSystem?: boolean;
   forcedTheme?: string;
+  /** Read by {@link ThemeScript}, which is what renders a `<script>`. */
   nonce?: string;
   storageKey?: string;
   themes?: string[];
@@ -77,61 +77,6 @@ const getStoredTheme = (
   return stored ?? fallback;
 };
 
-const noFlashScript = (
-  attribute: Attribute | Attribute[],
-  storageKey: string,
-  defaultTheme: string,
-  forcedTheme: string | undefined,
-  themes: string[],
-  value: Record<string, string> | undefined,
-  enableSystem: boolean,
-  enableColorScheme: boolean,
-) => {
-  const el = document.documentElement;
-  const systemThemes = ["light", "dark"];
-
-  const setColorScheme = (theme: string) => {
-    if (enableColorScheme && systemThemes.includes(theme)) {
-      el.style.colorScheme = theme;
-    }
-  };
-
-  const updateDOM = (theme: string) => {
-    const attributes = Array.isArray(attribute) ? attribute : [attribute];
-    attributes.forEach(attr => {
-      const isClass = attr === "class";
-      const classes =
-        isClass && value ? themes.map(t => value[t] ?? t) : themes;
-      if (isClass) {
-        el.classList.remove(...classes);
-        el.classList.add(value?.[theme] ?? theme);
-      } else {
-        el.setAttribute(attr, theme);
-      }
-    });
-    setColorScheme(theme);
-  };
-
-  if (forcedTheme) {
-    updateDOM(forcedTheme);
-
-    return;
-  }
-
-  try {
-    const stored = localStorage.getItem(storageKey) ?? defaultTheme;
-    const isSystem = enableSystem && stored === "system";
-    const resolved = isSystem
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : (value?.[stored] ?? stored);
-    updateDOM(resolved);
-  } catch {
-    // ignore
-  }
-};
-
 const disableTransitions = (): (() => void) => {
   const css = document.createElement("style");
   css.appendChild(
@@ -151,6 +96,16 @@ const disableTransitions = (): (() => void) => {
   };
 };
 
+/**
+ * The theme, as React state: what it is set to, what that resolves to once the
+ * system preference is known, and the class or attribute that puts it on
+ * `<html>`.
+ *
+ * Framework-free - it is mounted by the Next.js app and the TanStack Start app
+ * alike. The one piece that is not React, the script that paints the theme
+ * before the first frame, lives in `theme-script.tsx` and is rendered by whatever
+ * owns the document.
+ */
 export const ThemeProvider = ({
   attribute = "class",
   children,
@@ -158,7 +113,6 @@ export const ThemeProvider = ({
   enableColorScheme = true,
   enableSystem = true,
   forcedTheme,
-  nonce,
   storageKey = "theme",
   themes = ["light", "dark"],
   value,
@@ -238,27 +192,6 @@ export const ThemeProvider = ({
       window.removeEventListener("storage", onStorage);
     };
   }, [defaultTheme, storageKey]);
-
-  useServerInsertedHTML(() => (
-    <script
-      // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-      dangerouslySetInnerHTML={{
-        __html: `(${noFlashScript.toString()})(${JSON.stringify([
-          attribute,
-          storageKey,
-          defaultTheme,
-          forcedTheme,
-          themes,
-          value,
-          enableSystem,
-          enableColorScheme,
-        ]).slice(1, -1)})`,
-      }}
-      key="vitnode-theme-script"
-      nonce={typeof window === "undefined" ? nonce : ""}
-      suppressHydrationWarning
-    />
-  ));
 
   const contextValue = React.useMemo<UseThemeReturn>(
     () => ({ resolvedTheme, setTheme, systemTheme, theme, themes }),

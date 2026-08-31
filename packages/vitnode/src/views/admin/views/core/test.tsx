@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Editor } from "@/components/ui/editor";
 import { EditorContent } from "@/components/ui/editor-content";
 import { InputGroupAddon, InputGroupText } from "@/components/ui/input-group";
+import { ADMIN_QUERY_ROOT } from "@/views/admin/table/query";
 
 export const TestView = () => {
   const formSchema = z.object({
@@ -252,6 +253,9 @@ export const TestView = () => {
                   }}
                   id="test-combobox"
                   label="Type"
+                  // Required alongside `fetchData`, and under the AdminCP root
+                  // so a sign-out drops it with everything else the panel holds.
+                  queryKey={[...ADMIN_QUERY_ROOT, "test", "combobox"]}
                 />
               ),
             },

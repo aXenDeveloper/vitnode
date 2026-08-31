@@ -1,12 +1,11 @@
 import { SearchXIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 import type {
   AlignDataTable,
   ColumnDef,
-  DataTable,
+  DataTableProps,
   DataTableTMin,
-} from "./data-table";
+} from "./data-table-content";
 
 import { cn } from "../../lib/utils";
 import {
@@ -18,6 +17,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { FiltersDataTable } from "./filters";
+import { NoResultsDataTable } from "./no-results";
 import { OrderTableHeadDataTable } from "./order-table-head";
 import { PaginationDataTable } from "./pagination";
 import { SearchDataTable } from "./search";
@@ -46,8 +46,7 @@ export function ContentDataTable<T extends DataTableTMin>({
   searchPlaceholder,
   filters,
   ...props
-}: React.ComponentProps<typeof DataTable<T>>) {
-  const t = useTranslations("core.global");
+}: DataTableProps<T>) {
   const hasToolbar = Boolean(search) || Boolean(filters?.length);
   const allColumns: ColumnDef<T>[] = bulkActions
     ? [
@@ -149,12 +148,10 @@ export function ContentDataTable<T extends DataTableTMin>({
                     {customNoResults?.icon ?? <SearchXIcon />}
 
                     <div className="space-y-2 text-center">
-                      <h3 className="text-xl font-semibold tracking-tight">
-                        {customNoResults?.title ?? t("no_results.title")}
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {customNoResults?.description ?? t("no_results.desc")}
-                      </p>
+                      <NoResultsDataTable
+                        description={customNoResults?.description}
+                        title={customNoResults?.title}
+                      />
                       {customNoResults?.footer}
                     </div>
                   </div>

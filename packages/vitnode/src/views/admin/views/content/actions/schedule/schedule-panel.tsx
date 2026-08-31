@@ -1,13 +1,14 @@
 // No "use client": reached only from `schedule-action`, which is a client entry.
+import { useQuery } from "@tanstack/react-query";
 import {
   CalendarClockIcon,
   CheckIcon,
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -24,22 +25,37 @@ import { Loader } from "@/components/ui/loader";
 import { contentScheduleTimingError } from "@/content/schedules";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
-import {
-  cancelContentScheduleAction,
-  listContentSchedulesAction,
-  scheduleContentAction,
-} from "../mutation-api.server";
+import { contentSchedulesQueryOptions } from "../editorial-query";
+import { useContentEditorialTransport } from "../editorial-transport";
 
+/**
+ * One record's booked publications, and the form that books another.
+ *
+ * A schedule performs one of the two publication transitions later; it is not a
+ * third lifecycle state. `contentScheduleTimingError` is the *same* rule the API
+ * enforces, applied here first so an obviously-wrong time is refused without a
+ * round trip - and the API still refuses it if this is bypassed.
+ */
 const formSchema = z.object({
   action: z.enum(["publish", "unpublish"]),
   scheduledFor: z.iso.datetime(),
 });
 
+/**
+ * One booked transition.
+ *
+ * `now` is the moment the schedule list was last read, not the moment this
+ * renders: the panel carries a form, and a clock read during render would move
+ * on every keystroke - a row silently becoming overdue while somebody is typing.
+ * React Query already holds that timestamp, so it is read from there rather than
+ * from a second copy this component would have to keep in step.
+ */
 const ScheduleRow = ({
   now,
   onCancel,
   schedule,
 }: {
+  /** When the schedule list was last read - `dataUpdatedAt`. */
   now: number;
   onCancel: (scheduleId: number) => Promise<void>;
   schedule: ContentSchedule;
@@ -125,45 +141,28 @@ export const SchedulePanel = ({
   const t = useTranslations("core.content.schedule");
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
-  const [state, setState] = React.useState<null | {
-    edges: ContentSchedule[];
-    hasCronAdapter: boolean;
-    loadedAt: number;
-  }>(null);
+  const transport = useContentEditorialTransport();
 
-  const reload = React.useCallback(async () => {
-    const result = await listContentSchedulesAction(contentTypeId, id);
+  const schedules = useQuery(
+    contentSchedulesQueryOptions({
+      contentTypeId,
+      itemId: id,
+      listSchedules: transport.listSchedules,
+    }),
+  );
 
-    setState({
-      edges: result.edges,
-      hasCronAdapter: result.hasCronAdapter,
-
-      loadedAt: Date.now(),
+  const settled = async () => {
+    await transport.settled({
+      contentTypeId,
+      itemId: id,
+      scope: "schedules",
     });
-  }, [contentTypeId, id]);
+  };
 
-  React.useEffect(() => {
-    let active = true;
+  if (schedules.isPending) return <Loader />;
 
-    void listContentSchedulesAction(contentTypeId, id).then(result => {
-      if (!active) return;
-
-      setState({
-        edges: result.edges,
-        hasCronAdapter: result.hasCronAdapter,
-
-        loadedAt: Date.now(),
-      });
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [contentTypeId, id]);
-
-  if (!state) return <Loader />;
-
-  const pending = state.edges.filter(entry => entry.status === "pending");
+  const edges = schedules.data?.edges ?? [];
+  const pending = edges.filter(entry => entry.status === "pending");
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
     const timing = contentScheduleTimingError({
@@ -185,7 +184,7 @@ export const SchedulePanel = ({
       return;
     }
 
-    const mutation = await scheduleContentAction(
+    const mutation = await transport.schedule(
       contentTypeId,
       id,
       values.action,
@@ -212,12 +211,12 @@ export const SchedulePanel = ({
     }
 
     toast.success(t("success", { name: singular }), { description: title });
-    await reload();
+    await settled();
   };
 
   return (
     <div className="flex flex-col gap-4">
-      {!state.hasCronAdapter ? (
+      {schedules.data?.hasCronAdapter === false ? (
         <Alert variant="warning">
           <TriangleAlertIcon />
           <AlertTitle>{t("no_cron.title")}</AlertTitle>
@@ -225,14 +224,14 @@ export const SchedulePanel = ({
         </Alert>
       ) : null}
 
-      {state.edges.length > 0 ? (
+      {edges.length > 0 ? (
         <ul className="flex flex-col">
-          {state.edges.map(schedule => (
+          {edges.map(schedule => (
             <ScheduleRow
               key={schedule.id}
-              now={state.loadedAt}
+              now={schedules.dataUpdatedAt}
               onCancel={async scheduleId => {
-                const mutation = await cancelContentScheduleAction(
+                const mutation = await transport.cancelSchedule(
                   contentTypeId,
                   id,
                   scheduleId,
@@ -250,7 +249,7 @@ export const SchedulePanel = ({
                 }
 
                 toast.success(t("cancelled"), { description: title });
-                await reload();
+                await settled();
               }}
               schedule={schedule}
             />

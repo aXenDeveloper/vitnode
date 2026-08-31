@@ -6,12 +6,11 @@ import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFormLayout } from "@/lib/plugin";
 
-import { usePathname, useRouter } from "@/lib/navigation";
-
-import type { TranslationRow } from "../actions/translation-api.server";
+import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
 
 import { ContentForm } from "../actions/content-form";
+import { useContentFormNavigation } from "../form/navigation";
 
 export interface ContentFormPageProps {
   backHref: string;
@@ -36,11 +35,10 @@ export const ContentFormPage = ({
   data,
   ...props
 }: ContentFormPageProps) => {
-  const { push } = useRouter();
-  const pathname = usePathname();
+  const { navigate } = useContentFormNavigation();
 
   const onCreated = (id: number) => {
-    push(
+    navigate(
       createdHrefTemplate
         ? createdHrefTemplate.replace("{id}", String(id))
         : backHref,
@@ -49,7 +47,17 @@ export const ContentFormPage = ({
 
   return (
     <ContentForm
-      key={`${pathname}#${data?.id ?? "new"}`}
+      /**
+       * What the form is editing, as a key.
+       *
+       * It was the pathname until Stage 13, which is the same fact spelled in
+       * one framework's terms: a content form page's URL *is* its content type
+       * plus its action plus its record. Spelling it from the spec instead
+       * remounts on exactly the same transitions - a different record, a
+       * different content type, create becoming edit - under a router with no
+       * `usePathname`, and without a pathname the form otherwise has no use for.
+       */
+      key={`${props.spec.contentTypeId}#${data?.id ?? "new"}`}
       {...props}
       data={data}
       onCreated={onCreated}

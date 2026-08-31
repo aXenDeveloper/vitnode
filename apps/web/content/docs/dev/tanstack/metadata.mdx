@@ -1,0 +1,91 @@
+---
+title: Metadata
+description: Give a page a title, a description and a robots directive.
+---
+
+An app route declares `head`. A plugin route declares `head` inside
+`definePluginRoute`. Both end up in the same `<head>`.
+
+## Example
+
+```tsx title="apps/web/src/routes/_main/about.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+
+import { pageHead } from "#/lib/page-head";
+
+export const Route = createFileRoute("/_main/about")({
+  head: () =>
+    pageHead({
+      title: "About",
+      description: "What VitNode is, and who builds it",
+      robots: "index, follow",
+    }),
+  component: AboutPage,
+});
+```
+
+`pageHead` is the app's own binding of `createRouteHead(metadata)` from
+`@vitnode/core/tanstack/metadata`. It exists so the site's name is written once:
+the tab reads `About - VitNode`, and every page in the application composes its
+title the same way.
+
+And the plugin version, which is the same three fields:
+
+```tsx title="plugins/my-plugin/src/routes/post-page.tsx"
+export const route = definePluginRoute({
+  load: async ({ params }) => await fetchPost(params.slug),
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+    description: loaderData?.description,
+  }),
+});
+```
+
+A plugin returns the fields; the host formats the final title. That is why a
+plugin page's tab reads `My post - VitNode` without the plugin knowing the site
+is called VitNode.
+
+## Reading it off the loader
+
+`head` runs once *before* the loader has resolved, so `loaderData` is optional
+there. Use `?.`, or spread it:
+
+```ts
+head: ({ loaderData }) => pageHead({ robots: "index, follow", ...loaderData }),
+```
+
+Spreading `undefined` is a no-op, so one line covers both passes. Extra keys the
+loader returns are ignored.
+
+<Callout type="warn" title="`head` goes after `loader`">
+  `loaderData`'s type is inferred from `loader` in the same object literal, and
+  TypeScript reads members in order. Put `head` first and `loaderData` is
+  `never`.
+</Callout>
+
+## When to use it
+
+- **`robots` is stated, not assumed.** Nothing emits a directive on your behalf.
+  Declare it once on a layout route and every page below inherits it - the
+  router merges `head` down the matched routes and prefers the deepest.
+- **One lookup, not two.** Read the title off `loaderData` rather than fetching
+  again in `head`, so the `<title>` and the `<h1>` are the same string by
+  construction.
+- **Keep `head` light.** It is evaluated on every page of the application, not
+  only this one, so import your two strings from a small module rather than from
+  the page component.
+
+## Next
+
+<Cards>
+  <Card
+    title="Data loading"
+    description="Where loaderData comes from"
+    href="/docs/dev/tanstack/data-loading"
+  />
+  <Card
+    title="Content Engine SEO"
+    description="Canonical URLs and indexing for content"
+    href="/docs/dev/content-engine/content-delivery-and-seo"
+  />
+</Cards>

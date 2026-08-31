@@ -10,7 +10,7 @@
 
 # 🚀 VitNode
 
-**VitNode** is an extendable framework for building modern applications with Next.js and Hono.js. It provides a structured, plugin-based architecture that makes development faster and less complex.
+**VitNode** is an extendable framework for building modern applications with TanStack Start and Hono.js. It provides a structured, plugin-based architecture that makes development faster and less complex.
 
 > [!NOTE]
 > 🚧 You're viewing the `canary` branch (VitNode 2.0), which is under active development and may contain unstable code. For the stable version, check the `v1` branch.
@@ -61,7 +61,7 @@
 - `pnpm start` - Start production server
 - `pnpm lint` - Check code quality
 - `pnpm lint:fix` - Fix code quality issues
-- `pnpm db:migrate` - Run database migrations
+- `pnpm db:migrate` - Run database migrations by hand (`pnpm dev` already does this for you)
 - `pnpm dev:email` - Start email development server
 
 ## ✨ What's New in VitNode 2.0

@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 
 import { and, eq, gt, or } from "drizzle-orm";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 
+import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
-import { CONFIG } from "@/lib/config";
 
 import { DeviceModel } from "./device";
 import {
@@ -84,15 +84,16 @@ export class SessionAdminModel {
         deviceId: device.id,
       });
 
-    setCookie(this.c, this.c.get("core").authorization.adminCookieName, token, {
-      httpOnly: true,
-      secure: this.c.get("core").authorization.cookieSecure,
-      path: "/",
-      expires: new Date(
-        Date.now() + this.c.get("core").authorization.adminCookieExpires,
-      ),
-      domain: CONFIG.web.hostname,
-    });
+    setAuthCookie(
+      this.c,
+      this.c.get("core").authorization.adminCookieName,
+      token,
+      {
+        expires: new Date(
+          Date.now() + this.c.get("core").authorization.adminCookieExpires,
+        ),
+      },
+    );
 
     return { token };
   }
@@ -118,10 +119,7 @@ export class SessionAdminModel {
       .get("cache")
       .deleteSystem(adminSessionCacheKey(hashedToken, device.id));
 
-    deleteCookie(this.c, this.c.get("core").authorization.adminCookieName, {
-      path: "/",
-      domain: CONFIG.web.hostname,
-    });
+    deleteAuthCookie(this.c, this.c.get("core").authorization.adminCookieName);
   }
 
   async getUser() {
@@ -168,10 +166,10 @@ export class SessionAdminModel {
       .limit(1);
 
     if (!session) {
-      deleteCookie(this.c, this.c.get("core").authorization.adminCookieName, {
-        path: "/",
-        domain: CONFIG.web.hostname,
-      });
+      deleteAuthCookie(
+        this.c,
+        this.c.get("core").authorization.adminCookieName,
+      );
 
       return null;
     }

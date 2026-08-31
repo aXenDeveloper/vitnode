@@ -14,10 +14,7 @@ import color from "picocolors";
 
 import type { CreateCliReturn } from "../questions.js";
 
-import {
-  generateMigrationsVitnode,
-  initFilesVitnode,
-} from "../helpers/init-vitnode.js";
+import { generateMigrationsVitnode } from "../helpers/init-vitnode.js";
 import { installDependencies } from "../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../helpers/is-folder-empty.js";
 import { createPackageJSON } from "./create-package-json.js";
@@ -78,19 +75,33 @@ export const createVitNode = async ({
     recursive: true,
   });
   if (mode === "singleApp") {
-    await Promise.all([
-      cp(join(templatePath, "root"), monorepo ? monorepoStructure.web : root, {
-        recursive: true,
-      }),
-      cp(
-        join(templatePath, "api-single-app"),
-        monorepo ? monorepoStructure.web : root,
-        {
-          recursive: true,
-        },
-      ),
-    ]);
+    const destination = monorepo ? monorepoStructure.web : root;
+
+    /**
+     * `root` first, then `api-single-app` over the top - sequentially, because
+     * they land in the *same* directory and the order is what decides the
+     * bytes.
+     *
+     * It was one `Promise.all`, which is a race whenever the two trees share a
+     * path. They shared two: `.gitignore_template` and `.env.example`. The
+     * overlay's copies were the pre-TanStack ones - ignoring `/.next/` and
+     * `next-env.d.ts` while missing `.output`, `.nitro` and the generated
+     * `src/*.gen.ts`, and dropping `NEXT_PUBLIC_API_URL` and `CRON_SECRET` from
+     * the environment - so which of the two a new project got depended on which
+     * `cp` finished last. Both are deleted; `root` owns every generic host file
+     * and `api-single-app` is a true overlay of API-specific additions.
+     *
+     * The order stays explicit anyway. There is nothing overlapping left to
+     * decide, but "the overlay is applied over the base" is the contract, and it
+     * is the one an author adding a file to either tree needs to be able to
+     * rely on.
+     */
+    await cp(join(templatePath, "root"), destination, { recursive: true });
+    await cp(join(templatePath, "api-single-app"), destination, {
+      recursive: true,
+    });
   } else if (mode === "apiMonorepo") {
+    // Two different destinations, so these genuinely are independent.
     await Promise.all([
       cp(join(templatePath, "root"), monorepoStructure.web, {
         recursive: true,
@@ -217,24 +228,26 @@ export const createVitNode = async ({
     await writeFile(dockerComposePath, updatedContent);
   }
 
+  // `src/styles.css` points Tailwind at `@vitnode/core`'s compiled components
+  // with a path relative to itself. npm installs into the *root* `node_modules`
+  // of a workspace rather than beside each app, so in that one layout the
+  // relative path has to climb further. pnpm links the package into the app's
+  // own `node_modules`, where the committed path is already correct.
   spinner.text = "Updating VitNode paths...";
   if (
     (mode === "apiMonorepo" || monorepo) &&
     packageManager === "npm" &&
     mode !== "onlyApi"
   ) {
-    const globalCssPath = join(
-      monorepoStructure.web,
-      "src",
-      "app",
-      "global.css",
+    const stylesPath = join(monorepoStructure.web, "src", "styles.css");
+    const stylesContent = await readFile(stylesPath, "utf-8");
+    await writeFile(
+      stylesPath,
+      stylesContent.replaceAll(
+        '@source "../node_modules/@vitnode/',
+        '@source "../../../node_modules/@vitnode/',
+      ),
     );
-    const globalCssContent = await readFile(globalCssPath, "utf-8");
-    const updatedGlobalCssContent = globalCssContent.replaceAll(
-      '@source "../../node_modules/@vitnode/',
-      '@source "../../../../node_modules/@vitnode/',
-    );
-    await writeFile(globalCssPath, updatedGlobalCssContent);
   }
 
   if (mode === "apiMonorepo") {
@@ -251,29 +264,6 @@ export const createVitNode = async ({
       packageManager,
       cwd: root,
     });
-
-    spinner.text = "Initializing VitNode files...";
-    if (mode === "apiMonorepo") {
-      initFilesVitnode({
-        packageManager,
-        cwd: monorepoStructure.web,
-        flag: "web",
-      });
-      initFilesVitnode({
-        packageManager,
-        cwd: monorepoStructure.api,
-        flag: "api",
-      });
-      initFilesVitnode({
-        packageManager,
-        cwd: root,
-      });
-    } else {
-      initFilesVitnode({
-        packageManager,
-        cwd: root,
-      });
-    }
 
     spinner.text = "Preparing README...";
     await copyFile(join(templatePath, "README.md"), join(root, "README.md"));
@@ -300,10 +290,37 @@ export const createVitNode = async ({
     } else {
       migrationsCwd = root;
     }
-    generateMigrationsVitnode({
-      packageManager,
-      cwd: migrationsCwd,
-    });
+    /**
+     * Awaited, and a failure stops the CLI rather than being reported as a
+     * success.
+     *
+     * It used to be called without `await` around a `spawn` nobody listened to,
+     * two lines above `spinner.succeed("Success! Created …")` - so the message
+     * printed while `drizzle-kit` was still running, a non-zero exit was never
+     * seen, and the process could exit leaving the child writing into a
+     * directory the user had been told was finished.
+     *
+     * This is a convenience: it *generates* migrations, it does not apply them,
+     * and the generated `dev` script runs `vitnode db:prepare` before any
+     * runtime starts - so a project whose migrations were not generated here
+     * still migrates itself on first `dev`. The failure is surfaced anyway,
+     * because the alternative is a CLI that says "Success!" about work it knows
+     * did not happen.
+     */
+    try {
+      await generateMigrationsVitnode({
+        packageManager,
+        cwd: migrationsCwd,
+      });
+    } catch (error) {
+      spinner.fail(
+        `${color.red("Error!")} Created ${color.cyan(appName)}, but could not generate its migrations.`,
+      );
+      console.error(
+        color.red(error instanceof Error ? error.message : String(error)),
+      );
+      process.exit(1);
+    }
   }
 
   spinner.succeed(

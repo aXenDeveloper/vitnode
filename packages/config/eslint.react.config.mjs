@@ -43,24 +43,24 @@ export default [
       "no-restricted-imports": [
         "error",
         {
-          name: "next/link",
-          message: "Please import from `vitnode-frontend/navigation` instead.",
-        },
-        {
-          name: "next/navigation",
-          importNames: [
-            "redirect",
-            "permanentRedirect",
-            "useRouter",
-            "usePathname",
+          patterns: [
+            {
+              // VitNode runs on TanStack Start. Next.js is not a dependency of
+              // any workspace package, so these resolve to nothing - the ban is
+              // here to fail the lint with an explanation rather than a
+              // "cannot find module".
+              group: ["next", "next/*", "next/**"],
+              message:
+                "VitNode no longer runs on Next.js. Use `@vitnode/core/tanstack/*` for routing and navigation.",
+            },
+            {
+              // `use-intl` is the framework-neutral half of next-intl and is a
+              // direct dependency of @vitnode/core. `next-intl` re-exports it
+              // plus Next server bindings that no longer have a runtime.
+              group: ["next-intl", "next-intl/*"],
+              message: "Import from `use-intl` instead of `next-intl`.",
+            },
           ],
-          message: "Please import from `vitnode-frontend/navigation` instead.",
-        },
-        {
-          name: "next/router",
-          importNames: ["useRouter"],
-          message:
-            "This import is from Page router. Please import from `vitnode-frontend/navigation` instead.",
         },
       ],
     },

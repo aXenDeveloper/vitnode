@@ -2,7 +2,6 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { useTranslations } from "next-intl";
 import React from "react";
 import {
   Controller,
@@ -14,6 +13,7 @@ import {
   useFormContext,
   useFormState,
 } from "react-hook-form";
+import { useTranslations } from "use-intl";
 
 import { cn } from "@/lib/utils";
 

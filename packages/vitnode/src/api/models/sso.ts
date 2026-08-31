@@ -1,10 +1,11 @@
 import type { Context } from "hono";
 
 import { and, eq } from "drizzle-orm";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import crypto from "node:crypto";
 
+import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { core_users, core_users_sso } from "@/database/users";
 import { CONFIG } from "@/lib/config";
 import { removeSpecialCharacters } from "@/lib/special-characters";
@@ -145,16 +146,12 @@ export class SSOModel {
       });
     });
 
-    setCookie(
+    // No `expires`: the state is only good for the round trip to the provider
+    // and back, so it should not outlive the browser session.
+    setAuthCookie(
       this.c,
       `${this.c.get("core").authorization.cookieName}--state-sso`,
       encryptedState,
-      {
-        httpOnly: true,
-        secure: this.c.get("core").authorization.cookieSecure,
-        path: "/",
-        domain: CONFIG.web.hostname,
-      },
     );
 
     return state;
@@ -195,7 +192,7 @@ export class SSOModel {
       });
     }
 
-    deleteCookie(
+    deleteAuthCookie(
       this.c,
       `${this.c.get("core").authorization.cookieName}--state-sso`,
     );

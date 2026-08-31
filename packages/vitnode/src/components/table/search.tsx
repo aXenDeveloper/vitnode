@@ -1,12 +1,9 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
-
-import { usePathname, useRouter } from "@/lib/navigation";
+import { useTranslations } from "use-intl";
 
 import {
   InputGroup,
@@ -14,6 +11,8 @@ import {
   InputGroupInput,
 } from "../ui/input-group";
 import { Spinner } from "../ui/spinner";
+import { useDataTableUrl } from "./navigation";
+import { readTableSearch, withTableSearch } from "./url-state";
 
 export function SearchDataTable({
   searchPlaceholder,
@@ -21,13 +20,10 @@ export function SearchDataTable({
   searchPlaceholder?: string;
 }) {
   const t = useTranslations("core.global");
-  const searchParams = useSearchParams();
-  const searchValue = searchParams.get("search") ?? "";
+  const { isPending, navigate, searchParams } = useDataTableUrl();
+  const searchValue = readTableSearch(searchParams);
   const [value, setValue] = React.useState(searchValue);
   const [prevSearchValue, setPrevSearchValue] = React.useState(searchValue);
-  const [isPending, startTransition] = React.useTransition();
-  const pathname = usePathname();
-  const { push } = useRouter();
 
   if (searchValue !== prevSearchValue) {
     setPrevSearchValue(searchValue);
@@ -35,17 +31,7 @@ export function SearchDataTable({
   }
 
   const handleChangeSearch = useDebouncedCallback((value: string) => {
-    startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-
-      if (value.length >= 3) {
-        params.set("search", value);
-      } else {
-        params.delete("search");
-      }
-
-      push(`${pathname}?${params.toString()}`, { scroll: false });
-    });
+    navigate(withTableSearch(searchParams, value));
   }, 500);
 
   return (

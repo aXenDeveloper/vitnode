@@ -1,4 +1,4 @@
-import type { NavAdminParent } from "../sidebar/nav/get-admin-nav";
+import type { NavAdminParent } from "../sidebar/nav/nav-model";
 
 import { normalizeUrl } from "../normalize-url";
 

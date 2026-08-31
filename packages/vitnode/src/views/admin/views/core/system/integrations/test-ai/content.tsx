@@ -1,8 +1,8 @@
 "use client";
 
 import { LoaderCircleIcon, TriangleAlertIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
 

@@ -10,7 +10,7 @@ import {
   CONTENT_SYSTEM_FIELDS,
 } from "./const";
 import { ContentEngineError } from "./errors";
-import { clampWithFingerprint } from "./fingerprint";
+import { clampWithFingerprint } from "./hash";
 
 /** `createdAt` -> `created_at`, matching the SQL identifiers in migrations. */
 export const toSnakeCase = (value: string): string =>

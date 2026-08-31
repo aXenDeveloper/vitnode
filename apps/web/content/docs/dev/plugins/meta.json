@@ -1,0 +1,15 @@
+{
+  "title": "Plugins",
+  "description": "Make plugins and APIs",
+  "icon": "Plug",
+  "defaultOpen": true,
+  "pages": [
+    "create",
+    "route-manifest",
+    "admin-page",
+    "dashboard-widgets",
+    "breadcrumbs",
+    "api",
+    "..."
+  ]
+}

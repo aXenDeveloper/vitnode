@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
@@ -84,6 +84,9 @@ export const ContentField = ({
   ...rest
 }: ContentFieldProps) => {
   const t = useTranslations("core.content.form");
+  // A picker's labels are read in the administrator's language - see
+  // `contentOptionsQueryKey` for why that has to be part of the cache key.
+  const locale = useLocale();
   const multiLang = spec.localized === true;
   const isOptional = !spec.required && (spec.minItems ?? 0) === 0;
   const props = {
@@ -193,7 +196,7 @@ export const ContentField = ({
           id={`content-${spec.name}`}
           label={spec.label}
           placeholder={t("relation.placeholder")}
-          queryKey={contentOptionsQueryKey(spec)}
+          queryKey={contentOptionsQueryKey(spec, locale)}
           renderItem={item => <ContentOptionSwatch option={item} />}
           searchPlaceholder={t("relation.search_placeholder")}
           showClear={spec.nullable}

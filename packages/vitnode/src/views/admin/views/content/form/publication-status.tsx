@@ -1,10 +1,11 @@
 // No "use client": reached only from `content-form` / a layout, both of which
 // are already inside a client entry.
 import { CircleCheckIcon, FileClockIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
+import { isContentPublished } from "@/content/publication";
 
 export const ContentFormPublication = ({
   publishedAt,
@@ -14,7 +15,7 @@ export const ContentFormPublication = ({
   status: unknown;
 }) => {
   const t = useTranslations("core.content.status");
-  const published = status === "published";
+  const published = isContentPublished(status);
   const date = typeof publishedAt === "string" ? new Date(publishedAt) : null;
 
   return (

@@ -1,15 +1,17 @@
 // No "use client": reached only from a layout, which is reached only from
 // `content-form`, which is already a client entry.
 import { EyeOffIcon, SaveIcon, SendIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { AutoFormSubmitButton } from "@/components/form/auto-form";
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
-import { Link } from "@/lib/navigation";
+import { contentPublicationTransition } from "@/content/publication";
 import { cn } from "@/lib/utils";
+
+import type { ContentFormLinkComponent } from "./context";
 
 import { useContentForm } from "./context";
 import { ContentFormPublication } from "./publication-status";
@@ -21,7 +23,7 @@ export const ContentFormHeader = ({
   children?: React.ReactNode;
   className?: string;
 }) => {
-  const { header, markHeaderRendered } = useContentForm();
+  const { header, LinkComponent, markHeaderRendered } = useContentForm();
 
   markHeaderRendered?.();
 
@@ -30,6 +32,7 @@ export const ContentFormHeader = ({
   return (
     <HeaderContent
       back={header.back}
+      BackLink={LinkComponent}
       className={className}
       desc={header.desc}
       h1={header.title}
@@ -80,8 +83,8 @@ const ContentFormPublicationToggle = () => {
 
   if (!enabled || !canPublish || !transition) return null;
 
-  const published = status === "published";
-  const action = published ? "unpublish" : "publish";
+  const { action, destructive: published } =
+    contentPublicationTransition(status);
   const Icon = published ? EyeOffIcon : SendIcon;
 
   return (
@@ -158,6 +161,7 @@ export const ContentFormActions = ({
   submitLabel?: React.ReactNode;
 }) => {
   const t = useTranslations("core.global");
+  const { LinkComponent } = useContentForm();
 
   return (
     <div
@@ -166,18 +170,40 @@ export const ContentFormActions = ({
     >
       {children}
       {cancelHref ? (
-        <Button
-          nativeButton={false}
-          render={<Link href={cancelHref} />}
-          variant="ghost"
-        >
+        <ContentFormCancel href={cancelHref} LinkComponent={LinkComponent}>
           {t("cancel")}
-        </Button>
+        </ContentFormCancel>
       ) : null}
       <ContentFormSubmit label={submitLabel} />
     </div>
   );
 };
+
+/**
+ * The cancel button, wearing the host's link.
+ *
+ * Its own component so the injected one arrives as a **prop**: a component read
+ * out of a hook and rendered in the same pass is a component created during
+ * render, which React is entitled to remount. `HeaderContent` takes its
+ * `BackLink` the same way, and for the same reason.
+ */
+const ContentFormCancel = ({
+  children,
+  href,
+  LinkComponent,
+}: {
+  children: React.ReactNode;
+  href: string;
+  LinkComponent: ContentFormLinkComponent;
+}) => (
+  <Button
+    nativeButton={false}
+    render={<LinkComponent href={href} />}
+    variant="ghost"
+  >
+    {children}
+  </Button>
+);
 
 export const ContentFormLayoutGrid = ({
   children,

@@ -1,10 +1,44 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * The mark, at either of its two sizes.
+ *
+ * ## `idPrefix`, and the bug it exists for
+ *
+ * Both variants paint themselves with an SVG `<linearGradient>`, which a `fill`
+ * can only reach **by id, in document scope**. Two of these on one page
+ * therefore define the same id twice, and every reference resolves to whichever
+ * came first in the document.
+ *
+ * Usually that is invisible, because the two definitions are identical. It stops
+ * being invisible the moment the *first* one is inside a `display: none` SVG:
+ * Blink will not resolve a paint server out of a subtree that is not rendered,
+ * so the reference resolves to nothing and the hexagon paints with no fill at
+ * all - a white shape on a white card.
+ *
+ * That is not hypothetical. `LogoVitNodeBrand` renders both variants and hides
+ * one per breakpoint, and the front page renders a third mark in the centre of
+ * its animated beam. On a desktop viewport the header's hidden compact mark came
+ * first, and the beam's centre - the same id, the same gradient - went blank.
+ *
+ * So the ids are a prefix a caller may replace. The default keeps the ids the
+ * design tool exported, which is what every existing caller renders today; the
+ * only code that passes one is {@link LogoVitNodeBrand}, which has to, because
+ * it is the component that puts two of these in one document.
+ *
+ * A `useId()` would be the reflex here and it is not available: this component
+ * is rendered by React Server Components in the Next.js app - the AdminCP
+ * sidebar and the admin sign-in view are both server-rendered - and a hook there
+ * throws. A prop works in both worlds and needs no client boundary.
+ */
 export const LogoVitNode = ({
   className,
+  idPrefix = "vitnode-logo",
   small,
   ...props
 }: React.ComponentProps<"svg"> & {
+  /** Namespace for this instance's gradient ids. See the note above. */
+  idPrefix?: string;
   small?: boolean;
 }) => {
   if (small)
@@ -25,13 +59,13 @@ export const LogoVitNode = ({
         <path
           clipRule="evenodd"
           d="M168.101 5.19482C180.105 -1.73161 194.895 -1.73161 206.899 5.19482L336.101 79.745C348.105 86.6714 355.5 99.472 355.5 113.325V262.425C355.5 276.278 348.105 289.079 336.101 296.005L206.899 370.555C194.895 377.482 180.105 377.482 168.101 370.555L38.899 296.005C26.8948 289.079 19.5 276.278 19.5 262.425V113.325C19.5 99.472 26.8948 86.6714 38.899 79.745L168.101 5.19482ZM109.649 106.082L187.5 61.1613L265.351 106.082L187.5 241.071L109.649 106.082ZM77.6969 148.394V251.232L166.585 302.521L77.6969 148.394ZM208.415 302.521L297.303 251.232V148.394L208.415 302.521Z"
-          fill="url(#paint0_linear_123_23)"
+          fill={`url(#${idPrefix}-mark)`}
           fillRule="evenodd"
         />
         <defs>
           <linearGradient
             gradientUnits="userSpaceOnUse"
-            id="paint0_linear_123_23"
+            id={`${idPrefix}-mark`}
             x1="187.5"
             x2="187.5"
             y1="0"
@@ -61,7 +95,7 @@ export const LogoVitNode = ({
         />
         <path
           d="M349.338 32.044L305.016 157H266.924L222.602 32.044H254.998L285.97 126.384L317.12 32.044H349.338ZM392.497 32.044V157H362.059V32.044H392.497ZM504.446 32.044V56.43H471.338V157H440.9V56.43H407.792V32.044H504.446Z"
-          fill="url(#paint0_linear_205_42)"
+          fill={`url(#${idPrefix}-wordmark)`}
         />
       </g>
       <path
@@ -71,13 +105,13 @@ export const LogoVitNode = ({
       <path
         clipRule="evenodd"
         d="M85.1219 2.63204C91.2005 -0.877348 98.6896 -0.877348 104.768 2.63204L170.193 40.4041C176.271 43.9135 180.016 50.3991 180.016 57.4179V132.962C180.016 139.981 176.271 146.466 170.193 149.976L104.768 187.748C98.6896 191.257 91.2005 191.257 85.1219 187.748L19.6974 149.976C13.6188 146.466 9.87427 139.981 9.87427 132.962V57.4179C9.87427 50.3991 13.6188 43.9135 19.6974 40.4041L85.1219 2.63204ZM55.5232 53.7481L94.945 30.9884L134.367 53.7481L94.945 122.143L55.5232 53.7481ZM39.3436 75.1861V127.291L84.3544 153.277L39.3436 75.1861ZM105.536 153.277L150.546 127.291V75.1861L105.536 153.277Z"
-        fill="url(#paint1_linear_205_42)"
+        fill={`url(#${idPrefix}-hexagon)`}
         fillRule="evenodd"
       />
       <defs>
         <linearGradient
           gradientUnits="userSpaceOnUse"
-          id="paint0_linear_205_42"
+          id={`${idPrefix}-wordmark`}
           x1="381.603"
           x2="381.603"
           y1="6"
@@ -88,7 +122,7 @@ export const LogoVitNode = ({
         </linearGradient>
         <linearGradient
           gradientUnits="userSpaceOnUse"
-          id="paint1_linear_205_42"
+          id={`${idPrefix}-hexagon`}
           x1="94.945"
           x2="94.945"
           y1="0"
@@ -101,3 +135,42 @@ export const LogoVitNode = ({
     </svg>
   );
 };
+
+/**
+ * VitNode's mark, at whichever of its two sizes the viewport has room for.
+ *
+ * One component rather than a `className` every header picks for itself, because
+ * the choice is not a size - it is *which mark*. The wordmark is 136px wide and
+ * the bar it sits in also holds the language switcher, the theme switcher and
+ * the visitor's avatar; below `sm` those leave it about 110px, so the wordmark
+ * either overflows the bar or has to be hidden, and hiding it is the one answer
+ * that is not allowed - a site with no mark on a phone reads as a broken header
+ * rather than a compact one. The hexagon says the same thing in 32px.
+ *
+ * ## Both are in the DOM, and only one is in the accessibility tree
+ *
+ * `hidden` is `display: none`, which removes an element from the accessibility
+ * tree as well as from the layout - so at any width exactly one `Logo VitNode`
+ * is exposed, and the link wrapping this has one accessible name rather than
+ * two. That is worth stating because the obvious alternative - `opacity-0`, or
+ * `sr-only` on the one that is not showing - would leave both, and a screen
+ * reader would announce the mark twice.
+ *
+ * Takes no props on purpose. It is a brand lockup, not a styled primitive: an
+ * application whose mark is not VitNode's passes its own element to the header's
+ * `logo` slot, and one that wants VitNode's at some other size renders
+ * {@link LogoVitNode} directly.
+ */
+export const LogoVitNodeBrand = () => (
+  <>
+    <LogoVitNode
+      className="hidden w-34 sm:block"
+      idPrefix="vitnode-brand-wide"
+    />
+    <LogoVitNode
+      className="size-8 sm:hidden"
+      idPrefix="vitnode-brand-compact"
+      small
+    />
+  </>
+);

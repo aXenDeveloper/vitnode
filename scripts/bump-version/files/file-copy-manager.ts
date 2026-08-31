@@ -7,40 +7,20 @@ import {
   validatePath,
 } from "./file-system.ts";
 
+/**
+ * Refreshes the parts of the `create-vitnode-app` templates that are copied
+ * verbatim out of this repository at release time.
+ *
+ * Until Stage 17 this also seeded `copy-of-vitnode-app/root` and
+ * `copy-of-vitnode-app/api-single-app` from `apps/docs`, whose Next.js App
+ * Router tree (`src/app/[locale]/...`, `src/app/api/[...route]`) no longer
+ * exists. Those template directories are now maintained in place rather than
+ * generated; only the framework-neutral `apps/api` files are still mirrored.
+ */
 export class FileCopyManager {
   constructor(private env: EnvironmentConfig) {}
 
   async init(): Promise<void> {
-    const sourcePath = join(this.env.WORKSPACE, "apps", "docs");
-    const destPath = join(
-      this.env.WORKSPACE,
-      "packages",
-      "create-vitnode-app",
-      "copy-of-vitnode-app",
-      "root",
-    );
-    const singleAppApiDestPath = join(
-      this.env.WORKSPACE,
-      "packages",
-      "create-vitnode-app",
-      "copy-of-vitnode-app",
-      "api-single-app",
-    );
-
-    if (!validatePath(sourcePath, "web app directory")) {
-      throw new Error("Required paths not found");
-    }
-
-    await this.copyFiles(sourcePath, destPath, [
-      "src/app/[locale]/(main)/[...rest]",
-      "src/app/[locale]/(main)/not-found.tsx",
-      "src/app/[locale]/admin",
-      "src/app/favicon.ico",
-      "src/app/global-error.tsx",
-      "src/app/not-found.tsx",
-      "postcss.config.mjs",
-    ]);
-
     const apiSourcePath = join(this.env.WORKSPACE, "apps", "api");
     const apiDestPath = join(
       this.env.WORKSPACE,
@@ -50,13 +30,12 @@ export class FileCopyManager {
       "api",
     );
 
+    if (!validatePath(apiSourcePath, "api app directory")) {
+      throw new Error("Required paths not found");
+    }
+
     await this.copyFiles(apiSourcePath, apiDestPath, [
       "tsconfig.json",
-      "drizzle.config.ts",
-    ]);
-
-    await this.copyFiles(sourcePath, singleAppApiDestPath, [
-      "src/app/api/[...route]",
       "drizzle.config.ts",
     ]);
   }

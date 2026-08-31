@@ -1,8 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import dynamic from "next/dynamic";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import {
   AlertDialog,
@@ -14,7 +13,17 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 
-const ContentConfirmAction = dynamic(async () =>
+/**
+ * `React.lazy` rather than `next/dynamic`, which is what this used to be.
+ *
+ * The two are the same thing here - this is a client component, the import is
+ * already wrapped in the `<React.Suspense>` below, and `next/dynamic` defaults
+ * to server rendering the chunk - but only one of them resolves outside a
+ * Next.js app. Every confirm dialog in VitNode goes through this component,
+ * including the ones on the shared `/files` table, so that single import was
+ * enough to make the whole screen Next.js-only.
+ */
+const ContentConfirmAction = React.lazy(async () =>
   import("./content").then(module => ({
     default: module.ContentConfirmAction,
   })),

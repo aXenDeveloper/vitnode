@@ -1,7 +1,5 @@
-import type { ProgressProvider } from "@bprogress/next/app";
 import type { drizzle } from "drizzle-orm/postgres-js";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
-import type React from "react";
 
 import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
@@ -12,6 +10,7 @@ import type { EventsApiPlugin } from "./api/models/events";
 import type { SearchProviderApiPlugin } from "./api/models/search";
 import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
+import type { ProgressBarConfig } from "./components/progress-bar";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type {
@@ -19,6 +18,7 @@ import type {
   VitNodeApiI18nConfig,
   VitNodeI18nConfig,
 } from "./lib/i18n/types";
+import type { VitNodeMetadata } from "./lib/metadata";
 import type { BuildPluginReturn } from "./lib/plugin";
 
 export type { LocaleConfig };
@@ -28,9 +28,9 @@ export interface VitNodeConfig<
 > {
   debug?: boolean;
   i18n: VitNodeI18nConfig<AppLocales>;
-  metadata: VitNodeApiConfig["metadata"];
+  metadata: VitNodeMetadata;
   plugins: BuildPluginReturn[];
-  progressBar?: React.ComponentProps<typeof ProgressProvider>;
+  progressBar?: ProgressBarConfig;
   theme?: Omit<
     ThemeProviderProps,
     "attribute" | "children" | "disableTransitionOnChange" | "enableSystem"
@@ -52,6 +52,25 @@ export interface VitNodeApiConfig {
   authorization?: {
     adminCookieExpires?: number;
     adminCookieName?: string;
+    /**
+     * `Domain` to stamp on the session, admin, device and SSO cookies.
+     *
+     * Leave it unset - the default - and no `Domain` is sent at all, making the
+     * cookies *host-only*: valid on exactly the host that issued them. That is
+     * what a normal VitNode install wants, because the web app serves `/api/*`
+     * on its own origin, and it is the only setting that survives a hostname
+     * nobody configured, such as a per-branch preview deployment.
+     *
+     * Set it only to share one session across subdomains - `".example.com"` for
+     * `app.example.com` and `admin.example.com`. A value the response's own host
+     * does not fall under is rejected by the browser, so an install that gets
+     * this wrong cannot sign anybody in.
+     *
+     * Deliberately not derived from `NEXT_PUBLIC_WEB_URL`: that names where the
+     * front end lives, which is not the same question, and guessing it is how a
+     * preview deployment ends up sending `Domain=localhost`.
+     */
+    cookieDomain?: string;
     cookieExpires?: number;
     cookieName?: string;
     cookieSecure?: boolean;
@@ -69,9 +88,14 @@ export interface VitNodeApiConfig {
     /**
      * Web origins to notify when background work changes what is public.
      *
-     * Defaults to `[NEXT_PUBLIC_WEB_URL]`, which is right for the usual one-web
-     * app install. Set it when one API serves several front ends: each origin
-     * owns its own Next cache, and each is posted independently.
+     * Opt-in, and empty by default: only a front end that holds its own render
+     * cache has anything to expire, and only that front end knows it. Set it to
+     * the origins that serve `POST /api/vitnode/content/revalidate`, and each is
+     * posted independently when one API serves several of them.
+     *
+     * Left unset, a background publish invalidates nothing beyond the API's own
+     * cache - which is the whole story for a front end that reads through the
+     * public content routes rather than caching renders of them.
      */
     revalidateOrigins?: string[];
   };
@@ -101,10 +125,7 @@ export interface VitNodeApiConfig {
    * web and the API together, point this and `buildConfig` at the same object.
    */
   i18n?: VitNodeApiI18nConfig;
-  metadata: {
-    shortTitle?: string;
-    title: string;
-  };
+  metadata: VitNodeMetadata;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
   /**
@@ -162,8 +183,8 @@ export function buildConfig<AppLocales extends LocaleConfig[]>(
     },
   };
 
-  // Register the app config so framework-owned route files (e.g. the @breadcrumb
-  // slots copied into apps) can read it without prop-drilling.
+  // Register the app config so framework-owned modules - core's own route
+  // screens and breadcrumbs among them - can read it without prop-drilling.
   registeredVitNodeConfig = config;
 
   return config;

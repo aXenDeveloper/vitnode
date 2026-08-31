@@ -1,0 +1,369 @@
+---
+title: AdminCP Integration
+description: Step-by-step guide to zero-code AdminCP management screens, custom form layouts, AutoForm dialogs, and screen overrides.
+icon: Layout
+---
+
+Content Engine automatically builds interactive management screens in the VitNode AdminCP without requiring you to write Next.js page components or custom form components.
+
+<Callout title="Where these registrations live">
+  This page is about *what* each override does. Which module you declare it in -
+  `admin/nav`, `admin/content` or `config.tsx` - is
+  [Plugin Frontend Modules](/docs/dev/content-engine/plugin-registration), and the
+  short answer is `admin/content`.
+</Callout>
+
+## Prerequisites & Context
+
+AdminCP UI generation requires registering your content definition in `src/config.tsx` using `contentTypeAdmin`:
+
+```tsx title="src/config.tsx"
+import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
+import { NotebookPenIcon } from "lucide-react";
+import { articleContentType } from "@/content/article";
+
+export const examplePlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/example",
+    messages,
+    contentTypes: [
+      contentTypeAdmin({
+        definition: articleContentType,
+        icon: <NotebookPenIcon />,
+      }),
+    ],
+  });
+```
+
+- **Zero-Code Navigation**: Generates `/admin/content/{admin.path}` automatically,
+  defaulting to the id with its dots as slashes (`example.article` →
+  `example/article`).
+- **i18n Localization**: The screen title, the record's own noun, table headers, form
+  labels, enum values and form section headings all resolve from your plugin's locale
+  JSON (`src/locales/en.json`). Every key is optional, and every one has a readable
+  fallback - so a screen works before it is translated, and no string in it is stuck
+  in English afterwards.
+
+---
+
+## Step-by-Step Customization
+
+<Steps>
+
+<Step>
+### Step 1: Name the Record & Configure the List
+
+In `src/content/article.ts`, define the record's name, columns, search, and sorting
+behavior:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+    status: field.enum({ values: ["draft", "published"], defaultValue: "draft" }),
+    author: field.user(),
+  },
+  admin: { // [!code ++]
+    titleField: "title", // [!code ++]
+    list: { // [!code ++]
+      columns: ["title", "code", "status", "author", "updatedAt"], // [!code ++]
+      searchableFields: ["title", "code"], // [!code ++]
+      orderableFields: ["title", "code", "status"], // [!code ++]
+      defaultOrderBy: "updatedAt", // [!code ++]
+      defaultOrder: "desc", // [!code ++]
+    }, // [!code ++]
+  }, // [!code ++]
+});
+```
+
+#### The record's noun is a translation, and only a translation
+
+There is **no display name in the definition**. A name written there would be one
+language's answer, in the one file that is read in every language - so the noun lives
+in your messages, written as an [ICU cardinal
+plural](https://next-intl.dev/docs/usage/translations#cardinal-pluralization):
+
+```json title="src/locales/en.json"
+{
+  "@vitnode/example": {
+    "content": {
+      "article": {
+        "label": "{count, plural, one {Article} other {Articles}}", // [!code ++]
+        "title": "Articles",
+        "desc": "Write and manage articles."
+      }
+    }
+  }
+}
+```
+
+The AdminCP asks this message for the form it needs - the singular for
+`Create {name}`, `{name} has been updated` and every confirmation dialog, the
+plural for `Back to {name}` and the screen heading.
+
+<Callout type="info" title="Why one plural message instead of two strings">
+  A `{ singular, plural }` pair can only hold two forms, and plenty of languages
+  have more. Polish needs three for one noun, and ICU is what knows which one a
+  number selects:
+
+  ```json title="src/locales/pl.json"
+  {
+    "label": "{count, plural, one {Artykuł} few {Artykuły} many {Artykułów} other {Artykułu}}"
+  }
+  ```
+
+  `one` → *Artykuł*, `few` → *Artykuły*. A pair of strings in the definition could
+  not express that, and no amount of translating the frames around it would fix a
+  Polish screen reading "Utwórz Article".
+</Callout>
+
+| Key | Falls back to |
+| --- | --- |
+| `content.{entity}.label` | a name derived from the id ("Article"), in every number |
+| `content.{entity}.title` | the translated plural, then that derived name |
+| `content.{entity}.desc` | nothing - the screen simply has no lead-in |
+| `content.{entity}.fields.{field}` | the humanised field name ("Published at") |
+| `content.{entity}.enums.{field}.{value}` | the humanised value |
+
+`{entity}` is the content type id without its plugin segment: `example.article` →
+`article`, `example.kb.article` → `kb_article`.
+
+#### The URL says what the screen says
+
+The screens live at `/admin/content/{admin.path}`, and the default path is the id
+with its dots as slashes. That is right until the id and the screen disagree - a
+content type called `blog.post` whose every heading reads "Articles" should not be
+opened at an address that says `post`. `admin.path` is where the URL is written
+down:
+
+```ts title="src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  id: "blog.post",
+  tableName: "blog_posts",
+  admin: {
+    path: "blog/articles", // [!code ++]
+  },
+});
+```
+
+```text
+/admin/content/blog/articles            list
+/admin/content/blog/articles/create     create
+/admin/content/blog/articles/42/edit    edit
+```
+
+The id does **not** move with it, and that is the point: `blog.post` is the event
+name, the permission key and the message key - contracts written into roles, into
+listeners and into every locale file - while the path is the only part of a content
+type a person ever types. Renaming one to improve the other is churn with no payer.
+
+| Rule | Why |
+| --- | --- |
+| Lowercase segments of letters, digits and dashes, split by `/` | It is a URL, and a `[...slug]` route matches it segment by segment |
+| Cannot end in `create` or `edit` | Those two words are what tells a list screen from a generated form page |
+| Site-wide unique | `/admin/content/{path}` carries no plugin id, so two content types claiming one path would leave one of them with no screen at all. The app refuses to boot instead |
+
+<Callout type="warn" title="A path is an address people have bookmarked">
+  Changing `admin.path` on a content type that has shipped breaks every link to it -
+  there is no redirect, because the old path is simply not registered any more. If
+  the old address is worth keeping, a one-line page that redirects to
+  `contentAdminHref(definition)` is what the blog plugin does with
+  `/admin/blog/posts`.
+</Callout>
+</Step>
+
+<Step>
+### Step 2: Organize Form Fields into Sections
+
+`admin.form.sections` groups the generated form - dialog or page - into titled cards.
+A section carries a **`name`**, not a heading: the heading is a translation, so the
+same form reads correctly in every language the AdminCP is installed in.
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+    excerpt: field.textarea({ nullable: true }),
+    status: field.enum({ values: ["draft", "published"] }),
+    author: field.user(),
+  },
+  admin: {
+    form: { // [!code ++]
+      sections: [ // [!code ++]
+        { name: "general", fields: ["title", "code", "excerpt"] }, // [!code ++]
+        { name: "publishing", fields: ["status", "author"] }, // [!code ++]
+      ], // [!code ++]
+    }, // [!code ++]
+  },
+});
+```
+
+The headings come from your plugin's messages, under the content type's own key:
+
+```json title="src/locales/en.json"
+{
+  "@vitnode/example": {
+    "content": {
+      "article": {
+        "form": {
+          "general": { // [!code ++]
+            "title": "General information", // [!code ++]
+            "desc": "Main content details" // [!code ++]
+          }, // [!code ++]
+          "publishing": { // [!code ++]
+            "title": "Publishing settings", // [!code ++]
+            "desc": "Status and author options" // [!code ++]
+          } // [!code ++]
+        }
+      }
+    }
+  }
+}
+```
+
+| Key | Required | What it does |
+| --- | --- | --- |
+| `name` | yes | Stable id and i18n key segment. Lowercase letters, digits, `_` |
+| `fields` | yes | The fields in this section, in order |
+| `…form.{name}.title` | no | The heading. Falls back to the humanised `name` ("General") |
+| `…form.{name}.desc` | no | A line under the heading. Omitted entirely when absent |
+
+<Callout type="info" title="Sections are the field list">
+  When `sections` are declared they replace `admin.form.fields` - the concatenation
+  of their `fields`, in section order, *is* the form. Declaring both is an error,
+  because they are two answers to one question. A field in no section is not on the
+  form, exactly as it would be if left out of `admin.form.fields`.
+
+  Each field belongs to one section, each `name` is used once, and no section is
+  empty. All three are checked when the content type is defined, not when the form
+  is opened.
+</Callout>
+
+A plugin that registers its own `forms.layout` component keeps full control: an
+explicit layout wins over declared sections. Sections are the shorthand - they are
+rendered with the very same `ContentFormSection` primitive a hand-written layout
+uses, so the two look identical.
+</Step>
+
+<Step>
+### Step 3: Take Over the Layout, With i18n Hooks
+
+When declared sections are not enough - a wide writing column beside a metadata
+sidebar, say - register a **layout**. It decides where fields go and nothing else:
+the schema, validation, defaults, mutation, version precondition, structured errors,
+toast and cache invalidation all stay with the Content Engine.
+
+Any text the layout adds itself is yours to translate, so reach for
+`useTranslations` rather than a literal:
+
+```tsx title="src/views/admin/article/form-layout.tsx"
+"use client";
+
+import {
+  ContentFormActions,
+  ContentFormField,
+  ContentFormHeader,
+  ContentFormLayoutGrid,
+  ContentFormMain,
+  ContentFormSection,
+  ContentFormSidebar,
+  ContentFormStatus,
+} from "@vitnode/core/content/admin-form";
+import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
+import { useTranslations } from "use-intl"; // [!code ++]
+
+export const ArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
+  const t = useTranslations("@vitnode/example.admin.article.form"); // [!code ++]
+
+  return (
+    <>
+      <ContentFormHeader>
+        <ContentFormActions />
+      </ContentFormHeader>
+
+      <ContentFormLayoutGrid>
+        <ContentFormMain>
+          <ContentFormSection>
+            <ContentFormField name="title" />
+            <ContentFormField name="content" />
+          </ContentFormSection>
+        </ContentFormMain>
+
+        <ContentFormSidebar>
+          {mode === "edit" ? (
+            <ContentFormSection title={t("publish")}> {/* [!code ++] */}
+              <ContentFormStatus />
+            </ContentFormSection>
+          ) : null}
+
+          <ContentFormSection title={t("settings")}> {/* [!code ++] */}
+            <ContentFormField name="status" />
+            <ContentFormField name="author" />
+          </ContentFormSection>
+        </ContentFormSidebar>
+      </ContentFormLayoutGrid>
+    </>
+  );
+};
+```
+
+`ContentFormHeader` is the page heading - the title, the description and the
+**Back to …** link - rendered inside the form so a layout can seat the submit row
+beside the back link. It renders nothing in a dialog, so one layout serves both
+surfaces. `ContentFormActions` holds the submit buttons: **Save changes** while
+editing, **Create** while creating, and for a content type with `publication`,
+**Save as draft** and **Publish** - the second only for a role holding
+`can_publish`, and it runs the very same publish action the list's button does,
+right after the create. While editing such a record, the same role also gets
+**Publish** / **Convert to draft** beside **Save changes**: it moves the lifecycle
+behind the usual confirmation and leaves whatever is typed in the form untouched.
+
+<Callout type="warn" title="A page-mode layout places the header itself">
+  Just as it places every field, a layout used on a create or edit *page* has to
+  render `ContentFormHeader` - without it the page has no heading, no way back and,
+  unless `ContentFormActions` sits somewhere else, no way to save. In development
+  the engine logs a warning when a layout forgets it.
+</Callout>
+
+Register it under `forms` in `src/config.tsx`:
+
+```tsx title="src/config.tsx"
+import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
+import { NotebookPenIcon } from "lucide-react";
+import { articleContentType } from "@/content/article";
+import { ArticleFormLayout } from "@/views/admin/article/form-layout"; // [!code ++]
+
+export const examplePlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/example",
+    messages,
+    contentTypes: [
+      contentTypeAdmin({
+        definition: articleContentType,
+        icon: <NotebookPenIcon />,
+        // One layout for create and edit. Pass `{ create: { layout }, edit: { layout } }`
+        // instead to give each its own.
+        forms: { layout: ArticleFormLayout }, // [!code ++]
+      }),
+    ],
+  });
+```
+
+<Callout type="warn" title="A layout must place every field">
+  A field the layout never names is dropped from the payload. `ContentFormRemainingFields`
+  places whatever is left, and in development the engine logs the names of any fields a
+  layout forgot.
+</Callout>
+
+Field *components* are a separate override, and they compose with either arrangement -
+`fields: { content: { component: MyEditor } }` keeps the engine's label, validation and
+language switcher and swaps only the input.
+</Step>
+
+</Steps>

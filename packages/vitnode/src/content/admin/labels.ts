@@ -1,6 +1,22 @@
 import type { AnyContentTypeDefinition } from "../types";
 
 /**
+ * What the label rules actually read off a content type: its id, and nothing
+ * else.
+ *
+ * Narrower than `AnyContentTypeDefinition` on purpose. Every lookup below is a
+ * function of the id - the i18n keys are derived from it and so is the
+ * untranslated fallback - so requiring a whole definition made two callers
+ * fabricate one. The AdminCP navigation is the honest case: it resolves a
+ * content type's noun from a *declaration* that carries the id and the plugin
+ * that owns it, long after the definition itself has gone out of scope.
+ *
+ * A full definition still satisfies this structurally, so every existing caller
+ * is unchanged.
+ */
+export type ContentLabelSubject = Pick<AnyContentTypeDefinition, "id">;
+
+/**
  * Turns `publishedAt` into "Published at" - the fallback whenever a plugin has
  * not translated a field name.
  */
@@ -42,7 +58,7 @@ export const contentTypeName = (contentTypeId: string): string =>
  * own labels are the fallback.
  */
 export const contentI18nKeys = (
-  definition: AnyContentTypeDefinition,
+  definition: ContentLabelSubject,
   pluginId: string,
 ) => {
   const base = `${pluginId}.content.${contentEntityKey(definition.id)}`;
@@ -100,7 +116,7 @@ export interface ContentLabelTranslator {
  * that cannot be translated.
  */
 export const contentNouns = (
-  definition: AnyContentTypeDefinition,
+  definition: ContentLabelSubject,
   pluginId: string,
   t: ContentLabelTranslator,
 ): { plural: string; singular: string; title: string } => {

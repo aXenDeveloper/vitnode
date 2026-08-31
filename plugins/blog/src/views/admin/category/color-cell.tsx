@@ -2,7 +2,7 @@
 
 import type { ContentCellProps } from "@vitnode/core/lib/plugin";
 
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 import type { blogCategoryContentType } from "@/content/category";
 

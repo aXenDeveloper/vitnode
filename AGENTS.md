@@ -6,7 +6,7 @@ Account test:
 login: test@test.com
 pass: Test123!
 
-# React / Next.js
+# React / TanStack Start
 
 - Arrow functions for components - never `React.FC`.
 - No `any`; use `unknown` as rarely as possible.
@@ -23,21 +23,25 @@ import { Activity } from "react";
 </Activity>;
 ```
 
-- Add breadcrumbs via `@breadcrumb` (Parallel Routes) in the page component.
-- Name files `x.server.ts` when they contain `'use server'` code.
+- Add a breadcrumb with the route's `staticData.breadcrumb`; a crumb that renders strings needs its own `RouteMessages`.
+- Route files are topology only - `validateSearch`, `loaderDeps`, `loader`, `head`, `staticData`. The query, the permissions, the namespaces and the screen live in `@vitnode/core/tanstack/*`.
+- Write `head` **after** `loader` in the same object literal: `loaderData` is inferred from `loader`, and TypeScript reads members in order.
+- Name files `x.server.ts` when they must never reach the browser bundle.
+- A package may declare `createIsomorphicFn` but never `createServerFn` - uncompiled on the server, its handler silently resolves to `undefined`. Server functions belong to the host app.
 - New admin APIs always require staff permissions.
 
 ### Caching APIs
 
-- `revalidateTag(tag, profile)` - profile is required for SWR: `revalidateTag("blog-posts", "max")` (prefer `'max'`; also `'days'`, `'hours'`) or inline `{ revalidate: 3600 }`.
-- `updateTag(\`user-${userId}\`)` - Server Actions only, read-your-writes semantics.
-- `refresh()` - Server Actions only, refreshes uncached data, never touches the cache.
+- Client and SSR caching is TanStack Query. Invalidate with `queryClient.invalidateQueries` after a write; warm a route's data in its `loader` with `ensureQueryData`.
+- Server-side domain caching is the API's own: `c.get("cache")` in a Hono route, Redis-backed when `REDIS_URL` is set and a no-op otherwise.
+- Content Engine tag builders live in `content/cache.ts` (`contentPublicListTag` and friends) - pure strings, used to expire a content type's cached reads.
+- A background mutation cannot expire a front end's cache by calling a function. `dispatchContentRevalidation` posts to the origins an install opts into via `content.revalidateOrigins`.
 
 # Coding Guidelines
 
 - Always implement best practices for performance, security, and accessibility.
 - Semantic HTML (`main`, `header`) with correct ARIA roles/attributes, `sr-only` for screen-reader-only text, and alt text on all images unless decorative or repetitive.
-- Emit events for important actions (create, update, delete) so other components can react; use events instead of prop drilling or context. Document them in `apps/docs/content/docs/dev/events/built-in-events.mdx`.
+- Emit events for important actions (create, update, delete) so other components can react; use events instead of prop drilling or context. Document them in `apps/web/content/docs/dev/events/built-in-events.mdx`.
 - AI features use the Vercel AI SDK only - resolve models via the `c.get("ai")` registry and call native SDK functions.
 
 # Design

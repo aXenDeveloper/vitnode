@@ -4,8 +4,13 @@
  * Everything exported here is plain data plus zod: it is safe to import from a
  * client component, from `buildPlugin`, and from `src/database/*.ts` (which
  * Drizzle Kit executes). Anything that needs Drizzle or Hono lives in
- * `@vitnode/core/content/server`, and anything that needs `next/*` in
- * `@vitnode/core/content/next`.
+ * `@vitnode/core/content/server`.
+ *
+ * There was a third entrypoint, `@vitnode/core/content/next`, holding the host
+ * adapters that turned this surface into a framework's page, metadata and
+ * revalidation calls. It is gone: `resolveContentDelivery`, `contentDeliverySeo`
+ * and the sitemap builders here are the whole delivery surface, and a host maps
+ * them onto its own conventions.
  */
 export {
   contentEntityKey,
@@ -15,6 +20,31 @@ export {
   humanizeFieldName,
 } from "./admin/labels";
 export type { ContentLabelTranslator } from "./admin/labels";
+export {
+  buildContentFrontendRegistry,
+  CONTENT_FRONTEND_REGISTRY_MISSING,
+  contentFrontendRegistry,
+  hasContentFrontendRegistry,
+  setContentFrontendRegistry,
+} from "./admin/registry";
+export type {
+  ContentFrontendRegistry,
+  RegisteredFrontendContentType,
+} from "./admin/registry";
+/**
+ * The AdminCP route resolver, and the lookup a registry satisfies.
+ *
+ * Here rather than only in `content/admin/` because it is pure and
+ * framework-neutral - it maps a slug onto a content type and one of three
+ * screens, over a predicate `ContentFrontendRegistry.lookup` provides - and a
+ * host that owns `/admin/content/*` cannot use the registry without it.
+ */
+export { resolveContentAdminRoute } from "./admin/route";
+export type {
+  ContentAdminAction,
+  ContentAdminRoute,
+  ContentTypeLookup,
+} from "./admin/route";
 export {
   buildContentColumnSpec,
   buildContentFormSpec,
@@ -86,6 +116,8 @@ export type {
 } from "./conflicts";
 export {
   CONTENT_ACTOR_TYPES,
+  CONTENT_ADMIN_CREATE_SEGMENT,
+  CONTENT_ADMIN_EDIT_SEGMENT,
   CONTENT_CACHE_TAG_MAX_LENGTH,
   CONTENT_CONFLICT_CODES,
   CONTENT_DEFAULT_PAGE_SIZE,
@@ -239,7 +271,7 @@ export type {
   ContentFileFieldValue,
   ContentFileRejection,
 } from "./files";
-export { clampWithFingerprint, fingerprint } from "./fingerprint";
+export { clampWithFingerprint, fingerprint } from "./hash";
 export {
   contentIndexName,
   contentTranslationPrimaryKeyName,
@@ -263,6 +295,18 @@ export {
   resolveContentLocalization,
 } from "./localization";
 export type { ContentFieldPartition } from "./localization";
+export {
+  CONTENT_DEFAULT_PUBLICATION_STATUS,
+  CONTENT_PUBLICATION_ACTIONS,
+  contentPublicationStatus,
+  contentPublicationTransition,
+  hasContentPublication,
+  isContentPublished,
+} from "./publication";
+export type {
+  ContentPublicationAction,
+  ContentPublicationTransition,
+} from "./publication";
 export {
   CONTENT_EDIT_HREF_PLACEHOLDER,
   contentAdminHref,

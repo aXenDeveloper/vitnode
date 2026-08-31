@@ -35,6 +35,15 @@ export const changePasswordRoute = buildRoute({
       201: {
         description: "Password changed",
       },
+      400: {
+        // Thrown by the handler below when the `userId` + `token` +
+        // unexpired-`expiresAt` lookup finds nothing - a wrong link, a spent one,
+        // or one older than thirty minutes. Declared so the status is part of the
+        // route's contract rather than an undocumented throw a client has to
+        // discover: `fetcher()` types `res.status` from this list, so a caller
+        // cannot branch on a status the route does not admit to.
+        description: "Invalid or expired token",
+      },
     },
   },
   handler: async c => {

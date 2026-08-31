@@ -1,6 +1,20 @@
 {
   "@vitnode/example": {
     "title": "Example",
+    "admin": {
+      "nav": {
+        "overview": "Overview"
+      },
+      "overview": {
+        "title": "Example plugin",
+        "desc": "A plugin page inside the AdminCP, shipped by @vitnode/example and served by the app that installed it.",
+        "points": {
+          "shell": "The sidebar, the breadcrumb and the admin session guard around this page are the AdminCP's - the route declared area: \"admin\" and nothing else.",
+          "path": "The URL is the one the route manifest spells out in full. An area chooses the frame; it never adds a prefix.",
+          "nav": "The sidebar entry that led here is a separate declaration. A plugin page may have no entry, and an entry may point anywhere."
+        }
+      }
+    },
     "content": {
       "article": {
         "label": "{count, plural, one {Article} other {Articles}}",
@@ -27,6 +41,29 @@
           "createdAt": "Created"
         }
       }
+    },
+    "guide": {
+      "title": "Plugin routing guide",
+      "desc": "A nested route shipped by @vitnode/example, served by the app that installed it.",
+      "index": {
+        "intro": "This page and the frame around it are two routes declared in one plugin manifest. Neither was copied into the application - both are lazily imported from the plugin's own build output.",
+        "points": {
+          "nested": "A layout claims no URL; this index page claims the layout's.",
+          "messages": "The layout declares the messages both pages render in, so they are warmed alongside the code.",
+          "breadcrumb": "The breadcrumb above comes from the layout, next to the component that needs it."
+        }
+      },
+      "topic": {
+        "from_index": "You arrived here from the guide index - the route's search contract recognised it, and everything else in the query string was dropped."
+      }
+    },
+    "browse": {
+      "title": "Browse",
+      "desc": "A paginated page whose route declares an eager search schema, so ?page=999 is clamped before anything renders.",
+      "pagination": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {of}"
     }
   },
   "@vitnode/example:article": "Articles",

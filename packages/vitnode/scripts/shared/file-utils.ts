@@ -1,132 +1,38 @@
-/* eslint-disable no-console */
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import {
-  basename,
-  dirname,
-  extname,
-  join,
-  normalize,
-  relative,
-  resolve,
-  sep,
-} from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 
-const relativeImportRegex =
-  /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"]([./]+[^'"]*)['"]/g;
-const atImportRegex =
-  /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"](@\/[^'"]*)['"]/g;
-const dynamicAtImportRegex = /import\s*\(\s*['"](@\/[^'"]*)['"]\s*\)/g;
-const jsExtensionRegex = /\.(js|jsx|ts|tsx)$/;
-const pageFileRegex = /^page\.(tsx|ts|jsx|js)$/i;
+/**
+ * Where a VitNode project starts, for the scripts that have to read something
+ * outside the directory they were run in.
+ *
+ * All that is left of what used to be this file. Until the Next.js cutover it
+ * also held the plugin **route copier** - the machinery that read a plugin's
+ * `src/routes/{main,admin,blank,breadcrumb}/` and wrote copies of those pages
+ * into every Next.js app's `src/app/[locale]/…`, rewriting each import as it
+ * went. A plugin's pages are no longer copied anywhere: its route manifest is
+ * compiled into a literal registry and the app imports the page out of the
+ * plugin's own `dist`, so there is nothing to copy, nothing to clean up when a
+ * source file is deleted, and no import to rewrite.
+ *
+ * What the copier needed and this does not: `findLocaleRoot` (it looked for an
+ * `src/app/[locale]` directory, which only a Next.js App Router app has),
+ * `transformFileImports`, `copyFile`, `copyDirectoryRecursive`,
+ * `cleanupDeletedFiles`, `buildInitialRouteMap`, `routeKey`, `getAllFiles`,
+ * `isDirectoryEmpty` and `SourceConfig`.
+ *
+ * The two below survive because the `i18n:*` commands use them, and neither has
+ * anything to do with routing: one locates the project, the other locates an
+ * installed package inside it.
+ */
 
-export const routeKey = (filePath: string, localeRoot: string): string => {
-  const rel = relative(localeRoot, filePath);
-  const parts = rel.split(sep);
-
-  // remove filename
-  parts.pop();
-
-  // drop any group folders
-  const filtered = parts.filter(p => !p.startsWith("("));
-
-  // '' represents the root route
-  return normalize(filtered.join("/"));
-};
-
-export const buildInitialRouteMap = (
-  localeRoot: string,
-): Map<string, string> => {
-  const map = new Map<string, string>();
-
-  const visit = (dir: string) => {
-    if (!existsSync(dir)) return;
-
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        visit(full);
-        continue;
-      }
-
-      if (pageFileRegex.test(entry.name)) {
-        const key = routeKey(full, localeRoot);
-        map.set(key, full);
-      }
-    }
-  };
-
-  visit(localeRoot);
-
-  return map;
-};
-
-export const transformFileImports = (
-  content: string,
-  pluginName: string,
-): string => {
-  // First handle relative imports
-  let transformedContent = content.replace(
-    relativeImportRegex,
-    (match, importPath: string) => {
-      if (importPath.startsWith(".")) {
-        const cleanPath = importPath.replace(jsExtensionRegex, "");
-        const normalizedPath = cleanPath.replace(/^(?:\.\.\/)+/, "");
-
-        return match.replace(importPath, `${pluginName}/${normalizedPath}`);
-      }
-
-      return match;
-    },
-  );
-
-  // Then handle @/ imports
-  transformedContent = transformedContent.replace(
-    atImportRegex,
-    (match, importPath: string) => {
-      const cleanPath = importPath
-        .replace(/^@\//, "")
-        .replace(jsExtensionRegex, "");
-
-      return match.replace(importPath, `${pluginName}/${cleanPath}`);
-    },
-  );
-
-  // Handle dynamic imports (React.lazy) with @/ paths
-  transformedContent = transformedContent.replace(
-    dynamicAtImportRegex,
-    (match, importPath: string) => {
-      const cleanPath = importPath
-        .replace(/^@\//, "")
-        .replace(jsExtensionRegex, "");
-
-      return match.replace(importPath, `${pluginName}/${cleanPath}`);
-    },
-  );
-
-  // Handle Next.js dynamic() imports with @/ paths
-  // Example: dynamic(() => import('@/some/path'))
-  transformedContent = transformedContent.replace(
-    /dynamic\s*\(\s*\(\s*=>\s*import\s*\(\s*['"](@\/[^'"]*)['"]\s*\)\s*\)\s*\)/g,
-    (match, importPath: string) => {
-      const cleanPath = importPath
-        .replace(/^@\//, "")
-        .replace(jsExtensionRegex, "");
-
-      return match.replace(importPath, `${pluginName}/${cleanPath}`);
-    },
-  );
-
-  return transformedContent;
-};
-
+/**
+ * The root of the project, found by walking up to a `turbo.json`.
+ *
+ * A monorepo is the interesting case - a command is run inside `apps/web` and
+ * has to reach `plugins/` - so the marker is the file only a repository root
+ * has. A standalone project has no `turbo.json` and no directories above it to
+ * search, so its own `package.json` is the answer.
+ */
 export function findRepoRoot(startPath: string): string {
   let currentPath = startPath;
   while (currentPath !== resolve(currentPath, "..")) {
@@ -162,219 +68,3 @@ export function findPackagePath(
 
   return candidates.find(candidate => existsSync(candidate)) ?? null;
 }
-
-export function findLocaleRoot(repoRoot: string): string {
-  const standalonePath = join(repoRoot, "src", "app", "[locale]");
-  if (existsSync(standalonePath)) {
-    return standalonePath;
-  }
-
-  const findLocaleDirectories = (searchDir: string): string[] => {
-    const localeDirectories: string[] = [];
-    if (!existsSync(searchDir)) return localeDirectories;
-
-    const visit = (currentDir: string, depth = 0) => {
-      // Limit search depth to avoid infinite recursion and performance issues
-      if (depth > 4) return;
-
-      try {
-        const entries = readdirSync(currentDir, { withFileTypes: true });
-
-        for (const entry of entries) {
-          if (!entry.isDirectory()) continue;
-
-          const fullPath = join(currentDir, entry.name);
-
-          if (entry.name === "[locale]") {
-            const parentPath = dirname(fullPath);
-            if (parentPath.endsWith(join("src", "app"))) {
-              localeDirectories.push(fullPath);
-              continue;
-            }
-          }
-
-          visit(fullPath, depth + 1);
-        }
-      } catch (_error) {
-        // Skip directories we can't read
-      }
-    };
-
-    visit(searchDir);
-
-    return localeDirectories;
-  };
-
-  const localeDirectories = findLocaleDirectories(repoRoot);
-
-  if (localeDirectories.length > 0) {
-    return localeDirectories[0];
-  }
-
-  // Default to apps/docs structure if nothing is found (for new projects)
-  const defaultAppDir = join(
-    repoRoot,
-    "apps",
-    "docs",
-    "src",
-    "app",
-    "[locale]",
-  );
-
-  return defaultAppDir;
-}
-
-export const getAllFiles = (dir: string): string[] => {
-  const files: string[] = [];
-  if (!existsSync(dir)) return files;
-
-  const entries = readdirSync(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...getAllFiles(fullPath));
-    } else {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-};
-
-export const isDirectoryEmpty = (dir: string): boolean => {
-  if (!existsSync(dir)) return true;
-
-  const files = getAllFiles(dir);
-
-  return files.length === 0;
-};
-
-export interface SourceConfig {
-  destinationDir: string;
-  sourceDir: string;
-}
-
-export const copyFile = (
-  srcPath: string,
-  destPath: string,
-  pluginName: string,
-  routeMap: Map<string, string>,
-  localeRoot: string,
-  repoRoot: string,
-  verbose = true,
-) => {
-  const fileName = basename(srcPath);
-  if (pageFileRegex.test(fileName)) {
-    const key = routeKey(destPath, localeRoot);
-
-    const existing = routeMap.get(key);
-    // another file (not this exact one) already owns the route
-    if (existing && existing !== destPath) {
-      if (verbose) {
-        console.log(
-          `\x1b[31mSkipped duplicate page:\x1b[0m ${relative(
-            repoRoot,
-            destPath,
-          )} (collides with ${relative(repoRoot, existing)})`,
-        );
-      }
-
-      return;
-    }
-  }
-
-  try {
-    const destDir = dirname(destPath);
-    if (!existsSync(destDir)) {
-      mkdirSync(destDir, { recursive: true });
-    }
-
-    const ext = extname(srcPath);
-    if (pluginName && [".js", ".jsx", ".ts", ".tsx"].includes(ext)) {
-      const content = readFileSync(srcPath, "utf-8");
-      const transformedContent = transformFileImports(content, pluginName);
-      writeFileSync(destPath, transformedContent);
-    } else {
-      copyFileSync(srcPath, destPath);
-    }
-
-    if (verbose) {
-      // Show even shorter, project-rooted paths for clarity
-      const srcAppIdx = srcPath.indexOf(join("src", "app"));
-      let shortSrc: string;
-      if (srcAppIdx !== -1) {
-        shortSrc = srcPath.substring(srcAppIdx);
-      } else if (srcPath.startsWith(repoRoot)) {
-        shortSrc = relative(repoRoot, srcPath);
-      } else {
-        shortSrc = srcPath;
-      }
-      const shortDest = destPath.startsWith(repoRoot)
-        ? relative(repoRoot, destPath)
-        : destPath;
-      console.log(`\x1b[32mCopied:\x1b[0m ${shortSrc} → ${shortDest}`);
-    }
-
-    // 📝  update the map now that the copy succeeded
-    if (pageFileRegex.test(basename(destPath))) {
-      const key = routeKey(destPath, localeRoot);
-      routeMap.set(key, destPath);
-    }
-  } catch (error) {
-    console.error(`\x1b[31mError copying file:\x1b[0m ${srcPath}`, error);
-  }
-};
-
-export const cleanupDeletedFiles = (
-  sourceDir: string,
-  destinationDir: string,
-  removeFileFn: (p: string) => void,
-) => {
-  if (!existsSync(sourceDir)) return;
-  if (!existsSync(destinationDir)) return;
-
-  const isBreadcrumbDir = destinationDir
-    .replace(/\\/g, "/")
-    .includes("/@breadcrumb");
-  if (isBreadcrumbDir) return;
-
-  const destFiles = getAllFiles(destinationDir);
-  for (const destFile of destFiles) {
-    const relativePath = relative(destinationDir, destFile);
-    const sourceFile = join(sourceDir, relativePath);
-
-    if (!existsSync(sourceFile)) {
-      removeFileFn(destFile);
-    }
-  }
-};
-
-export const copyDirectoryRecursive = (
-  sourceDir: string,
-  destinationDir: string,
-  pluginName: string,
-  routeMap: Map<string, string>,
-  localeRoot: string,
-  repoRoot: string,
-  verbose = true,
-) => {
-  if (!existsSync(sourceDir) || isDirectoryEmpty(sourceDir)) return;
-
-  const files = getAllFiles(sourceDir);
-
-  for (const srcFile of files) {
-    const relativePath = relative(sourceDir, srcFile);
-    const destFile = join(destinationDir, relativePath);
-
-    copyFile(
-      srcFile,
-      destFile,
-      pluginName,
-      routeMap,
-      localeRoot,
-      repoRoot,
-      verbose,
-    );
-  }
-};

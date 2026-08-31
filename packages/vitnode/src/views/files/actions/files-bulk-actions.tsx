@@ -1,9 +1,9 @@
 "use client";
 
 import { Trash2Icon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
+import { useTranslations } from "use-intl";
 
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 
@@ -11,9 +11,27 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import { useDataTableSelection } from "@/components/table/selection";
 import { Button } from "@/components/ui/button";
 
-import { deleteMyFilesAction } from "./delete-action.server";
+import type { DeleteMyFiles } from "../my-files-delete";
 
-export const MyFilesBulkActions = () => {
+/**
+ * Delete, for every ticked row of the visitor's files.
+ *
+ * The two-pass shape is the point and it is unchanged: the first pass deletes
+ * what it can and comes back with the ids that only *history* is holding, and
+ * the dialog stays open offering to force past exactly those - never the whole
+ * selection again. Files a live page still points at are refused in both passes,
+ * because there is no version of "delete anyway" that leaves a published page
+ * unbroken.
+ *
+ * The run itself is a prop, for the reason set out in `my-files-delete.ts`: the
+ * accounting is shared and only the last step - revalidate or invalidate -
+ * belongs to a framework.
+ */
+export const MyFilesBulkActions = ({
+  onDeleteFiles,
+}: {
+  onDeleteFiles: DeleteMyFiles;
+}) => {
   const t = useTranslations("core.files");
   const tGlobal = useTranslations("core.global.errors");
   const { selected } = useDataTableSelection();
@@ -52,7 +70,7 @@ export const MyFilesBulkActions = () => {
         if (!open) setHeldByRevisions([]);
       }}
       onSubmit={async ({ onClose }) => {
-        const result = await deleteMyFilesAction({ force: isForcing, ids });
+        const result = await onDeleteFiles({ force: isForcing, ids });
         report(result);
 
         if (!isForcing && result.heldByRevisions.length > 0) {

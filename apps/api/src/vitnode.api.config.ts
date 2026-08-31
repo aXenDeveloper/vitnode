@@ -1,5 +1,8 @@
 import { google } from "@ai-sdk/google";
 import { blogApiPlugin } from "@vitnode/blog/config.api";
+import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
+import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
+import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
 import { coreRelations } from "@vitnode/core/database/relations";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
@@ -10,6 +13,8 @@ import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
+
+import { i18n } from "./i18n.js";
 
 config({
   quiet: true,
@@ -41,9 +46,16 @@ export const vitNodeApiConfig = buildApiConfig({
       },
     ],
   },
-  // No `i18n` block: the languages `@vitnode/core` and the installed plugins
-  // ship are picked up on their own. Add one to declare extra locales or to
-  // override strings from `src/locales/<pluginId>/<locale>.json`.
+  /**
+   * The installation's languages, from the one module that declares them.
+   *
+   * Not optional here, whatever the type says: this app owns the schema, so
+   * `vitnode db:prepare` seeds `core_languages` from this list. Left unset, the
+   * API derives its locales from whatever the installed packages ship - which
+   * answers "what can be translated", not "what does this site serve" - and the
+   * seed falls back to `en` alone.
+   */
+  i18n,
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,
@@ -61,6 +73,9 @@ export const vitNodeApiConfig = buildApiConfig({
     }),
     logo: {
       text: "VitNode Email Test",
+      // Served by the web app, not by this one. Stage 17 moved the file from
+      // `apps/docs/public` (which answered on 3000) to `apps/web/public`, and
+      // `vite dev --port 3000` is where that is reachable.
       src: "http://localhost:3000/logo_vitnode_dark.png",
     },
   },
@@ -85,6 +100,59 @@ export const vitNodeApiConfig = buildApiConfig({
       bucket: process.env.SUPABASE_STORAGE_BUCKET,
     }),
   },
+  /**
+   * Sign-in with Discord, Google and Facebook.
+   *
+   * Carried over from `apps/docs` when Stage 17 deleted it: that application's
+   * config was the only place in the repo registering these three adapters, and
+   * `@vitnode/core/api/adapters/sso/*` would otherwise have had no consumer at
+   * all - implementations behind a live route (`/login/sso/:providerId`) with
+   * nothing showing how to switch them on.
+   *
+   * Registering one with its environment variables unset is safe and is the
+   * normal state here: each adapter defaults `clientId`/`clientSecret` to `""`
+   * and only fails when somebody actually tries that provider, with "Missing
+   * Discord client ID or secret" rather than a broken login page. So the list is
+   * what this API *supports*; the environment decides what works.
+   */
+  authorization: {
+    ssoAdapters: [
+      DiscordSSOApiPlugin({
+        clientId: process.env.DISCORD_CLIENT_ID,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      }),
+      GoogleSSOApiPlugin({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      }),
+      FacebookSSOApiPlugin({
+        clientId: process.env.FACEBOOK_CLIENT_ID,
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      }),
+    ],
+  },
+  // Bot protection on the routes that declare `withCaptcha` - register, log in,
+  // reset password. Also carried over from `apps/docs`, and left commented for a
+  // reason worth knowing before uncommenting: unlike the SSO adapters above,
+  // this one is *not* inert without its keys. Present-but-unconfigured means
+  // every one of those routes posts `secret: undefined` to Cloudflare, gets
+  // `success: false` back, and rejects the request - so switching it on without
+  // setting both keys locks people out of registration rather than degrading.
+  //
+  // captcha: {
+  //   type: "cloudflare_turnstile",
+  //   siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+  //   secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+  // },
+  //
+  // And the rate limit `apps/docs` ran with. Sensible in production, and left
+  // off here because 20 requests a minute is easy to hit by hand while
+  // developing against this API.
+  //
+  // rateLimiter: {
+  //   points: 20, // 20 requests
+  //   duration: 60, // per 60 seconds
+  // },
   metadata: {
     title: "VitNode API",
     shortTitle: "VitNode",

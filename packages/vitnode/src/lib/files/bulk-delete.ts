@@ -85,3 +85,21 @@ export const runBulkFileDelete = async (
 
   return result;
 };
+
+/**
+ * Whether a bulk run changed anything the table is showing.
+ *
+ * The rule a Next.js server action applies before it calls `revalidatePath`, and
+ * the one a TanStack Start caller applies before it invalidates - one function,
+ * so the two cannot drift. A run that was refused outright leaves the page
+ * exactly as it was, and refetching would drop the selection that is showing
+ * which rows were kept, which is the only thing telling the person what to do
+ * next.
+ *
+ * Deliberately not "did anything happen": files blocked by content and files
+ * held by revisions are both *unchanged*, and both are reported in the dialog
+ * rather than by the table reloading underneath it.
+ */
+export const shouldRefreshAfterBulkDelete = (
+  result: BulkDeleteFilesResult,
+): boolean => result.deleted > 0;

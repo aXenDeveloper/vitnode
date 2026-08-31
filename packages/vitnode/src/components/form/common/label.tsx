@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 
 import { FieldLabel } from "@/components/ui/field";
 import { useFormField } from "@/components/ui/form";

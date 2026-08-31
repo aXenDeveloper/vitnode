@@ -86,6 +86,8 @@ export interface EnvVariablesVitNode {
       adminCookieExpires: number;
       adminCookieName: string;
       cookie_expires: number;
+      /** Unset means host-only cookies; see `VitNodeApiConfig`. */
+      cookieDomain: string | undefined;
       cookieName: string;
       cookieSecure: boolean;
       deviceCookieExpires: number;
@@ -396,6 +398,9 @@ export const globalMiddleware = ({
         adminCookieExpires:
           authorization?.adminCookieExpires ?? 1000 * 60 * 60 * 24 * 1, // 1 day
         cookieSecure: authorization?.cookieSecure ?? true,
+        // No default on purpose: absent means host-only, which is correct on
+        // localhost, on a generated preview hostname and in production alike.
+        cookieDomain: authorization?.cookieDomain,
       },
       captcha,
       contentPreviewSecret,

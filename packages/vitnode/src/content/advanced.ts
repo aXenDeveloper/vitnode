@@ -23,7 +23,7 @@ import {
 } from "./const";
 import { ContentEngineError } from "./errors";
 import { unboundSelfTarget } from "./fields";
-import { clampWithFingerprint } from "./fingerprint";
+import { clampWithFingerprint } from "./hash";
 import { toSnakeCase } from "./indexes";
 import {
   contentLeafColumnName,

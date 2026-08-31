@@ -1,11 +1,8 @@
 "use client";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import React from "react";
-
-import { usePathname, useRouter } from "@/lib/navigation";
+import { useTranslations } from "use-intl";
 
 import { Button } from "../ui/button";
 import {
@@ -16,6 +13,12 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
+import { useDataTableUrl } from "./navigation";
+import {
+  readTablePageSize,
+  withTablePage,
+  withTablePageSize,
+} from "./url-state";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40];
 
@@ -32,16 +35,8 @@ export const PaginationDataTable = ({
   };
 }) => {
   const t = useTranslations("core.global");
-  const { push } = useRouter();
-  const [isPending, startTransition] = React.useTransition();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const pagination = {
-    first: searchParams.get("first"),
-    last: searchParams.get("last"),
-    cursor: searchParams.get("cursor"),
-  };
-  const pageSize = pagination.first ?? pagination.last ?? 10;
+  const { isPending, navigate, searchParams } = useDataTableUrl();
+  const pageSize = readTablePageSize(searchParams);
 
   return (
     <div className="flex w-full flex-col-reverse items-center justify-end gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
@@ -52,15 +47,7 @@ export const PaginationDataTable = ({
             if (value == null) {
               return;
             }
-            startTransition(() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("first", value as string);
-              params.delete("last");
-              params.delete("cursor");
-              push(`${pathname}?${params.toString()}`, {
-                scroll: false,
-              });
-            });
+            navigate(withTablePageSize(searchParams, value as string));
           }}
           value={`${pageSize}`}
         >
@@ -89,19 +76,13 @@ export const PaginationDataTable = ({
               className="bg-card size-8"
               disabled={!hasPreviousPage}
               onClick={() => {
-                startTransition(() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set("last", `${Number(pageSize)}`);
-                  if (startCursor) {
-                    params.set("cursor", startCursor);
-                  } else {
-                    params.delete("cursor");
-                  }
-                  params.delete("first");
-                  push(`${pathname}?${params.toString()}`, {
-                    scroll: false,
-                  });
-                });
+                navigate(
+                  withTablePage(searchParams, {
+                    cursor: startCursor,
+                    direction: "previous",
+                    pageSize,
+                  }),
+                );
               }}
               size="icon"
               variant="outline"
@@ -118,19 +99,13 @@ export const PaginationDataTable = ({
               className="bg-card size-8"
               disabled={!hasNextPage || isPending}
               onClick={() => {
-                startTransition(() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set("first", `${Number(pageSize)}`);
-                  if (endCursor) {
-                    params.set("cursor", endCursor);
-                  } else {
-                    params.delete("cursor");
-                  }
-                  params.delete("last");
-                  push(`${pathname}?${params.toString()}`, {
-                    scroll: false,
-                  });
-                });
+                navigate(
+                  withTablePage(searchParams, {
+                    cursor: endCursor,
+                    direction: "next",
+                    pageSize,
+                  }),
+                );
               }}
               size="icon"
               variant="outline"

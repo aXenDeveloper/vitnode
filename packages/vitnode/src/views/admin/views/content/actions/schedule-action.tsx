@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import dynamic from "next/dynamic";
+import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { ContentPanelProps } from "./content-panel";
 
@@ -9,10 +9,11 @@ import { ContentPanel } from "./content-panel";
 
 // The panel carries a form and the whole schedule list, so it loads with the
 // dialog rather than with the table - the same treatment the edit form gets.
-const SchedulePanel = dynamic(async () =>
-  import("./schedule/schedule-panel").then(mod => ({
-    default: mod.SchedulePanel,
-  })),
+const SchedulePanel = React.lazy(
+  async () =>
+    await import("./schedule/schedule-panel").then(mod => ({
+      default: mod.SchedulePanel,
+    })),
 );
 
 export const ScheduleContentPanel = ({

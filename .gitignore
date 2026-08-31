@@ -12,7 +12,6 @@ node_modules
 .env.production.local
 
 # Build Outputs
-.next/
 out/
 build
 dist

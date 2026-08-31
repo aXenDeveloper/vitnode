@@ -1,10 +1,10 @@
 import type { Context } from "hono";
 
 import { and, eq, gt } from "drizzle-orm";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie";
 
+import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { core_sessions } from "@/database/sessions";
-import { CONFIG } from "@/lib/config";
 
 import { DeviceModel } from "./device";
 import {
@@ -60,17 +60,13 @@ export class SessionModel {
         deviceId: device.id,
       });
 
-    setCookie(this.c, this.c.get("core").authorization.cookieName, token, {
-      httpOnly: true,
-      secure: this.c.get("core").authorization.cookieSecure,
-      path: "/",
+    setAuthCookie(this.c, this.c.get("core").authorization.cookieName, token, {
       expires:
         this.c.get("core").authorization.cookie_expires > 0
           ? new Date(
               Date.now() + this.c.get("core").authorization.cookie_expires,
             )
           : undefined,
-      domain: CONFIG.web.hostname,
     });
 
     return { token };
@@ -85,7 +81,7 @@ export class SessionModel {
 
     // Ensure both token and deviceId exist before proceeding
     if (!(token && device.id)) {
-      deleteCookie(this.c, this.c.get("core").authorization.cookieName);
+      deleteAuthCookie(this.c, this.c.get("core").authorization.cookieName);
 
       return;
     }
@@ -107,7 +103,7 @@ export class SessionModel {
       .get("cache")
       .deleteSystem(sessionCacheKey(hashedToken, device.id));
 
-    deleteCookie(this.c, this.c.get("core").authorization.cookieName);
+    deleteAuthCookie(this.c, this.c.get("core").authorization.cookieName);
   }
 
   async getUser() {
@@ -146,7 +142,7 @@ export class SessionModel {
       .limit(1);
 
     if (!session) {
-      deleteCookie(this.c, this.c.get("core").authorization.cookieName);
+      deleteAuthCookie(this.c, this.c.get("core").authorization.cookieName);
 
       return null;
     }

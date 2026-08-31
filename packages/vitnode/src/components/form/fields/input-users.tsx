@@ -1,8 +1,8 @@
 "use client";
 
 import { UserIcon, XIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,28 @@ import { FormMessage } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
-import type { UserOption } from "./search-users.action.server";
 
 import { AsyncPicker } from "../common/async-picker";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
-import { searchUsers } from "./search-users.action.server";
 
-export type { UserOption };
+/**
+ * The columns a user picker needs: enough to identify a person on sight.
+ *
+ * Declared here rather than beside the search that produces it, and that is the
+ * whole reason this file has no import of `search-users.action.server` left.
+ * The action is a `"use server"` module: it reaches `next/headers` through the
+ * typed fetcher, so a component naming it - even only for a type, even only as
+ * a default argument nobody uses - put `server-only` into the graph of every
+ * screen that renders a person picker. The Content Engine's `user` field is one
+ * of those, so that single line made the whole AdminCP content form Next-only.
+ */
+export interface UserOption {
+  avatarColor: string;
+  id: number;
+  name: string;
+  nameCode: string;
+}
 
 /**
  * A person the field can label but has not necessarily fetched.
@@ -87,7 +101,7 @@ export const AutoFormUser = ({
   multiLang,
   otherProps,
   placeholder,
-  search = searchUsers,
+  search,
   searchPlaceholder,
   selected,
 }: ItemAutoFormComponentProps & {
@@ -95,7 +109,18 @@ export const AutoFormUser = ({
   clearable?: boolean;
   disabled?: boolean;
   placeholder?: string;
-  search?: (value: string) => Promise<UserOption[]>;
+  /**
+   * How the picker finds people.
+   *
+   * Required, and deliberately without the default it used to carry. The
+   * default was `searchUsers`, the AdminCP users list read through a server
+   * action - correct for a Next.js screen and unreachable from any other host,
+   * and imported whether a caller used it or not. A caller that wants it passes
+   * `search={searchUsers}`; the Content Engine passes its own, because a `user`
+   * field's people come from the content type's own options route rather than
+   * from the member list.
+   */
+  search: (value: string) => Promise<UserOption[]>;
   searchPlaceholder?: string;
   selected?: null | PartialUserOption;
 }) => {
