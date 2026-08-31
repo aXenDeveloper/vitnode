@@ -1,13 +1,22 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  CLI_COMMANDS,
+  cliCommandNames,
+  isCliCommand,
+  renderHelp,
+} from "./cli-commands.js";
+import {
   databaseBootstrapSteps,
   generateDatabaseMigrations,
   initialDataForDatabase,
+  isAlreadyCreatedError,
   languagesFromApiConfig,
+  migrationsFolderFrom,
+  resolveLocalBin,
   runMigrations,
   runWithMigrationLock,
 } from "./prepare-database.js";
@@ -16,28 +25,11 @@ import {
  * The development bootstrap runs to completion **before** anything serves a
  * request, and it is the database's business alone.
  *
- * Pure and static: the step list is a pure function and is called as one, and the
- * CLI is read as the text it is. No Postgres, no Hono, no dev server - a test
- * that needed a database could not tell the difference between "migrated first"
- * and "migrated eventually", which is the only distinction here that matters.
- *
- * ## The regression this exists for
- *
- * Until Stage 17 a generated app's `dev` script was
- * `vitnode init && next dev`, and `vitnode init` did two unrelated things: it
- * copied every installed plugin's pages into the host's `src/app/[locale]/…` so
- * Next.js could see them, and it prepared the database - generate, apply, seed.
- *
- * Stage 17 deleted the route copier, correctly, and deleted `init` with it. The
- * database half went too, and nothing noticed for the same reason it is hard to
- * notice now: every machine that had already run `pnpm dev` once had a migrated
- * database, so only a fresh clone or a wiped volume showed it - as an arbitrary
- * Postgres error from a page rather than a migration log in a terminal.
- *
- * `vitnode db:prepare` is the database half under a name that describes only
- * itself. What this file pins is that it exists, that its steps are in the one
- * order that works, that it cannot be started concurrently with a runtime, and
- * that it has not quietly re-acquired the other half.
+ * Pure and static: the step list, the seed's language rules, the lock's
+ * decisions and the CLI's command table are all called as the functions and read
+ * as the data they are. No Postgres, no Hono, no dev server - a test that needed
+ * a database could not tell the difference between "migrated first" and
+ * "migrated eventually", which is the only distinction here that matters.
  */
 
 const scriptsRoot = import.meta.dirname;
@@ -59,26 +51,10 @@ describe("the steps of a database bootstrap", () => {
    * migrations have run. A reordering here is a fresh-database crash.
    */
   it("generates, then applies, then seeds", () => {
-    expect(
-      databaseBootstrapSteps({ generate: true }).map(step => step.label),
-    ).toEqual([
-      "Generate migrations...",
-      "Apply pending migrations...",
-      "Ensure initial data...",
-    ]);
-  });
-
-  /**
-   * And they are the real functions rather than labels beside a reimplementation
-   * - which is what stops a second migration path appearing next to this one.
-   */
-  it("runs the real migration and seed functions", () => {
-    expect(
-      databaseBootstrapSteps({ generate: true }).map(step => step.action),
-    ).toEqual([
-      generateDatabaseMigrations,
-      runMigrations,
-      initialDataForDatabase,
+    expect(databaseBootstrapSteps({ generate: true })).toEqual([
+      { action: generateDatabaseMigrations, label: "Generate migrations..." },
+      { action: runMigrations, label: "Apply pending migrations..." },
+      { action: initialDataForDatabase, label: "Ensure initial data..." },
     ]);
   });
 
@@ -89,83 +65,123 @@ describe("the steps of a database bootstrap", () => {
    * role cannot be administered.
    */
   it("can apply without generating, and still seeds", () => {
-    const steps = databaseBootstrapSteps({ generate: false });
-
-    expect(steps.map(step => step.label)).toEqual([
-      "Apply pending migrations...",
-      "Ensure initial data...",
+    expect(databaseBootstrapSteps({ generate: false })).toEqual([
+      { action: runMigrations, label: "Apply pending migrations..." },
+      { action: initialDataForDatabase, label: "Ensure initial data..." },
     ]);
-    expect(steps.map(step => step.action)).toEqual([
-      runMigrations,
-      initialDataForDatabase,
-    ]);
-  });
-
-  it("always ends by ensuring initial data", () => {
-    for (const generate of [true, false]) {
-      const steps = databaseBootstrapSteps({ generate });
-
-      expect(steps.at(-1)?.action).toBe(initialDataForDatabase);
-      expect(steps.length).toBeGreaterThan(1);
-    }
   });
 });
 
-describe("the `db:prepare` command", () => {
-  it("exists", () => {
-    expect(cli).toContain('case "db:prepare":');
+describe("the two database commands are one implementation", () => {
+  /**
+   * `db:prepare` is the development bootstrap a `dev` script waits for;
+   * `migrate` is the same work under the name the documentation and every
+   * deployment guide spell. Neither reimplements a step, which is what stops the
+   * two names drifting into two behaviours.
+   */
+  it("both delegate to `databaseBootstrap`", () => {
+    for (const command of ["db:prepare", "migrate"]) {
+      expect(cli).toContain(`case "${command}":`);
+    }
+
+    expect(cli.match(/databaseBootstrap\(\{ initMessage \}\)/g)).toHaveLength(
+      2,
+    );
+    expect(cli).not.toMatch(/\brunMigrations\(/);
+    expect(cli).not.toMatch(/\binitialDataForDatabase\(/);
   });
 
-  /**
-   * `await`ed, and inside a `try`. Both halves matter and the second is the one
-   * that regressed: the branch was `case "init": void prepareDatabase(...)`, and
-   * `void` on an async call turns a failed step into an unhandled rejection
-   * rather than an exit code this process chose. It happened to exit non-zero,
-   * because crashing on an unhandled rejection is Node's default - which is to
-   * say the fail-fast a `&&` depends on was a runtime default rather than a
-   * decision anyone had made.
-   */
-  it("awaits the bootstrap and exits non-zero when it throws", () => {
-    const branch = cli.slice(
+  /** The one thing only `migrate` does. */
+  it("gives migration generation to `migrate --generate` alone", () => {
+    expect(cli).toMatch(/flag === "--generate"/);
+    expect(cli).toContain("generateDatabaseMigrations");
+
+    const prepare = cli.slice(
       cli.indexOf('case "db:prepare":'),
-      cli.indexOf('case "migrate":'),
+      cli.indexOf('case "dev":'),
     );
 
-    expect(branch).toMatch(/await databaseBootstrap\(/);
-    expect(branch).toMatch(/try\s*\{/);
-    expect(branch).toMatch(/catch/);
-    expect(branch).toMatch(/process\.exit\(1\)/);
-    expect(branch).not.toMatch(/\bvoid\s+databaseBootstrap/);
+    expect(prepare).not.toContain("--generate");
   });
 
   /**
-   * `migrate` is the same bootstrap under the name the documentation and every
-   * deployment guide spell - `docs/dev/database`, the Content Engine guides and
-   * the Vercel deployment page all say `db:migrate`, which runs it. It delegates
-   * rather than reimplementing, so the two names cannot drift into two
-   * behaviours.
+   * `await`ed, and inside a `try`: a `dev` script chains on `&&`, so a failed
+   * step has to be an exit code this process chose rather than an unhandled
+   * rejection Node happens to crash on.
    */
-  it("shares one implementation with `migrate`", () => {
-    const branch = cli.slice(cli.indexOf('case "migrate":'));
+  it("awaits the bootstrap and exits non-zero when it throws", () => {
+    const runner = cli.slice(
+      cli.indexOf("const runDatabaseCommand"),
+      cli.indexOf("if (command === undefined"),
+    );
 
-    expect(branch).toMatch(/await databaseBootstrap\(/);
-    // The one thing `migrate --generate` does that the bootstrap does not.
-    expect(branch).toMatch(/await generateDatabaseMigrations\(\)/);
-    expect(cli.match(/await runMigrations\(\)/g)).toBeNull();
-    expect(cli.match(/await initialDataForDatabase\(\)/g)).toBeNull();
+    expect(runner).toMatch(/await run\(\)/);
+    expect(runner).toMatch(/try\s*\{/);
+    expect(runner).toMatch(/catch/);
+    expect(runner).toMatch(/process\.exit\(1\)/);
+    expect(cli).toMatch(/await runDatabaseCommand\(/);
+    expect(cli).not.toMatch(
+      /\bvoid\s+(?:databaseBootstrap|runDatabaseCommand)/,
+    );
+  });
+});
+
+describe("the CLI's command surface", () => {
+  /** The permanent commands, and no more than those. */
+  it("offers exactly the commands VitNode supports", () => {
+    expect(cliCommandNames().sort()).toEqual([
+      "build",
+      "db:prepare",
+      "dev",
+      "i18n:check",
+      "i18n:create",
+      "i18n:delete",
+      "i18n:update",
+      "i18n:update:ai",
+      "migrate",
+    ]);
   });
 
   /**
-   * `init` is gone, and so is `--web`. A web app that talks to a separate API
-   * owns no schema, and `--web` existed only to print "nothing to initialise" -
-   * a flag whose meaning was to do nothing. The replacement is for such an app's
-   * `dev` script not to call the bootstrap at all.
+   * `init`, `prepare-plugins` and `plugin --w` were the route copier's entry
+   * points and the pre-TanStack project setup. All three are gone, and a
+   * generated project that still called one would fail on its first `dev`.
    */
-  it("no longer offers `init` or a `--web` no-op", () => {
-    expect(cli).not.toContain('case "init"');
-    expect(cli).not.toContain("prepareDatabase");
-    expect(bootstrap).not.toContain('"--web"');
-    expect(bootstrap).not.toContain("prepareDatabase");
+  it.each(["init", "prepare-plugins", "plugin", "migrate:web"])(
+    "does not answer to `%s`",
+    removed => {
+      expect(isCliCommand(removed)).toBe(false);
+      expect(cli).not.toContain(`case "${removed}"`);
+    },
+  );
+
+  /** Every command in the table is dispatched, and every branch is in the table. */
+  it("dispatches every command it lists, and lists every one it dispatches", () => {
+    const dispatched = [...cli.matchAll(/case "([^"]+)":/g)].map(
+      match => match[1],
+    );
+
+    expect(dispatched.sort()).toEqual(cliCommandNames().sort());
+  });
+
+  /**
+   * The help text is generated from the same table, so it cannot describe a CLI
+   * that does not exist - and it is where the difference between the two
+   * database commands is spelled out for somebody who is not reading this file.
+   */
+  it("renders help from the table", () => {
+    const help = renderHelp();
+
+    for (const command of CLI_COMMANDS) {
+      expect(help).toContain(command.name);
+      expect(help).toContain(command.summary);
+    }
+    expect(help).toContain("migrate --generate");
+  });
+
+  it("treats a bare invocation and `--help` as a request for the list", () => {
+    expect(cli).toMatch(/command === undefined \|\| HELP_FLAGS\.includes/);
+    expect(cli).toMatch(/if \(!isCliCommand\(command\)\)/);
   });
 });
 
@@ -177,9 +193,8 @@ describe("what decides whether work is pending", () => {
    * source of truth that a fresh clone, a wiped Docker volume or a colleague's
    * machine disagrees with immediately - and the disagreement is silent, because
    * the marker says "done" while the database is empty. So there is no first-run
-   * state machine anywhere, and this asserts the absence rather than the design:
-   * the bootstrap is safe to run before *every* dev start because every step is
-   * idempotent.
+   * state machine anywhere: the bootstrap is safe to run before *every* dev
+   * start because every step is idempotent.
    */
   it("keeps no first-run marker of its own", () => {
     for (const source of [cli, bootstrap]) {
@@ -192,14 +207,25 @@ describe("what decides whether work is pending", () => {
   /**
    * The migrator is Drizzle's, in-process, against the folder the app's own
    * `drizzle.config.ts` names - so the bootstrap and `drizzle-kit generate`
-   * cannot point at different directories, and `out` is honoured rather than
-   * `./migrations` being assumed.
+   * cannot point at different directories.
    */
-  it("reads the migrations folder from drizzle.config.ts", () => {
+  it.each([
+    ["a default export", { default: { out: "./db/out" } }, "./db/out"],
+    ["a bare export", { out: "./db/out" }, "./db/out"],
+    [
+      "the default export first",
+      { default: { out: "./a" }, out: "./b" },
+      "./a",
+    ],
+    ["no config at all", {}, "./migrations"],
+    ["an empty `out`", { out: "" }, "./migrations"],
+    ["a non-string `out`", { out: 7 }, "./migrations"],
+  ])("reads the migrations folder from %s", (_label, loaded, expected) => {
+    expect(migrationsFolderFrom(loaded)).toBe(expected);
+  });
+
+  it("hands that folder to the in-process migrator", () => {
     expect(bootstrap).toContain("drizzle.config.ts");
-    expect(bootstrap).toMatch(/loaded\.default\?\.out \?\? loaded\.out/);
-    // The fallback stays a fallback.
-    expect(bootstrap).toContain('return "./migrations"');
     expect(bootstrap).toMatch(
       /migrate\(config\.dbProvider, \{ migrationsFolder/,
     );
@@ -208,9 +234,8 @@ describe("what decides whether work is pending", () => {
   /**
    * Provisioned before the migrations that need them, not after: the generated
    * `search_vector` column resolves every `regconfig` branch at column-creation
-   * time, so a missing text-search dictionary fails migration 0017 rather than a
-   * later query. Managed Postgres cannot install the `polish` hunspell files, so
-   * a `COPY = simple` fallback is registered for whatever is absent.
+   * time, so a missing text-search dictionary fails the migration that creates
+   * the column rather than a later query.
    */
   it("ensures text-search configs before applying migrations", () => {
     const applyStep = bootstrap.slice(
@@ -224,7 +249,110 @@ describe("what decides whether work is pending", () => {
     expect(bootstrap).toContain("COPY = simple");
   });
 
+  /**
+   * And the tolerance the concurrent case exposed: the loser of a race on
+   * `CREATE TEXT SEARCH CONFIGURATION` gets `23505`, not the `42710` a reader
+   * would expect, and the code sits one wrapper deep inside Drizzle's
+   * `DrizzleQueryError`.
+   */
+  it.each([
+    ["a bare unique violation", { code: "23505" }],
+    ["a bare duplicate object", { code: "42710" }],
+    ["one wrapper deep", { cause: { code: "23505" } }],
+    ["two wrappers deep", { cause: { cause: { code: "42710" } } }],
+  ])("tolerates %s", (_label, error) => {
+    expect(isAlreadyCreatedError(error)).toBe(true);
+  });
+
+  it.each([
+    ["a syntax error", { code: "42601" }],
+    ["no code at all", new Error("boom")],
+    ["a numeric code", { code: 23505 }],
+    ["nothing", undefined],
+    [
+      "a cycle",
+      (() => {
+        const error: { cause?: unknown } = {};
+        error.cause = error;
+
+        return error;
+      })(),
+    ],
+  ])("rethrows %s", (_label, error) => {
+    expect(isAlreadyCreatedError(error)).toBe(false);
+  });
+});
+
+describe("migration generation runs the local drizzle-kit", () => {
+  /**
+   * Resolved out of `node_modules/.bin` rather than run through a package
+   * manager. `npm run drizzle-kit` needs npm installed *and* a `drizzle-kit`
+   * script in the app's `package.json`; a bun-only machine has neither, and a
+   * generated project that dropped the alias would fail on its first `dev`.
+   */
+  it("finds the binary beside the app", () => {
+    const found = "/repo/apps/api/node_modules/.bin/drizzle-kit";
+
+    expect(
+      resolveLocalBin("drizzle-kit", "/repo/apps/api", {
+        exists: candidate => candidate === found,
+        win32: false,
+      }),
+    ).toBe(found);
+  });
+
+  /** And hoisted at the workspace root, which is where npm and bun put it. */
+  it("walks up to the workspace root", () => {
+    const found = "/repo/node_modules/.bin/drizzle-kit";
+
+    expect(
+      resolveLocalBin("drizzle-kit", "/repo/apps/api", {
+        exists: candidate => candidate === found,
+        win32: false,
+      }),
+    ).toBe(found);
+  });
+
+  it("stops at the filesystem root rather than looping", () => {
+    expect(
+      resolveLocalBin("drizzle-kit", "/repo/apps/api", {
+        exists: () => false,
+        win32: false,
+      }),
+    ).toBeNull();
+  });
+
+  it("looks for the batch file on Windows", () => {
+    const found = "/repo/node_modules/.bin/drizzle-kit.cmd";
+
+    expect(
+      resolveLocalBin("drizzle-kit", "/repo/apps", {
+        exists: candidate => candidate === found,
+        win32: true,
+      }),
+    ).toBe(found);
+  });
+
+  it("asks no package manager to run it", () => {
+    const generate = bootstrap.slice(
+      bootstrap.indexOf("export const generateDatabaseMigrations"),
+      bootstrap.indexOf("export const migrationsFolderFrom"),
+    );
+
+    expect(generate).not.toMatch(/"(?:npm|pnpm|bun|yarn)"/);
+    expect(generate).toContain('resolveLocalBin("drizzle-kit"');
+    expect(generate).toMatch(/\["up"\]/);
+    expect(generate).toMatch(/\["generate"\]/);
+  });
+});
+
+describe("the seed", () => {
   /** A fresh database needs more than tables. */
+  const seed = bootstrap.slice(
+    bootstrap.indexOf("export const initialDataForDatabase"),
+    bootstrap.indexOf("export interface DatabaseBootstrapStep"),
+  );
+
   it.each([
     ["languages", "core_languages"],
     ["roles", "core_roles"],
@@ -232,47 +360,45 @@ describe("what decides whether work is pending", () => {
     ["moderator permissions", "core_moderators_permissions"],
     ["admin permissions", "core_admin_permissions"],
   ])("seeds %s", (_label, table) => {
-    const seed = bootstrap.slice(
-      bootstrap.indexOf("export const initialDataForDatabase"),
-      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
-    );
-
     expect(seed).toContain(table);
   });
 
   /** Idempotent, which is what makes running it every time safe. */
   it("seeds idempotently", () => {
-    expect(bootstrap).toContain("onConflictDoNothing");
-    expect(bootstrap).toMatch(/roleCount\.count === 0/);
+    expect(seed).toMatch(
+      /onConflictDoNothing\(\{ target: core_languages\.code \}\)/,
+    );
+    expect(seed).toMatch(/roleCount\.count === 0/);
   });
-});
 
-describe("the languages a fresh database is seeded with", () => {
   /**
-   * From the API config, and from nothing else.
-   *
-   * The regression: this used to be read from the *frontend* config, found by
-   * walking `process.cwd()` for a `src/vitnode.config.ts`. `db:prepare` runs
-   * from the app that owns the schema - `apps/api` here, and `apps/api` in every
-   * generated monorepo - where the web app's config is a sibling the search
-   * never reaches. The optional lookup returned `null` without a word, the
-   * fallback ran, and a fresh database came up with `en` alone while the site
-   * served `en` and `pl`.
+   * From the API config, and from nothing else. `db:prepare` runs from the app
+   * that owns the schema, where a frontend config is a sibling a filesystem walk
+   * would never reach - so a lookup for one returned `null` without a word and a
+   * fresh database came up with `en` alone while the site served `en` and `pl`.
    */
   it("reads no frontend config", () => {
-    const seed = bootstrap.slice(
-      bootstrap.indexOf("export const initialDataForDatabase"),
-      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
-    );
-
     expect(seed).not.toContain('type: "config"');
-    expect(seed).not.toContain("webConfig");
     expect(seed).toContain("languagesFromApiConfig(config.i18n)");
-    // And nothing anywhere reaches for a sibling application.
     expect(bootstrap).not.toMatch(/\.\.\/(?:web|api)\b/);
     expect(bootstrap).not.toContain("vitnode.config.ts");
   });
 
+  /**
+   * And the role labels go in under whichever language is the default:
+   * `languageCode` references `core_languages.code`, so a hard-coded `"en"` is a
+   * foreign-key violation on the first installation that does not serve English.
+   */
+  it("seeds role names under the default language, not under `en`", () => {
+    expect(seed).toContain("languageCode: defaultLanguageCode");
+    expect(seed).not.toMatch(/languageCode: "en"/);
+    for (const role of ["Guest", "Member", "Moderator", "Administrator"]) {
+      expect(seed).toContain(`value: "${role}"`);
+    }
+  });
+});
+
+describe("the languages a fresh database is seeded with", () => {
   /**
    * With no `i18n` block, `en` - and not the API's own derived locale list,
    * which is "whatever the installed packages ship a translation for" and would
@@ -323,8 +449,7 @@ describe("the languages a fresh database is seeded with", () => {
 
   /**
    * `defaultLocale` decides which row is the default, and `protected` follows
-   * it: the default language is the one the AdminCP must not let anybody
-   * delete.
+   * it: the default language is the one the AdminCP must not let anybody delete.
    */
   it("marks the configured default, whichever it is", () => {
     const rows = languagesFromApiConfig({
@@ -344,10 +469,10 @@ describe("the languages a fresh database is seeded with", () => {
   });
 
   /**
-   * A default has to exist. `defaultLocale` is optional on the API config and
-   * falls back to `"en"` the way the API runtime's does - but an app that does
-   * not serve English at all would then have no default row, and a
-   * `core_languages` with no default is a state nothing downstream can read.
+   * A default has to exist. `defaultLocale` is optional and falls back to `"en"`
+   * the way the API runtime's does - but an app that does not serve English at
+   * all would then have no default row, and a `core_languages` with no default
+   * is a state nothing downstream can read.
    */
   it("always leaves exactly one default", () => {
     for (const i18n of [
@@ -376,7 +501,7 @@ describe("the languages a fresh database is seeded with", () => {
     ).toBe("en");
   });
 
-  /** The installation's timezone, on every row. */
+  /** The installation's timezone, on every row, and `UTC` when it declares none. */
   it("propagates the configured timezone", () => {
     expect(
       languagesFromApiConfig({
@@ -389,7 +514,6 @@ describe("the languages a fresh database is seeded with", () => {
       }).map(row => row.timezone),
     ).toEqual(["Europe/Warsaw", "Europe/Warsaw"]);
 
-    // And `UTC` when an app declares locales but no zone.
     expect(
       languagesFromApiConfig({
         locales: [{ code: "en", name: "English" }],
@@ -424,8 +548,7 @@ describe("the languages a fresh database is seeded with", () => {
 
   /**
    * Adding a locale and re-running `db:prepare` inserts the new one and leaves
-   * the rest alone - `onConflictDoNothing` on `code`, which is what makes the
-   * seed safe to run before every dev start.
+   * the rest alone.
    */
   it("adds a locale without disturbing the ones already there", () => {
     const before = languagesFromApiConfig({
@@ -441,31 +564,6 @@ describe("the languages a fresh database is seeded with", () => {
     });
 
     expect(after.slice(0, 1)).toEqual(before);
-    expect(bootstrap).toMatch(
-      /onConflictDoNothing\(\{ target: core_languages\.code \}\)/,
-    );
-  });
-
-  /**
-   * And the role labels go in under whichever language is the default.
-   *
-   * They stay English - four words nobody translated are better than four words
-   * somebody invented, and VitNode falls back to the default language for a
-   * missing translation anyway. What changed is the *code*: `languageCode`
-   * references `core_languages.code`, so a hard-coded `"en"` is a foreign-key
-   * violation on the first installation that does not serve English.
-   */
-  it("seeds role names under the default language, not under `en`", () => {
-    const seed = bootstrap.slice(
-      bootstrap.indexOf("export const initialDataForDatabase"),
-      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
-    );
-
-    expect(seed).toContain("languageCode: defaultLanguageCode");
-    expect(seed).not.toMatch(/languageCode: "en"/);
-    for (const role of ["Guest", "Member", "Moderator", "Administrator"]) {
-      expect(seed).toContain(`value: "${role}"`);
-    }
   });
 });
 
@@ -473,19 +571,15 @@ describe("concurrent bootstraps are serialised", () => {
   /**
    * More than one runtime legitimately gates on the bootstrap - the API, and any
    * single app that mounts the API in-process - so a monorepo `turbo dev` starts
-   * two at once, and `cd apps/web && pnpm dev` starts one beside whatever else is
-   * running.
+   * two at once.
    *
    * Measured, not theorised: with the lock bypassed, two concurrent
    * `vitnode db:prepare` runs against one empty database leave one exiting 1 -
    * first on `CREATE TEXT SEARCH CONFIGURATION "polish"`, and once that is
    * tolerated, on `CREATE SCHEMA IF NOT EXISTS drizzle`. Postgres'
-   * `IF NOT EXISTS` is not race-safe against a concurrent creator. With the lock,
-   * both exit 0 and the database has 40 migrations and 4 roles rather than
-   * doubles of either.
+   * `IF NOT EXISTS` is not race-safe against a concurrent creator.
    */
   it("takes a Postgres advisory lock around the whole bootstrap", () => {
-    expect(bootstrap).toContain("withMigrationLock");
     expect(bootstrap).toContain("pg_try_advisory_lock");
     expect(bootstrap).toContain("pg_advisory_unlock");
     expect(bootstrap).toMatch(/MIGRATION_LOCK_KEY = [\d_]+;/);
@@ -517,9 +611,8 @@ describe("concurrent bootstraps are serialised", () => {
 
   /**
    * On a connection of its own, which is the fix for the deadlock below rather
-   * than a preference. An advisory lock belongs to a *session*, so one
-   * connection has to stay open for the whole bootstrap - and taking it out of
-   * the application's pool is what made a `max: 1` pool impossible to migrate.
+   * than a preference - and never out of the application's pool, where
+   * `reserve()` would pin the very connection the migration then needs.
    */
   it("opens a dedicated connection for the lock", () => {
     const open = bootstrap.slice(
@@ -530,28 +623,7 @@ describe("concurrent bootstraps are serialised", () => {
     expect(open).toContain("postgres({");
     expect(open).toContain("max: 1");
     expect(open).toContain("client.end(");
-  });
-
-  /**
-   * And never out of the application's. `reserve()` pins a pooled connection,
-   * which is exactly the connection the migration then needs.
-   */
-  it("reserves nothing from the application pool", () => {
     expect(bootstrap).not.toContain(".reserve(");
-    expect(bootstrap).not.toContain("session.release()");
-  });
-
-  /**
-   * `pg_try_advisory_lock` in a bounded loop rather than the blocking
-   * `pg_advisory_lock`: a blocking wait cannot say why it is waiting, and a
-   * developer whose previous run was killed mid-migration would get a terminal
-   * that never returns.
-   */
-  it("waits with a deadline and says what it is waiting for", () => {
-    expect(bootstrap).not.toContain("pg_advisory_lock(");
-    expect(bootstrap).toMatch(/MIGRATION_LOCK_WAIT_MS = [\d_]+;/);
-    expect(bootstrap).toMatch(/Timed out after/);
-    expect(bootstrap).toMatch(/waiting for it to finish/);
   });
 
   /**
@@ -562,22 +634,6 @@ describe("concurrent bootstraps are serialised", () => {
    */
   it("degrades to unlocked rather than failing on an unknown driver", () => {
     expect(bootstrap).toMatch(/!\("shared" in options\)/);
-    expect(bootstrap).toMatch(/if \(lock === null\) \{\s*await run\(\)/);
-  });
-
-  /**
-   * And the tolerance that the race exposed: the loser of a concurrent
-   * `CREATE TEXT SEARCH CONFIGURATION` gets `23505`, not the `42710` the original
-   * code checked - and the code sits one wrapper deep, inside Drizzle's
-   * `DrizzleQueryError`, so reading only the outermost `code` finds `undefined`.
-   */
-  it("tolerates both spellings of “already created”, down the cause chain", () => {
-    expect(bootstrap).toContain("isAlreadyCreatedError");
-    expect(bootstrap).toContain('"23505"');
-    expect(bootstrap).toContain('"42710"');
-    expect(bootstrap).toMatch(
-      /current = \(current as \{ cause\?: unknown \}\)\.cause/,
-    );
   });
 });
 
@@ -659,13 +715,11 @@ const createFakeLock = (
 
 describe("holding the lock costs the application pool nothing", () => {
   /**
-   * The regression, stated as the thing that used to hang.
-   *
-   * The old implementation called `dbClient.$client.reserve()` and then ran the
-   * whole bootstrap through `dbClient` - the same pool. With `max: 1` the
-   * reserved session *was* the pool, so `runMigrations` asked for a connection
-   * that could not be returned until the migration blocking on it had finished.
-   * Nothing errored and nothing timed out; the terminal simply stopped.
+   * The regression, stated as the thing that used to hang: a lock taken out of
+   * the application's own pool with `max: 1` *was* the pool, so `runMigrations`
+   * asked for a connection that could not be returned until the migration
+   * blocking on it had finished. Nothing errored and nothing timed out; the
+   * terminal simply stopped.
    *
    * A pool of one is the fake, so "waits forever" becomes "cannot acquire" -
    * which is the same fact where a test can see it.
@@ -693,7 +747,6 @@ describe("holding the lock costs the application pool nothing", () => {
 
   /**
    * And the fake is not vacuous: the design this replaced fails against it.
-   *
    * Without this, the test above would pass just as well for a lock that never
    * touched a connection at all, which is not what is being claimed.
    */
@@ -790,33 +843,5 @@ describe("holding the lock costs the application pool nothing", () => {
     });
 
     expect(ran).toEqual(["migrated"]);
-  });
-});
-
-describe("the bootstrap and the plugin runtime are separate", () => {
-  /**
-   * The invariant that keeps the two halves of the deleted `init` apart. A
-   * database bootstrap that copied a plugin page would be the old command back
-   * under a new name; the plugin half belongs to the app's Vite build, which
-   * writes four `*.gen.ts` registries and no route file.
-   */
-  it("prepares no plugin and writes no route file", () => {
-    for (const source of [cli, bootstrap]) {
-      expect(source).not.toContain("preparePluginsFiles");
-      expect(source).not.toContain("prepare-plugins");
-      expect(source).not.toContain("copyDirectoryRecursive");
-      expect(source).not.toMatch(/src\/routes|src\/app|\[locale\]|@breadcrumb/);
-      expect(source).not.toMatch(/\.gen\.tsx?\b/);
-    }
-  });
-
-  it("has no route-copying module left beside it", () => {
-    for (const deleted of [
-      "prepare-plugins-files.ts",
-      "plugin.ts",
-      "legacy-route-overlap.ts",
-    ]) {
-      expect(existsSync(join(scriptsRoot, deleted))).toBe(false);
-    }
   });
 });

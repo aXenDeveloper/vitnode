@@ -5,24 +5,10 @@ import { join, resolve } from "node:path";
  * Where a VitNode project starts, for the scripts that have to read something
  * outside the directory they were run in.
  *
- * All that is left of what used to be this file. Until the Next.js cutover it
- * also held the plugin **route copier** - the machinery that read a plugin's
- * `src/routes/{main,admin,blank,breadcrumb}/` and wrote copies of those pages
- * into every Next.js app's `src/app/[locale]/…`, rewriting each import as it
- * went. A plugin's pages are no longer copied anywhere: its route manifest is
- * compiled into a literal registry and the app imports the page out of the
- * plugin's own `dist`, so there is nothing to copy, nothing to clean up when a
- * source file is deleted, and no import to rewrite.
- *
- * What the copier needed and this does not: `findLocaleRoot` (it looked for an
- * `src/app/[locale]` directory, which only a Next.js App Router app has),
- * `transformFileImports`, `copyFile`, `copyDirectoryRecursive`,
- * `cleanupDeletedFiles`, `buildInitialRouteMap`, `routeKey`, `getAllFiles`,
- * `isDirectoryEmpty` and `SourceConfig`.
- *
- * The two below survive because the `i18n:*` commands use them, and neither has
- * anything to do with routing: one locates the project, the other locates an
- * installed package inside it.
+ * Both are used by the `i18n:*` commands and by nothing else: one locates the
+ * project, the other locates an installed package inside it. Neither has
+ * anything to do with routing - a plugin's pages are never copied anywhere, so
+ * there is no file-copying machinery here to reach for.
  */
 
 /**

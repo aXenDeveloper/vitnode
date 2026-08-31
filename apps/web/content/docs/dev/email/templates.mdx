@@ -130,7 +130,7 @@ We implemented [TailwindCSS](https://react.email/docs/components/tailwind) in th
 
 ## Internationalization (I18n)
 
-VitNode supports internationalization (I18n) in email templates thanks to [next-intl](https://react.email/docs/guides/internationalization/next-intl).
+VitNode supports internationalization (I18n) in email templates through [`use-intl`](https://www.npmjs.com/package/use-intl), the same library every string in the framework renders through.
 
 Strings live with the plugin that owns them, and the locale the email renders in comes from the recipient - see [Server-side i18n](/docs/dev/i18n/server). Because emails render on the server, the keys they use belong in the plugin's **server** tree, `src/locales/api/`, registered with `buildApiPlugin` - not the frontend tree the UI uses:
 
@@ -151,7 +151,7 @@ import { Text } from 'react-email';
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from '@vitnode/core/emails/default-template';
-import { createTranslator } from 'next-intl'; // [!code ++]
+import { createTranslator } from 'use-intl'; // [!code ++]
 
 export default function TestTemplateEmail({
   i18n,
@@ -188,7 +188,7 @@ You can also translate the subject of the email using the `createTranslator` fun
 ```ts title="src/api/modules/users/routes/test.route.ts"
 import { z } from 'zod';
 // [!code ++]
-import { createTranslator } from 'next-intl';
+import { createTranslator } from 'use-intl';
 import { buildRoute } from '@vitnode/core/api/lib/route';
 import { UserModel } from '@vitnode/core/api/models/user';
 

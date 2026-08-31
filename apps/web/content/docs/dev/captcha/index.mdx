@@ -57,19 +57,34 @@ export const exampleRoute = buildRoute({
 </Step>
 <Step>
 
-### Get config from middleware API
+### Read the captcha config
 
-Get captcha config from middleware API in your view and pass it to your `'use client';` component.
+The public site key comes from the middleware config - one anonymous, public read
+that is the same answer for every visitor. It is a TanStack Query definition, so
+warm it in the route's `loader` and read it back in the component:
 
-```tsx title="plugins/{plugin_name}/src/app/sing_up/page.tsx"
-import { getMiddlewareApi } from "@vitnode/core/lib/api/get-middleware-api"; // [!code ++]
+```tsx title="apps/web/src/routes/_main/sign-up.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import { middlewareConfigQueryOptions } from "@vitnode/core/tanstack/auth"; // [!code ++]
 
-export const SignUpView = async () => {
-  const { captcha } = await getMiddlewareApi(); // [!code ++]
+export const Route = createFileRoute("/_main/sign-up")({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(middlewareConfigQueryOptions()), // [!code ++]
+  component: SignUpRoute,
+});
 
-  return <FormSignUp captcha={captcha} />;
+const SignUpRoute = () => {
+  const { data } = useSuspenseQuery(middlewareConfigQueryOptions()); // [!code ++]
+
+  return <FormSignUp captcha={data.captcha} />;
 };
 ```
+
+<Callout type="info" title="If the read fails, the widget is absent">
+  The fallback config carries no site key, so a form rendered from it submits an
+  empty token and the API answers `400`. Degraded, but never a silent success -
+  nothing is created and nothing is claimed to have been.
+</Callout>
 
 </Step>
 <Step>
@@ -78,9 +93,7 @@ export const SignUpView = async () => {
 
 Get the `captcha` config from the props and pass it to the `AutoForm` component. This will render the captcha widget in your form.
 
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/sign-up.tsx"
-"use client";
-
+```tsx title="plugins/{plugin_name}/src/views/sign-up/sign-up.tsx"
 import { AutoForm } from "@vitnode/core/components/form/auto-form";
 
 export const FormSignUp = ({
@@ -111,9 +124,7 @@ export const FormSignUp = ({
 
 In your form submission handler, you can get the `captchaToken` from the form submission context and pass it to your mutation API.
 
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/sign-up.tsx"
-"use client";
-
+```tsx title="plugins/{plugin_name}/src/views/sign-up/sign-up.tsx"
 import {
   AutoForm,
   type AutoFormOnSubmit, // [!code ++]
@@ -149,21 +160,21 @@ export const FormSignUp = ({
 };
 ```
 
-Next, you need to set `captchaToken` in your mutation API call. This token is provided by the `AutoForm` component when the form is submitted.
+Then pass `captchaToken` through to your mutation. `AutoForm` hands it to
+`onSubmit`; the fetcher forwards it to the API as a header, which is what the
+`withCaptcha` route verifies.
 
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/mutation-api.server.ts"
-"use server";
-
+```ts title="plugins/{plugin_name}/src/views/sign-up/mutation-api.ts"
 import type { z } from "zod";
 
-import { fetcher } from "@vitnode/core/lib/fetcher";
+import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
 
 export const mutationApi = async ({
   captchaToken, // [!code ++]
   ...input
 }: // [!code ++]
 z.infer<typeof zodSignUpSchema> & { captchaToken: string }) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcherClient(usersModuleRef, {
     path: "/sign_up",
     method: "post",
     module: "users",

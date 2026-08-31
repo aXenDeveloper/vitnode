@@ -44,8 +44,8 @@ export interface AdminSearchIndexRouteProps extends AdminSearchIndexRouteData {
  *
  * The header's "rebuild everything" button and the two row actions share one
  * `actions` object, so all three refresh the same way: a query invalidation on
- * success. `useSearchIndexActions` is the TanStack half of the pair whose other
- * half is `useSearchIndexActionsNext`.
+ * success. `useSearchIndexActions` is what supplies it, and `SearchIndexActions`
+ * is the seam it satisfies.
  */
 export const AdminSearchIndexRouteContent = ({
   collectionLabels,

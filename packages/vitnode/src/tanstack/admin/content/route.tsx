@@ -52,8 +52,8 @@ import { contentListRouteParams } from "./route-search";
  *
  * The resolver already answers `undefined` for an empty array, so
  * `/admin/content` with nothing after it is a not-found rather than a list of
- * every content type. That is deliberate - there is no index screen, and
- * inventing one here would be a URL the Next.js AdminCP never served.
+ * every content type. That is deliberate: there is no index screen, and a route
+ * that invents one is a URL the sidebar never links to and nothing tests.
  */
 export const contentRouteSegments = (splat: string | undefined): string[] =>
   (splat ?? "").split("/").filter(segment => segment !== "");

@@ -23,9 +23,9 @@ import { ContentAdminRouteContent } from "./route-screen";
  *
  * The composition point, so a host's route file stays topology: it hands over
  * the loader data, the registry, the navigate and the search, and this decides
- * whether that URL is a list, a create form or an edit form. Exactly the choice
- * `ContentAdminView` makes in the Next.js AdminCP, made from the same resolved
- * `action` rather than from a second reading of the path.
+ * whether that URL is a list, a create form or an edit form. The choice is made
+ * from the already-resolved `action` rather than from a second reading of the
+ * path, so there is one answer to "which screen is this".
  *
  * ## Why it imports the form namespace
  *

@@ -70,9 +70,10 @@ export * from "./actions";
  *
  * The navigation model itself is *not* re-exported from here as an
  * implementation: it lives in `views/admin/layouts/sidebar/nav/nav-model`,
- * framework-free, because the Next.js AdminCP reads it too. What crosses this
- * barrel is the model's public vocabulary, so a TanStack host has one specifier
- * to import rather than a deep path into `views/`.
+ * framework-free, so a host that is not on TanStack Start can still build a
+ * sidebar from it. What crosses this barrel is the model's public vocabulary, so
+ * a TanStack host has one specifier to import rather than a deep path into
+ * `views/`.
  */
 export { AdminBreadcrumb, useAdminBreadcrumb } from "./breadcrumb";
 export * from "./intl";

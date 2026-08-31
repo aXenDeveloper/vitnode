@@ -65,8 +65,9 @@ if (staticStorage) {
 VitNodeAPI({ app, vitNodeApiConfig });
 ```
 
-Inside a **Next.js** app the `public/` directory is already served at the site
-root, so no `serveStatic` is needed - just point the adapter's public path at it:
+In a **TanStack Start** app that mounts the API in-process, Vite already serves
+`public/` at the site root, so no `serveStatic` is needed - just point the
+adapter's public path at a directory inside it:
 
 ```ts title="vitnode.api.config.ts"
 adapter: LocalStorageAdapter({ publicPath: "/uploads" }),

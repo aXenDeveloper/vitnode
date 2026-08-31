@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { PluginRouteDefinition } from "../../routing/types.js";
 import type { PluginRouteCompilerSource } from "../plugin-routes/compile.js";
 
 import { compilePluginRoutes } from "../plugin-routes/compile.js";
+import { vitNodeGeneratedRegistryPaths } from "./registries.js";
 
 /**
  * The generation pass writes **registries**, never pages.
@@ -43,8 +44,20 @@ import { compilePluginRoutes } from "../plugin-routes/compile.js";
  *
  * Both wrong shapes fail silently rather than loudly: the app ends up holding a
  * second copy of a page nobody wrote, and which of the two runs is decided by a
- * router's ranking. `scripts/no-route-copier.test.ts` keeps the first engine
- * deleted; this keeps the second from being built.
+ * router's ranking.
+ *
+ * This file is the half of the invariant that does not depend on any particular
+ * copier having been deleted, which is what makes it the permanent one: the
+ * destinations are a *pure function of the app root*, there are four of them,
+ * every one is a flat `*.gen.ts`, and none is inside the directory a router
+ * reads as routes. A copier reintroduced anywhere in the pass has nowhere to
+ * put its output.
+ *
+ * The two files that state the same thing from the other side are worth knowing
+ * about, because between them they cover the entry points this one cannot see:
+ * `scripts/no-route-copier.test.ts` asserts the deleted Next.js copier has no
+ * CLI command and is started by nothing, and `scripts/dev.test.ts` asserts
+ * `vitnode dev` spawns three compilers and no fourth process.
  *
  * The routes below are the ones the brief names, including the dynamic child,
  * because a dynamic segment is the case a materialising generator has to invent
@@ -212,59 +225,79 @@ describe("what a compilation produces", () => {
 
 describe("where the generation pass is allowed to write", () => {
   const writer = source("plugin-routes.ts");
-
-  /** `key: join(appRoot, "src", "<file>")`, as the writer declares them. */
-  const pathsForFiles = new Map(
-    [...writer.matchAll(/(\w+): join\(appRoot, "src", "([^"]+)"\)/g)].map(
-      match => [match[1], match[2]] as const,
-    ),
-  );
-
-  /** The first argument of every `writeIfChanged` call site. */
-  const written = [...writer.matchAll(/writeIfChanged\(\s*([\w.]+)\s*,/g)].map(
-    match => match[1],
-  );
-
-  it("declares the destinations this test reads", () => {
-    expect(pathsForFiles.size).toBeGreaterThan(0);
-    expect(written.length).toBeGreaterThan(0);
-  });
+  const generator = source("registries.ts");
 
   /**
-   * Every write goes through `paths`, so the set of destinations is the set
-   * `pathsFor` declares and cannot be assembled at a call site.
+   * Every destination, as data rather than as a regular expression over source.
+   *
+   * `vitNodeGeneratedRegistryPaths` is a pure function of the app root, which is
+   * the whole reason it is exported: the set of files VitNode may create in an
+   * application can be *called* with a synthetic root and read off the answer,
+   * rather than inferred from the shape of a `join(...)` call. Handed a path the
+   * writer could not possibly have hard-coded, anything it returns had to be
+   * derived from the argument.
    */
-  it("writes only to a declared path", () => {
-    for (const destination of written) {
-      expect(destination).toMatch(/^paths\.\w+$/);
-      expect(pathsForFiles.has(destination.slice("paths.".length))).toBe(true);
-    }
+  const appRoot = join(sep, "synthetic", "app-root");
+  const destinations = vitNodeGeneratedRegistryPaths(appRoot);
+  const relativeDestinations = Object.values(destinations).map(path =>
+    relative(appRoot, path).replaceAll(sep, "/"),
+  );
+
+  it("declares a destination for every projection", () => {
+    expect(Object.keys(destinations).sort()).toEqual([
+      "adminNav",
+      "contentRegistry",
+      "manifest",
+      "registry",
+    ]);
   });
 
   /**
-   * And each of those is a generated data file at the top of `src/` - never a
-   * page, and never inside a directory a router reads as routes.
+   * Four generated data files at the top of `src/` - never a page, and never
+   * inside a directory a router reads as routes.
    */
   it("writes four generated data files and no source file", () => {
-    // `?? destination` rather than a non-null assertion: an unresolved key is a
-    // real possible failure - a `writeIfChanged(paths.somethingNew, …)` whose
-    // key `pathsFor` does not declare - and it should fail the assertion below
-    // by name instead of being asserted away.
-    const files = written.map(
-      destination =>
-        pathsForFiles.get(destination.slice("paths.".length)) ?? destination,
-    );
-
-    expect([...files].sort()).toEqual([
-      "admin-nav.gen.ts",
-      "content-registry.gen.ts",
-      "plugin-route-manifest.gen.ts",
-      "plugin-routes.gen.ts",
+    expect([...relativeDestinations].sort()).toEqual([
+      "src/admin-nav.gen.ts",
+      "src/content-registry.gen.ts",
+      "src/plugin-route-manifest.gen.ts",
+      "src/plugin-routes.gen.ts",
     ]);
-    for (const file of files) {
-      expect(file).toMatch(/^[\w-]+\.gen\.ts$/);
-      expect(file).not.toContain("/");
+  });
+
+  it("puts every destination inside the app root it was handed", () => {
+    for (const path of Object.values(destinations)) {
+      expect(isAbsolute(path)).toBe(true);
+      expect(path.startsWith(`${appRoot}${sep}`)).toBe(true);
+      expect(relative(appRoot, path).startsWith("..")).toBe(false);
     }
+  });
+
+  /**
+   * And the writer can reach no destination the table does not name.
+   *
+   * The one thing the assertions above cannot say on their own: a
+   * `writeFile(join(appRoot, "src", "routes", …))` beside them would pass every
+   * one of them. So the writer's own call sites are read, and each has to be a
+   * `file.path` off the list the generator returned.
+   */
+  it("assembles no destination of its own", () => {
+    const written = [
+      ...writer.matchAll(/writeIfChanged\(\s*([\w.]+)\s*,/g),
+    ].map(match => match[1]);
+
+    expect(written.length).toBeGreaterThan(0);
+    for (const destination of written) {
+      expect(destination).toBe("file.path");
+    }
+
+    // And `writeIfChanged` is the only thing here that touches the disk: one
+    // `writeFile`, whose destination is its own `path` parameter.
+    expect(
+      [...writer.matchAll(/write(?:File|FileSync)\(\s*([\w.]+)/g)].map(
+        match => match[1],
+      ),
+    ).toEqual(["path"]);
   });
 
   /**
@@ -276,11 +309,13 @@ describe("where the generation pass is allowed to write", () => {
    * and a write there would invert the direction of the entire layer.
    */
   it("never passes a routes directory to a write", () => {
-    expect(writer).toContain("DEFAULT_HOST_ROUTES_DIR");
-    expect(writer).toContain("readHostRoutes");
-    expect(writer).not.toMatch(
-      /write(?:File|IfChanged)\([^)]*(?:routesDir|hostRoutesDir|DEFAULT_HOST_ROUTES_DIR)/,
-    );
+    expect(generator).toContain("DEFAULT_HOST_ROUTES_DIR");
+    expect(generator).toContain("readHostRoutes");
+    for (const file of [writer, generator]) {
+      expect(file).not.toMatch(
+        /write(?:File|IfChanged)\([^)]*(?:routesDir|hostRoutesDir|DEFAULT_HOST_ROUTES_DIR)/,
+      );
+    }
   });
 
   /**
@@ -292,8 +327,10 @@ describe("where the generation pass is allowed to write", () => {
    * proof that the output is flat.
    */
   it("creates no directory", () => {
-    expect(writer).not.toMatch(/\bmkdir\b/);
-    expect(writer).not.toMatch(/recursive:\s*true/);
+    for (const file of [writer, generator]) {
+      expect(file).not.toMatch(/\bmkdir\b/);
+      expect(file).not.toMatch(/recursive:\s*true/);
+    }
   });
 
   /**
@@ -303,7 +340,9 @@ describe("where the generation pass is allowed to write", () => {
    * bytes.
    */
   it("copies no file", () => {
-    expect(writer).not.toMatch(/\b(?:cp|copyFile|copyFileSync|cpSync)\s*\(/);
-    expect(writer).not.toMatch(/\bcopyDirectoryRecursive\b/);
+    for (const file of [writer, generator]) {
+      expect(file).not.toMatch(/\b(?:cp|copyFile|copyFileSync|cpSync)\s*\(/);
+      expect(file).not.toMatch(/\bcopyDirectoryRecursive\b/);
+    }
   });
 });

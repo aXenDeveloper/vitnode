@@ -4,7 +4,7 @@ import {
   routeMatchKeyFromTanStackPath,
 } from '@vitnode/core/routing'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
@@ -286,15 +286,16 @@ describe('a plugin page is never a file in this application', () => {
   })
 })
 
-describe('the deleted route copiers', () => {
+describe('nothing materialises a plugin page here', () => {
   /**
-   * Both of them, from this application's side.
+   * The permanent claim, from this application's side.
    *
-   * `@vitnode/core` guards its own half - the Next.js copier in
-   * `scripts/no-route-copier.test.ts`, the build-time strangler in the same
-   * file. What only this app can say is that *its* tree carries no residue: no
-   * App Router topology, and no directory of pages waiting to be copied
-   * anywhere.
+   * `@vitnode/core` owns the generator's half: `framework/vite/no-materialized-routes.test.ts`
+   * asserts the four destinations are a pure function of the app root and that
+   * every one is a flat `*.gen.ts`, so the pass has nowhere to put a page.
+   * `scripts/no-route-copier.test.ts` and `scripts/dev.test.ts` own the CLI's.
+   * What only this app can say is that *its* route directory is all its own -
+   * which is a claim about the tree that exists, not about a tool that used to.
    */
   it('has no App Router topology left in the routes directory', () => {
     expect(
@@ -304,31 +305,6 @@ describe('the deleted route copiers', () => {
           file.includes('@breadcrumb') ||
           /(^|\/)(page|layout)\.tsx$/.test(file),
       ),
-    ).toEqual([])
-  })
-
-  /**
-   * The four directory names a plugin's pages used to be copied out of. A
-   * `main/`, `admin/`, `blank/` or `breadcrumb/` directory inside a plugin's
-   * `routes/` is the old convention, whoever writes it and whatever reads it.
-   */
-  it.each(pluginIds)('finds no legacy route directory in %s', (pluginId) => {
-    const pluginRoutesDir = join(
-      appRoot,
-      'node_modules',
-      pluginId,
-      'dist/src/routes',
-    )
-
-    if (!existsSync(pluginRoutesDir)) return
-
-    expect(
-      readdirSync(pluginRoutesDir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name)
-        .filter((name) =>
-          ['admin', 'blank', 'breadcrumb', 'main'].includes(name),
-        ),
     ).toEqual([])
   })
 
@@ -352,9 +328,5 @@ describe('the deleted route copiers', () => {
     for (const pluginId of pluginIds) {
       expect(router).not.toContain(pluginId)
     }
-  })
-
-  it('resolves the routes directory relative to this app, not a copy', () => {
-    expect(relative(appRoot, routesDir)).toBe(join('src', 'routes'))
   })
 })

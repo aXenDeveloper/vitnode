@@ -277,7 +277,7 @@ content.example.article.unpublished
 
 And one that opts into
 [`editorial`](/docs/dev/content-engine/publication-and-editorial) emits one more, plus two with
-[`editorial.scheduling`](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing):
+[`editorial.scheduling`](/docs/dev/content-engine/publication-and-editorial#step-4-enable-scheduled-publishing):
 
 ```text
 content.example.article.restored
@@ -426,7 +426,7 @@ Announcements for a scheduled transition run in a
 that retries whenever the event, the search write or a cache origin failed - and
 a retry re-emits an event that some listeners already received. Delivery is
 **at-least-once**, deliberately: the alternative is a transactional outbox,
-which Stage 4 does not have.
+which VitNode does not have.
 
 A listener whose work must happen exactly once keys off `scheduleId`, which is
 stable across every attempt at the same booking:
@@ -497,14 +497,14 @@ update, a no-op publish and a restore that changes nothing all emit nothing, and
 `published`, `unpublished` and `restored` never come with an `updated` alongside
 them. Calling `service.publish()` or any other service method directly changes
 the database and emits nothing; that code owns its own follow-up. See
-[Generated events](/docs/dev/content-engine/services-and-api#event-system).
+[Generated events](/docs/dev/content-engine/services-and-api#step-3-listen-to-typed-content-events).
 
 `restored` carries `changedFields` exactly like `updated`, so a listener written
 for one ports to the other in a line - which is why a restore does not emit both.
 
 **Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
 change into a plugin-owned projection. See
-[Generated events](/docs/dev/content-engine/services-and-api#event-system).
+[Generated events](/docs/dev/content-engine/services-and-api#step-3-listen-to-typed-content-events).
 
 ## Deliberately not emitted (yet)
 

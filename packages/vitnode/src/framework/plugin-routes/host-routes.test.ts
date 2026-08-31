@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PluginRoute } from "../../routing/types.js";
 
+import { PluginRouteError } from "../../routing/errors.js";
 import { buildPluginRouteManifest } from "../../routing/manifest.js";
 import {
   assertNoHostRouteCollision,
@@ -32,6 +33,20 @@ const collisionOf = (pluginPath: string, ...files: string[]): null | string => {
     );
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  return null;
+};
+
+/** The thrown error itself, for the fields rather than the message. */
+const errorOf = (pluginPath: string, ...files: string[]): unknown => {
+  try {
+    assertNoHostRouteCollision(
+      manifestOf(pluginPath),
+      hostRoutePathsFromFiles(files),
+    );
+  } catch (error) {
+    return error;
   }
 
   return null;
@@ -180,5 +195,50 @@ describe("assertNoHostRouteCollision", () => {
     expect(collisionOf("/discover", "_main/Discover.tsx")).toContain(
       "Both match the same URLs",
     );
+  });
+});
+
+/**
+ * The refusal as *data*, which is what lets a build tool render it and what lets
+ * the diagnostics layer annotate it.
+ *
+ * A plain `Error` carried all of this in prose, so the only way to act on any of
+ * it was to parse the sentence - and `withPluginRouteDiagnostics`, which adds the
+ * manifest each side was declared in, ignores anything that is not a
+ * `PluginRouteError`. So the one failure fixed by editing one of two named files
+ * was the one that named only one of them.
+ */
+describe("what a host collision throws", () => {
+  it("is a PluginRouteError, so a build tool can read the fields", () => {
+    expect(errorOf("/discover", "_main/discover.tsx")).toBeInstanceOf(
+      PluginRouteError,
+    );
+  });
+
+  it("names the plugin, the route and the path it claimed", () => {
+    const error = errorOf("/discover", "_main/discover.tsx");
+
+    expect(error).toMatchObject({
+      code: "host-route-collision",
+      path: "/discover",
+      pluginId: "@vitnode/example",
+      routeId: "@vitnode/example:page-0",
+    });
+  });
+
+  /**
+   * The other side of the collision, in its own field.
+   *
+   * Not `conflictsWith`, which means "another plugin's route": the two are fixed
+   * differently, and a caller has to be able to tell "rename one plugin's route"
+   * from "edit this file".
+   */
+  it("names the application's own route as the conflicting owner", () => {
+    const error = errorOf("/discover", "_main/discover.tsx");
+
+    expect(error).toMatchObject({
+      conflictsWithHostRoute: { file: "_main/discover.tsx", path: "/discover" },
+    });
+    expect((error as PluginRouteError).conflictsWith).toBeUndefined();
   });
 });

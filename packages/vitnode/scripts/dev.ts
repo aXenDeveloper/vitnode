@@ -24,17 +24,12 @@ const spawnWatch = (command: string, args: string[]) => {
 /**
  * `vitnode dev` - a plugin's own build, in watch mode.
  *
- * Three compilers over the plugin's `src/`, and nothing else. Until the Next.js
- * cutover this also started a chokidar watcher that copied the plugin's
- * `src/routes/{main,admin,blank,breadcrumb}/` into every Next.js app's
- * `src/app/[locale]/…` on every save, rewriting each import as it went - so a
- * plugin page existed twice and the copy was the one that ran.
- *
- * An app now reads a plugin's routes out of its `dist` through the generated
- * route registry, which is why watching `dist` is the whole job: `swc -w`
- * writes the page, the app's Vite server sees the file it already imports
- * change, and the page reloads. Nothing is copied and nothing has to be cleaned
- * up when a route file is deleted.
+ * Three compilers over the plugin's `src/`, and nothing else. An app reads a
+ * plugin's routes out of its `dist` through the generated route registry, which
+ * is why watching `dist` is the whole job: `swc -w` writes the page, the app's
+ * Vite server sees the file it already imports change, and the page reloads.
+ * Nothing is copied into an application, so nothing has to be cleaned up when a
+ * route file is deleted.
  */
 export const devPlugin = ({ initMessage }: { initMessage: string }) => {
   const children = [

@@ -11,6 +11,12 @@ import { dirname, join, relative, resolve } from "node:path";
  * split, and they drifted: some walked dynamic imports, some did not, and only
  * some stripped `import type`.
  *
+ * Two copies outlived the first consolidation, in `providers.boundaries.test.ts`
+ * and `screen-boundaries.test.ts`, and the second one shows why that mattered:
+ * its forbidden list still named `@/lib/fetcher` and `@/lib/navigation` after
+ * both modules had been deleted, so a third of what it checked was an assertion
+ * about a module that could not exist. Both now import from here.
+ *
  * That mattered more than tidiness. These are negative assertions - "this graph
  * reaches nothing from `next/*`" - and a scanner with a weaker regex passes them
  * by finding less. One implementation means one regex, one set of forbidden

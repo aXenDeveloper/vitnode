@@ -18,8 +18,8 @@ export const i18n = {
   /**
    * Explicit, because the app renders on a server: without one, `use-intl`
    * formats dates in whatever zone the server happens to run in and warns that
-   * the client will disagree. Stage 3, which owns the locale runtime, is where a
-   * per-visitor zone would come from.
+   * the client will disagree. A per-visitor zone would come from the locale
+   * runtime in `src/lib/i18n/runtime.ts`.
    */
   timeZone: "UTC",
   /**

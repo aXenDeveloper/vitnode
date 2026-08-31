@@ -6,6 +6,7 @@
     "index",
     "plugin",
     "routing",
+    "generated-files",
     "metadata",
     "data-loading",
     "navigation",

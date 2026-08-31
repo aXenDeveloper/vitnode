@@ -15,7 +15,7 @@ vi.mock("./editorial-effects", () => ({
   contentEditorialEffects: (...args: unknown[]) =>
     contentEditorialEffects(...args),
 }));
-vi.mock("./revalidate-bridge", () => ({
+vi.mock("./revalidate-dispatch", () => ({
   dispatchContentRevalidation: (...args: unknown[]) =>
     dispatchContentRevalidation(...args),
 }));

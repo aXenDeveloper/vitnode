@@ -1,10 +1,10 @@
 import type { PluginRoute } from "../../routing/types.js";
 
+import { PluginRouteError } from "../../routing/errors.js";
 import {
   routeMatchKey,
   routeMatchKeyFromTanStackPath,
 } from "../../routing/path.js";
-import { PLUGIN_ROUTES_ERROR_PREFIX } from "./diagnostics.js";
 
 /**
  * One URL the host application's own route files already claim.
@@ -230,6 +230,20 @@ export const hostRoutePathsFromFiles = (
  * A layout and its index route both spell one path and are two halves of one
  * screen, so a plugin's *layout* is checked against host paths as well: it may
  * add no segment of its own, but the page underneath it will claim the URL.
+ *
+ * ## Why a `PluginRouteError` and not a plain one
+ *
+ * Every other refusal in this layer is one, and this used to be the exception -
+ * which cost it two things. A build tool rendering the failure its own way got a
+ * message to parse instead of `pluginId`, `routeId`, `path` and the conflicting
+ * owner as fields; and `withPluginRouteDiagnostics`, which annotates a
+ * `PluginRouteError` with the *manifest* each side was declared in, skipped it
+ * entirely. So the one failure whose fix is "edit one of these two files" was
+ * the one that named only one of them.
+ *
+ * The host is not a plugin, so it goes in its own field rather than in
+ * `conflictsWith`: the two are fixed differently, and a caller has to be able to
+ * tell "rename one plugin's route" from "edit `src/routes/_main/search.tsx`".
  */
 export const assertNoHostRouteCollision = (
   manifest: readonly PluginRoute[],
@@ -250,8 +264,15 @@ export const assertNoHostRouteCollision = (
 
     if (conflict === undefined) continue;
 
-    throw new Error(
-      `${PLUGIN_ROUTES_ERROR_PREFIX} Plugin "${route.pluginId}", route "${route.routeId}", claims "${route.path}", which this application already answers with its own route "${conflict.path}" (${conflict.file}). Both match the same URLs, and VitNode will not let a router's ordering decide which one wins - rename the plugin's route, or remove the application's.`,
+    throw new PluginRouteError(
+      `Plugin "${route.pluginId}", route "${route.routeId}", claims "${route.path}", which this application already answers with its own route "${conflict.path}" (${conflict.file}). Both match the same URLs, and VitNode will not let a router's ordering decide which one wins - rename the plugin's route, or remove the application's.`,
+      {
+        code: "host-route-collision",
+        conflictsWithHostRoute: { file: conflict.file, path: conflict.path },
+        path: route.path,
+        pluginId: route.pluginId,
+        routeId: route.id,
+      },
     );
   }
 };

@@ -56,17 +56,21 @@
 
 ## 📝 Available Scripts
 
-- `pnpm dev` - Start development server with auto-reload
+- `pnpm dev` - Build the CLI scripts and plugins, prepare the database, then start every app with auto-reload
 - `pnpm build` - Build for production
+- `pnpm build:plugins` - Build the workspace plugins on their own
 - `pnpm start` - Start production server
-- `pnpm lint` - Check code quality
-- `pnpm lint:fix` - Fix code quality issues
-- `pnpm db:migrate` - Run database migrations by hand (`pnpm dev` already does this for you)
+- `pnpm lint` / `pnpm lint:fix` - Check and fix code quality
+- `pnpm test` / `pnpm test:types` - Run the unit tests and the type-level tests
+- `pnpm db:prepare` - Generate pending migrations, apply them and seed initial data (`pnpm dev` already does this for you)
+- `pnpm db:migrate` - The same three steps, under the name deployments use
+- `pnpm docker:dev` - Start the local PostgreSQL container
 - `pnpm dev:email` - Start email development server
 
 ## ✨ What's New in VitNode 2.0
 
 - **Simplified Architecture**: Single-repo application structure (no monorepo)
+- **Modern Frontend**: TanStack Start on Vite - one server for the site, the AdminCP and the API
 - **Modern Backend**: Hono.js replaces NestJS for better performance
 - **ESM-Only**: Full support for ECMAScript Modules
 - **AI Integration**: New AI Rules and Multi-Cloud Provider support

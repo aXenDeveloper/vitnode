@@ -5,8 +5,21 @@ description: Declare a plugin's public pages as data, so any VitNode app can ser
 
 A plugin owns its pages. It declares _what_ pages it has and _where_ they live,
 as plain data; the application reads that list at build time and serves them. You
-add a route by editing your plugin and nothing else - no application file, no
-generated file, no route copied anywhere.
+add a route by editing your plugin and nothing else.
+
+```txt
+route module  +  manifest entry  =  a live URL
+```
+
+That is the whole contract, and the three things it does **not** include are
+worth saying out loud:
+
+- **No host page wrapper.** You do not write a route file in the app that
+  re-exports your page.
+- **No copy in `apps/web`.** Your module stays in your package. The app generates
+  a literal `import()` for it and the bundler gives it its own chunk.
+- **No router import in your module.** A page that imports a router can only be
+  installed into apps using that router. Yours needs none.
 
 ## The layout
 
@@ -77,9 +90,9 @@ One list, read by both paths - so the two can never disagree.
 ### Why these fields and not others
 
 Everything on a definition is **data**: serialisable, and meaningful in a Node
-process with no framework loaded. That is not tidiness. This list is read while a
-Next.js app builds, while a TanStack Start app builds, and frozen into a literal
-a browser imports.
+process with no framework loaded. That is not tidiness. This list is read by the
+app's build tooling, before a bundler runs, and frozen into a literal the browser
+imports - so it has to be readable without loading a single React component.
 
 What earns a place is a question the runtime has to answer **before** it can
 fetch your page's code: which URL is this, what shape is it in the tree, which
@@ -143,10 +156,13 @@ export default PostPage;
 ```
 
 <Callout type="info">
-  Keep these modules framework-neutral. Your plugin can be installed into a
-  Next.js app *and* a TanStack Start app at the same time, so anything from
-  `next/*`, `next-intl` or a router pins the page to one of them. Plain JSX,
-  `use-intl` and shared VitNode components are pinned to neither.
+  Keep these modules framework-neutral. This one is compiled into your package's
+  `dist` and imported by whichever app installed the plugin, so **importing a
+  router pins the plugin to that router** - and so does a host framework's data
+  API or a host-bound i18n package. You do not need one: routing, metadata and
+  the locale prefix are the host's job, and everything your module needs arrives
+  as props or through `definePluginRoute`. Plain JSX, `use-intl`,
+  `@vitnode/core/routing` and shared VitNode components are pinned to nothing.
 </Callout>
 
 No `<main>`. The application shell renders the document's one `main` landmark,
@@ -605,10 +621,10 @@ Name your own `pluginId` in `plugin`. A permission is a `plugin` / `module` /
 `permission` triple, so `reports.can_view` granted under core is a different
 permission from yours and does not open your page.
 
-That component reads the AdminCP's permission set from context, which both the
-Next.js and the TanStack AdminCP provide - so your page renders identically in
-either, which is the whole reason to import it from `components/` rather than
-from a host-specific module.
+That component reads the AdminCP's permission set from context, which the admin
+shell provides - which is the whole reason to import it from `components/` rather
+than from a host-specific module: your page renders the same in any VitNode
+AdminCP.
 
 <Callout type="warn" title="A hidden link is not a locked door">
   Hiding a nav entry or a button hides a *link*. The page is still reachable by

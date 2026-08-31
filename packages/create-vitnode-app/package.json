@@ -17,12 +17,10 @@
   "files": [
     "dist",
     "copy-of-vitnode-app",
-    "copy-of-vitnode-plugin",
-    "eslint",
-    "eslint-react"
+    "copy-of-vitnode-plugin"
   ],
   "scripts": {
-    "build:scripts": "tsc -p tsconfig.build.json && node dist/src/prepare/prepare.js",
+    "build:scripts": "tsc -p tsconfig.build.json",
     "start:scripts": "node dist/src/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

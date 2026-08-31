@@ -59,8 +59,8 @@ export interface PasswordResetSearch {
  *   does not redirect. See {@link PasswordResetSearch}.
  *
  * Judging whether the pair is *usable* is deliberately not done here - that is
- * {@link passwordResetMode}, through core's `parseRecoveryLink`, so the rule
- * lives once and both frameworks apply it.
+ * {@link passwordResetMode}, through core's `parseRecoveryLink`, so normalizing
+ * a search and judging a link cannot disagree.
  */
 export const normalizePasswordResetSearch = (
   input: Record<string, unknown>,

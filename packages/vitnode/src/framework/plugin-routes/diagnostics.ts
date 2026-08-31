@@ -36,6 +36,15 @@ export const PLUGIN_ROUTES_ERROR_PREFIX = "[VitNode plugin routes]";
  *
  * Anything that is not a `PluginRouteError` is returned untouched - the resolver
  * and the parity check write their own messages, already prefixed.
+ *
+ * ## Every field survives, including the ones this function does not read
+ *
+ * A `PluginRouteError` is reconstructed rather than mutated, which means the copy
+ * is where a field gets silently dropped. `conflictsWithHostRoute` is carried for
+ * that reason and not because anything here uses it: the host-route collision
+ * arrives with the app's own file in that field, and the only reason it passes
+ * through this function at all is to gain the manifest annotation below. Losing
+ * the field on the way would trade one half of the diagnostic for the other.
  */
 export const annotatePluginRouteError = (
   error: unknown,
@@ -63,6 +72,7 @@ export const annotatePluginRouteError = (
   return new PluginRouteError(parts.join(" "), {
     code: error.code,
     conflictsWith: error.conflictsWith,
+    conflictsWithHostRoute: error.conflictsWithHostRoute,
     path: error.path,
     pluginId: error.pluginId,
     routeId: error.routeId,

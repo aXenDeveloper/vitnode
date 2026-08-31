@@ -12,9 +12,9 @@ import { ADMIN_SIGN_IN_NAMESPACES } from "./sign-in-route";
 
 export interface AdminSignInRouteProps {
   /**
-   * How a finished sign-in moves. During the migration a host passes one that
-   * asks its route tree whether it serves the destination, so `/admin/core`
-   * is a document load into the Next.js AdminCP until that route lands here.
+   * How a finished sign-in moves. The host owns it because only the host knows
+   * its route tree: a destination it serves is a client navigation, and one it
+   * does not is a document load.
    */
   navigate: AuthNavigate;
   /** Where the administrator was heading before the guard sent them here. */

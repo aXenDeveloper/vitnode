@@ -18,11 +18,20 @@ import {
 /**
  * The invariant Stage 17 bought, asserted over the whole package at once.
  *
- * The fourteen `*-boundaries.test.ts` files each police one subtree, because
+ * Fourteen `*-boundaries.test.ts` files used to police one subtree each, because
  * each was written when that subtree was split in two and had a Next.js half to
- * point at. This one replaces the thing those halves used to make possible: a
- * *whole package* claim, which could not be made while the package deliberately
- * contained Next.js code.
+ * point at. This one makes the claim those halves used to make impossible: a
+ * *whole package* claim, over every source file rather than over the graph a
+ * walk from a handful of entry points happens to cover.
+ *
+ * Stage 18 finished the trade. The subtree suites kept the part only they can
+ * assert - that a shared component takes its framework parts as props - and
+ * handed this file everything they were saying about `next/*`, `next-intl`, the
+ * React `server-only` marker and the deleted halves. Two of them had nothing
+ * else left and are gone; the rest are half their old size. What is here now is
+ * one scanner with one set of controls, which matters more than the line count:
+ * a negative assertion passes by finding less, so four private copies of a
+ * reachability walk were four chances to pass for the wrong reason.
  *
  * It also absorbs what `lib/next-cache/inventory.test.ts` did. That file listed
  * six Next-cache entries with a `deleteWhen` condition each and failed when the
@@ -109,12 +118,13 @@ describe("the scanner still detects what these suites assert the absence of", ()
   /**
    * Controls, and the reason they point at a fixture.
    *
-   * Every other assertion in this file and in the fourteen subtree suites is
-   * "found nothing", which a scanner that silently matches nothing satisfies
-   * completely. So each of those suites kept a positive control aimed at the
-   * Next.js half of its own subtree - and Stage 17 deleted every one of those
-   * halves. Re-pointing the controls at production code would only defer the
-   * problem to whoever deletes the next specimen.
+   * Every other assertion in this file, and every graph assertion left in a
+   * subtree suite, is "found nothing" - which a scanner that silently matches
+   * nothing satisfies completely. Each subtree suite used to keep a positive
+   * control aimed at the Next.js half of its own subtree, and Stage 17 deleted
+   * every one of those halves. Re-pointing the controls at production code would
+   * only defer the problem to whoever deletes the next specimen, so they live
+   * here, once, aimed at a fixture that exists to be found.
    *
    * `test-fixtures/next-specimen/` exists for this and nothing else. It is
    * outside `tsconfig.json`'s `include`, so `next` need not be installed, and
@@ -246,6 +256,14 @@ describe("no permanent source file names Next.js", () => {
     // read their `use-intl` context from its module record rather than from the
     // one `apps/web` provides into. A production build merged the chunks and hid
     // it; `vite dev` did not.
+    //
+    // This is the assertion `shell-boundaries.test.ts` existed for, and the
+    // reason it is worth stating over the whole package rather than over one
+    // subtree: the two modules that actually broke the AdminCP were
+    // `components/ui/sidebar` and `components/ui/sheet` - shadcn primitives
+    // nobody thinks of as host-coupled, several imports below the shell that
+    // failed. A scan aimed at the shell found them by luck. This one cannot
+    // miss them.
     const found = permanentFiles
       .flatMap(path =>
         namedSpecifiers(path)
@@ -297,8 +315,100 @@ describe("the Next.js source trees are gone rather than emptied", () => {
     ["the Next cache handlers", "src/lib/next-cache"],
     ["the Content Engine's Next adapter", "src/content/next"],
     ["the Next config factory", "config"],
+    ["next-intl's locale-aware router", "src/lib/navigation.ts"],
+    ["the server-only fetcher", "src/lib/fetcher.ts"],
   ])("%s", (_label, path) => {
     expect(existsSync(join(packageRoot, path))).toBe(false);
+  });
+});
+
+/**
+ * Every Next.js half Stage 17 deleted, pinned in one list.
+ *
+ * Each of these paths was the one place in its subtree where a Next.js API was
+ * allowed to appear, and each was named by its own `*-boundaries.test.ts` so
+ * that the suite could notice one coming back. Stage 18 moved the naming here
+ * and left those suites the part only they can assert - that the shared half
+ * takes its framework parts as props.
+ *
+ * The move is the point. Split across twelve files, the list was twelve
+ * `DELETED_NEXT_HALF` constants that no reader ever saw together, each
+ * surrounded by a subtree scan that `namedSpecifiers` above already covers over
+ * the whole package. Together it is an inventory: this is the shape of the
+ * application that used to be here, and none of it is.
+ *
+ * A path graduating off this list is a real decision, not a cleanup. The
+ * filename is free again once nothing remembers it - but re-using
+ * `header.tsx` beside `header-content.tsx` is how the split got confusing the
+ * first time, so the entry stays until somebody argues otherwise.
+ */
+describe("the deleted Next.js halves stay deleted", () => {
+  const DELETED = [
+    "components/form/fields/input-roles-next.tsx",
+    "components/form/fields/search-roles.action.server.ts",
+    "components/switchers/langs/language-switcher.tsx",
+    "components/table/data-table.tsx",
+    "components/table/navigation-next.tsx",
+    // The four request-scope reads. Each was `next/headers` plus a fetch, and
+    // each is now a TanStack `createServerFn` in the host or a query in core.
+    "lib/api/get-middleware-api.ts",
+    "lib/api/get-moderator-permissions-api.ts",
+    "lib/api/get-session-admin-api.ts",
+    "lib/api/get-session-api.ts",
+    "views/admin/layouts/breadcrumb/breadcrumb-admin.tsx",
+    "views/admin/layouts/search/get-search-nav-items.tsx",
+    "views/admin/layouts/search/search.tsx",
+    "views/admin/layouts/sidebar/nav/item.tsx",
+    "views/admin/layouts/sidebar/nav/nav.tsx",
+    "views/admin/layouts/sidebar/sidebar.tsx",
+    "views/admin/layouts/user-bar/user-bar.tsx",
+    "views/auth/password-reset/change-password-form/form.tsx",
+    "views/auth/password-reset/form/form.tsx",
+    "views/auth/settings/devices/devices-list.tsx",
+    "views/auth/settings/devices/devices.tsx",
+    "views/auth/settings/nav.tsx",
+    "views/auth/settings/shell.tsx",
+    "views/auth/sign-in/form/form.tsx",
+    "views/auth/sign-in/sign-in-card.tsx",
+    "views/auth/sign-up/form/form.tsx",
+    "views/auth/sign-up/sign-up-card.tsx",
+    "views/auth/sso/buttons/client.tsx",
+    "views/auth/sso/callback/client/client.tsx",
+    "views/breadcrumb/breadcrumb-main.tsx",
+    "views/files/my-files-table-view.tsx",
+    "views/layouts/provider.tsx",
+    "views/layouts/theme/header/header-next.tsx",
+    "views/layouts/theme/header/header.tsx",
+    "views/layouts/theme/header/user/next-user-header.tsx",
+    "views/layouts/theme/layout.tsx",
+    "views/search/search-controls.tsx",
+    "views/search/search-feed.tsx",
+  ];
+
+  it("names every subtree the split touched", () => {
+    // Guards the guard: this list replaced twelve smaller ones, and a truncated
+    // version of it would pass every assertion below.
+    expect(DELETED.length).toBeGreaterThanOrEqual(37);
+  });
+
+  it("keeps the surviving half of each pair, so the list is about the right files", () => {
+    // A pair whose *shared* half also vanished would satisfy the deletions
+    // below while meaning the feature is gone, not migrated.
+    for (const survivor of [
+      "components/form/fields/input-roles.tsx",
+      "components/table/data-table-content.tsx",
+      "views/auth/settings/shell-content.tsx",
+      "views/layouts/providers.tsx",
+      "views/layouts/theme/header/header-content.tsx",
+      "views/layouts/theme/layout-content.tsx",
+      "views/search/search-feed-content.tsx",
+    ]) {
+      expect(existsSync(join(srcRoot, survivor))).toBe(true);
+    }
+  });
+
+  it.each(DELETED)("%s", path => {
+    expect(existsSync(join(srcRoot, path))).toBe(false);
   });
 });
 
@@ -379,13 +489,13 @@ describe("@vitnode/core stays framework-neutral", () => {
     ).toContain("redis");
   });
 
-  it("keeps the framework-free content revalidation bridge", () => {
+  it("keeps the framework-free content revalidation dispatcher", () => {
     // Runs in the Hono process, where `next/cache` throws on import. Only the
     // Route Handler at the far end went.
-    const bridge = join(srcRoot, "content/server/revalidate-bridge.ts");
+    const dispatcher = join(srcRoot, "content/server/revalidate-dispatch.ts");
 
-    expect(existsSync(bridge)).toBe(true);
-    expect(offenders(bridge, [...NEXT_ONLY, ...NEXT_INTL])).toEqual([]);
+    expect(existsSync(dispatcher)).toBe(true);
+    expect(offenders(dispatcher, [...NEXT_ONLY, ...NEXT_INTL])).toEqual([]);
   });
 });
 

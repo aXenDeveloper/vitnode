@@ -26,21 +26,19 @@ import { MainHeader } from "#/components/main-header";
  * interesting control is "sign in". Keeping them out is what makes this a shell
  * that routes opt into rather than one every route is subject to.
  * `routes/api/$` is outside for a different reason: it is a server route and
- * renders no document at all. Note this is a visual difference from the Next.js
- * app, where all four sit inside `(main)` and do render the header.
+ * renders no document at all.
  *
  * `src/tests/main-shell.test.ts` asserts both halves - the settings paths
  * inside, the four auth screens outside.
  *
  * ## The slots
  *
- * `ThemeLayoutContent`'s, and two of the same three the Next.js `ThemeLayout`
- * fills: `header` and `breadcrumb`.
+ * `ThemeLayoutContent`'s, and this shell fills two of its three: `header` and
+ * `breadcrumb`.
  *
- * `listeners` is deliberately left empty here. The Next.js app puts the
- * notification toasts and the WebSocket's sign-in resync in it because its
- * `/login` is inside the main shell; this app's is not, so a sync mounted here
- * would not exist during the sign-in it has to notice. They are mounted by
+ * `listeners` is deliberately left empty here. `/login` is outside this shell, so
+ * a sign-in resync mounted here would not exist during the sign-in it has to
+ * notice. The notification toasts and the WebSocket resync are mounted by
  * `__root` instead, next to the connection whose lifetime they share.
  *
  * ## What it is not

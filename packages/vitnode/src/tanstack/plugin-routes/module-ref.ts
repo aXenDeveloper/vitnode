@@ -51,10 +51,18 @@ export interface PluginRouteModuleRef {
  * `readPluginRouteModule`, which checks rather than asserts and throws with the
  * route id in the message. Without it the failure is React's "type is invalid"
  * from inside a lazy component, three frames from the plugin that caused it.
+ *
+ * `specifier` is the package subpath the registry imports the module by, passed
+ * through so the message names the file rather than only the route: a route id is
+ * what the manifest calls the page, and a malformed module is fixed by opening
+ * `@vitnode/blog/routes/post-page`. The registry's loader is a closure over that
+ * string and cannot be asked for it, so it is handed down from the manifest,
+ * which has both halves.
  */
 export const pluginRouteModuleRef = (
   load: PluginRouteModuleLoader,
   routeId: string,
+  specifier?: string,
 ): PluginRouteModuleRef => {
   const listeners = new Set<() => void>();
 
@@ -66,7 +74,7 @@ export const pluginRouteModuleRef = (
 
     pending ??= (async () => {
       try {
-        const checked = readPluginRouteModule(await load(), routeId);
+        const checked = readPluginRouteModule(await load(), routeId, specifier);
 
         current = checked;
         // A copy, because a listener that unsubscribes itself while this runs

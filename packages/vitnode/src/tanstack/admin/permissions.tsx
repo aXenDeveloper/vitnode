@@ -27,11 +27,11 @@ import { adminPermissionsOf, hasAdminPermission } from "./state";
  *                              AdminStaffPermissionGate, useAdminStaffPermission
  *
  * One server truth, one browser query state, one React context. The context is
- * the *existing* one from `components/staff-permission/provider` - the same one
- * the Next.js AdminCP mounts - so every screen already written against
- * `AdminStaffPermissionGate` and `useAdminStaffPermission` keeps working
- * unchanged as it migrates, and there is never a moment where two permission
- * states exist and can disagree.
+ * the *existing* one from `components/staff-permission/provider` rather than a
+ * second of its own, which is what keeps every screen written against
+ * `AdminStaffPermissionGate` and `useAdminStaffPermission` working unchanged -
+ * and means there is no moment where two permission states exist and can
+ * disagree.
  *
  * That provider is a rendering adapter and nothing more. It holds no state of
  * its own, it cannot be written to, and it is not authorization: `api/config.ts`

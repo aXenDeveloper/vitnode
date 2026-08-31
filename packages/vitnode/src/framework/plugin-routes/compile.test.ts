@@ -245,6 +245,141 @@ describe("enabling and disabling a plugin", () => {
   });
 });
 
+/**
+ * Adding, removing and renaming a *route*, which is the mutation a plugin author
+ * makes far more often than adding or removing a plugin.
+ *
+ * The same claim as the block above, one level down, and it needs stating
+ * separately because the failure is different. A disabled plugin disappearing
+ * from both files is a property of the plugin list; a *deleted route* leaving no
+ * trace is a property of the derivation - the manifest is built first and the
+ * registry is derived from it, so there is no second pass that could remember a
+ * route the first one no longer has. What would go wrong without it is quiet: a
+ * lazy `import()` for a page that no longer exists, which the bundler resolves
+ * against a `dist` that still has yesterday's file.
+ *
+ * Every assertion is a byte comparison, and several are round trips - remove and
+ * re-add, rename and rename back - because "no stale entry" and "deterministic"
+ * are the same property looked at twice: if the output is a pure function of the
+ * input then returning to a previous input has to return the previous bytes.
+ */
+describe("adding, removing and renaming a route", () => {
+  const routes = (...defs: PluginRouteDefinition[]) =>
+    compile(example(...defs));
+  const bytes = (...defs: PluginRouteDefinition[]) => {
+    const { manifestSource, registrySource } = routes(...defs);
+
+    return { manifestSource, registrySource };
+  };
+
+  const a = page("a", "/a");
+  const b = page("b", "/b");
+
+  it("adds a route to both files and nothing else", () => {
+    const before = routes(a);
+    const after = routes(a, b);
+
+    expect(after.manifest.map(route => route.id)).toEqual([
+      "@vitnode/example:a",
+      "@vitnode/example:b",
+    ]);
+    // The route that did not change is still described the same way, so a diff
+    // adding a page is a diff adding a page.
+    expect(before.manifest[0]).toEqual(
+      after.manifest.find(route => route.id === "@vitnode/example:a"),
+    );
+  });
+
+  it("leaves no manifest entry and no import behind when a route is removed", () => {
+    const { manifestSource, registrySource } = bytes(a);
+
+    expect(manifestSource).not.toContain("'@vitnode/example:b'");
+    expect(manifestSource).not.toContain("'/b'");
+    expect(manifestSource).not.toContain("'routes/b'");
+    expect(registrySource).not.toContain("@vitnode/example:b");
+    expect(registrySource).not.toContain("routes/b");
+  });
+
+  /**
+   * Remove a route, then add it back: the original bytes, exactly.
+   *
+   * Written as three states in sequence rather than as one repeated call,
+   * because the claim is about the round trip and not about the function being
+   * called twice - a generator that kept any state between passes would fail
+   * this and pass a self-comparison.
+   */
+  it("restores exactly the previous bytes when the route is added back", () => {
+    const original = bytes(a, b);
+    const removed = bytes(a);
+    const restored = bytes(a, b);
+
+    expect(removed).not.toEqual(original);
+    expect(restored).toEqual(original);
+  });
+
+  it("does not depend on the order the routes were declared in", () => {
+    expect(bytes(a, b)).toEqual(bytes(b, a));
+  });
+
+  /**
+   * A rename is a removal and an addition at once, and the id is what makes it
+   * legible: an `id` survives a path change - that is what it is for - so
+   * renaming the *path* keeps the registry identical, and renaming the *id*
+   * rewrites both files.
+   */
+  it("keeps only the new spelling when a route's id is renamed", () => {
+    const { manifestSource, registrySource } = bytes(page("renamed", "/a"));
+
+    expect(manifestSource).toContain("'@vitnode/example:renamed'");
+    expect(manifestSource).not.toContain("'@vitnode/example:a'");
+    expect(registrySource).toContain("'@vitnode/example:renamed'");
+    expect(registrySource).not.toContain("'@vitnode/example:a'");
+  });
+
+  it("keeps only the new path when a route's path is renamed", () => {
+    const { manifestSource } = bytes({
+      entry: "routes/a",
+      id: "a",
+      path: "/renamed",
+    });
+
+    expect(manifestSource).toContain("'/renamed'");
+    expect(manifestSource).not.toContain("'/a'");
+  });
+
+  it("keeps only the new entry when a route's module is renamed", () => {
+    const { registrySource } = bytes({
+      entry: "routes/renamed",
+      id: "a",
+      path: "/a",
+    });
+
+    expect(registrySource).toContain("'@vitnode/example/routes/renamed'");
+    expect(registrySource).not.toContain("'@vitnode/example/routes/a'");
+  });
+
+  /**
+   * And a route dropping its eager search schema drops the *static* import too.
+   *
+   * The one entry in these files that is not lazy, so a leftover would be a
+   * module in the initial bundle for a contract nothing validates - and
+   * `pluginRouteSpecs` refuses the mismatched pair at runtime, which is a
+   * failure a build should not have handed it.
+   */
+  it("drops the eager search import when a searchEntry is removed", () => {
+    const withSearch = bytes({
+      entry: "routes/a",
+      id: "a",
+      path: "/a",
+      searchEntry: "routes/a.search",
+    });
+
+    expect(withSearch.registrySource).toContain("routes/a.search");
+    expect(bytes(a).registrySource).not.toContain("routes/a.search");
+    expect(bytes(a).registrySource).not.toContain("pluginRouteSearch0");
+  });
+});
+
 describe("collisions", () => {
   it("rejects two plugins claiming one path", () => {
     expect(
@@ -525,6 +660,54 @@ describe("diagnostics", () => {
     expect(messageOf(() => compile(example(page("a", "/A"))))).toContain(
       "[VitNode plugin routes]",
     );
+  });
+
+  /**
+   * A host collision is fixed by editing one of two files, so it names both.
+   *
+   * It always named the application's - `hostRoutes` carries the file for that
+   * reason - and it named the plugin's only once the refusal became a
+   * `PluginRouteError`: the annotation that adds "Declared in …" ignores anything
+   * else, so for as long as this threw a plain `Error` the half an author could
+   * not guess was the half that was missing.
+   */
+  it("names both files when a plugin shadows the application's own page", () => {
+    const message = messageOf(() =>
+      compilePluginRoutes({
+        hostRoutes: [{ file: "src/routes/_main/search.tsx", path: "/search" }],
+        sources: [example(page("search", "/search"))],
+      }),
+    );
+
+    expect(message).toContain("[VitNode plugin routes]");
+    expect(message).toContain("src/routes/_main/search.tsx");
+    expect(message).toContain(
+      'Declared in "@vitnode/example/routes/manifest".',
+    );
+  });
+
+  it("keeps the host route on the error a host collision throws", () => {
+    let thrown: unknown;
+
+    try {
+      compilePluginRoutes({
+        hostRoutes: [{ file: "src/routes/_main/search.tsx", path: "/search" }],
+        sources: [example(page("search", "/search"))],
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(PluginRouteError);
+    expect(thrown).toMatchObject({
+      code: "host-route-collision",
+      conflictsWithHostRoute: {
+        file: "src/routes/_main/search.tsx",
+        path: "/search",
+      },
+      path: "/search",
+      pluginId: "@vitnode/example",
+    });
   });
 
   it("keeps the structured fields a build tool can render itself", () => {

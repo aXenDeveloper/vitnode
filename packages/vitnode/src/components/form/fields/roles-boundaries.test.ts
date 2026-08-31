@@ -1,40 +1,28 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import {
-  NEXT_INTL,
-  NEXT_ONLY,
-  offenders,
-  reachedSpecifiers,
-  runtimeImports,
-} from "@/tests/import-graph";
+import { reachedSpecifiers, runtimeImports } from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
- * The role field, and the two couplings it took two attempts to remove.
+ * The role field's injected search, which took two attempts to remove.
  *
- * Neither looked like one, which is why this is a scan rather than a review:
+ * `search` used to default to a server action carrying the `server-only` marker.
+ * A static import put that marker in the graph of every application rendering
+ * the field, and deferring it behind `await import()` only moved the throw from
+ * load time to the first keystroke. The fix was to move the type into a module
+ * with no imports and make the search a required, injected prop - so the field
+ * does not know how roles are found.
  *
- * - `useLocale`/`useTranslations` came from `next-intl`, whose root entry
- *   re-exports `use-intl`. It *worked*, which is why it survived so long - what
- *   it cost was the boundary, not a render.
- * - `search` defaulted to `searchRoles`, a `"use server"` action carrying
- *   `server-only`. A static import put that marker in the graph of every
- *   application rendering the field, and deferring it behind `await import()`
- *   only moved the throw from load time to the first keystroke.
- *
- * The fix was to move the type into a module with no imports and make the search
- * a required, injected prop. Stage 17 then deleted the Next.js adapter that
- * supplied the default, so what this file used to prove about that adapter -
- * that it was the one place allowed to name the action - is now proved by the
- * adapter's absence.
- *
- * The scanner and its positive controls live in `@/tests/import-graph` and
- * `src/next-boundary.test.ts`.
+ * That is what this file asserts, and it has to read the source to do it: a type
+ * test cannot see a default parameter, and a render test passes either way. The
+ * host-neutrality half of the old claim - reaches nothing from `next/*`, from the
+ * `server-only` marker, from `next-intl` - is now `next-boundary.test.ts`'s, over
+ * every file in the package.
  */
 const SHARED = {
   /** The framework-neutral field. */
@@ -43,30 +31,9 @@ const SHARED = {
   types: join(here, "roles.ts"),
 };
 
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Kept as named constants rather than deleted with the assertion: the risk this
- * guards is somebody reintroducing the convenience, and a test that no longer
- * names the file cannot notice that happening.
- */
-const DELETED_NEXT_HALF = {
-  action: join(here, "search-roles.action.server.ts"),
-  adapter: join(here, "input-roles-next.tsx"),
-};
-
 const read = (path: string) => readFileSync(path, "utf8");
 
-describe("the shared role field is framework-neutral", () => {
-  it("reaches nothing from next/* or the server-only marker", () => {
-    expect(offenders(SHARED.field, NEXT_ONLY)).toEqual([]);
-  });
-
-  it("never imports next-intl, root entry included", () => {
-    // The one that worked, and was therefore the one that lasted.
-    expect(offenders(SHARED.field, NEXT_INTL)).toEqual([]);
-  });
-
+describe("the role field's dependencies point outward", () => {
   it("takes its translations from use-intl", () => {
     expect(reachedSpecifiers(SHARED.field)).toContain("use-intl");
   });
@@ -75,13 +42,13 @@ describe("the shared role field is framework-neutral", () => {
     expect(runtimeImports(SHARED.types)).toEqual([]);
   });
 
-  it("reads RoleOption from that module rather than from an action", () => {
+  it("reads RoleOption from that module rather than from a transport", () => {
     const source = read(SHARED.field);
 
     expect(source).toMatch(
       /import type \{ RoleOption, RoleSearch \} from "\.\/roles"/,
     );
-    expect(source).not.toContain("search-roles.action.server");
+    expect(source).not.toContain("search-roles");
   });
 });
 
@@ -114,9 +81,16 @@ describe("the search dependency is injected, and stays injected", () => {
     expect(source).not.toMatch(/typeof window|process\.env|import\.meta\.env/);
   });
 
+  it("is not rescued by a default when a caller forgets it", () => {
+    // The specific regression: with nothing left to supply a default, the
+    // tempting fix for a caller that forgot `search` is one here. That would put
+    // a transport back inside a framework-neutral component and re-close the
+    // seam.
+    expect(read(SHARED.field)).not.toMatch(/search\s*=\s*search[A-Z]/);
+  });
+
   it("still exports the canonical field and its two types", () => {
-    // The three names a host binds to. Deleting the adapter must not have taken
-    // any of them with it.
+    // The three names a host binds to.
     expect(read(SHARED.field)).toContain("export const AutoFormRoles");
     expect(read(SHARED.types)).toContain("export interface RoleOption");
     expect(read(SHARED.types)).toContain("export type RoleSearch");
@@ -125,7 +99,7 @@ describe("the search dependency is injected, and stays injected", () => {
   it("leaves a browser search for the host to pass, in the AdminCP's own module", () => {
     // `searchAdminRolesInBrowser` is the answer for every host now, and it lives
     // with the roles screen's other reads rather than beside the field - which is
-    // the point: the field does not know how roles are found.
+    // the point.
     const rolesQuery = join(
       here,
       "../../../views/admin/views/core/users/roles/roles-query.ts",
@@ -134,24 +108,5 @@ describe("the search dependency is injected, and stays injected", () => {
     expect(read(rolesQuery)).toContain(
       "export const searchAdminRolesInBrowser",
     );
-  });
-});
-
-describe("the Next.js half is gone, and a default search may not return", () => {
-  it.each(Object.entries(DELETED_NEXT_HALF))(
-    "%s no longer exists",
-    (_name, path) => {
-      expect(existsSync(path)).toBe(false);
-    },
-  );
-
-  it("is not replaced by a default inside the field", () => {
-    // The specific regression: with no adapter left, the tempting fix for a
-    // caller that forgot `search` is a default here. That would put a transport
-    // back inside a framework-neutral component and re-close the seam.
-    const source = read(SHARED.field);
-
-    expect(source).not.toMatch(/search\s*=\s*search[A-Z]/);
-    expect(source).not.toContain("AutoFormRolesNext");
   });
 });

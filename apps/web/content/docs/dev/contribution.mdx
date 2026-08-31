@@ -10,7 +10,7 @@ So, you want to help make VitNode even more awesome? That's great! Whether you'r
 
 Before you start, make sure you have these installed:
 
-- [Node.js](https://nodejs.org/) _(minimum v20, recommended v22)_
+- [Node.js](https://nodejs.org/) _(minimum v22, recommended v24)_
 - [Docker](https://www.docker.com/) for local development
 - [pnpm](https://pnpm.io/) as the package manager
 - Your favorite code editor (we ❤️ VS Code)
@@ -59,11 +59,12 @@ This starts a PostgreSQL container configured for VitNode development.
 pnpm dev
 ```
 
-This command:
+One command, four steps, in this order:
 
-1. Builds necessary scripts
-2. Starts the development server
-3. Watches for changes and hot reloads
+1. **Builds the CLI scripts** (`pnpm build:scripts`) so the `vitnode` binary exists.
+2. **Builds the workspace plugins** (`turbo build:plugins`) so `@vitnode/core` and the plugins have a `dist` for the apps to import.
+3. **Prepares the database** (`turbo db:prepare`) - generate, apply, seed. Chained with `&&`, so a failed migration means nothing starts.
+4. **Starts every app** in watch mode.
 
   </Step>
 </Steps>
@@ -104,12 +105,92 @@ vitnode/
   plugins all live together in harmony!
 </Callout>
 
+## Everyday Commands
+
+| Command              | What it does                                               |
+| -------------------- | ---------------------------------------------------------- |
+| `pnpm dev`           | The full bootstrap above, then every app in watch mode     |
+| `pnpm build`         | Production build of every workspace                        |
+| `pnpm build:plugins` | Rebuild `@vitnode/core` and the plugins only               |
+| `pnpm start`         | Run the production build                                   |
+| `pnpm test`          | Vitest, everywhere                                         |
+| `pnpm test:types`    | The type-level tests (`*.test-d.ts`)                       |
+| `pnpm lint`          | ESLint, everywhere                                         |
+| `pnpm lint:fix`      | ESLint with `--fix`                                        |
+| `pnpm db:prepare`    | Generate pending migrations, apply them, seed initial data |
+| `pnpm db:migrate`    | The same three steps, under the name deployments use       |
+| `pnpm docker:dev`    | Start the local PostgreSQL container                       |
+| `pnpm i18n:check`    | Report locale files that have drifted from English         |
+
+Inside a single workspace, run the same script with a filter -
+`pnpm --filter web test`, `pnpm --filter api db:prepare`.
+
+### Working on a plugin
+
+Plugins are packages, and the apps import their build output rather than their
+source. So a change to `plugins/blog/src` needs a rebuild before an app sees it:
+
+```bash
+pnpm --filter @vitnode/blog dev    # the plugin's compilers, in watch mode
+```
+
+`vitnode dev` and `vitnode build` are the plugin toolchain. See the
+[CLI reference](/docs/dev/cli) for everything the binary answers to.
+
+<Callout type="info" title="A plugin page is never copied into an app">
+  A plugin declares its URLs in `src/routes/manifest.ts` and exports the module
+  that renders each one. The app's Vite plugin turns that list into literal
+  `import()` calls at build time - so there is no file in `apps/web` to keep in
+  sync, and nothing to regenerate by hand. See [Route
+  Manifest](/docs/dev/plugins/route-manifest).
+</Callout>
+
+## Generated Files
+
+Some files in the repository are written by tooling and rewritten on every
+`vite dev` and `vite build`. **Do not edit them, and do not format them** - your
+change is gone on the next start. Change the input instead: a plugin's route
+manifest, `src/vitnode.config.ts`, or a package's `src/locales/*.json`.
+
+```txt
+apps/web/src/routeTree.gen.ts               TanStack Router
+apps/web/src/plugin-route-manifest.gen.ts   VitNode
+apps/web/src/plugin-routes.gen.ts           VitNode
+apps/web/src/admin-nav.gen.ts               VitNode
+apps/web/src/content-registry.gen.ts        VitNode
+apps/web/.source/                           Fumadocs
+packages/*/dist/                            tsc + swc
+```
+
+They are committed, so they can go stale: change a plugin's manifest without
+running the app and the diff describes the manifest as it was. `apps/web` has a
+test that regenerates them in memory and fails when the committed bytes differ -
+run `pnpm dev` and commit the result.
+
+[Generated files](/docs/dev/tanstack/generated-files) explains who writes each
+one and exactly when.
+
+## Documentation
+
+Every page of these docs lives in `apps/web/content/docs` as MDX, and Fumadocs
+renders it. Edit a `.mdx` file and the page reloads - there is no separate docs
+app and no separate build.
+
+- A directory's `meta.json` decides its title, icon and page order.
+- Headings start at `##`; the frontmatter `title` is the page's `h1`.
+- Put install commands in tabbed code blocks (`bun` / `pnpm` / `npm`).
+- Document every new feature, and keep it readable at any skill level.
+
 ## Coding Standards
 
 - We use TypeScript for type safety ([TypeScript Docs](https://www.typescriptlang.org/))
 - Follow ESM (ECMAScript Modules) conventions ([ESM Guide](https://nodejs.org/api/esm.html))
 - Respect the ESLint & Prettier configuration in each workspace ([ESLint](https://eslint.org/) & [Prettier](https://prettier.io/))
 - Write meaningful commit messages ([Conventional Commits](https://www.conventionalcommits.org/))
+- Components are arrow functions - never `React.FC`
+- No `any`. `unknown` sparingly
+- Prefer pure, static and type-level tests. A test that needs a live database, an
+  external API or a rendered browser is the last resort, not the first
 
 ## Database Changes
 
@@ -125,6 +206,11 @@ the generated SQL:
 pnpm db:prepare # generate, apply, seed
 pnpm db:migrate # the same thing, under the name deployments use
 ```
+
+`apps/api` owns `migrations/`, so a generated file lands there whichever app you
+started. Commit it with the schema change - and never regenerate one that has
+already been applied, because the migrator replays a file whose contents moved.
+See [Database](/docs/dev/database) for the whole contract.
 
 <Callout title="Test your changes!!! <3" type="warn">
   Always test your database changes thoroughly before submitting a PR!

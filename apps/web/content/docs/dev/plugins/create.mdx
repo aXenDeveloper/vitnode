@@ -112,10 +112,18 @@ Keys have to sit under your plugin's namespace, or they collide with core. The d
 
 ## Where your pages live
 
+```txt
+route module  +  manifest entry  =  a live URL
+```
+
 Your pages stay in your package. A plugin's routes are read from
 `routes/manifest.ts`, compiled into the app's generated route registry, and
 imported straight out of your `dist` - nothing is copied into the application,
 and there is no generated folder of your files to know about.
 
-That means a page has exactly one home: the file you are editing is the file
-that runs. See [Route Manifest](/docs/dev/plugins/route-manifest).
+So: no host page wrapper to write, no file in `apps/web` to keep in sync, and no
+router to import in the module itself. A page has exactly one home, and the file
+you are editing is the file that runs.
+
+See [Route Manifest](/docs/dev/plugins/route-manifest) for every field, and
+[Create your first plugin](/docs/dev/tanstack/plugin) for the short version.

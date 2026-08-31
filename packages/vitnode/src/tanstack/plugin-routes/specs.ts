@@ -226,7 +226,14 @@ export const pluginRouteSpecs = (
     return {
       breadcrumbChain: breadcrumbChainOf(node),
       isIndex: node.isIndex,
-      module: pluginRouteModuleRef(load, route.id),
+      // `<pluginId>/<entry>` is exactly what the generated registry's literal
+      // `import()` spells, rebuilt from the manifest because the loader is a
+      // closure and cannot be asked. It is what a malformed-module error names.
+      module: pluginRouteModuleRef(
+        load,
+        route.id,
+        `${route.pluginId}/${route.entry}`,
+      ),
       namespaces: pluginRouteMessageNamespaces(node),
       parentId: node.parent?.route.id ?? null,
       path: toTanStackRoutePath(

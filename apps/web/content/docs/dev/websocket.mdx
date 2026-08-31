@@ -303,23 +303,27 @@ c.get("realtime").broadcast(postsChannel, { action: "created" });
 On the client, listen and refresh the page when it fires:
 
 ```tsx title="views/live-posts.tsx"
-"use client";
-
-import { useRouter } from "@vitnode/core/lib/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useVitNodeWebSocket } from "@vitnode/core/ws/use-websocket";
 
 import { postsChannel } from "@/realtime/posts.channel";
 
 export const LivePosts = () => {
-  const router = useRouter();
+  const queryClient = useQueryClient();
 
   useVitNodeWebSocket(postsChannel, {
-    onMessage: () => router.refresh(),
+    onMessage: () => {
+      void queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
   });
 
   return null;
 };
 ```
+
+Invalidate the entry that changed rather than reloading the page: the list
+refetches, everything else on screen stays as it is. See
+[Cache](/docs/dev/cache).
 
 <Callout type="info">
   `broadcast` reaches everyone, so use it only for non-sensitive signals like

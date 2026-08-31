@@ -34,20 +34,19 @@ import {
  *
  * ## No `head`, deliberately
  *
- * The Next.js page exports no `generateMetadata`, so the tab keeps the site's
- * own name. Declaring `title: 'VitNode'` here would render "VitNode - VitNode"
- * through `formatPageTitle`; saying nothing inherits the root's title and
- * `_admin`'s `noindex`, which is the parity-preserving answer.
+ * The dashboard is the site under its own name, so the tab keeps that name.
+ * Declaring `title: 'VitNode'` here would render "VitNode - VitNode" through
+ * `formatPageTitle`; saying nothing inherits the root's title and `_admin`'s
+ * `noindex`, which is what this screen wants.
  *
  * ## `pluginWidgets` is not passed
  *
- * A plugin's dashboard widgets reach the Next.js board through
- * `getVitNodeConfig()`, which is server-side config kept out of this app's
- * browser bundle by `vitnode.shell.config.ts` - and this app registers its
- * plugins by id and messages only (see `src/vitnode.config.ts`). So the board
- * shows core's own widgets, which is the complete set for this install. It is
- * the same seam `AdminShell` leaves open for nav `declarations`, and it changes
- * here when plugin AdminCP registration moves over.
+ * A plugin's dashboard widgets live in its server-side config, which
+ * `vitnode.shell.config.ts` deliberately keeps out of this app's browser bundle -
+ * and this app registers its plugins by id and messages only (see
+ * `src/vitnode.config.ts`). So the board shows core's own widgets, which is the
+ * complete set for this install. It is the same seam `AdminShell` leaves open for
+ * nav `declarations`: pass `pluginWidgets` here when you have some.
  */
 export const Route = createFileRoute("/_admin/admin/core/")({
   loader: async ({ context }) => await loadAdminDashboardRoute(context),

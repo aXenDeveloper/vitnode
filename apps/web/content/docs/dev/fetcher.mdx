@@ -1,50 +1,113 @@
 ---
 title: Fetcher
-description: Type-safe API data fetching with RPC-style interface
+description: Type-safe, RPC-style calls to your own Hono API.
 ---
 
-The VitNode fetcher provides a type-safe RPC (Remote Procedure Call) style interface for making API requests. It simplifies data fetching by providing strong typing and a consistent API across your application.
+The VitNode fetcher is a typed, RPC-style wrapper around `fetch`. You import an
+API module as a **type**, name a path and a method on it, and TypeScript checks
+the params, the body and the response - end to end, with no code generation step.
 
-<Callout type="warn" title="Server-side only">
-  The `fetcher()` function can only be used on the server-side. Client-side
-  usage is not supported.
-</Callout>
+## Which one to import
 
-## Getting Started
+Three entry points, and the difference between them is **whose request they are
+part of**:
 
-First, import the required dependencies:
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    fetcherClient: {
+      description:
+        "In the browser. Same-origin, so the browser attaches the session cookie itself. This is what a component or a TanStack Query queryFn uses.",
+      type: '@vitnode/core/lib/fetcher-client',
+    },
+    fetcherServer: {
+      description:
+        "On the server, inside a request. Forwards the incoming request's cookies and headers, so the API knows who is asking. Use it in a route loader or a server function.",
+      type: '@vitnode/core/tanstack/fetcher/server',
+    },
+    coreFetcher: {
+      description:
+        "On the server, outside a request. No cookies, no forwarded headers - the same call for every visitor. Use it for public data and for background work.",
+      type: '@vitnode/core/lib/fetcher/core',
+    },
+  }}
+/>
+
+## Getting started
+
+Import the module as a type and turn it into a reference with `clientModule`, so
+none of the API's server code follows it into the bundle:
 
 ```ts
-import { fetcher } from '@vitnode/core/lib/fetcher';
-import { usersModule } from '@vitnode/core/api/modules/users/users.module';
+import type { usersModule } from "@vitnode/core/api/modules/users/users.module";
+
+import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client";
+
+const usersModuleRef = clientModule<typeof usersModule>("@vitnode/core");
 ```
 
-Make your first API call:
+Then make the call:
 
 ```ts
-const response = await fetcher(usersModule, {
-  path: '/session',
-  method: 'get',
-  module: 'users',
+const response = await fetcherClient(usersModuleRef, {
+  path: "/session",
+  method: "get",
+  module: "users",
 });
 
-// Handle the response
 if (response.ok) {
   const data = await response.json();
-  console.log('Session data:', data);
 }
 ```
 
-The fetcher returns a standard Response object, just like the native `fetch` API. This makes it familiar and easy to work with.
+The fetcher returns a standard `Response`, just like native `fetch`. Paths,
+methods and the parsed JSON are all inferred from the module's route definitions.
 
-## Advanced Features
+<Callout type="warn" title="Declare a `200` with `content`">
+  `res.json()` is typed from the route's declared responses. A route that
+  declares a non-200 response with no `content` (a bare `401`, say) widens the
+  union to `unknown`, and every caller loses its types.
+</Callout>
 
-### Path Prefixing
+## In a query
 
-When working with nested modules you can import the module and use it directly with the `fetcher` function and add the `prefixPath` option to specify a path prefix. This is useful for organizing your API endpoints and keeping them modular.
+The usual shape: one exported `queryOptions`, with the request inside it.
+
+```ts title="announcements-query.ts"
+import { queryOptions } from "@tanstack/react-query";
+import { RECORD_STALE_TIME } from "@vitnode/core/lib/query-freshness";
+
+export const announcementsQuery = () =>
+  queryOptions({
+    queryFn: async () => {
+      const response = await fetcherClient(announcementsModuleRef, {
+        method: "get",
+        module: "announcements",
+        path: "/",
+      });
+
+      if (!response.ok) throw new Error("Failed to load announcements");
+
+      return await response.json();
+    },
+    queryKey: ["announcements"],
+    staleTime: RECORD_STALE_TIME,
+  });
+```
+
+The route's `loader` warms it with `ensureQueryData` and the component reads it
+back with `useSuspenseQuery`. See [Data
+loading](/docs/dev/tanstack/data-loading) and [Cache](/docs/dev/cache).
+
+## Advanced features
+
+### Path prefixing
+
+When working with nested modules, add `prefixPath` to reach a mounted subtree:
 
 ```ts
-const response = await fetcher(categoriesAdminModule, {
+const response = await fetcherClient(categoriesAdminModuleRef, {
   // [!code ++]
   prefixPath: '/admin', // Adds prefix to the path
   path: '/categories',
@@ -61,72 +124,47 @@ const response = await fetcher(categoriesAdminModule, {
 // This will make a request to: /admin/categories
 ```
 
-### Caching Responses
+### Public data on the server
 
-<Callout type="info" title="Next.js hosts only">
-  `"use cache"` is Next.js'. On TanStack Start the same job is TanStack Query's:
-  a route loader warms an entry and the component reads it back. See [Data
-  loading](/docs/dev/tanstack/data-loading).
-</Callout>
-
-`fetcher()` forwards the incoming request's cookies and headers, which means two
-things at once: the API knows who is asking, and the call can never sit inside a
-`"use cache"` function. For a response that is the same for every visitor, reach
-for `coreFetcher` - the same typed interface without the request-bound headers -
-and cache that:
+`fetcherServer` forwards the incoming request's cookies, which is exactly what
+you want for anything per-visitor and exactly what you do not want for anything
+shared. For a response that is the same for everyone, reach for `coreFetcher`:
 
 ```ts
-import { coreFetcher } from '@vitnode/core/lib/fetcher/core';
-import { cacheLife, cacheTag } from 'next/cache';
+import { coreFetcher } from "@vitnode/core/lib/fetcher/core";
 
-const getAnnouncements = async () => {
-  // [!code ++:3]
-  'use cache';
-  cacheLife('minutes');
-  cacheTag('announcements');
-
-  const response = await coreFetcher(announcementsModule, {
-    path: '/',
-    method: 'get',
-    module: 'announcements',
+const announcements = async (locale: string) => {
+  const response = await coreFetcher(announcementsModuleRef, {
+    args: { query: { lang: locale } },
+    method: "get",
+    module: "announcements",
+    path: "/",
   });
 
   return await response.json();
 };
 ```
 
-<Callout type="warn" title="Not for per-visitor responses">
-  Do not reach for `options: { cache: 'force-cache' }` on a `fetcher()` call. It
-  stores the response in the Next.js Data Cache keyed by the request - cookie
-  included - with no expiry, so the visitor keeps being served their own data
-  from whenever it was first fetched. Use React's `cache()` for those instead.
-</Callout>
+### Cookie management
 
-See [Cache](/docs/dev/cache) for how to decide which of the two a given route is,
-and how to expire what you store.
+Sign-in is the case that needs a server function: the API answers with a
+`Set-Cookie`, and only something running inside this request can copy it onto
+*this* document's response.
 
-### Cookie Management
+```ts title="apps/web/src/lib/auth.ts"
+import { createServerFn } from "@tanstack/react-start";
+import { signInInputSchema } from "@vitnode/core/tanstack/auth";
+import { signInOnApi } from "@vitnode/core/tanstack/auth/server";
 
-When working with authentication or sessions, you might need to handle cookies. React Server Components have special considerations for cookie handling:
-
-<Callout type="info" title="Cookie Handling">
-  Cookie saving is only supported for requests that return a 2xx status code.
-</Callout>
-
-Here's how to enable cookie handling for a sign-in request:
-
-```ts
-const response = await fetcher(usersModule, {
-  path: '/sign_in',
-  method: 'post',
-  module: 'users',
-  // [!code ++]
-  allowSaveCookies: true,
-  args: {
-    body: {
-      email: 'user@example.com',
-      password: '********',
-    },
-  },
-});
+export const signInFn = createServerFn({ method: "POST" })
+  .validator(signInInputSchema)
+  .handler(async ({ data }) => await signInOnApi(data));
 ```
+
+<Callout type="info" title="Cookie handling">
+  Cookies are saved only for responses with a 2xx status code. A refusal never
+  writes one.
+</Callout>
+
+See [Server functions](/docs/dev/tanstack/server-functions) for when one is
+warranted - which is rarer than it looks.

@@ -78,15 +78,14 @@ On the frontend a user's role is identified by the `roleId` carried on the sessi
 
 ### Formatting a role
 
-Use the `RoleFormat` component to render a role's name styled with its `color`.
-Because role names are translatable, the `name` is the full list of translations;
-`RoleFormat` resolves it to the active locale with `getLocale()`, so it is an
-async **Server Component**.
+Use `RoleFormatContent` to render a role's name styled with its `color`. Role
+names are translatable, so `name` is the full list of translations and the
+component resolves it against the reader's locale from `use-intl`'s context.
 
 ```tsx title="role-badge.tsx"
-import { RoleFormat } from "@vitnode/core/components/role-format";
+import { RoleFormatContent } from "@vitnode/core/components/role-format-content";
 
-<RoleFormat
+<RoleFormatContent
   role={{
     id: 2,
     name: [
@@ -112,32 +111,13 @@ The `role` prop has the following shape:
 }
 ```
 
-<Callout type="info" title="Server Component only">
-  `RoleFormat` calls `getLocale()` from `next-intl/server`, so it can only be
-  rendered on the server. The admin roles list route returns the `name` array in
-  exactly this shape.
-</Callout>
-
-### Formatting a role anywhere
-
-`RoleFormatContent` is the same component without the Server Component part. It
-reads the locale from `use-intl`'s context instead of the request, so it works in
-a client component, in a table cell, and in an application that is not Next.js -
-which is why every AdminCP table renders roles through it.
-
-```tsx title="role-badge.tsx"
-"use client";
-
-import { RoleFormatContent } from "@vitnode/core/components/role-format-content";
-
-<RoleFormatContent role={role} />;
-```
-
-Same props, same output. Pick `RoleFormat` when you are already in a Server
-Component and `RoleFormatContent` everywhere else.
+It reads the locale from context rather than from the request, so it works
+anywhere a React tree does - in a table cell, in a dialog, during SSR, in the
+browser. Every AdminCP table renders roles through it, and the admin roles list
+route returns `name` in exactly this shape.
 
 If you only need the string, `resolveRoleName(role, locale)` from
-`@vitnode/core/components/role-name` is the rule both components share: the
+`@vitnode/core/components/role-name` is the rule the component applies: the
 reader's language, then the first translation, then the id. It is a pure
 function, so it works in a loader or a test.
 

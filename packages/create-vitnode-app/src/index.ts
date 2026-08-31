@@ -49,10 +49,25 @@ const init = async () => {
       "Specify the package manager to use",
     ).choices(["npm", "pnpm", "bun"]),
   );
+  /**
+   * Every prompt has a flag *and* its negation, so the whole generator can be
+   * driven without a terminal.
+   *
+   * Commander only asks when an option is `undefined`, and a bare `--eslint`
+   * could say yes and never no - so `--no-eslint` in a script had no spelling at
+   * all and CI could not generate the "without" half of any choice. Declaring
+   * `--foo` first keeps the default `undefined`, which is what still makes an
+   * unanswered flag a question.
+   */
   program.option("--eslint", "Initialize with ESLint & Prettier config.");
+  program.option("--no-eslint", "Skip the ESLint & Prettier config.");
   program.option(
     "--skip-install",
     "Skip installing packages after initializing the project.",
+  );
+  program.option(
+    "--install",
+    "Install packages after initializing the project.",
   );
   program.addOption(
     new Option(
@@ -61,7 +76,9 @@ const init = async () => {
     ).choices(["singleApp", "apiMonorepo", "onlyApi"]),
   );
   program.option("--monorepo", "Create project with monorepo structure.");
+  program.option("--no-monorepo", "Create a single flat project.");
   program.option("--docker", "Initialize with Docker support.");
+  program.option("--no-docker", "Create the project without Docker support.");
   program.option("--plugin", "Create a plugin.");
 
   program.parse(process.argv);

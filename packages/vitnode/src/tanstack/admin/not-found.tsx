@@ -14,9 +14,8 @@ import { NotFound } from "../layout/not-found";
  * handles the error, so the shell that route mounts is exactly what is missing
  * by the time this renders - and a refusal with no sidebar, no header and no
  * palette leaves an administrator on a dead page with the browser's back button
- * for a way out. The Next.js AdminCP keeps the panel: its `not-found.tsx` sits
- * under `admin/(auth)/layout.tsx`. `apps/web/src/routes/_admin.tsx` shows the
- * two lines that match it.
+ * for a way out. `apps/web/src/routes/_admin.tsx` shows the two lines that do
+ * it.
  *
  * This component deliberately does not mount the shell itself. It is the
  * message, and the shell needs a link component and a user lookup that only a

@@ -296,6 +296,7 @@ describe('the TanStack Start documentation category', () => {
       'index',
       'plugin',
       'routing',
+      'generated-files',
       'metadata',
       'data-loading',
       'navigation',

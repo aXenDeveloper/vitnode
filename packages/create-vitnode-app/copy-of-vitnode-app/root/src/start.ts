@@ -24,8 +24,8 @@ import { localeRouting } from "#/lib/i18n/runtime";
  * canonical URL would break it rather than tidy it.
  *
  * `/api/*` reaches here too and is deliberately ignored by
- * `handleLocaleRequest`, so the Stage 1 Hono bridge sees the request exactly as
- * the client sent it.
+ * `handleLocaleRequest`, so the Hono API sees the request exactly as the client
+ * sent it.
  *
  * `localeRouting` is handed in rather than read from the package's registered
  * runtime: Start runs request middleware before route matching, so this is the

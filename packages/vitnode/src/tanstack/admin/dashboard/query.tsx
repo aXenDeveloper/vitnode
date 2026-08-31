@@ -71,9 +71,8 @@ export const invalidateDashboardLayout = async (
  * The four board actions, bound to the mounted router's cache and to the widget
  * catalogue this browser can render.
  *
- * The TanStack half of the pair whose other half is `DashboardBoardProviderNext`.
- * Both satisfy `DashboardActions`, which is what lets one board be driven by
- * either framework.
+ * This satisfies `DashboardActions`, which is the seam that keeps one board
+ * driveable by whichever host supplies the four.
  *
  * ## The two loads render here rather than on a server
  *

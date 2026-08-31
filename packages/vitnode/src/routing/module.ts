@@ -400,14 +400,28 @@ const OPTION_KEYS = [
  * anything else throws with the route id in it. It reads nothing but the two
  * names the contract defines, so a module that also exports helpers, constants
  * or a test fixture is fine.
+ *
+ * `specifier` is the package subpath the module was imported by, and it is the
+ * difference between a message an author can act on and one they have to
+ * investigate. A route id names the *route* - `"@vitnode/blog:post"` - which is
+ * what the manifest calls it and not what any file is called; the specifier is
+ * the file, and this is a failure fixed by opening it. Optional because a caller
+ * with no import to name - a test, or a registry entry built by hand - should not
+ * have to invent one.
  */
 export const readPluginRouteModule = (
   module: unknown,
   routeId: string,
+  specifier?: string,
 ): CheckedPluginRouteModule => {
+  const named =
+    specifier === undefined
+      ? `plugin route "${routeId}"`
+      : `plugin route "${routeId}" ("${specifier}")`;
+
   const fail = (reason: string): never => {
     throw new Error(
-      `[VitNode plugin routes] The module for plugin route "${routeId}" ${reason}`,
+      `[VitNode plugin routes] The module for ${named} ${reason}`,
     );
   };
 

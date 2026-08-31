@@ -6,7 +6,7 @@ node_modules
 
 # Test & Build
 /coverage
-/desc
+/dist
 *.tsbuildinfo
 
 # Misc

@@ -164,10 +164,11 @@ a misconfiguration. Nothing requires you to export both.
 ## Browser-safe means browser-safe
 
 Everything reachable from `admin/nav` and `admin/content` is loaded in a browser,
-by applications that may not be Next.js. Nothing in that graph may import:
+by whichever application installed your plugin. Nothing in that graph may import:
 
-- `next/*` — including `next/navigation`, `next/dynamic` and `next/cache`
-- `next-intl/server` and the other Next-bound `next-intl` entries
+- a **router** — the host owns routing, and importing one pins the plugin to it
+- a host framework's own modules (its navigation, data or cache APIs)
+- a host-bound i18n package
 - `server-only`
 - Node built-ins such as `node:fs`
 
@@ -177,7 +178,7 @@ The full server config (`vitnode.config.ts`) carries message loaders and API
 wiring — it is not importable from here, and does not need to be.
 
 ```tsx title="src/views/admin/article/color-cell.tsx"
-import { useTranslations } from "use-intl"; // not "next-intl"
+import { useTranslations } from "use-intl";
 ```
 
 ---
@@ -190,8 +191,6 @@ list of a content type that has no editor at all. Draw the boundary in your own
 module, so the registration is a label and a `lazy()` call:
 
 ```tsx title="src/views/admin/article/editor-field.tsx"
-"use client";
-
 import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/auto-form";
 
 import { Loader } from "@vitnode/core/components/ui/loader";
@@ -216,8 +215,8 @@ export const ArticleEditorField = (props: ItemAutoFormComponentProps) => {
 };
 ```
 
-`React.lazy` rather than `next/dynamic`: the two do the same job here, and only
-one of them exists outside Next.js.
+`React.lazy` and `Suspense` — plain React, so the split works in any host that
+installs your plugin.
 
 <Callout title="Never from admin/nav">
   A sidebar does not need an editor. Keep Tiptap — and anything else of that size

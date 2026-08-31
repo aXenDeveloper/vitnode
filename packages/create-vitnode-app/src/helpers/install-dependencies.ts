@@ -69,7 +69,11 @@ export const installDependencies = async ({
     const child = spawn(packageManager, args, {
       stdio: "pipe",
       cwd,
-      shell: true, // Use shell to properly handle Windows batch files
+      // A shell on Windows only: a package manager there is a batch file, which
+      // `spawn` cannot execute directly. Everywhere else the arguments go to the
+      // binary untouched - which is also what silences Node's DEP0190, the
+      // warning that shell arguments are concatenated rather than escaped.
+      shell: process.platform === "win32",
       env: {
         ...process.env,
         ADBLOCK: "1",

@@ -33,25 +33,28 @@ Every admin arranges their **own** dashboard: drag to reorder, drag new widgets 
 
 ### Write the component
 
-A widget is an ordinary React component. It renders **on the server**, so it can be `async` and talk to the database directly - no API round-trip needed.
+A widget is an ordinary React component. It gets `settings` and `widgetId`, and
+it reads its data the way every other screen does - through the API, with
+TanStack Query:
 
 ```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-widget.tsx"
 import type { AdminDashboardWidgetProps } from "@vitnode/core/lib/plugin";
 
-export const StatsWidget = async ({ settings }: AdminDashboardWidgetProps) => {
-  const posts = await countPosts();
+import { useSuspenseQuery } from "@tanstack/react-query";
 
-  return (
-    <p className="text-3xl font-bold tabular-nums">{posts}</p>
-  );
+export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => {
+  const { data } = useSuspenseQuery(blogStatsQuery(settings));
+
+  return <p className="text-3xl font-bold tabular-nums">{data.posts}</p>;
 };
 ```
 
-<Callout type="warn" title="It runs on the server">
-  VitNode renders your widget on the server and hands the *output* to the client
-  grid - the component function itself never crosses the boundary. Anything
-  interactive (an input, a button with `onClick`) goes in a child component
-  marked `"use client"`, exactly like a normal Server Component.
+<Callout type="warn" title="It is a component, not a server function">
+  A widget renders during SSR *and* in the browser, so it cannot be `async` and
+  it cannot reach the database. Put the query behind a Hono route in your
+  plugin's API module and call that - which is also what makes the permission
+  check real: `Hono` re-checks the staff tables on every request, whoever is
+  asking.
 </Callout>
 
 <Callout title="Take your time">
@@ -61,22 +64,23 @@ export const StatsWidget = async ({ settings }: AdminDashboardWidgetProps) => {
   there is no need to hand-roll a loading state.
 </Callout>
 
-<Callout title="Translations in a client child">
-  The dashboard only ships core's own messages to the browser. A `"use client"`
-  child that calls `useTranslations` on your plugin's namespace needs your
-  messages there too - wrap it in core's `I18nProvider` inside your widget:
+<Callout title="Your own translations">
+  The dashboard route warms core's namespaces, not yours. Your widget's **title**
+  is read from `<pluginId>.admin.dashboard.widgets.<id>.title` and the host warms
+  that for you; anything else your card renders needs its namespace mounted -
+  wrap it in `RouteMessages`:
 
 ```tsx
-import { I18nProvider } from "@vitnode/core/components/i18n-provider";
+import { RouteMessages } from "@vitnode/core/tanstack/i18n";
 
 export const StatsWidget = () => (
-  <I18nProvider namespaces={["@vitnode/blog.admin.dashboard"]}>
+  <RouteMessages namespaces={["@vitnode/blog.admin.dashboard"]}>
     <StatsChart />
-  </I18nProvider>
+  </RouteMessages>
 );
 ```
 
-  A widget that renders all its text on the server needs none of this.
+  A widget whose only string is its title needs none of this.
 </Callout>
 
 </Step>
@@ -159,7 +163,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
     },
     component: {
       description:
-        "The component VitNode renders. May be an async Server Component. Receives `settings` and `widgetId`.",
+        "The component VitNode renders. Receives `settings` and `widgetId`.",
       type: "React.ComponentType<AdminDashboardWidgetProps>",
       required: true,
     },
@@ -346,23 +350,25 @@ export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => {
 };
 ```
 
-Write it from a client child with the server action core ships:
+Write it with the mutation core ships:
 
 ```tsx title="plugins/{plugin_name}/src/views/admin/widgets/range-picker.tsx"
-"use client";
-
-import { saveWidgetSettingsMutation } from "@vitnode/core/views/admin/views/core/dashboard/widgets/save-widget-settings.server";
+import { saveWidgetSettingsInBrowser } from "@vitnode/core/views/admin/views/core/dashboard/widgets/widget-mutations";
 
 export const RangePicker = ({ widgetId }: { widgetId: string }) => (
   <button
     onClick={() =>
-      saveWidgetSettingsMutation({ widgetId, settings: { range: "year" } })
+      void saveWidgetSettingsInBrowser({ widgetId, settings: { range: "year" } })
     }
   >
     Last year
   </button>
 );
 ```
+
+It resolves to `undefined` on success and `{ error }` when the API refused -
+`PUT /admin/admin/dashboard/widget-settings` requires `dashboard.can_edit`,
+checked against the staff tables on every request.
 
 Settings are **merged**, not replaced, so you only send the keys you changed. Rearranging the dashboard never wipes them. The whole bag is capped at 64 KB of UTF-8 - a dashboard is not a CMS.
 
@@ -381,9 +387,9 @@ Saving straight from the card suits things the admin is already typing into. For
 <Steps>
 <Step>
 
-### Render the form on the server
+### Render the form
 
-It gets the same props as the widget, so it starts from what this copy has already saved. Unlike the widget itself, it runs only when an admin opens the dialog - a dashboard load never pays for a form nobody asked to see, so it is fine to query the database here:
+It gets the same props as the widget, so it starts from what this copy has already saved. Unlike the widget itself, it only renders when an admin opens the dialog - a dashboard load never pays for a form nobody asked to see, so a query here costs nothing until it is wanted:
 
 ```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-settings.tsx"
 import type { AdminDashboardWidgetProps } from "@vitnode/core/lib/plugin";
@@ -400,15 +406,13 @@ export const StatsSettings = ({ settings }: AdminDashboardWidgetProps) => (
 </Step>
 <Step>
 
-### Save from a client child
+### Save it
 
 Build it with [`AutoForm`](/docs/ui/auto-form), like every other form in the AdminCP - it takes the labels, validation and the dialog's own footer off your hands.
 
-`useWidgetSettingsDialog` is available to anything under your settings component. Its `save` writes the settings and closes the dialog - you do not need `saveWidgetSettingsMutation` here, and you never have to pass `widgetId` around. Await it and the submit button stays in its loading state until the write lands:
+`useWidgetSettingsDialog` is available to anything under your settings component. Its `save` writes the settings and closes the dialog - you do not need `saveWidgetSettingsInBrowser` here, and you never have to pass `widgetId` around. Await it and the submit button stays in its loading state until the write lands:
 
 ```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-settings-form.tsx"
-"use client";
-
 import { AutoForm } from "@vitnode/core/components/form/auto-form";
 import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
 import { useWidgetSettingsDialog } from "@vitnode/core/views/admin/views/core/dashboard/grid/widget-settings-dialog";

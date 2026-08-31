@@ -15,7 +15,7 @@ import { CONTENT_SCHEDULE_ACTIONS } from "../const";
 import { contentEditorialEffects } from "./editorial-effects";
 import { contentDefinitionOf, findContentModel } from "./model";
 import { contentPublicLocaleStates } from "./public-locales";
-import { dispatchContentRevalidation } from "./revalidate-bridge";
+import { dispatchContentRevalidation } from "./revalidate-dispatch";
 import { recordContentScheduleEffectsError } from "./schedules-model";
 import { isContentRowPublic } from "./search-document";
 

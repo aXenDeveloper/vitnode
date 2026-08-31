@@ -245,14 +245,13 @@ nothing else, so the snapshot still records which file the field held, and only
 restoring that revision changes behaviour - it now fails with "file does not
 exist" instead of restoring a file that is gone.
 
-### Uploads are multipart, never a Server Action
+### Uploads are multipart, over the API
 
-<Callout type="warn" title="Binary data does not go through Server Actions">
-Content Engine binary uploads use TanStack Query and multipart API routes.
-Next.js Server Actions must **not** be used for file transfer - a Server Action
-body is a serialised RSC payload, so an image crosses as a string, buffered
-whole, under a platform body limit that has nothing to do with the field's
-`maxBytes`.
+<Callout type="warn" title="Binary data goes to a route, not to a server function">
+Content Engine binary uploads use TanStack Query and a multipart API route. A
+server function is the wrong transport for a file: its body is a serialised
+payload, so an image crosses as a string, buffered whole, under a platform body
+limit that has nothing to do with the field's `maxBytes`.
 </Callout>
 
 ```text
@@ -393,15 +392,14 @@ own uploads.
 <Step>
 ### Call it from the client
 
-Uploads run through TanStack Query, **not** Next.js server actions (which can't
-stream large bodies). Build a `FormData` and pass it to `fetcherClient` as
+Uploads run through TanStack Query, **not** a server function - a server
+function's body cannot stream a large file. Build a `FormData` and pass it to
+`fetcherClient` as
 `formData` - it drops the JSON `Content-Type` so the browser sets the multipart
 boundary. Reference your route with `clientModule` and a **type-only** import of
 its module, so the call stays fully typed without bundling any server code:
 
 ```tsx title="use-upload-avatar.ts"
-"use client";
-
 import { useMutation } from "@tanstack/react-query";
 import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client";
 import type { myPluginModule } from "@/api/my-plugin.module";

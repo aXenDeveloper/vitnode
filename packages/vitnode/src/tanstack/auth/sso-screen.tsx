@@ -53,7 +53,7 @@ export const SsoCallbackRouteContent = ({
   const completeSso = useCompleteSsoAction(parsed.ok ? parsed.params : null);
 
   /**
-   * The exchange, run once, by the shared hook both frameworks use.
+   * The exchange, run once, by the shared hook.
    *
    * `oauthError` is the raw `error` parameter, which is what the hook's own rule
    * is written against: `access_denied` disables the query outright - there is

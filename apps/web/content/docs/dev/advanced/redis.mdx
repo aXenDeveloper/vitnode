@@ -55,10 +55,11 @@ REDIS_URL=redis://localhost:6379
 REDIS_PASSWORD=root
 ```
 
-<Callout type="info" title="Both processes read these">
-  The API takes its connection from `vitnode.api.config.ts`, but the [Next.js cache
-  handlers](#caching-nextjs-output) read these variables directly. If you run the
-  web app and the API as separate services, set them on both.
+<Callout type="info" title="Set them wherever the API runs">
+  The API takes its connection from `vitnode.api.config.ts`, and these variables
+  are what that config reads. In a split deployment only the **API** service needs
+  them - a frontend that talks to the API over HTTP keeps no Redis-backed cache
+  of its own.
 </Callout>
 
 <Callout type="warn" title="Change the password in production">
@@ -196,9 +197,9 @@ export const postsRoute = buildRoute({
 ## Caching database queries
 
 <Callout type="info" title="Two caches, one request">
-  This page covers the cache *inside* the API. The Next.js cache in front of it
-  stores whole responses and is expired differently. [Cache](/docs/dev/cache)
-  covers both and how to choose between them.
+  This page covers the cache *inside* the API. The app keeps a second one -
+  TanStack Query, in the browser - and it is expired differently.
+  [Cache](/docs/dev/cache) covers both and how to choose between them.
 </Callout>
 
 The most useful method is `remember` - it runs your loader only on a cache
@@ -281,82 +282,23 @@ answer expire the cache themselves, so a permission change is live immediately.
   permissions from the database exactly as before.
 </Callout>
 
-## Caching Next.js output
+## What Redis does *not* back
 
-Everything above is the cache *inside* the API. Redis also backs the **Next.js**
-caches in the web process, so a cached page or `fetch` response is shared by
-every instance instead of being rebuilt once per container.
+The web application's cache is [TanStack Query](/docs/dev/tanstack/data-loading):
+a route loader warms an entry, the component reads it back, and the entry lives
+in that visitor's browser (and, for the server-rendered pass, in that request).
+There is no shared render cache in front of the pages, so there is nothing here
+for Redis to store and no cache handler to register.
 
-**There is nothing to add to `next.config.ts`.** `vitNodeNextConfig` wires the
-handlers up when `REDIS_URL` is set - the same variable that turns Redis on for
-the API - because Next takes a cache handler as a module *path* and cannot be
-handed a config object:
+That is a deliberate simplification rather than a gap. A per-visitor cache cannot
+serve one visitor another's data, and it cannot go stale across instances,
+because there is nothing shared to go stale.
 
-```ts title="src/next.config.ts"
-// Already all it takes - the handlers follow REDIS_URL.
-export default vitNodeNextConfig(nextConfig);
-```
-
-<Callout type="warn" title="The web process reads the environment directly">
-  The API gets its connection from `vitnode.api.config.ts`; the cache handlers
-  cannot - they are loaded by Next itself, outside your app's module graph. They
-  read `REDIS_URL` and `REDIS_PASSWORD` from the environment, so both must be set
-  wherever the **web** process runs, not only where the API runs. In a split
-  deployment that means adding them to the frontend service too.
-</Callout>
-
-### What each handler covers
-
-VitNode registers two, because Next has two caches and they are not the same one:
-
-<TypeTable
-  type={{
-    "cacheHandlers.default": {
-      description:
-        'Backs the `use cache` directive. Entries are stored whole in Redis, so they survive a restart and every instance reads the same one.',
-      type: "use cache",
-    },
-    cacheHandler: {
-      description:
-        "Backs the fetch Data Cache and the prerender store. `fetch` responses go to Redis; prerendered pages stay on each instance's disk, where the build put them.",
-      type: "Data Cache + ISR",
-    },
-  }}
-/>
-
-Prerendered pages are deliberately left on disk. A custom handler *replaces*
-Next's filesystem cache outright, and the pages `next build` produced only exist
-there - putting them in Redis would mean serving one deploy's HTML from another
-deploy's cache. Their payloads are also Next-internal structures that would need
-re-checking on every upgrade. The build output is identical on every instance
-anyway, so there is nothing to gain by sharing it.
-
-### Why it matters: shared invalidation
-
-The part that is genuinely broken without this is not speed, it is correctness.
-`updateTag` runs on whichever instance handled the Server Action. With per-process
-caches the other instances never hear about it and keep serving the old page until
-their own copies age out.
-
-Both handlers record every revalidation in Redis and check it on read, so an
-invalidation raised anywhere is seen everywhere - including for the prerendered
-pages that still live on local disk, which each instance then rebuilds for itself.
-
-### Behaviour and limits
-
-- **A cold start misses.** The connection is opened in the background and commands
-  fail fast until it is ready, so the first requests after a boot render normally.
-- **A Redis outage is a miss, never an error.** Reads fall through and writes are
-  dropped; pages render as if nothing were cached.
-- **Entries carry a TTL** so abandoned keys cannot accumulate: `use cache` entries
-  expire at their `cacheLife` `expire`, stored `fetch` responses after 7 days, and
-  revalidation markers after 30 days.
-- **Everything lives under `vitnode:next:`**, separate from the API's
-  `vitnode:cache:` namespace, so neither side can clear the other by accident.
-
-<Callout type="info" title="Opting out">
-  To use Redis for the API but keep Next on its built-in caches, override the two
-  keys after the wrapper: `vitNodeNextConfig({ cacheHandler: undefined, cacheHandlers: undefined })`.
+<Callout type="info" title="What if I put a CDN in front?">
+  Then the CDN owns that layer, and the API tells it when to expire: a background
+  mutation calls `dispatchContentRevalidation`, which posts the invalidated
+  Content Engine tags to every origin listed in `content.revalidateOrigins`. See
+  [Cache](/docs/dev/cache).
 </Callout>
 
 ## Rate limiting with Redis

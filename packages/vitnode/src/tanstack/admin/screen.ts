@@ -28,14 +28,13 @@ export interface AdminScreenContext extends AdminLoaderContext {
 /**
  * The screen's own permission, on top of holding an admin session at all.
  *
- * The direct replacement for the Next.js `<AdminPermissionRequired>` wrapper,
- * and it behaves identically on purpose: an administrator without the permission
- * gets the AdminCP's 404, not a redirect and not an empty table. `notFound()` is
- * TanStack Router's own control-flow signal, and the guard route's
- * `notFoundComponent` answers it - rendering `AdminNotFound` inside the shell it
- * mounts, the same thing `app/[locale]/admin/(auth)/not-found.tsx` does for the
- * Next.js AdminCP. See the note on `AdminNotFound` for why the shell has to be
- * mounted there rather than inherited.
+ * An administrator without the permission gets the AdminCP's 404, not a redirect
+ * and not an empty table - a redirect tells them where they are not allowed to
+ * be, and an empty table reads as "no records". `notFound()` is TanStack
+ * Router's own control-flow signal, and the guard route's `notFoundComponent`
+ * answers it, rendering `AdminNotFound` inside the shell it mounts. See the note
+ * on `AdminNotFound` for why the shell has to be mounted there rather than
+ * inherited.
  *
  * ## It is not the security boundary, and must never be treated as one
  *

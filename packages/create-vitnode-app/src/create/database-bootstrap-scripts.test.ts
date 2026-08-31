@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   apiScripts,
+  projectRootScripts,
   rootScripts,
   singleAppScripts,
   webScripts,
@@ -13,30 +14,9 @@ import {
  * A generated project migrates its own database on `dev`, and only the package
  * that owns a schema does it.
  *
- * Static and pure: the four script builders are called as the functions they
- * are, and the committed `turbo.json` template is read off disk. Nothing here
- * spawns a package manager, starts a dev server or touches Postgres.
- *
- * ## The regression
- *
- * Before Stage 17 the shapes that own a database had a bootstrap in their `dev`
- * script:
- *
- *     api          vitnode init --api && tsx watch src/index.ts
- *     single app   vitnode init && next dev
- *     web-only     vitnode init --web && next dev      (a no-op flag)
- *
- * `vitnode init` prepared the database *and* copied every installed plugin's
- * pages into the host's `src/app/[locale]/…` for Next.js to find. Stage 17
- * deleted the copier and deleted `init` with it - and the single app lost its
- * database bootstrap in the process, because the reasoning at the time only
- * examined the plugin half. `apiScripts` kept its gate by luck: the line was
- * left alone because it did not mention `next`.
- *
- * So a developer who cloned a generated project, installed and started a fresh
- * Postgres got Vite serving pages against an empty database, and the first
- * symptom was an arbitrary SQL error from a route rather than anything about
- * migrations.
+ * Static and pure: the script builders are called as the functions they are, and
+ * the committed `turbo.json` template is read off disk. Nothing here spawns a
+ * package manager, starts a dev server or touches Postgres.
  *
  * ## What is asserted
  *
@@ -78,6 +58,13 @@ const gatesOnBootstrap = (dev: string): boolean => {
   );
 };
 
+const options = {
+  appName: "app",
+  atProjectRoot: true,
+  docker: true,
+  eslint: true,
+};
+
 /**
  * Every shape the generator supports whose `dev` must gate on the bootstrap.
  *
@@ -86,19 +73,19 @@ const gatesOnBootstrap = (dev: string): boolean => {
  */
 const shapes = [
   {
-    dev: () => singleAppScripts(true, true, "app").dev,
+    dev: () => singleAppScripts(options).dev,
     label: "singleApp, flat",
   },
   {
-    dev: () => apiScripts("pnpm", true, true, true, "app").dev,
+    dev: () => apiScripts({ ...options, packageManager: "pnpm" }).dev,
     label: "onlyApi, flat",
   },
   {
-    dev: () => apiScripts("bun", true, true, true, "app").dev,
+    dev: () => apiScripts({ ...options, packageManager: "bun" }).dev,
     label: "onlyApi, flat, bun",
   },
   {
-    dev: () => rootScripts(true, true, "app").dev,
+    dev: () => rootScripts(options).dev,
     label: "monorepo root",
   },
 ] as const;
@@ -119,18 +106,16 @@ describe("a generated project prepares its database before it starts", () => {
    * `it.each` above says the property; this says the value.
    */
   it("spells each one out", () => {
-    expect(singleAppScripts(true, true, "app").dev).toBe(
+    expect(singleAppScripts(options).dev).toBe(
       "vitnode db:prepare && vite dev --port 3000",
     );
-    expect(apiScripts("pnpm", true, true, true, "app").dev).toBe(
+    expect(apiScripts({ ...options, packageManager: "pnpm" }).dev).toBe(
       "vitnode db:prepare && tsx watch src/index.ts",
     );
-    expect(apiScripts("bun", true, true, true, "app").dev).toBe(
+    expect(apiScripts({ ...options, packageManager: "bun" }).dev).toBe(
       "vitnode db:prepare && bun run --hot src/index.ts",
     );
-    expect(rootScripts(true, true, "app").dev).toBe(
-      "turbo db:prepare && turbo dev",
-    );
+    expect(rootScripts(options).dev).toBe("turbo db:prepare && turbo dev");
   });
 
   /**
@@ -155,15 +140,13 @@ describe("a generated project prepares its database before it starts", () => {
    * run by hand and - in a monorepo - resolved by the root's `turbo db:prepare`.
    */
   it("exposes db:prepare on every schema-owning package", () => {
-    expect(singleAppScripts(true, true, "app")["db:prepare"]).toBe(
-      "vitnode db:prepare",
-    );
-    expect(apiScripts("pnpm", true, true, false, "app")["db:prepare"]).toBe(
-      "vitnode db:prepare",
-    );
-    expect(rootScripts(true, true, "app")["db:prepare"]).toBe(
-      "turbo db:prepare",
-    );
+    expect(singleAppScripts(options)["db:prepare"]).toBe("vitnode db:prepare");
+    expect(
+      apiScripts({ ...options, atProjectRoot: false, packageManager: "pnpm" })[
+        "db:prepare"
+      ],
+    ).toBe("vitnode db:prepare");
+    expect(rootScripts(options)["db:prepare"]).toBe("turbo db:prepare");
   });
 });
 
@@ -174,30 +157,35 @@ describe("every schema-owning app gates itself, root or not", () => {
    * schema, because neither goes through the root script. An app that reads a
    * schema is responsible for having one.
    *
-   * Gating twice on the common path is safe *because* of the advisory lock in
-   * `withMigrationLock` - measured: without it, two concurrent gates race on
+   * Gating twice on the common path is safe *because* of the advisory lock the
+   * bootstrap takes - measured: without it, two concurrent gates race on
    * `CREATE SCHEMA IF NOT EXISTS drizzle` and one exits non-zero.
    */
-  it("gates the api inside a monorepo too", () => {
-    expect(apiScripts("pnpm", true, true, false, "app").dev).toBe(
+  it.each([
+    [
+      "the api",
+      () =>
+        apiScripts({ ...options, atProjectRoot: false, packageManager: "pnpm" })
+          .dev,
       "vitnode db:prepare && tsx watch src/index.ts",
-    );
-  });
-
-  it("gates the single app inside a monorepo too", () => {
-    expect(singleAppScripts(true, true, "app").dev).toBe(
+    ],
+    [
+      "the single app",
+      () => singleAppScripts({ ...options, atProjectRoot: false }).dev,
       "vitnode db:prepare && vite dev --port 3000",
-    );
+    ],
+  ])("gates %s inside a monorepo too", (_label, dev, expected) => {
+    expect(dev()).toBe(expected);
   });
 
   /** And the root still gates, so the first run is one clean serial pass. */
   it("still gates the workspace at the root", () => {
-    expect(gatesOnBootstrap(rootScripts(true, true, "app").dev)).toBe(true);
+    expect(gatesOnBootstrap(rootScripts(options).dev)).toBe(true);
   });
 });
 
 describe("the web app of a split deployment owns no database", () => {
-  const web = webScripts(true);
+  const web = webScripts({ eslint: true });
 
   /**
    * The rule this file exists to keep on the right side of the boundary. A
@@ -230,12 +218,12 @@ describe("the web app of a split deployment owns no database", () => {
 
 describe("no legacy lifecycle is generated", () => {
   const everyScript = [
-    rootScripts(true, true, "app"),
-    apiScripts("pnpm", true, true, true, "app"),
-    apiScripts("bun", true, true, false, "app"),
-    singleAppScripts(true, true, "app"),
-    singleAppScripts(true, true, "app"),
-    webScripts(true),
+    rootScripts(options),
+    apiScripts({ ...options, packageManager: "pnpm" }),
+    apiScripts({ ...options, atProjectRoot: false, packageManager: "bun" }),
+    singleAppScripts(options),
+    singleAppScripts({ ...options, atProjectRoot: false }),
+    webScripts({ eslint: true }),
   ].flatMap(scripts => Object.entries(scripts));
 
   it.each([
@@ -253,17 +241,99 @@ describe("no legacy lifecycle is generated", () => {
   });
 
   it("keeps db:migrate, which the documentation and deployments name", () => {
-    // `docs/dev/database`, the Content Engine guides and the Vercel deployment
-    // page all tell people to run it, so its name and behaviour are a contract.
-    expect(rootScripts(true, true, "app")["db:migrate"]).toBe(
-      "turbo db:migrate",
+    // `docs/dev/cli`, `docs/dev/database`, the Content Engine guides and the
+    // Vercel deployment page all tell people to run it, so its name and
+    // behaviour are a contract.
+    expect(rootScripts(options)["db:migrate"]).toBe("turbo db:migrate");
+    expect(
+      apiScripts({ ...options, packageManager: "pnpm" })["db:migrate"],
+    ).toBe("vitnode migrate");
+    expect(singleAppScripts(options)["db:migrate"]).toBe("vitnode migrate");
+  });
+});
+
+describe("`docker:dev` goes to the package the compose file is beside", () => {
+  /**
+   * `docker-compose.yml` is written to the project root and nowhere else, so a
+   * nested app carrying `docker compose -f ./docker-compose.yml` names a file
+   * that is not there. A monorepo's root script is the one that works.
+   */
+  it("is on the workspace root", () => {
+    expect(rootScripts(options)["docker:dev"]).toContain("docker compose");
+  });
+
+  it.each([
+    [
+      "a nested api",
+      () =>
+        apiScripts({
+          ...options,
+          atProjectRoot: false,
+          packageManager: "pnpm",
+        }),
+    ],
+    [
+      "a nested single app",
+      () => singleAppScripts({ ...options, atProjectRoot: false }),
+    ],
+  ])("is not on %s", (_label, scripts) => {
+    expect(Object.keys(scripts())).not.toContain("docker:dev");
+  });
+
+  it.each([
+    ["a flat api", () => apiScripts({ ...options, packageManager: "pnpm" })],
+    ["a flat single app", () => singleAppScripts(options)],
+  ])("is on %s, which is the project root", (_label, scripts) => {
+    expect(scripts()["docker:dev"]).toContain(
+      "docker compose -f ./docker-compose.yml",
     );
-    expect(apiScripts("pnpm", true, true, true, "app")["db:migrate"]).toBe(
-      "vitnode migrate",
-    );
-    expect(singleAppScripts(true, true, "app")["db:migrate"]).toBe(
-      "vitnode migrate",
-    );
+  });
+
+  it("is absent entirely when Docker was not asked for", () => {
+    for (const scripts of [
+      rootScripts({ ...options, docker: false }),
+      apiScripts({ ...options, docker: false, packageManager: "pnpm" }),
+      singleAppScripts({ ...options, docker: false }),
+    ]) {
+      expect(Object.keys(scripts)).not.toContain("docker:dev");
+    }
+  });
+});
+
+describe("the package a user runs commands in", () => {
+  /**
+   * One selector, so the `package.json` this generator writes and the README it
+   * writes beside it cannot name different commands.
+   */
+  it.each([
+    [
+      "a workspace",
+      { mode: "singleApp", monorepo: true },
+      rootScripts(options),
+    ],
+    [
+      "a split deployment",
+      { mode: "apiMonorepo", monorepo: false },
+      rootScripts(options),
+    ],
+    [
+      "a flat single app",
+      { mode: "singleApp", monorepo: false },
+      singleAppScripts(options),
+    ],
+    [
+      "a flat api",
+      { mode: "onlyApi", monorepo: false },
+      apiScripts({ ...options, packageManager: "pnpm" }),
+    ],
+  ] as const)("is the root of %s", (_label, shape, expected) => {
+    expect(
+      projectRootScripts({
+        ...options,
+        ...shape,
+        packageManager: "pnpm",
+      }),
+    ).toEqual(expected);
   });
 });
 
@@ -321,8 +391,21 @@ describe("creation-time migration generation is awaited", () => {
     expect(helper).toMatch(/code === 0/);
     expect(helper).toMatch(/reject\(/);
     expect(helper).toMatch(/on\("error"/);
-    // Windows package managers are batch files, which `spawn` cannot exec.
-    expect(helper).toContain("shell: true");
+  });
+
+  /**
+   * And it runs the binary rather than asking a package manager to.
+   * `pnpm vitnode …` and `bun vitnode …` both work; `npm vitnode …` is "Unknown
+   * command", so an npm project failed here every time and the CLI reported it
+   * as created-but-broken. The path out of `node_modules/.bin` works for all
+   * three - and needs a shell only on Windows, where the entry is a `.cmd`.
+   */
+  it("runs the local binary, not a package manager", () => {
+    expect(helper).toContain('resolveLocalBin("vitnode"');
+    expect(helper).not.toMatch(/spawn\(\s*packageManager/);
+    expect(helper).not.toMatch(/"vitnode",\s*"migrate"/);
+    expect(helper).toContain('process.platform === "win32"');
+    expect(helper).not.toContain("shell: true");
   });
 
   it("is awaited by the generator, and a failure is surfaced", () => {
@@ -342,7 +425,7 @@ describe("creation-time migration generation is awaited", () => {
    * instead, which is why that is where the invariant lives.
    */
   it("generates only, leaving the dev script to apply", () => {
-    expect(helper).toContain('"migrate", "--generate"');
+    expect(helper).toContain('["migrate", "--generate"]');
     expect(helper).not.toMatch(/"db:prepare"\]/);
   });
 });

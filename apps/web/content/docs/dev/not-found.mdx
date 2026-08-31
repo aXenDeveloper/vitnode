@@ -1,14 +1,72 @@
 ---
 title: Not Found
-description: xxx
+description: What a URL that matches no route renders, and how to replace it.
 ---
 
-VitNode has implemented own 404 page. You can create your own page by modifying the `app/[locale]/(main)/not-found.tsx` file.
+VitNode ships its own 404. It is wired up in two places, and which one answers
+depends on how the page went missing.
+
+## A URL that matched no route
+
+The root route's `notFoundComponent` is the last resort - a path the route tree
+does not serve at all, like a stale bookmark or a typo:
+
+```tsx title="src/routes/__root.tsx"
+import { NotFound } from "@vitnode/core/tanstack/layout";
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  // ...
+  notFoundComponent: () => <NotFound actions={<ErrorActions />} />,
+});
+```
+
+`NotFound` reads its two lines from the `core.global` namespace, which the root
+already warms - so nothing suspends and nothing renders a raw key.
+
+## A route that matched, and found nothing
+
+A loader that throws `notFound()` is caught by the nearest `notFoundComponent`
+**above it**, not by the root's. That is what lets a section keep its own chrome:
+
+```tsx title="src/routes/_admin.tsx"
+export const Route = createFileRoute("/_admin")({
+  notFoundComponent: AdminNotFound,
+});
+```
+
+`/admin/content/nope` therefore renders the AdminCP's 404 inside the panel, with
+the sidebar still there, rather than the bare root one.
+
+<Callout type="info" title="It is a 404, never a redirect">
+  A URL that reaches here is one somebody typed. Bouncing it somewhere else hides
+  a genuinely missing page behind a hop to a server that 404s it anyway - and
+  where a URL is served from is a deployment question a proxy answers better than
+  a route can.
+</Callout>
+
+## Your own
+
+Put a `notFoundComponent` on whichever route should own the message. For a
+different design entirely, `ErrorContent` is the presentation with no strings and
+no navigation in it - you supply both:
 
 ```tsx
-import { ErrorView } from '@vitnode/core/views/error/error-view';
+import { ErrorContent } from "@vitnode/core/views/error/error-content";
+import { useTranslations } from "use-intl";
 
-export default function NotFoundPage() {
-  return <ErrorView code={404} />;
-}
+const MyNotFound = () => {
+  const t = useTranslations("core.global");
+
+  return (
+    <ErrorContent
+      code={404}
+      title={t("errors.404.title")}
+      description={t("errors.404.desc")}
+      actions={<ErrorActions />}
+    />
+  );
+};
 ```
+
+The strings and the "go back" / "go home" buttons are slots on purpose: text is
+i18n's business and navigation is the router's, and `ErrorContent` is neither.

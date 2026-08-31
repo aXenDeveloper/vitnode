@@ -8,6 +8,29 @@ icon: Power
   We're working hard to bring you the best documentation experience.
 </Callout>
 
+## The stack
+
+A VitNode app is one server with two halves, and the line between them is the one
+worth memorising:
+
+```txt
+TanStack Start  ->  pages, routing, rendering
+Hono            ->  the API, and every security decision
+```
+
+- **[TanStack Start](https://tanstack.com/start)** on Vite serves the site, the
+  AdminCP and the documentation. Pages are **TanStack Router** routes; cached
+  data is **TanStack Query**.
+- **[Hono](https://hono.dev)** is the API at `/api/*`, with OpenAPI schemas and
+  **Drizzle ORM** over PostgreSQL. It authorizes every read and write from the
+  session cookie, on every request - a route guard is navigation, never the
+  boundary.
+- **Plugins** are packages. A plugin declares its URLs in a **route manifest**
+  and exports the module that renders each one; the app compiles that list into
+  lazy imports at build time. Nothing is copied into your app.
+- **[Fumadocs](https://fumadocs.dev)** renders these pages from MDX, served by
+  the same app at `/docs/*`.
+
 ## Support
 
 - [Postgres 18-19](https://www.postgresql.org/) (min: v18, recommended: v19) - database support.
@@ -47,6 +70,16 @@ npx create-vitnode-app@canary
 ```
 
 </Tabs>
+
+Then start it:
+
+```bash
+pnpm dev
+```
+
+Every app that owns a schema prepares the database - generate, apply, seed -
+before its dev server accepts a request, so a fresh clone needs no setup command
+of its own. See [Database](/docs/dev/database#your-first-start).
 
 ## Where to go next
 

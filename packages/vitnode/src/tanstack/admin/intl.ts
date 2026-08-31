@@ -44,9 +44,9 @@ import { intlQueryOptions } from "../i18n/query";
  *
  * A feature route mounts its own `RouteMessages` with its own namespaces on top
  * of this one - `admin.user` for the users table, `admin.staff` for the six
- * staff screens - and the inner provider wins for the keys it names. That is the
- * same rule `<I18nProvider namespaces={[...]}>` applies in the Next.js AdminCP,
- * so a screen's namespace list survives its migration unchanged.
+ * staff screens - and the inner provider wins for the keys it names. Nesting is
+ * the whole mechanism: a screen names only what it adds, and never has to
+ * restate the two this provider already carries.
  *
  * One list, read by both the loader that fetches these and the provider that
  * mounts them, because they have to be the same set or the provider suspends on

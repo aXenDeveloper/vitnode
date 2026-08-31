@@ -10,11 +10,41 @@ description: A table component with sorting, filtering, and pagination compatibl
 ## Usage
 
 ```ts
-import {
-  type ColumnDef,
-  DataTable,
-} from "@vitnode/core/components/table/data-table";
+import { ContentDataTable } from "@vitnode/core/components/table/content";
+import { type ColumnDef } from "@vitnode/core/components/table/data-table-content";
+import { DataTableNavigationProvider } from "@vitnode/core/components/table/navigation";
 ```
+
+The table keeps its state - the page, the sort, the search term, every filter -
+in the **URL**. It does not own a router, so you tell it where it is and how to
+move by wrapping it in `DataTableNavigationProvider`:
+
+```tsx
+const navigation = React.useMemo(
+  () => ({
+    navigate: async nextSearch => {
+      await navigate({ resetScroll: false, search: searchFrom(nextSearch) });
+    },
+    searchParams: toSearchParams(search),
+  }),
+  [navigate, search],
+);
+
+<DataTableNavigationProvider value={navigation}>
+  <ContentDataTable
+    id="users-table"
+    columns={columns}
+    edges={data.edges}
+    pageInfo={data.pageInfo}
+    order={order}
+  />
+</DataTableNavigationProvider>;
+```
+
+Two values, and that is the whole seam - it is what lets one table serve a route
+in the app, a screen in the AdminCP and a page in a plugin, none of which agree on
+how navigation works. The [full contract](#the-navigation-contract) is below;
+every example on this page assumes the provider is already above it.
 
 Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe - it only accepts a `keyof T`, just like TanStack Table. A **display column** (for actions, selection, etc.) has no `accessorKey` and instead requires a string `id`.
 
@@ -36,7 +66,7 @@ const columns: ColumnDef<User>[] = [
   },
 ];
 
-<DataTable
+<ContentDataTable
   id="users-table"
   columns={columns}
   edges={data.edges}
@@ -153,7 +183,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 You can customize how each cell is rendered using the `cell` property. The renderer function receives the current row data and all table data as parameters.
 
 ```tsx
-<DataTable
+<ContentDataTable
   id="users-table"
   columns={[
     {
@@ -222,7 +252,7 @@ columns={[
 Set the `search` prop to `true` to render a search input above the table. You can optionally customize the placeholder with `searchPlaceholder`.
 
 ```tsx
-<DataTable
+<ContentDataTable
   id="users-table"
   // [!code ++]
   search
@@ -291,7 +321,7 @@ Pass the `filters` prop to render one or more faceted, multi-select dropdowns ab
 When the set of options is small and known ahead of time, pass them directly via `options`. The dropdown list is filtered on the client.
 
 ```tsx
-<DataTable
+<ContentDataTable
   id="users-table"
   // [!code ++]
   filters={[
@@ -332,11 +362,9 @@ When the set of options is small and known ahead of time, pass them directly via
 
 When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server.
 
-The filter is a client component, so `onSearch` is an ordinary function. Read the API directly with `fetcherClient`:
+`onSearch` is an ordinary function. Read the API directly with `fetcherClient`:
 
 ```tsx title="search-roles.tsx"
-"use client";
-
 import type { FilterOption } from "@vitnode/core/components/table/filters";
 
 import type { adminModule } from "@/api/modules/admin/admin.module";
@@ -374,13 +402,13 @@ export const searchRoles = async (search: string): Promise<FilterOption[]> => {
 };
 ```
 
-<Callout type="info" title="A Server Action works too, with one catch">
-  `onSearch` accepts any function returning a promise, so a [Server
-  Action](https://react.dev/reference/rsc/server-functions) is a valid answer
-  when the lookup genuinely needs a server-only secret. It is the wrong default
-  for a read the browser can already make: it is a `POST` back to your app that
-  then calls the API - two round trips instead of one - and a Server Action
-  cannot be called from an application that is not Next.js.
+<Callout type="info" title="A server function works too, with one catch">
+  `onSearch` accepts any function returning a promise, so a
+  `createServerFn` is a valid answer when the lookup genuinely needs a
+  server-only secret. It is the wrong default for a read the browser can already
+  make: it is a `POST` back to your app that then calls the API - two round trips
+  instead of one - and a server function cannot be declared in a plugin. See
+  [Server functions](/docs/dev/tanstack/server-functions).
 </Callout>
 
 ```tsx
@@ -420,8 +448,6 @@ Pass `bulkActions` to let a person act on several rows at once. That single prop
 Your actions read the ticked ids with the `useDataTableSelection` hook. They are rendered inside the bar, which lives inside the table's selection provider, so nothing has to be threaded through props:
 
 ```tsx title="delete-bulk-action.tsx"
-"use client";
-
 import { useDataTableSelection } from "@vitnode/core/components/table/selection";
 import { Button } from "@vitnode/core/components/ui/button";
 
@@ -442,7 +468,7 @@ export const DeleteBulkAction = () => {
 ```
 
 ```tsx
-<DataTable
+<ContentDataTable
   id="users-table"
   // [!code ++]
   bulkActions={<DeleteBulkAction />}
@@ -542,11 +568,11 @@ withTableSearch("page=3&tab=media", "vitnode");
 
 Each `with*` helper takes the current query string (or a `URLSearchParams`) and returns a new one. They never mutate what you hand them, they always keep parameters they don't own - your own `?tab=` survives a sort click - and they remove a parameter rather than leaving it empty. Filtering and changing the page size drop the pagination cursor, because the rows underneath it changed; sorting and searching leave it alone.
 
-### Using the table outside Next.js
+### The navigation contract
 
-`DataTable` is the Next.js binding: it supplies the current search parameters and a locale-aware, scroll-free push, and every page in this documentation uses it. Under it sits the same table with that one decision taken as an argument, which is all another router needs to render it.
-
-Give `DataTableNavigationProvider` where you are and how to move, and render `ContentDataTable` inside it:
+`ContentDataTable` never imports a router. The one decision it cannot make for
+itself - where it is, and how to get somewhere else - is handed in as context, so
+the same table renders under any router at all:
 
 ```tsx
 import { ContentDataTable } from "@vitnode/core/components/table/content";
@@ -554,7 +580,8 @@ import { DataTableNavigationProvider } from "@vitnode/core/components/table/navi
 
 <DataTableNavigationProvider
   value={{
-    navigate: nextSearch => router.navigate({ search: nextSearch }),
+    navigate: async nextSearch =>
+      await navigate({ resetScroll: false, search: searchFrom(nextSearch) }),
     searchParams: new URLSearchParams(location.searchStr),
   }}
 >
@@ -567,6 +594,10 @@ import { DataTableNavigationProvider } from "@vitnode/core/components/table/navi
   />
 </DataTableNavigationProvider>;
 ```
+
+It is **context rather than props** on purpose: a sort header, a filter dropdown
+and the pagination footer all need it, and threading two values through five
+components is how one of them ends up with a stale copy.
 
 <TypeTable
   type={{
@@ -585,65 +616,81 @@ import { DataTableNavigationProvider } from "@vitnode/core/components/table/navi
   }}
 />
 
-The types, and the `DataTableSkeleton` you render as a loading fallback, come from `@vitnode/core/components/table/data-table-content` - importing them from `data-table` would pull Next.js in behind them.
+The types (`ColumnDef`, `DataTableProps`, `SearchParamsDataTable`) and the `DataTableSkeleton` you render as a loading fallback all come from `@vitnode/core/components/table/data-table-content`, which imports nothing but React and the UI primitives.
 
 ## Complete Example
 
-Here's a complete example showing how to use the `DataTable` component in a page:
+A route that owns its query string, warms the rows in its `loader`, and hands the
+table the two navigation values:
 
-```tsx
-import {
-  DataTable,
-  SearchParamsDataTable,
-} from "@vitnode/core/components/table/data-table";
-import { userModule } from "@/api/modules/user/user.module";
-import { fetcher } from "@vitnode/core/lib/fetcher";
+```tsx title="apps/web/src/routes/_admin/users.tsx"
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { ContentDataTable } from "@vitnode/core/components/table/content";
+import { DataTableNavigationProvider } from "@vitnode/core/components/table/navigation";
+import React from "react";
 
-export const UsersView = async ({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParamsDataTable>;
-}) => {
-  const query = await searchParams;
-  const res = await fetcher(userModule, {
-    path: "/users",
-    method: "get",
-    module: "user",
-    args: {
-      query,
-    },
-    withPagination: true,
-  });
-  const data = await res.json();
+import { usersQuery, usersSearchFrom, usersSearchParams } from "#/lib/users";
+
+export const Route = createFileRoute("/_admin/users")({
+  validateSearch: search => usersSearchFrom(search),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) =>
+    await context.queryClient.ensureQueryData(usersQuery(deps)),
+  component: UsersRoute,
+});
+
+const UsersRoute = () => {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data } = useSuspenseQuery(usersQuery(search));
+
+  const navigation = React.useMemo(
+    () => ({
+      navigate: async (nextSearch: string) => {
+        await navigate({
+          resetScroll: false,
+          search: usersSearchFrom(nextSearch),
+        });
+      },
+      searchParams: usersSearchParams(search),
+    }),
+    [navigate, search],
+  );
 
   return (
-    <DataTable
-      id="users-table"
-      columns={[
-        {
-          accessorKey: "id",
-          header: "ID",
-        },
-        {
-          accessorKey: "username",
-          header: "Username",
-          cell: ({ row }) => (
-            <span className="font-medium">{row.username}</span>
-          ),
-        },
-        { accessorKey: "email", header: "Email" },
-        { accessorKey: "createdAt", header: "Created at" },
-      ]}
-      edges={data.edges}
-      order={{
-        columns: ["id", "username", "email", "createdAt"],
-        defaultOrder: {
-          column: "createdAt",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-    />
+    <DataTableNavigationProvider value={navigation}>
+      <ContentDataTable
+        id="users-table"
+        search
+        columns={[
+          { accessorKey: "id", header: "ID" },
+          {
+            accessorKey: "name",
+            header: "Name",
+            cell: ({ row }) => <span className="font-medium">{row.name}</span>,
+          },
+          { accessorKey: "email", header: "Email" },
+          { accessorKey: "createdAt", header: "Created at" },
+        ]}
+        edges={data.edges}
+        order={{
+          columns: ["id", "name", "email", "createdAt"],
+          defaultOrder: { column: "createdAt", order: "desc" },
+        }}
+        pageInfo={data.pageInfo}
+      />
+    </DataTableNavigationProvider>
   );
 };
 ```
+
+`usersQuery` is one `queryOptions` object with the `fetcherClient` call inside it,
+so the loader and the component ask for the identical cache entry - see
+[Data loading](/docs/dev/tanstack/data-loading).
+
+<Callout type="warn" title="Page sizes are numbers">
+  `first` and `last` in a route's search schema must be `number`, not `string`.
+  The router's default serializer JSON-quotes a numeric string, so a `"20"` ends
+  up in the URL as `?first=%2220%22`.
+</Callout>

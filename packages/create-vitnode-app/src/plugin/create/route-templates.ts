@@ -68,7 +68,7 @@ export const pluginRouteManifestTemplate = (pluginName: string): string => {
  * Add a route by adding a record. \`id\` is a stable name for the page - name it
  * after the page, not the URL, because it survives a path change. \`path\` is the
  * public URL, written in VitNode's own spelling: a dynamic segment is \`:id\`,
- * never Next's \`[id]\` and never TanStack's \`$id\`.
+ * never \`[id]\` and never \`$id\` - the host converts.
  */
 export const routes: PluginRouteDefinition[] = [
   {
@@ -95,10 +95,10 @@ export const pluginRouteModuleTemplate = (pluginName: string): string =>
  * The page \`routes/manifest.ts\` declares.
  *
  * Keep it framework-neutral. This module is compiled into the package's own
- * \`dist\` and imported by whichever app installed the plugin, so anything from
- * \`next/*\`, \`next-intl\` or a router pins the plugin to one kind of host.
- * \`use-intl\` - which is what VitNode itself renders through - and plain JSX are
- * pinned to neither.
+ * \`dist\` and imported by whichever app installed the plugin, so **importing a
+ * router pins the plugin to that router** - and so does a host framework's own
+ * data or navigation API, or a host-bound i18n package. \`use-intl\` - which is
+ * what VitNode itself renders through - and plain JSX are pinned to nothing.
  *
  * No \`<main>\`: the application shell owns the document's one \`main\` landmark,
  * and a page that renders a second gives a screen reader two to choose between.

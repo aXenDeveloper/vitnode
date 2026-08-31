@@ -20,8 +20,8 @@ import { CONTENT_EDITORIAL_ACTION_IDS } from "@/views/admin/views/content/action
  * to stay identical to something it cannot see. So the list states exactly what
  * it needs - a trigger it can wrap, and a panel it can open by id - and nothing
  * more. Which actions a row offers, in what order, and whether they fit as
- * buttons is *not* delegated: that is `row-actions-model.ts`, shared with the
- * Next.js AdminCP, so the two lists cannot drift.
+ * buttons is *not* delegated: that is `row-actions-model.ts`, so a registered
+ * panel cannot change what the menu looks like.
  *
  * ## Why a module-scope registry rather than props
  *

@@ -19,9 +19,8 @@ import { contentEditorialTransport } from "./transport";
  * Mounted by each panel rather than by the list, and that is deliberate: the
  * list screen has no form and no panels of its own, and a host that renders only
  * a table should pay for neither provider. It is the same choice `ContentFormHost`
- * makes one screen over - the Next.js AdminCP mounts all three above every
- * content screen at once, because there a Server Component assembles the page
- * and a provider cannot be created lower down.
+ * makes one screen over. Mounting all three above every content screen at once
+ * would be simpler to write and would put two providers into every table.
  *
  * Both providers are needed and neither is redundant:
  *

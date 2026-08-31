@@ -21,7 +21,7 @@ export const createQuestionsCli = async (
   const options: CreateCliReturn = {
     packageManager: optionsFromProgram.packageManager,
     eslint: optionsFromProgram.eslint,
-    install: !optionsFromProgram.skipInstall,
+    install: optionsFromProgram.install === true,
     docker: optionsFromProgram.docker,
     mode: optionsFromProgram.mode,
     monorepo: optionsFromProgram.monorepo,
@@ -99,7 +99,14 @@ export const createQuestionsCli = async (
     });
   }
 
-  if (optionsFromProgram.skipInstall === undefined) {
+  /**
+   * Both spellings, so the whole generator can be driven without a terminal.
+   * `--skip-install` alone could only ever say no.
+   */
+  if (
+    optionsFromProgram.skipInstall === undefined &&
+    optionsFromProgram.install === undefined
+  ) {
     options.install = await confirm({
       message: `Would you like to ${color.blue("Install dependencies")}?`,
     });

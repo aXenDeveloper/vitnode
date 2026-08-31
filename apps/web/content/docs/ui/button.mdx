@@ -28,12 +28,16 @@ another component, such as a link. Set `nativeButton={false}` when the rendered
 element is not a native `<button>`.
 
 ```tsx
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
-<Button nativeButton={false} render={<Link href="/home" />}>
+<Button nativeButton={false} render={<Link to="/home" />}>
   Home
 </Button>
 ```
+
+In a plugin route module - which imports no router - accept the link component as
+a prop instead, or render plain text. See
+[Navigation](/docs/dev/tanstack/navigation).
 
 ## Loading
 

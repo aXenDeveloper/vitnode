@@ -1,16 +1,10 @@
 ---
 title: Namespaces
-description: Provide a way to get access to the translation strings in client components on frontend.
+description: Declare which message namespaces a screen renders, so its strings arrive with its code.
 ---
 
-By default VitNode provide a way to get access to the translation strings only for `core.global` namespace. But sometimes you need to get access to the translation strings in other namespaces.
-
-For example, you have a component that needs to get access to the translation strings in the `core.global` and `welcome.home` namespaces.
-
-<Callout title="Client Component Only">
-  Provide namespaces into components is only for client components. If you want
-  to use translation strings in server components you can avoid this guide.
-</Callout>
+Messages are grouped into namespaces, and a screen only gets the ones it asked
+for. `core.global` is provided above every route; everything else is declared.
 
 ## Structuring
 
@@ -27,21 +21,77 @@ A plugin's strings live in `src/locales/{locale}.json`, and every one of them be
 
 See [Server-side](/docs/dev/i18n/server) for registering that file with your plugin.
 
-## Usage
+## In a plugin route: declare them in the manifest
 
-To get access to the translation strings in other namespaces you need to use the `I18nProvider` component.
-
-```tsx title="plugins/{your_plugin}/src/app/blog/layout.tsx"
-import { I18nProvider } from '@vitnode/core/components/i18n-provider';
-
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <I18nProvider namespaces={['blog.home']}>{children}</I18nProvider>;
+```ts title="plugins/{your_plugin}/src/routes/manifest.ts"
+{
+  entry: "routes/home-page",
+  id: "home",
+  path: "/my-plugin",
+  namespaces: ["my-plugin.home"], // [!code highlight]
 }
 ```
 
-Provide the list of namespaces that you want to get access to the translation strings in the `namespaces` prop.
+They live on the **route** rather than inside the module because of a waterfall
+that is otherwise unavoidable: a page's strings and a page's code are two
+requests, and a list that lived inside the code could only be read after
+downloading the page it describes. Declared here, the runtime starts both at once.
 
-<Callout title="Global namespace">
-  You don't need to include the `core.global` namespace in the `namespaces`
-  prop. It's already included by default.
+A child route inherits every namespace its ancestors declare, so a layout can name
+the set once for the pages under it.
+
+## In an app route: warm them, then mount them
+
+An app route owns both halves. Warm the namespaces in the `loader` so nothing
+suspends, and mount `RouteMessages` around what renders them:
+
+```tsx title="apps/web/src/routes/_main/blog.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import { intlQueryOptions, RouteMessages } from "@vitnode/core/tanstack/i18n";
+
+const NAMESPACES = ["core.global", "blog.home"] as const;
+
+export const Route = createFileRoute("/_main/blog")({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(
+      intlQueryOptions({ locale: context.locale, namespaces: NAMESPACES }),
+    ),
+  component: () => (
+    <RouteMessages namespaces={NAMESPACES}>
+      <BlogScreen />
+    </RouteMessages>
+  ),
+});
+```
+
+<Callout type="warn" title="The loader and the provider must agree">
+  `RouteMessages` reads the entry the loader warmed - same locale, same
+  namespaces. Hand it a different list and the first paint suspends and the
+  strings arrive a round trip late.
+</Callout>
+
+<Callout type="warn" title="It replaces, it does not add">
+  `RouteMessages` mounts its provider *over* the one above it rather than merging
+  with it. So list every namespace the subtree needs, `core.global` included, even
+  though the root already warmed it.
+</Callout>
+
+## Reading them
+
+Same hook everywhere - during SSR and in the browser, in the app and in a plugin:
+
+```tsx
+import { useTranslations } from "use-intl";
+
+const BlogScreen = () => {
+  const t = useTranslations("blog.home");
+
+  return <h1>{t("title")}</h1>;
+};
+```
+
+<Callout type="info" title="A missing key falls back, per key">
+  The default locale is merged underneath the language being rendered, so a
+  half-finished translation shows translated strings where they exist and English
+  where they do not - rather than leaking `blog.home.title` into the page.
 </Callout>

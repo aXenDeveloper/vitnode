@@ -30,15 +30,21 @@ export const exampleRoute = buildRoute({
 </Step>
 <Step>
 
-### Get config from middleware API
+### Read the captcha config
 
-```tsx title="plugins/{plugin_name}/src/app/sing_up/page.tsx"
-import { getMiddlewareApi } from "@vitnode/core/lib/api/get-middleware-api"; // [!code ++]
+```tsx title="apps/web/src/routes/_main/sign-up.tsx"
+import { middlewareConfigQueryOptions } from "@vitnode/core/tanstack/auth"; // [!code ++]
 
-export const SignUpView = async () => {
-  const { captcha } = await getMiddlewareApi(); // [!code ++]
+export const Route = createFileRoute("/_main/sign-up")({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(middlewareConfigQueryOptions()), // [!code ++]
+  component: SignUpRoute,
+});
 
-  return <FormSignUp captcha={captcha} />;
+const SignUpRoute = () => {
+  const { data } = useSuspenseQuery(middlewareConfigQueryOptions()); // [!code ++]
+
+  return <FormSignUp captcha={data.captcha} />;
 };
 ```
 
@@ -47,11 +53,9 @@ export const SignUpView = async () => {
 
 ### Use `useCaptcha` hook
 
-Inside your client component, use the `useCaptcha` hook to handle captcha rendering and validation. Remember to add `div` with `id="vitnode_captcha"` where you want the captcha widget to appear.
+Use the `useCaptcha` hook to handle captcha rendering and validation. Remember to add a `div` with `id="vitnode_captcha"` where you want the captcha widget to appear.
 
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/sign-up.tsx"
-"use client";
-
+```tsx title="plugins/{plugin_name}/src/views/sign-up/sign-up.tsx"
 import { AutoForm } from "@vitnode/core/components/form/auto-form";
 
 export const FormSignUp = ({
@@ -90,20 +94,18 @@ export const FormSignUp = ({
 
 ### Submit form with captcha
 
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/mutation-api.server.ts"
-"use server";
-
+```ts title="plugins/{plugin_name}/src/views/sign-up/mutation-api.ts"
 import type { z } from "zod";
 
-import { fetcher } from "@vitnode/core/lib/fetcher";
+import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
 
 export const mutationApi = async ({
   captchaToken, // [!code ++]
 }: {
   // [!code ++]
-  captchaToken;
+  captchaToken: string;
 }) => {
-  await fetcher(usersModule, {
+  await fetcherClient(usersModuleRef, {
     path: "/test",
     method: "post",
     module: "blog",

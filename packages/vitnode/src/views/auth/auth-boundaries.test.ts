@@ -1,27 +1,26 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import {
-  externalGraph,
-  NEXT_INTL,
-  NEXT_ONLY,
-  offenders,
-  runtimeImports,
-} from "@/tests/import-graph";
+import { externalGraph, runtimeImports } from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
- * The auth screens, split down the middle.
+ * The auth screens, and the props each one takes instead of a framework.
  *
- * The same boundary `feed-boundaries.test.ts` draws around the search feed, for
- * the same reason and with the same machinery: a shared component that reaches
- * `@/lib/navigation` - or anything else built on Next's request scope - cannot
- * be rendered by a TanStack Start route, and nothing about that failure is
- * visible until somebody tries.
+ * Every screen here is a card with a form in it, and the interesting thing about
+ * all of them is what they refuse to own: no mutation, no router, no request.
+ * The sign-in gets `onSignIn`, the SSO buttons get `onSelectProvider`, the
+ * settings frame gets told where the visitor is. That shape is what this file
+ * asserts, and it has to read the source to do it - a component can also fail by
+ * taking the *wrong* thing as a prop, which no reachability walk can see.
+ *
+ * The walk that used to sit above this - reaches nothing from `next/*`, from
+ * `next-intl`, from a server action, over all eighteen entry points - is now
+ * `next-boundary.test.ts`'s, asserted over every file in the package.
  */
 const SHARED = {
   breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-main-content.tsx"),
@@ -31,12 +30,10 @@ const SHARED = {
     "password-reset/change-password-form/change-password-form-content.tsx",
   ),
   errorScreen: join(here, "../error/error-content.tsx"),
-  passwordResetCard: join(here, "password-reset/password-reset-content.tsx"),
   passwordResetForm: join(
     here,
     "password-reset/form/password-reset-form-content.tsx",
   ),
-  recoveryLink: join(here, "password-reset/recovery-link.ts"),
   settingsNav: join(here, "settings/nav-content.tsx"),
   settingsNavModel: join(here, "settings/settings-nav.ts"),
   settingsOverview: join(here, "settings/overview/overview.tsx"),
@@ -47,72 +44,7 @@ const SHARED = {
   signUpForm: join(here, "sign-up/form/sign-up-form-content.tsx"),
   ssoButtons: join(here, "sso/buttons/sso-buttons-content.tsx"),
   ssoCallback: join(here, "sso/callback/sso-callback-content.tsx"),
-  ssoCallbackHook: join(here, "sso/callback/use-sso-callback.ts"),
 };
-
-/** The Next.js half: server actions, `next/cache`, locale-aware navigation. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
-const DELETED_NEXT_HALF = {
-  breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-main.tsx"),
-  card: join(here, "sign-in/sign-in-card.tsx"),
-  changePasswordForm: join(
-    here,
-    "password-reset/change-password-form/form.tsx",
-  ),
-  passwordResetForm: join(here, "password-reset/form/form.tsx"),
-  settingsNav: join(here, "settings/nav.tsx"),
-  settingsShell: join(here, "settings/shell.tsx"),
-  signInForm: join(here, "sign-in/form/form.tsx"),
-  signUpCard: join(here, "sign-up/sign-up-card.tsx"),
-  signUpForm: join(here, "sign-up/form/form.tsx"),
-  ssoButtons: join(here, "sso/buttons/client.tsx"),
-  ssoCallback: join(here, "sso/callback/client/client.tsx"),
-};
-
-const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
-  name,
-  path,
-}));
-
-describe("the shared auth views are framework-neutral", () => {
-  it.each(sharedEntries)("$name reaches nothing from next/*", ({ path }) => {
-    expect(offenders(path, NEXT_ONLY)).toEqual([]);
-  });
-
-  it.each(sharedEntries)(
-    "$name reaches none of next-intl's Next-only entrypoints",
-    ({ path }) => {
-      expect(offenders(path, NEXT_INTL)).toEqual([]);
-    },
-  );
-
-  it.each(sharedEntries)(
-    "$name never reaches the locale-aware navigation module",
-    ({ path }) => {
-      const reached = [...externalGraph(path).keys()];
-
-      expect(reached.some(one => one.includes("navigation"))).toBe(false);
-    },
-  );
-
-  it.each(sharedEntries)("$name never reaches a server action", ({ path }) => {
-    // A `"use server"` module is the other way Next.js gets in: importing one
-    // pulls the fetcher, `next/headers` and the whole API module graph behind
-    // it. Every mutation on these screens is a prop instead.
-    const reached = [...externalGraph(path).keys()];
-
-    expect(reached.some(one => one.endsWith(".server"))).toBe(false);
-    expect(runtimeImports(path).some(one => one.includes(".server"))).toBe(
-      false,
-    );
-  });
-});
 
 describe("the shared views take their framework parts as props", () => {
   const withoutComments = (path: string): string =>
@@ -206,8 +138,8 @@ describe("the shared views take their framework parts as props", () => {
  *
  * What replaced them is one rule: the frame and the menu are *told* where the
  * visitor is and how to build a link. The assertions below are about that shape
- * as well as about the absence of a specifier, because a shared component can
- * also fail by taking the wrong thing as a prop.
+ * rather than about the absence of a specifier, because a shared component can
+ * fail by taking the wrong thing as a prop and no import scan sees that.
  */
 describe("the settings frame is told its framework parts", () => {
   const withoutComments = (path: string): string =>
@@ -223,8 +155,13 @@ describe("the settings frame is told its framework parts", () => {
   });
 
   it("takes where it is as a prop rather than asking", () => {
-    // The one decision neither half can make for itself. `isSettingsRootPath`
+    // The one decision the frame cannot make for itself. `isSettingsRootPath`
     // and the active-item rule are shared; reading the pathname is not.
+    //
+    // This is also the invariant that outlived the wrappers. `usePathname` used
+    // to live in the Next.js halves so the shared frame could stay ignorant of
+    // it; with those gone, being handed `isRoot`/`pathname` is exactly what
+    // tempts somebody to read the pathname here instead and drop a prop.
     for (const path of [SHARED.settingsShell, SHARED.settingsNav]) {
       expect(withoutComments(path)).not.toContain("usePathname");
     }
@@ -257,17 +194,6 @@ describe("the settings frame is told its framework parts", () => {
     // nothing at all.
     for (const path of [SHARED.settingsOverview, SHARED.settingsSecurity]) {
       expect(runtimeImports(path)).toContain("use-intl");
-    }
-  });
-
-  it("has no half left that reads the pathname for itself", () => {
-    // This used to assert the opposite about the two Next.js wrappers: that they
-    // were where `usePathname` lived, so the shared frame could stay ignorant of
-    // it. Both are gone, and the invariant that survives them is that the shared
-    // frame never grew the hook back to fill the gap - which is what a host
-    // supplying `isRoot`/`pathname` would tempt somebody to do.
-    for (const path of Object.values(DELETED_NEXT_HALF)) {
-      expect(existsSync(path)).toBe(false);
     }
   });
 });

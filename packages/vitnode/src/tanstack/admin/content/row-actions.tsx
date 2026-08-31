@@ -63,13 +63,11 @@ import { contentAdminSlots, registeredContentRowPanels } from "./slots";
 /**
  * One content list row's actions, for a TanStack Start host.
  *
- * The same cluster the Next.js list renders, in the same order, gated on the
- * same permissions: publish or unpublish, edit, then everything else behind a
- * `⋯`. What differs is only where the writes land - a browser request and a
- * query invalidation, rather than a Server Action and `revalidatePath` - and
- * that difference is entirely inside `./query`.
+ * Publish or unpublish, edit, then everything else behind a `⋯`, each gated on
+ * its own permission. Where the writes land is entirely inside `./query`, so
+ * this file is the cluster and nothing about the transport.
  *
- * Which actions exist is `row-actions-model.ts`, shared with the Next.js AdminCP.
+ * Which actions exist is `row-actions-model.ts`, which is framework-neutral.
  * The editorial panels behind four of them are not implemented here at all; they
  * arrive through `./slots`, and an action whose panel nobody registered is not
  * offered rather than offered and inert.

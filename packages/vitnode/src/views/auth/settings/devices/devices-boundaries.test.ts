@@ -1,98 +1,55 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import {
-  externalGraph,
-  NEXT_INTL,
-  NEXT_ONLY,
-  offenders,
-  runtimeImports,
-} from "@/tests/import-graph";
+import { externalGraph } from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
- * `/settings/devices`, split down the middle.
+ * What `/settings/devices` keeps out of the browser, and what it takes as props.
  *
- * The same boundary `files-boundaries.test.ts` and `auth-boundaries.test.ts`
- * draw, with the same machinery and for the same reason: a shared module that
- * reaches `next/headers`, a server action or `@/lib/navigation` cannot be loaded
- * by a TanStack Start route, and nothing about that failure is visible until
- * somebody tries. A scan is the only way to state it, because the offending
- * import is usually two files away from the one being written - this feature's
- * would have been the server action, imported by the revoke button, behind the
- * list.
+ * The bundle claim first, because it is the one a reachability walk is needed
+ * for: the fetchers import the users module's *type* to keep the route literals
+ * inferring, and a value import of the same module would drag Hono, Drizzle and
+ * `@/database` into the browser bundle of every page that lists a device. That
+ * is one character's difference in the source and several hundred kilobytes in
+ * the output, which is exactly the kind of mistake review does not catch.
+ *
+ * The host-neutrality claim that used to sit beside it - reaches nothing from
+ * `next/*`, from `next-intl`, from a server action - is now
+ * `next-boundary.test.ts`'s, asserted over every file in the package rather than
+ * over the six entry points listed here.
  */
 const SHARED = {
-  item: join(here, "device-item.tsx"),
   list: join(here, "devices-content.tsx"),
   query: join(here, "devices-query.ts"),
-  revoke: join(here, "devices-revoke.ts"),
   revokeButton: join(here, "revoke-device-button.tsx"),
-  skeleton: join(here, "devices-list-skeleton.tsx"),
 };
 
-/** The Next.js half: `next/navigation`, `next/cache`, `fetcher()`, the action. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
-const DELETED_NEXT_HALF = {
-  list: join(here, "devices-list.tsx"),
-  page: join(here, "devices.tsx"),
-};
+const withoutComments = (path: string): string =>
+  readFileSync(path, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
 
-const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
-  name,
-  path,
-}));
-describe("the shared devices modules are framework-neutral", () => {
-  it.each(sharedEntries)("$name reaches nothing from next/*", ({ path }) => {
-    expect(offenders(path, NEXT_ONLY)).toEqual([]);
-  });
-
-  it.each(sharedEntries)(
-    "$name reaches none of next-intl's Next-only entrypoints",
-    ({ path }) => {
-      expect(offenders(path, NEXT_INTL)).toEqual([]);
-    },
-  );
-
-  it.each(sharedEntries)("$name never reaches a server action", ({ path }) => {
-    // A `"use server"` module is the other way Next.js gets in: importing one
-    // pulls the fetcher, `next/headers` and the whole API module graph behind it.
-    // The revoke is a prop instead.
-    const reached = [...externalGraph(path).keys()];
-
-    expect(reached.some(one => one.endsWith(".server"))).toBe(false);
-    expect(runtimeImports(path).some(one => one.includes(".server"))).toBe(
-      false,
-    );
-  });
-
-  it("never imports the API's own module for one plugin id", () => {
-    // The fetchers need the users module's *type* to keep route literals
-    // inferring; a value import would drag Hono, Drizzle and `@/database` into
-    // the browser bundle of every page that lists a device.
+describe("the browser graph stops at the API's edge", () => {
+  it("the query reaches neither Drizzle nor Hono", () => {
     const reached = [...externalGraph(SHARED.query).keys()];
 
     expect(reached).not.toContain("drizzle-orm");
     expect(reached.some(one => one.startsWith("hono"))).toBe(false);
   });
+
+  it("walks far enough to have found them", () => {
+    // Guards the guard: the assertion above is "found nothing", which a walk
+    // that stopped at the entry file would satisfy completely.
+    expect([...externalGraph(SHARED.list).keys()].length).toBeGreaterThan(2);
+  });
 });
 
 describe("the shared list takes its framework parts as props", () => {
-  const withoutComments = (path: string): string =>
-    readFileSync(path, "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/.*$/gm, "");
-
   it("is handed the devices rather than fetching them", () => {
     const code = withoutComments(SHARED.list);
 
@@ -102,9 +59,7 @@ describe("the shared list takes its framework parts as props", () => {
   });
 
   it("is handed the revoke rather than importing one", () => {
-    const code = withoutComments(SHARED.list);
-
-    expect(code).toContain("onRevoke: RevokeDevice;");
+    expect(withoutComments(SHARED.list)).toContain("onRevoke: RevokeDevice;");
   });
 
   it("passes the revoke down to the button rather than the button finding it", () => {
@@ -112,13 +67,4 @@ describe("the shared list takes its framework parts as props", () => {
       "onRevoke: RevokeDevice;",
     );
   });
-});
-
-describe("the Next.js half of this subtree is gone", () => {
-  it.each(Object.entries(DELETED_NEXT_HALF))(
-    "%s no longer exists",
-    (_name, path) => {
-      expect(existsSync(path)).toBe(false);
-    },
-  );
 });

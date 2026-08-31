@@ -93,6 +93,25 @@ const byId = (id: string) => {
   return spec;
 };
 
+describe("a malformed module names the file to open", () => {
+  /**
+   * The registry's loader is a closure over a literal `import()`, so it cannot be
+   * asked what it imports. The manifest has both halves - `pluginId` and `entry` -
+   * and `<pluginId>/<entry>` is exactly the specifier the generated file spells,
+   * so the spec rebuilds it and hands it down. Without it the message names only
+   * the route id, which is not the name of any file.
+   */
+  it("carries `<pluginId>/<entry>` into the module error", async () => {
+    const [spec] = pluginRouteSpecs([route()], {
+      "plugin:page": async () => Promise.resolve({ route: {} }),
+    });
+
+    await expect(spec.module()).rejects.toThrow(
+      /"plugin:page" \("plugin\/routes\/page"\) does not export a component/,
+    );
+  });
+});
+
 describe("pluginRouteSpecs", () => {
   it("pairs each route with its module and converts the path for TanStack", () => {
     const specs = pluginRouteSpecs(

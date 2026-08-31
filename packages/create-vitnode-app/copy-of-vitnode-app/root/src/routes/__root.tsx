@@ -79,8 +79,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1", name: "viewport" },
       // The default title, from the app's config. A route that names itself
-      // renders `"<page> - <shortTitle>"` instead, through `formatPageTitle` -
-      // the same rule Next.js applies through `title.template`.
+      // renders `"<page> - <shortTitle>"` instead, through `formatPageTitle`.
       { title: metadata.title },
     ],
   }),
@@ -140,11 +139,10 @@ function RootNotFound() {
 /**
  * The VitNode provider tree, mounted once above every route.
  *
- * Every provider in it is shared with the Next.js app - the theme, the toaster,
- * the tooltip provider, the WebSocket - plus the pair of `use-intl` records that
- * only a package can name. `VitNodeRootProviders` owns all of it, including the
- * argument for why the realtime listeners are inside it rather than in the main
- * shell.
+ * The theme, the toaster, the tooltip provider and the WebSocket, plus the pair
+ * of `use-intl` records that only a package can name. `VitNodeRootProviders` owns
+ * all of it, including the argument for why the realtime listeners are inside it
+ * rather than in the main shell.
  *
  * What this route contributes is the two things an application owns: which
  * languages it serves, and its theme defaults.

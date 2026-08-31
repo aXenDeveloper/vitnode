@@ -165,48 +165,14 @@ For the full set (e.g. to return it from an endpoint), use `resolveStaffPermissi
 
 ## Frontend
 
-### Admin panel (server components)
+### Admin panel
 
-`getSessionAdminApi()` returns the admin's `permissions` set. Combine it with the pure `hasStaffPermission` helper:
-
-```tsx
-import { getSessionAdminApi } from "@vitnode/core/lib/api/get-session-admin-api";
-import { hasStaffPermission } from "@vitnode/core/api/lib/staff-permission";
-
-export default async function Page() {
-  const session = await getSessionAdminApi();
-  if (!session) return null;
-
-  const canView = hasStaffPermission(session.permissions, {
-    plugin: "@vitnode/blog",
-    module: "categories",
-    permission: "can_view",
-  });
-
-  return canView ? <Categories /> : null;
-}
-```
-
-Or use the `checkAdminPermissionApi` shortcut, which resolves the session and
-checks a single permission in one call (`plugin` defaults to `@vitnode/core`):
+The current admin's effective permissions arrive with the admin session and are
+provided through a context. Gate UI with the `useAdminStaffPermission` hook or the
+`<AdminStaffPermissionGate>` component from
+`@vitnode/core/components/staff-permission/provider`:
 
 ```tsx
-import { checkAdminPermissionApi } from "@vitnode/core/lib/api/get-session-admin-api";
-
-const canView = await checkAdminPermissionApi({
-  plugin: "@vitnode/blog",
-  module: "categories",
-  permission: "can_view",
-});
-```
-
-### Admin panel (client components)
-
-The current admin's effective permissions are loaded with the admin session and provided through a context. Gate UI with the `useAdminStaffPermission` hook or the `<AdminStaffPermissionGate>` component from `@vitnode/core/components/staff-permission/provider`:
-
-```tsx
-"use client";
-
 import {
   AdminStaffPermissionGate,
   useAdminStaffPermission,
@@ -233,6 +199,35 @@ const DeleteButton = () => {
   <button>Delete</button>
 </AdminStaffPermissionGate>;
 ```
+
+`plugin` defaults to `@vitnode/core`. Name your own `pluginId` on a plugin's
+screen - a `posts.can_delete` granted under core is a *different* permission from
+yours and must not open your page.
+
+### In a loader
+
+When the decision has to be made before the screen renders - to redirect, or to
+choose what to fetch - read the admin session the loader already warmed and ask
+`hasAdminPermission`:
+
+```ts
+import { adminSessionQueryOptions, hasAdminPermission } from "@vitnode/core/tanstack/admin";
+
+const access = await context.queryClient.ensureQueryData(
+  adminSessionQueryOptions(),
+);
+
+const canView = hasAdminPermission(access, {
+  plugin: "@vitnode/blog",
+  module: "categories",
+  permission: "can_view",
+});
+```
+
+`hasStaffPermission` from `@vitnode/core/api/lib/staff-permission` is the pure
+predicate underneath both, taking a permission set and a
+`{ plugin, module, permission }` triple. It works in a test, in a loader, and in
+an API handler.
 
 ### Admin sidebar nav
 
@@ -265,19 +260,25 @@ all of its children are hidden. Items without a `permission` are always shown.
 
 <Callout type="info" title="Gate the page too">
   Hiding the nav entry does not protect the route. Guard the page itself (e.g.
-  `notFound()` when `checkAdminPermissionApi` is false) and the underlying
+  `throw notFound()` when `hasAdminPermission` is false) and the underlying
   action on the backend with `assertStaffPermission`.
 </Callout>
 
 ### Public site (moderators)
 
-For moderator actions on the public (non-admin) site, use `checkModeratorPermissionApi` (or `getModeratorPermissionsApi` for the whole set) from `@vitnode/core/lib/api/get-moderator-permissions-api` in a Server Component:
+The public site has its own set. `GET /api/@vitnode/core/users/permissions`
+returns the signed-in visitor's effective **moderator** permissions as
+`{ root, permissions }` - and `{ root: false, permissions: [] }` for a guest.
+Cache it like any other private read and check it with the same pure predicate:
 
 ```tsx
-import { checkModeratorPermissionApi } from "@vitnode/core/lib/api/get-moderator-permissions-api";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { hasStaffPermission } from "@vitnode/core/api/lib/staff-permission";
 
-export const PostActions = async () => {
-  const canEdit = await checkModeratorPermissionApi({
+export const PostActions = ({ userId }: { userId: number }) => {
+  const { data } = useSuspenseQuery(moderatorPermissionsQuery(userId));
+
+  const canEdit = hasStaffPermission(data, {
     plugin: "@vitnode/blog",
     module: "posts",
     permission: "can_edit",
@@ -286,6 +287,12 @@ export const PostActions = async () => {
   return canEdit ? <EditPostButton /> : null;
 };
 ```
+
+<Callout type="warn" title="Key it by the viewer">
+  The browser's `QueryClient` outlives a sign-out, so a permissions entry under a
+  shared key would hand the next visitor the previous one's set. Partition by the
+  owner's id - see [Cache](/docs/dev/cache).
+</Callout>
 
 <Callout type="warn" title="Never trust the frontend">
   Frontend checks only hide UI. Always guard the underlying action on the

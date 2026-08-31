@@ -61,12 +61,13 @@ Compiling this model automatically builds two PostgreSQL tables:
 <Step>
 ### Step 3: Render Localized Content with i18n Fallbacks
 
-When fetching localized content via public API or `resolveContentDelivery`, translatable fields (`title`, `content`) resolve in the active locale.
+When fetching localized content through the public API or the delivery resolve
+endpoint, translatable fields (`title`, `content`) resolve in the active locale.
 
-For UI wrapper elements (e.g. status badges, section headers), use `useTranslations` from `next-intl`:
+For UI wrapper elements (e.g. status badges, section headers), use `useTranslations` from `use-intl`:
 
 ```tsx title="src/components/article-card.tsx"
-import { useTranslations } from "next-intl"; // [!code ++]
+import { useTranslations } from "use-intl"; // [!code ++]
 
 interface Props {
   article: {

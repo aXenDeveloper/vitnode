@@ -5,6 +5,7 @@ export type PluginRouteErrorCode =
   | "cross-plugin-parent"
   | "duplicate-id"
   | "duplicate-path"
+  | "host-route-collision"
   | "invalid-area"
   | "invalid-entry"
   | "invalid-id"
@@ -25,6 +26,18 @@ export interface PluginRouteErrorDetails {
   code: PluginRouteErrorCode;
   /** The route that already owned the id or the path, on a collision. */
   conflictsWith?: { pluginId: string; routeId: string };
+  /**
+   * The *application's* own route that already owned the path, when the other
+   * side of a collision is not a plugin.
+   *
+   * A separate field rather than a `pluginId` of `""` in
+   * {@link PluginRouteErrorDetails.conflictsWith}, because the two are fixed
+   * differently and a build tool rendering the failure needs to say which: a
+   * plugin-versus-plugin clash is settled by renaming one plugin's route, and
+   * this one by editing the file it names. `file` is relative to the app root -
+   * the path an author would type to open it.
+   */
+  conflictsWithHostRoute?: { file: string; path: string };
   path?: string;
   pluginId: string;
   routeId?: string;
@@ -46,6 +59,7 @@ export class PluginRouteError extends Error {
     this.name = "PluginRouteError";
     this.code = details.code;
     this.conflictsWith = details.conflictsWith;
+    this.conflictsWithHostRoute = details.conflictsWithHostRoute;
     this.path = details.path;
     this.pluginId = details.pluginId;
     this.routeId = details.routeId;
@@ -53,6 +67,7 @@ export class PluginRouteError extends Error {
 
   readonly code: PluginRouteErrorCode;
   readonly conflictsWith?: { pluginId: string; routeId: string };
+  readonly conflictsWithHostRoute?: { file: string; path: string };
   readonly path?: string;
   readonly pluginId: string;
   readonly routeId?: string;

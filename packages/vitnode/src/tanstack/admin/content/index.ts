@@ -146,8 +146,8 @@ export {
 } from "@/views/admin/views/content/actions/editorial-transport";
 /**
  * The list's shared model, re-exported so a screen imports the rules it renders
- * from the same place it imports the screen. All of it is framework-neutral and
- * all of it is what the Next.js AdminCP reads too.
+ * from the same place it imports the screen. All of it is framework-neutral, so
+ * the rules do not move if the host does.
  */
 export type {
   ContentEditorialActionId,
@@ -197,7 +197,7 @@ export {
   readContentApiJson,
 } from "@/views/admin/views/content/content-request";
 /**
- * The narrow invalidation helpers, shared with the Next.js AdminCP.
+ * The narrow invalidation helpers.
  *
  * One prefix each, none of them above the content type that was written to.
  * `invalidateContentAfterWrite` in `./query` composes the three a record write

@@ -35,8 +35,28 @@ const i18nScripts = {
   "i18n:update:ai": "vitnode i18n:update:ai",
 };
 
-const dockerDevScript = (appName: string) =>
-  `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`;
+/**
+ * `docker:dev`, for the one package the compose file is written beside.
+ *
+ * `docker-compose.yml` goes to the project root and nowhere else, so the path in
+ * this command only resolves from there. A nested `apps/api` that carried it
+ * would be pointing at a file one directory up, and the failure is a `docker
+ * compose` error rather than anything about VitNode - which is why the caller
+ * has to say whether it *is* the root rather than merely whether Docker was
+ * asked for.
+ */
+const dockerScripts = ({
+  appName,
+  atProjectRoot,
+  docker,
+}: {
+  appName: string;
+  atProjectRoot: boolean;
+  docker: boolean;
+}) =>
+  withIf(docker && atProjectRoot, {
+    "docker:dev": `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`,
+  });
 
 /**
  * The root of a generated monorepo, and the one place its database is gated.
@@ -53,11 +73,15 @@ const dockerDevScript = (appName: string) =>
  * single app that mounts it); the web app of a split deployment declares no such
  * script, so nothing in this line makes the frontend own migrations.
  */
-export const rootScripts = (
-  enableEslint: boolean,
-  enableDocker: boolean,
-  appName: string,
-) => ({
+export const rootScripts = ({
+  appName,
+  docker,
+  eslint,
+}: {
+  appName: string;
+  docker: boolean;
+  eslint: boolean;
+}) => ({
   "db:migrate": "turbo db:migrate",
   "db:prepare": "turbo db:prepare",
   dev: "turbo db:prepare && turbo dev",
@@ -68,11 +92,11 @@ export const rootScripts = (
   "i18n:delete": "turbo i18n:delete",
   "i18n:update": "turbo i18n:update",
   "i18n:update:ai": "turbo i18n:update:ai",
-  ...withIf(enableEslint, {
+  ...withIf(eslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
   }),
-  ...withIf(enableDocker, { "docker:dev": dockerDevScript(appName) }),
+  ...dockerScripts({ appName, atProjectRoot: true, docker }),
 });
 
 /**
@@ -84,71 +108,73 @@ export const rootScripts = (
  * through the root script. An app that reads a schema is responsible for having
  * one.
  *
- * Running the bootstrap twice is safe *because* of `withMigrationLock`: the
- * second run waits for the first, then finds nothing pending. Without that lock
- * two gates in one monorepo race on `CREATE SCHEMA IF NOT EXISTS drizzle` and one
- * of them fails - measured, not theorised. See `@vitnode/core`'s
+ * Running the bootstrap twice is safe *because* of the advisory lock it takes:
+ * the second run waits for the first, then finds nothing pending. Without that
+ * lock two gates in one monorepo race on `CREATE SCHEMA IF NOT EXISTS drizzle`
+ * and one of them fails - measured, not theorised. See `@vitnode/core`'s
  * `scripts/prepare-database.ts`.
+ *
+ * Bun runs TypeScript directly, so it needs neither the `tsx` watcher nor a
+ * compile step to start from.
  */
-export const apiScripts = (
-  pm: string,
-  eslint: boolean,
-  docker: boolean,
-  onlyApi: boolean,
-  appName: string,
-) => {
-  return {
-    "db:migrate": "vitnode migrate",
-    "db:prepare": "vitnode db:prepare",
-    ...(pm === "bun"
-      ? {
-          dev: "vitnode db:prepare && bun run --hot src/index.ts",
-          start: "NODE_ENV=production bun run src/index.ts",
-        }
-      : {
-          dev: "vitnode db:prepare && tsx watch src/index.ts",
-          build: "tsc && tsc-alias -p tsconfig.json",
-          start: "node dist/index.js",
-        }),
-    "dev:email": "email dev --dir src/emails",
-    ...i18nScripts,
-    ...withIf(eslint, eslintScripts),
-    ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
-    "drizzle-kit": "drizzle-kit",
-  };
-};
+export const apiScripts = ({
+  appName,
+  atProjectRoot,
+  docker,
+  eslint,
+  packageManager,
+}: {
+  appName: string;
+  atProjectRoot: boolean;
+  docker: boolean;
+  eslint: boolean;
+  packageManager: string;
+}) => ({
+  "db:migrate": "vitnode migrate",
+  "db:prepare": "vitnode db:prepare",
+  ...(packageManager === "bun"
+    ? {
+        dev: "vitnode db:prepare && bun run --hot src/index.ts",
+        start: "NODE_ENV=production bun run src/index.ts",
+      }
+    : {
+        dev: "vitnode db:prepare && tsx watch src/index.ts",
+        build: "tsc && tsc-alias -p tsconfig.json",
+        start: "node dist/index.js",
+      }),
+  "dev:email": "email dev --dir src/emails",
+  ...i18nScripts,
+  ...withIf(eslint, eslintScripts),
+  ...dockerScripts({ appName, atProjectRoot, docker }),
+  "drizzle-kit": "drizzle-kit",
+});
 
 /**
  * The single app: a TanStack Start site with the Hono API mounted inside it.
  *
- * `vite` rather than `next`, and `start` runs Nitro's own server output rather
- * than a framework CLI: a Start build emits `.output/server/index.mjs`, which is
- * a plain Node entry point and needs nothing installed to run.
+ * `start` runs Nitro's own server output rather than a framework CLI: a Start
+ * build emits `.output/server/index.mjs`, which is a plain Node entry point and
+ * needs nothing installed to run.
  *
  * **This shape owns a database.** It ships `drizzle.config.ts`, a `migrations/`
  * directory and `vitnode.api.config.ts`, and it serves `/api/*` from its own
  * process - so it is the schema's owner as much as a standalone API app is, and
- * `dev` waits for the bootstrap before Vite starts.
- *
- * That line went missing in Stage 17 and it is the regression this file was
- * fixed for. The reasoning at the time was correct about the half it was looking
- * at: `dev` used to be `vitnode init && next dev`, `init` also copied every
- * installed plugin's pages into `src/app/` for Next.js to find, and a plugin's
- * routes are compiled into `src/plugin-routes.gen.ts` by the app's own Vite
- * plugin now - so the *plugin* half of `init` really had nothing left to do. But
- * `init` had a second responsibility nobody was auditing, and dropping the whole
- * command dropped it too: apply pending migrations and seed the roles,
- * languages and permissions a VitNode installation cannot answer a request
- * without. A fresh clone then started Vite against an empty database.
- *
- * `vitnode db:prepare` is that half, under a name that says only what it does.
- * It never touches a plugin page - see `@vitnode/core/framework/vite`.
+ * `dev` waits for the bootstrap before Vite starts. `vitnode db:prepare` is a
+ * database command and nothing else: a plugin's routes are compiled into
+ * `src/plugin-routes.gen.ts` by the app's own Vite plugin, on every dev start
+ * and every build.
  */
-export const singleAppScripts = (
-  eslint: boolean,
-  docker: boolean,
-  appName: string,
-) => ({
+export const singleAppScripts = ({
+  appName,
+  atProjectRoot,
+  docker,
+  eslint,
+}: {
+  appName: string;
+  atProjectRoot: boolean;
+  docker: boolean;
+  eslint: boolean;
+}) => ({
   "db:migrate": "vitnode migrate",
   "db:prepare": "vitnode db:prepare",
   dev: "vitnode db:prepare && vite dev --port 3000",
@@ -157,7 +183,7 @@ export const singleAppScripts = (
   start: "node .output/server/index.mjs",
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
-  ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
+  ...dockerScripts({ appName, atProjectRoot, docker }),
   "drizzle-kit": "drizzle-kit",
 });
 
@@ -166,26 +192,61 @@ export const singleAppScripts = (
  *
  * Deliberately no `db:prepare`, no `db:migrate` and no `drizzle-kit`: this app
  * talks to a separate API over HTTP and has no schema, no migrations directory
- * and no database credentials. Its `dev` is the Vite server and nothing else.
- *
- * Its predecessor was `vitnode init --web && next dev`, and `--web` printed
- * "nothing to initialise" - a flag whose only meaning was to do nothing. The
- * honest replacement is for the script not to call the bootstrap at all, which
- * is also what keeps schema lifecycle out of the frontend: a root `turbo
- * db:prepare` resolves to the API package, never to this one.
+ * and no database credentials. Its `dev` is the Vite server and nothing else,
+ * which is what keeps schema lifecycle out of the frontend - a root
+ * `turbo db:prepare` resolves to the API package, never to this one.
  *
  * Its own generated artefacts - the plugin route manifest, the module registry,
  * the AdminCP navigation and content projections - are written by the Vite
  * plugin on every `vite dev` and `vite build`, so there is nothing to prepare
  * here either.
  */
-export const webScripts = (eslint: boolean) => ({
+export const webScripts = ({ eslint }: { eslint: boolean }) => ({
   dev: "vite dev --port 3000",
   build: "vite build",
   start: "node .output/server/index.mjs",
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
 });
+
+/**
+ * The scripts of the package a user runs commands in.
+ *
+ * The workspace root when there is one, and the single app or the API when the
+ * project is flat. Exported because two things need the same answer and must not
+ * disagree: this file writes it into a `package.json`, and the generated README
+ * documents it. A README naming a script the project does not have is the kind
+ * of wrong nothing else catches.
+ */
+export const projectRootScripts = ({
+  appName,
+  docker,
+  eslint,
+  mode,
+  monorepo = false,
+  packageManager,
+}: {
+  appName: string;
+  docker: boolean;
+  eslint: boolean;
+  mode: Mode;
+  monorepo?: boolean;
+  packageManager: string;
+}): Record<string, string> => {
+  if (monorepo || mode === "apiMonorepo") {
+    return rootScripts({ appName, docker, eslint });
+  }
+
+  return mode === "singleApp"
+    ? singleAppScripts({ appName, atProjectRoot: true, docker, eslint })
+    : apiScripts({
+        appName,
+        atProjectRoot: true,
+        docker,
+        eslint,
+        packageManager,
+      });
+};
 
 /**
  * Dependency builders
@@ -357,19 +418,33 @@ export const createPackageJSON = async ({
 }) => {
   const vitnodeVersionRange = await getVitnodePackageVersion();
   const pmVersions = await getAvailablePackageManagers();
+  /**
+   * The package manager, pinned - on the workspace root and nowhere else.
+   *
+   * `packageManager` is read by Corepack from the project root; a nested app
+   * declaring one as well is a second answer to a question that has one, and the
+   * two go out of step the moment somebody bumps the root.
+   */
   const pmSpec = `${packageManager}@${pmVersions[packageManager]}`;
   const p = paths(root);
 
-  const isApiMonorepo = mode === "apiMonorepo" || !!monorepo;
+  const isWorkspace = mode === "apiMonorepo" || !!monorepo;
   const isOnlyApi = mode === "onlyApi";
   const isSingleApp = mode === "singleApp";
 
-  // 1) Root package.json (for monorepo/apiMonorepo)
-  if (isApiMonorepo) {
+  // 1) Root package.json (for a workspace)
+  if (isWorkspace) {
     const rootPkg: PackageJSON = {
       name: appName,
       private: true,
-      scripts: rootScripts(eslint, !!docker, appName),
+      scripts: projectRootScripts({
+        appName,
+        docker: !!docker,
+        eslint,
+        mode,
+        monorepo: true,
+        packageManager,
+      }),
       devDependencies: {
         ...rootDevDeps(eslint),
         "@vitnode/config": vitnodeVersionRange,
@@ -383,17 +458,17 @@ export const createPackageJSON = async ({
 
   // 2) API package.json (shared by onlyApi and apiMonorepo)
   const apiPkg: PackageJSON = {
-    name: isApiMonorepo ? "api" : appName,
+    name: isWorkspace ? "api" : appName,
     version: "0.1.0",
     private: true,
     type: "module",
-    scripts: apiScripts(
-      packageManager,
-      eslint,
-      !!docker,
-      mode === "onlyApi",
+    scripts: apiScripts({
       appName,
-    ),
+      atProjectRoot: !isWorkspace,
+      docker: !!docker,
+      eslint,
+      packageManager,
+    }),
     dependencies: {
       ...apiDeps,
       "@vitnode/core": vitnodeVersionRange,
@@ -401,15 +476,14 @@ export const createPackageJSON = async ({
     devDependencies: {
       ...apiDevDeps(packageManager, eslint),
       "@vitnode/config": vitnodeVersionRange,
-      ...(eslint && mode === "onlyApi"
+      ...(eslint && isOnlyApi
         ? {
             prettier: versionsPackageJson.prettier,
             "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
           }
         : {}),
-      // TS pipeline pieces when not using Bun for dev
-      ...(packageManager === "bun" ? {} : {}),
     },
+    ...(isWorkspace ? {} : { packageManager: pmSpec }),
   };
 
   // 3) Single app (TanStack Start + the Hono API inside one app)
@@ -419,7 +493,12 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
-      scripts: singleAppScripts(eslint, !!docker, appName),
+      scripts: singleAppScripts({
+        appName,
+        atProjectRoot: !isWorkspace,
+        docker: !!docker,
+        eslint,
+      }),
       dependencies: {
         ...singleAppDeps,
         "@vitnode/core": vitnodeVersionRange,
@@ -428,7 +507,7 @@ export const createPackageJSON = async ({
         ...singleAppDevDeps(eslint),
         "@vitnode/config": vitnodeVersionRange,
       },
-      packageManager: pmSpec,
+      ...(isWorkspace ? {} : { packageManager: pmSpec }),
     };
 
     await writeJson(join(monorepo ? p.web : p.root, "package.json"), singlePkg);
@@ -443,7 +522,7 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
-      scripts: webScripts(eslint),
+      scripts: webScripts({ eslint }),
       dependencies: {
         ...webDeps,
         "@vitnode/core": vitnodeVersionRange,
@@ -457,7 +536,7 @@ export const createPackageJSON = async ({
     await writeJson(join(p.web, "package.json"), webPkg);
   }
 
-  // 5) onlyApi: write API (in root or in monorepo structure if requested)
+  // 5) onlyApi: write API (in root or in the workspace structure if requested)
   if (isOnlyApi) {
     await writeJson(join(monorepo ? p.api : p.root, "package.json"), apiPkg);
   }

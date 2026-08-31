@@ -16,11 +16,10 @@ import { useContentTypeForm } from "./spec";
  * per language, which a list of fifty rows would otherwise do fifty times for
  * dialogs nobody opened.
  *
- * ## No custom layout, and that is the existing behaviour
+ * ## No custom layout, deliberately
  *
  * `forms.layout` is resolved for the **page** screens only - in `./page-body`,
- * which is the other half of this split - exactly as the Next.js AdminCP does: `ContentTableView` passes no layout to
- * `EditContentAction` and the list heading passes none to `CreateContentAction`.
+ * which is the other half of this split. A dialog passes none.
  * A plugin layout is a full editor screen - `@vitnode/blog`'s article form is a
  * two-column arrangement with its own sidebar - and rendering one inside a
  * dialog was never what it was written for. A content type that wants its layout

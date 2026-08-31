@@ -17,7 +17,38 @@ import type { CreateCliReturn } from "../questions.js";
 import { generateMigrationsVitnode } from "../helpers/init-vitnode.js";
 import { installDependencies } from "../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../helpers/is-folder-empty.js";
-import { createPackageJSON } from "./create-package-json.js";
+import { writeEnvExample } from "./create-env-example.js";
+import {
+  createPackageJSON,
+  projectRootScripts,
+} from "./create-package-json.js";
+import { renderReadme } from "./create-readme.js";
+
+/**
+ * The directories a project of this shape actually has.
+ *
+ * Pure, and the answer to the question every copy below asks. `apps/web` exists
+ * for the two shapes with a frontend and not for the API-only one - a monorepo
+ * that copied a web app's files into a `web` package that has no `package.json`
+ * gets a directory nothing builds and nobody wrote, which is what an
+ * `existsSync` check produced when an earlier copy had created the directory as
+ * a side effect.
+ */
+export const projectLayout = ({
+  mode,
+  monorepo = false,
+}: Pick<CreateCliReturn, "mode" | "monorepo">) => {
+  const workspace = monorepo || mode === "apiMonorepo";
+
+  return {
+    /** Whether an `apps/api` package is written. */
+    hasApi: mode !== "singleApp",
+    /** Whether an `apps/web` (or flat) frontend is written. */
+    hasWeb: mode !== "onlyApi",
+    /** Whether the project has a workspace root above its apps. */
+    workspace,
+  };
+};
 
 export const createVitNode = async ({
   root,
@@ -50,23 +81,26 @@ export const createVitNode = async ({
   if (!isFolderEmpty(root, appName)) {
     process.exit(1);
   }
+
+  const layout = projectLayout({ mode, monorepo });
+  monorepo = layout.workspace;
   const monorepoStructure = {
     api: join(root, "apps", "api"),
     web: join(root, "apps", "web"),
   };
+  /** Where each app lands, flat or under `apps/`. */
+  const appRoot = {
+    api: monorepo ? monorepoStructure.api : root,
+    web: monorepo ? monorepoStructure.web : root,
+  };
 
   spinner.text = "Preparing the project structure...";
-  if (monorepo || mode === "apiMonorepo") {
-    monorepo = true;
-    const dirsToCreate: string[] = [];
-    if (mode === "apiMonorepo" || (monorepo && mode === "onlyApi")) {
-      dirsToCreate.push(monorepoStructure.api);
-    }
-    if (mode === "apiMonorepo" || (monorepo && mode === "singleApp")) {
-      dirsToCreate.push(monorepoStructure.web);
-    }
+  if (monorepo) {
     await Promise.all(
-      dirsToCreate.map(async dir => mkdir(dir, { recursive: true })),
+      [
+        ...(layout.hasApi ? [monorepoStructure.api] : []),
+        ...(layout.hasWeb ? [monorepoStructure.web] : []),
+      ].map(async dir => mkdir(dir, { recursive: true })),
     );
   }
 
@@ -75,29 +109,17 @@ export const createVitNode = async ({
     recursive: true,
   });
   if (mode === "singleApp") {
-    const destination = monorepo ? monorepoStructure.web : root;
-
     /**
      * `root` first, then `api-single-app` over the top - sequentially, because
-     * they land in the *same* directory and the order is what decides the
-     * bytes.
+     * they land in the *same* directory and the order is what decides the bytes.
      *
-     * It was one `Promise.all`, which is a race whenever the two trees share a
-     * path. They shared two: `.gitignore_template` and `.env.example`. The
-     * overlay's copies were the pre-TanStack ones - ignoring `/.next/` and
-     * `next-env.d.ts` while missing `.output`, `.nitro` and the generated
-     * `src/*.gen.ts`, and dropping `NEXT_PUBLIC_API_URL` and `CRON_SECRET` from
-     * the environment - so which of the two a new project got depended on which
-     * `cp` finished last. Both are deleted; `root` owns every generic host file
-     * and `api-single-app` is a true overlay of API-specific additions.
-     *
-     * The order stays explicit anyway. There is nothing overlapping left to
-     * decide, but "the overlay is applied over the base" is the contract, and it
-     * is the one an author adding a file to either tree needs to be able to
-     * rely on.
+     * The two trees share no path at all, so there is nothing left for the order
+     * to decide; it stays explicit because "the overlay is applied over the
+     * base" is the contract an author adding a file to either tree relies on,
+     * and `Promise.all` into one destination cannot express an order.
      */
-    await cp(join(templatePath, "root"), destination, { recursive: true });
-    await cp(join(templatePath, "api-single-app"), destination, {
+    await cp(join(templatePath, "root"), appRoot.web, { recursive: true });
+    await cp(join(templatePath, "api-single-app"), appRoot.web, {
       recursive: true,
     });
   } else if (mode === "apiMonorepo") {
@@ -110,90 +132,77 @@ export const createVitNode = async ({
         recursive: true,
       }),
     ]);
-
-    if (packageManager === "bun") {
-      await cp(join(templatePath, "api-bun"), monorepoStructure.api, {
-        recursive: true,
-      });
-    }
-  } else if (mode === "onlyApi") {
-    await cp(
-      join(templatePath, "api"),
-      monorepo ? monorepoStructure.api : root,
-      {
-        recursive: true,
-      },
-    );
-
-    if (packageManager === "bun") {
-      await cp(
-        join(templatePath, "api-bun"),
-        monorepo ? monorepoStructure.api : root,
-        {
-          recursive: true,
-        },
-      );
-    }
+  } else {
+    await cp(join(templatePath, "api"), appRoot.api, { recursive: true });
   }
 
-  if (mode === "apiMonorepo" || (monorepo && mode !== "singleApp")) {
-    await cp(join(templatePath, "monorepo"), root, {
-      recursive: true,
-    });
-  } else if (monorepo && mode === "singleApp") {
-    // Copy only the necessary monorepo files, excluding the api folder
-    await copyFile(
-      join(templatePath, "monorepo", "turbo.json"),
-      join(root, "turbo.json"),
-    );
-    await copyFile(
-      join(templatePath, "monorepo", ".gitignore_template"),
-      join(root, ".gitignore_template"),
-    );
+  // The one file `api-bun` has, over the Node entry point the `api` tree ships.
+  if (layout.hasApi && packageManager === "bun") {
+    await cp(join(templatePath, "api-bun"), appRoot.api, { recursive: true });
+  }
+
+  /**
+   * The workspace root's own files, and only for a project that has one.
+   *
+   * `turbo.json` and a repository-wide `.gitignore`; the apps under it bring
+   * their own of the latter. Nothing in this tree belongs to an app, so a shape
+   * without a frontend cannot end up with a stray `apps/web`.
+   */
+  if (monorepo) {
+    await cp(join(templatePath, "monorepo"), root, { recursive: true });
   }
 
   if (eslint) {
     spinner.text = "Copying ESLint & Prettier files...";
-    if (monorepo) {
-      if (existsSync(monorepoStructure.api)) {
-        await cp(join(templatePath, "eslint"), monorepoStructure.api, {
-          recursive: true,
-        });
-      }
-      if (existsSync(monorepoStructure.web)) {
-        await cp(join(templatePath, "eslint-react"), monorepoStructure.web, {
-          recursive: true,
-        });
-      }
-    } else {
-      if (mode === "onlyApi") {
-        await cp(join(templatePath, "eslint"), root, {
-          recursive: true,
-        });
-      } else if (mode === "singleApp") {
-        await cp(join(templatePath, "eslint-react"), root, {
-          recursive: true,
-        });
-      }
-    }
+    await Promise.all([
+      ...(layout.hasApi
+        ? [cp(join(templatePath, "eslint"), appRoot.api, { recursive: true })]
+        : []),
+      ...(layout.hasWeb
+        ? [
+            cp(join(templatePath, "eslint-react"), appRoot.web, {
+              recursive: true,
+            }),
+          ]
+        : []),
+    ]);
   }
 
   spinner.text = "Renaming special files...";
   await rename(join(root, ".gitignore_template"), join(root, ".gitignore"));
-  if (mode === "apiMonorepo" || monorepo) {
-    if (existsSync(join(monorepoStructure.api, ".gitignore_template"))) {
-      await rename(
-        join(monorepoStructure.api, ".gitignore_template"),
-        join(monorepoStructure.api, ".gitignore"),
-      );
-    }
-    if (existsSync(join(monorepoStructure.web, ".gitignore_template"))) {
-      await rename(
-        join(monorepoStructure.web, ".gitignore_template"),
-        join(monorepoStructure.web, ".gitignore"),
-      );
-    }
+  if (monorepo) {
+    await Promise.all(
+      [
+        ...(layout.hasApi ? [monorepoStructure.api] : []),
+        ...(layout.hasWeb ? [monorepoStructure.web] : []),
+      ].map(async dir =>
+        rename(join(dir, ".gitignore_template"), join(dir, ".gitignore")),
+      ),
+    );
   }
+
+  /**
+   * The environment each app starts from, composed rather than copied.
+   *
+   * One owner, and one per app: a single app's URLs name its own origin, a
+   * standalone API's do not, and the frontend of a split deployment gets no
+   * database credentials at all because it owns no schema.
+   */
+  spinner.text = "Writing .env.example...";
+  await Promise.all([
+    ...(layout.hasApi
+      ? [writeEnvExample({ docker, role: "api", root: appRoot.api })]
+      : []),
+    ...(layout.hasWeb
+      ? [
+          writeEnvExample({
+            docker,
+            role: mode === "singleApp" ? "singleApp" : "web",
+            root: appRoot.web,
+          }),
+        ]
+      : []),
+  ]);
 
   spinner.text = "Creating package.json...";
   await createPackageJSON({
@@ -206,7 +215,7 @@ export const createVitNode = async ({
     monorepo,
   });
 
-  if ((mode === "apiMonorepo" || monorepo) && packageManager === "pnpm") {
+  if (monorepo && packageManager === "pnpm") {
     spinner.text = "Creating pnpm-workspace.yaml...";
     const pnpmWorkspaceContent = `packages:\n  - 'apps/*'\n  - 'plugins/*'\n`;
     await writeFile(join(root, "pnpm-workspace.yaml"), pnpmWorkspaceContent);
@@ -214,18 +223,20 @@ export const createVitNode = async ({
 
   if (docker) {
     spinner.text = "Copying docker files...";
+    const dockerComposePath = join(root, "docker-compose.yml");
     await copyFile(
       join(templatePath, "docker", "docker-compose.yml"),
-      join(root, "docker-compose.yml"),
+      dockerComposePath,
     );
 
-    const dockerComposePath = join(root, "docker-compose.yml");
     const dockerComposeContent = await readFile(dockerComposePath, "utf-8");
-    const updatedContent = dockerComposeContent.replace(
-      /vitnode_postgres_dev/g,
-      `${appName}_vitnode_postgres_dev`,
+    await writeFile(
+      dockerComposePath,
+      dockerComposeContent.replaceAll(
+        "vitnode_postgres_dev",
+        `${appName}_vitnode_postgres_dev`,
+      ),
     );
-    await writeFile(dockerComposePath, updatedContent);
   }
 
   // `src/styles.css` points Tailwind at `@vitnode/core`'s compiled components
@@ -233,13 +244,9 @@ export const createVitNode = async ({
   // of a workspace rather than beside each app, so in that one layout the
   // relative path has to climb further. pnpm links the package into the app's
   // own `node_modules`, where the committed path is already correct.
-  spinner.text = "Updating VitNode paths...";
-  if (
-    (mode === "apiMonorepo" || monorepo) &&
-    packageManager === "npm" &&
-    mode !== "onlyApi"
-  ) {
-    const stylesPath = join(monorepoStructure.web, "src", "styles.css");
+  if (monorepo && layout.hasWeb && packageManager === "npm") {
+    spinner.text = "Updating VitNode paths...";
+    const stylesPath = join(appRoot.web, "src", "styles.css");
     const stylesContent = await readFile(stylesPath, "utf-8");
     await writeFile(
       stylesPath,
@@ -250,13 +257,32 @@ export const createVitNode = async ({
     );
   }
 
-  if (mode === "apiMonorepo") {
-    spinner.text = "Setting up environment variables...";
-    const envExamplePath = join(monorepoStructure.web, ".env.example");
-    if (existsSync(envExamplePath)) {
-      await rename(envExamplePath, join(monorepoStructure.web, ".env"));
-    }
-  }
+  /**
+   * Always written, because it is where a new project is told to copy
+   * `.env.example` to `.env` before its first `dev`. It used to be inside the
+   * `install` branch, so `--skip-install` produced a project with no README at
+   * all - and the instruction it carries is not about installing.
+   */
+  spinner.text = "Preparing README...";
+  await writeFile(
+    join(root, "README.md"),
+    renderReadme({
+      appName,
+      docker: !!docker,
+      mode,
+      packageManager,
+      scripts: projectRootScripts({
+        appName,
+        docker: !!docker,
+        eslint,
+        mode,
+        monorepo,
+        packageManager,
+      }),
+      template: await readFile(join(templatePath, "README.md"), "utf-8"),
+      workspace: monorepo,
+    }),
+  );
 
   if (install) {
     spinner.text = "Installing dependencies...";
@@ -265,52 +291,17 @@ export const createVitNode = async ({
       cwd: root,
     });
 
-    spinner.text = "Preparing README...";
-    await copyFile(join(templatePath, "README.md"), join(root, "README.md"));
-    let readmeContent = await readFile(join(root, "README.md"), "utf-8");
-    readmeContent = readmeContent.replaceAll("pnpm", packageManager);
-
-    let startUrlsText = "[http://localhost:3000](http://localhost:3000)";
-    if (mode === "onlyApi") {
-      startUrlsText = "[http://localhost:8000](http://localhost:8000)";
-    } else if (mode === "apiMonorepo") {
-      startUrlsText =
-        "[http://localhost:3000](http://localhost:3000) for the Web app and [http://localhost:8000](http://localhost:8000) for the API";
-    }
-
-    readmeContent = readmeContent.replace("{{START_URLS}}", startUrlsText);
-    await writeFile(join(root, "README.md"), readmeContent);
-
     spinner.text = "Generating migrations...";
-    let migrationsCwd: string;
-    if (mode === "apiMonorepo" || (monorepo && mode !== "singleApp")) {
-      migrationsCwd = monorepoStructure.api;
-    } else if (mode === "singleApp" && monorepo) {
-      migrationsCwd = monorepoStructure.web;
-    } else {
-      migrationsCwd = root;
-    }
     /**
-     * Awaited, and a failure stops the CLI rather than being reported as a
-     * success.
-     *
-     * It used to be called without `await` around a `spawn` nobody listened to,
-     * two lines above `spinner.succeed("Success! Created …")` - so the message
-     * printed while `drizzle-kit` was still running, a non-zero exit was never
-     * seen, and the process could exit leaving the child writing into a
-     * directory the user had been told was finished.
-     *
-     * This is a convenience: it *generates* migrations, it does not apply them,
+     * A convenience, and awaited so a failure stops the CLI rather than being
+     * reported as a success. It *generates* migrations and does not apply them,
      * and the generated `dev` script runs `vitnode db:prepare` before any
      * runtime starts - so a project whose migrations were not generated here
-     * still migrates itself on first `dev`. The failure is surfaced anyway,
-     * because the alternative is a CLI that says "Success!" about work it knows
-     * did not happen.
+     * still migrates itself on first `dev`.
      */
     try {
       await generateMigrationsVitnode({
-        packageManager,
-        cwd: migrationsCwd,
+        cwd: mode === "singleApp" ? appRoot.web : appRoot.api,
       });
     } catch (error) {
       spinner.fail(

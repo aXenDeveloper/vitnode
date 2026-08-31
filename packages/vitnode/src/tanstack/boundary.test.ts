@@ -375,17 +375,33 @@ describe("the export map publishes the namespace", () => {
   };
 
   /**
-   * Three patterns, one shape each. Node picks the *longest* matching pattern
-   * and does not fall through to a shorter one, so `./tanstack/*` shadows the
-   * package-wide `./*` for everything under the namespace: only these three
+   * Two patterns, one shape each. Node picks the *longest* matching pattern and
+   * does not fall through to a shorter one, so `./tanstack/*` shadows the
+   * package-wide `./*` for everything under the namespace: only these two
    * spellings resolve, and a feature's internals are unreachable from outside.
    */
   it.each([
     ["./tanstack/*", "./dist/src/tanstack/*/index.js"],
-    ["./tanstack/*/client", "./dist/src/tanstack/*/client.js"],
     ["./tanstack/*/server", "./dist/src/tanstack/*/server.js"],
   ])("maps %s to %s", (subpath, expected) => {
     expect(target(subpath)).toBe(expected);
+  });
+
+  it("publishes no third spelling for a client entry point", () => {
+    /**
+     * There was a `./tanstack/<name>/client` pattern here, and no feature in the
+     * namespace ever had a `client.ts` behind it - the split that mattered was
+     * `index.ts` versus `server.ts`, because only the second one needs keeping
+     * out of the browser. Published, the pattern resolved to a module error for
+     * the first consumer to try it.
+     *
+     * Asserted as an absence because the symmetry is tempting: a namespace with
+     * a `server` spelling looks like it is missing its `client` one. What a
+     * client entry point would be is the barrel, which `./tanstack/*` already
+     * is. `package-exports.test.ts` makes the general form of this claim - no
+     * subpath without a file behind it - over the whole map.
+     */
+    expect(manifest.exports["./tanstack/*/client"]).toBeUndefined();
   });
 
   it("keeps the namespace patterns ahead of the package-wide wildcard", () => {

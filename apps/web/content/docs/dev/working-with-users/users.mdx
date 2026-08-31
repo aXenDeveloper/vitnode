@@ -3,7 +3,7 @@ title: Users
 description: Helper functions and components to work with users.
 ---
 
-VitNode ships with a small set of helpers for reading the currently authenticated user and for looking users up by their `id` or `nameCode`. Backend helpers run inside your API route handlers (Hono context), while frontend helpers run in your React Server Components.
+VitNode ships with a small set of helpers for reading the currently authenticated user and for looking users up by their `id` or `nameCode`. Backend helpers run inside your API route handlers (Hono context); frontend helpers are TanStack Query definitions and components.
 
 ## Backend
 
@@ -75,58 +75,79 @@ export const userRoute = buildRoute({
 
 ### Current session
 
-On the server (React Server Components) read the current session with `getSessionApi()`. It returns `{ user }`, where `user` is the authenticated user - including an `isAdmin` flag - or `null` for guests.
+The session is one TanStack Query entry, and everything reads it through the same
+options object. In a route's `loader`, warm it:
 
-```tsx title="app/[locale]/profile/page.tsx"
-import { getSessionApi } from "@vitnode/core/lib/api/get-session-api";
+```tsx title="apps/web/src/routes/_main/profile.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import { sessionQueryOptions } from "@vitnode/core/tanstack/auth";
 
-export default async function Page() {
-  const { user } = await getSessionApi();
-
-  if (!user) {
-    return <p>You are not signed in.</p>;
-  }
-
-  return <p>Welcome back, {user.name}!</p>;
-}
+export const Route = createFileRoute("/_main/profile")({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(sessionQueryOptions()),
+  component: ProfileRoute,
+});
 ```
 
-To type a Client Component that receives the user as a prop, use the exported `SessionApi` type:
+and in a component, read the identical entry back:
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { sessionQueryOptions } from "@vitnode/core/tanstack/auth";
+
+const ProfileRoute = () => {
+  const { data } = useQuery(sessionQueryOptions());
+
+  if (!data?.user) return <p>You are not signed in.</p>;
+
+  return <p>Welcome back, {data.user.name}!</p>;
+};
+```
+
+`data` is `{ user }`, where `user` is the authenticated user - including an
+`isAdmin` flag - or `null` for guests. To type a component that receives the user
+as a prop, use the exported `SessionApi` type:
 
 ```tsx title="profile.tsx"
-"use client";
-
-import type { SessionApi } from "@vitnode/core/lib/api/get-session-api";
+import type { SessionApi } from "@vitnode/core/tanstack/auth";
 
 export const Profile = ({
   user,
 }: {
   user: NonNullable<SessionApi["user"]>;
-}) => {
-  return <span>{user.name}</span>;
-};
+}) => <span>{user.name}</span>;
 ```
 
-<Callout type="warn" title="Server-side only">
-  `getSessionApi()` relies on the [`fetcher`](/docs/dev/fetcher), so it can only
-  run on the server. Fetch the session in a Server Component and pass what you
-  need down to Client Components as props.
+<Callout type="warn" title="The key addresses a cache; it never authorizes anything">
+  Who the session belongs to is decided in Hono, from the cookie, on every
+  request. And because the browser's `QueryClient` outlives a sign-out, any
+  *other* private read you cache must be partitioned by the owner's id - see
+  [Cache](/docs/dev/cache).
 </Callout>
 
 ### Current admin session
 
-Admin pages have their own session, separate from the public one. Read it on the server with `getSessionAdminApi()` - it returns the admin `user` and the current `vitnode_version`, and automatically redirects to `/admin` when the visitor is not an authenticated administrator.
+Admin pages have their own session, separate from the public one, under its own
+cookie. It works the same way, through `adminSessionQueryOptions()` from
+`@vitnode/core/tanstack/admin` - the `_admin` shell's guard warms it before any
+admin route renders, so a screen inside the AdminCP just reads it:
 
-```tsx title="app/[locale]/admin/page.tsx"
-import { getSessionAdminApi } from "@vitnode/core/lib/api/get-session-admin-api";
+```tsx
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { adminSessionQueryOptions } from "@vitnode/core/tanstack/admin";
 
-export default async function Page() {
-  const session = await getSessionAdminApi();
-  if (!session) return null;
+const AdminHome = () => {
+  const { data } = useSuspenseQuery(adminSessionQueryOptions());
 
-  return <p>Signed in as {session.user.name}</p>;
-}
+  return <p>Signed in as {data.user.name}</p>;
+};
 ```
+
+<Callout type="warn" title="The guard is navigation, not security">
+  The shell's guard decides whether to *show* a screen. Every admin route and
+  action behind it re-checks the staff tables on the server, on every request.
+  See [Staff permissions](/docs/dev/working-with-users/staff-permissions).
+</Callout>
 
 ### Avatar
 
@@ -184,6 +205,6 @@ The `user` prop has the following shape:
 
 <Callout type="info" title="Roles">
   To render a role on its own, use the
-  [`RoleFormat`](/docs/dev/working-with-users/roles#formatting-a-role)
+  [`RoleFormatContent`](/docs/dev/working-with-users/roles#formatting-a-role)
   component.
 </Callout>

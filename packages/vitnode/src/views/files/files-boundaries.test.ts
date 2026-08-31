@@ -1,109 +1,62 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import {
-  externalGraph,
-  NEXT_INTL,
-  NEXT_ONLY,
-  offenders,
-  runtimeImports,
-} from "@/tests/import-graph";
+import { externalGraph } from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
- * `/files`, split down the middle.
+ * What `/files` keeps out of the browser, and what it takes as props.
  *
- * The same boundary `auth-boundaries.test.ts` and `feed-boundaries.test.ts`
- * draw, with the same machinery and for the same reason: a shared module that
- * reaches `next/headers`, a server action or `@/lib/navigation` cannot be loaded
- * by a TanStack Start route, and nothing about that failure is visible until
- * somebody tries. A scan is the only way to state it, because the offending
- * import is usually three files away from the one being written - this feature's
- * was `next/dynamic`, inside the confirm dialog, behind the delete button.
+ * Two claims, and a reachability walk is the only way to state the first one:
+ * the offending import is usually three files away from the one being written -
+ * this feature's was inside the confirm dialog, behind the delete button - so a
+ * per-file review never finds it.
+ *
+ * The first claim is a bundle claim. `my-files-delete.ts` needs one string
+ * constant that used to live in `@/api/models/storage`, and importing it for
+ * that string pulled Hono, Drizzle and all of `@/database` into the browser
+ * bundle of every surface that deletes a file. The type-only import is what
+ * keeps the route literals inferring without any of that.
+ *
+ * The host-neutrality claim that used to sit beside it - reaches nothing from
+ * `next/*`, from `next-intl`, from a server action - is now
+ * `next-boundary.test.ts`'s, asserted over every file in the package rather than
+ * over the five entry points listed here.
  */
 const SHARED = {
-  bulkActions: join(here, "actions/files-bulk-actions.tsx"),
   deletes: join(here, "my-files-delete.ts"),
   query: join(here, "my-files-query.ts"),
-  rowActions: join(here, "actions/file-row-actions.tsx"),
   table: join(here, "my-files-table-content.tsx"),
 };
 
-/** The Next.js half: `next/headers`, `notFound`, and the server actions. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
-const DELETED_NEXT_HALF = join(here, "my-files-table-view.tsx");
+const withoutComments = (path: string): string =>
+  readFileSync(path, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
 
-const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
-  name,
-  path,
-}));
-
-describe("the shared files modules are framework-neutral", () => {
-  it.each(sharedEntries)("$name reaches nothing from next/*", ({ path }) => {
-    // The table is in here too, which is only true because it renders
-    // `ContentDataTable`: `DataTable` mounts the Next.js navigation provider,
-    // and every one of the table's controls reads the URL through the seam in
-    // `components/table/navigation` instead of `next/navigation`.
-    expect(offenders(path, NEXT_ONLY)).toEqual([]);
-  });
-
-  it.each(sharedEntries)(
-    "$name reaches none of next-intl's Next-only entrypoints",
-    ({ path }) => {
-      expect(offenders(path, NEXT_INTL)).toEqual([]);
-    },
-  );
-
-  it.each(sharedEntries)(
-    "$name never reaches the locale-aware navigation module directly",
-    ({ path }) => {
-      const reached = [...externalGraph(path).keys()];
-
-      expect(reached.some(one => one.includes("next-intl/navigation"))).toBe(
-        false,
-      );
-    },
-  );
-
-  it.each(sharedEntries)("$name never reaches a server action", ({ path }) => {
-    // A `"use server"` module is the other way Next.js gets in: importing one
-    // pulls the fetcher, `next/headers` and the whole API module graph behind
-    // it. Both deletes are a prop instead.
+describe("the browser graph stops at the API's edge", () => {
+  it.each([
+    ["the deletes", SHARED.deletes],
+    ["the query", SHARED.query],
+  ])("%s reaches neither Drizzle nor Hono", (_name, path) => {
     const reached = [...externalGraph(path).keys()];
-
-    expect(reached.some(one => one.endsWith(".server"))).toBe(false);
-    expect(runtimeImports(path).some(one => one.includes(".server"))).toBe(
-      false,
-    );
-  });
-
-  it("never imports the API's storage model for one string", () => {
-    // `readFileInUse` needs the `FILE_IN_USE` code, which used to live in
-    // `@/api/models/storage` - a value import that dragged Hono, Drizzle and
-    // `@/database` into the browser bundle of every surface that deletes a file.
-    const reached = [...externalGraph(SHARED.deletes).keys()];
 
     expect(reached).not.toContain("drizzle-orm");
     expect(reached.some(one => one.startsWith("hono"))).toBe(false);
   });
+
+  it("walks far enough to have found them", () => {
+    // Guards the guard: both assertions above are "found nothing", which a walk
+    // that stopped at the entry file would satisfy completely.
+    expect([...externalGraph(SHARED.table).keys()].length).toBeGreaterThan(3);
+  });
 });
 
 describe("the shared table takes its framework parts as props", () => {
-  const withoutComments = (path: string): string =>
-    readFileSync(path, "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/.*$/gm, "");
-
   it("is handed a page rather than fetching one", () => {
     const code = withoutComments(SHARED.table);
 
@@ -119,19 +72,10 @@ describe("the shared table takes its framework parts as props", () => {
     expect(code).toContain("onDeleteFiles: DeleteMyFiles;");
   });
 
-  it("renders the framework-neutral table, not the Next.js one", () => {
-    // `DataTable` *is* the Next.js wiring - it mounts `NextDataTableNavigation`.
-    // The shared table renders `ContentDataTable` and leaves the provider to
-    // whoever is rendering it.
-    const code = withoutComments(SHARED.table);
-
-    expect(code).toContain("ContentDataTable");
-    expect(code).not.toContain("components/table/data-table");
-  });
-});
-
-describe("the Next.js half of this subtree is gone", () => {
-  it("no longer exists", () => {
-    expect(existsSync(DELETED_NEXT_HALF)).toBe(false);
+  it("renders the table that leaves the navigation to its host", () => {
+    // `ContentDataTable` takes the URL state through the seam in
+    // `components/table/navigation`; the wrapper that mounted a router's
+    // provider for it is gone.
+    expect(withoutComments(SHARED.table)).toContain("ContentDataTable");
   });
 });

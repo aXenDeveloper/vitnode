@@ -48,21 +48,21 @@ FACEBOOK_CLIENT_SECRET={app-secret}
 
 ## Configuration in VitNode
 
-Add the Facebook SSO plugin to your API routes.
+Register the Facebook SSO adapter in your API config.
 
-```ts title="src/app/api/[...route]/route.ts"
+```ts title="src/vitnode.api.config.ts"
 // [!code ++]
-import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
+import { FacebookSSOApiPlugin } from '@vitnode/core/api/adapters/sso/facebook';
+import { buildApiConfig } from '@vitnode/core/vitnode.config';
 
-VitNodeAPI({
-  app,
+export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
   // [!code ++]
-  authorization
+  authorization: {
     // [!code ++]
     ssoAdapters: [
       // [!code ++]
-      new FacebookSSOApiPlugin({
+      FacebookSSOApiPlugin({
         // [!code ++]
         clientId: process.env.FACEBOOK_CLIENT_ID,
         // [!code ++]
@@ -75,6 +75,12 @@ VitNodeAPI({
   },
 });
 ```
+
+<Callout type="info" title="Registering it with the variables unset is safe">
+  Each adapter defaults `clientId` and `clientSecret` to `""` and only fails when
+  somebody actually tries that provider. So the list is what your API
+  *supports*; the environment decides what works.
+</Callout>
 
 </Step>
 

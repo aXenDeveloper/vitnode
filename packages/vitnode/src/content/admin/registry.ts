@@ -11,11 +11,11 @@ import { validateContentTypes } from "../registry";
  * The Content Engine's frontend registry - one implementation, two doors.
  *
  * Everything here is plain data and component *references*: no `next/*`, no
- * server config, no filesystem, no `import(variable)`. That is what lets the
- * same registry serve the Next.js AdminCP, which builds it from
- * `getVitNodeConfig().plugins`, and the TanStack Start AdminCP, which builds it
- * from a generated module of literal imports. See `./config.ts` for the first
- * and `framework/content-registry` for the second.
+ * server config, no filesystem, no `import(variable)`. That is what keeps the
+ * registry buildable two ways - from `getVitNodeConfig().plugins` at runtime, or
+ * from a generated module of literal imports a bundler can see. See
+ * `./config.ts` for the first and `framework/content-registry` for the second,
+ * which is the one a Vite host uses.
  *
  * There is deliberately no second registry beside this one. The two hosts differ
  * only in *where the plugin list comes from*; every rule about what a valid

@@ -128,7 +128,7 @@ export const contentDeliverySitemapTag = (
  * How hard a mutation expires the tags it touched.
  *
  * Lives here, in the client-safe layer, because the background
- * [bridge](./server/revalidate-bridge.ts) has to name a mode from the queue
+ * [dispatcher](./server/revalidate-dispatch.ts) has to name a mode from the queue
  * process, which holds no cache of its own and cannot import the front end's.
  * It is exported from `@vitnode/core/content`, which is where it has always
  * resolved from - a deleted adapter used to re-export it as well.

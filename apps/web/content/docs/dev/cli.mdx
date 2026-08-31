@@ -1,0 +1,164 @@
+---
+title: CLI
+description: Every vitnode command - what it does, and which one to reach for.
+---
+
+`@vitnode/core` ships a `vitnode` binary. It has nine commands in three groups,
+and you can always ask it:
+
+```bash
+vitnode --help
+```
+
+Everything it does falls into one of these:
+
+| Group              | What it is for                                       |
+| ------------------ | ---------------------------------------------------- |
+| **Database**       | Getting a schema ready to serve requests.            |
+| **Plugin package** | Compiling a plugin package you are developing.       |
+| **Translations**   | Keeping locale files in step with the default one.   |
+
+There is nothing else. In particular there is no project-setup command: a
+plugin's pages are never copied into an application, so nothing has to be
+"prepared" before a dev server starts except the database.
+
+---
+
+## Database
+
+Two commands, **one implementation**. They generate migrations, apply them and
+seed the rows a VitNode installation cannot answer a request without - all of it
+under one Postgres advisory lock. The difference is which name fits where you
+are standing, not what happens.
+
+### `vitnode db:prepare`
+
+The development bootstrap. It is what every generated `dev` script waits for:
+
+```json title="package.json"
+{
+  "scripts": {
+    "dev": "vitnode db:prepare && vite dev --port 3000"
+  }
+}
+```
+
+The `&&` is the point. `A && B` runs B only if A exited zero, so a schema that
+failed to migrate is never served - you get a migration log in your terminal
+instead of an arbitrary SQL error from a page.
+
+It does three things, in this order:
+
+1. **Generate** any migration your schema changes imply. A no-op when nothing
+   changed.
+2. **Apply** every pending migration.
+3. **Ensure initial data** - the languages from your API config, the
+   Guest/Member/Moderator/Administrator roles and their permission rows.
+
+Every step is idempotent, so running it before every start is free. Drizzle's own
+`__drizzle_migrations` table is what decides whether there is work to do. There
+is no marker file and no "first run" state anywhere in VitNode - a fresh clone, a
+wiped Docker volume and a colleague's machine would all disagree with one
+immediately.
+
+<Callout type="info" title="Two at once is safe">
+  A monorepo starts more than one gated app, so more than one bootstrap can run
+  at the same time. VitNode takes a Postgres advisory lock around the whole run:
+  the first process does the work, the second waits and then finds nothing
+  pending. The lock is held on a connection of its own, so an app configured with
+  a pool of one still migrates.
+</Callout>
+
+### `vitnode migrate`
+
+The same work, under the name deployments use. Your generated projects expose it
+as `db:migrate`, and it is what the
+[Vercel guide](/docs/dev/deployments/cloud/vercel) and the
+[Content Engine guides](/docs/dev/content-engine/database-and-migrations) tell you
+to run.
+
+Reach for it when a migration is a **step you are taking**, rather than something
+a dev server is waiting on - a deploy, a CI job, or a schema change you just made
+to a plugin:
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+### `vitnode migrate --generate`
+
+Migration files, and nothing else. It writes what your current schema implies
+into your `drizzle.config.ts`'s `out` directory and stops - it never touches a
+database, so it is the one database command that needs no `POSTGRES_URL`.
+
+`create-vitnode-app` runs this once for you when it creates a project. Everyone
+who clones that project afterwards gets their migrations applied by the `dev`
+script instead.
+
+<Callout type="warn" title="Production never migrates on start">
+  `start` runs the build and nothing else, deliberately: a horizontally scaled
+  deployment would otherwise have every replica racing to migrate the same
+  database on boot. Run `db:migrate` as its own deployment step.
+</Callout>
+
+### Which app owns the database
+
+An app is gated on `db:prepare` if it **serves `/api/*` from its own process**:
+
+- A **single app** does, so its `dev` gates.
+- A standalone **API** does, so its `dev` gates - including inside a monorepo
+  whose root also gates, because `cd apps/api && pnpm dev` does not go through
+  the root script.
+- The **frontend of a split deployment** does not. It talks to the API over HTTP
+  and has no schema, no migrations directory and no database credentials - so it
+  ships no `db:prepare`, no `db:migrate` and no `drizzle-kit` at all.
+
+---
+
+## Plugin package
+
+Run these **inside a plugin package**, not inside an app.
+
+### `vitnode build`
+
+Compiles the plugin once: `tsc` for types, `swc` for JavaScript, `tsc-alias` to
+rewrite the path aliases. Output goes to `dist`.
+
+### `vitnode dev`
+
+The same three compilers in watch mode.
+
+Nothing is copied into an application. An app reads your plugin's routes out of
+its `dist` through a registry its own Vite build generates, so a save recompiles
+the file the app already imports and the page reloads. See
+[the route manifest](/docs/dev/plugins/route-manifest).
+
+---
+
+## Translations
+
+See [i18n](/docs/dev/i18n) for what these do to your locale files.
+
+| Command                 | What it does                                                     |
+| ----------------------- | ---------------------------------------------------------------- |
+| `vitnode i18n:check`    | Report locale files that have drifted from the default language.  |
+| `vitnode i18n:create`   | Add a locale to this app and to every installed package.          |
+| `vitnode i18n:delete`   | Remove a locale from this app and from every installed package.   |
+| `vitnode i18n:update`   | Copy new keys from the default language into every locale.        |
+| `vitnode i18n:update:ai`| The same, translating the new keys with the configured AI model.  |
+
+`i18n:check` takes `--ci`, which makes drift an exit code instead of a report.

@@ -48,12 +48,11 @@ import { ContentRowActions } from "./row-actions";
  * `/admin/content/{path}` - one content type's records, for a TanStack Start
  * host.
  *
- * The same table the Next.js AdminCP renders, from the same specs: the columns
- * are `buildContentColumnSpec`'s, the cells are `ContentCell` or the plugin's
+ * Assembled entirely from the shared specs: the columns are
+ * `buildContentColumnSpec`'s, the cells are `ContentCell` or the plugin's
  * override, the actions are `row-actions-model`'s, and the URL contract is
- * `./route-search`'s. Nothing about the table was redesigned and nothing is
- * derived from a Zod schema here - a definition becomes a column spec in one
- * place, and both AdminCPs read that.
+ * `./route-search`'s. Nothing is derived from a Zod schema here - a definition
+ * becomes a column spec in one place, and this reads that.
  *
  * What is genuinely this host's:
  *

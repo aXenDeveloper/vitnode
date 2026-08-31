@@ -1,23 +1,13 @@
 import { spawn } from "node:child_process";
 import color from "picocolors";
 
-import type { CreateCliReturn } from "../questions.js";
+import { resolveLocalBin } from "./resolve-local-bin.js";
 
 /**
  * `vitnode migrate --generate` in a freshly created project.
  *
  * The only VitNode command a new project still needs run for it, and it is a
- * *convenience* rather than the contract. There was a second one -
- * `initFilesVitnode`, which ran `vitnode prepare-plugins` in every generated app
- * - and it existed for the route copier: each installed plugin's
- * `src/routes/{main,admin,blank,breadcrumb}/` had to be copied into the app's
- * `src/app/[locale]/…` before Next.js could see a plugin's pages at all, so a
- * project that skipped it started with its plugins half-installed.
- *
- * Nothing is copied now. A plugin's routes are compiled into the generated
- * registry by the app's own Vite build, from the plugin's `dist`, on every `dev`
- * and every `build` - so there is no step to run first and no state on disk that
- * can be stale.
+ * *convenience* rather than the contract.
  *
  * ## Why this is not what makes a database work
  *
@@ -28,39 +18,54 @@ import type { CreateCliReturn } from "../questions.js";
  * runs `vitnode db:prepare` before any runtime starts. See
  * `create/create-package-json.ts`.
  *
+ * ## Why the binary is resolved rather than run through the package manager
+ *
+ * It was `spawn(packageManager, ["vitnode", "migrate", "--generate"])`, which
+ * only two of the three supported managers understand: `npm vitnode …` is
+ * "Unknown command", so an npm project reported itself created-but-broken every
+ * single time. The path out of `node_modules/.bin` works for all three, and
+ * needs no shell.
+ *
  * ## Why it is awaited
  *
  * It was fire-and-forget: a bare `spawn` with no `await`, no exit-code check and
- * no error handler, called without `await` from `create-vitnode.ts` immediately
- * before `spinner.succeed("Success! Created …")`. Three consequences, all of
- * them silent. The success message printed while `drizzle-kit` was still
- * running. A non-zero exit was never noticed, so a project whose migrations
- * failed to generate was reported as created. And the CLI could exit with the
- * child still alive, leaving a detached `drizzle-kit` writing into a directory
- * the user had already been told was finished.
- *
- * Resolving on a zero exit and rejecting otherwise is the whole fix. `shell:
- * true` for the same reason `installDependencies` uses it: a package manager on
- * Windows is a batch file, which `spawn` cannot execute directly.
+ * no error handler, called immediately before `spinner.succeed("Success!
+ * Created …")`. So the success message printed while `drizzle-kit` was still
+ * running, a non-zero exit was never noticed, and the CLI could exit with the
+ * child still alive, writing into a directory the user had been told was
+ * finished. Resolving on a zero exit and rejecting otherwise is the whole fix.
  */
 export const generateMigrationsVitnode = async ({
-  packageManager: pm,
   cwd,
-}: Pick<CreateCliReturn, "packageManager"> & {
-  cwd?: string;
+}: {
+  cwd: string;
 }): Promise<void> => {
-  const packageManager = pm.split("@")[0];
-  const args = ["vitnode", "migrate", "--generate"];
+  const vitnode = resolveLocalBin("vitnode", cwd);
+
+  if (vitnode === null) {
+    throw new Error(
+      `Could not find the "vitnode" command in ${cwd}. Run "vitnode migrate --generate" there once its dependencies are installed.`,
+    );
+  }
+
+  const shell = process.platform === "win32";
 
   await new Promise<void>((resolve, reject) => {
     let output = "";
 
-    const child = spawn(packageManager, args, {
-      cwd,
-      env: process.env,
-      shell: true, // Use shell to properly handle Windows batch files
-      stdio: "pipe",
-    });
+    const child = spawn(
+      shell ? `"${vitnode}"` : vitnode,
+      ["migrate", "--generate"],
+      {
+        cwd,
+        env: process.env,
+        // A shell on Windows only, where the entry is a `.cmd` batch file `spawn`
+        // cannot execute directly - and quoted, because `cmd.exe` splits an
+        // unquoted path on its first space.
+        shell,
+        stdio: "pipe",
+      },
+    );
 
     child.stdout?.on("data", (data: Buffer) => {
       output += data.toString();
@@ -72,7 +77,7 @@ export const generateMigrationsVitnode = async ({
     child.on("error", error => {
       reject(
         new Error(
-          `Failed to start ${packageManager}: ${error.message}\nRun "${packageManager} vitnode db:prepare" in the new project once your database is running.`,
+          `Failed to start "vitnode": ${error.message}\nRun "vitnode db:prepare" in the new project once your database is running.`,
         ),
       );
     });
@@ -90,7 +95,7 @@ export const generateMigrationsVitnode = async ({
 
       reject(
         new Error(
-          `"${packageManager} vitnode migrate --generate" exited with code ${String(code)}. Your project was created - run "${packageManager} dev" once your database is running and it will migrate itself.`,
+          `"vitnode migrate --generate" exited with code ${String(code)}. Your project was created - run the dev script once your database is running and it will migrate itself.`,
         ),
       );
     });

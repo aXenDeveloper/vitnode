@@ -56,8 +56,8 @@ export const ContentAdminRouteContent = ({
        * renders through `ContentFormHeader`, and which a plugin's custom layout
        * renders in whatever position that layout puts it. Rendering this one as
        * well would put two `h1`s on the page, the first of them naming the list
-       * the person just left. The Next.js AdminCP has always shown exactly one:
-       * `ContentListView` draws this heading and the two page views draw none.
+       * the person just left. One `h1` per screen: the list draws this heading and
+       * the two page views draw their own.
        */}
       {action === "list" ? (
         <HeaderContent desc={description} h1={title}>

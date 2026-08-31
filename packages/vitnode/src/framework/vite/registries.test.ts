@@ -5,7 +5,7 @@ import type { ResolvedContentRegistryModule } from "../content-registry";
 
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
-import { readOptionalPluginModules } from "./plugin-routes";
+import { readOptionalPluginModules } from "./registries";
 
 /**
  * How an app's two browser-safe projections are discovered, and why they are

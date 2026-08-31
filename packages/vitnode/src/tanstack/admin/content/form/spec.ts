@@ -22,12 +22,11 @@ import { intlQueryOptions } from "../../../i18n/query";
 /**
  * One content type's form, as the browser has to build it.
  *
- * The Next.js AdminCP builds the spec in a Server Component and hands it to the
- * form as a prop, already translated. There is no server component here, so it
- * is built where the strings are - and the whole of the difficulty is making it
- * *stable*, because a spec with a fresh identity on every render would rebuild
- * the Zod schema on every render, and `AutoForm` would be handed a new schema
- * while somebody is typing into it.
+ * Built in the browser, where the strings are, because the spec needs the
+ * translated labels and the locale is a client concern. The whole of the
+ * difficulty is making it *stable*: a spec with a fresh identity on every render
+ * would rebuild the Zod schema on every render, and `AutoForm` would be handed a
+ * new schema while somebody is typing into it.
  *
  * So the messages come from the query entry the route's loader already warmed
  * rather than from `useTranslations()`. A query result is one object for the

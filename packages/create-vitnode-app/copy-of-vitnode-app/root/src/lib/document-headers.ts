@@ -14,7 +14,7 @@
  * deployment, not of the application: the moment a CDN, a reverse proxy or a
  * `Cache-Control`-respecting edge sits in front of the Node server, an absent
  * directive is an invitation to store one visitor's HTML and serve it to the
- * next. Stage 15 is when that becomes likely, so the header belongs here now.
+ * next. So the header is stated here rather than assumed anywhere.
  *
  * ## It is an invariant, not a default
  *

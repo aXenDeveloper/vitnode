@@ -52,8 +52,9 @@ name the set once for the pages under it.
 
 ## When to use it
 
-- **`useTranslations` from `use-intl`**, in every component. Not `next-intl` -
-  that pins your plugin to one kind of host.
+- **`useTranslations` from `use-intl`**, in every component. It is
+  framework-neutral, which is what keeps your plugin installable in any VitNode
+  host - a host-bound i18n package would not be.
 - **Namespaces are per route, not per plugin.** Name what the page renders; the
   merged tree holds everything else.
 - **A missing key falls back to the default locale, per key.** A half-translated

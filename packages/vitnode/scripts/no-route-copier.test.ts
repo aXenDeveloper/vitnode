@@ -9,37 +9,16 @@ import { describe, expect, it } from "vitest";
  * Static and pure: a file listing plus a string search over `scripts/` and
  * `src/`. Nothing here runs the CLI, starts a watcher or touches an app.
  *
- * ## What was deleted
- *
- * Until the Next.js cutover a plugin's `src/routes/` meant two different things
- * at once, because two runtimes read it:
- *
- *     src/routes/main/page.tsx       COPIED into a Next app's src/app/[locale]/(main)/
- *     src/routes/admin/…             copied into the AdminCP
- *     src/routes/blank/…             copied without the site chrome
- *     src/routes/breadcrumb/…        copied into a @breadcrumb parallel-route slot
- *
- *     src/routes/manifest.ts         declared, never copied
- *
- * `scripts/prepare-plugins-files.ts` did the copy once per `vitnode init`,
- * `scripts/plugin.ts` watched and re-copied on every save, and
- * `scripts/shared/file-utils.ts` rewrote each import on the way through so a
- * page's `@/` still resolved after it landed in somebody else's `src/`.
- * `scripts/legacy-route-overlap.ts` warned when a manifest entry pointed inside
- * one of those four directories, and
- * `src/framework/plugin-routes/legacy-routes.ts` refused a plugin route whose
- * URL a Next.js page still answered.
- *
- * ## What replaced it, and why a copy may never come back
- *
- * A plugin declares its routes in `src/routes/manifest.ts`; the app's Vite build
- * compiles that into a literal registry it imports from the plugin's own `dist`.
- * The page has exactly one home, so there is no copy to go stale, no import to
- * rewrite, and no generated directory in an application that nobody wrote.
+ * A plugin used to mean its pages twice: `src/routes/{main,admin,blank,breadcrumb}/`
+ * was copied into the host application's own route directory on every save, with
+ * each import rewritten on the way through, and the copy was the one that ran.
+ * A plugin declares its routes in `src/routes/manifest.ts` now; the app's Vite
+ * build compiles that into a literal registry it imports from the plugin's own
+ * `dist`, so the page has exactly one home - no copy to go stale, no import to
+ * rewrite, and no generated directory in an application nobody wrote.
  *
  * A test rather than a note in a changelog, because the copier's failure mode
- * was silence: it wrote files into a directory nobody reads, and the wrong copy
- * is the one that ran.
+ * was silence: it wrote files into a directory nobody reads.
  */
 const scriptsRoot = resolve(import.meta.dirname);
 const packageRoot = resolve(scriptsRoot, "..");
@@ -91,28 +70,37 @@ describe("the plugin route copier", () => {
   });
 
   /**
-   * The CLI is the copier's only entry point, so the command table is the thing
-   * worth asserting on: `vitnode prepare-plugins` ran it once and
-   * `vitnode plugin --w` started its watcher.
+   * The CLI is the copier's only entry point, so the command surface is the
+   * thing worth asserting on: `vitnode prepare-plugins` ran it once and
+   * `vitnode plugin --w` started its watcher. Neither is a command, so neither
+   * dispatches - `scripts.ts` rejects a name that is not in the table.
    */
-  it("has no CLI command", () => {
+  it("has no CLI command", async () => {
+    const { cliCommandNames } = await import("./cli-commands.js");
     const cli = codeOf("scripts/scripts.ts");
 
-    expect(cli).not.toContain("prepare-plugins");
-    expect(cli).not.toContain('case "plugin"');
+    expect(cliCommandNames()).not.toContain("prepare-plugins");
+    expect(cliCommandNames()).not.toContain("plugin");
     expect(cli).not.toContain("processPlugin");
     expect(cli).not.toContain("preparePluginsFiles");
   });
 
   /**
    * `vitnode dev` is the other way in - it started the watcher alongside the
-   * three compilers - and `vitnode init` is where a fresh project ran the copy.
+   * three compilers - and the database bootstrap is where a fresh project used
+   * to run the copy. Neither may grow it back: a bootstrap that copied a plugin
+   * page would be the deleted `init` under a new name, and the two lifecycles
+   * have different triggers.
    */
-  it("is not started by `vitnode dev` or `vitnode init`", () => {
+  it("is not started by `vitnode dev` or the database bootstrap", () => {
+    const bootstrap = codeOf("scripts/prepare-database.ts");
+
     expect(codeOf("scripts/dev.ts")).not.toContain("processPlugin");
-    expect(codeOf("scripts/prepare-database.ts")).not.toContain(
-      "preparePluginsFiles",
+    expect(bootstrap).not.toContain("preparePluginsFiles");
+    expect(bootstrap).not.toMatch(
+      /src\/routes|src\/app|\[locale\]|@breadcrumb/,
     );
+    expect(bootstrap).not.toMatch(/\.gen\.tsx?\b/);
   });
 
   /**

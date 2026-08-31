@@ -187,7 +187,7 @@ describe('the generated content registry', () => {
  * and the first plugin to ship an AdminCP settings screen with no content types
  * would have failed the build for it. The asymmetric cases cannot be shown from
  * this workspace at all, so they are stated where they can be:
- * `packages/vitnode/src/framework/vite/plugin-routes.test.ts` drives the same
+ * `packages/vitnode/src/framework/vite/registries.test.ts` drives the same
  * discovery function with a synthetic resolver.
  *
  * What is left for *this* file is the half that needs the real `node_modules`:

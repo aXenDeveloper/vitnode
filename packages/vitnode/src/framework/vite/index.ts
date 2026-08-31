@@ -28,9 +28,30 @@
  * These run in Node during Vite's config load, never in a bundle. `vite` is an
  * optional peer dependency for exactly that reason: importing this subpath is
  * what makes it required, and a Next.js install never does.
+ *
+ * ## Generating, and writing, are two exports
+ *
+ * `vitNodePluginRoutes` is the only thing that *writes* an application's four
+ * generated registries, and the plugin is the only entry point that calls it -
+ * there is no `vitnode generate`, no `postinstall` and no prebuild step. What
+ * the pass decides is `./registries.ts`, exported here as
+ * `vitNodeGeneratedRegistries`: the same function, asked for the bytes instead
+ * of asked to write them.
+ *
+ * That second export exists so an installation can hold its generators to
+ * account without running a build - generate twice and diff, generate once and
+ * compare to what is committed. A test that reimplemented the pass instead would
+ * only ever prove the two implementations agree.
  */
 
 export type { VitNodeEnvOptions } from "./env";
 export { vitNodeEnv } from "./env";
 export type { VitNodePluginRoutesOptions } from "./plugin-routes";
 export { vitNodePluginRoutes } from "./plugin-routes";
+export type { GeneratedRegistryFile, VitNodeRegistryName } from "./registries";
+export {
+  vitNodeConfigPath,
+  vitNodeGeneratedRegistries,
+  vitNodeGeneratedRegistryPaths,
+  vitNodeHostRoutesDir,
+} from "./registries";

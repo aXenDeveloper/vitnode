@@ -54,21 +54,21 @@ DISCORD_CLIENT_SECRET=XXX
 
 ## Configuration in VitNode
 
-Add the Discord SSO plugin to your API routes.
+Register the Discord SSO adapter in your API config.
 
-```ts title="src/app/api/[...route]/route.ts"
+```ts title="src/vitnode.api.config.ts"
 // [!code ++]
-import { DiscordSSOApiPlugin } from '@vitnode/core/api/plugins/sso/discord';
+import { DiscordSSOApiPlugin } from '@vitnode/core/api/adapters/sso/discord';
+import { buildApiConfig } from '@vitnode/core/vitnode.config';
 
-VitNodeAPI({
-  app,
+export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
   // [!code ++]
   authorization: {
     // [!code ++]
     ssoAdapters: [
       // [!code ++]
-      new DiscordSSOApiPlugin({
+      DiscordSSOApiPlugin({
         // [!code ++]
         clientId: process.env.DISCORD_CLIENT_ID,
         // [!code ++]
@@ -81,6 +81,12 @@ VitNodeAPI({
   },
 });
 ```
+
+<Callout type="info" title="Registering it with the variables unset is safe">
+  Each adapter defaults `clientId` and `clientSecret` to `""` and only fails when
+  somebody actually tries that provider. So the list is what your API
+  *supports*; the environment decides what works.
+</Callout>
 
 </Step>
 

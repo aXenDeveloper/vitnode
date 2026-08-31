@@ -98,23 +98,42 @@ export const articleContentType = defineContentType({
 </Step>
 
 <Step>
-### Step 4: Manage SWR Cache Tags in Server Actions
+### Step 4: Expire the cache tags a write invalidated
 
-Use VitNode's cache helpers to invalidate or revalidate tags inside Server Actions:
+Every public read of a content type has a tag, and the tags are **pure string
+builders** from `@vitnode/core/content` - no framework, no runtime:
 
-```ts title="src/actions/update-article.ts"
-"use server";
+```ts
+import {
+  contentPublicItemTag,
+  contentPublicListTag,
+  contentPublicSlugTag,
+} from "@vitnode/core/content";
 
-import { revalidateTag, updateTag } from "@vitnode/core/cache";
-
-export async function updateArticleAction(id: number, data: unknown) {
-  // Perform update...
-
-  // Revalidate SWR list and item tags
-  revalidateTag(`content-public-item-example-article-${id}`, "max");
-  updateTag(`user-${userId}`);
-}
+contentPublicListTag("example.article", "en");
+contentPublicItemTag("example.article", 42, "en");
+contentPublicSlugTag("example.article", "hello-world", "en");
 ```
+
+They are per locale rather than global on purpose: publishing a Polish
+translation changes no English list page, and throwing that cache away would be a
+cost with no correctness to show for it.
+
+In the app, a write invalidates the TanStack Query entry it changed:
+
+```ts
+await queryClient.invalidateQueries({ queryKey: ["articles"] });
+```
+
+<Callout type="warn" title="A background job cannot call your front end">
+  A scheduled publish runs in the API process and holds no reference to whatever
+  cache is in front of the pages. So it asks over HTTP:
+  `dispatchContentRevalidation` posts the invalidated tags to every origin listed
+  in `content.revalidateOrigins`, signed with the cron secret. An install whose
+  front end caches nothing lists no origin and is never posted at.
+</Callout>
+
+See [Cache](/docs/dev/cache) for the whole model.
 </Step>
 
 </Steps>

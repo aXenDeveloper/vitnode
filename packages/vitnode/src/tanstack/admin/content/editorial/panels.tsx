@@ -16,11 +16,11 @@ import { ContentEditorialHost } from "./host";
 /**
  * The four editorial panels, as the row menu's slots.
  *
- * Each is the *same component* the Next.js AdminCP renders - the dialog, the
- * timeline, the diff, the schedule form, the URL history - wrapped in the two
- * providers that tell it how to reach the API and how to refresh the screen.
- * Nothing about a panel was rewritten for this host, which is the point: a
- * restore behaves identically in both AdminCPs because it *is* the same code.
+ * Each is a framework-neutral component - the dialog, the timeline, the diff,
+ * the schedule form, the URL history - wrapped in the two providers that tell it
+ * how to reach the API and how to refresh the screen. No panel is reimplemented
+ * here, which is the point: this file is wiring, and a panel's behaviour lives in
+ * one place.
  *
  * ## Why each panel mounts its own host
  *

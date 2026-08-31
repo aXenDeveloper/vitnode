@@ -79,7 +79,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
   type={{
     getTranslator: {
       description:
-        "next-intl translator for the resolved locale. Pass a locale to override the resolution.",
+        "A use-intl translator for the resolved locale. Pass a locale to override the resolution.",
       type: "(locale?: string) => Promise<Translator>",
     },
     getMessages: {
@@ -132,10 +132,10 @@ await c.get("email").send({
 });
 ```
 
-The template receives `i18n` as a prop and turns it into a translator with `createTranslator` from `next-intl`:
+The template receives `i18n` as a prop and turns it into a translator with `createTranslator` from `use-intl`:
 
 ```tsx title="src/emails/welcome.tsx"
-import { createTranslator } from "next-intl";
+import { createTranslator } from "use-intl";
 
 export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
   const t = createTranslator(i18n);
@@ -175,20 +175,27 @@ Adding a language later is a new file plus one line in the barrel - apps pick it
 
 ## Typing the keys
 
-`t()` autocompletes from a `global.d.ts` that augments next-intl's `Messages`. Import the tree an app actually uses: an API-only app types against the server tree alone, a frontend-only app against the frontend tree, and a single app - one that serves the frontend and runs the API together - against both.
+`t()` autocompletes from a `global.d.ts` that augments `use-intl`'s `AppConfig`. Import the tree an app actually uses: an API-only app types against the server tree alone, a frontend-only app against the frontend tree, and a single app - one that serves the frontend and runs the API together - against both.
 
 ```ts title="global.d.ts (single app)"
-/// <reference types="next-intl" />
+/// <reference types="use-intl" />
 
 import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
 import core from "@vitnode/core/locales/en.json" with { type: "json" };
 
-declare module "next-intl" {
+declare module "use-intl" {
   interface AppConfig {
     Messages: typeof core & typeof coreApi; // [!code highlight]
   }
 }
 ```
+
+<Callout title="`use-intl` has to be a direct dependency" type="info">
+  The `/// <reference types="use-intl" />` above only resolves if the package is
+  in the app's own `package.json`. Under pnpm's strict `node_modules` layout,
+  reaching it through `@vitnode/core` is not enough. `create-vitnode-app` adds it
+  for you.
+</Callout>
 
 <Callout title="Keys must be namespaced" type="warn">
   Everything a plugin ships belongs under its own namespace, or it will collide

@@ -34,8 +34,8 @@ import { pageHead } from "#/lib/page-head";
  * ## Exactly one splat may live under here, and nothing wider
  *
  * `admin.content.$.tsx` claims `/admin/content/*` - the Content Engine's own
- * namespace, which Stage 13 moved into this router. That one is deliberate and
- * narrow; a second is how the AdminCP breaks.
+ * namespace. That one is deliberate and narrow; a second is how the AdminCP
+ * breaks.
  *
  * `$.tsx`, `admin.$.tsx` or any other catch-all beside it would consume every
  * *remaining* admin URL, including the ones no route declares. The AdminCP's own
@@ -86,8 +86,7 @@ import { pageHead } from "#/lib/page-head";
  * Only `canEnterAdmin` answering `false` sends anybody to `/admin`. Catching the
  * rejection and redirecting instead would sign every administrator out of the
  * AdminCP during an outage and present them with a sign-in form for a session
- * they already hold - which is precisely what the Next.js `getSessionAdminApi()`
- * does today, and precisely what this shape exists to stop.
+ * they already hold - which is precisely what this shape exists to stop.
  *
  * ## What it is not
  *
@@ -162,24 +161,18 @@ export const Route = createFileRoute("/_admin")({
    * The AdminCP's 404, rendered inside the shell.
    *
    * What reaches it is a screen whose loader called `requireAdminPermission`
-   * and was refused - the same answer `app/[locale]/admin/(auth)/not-found.tsx`
-   * gives in the Next.js AdminCP. Declared here rather than per screen so every
-   * one of them answers a missing permission identically.
+   * and was refused. Declared here rather than per screen so every one of them
+   * answers a missing permission identically.
    *
    * A content URL that resolves to no content type reaches it too, and by the
    * same route: `loadContentAdminRoute` throws `notFound()` for a splat its
-   * registry cannot name, which is the answer the Next.js catch-all's
-   * `notFound()` gives one navigation later.
+   * registry cannot name.
    *
    * A URL under `/admin` that matches no route at all does *not* reach this one.
    * Outside `/admin/content`, `_admin` has only declared children - see above -
    * so such a path matches nothing in this subtree and the router falls back to
-   * its own not-found at the root. That is the correct trade, and the cost is
-   * paid deliberately: rendering an unmigrated admin URL inside this shell would
-   * mean claiming it. (The root has no `notFoundComponent` of its own yet, so
-   * that fallback is currently the router's bare one - for every unmatched URL
-   * in this application, not only admin ones. Giving the root a real 404 page is
-   * its own piece of work.)
+   * `__root`'s `notFoundComponent`. That is the correct trade: rendering an
+   * unclaimed admin URL inside this shell would mean claiming it.
    */
   notFoundComponent: AdminNotFoundScreen,
   component: AdminLayout,
@@ -194,21 +187,19 @@ export const Route = createFileRoute("/_admin")({
  * handles the error, not inside it - so this replaces `AdminLayout`, sidebar
  * and header and palette included. An administrator who opened a screen they
  * lack the permission for would otherwise be dropped onto a bare 404 page with
- * no way back into the AdminCP but the browser's back button, which is not what
- * the Next.js AdminCP does: its `not-found.tsx` sits *under*
- * `admin/(auth)/layout.tsx` and keeps the panel around the message.
+ * no way back into the AdminCP but the browser's back button.
  *
- * Mounting `AdminShell` here restores that, and it costs nothing: `beforeLoad`
+ * Mounting `AdminShell` here keeps the panel around the message, and it costs
+ * nothing: `beforeLoad`
  * has already resolved the admin session and the loader above has already
  * warmed the shell's messages, so the providers inside read the same two cache
  * entries the working screens read and nothing suspends or fetches again.
  *
  * ## What is bound rather than defaulted
  *
- * `ErrorActions` is this app's binding rather than core's default: `/` is served
- * by the Next.js application on some installs and by this one on others, and
- * only the route tree knows which. It is passed as an element from module scope
- * so the type is stable across renders.
+ * `ErrorActions` is this app's binding rather than core's default: "go back" and
+ * "go home" are navigation, and only the route tree knows how to navigate. It is
+ * passed as an element from module scope so the type is stable across renders.
  */
 function AdminNotFoundScreen() {
   return (
@@ -225,9 +216,9 @@ function AdminNotFoundScreen() {
  * command palette, the breadcrumb area, the user menu and the one `<main>` every
  * admin page renders inside. It mounts `AdminPermissionsProvider` itself, from
  * the same admin session query the guard above has already filled, so
- * `AdminStaffPermissionGate` and `useAdminStaffPermission` work identically here
- * and in the Next.js AdminCP. It cannot suspend in practice and nothing below it
- * can suspend at all; see the note on the provider.
+ * `AdminStaffPermissionGate` and `useAdminStaffPermission` work anywhere inside
+ * it. It cannot suspend in practice and nothing below it can suspend at all; see
+ * the note on the provider.
  *
  * What `#/components/admin-shell` adds on top is only what a package cannot
  * answer for a particular installation: where the user lookup runs, which

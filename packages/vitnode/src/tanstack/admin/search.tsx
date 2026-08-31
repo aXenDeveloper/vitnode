@@ -13,9 +13,8 @@ import { useAdminSearchNavItems } from "./nav";
 /**
  * The AdminCP command palette, on TanStack Start.
  *
- * Everything visible is `SearchAdminContent`'s - the same control and the same
- * dialog the Next.js AdminCP renders. What is here is the three things it
- * refuses to decide:
+ * Everything visible is `SearchAdminContent`'s, which is framework-free. What
+ * is here is the three things it refuses to decide:
  *
  *     the index    ->  useAdminSearchNavItems()  the one filtered nav tree
  *     a link       ->  LinkComponent             the router's, or the host's

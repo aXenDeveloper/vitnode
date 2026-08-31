@@ -25,27 +25,46 @@ Some features of Vitnode are not supported on Vercel due to its serverless archi
 <Steps>
 <Step>
 
-### Generate migrations
+### Generate migrations, and commit them
 
-Run the following command to generate migrations for your Vitnode project:
+Locally, write the migration files for your current schema and stop - no
+connection, no apply:
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Generate Migrations'>
 
 ```bash tab="bun"
-bun db:migrate
+bun db:migrate --generate
 ```
 
 ```bash tab="pnpm"
-pnpm db:migrate
+pnpm db:migrate --generate
 ```
 
 ```bash tab="npm"
-npm run db:migrate
+npm run db:migrate -- --generate
 ```
 
 </Tabs>
+
+Commit the files it writes. The build does not generate migrations, and it must
+not: a build with no database connection cannot diff a schema.
+
+</Step>
+<Step>
+
+### Apply them as a deployment step
+
+Migrating is **not** automatic in production, deliberately: a horizontally scaled
+deployment would have every replica racing to migrate the same database on boot.
+Run it once, as its own step, before the new version starts serving:
+
+```bash
+pnpm db:migrate
+```
+
+`start` never migrates. See [Database](/docs/dev/database#in-production).
 
 </Step>
 <Step>

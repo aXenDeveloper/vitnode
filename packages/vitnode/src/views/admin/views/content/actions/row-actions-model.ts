@@ -63,10 +63,10 @@ export interface ContentRowActionInput {
   /**
    * Which of the ids this host can actually put a panel behind.
    *
-   * Defaults to all of them, which is the Next.js AdminCP - it imports every
-   * panel directly. A TanStack Start host renders the editorial panels through a
-   * registered slot, so an action whose panel nobody registered must not be
-   * offered: a menu entry that opens nothing is worse than an absent one.
+   * Defaults to all of them, for a host that imports every panel directly. A
+   * host that renders the editorial panels through a registered slot passes the
+   * subset it registered, because an action whose panel nobody registered must
+   * not be offered: a menu entry that opens nothing is worse than an absent one.
    */
   renderable?: readonly ContentRowActionId[];
   /** `definition.editorial.scheduling.enabled` - publish/unpublish later. */

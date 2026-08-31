@@ -7,7 +7,7 @@ import {
   CONTENT_REVALIDATE_PATH,
   CONTENT_REVALIDATE_TIMESTAMP_HEADER,
   dispatchContentRevalidation,
-} from "./revalidate-bridge";
+} from "./revalidate-dispatch";
 
 const input = {
   contentTypeId: "example.article",

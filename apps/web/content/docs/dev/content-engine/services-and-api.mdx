@@ -73,15 +73,35 @@ app.post("/custom-articles", async (c) => {
 <Step>
 ### Step 3: Listen to Typed Content Events
 
-Register event handlers using `eventEngine.on` to react whenever content is created, updated, or deleted:
+Content events are ordinary VitNode events: build a listener, then register it on a top-level module.
 
-```ts title="src/hooks/on-article-created.ts"
-import { eventEngine } from "@vitnode/core/events";
+```ts title="src/api/lib/events.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
 
-eventEngine.on("content.example.article.created", async (payload) => {
-  console.log(`Article #${payload.id} created by user #${payload.actor.id}`);
+export const onArticleCreated = buildEventListener({
+  event: "content.example.article.created",
+  name: "on-article-created",
+  description: "React to a newly created article",
+  handler: async (c, payload, envelope) => {
+    await c
+      .get("log")
+      .debug(`Article #${payload.id} created by ${envelope.actor.type} #${envelope.actor.id}`);
+  },
 });
 ```
+
+```ts title="src/api/modules/admin/admin.module.ts"
+export const adminModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "admin",
+  routes: [],
+  events: [onArticleCreated], // [!code ++]
+});
+```
+
+See [Events](/docs/dev/events) for the envelope, error isolation and adapters,
+and [Built-in Events](/docs/dev/events/built-in-events) for what the Content
+Engine already emits.
 </Step>
 
 </Steps>

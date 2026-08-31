@@ -263,11 +263,13 @@ enforce. Extensions are preferred over media types in that line, because
 The native picker's `accept` gets both (`.gif,image/gif`), which is UX only: the
 server checks everything again.
 
-#### Uploads never go through a Server Action
+#### Uploads are multipart, over the API
 
-<Callout type="warn" title="Binary data uses multipart, not Server Actions">
-Content Engine binary uploads use TanStack Query and multipart API routes.
-Next.js Server Actions must **not** be used for file transfer.
+<Callout type="warn" title="Binary data goes to a route, not to a server function">
+Content Engine binary uploads use TanStack Query and a multipart API route. A
+server function is the wrong transport for a file: its body is a serialised
+payload, so the image crosses as a string, buffered whole, under a platform limit
+that has nothing to do with the field's `maxBytes`.
 </Callout>
 
 The flow is:

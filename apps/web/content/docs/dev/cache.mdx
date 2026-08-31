@@ -1,180 +1,91 @@
 ---
 title: Cache
-description: Learn how caching works in VitNode across the app runtime and Redis.
+description: Learn how caching works in VitNode - TanStack Query in the app, Redis in the API.
 ---
 
-VitNode uses a simple two-layer caching model:
+VitNode has a two-layer caching model, and each layer belongs to exactly one
+process:
 
-1. **App cache**: what the frontend keeps, so a page does not re-ask for
-   something it already has.
-2. **Redis Cache (API)**: Caches database queries and heavy computations inside Hono route handlers.
+1. **App cache - TanStack Query.** What the front end keeps, so a page does not
+   re-ask for something it already has.
+2. **API cache - Redis.** What a Hono route handler keeps, so the database is not
+   asked the same expensive question twice.
 
-Caching is **opt-in**. Dynamic data stays fresh by default.
-
-<Callout type="info" title="Which app cache you have depends on the runtime">
-  On **TanStack Start** the app cache is TanStack Query - a route loader warms an
-  entry, the component reads the same one back, and a mutation invalidates
-  exactly what it changed. See [Data
-  loading](/docs/dev/tanstack/data-loading).
-
-On **Next.js** it is `"use cache"` and the tag API, which is what the rest of
-this page describes. The Redis layer below is shared by both, because it lives
-in the API.
-
-</Callout>
+Caching is **opt-in** on both sides. Dynamic data stays fresh by default.
 
 ---
 
-## App Caching (Next.js)
+## App caching (TanStack Query)
 
-### Public Data (`"use cache"`)
+A route loader warms a cache entry before React runs, and the component reads the
+same entry back. That is the whole model - there is no separate render cache and
+no directive to remember.
 
-For public data shared by all visitors (e.g. blog posts, site configuration), use Next.js `"use cache"`.
-
-Always use `coreFetcher` (which skips request cookies) and call `await connection()` so Next.js can prerender safely:
-
-```ts title="services/announcements.ts"
-import { coreFetcher } from '@vitnode/core/lib/fetcher/core';
-import { cacheLife, cacheTag } from 'next/cache';
-import { connection } from 'next/server';
-
-export const getAnnouncements = async (locale: string) => {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('announcements');
-  await connection();
-
-  const res = await coreFetcher(announcementsModule, {
-    module: 'announcements',
-    path: '/',
-    method: 'get',
-    args: { query: { lang: locale } },
-  });
-
-  return await res.json();
-};
-```
-
-Render cached data inside a `<Suspense>` boundary in your page:
-
-```tsx title="page.tsx"
-<React.Suspense fallback={<Skeleton className="h-64 w-full" />}>
-  <Announcements />
-</React.Suspense>
-```
-
-<Callout type="info" title="cacheLife Presets">
-  Common presets: `'seconds'`, `'minutes'`, `'hours'`, `'days'`, `'weeks'`, `'max'`, or custom `{ stale, revalidate, expire }`.
-</Callout>
-
-### Per-User Data (`React.cache`)
-
-Never cache user-specific data (such as sessions or permissions) with `"use cache"`.
-
-Instead, use React's `cache()` to deduplicate calls within a single render pass without sharing data between visitors:
-
-```ts title="services/profile.ts"
-import { fetcher } from '@vitnode/core/lib/fetcher';
-import { cache } from 'react';
-
-export const getMyProfile = cache(async () => {
-  const res = await fetcher(usersModule, {
-    module: 'users',
-    path: '/me',
-    method: 'get',
-  });
-
-  return await res.json();
+```tsx title="apps/web/src/routes/_main/announcements.tsx"
+export const Route = createFileRoute("/_main/announcements")({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(announcementsQuery()),
+  component: AnnouncementsRoute,
 });
 ```
 
----
+```tsx
+const { data } = useSuspenseQuery(announcementsQuery());
+```
 
-## Invalidation APIs
+Same options object in both places, so the server-rendered HTML and the first
+client render come from one request. See [Data
+loading](/docs/dev/tanstack/data-loading).
 
-When data changes, expire the cached entries using the appropriate helper:
+### The query definition is the contract
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+Keep the key, the request and the freshness in one exported module:
 
-<TypeTable
-  type={{
-    "updateTag(tag)": {
-      description:
-        "Server Actions only. Instantly purges the tag and refreshes the current page (read-your-writes semantics).",
-      type: "void",
-    },
-    "revalidateTag(tag, profile)": {
-      description:
-        "Route Handlers, webhooks, or background jobs. Profile is required for SWR: revalidateTag('posts', 'max') or inline { revalidate: 3600 }.",
-      type: "void",
-    },
-    "refresh()": {
-      description:
-        "Server Actions only. Refreshes uncached dynamic data on the page without touching the cache.",
-      type: "void",
-    },
-  }}
-/>
+```ts title="announcements-query.ts"
+import { queryOptions } from "@tanstack/react-query";
+import { RECORD_STALE_TIME } from "@vitnode/core/lib/query-freshness";
 
-### Invalidation Example
-
-Call `updateTag` inside a Server Action after mutating data:
-
-```ts title="mutation-api.server.ts"
-'use server';
-
-import { fetcher } from '@vitnode/core/lib/fetcher';
-import { updateTag } from 'next/cache';
-
-export const publishAnnouncement = async (id: number) => {
-  const res = await fetcher(announcementsModule, {
-    module: 'announcements',
-    path: '/{id}/publish',
-    method: 'post',
-    args: { params: { id } },
+export const announcementsQuery = () =>
+  queryOptions({
+    queryFn: async () => await fetchAnnouncements(),
+    queryKey: ["announcements"],
+    staleTime: RECORD_STALE_TIME,
   });
-
-  // Purge the cache immediately
-  updateTag('announcements');
-
-  return await res.json();
-};
 ```
 
-<Callout type="info" title="Content Engine">
-  Content Engine entries are automatically tagged and revalidated for you via `revalidateContent`. See [Content Engine Caching](/docs/dev/content-engine/public-api-and-caching).
+### Invalidation
+
+After a write, expire exactly the entry you changed:
+
+```ts
+await queryClient.invalidateQueries({ queryKey: ["announcements"] });
+```
+
+Not `invalidateQueries()` with no key: the session, the messages and every other
+screen's data have not changed because one announcement was published.
+
+<Callout type="warn" title="A key addresses a cache; it never authorizes anything">
+  The browser's `QueryClient` is created once per document and outlives a
+  sign-out, so a shared key like `["devices", "me"]` would show the next person
+  the previous one's data **without a single request being made**. Partition
+  private reads by the owner's id, and remember that who may read what is decided
+  in Hono, from the session cookie, on every request.
+</Callout>
+
+<Callout type="info" title="Plugin routes are the same, minus the client">
+  A plugin route's `load` is handed `{ locale }` and no `QueryClient`, so it
+  awaits its own fetch and returns the result. Everything above still applies to
+  the Hono route it calls.
 </Callout>
 
 ---
 
-## Where the App cache is stored
+## API caching (Redis)
 
-By default Next.js keeps `"use cache"` entries in a per-process memory cache and everything else on local disk. That is fine for one instance and wrong for several: an `updateTag` runs on whichever instance handled the Server Action, and the others keep serving what they already had.
+Inside your Hono route handlers, use `c.get("cache")` to store expensive query
+results in Redis:
 
-**Set `REDIS_URL` and VitNode swaps both Next.js cache handlers for Redis-backed ones.** No `next.config.ts` change is required - `vitNodeNextConfig` registers them:
-
-```ts title="src/next.config.ts"
-// Unchanged. The handlers follow REDIS_URL.
-export default vitNodeNextConfig(nextConfig);
-```
-
-What that buys you:
-
-- `"use cache"` entries are stored in Redis, so they survive restarts and rolling deploys and are shared between instances.
-- `fetch` Data Cache responses are shared too.
-- **Every tag revalidation is shared**, so `updateTag` on one instance invalidates all of them - including for prerendered pages, which stay on each instance's own disk and are rebuilt individually.
-
-<Callout type="warn" title="The web process needs the env vars">
-  The handlers are loaded by Next.js itself and read `REDIS_URL` / `REDIS_PASSWORD` straight from the environment - they cannot see `vitnode.api.config.ts`. In a split deployment, set them on the **frontend** service as well as the API.
-</Callout>
-
-See [Redis](/docs/dev/advanced/redis#caching-nextjs-output) for what each handler covers, TTLs, and how to opt out.
-
-## API Caching (Redis)
-
-Inside your Hono API route handlers, use `c.get("cache")` to store expensive query results in Redis:
-
-```ts title="plugins/stats/src/routes/stats.ts"
+```ts title="plugins/stats/src/api/modules/stats.route.ts"
 // Cache result on miss for 5 minutes
 const stats = await c.get('cache').remember(
   `stats:${containerId}`,
@@ -187,10 +98,51 @@ const stats = await c.get('cache').remember(
 
 Delete the key whenever the underlying record changes:
 
-```ts title="plugins/stats/src/routes/update.ts"
+```ts
 await c.get('cache').delete(`stats:${containerId}`);
 ```
 
 <Callout type="info" title="Optional Redis">
-  Redis is optional. If not configured, `c.get("cache")` gracefully acts as a no-op and runs the callback directly. See [Redis Setup](/docs/dev/advanced/redis).
+  Redis is optional. If not configured, `c.get("cache")` gracefully acts as a
+  no-op and runs the callback directly. See [Redis Setup](/docs/dev/advanced/redis).
 </Callout>
+
+---
+
+## Content Engine tags
+
+Content Engine builds its own cache tags for a content type's public reads -
+`contentPublicListTag`, `contentPublicItemTag`, `contentDeliveryTag` and friends,
+all in `@vitnode/core/content`. They are pure strings: a mutation computes the
+tags it invalidated and hands them to whoever keeps the cache.
+
+```ts
+import { contentPublicItemTag } from "@vitnode/core/content";
+
+const tag = contentPublicItemTag("blog.post", 42, "en");
+```
+
+<Callout type="warn" title="A background job cannot expire a front end's cache by calling a function">
+  A scheduled publish runs in the API process, which has no access to whatever
+  cache is in front of the pages. So it asks over HTTP:
+  `dispatchContentRevalidation` posts the invalidated tags to every origin an
+  install opted into through `content.revalidateOrigins`, signed with the cron
+  secret. A front end that caches nothing lists no origin and is never posted at.
+</Callout>
+
+See [Content Engine caching](/docs/dev/content-engine/public-api-and-caching) for
+which tags a content type produces.
+
+---
+
+## Choosing between them
+
+| The data                                          | Where it belongs                       |
+| ------------------------------------------------- | -------------------------------------- |
+| The rows one screen renders                       | TanStack Query, keyed by that screen    |
+| A private read (sessions, devices, permissions)   | TanStack Query, keyed by the owner's id |
+| An expensive aggregate several endpoints share    | `c.get("cache")` in the API             |
+| Reference data (role names, resolved permissions) | `c.get("cache")` in the API             |
+
+The rule of thumb: cache in the API when the *answer* is expensive, and in the
+app when the *round trip* is.

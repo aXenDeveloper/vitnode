@@ -320,15 +320,12 @@ export const DiscordSSOApiPlugin = ({
 
 Last step! Let's plug your new SSO provider into your app:
 
-```ts title="src/app/api/[...route]/route.ts"
-import { OpenAPIHono } from "@hono/zod-openapi";
-import { handle } from "hono/vercel";
-import { VitNodeAPI } from "@vitnode/core/api/config";
-import { DiscordSSOApiPlugin } from "@/utils/sso/discord_api";
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
 
-const app = new OpenAPIHono().basePath("/api");
-VitNodeAPI({
-  app,
+import { DiscordSSOApiPlugin } from "./utils/sso/discord_api";
+
+export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
   authorization: {
     // [!code ++]

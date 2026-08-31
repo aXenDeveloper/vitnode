@@ -8,9 +8,8 @@
  *
  * The board itself - the grid, the drag-and-drop, the widget panel, the settings
  * dialog - is framework-free and imported from
- * `@/views/admin/views/core/dashboard` by both applications. What differs is one
- * object: `DashboardActions`, whose Next.js half is `DashboardBoardProviderNext`
- * and whose TanStack half is `useDashboardActions`.
+ * `@/views/admin/views/core/dashboard`. Everything host-shaped is behind one
+ * object, `DashboardActions`, which `useDashboardActions` builds here.
  */
 export {
   dashboardLayoutQuery,

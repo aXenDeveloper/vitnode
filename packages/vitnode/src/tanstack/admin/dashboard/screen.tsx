@@ -75,13 +75,12 @@ export const AdminDashboardRouteContent = ({
  * Assembled *here* rather than in a loader because two of its three inputs are
  * React state: the widget list needs a translator and this administrator's
  * permission set, both of which are context, and the content is elements.
- * `buildDashboardBoard` and `resolveDashboardWidgets` are the same two functions
- * the Next.js Server Component runs - only where they run differs.
+ * `buildDashboardBoard` and `resolveDashboardWidgets` are pure, so where they run
+ * is the host's choice rather than theirs.
  *
- * `useDashboardActions` is the TanStack half of `DashboardBoardProviderNext`:
- * both produce a `DashboardActions`, which is what lets the provider, the grid,
- * the panel and the settings dialog below be the same components in both
- * applications.
+ * `useDashboardActions` produces the `DashboardActions` the provider, the grid,
+ * the panel and the settings dialog below all read - which is what keeps those
+ * four framework-neutral.
  */
 const AdminDashboardBoard = ({
   pluginWidgets,

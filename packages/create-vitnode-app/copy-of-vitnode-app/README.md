@@ -17,24 +17,44 @@ This is a basic template for a [VitNode](https://vitnode.com/) app.
 
 ## Getting Started
 
-To get started, run the following commands:
+### 1. Install dependencies
 
 ```bash
-pnpm i
+{{INSTALL}}
+```
+
+### 2. Create your `.env`
+
+Every app in this project ships a `.env.example`. Copy each one to `.env` beside
+it — in development the values as they come are the ones the bundled Postgres
+uses, so you can paste them unchanged:
+
+```bash
+{{ENV_COPY}}
+```
+
+### 3. Start a database
+
+Any Postgres will do. {{DATABASE}}
+
+### 4. Start the development server
+
+```bash
+{{DEV}}
 ```
 
 Open {{START_URLS}} with your browser to see the result.
 
-## Development
+The first start migrates the database for you: `{{DEV}}` runs
+`vitnode db:prepare` before anything serves a request, which applies every
+pending migration and seeds the roles, languages and permissions a VitNode
+installation needs. It is safe to run again — every step is idempotent, and the
+database itself is what decides whether there is work to do.
 
-To start the development server, you need to create a `.env` file from the provided `.env.example` file.
+## Useful commands
 
-In the `development` environment, you can just copy and paste the content of `.env.example` to `.env`.
+| Command | What it does |
+| ------- | ------------ |
+{{COMMANDS}}
 
-### Development server
-
-To start the development server, run the following command:
-
-```bash
-pnpm dev
-```
+Read more in the [VitNode documentation](https://vitnode.com/docs/dev).

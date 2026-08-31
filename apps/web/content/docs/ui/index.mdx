@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: Welcome to the VitNode documentation!
+description: The VitNode component library - Shadcn UI on Base UI, styled with Tailwind CSS 4.
 icon: Power
 ---
 
@@ -8,11 +8,25 @@ icon: Power
   We're working hard to bring you the best documentation experience.
 </Callout>
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+Every component on these pages ships from `@vitnode/core/components/*` - the same
+ones the site, the AdminCP and every plugin screen are built from. They are
+[Shadcn UI](https://ui.shadcn.com) components on
+[Base UI](https://base-ui.com) primitives, styled with
+[Tailwind CSS 4](https://tailwindcss.com) and driven by semantic design tokens
+(`bg-background`, `text-foreground`), so a component picks up light and dark mode
+without being told.
 
-## What is Next?
+```tsx
+import { Button } from "@vitnode/core/components/ui/button";
+
+<Button>Save changes</Button>;
+```
+
+## Where to go next
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.vercel.app" />
+  <Card title="Colors and tokens" href="/docs/ui/colors" />
+  <Card title="AutoForm" description="The way VitNode builds forms" href="/docs/ui/auto-form" />
+  <Card title="DataTable" description="Server-driven tables, with URL state" href="/docs/ui/data-table" />
+  <Card title="Base UI" href="https://base-ui.com" />
 </Cards>

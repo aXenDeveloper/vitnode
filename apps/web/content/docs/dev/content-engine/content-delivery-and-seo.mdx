@@ -1,28 +1,29 @@
 ---
 title: Content Delivery & SEO
-description: Step-by-step guide to integrating content types with Next.js App Router, managing slug redirect history, auto-generating SEO metadata, canonical links, hreflang tags, and XML sitemaps.
+description: Serve a content type at a public URL - slug redirect history, canonical links, hreflang, SEO metadata and XML sitemaps.
 icon: Compass
 ---
 
-Content Engine provides frontend content delivery abstractions (`delivery: true`) to streamline routing, automatic 308 redirects, SEO meta generation, and XML sitemap creation.
+Turn on `delivery` and a content type gets a public URL contract: a canonical
+path, 308 redirects for every slug it used to have, `hreflang` alternates for its
+published translations, ready-made SEO metadata, and a paginated sitemap feed.
 
-## Prerequisites & Context
+The engine produces the *answers*. Your route renders them - which keeps the
+whole thing framework-neutral: the same three HTTP endpoints serve a page in this
+app, in a separately deployed frontend, or in a static build.
 
-Frontend content delivery maps a client definition (e.g. `articleContentType`) and server model (`articleContent`) directly into Next.js App Router dynamic routes:
+## Prerequisites
 
-- **`delivery: { basePath: "/articles", ... }`**: Configures route bases, automatic slug 308 redirects, SEO meta fields, and sitemap frequency.
-- **`resolveContentDelivery(articleContent, { slug, locale })`**: A Next.js server utility from `@vitnode/core/content/next` that fetches content, resolves slug redirects, generates SEO metadata, and handles 404 fallbacks.
+A content type with `publicApi` enabled and exactly one exposed slug field.
+Delivery is refused without one - there is no canonical path to build, no
+redirect to issue and no sitemap entry to emit.
 
 ---
-
-## Step-by-Step Delivery Setup
 
 <Steps>
 
 <Step>
-### Step 1: Enable Content Delivery in Definition
-
-Add `delivery` settings to `src/content/article.ts`:
+### Enable delivery in the definition
 
 ```ts title="src/content/article.ts"
 export const articleContentType = defineContentType({
@@ -30,17 +31,19 @@ export const articleContentType = defineContentType({
   tableName: "example_articles",
   publication: true,
   editorial: true,
+  publicApi: {
+    enabled: true,
+    path: "articles",
+    fields: ["title", "slug", "excerpt", "publishedAt"],
+  },
   delivery: { // [!code ++]
-    basePath: "/articles", // [!code ++]
-    redirects: true, // Auto 308 redirects on slug rename // [!code ++]
+    enabled: true, // [!code ++]
+    redirects: { enabled: true }, // 308s on slug rename // [!code ++]
     seo: { // [!code ++]
       titleField: "title", // [!code ++]
       descriptionField: "excerpt", // [!code ++]
     }, // [!code ++]
-    sitemap: { // [!code ++]
-      changefreq: "weekly", // [!code ++]
-      priority: 0.8, // [!code ++]
-    }, // [!code ++]
+    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.8 }, // [!code ++]
   }, // [!code ++]
   fields: {
     title: field.text({ required: true }),
@@ -49,74 +52,151 @@ export const articleContentType = defineContentType({
   },
 });
 ```
+
+<Callout type="warn" title="`redirects` needs `editorial`">
+  Slug history has to be written in the same transaction as the slug change, its
+  version and its revision - and only the editorial mutation path owns that
+  transaction. Delivery without `redirects` (canonical URLs, SEO, alternates,
+  sitemap) works on its own.
+</Callout>
 </Step>
 
 <Step>
-### Step 2: Implement Next.js Dynamic Route with i18n & Metadata
+### What you get on the API
 
-Create `app/[locale]/articles/[slug]/page.tsx`. Use `useTranslations` from `next-intl` to localize UI labels instead of hardcoding plain text strings:
+Registering the content type's public module mounts three routes beside the
+ordinary public reads:
 
-```tsx title="app/[locale]/articles/[slug]/page.tsx"
-import { notFound, redirect } from "next/navigation";
-import { useTranslations } from "next-intl"; // [!code ++]
-import { resolveContentDelivery } from "@vitnode/core/content/next";
-import { articleContent } from "@/database/articles";
+```http
+GET /api/{pluginId}/content/{publicApi.path}/delivery/resolve/{slug}
+GET /api/{pluginId}/content/{publicApi.path}/delivery/item/{id}
+GET /api/{pluginId}/content/{publicApi.path}/delivery/sitemap
+```
 
-interface Props {
-  params: Promise<{ locale: string; slug: string }>;
-}
+`resolve` is the one a page calls. It answers `200` with a discriminated union:
 
-export async function generateMetadata({ params }: Props) {
-  const { locale, slug } = await params;
-  const delivery = await resolveContentDelivery(articleContent, { slug, locale });
+| `type`        | What it means                                                |
+| ------------- | ------------------------------------------------------------ |
+| `"content"`   | The record is here. Canonical path, alternates, hreflang, SEO |
+| `"redirect"`  | This slug was retired. `location` and `status` (308)          |
+| `"not_found"` | Nothing here - **a `200` with a body**, not a `404`           |
 
-  if (delivery.type !== "found") return {};
+Three arms rather than a nullable object, because the three outcomes need three
+different responses and a client that had to guess would eventually redirect to
+`undefined`.
+</Step>
 
-  return delivery.seo; // Generates title, description, openGraph, canonical URLs
-}
+<Step>
+### Render it in a route
 
-export default async function ArticlePage({ params }: Props) {
-  const { locale, slug } = await params;
-  const delivery = await resolveContentDelivery(articleContent, { slug, locale });
+An ordinary TanStack Start route: resolve in the `loader`, act on the arm, and
+build the `<head>` from what came back.
 
-  if (delivery.type === "redirect") {
-    redirect(delivery.destination, delivery.status); // 308 permanent redirect
-  }
+```tsx title="apps/web/src/routes/_main/articles.$slug.tsx"
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 
-  if (delivery.type === "not_found") {
-    notFound();
-  }
+import { pageHead } from "#/lib/page-head";
+import { resolveArticleDelivery } from "#/lib/articles";
 
-  const t = useTranslations("@vitnode/example"); // [!code ++]
-  const { item } = delivery;
+export const Route = createFileRoute("/_main/articles/$slug")({
+  loader: async ({ params }) => {
+    const delivery = await resolveArticleDelivery(params.slug);
+
+    if (delivery.type === "redirect") {
+      throw redirect({ href: delivery.location, statusCode: delivery.status });
+    }
+
+    if (delivery.type === "not_found") throw notFound();
+
+    return delivery;
+  },
+  head: ({ loaderData }) =>
+    pageHead({
+      title: loaderData?.seo.title ?? undefined,
+      description: loaderData?.seo.description ?? undefined,
+      robots:
+        loaderData?.robots?.index === false
+          ? "noindex, nofollow"
+          : "index, follow",
+    }),
+  component: ArticlePage,
+});
+
+const ArticlePage = () => {
+  const delivery = Route.useLoaderData();
 
   return (
-    <article className="container py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">{item.title}</h1>
-        <p className="text-muted-foreground">{t("articles.published_on", { date: item.publishedAt })}</p> {/* [!code ++] */}
-      </header>
-
-      <div className="prose">
-        <p>{item.excerpt}</p>
-      </div>
-
-      <footer className="mt-8 border-t pt-4">
-        <p>{t("articles.author_label", { name: item.author.name })}</p> {/* [!code ++] */}
-      </footer>
+    <article className="container mx-auto flex max-w-2xl flex-col gap-4 p-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {delivery.seo.title}
+      </h1>
+      <p className="text-muted-foreground leading-relaxed text-pretty">
+        {delivery.seo.description}
+      </p>
     </article>
   );
-}
+};
 ```
+
+<Callout type="info" title="`href`, not `to`">
+  `delivery.location` is a path the engine already built - locale segment
+  included, for a localized content type. `href` sends the browser there
+  verbatim; `to` would name a route in the tree and get the locale prefix written
+  in a second time.
+</Callout>
+
+<Callout type="warn" title="Write `head` after `loader`">
+  `loaderData`'s type is inferred from `loader` in the same object literal, and
+  TypeScript reads members in order. Put `head` first and `loaderData` is `never`.
+</Callout>
+
+<Callout type="info" title="A plugin does the same thing, as data">
+  A plugin route declares the URL in its manifest and puts the same `load` and
+  `head` in `definePluginRoute`. See [Route
+  Manifest](/docs/dev/plugins/route-manifest).
+</Callout>
 </Step>
 
 </Steps>
 
 ---
 
-## Automatic SEO Capabilities
+## What the resolution carries
 
-- **308 Permanent Redirects**: Renaming an item's slug preserves historical URLs, issuing automatic 308 redirects to preserve SEO rank.
-- **Canonical URLs**: Constructed using the application's base URL and current slug.
-- **Hreflang Tags**: Outputs `<link rel="alternate" hreflang="..." />` tags for active translations.
-- **XML Sitemaps**: Serves paginated XML sitemaps at `/sitemap-articles.xml`.
+<Callout type="info" title="Everything below is framework-neutral">
+  `canonicalPath` and every alternate are **relative paths**, never absolute
+  URLs. A definition lives in source control and is deployed to a preview domain,
+  a staging domain and production, so an origin baked into it would be wrong in
+  two of the three. `contentDeliveryUrl({ origin, path })` adds one when a caller
+  has one to add.
+</Callout>
+
+- **`canonicalPath`** - the record's one true path, locale segment included for a
+  localized content type.
+- **`alternates`** and **`hreflang`** - one entry per genuinely published
+  translation. A fallback is *not* an alternate: it has no URL of its own, so
+  listing it would announce a page that answers 404.
+- **`seo`** and **`openGraph`** - `{ title, description }`, read off the public
+  projection. Every field they are built from has to be in `publicApi.fields`
+  already, because they end up in a public page.
+- **`robots`** - `{ index, follow }`, or `null` when the content type states none.
+- **`isFallback`** - whether the body you were handed is the default locale
+  standing in for a missing translation.
+
+## Automatic SEO capabilities
+
+- **308 permanent redirects** - renaming a slug preserves the historical URL, so
+  the rank a page earned follows it.
+- **Canonical URLs** - built from your origin plus `canonicalPath`.
+- **Hreflang** - `<link rel="alternate" hreflang="...">` for every published
+  translation, with an optional `x-default`.
+- **XML sitemaps** - `GET .../delivery/sitemap` returns entries plus a
+  `nextCursor`; `contentSitemapXml` and `contentSitemapIndexXml` from
+  `@vitnode/core/content` turn a page of entries into the XML a crawler wants.
+
+<Callout type="info" title="Caching">
+  Delivery answers have their own tags - `contentDeliveryTag`,
+  `contentDeliveryRedirectTag`, `contentDeliverySitemapTag`. A background
+  mutation posts the ones it invalidated to your configured origins; see
+  [Cache](/docs/dev/cache).
+</Callout>

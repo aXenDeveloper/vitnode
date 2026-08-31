@@ -21,7 +21,6 @@
     "*.css",
     "**/*.css",
     "**/server.js",
-    "**/*.server.js",
     "./dist/src/tanstack/admin/content/editorial/index.js",
     "./dist/src/tanstack/admin/content/form/index.js",
     "./src/tanstack/admin/content/editorial/index.ts",
@@ -49,9 +48,7 @@
   },
   "devDependencies": {
     "@hono/zod-openapi": "^1.5.1",
-    "@hono/zod-validator": "^0.9.0",
     "@hookform/resolvers": "^5.4.0",
-    "@react-email/ui": "^6.9.0",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.46",
     "@tanstack/react-query": "^5.101.4",
@@ -146,11 +143,6 @@
       "types": "./dist/src/tanstack/*/index.d.ts",
       "default": "./dist/src/tanstack/*/index.js"
     },
-    "./tanstack/*/client": {
-      "import": "./dist/src/tanstack/*/client.js",
-      "types": "./dist/src/tanstack/*/client.d.ts",
-      "default": "./dist/src/tanstack/*/client.js"
-    },
     "./tanstack/*/server": {
       "import": "./dist/src/tanstack/*/server.js",
       "types": "./dist/src/tanstack/*/server.d.ts",
@@ -166,7 +158,6 @@
   },
   "scripts": {
     "build:scripts": "tsup",
-    "start:scripts": "node dist/scripts/scripts.js db:prepare",
     "build:plugins": "tsc -p tsconfig.build.json && swc src -d dist --config-file .swcrc --copy-files && tsc-alias -p tsconfig.build.json",
     "dev": "node dist/scripts/scripts.js dev",
     "dev:email": "email dev --dir src/emails",
@@ -204,7 +195,6 @@
     "postgres": "^3.4.9",
     "rate-limiter-flexible": "^11.2.0",
     "react-colorful": "^5.8.0",
-    "react-day-picker": "^10.0.1",
     "react-resizable-panels": "^4.12.2",
     "react-scan": "^0.5.7",
     "recharts": "^3.10.0",

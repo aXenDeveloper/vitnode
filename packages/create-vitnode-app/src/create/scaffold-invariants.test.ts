@@ -136,42 +136,53 @@ describe("the generated application", () => {
   });
 });
 
-describe("the single-app template's two trees", () => {
+describe("the template trees", () => {
   /**
-   * `root` owns every generic host file; `api-single-app` is an overlay of
-   * API-specific additions and nothing else.
+   * Six trees, and no two of them own the same path in the same destination.
    *
-   * ## The regression
-   *
-   * Both trees are copied into the *same* directory, and they were copied with
-   * one `Promise.all` - so any path they shared was a race, decided by whichever
-   * `cp` happened to finish last. They shared two, and both of the overlay's
-   * copies were the pre-TanStack ones:
-   *
-   *     .gitignore_template   ignored `/.next/` and `next-env.d.ts`; had no
-   *                           `.output`, `.nitro`, `.vite` or `src/*.gen.ts`
-   *     .env.example          no `NEXT_PUBLIC_API_URL`, no `CRON_SECRET`
-   *
-   * So a new project got a `.gitignore` for a framework it does not use, missing
-   * every output directory it actually writes - about half the time. Nothing
-   * fails; the first symptom is `.output/` showing up in `git status`.
-   *
-   * Both duplicates are deleted rather than corrected, because a corrected
-   * duplicate is still two files that have to agree.
+   * `root` is the generic host app; `api-single-app` is the API half a single
+   * app adds over it; `api` is the standalone API; `api-bun` is the one entry
+   * point bun replaces; `monorepo` is the workspace root; `docker` is the
+   * compose file. Two of these land in the *same* directory, and a shared path
+   * there is a race whose winner is whichever `cp` finished last - which is how
+   * a new project came to get a `.gitignore` for a framework it does not use,
+   * about half the time.
    */
-  const overlayFiles = filesUnder(join(appTemplate, "api-single-app"));
-  const rootFiles = filesUnder(join(appTemplate, "root"));
+  const treeFiles = (tree: string) => filesUnder(join(appTemplate, tree));
 
-  it("share no path at all", () => {
-    expect(overlayFiles.filter(file => rootFiles.includes(file))).toEqual([]);
+  /**
+   * `root` and `api-single-app` are copied into the *same* directory, so a
+   * shared path between them is a race whose winner is whichever `cp` finished
+   * last. They shared `.gitignore_template` and `.env.example`, and the
+   * overlay's were the pre-TanStack copies - which is how about half of all new
+   * single apps got a `.gitignore` for a framework they do not use.
+   */
+  it("share no path between the base and the single-app overlay", () => {
+    expect(
+      treeFiles("api-single-app").filter(file =>
+        treeFiles("root").includes(file),
+      ),
+    ).toEqual([]);
+  });
+
+  /**
+   * `api-bun` is the one overlay that is *meant* to replace a file, and it is
+   * exactly one: bun's entry point over Node's. An overlay that grew a second
+   * file would be silently deciding something for a package manager.
+   */
+  it("lets the bun overlay replace one file and no more", () => {
+    expect(treeFiles("api-bun")).toEqual(["src/index.ts"]);
+    expect(treeFiles("api")).toContain("src/index.ts");
   });
 
   /**
    * And the overlay is only the API. Listed as a property rather than as an
    * expected file list, so adding a genuinely API-specific file needs no edit
-   * here - `drizzle.config.ts` and anything under `src/` that names the API.
+   * here.
    */
-  it("keeps only API-specific files in the overlay", () => {
+  it("keeps only API-specific files in the single-app overlay", () => {
+    const overlayFiles = filesUnder(join(appTemplate, "api-single-app"));
+
     expect(overlayFiles.length).toBeGreaterThan(0);
     for (const file of overlayFiles) {
       expect(file).toMatch(
@@ -180,14 +191,44 @@ describe("the single-app template's two trees", () => {
     }
   });
 
-  /** No generic host file, by name - the two that were actually there. */
-  it.each([".gitignore_template", ".env.example", "global.d.ts"])(
-    "does not duplicate %s",
-    file => {
-      expect(existsSync(join(appTemplate, "api-single-app", file))).toBe(false);
-      expect(existsSync(join(appTemplate, "root", file))).toBe(true);
-    },
-  );
+  /**
+   * The workspace tree is the workspace's own files and nothing else.
+   *
+   * It shipped `apps/api/.env.example` and `apps/web/.env.example`, which is how
+   * an API-only monorepo ended up with an `apps/web` directory holding one file
+   * and no package. An app's files belong to an app's tree - or, for the
+   * environment, to the builder that composes one per role.
+   */
+  it("gives the workspace root no files belonging to an app", () => {
+    expect(filesUnder(join(appTemplate, "monorepo")).sort()).toEqual([
+      ".gitignore_template",
+      "turbo.json",
+    ]);
+  });
+
+  /**
+   * `.env.example` is composed rather than copied, so it has exactly one owner
+   * for three genuinely different files - see `create-env-example.ts`. No
+   * template tree may reintroduce a fourth.
+   */
+  it("commits no `.env.example` to any tree", () => {
+    expect(allFiles.filter(file => file.endsWith(".env.example"))).toEqual([]);
+  });
+
+  /**
+   * `.gitignore_template` is a file, and one per destination: the workspace
+   * root's, the API app's and the web app's are three different lists for three
+   * different build outputs.
+   */
+  it("gives each destination exactly one .gitignore", () => {
+    expect(
+      appFiles.filter(file => file.endsWith(".gitignore_template")).sort(),
+    ).toEqual([
+      "api/.gitignore_template",
+      "monorepo/.gitignore_template",
+      "root/.gitignore_template",
+    ]);
+  });
 
   /**
    * Copied in a fixed order regardless, because "the overlay goes over the base"
@@ -217,7 +258,6 @@ describe("the single-app template's two trees", () => {
 
 describe("what a generated single app starts from", () => {
   const gitignore = read(appTemplate, "root/.gitignore_template");
-  const env = read(appTemplate, "root/.env.example");
 
   /** The directories a TanStack Start build actually writes. */
   it.each(["/.output/", "/.nitro/", "/.vite/", "/.tanstack/", "src/*.gen.ts"])(
@@ -238,16 +278,12 @@ describe("what a generated single app starts from", () => {
     },
   );
 
-  /**
-   * The environment a single app is configured with. Both URLs name this app's
-   * own origin, because it serves its own `/api/*` - which is exactly what the
-   * overlay's copy dropped.
-   */
-  it("ships the single-app environment", () => {
-    expect(env).toContain("POSTGRES_URL=");
-    expect(env).toContain("NEXT_PUBLIC_WEB_URL=http://localhost:3000");
-    expect(env).toContain("NEXT_PUBLIC_API_URL=http://localhost:3000");
-    expect(env).toContain("CRON_SECRET=");
+  /** The API compiles to `dist/`, which is what its `start` script runs. */
+  it("ignores the API's build output", () => {
+    const api = read(appTemplate, "api/.gitignore_template");
+
+    expect(api).toContain("/dist");
+    expect(api).toContain("node_modules");
   });
 
   /**
@@ -282,6 +318,21 @@ describe("what a generated single app starts from", () => {
     expect(
       withoutComments(read(appTemplate, "api/src/vitnode.api.config.ts")),
     ).toMatch(/import \{ i18n \} from ['"]\.\/i18n\.js['"]/);
+  });
+
+  /**
+   * A `tsconfig` that includes a file the tree does not ship is a phantom: the
+   * API's named a `global.d.ts` that only the web template has.
+   */
+  it("includes no file the API template does not ship", () => {
+    const tsconfig = JSON.parse(read(appTemplate, "api/tsconfig.json")) as {
+      include: string[];
+    };
+
+    for (const entry of tsconfig.include) {
+      if (entry.includes("*") || !entry.includes(".")) continue;
+      expect(appFiles).toContain(`api/${entry}`);
+    }
   });
 });
 

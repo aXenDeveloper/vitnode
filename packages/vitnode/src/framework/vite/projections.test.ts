@@ -7,7 +7,7 @@ import type { PluginRouteCompilerSource } from "../plugin-routes";
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
 import { compilePluginRoutes } from "../plugin-routes";
-import { readOptionalPluginModules } from "./plugin-routes";
+import { readOptionalPluginModules } from "./registries";
 
 /**
  * All four generated projections, from one configured plugin list, in one pass.

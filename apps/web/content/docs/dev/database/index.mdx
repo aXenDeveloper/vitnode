@@ -108,47 +108,36 @@ export const coreRelations = defineRelations(schema, (r) => ({
   `language_ref` - naming it `language` is an error, not a shadow.
 </Callout>
 
-## Database Operations
+## Your first start
 
-VitNode provides convenient commands for managing your database schema and migrations.
-
-### Creating Migrations
-
-Generate migration files when you modify your database schema:
+Nothing. Run the app:
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
 ```bash tab="bun"
-bun db:migrate
+bun dev
 ```
 
 ```bash tab="pnpm"
-pnpm db:migrate
+pnpm dev
 ```
 
 ```bash tab="npm"
-npm run db:migrate
+npm run dev
 ```
 
 </Tabs>
 
-<Callout type="info" title="Automatic Updates in Development">
-  VitNode automatically runs migrations and schema updates when you start your
-  application in development mode, keeping your database in sync with your code.
-</Callout>
-
-### The development bootstrap
-
-You rarely need to run anything by hand. **Every app that reads the schema gates
-its own `dev` script** on `vitnode db:prepare`, so a fresh clone prepares the
-database before a single request can be served - whichever way you start it:
+**Every app that reads the schema gates its own `dev` script on the database
+bootstrap**, so a fresh clone prepares the database before a single request can
+be served - whichever way you start it:
 
 ```bash
 pnpm dev                    # the monorepo root: prepares once, then starts everything
 cd apps/api && pnpm dev     # gated on its own
-cd apps/web && pnpm dev     # gated too, if it mounts the API in-process
+cd apps/web && pnpm dev     # gated too, because it mounts the API in-process
 turbo dev --filter=web      # gated, because the gate lives in the script
 ```
 
@@ -156,7 +145,9 @@ The rule is ownership of _reads_, not of migration files: an app is gated if it
 serves `/api/*` from its own process. A frontend that talks to a separate API
 over HTTP is not gated, because it has no schema to prepare.
 
-`db:prepare` does three things, in this order:
+### What the bootstrap does
+
+Three steps, in this order:
 
 1. **Generate** any migration your schema changes imply. A no-op when nothing
    changed.
@@ -170,6 +161,12 @@ Every step is idempotent, and the chain is `&&` rather than `&` on purpose: if a
 migration fails, the dev server does not start. A schema that failed to migrate
 is never served.
 
+<Callout type="info" title="So: change a schema, restart">
+  There is no command to run first, and no command to run after. Edit a table,
+  restart `pnpm dev`, and the migration is generated, applied and committed to
+  your `migrations/` folder for you.
+</Callout>
+
 <Callout type="info" title="Two gates at once are safe">
   A monorepo starts more than one gated app, so more than one bootstrap can run
   at the same time. VitNode takes a Postgres advisory lock around the whole
@@ -177,6 +174,48 @@ is never served.
   nothing pending. Without it the two race on `CREATE SCHEMA IF NOT EXISTS
   drizzle` - Postgres' `IF NOT EXISTS` is not race-safe against a concurrent
   creator - and one dev server fails to start.
+</Callout>
+
+## Running it by hand
+
+Useful in CI, in a container entrypoint, or when you want the SQL without
+starting a server. Both scripts are on every app that owns a schema:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun db:prepare   # generate, apply, seed
+bun db:migrate   # the same three steps, under the name deployments use
+```
+
+```bash tab="pnpm"
+pnpm db:prepare  # generate, apply, seed
+pnpm db:migrate  # the same three steps, under the name deployments use
+```
+
+```bash tab="npm"
+npm run db:prepare  # generate, apply, seed
+npm run db:migrate  # the same three steps, under the name deployments use
+```
+
+</Tabs>
+
+They are one implementation with two names, so they cannot drift into two
+behaviours. `db:prepare` is what a `dev` script waits for; `db:migrate` is the
+name deployment guides and CI pipelines spell.
+
+To write the migration files and stop - no connection, no apply, no seed:
+
+```bash
+pnpm db:migrate --generate
+```
+
+See the [CLI reference](/docs/dev/cli) for everything the binary answers to.
+
+<Callout type="warn" title="Never regenerate an applied migration in place">
+  The migrator identifies a migration by the hash of its file. Regenerating one
+  that has already run changes that hash, and the whole file is replayed -
+  `relation already exists`, and a broken database. Add a new migration instead.
 </Callout>
 
 <Callout type="warn" title="Only one package owns the migrations">
@@ -188,7 +227,7 @@ is never served.
   runs exactly one bootstrap.
 </Callout>
 
-### In production
+## In production
 
 Production is a separate contract, and it is deliberately **not** automatic: a
 horizontally scaled deployment would have every replica racing to migrate the

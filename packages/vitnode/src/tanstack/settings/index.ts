@@ -28,9 +28,9 @@ import { intlQueryOptions } from "../i18n/query";
  * What the settings screens render strings from.
  *
  * `core.auth.settings` is the heading, the description, the navigation and every
- * panel's own title - the same namespace the Next.js layout mounts, kept
- * deliberately: the panels are shared components and they look their strings up
- * by the same keys in both frameworks.
+ * panel's own title. One namespace for the whole area, because the panels are
+ * framework-neutral components that look their strings up by key - so the set a
+ * route warms has to be the set the components read.
  *
  * `core.global` is listed even though a root provider already provides it,
  * because a per-route provider mounts its own over the root's rather than adding

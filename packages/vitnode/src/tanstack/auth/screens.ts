@@ -23,8 +23,8 @@ import type { SessionApi } from "./session-api";
  *
  * Two vocabularies exist on purpose and neither is wrong. The contract is a
  * closed union over what the API can answer, with the distinctions the API makes
- * kept (`invalid_state` is not `unknown_provider`); the screens speak the legacy
- * shape they were extracted from, and are rendered unchanged by both frameworks.
+ * kept (`invalid_state` is not `unknown_provider`); the screens speak the flatter
+ * shape they render from, which is a message or a failure and nothing else.
  * Something has to translate, and it happens once, at the call site. This is
  * that call site, pulled out of the hooks so it is a set of
  * total functions over finite unions - checkable exhaustively, with no server,

@@ -72,7 +72,7 @@ An email renders in the recipient's language, not the sender's. Pass `user` and 
 Templates get an `i18n` prop to turn into a translator:
 
 ```tsx
-import { createTranslator } from "next-intl";
+import { createTranslator } from "use-intl";
 
 export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
   const t = createTranslator(i18n);

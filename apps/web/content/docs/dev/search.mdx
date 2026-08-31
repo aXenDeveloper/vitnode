@@ -30,15 +30,16 @@ config change followed by a rebuild.
 
 <Callout type="info" title="Using the Content Engine?">
   A content type only needs a [`search`
-  block](/docs/dev/content-engine/public-api-and-caching#2-full-text-search-indexing)
+  block](/docs/dev/content-engine/public-api-and-caching#step-3-enable-global-search-indexing)
   - publishing, editing, unpublishing and deleting a record then keep its
   document in step automatically, and it joins the rebuild without any of the
   wiring below.
 </Callout>
 
 Any API handler can (re)index or remove an item through `c.get("search")`. It is
-an **API-process** model: a Next.js server action or server component cannot
-reach `c.get("search")` at all, so anything Next-side goes over HTTP.
+an **API-process** model: only something running inside the API holds that
+context, so a route loader, a component or a server function reaches search the
+same way it reaches everything else - over HTTP.
 
 ```ts
 // After creating or updating an item
@@ -258,8 +259,8 @@ generic renderer, so nothing breaks if an entry is missing.
 
 ## Rendering search in your own app
 
-The search UI ships in three framework-neutral pieces, so a Next.js page and a
-TanStack Start route render the same components:
+The search UI ships in three framework-neutral pieces, so an app route and a
+plugin route render the same components:
 
 | Module                                               | What it is                                                                                       |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |

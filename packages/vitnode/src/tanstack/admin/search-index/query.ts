@@ -63,11 +63,10 @@ export const invalidateSearchIndex = async (
 /**
  * The two mutations, bound to the mounted router's cache.
  *
- * The TanStack counterpart of `useSearchIndexActionsNext`, and the shape is the
- * point: both satisfy `SearchIndexActions`, so `SearchIndexContent` and its
- * three buttons are rendered by either framework unchanged. Each callback
- * refreshes on success - a query invalidation here, `router.refresh()` there -
- * because the screen reports state the mutation just changed.
+ * The shape is the point: this satisfies `SearchIndexActions`, so
+ * `SearchIndexContent` and its three buttons stay framework-neutral and a host
+ * supplies the transport. Each callback refreshes on success - a query
+ * invalidation - because the screen reports state the mutation just changed.
  *
  * Only on success. A refused rebuild changed nothing, and refetching the status
  * underneath the error toast would replace the numbers the administrator is

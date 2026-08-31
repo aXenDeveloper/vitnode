@@ -63,6 +63,29 @@ describe("readPluginRouteModule", () => {
     ).toThrow(/"@vitnode\/blog:post" does not export a component/);
   });
 
+  /**
+   * A route id is what the *manifest* calls the page. The specifier is the file,
+   * and this is a failure fixed by opening it - so when the caller knows the
+   * import, the message says both.
+   */
+  it("names the module's specifier when it is given one", () => {
+    expect(() =>
+      readPluginRouteModule(
+        { route: {} },
+        "@vitnode/blog:post",
+        "@vitnode/blog/routes/post-page",
+      ),
+    ).toThrow(
+      /"@vitnode\/blog:post" \("@vitnode\/blog\/routes\/post-page"\) does not export a component/,
+    );
+  });
+
+  it("still names the route alone for a caller with no import to name", () => {
+    expect(() => readPluginRouteModule({ route: {} }, "p:page")).toThrow(
+      /plugin route "p:page" does not export a component/,
+    );
+  });
+
   it("refuses a `route` that is not an object", () => {
     expect(() =>
       readPluginRouteModule({ default: Page, route: "yes" }, "p:page"),
