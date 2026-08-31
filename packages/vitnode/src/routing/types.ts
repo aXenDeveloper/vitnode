@@ -218,6 +218,42 @@ export interface PluginRouteDefinition {
   path: string;
   /** Who this route is offered to. See {@link PluginRouteRequirement}. */
   requires?: PluginRouteRequirement;
+  /**
+   * Package export subpath of a module exporting this route's `validateSearch`,
+   * e.g. `"routes/admin-staff.search"` - the one piece of a route's behaviour
+   * that may not be lazy.
+   *
+   * ## Why this is a second entry rather than a field in the module
+   *
+   * A router's `validateSearch` runs during **path matching**, which is before
+   * any chunk is fetched. A route whose whole module is lazy therefore cannot
+   * have one, and that is why {@link PluginRoutePageModule.parseSearch} exists
+   * and is careful to say it is not a URL schema: it runs in the loader, it
+   * normalises rather than validates, and the router's own search type for the
+   * route stays untouched.
+   *
+   * `parseSearch` is the right answer for most pages. It is not the right answer
+   * for a screen whose URL *is* its state - a paginated table where `?page=999`
+   * has to be clamped and redirected to the last real page, a filter whose links
+   * must be typed. Those need the router to know the shape before it matches.
+   *
+   * So a route may name a second module, and the build imports it **eagerly**,
+   * as a literal static import in the generated registry. That is the whole cost
+   * and it is deliberately visible: a route that declares one puts a module in
+   * the initial bundle. Which is why the contract on it is narrow -
+   *
+   * - it exports `validateSearch`, and nothing that renders;
+   * - it must not import React, a component, or the page it belongs to;
+   * - it must be **total** in the same sense `parseSearch` is: a hand-typed
+   *   query string is normalised, never thrown on.
+   *
+   * Keep it small. It is the schema, not the screen.
+   *
+   * A route that declares one gets a real router-level `validateSearch`, a
+   * `loaderDeps` derived from it, and typed `search` and `navigate` handed to
+   * its component - while its page stays in its own chunk exactly as before.
+   */
+  searchEntry?: string;
 }
 
 /**
@@ -255,6 +291,11 @@ export interface PluginRoute {
   requires: null | PluginRouteRequirement;
   /** The plugin-local half of {@link PluginRoute.id}, as declared. */
   routeId: string;
+  /**
+   * As declared. `null` means this route has no eager search schema, which is
+   * the ordinary case - see {@link PluginRouteDefinition.searchEntry}.
+   */
+  searchEntry: null | string;
   /** `path`, already parsed - so nothing downstream has to parse it again. */
   segments: PluginRouteSegment[];
 }

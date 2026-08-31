@@ -232,7 +232,7 @@ describe('one route serves both public URLs', () => {
       id.includes('discover'),
     )
 
-    expect(ids).toEqual(['/_main/discover'])
+    expect(ids).toEqual(['/_main/_core-main/discover'])
   })
 
   it('answers both URLs with the page rather than a 404', async () => {
@@ -569,7 +569,9 @@ describe('switching language stays on the page', () => {
     // Internally it never moved: `/discover` and `/pl/discover` are one route,
     // which is why the switch is an `invalidate` rather than a navigation.
     expect(router.state.location.pathname).toBe('/discover')
-    expect(router.state.matches.at(-1)?.routeId).toBe('/_main/discover')
+    expect(router.state.matches.at(-1)?.routeId).toBe(
+      '/_main/_core-main/discover',
+    )
   })
 
   it('brings the loader context in step with the new URL', async () => {
@@ -635,12 +637,26 @@ describe('switching language stays on the page', () => {
     expect(feedAt).toBeGreaterThan(messagesAt)
   })
 
+  /**
+   * `to` is cast because `/discover` is not in the router's type table.
+   *
+   * It is `@vitnode/core`'s code-based route - mounted by `withCoreMainRoutes`
+   * rather than written as a file here - and code-based routes are outside the
+   * generated tree's types, which is the same trade every plugin route makes.
+   * The *runtime* is unaffected, and the runtime is what this asserts.
+   */
+  const publicHrefFor = (
+    router: ReturnType<typeof routerAt>,
+    to: string,
+  ): string =>
+    router.buildLocation({
+      to,
+    } as Parameters<typeof router.buildLocation>[0]).publicHref
+
   it('writes the locale prefix into the links it now builds', async () => {
     const { router } = await switchedToPolish()
 
-    expect(router.buildLocation({ to: '/discover' }).publicHref).toBe(
-      '/pl/discover',
-    )
+    expect(publicHrefFor(router, '/discover')).toBe('/pl/discover')
   })
 
   it('switches back to the unprefixed URL', async () => {
@@ -656,8 +672,6 @@ describe('switching language stays on the page', () => {
 
     expect(router.state.location.publicHref).toBe('/discover')
     expect(localeOf(router)).toBe('en')
-    expect(router.buildLocation({ to: '/discover' }).publicHref).toBe(
-      '/discover',
-    )
+    expect(publicHrefFor(router, '/discover')).toBe('/discover')
   })
 })

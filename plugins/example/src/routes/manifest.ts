@@ -130,6 +130,28 @@ export const routes: PluginRouteDefinition[] = [
    * a module in both places was copied *and* bundled. Manifest entries are now
    * the only way a plugin contributes a page.
    */
+  /**
+   * A page whose query string is validated by the **router**, not by its module.
+   *
+   * The one field here that costs something, and the only one that does:
+   * `searchEntry` names a second module, and the app's build imports it
+   * *statically*. That is the price of being early - a router's
+   * `validateSearch` runs during path matching, before any chunk is fetched, so
+   * a schema in the lazy page module would arrive too late to shape anything.
+   *
+   * Declare it only for a page whose URL *is* its state - a paginated list whose
+   * `?page=999` has to be clamped, a filter whose links have to be typed and
+   * checked. `/example/guide/:topic` above is the ordinary case: it reads its
+   * query string through its own module's `parseSearch`, lazily, and nothing is
+   * added to the initial bundle.
+   */
+  {
+    entry: "routes/browse-page",
+    id: "browse",
+    namespaces: ["@vitnode/example.browse"],
+    path: "/example/browse",
+    searchEntry: "routes/browse-page.search",
+  },
   {
     area: "admin",
     entry: "routes/admin-example-page",

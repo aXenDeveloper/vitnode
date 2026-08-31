@@ -1,6 +1,8 @@
 import type {
   PluginRouteModuleLoader,
   PluginRouteModuleRegistry,
+  PluginRouteSearchRegistry,
+  PluginRouteSearchValidator,
 } from "@/framework/plugin-routes";
 import type { PluginRoute, PluginRouteNode } from "@/routing";
 
@@ -85,6 +87,18 @@ export interface PluginRouteSpec {
   path: string;
   /** The manifest entry this spec was built from, unchanged. */
   route: PluginRoute;
+  /**
+   * This route's **eager** search schema, or `null` for the ordinary route that
+   * declared none.
+   *
+   * The one thing on a spec that is a function rather than data, and the one
+   * thing that could not wait for the module: a router's `validateSearch` runs
+   * during path matching, before any chunk is fetched. A route earns it by
+   * declaring a `searchEntry` in its manifest, which the build turns into a
+   * static import - so by the time this spec exists the function is simply
+   * here. See `PluginRouteDefinition.searchEntry`.
+   */
+  validateSearch: null | PluginRouteSearchValidator;
 }
 
 /**
@@ -176,6 +190,7 @@ export const pluginRouteSearchDeps = (
 export const pluginRouteSpecs = (
   manifest: readonly PluginRoute[],
   registry: PluginRouteModuleRegistry,
+  searchRegistry: PluginRouteSearchRegistry = {},
 ): PluginRouteSpec[] => {
   const graph = buildPluginRouteGraph(manifest);
 
@@ -189,6 +204,25 @@ export const pluginRouteSpecs = (
       );
     }
 
+    const validateSearch = searchRegistry[route.id] ?? null;
+
+    // The same both-directions check the module registry gets, and for the same
+    // reason: a route that declared a `searchEntry` and has no schema here would
+    // silently lose its `validateSearch` - the router would match, the loader
+    // would run, and the page would read a query string nobody normalised. A
+    // schema with no declaration is the other half of one stale generated file.
+    if (route.searchEntry !== null && validateSearch === null) {
+      throw new Error(
+        `[VitNode plugin routes] Plugin route "${route.id}" declares the search entry "${route.searchEntry}" but has no schema in the registry. Regenerate \`src/plugin-routes.gen.ts\` - the two generated files are out of step.`,
+      );
+    }
+
+    if (route.searchEntry === null && validateSearch !== null) {
+      throw new Error(
+        `[VitNode plugin routes] The registry has a search schema for "${route.id}", which declares no \`searchEntry\`. Regenerate \`src/plugin-routes.gen.ts\` - the two generated files are out of step.`,
+      );
+    }
+
     return {
       breadcrumbChain: breadcrumbChainOf(node),
       isIndex: node.isIndex,
@@ -199,6 +233,7 @@ export const pluginRouteSpecs = (
         node.parent === null ? route.segments : node.relativeSegments,
       ),
       route,
+      validateSearch,
     } satisfies PluginRouteSpec;
   });
 

@@ -71,7 +71,11 @@ export const ContentCell = ({
     const file = entry === undefined || Array.isArray(entry) ? null : entry;
     if (!file) return <Empty label={emptyLabel} />;
 
-    const image = (file.mimeType ?? "").startsWith("image/");
+    // A url as well as an image MIME type: a `core_files` row stores a `key`
+    // and the url is built at read time from the configured storage adapter, so
+    // an installation with no `storage.adapter` describes every file with
+    // `url: ""`. `<img src="">` makes the browser re-request the document.
+    const image = file.url !== "" && (file.mimeType ?? "").startsWith("image/");
 
     return (
       <span className="flex min-w-0 items-center gap-2">

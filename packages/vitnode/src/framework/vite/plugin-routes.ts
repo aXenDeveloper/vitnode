@@ -531,11 +531,48 @@ const discover = async (
     assertImportable(module, resolvePackageFile);
   });
 
+  /**
+   * A search schema is checked the same way, and it matters more.
+   *
+   * An unresolvable lazy entry is a broken `import()` a visitor reaches when
+   * they open the page. An unresolvable *static* one is a module the app cannot
+   * build at all - Vite fails on the generated file rather than on the plugin,
+   * with a specifier nobody in the app wrote. Failing here names the plugin, the
+   * route and the entry.
+   */
+  compiled.searchModules.forEach(module => {
+    if (resolvePackageFile(module.specifier) !== null) return;
+
+    throw new Error(
+      `${ERROR_PREFIX} Plugin "${module.pluginId}", route "${module.routeId}", declares the search entry "${module.searchEntry}", which cannot be imported as "${module.specifier}". Check that ${module.pluginId} exports "./${module.searchEntry}" and that its build output is up to date.`,
+    );
+  });
+
+  /**
+   * The search modules join the watch list, a second call later than the rest.
+   *
+   * They cannot be in the first one: which routes declare a `searchEntry` is
+   * only known once the manifests have been read *and* compiled, and the first
+   * call deliberately happens before anything can fail so that a manifest which
+   * threw is still watched. `onLoaded` is additive - the dev server folds each
+   * call into one set - so two calls is the honest shape rather than a
+   * workaround.
+   *
+   * Worth watching for the same reason a manifest is: editing a route's
+   * `validateSearch` changes what the app does with a URL, and no other file
+   * this pass reads would have noticed.
+   */
+  const searchFiles = compiled.searchModules.flatMap(
+    module => resolvePackageFile(module.specifier) ?? [],
+  );
+
+  if (searchFiles.length > 0) onLoaded?.(searchFiles);
+
   return {
     adminNav: adminNav.modules,
     compiled,
     contentRegistry: contentRegistry.modules,
-    watch,
+    watch: [...watch, ...searchFiles],
   };
 };
 

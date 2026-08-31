@@ -113,8 +113,12 @@ describe('the route files this application owns', () => {
   it('is a populated listing, and so is the plugin manifest', () => {
     expect(existsSync(routesDir)).toBe(true)
     expect(statSync(routesDir).isDirectory()).toBe(true)
-    expect(routeFiles.length).toBeGreaterThan(20)
-    expect(hostRoutes.length).toBeGreaterThan(20)
+    // A floor, not a count. Twenty-nine files left this directory when core's own
+    // screens became code-based routes - the AdminCP's sixteen, the public nine,
+    // and the four shell-less auth ones - so what is left is this application's
+    // front page, its shells, its documentation and its API mount.
+    expect(routeFiles.length).toBeGreaterThan(5)
+    expect(hostRoutes.length).toBeGreaterThan(2)
     expect(pluginRouteManifest.length).toBeGreaterThan(0)
     expect(pluginIds.length).toBeGreaterThan(0)
   })
@@ -127,26 +131,23 @@ describe('the route files this application owns', () => {
    * than by filename, through the same reader. These are the routes Stages 4
    * through 16 migrated; a plugin may not claim any of them, and neither may a
    * cleanup.
+   *
+   * Three, and that is the point. Everything else - `/discover`, `/search`,
+   * `/files`, the settings subtree, every AdminCP screen, the auth cards and the
+   * AdminCP's own sign-in - is `@vitnode/core`'s, mounted by
+   * `withCoreMainRoutes`, `withCoreAdminRoutes` and `withCoreRootRoutes` rather
+   * than written as files here. A *file* for any of them would be the
+   * duplication this whole file exists to forbid, one package up from a plugin.
+   *
+   * What is left is what the application itself owns: its front page, the
+   * dashboard anchor `_admin` needs in order to exist, and its documentation.
    */
-  it.each([
-    '/',
-    '/discover',
-    '/search',
-    '/files',
-    '/settings',
-    '/settings/overview',
-    '/settings/devices',
-    '/settings/security',
-    '/login',
-    '/login/reset-password',
-    '/register',
-    '/admin',
-    '/admin/core',
-    '/admin/core/users',
-    '/docs',
-  ])('claims %s with a route file of its own', (path) => {
-    expect(hostKeys.get(routeMatchKeyFromTanStackPath(path))).toBeDefined()
-  })
+  it.each(['/', '/admin/core', '/docs'])(
+    'claims %s with a route file of its own',
+    (path) => {
+      expect(hostKeys.get(routeMatchKeyFromTanStackPath(path))).toBeDefined()
+    },
+  )
 })
 
 describe('a plugin page is never a file in this application', () => {

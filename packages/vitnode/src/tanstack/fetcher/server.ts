@@ -95,9 +95,10 @@ export const getForwardedApiHeaders = ({
 };
 
 /**
- * `coreFetcher` with this request's context attached - the TanStack Start
- * equivalent of `@/lib/fetcher`, which reads the same state through
- * `next/headers` and is unusable outside Next.
+ * `coreFetcher` with this request's context attached.
+ *
+ * The context - locale, forwarded IP, user agent, cookies - is read off the
+ * request currently being handled, through TanStack Start's own request scope.
  *
  * Typed as `typeof coreFetcher` so route literals, methods and response schemas
  * keep inferring exactly as they do everywhere else in VitNode.

@@ -32,6 +32,7 @@ describe("generatePluginRouteRegistrySource", () => {
 
       import type {
         PluginRouteModuleRegistry,
+        PluginRouteSearchRegistry,
         ResolvedPluginRouteModule,
       } from '@vitnode/core/framework/plugin-routes'
 
@@ -72,6 +73,26 @@ describe("generatePluginRouteRegistrySource", () => {
           specifier: '@vitnode/example/routes/example-page',
         },
       ] as const satisfies readonly ResolvedPluginRouteModule[]
+
+      /**
+       * The route search schemas this app imports **eagerly**, keyed the same way.
+       *
+       * The one thing about a plugin route that may not be lazy. A router's
+       * \`validateSearch\` runs during path matching, before any chunk is fetched, so a
+       * route that needs a real one - a paginated table whose \`?page=999\` has to be
+       * clamped, a filter whose links must be typed - names a second module and the
+       * build imports it statically, above.
+       *
+       * Sparse by design: a route is here only if its manifest entry declares a
+       * \`searchEntry\`, and most do not. A route with no key here gets no
+       * \`validateSearch\` and normalises its query string in the loader instead, which
+       * is what every plugin route did before this registry existed.
+       *
+       * These modules are in the initial bundle. That is the cost, it is why the
+       * contract on them is "the schema, not the screen", and it is why this list is
+       * worth reading in a diff.
+       */
+      export const pluginRouteSearchSchemas = {} satisfies PluginRouteSearchRegistry
       "
     `);
   });
@@ -175,5 +196,87 @@ describe("generatePluginRouteRegistrySource", () => {
         },
       ]),
     ).toContain("import('@vitnode/example/routes/x\\'); evil((\\'')");
+  });
+});
+
+/**
+ * The one part of a plugin route that is not lazy.
+ *
+ * A router's `validateSearch` runs during path matching, before any chunk is
+ * fetched, so a route that needs a real one names a second module and the build
+ * imports it **statically**. These assertions are about that word: a
+ * `() => import(...)` here would compile, would type-check, and would silently
+ * give the route no search schema at all - the router would have matched and
+ * moved on long before the promise resolved.
+ */
+describe("the eager search registry", () => {
+  const searchModule = (routeId: string) => ({
+    key: `@vitnode/core:${routeId}`,
+    pluginId: "@vitnode/core",
+    routeId,
+    searchEntry: `routes/${routeId}.search`,
+    specifier: `@vitnode/core/routes/${routeId}.search`,
+  });
+
+  const withSearch = (...routeIds: string[]): string =>
+    generatePluginRouteRegistrySource(
+      resolvePluginRouteModules([
+        {
+          pluginId: "@vitnode/core",
+          routes: routeIds.map(id => ({ entry: `routes/${id}`, id })),
+        },
+      ]),
+      routeIds.map(searchModule),
+    );
+
+  it("imports a search schema statically, not through a dynamic import", () => {
+    const source = withSearch("staff");
+
+    expect(source).toContain(
+      "import { validateSearch as pluginRouteSearch0 } from '@vitnode/core/routes/staff.search'",
+    );
+    expect(source).not.toContain("import('@vitnode/core/routes/staff.search')");
+  });
+
+  /** Above the first `export`, because that is where a static import may be. */
+  it("puts the imports at the top of the file", () => {
+    const source = withSearch("staff");
+
+    expect(source.indexOf("import { validateSearch")).toBeLessThan(
+      source.indexOf("export const"),
+    );
+  });
+
+  it("keys the registry by the same route id the module registry uses", () => {
+    const source = withSearch("staff");
+
+    expect(source).toContain("'@vitnode/core:staff': pluginRouteSearch0,");
+    expect(source).toContain(
+      "'@vitnode/core:staff': () => import('@vitnode/core/routes/staff'),",
+    );
+  });
+
+  /**
+   * Sparse, and empty is the ordinary answer: a route appears only by declaring
+   * a `searchEntry`, and the registry is still exported so a consumer never has
+   * to test for its existence.
+   */
+  it("emits an empty registry and no imports when no route declares one", () => {
+    const source = generate(EXAMPLE);
+
+    expect(source).toContain(
+      "export const pluginRouteSearchSchemas = {} satisfies PluginRouteSearchRegistry",
+    );
+    expect(source).not.toContain("import { validateSearch");
+  });
+
+  /** Same configuration in, same bytes out - the entries are sorted by key. */
+  it("sorts by key, whatever order it is handed", () => {
+    expect(withSearch("users", "staff")).toBe(withSearch("staff", "users"));
+    expect(
+      withSearch("staff", "users").indexOf("'@vitnode/core:staff'"),
+    ).toBeLessThan(
+      withSearch("staff", "users").indexOf("'@vitnode/core:users'"),
+    );
   });
 });

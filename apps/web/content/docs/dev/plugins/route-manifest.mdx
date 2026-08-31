@@ -19,7 +19,8 @@ plugins/my-plugin/
     ├── locales/en.json         the strings your pages render
     └── routes/
         ├── manifest.ts         what routes exist
-        └── home-page.tsx       what one of them renders
+        ├── home-page.tsx       what one of them renders
+        └── home-page.search.ts optional - see searchEntry
 ```
 
 `create-vitnode-app --plugin` writes all four for you. If you already have a
@@ -41,7 +42,7 @@ export const routes: PluginRouteDefinition[] = [
 ];
 ```
 
-Three fields have no default. The other five describe the cases beyond one flat
+Three fields have no default. The others describe the cases beyond one flat
 public page:
 
 | Field        | What it is                                                                                                                            |
@@ -54,6 +55,7 @@ public page:
 | `namespaces` | The message namespaces this route renders, fetched alongside its code rather than after it.                                           |
 | `requires`   | `"authenticated"` or `"guest"`. A navigation rule, never the security boundary.                                                       |
 | `area`       | Which shell frames the page: `"main"` (the default, the public site) or `"admin"` (the AdminCP). See [AdminCP pages](#admincp-pages). |
+| `searchEntry` | Export subpath of a module exporting this route's `validateSearch`, imported **eagerly**. Only for a page whose URL is its state - see [When the URL is the state](#when-the-url-is-the-state). |
 
 Then hand the same array to `buildPlugin`, so an app that registers your plugin
 the usual way declares the same routes:
@@ -200,9 +202,21 @@ Your component is handed the same three names `load` and `head` receive:
 interface PluginRoutePageProps<TData, TSearch> {
   loaderData: TData; // exactly what `load` returned
   params: Readonly<Record<string, string>>;
-  search: TSearch; // your `parseSearch` applied - never raw query params
+  search: TSearch; // validated - never raw query params
+  navigate: (options: {
+    // replaces this page's query string
+    resetScroll?: boolean;
+    search: TSearch;
+  }) => Promise<void>;
 }
 ```
+
+`navigate` is the narrowest useful navigation, and narrow on purpose: a plugin
+page handed a router's own `navigate` would be handed that router's whole route
+table with it, and would then compile against exactly the hosts that have the
+same one. This changes the search of the URL your page is already on - which is
+what a paginated table, a filter or a sort control actually needs - and means the
+same thing under any router.
 
 `loaderData` is optional in `head` and not in your component, and the asymmetry
 is real: `head` runs on passes where the loader hasn't resolved, and a route
@@ -240,6 +254,105 @@ parseSearch: input => {
 },
 ```
 
+If you need the real thing, see the next section.
+
+</Callout>
+
+## When the URL is the state
+
+`parseSearch` is the right answer for a page that _reads_ a query parameter. It
+is the wrong answer for a page whose URL **is** its state - a paginated table
+where `?page=999` has to be clamped and the browser redirected to the last real
+page, or a filter whose links you want the router to build and check.
+
+Those need the schema before the router matches, not after. So a route may name a
+**second** module, and the build imports that one eagerly:
+
+```ts title="plugins/blog/src/routes/manifest.ts"
+export const routes: PluginRouteDefinition[] = [
+  {
+    entry: "routes/browse-page",
+    id: "browse",
+    path: "/blog/browse",
+    searchEntry: "routes/browse-page.search", // [!code highlight]
+  },
+];
+```
+
+The module exports `validateSearch`, and nothing that renders:
+
+```ts title="plugins/blog/src/routes/browse-page.search.ts"
+export const LAST_PAGE = 3;
+
+export interface BrowseSearch {
+  page: number;
+}
+
+export const validateSearch = (
+  input: Record<string, unknown>,
+): BrowseSearch => {
+  const parsed = typeof input.page === "number" ? input.page : Number.NaN;
+
+  if (!Number.isFinite(parsed)) return { page: 1 };
+
+  return { page: Math.min(Math.max(Math.trunc(parsed), 1), LAST_PAGE) }; // [!code highlight]
+};
+```
+
+Your page then gets a typed `search` and a `navigate` that writes back to it, and
+no `parseSearch` - the router has already validated the query string, so a second
+normaliser would disagree with the one your links were built from:
+
+```tsx title="plugins/blog/src/routes/browse-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import type { BrowseSearch } from "./browse-page.search";
+
+const BrowsePage = ({
+  navigate,
+  search,
+}: PluginRoutePageProps<undefined, BrowseSearch>) => (
+  <button
+    onClick={() => {
+      void navigate({ resetScroll: false, search: { page: search.page + 1 } }); // [!code highlight]
+    }}
+    type="button"
+  >
+    Page {search.page}
+  </button>
+);
+
+export default BrowsePage;
+```
+
+With that, `?page=999` is a **307 to `?page=3`** before anything renders, and
+`?page=banana` a 307 to `?page=1`. Neither is possible with `parseSearch`, which
+runs too late to change a URL.
+
+### What it costs
+
+The search module is in the **initial bundle**. That is the whole price of being
+early, and it is why the contract on it is narrow:
+
+- it exports `validateSearch`, and nothing that renders;
+- it must not import React, a component, or the page it belongs to;
+- it must be **total**, exactly as `parseSearch` is - the router calls it on
+  whatever somebody typed, and a throw there is an error screen rather than a
+  page.
+
+Keep it to the schema, not the screen. Your page still gets its own chunk, and a
+route that declares no `searchEntry` adds nothing to the bundle at all.
+
+<Callout type="info" title="Numbers, not strings">
+  The router's default search serialisation JSON-encodes what it doesn't
+  recognise, so a `page` kept as `"2"` comes back as `?page=%222%22`. Parse to a
+  number in `validateSearch` and the URL stays `?page=2`.
+</Callout>
+
+<Callout type="warn" title="A layout may not declare one">
+  A layout claims no URL of its own and is only ever reached through a child, so
+  a `validateSearch` on it would shape the search of pages that never asked for
+  it. It is refused with a message saying so, rather than ignored.
 </Callout>
 
 ## Layouts and nesting
@@ -406,6 +519,18 @@ rather than assembled at runtime: the bundler can follow it, so your page gets
 its own chunk and stays out of the app's initial download until somebody visits
 it. Nothing in the browser ever asks which plugins are installed.
 
+A route that declared a [`searchEntry`](#when-the-url-is-the-state) gets a second
+line in the same file, and this one is a _static_ import - the visible form of the
+trade that section describes:
+
+```ts title="src/plugin-routes.gen.ts"
+import { validateSearch as pluginRouteSearch0 } from "@vitnode/blog/routes/browse-page.search";
+
+export const pluginRouteSearchSchemas = {
+  "@vitnode/blog:browse": pluginRouteSearch0,
+};
+```
+
 The app then joins the two by route id and registers each one on its **existing**
 route tree - the same tree its own pages are in. There is no second router and no
 separate route tree for plugins.
@@ -522,6 +647,10 @@ Loudly, at build time, naming your plugin - never as a silent default:
   how a shell is chosen, so the two have to agree.
 - `requires` on an admin route. It's about the public session, and the AdminCP
   has its own.
+- A `searchEntry` the app cannot import, or one on a `kind: "layout"` route. The
+  first fails the build naming your plugin, the route and the entry - and it
+  matters more than a bad `entry` does, because a static import the bundler
+  cannot resolve fails the whole build rather than one page.
 - An area the **application** hasn't given a shell to. Nothing falls back to the
   other one: a page framed by the wrong shell renders outside the guards and
   chrome its area was the whole statement about.

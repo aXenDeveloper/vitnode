@@ -232,7 +232,21 @@ const pluginRouteLoader =
           ),
     ]);
 
-    const search = route.parseSearch ? route.parseSearch(deps) : {};
+    /**
+     * The eager schema wins, and the module's `parseSearch` is not consulted
+     * when there is one.
+     *
+     * `deps` for a route with a `searchEntry` is already the router's validated
+     * search - `validateSearch` ran during path matching and `loaderDeps` reads
+     * its output - so running `parseSearch` over it would normalise a normalised
+     * value, with the module's answer silently overriding the one the router
+     * built its links and its match id from. One route, one search contract.
+     */
+    const search = spec.validateSearch
+      ? deps
+      : route.parseSearch
+        ? route.parseSearch(deps)
+        : {};
 
     return {
       data: route.load
@@ -276,6 +290,22 @@ const pluginRouteOptions = (
 
   return {
     ...(beforeLoad ? { beforeLoad } : {}),
+    /**
+     * The route's own `validateSearch`, when its manifest declared one.
+     *
+     * This is the seam a lazy module cannot reach: it runs during path matching,
+     * so the function has to be in hand before any chunk is fetched, which is
+     * exactly what a `searchEntry` buys - a static import in the generated
+     * registry rather than a `() => import()`. A route that declares one gets
+     * everything a host's own route file gets from the same option: a typed
+     * search, links the router can build and check, and a clamped value that
+     * redirects instead of rendering a page that does not exist.
+     *
+     * Spread rather than set to `undefined`, because TanStack reads the presence
+     * of the key: a route without one keeps the raw query string, which is what
+     * every plugin route did before this existed and is still the right default.
+     */
+    ...(spec.validateSearch ? { validateSearch: spec.validateSearch } : {}),
     component: lazyRouteComponent(async () => ({
       default: (spec.route.kind === "layout"
         ? pluginLayoutComponent
@@ -286,13 +316,20 @@ const pluginRouteOptions = (
     /**
      * What the loader re-runs for.
      *
-     * The query string, normalised - because a plugin route registers no
-     * `validateSearch` of the router's own, the runtime cannot know before the
-     * chunk loads whether this route reads the query string at all, so it
-     * assumes it does. A route whose module declares `parseSearch` therefore
-     * re-runs `load` whenever the query string changes, which is the contract; a
-     * route that declares none pays for it with a re-run on a query parameter it
-     * does not read.
+     * The query string, normalised - and what "the query string" is depends on
+     * which of the two search contracts the route chose.
+     *
+     * With a `searchEntry`, `search` here is already the router's validated
+     * output, so this passes the route's own schema through and the loader
+     * re-runs exactly when a parameter the schema keeps changes. Without one,
+     * the runtime cannot know before the chunk loads whether this route reads
+     * the query string at all, so it assumes it does: a route whose module
+     * declares `parseSearch` re-runs `load` whenever the query string changes,
+     * which is the contract, and a route that declares neither pays for it with
+     * a re-run on a parameter it does not read.
+     *
+     * Sorted either way, so `?b=2&a=1` and `?a=1&b=2` are one match rather than
+     * two.
      */
     loaderDeps: ({ search }: { search: unknown }) =>
       pluginRouteSearchDeps(search),

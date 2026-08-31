@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn } from "@tanstack/react-start";
 import {
   changePasswordInputSchema,
   passwordResetRequestInputSchema,
@@ -8,7 +8,7 @@ import {
   signUpInputSchema,
   ssoCallbackInputSchema,
   ssoStartInputSchema,
-} from '@vitnode/core/tanstack/auth'
+} from "@vitnode/core/tanstack/auth";
 import {
   changePasswordFromResetOnApi,
   completeSsoOnApi,
@@ -18,7 +18,7 @@ import {
   signOutOnApi,
   signUpOnApi,
   startSsoOnApi,
-} from '@vitnode/core/tanstack/auth/server'
+} from "@vitnode/core/tanstack/auth/server";
 
 /**
  * This application's auth transport: eight server functions, and nothing else.
@@ -78,42 +78,42 @@ import {
  */
 export const readSessionFn = createServerFn().handler(
   async () => await readSessionOnApi(),
-)
+);
 
 /** Signs a visitor in. The reply carries the session cookie. */
-export const signInFn = createServerFn({ method: 'POST' })
+export const signInFn = createServerFn({ method: "POST" })
   .validator(signInInputSchema)
-  .handler(async ({ data }) => await signInOnApi(data))
+  .handler(async ({ data }) => await signInOnApi(data));
 
 /** Ends the current session. The reply carries the cookie deletion. */
-export const signOutFn = createServerFn({ method: 'POST' })
+export const signOutFn = createServerFn({ method: "POST" })
   .validator(signOutInputSchema)
-  .handler(async ({ data }) => await signOutOnApi(data))
+  .handler(async ({ data }) => await signOutOnApi(data));
 
 /** Begins an SSO sign-in and answers with the provider's authorization URL. */
-export const startSsoFn = createServerFn({ method: 'POST' })
+export const startSsoFn = createServerFn({ method: "POST" })
   .validator(ssoStartInputSchema)
-  .handler(async ({ data }) => await startSsoOnApi(data))
+  .handler(async ({ data }) => await startSsoOnApi(data));
 
 /** Completes an SSO sign-in, exchanging the provider's `code` for a session. */
-export const completeSsoFn = createServerFn({ method: 'POST' })
+export const completeSsoFn = createServerFn({ method: "POST" })
   .validator(ssoCallbackInputSchema)
-  .handler(async ({ data }) => await completeSsoOnApi(data))
+  .handler(async ({ data }) => await completeSsoOnApi(data));
 
 /** Registers a new account, which may or may not come with a session. */
-export const signUpFn = createServerFn({ method: 'POST' })
+export const signUpFn = createServerFn({ method: "POST" })
   .validator(signUpInputSchema)
-  .handler(async ({ data }) => await signUpOnApi(data))
+  .handler(async ({ data }) => await signUpOnApi(data));
 
 /** Asks for a password-reset link to be emailed. */
-export const requestPasswordResetFn = createServerFn({ method: 'POST' })
+export const requestPasswordResetFn = createServerFn({ method: "POST" })
   .validator(passwordResetRequestInputSchema)
-  .handler(async ({ data }) => await requestPasswordResetOnApi(data))
+  .handler(async ({ data }) => await requestPasswordResetOnApi(data));
 
 /** Sets a new password from a recovery link. Mints no session. */
-export const changePasswordFromResetFn = createServerFn({ method: 'POST' })
+export const changePasswordFromResetFn = createServerFn({ method: "POST" })
   .validator(changePasswordInputSchema)
-  .handler(async ({ data }) => await changePasswordFromResetOnApi(data))
+  .handler(async ({ data }) => await changePasswordFromResetOnApi(data));
 
 /**
  * Hand the eight to `@vitnode/core/tanstack/auth`, once, at module scope.
@@ -129,14 +129,14 @@ export const changePasswordFromResetFn = createServerFn({ method: 'POST' })
  * and a server function takes its payload under `data`.
  */
 setAuthTransport({
-  changePasswordFromReset: async (input) =>
+  changePasswordFromReset: async input =>
     await changePasswordFromResetFn({ data: input }),
-  completeSso: async (input) => await completeSsoFn({ data: input }),
+  completeSso: async input => await completeSsoFn({ data: input }),
   readSession: async () => await readSessionFn(),
-  requestPasswordReset: async (input) =>
+  requestPasswordReset: async input =>
     await requestPasswordResetFn({ data: input }),
-  signIn: async (input) => await signInFn({ data: input }),
-  signOut: async (input) => await signOutFn({ data: input }),
-  signUp: async (input) => await signUpFn({ data: input }),
-  startSso: async (input) => await startSsoFn({ data: input }),
-})
+  signIn: async input => await signInFn({ data: input }),
+  signOut: async input => await signOutFn({ data: input }),
+  signUp: async input => await signUpFn({ data: input }),
+  startSso: async input => await startSsoFn({ data: input }),
+});

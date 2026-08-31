@@ -1,6 +1,6 @@
-import { createServerFn } from '@tanstack/react-start'
-import { setAdminTransport } from '@vitnode/core/tanstack/admin'
-import { readAdminSessionOnApi } from '@vitnode/core/tanstack/admin/server'
+import { createServerFn } from "@tanstack/react-start";
+import { setAdminTransport } from "@vitnode/core/tanstack/admin";
+import { readAdminSessionOnApi } from "@vitnode/core/tanstack/admin/server";
 
 /**
  * This application's admin transport: one server function, and nothing else.
@@ -56,7 +56,7 @@ import { readAdminSessionOnApi } from '@vitnode/core/tanstack/admin/server'
  */
 export const readAdminSessionFn = createServerFn().handler(
   async () => await readAdminSessionOnApi(),
-)
+);
 
 /**
  * Hand it to `@vitnode/core/tanstack/admin`, once, at module scope.
@@ -70,4 +70,4 @@ export const readAdminSessionFn = createServerFn().handler(
  */
 setAdminTransport({
   readAdminSession: async () => await readAdminSessionFn(),
-})
+});

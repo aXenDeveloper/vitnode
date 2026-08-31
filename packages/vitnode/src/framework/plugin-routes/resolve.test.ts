@@ -358,6 +358,7 @@ describe("pluginRouteEntrySources", () => {
     pluginId,
     requires: null,
     routeId,
+    searchEntry: null,
     segments: [{ kind: "static", value: routeId }],
   });
 

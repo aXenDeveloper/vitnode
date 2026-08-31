@@ -4,6 +4,7 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createJiti } from "jiti";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import postgres from "postgres";
 
 import { core_admin_permissions } from "@/database/admins.js";
 import { core_languages, core_languages_words } from "@/database/languages.js";
@@ -11,6 +12,7 @@ import { core_moderators_permissions } from "@/database/moderators.js";
 import { core_roles } from "@/database/roles.js";
 import { SEARCH_TEXT_CONFIGS } from "@/database/search.js";
 
+import type { VitNodeApiI18nConfig } from "../src/lib/i18n/types.js";
 import type { VitNodeApiConfig } from "../src/vitnode.config.js";
 
 import { getConfig } from "./get-config.js";
@@ -190,89 +192,173 @@ const MIGRATION_LOCK_WAIT_MS = 120_000;
 const MIGRATION_LOCK_POLL_MS = 250;
 
 /**
- * A connection pinned out of the pool, as a tagged template plus a release.
+ * A dedicated Postgres session that does nothing but hold the migration lock.
  *
- * Structural, because the shape is `postgres`' and not Drizzle's: `$client` is
- * whichever driver the app configured, and this only asks whether it can pin a
- * session. A driver that cannot is not an error - see below.
+ * Three calls, and the third is the one that makes the shape worth naming:
+ * `close` exists because this session is *not* the application's. It is opened
+ * for the bootstrap and shut when the bootstrap ends.
  */
-interface ReservedConnection {
-  (
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ): Promise<Record<string, unknown>[]>;
-  release: () => void;
+interface MigrationLock {
+  close: () => Promise<void>;
+  tryLock: () => Promise<boolean>;
+  unlock: () => Promise<void>;
 }
 
 /**
- * Runs a bootstrap with the database's migration lock held.
+ * `application_name` for the lock connection, so `pg_stat_activity` says what
+ * the idle session holding an advisory lock is for.
+ */
+const MIGRATION_LOCK_APPLICATION_NAME = "vitnode-migration-lock";
+
+/**
+ * Opens the connection the migration lock is held on, or `null`.
  *
- * ## Why a lock at all
+ * ## Why this is a connection of its own
  *
- * Because more than one process legitimately wants to prepare the same database
- * at the same time. Every app that *reads* the schema gates its `dev` script on
- * the bootstrap - the API, and any single app that mounts the API in-process -
- * so a monorepo `turbo dev` starts two of them at once. Without a lock they
- * both call `migrate()` on one database: at best one fails with "relation
- * already exists", at worst two `drizzle-kit generate` runs each write a
- * migration directory for the same schema change and the history forks.
+ * An advisory lock belongs to a *session*, so the lock has to be taken and
+ * released on one connection that stays open for the whole bootstrap. The
+ * obvious way to get one is `postgres`' own `reserve()`, which pins a connection
+ * out of the application's pool - and that is exactly what this used to do, and
+ * it deadlocks.
  *
- * With it, the first process does the work and the second waits, then finds
- * nothing pending and starts. That is what makes "gate every runtime" safe
- * rather than merely well intentioned, and it is the same reason a horizontally
- * scaled deployment could run this without its replicas racing.
+ * The pool has a size. `drizzle({ connection })` passes an app's options through
+ * to `postgres`, so `max: 1` is a configuration a VitNode app is entitled to
+ * have - a serverless function or a small container has every reason to. With
+ * `max: 1`, `reserve()` takes the only connection there is; `runMigrations` then
+ * asks the same pool for one to migrate on, and waits for a connection that
+ * cannot be returned until the migration it is blocking has finished. Nothing
+ * times out and nothing errors: the terminal simply stops.
  *
- * ## Why the lock is taken on a *reserved* connection
+ * So the lock gets a connection the pool does not know about, and every pooled
+ * connection stays available for the work being serialised. The bootstrap then
+ * needs exactly one application connection, which is the smallest pool anybody
+ * can configure.
  *
- * An advisory lock belongs to a session, and `postgres` hands out connections
- * from a pool - so `pg_advisory_lock` on the pool and `pg_advisory_unlock` on
- * the pool are not guaranteed to be the same session, which either fails to
- * release or releases somebody else's. `reserve()` pins one connection for the
- * duration, so the session that takes the lock is the session that gives it
- * back.
+ * ## Why it is built from the app's own options
+ *
+ * `sql.options` is `postgres`' parsed connection configuration and part of its
+ * public surface (`Sql.options: ParsedOptions`). Handing it back to `postgres()`
+ * is supported by construction - `parseOptions` returns an already-parsed object
+ * untouched - so the lock connects to the same database, as the same user, with
+ * the same TLS settings and the same custom socket as the application, without
+ * this code knowing what any of those are. Nothing is re-derived from an
+ * environment variable, which is what would break the moment an app built its
+ * `dbProvider` from something other than `POSTGRES_URL`.
+ *
+ * Four fields are overridden, and each is about this connection being
+ * short-lived and solitary: one connection, no idle recycling while the lock is
+ * held, its own server-parameter and type caches rather than the application's,
+ * and a recognisable `application_name`.
+ *
+ * ## When there is no lock
+ *
+ * A driver whose client carries no such options runs unlocked rather than
+ * failing. VitNode supports whatever `dbProvider` an app configures, and
+ * refusing to migrate on one this cannot introspect would be a worse outcome
+ * than the race it avoids - which, for the single-process case that every
+ * non-monorepo app has, does not exist anyway.
+ */
+const openMigrationLock = (
+  dbClient: VitNodeApiConfig["dbProvider"],
+): MigrationLock | null => {
+  const options = (
+    dbClient.$client as unknown as {
+      options?: Record<string, unknown>;
+    }
+  ).options;
+
+  // `shared` is how `postgres` itself recognises an options object it has
+  // already parsed, and the reason handing one back is safe. Its absence means
+  // this is not a postgres.js client.
+  if (
+    typeof options !== "object" ||
+    options === null ||
+    !("shared" in options)
+  ) {
+    return null;
+  }
+
+  const client = postgres({
+    ...options,
+    connection: {
+      ...(options.connection as Record<string, unknown> | undefined),
+      application_name: MIGRATION_LOCK_APPLICATION_NAME,
+    },
+    idle_timeout: null,
+    max: 1,
+    parameters: {},
+    shared: { retries: 0, typeArrayMap: {} },
+    // The app's parsed options carry fields `postgres`' public `Options` type
+    // does not name - it is the input type, and this is an output object. The
+    // runtime contract is the one above: `parseOptions` short-circuits on
+    // `shared` and returns it as it stands.
+  } as unknown as Parameters<typeof postgres>[0]);
+
+  return {
+    close: async () => {
+      await client.end({ timeout: 5 });
+    },
+    tryLock: async () => {
+      const [row] =
+        await client`SELECT pg_try_advisory_lock(${MIGRATION_LOCK_KEY}) AS locked`;
+
+      return row.locked === true;
+    },
+    unlock: async () => {
+      await client`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY})`;
+    },
+  };
+};
+
+/**
+ * Runs `run` with the migration lock held, given a lock to hold it on.
+ *
+ * The decisions, separated from the connection so they can be stated without a
+ * database: acquire or wait, wait with a deadline, say so once, release in a
+ * `finally`, and close the session whether or not the lock was ever taken.
+ * `sleep` is injected for the same reason - a test for the deadline should not
+ * spend two minutes proving it.
  *
  * `pg_try_advisory_lock` in a loop rather than the blocking `pg_advisory_lock`,
  * because a blocking wait cannot say why it is waiting. This one says so once,
  * and gives up after two minutes rather than hanging a developer's terminal
  * forever.
  *
- * ## When there is no lock
+ * A `null` lock runs `run` unlocked - see {@link openMigrationLock}.
  *
- * A driver that cannot pin a session runs unlocked rather than failing. VitNode
- * supports whatever `dbProvider` an app configures, and refusing to migrate on
- * one that has no `reserve()` would be a worse outcome than the race it avoids -
- * which, for the single-process case that every non-monorepo app has, does not
- * exist anyway.
+ * Exported for `./database-bootstrap.test.ts`, which drives it with a fake lock
+ * and a fake single-connection pool. That is the only way to state the property
+ * this layer exists for - that holding the lock costs the application pool
+ * nothing - without a Postgres.
  */
-const withMigrationLock = async (
-  dbClient: VitNodeApiConfig["dbProvider"],
-  initMessage: string,
-  run: () => Promise<void>,
-): Promise<void> => {
-  const client = dbClient.$client as unknown as {
-    reserve?: () => Promise<ReservedConnection>;
-  };
-
-  if (typeof client.reserve !== "function") {
+export const runWithMigrationLock = async ({
+  initMessage,
+  lock,
+  run,
+  sleep = async ms => {
+    await new Promise(resolve => setTimeout(resolve, ms));
+  },
+}: {
+  initMessage: string;
+  lock: MigrationLock | null;
+  run: () => Promise<void>;
+  sleep?: (ms: number) => Promise<void>;
+}): Promise<void> => {
+  if (lock === null) {
     await run();
 
     return;
   }
 
-  const session = await client.reserve();
   const deadline = Date.now() + MIGRATION_LOCK_WAIT_MS;
   let held = false;
   let announced = false;
 
   try {
     while (!held) {
-      const [row] =
-        await session`SELECT pg_try_advisory_lock(${MIGRATION_LOCK_KEY}) AS locked`;
+      held = await lock.tryLock();
 
-      if (row.locked === true) {
-        held = true;
-        break;
-      }
+      if (held) break;
 
       if (Date.now() > deadline) {
         throw new Error(
@@ -289,27 +375,153 @@ const withMigrationLock = async (
         announced = true;
       }
 
-      await new Promise(resolve => setTimeout(resolve, MIGRATION_LOCK_POLL_MS));
+      await sleep(MIGRATION_LOCK_POLL_MS);
     }
 
     await run();
   } finally {
     if (held) {
       try {
-        await session`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY})`;
+        await lock.unlock();
       } catch {
         // The connection is already gone, which released the lock with it.
       }
     }
 
-    session.release();
+    try {
+      await lock.close();
+    } catch {
+      // Nothing left to close, which is the state this wanted anyway.
+    }
   }
+};
+
+/**
+ * Runs a bootstrap with the database's migration lock held.
+ *
+ * Because more than one process legitimately wants to prepare the same database
+ * at the same time. Every app that *reads* the schema gates its `dev` script on
+ * the bootstrap - the API, and any single app that mounts the API in-process -
+ * so a monorepo `turbo dev` starts two of them at once. Without a lock they
+ * both call `migrate()` on one database: at best one fails with "relation
+ * already exists", at worst two `drizzle-kit generate` runs each write a
+ * migration directory for the same schema change and the history forks.
+ *
+ * With it, the first process does the work and the second waits, then finds
+ * nothing pending and starts. That is what makes "gate every runtime" safe
+ * rather than merely well intentioned, and it is the same reason a horizontally
+ * scaled deployment could run this without its replicas racing.
+ *
+ * The lock is held on a connection of its own, so the application pool is left
+ * entirely to the work being serialised - see {@link openMigrationLock}.
+ */
+const withMigrationLock = async (
+  dbClient: VitNodeApiConfig["dbProvider"],
+  initMessage: string,
+  run: () => Promise<void>,
+): Promise<void> => {
+  await runWithMigrationLock({
+    initMessage,
+    lock: openMigrationLock(dbClient),
+    run,
+  });
+};
+
+/**
+ * One row of `core_languages`, as the seed writes it.
+ *
+ * Named because it is the whole output of the pure function below - the shape a
+ * test can assert without a Postgres.
+ */
+export interface SeedLanguage {
+  code: string;
+  default: boolean;
+  name: string;
+  protected: boolean;
+  timezone: string;
+}
+
+/**
+ * The languages a fresh database is seeded with, when the API declares none.
+ *
+ * `en` alone, and the one place in VitNode where a timezone is guessed rather
+ * than configured - which is why this is the *fallback* and `i18n.timeZone` wins
+ * whenever an app has one.
+ */
+const DEFAULT_SEED_LANGUAGES: SeedLanguage[] = [
+  {
+    code: "en",
+    default: true,
+    name: "English (USA)",
+    protected: true,
+    timezone: "America/New_York",
+  },
+];
+
+/**
+ * The `core_languages` rows an API config asks for.
+ *
+ * Pure, and the answer to a question the bootstrap used to get wrong.
+ *
+ * ## What it replaced
+ *
+ * The seed read the *frontend* config - `getConfig({ type: "config" })`, which
+ * walks the working directory looking for a `src/vitnode.config.ts`. Run from
+ * the app that owns the schema, which in this repository and in every generated
+ * monorepo is the API, there is no such file to find: the web app's config is a
+ * sibling the search never reaches. So the lookup returned `null`, the fallback
+ * ran, and a fresh database came up with `en` and nothing else - however many
+ * languages the installation actually serves. `pl` was missing from
+ * `core_languages`, and everything keyed on a language row - translations,
+ * localized content, the AdminCP's language switcher - had nowhere to put it.
+ *
+ * A database bootstrap discovering a *frontend* by walking the filesystem was
+ * the mistake underneath the symptom. The API config is the one this command
+ * already loads, an installation declares its languages once and points both
+ * configs at that declaration, and nothing here looks for a sibling app.
+ *
+ * ## The rules
+ *
+ * - No `i18n`, or no locales: {@link DEFAULT_SEED_LANGUAGES}. The API's own
+ *   locale list is derived from what the installed packages ship when it has no
+ *   block, which is not a statement about what the *site* offers - so seeding
+ *   from it would write a language row per installed translation.
+ * - `enabled: false` is dropped, matching `localeRoutingFromConfig`: a language
+ *   the app has switched off should 404 rather than get a row that makes it
+ *   selectable in the AdminCP. If that leaves nothing, the default list stands.
+ * - `default` and `protected` mark `defaultLocale`, which falls back to `"en"`
+ *   exactly as the API runtime's does, and then to the first configured locale
+ *   when the app does not serve `en` at all - a database with no default
+ *   language is not a state anything downstream can read.
+ * - `timeZone` is the installation's, for every row.
+ */
+export const languagesFromApiConfig = (
+  i18n: undefined | VitNodeApiI18nConfig,
+): SeedLanguage[] => {
+  const locales = (i18n?.locales ?? []).filter(
+    locale => locale.enabled !== false,
+  );
+
+  if (locales.length === 0) return DEFAULT_SEED_LANGUAGES;
+
+  const declared = i18n?.defaultLocale ?? "en";
+  const defaultLocale = locales.some(locale => locale.code === declared)
+    ? declared
+    : locales[0].code;
+  const timezone = i18n?.timeZone ?? "UTC";
+
+  return locales.map(locale => ({
+    code: locale.code,
+    default: locale.code === defaultLocale,
+    name: locale.name,
+    protected: locale.code === defaultLocale,
+    timezone,
+  }));
 };
 
 export const initialDataForDatabase = async () => {
   const config = await getConfig({ type: "api.config" });
   const dbClient = config.dbProvider;
-  const webConfig = await getConfig({ type: "config", optional: true });
 
   const [roleCount] = await dbClient
     .select({
@@ -318,24 +530,10 @@ export const initialDataForDatabase = async () => {
     .from(core_roles)
     .limit(1);
 
-  const languages = webConfig?.i18n?.locales?.length
-    ? webConfig.i18n.locales.map(locale => ({
-        code: locale.code,
-        name: locale.name,
-        default: locale.code === webConfig.i18n.defaultLocale,
-        protected: locale.code === webConfig.i18n.defaultLocale,
-        timezone: webConfig.i18n.timeZone ?? "UTC",
-      }))
-    : [
-        {
-          code: "en",
-          name: "English (USA)",
-          default: true,
-          protected: true,
-          timezone: "America/New_York",
-        },
-      ];
+  const languages = languagesFromApiConfig(config.i18n);
 
+  // Idempotent by `code`, which is what lets a locale be added to the config and
+  // picked up by the next `db:prepare` without touching the rows already there.
   await dbClient
     .insert(core_languages)
     .values(languages)
@@ -371,44 +569,40 @@ export const initialDataForDatabase = async () => {
       ])
       .returning({ id: core_roles.id });
 
-    await dbClient.insert(core_languages_words).values([
-      {
-        // Guest role
-        languageCode: "en",
+    /**
+     * Role names, in the installation's default language and no other.
+     *
+     * Deliberately not one row per configured locale: these are four English
+     * words a `pl` installation would then see twice, once as a translation
+     * nobody wrote. VitNode's own fallback already covers the gap - a role with
+     * no row for the reader's language renders the default language's - so a
+     * missing translation is a missing translation rather than a wrong one.
+     * Renaming a role in the AdminCP is how a real name gets there.
+     *
+     * The *code* has to be a language that exists, though. `languageCode`
+     * references `core_languages.code`, so the `"en"` this was hard-coded to
+     * was a foreign-key violation waiting for the first installation that does
+     * not serve English - which is reachable now that these rows come from the
+     * app's own configuration rather than from a fallback that always said `en`.
+     */
+    const { code: defaultLanguageCode } =
+      languages.find(language => language.default) ?? languages[0];
+
+    await dbClient.insert(core_languages_words).values(
+      [
+        { role: roles[0].id, value: "Guest" },
+        { role: roles[1].id, value: "Member" },
+        { role: roles[2].id, value: "Moderator" },
+        { role: roles[3].id, value: "Administrator" },
+      ].map(({ role, value }) => ({
+        itemId: role,
+        languageCode: defaultLanguageCode,
         pluginCode: "core",
-        itemId: roles[0].id,
-        value: "Guest",
         tableName: "core_roles",
+        value,
         variable: "name",
-      },
-      {
-        // Member role
-        languageCode: "en",
-        pluginCode: "core",
-        itemId: roles[1].id,
-        value: "Member",
-        tableName: "core_roles",
-        variable: "name",
-      },
-      {
-        // Moderator role
-        languageCode: "en",
-        pluginCode: "core",
-        itemId: roles[2].id,
-        value: "Moderator",
-        tableName: "core_roles",
-        variable: "name",
-      },
-      {
-        // Administrator role
-        languageCode: "en",
-        pluginCode: "core",
-        itemId: roles[3].id,
-        value: "Administrator",
-        tableName: "core_roles",
-        variable: "name",
-      },
-    ]);
+      })),
+    );
 
     await dbClient.insert(core_moderators_permissions).values([
       {

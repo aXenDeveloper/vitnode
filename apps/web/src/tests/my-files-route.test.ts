@@ -46,11 +46,15 @@ describe('`/files` is this app’s route now', () => {
       routeId: string
     }[]
 
+    // Four pathless routes above the page and not one segment between them:
+    // the shell, the container core's own screens hang from, the signed-in guard
+    // nested in it, and `/files` itself.
     expect(matched.map((match) => match.routeId)).toEqual([
       '__root__',
       '/_main',
-      '/_main/_authenticated',
-      '/_main/_authenticated/files',
+      '/_main/_core-main',
+      '/_main/_core-main/_core-authenticated',
+      '/_main/_core-main/_core-authenticated/files',
     ])
   })
 })

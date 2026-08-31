@@ -1,9 +1,9 @@
 import {
   buildContentFrontendRegistry,
   setContentFrontendRegistry,
-} from '@vitnode/core/content'
+} from "@vitnode/core/content";
 
-import { pluginContentTypes } from '#/content-registry.gen'
+import { pluginContentTypes } from "#/content-registry.gen";
 
 /**
  * This installation's Content Engine registry - every content type its
@@ -44,6 +44,6 @@ import { pluginContentTypes } from '#/content-registry.gen'
  * `React.lazy` boundary around its Tiptap editor, so even opening the article
  * list does not fetch it.
  */
-export const contentRegistry = buildContentFrontendRegistry(pluginContentTypes)
+export const contentRegistry = buildContentFrontendRegistry(pluginContentTypes);
 
-setContentFrontendRegistry(contentRegistry)
+setContentFrontendRegistry(contentRegistry);

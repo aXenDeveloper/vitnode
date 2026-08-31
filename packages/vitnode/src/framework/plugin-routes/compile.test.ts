@@ -58,6 +58,7 @@ describe("compilePluginRoutes", () => {
         pluginId: "@vitnode/example",
         requires: null,
         routeId: "hello",
+        searchEntry: null,
         segments: [{ kind: "static", value: "hello" }],
       },
     ]);

@@ -3,7 +3,10 @@ import type {
   PluginRouteManifest,
 } from "../../routing/types.js";
 import type { HostRoutePath } from "./host-routes.js";
-import type { ResolvedPluginRouteModule } from "./types.js";
+import type {
+  ResolvedPluginRouteModule,
+  ResolvedPluginRouteSearchModule,
+} from "./types.js";
 
 import { buildPluginRouteManifest } from "../../routing/manifest.js";
 import { withPluginRouteDiagnostics } from "./diagnostics.js";
@@ -13,6 +16,7 @@ import { generatePluginRouteManifestSource } from "./manifest-source.js";
 import { assertPluginRouteRegistryParity } from "./parity.js";
 import {
   pluginRouteEntrySources,
+  pluginRouteSearchModules,
   resolvePluginRouteModules,
 } from "./resolve.js";
 
@@ -48,6 +52,11 @@ export interface CompiledPluginRoutes {
   modules: ResolvedPluginRouteModule[];
   /** The source of `src/plugin-routes.gen.ts`. */
   registrySource: string;
+  /**
+   * The routes that declared an eager search schema, paired with the specifiers
+   * the generated file imports them by. Usually empty.
+   */
+  searchModules: ResolvedPluginRouteSearchModule[];
 }
 
 export interface CompilePluginRoutesOptions {
@@ -137,11 +146,14 @@ export const compilePluginRoutes = ({
 
     assertPluginRouteRegistryParity(manifest, modules);
 
+    const searchModules = pluginRouteSearchModules(manifest);
+
     return {
       manifest,
       manifestSource: generatePluginRouteManifestSource(manifest),
       modules,
-      registrySource: generatePluginRouteRegistrySource(modules),
+      registrySource: generatePluginRouteRegistrySource(modules, searchModules),
+      searchModules,
     };
   });
 };

@@ -22,6 +22,7 @@ export {
   assertPluginId,
   pluginIdsFromLoadedConfig,
   pluginRouteEntrySources,
+  pluginRouteSearchModules,
   resolvePluginRouteModules,
   routeDeclarationsFromManifest,
   sortAndAssertUnique,
@@ -68,5 +69,8 @@ export type {
   PluginRouteEntrySource,
   PluginRouteModuleLoader,
   PluginRouteModuleRegistry,
+  PluginRouteSearchRegistry,
+  PluginRouteSearchValidator,
   ResolvedPluginRouteModule,
+  ResolvedPluginRouteSearchModule,
 } from "./types.js";

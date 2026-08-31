@@ -393,27 +393,23 @@ describe('the whole graph this app imports stays Next-free', () => {
     // mappings, the deployment configuration - through the package, and walking
     // from a route is what proves that graph is still Next-free.
     'apps/web/src/lib/auth.ts',
-    'apps/web/src/routes/_main/_authenticated.tsx',
-    'apps/web/src/routes/login.tsx',
-    'apps/web/src/routes/login_.sso.$providerId.tsx',
+    'packages/vitnode/dist/src/tanstack/routes/root/auth.js',
+    'packages/vitnode/dist/src/tanstack/routes/root/sso.js',
     // Stage 9. Registration reaches deeper still than the login card: the same
     // `AutoForm` stack plus the captcha widget, the password checklist tooltip
     // and the confirmation screen. Password recovery adds core's shared error
     // screen on top. Both were Next-only until Stage 9 split their views.
-    'apps/web/src/routes/register.tsx',
-    'apps/web/src/routes/login_.reset-password.tsx',
     // Stage 9. The settings subtree, which is the first *nested layout* this app
     // renders and the first place the shared settings frame - the navigation
     // card, the mobile back link, the panel card - is mounted outside Next.js.
     // The devices panel is the one with data, so its graph reaches core's list,
     // its revoke and the confirm dialog behind the revoke button.
-    'apps/web/src/components/settings-breadcrumb.tsx',
-    'apps/web/src/lib/settings/panel.ts',
-    'apps/web/src/routes/_main/_authenticated/settings.tsx',
-    'apps/web/src/routes/_main/_authenticated/settings/devices.tsx',
-    'apps/web/src/routes/_main/_authenticated/settings/index.tsx',
-    'apps/web/src/routes/_main/_authenticated/settings/overview.tsx',
-    'apps/web/src/routes/_main/_authenticated/settings/security.tsx',
+    //
+    // They are `@vitnode/core`'s own code-based routes now, mounted by
+    // `withCoreMainRoutes`, so the entry is the module that declares them rather
+    // than a file in this application. The walk is the same walk and reaches
+    // more: the whole subtree, its guard and its breadcrumb, from one entry.
+    'packages/vitnode/dist/src/tanstack/routes/main/settings.js',
     // Stage 7. `/files` renders the whole data table - eight columns, the
     // bulk-action bar and both confirm dialogs - which is the deepest this app
     // reaches into the design system after the auth screens. That graph was
@@ -424,7 +420,9 @@ describe('the whole graph this app imports stays Next-free', () => {
     // transport into `@vitnode/core/tanstack/files`, so the route file is the
     // only entry left - and walking it still reaches all three, because the walk
     // follows the package's own `dist` out of the barrel it imports.
-    'apps/web/src/routes/_main/_authenticated/files.tsx',
+    'packages/vitnode/dist/src/tanstack/routes/main/files.js',
+    // The signed-in guard the two above sit behind, which moved with them.
+    'packages/vitnode/dist/src/tanstack/routes/main/index.js',
     // Stage 10. The i18n runtime moved into `@vitnode/core/tanstack/i18n`;
     // what is left here is the app's language list and the one server function
     // a package may not declare. Walking it still reaches the whole runtime,
@@ -436,9 +434,8 @@ describe('the whole graph this app imports stays Next-free', () => {
     // Stage 8. The main shell, and with it the header and breadcrumb slots the
     // pages under it render inside.
     'apps/web/src/routes/_main.tsx',
-    'apps/web/src/routes/_main/discover.tsx',
     'apps/web/src/routes/_main/index.tsx',
-    'apps/web/src/routes/_main/search.tsx',
+    'packages/vitnode/dist/src/tanstack/routes/main/discovery.js',
     'apps/web/src/server/messages.server.ts',
     'apps/web/src/start.ts',
     'apps/web/src/vitnode.config.ts',
@@ -458,7 +455,7 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/lib/admin-auth.ts',
     'apps/web/src/lib/admin-nav.ts',
     'apps/web/src/lib/admin-search.ts',
-    'apps/web/src/routes/admin.index.tsx',
+    'packages/vitnode/dist/src/tanstack/routes/root/admin-sign-in.js',
     'apps/web/src/routes/_admin.tsx',
     // Stage 16. The documentation, which is the first thing this application
     // renders out of a third-party UI library rather than out of
@@ -469,7 +466,26 @@ describe('the whole graph this app imports stays Next-free', () => {
     'apps/web/src/routes/_docs.tsx',
     'apps/web/src/routes/_docs/docs.$.tsx',
     'apps/web/src/routes/_docs/docs.index.tsx',
-    ...filesUnder(join(repoRoot, 'apps/web/src/routes/_admin'))
+    // Derived, not hand-picked - and derived from where the screens now live.
+    //
+    // They were `apps/web/src/routes/_admin/**` until `withCoreAdminRoutes`
+    // existed; they are `@vitnode/core`'s code-based routes now, and one anchor
+    // file is left in the app because a pathless layout with no file children is
+    // dropped from the generated tree. Both directories are walked, so a screen
+    // gaining an import is caught wherever it is declared and nobody has to
+    // remember to add it here.
+    ...[
+      ...filesUnder(join(repoRoot, 'apps/web/src/routes/_admin')),
+      // The built files, not the sources: the walker resolves a package's `@/`
+      // imports out of its `dist`, which is also what a bundler loads - walking
+      // the source would stop at the first alias and quietly assert nothing.
+      ...filesUnder(
+        join(repoRoot, 'packages/vitnode/dist/src/tanstack/routes/admin'),
+      ).filter((path) => path.endsWith('.js')),
+      ...filesUnder(
+        join(repoRoot, 'packages/vitnode/dist/src/tanstack/routes/main'),
+      ).filter((path) => path.endsWith('.js')),
+    ]
       .map((path) => relative(repoRoot, path))
       .sort(),
   ]
@@ -634,7 +650,9 @@ describe('the whole graph this app imports stays Next-free', () => {
    * failure names the specifier rather than "something in this list".
    */
   describe('the /discover runtime graph reaches no Next.js', () => {
-    const DISCOVER = ['apps/web/src/routes/_main/discover.tsx']
+    const DISCOVER = [
+      'packages/vitnode/dist/src/tanstack/routes/main/discovery.js',
+    ]
 
     it('walks into the shared components the route renders', () => {
       // Without this the assertions below would pass on a graph that stopped at
@@ -957,7 +975,9 @@ describe('the whole graph this app imports stays Next-free', () => {
    * that reason until the controls became `SearchControlsContent`.
    */
   describe('the /search runtime graph reaches no Next.js', () => {
-    const SEARCH = ['apps/web/src/routes/_main/search.tsx']
+    const SEARCH = [
+      'packages/vitnode/dist/src/tanstack/routes/main/discovery.js',
+    ]
 
     it('walks into the shared controls the route renders', () => {
       // Without this the assertions below would pass on a graph that stopped at
@@ -1027,7 +1047,7 @@ describe('the whole graph this app imports stays Next-free', () => {
    * was visible from the route file.
    */
   describe('the /files runtime graph reaches no Next.js', () => {
-    const FILES = ['apps/web/src/routes/_main/_authenticated/files.tsx']
+    const FILES = ['packages/vitnode/dist/src/tanstack/routes/main/files.js']
 
     it('walks into the table and the dialogs the route renders', () => {
       // Without this the assertions below would pass on a graph that stopped at
@@ -1140,21 +1160,16 @@ describe('the whole graph this app imports stays Next-free', () => {
       'apps/web/src/routes/__root.tsx',
       'apps/web/src/routes/_main.tsx',
       'apps/web/src/routes/_main/index.tsx',
-      'apps/web/src/routes/_main/discover.tsx',
-      'apps/web/src/routes/_main/search.tsx',
-      'apps/web/src/routes/_main/_authenticated.tsx',
-      'apps/web/src/routes/_main/_authenticated/files.tsx',
-      'apps/web/src/routes/_main/_authenticated/settings.tsx',
-      'apps/web/src/routes/_main/_authenticated/settings/index.tsx',
-      'apps/web/src/routes/_main/_authenticated/settings/overview.tsx',
-      'apps/web/src/routes/_main/_authenticated/settings/devices.tsx',
-      'apps/web/src/routes/_main/_authenticated/settings/security.tsx',
-      'apps/web/src/routes/login.tsx',
-      'apps/web/src/routes/login_.reset-password.tsx',
-      'apps/web/src/routes/login_.sso.$providerId.tsx',
-      'apps/web/src/routes/register.tsx',
+      // The public and signed-in screens, which are `@vitnode/core`'s own
+      // code-based routes - one entry per module that declares them rather than
+      // one per file in this application.
+      'packages/vitnode/dist/src/tanstack/routes/main/discovery.js',
+      'packages/vitnode/dist/src/tanstack/routes/main/files.js',
+      'packages/vitnode/dist/src/tanstack/routes/main/settings.js',
+      'packages/vitnode/dist/src/tanstack/routes/main/index.js',
+      'packages/vitnode/dist/src/tanstack/routes/root/auth.js',
+      'packages/vitnode/dist/src/tanstack/routes/root/sso.js',
       'apps/web/src/components/main-header.tsx',
-      'apps/web/src/components/settings-breadcrumb.tsx',
     ]
 
     it('walks into the design system, where the imports it bans live', () => {

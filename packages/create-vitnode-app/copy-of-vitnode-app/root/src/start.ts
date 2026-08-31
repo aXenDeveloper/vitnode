@@ -2,14 +2,14 @@ import {
   createCsrfMiddleware,
   createMiddleware,
   createStart,
-} from '@tanstack/react-start'
-import { handleLocaleRequest } from '@vitnode/core/tanstack/i18n/server'
+} from "@tanstack/react-start";
+import { handleLocaleRequest } from "@vitnode/core/tanstack/i18n/server";
 
 import {
   applyDocumentCacheControl,
   applyRedirectCacheControl,
-} from '#/lib/document-headers'
-import { localeRouting } from '#/lib/i18n/runtime'
+} from "#/lib/document-headers";
+import { localeRouting } from "#/lib/i18n/runtime";
 
 /**
  * Locale routing, as the first thing that happens to a request.
@@ -46,30 +46,30 @@ import { localeRouting } from '#/lib/i18n/runtime'
  */
 const localeMiddleware = createMiddleware().server(
   async ({ handlerType, next, request }) => {
-    if (handlerType !== 'router') return await next()
+    if (handlerType !== "router") return await next();
 
-    const { redirect, setCookie } = handleLocaleRequest(request, localeRouting)
+    const { redirect, setCookie } = handleLocaleRequest(request, localeRouting);
     if (redirect) {
-      applyRedirectCacheControl(redirect)
+      applyRedirectCacheControl(redirect);
 
-      return redirect
+      return redirect;
     }
 
-    const result = await next()
+    const result = await next();
 
     // `append`, not `set`: the API mounted at `/api/*` and the auth flow both
     // mint their own cookies, and overwriting the header would sign people out.
-    if (setCookie) result.response.headers.append('set-cookie', setCookie)
+    if (setCookie) result.response.headers.append("set-cookie", setCookie);
 
     // After the cookie, so a document that just wrote one is covered by the
     // same directive as one that did not. Only an HTML response is touched -
     // `/api/*` reaches here too, and the API's own caching is not this
     // middleware's to decide.
-    applyDocumentCacheControl(result.response)
+    applyDocumentCacheControl(result.response);
 
-    return result
+    return result;
   },
-)
+);
 
 /**
  * This app's Start instance.
@@ -82,7 +82,7 @@ const localeMiddleware = createMiddleware().server(
  */
 export const startInstance = createStart(() => ({
   requestMiddleware: [
-    createCsrfMiddleware({ filter: (ctx) => ctx.handlerType === 'serverFn' }),
+    createCsrfMiddleware({ filter: ctx => ctx.handlerType === "serverFn" }),
     localeMiddleware,
   ],
-}))
+}));

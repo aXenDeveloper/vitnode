@@ -39,6 +39,7 @@ const route = (overrides: Partial<PluginRoute> = {}): PluginRoute => ({
   pluginId: "plugin",
   requires: null,
   routeId: "page",
+  searchEntry: null,
   segments: [{ kind: "static", value: "page" }],
   ...overrides,
 });
@@ -793,5 +794,94 @@ describe("a plugin route's loader", () => {
 
     expect(args.context).toEqual({ locale: "pl" });
     expect(args.context).not.toHaveProperty("queryClient");
+  });
+});
+
+/**
+ * The one seam a lazy route module cannot reach.
+ *
+ * `validateSearch` runs during **path matching**, which is before any chunk is
+ * fetched - so for as long as everything a plugin contributed arrived with its
+ * module, a plugin route could not have one, and `parseSearch` (in the loader,
+ * normalising rather than validating) was the whole of the answer. That is fine
+ * for a page that reads a query parameter and wrong for a screen whose URL *is*
+ * its state: a paginated table needs `?page=999` clamped and redirected, and a
+ * filter needs links the router can build and check.
+ *
+ * A route earns a real one by declaring a `searchEntry`, which the build turns
+ * into a *static* import in the generated registry - so the function is in hand
+ * before the router matches, while the page stays in its own chunk.
+ *
+ * Asserted on the constructed route's own options, because that is the only
+ * place the difference is observable: the same manifest with and without a
+ * schema produces the same paths, the same loader and the same component.
+ */
+describe("a route's eager search schema", () => {
+  const validateSearch = (input: Record<string, unknown>) => ({
+    page: typeof input.page === "number" ? input.page : 1,
+  });
+
+  /** The mounted plugin route's own options, whatever the tree around it. */
+  const mountedOptions = (
+    specs: ReturnType<typeof pluginRouteSpecs>,
+  ): Record<string, unknown> => {
+    const root = createRootRoute();
+    const tree: AnyRoute = withPluginRoutes(root.addChildren([]), specs, {
+      pageHead,
+    });
+    const container = (tree.children ?? []).find(
+      (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
+    );
+    const [mounted] = (container?.children ?? []) as AnyRoute[];
+
+    // Through `unknown`: a route's options are a deeply generic interface with
+    // no index signature, and what this reads is whether one key is on it.
+    return mounted.options as unknown as Record<string, unknown>;
+  };
+
+  it("reaches the constructed route as `validateSearch`", () => {
+    const options = mountedOptions(
+      pluginRouteSpecs(
+        [route({ searchEntry: "routes/page.search" })],
+        registryOf("plugin:page"),
+        { "plugin:page": validateSearch },
+      ),
+    );
+
+    expect(options.validateSearch).toBe(validateSearch);
+  });
+
+  /**
+   * And a route that declares none has no `validateSearch` **key at all**, not
+   * an `undefined` one: TanStack reads the option's presence, so a key set to
+   * `undefined` is not the same as an absent one.
+   */
+  it("is absent for a route that declares none", () => {
+    const options = mountedOptions(
+      pluginRouteSpecs([route()], registryOf("plugin:page")),
+    );
+
+    expect("validateSearch" in options).toBe(false);
+  });
+
+  /**
+   * The two generated files have to agree about it, in both directions - the
+   * same parity the module registry gets, and for a sharper reason: a route that
+   * lost its schema would still match, still load and still render, reading a
+   * query string nobody validated.
+   */
+  it("fails when the manifest and the registry disagree", () => {
+    expect(() =>
+      pluginRouteSpecs(
+        [route({ searchEntry: "routes/page.search" })],
+        registryOf("plugin:page"),
+      ),
+    ).toThrow(/declares the search entry .* but has no schema/);
+
+    expect(() =>
+      pluginRouteSpecs([route()], registryOf("plugin:page"), {
+        "plugin:page": validateSearch,
+      }),
+    ).toThrow(/has a search schema for .* which declares no/);
   });
 });

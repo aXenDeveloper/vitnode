@@ -14,8 +14,8 @@ has the data in it. The component reads the same cache entry back.
 
 ## Example
 
-```tsx title="apps/web/src/routes/_main/_authenticated/settings/devices.tsx"
-export const Route = createFileRoute("/_main/_authenticated/settings/devices")({
+```tsx title="apps/web/src/routes/_main/about.tsx"
+export const Route = createFileRoute("/_main/about")({
   loader: async ({ context }) =>
     await context.queryClient.ensureQueryData({
       ...devicesQuery(context.auth.user.id),

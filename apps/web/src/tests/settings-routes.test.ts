@@ -19,8 +19,30 @@ import { resolvesToRoute } from './route-tree'
 import { withoutComments } from './source'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const settingsDir = resolve(here, '../routes/_main/_authenticated/settings')
-const layoutRoute = resolve(here, '../routes/_main/_authenticated/settings.tsx')
+const repoRoot = resolve(here, '../../../..')
+/**
+ * Where the settings subtree is declared - one module in `@vitnode/core`.
+ *
+ * It was seven route files in this application until `withCoreMainRoutes`
+ * existed, and every one of them was wiring around something imported from the
+ * package: the frame, the four panels, the guard above them and the breadcrumb.
+ * They are core's code-based routes now, so the source assertions below read the
+ * one module that declares them.
+ */
+const settingsModule = resolve(
+  repoRoot,
+  'packages/vitnode/src/tanstack/routes/main/settings.tsx',
+)
+
+/**
+ * The ids the panels carry in the tree, which changed with them.
+ *
+ * `_core-main` is the pathless container core's public screens hang from and
+ * `_core-authenticated` is the guard nested inside it - so a settings panel is
+ * three pathless routes below the main shell rather than two. The URLs are
+ * unchanged, which is the point.
+ */
+const SETTINGS_LAYOUT_ID = '/_main/_core-main/_core-authenticated/settings'
 
 /**
  * The settings navigation, as data.
@@ -144,8 +166,8 @@ describe('every settings panel is a child of the layout and the guard', () => {
       expect(matchedIds(path)).toEqual(
         expect.arrayContaining([
           '/_main',
-          '/_main/_authenticated',
-          '/_main/_authenticated/settings',
+          '/_main/_core-main/_core-authenticated',
+          SETTINGS_LAYOUT_ID,
         ]),
       )
     },
@@ -180,22 +202,18 @@ describe('every settings panel is a child of the layout and the guard', () => {
    * right and the deepest match consumes the whole path.
    */
   it('serves the settings root from an index child, not a redirect', () => {
-    expect(matchedIds('/settings').at(-1)).toBe(
-      '/_main/_authenticated/settings/',
-    )
-    expect(withoutComments(`${settingsDir}/index.tsx`)).not.toContain(
-      'redirect',
-    )
+    expect(matchedIds('/settings').at(-1)).toBe(`${SETTINGS_LAYOUT_ID}/`)
+    expect(withoutComments(settingsModule)).not.toContain('redirect')
   })
 
   it('renders the same panel component at the root and at /settings/overview', () => {
     // The visible half of the alias. Two routes, one component - so the two URLs
-    // cannot drift into two different overview screens.
-    for (const file of ['index.tsx', 'overview.tsx']) {
-      expect(withoutComments(`${settingsDir}/${file}`)).toContain(
-        'OverviewSettings',
-      )
-    }
+    // cannot drift into two different overview screens. One module declares
+    // both, from one builder, which is stronger than two files agreeing.
+    const code = withoutComments(settingsModule)
+
+    expect(code).toContain('"/", OverviewSettings')
+    expect(code).toContain('"/overview", OverviewSettings')
   })
 })
 
@@ -210,35 +228,31 @@ describe('every settings panel is a child of the layout and the guard', () => {
  * say where it really lives - from matching.
  */
 describe('a settings panel owns only its own contents', () => {
-  const panels = ['index.tsx', 'overview.tsx', 'security.tsx', 'devices.tsx']
+  const code = withoutComments(settingsModule)
 
-  it.each(panels)('%s adds no session check of its own', (file) => {
-    const code = withoutComments(`${settingsDir}/${file}`)
-
+  it('adds no session check of its own', () => {
+    // The guard is the authenticated container's, one level up, and a panel that
+    // quietly acquired its own copy would keep working while the two drifted.
     expect(code).not.toContain('ensureAuthState')
     expect(code).not.toContain('getSession')
     expect(code).not.toContain('RequireSession')
   })
 
-  it.each(panels)('%s does not restate the robots directive', (file) => {
-    // The layout declares `noindex, nofollow` once and TanStack Router merges
-    // the `head` of every matched route, so the subtree inherits it.
-    expect(withoutComments(`${settingsDir}/${file}`)).not.toContain('robots')
+  it('declares the robots directive exactly once, on the frame', () => {
+    // The frame declares `noindex, nofollow` once and TanStack Router merges the
+    // `head` of every matched route, so the subtree inherits it. A panel's own
+    // `head` is a title and nothing else.
+    expect(code.match(/robots/g)).toHaveLength(1)
+    expect(code).toContain('name: "robots"')
   })
 
-  it.each(panels)('%s does not render the shell a second time', (file) => {
-    const code = withoutComments(`${settingsDir}/${file}`)
-
+  it('renders the shell exactly once, on the frame', () => {
+    // Three mentions, one render: the import, and the open and close tags of the
+    // single `<SettingsLayoutContent>` the frame's component returns. A panel
+    // rendering a second frame would be a fourth.
+    expect(code.match(/SettingsLayoutContent/g)).toHaveLength(3)
     expect(code).not.toContain('SettingsShellContent')
     expect(code).not.toContain('SettingsNavContent')
-  })
-
-  it('declares the robots directive exactly once, on the layout', () => {
-    expect(withoutComments(layoutRoute)).toContain("name: 'robots'")
-  })
-
-  it('puts the session guard nowhere in the subtree', () => {
-    expect(withoutComments(layoutRoute)).not.toContain('ensureAuthState')
   })
 })
 

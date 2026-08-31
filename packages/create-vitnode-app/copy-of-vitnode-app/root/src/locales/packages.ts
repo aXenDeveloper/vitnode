@@ -1,6 +1,6 @@
-import type { LocaleMessagesMap } from '@vitnode/core/lib/i18n/types'
+import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
 
-import { CONFIG_PLUGIN as CORE } from '@vitnode/core/config'
+import { CONFIG_PLUGIN as CORE } from "@vitnode/core/config";
 
 /**
  * Where this app reads each installed package's translations from.
@@ -38,6 +38,6 @@ import { CONFIG_PLUGIN as CORE } from '@vitnode/core/config'
  */
 export const packageMessages: Record<string, LocaleMessagesMap> = {
   [CORE.pluginId]: {
-    en: async () => await import('@vitnode/core/locales/en.json'),
+    en: async () => await import("@vitnode/core/locales/en.json"),
   },
-}
+};

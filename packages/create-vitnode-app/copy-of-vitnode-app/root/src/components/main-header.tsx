@@ -1,4 +1,4 @@
-import { MainHeader as MainHeaderContent } from '@vitnode/core/tanstack/layout'
+import { MainHeader as MainHeaderContent } from "@vitnode/core/tanstack/layout";
 
 /**
  * The site header, as the main shell's slot for it.
@@ -30,4 +30,4 @@ import { MainHeader as MainHeaderContent } from '@vitnode/core/tanstack/layout'
  * See the loader in `routes/_main.tsx`, which states why one is `ensure` and the
  * other `prefetch`.
  */
-export const MainHeader = () => <MainHeaderContent />
+export const MainHeader = () => <MainHeaderContent />;

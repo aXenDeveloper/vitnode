@@ -114,6 +114,7 @@ describe("generatePluginRouteManifestSource", () => {
         pluginId: "p",
         requires: null,
         routeId: "x",
+        searchEntry: null,
         segments: [{ kind: "static", value: "it's" }],
       },
     ]);

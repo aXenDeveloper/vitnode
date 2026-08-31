@@ -1,6 +1,6 @@
-import type { VitNodeConfig } from '@vitnode/core/vitnode.config'
+import type { VitNodeConfig } from "@vitnode/core/vitnode.config";
 
-import { i18n } from './i18n'
+import { i18n } from "./i18n";
 
 /**
  * The VitNode config the browser is allowed to see.
@@ -26,10 +26,10 @@ export const vitNodeShellConfig = {
   debug: false,
   i18n,
   metadata: {
-    shortTitle: 'VitNode',
-    title: 'VitNode',
+    shortTitle: "VitNode",
+    title: "VitNode",
   },
   theme: {
-    defaultTheme: 'system',
+    defaultTheme: "system",
   },
-} satisfies Omit<VitNodeConfig, 'plugins'>
+} satisfies Omit<VitNodeConfig, "plugins">;

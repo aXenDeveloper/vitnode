@@ -118,6 +118,7 @@ describe("normalising a declaration", () => {
       pluginId: "@vitnode/example",
       requires: null,
       routeId: "x",
+      searchEntry: null,
       segments: [
         { kind: "static", value: "example" },
         { kind: "static", value: "x" },
@@ -594,6 +595,7 @@ describe("the fields Stage 11 added", () => {
       pluginId: "@vitnode/example",
       requires: null,
       routeId: "x",
+      searchEntry: null,
       segments: [{ kind: "static", value: "x" }],
     });
   });

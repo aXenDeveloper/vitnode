@@ -45,10 +45,10 @@ const BODY_DOC = `
  *
  * This is deliberately **not** the plugin's frontend registration.
  * \`blogPlugin()\` and friends register content types with their editing screens
- * attached - an editor field, a form layout, a table cell - which reach core's
- * form stack and, today, \`next/dynamic\`. A sidebar needs ids, hrefs,
- * permissions, icons and content type definitions, all of which are plain data,
- * so that is all this carries. See \`AdminNavPluginSource\`.
+ * attached - an editor field, a form layout, a table cell - the whole of core's
+ * form stack. A sidebar needs ids, hrefs, permissions, icons and content type
+ * definitions, all of which are plain data, so that is all this carries. See
+ * \`AdminNavPluginSource\`.
  *
  * Navigation is not derived from the route manifest and never will be: a nav
  * entry may point at a plugin route, at a legacy screen, or at another origin,

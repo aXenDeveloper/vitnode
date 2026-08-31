@@ -114,11 +114,18 @@ export const Route = createFileRoute('/_admin')({
       // `/admin` is a sibling leaf, not a child of this route, so this cannot
       // loop: the sign-in page's own guard only redirects *away* on a granted
       // session, and `sanitizeAdminReturnTo` rejects `/admin` as a target.
+      //
+      // Cast because `/admin` is not in this router's type table: it is
+      // `@vitnode/core`'s code-based route now, mounted by `withCoreRootRoutes`,
+      // and code-based routes are outside the generated tree's types. The
+      // *runtime* is unaffected, and `ADMIN_ENTRY_PATH` is the package's own
+      // constant - so the path and the sign-in route that serves it are still one
+      // fact in one place.
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({
         search: { returnTo: adminReturnToFor(location) },
         to: ADMIN_ENTRY_PATH,
-      })
+      } as unknown as Parameters<typeof redirect>[0])
     }
 
     // Merged into the context of everything below, so a child route reads

@@ -38,18 +38,39 @@ describe('the root route answers for everything unmatched', () => {
   })
 
   it.each([
-    // Adjacent to a namespace this app owns, and inside neither.
-    '/admin/contents',
-    '/admin/core/not-migrated-yet',
-    // Pages the Next.js application still serves. A link to one of these is a
-    // document navigation - every link goes through the router - so what
-    // reaches the root is somebody typing or a stale bookmark.
+    // Pages nothing in this tree declares. A link to one of these is a document
+    // navigation - every link goes through the router - so what reaches the root
+    // is somebody typing or a stale bookmark.
     '/blog/post-30',
     '/users/aXen',
     '/nope',
   ])('%s resolves to the root and nothing else', (pathname) => {
     expect(matchedIds(pathname)).toEqual(['__root__'])
   })
+
+  /**
+   * `/admin/…` is the one prefix where "nothing else" needs saying carefully.
+   *
+   * `/admin` itself is a route - the AdminCP's sign-in, which
+   * `withCoreRootRoutes` mounts under a pathless container on the root - so
+   * `matchRoutes` answers with that route as the deepest *ancestor* it can reach
+   * and leaves the rest of the path unconsumed. That is the same behaviour
+   * `/login/something-else` has, and it is why `resolvesToRoute` compares the
+   * matched pathname to the requested one rather than counting matches.
+   *
+   * What must not happen is a *leaf* claiming these: no route consumes the whole
+   * path, so nothing renders an AdminCP screen for a URL no screen declares.
+   */
+  it.each(['/admin/contents', '/admin/core/not-migrated-yet'])(
+    '%s reaches no route that consumes it',
+    (pathname) => {
+      const matched = getRouter().matchRoutes(pathname, undefined) as {
+        pathname: string
+      }[]
+
+      expect(matched.at(-1)?.pathname).not.toBe(pathname)
+    },
+  )
 
   /**
    * The half that must not regress with it.

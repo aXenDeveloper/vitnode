@@ -1,6 +1,11 @@
 "use client";
 
-import { Outlet, useLoaderData, useParams } from "@tanstack/react-router";
+import {
+  Outlet,
+  useLoaderData,
+  useNavigate,
+  useParams,
+} from "@tanstack/react-router";
 import {
   createElement,
   Suspense,
@@ -10,6 +15,7 @@ import {
 
 import type { CheckedPluginRouteModule } from "@/routing";
 
+import type { RuntimePluginRoutePageProps } from "./loader-data";
 import type { PluginRouteModuleRef } from "./module-ref";
 
 import { RouteMessages } from "../i18n/route-messages";
@@ -63,10 +69,35 @@ const withMessages = (
  * match. See `PluginRoutePageProps` for why the result is an envelope rather
  * than the loader's data spread flat.
  */
+/**
+ * A `navigate` that replaces this page's query string and nothing else.
+ *
+ * `useNavigate()` unbound, called with no `to`, which is TanStack's own spelling
+ * of "stay where you are and change the search" - the same call the host's own
+ * route files make through `Route.useNavigate()`. Handing a plugin the router's
+ * navigate whole would hand it the route table with it; this is the one shape
+ * that means the same thing under any router, so it is the only one that
+ * crosses.
+ */
+const usePluginRouteNavigate = (): RuntimePluginRoutePageProps["navigate"] => {
+  const navigate = useNavigate();
+
+  return useCallback(
+    async ({ resetScroll, search }) => {
+      await navigate({
+        ...(resetScroll === undefined ? {} : { resetScroll }),
+        search,
+      } as Parameters<typeof navigate>[0]);
+    },
+    [navigate],
+  );
+};
+
 const usePluginRoutePageProps = () =>
   pluginRoutePageProps(
     useLoaderData({ strict: false }),
     useParams({ strict: false }),
+    usePluginRouteNavigate(),
   );
 
 /**

@@ -74,16 +74,16 @@ describe('where the two migrated auth routes sit in the tree', () => {
 
     expect(deepest('/login')).toMatchObject({
       pathname: '/login',
-      routeId: '/login',
+      routeId: '/_core-root/login',
     })
     expect(deepest('/login/reset-password')).toMatchObject({
       pathname: '/login/reset-password',
-      routeId: '/login_/reset-password',
+      routeId: '/_core-root/login/reset-password',
     })
     // Still nobody's: matched at `/login`, having consumed less than was asked.
     expect(deepest('/login/something-else')).toMatchObject({
       pathname: '/login',
-      routeId: '/login',
+      routeId: '/_core-root/login',
     })
   })
 })

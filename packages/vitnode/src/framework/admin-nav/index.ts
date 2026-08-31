@@ -14,8 +14,10 @@
  * and in a Next.js app that is free: `vitnode.config.ts` is only ever read by
  * Server Components, so the whole plugin registry - editing screens included -
  * can be walked in the render pass that draws the sidebar. A TanStack Start
- * application has no such boundary, and the registry it would have to import
- * reaches `next/dynamic` through the Content Engine's UI.
+ * application has no such boundary: anything the root route imports is in the
+ * browser bundle, and the registry it would have to import carries every content
+ * type's editing screen - an editor field, a form layout, a table cell - none of
+ * which a sidebar needs.
  *
  * So the two are separated by what they carry rather than by a build flag, and
  * the generated file names the browser-safe half:

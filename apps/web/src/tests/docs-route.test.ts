@@ -107,9 +107,11 @@ describe('the documentation is one logical route', () => {
     // The reason the splat is `/docs/$` and not `/$`. Each of these resolves to
     // its own route or to none at all; a root catch-all would have swallowed
     // every one.
-    expect(deepestRouteId('/discover')).toBe('/_main/discover')
-    expect(deepestRouteId('/settings')).toBe('/_main/_authenticated/settings/')
-    expect(deepestRouteId('/admin')).toBe('/admin/')
+    expect(deepestRouteId('/discover')).toBe('/_main/_core-main/discover')
+    expect(deepestRouteId('/settings')).toBe(
+      '/_main/_core-main/_core-authenticated/settings/',
+    )
+    expect(deepestRouteId('/admin')).toBe('/_core-root/admin')
     expect(deepestRouteId('/example')).toBe('/_main/_plugins/example')
     // Not a route at all - which is the point: an unmatched path 404s rather
     // than being annexed by the documentation.

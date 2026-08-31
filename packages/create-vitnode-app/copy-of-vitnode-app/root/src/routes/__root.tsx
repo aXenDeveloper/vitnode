@@ -1,34 +1,34 @@
-import type { QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from "@tanstack/react-query";
 
-import { TanStackDevtools } from '@tanstack/react-devtools'
-import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
   createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
-} from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { ThemeScript } from '@vitnode/core/components/theme-script'
+} from "@tanstack/react-router";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { ThemeScript } from "@vitnode/core/components/theme-script";
 import {
   intlQueryOptions,
   publicPathnameOf,
   resolveLocale,
   useLocale,
-} from '@vitnode/core/tanstack/i18n'
+} from "@vitnode/core/tanstack/i18n";
 import {
   ErrorActions,
   NotFound,
   VitNodeRootProviders,
-} from '@vitnode/core/tanstack/layout'
+} from "@vitnode/core/tanstack/layout";
 
-import type { Locale } from '#/lib/i18n/shared'
+import type { Locale } from "#/lib/i18n/shared";
 
-import { vitNodeShellConfig } from '#/vitnode.shell.config'
+import { vitNodeShellConfig } from "#/vitnode.shell.config";
 
-import appCss from '../styles.css?url'
+import appCss from "../styles.css?url";
 
-const { debug, i18n, metadata, theme } = vitNodeShellConfig
+const { debug, i18n, metadata, theme } = vitNodeShellConfig;
 
 /**
  * What the router itself provides, before any route has run.
@@ -39,7 +39,7 @@ const { debug, i18n, metadata, theme } = vitNodeShellConfig
  * which one it is fetching.
  */
 export interface RootRouterContext {
-  queryClient: QueryClient
+  queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RootRouterContext>()({
@@ -57,7 +57,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
   component: RootComponent,
   head: () => ({
     links: [
-      { href: appCss, rel: 'stylesheet' },
+      { href: appCss, rel: "stylesheet" },
       /*
        * The tab icon, from `public/favicon.ico`.
        *
@@ -69,15 +69,15 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
        * path browsers ask for unprompted.
        */
       {
-        href: '/favicon.ico',
-        rel: 'icon',
-        sizes: '32x32',
-        type: 'image/x-icon',
+        href: "/favicon.ico",
+        rel: "icon",
+        sizes: "32x32",
+        type: "image/x-icon",
       },
     ],
     meta: [
-      { charSet: 'utf-8' },
-      { content: 'width=device-width, initial-scale=1', name: 'viewport' },
+      { charSet: "utf-8" },
+      { content: "width=device-width, initial-scale=1", name: "viewport" },
       // The default title, from the app's config. A route that names itself
       // renders `"<page> - <shortTitle>"` instead, through `formatPageTitle` -
       // the same rule Next.js applies through `title.template`.
@@ -94,7 +94,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(
       intlQueryOptions({ locale: context.locale }),
-    )
+    );
   },
   /**
    * Every URL this application does not serve.
@@ -125,7 +125,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
    */
   notFoundComponent: RootNotFound,
   shellComponent: RootDocument,
-})
+});
 
 /**
  * Rendered inside `RootComponent`, which is what makes the strings work: the
@@ -134,7 +134,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
  * already warmed that entry, so nothing suspends.
  */
 function RootNotFound() {
-  return <NotFound actions={<ErrorActions />} />
+  return <NotFound actions={<ErrorActions />} />;
 }
 
 /**
@@ -157,7 +157,7 @@ function RootComponent() {
     <VitNodeRootProviders config={{ debug, locales: i18n.locales, theme }}>
       <Outlet />
     </VitNodeRootProviders>
-  )
+  );
 }
 
 /**
@@ -175,7 +175,7 @@ function RootComponent() {
  * differ from what the server rendered.
  */
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const locale = useLocale()
+  const locale = useLocale();
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -190,15 +190,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {import.meta.env.DEV ? (
           <TanStackDevtools
             config={{
-              position: 'bottom-right',
+              position: "bottom-right",
             }}
             plugins={[
               {
-                name: 'TanStack Router',
+                name: "TanStack Router",
                 render: <TanStackRouterDevtoolsPanel />,
               },
               {
-                name: 'TanStack Query',
+                name: "TanStack Query",
                 render: <ReactQueryDevtoolsPanel />,
               },
             ]}
@@ -208,5 +208,5 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }

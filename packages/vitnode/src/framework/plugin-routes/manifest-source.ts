@@ -59,8 +59,8 @@ const segmentLiteral = (segment: PluginRouteSegment): string =>
 /**
  * A value that is either a string literal or `null`.
  *
- * `parentId` and `requires` are both "declared, or not" - and both are emitted
- * as `null` rather than left out. A missing field would still satisfy
+ * `parentId`, `requires` and `searchEntry` are all "declared, or not" - and all
+ * are emitted as `null` rather than left out. A missing field would still satisfy
  * `PluginRoute` if the type ever loosened, and the whole reason the built type
  * has no optional members is so that a generator which forgets one is a compile
  * error rather than a route that silently loses its parent.
@@ -81,6 +81,7 @@ const routeLiteral = (route: PluginRoute): string =>
     `    pluginId: ${toSingleQuotedLiteral(route.pluginId)},`,
     `    requires: ${optionalLiteral(route.requires)},`,
     `    routeId: ${toSingleQuotedLiteral(route.routeId)},`,
+    `    searchEntry: ${optionalLiteral(route.searchEntry)},`,
     `    segments: [${route.segments.map(segmentLiteral).join(", ")}],`,
     "  },",
   ].join("\n");

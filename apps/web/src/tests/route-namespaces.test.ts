@@ -326,8 +326,11 @@ describe('the shared namespace sets', () => {
       'core.global',
     ])
 
-    expect(read('components/settings-breadcrumb.tsx')).toContain(
-      'SETTINGS_NAMESPACES',
+    // The crumb moved into the module that declares the settings routes when
+    // they became `@vitnode/core`'s - `withCoreMainRoutes` - so it is read from
+    // there rather than from a binding in this application.
+    expect(readCore('routes/main/settings.tsx')).toContain(
+      '<RouteMessages namespaces={SETTINGS_NAMESPACES}>',
     )
     expect(readCore('settings/layout.tsx')).toContain(
       '<RouteMessages namespaces={SETTINGS_NAMESPACES}>',

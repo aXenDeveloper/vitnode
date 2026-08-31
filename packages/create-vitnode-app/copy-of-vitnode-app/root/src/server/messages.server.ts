@@ -1,10 +1,10 @@
-import '@tanstack/react-start/server-only'
-import { createIntlMessagesLoader } from '@vitnode/core/tanstack/i18n/server'
+import "@tanstack/react-start/server-only";
+import { createIntlMessagesLoader } from "@vitnode/core/tanstack/i18n/server";
 
-import { packageMessages } from '#/locales/packages'
-import { vitNodeConfig } from '#/vitnode.config'
+import { packageMessages } from "#/locales/packages";
+import { vitNodeConfig } from "#/vitnode.config";
 
-export type { IntlMessages } from '@vitnode/core/tanstack/i18n/server'
+export type { IntlMessages } from "@vitnode/core/tanstack/i18n/server";
 
 /**
  * The messages one page needs, in one language - this app's loader.
@@ -26,4 +26,4 @@ export const loadIntlMessages = createIntlMessagesLoader({
   defaultLocale: vitNodeConfig.i18n.defaultLocale,
   packageMessages,
   plugins: vitNodeConfig.plugins,
-})
+});

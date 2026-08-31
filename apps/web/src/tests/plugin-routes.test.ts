@@ -238,14 +238,14 @@ describe("the app's real route tree", () => {
     // `/login` resolves to itself, having consumed the whole path.
     expect(deepest('/login')).toMatchObject({
       pathname: '/login',
-      routeId: '/login',
+      routeId: '/_core-root/login',
     })
 
     // A path below it that no route declares resolves to `/login` - the route id
     // alone says "owned" here, and it is not.
     expect(deepest('/login/something-else')).toMatchObject({
       pathname: '/login',
-      routeId: '/login',
+      routeId: '/_core-root/login',
     })
     expect(resolvesToRoute(router, '/login/something-else')).toBe(false)
   })
@@ -403,6 +403,10 @@ describe('the shells plugin routes mount under', () => {
    * URL is served by the Content Engine's own splat and never by the plugin
    * container, which would otherwise be a plugin quietly answering for every
    * content type in the installation.
+   *
+   * Both containers hang from the same AdminCP shell now - `_core-admin` for
+   * `@vitnode/core`'s own screens, `_plugins` for a plugin's - so this is also
+   * the test that says they compose without either swallowing the other.
    */
   it('serves no part of the Content Engine URLs', () => {
     const router = getRouter()
@@ -415,7 +419,9 @@ describe('the shells plugin routes mount under', () => {
     )
 
     for (const pathname of ['/admin/content', '/admin/content/blog/posts']) {
-      expect(matchedIds(pathname)).toContain('/_admin/admin/content/$')
+      expect(matchedIds(pathname)).toContain(
+        '/_admin/_core-admin/admin/content/$',
+      )
       expect(
         matchedIds(pathname).some((id) => id.includes(PLUGIN_ROUTES_ROUTE_ID)),
         pathname,

@@ -17,6 +17,7 @@ const route = (routeId: string, entry = `routes/${routeId}`): PluginRoute => ({
   pluginId: "@vitnode/example",
   requires: null,
   routeId,
+  searchEntry: null,
   segments: [{ kind: "static", value: routeId }],
 });
 

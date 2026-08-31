@@ -214,8 +214,12 @@ describe("the generated application", () => {
    * Guards the guard: the assertions below are absences over this listing.
    */
   it("ships a populated routes directory", () => {
-    expect(appRouteFiles.length).toBeGreaterThan(20);
-    expect(routeTokens.size).toBeGreaterThan(10);
+    // A floor, not a count. Twenty-nine files left `src/routes/` when core's own
+    // screens became code-based routes - the AdminCP's sixteen, the public nine
+    // and the four shell-less auth ones. What a new project starts with is its
+    // shells, its front page, and the one file `_admin` keeps in order to exist.
+    expect(appRouteFiles.length).toBeGreaterThan(3);
+    expect(routeTokens.size).toBeGreaterThan(4);
   });
 
   /**
@@ -225,21 +229,51 @@ describe("the generated application", () => {
    * router: what matters is that the check below cannot be satisfied by deleting
    * the routes directory, and a named-file assertion says that most directly.
    */
+  it.each(["__root.tsx", "_main.tsx", "_main/index.tsx", "_admin.tsx"])(
+    "owns %s itself",
+    file => {
+      expect(appRouteFiles).toContain(file);
+    },
+  );
+
+  /**
+   * And the screens `@vitnode/core` owns are **not** among them.
+   *
+   * `/discover`, `/search`, `/files` and the settings subtree were route files in
+   * every generated project - nine of them, each one wiring around something
+   * imported from the package - so a new project carried a copy of VitNode's own
+   * routing table and core could not add a screen without an edit in every app.
+   * They are mounted by `withCoreMainRoutes` now, so a *file* for one of them
+   * here would be the duplication this whole file exists to forbid, one package
+   * up from a plugin.
+   */
   it.each([
-    "__root.tsx",
-    "_main.tsx",
-    "_main/index.tsx",
     "_main/discover.tsx",
     "_main/search.tsx",
+    "_main/_authenticated.tsx",
     "_main/_authenticated/files.tsx",
     "_main/_authenticated/settings.tsx",
-    "_admin.tsx",
-    "admin.index.tsx",
     "login.tsx",
+    "login_.reset-password.tsx",
+    "login_.sso.$providerId.tsx",
     "register.tsx",
-  ])("owns %s itself", file => {
-    expect(appRouteFiles).toContain(file);
+    "admin.index.tsx",
+  ])("ships no route file for core's own %s", file => {
+    expect(appRouteFiles).not.toContain(file);
   });
+
+  /**
+   * All three mounts, because a project that had one and not the others would be
+   * missing whole sections of VitNode with nothing to say so.
+   */
+  it.each(["withCoreMainRoutes", "withCoreAdminRoutes", "withCoreRootRoutes"])(
+    "mounts core's own screens through %s instead",
+    mount => {
+      expect(withoutComments(readTemplate("root/src/router.tsx"))).toContain(
+        mount,
+      );
+    },
+  );
 
   /**
    * C. No host physical page for the plugin a new project is most likely to
@@ -299,21 +333,42 @@ describe("the generated application", () => {
   });
 
   /**
-   * E. The AdminCP half, stated on its own.
+   * E. The AdminCP half, stated on its own - and it is now an *emptiness*.
    *
-   * Every `_admin` route file the starter ships is one of core's own screens -
-   * the staff, users, system and advanced sections, plus the Content Engine
-   * splat. A plugin's AdminCP page is not among them and must not be: `area:
-   * "admin"` picks the shell, and the shell is composed around a route the
-   * registry provides.
+   * A generated project used to ship seventeen `_admin` route files, every one
+   * of them wiring around something imported from `@vitnode/core`: the staff,
+   * users, system and advanced sections, plus the Content Engine splat. They
+   * were the same duplication a copied plugin page is, one package up - a new
+   * project carrying a copy of VitNode's own routing table, which core could not
+   * add a screen to without an edit in every app.
+   *
+   * They are core's code-based routes now, mounted by `withCoreAdminRoutes`, and
+   * exactly one file is left. It is not a screen and it is not optional: a
+   * pathless layout with no *file* children is dropped from the generated route
+   * tree and collapses to `/`, so `_admin.tsx` needs one file-based child with a
+   * real path in order to exist at all. The dashboard is that anchor.
+   *
+   * A plugin's AdminCP page is still not among them and still must not be:
+   * `area: "admin"` picks the shell, and the shell is composed around a route
+   * the plugin registry provides.
    */
-  it("ships no AdminCP route file beyond core's own screens", () => {
-    const adminFiles = appRouteFiles.filter(file => file.startsWith("_admin/"));
+  it("ships one AdminCP route file, the shell's anchor, and no screen beside it", () => {
+    expect(appRouteFiles.filter(file => file.startsWith("_admin/"))).toEqual([
+      "_admin/admin.core.index.tsx",
+    ]);
+  });
 
-    expect(adminFiles.length).toBeGreaterThan(5);
-    for (const file of adminFiles) {
-      expect(file).toMatch(/^_admin\/admin\.(core|content)\./);
-    }
+  /**
+   * And the shell itself stays, because it is genuinely the application's: the
+   * admin session guard, and `AdminShell` - this app's binding of the sidebar,
+   * the command palette and the one `<main>`, which is where a package cannot
+   * answer for an installation.
+   */
+  it("still ships the AdminCP shell and its mount", () => {
+    expect(appRouteFiles).toContain("_admin.tsx");
+    expect(withoutComments(readTemplate("root/src/router.tsx"))).toContain(
+      "withCoreAdminRoutes",
+    );
   });
 
   /**

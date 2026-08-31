@@ -1,6 +1,6 @@
-import type { i18n } from '#/i18n'
+import type { i18n } from "#/i18n";
 
-import { localeRouting } from '#/lib/i18n/runtime'
+import { localeRouting } from "#/lib/i18n/runtime";
 
 /**
  * A language this app serves, as a type. `"en" | "pl"`, derived from the config
@@ -11,10 +11,10 @@ import { localeRouting } from '#/lib/i18n/runtime'
  * `string` and takes this union as a type argument where the value originates
  * (`useLocale<Locale>()`, `resolveLocale<Locale>()`).
  */
-export type Locale = (typeof i18n.locales)[number]['code']
+export type Locale = (typeof i18n.locales)[number]["code"];
 
-export { defaultLocale, localeRouting } from '#/lib/i18n/runtime'
+export { defaultLocale, localeRouting } from "#/lib/i18n/runtime";
 
 /** Narrows a string - a URL segment, a cookie, a `<select>` value - to a locale. */
 export const isLocale = (value: null | string | undefined): value is Locale =>
-  localeRouting.isSupportedLocale(value)
+  localeRouting.isSupportedLocale(value);

@@ -50,6 +50,7 @@ const route = (overrides: Partial<PluginRoute> = {}): PluginRoute => ({
   pluginId: "plugin",
   requires: null,
   routeId: "page",
+  searchEntry: null,
   segments: [{ kind: "static", value: "page" }],
   ...overrides,
 });

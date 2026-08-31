@@ -105,13 +105,19 @@ describe("what a compilation produces", () => {
   });
 
   /**
-   * The result's shape *is* the contract. Four fields: one resolved snapshot and
-   * the two source strings written from it.
+   * The result's shape *is* the contract. One resolved snapshot, the two source
+   * strings written from it, and two lists of package export subpaths.
    *
-   * A fifth - `files`, `routeFiles`, `pages`, anything keyed by a path - would be
+   * Another - `files`, `routeFiles`, `pages`, anything keyed by a path - would be
    * the compiler gaining somewhere else to write, which is the first thing a
    * materialising generator needs. Pinned as an exact list so it cannot grow
    * quietly.
+   *
+   * `searchModules` is the one field added since, and it is the same kind of
+   * thing `modules` is: a route's eager `validateSearch` module, named by the
+   * subpath its own package exports it at. The test below says so in the terms
+   * that matter here - it is a specifier, never a path this compiler could write
+   * to.
    */
   it("returns two sources and a snapshot, and nothing keyed by a file path", () => {
     expect(Object.keys(compiled).sort()).toEqual([
@@ -119,6 +125,7 @@ describe("what a compilation produces", () => {
       "manifestSource",
       "modules",
       "registrySource",
+      "searchModules",
     ]);
   });
 
@@ -162,6 +169,26 @@ describe("what a compilation produces", () => {
     expect(compiled.registrySource).not.toMatch(/import\(\s*[^'"]/);
     expect(compiled.registrySource).not.toMatch(/import\(['"][.#]/);
     expect(compiled.registrySource).not.toMatch(/src\/routes/);
+  });
+
+  /**
+   * And a search schema is imported the same way - out of the plugin's package,
+   * by a subpath it exports - the only difference being that this one is static.
+   *
+   * The eagerness is the whole point of the field and the whole of its cost, so
+   * it is asserted rather than assumed: a `() => import()` here would compile,
+   * type-check, and give the route no `validateSearch` at all, because the router
+   * would have matched long before the promise resolved.
+   */
+  it("imports every search schema from the plugin package, eagerly and literally", () => {
+    for (const module of compiled.searchModules) {
+      expect(module.specifier).toBe(`@vitnode/example/${module.searchEntry}`);
+      expect(module.specifier).not.toMatch(/^[.#/]/);
+      expect(compiled.registrySource).toContain(`from '${module.specifier}'`);
+      expect(compiled.registrySource).not.toContain(
+        `import('${module.specifier}')`,
+      );
+    }
   });
 
   /**

@@ -17,7 +17,11 @@ import type { PluginRoutePageProps } from "@/routing";
 export interface PluginRouteLoaderData {
   /** Whatever the module's `load` returned, or `undefined` if it declares none. */
   data: unknown;
-  /** The module's `parseSearch` applied to the query string, or `{}`. */
+  /**
+   * The route's validated search: its eager `validateSearch` when its manifest
+   * entry declares a `searchEntry`, its module's `parseSearch` otherwise, or
+   * `{}` when it declares neither.
+   */
   search: unknown;
 }
 
@@ -51,6 +55,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const pluginRoutePageProps = (
   loaderData: unknown,
   params: Readonly<Record<string, string>>,
+  navigate: RuntimePluginRoutePageProps["navigate"],
 ): RuntimePluginRoutePageProps => {
   const envelope: Partial<PluginRouteLoaderData> = isRecord(loaderData)
     ? loaderData
@@ -58,6 +63,7 @@ export const pluginRoutePageProps = (
 
   return {
     loaderData: envelope.data,
+    navigate,
     params,
     search: envelope.search ?? {},
   };

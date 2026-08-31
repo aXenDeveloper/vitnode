@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import {
   ADMIN_ENTRY_PATH,
   AdminNotFound,
@@ -7,12 +7,12 @@ import {
   ensureAdminAccess,
   loadAdminMessages,
   preloadAdminAccess,
-} from '@vitnode/core/tanstack/admin'
-import { ErrorActions } from '@vitnode/core/tanstack/layout'
+} from "@vitnode/core/tanstack/admin";
+import { ErrorActions } from "@vitnode/core/tanstack/layout";
 
-import { AdminShell } from '#/components/admin-shell'
-import { adminNav } from '#/lib/admin-nav'
-import { pageHead } from '#/lib/page-head'
+import { AdminShell } from "#/components/admin-shell";
+import { adminNav } from "#/lib/admin-nav";
+import { pageHead } from "#/lib/page-head";
 
 /**
  * The boundary every AdminCP page sits under - the admin session guard, and the
@@ -100,11 +100,11 @@ import { pageHead } from '#/lib/page-head'
  * devtools gets a visible button and an API that still refuses them. Nothing
  * here is, or may become, the security boundary.
  */
-export const Route = createFileRoute('/_admin')({
+export const Route = createFileRoute("/_admin")({
   beforeLoad: async ({ context, location, preload }) => {
     const access = preload
       ? await preloadAdminAccess(context.queryClient)
-      : await ensureAdminAccess(context.queryClient)
+      : await ensureAdminAccess(context.queryClient);
 
     if (!canEnterAdmin(access)) {
       // TanStack Router's own control-flow signal: `redirect()` returns a typed
@@ -114,18 +114,25 @@ export const Route = createFileRoute('/_admin')({
       // `/admin` is a sibling leaf, not a child of this route, so this cannot
       // loop: the sign-in page's own guard only redirects *away* on a granted
       // session, and `sanitizeAdminReturnTo` rejects `/admin` as a target.
+      //
+      // Cast because `/admin` is not in this router's type table: it is
+      // `@vitnode/core`'s code-based route now, mounted by `withCoreRootRoutes`,
+      // and code-based routes are outside the generated tree's types. The
+      // *runtime* is unaffected, and `ADMIN_ENTRY_PATH` is the package's own
+      // constant - so the path and the sign-in route that serves it are still one
+      // fact in one place.
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({
         search: { returnTo: adminReturnToFor(location) },
         to: ADMIN_ENTRY_PATH,
-      })
+      } as unknown as Parameters<typeof redirect>[0]);
     }
 
     // Merged into the context of everything below, so a child route reads
     // `context.adminAccess` already narrowed to the granted half of the union.
     // It is the same object the guard decided on, from the same cache entry, so
     // a page cannot disagree with the guard that let it render.
-    return { adminAccess: access }
+    return { adminAccess: access };
   },
   /**
    * The shell's strings, warmed before React renders.
@@ -139,7 +146,7 @@ export const Route = createFileRoute('/_admin')({
    * in `src/admin-nav.gen.ts`.
    */
   loader: async ({ context }) => {
-    await loadAdminMessages({ ...context, namespaces: adminNav.namespaces })
+    await loadAdminMessages({ ...context, namespaces: adminNav.namespaces });
   },
   /**
    * Stated once for the whole panel rather than on each screen.
@@ -150,7 +157,7 @@ export const Route = createFileRoute('/_admin')({
    * exactly what `RouteHeadOptions` describes. A screen's own `pageHead` adds
    * only its title and description.
    */
-  head: () => pageHead({ robots: 'noindex, nofollow' }),
+  head: () => pageHead({ robots: "noindex, nofollow" }),
   /**
    * The AdminCP's 404, rendered inside the shell.
    *
@@ -176,7 +183,7 @@ export const Route = createFileRoute('/_admin')({
    */
   notFoundComponent: AdminNotFoundScreen,
   component: AdminLayout,
-})
+});
 
 /**
  * The refusal, wearing the panel it was refused inside.
@@ -208,7 +215,7 @@ function AdminNotFoundScreen() {
     <AdminShell>
       <AdminNotFound actions={<ErrorActions />} />
     </AdminShell>
-  )
+  );
 }
 
 /**
@@ -234,5 +241,5 @@ function AdminLayout() {
     <AdminShell>
       <Outlet />
     </AdminShell>
-  )
+  );
 }

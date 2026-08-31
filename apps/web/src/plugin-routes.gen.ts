@@ -12,9 +12,11 @@
 
 import type {
   PluginRouteModuleRegistry,
+  PluginRouteSearchRegistry,
   ResolvedPluginRouteModule,
 } from '@vitnode/core/framework/plugin-routes'
 
+import { validateSearch as pluginRouteSearch0 } from '@vitnode/example/routes/browse-page.search'
 /**
  * Every configured plugin's route modules, keyed by `<pluginId>:<routeId>`.
  *
@@ -30,6 +32,7 @@ import type {
  */
 export const pluginRouteModules = {
   '@vitnode/example:admin-overview': () => import('@vitnode/example/routes/admin-example-page'),
+  '@vitnode/example:browse': () => import('@vitnode/example/routes/browse-page'),
   '@vitnode/example:example-page': () => import('@vitnode/example/routes/example-page'),
   '@vitnode/example:guide': () => import('@vitnode/example/routes/guide-layout'),
   '@vitnode/example:guide-index': () => import('@vitnode/example/routes/guide-index-page'),
@@ -54,6 +57,13 @@ export const pluginRouteEntries = [
     pluginId: '@vitnode/example',
     routeId: 'admin-overview',
     specifier: '@vitnode/example/routes/admin-example-page',
+  },
+  {
+    entry: 'routes/browse-page',
+    key: '@vitnode/example:browse',
+    pluginId: '@vitnode/example',
+    routeId: 'browse',
+    specifier: '@vitnode/example/routes/browse-page',
   },
   {
     entry: 'routes/example-page',
@@ -84,3 +94,25 @@ export const pluginRouteEntries = [
     specifier: '@vitnode/example/routes/guide-topic-page',
   },
 ] as const satisfies readonly ResolvedPluginRouteModule[]
+
+/**
+ * The route search schemas this app imports **eagerly**, keyed the same way.
+ *
+ * The one thing about a plugin route that may not be lazy. A router's
+ * `validateSearch` runs during path matching, before any chunk is fetched, so a
+ * route that needs a real one - a paginated table whose `?page=999` has to be
+ * clamped, a filter whose links must be typed - names a second module and the
+ * build imports it statically, above.
+ *
+ * Sparse by design: a route is here only if its manifest entry declares a
+ * `searchEntry`, and most do not. A route with no key here gets no
+ * `validateSearch` and normalises its query string in the loader instead, which
+ * is what every plugin route did before this registry existed.
+ *
+ * These modules are in the initial bundle. That is the cost, it is why the
+ * contract on them is "the schema, not the screen", and it is why this list is
+ * worth reading in a diff.
+ */
+export const pluginRouteSearchSchemas = {
+  '@vitnode/example:browse': pluginRouteSearch0,
+} satisfies PluginRouteSearchRegistry

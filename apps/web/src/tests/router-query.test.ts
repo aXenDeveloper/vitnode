@@ -110,10 +110,9 @@ describe('nothing but the router creates a query client', () => {
   const appFiles = [
     'routes/__root.tsx',
     'routes/_main.tsx',
-    'routes/_main/_authenticated/files.tsx',
-    'routes/_main/discover.tsx',
     'routes/_main/index.tsx',
-    'routes/_main/search.tsx',
+    'routes/_admin.tsx',
+    'routes/_admin/admin.core.index.tsx',
     'lib/i18n/runtime.ts',
     'lib/i18n/shared.ts',
   ]

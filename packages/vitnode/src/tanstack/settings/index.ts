@@ -141,34 +141,41 @@ export const settingsPanelTitle = ({
  * reads, and the decision that a panel's `head` is a title and nothing else - is
  * here, so three panel routes and a breadcrumb cannot drift apart.
  */
+/**
+ * A settings panel's loader: warm the strings, translate its title.
+ *
+ * Every panel's loader is this and nothing else, until a panel has data of its
+ * own to fetch - at which point it awaits this alongside its own read rather
+ * than replacing it.
+ *
+ * Standalone, and it takes no metadata, because it needs none: a panel's *title*
+ * is a translated string and the site name is appended later, by whichever
+ * `head` renders it. {@link createSettingsPanel} re-exports this one rather than
+ * carrying a second copy.
+ */
+export const loadSettingsPanel = async (
+  context: SettingsLoaderContext,
+  navKey: SettingsNavKey,
+): Promise<SettingsPanelData> => {
+  const intl = await context.queryClient.ensureQueryData(
+    settingsMessagesQueryOptions(context.locale),
+  );
+
+  return {
+    title: settingsPanelTitle({
+      locale: context.locale,
+      messages: intl.messages,
+      navKey,
+    }),
+  };
+};
+
 export const createSettingsPanel = ({
   metadata,
 }: {
   metadata: VitNodeMetadata;
 }) => ({
-  /**
-   * A settings panel's loader: warm the strings, translate its title.
-   *
-   * Every panel's loader is this and nothing else, until a panel has data of its
-   * own to fetch - at which point it awaits this alongside its own read rather
-   * than replacing it.
-   */
-  loadSettingsPanel: async (
-    context: SettingsLoaderContext,
-    navKey: SettingsNavKey,
-  ): Promise<SettingsPanelData> => {
-    const intl = await context.queryClient.ensureQueryData(
-      settingsMessagesQueryOptions(context.locale),
-    );
-
-    return {
-      title: settingsPanelTitle({
-        locale: context.locale,
-        messages: intl.messages,
-        navKey,
-      }),
-    };
-  },
+  loadSettingsPanel,
 
   /**
    * A settings panel's `head`, which is a title and deliberately nothing else.

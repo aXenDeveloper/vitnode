@@ -1,6 +1,6 @@
-import { adminNavBundle } from '@vitnode/core/tanstack/admin'
+import { adminNavBundle } from "@vitnode/core/tanstack/admin";
 
-import { pluginAdminNav } from '#/admin-nav.gen'
+import { pluginAdminNav } from "#/admin-nav.gen";
 
 /**
  * This installation's AdminCP navigation - core's own, plus whatever the plugins
@@ -40,4 +40,4 @@ import { pluginAdminNav } from '#/admin-nav.gen'
  * navigation stay separate concepts: nothing derives a nav entry from a route
  * file, and nothing makes one conditional on a route existing.
  */
-export const adminNav = adminNavBundle({ plugins: pluginAdminNav })
+export const adminNav = adminNavBundle({ plugins: pluginAdminNav });

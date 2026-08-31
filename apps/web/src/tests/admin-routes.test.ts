@@ -10,12 +10,34 @@ import { withoutComments } from './source'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const routesDir = resolve(here, '../routes')
+/** `@vitnode/core`'s TanStack namespace, where the screens themselves live. */
+const coreTanstackDir = resolve(
+  here,
+  '../../../../packages/vitnode/src/tanstack',
+)
 
-/** The `/admin` sign-in screen, and the pathless shell everything else sits in. */
-const ADMIN_ENTRY_ROUTE_ID = '/admin/'
+/**
+ * The `/admin` sign-in screen, and the pathless shell everything else sits in.
+ *
+ * The sign-in screen is `@vitnode/core`'s code-based route now, under the
+ * shell-less container `withCoreRootRoutes` mounts on the root - hence
+ * `_core-root` in its id. It is deliberately *not* under `_admin`: it is the page
+ * that shell's guard sends a denied visitor to, so a child of it would loop.
+ */
+const ADMIN_ENTRY_ROUTE_ID = '/_core-root/admin'
 const ADMIN_SHELL_ROUTE_ID = '/_admin'
 /** The Content Engine's one splat - Stage 13's whole route surface. */
-const CONTENT_ROUTE_ID = '/_admin/admin/content/$'
+const CONTENT_ROUTE_ID = '/_admin/_core-admin/admin/content/$'
+/**
+ * Where `@vitnode/core`'s own AdminCP screens hang.
+ *
+ * They were route files in this application until `withCoreAdminRoutes` existed
+ * - one `createFileRoute` per screen, every one of them wiring around something
+ * imported from the package - so an app carried a copy of VitNode's routing
+ * table. They are code-based routes under a pathless container now, which is why
+ * their ids carry `_core-admin` and their URLs are unchanged.
+ */
+const CORE_ADMIN_ROUTE_PREFIX = '/_admin/_core-admin'
 
 const matchedIds = (pathname: string): string[] =>
   getRouter()
@@ -196,34 +218,35 @@ describe('nothing may claim the admin subtree by accident', () => {
   }
 
   /**
-   * The Content Engine's splat, and no other.
+   * No route *file* under the admin shell declares a splat.
    *
-   * A catch-all child of `_admin` consumes every admin URL beneath it, so the
-   * route file naming is the whole mechanism and the file names are what this
-   * checks. There is exactly one - `/admin/content/$`, the namespace the
-   * Content Engine owns outright - and this is the assertion that keeps it the
-   * only one.
+   * It used to be an allowlist of exactly one - `admin.content.$.tsx` - because
+   * a catch-all child of `_admin` consumes every admin URL beneath it, and file
+   * naming was the whole mechanism. The Content Engine's splat is
+   * `@vitnode/core`'s code-based route now (`withCoreAdminRoutes`), so the
+   * allowlist is empty and the *tree* is where the question is settled - see the
+   * test below, which is the one that always mattered.
    *
-   * Written as an allowlist of one rather than as "no splats", because the
-   * failure it guards against did not go away when a legitimate splat appeared:
-   * `$.tsx` or `admin.$.tsx` beside it would still swallow the whole AdminCP.
+   * Kept as an assertion rather than deleted, because the failure it guards
+   * against is unchanged: a `$.tsx` or `admin.$.tsx` appearing here would still
+   * swallow the whole AdminCP, and it would still be one file away.
    */
-  const CONTENT_SPLAT_FILE = 'admin.content.$.tsx'
-
-  it("declares exactly one splat under the admin shell, and it is the Content Engine's", () => {
+  it('declares no splat route file under the admin shell', () => {
     const splats = adminRouteFiles().filter((name) =>
       /(^|[./])\$(\.|$)/.test(name),
     )
 
-    expect(splats).toEqual([CONTENT_SPLAT_FILE])
+    expect(splats).toEqual([])
   })
 
   /**
-   * A splat is only as narrow as its path. The file name above could sit at
-   * `/admin/content/$` or - one careless rename later - somewhere far wider, and
-   * the name alone would not say which, so the route id is asserted too.
+   * A splat is only as narrow as its path, and this is now the whole of the
+   * check rather than half of it: the route is declared in
+   * `@vitnode/core/tanstack/routes/admin`, so there is no filename left to read.
+   * Asserted as an allowlist of exactly one, over the real tree - which is what
+   * the router matches against anyway.
    */
-  it('mounts that splat at the Content Engine namespace and nowhere wider', () => {
+  it('mounts exactly one splat under the admin shell, at the Content Engine namespace', () => {
     const ids = Object.keys(getRouter().routesById)
     const splatIds = ids.filter(
       (id) => id.startsWith('/_admin') && id.endsWith('/$'),
@@ -239,8 +262,21 @@ describe('nothing may claim the admin subtree by accident', () => {
    * route away from claiming the subtree.
    */
   it('keeps /admin a leaf rather than a nested layout', () => {
+    // No `admin/` directory in the app, and the sign-in screen is one route with
+    // no children - asserted against the tree, since it is core's declaration
+    // rather than a file here.
     expect(existsSync(join(routesDir, 'admin'))).toBe(false)
-    expect(existsSync(join(routesDir, 'admin.index.tsx'))).toBe(true)
+    // Read as a plain record: `routesById` is typed by the *generated* tree, and
+    // a code-based route is outside it by construction - the same trade every
+    // plugin route makes.
+    const byId = getRouter().routesById as unknown as Record<string, unknown>
+
+    expect(byId[ADMIN_ENTRY_ROUTE_ID]).toBeDefined()
+    expect(
+      Object.keys(byId).filter((id) =>
+        id.startsWith(`${ADMIN_ENTRY_ROUTE_ID}/`),
+      ),
+    ).toEqual([])
   })
 })
 
@@ -385,7 +421,17 @@ describe('the admin guard', () => {
 })
 
 describe('the sign-in screen', () => {
-  const signInSource = () => withoutComments(join(routesDir, 'admin.index.tsx'))
+  /**
+   * The module that declares it, in `@vitnode/core`.
+   *
+   * It was `apps/web/src/routes/admin.index.tsx` - pure wiring around
+   * `AdminSignInRouteContent`, `prefetchAdminAccess` and `sanitizeAdminReturnTo`,
+   * all of them the package's - so it moved with the rest of core's routes. The
+   * assertions below are unchanged: they are about what the *route* does, and
+   * that is still one file.
+   */
+  const signInSource = () =>
+    withoutComments(join(coreTanstackDir, 'routes/root/admin-sign-in.tsx'))
 
   /**
    * The tolerant read, and the one route where it is correct.
@@ -445,10 +491,19 @@ describe('the AdminCP users, roles and staff screens', () => {
     // `/admin/core/users/roles` and `/admin/core/users/$id` both match the same
     // shape. TanStack ranks a static segment above a dynamic one, and the roles
     // screen would otherwise be rendered as a user whose id is the word "roles".
+    //
+    // Both live under `_core-admin` now - they are `@vitnode/core`'s screens,
+    // mounted by `withCoreAdminRoutes` rather than files in this application -
+    // and the ranking is a property of the router, so it survives the move. That
+    // it survives is the reason this still reads ids rather than paths.
     const matched = matchedIds('/admin/core/users/roles')
 
-    expect(matched).toContain('/_admin/admin/core/users/roles')
-    expect(matched).not.toContain('/_admin/admin/core/users/$id')
+    expect(matched).toContain(
+      `${CORE_ADMIN_ROUTE_PREFIX}/admin/core/users/roles`,
+    )
+    expect(matched).not.toContain(
+      `${CORE_ADMIN_ROUTE_PREFIX}/admin/core/users/$id`,
+    )
   })
 
   it.each([

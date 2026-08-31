@@ -5,6 +5,8 @@ import { exampleApiPlugin } from '@vitnode/example/config.api'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
+import { i18n } from './i18n'
+
 // Vite's own `loadEnv` populates `process.env` at config time, which covers
 // `vite dev` and `vite build` but not `node .output/server/index.mjs`. dotenv
 // covers the production server too, the same way `apps/api` does it.
@@ -25,6 +27,20 @@ export const POSTGRES_URL =
  */
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin()],
+  /**
+   * The same locale declaration `vitnode.shell.config.ts` spreads into
+   * `buildConfig`, because this app serves the site and the API from one
+   * process: `src/i18n.ts` is the installation's one statement of which
+   * languages exist, and both configs read it rather than each carrying a list
+   * that agrees until it doesn't.
+   *
+   * It is also what a database bootstrap seeds `core_languages` from. This app
+   * delegates that to `apps/api` (see the `dev` script), so the list here is not
+   * what runs in this repository - but it is what runs in a generated single
+   * app, which owns its own schema, and it is what this app's emails and
+   * `c.get("i18n")` render in either case.
+   */
+  i18n,
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,

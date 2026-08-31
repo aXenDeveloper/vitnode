@@ -18,7 +18,9 @@ import { describe, expect, it } from 'vitest'
  *     docker-compose.yml      the only compose file in the repository. `pnpm
  *                            docker:dev` is step 3 of the contribution guide.
  *     logo_vitnode_dark.png   the image every email template points at.
- *     @vitnode/blog/pl.json   the only Polish translation of the blog plugin.
+ *     @vitnode/blog/pl.json   the only Polish translation of the blog plugin -
+ *                            which now ships from the plugin itself, where it
+ *                            belonged all along.
  *
  * So this file is mostly about the moves, not the removal. Static only: it reads
  * the filesystem and the manifests, and asks nothing that needs a running
@@ -142,10 +144,26 @@ describe('what only the deleted application had', () => {
     expect(existsSync(join(appRoot, 'public/logo_vitnode_dark.png'))).toBe(true)
   })
 
-  it('kept the blog plugin Polish translation, and registered it', () => {
-    const messages = json(
-      'apps/web/src/locales/@vitnode/blog/pl.json',
-    ) as Record<string, unknown>
+  /**
+   * And gave it to the plugin rather than to this app.
+   *
+   * It landed in `apps/web/src/locales/@vitnode/blog/pl.json` when `apps/docs`
+   * was deleted, registered as an *app override* - which is what an app writes
+   * when it wants to reword a string a package already ships. This was not a
+   * rewording: it was the only Polish the blog plugin had, so every other
+   * installation of `@vitnode/blog` still rendered English labels in a Polish
+   * AdminCP, and so did this repository's own `apps/api` when it sent an email.
+   *
+   * A plugin's canonical translation belongs to the plugin. It ships from
+   * `plugins/blog/src/locales/pl.json` now, through the plugin's own locale
+   * barrel, and this app registers it beside the English in
+   * `src/locales/packages.ts` the way it registers every other package's.
+   */
+  it('gave the blog plugin its Polish translation to ship', () => {
+    const messages = json('plugins/blog/src/locales/pl.json') as Record<
+      string,
+      unknown
+    >
 
     // The plugin's own namespace, which is what the merge reads. The flat
     // `@vitnode/blog:posts:can_edit` keys beside it are the staff-permission
@@ -154,11 +172,23 @@ describe('what only the deleted application had', () => {
     expect(Object.keys(messages)).toContain('@vitnode/blog')
     expect(messages['@vitnode/blog']).toMatchObject({ title: 'Blog' })
 
-    // A file nothing loads is the same as no file. `appMessages` is the app's
-    // override map; `packages.ts` registers only `en` for this plugin, which is
-    // why the override has to exist at all.
-    expect(readFileSync(join(appRoot, 'src/locales/app.ts'), 'utf8')).toContain(
-      './@vitnode/blog/pl.json',
-    )
+    // A file nothing loads is the same as no file: the plugin's barrel, which
+    // `apps/api` reads directly, and this app's bundler-safe loader map.
+    expect(
+      readFileSync(join(repoRoot, 'plugins/blog/src/locales/index.ts'), 'utf8'),
+    ).toContain('./pl.json')
+    expect(
+      readFileSync(join(appRoot, 'src/locales/packages.ts'), 'utf8'),
+    ).toContain('@vitnode/blog/locales/pl.json')
+
+    // And it is no longer an app override, which is what it never was. Read
+    // without comments: `app.ts` explains the move, and prose may name what
+    // code may not do.
+    expect(existsSync(join(appRoot, 'src/locales/@vitnode'))).toBe(false)
+    expect(
+      readFileSync(join(appRoot, 'src/locales/app.ts'), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, ''),
+    ).not.toContain('@vitnode/blog')
   })
 })

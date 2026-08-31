@@ -13,42 +13,12 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as DocsRouteImport } from './routes/_docs'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
-import { Route as MainAuthenticatedRouteImport } from './routes/_main/_authenticated'
-import { Route as MainDiscoverRouteImport } from './routes/_main/discover'
-import { Route as MainSearchRouteImport } from './routes/_main/search'
-import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DocsSearchRouteImport } from './routes/docs.search'
-import { Route as LoginResetPasswordRouteImport } from './routes/login_.reset-password'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
 import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
-import { Route as MainAuthenticatedFilesRouteImport } from './routes/_main/_authenticated/files'
-import { Route as MainAuthenticatedSettingsRouteImport } from './routes/_main/_authenticated/settings'
-import { Route as LoginSsoProviderIdRouteImport } from './routes/login_.sso.$providerId'
-import { Route as AdminAdminContentSplatRouteImport } from './routes/_admin/admin.content.$'
 import { Route as AdminAdminCoreIndexRouteImport } from './routes/_admin/admin.core.index'
-import { Route as AdminAdminCoreDebugRouteImport } from './routes/_admin/admin.core.debug'
-import { Route as MainAuthenticatedSettingsIndexRouteImport } from './routes/_main/_authenticated/settings/index'
-import { Route as MainAuthenticatedSettingsDevicesRouteImport } from './routes/_main/_authenticated/settings/devices'
-import { Route as MainAuthenticatedSettingsOverviewRouteImport } from './routes/_main/_authenticated/settings/overview'
-import { Route as MainAuthenticatedSettingsSecurityRouteImport } from './routes/_main/_authenticated/settings/security'
-import { Route as AdminAdminCoreAdvancedCronRouteImport } from './routes/_admin/admin.core.advanced.cron'
-import { Route as AdminAdminCoreAdvancedQueueRouteImport } from './routes/_admin/admin.core.advanced.queue'
-import { Route as AdminAdminCoreAdvancedSearchRouteImport } from './routes/_admin/admin.core.advanced.search'
-import { Route as AdminAdminCoreSystemFilesRouteImport } from './routes/_admin/admin.core.system.files'
-import { Route as AdminAdminCoreSystemIntegrationsRouteImport } from './routes/_admin/admin.core.system.integrations'
-import { Route as AdminAdminCoreUsersIndexRouteImport } from './routes/_admin/admin.core.users.index'
-import { Route as AdminAdminCoreUsersIdRouteImport } from './routes/_admin/admin.core.users.$id'
-import { Route as AdminAdminCoreUsersRolesRouteImport } from './routes/_admin/admin.core.users.roles'
-import { Route as AdminAdminCoreStaffAdminsIndexRouteImport } from './routes/_admin/admin.core.staff.admins.index'
-import { Route as AdminAdminCoreStaffAdminsCreateRouteImport } from './routes/_admin/admin.core.staff.admins.create'
-import { Route as AdminAdminCoreStaffModeratorsIndexRouteImport } from './routes/_admin/admin.core.staff.moderators.index'
-import { Route as AdminAdminCoreStaffModeratorsCreateRouteImport } from './routes/_admin/admin.core.staff.moderators.create'
-import { Route as AdminAdminCoreStaffAdminsEditIdRouteImport } from './routes/_admin/admin.core.staff.admins.edit.$id'
-import { Route as AdminAdminCoreStaffModeratorsEditIdRouteImport } from './routes/_admin/admin.core.staff.moderators.edit.$id'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -67,39 +37,10 @@ const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
   path: '/llms-full.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MainIndexRoute = MainIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MainRoute,
-} as any)
-const MainAuthenticatedRoute = MainAuthenticatedRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainDiscoverRoute = MainDiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainSearchRoute = MainSearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => MainRoute,
-} as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
@@ -109,11 +50,6 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
 const DocsSearchRoute = DocsSearchRouteImport.update({
   id: '/docs/search',
   path: '/docs/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginResetPasswordRoute = LoginResetPasswordRouteImport.update({
-  id: '/login_/reset-password',
-  path: '/login/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsDocsIndexRoute = DocsDocsIndexRouteImport.update({
@@ -126,219 +62,29 @@ const DocsDocsSplatRoute = DocsDocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => DocsRoute,
 } as any)
-const MainAuthenticatedFilesRoute = MainAuthenticatedFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => MainAuthenticatedRoute,
-} as any)
-const MainAuthenticatedSettingsRoute =
-  MainAuthenticatedSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => MainAuthenticatedRoute,
-  } as any)
-const LoginSsoProviderIdRoute = LoginSsoProviderIdRouteImport.update({
-  id: '/login_/sso/$providerId',
-  path: '/login/sso/$providerId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAdminContentSplatRoute = AdminAdminContentSplatRouteImport.update({
-  id: '/admin/content/$',
-  path: '/admin/content/$',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminAdminCoreIndexRoute = AdminAdminCoreIndexRouteImport.update({
   id: '/admin/core/',
   path: '/admin/core/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAdminCoreDebugRoute = AdminAdminCoreDebugRouteImport.update({
-  id: '/admin/core/debug',
-  path: '/admin/core/debug',
-  getParentRoute: () => AdminRoute,
-} as any)
-const MainAuthenticatedSettingsIndexRoute =
-  MainAuthenticatedSettingsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => MainAuthenticatedSettingsRoute,
-  } as any)
-const MainAuthenticatedSettingsDevicesRoute =
-  MainAuthenticatedSettingsDevicesRouteImport.update({
-    id: '/devices',
-    path: '/devices',
-    getParentRoute: () => MainAuthenticatedSettingsRoute,
-  } as any)
-const MainAuthenticatedSettingsOverviewRoute =
-  MainAuthenticatedSettingsOverviewRouteImport.update({
-    id: '/overview',
-    path: '/overview',
-    getParentRoute: () => MainAuthenticatedSettingsRoute,
-  } as any)
-const MainAuthenticatedSettingsSecurityRoute =
-  MainAuthenticatedSettingsSecurityRouteImport.update({
-    id: '/security',
-    path: '/security',
-    getParentRoute: () => MainAuthenticatedSettingsRoute,
-  } as any)
-const AdminAdminCoreAdvancedCronRoute =
-  AdminAdminCoreAdvancedCronRouteImport.update({
-    id: '/admin/core/advanced/cron',
-    path: '/admin/core/advanced/cron',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreAdvancedQueueRoute =
-  AdminAdminCoreAdvancedQueueRouteImport.update({
-    id: '/admin/core/advanced/queue',
-    path: '/admin/core/advanced/queue',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreAdvancedSearchRoute =
-  AdminAdminCoreAdvancedSearchRouteImport.update({
-    id: '/admin/core/advanced/search',
-    path: '/admin/core/advanced/search',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreSystemFilesRoute =
-  AdminAdminCoreSystemFilesRouteImport.update({
-    id: '/admin/core/system/files',
-    path: '/admin/core/system/files',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreSystemIntegrationsRoute =
-  AdminAdminCoreSystemIntegrationsRouteImport.update({
-    id: '/admin/core/system/integrations',
-    path: '/admin/core/system/integrations',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreUsersIndexRoute =
-  AdminAdminCoreUsersIndexRouteImport.update({
-    id: '/admin/core/users/',
-    path: '/admin/core/users/',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreUsersIdRoute = AdminAdminCoreUsersIdRouteImport.update({
-  id: '/admin/core/users/$id',
-  path: '/admin/core/users/$id',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminAdminCoreUsersRolesRoute =
-  AdminAdminCoreUsersRolesRouteImport.update({
-    id: '/admin/core/users/roles',
-    path: '/admin/core/users/roles',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreStaffAdminsIndexRoute =
-  AdminAdminCoreStaffAdminsIndexRouteImport.update({
-    id: '/admin/core/staff/admins/',
-    path: '/admin/core/staff/admins/',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreStaffAdminsCreateRoute =
-  AdminAdminCoreStaffAdminsCreateRouteImport.update({
-    id: '/admin/core/staff/admins/create',
-    path: '/admin/core/staff/admins/create',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreStaffModeratorsIndexRoute =
-  AdminAdminCoreStaffModeratorsIndexRouteImport.update({
-    id: '/admin/core/staff/moderators/',
-    path: '/admin/core/staff/moderators/',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreStaffModeratorsCreateRoute =
-  AdminAdminCoreStaffModeratorsCreateRouteImport.update({
-    id: '/admin/core/staff/moderators/create',
-    path: '/admin/core/staff/moderators/create',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreStaffAdminsEditIdRoute =
-  AdminAdminCoreStaffAdminsEditIdRouteImport.update({
-    id: '/admin/core/staff/admins/edit/$id',
-    path: '/admin/core/staff/admins/edit/$id',
-    getParentRoute: () => AdminRoute,
-  } as any)
-const AdminAdminCoreStaffModeratorsEditIdRoute =
-  AdminAdminCoreStaffModeratorsEditIdRouteImport.update({
-    id: '/admin/core/staff/moderators/edit/$id',
-    path: '/admin/core/staff/moderators/edit/$id',
-    getParentRoute: () => AdminRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/discover': typeof MainDiscoverRoute
-  '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
-  '/login/reset-password': typeof LoginResetPasswordRoute
-  '/admin/': typeof AdminIndexRoute
   '/docs/$': typeof DocsDocsSplatRoute
-  '/files': typeof MainAuthenticatedFilesRoute
-  '/settings': typeof MainAuthenticatedSettingsRouteWithChildren
-  '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
   '/docs/': typeof DocsDocsIndexRoute
-  '/admin/content/$': typeof AdminAdminContentSplatRoute
-  '/admin/core/debug': typeof AdminAdminCoreDebugRoute
-  '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
-  '/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
-  '/settings/security': typeof MainAuthenticatedSettingsSecurityRoute
   '/admin/core/': typeof AdminAdminCoreIndexRoute
-  '/settings/': typeof MainAuthenticatedSettingsIndexRoute
-  '/admin/core/advanced/cron': typeof AdminAdminCoreAdvancedCronRoute
-  '/admin/core/advanced/queue': typeof AdminAdminCoreAdvancedQueueRoute
-  '/admin/core/advanced/search': typeof AdminAdminCoreAdvancedSearchRoute
-  '/admin/core/system/files': typeof AdminAdminCoreSystemFilesRoute
-  '/admin/core/system/integrations': typeof AdminAdminCoreSystemIntegrationsRoute
-  '/admin/core/users/$id': typeof AdminAdminCoreUsersIdRoute
-  '/admin/core/users/roles': typeof AdminAdminCoreUsersRolesRoute
-  '/admin/core/users/': typeof AdminAdminCoreUsersIndexRoute
-  '/admin/core/staff/admins/create': typeof AdminAdminCoreStaffAdminsCreateRoute
-  '/admin/core/staff/moderators/create': typeof AdminAdminCoreStaffModeratorsCreateRoute
-  '/admin/core/staff/admins/': typeof AdminAdminCoreStaffAdminsIndexRoute
-  '/admin/core/staff/moderators/': typeof AdminAdminCoreStaffModeratorsIndexRoute
-  '/admin/core/staff/admins/edit/$id': typeof AdminAdminCoreStaffAdminsEditIdRoute
-  '/admin/core/staff/moderators/edit/$id': typeof AdminAdminCoreStaffModeratorsEditIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/discover': typeof MainDiscoverRoute
-  '/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
-  '/login/reset-password': typeof LoginResetPasswordRoute
-  '/admin': typeof AdminIndexRoute
   '/docs/$': typeof DocsDocsSplatRoute
-  '/files': typeof MainAuthenticatedFilesRoute
-  '/login/sso/$providerId': typeof LoginSsoProviderIdRoute
   '/docs': typeof DocsDocsIndexRoute
-  '/admin/content/$': typeof AdminAdminContentSplatRoute
-  '/admin/core/debug': typeof AdminAdminCoreDebugRoute
-  '/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
-  '/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
-  '/settings/security': typeof MainAuthenticatedSettingsSecurityRoute
   '/admin/core': typeof AdminAdminCoreIndexRoute
-  '/settings': typeof MainAuthenticatedSettingsIndexRoute
-  '/admin/core/advanced/cron': typeof AdminAdminCoreAdvancedCronRoute
-  '/admin/core/advanced/queue': typeof AdminAdminCoreAdvancedQueueRoute
-  '/admin/core/advanced/search': typeof AdminAdminCoreAdvancedSearchRoute
-  '/admin/core/system/files': typeof AdminAdminCoreSystemFilesRoute
-  '/admin/core/system/integrations': typeof AdminAdminCoreSystemIntegrationsRoute
-  '/admin/core/users/$id': typeof AdminAdminCoreUsersIdRoute
-  '/admin/core/users/roles': typeof AdminAdminCoreUsersRolesRoute
-  '/admin/core/users': typeof AdminAdminCoreUsersIndexRoute
-  '/admin/core/staff/admins/create': typeof AdminAdminCoreStaffAdminsCreateRoute
-  '/admin/core/staff/moderators/create': typeof AdminAdminCoreStaffModeratorsCreateRoute
-  '/admin/core/staff/admins': typeof AdminAdminCoreStaffAdminsIndexRoute
-  '/admin/core/staff/moderators': typeof AdminAdminCoreStaffModeratorsIndexRoute
-  '/admin/core/staff/admins/edit/$id': typeof AdminAdminCoreStaffAdminsEditIdRoute
-  '/admin/core/staff/moderators/edit/$id': typeof AdminAdminCoreStaffModeratorsEditIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -346,161 +92,44 @@ export interface FileRoutesById {
   '/_docs': typeof DocsRouteWithChildren
   '/_main': typeof MainRouteWithChildren
   '/llms-full.txt': typeof LlmsFullDottxtRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/_main/_authenticated': typeof MainAuthenticatedRouteWithChildren
-  '/_main/discover': typeof MainDiscoverRoute
-  '/_main/search': typeof MainSearchRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
-  '/login_/reset-password': typeof LoginResetPasswordRoute
   '/_main/': typeof MainIndexRoute
-  '/admin/': typeof AdminIndexRoute
   '/_docs/docs/$': typeof DocsDocsSplatRoute
-  '/_main/_authenticated/files': typeof MainAuthenticatedFilesRoute
-  '/_main/_authenticated/settings': typeof MainAuthenticatedSettingsRouteWithChildren
-  '/login_/sso/$providerId': typeof LoginSsoProviderIdRoute
   '/_docs/docs/': typeof DocsDocsIndexRoute
-  '/_admin/admin/content/$': typeof AdminAdminContentSplatRoute
-  '/_admin/admin/core/debug': typeof AdminAdminCoreDebugRoute
-  '/_main/_authenticated/settings/devices': typeof MainAuthenticatedSettingsDevicesRoute
-  '/_main/_authenticated/settings/overview': typeof MainAuthenticatedSettingsOverviewRoute
-  '/_main/_authenticated/settings/security': typeof MainAuthenticatedSettingsSecurityRoute
   '/_admin/admin/core/': typeof AdminAdminCoreIndexRoute
-  '/_main/_authenticated/settings/': typeof MainAuthenticatedSettingsIndexRoute
-  '/_admin/admin/core/advanced/cron': typeof AdminAdminCoreAdvancedCronRoute
-  '/_admin/admin/core/advanced/queue': typeof AdminAdminCoreAdvancedQueueRoute
-  '/_admin/admin/core/advanced/search': typeof AdminAdminCoreAdvancedSearchRoute
-  '/_admin/admin/core/system/files': typeof AdminAdminCoreSystemFilesRoute
-  '/_admin/admin/core/system/integrations': typeof AdminAdminCoreSystemIntegrationsRoute
-  '/_admin/admin/core/users/$id': typeof AdminAdminCoreUsersIdRoute
-  '/_admin/admin/core/users/roles': typeof AdminAdminCoreUsersRolesRoute
-  '/_admin/admin/core/users/': typeof AdminAdminCoreUsersIndexRoute
-  '/_admin/admin/core/staff/admins/create': typeof AdminAdminCoreStaffAdminsCreateRoute
-  '/_admin/admin/core/staff/moderators/create': typeof AdminAdminCoreStaffModeratorsCreateRoute
-  '/_admin/admin/core/staff/admins/': typeof AdminAdminCoreStaffAdminsIndexRoute
-  '/_admin/admin/core/staff/moderators/': typeof AdminAdminCoreStaffModeratorsIndexRoute
-  '/_admin/admin/core/staff/admins/edit/$id': typeof AdminAdminCoreStaffAdminsEditIdRoute
-  '/_admin/admin/core/staff/moderators/edit/$id': typeof AdminAdminCoreStaffModeratorsEditIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/llms-full.txt'
-    | '/login'
-    | '/register'
-    | '/discover'
-    | '/search'
     | '/api/$'
     | '/docs/search'
-    | '/login/reset-password'
-    | '/admin/'
     | '/docs/$'
-    | '/files'
-    | '/settings'
-    | '/login/sso/$providerId'
     | '/docs/'
-    | '/admin/content/$'
-    | '/admin/core/debug'
-    | '/settings/devices'
-    | '/settings/overview'
-    | '/settings/security'
     | '/admin/core/'
-    | '/settings/'
-    | '/admin/core/advanced/cron'
-    | '/admin/core/advanced/queue'
-    | '/admin/core/advanced/search'
-    | '/admin/core/system/files'
-    | '/admin/core/system/integrations'
-    | '/admin/core/users/$id'
-    | '/admin/core/users/roles'
-    | '/admin/core/users/'
-    | '/admin/core/staff/admins/create'
-    | '/admin/core/staff/moderators/create'
-    | '/admin/core/staff/admins/'
-    | '/admin/core/staff/moderators/'
-    | '/admin/core/staff/admins/edit/$id'
-    | '/admin/core/staff/moderators/edit/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/llms-full.txt'
-    | '/login'
-    | '/register'
-    | '/discover'
-    | '/search'
     | '/api/$'
     | '/docs/search'
-    | '/login/reset-password'
-    | '/admin'
     | '/docs/$'
-    | '/files'
-    | '/login/sso/$providerId'
     | '/docs'
-    | '/admin/content/$'
-    | '/admin/core/debug'
-    | '/settings/devices'
-    | '/settings/overview'
-    | '/settings/security'
     | '/admin/core'
-    | '/settings'
-    | '/admin/core/advanced/cron'
-    | '/admin/core/advanced/queue'
-    | '/admin/core/advanced/search'
-    | '/admin/core/system/files'
-    | '/admin/core/system/integrations'
-    | '/admin/core/users/$id'
-    | '/admin/core/users/roles'
-    | '/admin/core/users'
-    | '/admin/core/staff/admins/create'
-    | '/admin/core/staff/moderators/create'
-    | '/admin/core/staff/admins'
-    | '/admin/core/staff/moderators'
-    | '/admin/core/staff/admins/edit/$id'
-    | '/admin/core/staff/moderators/edit/$id'
   id:
     | '__root__'
     | '/_admin'
     | '/_docs'
     | '/_main'
     | '/llms-full.txt'
-    | '/login'
-    | '/register'
-    | '/_main/_authenticated'
-    | '/_main/discover'
-    | '/_main/search'
     | '/api/$'
     | '/docs/search'
-    | '/login_/reset-password'
     | '/_main/'
-    | '/admin/'
     | '/_docs/docs/$'
-    | '/_main/_authenticated/files'
-    | '/_main/_authenticated/settings'
-    | '/login_/sso/$providerId'
     | '/_docs/docs/'
-    | '/_admin/admin/content/$'
-    | '/_admin/admin/core/debug'
-    | '/_main/_authenticated/settings/devices'
-    | '/_main/_authenticated/settings/overview'
-    | '/_main/_authenticated/settings/security'
     | '/_admin/admin/core/'
-    | '/_main/_authenticated/settings/'
-    | '/_admin/admin/core/advanced/cron'
-    | '/_admin/admin/core/advanced/queue'
-    | '/_admin/admin/core/advanced/search'
-    | '/_admin/admin/core/system/files'
-    | '/_admin/admin/core/system/integrations'
-    | '/_admin/admin/core/users/$id'
-    | '/_admin/admin/core/users/roles'
-    | '/_admin/admin/core/users/'
-    | '/_admin/admin/core/staff/admins/create'
-    | '/_admin/admin/core/staff/moderators/create'
-    | '/_admin/admin/core/staff/admins/'
-    | '/_admin/admin/core/staff/moderators/'
-    | '/_admin/admin/core/staff/admins/edit/$id'
-    | '/_admin/admin/core/staff/moderators/edit/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -508,13 +137,8 @@ export interface RootRouteChildren {
   DocsRoute: typeof DocsRouteWithChildren
   MainRoute: typeof MainRouteWithChildren
   LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
-  LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
   ApiSplatRoute: typeof ApiSplatRoute
   DocsSearchRoute: typeof DocsSearchRoute
-  LoginResetPasswordRoute: typeof LoginResetPasswordRoute
-  AdminIndexRoute: typeof AdminIndexRoute
-  LoginSsoProviderIdRoute: typeof LoginSsoProviderIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -547,54 +171,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LlmsFullDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_main/': {
       id: '/_main/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
-    }
-    '/_main/_authenticated': {
-      id: '/_main/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof MainAuthenticatedRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/discover': {
-      id: '/_main/discover'
-      path: '/discover'
-      fullPath: '/discover'
-      preLoaderRoute: typeof MainDiscoverRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/search': {
-      id: '/_main/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof MainSearchRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/admin/': {
-      id: '/admin/'
-      path: '/admin'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/$': {
       id: '/api/$'
@@ -608,13 +190,6 @@ declare module '@tanstack/react-router' {
       path: '/docs/search'
       fullPath: '/docs/search'
       preLoaderRoute: typeof DocsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login_/reset-password': {
-      id: '/login_/reset-password'
-      path: '/login/reset-password'
-      fullPath: '/login/reset-password'
-      preLoaderRoute: typeof LoginResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_docs/docs/': {
@@ -631,34 +206,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsDocsSplatRouteImport
       parentRoute: typeof DocsRoute
     }
-    '/_main/_authenticated/files': {
-      id: '/_main/_authenticated/files'
-      path: '/files'
-      fullPath: '/files'
-      preLoaderRoute: typeof MainAuthenticatedFilesRouteImport
-      parentRoute: typeof MainAuthenticatedRoute
-    }
-    '/_main/_authenticated/settings': {
-      id: '/_main/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof MainAuthenticatedSettingsRouteImport
-      parentRoute: typeof MainAuthenticatedRoute
-    }
-    '/login_/sso/$providerId': {
-      id: '/login_/sso/$providerId'
-      path: '/login/sso/$providerId'
-      fullPath: '/login/sso/$providerId'
-      preLoaderRoute: typeof LoginSsoProviderIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_admin/admin/content/$': {
-      id: '/_admin/admin/content/$'
-      path: '/admin/content/$'
-      fullPath: '/admin/content/$'
-      preLoaderRoute: typeof AdminAdminContentSplatRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/_admin/admin/core/': {
       id: '/_admin/admin/core/'
       path: '/admin/core'
@@ -666,183 +213,15 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminCoreIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/_admin/admin/core/debug': {
-      id: '/_admin/admin/core/debug'
-      path: '/admin/core/debug'
-      fullPath: '/admin/core/debug'
-      preLoaderRoute: typeof AdminAdminCoreDebugRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_main/_authenticated/settings/': {
-      id: '/_main/_authenticated/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof MainAuthenticatedSettingsIndexRouteImport
-      parentRoute: typeof MainAuthenticatedSettingsRoute
-    }
-    '/_main/_authenticated/settings/devices': {
-      id: '/_main/_authenticated/settings/devices'
-      path: '/devices'
-      fullPath: '/settings/devices'
-      preLoaderRoute: typeof MainAuthenticatedSettingsDevicesRouteImport
-      parentRoute: typeof MainAuthenticatedSettingsRoute
-    }
-    '/_main/_authenticated/settings/overview': {
-      id: '/_main/_authenticated/settings/overview'
-      path: '/overview'
-      fullPath: '/settings/overview'
-      preLoaderRoute: typeof MainAuthenticatedSettingsOverviewRouteImport
-      parentRoute: typeof MainAuthenticatedSettingsRoute
-    }
-    '/_main/_authenticated/settings/security': {
-      id: '/_main/_authenticated/settings/security'
-      path: '/security'
-      fullPath: '/settings/security'
-      preLoaderRoute: typeof MainAuthenticatedSettingsSecurityRouteImport
-      parentRoute: typeof MainAuthenticatedSettingsRoute
-    }
-    '/_admin/admin/core/advanced/cron': {
-      id: '/_admin/admin/core/advanced/cron'
-      path: '/admin/core/advanced/cron'
-      fullPath: '/admin/core/advanced/cron'
-      preLoaderRoute: typeof AdminAdminCoreAdvancedCronRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/advanced/queue': {
-      id: '/_admin/admin/core/advanced/queue'
-      path: '/admin/core/advanced/queue'
-      fullPath: '/admin/core/advanced/queue'
-      preLoaderRoute: typeof AdminAdminCoreAdvancedQueueRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/advanced/search': {
-      id: '/_admin/admin/core/advanced/search'
-      path: '/admin/core/advanced/search'
-      fullPath: '/admin/core/advanced/search'
-      preLoaderRoute: typeof AdminAdminCoreAdvancedSearchRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/system/files': {
-      id: '/_admin/admin/core/system/files'
-      path: '/admin/core/system/files'
-      fullPath: '/admin/core/system/files'
-      preLoaderRoute: typeof AdminAdminCoreSystemFilesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/system/integrations': {
-      id: '/_admin/admin/core/system/integrations'
-      path: '/admin/core/system/integrations'
-      fullPath: '/admin/core/system/integrations'
-      preLoaderRoute: typeof AdminAdminCoreSystemIntegrationsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/users/': {
-      id: '/_admin/admin/core/users/'
-      path: '/admin/core/users'
-      fullPath: '/admin/core/users/'
-      preLoaderRoute: typeof AdminAdminCoreUsersIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/users/$id': {
-      id: '/_admin/admin/core/users/$id'
-      path: '/admin/core/users/$id'
-      fullPath: '/admin/core/users/$id'
-      preLoaderRoute: typeof AdminAdminCoreUsersIdRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/users/roles': {
-      id: '/_admin/admin/core/users/roles'
-      path: '/admin/core/users/roles'
-      fullPath: '/admin/core/users/roles'
-      preLoaderRoute: typeof AdminAdminCoreUsersRolesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/staff/admins/': {
-      id: '/_admin/admin/core/staff/admins/'
-      path: '/admin/core/staff/admins'
-      fullPath: '/admin/core/staff/admins/'
-      preLoaderRoute: typeof AdminAdminCoreStaffAdminsIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/staff/admins/create': {
-      id: '/_admin/admin/core/staff/admins/create'
-      path: '/admin/core/staff/admins/create'
-      fullPath: '/admin/core/staff/admins/create'
-      preLoaderRoute: typeof AdminAdminCoreStaffAdminsCreateRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/staff/moderators/': {
-      id: '/_admin/admin/core/staff/moderators/'
-      path: '/admin/core/staff/moderators'
-      fullPath: '/admin/core/staff/moderators/'
-      preLoaderRoute: typeof AdminAdminCoreStaffModeratorsIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/staff/moderators/create': {
-      id: '/_admin/admin/core/staff/moderators/create'
-      path: '/admin/core/staff/moderators/create'
-      fullPath: '/admin/core/staff/moderators/create'
-      preLoaderRoute: typeof AdminAdminCoreStaffModeratorsCreateRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/staff/admins/edit/$id': {
-      id: '/_admin/admin/core/staff/admins/edit/$id'
-      path: '/admin/core/staff/admins/edit/$id'
-      fullPath: '/admin/core/staff/admins/edit/$id'
-      preLoaderRoute: typeof AdminAdminCoreStaffAdminsEditIdRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/core/staff/moderators/edit/$id': {
-      id: '/_admin/admin/core/staff/moderators/edit/$id'
-      path: '/admin/core/staff/moderators/edit/$id'
-      fullPath: '/admin/core/staff/moderators/edit/$id'
-      preLoaderRoute: typeof AdminAdminCoreStaffModeratorsEditIdRouteImport
-      parentRoute: typeof AdminRoute
-    }
   }
 }
 
 interface AdminRouteChildren {
-  AdminAdminContentSplatRoute: typeof AdminAdminContentSplatRoute
-  AdminAdminCoreDebugRoute: typeof AdminAdminCoreDebugRoute
   AdminAdminCoreIndexRoute: typeof AdminAdminCoreIndexRoute
-  AdminAdminCoreAdvancedCronRoute: typeof AdminAdminCoreAdvancedCronRoute
-  AdminAdminCoreAdvancedQueueRoute: typeof AdminAdminCoreAdvancedQueueRoute
-  AdminAdminCoreAdvancedSearchRoute: typeof AdminAdminCoreAdvancedSearchRoute
-  AdminAdminCoreSystemFilesRoute: typeof AdminAdminCoreSystemFilesRoute
-  AdminAdminCoreSystemIntegrationsRoute: typeof AdminAdminCoreSystemIntegrationsRoute
-  AdminAdminCoreUsersIdRoute: typeof AdminAdminCoreUsersIdRoute
-  AdminAdminCoreUsersRolesRoute: typeof AdminAdminCoreUsersRolesRoute
-  AdminAdminCoreUsersIndexRoute: typeof AdminAdminCoreUsersIndexRoute
-  AdminAdminCoreStaffAdminsCreateRoute: typeof AdminAdminCoreStaffAdminsCreateRoute
-  AdminAdminCoreStaffModeratorsCreateRoute: typeof AdminAdminCoreStaffModeratorsCreateRoute
-  AdminAdminCoreStaffAdminsIndexRoute: typeof AdminAdminCoreStaffAdminsIndexRoute
-  AdminAdminCoreStaffModeratorsIndexRoute: typeof AdminAdminCoreStaffModeratorsIndexRoute
-  AdminAdminCoreStaffAdminsEditIdRoute: typeof AdminAdminCoreStaffAdminsEditIdRoute
-  AdminAdminCoreStaffModeratorsEditIdRoute: typeof AdminAdminCoreStaffModeratorsEditIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminAdminContentSplatRoute: AdminAdminContentSplatRoute,
-  AdminAdminCoreDebugRoute: AdminAdminCoreDebugRoute,
   AdminAdminCoreIndexRoute: AdminAdminCoreIndexRoute,
-  AdminAdminCoreAdvancedCronRoute: AdminAdminCoreAdvancedCronRoute,
-  AdminAdminCoreAdvancedQueueRoute: AdminAdminCoreAdvancedQueueRoute,
-  AdminAdminCoreAdvancedSearchRoute: AdminAdminCoreAdvancedSearchRoute,
-  AdminAdminCoreSystemFilesRoute: AdminAdminCoreSystemFilesRoute,
-  AdminAdminCoreSystemIntegrationsRoute: AdminAdminCoreSystemIntegrationsRoute,
-  AdminAdminCoreUsersIdRoute: AdminAdminCoreUsersIdRoute,
-  AdminAdminCoreUsersRolesRoute: AdminAdminCoreUsersRolesRoute,
-  AdminAdminCoreUsersIndexRoute: AdminAdminCoreUsersIndexRoute,
-  AdminAdminCoreStaffAdminsCreateRoute: AdminAdminCoreStaffAdminsCreateRoute,
-  AdminAdminCoreStaffModeratorsCreateRoute:
-    AdminAdminCoreStaffModeratorsCreateRoute,
-  AdminAdminCoreStaffAdminsIndexRoute: AdminAdminCoreStaffAdminsIndexRoute,
-  AdminAdminCoreStaffModeratorsIndexRoute:
-    AdminAdminCoreStaffModeratorsIndexRoute,
-  AdminAdminCoreStaffAdminsEditIdRoute: AdminAdminCoreStaffAdminsEditIdRoute,
-  AdminAdminCoreStaffModeratorsEditIdRoute:
-    AdminAdminCoreStaffModeratorsEditIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -859,53 +238,11 @@ const DocsRouteChildren: DocsRouteChildren = {
 
 const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
-interface MainAuthenticatedSettingsRouteChildren {
-  MainAuthenticatedSettingsDevicesRoute: typeof MainAuthenticatedSettingsDevicesRoute
-  MainAuthenticatedSettingsOverviewRoute: typeof MainAuthenticatedSettingsOverviewRoute
-  MainAuthenticatedSettingsSecurityRoute: typeof MainAuthenticatedSettingsSecurityRoute
-  MainAuthenticatedSettingsIndexRoute: typeof MainAuthenticatedSettingsIndexRoute
-}
-
-const MainAuthenticatedSettingsRouteChildren: MainAuthenticatedSettingsRouteChildren =
-  {
-    MainAuthenticatedSettingsDevicesRoute:
-      MainAuthenticatedSettingsDevicesRoute,
-    MainAuthenticatedSettingsOverviewRoute:
-      MainAuthenticatedSettingsOverviewRoute,
-    MainAuthenticatedSettingsSecurityRoute:
-      MainAuthenticatedSettingsSecurityRoute,
-    MainAuthenticatedSettingsIndexRoute: MainAuthenticatedSettingsIndexRoute,
-  }
-
-const MainAuthenticatedSettingsRouteWithChildren =
-  MainAuthenticatedSettingsRoute._addFileChildren(
-    MainAuthenticatedSettingsRouteChildren,
-  )
-
-interface MainAuthenticatedRouteChildren {
-  MainAuthenticatedFilesRoute: typeof MainAuthenticatedFilesRoute
-  MainAuthenticatedSettingsRoute: typeof MainAuthenticatedSettingsRouteWithChildren
-}
-
-const MainAuthenticatedRouteChildren: MainAuthenticatedRouteChildren = {
-  MainAuthenticatedFilesRoute: MainAuthenticatedFilesRoute,
-  MainAuthenticatedSettingsRoute: MainAuthenticatedSettingsRouteWithChildren,
-}
-
-const MainAuthenticatedRouteWithChildren =
-  MainAuthenticatedRoute._addFileChildren(MainAuthenticatedRouteChildren)
-
 interface MainRouteChildren {
-  MainAuthenticatedRoute: typeof MainAuthenticatedRouteWithChildren
-  MainDiscoverRoute: typeof MainDiscoverRoute
-  MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
-  MainAuthenticatedRoute: MainAuthenticatedRouteWithChildren,
-  MainDiscoverRoute: MainDiscoverRoute,
-  MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
 }
 
@@ -916,13 +253,8 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRoute: DocsRouteWithChildren,
   MainRoute: MainRouteWithChildren,
   LlmsFullDottxtRoute: LlmsFullDottxtRoute,
-  LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRoute,
   ApiSplatRoute: ApiSplatRoute,
   DocsSearchRoute: DocsSearchRoute,
-  LoginResetPasswordRoute: LoginResetPasswordRoute,
-  AdminIndexRoute: AdminIndexRoute,
-  LoginSsoProviderIdRoute: LoginSsoProviderIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-import { pageHead } from '#/lib/page-head'
+import { pageHead } from "#/lib/page-head";
 
 /**
  * The front page.
@@ -20,15 +20,15 @@ import { pageHead } from '#/lib/page-head'
  * about indexing, and a page that wants to be found should say so where somebody
  * editing it will see it.
  */
-export const Route = createFileRoute('/_main/')({
+export const Route = createFileRoute("/_main/")({
   head: () =>
     pageHead({
-      description: 'A VitNode application.',
-      robots: 'index, follow',
-      title: 'Home',
+      description: "A VitNode application.",
+      robots: "index, follow",
+      title: "Home",
     }),
   component: HomeRoute,
-})
+});
 
 /**
  * Replace this with your own home page.
@@ -51,10 +51,10 @@ function HomeRoute() {
 
       <p className="text-muted-foreground leading-relaxed text-pretty">
         Edit <code>src/routes/_main/index.tsx</code> to change this page. The
-        header, the footer and the shell around it are{' '}
-        <code>@vitnode/core</code>&rsquo;s; everything under{' '}
+        header, the footer and the shell around it are{" "}
+        <code>@vitnode/core</code>&rsquo;s; everything under{" "}
         <code>src/routes</code> is yours.
       </p>
     </div>
-  )
+  );
 }

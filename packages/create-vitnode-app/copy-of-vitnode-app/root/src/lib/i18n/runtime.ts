@@ -1,9 +1,9 @@
-import { createServerFn } from '@tanstack/react-start'
-import { configureIntl, validateIntlInput } from '@vitnode/core/tanstack/i18n'
-import { IntlProvider } from 'use-intl'
+import { createServerFn } from "@tanstack/react-start";
+import { configureIntl, validateIntlInput } from "@vitnode/core/tanstack/i18n";
+import { IntlProvider } from "use-intl";
 
-import { i18n } from '#/i18n'
-import { loadIntlMessages } from '#/server/messages.server'
+import { i18n } from "#/i18n";
+import { loadIntlMessages } from "#/server/messages.server";
 
 /**
  * One language's messages for one set of namespaces, fetched on the server.
@@ -21,7 +21,7 @@ import { loadIntlMessages } from '#/server/messages.server'
  */
 export const getIntlMessages = createServerFn()
   .validator(validateIntlInput)
-  .handler(async ({ data }) => await loadIntlMessages(data))
+  .handler(async ({ data }) => await loadIntlMessages(data));
 
 /**
  * This app's languages, handed to the package once.
@@ -43,7 +43,7 @@ export const {
   isLocale: isSupportedLocale,
   localeRouting,
 } = configureIntl({
-  fetchMessages: async (input) => await getIntlMessages({ data: input }),
+  fetchMessages: async input => await getIntlMessages({ data: input }),
   /**
    * This app's own `use-intl`, handed over so `RouteMessages` can provide it.
    *
@@ -62,7 +62,7 @@ export const {
    */
   hostIntlProvider: IntlProvider,
   i18n,
-})
+});
 
 /**
  * The router's half of locale routing, bound to this app's languages.
@@ -72,4 +72,4 @@ export const {
  * through this module is what makes `configureIntl` above run before the router
  * - and therefore before any route, loader or component - exists.
  */
-export { createLocaleRewrite } from '@vitnode/core/tanstack/i18n'
+export { createLocaleRewrite } from "@vitnode/core/tanstack/i18n";

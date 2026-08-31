@@ -1,7 +1,7 @@
-import { buildConfig } from '@vitnode/core/vitnode.config'
+import { buildConfig } from "@vitnode/core/vitnode.config";
 
-import { appMessages } from './locales/app'
-import { vitNodeShellConfig } from './vitnode.shell.config'
+import { appMessages } from "./locales/app";
+import { vitNodeShellConfig } from "./vitnode.shell.config";
 
 /**
  * This app's frontend config, in the shape every VitNode app builds it.
@@ -56,4 +56,4 @@ export const vitNodeConfig = buildConfig({
    */
   i18n: { ...vitNodeShellConfig.i18n, messages: appMessages },
   plugins: [],
-})
+});

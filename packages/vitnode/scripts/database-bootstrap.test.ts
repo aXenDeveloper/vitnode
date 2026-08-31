@@ -1,13 +1,15 @@
 // @vitest-environment node
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   databaseBootstrapSteps,
   generateDatabaseMigrations,
   initialDataForDatabase,
+  languagesFromApiConfig,
   runMigrations,
+  runWithMigrationLock,
 } from "./prepare-database.js";
 
 /**
@@ -245,6 +247,228 @@ describe("what decides whether work is pending", () => {
   });
 });
 
+describe("the languages a fresh database is seeded with", () => {
+  /**
+   * From the API config, and from nothing else.
+   *
+   * The regression: this used to be read from the *frontend* config, found by
+   * walking `process.cwd()` for a `src/vitnode.config.ts`. `db:prepare` runs
+   * from the app that owns the schema - `apps/api` here, and `apps/api` in every
+   * generated monorepo - where the web app's config is a sibling the search
+   * never reaches. The optional lookup returned `null` without a word, the
+   * fallback ran, and a fresh database came up with `en` alone while the site
+   * served `en` and `pl`.
+   */
+  it("reads no frontend config", () => {
+    const seed = bootstrap.slice(
+      bootstrap.indexOf("export const initialDataForDatabase"),
+      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
+    );
+
+    expect(seed).not.toContain('type: "config"');
+    expect(seed).not.toContain("webConfig");
+    expect(seed).toContain("languagesFromApiConfig(config.i18n)");
+    // And nothing anywhere reaches for a sibling application.
+    expect(bootstrap).not.toMatch(/\.\.\/(?:web|api)\b/);
+    expect(bootstrap).not.toContain("vitnode.config.ts");
+  });
+
+  /**
+   * With no `i18n` block, `en` - and not the API's own derived locale list,
+   * which is "whatever the installed packages ship a translation for" and would
+   * write a language row per installed language pack.
+   */
+  it("falls back to English when the API declares no locales", () => {
+    for (const i18n of [undefined, {}, { locales: [] }]) {
+      expect(languagesFromApiConfig(i18n)).toEqual([
+        {
+          code: "en",
+          default: true,
+          name: "English (USA)",
+          protected: true,
+          timezone: "America/New_York",
+        },
+      ]);
+    }
+  });
+
+  /** Every configured locale, in configuration order. */
+  it("inserts every configured locale", () => {
+    expect(
+      languagesFromApiConfig({
+        defaultLocale: "en",
+        locales: [
+          { code: "en", name: "English" },
+          { code: "pl", name: "Polski" },
+        ],
+        timeZone: "UTC",
+      }),
+    ).toEqual([
+      {
+        code: "en",
+        default: true,
+        name: "English",
+        protected: true,
+        timezone: "UTC",
+      },
+      {
+        code: "pl",
+        default: false,
+        name: "Polski",
+        protected: false,
+        timezone: "UTC",
+      },
+    ]);
+  });
+
+  /**
+   * `defaultLocale` decides which row is the default, and `protected` follows
+   * it: the default language is the one the AdminCP must not let anybody
+   * delete.
+   */
+  it("marks the configured default, whichever it is", () => {
+    const rows = languagesFromApiConfig({
+      defaultLocale: "pl",
+      locales: [
+        { code: "en", name: "English" },
+        { code: "pl", name: "Polski" },
+      ],
+    });
+
+    expect(rows.filter(row => row.default).map(row => row.code)).toEqual([
+      "pl",
+    ]);
+    expect(rows.filter(row => row.protected).map(row => row.code)).toEqual([
+      "pl",
+    ]);
+  });
+
+  /**
+   * A default has to exist. `defaultLocale` is optional on the API config and
+   * falls back to `"en"` the way the API runtime's does - but an app that does
+   * not serve English at all would then have no default row, and a
+   * `core_languages` with no default is a state nothing downstream can read.
+   */
+  it("always leaves exactly one default", () => {
+    for (const i18n of [
+      { locales: [{ code: "pl", name: "Polski" }] },
+      { defaultLocale: "de", locales: [{ code: "pl", name: "Polski" }] },
+      {
+        locales: [
+          { code: "en", name: "English" },
+          { code: "pl", name: "Polski" },
+        ],
+      },
+    ]) {
+      expect(
+        languagesFromApiConfig(i18n).filter(row => row.default),
+      ).toHaveLength(1);
+    }
+
+    // With no `defaultLocale` and an `en` on the list, `en` is it.
+    expect(
+      languagesFromApiConfig({
+        locales: [
+          { code: "pl", name: "Polski" },
+          { code: "en", name: "English" },
+        ],
+      }).find(row => row.default)?.code,
+    ).toBe("en");
+  });
+
+  /** The installation's timezone, on every row. */
+  it("propagates the configured timezone", () => {
+    expect(
+      languagesFromApiConfig({
+        defaultLocale: "en",
+        locales: [
+          { code: "en", name: "English" },
+          { code: "pl", name: "Polski" },
+        ],
+        timeZone: "Europe/Warsaw",
+      }).map(row => row.timezone),
+    ).toEqual(["Europe/Warsaw", "Europe/Warsaw"]);
+
+    // And `UTC` when an app declares locales but no zone.
+    expect(
+      languagesFromApiConfig({
+        locales: [{ code: "en", name: "English" }],
+      })[0].timezone,
+    ).toBe("UTC");
+  });
+
+  /**
+   * `enabled: false` is dropped, the same way `localeRoutingFromConfig` drops
+   * it: a language the app has switched off should 404 rather than get a row
+   * that makes it selectable in the AdminCP.
+   */
+  it("skips disabled locales, and never seeds nothing", () => {
+    expect(
+      languagesFromApiConfig({
+        defaultLocale: "en",
+        locales: [
+          { code: "en", name: "English" },
+          { code: "pl", enabled: false, name: "Polski" },
+        ],
+      }).map(row => row.code),
+    ).toEqual(["en"]);
+
+    // Every locale disabled is not "no languages" - it is a misconfiguration,
+    // and the fallback is a database that still works.
+    expect(
+      languagesFromApiConfig({
+        locales: [{ code: "pl", enabled: false, name: "Polski" }],
+      }).map(row => row.code),
+    ).toEqual(["en"]);
+  });
+
+  /**
+   * Adding a locale and re-running `db:prepare` inserts the new one and leaves
+   * the rest alone - `onConflictDoNothing` on `code`, which is what makes the
+   * seed safe to run before every dev start.
+   */
+  it("adds a locale without disturbing the ones already there", () => {
+    const before = languagesFromApiConfig({
+      defaultLocale: "en",
+      locales: [{ code: "en", name: "English" }],
+    });
+    const after = languagesFromApiConfig({
+      defaultLocale: "en",
+      locales: [
+        { code: "en", name: "English" },
+        { code: "pl", name: "Polski" },
+      ],
+    });
+
+    expect(after.slice(0, 1)).toEqual(before);
+    expect(bootstrap).toMatch(
+      /onConflictDoNothing\(\{ target: core_languages\.code \}\)/,
+    );
+  });
+
+  /**
+   * And the role labels go in under whichever language is the default.
+   *
+   * They stay English - four words nobody translated are better than four words
+   * somebody invented, and VitNode falls back to the default language for a
+   * missing translation anyway. What changed is the *code*: `languageCode`
+   * references `core_languages.code`, so a hard-coded `"en"` is a foreign-key
+   * violation on the first installation that does not serve English.
+   */
+  it("seeds role names under the default language, not under `en`", () => {
+    const seed = bootstrap.slice(
+      bootstrap.indexOf("export const initialDataForDatabase"),
+      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
+    );
+
+    expect(seed).toContain("languageCode: defaultLanguageCode");
+    expect(seed).not.toMatch(/languageCode: "en"/);
+    for (const role of ["Guest", "Member", "Moderator", "Administrator"]) {
+      expect(seed).toContain(`value: "${role}"`);
+    }
+  });
+});
+
 describe("concurrent bootstraps are serialised", () => {
   /**
    * More than one runtime legitimately gates on the bootstrap - the API, and any
@@ -292,14 +516,29 @@ describe("concurrent bootstraps are serialised", () => {
   });
 
   /**
-   * On a connection reserved out of the pool. An advisory lock belongs to a
-   * session, and `postgres` hands out pooled connections - so locking on the
-   * pool and unlocking on the pool are not guaranteed to be the same session,
-   * which either fails to release or releases somebody else's.
+   * On a connection of its own, which is the fix for the deadlock below rather
+   * than a preference. An advisory lock belongs to a *session*, so one
+   * connection has to stay open for the whole bootstrap - and taking it out of
+   * the application's pool is what made a `max: 1` pool impossible to migrate.
    */
-  it("pins one session for the lock's lifetime", () => {
-    expect(bootstrap).toContain("client.reserve");
-    expect(bootstrap).toContain("session.release()");
+  it("opens a dedicated connection for the lock", () => {
+    const open = bootstrap.slice(
+      bootstrap.indexOf("const openMigrationLock"),
+      bootstrap.indexOf("export const runWithMigrationLock"),
+    );
+
+    expect(open).toContain("postgres({");
+    expect(open).toContain("max: 1");
+    expect(open).toContain("client.end(");
+  });
+
+  /**
+   * And never out of the application's. `reserve()` pins a pooled connection,
+   * which is exactly the connection the migration then needs.
+   */
+  it("reserves nothing from the application pool", () => {
+    expect(bootstrap).not.toContain(".reserve(");
+    expect(bootstrap).not.toContain("session.release()");
   });
 
   /**
@@ -316,12 +555,14 @@ describe("concurrent bootstraps are serialised", () => {
   });
 
   /**
-   * A driver that cannot pin a session runs unlocked rather than refusing to
-   * migrate. VitNode serves whatever `dbProvider` an app configures, and the
-   * single-process case every non-monorepo app has cannot race anyway.
+   * A driver whose client carries no `postgres` options runs unlocked rather
+   * than refusing to migrate. VitNode serves whatever `dbProvider` an app
+   * configures, and the single-process case every non-monorepo app has cannot
+   * race anyway.
    */
   it("degrades to unlocked rather than failing on an unknown driver", () => {
-    expect(bootstrap).toMatch(/typeof client\.reserve !== "function"/);
+    expect(bootstrap).toMatch(/!\("shared" in options\)/);
+    expect(bootstrap).toMatch(/if \(lock === null\) \{\s*await run\(\)/);
   });
 
   /**
@@ -337,6 +578,218 @@ describe("concurrent bootstraps are serialised", () => {
     expect(bootstrap).toMatch(
       /current = \(current as \{ cause\?: unknown \}\)\.cause/,
     );
+  });
+});
+
+/**
+ * A pool of a fixed size, as the smallest thing that can tell the two lock
+ * designs apart.
+ *
+ * `drizzle({ connection })` hands an app's options to `postgres`, so `max` is
+ * the app's to choose and `max: 1` is a choice a serverless function or a small
+ * container has every reason to make. Nothing else about a pool matters here:
+ * the question is only whether a connection is available when the migration
+ * asks for one.
+ */
+const createPool = (max: number) => {
+  let inUse = 0;
+
+  return {
+    acquire: () => {
+      if (inUse >= max) {
+        throw new Error("pool exhausted - no connection available");
+      }
+
+      inUse += 1;
+
+      return () => {
+        inUse -= 1;
+      };
+    },
+  };
+};
+
+/**
+ * One round trip to the database, as the fakes below spend it.
+ *
+ * Every call the real lock makes is a query, so none of them resolves
+ * synchronously - and a fake that did would let a missing `await` in
+ * `runWithMigrationLock` pass unnoticed.
+ */
+const roundTrip = async (): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 0));
+};
+
+/**
+ * A lock whose session comes from `pool`, or from nowhere.
+ *
+ * `pool` is `null` for the design that ships - the lock has a connection of its
+ * own - and the application's pool for the design that deadlocked.
+ */
+const createFakeLock = (
+  pool: null | ReturnType<typeof createPool>,
+  { available = true }: { available?: boolean } = {},
+) => {
+  const events: string[] = [];
+  let release: (() => void) | null = null;
+
+  return {
+    events,
+    lock: {
+      close: async () => {
+        events.push("close");
+        release?.();
+        release = null;
+        await roundTrip();
+      },
+      tryLock: async () => {
+        release ??= pool?.acquire() ?? null;
+        events.push("tryLock");
+        await roundTrip();
+
+        return available;
+      },
+      unlock: async () => {
+        events.push("unlock");
+        await roundTrip();
+      },
+    },
+  };
+};
+
+describe("holding the lock costs the application pool nothing", () => {
+  /**
+   * The regression, stated as the thing that used to hang.
+   *
+   * The old implementation called `dbClient.$client.reserve()` and then ran the
+   * whole bootstrap through `dbClient` - the same pool. With `max: 1` the
+   * reserved session *was* the pool, so `runMigrations` asked for a connection
+   * that could not be returned until the migration blocking on it had finished.
+   * Nothing errored and nothing timed out; the terminal simply stopped.
+   *
+   * A pool of one is the fake, so "waits forever" becomes "cannot acquire" -
+   * which is the same fact where a test can see it.
+   */
+  it("migrates through a pool of one while the lock is held", async () => {
+    const pool = createPool(1);
+    const { events, lock } = createFakeLock(null);
+    const ran: string[] = [];
+
+    await runWithMigrationLock({
+      initMessage: "[test]",
+      lock,
+      run: async () => {
+        const release = pool.acquire();
+
+        ran.push("migrated");
+        await roundTrip();
+        release();
+      },
+    });
+
+    expect(ran).toEqual(["migrated"]);
+    expect(events).toEqual(["tryLock", "unlock", "close"]);
+  });
+
+  /**
+   * And the fake is not vacuous: the design this replaced fails against it.
+   *
+   * Without this, the test above would pass just as well for a lock that never
+   * touched a connection at all, which is not what is being claimed.
+   */
+  it("would have deadlocked had the lock come out of that pool", async () => {
+    const pool = createPool(1);
+    const { lock } = createFakeLock(pool);
+
+    await expect(
+      runWithMigrationLock({
+        initMessage: "[test]",
+        lock,
+        run: async () => {
+          await roundTrip();
+          pool.acquire()();
+        },
+      }),
+    ).rejects.toThrow("pool exhausted");
+  });
+
+  /** Released and closed even when the work throws. */
+  it("releases and closes when the bootstrap fails", async () => {
+    const { events, lock } = createFakeLock(null);
+
+    await expect(
+      runWithMigrationLock({
+        initMessage: "[test]",
+        lock,
+        run: async () => {
+          await roundTrip();
+
+          throw new Error("migration failed");
+        },
+      }),
+    ).rejects.toThrow("migration failed");
+
+    expect(events).toEqual(["tryLock", "unlock", "close"]);
+  });
+
+  /**
+   * A lock somebody else holds is waited for, announced once, and given up on -
+   * `sleep` is injected so the deadline can be reached without spending the two
+   * minutes it describes.
+   */
+  it("waits, says so once, and times out", async () => {
+    const { events, lock } = createFakeLock(null, { available: false });
+    const said: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation(message => {
+      said.push(String(message));
+    });
+    // Each poll advances the clock past the two-minute deadline.
+    let now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+
+    try {
+      await expect(
+        runWithMigrationLock({
+          initMessage: "[test]",
+          lock,
+          run: async () => {
+            await roundTrip();
+
+            throw new Error("must not run");
+          },
+          sleep: async () => {
+            now += 60_000;
+            await roundTrip();
+          },
+        }),
+      ).rejects.toThrow(/Timed out after 120s/);
+    } finally {
+      log.mockRestore();
+      clock.mockRestore();
+    }
+
+    // Never acquired, so never released - but the session is closed regardless.
+    expect(events.at(-1)).toBe("close");
+    expect(events).not.toContain("unlock");
+    expect(
+      said.filter(line => line.includes("waiting for it to finish")),
+    ).toHaveLength(1);
+  });
+
+  /** No lock at all still runs the bootstrap - an unknown driver, unlocked. */
+  it("runs unlocked when there is no lock to take", async () => {
+    const ran: string[] = [];
+
+    await runWithMigrationLock({
+      initMessage: "[test]",
+      lock: null,
+      run: async () => {
+        ran.push("migrated");
+        await roundTrip();
+      },
+    });
+
+    expect(ran).toEqual(["migrated"]);
   });
 });
 

@@ -74,8 +74,19 @@ export const fileRejectionReasonOf = (
     : undefined;
 };
 
+/**
+ * Whether a file should be *rendered* as an image, which needs a `src` as well
+ * as an image MIME type.
+ *
+ * The url check is not defensive padding. A `core_files` row stores a `key`, not
+ * a url - the url is built at read time by the configured storage adapter - and
+ * an installation with no `storage.adapter` serialises `url: ""` for every file
+ * it describes. Rendering `<img src="">` then makes the browser re-request the
+ * current document, which is what React warns about, so a file with no
+ * resolvable url is an icon rather than a broken image.
+ */
 export const isImageFile = (file: AutoFormFileValue): boolean =>
-  (file.mimeType ?? "").startsWith("image/");
+  file.url !== "" && (file.mimeType ?? "").startsWith("image/");
 
 /** One entry of what a file control should show: the id, and what is known of it. */
 export interface ResolvedFormFile {

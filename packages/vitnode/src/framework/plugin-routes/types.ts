@@ -62,3 +62,53 @@ export type PluginRouteModuleLoader = () => Promise<unknown>;
 export type PluginRouteModuleRegistry = Readonly<
   Record<string, PluginRouteModuleLoader>
 >;
+
+/**
+ * A route's eager search module, paired with the specifier that imports it.
+ *
+ * The twin of {@link ResolvedPluginRouteModule}, and deliberately a separate
+ * type rather than an optional field on it: the two are imported in opposite
+ * ways. A route module is `() => import(...)` and gets its own chunk; a search
+ * module is a *static* import and is in the initial bundle. A single record
+ * carrying both would make that difference invisible at the one place it
+ * matters.
+ *
+ * `key` is the same `<pluginId>:<routeId>` the module registry uses, so the
+ * runtime looks a route's schema up by the id everything else addresses it by.
+ */
+export interface ResolvedPluginRouteSearchModule {
+  key: string;
+  pluginId: string;
+  routeId: string;
+  searchEntry: string;
+  specifier: string;
+}
+
+/**
+ * One route's `validateSearch`, as the router will call it.
+ *
+ * `unknown` out rather than a schema type, for the same reason
+ * {@link PluginRouteModuleLoader} returns `unknown`: the generated file uses
+ * `satisfies`, so each entry keeps the real return type of the validator it
+ * names and a consumer gets that type rather than this one.
+ *
+ * Total by contract. TanStack calls this during path matching, on whatever was
+ * in the query string, and a throw there is a router error screen rather than a
+ * page - so a validator normalises and clamps, it does not reject. See
+ * {@link PluginRouteDefinition.searchEntry}.
+ */
+export type PluginRouteSearchValidator = (
+  input: Record<string, unknown>,
+) => unknown;
+
+/**
+ * Every eagerly-imported route search schema of an app, keyed by
+ * {@link ResolvedPluginRouteSearchModule.key}.
+ *
+ * Sparse on purpose: a route appears here only by declaring a `searchEntry`, and
+ * most do not. A missing key means "this route has no router-level search
+ * schema", which is the ordinary case and not an error.
+ */
+export type PluginRouteSearchRegistry = Readonly<
+  Record<string, PluginRouteSearchValidator>
+>;

@@ -7,6 +7,11 @@ import {
   pluginRouteSpecs,
   withPluginRoutes,
 } from '@vitnode/core/tanstack/plugin-routes'
+import {
+  withCoreAdminRoutes,
+  withCoreMainRoutes,
+  withCoreRootRoutes,
+} from '@vitnode/core/tanstack/routes'
 
 /**
  * The auth transport, registered by importing the module that declares it.
@@ -31,16 +36,21 @@ import './lib/auth'
  * VitNode may let the public session answer an admin question.
  */
 import './lib/admin-auth'
-import { createLocaleRewrite } from './lib/i18n/runtime'
+import { contentRegistry } from './lib/content-registry'
+import { createLocaleRewrite, localeRouting } from './lib/i18n/runtime'
 import { pageHead } from './lib/page-head'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
-import { pluginRouteModules } from './plugin-routes.gen'
+import {
+  pluginRouteModules,
+  pluginRouteSearchSchemas,
+} from './plugin-routes.gen'
 import { Route as adminShellRoute } from './routes/_admin'
 import { Route as mainShellRoute } from './routes/_main'
 import { routeTree as fileRouteTree } from './routeTree.gen'
 
 /**
- * One route tree: this app's route files, plus the pages its plugins declare.
+ * One route tree: this app's route files, plus the AdminCP screens `@vitnode/core`
+ * owns, plus the pages its plugins declare.
  *
  * At module scope rather than inside `getRouter`, because `getRouter` runs once
  * per server request and mounting the plugin routes mutates the route tree - the
@@ -51,6 +61,12 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
  * plugin page is copied into `src/routes`, no route path is written by hand, and
  * nothing here knows which plugins are installed - see
  * `@vitnode/core/tanstack/plugin-routes`.
+ *
+ * `pluginRouteSearchSchemas` is the third argument and the one part of a plugin
+ * route that is not lazy: a router's `validateSearch` runs during path matching,
+ * before any chunk is fetched, so a route that needs a real one is imported
+ * statically by the generated registry. Usually empty. See
+ * `PluginRouteDefinition.searchEntry`.
  *
  * `mountUnder` names one route per shell, which is the whole of what "a plugin
  * route renders in the application shell" amounts to here. A plugin declares
@@ -71,15 +87,49 @@ import { routeTree as fileRouteTree } from './routeTree.gen'
  * same objects the generated tree holds: `createFileRoute` produces one instance
  * per module and `routeTree.gen.ts` mutates it in place.
  *
+ * `withCoreMainRoutes`, `withCoreAdminRoutes` and `withCoreRootRoutes` mount
+ * core's own screens the same way, one per mount point: the public pages under
+ * the main shell, the AdminCP's under its own, and the shell-less ones - the auth
+ * cards and the AdminCP sign-in - straight under the root. See
+ * `@vitnode/core/tanstack/routes`.
+ *
+ * `localeRouting` is handed to the last of the three because a sign-in navigates
+ * to a path a *visitor* supplied: the route tree carries no locale, so the prefix
+ * has to be stripped before the router sees it, and which prefixes exist is this
+ * app's answer. It is the same object the `rewrite` below uses, so the strip and
+ * the write-back are one rule. They were a directory of route files in this application until it
+ * existed - one `createFileRoute` per screen, every one of them pure wiring
+ * around something imported from `@vitnode/core` - so an app carried a copy of
+ * VitNode's own routing table and core adding a screen meant an edit here. They
+ * are code-based rather than manifest-declared because they need the router's
+ * full option set: a real `validateSearch` that clamps `?page=999` before
+ * anything renders, and a splat path the manifest's grammar does not represent.
+ *
  * `pageHead` is this app's own `createRouteHead(metadata)` binding, handed over
  * because a package cannot know the site's name: a plugin page's `<title>` goes
  * through the same `"<page> - <site>"` rule every other VitNode page's does,
  * rather than through a second one the plugin invented.
  */
-const routeTree = withPluginRoutes(
-  fileRouteTree,
-  pluginRouteSpecs(pluginRouteManifest, pluginRouteModules),
-  { mountUnder: { admin: adminShellRoute, main: mainShellRoute }, pageHead },
+const routeTree = withCoreRootRoutes(
+  withCoreAdminRoutes(
+    withCoreMainRoutes(
+      withPluginRoutes(
+        fileRouteTree,
+        pluginRouteSpecs(
+          pluginRouteManifest,
+          pluginRouteModules,
+          pluginRouteSearchSchemas,
+        ),
+        {
+          mountUnder: { admin: adminShellRoute, main: mainShellRoute },
+          pageHead,
+        },
+      ),
+      { mountUnder: mainShellRoute, pageHead },
+    ),
+    { contentRegistry, mountUnder: adminShellRoute, pageHead },
+  ),
+  { localeRouting, mountUnder: fileRouteTree, pageHead },
 )
 
 /**

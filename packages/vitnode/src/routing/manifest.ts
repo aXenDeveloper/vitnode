@@ -1,6 +1,7 @@
 import type {
   PluginRoute,
   PluginRouteDefinition,
+  PluginRouteKind,
   PluginRouteManifest,
   PluginRouteSource,
 } from "./types";
@@ -49,10 +50,11 @@ const readEntry = (
   entry: string | undefined,
   pluginId: string,
   routeId: string,
+  field = "entry",
 ): string => {
   const fail = (reason: string): never => {
     throw new PluginRouteError(
-      `Plugin route "${routeId}" from ${pluginId} has an invalid entry ${JSON.stringify(entry)}: ${reason}.`,
+      `Plugin route "${routeId}" from ${pluginId} has an invalid ${field} ${JSON.stringify(entry)}: ${reason}.`,
       { code: "invalid-entry", pluginId, routeId },
     );
   };
@@ -65,11 +67,44 @@ const readEntry = (
 
   if (ENTRY_EXTENSION.test(entry)) {
     return fail(
-      "an entry is a package export subpath and the plugin's export map adds the extension - drop it",
+      `an ${field} is a package export subpath and the plugin's export map adds the extension - drop it`,
     );
   }
 
   return entry;
+};
+
+/**
+ * A route's optional eager search module, validated the way its entry is.
+ *
+ * Absent is the ordinary case and means `null` - most pages read no query
+ * string, and one that does is usually better served by the module's own
+ * `parseSearch`. See {@link PluginRouteDefinition.searchEntry} for when the
+ * eager one is worth its place in the initial bundle.
+ *
+ * A layout may not declare one. A layout claims no URL of its own and is only
+ * ever reached through a child, so a `validateSearch` on it would shape the
+ * search of pages that never asked for it - and the child that did would have
+ * two. Refused rather than ignored, for the same reason `requires` is refused in
+ * the admin area: a field that reads as behaviour and has none is worse than no
+ * field.
+ */
+const readSearchEntry = (
+  searchEntry: string | undefined,
+  kind: PluginRouteKind,
+  pluginId: string,
+  routeId: string,
+): null | string => {
+  if (searchEntry === undefined) return null;
+
+  if (kind === "layout") {
+    throw new PluginRouteError(
+      `Plugin route "${routeId}" from ${pluginId} is a layout and declares a \`searchEntry\`. A layout claims no URL of its own, so it has no query string to validate - declare it on the page that reads the search instead.`,
+      { code: "invalid-entry", pluginId, routeId },
+    );
+  }
+
+  return readEntry(searchEntry, pluginId, routeId, "searchEntry");
 };
 
 /**
@@ -144,8 +179,17 @@ const readDefinition = (
   // The only cast in the module. `routes` is typed, but a plugin is JavaScript
   // by the time it is registered and its config is written by hand, so the
   // fields are read defensively and the types are re-established here.
-  const { area, entry, id, kind, namespaces, parentId, path, requires } =
-    definition as Partial<PluginRouteDefinition>;
+  const {
+    area,
+    entry,
+    id,
+    kind,
+    namespaces,
+    parentId,
+    path,
+    requires,
+    searchEntry,
+  } = definition as Partial<PluginRouteDefinition>;
 
   if (typeof id !== "string" || !SEGMENTED.test(id)) {
     throw new PluginRouteError(
@@ -229,6 +273,7 @@ const readDefinition = (
     pluginId,
     requires: requires ?? null,
     routeId: id,
+    searchEntry: readSearchEntry(searchEntry, kind ?? "page", pluginId, id),
     segments: parsed.segments,
   };
 };

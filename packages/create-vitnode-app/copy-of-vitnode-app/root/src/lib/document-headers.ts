@@ -52,7 +52,7 @@
  * and the outcome anybody would want, but it is a real difference and it is
  * worth a look during a manual pass rather than a surprise later.
  */
-export const DOCUMENT_CACHE_CONTROL = 'private, no-store'
+export const DOCUMENT_CACHE_CONTROL = "private, no-store";
 
 /**
  * Whether this response is one of the documents the rule above describes.
@@ -74,7 +74,7 @@ export const DOCUMENT_CACHE_CONTROL = 'private, no-store'
  * rule.
  */
 const isRenderedDocument = (headers: Headers): boolean =>
-  (headers.get('content-type') ?? '').toLowerCase().startsWith('text/html')
+  (headers.get("content-type") ?? "").toLowerCase().startsWith("text/html");
 
 /**
  * Says what a rendered document is, on the response about to be sent.
@@ -92,10 +92,10 @@ const isRenderedDocument = (headers: Headers): boolean =>
  * The same reason `set-cookie` is appended in place a few lines away.
  */
 export const applyDocumentCacheControl = (response: Response): void => {
-  if (!isRenderedDocument(response.headers)) return
+  if (!isRenderedDocument(response.headers)) return;
 
-  response.headers.set('cache-control', DOCUMENT_CACHE_CONTROL)
-}
+  response.headers.set("cache-control", DOCUMENT_CACHE_CONTROL);
+};
 
 /**
  * The same for a locale redirect, but only when it is carrying a cookie.
@@ -122,7 +122,7 @@ export const applyDocumentCacheControl = (response: Response): void => {
  * nothing to override.
  */
 export const applyRedirectCacheControl = (response: Response): void => {
-  if (!response.headers.has('set-cookie')) return
+  if (!response.headers.has("set-cookie")) return;
 
-  response.headers.set('cache-control', DOCUMENT_CACHE_CONTROL)
-}
+  response.headers.set("cache-control", DOCUMENT_CACHE_CONTROL);
+};

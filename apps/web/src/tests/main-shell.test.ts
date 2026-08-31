@@ -79,9 +79,13 @@ describe('the main shell is what a public page renders inside', () => {
   it('puts the session guard inside the shell rather than next to it', () => {
     const matched = matchedIds('/files')
 
+    // `_core-main` is the pathless container core's own screens hang from, and
+    // `_core-authenticated` is the guard nested inside it - so the chain is
+    // shell, container, guard, and the order is what says the guard is below the
+    // shell rather than beside it.
     expect(matched.indexOf(MAIN_SHELL_ROUTE_ID)).toBeGreaterThanOrEqual(0)
     expect(matched.indexOf(MAIN_SHELL_ROUTE_ID)).toBeLessThan(
-      matched.indexOf(`${MAIN_SHELL_ROUTE_ID}/_authenticated`),
+      matched.indexOf(`${MAIN_SHELL_ROUTE_ID}/_core-main/_core-authenticated`),
     )
   })
 })
@@ -150,24 +154,32 @@ describe('the shell owns the main landmark', () => {
    * Stage 14 then split each of those namespaces in two: `*-route.tsx` for the
    * loader a route file imports eagerly, `*-screen.tsx` for the component. The
    * landmark is part of the screen, so it is the screen half that is read here.
+   *
+   * The *routes* moved too - they are `@vitnode/core`'s code-based routes now,
+   * declared in `tanstack/routes/root/` - so the second assertion reads the
+   * modules that declare them rather than files in this application. The claim is
+   * unchanged and is the one that matters: a route declares topology, a screen
+   * renders the landmark, and neither does the other's job.
    */
   it.each([
-    ['auth/login-screen.tsx', 'login.tsx', 1],
-    ['auth/sso-screen.tsx', 'login_.sso.$providerId.tsx', 1],
+    ['auth/login-screen.tsx', 'routes/root/auth.tsx', 1],
+    ['auth/sso-screen.tsx', 'routes/root/sso.tsx', 1],
     // Stage 9. Registration and password recovery join the blank-auth area, so
     // they own their landmark for the same reason.
-    ['auth/register-screen.tsx', 'register.tsx', 1],
+    ['auth/register-screen.tsx', 'routes/root/auth.tsx', 1],
     // Two, and both correct: the page body and the `notFoundComponent` the route
     // mounts, which replaces it on an install with no email adapter. They are
     // alternatives, so a document still renders exactly one.
-    ['auth/recovery-screen.tsx', 'login_.reset-password.tsx', 2],
+    ['auth/recovery-screen.tsx', 'routes/root/auth.tsx', 2],
   ] as const)(
-    '%s renders %i <main>, and its route file none',
+    '%s renders %i <main>, and the route that mounts it none',
     (module, route, count) => {
       expect(
         landmarks(withoutComments(join(coreTanstackDir, module))),
       ).toHaveLength(count)
-      expect(landmarks(withoutComments(join(routesDir, route)))).toEqual([])
+      expect(landmarks(withoutComments(join(coreTanstackDir, route)))).toEqual(
+        [],
+      )
     },
   )
 

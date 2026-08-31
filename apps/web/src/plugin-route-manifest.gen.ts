@@ -39,6 +39,7 @@ export const pluginRouteManifest = [
     pluginId: '@vitnode/example',
     requires: null,
     routeId: 'admin-overview',
+    searchEntry: null,
     segments: [{ kind: 'static', value: 'admin' }, { kind: 'static', value: 'example' }],
   },
   {
@@ -52,7 +53,22 @@ export const pluginRouteManifest = [
     pluginId: '@vitnode/example',
     requires: null,
     routeId: 'example-page',
+    searchEntry: null,
     segments: [{ kind: 'static', value: 'example' }],
+  },
+  {
+    area: 'main',
+    entry: 'routes/browse-page',
+    id: '@vitnode/example:browse',
+    kind: 'page',
+    namespaces: ['@vitnode/example.browse'],
+    parentId: null,
+    path: '/example/browse',
+    pluginId: '@vitnode/example',
+    requires: null,
+    routeId: 'browse',
+    searchEntry: 'routes/browse-page.search',
+    segments: [{ kind: 'static', value: 'example' }, { kind: 'static', value: 'browse' }],
   },
   {
     area: 'main',
@@ -65,6 +81,7 @@ export const pluginRouteManifest = [
     pluginId: '@vitnode/example',
     requires: null,
     routeId: 'guide',
+    searchEntry: null,
     segments: [{ kind: 'static', value: 'example' }, { kind: 'static', value: 'guide' }],
   },
   {
@@ -78,6 +95,7 @@ export const pluginRouteManifest = [
     pluginId: '@vitnode/example',
     requires: null,
     routeId: 'guide-index',
+    searchEntry: null,
     segments: [{ kind: 'static', value: 'example' }, { kind: 'static', value: 'guide' }],
   },
   {
@@ -91,6 +109,7 @@ export const pluginRouteManifest = [
     pluginId: '@vitnode/example',
     requires: null,
     routeId: 'guide-topic',
+    searchEntry: null,
     segments: [{ kind: 'static', value: 'example' }, { kind: 'static', value: 'guide' }, { kind: 'param', name: 'topic' }],
   },
 ] satisfies readonly PluginRoute[]

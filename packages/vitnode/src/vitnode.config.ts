@@ -183,8 +183,8 @@ export function buildConfig<AppLocales extends LocaleConfig[]>(
     },
   };
 
-  // Register the app config so framework-owned route files (e.g. the @breadcrumb
-  // slots copied into apps) can read it without prop-drilling.
+  // Register the app config so framework-owned modules - core's own route
+  // screens and breadcrumbs among them - can read it without prop-drilling.
   registeredVitNodeConfig = config;
 
   return config;

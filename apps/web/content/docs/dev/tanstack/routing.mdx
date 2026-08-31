@@ -6,6 +6,20 @@ description: The two ways a URL gets claimed - an app route file, or a plugin's 
 There are two, and which one you want depends on who owns the page. The app owns
 its own routes as files; a plugin declares its routes as data.
 
+<Callout type="info" title="There is a third, and it is not yours">
+  VitNode's own screens - `/discover`, `/search`, `/settings`, `/login`, the
+  whole AdminCP - are neither. They are **code-based** routes declared in
+  `@vitnode/core/tanstack/routes` and mounted onto your tree by
+  `withCoreMainRoutes`, `withCoreAdminRoutes` and `withCoreRootRoutes` in
+  `src/router.tsx`.
+
+You never write one, and you never edit one: they used to be twenty-nine route
+files in every application - all of them wiring around something imported from
+the package - and moving them means VitNode can add a screen without an edit in
+your app. Your `src/routes` is for **your** pages.
+
+</Callout>
+
 ## An app-owned route
 
 One file per URL, under `src/routes`. The path comes from the filename.

@@ -1,4 +1,4 @@
-import type { AppMessagesMap } from '@vitnode/core/lib/i18n/types'
+import type { AppMessagesMap } from "@vitnode/core/lib/i18n/types";
 
 /**
  * Translations this app owns, on top of whatever the packages ship.
@@ -25,4 +25,4 @@ import type { AppMessagesMap } from '@vitnode/core/lib/i18n/types'
  * functions, and `src/i18n.ts` is spread into the shell config, which crosses to
  * the browser and has to stay serializable.
  */
-export const appMessages: AppMessagesMap = {}
+export const appMessages: AppMessagesMap = {};

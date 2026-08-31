@@ -114,32 +114,47 @@ describe("pluginRouteModuleRef", () => {
  */
 describe("pluginRoutePageProps", () => {
   const params = { topic: "routing" };
+  /**
+   * The runtime's own, in the component. It is passed through untouched, so
+   * every assertion below names the identity rather than a shape.
+   */
+  const navigate = async () => {
+    await Promise.resolve();
+  };
 
   it("hands the loader's own data back under `loaderData`", () => {
     expect(
       pluginRoutePageProps(
         { data: { title: "Guide" }, search: { q: "x" } },
         params,
+        navigate,
       ),
-    ).toEqual({ loaderData: { title: "Guide" }, params, search: { q: "x" } });
+    ).toEqual({
+      loaderData: { title: "Guide" },
+      navigate,
+      params,
+      search: { q: "x" },
+    });
   });
 
   it("keeps a loader result that is not an object", () => {
-    expect(pluginRoutePageProps({ data: "plain", search: {} }, params)).toEqual(
-      {
-        loaderData: "plain",
-        params,
-        search: {},
-      },
-    );
+    expect(
+      pluginRoutePageProps({ data: "plain", search: {} }, params, navigate),
+    ).toEqual({
+      loaderData: "plain",
+      navigate,
+      params,
+      search: {},
+    });
   });
 
   it.each([
     ["a module with no loader", { data: undefined, search: {} }],
     ["nothing at all", undefined],
   ])("still produces every prop for %s", (_label, loaderData) => {
-    expect(pluginRoutePageProps(loaderData, params)).toEqual({
+    expect(pluginRoutePageProps(loaderData, params, navigate)).toEqual({
       loaderData: undefined,
+      navigate,
       params,
       search: {},
     });

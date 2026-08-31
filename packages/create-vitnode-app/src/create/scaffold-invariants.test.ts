@@ -136,6 +136,155 @@ describe("the generated application", () => {
   });
 });
 
+describe("the single-app template's two trees", () => {
+  /**
+   * `root` owns every generic host file; `api-single-app` is an overlay of
+   * API-specific additions and nothing else.
+   *
+   * ## The regression
+   *
+   * Both trees are copied into the *same* directory, and they were copied with
+   * one `Promise.all` - so any path they shared was a race, decided by whichever
+   * `cp` happened to finish last. They shared two, and both of the overlay's
+   * copies were the pre-TanStack ones:
+   *
+   *     .gitignore_template   ignored `/.next/` and `next-env.d.ts`; had no
+   *                           `.output`, `.nitro`, `.vite` or `src/*.gen.ts`
+   *     .env.example          no `NEXT_PUBLIC_API_URL`, no `CRON_SECRET`
+   *
+   * So a new project got a `.gitignore` for a framework it does not use, missing
+   * every output directory it actually writes - about half the time. Nothing
+   * fails; the first symptom is `.output/` showing up in `git status`.
+   *
+   * Both duplicates are deleted rather than corrected, because a corrected
+   * duplicate is still two files that have to agree.
+   */
+  const overlayFiles = filesUnder(join(appTemplate, "api-single-app"));
+  const rootFiles = filesUnder(join(appTemplate, "root"));
+
+  it("share no path at all", () => {
+    expect(overlayFiles.filter(file => rootFiles.includes(file))).toEqual([]);
+  });
+
+  /**
+   * And the overlay is only the API. Listed as a property rather than as an
+   * expected file list, so adding a genuinely API-specific file needs no edit
+   * here - `drizzle.config.ts` and anything under `src/` that names the API.
+   */
+  it("keeps only API-specific files in the overlay", () => {
+    expect(overlayFiles.length).toBeGreaterThan(0);
+    for (const file of overlayFiles) {
+      expect(file).toMatch(
+        /^(?:drizzle\.config\.ts|src\/(?:routes\/api\/|server\/|vitnode\.api\.config\.ts))/,
+      );
+    }
+  });
+
+  /** No generic host file, by name - the two that were actually there. */
+  it.each([".gitignore_template", ".env.example", "global.d.ts"])(
+    "does not duplicate %s",
+    file => {
+      expect(existsSync(join(appTemplate, "api-single-app", file))).toBe(false);
+      expect(existsSync(join(appTemplate, "root", file))).toBe(true);
+    },
+  );
+
+  /**
+   * Copied in a fixed order regardless, because "the overlay goes over the base"
+   * is the contract an author adding a file to either tree relies on - and
+   * `Promise.all` into one destination cannot express an order at all.
+   */
+  it("is copied base-then-overlay, sequentially", () => {
+    const code = withoutComments(
+      read(join(packageRoot, "src"), "create/create-vitnode.ts"),
+    );
+    const singleApp = code.slice(
+      code.indexOf('if (mode === "singleApp")'),
+      code.indexOf('} else if (mode === "apiMonorepo")'),
+    );
+
+    expect(singleApp).toContain('await cp(join(templatePath, "root")');
+    expect(singleApp).toContain(
+      'await cp(join(templatePath, "api-single-app")',
+    );
+    expect(singleApp.indexOf('"root"')).toBeLessThan(
+      singleApp.indexOf('"api-single-app"'),
+    );
+    // The race itself: two trees into one directory, concurrently.
+    expect(singleApp).not.toContain("Promise.all");
+  });
+});
+
+describe("what a generated single app starts from", () => {
+  const gitignore = read(appTemplate, "root/.gitignore_template");
+  const env = read(appTemplate, "root/.env.example");
+
+  /** The directories a TanStack Start build actually writes. */
+  it.each(["/.output/", "/.nitro/", "/.vite/", "/.tanstack/", "src/*.gen.ts"])(
+    "ignores %s",
+    entry => {
+      expect(gitignore).toContain(entry);
+    },
+  );
+
+  /**
+   * And nothing from the framework this replaced. A fresh scaffold has no
+   * migration to explain, so these do not belong even as a comment.
+   */
+  it.each([".next", "next-env.d.ts", ".contentlayer", ".content-collections"])(
+    "does not mention %s",
+    entry => {
+      expect(gitignore).not.toContain(entry);
+    },
+  );
+
+  /**
+   * The environment a single app is configured with. Both URLs name this app's
+   * own origin, because it serves its own `/api/*` - which is exactly what the
+   * overlay's copy dropped.
+   */
+  it("ships the single-app environment", () => {
+    expect(env).toContain("POSTGRES_URL=");
+    expect(env).toContain("NEXT_PUBLIC_WEB_URL=http://localhost:3000");
+    expect(env).toContain("NEXT_PUBLIC_API_URL=http://localhost:3000");
+    expect(env).toContain("CRON_SECRET=");
+  });
+
+  /**
+   * One locale declaration, read by both configs.
+   *
+   * `vitnode db:prepare` seeds `core_languages` from the *API* config, and a
+   * single app owns its schema - so a language added to `src/i18n.ts` has to
+   * reach the seed without a second edit. It does, because there is only one
+   * list.
+   */
+  it("declares its languages once and reads them from both configs", () => {
+    expect(appFiles).toContain("root/src/i18n.ts");
+    expect(appFiles).not.toContain("api-single-app/src/i18n.ts");
+
+    for (const file of [
+      "root/src/vitnode.shell.config.ts",
+      "api-single-app/src/vitnode.api.config.ts",
+    ]) {
+      expect(withoutComments(read(appTemplate, file))).toMatch(
+        /import \{ i18n \} from ['"]\.\/i18n['"]/,
+      );
+    }
+  });
+
+  /**
+   * The split shape has the same obligation, one file each: two packages, so
+   * neither can import the other's, and the API's is the one the seed reads.
+   */
+  it("gives a split deployment an API locale declaration of its own", () => {
+    expect(appFiles).toContain("api/src/i18n.ts");
+    // `.js` here: the split API compiles with `moduleResolution: nodenext`.
+    expect(
+      withoutComments(read(appTemplate, "api/src/vitnode.api.config.ts")),
+    ).toMatch(/import \{ i18n \} from ['"]\.\/i18n\.js['"]/);
+  });
+});
+
 describe("the generated plugin", () => {
   /**
    * A plugin declares its routes; it does not ship a directory of pages for

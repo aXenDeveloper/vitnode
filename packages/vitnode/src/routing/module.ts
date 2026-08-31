@@ -258,9 +258,37 @@ export interface PluginRoutePageProps<
    * loader has. By the time this component exists the data is in hand.
    */
   loaderData: TData;
+  /**
+   * Replaces this page's query string, and nothing else.
+   *
+   * The narrowest useful navigation, and narrow on purpose: a plugin page that
+   * could be handed a router's own `navigate` would be handed that router's
+   * whole route table with it, and would compile against exactly the hosts that
+   * happen to have the same one. This changes the search of the URL the page is
+   * already on, which is what a paginated table, a filter or a sort control
+   * actually needs, and it means the same thing under any router.
+   *
+   * `resetScroll` defaults to the router's own behaviour; pass `false` for a
+   * table whose page should not jump to the top when the page number changes.
+   *
+   * Pairs with {@link PluginRouteDefinition.searchEntry}: a route with an eager
+   * search schema gets a validated {@link PluginRoutePageProps.search} in and a
+   * typed one out, which together are what make the query string usable as
+   * state rather than as a string.
+   */
+  navigate: (options: {
+    resetScroll?: boolean;
+    search: TSearch;
+  }) => Promise<void>;
   /** The route's own dynamic segments, e.g. `{ slug: "hello" }`. */
   params: Readonly<Record<string, string>>;
-  /** Whatever `parseSearch` returned - never raw query parameters. */
+  /**
+   * The route's query string, validated.
+   *
+   * Whatever the route's eager `validateSearch` returned when its manifest entry
+   * declares a `searchEntry`, and whatever the module's own `parseSearch`
+   * returned otherwise. Never raw query parameters in either case.
+   */
   search: TSearch;
 }
 

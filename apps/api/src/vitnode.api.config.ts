@@ -14,6 +14,8 @@ import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
 
+import { i18n } from "./i18n.js";
+
 config({
   quiet: true,
 });
@@ -44,9 +46,16 @@ export const vitNodeApiConfig = buildApiConfig({
       },
     ],
   },
-  // No `i18n` block: the languages `@vitnode/core` and the installed plugins
-  // ship are picked up on their own. Add one to declare extra locales or to
-  // override strings from `src/locales/<pluginId>/<locale>.json`.
+  /**
+   * The installation's languages, from the one module that declares them.
+   *
+   * Not optional here, whatever the type says: this app owns the schema, so
+   * `vitnode db:prepare` seeds `core_languages` from this list. Left unset, the
+   * API derives its locales from whatever the installed packages ship - which
+   * answers "what can be translated", not "what does this site serve" - and the
+   * seed falls back to `en` alone.
+   */
+  i18n,
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,

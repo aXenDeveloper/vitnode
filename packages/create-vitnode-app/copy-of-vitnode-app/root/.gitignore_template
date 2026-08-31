@@ -9,6 +9,7 @@ node_modules
 /.output/
 /.nitro/
 /.vite/
+/.tanstack/
 /out/
 /build
 *.tsbuildinfo

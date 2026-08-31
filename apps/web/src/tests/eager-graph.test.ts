@@ -118,8 +118,18 @@ const eagerSource = (path: string): string => {
 const SCREEN_SUFFIXES = /\b[A-Z][A-Za-z]*(?:Route|Screen|Form)Content\b/g
 
 describe('route files', () => {
+  /**
+   * Guards the guard: every rule below is an absence over this listing, so an
+   * empty one would pass all of them.
+   *
+   * The threshold was 30 until core's own screens became code-based routes -
+   * twenty-five route files left `src/routes/` in two passes, the AdminCP's and
+   * the public ones - and the number here is the application's own pages plus the
+   * one file `_admin` keeps. It is deliberately a floor rather than an exact
+   * count: a new page in this app should not have to edit a test.
+   */
   it('exist, so a move cannot silently empty this suite', () => {
-    expect(routeFiles.length).toBeGreaterThan(30)
+    expect(routeFiles.length).toBeGreaterThan(8)
   })
 
   /**
@@ -200,7 +210,28 @@ describe('the documentation runtime', () => {
  * bytes.
  */
 describe('breadcrumb components declared on staticData', () => {
-  const withBreadcrumb = routeFiles.filter((path) =>
+  /**
+   * Both places a route is declared: this application's own files, and the
+   * modules in `@vitnode/core` that declare the screens it mounts.
+   *
+   * Almost every crumb moved with the screens - `withCoreMainRoutes` and
+   * `withCoreAdminRoutes` - so scanning only `src/routes` would have left this
+   * asserting over one file and calling it a pass. The rule is the same wherever
+   * the route is written: a crumb is eager, so it may not live in the module that
+   * holds the screen.
+   */
+  const declaringFiles = [
+    ...routeFiles,
+    ...['admin', 'main', 'root'].flatMap((area) =>
+      walk(
+        resolve(
+          here,
+          `../../../../packages/vitnode/src/tanstack/routes/${area}`,
+        ),
+      ).filter((path) => path.endsWith('.tsx')),
+    ),
+  ]
+  const withBreadcrumb = declaringFiles.filter((path) =>
     /staticData:\s*\{[\s\S]*?breadcrumb:/.test(withoutComments(path)),
   )
 
