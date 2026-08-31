@@ -229,6 +229,38 @@ describe('the source loader', () => {
     expect(loader).toContain("getText('processed')")
   })
 
+  it('loads document bodies lazily', () => {
+    // Without `async`, the generated collection globs every document with
+    // `eager: true`, so *reaching* this loader compiles all ~120 documents -
+    // MDX and Shiki included - to answer a lookup that only reads frontmatter.
+    // The dev server pays it on the first docs request and the SSR pass pays it
+    // in production, both for content the server never renders.
+    const config = withoutComments(join(appRoot, 'source.config.ts'))
+
+    expect(config).toContain('async: true')
+  })
+
+  it('reads no document body as a property, because there is not one', () => {
+    // `async: true` moves `body`, `toc` and `structuredData` behind
+    // `page.data.load()`. Frontmatter is untouched, which is why nothing here
+    // had to change - but a later `page.data.toc` would type-check against a
+    // stale mental model and be `undefined` at runtime. `structuredData` is the
+    // trap: it still exists, as a function, so reading it as a value produces a
+    // search index of `undefined` rather than an error.
+    const serverSide = [
+      join(appSrc, 'docs', 'source.server.ts'),
+      join(appSrc, 'docs', 'transport.ts'),
+      join(appSrc, 'routes', 'docs.search.ts'),
+      join(appSrc, 'routes', 'llms-full[.]txt.ts'),
+    ]
+
+    const offenders = serverSide.filter((path) =>
+      /\.data\.(body|toc|structuredData)\b/.test(withoutComments(path)),
+    )
+
+    expect(offenders).toEqual([])
+  })
+
   it('is server-only, and says so in a way the bundler enforces', () => {
     // `collections/server` eagerly loads the frontmatter of every document and
     // reaches the whole Lucide icon set. The marker at the top of the module is
