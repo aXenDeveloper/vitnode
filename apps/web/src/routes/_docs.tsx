@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
+import { DOCS_TREE_STALE_TIME } from '#/docs/freshness'
 import { DocsShellContent } from '#/docs/shell-content'
 import { getDocsPageTree } from '#/docs/transport'
 
@@ -29,10 +30,14 @@ import { getDocsPageTree } from '#/docs/transport'
  *      └── _admin the AdminCP: its own session, its own sidebar
  *
  * The loader fetches the sidebar's tree, once, for the whole subtree - a page
- * route below fetches only its own document. `staleTime: Infinity` because the
- * tree is build output: it is identical for every visitor and cannot change
- * while the server is running, so re-fetching it on each navigation within the
- * documentation would be a round trip for a constant.
+ * route below fetches only its own document.
+ *
+ * `DOCS_TREE_STALE_TIME` is `Infinity` in production, because the tree is build
+ * output: identical for every visitor, unchanged for the life of the process, so
+ * re-fetching it on each navigation within the documentation would be a round
+ * trip for a constant. In development it is `0`, so that adding or renaming a
+ * page shows up in the sidebar on the next navigation rather than on the next
+ * server restart. See `#/docs/freshness`, which owns both halves.
  *
  * There is deliberately **no stylesheet declared here**. Fumadocs' design system
  * was a route-owned `<link>` for exactly one build, and `src/styles.css` records
@@ -50,7 +55,7 @@ import { getDocsPageTree } from '#/docs/transport'
  */
 export const Route = createFileRoute('/_docs')({
   loader: async () => ({ pageTree: await getDocsPageTree() }),
-  staleTime: Infinity,
+  staleTime: DOCS_TREE_STALE_TIME,
   component: DocsShell,
 })
 

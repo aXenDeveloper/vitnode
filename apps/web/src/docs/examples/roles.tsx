@@ -1,6 +1,6 @@
 'use client'
 
-import type { RoleOption } from '@vitnode/core/components/form/fields/search-roles.action.server'
+import type { RoleOption } from '@vitnode/core/components/form/fields/roles'
 
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormRoles } from '@vitnode/core/components/form/fields/input-roles'

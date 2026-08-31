@@ -859,6 +859,73 @@ describe('the whole graph this app imports stays Next-free', () => {
   })
 
   /**
+   * Every live component the documentation renders, on its own.
+   *
+   * `<Preview name="button" />` mounts `src/docs/examples/button.tsx` - 37 of
+   * them, reached through an `import.meta.glob`, which is not a static import
+   * and is therefore invisible to the documentation walk above. So they are
+   * walked as entries in their own right, because *every one of them* is
+   * reachable from a documentation page and each renders a piece of the shared
+   * design system straight out of `@vitnode/core`.
+   *
+   * That is exactly how `AutoFormRoles` was caught: it read `next-intl` and
+   * defaulted its role search to a `"use server"` action, so `/docs/ui/roles`
+   * threw `This module cannot be imported from a Client Component module`
+   * during SSR - a runtime failure, on one page, that no type check and no
+   * per-route walk could see. The examples are the widest surface this
+   * application has onto the design system, which makes them the right place to
+   * hold the line.
+   */
+  describe('the documentation live examples reach no Next.js', () => {
+    const EXAMPLES = filesUnder(join(repoRoot, 'apps/web/src/docs/examples'))
+      .map((path) => relative(repoRoot, path))
+      .sort()
+
+    it('has examples to check, and a lot of them', () => {
+      expect(EXAMPLES.length).toBeGreaterThan(30)
+    })
+
+    it('walks into the design system each one renders', () => {
+      // Without this the assertions below would pass on a graph that stopped at
+      // the example files - which is exactly the graph that cannot break.
+      const reached = [...reachableExternals(EXAMPLES).visited]
+
+      expect(
+        reached.some((path) => path.includes('components/form/auto-form')),
+      ).toBe(true)
+      expect(
+        reached.some((path) => path.includes('form/fields/input-roles')),
+      ).toBe(true)
+      expect(
+        reached.some((path) => path.includes('components/table/content')),
+      ).toBe(true)
+    })
+
+    it.each([
+      'next',
+      'next/cache',
+      'next/dynamic',
+      'next/headers',
+      'next/navigation',
+      'next/server',
+      'next-intl',
+      'server-only',
+    ])('never reaches %s', (forbidden) => {
+      expect(offenders(EXAMPLES, [forbidden])).toEqual([])
+    })
+
+    it('never reaches a Next.js server action or its wrappers', () => {
+      // The `"use server"` modules and the `*-next.tsx` adapters that inject
+      // them. An example importing one compiles, bundles, and throws on render.
+      const reached = [...reachableExternals(EXAMPLES).visited]
+
+      expect(
+        reached.filter((path) => /\.action\.server\.js$|-next\.js$/.test(path)),
+      ).toEqual([])
+    })
+  })
+
+  /**
    * `/search`, on its own.
    *
    * Stated separately from `/discover` because it renders strictly more of the

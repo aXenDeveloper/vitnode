@@ -1,56 +1,68 @@
 "use client";
 
 import { XIcon } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
 import React from "react";
+import { useLocale, useTranslations } from "use-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
-import type { RoleOption } from "./search-roles.action.server";
+import type { RoleOption, RoleSearch } from "./roles";
 
 import { AsyncPicker } from "../common/async-picker";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
+import { roleOptionName } from "./roles";
 
-export type { RoleOption };
+export type { RoleOption, RoleSearch };
+export { roleOptionName };
 
-/**
- * The default role search, imported when it is called rather than when this
- * module is.
- *
- * `search-roles.action.server` is a `"use server"` module: it carries
- * `server-only` and reaches Next's request scope through `fetcher`. Imported
- * statically here - which it was - it put that marker in the module graph of
- * every application that renders `AutoFormRoles`, whether or not the default was
- * ever used. On a Next.js host that is invisible; on any other host it is a
- * module that throws on import, and Stage 16 found it the moment the
- * documentation's own `/docs/ui/roles` preview rendered outside Next.js.
- *
- * Deferred, the edge is gone and the behaviour is not: a Next.js app that omits
- * `search` still gets exactly this action, resolved on the first keystroke. Every
- * caller in this repository passes its own `search`, so nothing here reaches it -
- * which is also why the static import was so easy to miss.
- */
-const searchRolesLazily = async (search: string): Promise<RoleOption[]> => {
-  const { searchRoles } = await import("./search-roles.action.server");
-
-  return await searchRoles(search);
+/** What the role field takes. `search` is the whole of its host coupling. */
+export type AutoFormRolesProps = ItemAutoFormComponentProps & {
+  disabled?: boolean;
+  excludeIds?: number[];
+  multiple?: boolean;
+  placeholder?: string;
+  /**
+   * Required, and there is no default. See the note on the component below:
+   * reading roles is the host's business, and a component that guessed would be
+   * a component whose behaviour depended on how it was bundled.
+   */
+  search: RoleSearch;
+  searchPlaceholder?: string;
+  selected?: RoleOption[];
 };
 
 /**
- * A role's name in the reader's language.
+ * The role field, and it belongs to no framework.
  *
- * Falls back to the first translation rather than to the id: a role with no
- * English name is still a role somebody named, and showing `4` helps nobody.
+ * Two things used to pin it to Next.js, and both were invisible until something
+ * other than Next.js rendered it - which is exactly what `/docs/ui/roles`
+ * started doing when the documentation moved to TanStack Start.
+ *
+ * **`next-intl`.** Its root entry re-exports `use-intl`, so this worked, and
+ * that is the trap: a shared component reading it is one a framework-neutral
+ * package cannot claim to be framework-neutral about. Every migrated component
+ * in this package reads `use-intl` directly, and now so does this one.
+ *
+ * **The default search.** `search` defaulted to `searchRoles`, a `"use server"`
+ * action carrying `server-only` and Next's request scope. Deferring it behind an
+ * `await import()` moved the failure from load time to the first keystroke,
+ * which is worse rather than better: a host that cannot run the action still
+ * cannot run it, and now finds out inside a dropdown.
+ *
+ * So the dependency is injected and **required**. Reading roles is the host's
+ * business - a TanStack app hands over a browser fetch to Hono
+ * (`searchAdminRolesInBrowser`), a Next.js app uses `AutoFormRolesNext` beside
+ * this file, which injects the action. There is deliberately no fallback and no
+ * environment sniffing: a component that guessed its host would be a component
+ * whose behaviour depends on how it was bundled.
+ *
+ * `packages/vitnode/src/components/form/fields/roles-boundaries.test.ts` holds
+ * all of it.
  */
-export const roleOptionName = (role: RoleOption, locale: string): string =>
-  role.name.find(item => item.languageCode === locale)?.name ??
-  role.name[0]?.name ??
-  String(role.id);
-
 export const AutoFormRoles = ({
   description,
   disabled,
@@ -65,18 +77,10 @@ export const AutoFormRoles = ({
   multiple = false,
   otherProps,
   placeholder,
-  search = searchRolesLazily,
+  search,
   searchPlaceholder,
   selected = [],
-}: ItemAutoFormComponentProps & {
-  disabled?: boolean;
-  excludeIds?: number[];
-  multiple?: boolean;
-  placeholder?: string;
-  search?: (value: string) => Promise<RoleOption[]>;
-  searchPlaceholder?: string;
-  selected?: RoleOption[];
-}) => {
+}: AutoFormRolesProps) => {
   const t = useTranslations("core.global");
   const locale = useLocale();
   const [known, setKnown] = React.useState<Record<number, RoleOption>>(() =>

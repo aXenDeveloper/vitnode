@@ -39,6 +39,16 @@ import { pageHead } from '#/lib/page-head'
  * heading reads "Create a plugin". Both are composed on the server, from the
  * page tree, exactly as the Next.js application composed them.
  *
+ * ## The Open Graph is the same string without the site name
+ *
+ * `og:title` is `metaTitle` **verbatim**, while `<title>` is `metaTitle` plus
+ * ` - VitNode`. That is not an oversight, it is what the Next.js route emitted -
+ * Next applies `title.template` to the document title and leaves
+ * `openGraph.title` alone - and it is what a social card wants: "Routes -
+ * Plugins" over a link to vitnode.com, rather than the site's name twice.
+ * Measured against the running Next.js application rather than inferred; see
+ * `@vitnode/core/tanstack/metadata`.
+ *
  * ## Why the body is preloaded here
  *
  * `docsClientLoader.preload` starts the `import()` of this page's compiled MDX
@@ -70,6 +80,11 @@ export const Route = createFileRoute('/_docs/docs/$')({
   head: ({ loaderData }) =>
     pageHead({
       description: loaderData?.description,
+      openGraph: {
+        description: loaderData?.description,
+        title: loaderData?.metaTitle,
+        type: 'article',
+      },
       robots: 'index, follow',
       title: loaderData?.metaTitle,
     }),

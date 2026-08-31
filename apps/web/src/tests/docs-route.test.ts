@@ -263,6 +263,55 @@ describe('the docs shell is separate from the main shell', () => {
 })
 
 /**
+ * What a link to a documentation page unfurls as.
+ *
+ * The Next.js route emitted `og:title`, `og:description` and `og:type=article`
+ * through `generateMetadata`, and the first port of it emitted none of them -
+ * a silent SEO and social-sharing regression, because a missing meta tag looks
+ * exactly like a page that never wanted one.
+ *
+ * Static: the route's `head` is read as source. What the tags *are* is
+ * `@vitnode/core/tanstack/metadata`'s to prove, and
+ * `packages/vitnode/src/tanstack/metadata/metadata.test.ts` does, purely. What
+ * belongs here is that the documentation route asks for them.
+ */
+describe('the documentation declares Open Graph', () => {
+  const page = withoutComments(join(routesDir, '_docs/docs.$.tsx'))
+
+  it('asks for an article card', () => {
+    expect(page).toMatch(/openGraph:\s*\{[\s\S]*?type:\s*'article'/)
+  })
+
+  it('gives the card the page title and description', () => {
+    expect(page).toMatch(
+      /openGraph:\s*\{[\s\S]*?title:\s*loaderData\?\.metaTitle/,
+    )
+    expect(page).toMatch(
+      /openGraph:\s*\{[\s\S]*?description:\s*loaderData\?\.description/,
+    )
+  })
+
+  /**
+   * `og:title` is the composed title *without* the site name, and `<title>` is
+   * the same string *with* it. Measured against the running Next.js
+   * application - `<title>Routes - Plugins - VitNode</title>` beside
+   * `<meta property="og:title" content="Routes - Plugins">` - rather than
+   * inferred, because the two are one substitution apart and it would be very
+   * easy to "fix" this into agreement.
+   */
+  it('keeps the document title templated and the card title not', () => {
+    expect(page).toMatch(/\n\s*title:\s*loaderData\?\.metaTitle,/)
+    // One `pageHead` call, one `metaTitle` for both - the helper is what applies
+    // the site name to exactly one of them.
+    expect(page.match(/pageHead\(/g)).toHaveLength(1)
+  })
+
+  it('adds no image, canonical URL or Twitter card', () => {
+    expect(page).not.toMatch(/og:image|twitter:|canonical/)
+  })
+})
+
+/**
  * One Tailwind build per document, and it is a correctness rule rather than a
  * budget.
  *

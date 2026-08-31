@@ -2,6 +2,8 @@ import type { SearchAPI } from 'fumadocs-core/search/server'
 
 import { createFileRoute } from '@tanstack/react-router'
 
+import { memoizePerSource } from '#/docs/freshness'
+
 /**
  * `/docs/search` - the documentation's search index, and the one endpoint in
  * this application that is not Hono's.
@@ -25,25 +27,26 @@ import { createFileRoute } from '@tanstack/react-router'
  *
  * `createFromSource` reads every page's structured data and builds an Orama
  * index from it. Doing that at module load would make it part of server startup
- * for an application whose front page is not the documentation; behind a lazily
- * awaited promise it happens the first time somebody searches, and the promise
- * itself is the cache from then on. Assigning the promise before awaiting it is
- * what makes two simultaneous first queries build one index rather than two.
+ * for an application whose front page is not the documentation; behind
+ * `memoizePerSource` it happens the first time somebody searches, and is
+ * reused from then on.
+ *
+ * "From then on" means *until the documentation changes*, which is the whole
+ * reason that helper exists rather than a `let`. A module-level promise is
+ * correct in production, where `content/docs` is frozen build output, and wrong
+ * while somebody is writing: it would keep answering searches from the index
+ * built at boot until the dev server was restarted. Keying the cache on the
+ * source module gives both behaviours from one mechanism - see
+ * `#/docs/freshness`.
  */
-let searchApi: Promise<SearchAPI> | undefined
-
-const docsSearchApi = async (): Promise<SearchAPI> => {
-  searchApi ??= (async () => {
-    const [{ createFromSource }, { source }] = await Promise.all([
-      import('fumadocs-core/search/server'),
-      import('#/docs/source.server'),
-    ])
+const docsSearchApi = memoizePerSource(
+  async () => await import('#/docs/source.server'),
+  async ({ source }): Promise<SearchAPI> => {
+    const { createFromSource } = await import('fumadocs-core/search/server')
 
     return createFromSource(source)
-  })()
-
-  return await searchApi
-}
+  },
+)
 
 export const Route = createFileRoute('/docs/search')({
   server: {

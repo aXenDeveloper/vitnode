@@ -1,23 +1,25 @@
 "use server";
 
+import type { RoleOption } from "@/components/form/fields/roles";
+
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { fetcher } from "@/lib/fetcher";
 
 /**
- * One role, as a picker needs it.
- *
- * `name` is the raw per-language list rather than a resolved string: the server
- * has no business deciding which language the person clicking reads in, so the
- * component resolves it against the active locale.
+ * Re-exported so an existing importer keeps working. The type itself lives in
+ * `./roles`, which imports nothing - a shared component must not have to reach
+ * into a `"use server"` module to describe its own props. See that file.
  */
-export interface RoleOption {
-  color: null | string;
-  id: number;
-  name: { languageCode: string; name: string }[];
-}
+export type { RoleOption };
 
 /**
- * The default search behind {@link AutoFormRoles}.
+ * The role search a **Next.js** application uses, injected by
+ * `AutoFormRolesNext`.
+ *
+ * It is not a default any more, and nothing imports it implicitly: it reads
+ * Next's request scope through `fetcher`, so it resolves only inside a Next.js
+ * app. A TanStack host reads the same Hono endpoint from the browser instead -
+ * `searchAdminRolesInBrowser`.
  *
  * The guest role is filtered out, and that is not cosmetic: it is the role a
  * request has when it has no account, so it is never something to *assign* to
