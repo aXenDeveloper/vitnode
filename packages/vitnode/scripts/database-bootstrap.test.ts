@@ -3,12 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  CLI_COMMANDS,
-  cliCommandNames,
-  isCliCommand,
-  renderHelp,
-} from "./cli-commands.js";
+import { cliCommandNames, isCliCommandName } from "./cli-arguments.js";
+import { CLI_COMMANDS, helpCommandNames, renderHelp } from "./cli-commands.js";
 import {
   databaseBootstrapSteps,
   generateDatabaseMigrations,
@@ -93,7 +89,7 @@ describe("the two database commands are one implementation", () => {
 
   /** The one thing only `migrate` does. */
   it("gives migration generation to `migrate --generate` alone", () => {
-    expect(cli).toMatch(/flag === "--generate"/);
+    expect(cli).toMatch(/args\.includes\("--generate"\)/);
     expect(cli).toContain("generateDatabaseMigrations");
 
     const prepare = cli.slice(
@@ -112,7 +108,7 @@ describe("the two database commands are one implementation", () => {
   it("awaits the bootstrap and exits non-zero when it throws", () => {
     const runner = cli.slice(
       cli.indexOf("const runDatabaseCommand"),
-      cli.indexOf("if (command === undefined"),
+      cli.indexOf("switch (command)"),
     );
 
     expect(runner).toMatch(/await run\(\)/);
@@ -127,9 +123,16 @@ describe("the two database commands are one implementation", () => {
 });
 
 describe("the CLI's command surface", () => {
-  /** The permanent commands, and no more than those. */
+  /**
+   * The permanent commands, and no more than those.
+   *
+   * Read off `--help`'s table rather than the parser's, because the parser's
+   * list is asserted in `cli-arguments.test.ts` and the failure worth catching
+   * here is the other one: a command that validates and dispatches but that
+   * `vitnode --help` never mentions, so nobody finds it.
+   */
   it("offers exactly the commands VitNode supports", () => {
-    expect(cliCommandNames().sort()).toEqual([
+    expect(helpCommandNames().sort()).toEqual([
       "build",
       "db:prepare",
       "dev",
@@ -150,7 +153,7 @@ describe("the CLI's command surface", () => {
   it.each(["init", "prepare-plugins", "plugin", "migrate:web"])(
     "does not answer to `%s`",
     removed => {
-      expect(isCliCommand(removed)).toBe(false);
+      expect(isCliCommandName(removed)).toBe(false);
       expect(cli).not.toContain(`case "${removed}"`);
     },
   );
@@ -179,9 +182,27 @@ describe("the CLI's command surface", () => {
     expect(help).toContain("migrate --generate");
   });
 
-  it("treats a bare invocation and `--help` as a request for the list", () => {
-    expect(cli).toMatch(/command === undefined \|\| HELP_FLAGS\.includes/);
-    expect(cli).toMatch(/if \(!isCliCommand\(command\)\)/);
+  /**
+   * Somebody who does not know the commands asks in one of three ways, and all
+   * three end at the list. `--help` and a bare `vitnode` are questions rather
+   * than commands, so they print it and exit 0 - above `parseCliArguments`,
+   * which refuses both as the non-commands they are. A name that is not a
+   * command is the parser's refusal, and the list follows it.
+   */
+  it("answers `--help`, a bare invocation and a bad one with the list", () => {
+    expect(cli).toMatch(/name === undefined \|\| HELP_FLAGS\.includes\(name\)/);
+    expect(cli.indexOf("HELP_FLAGS.includes")).toBeLessThan(
+      cli.indexOf("parseCliArguments("),
+    );
+
+    const refusal = cli.slice(
+      cli.indexOf("if (!parsed.ok)"),
+      cli.indexOf("const { args, command }"),
+    );
+
+    expect(refusal).toContain("parsed.message");
+    expect(refusal).toContain("renderHelp()");
+    expect(refusal).toMatch(/process\.exit\(1\)/);
   });
 });
 

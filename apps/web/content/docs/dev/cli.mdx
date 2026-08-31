@@ -162,3 +162,31 @@ See [i18n](/docs/dev/i18n) for what these do to your locale files.
 | `vitnode i18n:update:ai`| The same, translating the new keys with the configured AI model.  |
 
 `i18n:check` takes `--ci`, which makes drift an exit code instead of a report.
+
+---
+
+## Typos are refused, not guessed
+
+Every invocation is checked against the command's own argument list **before**
+anything runs. A flag that is not spelled exactly right is an error and an exit
+code 1 - never a command quietly doing something else:
+
+```bash
+$ vitnode migrate --generat
+[VitNode] Invalid argument "--generat" for command "migrate". Allowed: --generate. Usage: vitnode migrate [--generate]
+```
+
+That one used to be expensive. `--generat` failed an `=== "--generate"` test and
+fell through to the *full* bootstrap, so somebody who meant "write the migration
+files" got a migrated and seeded database instead. `i18n:check --cii` was the
+same shape, quieter: the CI job that asked for a hard failure got a soft report
+and an exit code 0.
+
+The check is per command, because a flag belongs to the command that reads it -
+`--ci` means something to `i18n:check` and nothing to `migrate`, so
+`vitnode migrate --ci` is refused rather than ignored. Unknown commands, repeated
+flags and a value-taking flag with no value are all refused the same way, and
+every refusal prints the usage line plus the full command list.
+
+Asking properly works too - `vitnode`, `vitnode --help`, `vitnode -h` and
+`vitnode help` all print the list and exit 0.

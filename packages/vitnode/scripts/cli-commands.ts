@@ -1,11 +1,14 @@
 /**
- * The commands `vitnode` answers to, as data.
+ * How `vitnode --help` describes each command, as data.
  *
- * Separated from the dispatch in `scripts.ts` so the surface can be read - by
- * `--help`, and by a test - without running anything. A command that is not on
- * this list does not exist: `scripts.ts` looks the name up here before it does
- * any work, so the help text and the dispatch cannot describe different CLIs.
+ * Presentation only. What a command *is* - whether the name exists, and which
+ * arguments it takes - is `./cli-arguments.ts`, and this file names its commands
+ * with that module's `CliCommandName`: help that described a command the parser
+ * refuses would not compile. Separated from the dispatch in `scripts.ts` so the
+ * surface can be read - by `--help`, and by a test - without running anything.
  */
+
+import type { CliCommandName } from "./cli-arguments.js";
 
 /** The group a command is listed under in `--help`. */
 export type CliCommandGroup = "Database" | "Plugin package" | "Translations";
@@ -14,7 +17,7 @@ export interface CliCommand {
   /** The flag a command accepts, if it has one, as it appears in `--help`. */
   flag?: string;
   group: CliCommandGroup;
-  name: string;
+  name: CliCommandName;
   /** One line, printed beside the name. */
   summary: string;
 }
@@ -84,14 +87,10 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
 ];
 
-/** The command names the CLI dispatches on, without duplicates. */
-export const cliCommandNames = (): string[] => [
+/** The commands `--help` describes, without the duplicate `migrate` entry. */
+export const helpCommandNames = (): CliCommandName[] => [
   ...new Set(CLI_COMMANDS.map(command => command.name)),
 ];
-
-/** Whether `vitnode <name>` is a command at all. */
-export const isCliCommand = (name: string | undefined): boolean =>
-  name !== undefined && cliCommandNames().includes(name);
 
 /** The argument spellings that ask for the command list rather than a command. */
 export const HELP_FLAGS = ["--help", "-h", "help"];

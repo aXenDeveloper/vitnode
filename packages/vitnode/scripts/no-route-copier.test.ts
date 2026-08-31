@@ -76,7 +76,7 @@ describe("the plugin route copier", () => {
    * dispatches - `scripts.ts` rejects a name that is not in the table.
    */
   it("has no CLI command", async () => {
-    const { cliCommandNames } = await import("./cli-commands.js");
+    const { cliCommandNames } = await import("./cli-arguments.js");
     const cli = codeOf("scripts/scripts.ts");
 
     expect(cliCommandNames()).not.toContain("prepare-plugins");
