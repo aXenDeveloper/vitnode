@@ -3,13 +3,12 @@
  *
  * Every link on the login card points somewhere VitNode owns - `/register`,
  * `/login/reset-password`, `/login` - and turning one of those paths into a
- * navigation is the single question whose answer differs between the two
- * frameworks: Next.js wants `next-intl`'s locale-aware `Link`
- * (`@/lib/navigation`), TanStack Start wants the router's own, and during the
- * migration it wants one that decides per href whether this app can render the
- * destination at all. Both are a component taking {@link AuthLinkProps}, so the
- * shared views take one and stop caring - and importing neither is what lets a
- * TanStack Start route render the login card.
+ * navigation is the single question whose answer differs by host: a TanStack
+ * Start app wants the router's own `Link` (`RouterLink`), and a host that mounts
+ * VitNode differently wants its own. Each is a component taking
+ * {@link AuthLinkProps}, so the shared views take one and stop caring - and
+ * importing none of them is what keeps this directory host-neutral, and what
+ * lets a TanStack Start route render the login card at all.
  *
  * The same boundary `SearchFeedContent` and `HeaderContent` already draw, for
  * the same reason.
@@ -36,11 +35,10 @@ export type AuthLinkComponent = (props: AuthLinkProps) => React.ReactNode;
  * somewhere else overrides the one href it moved, and nothing here has to know
  * about it.
  *
- * Nothing here records which application serves any of them either, and that is
+ * Nothing here records which framework renders any of them either, and that is
  * the point rather than an omission. All three were Next.js pages when this was
- * written and all three are TanStack Start routes now; in that app they are
- * reached through the migration link, which asks the route tree per href, so the
- * change was route files and no edit to this record.
+ * written and all three are TanStack Start routes now, and the change that moved
+ * them was route files and no edit to this record.
  */
 export const AUTH_HREF = {
   resetPassword: "/login/reset-password",

@@ -326,7 +326,7 @@ describe('the shared namespace sets', () => {
       'core.global',
     ])
 
-    expect(read('migration/settings-breadcrumb.tsx')).toContain(
+    expect(read('components/settings-breadcrumb.tsx')).toContain(
       'SETTINGS_NAMESPACES',
     )
     expect(readCore('settings/layout.tsx')).toContain(

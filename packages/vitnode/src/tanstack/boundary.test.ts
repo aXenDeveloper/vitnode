@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -116,7 +116,7 @@ const TANSTACK_RUNTIME = ["@tanstack/react-router", "@tanstack/react-start"];
  * installs this package for its Hono modules and renders nothing at all.
  * "Optional" here means "not every install needs one", never "core works
  * without it once you render" - an app that mounts VitNode's provider tree has
- * to supply React Query, which is why `apps/docs` declares it too.
+ * to supply React Query, which is why `apps/web` declares it too.
  */
 const TANSTACK_PEER_RUNTIME = [
   ...TANSTACK_RUNTIME,
@@ -149,6 +149,11 @@ const NEXT_ONLY = ["next", "server-only"];
  * resolves in a TanStack Start host.
  */
 const NEXT_INTL_RUNTIME = [
+  // The root entry is included now. It re-exports `use-intl` and resolves
+  // outside Next.js, which is what let it survive in two shared components for
+  // as long as it did - and what made them read a `use-intl` context from a
+  // second module record nothing in `apps/web` provides into.
+  "next-intl",
   "next-intl/middleware",
   "next-intl/navigation",
   "next-intl/plugin",
@@ -186,12 +191,13 @@ describe("this test is looking at the right tree", () => {
 
 describe("TanStack stays behind the tanstack/ namespace", () => {
   /**
-   * The rest of the package, which the Next.js apps import.
+   * The rest of the package, which a consumer may import without TanStack.
    *
-   * `apps/docs` resolves `@vitnode/core/components/...` and
-   * `@vitnode/core/views/...` and has no TanStack dependency at all. A single
-   * import from one of those trees would make `@tanstack/react-router` a hard
-   * requirement of every VitNode install, which is what the optional peer
+   * `apps/api` resolves this package for its Hono modules and has no TanStack
+   * dependency at all, and a plugin importing `@vitnode/core/components/...` or
+   * `@vitnode/core/content/admin-form` is in the same position. A single import
+   * from one of those trees into TanStack would make `@tanstack/react-router` a
+   * hard requirement of every VitNode install, which is what the optional peer
    * dependency in `package.json` says it is not.
    */
   const outsideTanstack = () =>
@@ -238,16 +244,15 @@ describe("the namespace reaches no Next.js runtime", () => {
    */
   const NEXT_RUNTIME = [...NEXT_ONLY, ...NEXT_INTL_RUNTIME];
 
-  it("finds those imports where they are allowed, so the scan is real", () => {
-    // The control. Every assertion below is a "found nothing" one, which a
-    // scanner that silently matches nothing also satisfies. `content/next` is
-    // the layer that exists precisely to hold them.
-    expect(
-      offendersIn(
-        runtimeFilesUnder(join(packageRoot, "src/content/next")),
-        NEXT_RUNTIME,
-      ),
-    ).not.toEqual([]);
+  it("has no layer left where those imports are allowed", () => {
+    // This was the control: `content/next` was the layer that existed precisely
+    // to hold these imports, so scanning it proved the scanner could find them.
+    // It is gone, and a control pointed at production code would only defer the
+    // problem to whoever deletes the next specimen - so the positive controls
+    // moved to `src/next-boundary.test.ts`, which scans a fixture built for the
+    // purpose. What is left to assert here is that the exemption is gone too.
+    expect(existsSync(join(packageRoot, "src/content/next"))).toBe(false);
+    expect(existsSync(join(packageRoot, "src/lib/next-cache"))).toBe(false);
   });
 
   it.each(NEXT_RUNTIME)("never imports %s", forbidden => {

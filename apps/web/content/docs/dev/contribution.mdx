@@ -68,12 +68,10 @@ This command:
   </Step>
 </Steps>
 
-Voilà! Two servers come up:
-
-- **http://localhost:3001** - `apps/web`, the TanStack Start application. The
-  site, the AdminCP, the API at `/api/*` and the documentation at `/docs/*`.
-- **http://localhost:3000** - `apps/docs`, the Next.js application it is
-  replacing. Still running so the two can be compared side by side.
+Voilà! Your development environment is ready at
+**http://localhost:3000** 🎉 - `apps/web`, the TanStack Start application. One
+server, one origin: the site, the AdminCP, the API at `/api/*` and the
+documentation at `/docs/*` all come from it.
 
 ## Project Structure
 
@@ -86,7 +84,8 @@ vitnode/
 │   │   ├── src/routes/   # one file per URL, including /docs/*
 │   │   ├── src/docs/     # the documentation site implementation
 │   │   └── content/docs/ # the documentation itself, as MDX
-│   └── docs/         # The Next.js application being replaced
+│   └── api/          # The API on its own, for deploying it separately
+│       └── migrations/   # the versioned database migrations
 ├── packages/
 │   ├── vitnode/      # Core framework code
 │   ├── config/       # Shared ESLInt, TypeScript configs
@@ -114,10 +113,17 @@ vitnode/
 
 ## Database Changes
 
-If you make changes to the database schema:
+`pnpm dev` migrates for you - it runs `turbo db:prepare` before starting any
+dev server, which generates a migration for your schema change, applies it and
+seeds anything missing. So the usual workflow after editing a schema is to
+restart `pnpm dev`.
+
+To do it without starting anything - useful in CI, or when you only want to see
+the generated SQL:
 
 ```bash
-pnpm db:migrate # Run migrations
+pnpm db:prepare # generate, apply, seed
+pnpm db:migrate # the same thing, under the name deployments use
 ```
 
 <Callout title="Test your changes!!! <3" type="warn">

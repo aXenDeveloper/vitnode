@@ -14,7 +14,6 @@ import { SEARCH_TEXT_CONFIGS } from "@/database/search.js";
 import type { VitNodeApiConfig } from "../src/vitnode.config.js";
 
 import { getConfig } from "./get-config.js";
-import { preparePluginsFiles } from "./prepare-plugins-files.js";
 import { runInteractiveShellCommand } from "./run-interactive-shell-command.js";
 
 export const generateDatabaseMigrations = async () => {
@@ -59,6 +58,38 @@ const getMigrationsFolder = async (): Promise<string> => {
 // for any missing config: search still tokenizes and matches, it just skips
 // stemming. Configs that already exist (including a real dictionary) are left
 // untouched.
+/**
+ * Whether a failure is Postgres saying "somebody else created that already".
+ *
+ * Two SQLSTATEs, and the second is the one that actually happens.
+ * `CREATE TEXT SEARCH CONFIGURATION` has no `IF NOT EXISTS`, so two sessions
+ * racing on it do not get `42710 duplicate_object` - they get
+ * `23505 unique_violation` from the unique index on `pg_ts_config.cfgname`,
+ * because both passed the existence check before either inserted. The original
+ * code tolerated only `42710`, which is why the race failed a whole bootstrap.
+ *
+ * Walks `cause`, because the code is one wrapper deep: Drizzle 1.0 raises a
+ * `DrizzleQueryError` carrying no `code` of its own, with the driver's
+ * `PostgresError` as its `cause`. Reading only the outermost `code` finds
+ * `undefined` and rethrows.
+ */
+const isAlreadyCreatedError = (error: unknown): boolean => {
+  const TOLERATED = new Set([
+    "23505", // unique_violation - lost the insert race
+    "42710", // duplicate_object - lost the create race
+  ]);
+
+  for (let current = error, depth = 0; current != null && depth < 5; depth++) {
+    const { code } = current as { code?: unknown };
+
+    if (typeof code === "string" && TOLERATED.has(code)) return true;
+
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  return false;
+};
+
 const ensureSearchTextConfigs = async (
   dbClient: VitNodeApiConfig["dbProvider"],
 ): Promise<void> => {
@@ -86,8 +117,11 @@ const ensureSearchTextConfigs = async (
         sql.raw(`CREATE TEXT SEARCH CONFIGURATION "${name}" (COPY = simple)`),
       );
     } catch (err) {
-      // 42710 = duplicate_object: another process created it first - ignore.
-      if ((err as { code?: string }).code !== "42710") {
+      // Another process created it first, which is fine - see
+      // `isAlreadyCreatedError` for why this needs two SQLSTATEs and a walk down
+      // the cause chain. `withMigrationLock` makes the race rare rather than
+      // impossible, so the tolerance is worth having correct.
+      if (!isAlreadyCreatedError(err)) {
         throw err;
       }
     }
@@ -137,6 +171,138 @@ export const runMigrations = async () => {
     }
 
     process.exit(1);
+  }
+};
+
+/**
+ * The advisory-lock key every VitNode bootstrap serialises on.
+ *
+ * Arbitrary, and stable forever: it identifies "somebody is preparing this
+ * database" and nothing else. Postgres advisory locks live in a single
+ * cluster-wide namespace keyed by number, so the only property that matters is
+ * that VitNode always picks the same one.
+ */
+const MIGRATION_LOCK_KEY = 4_675_309;
+
+/** How long to wait for another bootstrap before giving up. */
+const MIGRATION_LOCK_WAIT_MS = 120_000;
+
+const MIGRATION_LOCK_POLL_MS = 250;
+
+/**
+ * A connection pinned out of the pool, as a tagged template plus a release.
+ *
+ * Structural, because the shape is `postgres`' and not Drizzle's: `$client` is
+ * whichever driver the app configured, and this only asks whether it can pin a
+ * session. A driver that cannot is not an error - see below.
+ */
+interface ReservedConnection {
+  (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): Promise<Record<string, unknown>[]>;
+  release: () => void;
+}
+
+/**
+ * Runs a bootstrap with the database's migration lock held.
+ *
+ * ## Why a lock at all
+ *
+ * Because more than one process legitimately wants to prepare the same database
+ * at the same time. Every app that *reads* the schema gates its `dev` script on
+ * the bootstrap - the API, and any single app that mounts the API in-process -
+ * so a monorepo `turbo dev` starts two of them at once. Without a lock they
+ * both call `migrate()` on one database: at best one fails with "relation
+ * already exists", at worst two `drizzle-kit generate` runs each write a
+ * migration directory for the same schema change and the history forks.
+ *
+ * With it, the first process does the work and the second waits, then finds
+ * nothing pending and starts. That is what makes "gate every runtime" safe
+ * rather than merely well intentioned, and it is the same reason a horizontally
+ * scaled deployment could run this without its replicas racing.
+ *
+ * ## Why the lock is taken on a *reserved* connection
+ *
+ * An advisory lock belongs to a session, and `postgres` hands out connections
+ * from a pool - so `pg_advisory_lock` on the pool and `pg_advisory_unlock` on
+ * the pool are not guaranteed to be the same session, which either fails to
+ * release or releases somebody else's. `reserve()` pins one connection for the
+ * duration, so the session that takes the lock is the session that gives it
+ * back.
+ *
+ * `pg_try_advisory_lock` in a loop rather than the blocking `pg_advisory_lock`,
+ * because a blocking wait cannot say why it is waiting. This one says so once,
+ * and gives up after two minutes rather than hanging a developer's terminal
+ * forever.
+ *
+ * ## When there is no lock
+ *
+ * A driver that cannot pin a session runs unlocked rather than failing. VitNode
+ * supports whatever `dbProvider` an app configures, and refusing to migrate on
+ * one that has no `reserve()` would be a worse outcome than the race it avoids -
+ * which, for the single-process case that every non-monorepo app has, does not
+ * exist anyway.
+ */
+const withMigrationLock = async (
+  dbClient: VitNodeApiConfig["dbProvider"],
+  initMessage: string,
+  run: () => Promise<void>,
+): Promise<void> => {
+  const client = dbClient.$client as unknown as {
+    reserve?: () => Promise<ReservedConnection>;
+  };
+
+  if (typeof client.reserve !== "function") {
+    await run();
+
+    return;
+  }
+
+  const session = await client.reserve();
+  const deadline = Date.now() + MIGRATION_LOCK_WAIT_MS;
+  let held = false;
+  let announced = false;
+
+  try {
+    while (!held) {
+      const [row] =
+        await session`SELECT pg_try_advisory_lock(${MIGRATION_LOCK_KEY}) AS locked`;
+
+      if (row.locked === true) {
+        held = true;
+        break;
+      }
+
+      if (Date.now() > deadline) {
+        throw new Error(
+          `Timed out after ${String(
+            MIGRATION_LOCK_WAIT_MS / 1000,
+          )}s waiting for another process to finish preparing this database. If nothing else is running, a previous run was killed mid-migration - reconnect and retry, or check for a stuck session with "SELECT * FROM pg_locks WHERE locktype = 'advisory'".`,
+        );
+      }
+
+      if (!announced) {
+        console.log(
+          `${initMessage} Another process is preparing this database - waiting for it to finish...`,
+        );
+        announced = true;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, MIGRATION_LOCK_POLL_MS));
+    }
+
+    await run();
+  } finally {
+    if (held) {
+      try {
+        await session`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY})`;
+      } catch {
+        // The connection is already gone, which released the lock with it.
+      }
+    }
+
+    session.release();
   }
 };
 
@@ -265,73 +431,108 @@ export const initialDataForDatabase = async () => {
   }
 };
 
-export const prepareDatabase = async ({
-  initMessage,
-  flag,
+/**
+ * One step of a database bootstrap: what it does, and what to print while it does
+ * it.
+ *
+ * A record rather than a bare function so the *order* can be asserted without a
+ * database. That is the whole reason this type is exported: the regression this
+ * layer exists to prevent is not a broken migration, it is a migration that runs
+ * beside the dev server instead of before it, and no amount of Postgres proves
+ * the difference. `database-bootstrap.test.ts` reads this list.
+ */
+export interface DatabaseBootstrapStep {
+  action: () => Promise<void>;
+  label: string;
+}
+
+/**
+ * The steps of a database bootstrap, in the order they must run - and nothing
+ * else.
+ *
+ * Pure, and separated from the running so it can be stated as a list. Every step
+ * is idempotent, which is what makes it safe to run this before *every* dev
+ * server start rather than guarding it behind a marker file: `drizzle`'s own
+ * `__drizzle_migrations` table decides what is pending, `initialDataForDatabase`
+ * upserts the languages and only seeds roles into an empty table, and
+ * `ensureSearchTextConfigs` skips configs that already exist. There is no
+ * first-run state anywhere in VitNode, and there must not be - a marker file is
+ * a second source of truth that a fresh clone, a wiped volume or a colleague's
+ * machine immediately disagrees with.
+ *
+ * ## Why generation is one of the steps
+ *
+ * `generate` is a flag rather than an assumption because the two callers want
+ * different things, but development has always wanted generation: VitNode's
+ * documented workflow for adding a content type is
+ * `build:plugins && db:migrate`, and the migration for a plugin's new tables
+ * does not exist until `drizzle-kit generate` writes it. Dropping generation
+ * from the dev bootstrap would leave that documented flow needing a command the
+ * docs do not mention. It is a no-op when the schema matches the last snapshot,
+ * so it costs a `drizzle-kit` round trip and nothing else.
+ */
+export const databaseBootstrapSteps = ({
+  generate,
 }: {
-  flag: string;
+  generate: boolean;
+}): DatabaseBootstrapStep[] => [
+  ...(generate
+    ? [{ action: generateDatabaseMigrations, label: "Generate migrations..." }]
+    : []),
+  { action: runMigrations, label: "Apply pending migrations..." },
+  { action: initialDataForDatabase, label: "Ensure initial data..." },
+];
+
+/**
+ * `vitnode db:prepare` - everything a database needs before anything serves a
+ * request.
+ *
+ * Awaited to completion by whatever starts a dev server, and that sequencing is
+ * the point rather than a detail. Serialised by
+ * {@link withMigrationLock}, because more than one runtime legitimately gates on
+ * it: the API and any single app that mounts the API both need the schema before
+ * they start, and a monorepo `turbo dev` launches them at once. Run concurrently with `vite dev` or
+ * `tsx watch`, a bootstrap turns every fresh checkout into a race: the first
+ * requests hit a schema that is still being built, and what a developer sees is
+ * an arbitrary Postgres error from a page rather than a migration log from their
+ * terminal. So this resolves or it throws, and the caller starts nothing until it
+ * has resolved.
+ *
+ * ## What it is not
+ *
+ * It was `vitnode init` until Stage 17, and the rename is not cosmetic. That
+ * command had two responsibilities bolted together: it prepared the database,
+ * and - through `preparePluginsFiles` - it copied every installed plugin's pages
+ * into the host app's `src/app/[locale]/…` so Next.js could see them. Removing
+ * the copier removed the reason `init` was called `init`, and left a command
+ * whose name promised a project-wide setup while doing one thing.
+ *
+ * A plugin's routes are compiled into a literal registry by the app's own Vite
+ * plugin now, on every dev start and every build. Nothing here prepares a
+ * plugin, nothing here writes a route file, and nothing here knows what a plugin
+ * is. See `@vitnode/core/framework/vite`.
+ *
+ * `--web` is gone with it. A web app that talks to a separate API owns no
+ * schema, so the honest answer is for its `dev` script not to call this at all
+ * rather than for this to accept a flag meaning "do nothing".
+ */
+export const databaseBootstrap = async ({
+  generate = true,
+  initMessage,
+}: {
+  generate?: boolean;
   initMessage: string;
-}) => {
-  const steps: { action: () => Promise<void>; label: string }[] = [];
+}): Promise<void> => {
+  const config = await getConfig({ type: "api.config" });
+  const steps = databaseBootstrapSteps({ generate });
 
-  if (flag === "--web") {
-    steps.push({
-      label: "Prepare plugins files...",
-      action: async () => await preparePluginsFiles(flag),
-    });
-  } else if (flag === "--api") {
-    steps.push(
-      {
-        label: "Prepare plugins files...",
-        action: async () => await preparePluginsFiles(flag),
-      },
-      {
-        label: "Generate migrations...",
-        action: generateDatabaseMigrations,
-      },
-      {
-        label: "Run migrations...",
-        action: runMigrations,
-      },
-      {
-        label: "Insert initial data...",
-        action: initialDataForDatabase,
-      },
-    );
-  } else {
-    steps.push(
-      {
-        label: "Prepare plugins files...",
-        action: async () => await preparePluginsFiles(flag),
-      },
-      {
-        label: "Generate migrations...",
-        action: generateDatabaseMigrations,
-      },
-      {
-        label: "Run migrations...",
-        action: runMigrations,
-      },
-      {
-        label: "Insert initial data...",
-        action: initialDataForDatabase,
-      },
-    );
-  }
+  await withMigrationLock(config.dbProvider, initMessage, async () => {
+    for (const [index, step] of steps.entries()) {
+      console.log(
+        `${initMessage} [${index + 1}/${steps.length}] ${step.label}`,
+      );
 
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
-    const stepNum = `[${i + 1}/${steps.length}]`;
-
-    if (step.label === "Insert initial data...") {
-      console.log(`\n${initMessage} ${stepNum} ${step.label}`);
-    } else {
-      console.log(`${initMessage} ${stepNum} ${step.label}`);
+      await step.action();
     }
-
-    await step.action();
-  }
-
-  console.log(`${initMessage} \x1b[32mInitial setup completed.\x1b[0m`);
-  process.exit(0);
+  });
 };

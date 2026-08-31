@@ -16,7 +16,7 @@ import { blogCategoryNav, blogPostNav } from "./nav";
  *
  * The **browser-safe** half of the plugin's frontend integration, and the
  * canonical declaration of every override: `config.tsx` spreads this rather than
- * repeating it, so the Next.js AdminCP and the TanStack Start AdminCP render the
+ * repeating it, so every AdminCP that reads this registration renders the
  * same components from the same list. There is no second copy to drift.
  *
  * Three modules, three questions:
@@ -39,7 +39,7 @@ import { blogCategoryNav, blogPostNav } from "./nav";
  * the structured errors, the toast and the cache invalidation.
  *
  * Everything reachable from here is framework-neutral by contract: no
- * `next/*`, no `next-intl`, no server action. `BlogArticleEditorField` draws its
+ * framework package, no router, no server action. `BlogArticleEditorField` draws its
  * own lazy boundary with `React.lazy`, which is what keeps the editor out of the
  * initial AdminCP bundle now that a generated registry imports this module
  * eagerly.

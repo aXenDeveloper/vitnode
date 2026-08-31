@@ -42,7 +42,7 @@ describe('the root route answers for everything unmatched', () => {
     '/admin/contents',
     '/admin/core/not-migrated-yet',
     // Pages the Next.js application still serves. A link to one of these is a
-    // document navigation - `MigrationLink` asks the route tree - so what
+    // document navigation - every link goes through the router - so what
     // reaches the root is somebody typing or a stale bookmark.
     '/blog/post-30',
     '/users/aXen',

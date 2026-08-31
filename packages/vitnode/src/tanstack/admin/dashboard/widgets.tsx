@@ -16,11 +16,11 @@ import { useAdminUser } from "../permissions";
 /**
  * Core's dashboard widgets, as a browser can render them.
  *
- * The Next.js registry (`views/.../dashboard/widgets/registry.tsx`) is unchanged
- * and stays the source of truth for what core ships. This is the same two
- * widgets with the one difference a browser forces: `SendNotificationWidget`
- * there is an async Server Component that reads `getSessionAdminApi()`, and a
- * browser has no request scope to read.
+ * The only registry now, and the widgets it lists are the ones core ships. It
+ * used to be the browser half of a pair: a Next.js registry beside the widgets
+ * held the same two entries, differing only in that its `SendNotificationWidget`
+ * was an async Server Component reading the request scope, which a browser has
+ * none of. That half is gone along with the rest of that host.
  *
  * ## Why the list is duplicated rather than shared
  *

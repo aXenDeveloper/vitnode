@@ -163,12 +163,10 @@ const metaOf = (html: string, name: string): string | undefined =>
  *
  * Paths rather than whole hrefs, because what the assertions below are about is
  * the locale prefix, and that is a fact about the path. A search result points
- * at `/blog/post-30`, which the Next.js app still serves - so with
- * `NEXT_PUBLIC_LEGACY_WEB_URL` configured `MigrationLink` renders it absolute,
- * against the legacy origin, and without it renders it relative. Both are
- * correct, the prefix rule is the same either way, and reading whole hrefs made
- * this file's result depend on whether the developer running it had that
- * variable set.
+ * wherever the indexed record says, which on this deployment is a relative path
+ * and on another could carry an origin; reading whole hrefs would make this
+ * file's result depend on the fixture's spelling rather than on the prefix rule
+ * it is actually testing.
  */
 const hrefsOf = (html: string): string[] =>
   [...html.matchAll(/href="([^"]*)"/g)].flatMap(([, href]) => {

@@ -5,7 +5,6 @@
   "defaultOpen": true,
   "pages": [
     "create",
-    "layouts-and-pages",
     "route-manifest",
     "admin-page",
     "dashboard-widgets",

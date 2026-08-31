@@ -176,7 +176,7 @@ export const ContentEditorialTransportProvider = ({
  * the sentence says what to do rather than what went wrong.
  */
 export const CONTENT_EDITORIAL_TRANSPORT_MISSING =
-  "A Content Engine editorial panel must be rendered inside a ContentEditorialTransportProvider. Next.js mounts one in NextContentFormHost; a TanStack Start route mounts one in ContentEditorialHost.";
+  "A Content Engine editorial panel must be rendered inside a ContentEditorialTransportProvider. A TanStack Start route mounts one in ContentEditorialHost.";
 
 export const useContentEditorialTransport = (): ContentEditorialTransport => {
   const transport = React.use(ContentEditorialTransportContext);

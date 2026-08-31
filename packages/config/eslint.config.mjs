@@ -8,21 +8,12 @@ import tsEslint from "typescript-eslint";
 export default [
   {
     ignores: [
-      "next-env.d.ts",
       "dist",
-      "**/\\(main\\)/\\(plugins\\)/**",
-      "**/\\(auth\\)/\\(plugins\\)/**",
-      "**/\\(blank\\)/\\(plugins\\)/**",
-      "**/\\(main\\)/@breadcrumb/**",
-      "**/\\(auth\\)/@breadcrumb/**",
       ".prettierrc.mjs",
       "node_modules",
       "eslint.config.mjs",
-      "next.config.ts",
-      "config/next.config.ts",
       "postcss.config.mjs",
       ".turbo",
-      ".next",
       "global.d.ts",
       "tsup.config.ts",
       "*.test.tsx",

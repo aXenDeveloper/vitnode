@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { RouterLink } from '@vitnode/core/tanstack/layout'
 
 import { pageHead } from '#/lib/page-head'
-import { MigrationLink } from '#/migration/link'
 import { HomeRouteContent } from '#/site/home/home-content'
 import { HOME_DESCRIPTION, HOME_TITLE } from '#/site/home/metadata'
 
@@ -52,16 +52,19 @@ export const Route = createFileRoute('/_main/')({
 })
 
 /**
- * `MigrationLink` rather than the router's `Link`, and the same wrapper
- * `/discover` uses for the same reason: the page's primary call to action points
- * at `/docs/dev`, which the Next.js application serves until Stage 16.
+ * The link component is named *here* rather than inside the page.
  *
- * The seam is named *here* rather than inside the page because a route file is
- * where this application keeps every migration decision - one grep, one cutover
- * edit, and `src/tests/migration-destination.test.ts` is what keeps it that way.
- * The page and every section under it take a link component and hold no opinion
- * about which application answers for a path.
+ * `#/site` is written against `SiteLinkComponent` - structurally an anchor with
+ * `href` required - and holds no opinion about how a path becomes a navigation.
+ * That is what let the primary call to action point at `/docs/dev` through three
+ * different answers to that question without a section being edited, and it is
+ * why `RouterLink` is passed in from the route rather than imported by the hero.
+ *
+ * `RouterLink` is core's own: the router's `Link` in the shape the shared views
+ * ask for. `/docs/dev` is a route in this tree, so the button is an ordinary
+ * client-side navigation and the rewrite writes the locale prefix - no `/docs`
+ * special case anywhere on this page.
  */
 function HomeRoute() {
-  return <HomeRouteContent LinkComponent={MigrationLink} />
+  return <HomeRouteContent LinkComponent={RouterLink} />
 }

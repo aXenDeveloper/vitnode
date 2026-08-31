@@ -10,11 +10,11 @@ VitNode plugins seamlessly integrate with databases using [Drizzle ORM](https://
 Create your database schema in the `database` directory of your plugin. Each table should be defined in its own file for better organization.
 
 ```ts title="plugins/{plugin_name}/src/database/categories.ts"
-import { camelCase } from "drizzle-orm/pg-core";
+import { camelCase } from 'drizzle-orm/pg-core'
 
 export const blog_categories = camelCase.table.withRLS(
-  "blog_categories",
-  t => ({
+  'blog_categories',
+  (t) => ({
     id: t.serial().primaryKey(),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t
@@ -23,7 +23,7 @@ export const blog_categories = camelCase.table.withRLS(
       .defaultNow()
       .$onUpdate(() => new Date()),
   }),
-);
+)
 ```
 
 Two pieces of that are worth naming, because both moved in Drizzle v1:
@@ -39,8 +39,8 @@ Two pieces of that are worth naming, because both moved in Drizzle v1:
 
 <Callout type="info" title="Let the Content Engine write this for you">
   Hand-writing the table, its schemas, its routes and its AdminCP screen is a
-  lot of repetition. The [Content Engine](/docs/dev/content-engine) generates all
-  of it from one declaration - and produces exactly this kind of table.
+  lot of repetition. The [Content Engine](/docs/dev/content-engine) generates
+  all of it from one declaration - and produces exactly this kind of table.
 </Callout>
 
 ## Accessing Database
@@ -54,16 +54,16 @@ export const postsRoute = buildRoute({
   handler: async (c) => {
     // [!code ++:7]
     const data = await c
-      .get("db")
+      .get('db')
       .select({
         id: blog_posts.id,
-        status: blog_posts.status
+        status: blog_posts.status,
       })
-      .from(blog_posts);
+      .from(blog_posts)
 
-    return c.json(data);
-  }
-});
+    return c.json(data)
+  },
+})
 ```
 
 ## Relational Queries
@@ -72,34 +72,34 @@ export const postsRoute = buildRoute({
 record together with what it points at - one round trip, and no join to write:
 
 ```ts
-const user = await c.get("db").query.core_users.findFirst({
+const user = await c.get('db').query.core_users.findFirst({
   where: { id: 1 },
   with: { group: true, secondary_roles: true },
-});
+})
 ```
 
 Filters and ordering are plain objects rather than callbacks:
 
 ```ts
-await c.get("db").query.core_users.findMany({
-  where: { emailVerified: true, name: { like: "A%" } },
-  orderBy: { createdAt: "desc" },
+await c.get('db').query.core_users.findMany({
+  where: { emailVerified: true, name: { like: 'A%' } },
+  orderBy: { createdAt: 'desc' },
   limit: 20,
-});
+})
 ```
 
 Relations live in one place - `@vitnode/core/database/relations` - rather than
 beside each table, and a relation is named on the side that reads it:
 
 ```ts title="src/database/relations.ts"
-import { defineRelations } from "drizzle-orm";
+import { defineRelations } from 'drizzle-orm'
 
-export const coreRelations = defineRelations(schema, r => ({
+export const coreRelations = defineRelations(schema, (r) => ({
   core_users: {
     group: r.one.core_roles({ from: r.core_users.roleId, to: r.core_roles.id }),
     secondary_roles: r.many.core_users_secondary_roles(),
   },
-}));
+}))
 ```
 
 <Callout type="warn" title="A relation cannot reuse a column name">
@@ -116,7 +116,7 @@ VitNode provides convenient commands for managing your database schema and migra
 
 Generate migration files when you modify your database schema:
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
@@ -135,6 +135,63 @@ npm run db:migrate
 </Tabs>
 
 <Callout type="info" title="Automatic Updates in Development">
-  VitNode automatically runs migrations and schema updates when you start your application in
-  development mode, keeping your database in sync with your code.
+  VitNode automatically runs migrations and schema updates when you start your
+  application in development mode, keeping your database in sync with your code.
 </Callout>
+
+### The development bootstrap
+
+You rarely need to run anything by hand. **Every app that reads the schema gates
+its own `dev` script** on `vitnode db:prepare`, so a fresh clone prepares the
+database before a single request can be served - whichever way you start it:
+
+```bash
+pnpm dev                    # the monorepo root: prepares once, then starts everything
+cd apps/api && pnpm dev     # gated on its own
+cd apps/web && pnpm dev     # gated too, if it mounts the API in-process
+turbo dev --filter=web      # gated, because the gate lives in the script
+```
+
+The rule is ownership of _reads_, not of migration files: an app is gated if it
+serves `/api/*` from its own process. A frontend that talks to a separate API
+over HTTP is not gated, because it has no schema to prepare.
+
+`db:prepare` does three things, in this order:
+
+1. **Generate** any migration your schema changes imply. A no-op when nothing
+   changed.
+2. **Apply** every pending migration. Drizzle's own `__drizzle_migrations` table
+   decides what is pending - there is no marker file and no "first run" state, so
+   this is safe to run before every start.
+3. **Ensure initial data** - the languages, the Guest/Member/Moderator/Administrator
+   roles and their permission rows. A fresh database needs more than tables.
+
+Every step is idempotent, and the chain is `&&` rather than `&` on purpose: if a
+migration fails, the dev server does not start. A schema that failed to migrate
+is never served.
+
+<Callout type="info" title="Two gates at once are safe">
+  A monorepo starts more than one gated app, so more than one bootstrap can run
+  at the same time. VitNode takes a Postgres advisory lock around the whole
+  bootstrap: the first process does the work, the second waits and then finds
+  nothing pending. Without it the two race on `CREATE SCHEMA IF NOT EXISTS
+  drizzle` - Postgres' `IF NOT EXISTS` is not race-safe against a concurrent
+  creator - and one dev server fails to start.
+</Callout>
+
+<Callout type="warn" title="Only one package owns the migrations">
+  A gated app is not necessarily a migration *owner*. In a split deployment the
+  frontend talks to the API over HTTP and ships no `db:prepare`, `db:migrate` or
+  `drizzle-kit` at all. And where a web app does serve the API but the
+  migrations live next door, its gate delegates - `pnpm --filter api db:prepare`
+  - so the `migrations/` directory has exactly one owner and `turbo db:prepare`
+  runs exactly one bootstrap.
+</Callout>
+
+### In production
+
+Production is a separate contract, and it is deliberately **not** automatic: a
+horizontally scaled deployment would have every replica racing to migrate the
+same database on boot. Run the migration as its own deployment step instead -
+`pnpm db:migrate` - the way the [Vercel guide](/docs/dev/deployments/cloud/vercel)
+does. `start` never migrates.

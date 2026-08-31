@@ -84,9 +84,9 @@ export const loadAdminUserRoute = async ({
    * The one place `$id` becomes an id.
    *
    * Here rather than in the route's `params.parse`, and that is deliberate:
-   * `parse` runs inside `matchRoutes`, which `isTanStackOwnedPath` calls to
-   * decide whether *this* application serves a path at all - so a `parse` that
-   * threw would take down the link component for every href it was asked about.
+   * `parse` runs inside `matchRoutes`, which the router calls on every
+   * navigation and every `<Link>` it builds - so a `parse` that threw would take
+   * down far more than the one screen with a bad id in its URL.
    *
    * `notFound()` rather than a `400`: `/admin/core/users/abc` is a URL that
    * names no user, which is what a not-found screen is for, and it is the same

@@ -54,9 +54,9 @@
  *   which is which is route composition. This package hands the routes their
  *   decisions (`ensureAdminAccess`, `canEnterAdmin`, `sanitizeAdminReturnTo`)
  *   and never a `createFileRoute`.
- * - **Navigation.** Every action and the shell itself take a `navigate` and a
- *   `LinkComponent`, because during the migration part of `/admin/*` is still
- *   served by the Next.js application - `/admin/content/*` after Stage 12.
+ * - **Navigation.** Every action and the shell itself take a `navigate`, and a
+ *   `LinkComponent` that defaults to `RouterLink` - so a host supplies only what
+ *   its own router setup makes different.
  */
 
 export * from "./actions";

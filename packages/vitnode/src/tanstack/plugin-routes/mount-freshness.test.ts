@@ -28,16 +28,14 @@ import { pluginRouteSpecs } from "./specs";
  * is only half the job: the old ones have to stop existing, and they have to
  * stop existing on the tree that is already there rather than on a fresh one.
  *
- * The symptom when they do not is route *ownership*, not a broken page. VitNode
- * asks the live route tree whether it serves a path - `isTanStackOwnedPath`,
- * which is `matchRoutes` and nothing else - and every link, redirect and guard
- * decides from that answer. A subtree nobody declares any more still matches, so
- * a URL that has gone back to the other application keeps being claimed by this
- * one: the click is handled client-side and lands on a not-found instead of the
- * page that is actually serving it.
+ * The symptom when they do not is a *stale match*, not a broken page. The live
+ * route tree is what every link, redirect and guard resolves against, and a
+ * subtree nobody declares any more still matches - so a URL whose plugin was
+ * uninstalled keeps resolving to a route that no longer has a component behind
+ * it, and the dev server serves a blank or a crash rather than a not-found.
  *
- * `matchRoutes` is used directly here for the same reason the app's own seam
- * uses it: the route tree is the only table, and a test that consulted a list of
+ * `matchRoutes` is used directly here because the route tree is the only table,
+ * and a test that consulted a list of
  * expected paths would be asserting against its own copy of the answer.
  */
 
@@ -124,13 +122,12 @@ const appTree = (): { admin: AnyRoute; main: AnyRoute; root: AnyRoute } => {
 };
 
 /**
- * The ownership question, as the application asks it: does the deepest match
- * consume the whole path?
+ * Does the deepest match consume the whole path?
  *
- * A copy of `isTanStackOwnedPath`'s rule minus the locale and origin handling,
- * which are the host's and are tested there. "Something matched" is not enough:
- * `matchRoutes` answers with the deepest *ancestor* it can resolve, so a removed
- * `/example` still comes back as a match on the root.
+ * The locale and origin handling a host wraps around this is the host's and is
+ * tested there; this is the route-tree half alone. "Something matched" is not
+ * enough: `matchRoutes` answers with the deepest *ancestor* it can resolve, so a
+ * removed `/example` still comes back as a match on the root.
  */
 const owns = (tree: AnyRoute, pathname: string): boolean => {
   // A router per question, built from the tree as it stands right now - which is

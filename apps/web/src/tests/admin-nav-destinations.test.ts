@@ -12,20 +12,19 @@ import { isExternalHref } from '@vitnode/core/views/admin/layouts/normalize-url'
 import { describe, expect, it } from 'vitest'
 
 import { adminNav } from '#/lib/admin-nav'
-import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
+
+import { resolvesToRoute } from './route-tree'
 
 /**
  * Where the AdminCP sidebar's entries actually lead, in a half-migrated app.
  *
  * The nav model and the route tree are tested separately and thoroughly - one in
  * `packages/vitnode`, the other in `admin-routes.test.ts`. What neither can see
- * on its own is the join between them, which is the thing Stage 12 actually
- * ships: the sidebar names every AdminCP screen the installation has, and only
- * some of them are served by this router - after Wave 1, the dashboard, the two
- * system screens and the three advanced ones. `MigrationLink` asks per href, so an
- * entry pointing at a screen the Next.js app still renders becomes a document
- * load rather than a client-side navigation into a route that cannot match.
+ * on its own is the join between them: the sidebar names every AdminCP screen
+ * the installation has, and each entry is a hand-written (or plugin-declared)
+ * href that nothing but a test connects to a route file. An entry naming a URL
+ * no route declares renders perfectly and 404s on click.
  *
  * The failure this guards against is silent and total. If `/admin/content/...`
  * ever started answering "owned", every content screen would become a TanStack
@@ -47,7 +46,7 @@ const t: AdminNavTranslator = Object.assign((key: string): string => key, {
 
 const root: StaffPermissionSet = { root: true, permissions: [] }
 
-const owns = (href: string): boolean => isTanStackOwnedPath(getRouter(), href)
+const owns = (href: string): boolean => resolvesToRoute(getRouter(), href)
 
 /** Every destination the sidebar offers a root administrator. */
 const navHrefs = (plugins: unknown[] = []): string[] =>
@@ -127,27 +126,33 @@ describe('the AdminCP navigation names screens both applications serve', () => {
   })
 
   /**
-   * The property that outlives every wave: the sidebar names screens whether or
-   * not this router serves them.
+   * Navigation is a product model, not a projection of the route tree.
    *
-   * Deliberately *not* a list of what is still legacy-owned. That list shrinks
-   * every wave and two migrations landing at once would each have to edit the
-   * other's copy of it; more importantly, an entry being a document load is not
-   * a fault to guard against - it is the correct answer for a screen that has
-   * not moved. What must stay true is that the navigation is complete either
-   * way, which is what makes `MigrationLink`'s per-href question the only thing
-   * deciding how anybody travels.
-   *
-   * The one destination that must *never* be owned is the Content Engine's, and
-   * that has its own describe block below.
+   * Nothing derives a nav entry from a route file, in either direction, and
+   * nothing makes an entry conditional on a route existing - which is what let
+   * the sidebar name the whole AdminCP throughout a migration in which only some
+   * of it was served from here. That independence is the property worth pinning;
+   * the assertion below is the other half of it.
    */
-  it('names screens this router does not serve, and that is not a fault', () => {
+  it('is complete, and derived from no route file', () => {
     const hrefs = navHrefs()
 
     expect(hrefs.length).toBeGreaterThan(WAVE_ONE.length)
-    // Every entry is a real destination in one application or the other; none is
-    // conditional on a route existing here.
     expect(hrefs.every((href) => href.startsWith('/admin/'))).toBe(true)
+  })
+
+  /**
+   * ...and every entry it names is a URL this route tree declares.
+   *
+   * The join the two suites cannot make on their own, and now that the whole
+   * AdminCP is served from here it can be asserted for *every* entry rather than
+   * for a hand-kept subset. A crumb or a sidebar row pointing at
+   * `/admin/core/user` is invisible until somebody clicks it.
+   */
+  it('names no destination this route tree cannot serve', () => {
+    const unreachable = navHrefs().filter((href) => !owns(href))
+
+    expect(unreachable).toEqual([])
   })
 
   it('serves the dashboard itself, so the shell has something to frame', () => {
@@ -155,12 +160,12 @@ describe('the AdminCP navigation names screens both applications serve', () => {
   })
 })
 
-describe('content navigation during Stage 12', () => {
+describe('content navigation', () => {
   /**
    * A content type gets a nav entry for free, and it points into
-   * `/admin/content/*` - which the Content Engine owns and Stage 13 migrates. The
-   * entry is produced regardless, because navigation describes what exists rather
-   * than what this router happens to render.
+   * `/admin/content/*`, which the Content Engine owns. The entry is produced
+   * from the content type declaration alone, because navigation describes what
+   * the installation has rather than what any route file says.
    */
   const plugins = [
     {
@@ -182,10 +187,9 @@ describe('content navigation during Stage 12', () => {
   })
 
   /**
-   * And that entry is a client-side navigation, which is the whole of "Stage 13
-   * owns the Content Engine". It flipped from a document load into the legacy
-   * app the moment `/admin/content/$` existed - from the route tree, with no
-   * list of migrated paths anywhere and no change to the navigation.
+   * And that entry resolves, which is the whole of "the Content Engine owns this
+   * namespace": the answer comes from `/admin/content/$` being in the route
+   * tree, with no list of paths anywhere and no change to the navigation.
    */
   it('routes that entry into this router', () => {
     expect(owns('/admin/content/blog/posts')).toBe(true)
@@ -259,8 +263,8 @@ describe('external navigation is not a route question at all', () => {
  * 12 shipped wrong: does the navigation this app hands its shell contain the
  * plugins this app configured? Before the projection existed, `AdminShell`
  * passed nothing and the shell fell back to core's own groups - so every plugin
- * entry and every content type entry the legacy AdminCP shows was simply absent,
- * with no error anywhere to say so.
+ * entry and every content type entry was simply absent, with no error anywhere
+ * to say so.
  *
  * It reads `#/lib/admin-nav`, which is the same object the shell is given, so
  * there is nothing here that could agree with a test and disagree with a

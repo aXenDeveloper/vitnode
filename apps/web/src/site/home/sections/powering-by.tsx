@@ -38,9 +38,10 @@ const TOOLS = [
  * Everything else is the section as it was: same frame, same fades at both
  * edges, same speeds, same marks.
  *
- * Plain `<a>` rather than the migration link, because every href here leaves
- * VitNode entirely. `MigrationLink` answers "which of our two applications
- * serves this path", and for `https://hono.dev` the answer is neither.
+ * Plain `<a>` rather than the injected `LinkComponent`, because every href here
+ * leaves VitNode entirely. A `LinkComponent` takes a *path*; handing it
+ * `https://hono.dev` would ask a router to match an absolute URL against the
+ * route tree, which answers with something other than Hono's website.
  */
 export const PoweringBySection = () => (
   <section className="bg-background border-border/75 dark:border-border/50 overflow-hidden border">

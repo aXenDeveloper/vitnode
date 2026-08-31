@@ -50,7 +50,7 @@ const code = (path: string) => withoutComments(path)
 const ROUTE = join(appSrc, 'routes/_main/index.tsx')
 const HOME_CONTENT = join(siteDir, 'home/home-content.tsx')
 const HERO = join(siteDir, 'home/sections/hero.tsx')
-const HEADER = join(appSrc, 'migration/main-header.tsx')
+const HEADER = join(appSrc, 'components/main-header.tsx')
 const STYLES = join(appSrc, 'styles.css')
 const LOGO = join(repoRoot, 'packages/vitnode/src/components/logo-vitnode.tsx')
 const CORE_HEADER = join(
@@ -128,15 +128,15 @@ describe('the Stage 3 scaffold is gone', () => {
 })
 
 describe('the front page links', () => {
-  it('sends Get Started to the docs through the migration seam', () => {
+  it('sends Get Started to the docs through the injected link', () => {
     expect(code(HERO)).toMatch(/<LinkComponent[\s\S]*?href="\/docs\/dev"/)
   })
 
-  it('decides nothing about which application serves the docs', () => {
-    // The rule `MigrationLink` owns, and the one a page most easily duplicates.
-    // A `startsWith('/docs')` here would keep working right up until Stage 16
-    // migrates the docs, and then quietly send every reader out of the
-    // application and back in again.
+  it('decides nothing about how a path becomes a navigation', () => {
+    // The rule a page most easily duplicates. A `startsWith('/docs')` here
+    // would be a second, hand-written route table living on the front page -
+    // which is what the docs migration would have broken, and what any future
+    // move of that URL would break again.
     for (const path of filesUnder(siteDir)) {
       const source = code(path)
       const name = relative(appSrc, path)
@@ -149,21 +149,22 @@ describe('the front page links', () => {
     }
   })
 
-  it('names the migration link in the route file and nowhere under #/site', () => {
-    // `migration-destination.test.ts` states this as a rule over the whole app.
-    // Restated here for the page it was most tempting to break: the sections
-    // take a `SiteLinkComponent` prop, and only the route wires it.
+  it('names the link component in the route file and nowhere under #/site', () => {
+    // The sections take a `SiteLinkComponent` prop and only the route wires it,
+    // which is the whole reason the front page survived three different answers
+    // to "how does a path become a navigation" without a section being edited.
     const offenders = filesUnder(siteDir)
-      .filter((path) => code(path).includes("from '#/migration/"))
+      .filter((path) => code(path).includes("from '@tanstack/react-router'"))
       .map((path) => relative(appSrc, path))
 
     expect(offenders).toEqual([])
-    expect(code(ROUTE)).toMatch(/from '#\/migration\/link'/)
+    expect(code(ROUTE)).toMatch(/from '@vitnode\/core\/tanstack\/layout'/)
+    expect(code(ROUTE)).toMatch(/LinkComponent=\{RouterLink\}/)
   })
 
-  it('leaves VitNode by a plain anchor, not by the migration seam', () => {
-    // `MigrationLink` answers "which of our two applications serves this path",
-    // and `github.com` is not a path - `buildLegacyHref` would localize it.
+  it('leaves VitNode by a plain anchor, not through the router', () => {
+    // `github.com` is not a path, and a router asked to match one answers with
+    // something broken rather than with the site the href named.
     //
     // Raw source rather than `code()`: the comment stripper is deliberately
     // naive and does not know that `//` inside a string is not a comment, so it
@@ -202,11 +203,12 @@ describe('the docs are this application own, and the homepage did not notice', (
 
   it('still sends Get Started to /docs/dev through the same seam', () => {
     // The whole proof. Stage 15 wrote this href and this component; Stage 16
-    // added route files and changed neither. `plugin-routes.test.ts` is the
-    // other half - the route tree now answers `true` for `/docs/dev`, so
-    // `MigrationLink` renders a `<Link>` rather than an `<a>`.
+    // added the route files and changed neither, and the cutover changed only
+    // which component the route passes in. `no-legacy-origin.test.ts` is the
+    // other half - `/docs/dev` is a route in this tree, so the button is an
+    // ordinary client-side navigation with no `/docs` special case anywhere.
     expect(code(HERO)).toMatch(/<LinkComponent[\s\S]*?href="\/docs\/dev"/)
-    expect(code(ROUTE)).toMatch(/from '#\/migration\/link'/)
+    expect(code(ROUTE)).toMatch(/LinkComponent=\{RouterLink\}/)
   })
 
   it('keeps Fumadocs inside the documentation', () => {

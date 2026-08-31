@@ -2,13 +2,13 @@
  * Which of an application's shells a plugin route renders inside.
  *
  * Two members, and each was earned by a stage rather than inherited from the
- * legacy route-copying pipeline (`scripts/prepare-plugins-files.ts`), which knew
- * three destinations. `main` is the public site. `admin` is the AdminCP, and
- * Stage 12 is where it arrives: it has its own layout, its own second session
- * under its own cookie, and its own staff permissions. `blank` - a page rendered
- * without the site chrome - is still absent, because it was used once by a core
- * test page and by no plugin, and a member here has to be a shell some route
- * actually renders in.
+ * legacy route-copying pipeline, which knew three destinations and wrote a
+ * plugin's pages into a Next.js app's `src/app/` by directory name. `main` is
+ * the public site. `admin` is the AdminCP: it has its own layout, its own second
+ * session under its own cookie, and its own staff permissions. `blank` - a page
+ * rendered without the site chrome - is deliberately absent, because it was used
+ * once by a core test page and by no plugin, and a member here has to be a shell
+ * some route actually renders in.
  *
  * ## An area chooses a parent. It never rewrites a path
  *
@@ -136,10 +136,9 @@ export type PluginRouteSegment =
  *     { entry: "routes/example-page", id: "example-page", path: "/example" }
  *
  * Every field here is **data**: serialisable, deterministic, meaningful in a
- * Node process with no framework loaded, and free of React, TanStack Router and
- * Next.js. That is not an aesthetic rule - this list is read while a Next.js app
- * builds, while a TanStack Start app builds, and frozen into a generated literal
- * that a browser imports. A `loader`, a `component`, a `beforeLoad` or a `head`
+ * Node process with no framework loaded, and free of React and TanStack Router.
+ * That is not an aesthetic rule - this list is read while an app builds, and
+ * frozen into a generated literal that a browser imports. A `loader`, a `component`, a `beforeLoad` or a `head`
  * is executable behaviour and belongs in the route *module*, which is fetched
  * as its own chunk; see `./module` for that half of the contract.
  *

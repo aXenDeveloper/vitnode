@@ -22,10 +22,9 @@ import { SETTINGS_NAMESPACES } from "./index";
  *
  * `SettingsShellContent` and `SettingsNavContent` are the same modules the
  * Next.js layout renders. The one thing neither can resolve for itself is how to
- * build a link, which is why `LinkComponent` is a prop: during the migration a
- * host passes one that asks its route tree per href, so a panel added to
- * `SETTINGS_NAV_ITEMS` before its route exists degrades to a document load into
- * the application that does serve it rather than to a not-found.
+ * build a link, which is why `LinkComponent` is a prop: this module is shared
+ * with hosts that are not on TanStack Router, so it may not import one. A
+ * TanStack Start host passes `RouterLink`.
  *
  * ## What a panel may assume about the provider
  *

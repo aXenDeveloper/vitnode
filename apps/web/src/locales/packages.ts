@@ -10,7 +10,7 @@ import { CONFIG_PLUGIN as EXAMPLE } from '@vitnode/example/const'
  * Every VitNode package ships a locale barrel - `@vitnode/core/locales/index` -
  * that loads its own files with a runtime
  * `import("./en.json", { with: { type: "json" } })`. Under Node that is exactly
- * right, and it is how `apps/api` and `apps/docs` read them.
+ * right, and it is how `apps/api` reads them.
  *
  * It cannot work here, and the reason is the import attribute rather than
  * anything about VitNode. Vite and Nitro inline `@vitnode/core`'s build output

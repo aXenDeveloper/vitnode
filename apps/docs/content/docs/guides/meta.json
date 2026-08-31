@@ -1,7 +1,0 @@
-{
-  "title": "Guides",
-  "description": "Learn how to use VitNode",
-  "icon": "BookOpenText",
-  "root": true,
-  "pages": ["index", "...", "---Plugins by VitNode---", "blog"]
-}

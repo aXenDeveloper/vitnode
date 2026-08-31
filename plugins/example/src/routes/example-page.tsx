@@ -5,9 +5,9 @@
  * Zero imports, which is the point rather than an accident. It is compiled into
  * this package's `dist` and imported by the app as
  * `@vitnode/example/routes/example-page`, so it has to be renderable by whatever
- * framework the app happens to use - and today those are Next.js and TanStack
- * Start at the same time. Anything from `next/*`, `next-intl` or a router would
- * pin it to one of them; a component that only needs JSX is pinned to neither.
+ * framework the app happens to use. Anything from a router, a framework's data
+ * APIs or a host-bound i18n package would pin it to one of them; a component that
+ * only needs JSX is pinned to none.
  *
  * It exports a default component because that is how every VitNode plugin page
  * already exports itself, and because a default export is the one name a

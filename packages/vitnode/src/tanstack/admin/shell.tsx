@@ -84,12 +84,12 @@ import { AdminUserBar } from "./user-bar";
  *
  * ## What a host still supplies
  *
- * Only what a package cannot answer: how a path becomes a navigation
- * (`LinkComponent` / `onNavigate`, which during the migration decide per href
- * between this router and the legacy application), which language switcher to
- * render, how to look a user up, and its own AdminCP navigation - the
- * declarations *and* the namespaces they need - built from the plugins that
- * application actually configured.
+ * Only what a package cannot answer: how the palette moves without a link
+ * (`onNavigate` - Enter on a highlighted entry is a navigation nobody clicked),
+ * which language switcher to render, how to look a user up, and its own AdminCP
+ * navigation - the declarations *and* the namespaces they need - built from the
+ * plugins that application actually configured. `LinkComponent` is there too,
+ * but it defaults to `RouterLink` and most hosts leave it alone.
  *
  * Sign-out is deliberately **not** on that list. It is the canonical action plus
  * the shell's own cache clearing, and a host that could replace it could replace

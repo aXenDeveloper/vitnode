@@ -100,11 +100,11 @@ export const PasswordResetRouteContent = ({
           ) : (
             /*
               No `onSuccess` and no navigation: an accepted request swaps the
-              card for "check your email" and leaves the visitor there, which is
-              what the Next.js form does. It says the same thing for an address
-              with an account and one without, because the API answers the same
-              201 for both - the anti-enumeration behaviour is preserved by there
-              being nothing here that could distinguish them.
+              card for "check your email" and leaves the visitor there. It says
+              the same thing for an address with an account and one without,
+              because the API answers the same 201 for both - the
+              anti-enumeration behaviour is preserved by there being nothing
+              here that could distinguish them.
             */
             <PasswordResetFormContent
               captcha={config.captcha}

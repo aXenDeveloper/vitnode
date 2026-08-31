@@ -148,7 +148,7 @@ describe('the locale cookie', () => {
   it('adds Secure over HTTPS and not over plain HTTP', () => {
     expect(setCookieFor('/pl')).toContain('Secure')
     expect(
-      handleLocaleRequest(new Request('http://localhost:3001/pl')).setCookie,
+      handleLocaleRequest(new Request('http://localhost:3000/pl')).setCookie,
     ).not.toContain('Secure')
   })
 

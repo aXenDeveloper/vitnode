@@ -13,15 +13,15 @@ import { withoutComments } from './source'
 /**
  * `/docs/*`, as this application's route tree actually serves it.
  *
- * Static and type-level only, by the migration testing policy. What the
- * documentation *looks* like is not asserted anywhere - that is a browser's job,
+ * Static and type-level only. What the documentation *looks* like is not
+ * asserted anywhere - that is a browser's job,
  * and a snapshot of Fumadocs' markup would fail on every upstream release. What
  * is asserted here is topology: which route answers for which URL, that the
  * locale rewrite reaches it, that the splat claims the documentation and nothing
  * else, and that no second locale model was introduced along the way.
  *
  * The pieces checked elsewhere, so this file does not restate them:
- * `plugin-routes.test.ts` asks `isTanStackOwnedPath` about `/docs`,
+ * `no-legacy-origin.test.ts` asks the route tree about `/docs/dev`,
  * `docs-source.test.ts` covers the copied content and the source loader, and
  * `isolation.test.ts` walks the documentation's runtime graph for Next.js.
  */
@@ -165,8 +165,8 @@ describe('no locale is a route segment', () => {
  * `/api/*` is still Hono's, and Fumadocs did not take a path inside it.
  *
  * The default `useDocsSearch({ type: "fetch" })` endpoint is `/api/search`, and
- * accepting that default is the single easiest way for a documentation
- * migration to put a second server inside the application's API namespace. The
+ * accepting that default is the single easiest way to put a second server
+ * inside the application's API namespace. The
  * search index lives at `/docs/search` instead - see `src/docs/search-path.ts`.
  */
 describe('the API namespace stays Hono own', () => {

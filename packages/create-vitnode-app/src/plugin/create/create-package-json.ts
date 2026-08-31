@@ -21,6 +21,19 @@ export const createPluginPackageJSON = async ({
 }) => {
   const vitnodeVersionRange = await getVitnodePackageVersion();
 
+  /**
+   * No `next` and no `next-intl`.
+   *
+   * A plugin is compiled to its own `dist` and imported by whichever app
+   * installed it, so a dependency on one host's framework is a dependency every
+   * app that installs the plugin inherits - and, worse, one the plugin's route
+   * module can reach for without anything failing until somebody runs it
+   * somewhere else. `route-templates.ts` tells the author exactly this in the
+   * scaffolded page's own comment; the dependency list has to agree with it.
+   *
+   * `use-intl` is what a plugin renders strings through, and it is the same
+   * library VitNode itself uses, on every host.
+   */
   const pluginPkg: PackageJSON = {
     name: pluginName,
     version: "0.1.0",
@@ -43,8 +56,6 @@ export const createPluginPackageJSON = async ({
       "drizzle-orm": versionsPackageJson.drizzleOrm,
       hono: versionsPackageJson.hono,
       "lucide-react": versionsPackageJson.lucide,
-      next: versionsPackageJson.nextSingle,
-      "next-intl": versionsPackageJson.nextIntl,
       react: versionsPackageJson.react,
       "react-dom": versionsPackageJson.reactDom,
       "react-email": versionsPackageJson.reactEmail,

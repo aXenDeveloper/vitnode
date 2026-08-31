@@ -89,7 +89,7 @@ export const ContentFormNavigationProvider = ({
 
 /** The message a caller gets when a host forgot to mount the provider. */
 export const CONTENT_FORM_NAVIGATION_MISSING =
-  "A Content Engine screen must be rendered inside a ContentFormNavigationProvider. Next.js mounts one in NextContentFormHost; a TanStack Start route mounts one in ContentFormHost.";
+  "A Content Engine screen must be rendered inside a ContentFormNavigationProvider. A TanStack Start route mounts one in ContentFormHost.";
 
 export const useContentFormNavigation = (): ContentFormNavigation => {
   const navigation = React.use(ContentFormNavigationContext);

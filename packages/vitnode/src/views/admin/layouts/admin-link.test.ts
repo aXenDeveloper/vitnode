@@ -7,11 +7,10 @@ import { isExternalHref } from "./normalize-url";
  *
  * A plugin's `admin.nav` entry may point anywhere, and an absolute URL is not a
  * path - which matters because every link component in VitNode takes a path.
- * Hand one an external URL and `next-intl` tries to localize it, TanStack Router
- * tries to match it, and `apps/web`'s `MigrationLink` asks
- * `isTanStackOwnedPath`, which reads only the pathname: `https://example.com`
- * arrives as `/`, matches the front page, and is reported as owned. The sidebar
- * entry then goes to the wrong place, silently.
+ * Hand `RouterLink` an external URL and it becomes `<Link to="https://...">`,
+ * which the router matches by pathname alone: `https://example.com` arrives as
+ * `/` and client-navigates to the front page. The sidebar entry then goes to the
+ * wrong place, silently.
  *
  * This classification is what stops that, so it is worth pinning precisely -
  * especially the two cases in the middle, which are the ones a looser rule gets

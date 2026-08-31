@@ -25,7 +25,7 @@ import type { BreadcrumbCrumb } from "./crumb";
  *
  * `AuthLinkComponent` is reused rather than redeclared: it is already "every prop
  * of an anchor, plus a required `href`", which is exactly what a crumb needs and
- * what `MigrationLink` in `apps/web` already satisfies.
+ * what `RouterLink` in `@vitnode/core/tanstack/layout` already satisfies.
  *
  * Deliberately not a client component. It renders no hooks, and Next.js passes
  * `LinkComponent` into it from a Server Component - a boundary here would turn

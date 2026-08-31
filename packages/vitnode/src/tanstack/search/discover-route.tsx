@@ -79,9 +79,8 @@ export const loadDiscoverRoute = async ({
  * Discover, as everything below a route file's `component`.
  *
  * `LinkComponent` is the one thing a package cannot decide: a search result
- * points wherever the indexed content lives, and during the migration a host
- * hands in a link that asks its route tree whether it can render the
- * destination. External and unsafe URLs never reach it - `SearchFeedContent`
+ * points wherever the indexed content lives, and the shared feed is host-neutral
+ * by design. External and unsafe URLs never reach it - `SearchFeedContent`
  * classifies those and renders them itself.
  *
  * The query options are built here from the same factory the loader used, so

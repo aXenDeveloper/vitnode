@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { createTranslator } from "next-intl";
+import { createTranslator } from "use-intl";
 import { describe, expect, it } from "vitest";
 
 import messages from "@/locales/en.json";
@@ -13,7 +13,7 @@ import messages from "@/locales/en.json";
  * it *required* a `name` argument and then ignored it, always rendering the word
  * "record". The dialog passed only `{ version }`.
  *
- * A missing ICU argument is not a blank in next-intl. It is a `FORMATTING_ERROR`,
+ * A missing ICU argument is not a blank in use-intl. It is a `FORMATTING_ERROR`,
  * and the fallback it renders is the **key path** - so an editor whose save was
  * refused read the literal string `core.content.conflict.desc` where the
  * explanation should have been. Nothing crashed, nothing was logged where anybody
@@ -27,7 +27,7 @@ const format = (
   values: Record<string, number | string>,
 ): { errors: string[]; text: string } => {
   const errors: string[] = [];
-  // Widened on purpose: the key is computed at runtime here, and next-intl's
+  // Widened on purpose: the key is computed at runtime here, and use-intl's
   // typed signature narrows the values parameter to `undefined` for a key it
   // cannot see. The point of this suite is what happens at *format* time.
   const t = createTranslator({
@@ -90,7 +90,7 @@ describe("the conflict dialog's messages", () => {
       const { errors, text } = format(key, values);
 
       expect(errors).toEqual([]);
-      // The tell-tale of a formatting failure: next-intl renders the key path.
+      // The tell-tale of a formatting failure: use-intl renders the key path.
       expect(text).not.toContain("core.content.conflict");
       expect(text.trim()).not.toBe("");
     },

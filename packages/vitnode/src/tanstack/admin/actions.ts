@@ -77,13 +77,9 @@ import { removeAdminIdentityQueries } from "./queries";
  *   which is administrator-specific and not keyed by identity. See
  *   `./queries`, which owns that list.
  *
- * `navigate` is the caller's, and during the migration that matters: part of
- * `/admin/*` is still served by the Next.js application - `/admin/content/*`
- * after Stage 12 - so `apps/web` passes a navigator that asks its own route tree
- * whether it serves the destination. A `?returnTo=` naming a migrated screen is
- * a client navigation and one naming a content screen is a document load, and
- * the answer changes on its own as later stages move routes. There is no list of
- * migrated admin routes here or anywhere else.
+ * `navigate` is the caller's, because a `?returnTo=` names a path and only the
+ * host knows what its router wants to be handed. There is no list of admin
+ * routes here or anywhere else.
  *
  * `destination` is a thunk rather than a value for the same reason it is on the
  * login page: `?returnTo=` can change under the form, and reading it at submit

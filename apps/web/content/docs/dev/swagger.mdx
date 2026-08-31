@@ -16,6 +16,10 @@ To check documentation, open the following URL in your browser:
 
 [http://localhost:3000/api/swagger](http://localhost:3000/api/swagger)
 
+That is `apps/web`, which mounts the API at `/api/*` in its own process. If you
+are running `apps/api` on its own instead, it is
+[http://localhost:8000/api/swagger](http://localhost:8000/api/swagger).
+
 ## Grouping
 
 Every route is tagged `(Plugin) - Module`, and that tag is the group Swagger UI

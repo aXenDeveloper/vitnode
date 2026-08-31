@@ -300,38 +300,18 @@ describe("collisions", () => {
   });
 
   /**
-   * Migration-only, and off unless a caller supplies the legacy routes - which
-   * is why the wiring is worth one test of its own. `assertNoHostRouteCollision`
-   * cannot see this case: `/admin/content/*` is not one of the host's route
-   * files, it is a page in the Next.js application beside it.
+   * `/admin/content/blog` used to be refused here.
+   *
+   * A build-time strangler - `assertNoLegacyRouteCollision` - read every URL the
+   * Next.js AdminCP answered off `@vitnode/core`'s own `src/routes/admin/**` and
+   * refused a plugin route that claimed one, because a TanStack route at that
+   * path turned a working Next.js screen into a not-found. There is one
+   * application now and that directory is gone, so a plugin may claim any URL
+   * the host's own route files do not - which is exactly what
+   * `assertNoHostRouteCollision` above checks, against the real route tree
+   * rather than against a second application.
    */
-  it("rejects a plugin route that takes a URL Next.js still answers", () => {
-    const message = messageOf(() =>
-      compilePluginRoutes({
-        legacyRoutes: [
-          {
-            file: "src/routes/admin/content/[...slug]/page.tsx",
-            key: "/admin/content",
-            path: "/admin/content/[...slug]",
-            subtree: true,
-          },
-        ],
-        sources: [
-          example({
-            area: "admin",
-            entry: "routes/posts",
-            id: "posts",
-            path: "/admin/content/blog",
-          }),
-        ],
-      }),
-    );
-
-    expect(message).toContain('claims "/admin/content/blog"');
-    expect(message).toContain("src/routes/admin/content/[...slug]/page.tsx");
-  });
-
-  it("compiles the same route when no legacy routes are supplied", () => {
+  it("compiles a plugin route under /admin/content, which no other app answers", () => {
     expect(
       compile(
         example({

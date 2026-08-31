@@ -35,8 +35,7 @@ export interface HeaderLinkProps extends Omit<
  * Turning `/discover` into a client-side navigation is the single question whose
  * answer differs between the two frameworks: Next.js wants `next-intl`'s
  * locale-aware `Link` (`@/lib/navigation`), TanStack Start wants the router's own
- * - and during the migration it wants one that decides per href whether this app
- * can render the destination at all (`MigrationLink`). Both are a component
+ * - and TanStack Start wants the router's own (`RouterLink`). Both are a component
  * taking {@link HeaderLinkProps}, so the header takes one and stops caring - and
  * importing neither is what lets a TanStack Start route render it.
  */

@@ -299,9 +299,10 @@ describe("publication", () => {
 
 describe("picker options", () => {
   it("passes an option's colour, face and handle straight through", async () => {
-    // Spread rather than rebuilt key by key - the Server Action's own test pins
-    // the same thing, because a hand-listed object is how `color` once reached
-    // the browser as `undefined` while its label came through fine.
+    // Spread rather than rebuilt key by key: a hand-listed object is how `color`
+    // once reached the browser as `undefined` while its label came through fine.
+    // This is now the only test pinning it - the Next.js Server Action that had
+    // the same bug, and the same assertion, went with the rest of that surface.
     answers(200, {
       items: [
         { avatarColor: "3b82f6", label: "Ada", nameCode: "ada", value: 7 },

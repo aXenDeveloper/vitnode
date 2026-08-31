@@ -24,14 +24,19 @@ const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const read = (path: string) => readFileSync(join(appRoot, path), 'utf8')
 
 /**
- * The one key beyond the package's two.
+ * Keys this app adds on top of the package's two, and there are none.
  *
- * Temporary migration infrastructure: the origin still serving the routes this
- * app has not taken over. It is inlined because `src/migration/legacy-app.ts`
- * reads it in the browser, and it goes away with the last legacy route - at
- * which point this list is empty and the argument comes off the call entirely.
+ * The list is empty because nothing in this app's browser bundle reads an
+ * environment variable the package does not already inline
+ * (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WEB_URL`). It was not always: the
+ * migration published a second origin here so the browser could build hrefs
+ * into the application that still served the un-migrated routes. Every URL is
+ * this application's now, so the key, its reader and the argument are all gone.
+ *
+ * Kept as an empty list rather than deleted so the two assertions below still
+ * run: adding a key back has to be a deliberate edit to this file.
  */
-const APP_CLIENT_ENV = ['NEXT_PUBLIC_LEGACY_WEB_URL']
+const APP_CLIENT_ENV: string[] = []
 
 describe('the environment this app publishes to the browser', () => {
   const config = () => withoutComments(join(appRoot, 'vite.config.ts'))
@@ -45,17 +50,20 @@ describe('the environment this app publishes to the browser', () => {
 
   it('adds exactly the keys this list names', () => {
     const call = /vitNodeEnv\(\{\s*clientEnv:\s*\[([^\]]*)\]/.exec(config())
-
-    expect(
-      call,
-      'vite.config.ts calls vitNodeEnv({ clientEnv: [...] })',
-    ).not.toBeNull()
-
     const named = [...(call?.[1] ?? '').matchAll(/'([^']+)'/g)].map(
       (match) => match[1],
     )
 
     expect(named).toStrictEqual(APP_CLIENT_ENV)
+  })
+
+  it('calls the plugin with no argument at all while that list is empty', () => {
+    // The shape the empty list should produce, stated separately because the
+    // assertion above passes for `vitNodeEnv({ clientEnv: [] })` too - and a
+    // leftover empty option is a worse thing to leave behind than a wrong one,
+    // since it reads as "this app publishes something" to everybody who greps.
+    expect(config()).toMatch(/vitNodeEnv\(\)/)
+    expect(config()).not.toContain('clientEnv')
   })
 
   it('names nothing that is not a public key', () => {
@@ -67,13 +75,12 @@ describe('the environment this app publishes to the browser', () => {
     }
   })
 
-  it('publishes the migration key because something in the browser reads it', () => {
-    // The other half of the justification. A published key nothing reads is a
-    // key that should not be published, and this one is read by the module that
-    // builds an href into the application still serving the un-migrated routes.
-    expect(read('src/migration/legacy-app.ts')).toContain(
-      'process.env.NEXT_PUBLIC_LEGACY_WEB_URL',
-    )
+  it('names no origin but its own', () => {
+    // The legacy origin, gone from the one file that configured it. A second
+    // web origin is not a thing a VitNode install has any more, so a `.env`
+    // template offering one would be configuration nobody can use.
+    expect(read('.env.example')).not.toContain('NEXT_PUBLIC_LEGACY_WEB_URL')
+    expect(config()).not.toContain('NEXT_PUBLIC_LEGACY_WEB_URL')
   })
 
   it('hands the plugin routes generator this app’s own root', () => {

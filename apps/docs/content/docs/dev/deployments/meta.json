@@ -1,5 +1,0 @@
-{
-  "title": "Deployments",
-  "icon": "HardDriveUpload",
-  "pages": ["cloud", "self-hosted"]
-}

@@ -8,7 +8,7 @@ import type {
 import { CONFIG } from "../../lib/config";
 import { contentInvalidationTags } from "../cache";
 
-/** Where the Route Handler is mounted in every VitNode web app. */
+/** The path a front end mounts if it wants to be told. */
 export const CONTENT_REVALIDATE_PATH = "/api/vitnode/content/revalidate";
 
 /** Requests older than this are refused. Replaying one is harmless anyway. */
@@ -28,39 +28,41 @@ const sleep = async (ms: number): Promise<void> =>
   await new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Which web origins to notify.
+ * Which web origins to notify. Configured, or none.
  *
- * Defaults to the one origin every install already configures for its session
- * cookie and CORS. An install that serves several web apps from one API
- * overrides it, and each is posted independently.
+ * There is deliberately no fallback to the session-cookie origin. Only a front
+ * end that caches its own renders has anything to expire, and posting at one
+ * that does not is worse than not posting: the request lands on whatever that
+ * origin serves at this path - a 404, in an application whose `/api/*` is a
+ * Hono mount - which reads as a failed delivery, and
+ * `content-schedule-effects` fails the queue task on a partial delivery. Every
+ * scheduled publish would then retry its effects forever over a cache that was
+ * never there.
+ *
+ * So the list is opt-in: an install that mounts the handler names its origins,
+ * and an install that does not gets `attempted: 0` - "nothing to tell", which
+ * is a decision rather than an outage.
  */
-const originsFor = (c: Context): string[] => {
-  const configured = c.get("core")?.contentRevalidateOrigins;
-  if (configured && configured.length > 0) return configured;
-
-  try {
-    // `CONFIG.web` builds a `URL`, which throws on an empty or malformed
-    // `NEXT_PUBLIC_WEB_URL`. A bad env var must degrade to "nowhere to tell"
-    // and a log line - never take the queue task down with it.
-    return [CONFIG.web.origin];
-  } catch {
-    return [];
-  }
-};
+const originsFor = (c: Context): string[] =>
+  c.get("core")?.contentRevalidateOrigins ?? [];
 
 /**
- * Tells the web app to expire the tags a background mutation just invalidated.
+ * Tells a front end to expire the tags a background mutation just invalidated.
  *
  * This exists because of one hard constraint: **the queue handler does not run
- * in Next.** In the split deployment it is a plain `@hono/node-server` process
- * where importing `next/cache` throws outright, and in the single-app
- * deployment it is a Route Handler where `updateTag` is unavailable. So a
- * scheduled publish cannot expire a cache tag by calling a function - it has to
- * ask the process that can.
+ * in the front end.** It is a plain `@hono/node-server` process, with no access
+ * to whatever cache the thing serving the pages keeps. So a scheduled publish
+ * cannot expire a render cache by calling a function - it has to ask the
+ * process that can, over HTTP, which is why this is a `fetch` and not an import.
  *
- * The alternative was to let the tag expire on its own `cacheLife`, which would
+ * The alternative was to let each entry expire on its own lifetime, which would
  * leave an unpublished record readable for as long as that lasts. That is not a
  * cache miss; it is the feature not working.
+ *
+ * Framework-neutral on both sides: the request is a signed POST carrying tag
+ * inputs, and what the receiver does with them is its own business. A front end
+ * that caches nothing simply does not appear in `content.revalidateOrigins` and
+ * is never posted at.
  *
  * **It reports rather than throws.** Every origin is tried, a failure is logged,
  * and the counts come back for the caller to judge. That split matters: one
@@ -87,15 +89,10 @@ export const dispatchContentRevalidation = async (
     return { attempted: 0, delivered: 0 };
   }
 
+  // Not logged: no configured origin is the default, not a misconfiguration.
+  // A front end that wants to be told says so through `content.revalidateOrigins`.
   const origins = originsFor(c);
-  if (origins.length === 0) {
-    void log(
-      c,
-      "No web origin is configured, so nothing was told to expire its cache. Set NEXT_PUBLIC_WEB_URL, or content.revalidateOrigins for a multi-app install.",
-    );
-
-    return { attempted: 0, delivered: 0 };
-  }
+  if (origins.length === 0) return { attempted: 0, delivered: 0 };
 
   const secret = c.get("core")?.cronSecret ?? CONFIG.cronJobSecret;
   const body = JSON.stringify(input);

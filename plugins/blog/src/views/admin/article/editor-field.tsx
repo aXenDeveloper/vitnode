@@ -10,7 +10,7 @@ import { useTranslations } from "use-intl";
  * The rich-text editor, behind its own lazy boundary.
  *
  * `React.lazy` rather than `next/dynamic`, and that is what makes this field
- * usable from both AdminCPs: the Next.js one and the TanStack Start one. The two
+ * usable from any AdminCP that renders this plugin's content screens. The two
  * behave the same here - one chunk, fetched when the field first renders - and
  * only one of them exists outside Next.
  *

@@ -32,7 +32,8 @@ import { categoryContentType } from "./category";
  *
  * What is deliberately **not** here is the combination Stage 6 refuses:
  * `field.repeatable({ localized: true })`, and a `localized: true` leaf inside
- * either kind. See `apps/docs/content/docs/dev/content-engine/relations-and-advanced-modeling.mdx`.
+ * either kind. See
+ * `apps/web/content/docs/dev/content-engine/relations-and-advanced-modeling.mdx`.
  */
 export const advancedArticleContentType = defineContentType({
   id: "example.advanced-article",

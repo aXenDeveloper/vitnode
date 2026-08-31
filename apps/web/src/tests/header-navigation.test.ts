@@ -11,8 +11,9 @@ import {
 } from '@vitnode/core/views/layouts/theme/header/user/user-header-model'
 import { describe, expect, it } from 'vitest'
 
-import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
+
+import { resolvesToRoute } from './route-tree'
 
 /**
  * A router on a given public URL, the way the server builds one per request -
@@ -40,7 +41,7 @@ const HEADER_LINKS = [
 /**
  * Which mechanism each header link navigates by.
  *
- * The header renders `MigrationLink`, which asks the route tree per href rather
+ * The header renders `RouterLink`, which hands the href to the router rather
  * than reading a list of migrated routes - so this is the question that decides
  * whether clicking "Discover" is a client-side transition or a full document
  * load into the Next.js app. All three of the header's destinations are this
@@ -48,7 +49,7 @@ const HEADER_LINKS = [
  */
 describe('every header link is a client-side navigation', () => {
   it.each(HEADER_LINKS)('%s is served by this route tree', (href) => {
-    expect(isTanStackOwnedPath(routerAt('/'), href)).toBe(true)
+    expect(resolvesToRoute(routerAt('/'), href)).toBe(true)
   })
 
   it.each(HEADER_LINKS)('%s is still owned when locale-prefixed', (href) => {
@@ -57,35 +58,34 @@ describe('every header link is a client-side navigation', () => {
     // else's.
     const prefixed = href === '/' ? '/pl' : `/pl${href}`
 
-    expect(isTanStackOwnedPath(routerAt('/pl'), prefixed)).toBe(true)
+    expect(resolvesToRoute(routerAt('/pl'), prefixed)).toBe(true)
   })
 
   it('does not claim a route the Next.js app still serves', () => {
     // The control: without it, a rule that answered `true` for everything would
     // satisfy every assertion above - and would turn a working blog post into a
     // TanStack not-found.
-    expect(isTanStackOwnedPath(routerAt('/'), '/blog/post-30')).toBe(false)
+    expect(resolvesToRoute(routerAt('/'), '/blog/post-30')).toBe(false)
   })
 })
 
 /**
- * The user area of the header, which is the part of it that spans the migration.
+ * The user area of the header.
  *
  * `USER_HEADER_HREF` is ordinary data in `@vitnode/core` - a record of five
  * paths, shared verbatim with the Next.js header - and it says nothing about
  * which application serves any of them. That is the property worth pinning here
  * rather than the individual answers: the header points at a mixture of migrated
- * and unmigrated routes, `MigrationLink` asks the route tree per href, and the
+ * and routes this app declares, the router resolves each href, and the
  * *model* needs no edit when a route moves.
  *
  * Stage 9 is the proof. `/settings` and `/register` were full document loads
  * into the Next.js app when Stage 8 mounted this header; they are client-side
  * navigations now, and the diff that did it added route files and touched
- * neither `user-header-model.ts` nor `migration/link.tsx`.
+ * neither `user-header-model.ts` nor a link component.
  */
 describe('the user menu navigates by what the route tree serves', () => {
-  const owns = (href: string): boolean =>
-    isTanStackOwnedPath(routerAt('/'), href)
+  const owns = (href: string): boolean => resolvesToRoute(routerAt('/'), href)
 
   /**
    * The guest controls and the account links, split by which application renders
@@ -100,7 +100,7 @@ describe('the user menu navigates by what the route tree serves', () => {
     // Flipped by Stage 12, and the flip is the point: the AdminCP entrance is a
     // route in this tree now (`routes/admin.index.tsx`), so the menu item is a
     // client-side navigation rather than a document load. Nothing in
-    // `user-header-model.ts` or `migration/link.tsx` changed to do it - the
+    // `user-header-model.ts` or a link component changed to do it - the
     // route tree is the table, exactly as it was for `/settings` in Stage 9.
     //
     // Only the *entrance* moved, not the panel: `/admin/core` is served here
@@ -139,7 +139,7 @@ describe('the user menu navigates by what the route tree serves', () => {
     ])
 
     // Owned or not, every destination is an application-relative path with no
-    // locale in it: the prefix is `MigrationLink`'s to write, on whichever
+    // locale in it: the prefix is the router rewrite's to write, on whichever
     // branch it takes.
     for (const { href } of items) {
       expect(href.startsWith('/')).toBe(true)
@@ -152,7 +152,7 @@ describe('the user menu navigates by what the route tree serves', () => {
     // before matching - otherwise reading Polish would silently move the whole
     // user menu back onto the Next.js app.
     for (const href of [USER_HEADER_HREF.settings, USER_HEADER_HREF.signUp]) {
-      expect(isTanStackOwnedPath(routerAt('/pl'), `/pl${href}`)).toBe(true)
+      expect(resolvesToRoute(routerAt('/pl'), `/pl${href}`)).toBe(true)
     }
   })
 })

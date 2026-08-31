@@ -1,8 +1,16 @@
 // @vitest-environment node
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+
+import {
+  externalGraph,
+  NEXT_INTL,
+  NEXT_ONLY,
+  offenders,
+  runtimeImports,
+} from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(here, "../../../..");
@@ -36,7 +44,14 @@ const SHARED = {
   ),
 };
 
-const NEXT_WRAPPERS = {
+/**
+ * The Next.js half, by path, so its absence can be asserted.
+ *
+ * Named rather than deleted along with the assertions: each of these was the
+ * only place a Next.js API was allowed to appear, and a test that stops naming
+ * them cannot notice one coming back.
+ */
+const DELETED_NEXT_HALF = {
   header: join(here, "header.tsx"),
   headerLink: join(here, "header-next.tsx"),
   languageSwitcher: join(
@@ -45,128 +60,14 @@ const NEXT_WRAPPERS = {
   ),
 };
 
-const resolveSpecifier = (specifier: string, from: string): null | string => {
-  let base: string;
-
-  if (specifier.startsWith("@/")) base = join(srcRoot, specifier.slice(2));
-  else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
-  else return null;
-
-  for (const suffix of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
-    const candidate = base + suffix;
-    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
-  }
-
-  return existsSync(base) && statSync(base).isFile() ? base : null;
-};
-
-/** Every specifier a file imports at runtime; `import type` is erased first. */
-const runtimeImports = (path: string): string[] => {
-  const source = readFileSync(path, "utf8").replace(
-    /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
-    "$1",
-  );
-
-  return [
-    ...source.matchAll(
-      /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']/g,
-    ),
-  ]
-    .map(match => match[1] ?? match[2] ?? match[3])
-    .filter((specifier): specifier is string => Boolean(specifier));
-};
-
-/** Every external specifier reachable from an entry, with the chain that got there. */
-const externalGraph = (entry: string): Map<string, string[]> => {
-  const found = new Map<string, string[]>();
-  const parents = new Map<string, string>();
-  const seen = new Set<string>();
-
-  const chain = (file: string): string => {
-    const parts: string[] = [];
-    for (let at: string | undefined = file; at; at = parents.get(at)) {
-      parts.unshift(relative(srcRoot, at));
-    }
-
-    return parts.join(" -> ");
-  };
-
-  const walk = (file: string) => {
-    if (seen.has(file)) return;
-    seen.add(file);
-
-    for (const specifier of runtimeImports(file)) {
-      const target = resolveSpecifier(specifier, file);
-
-      if (target) {
-        if (!parents.has(target)) parents.set(target, file);
-        walk(target);
-        continue;
-      }
-
-      found.set(specifier, [...(found.get(specifier) ?? []), chain(file)]);
-    }
-  };
-
-  walk(entry);
-
-  return found;
-};
-
-const matches = (specifier: string, forbidden: string): boolean =>
-  specifier === forbidden || specifier.startsWith(`${forbidden}/`);
-
-const offenders = (entry: string, forbidden: string[]): string[] =>
-  [...externalGraph(entry)]
-    .filter(([specifier]) => forbidden.some(one => matches(specifier, one)))
-    .flatMap(([specifier, chains]) => chains.map(at => `${specifier} in ${at}`))
-    .sort();
-
-/** Anything that only resolves inside a Next.js app. */
-const NEXT_ONLY = ["next", "server-only"];
-
-/**
- * `next-intl`'s Next-only halves. The root entry is absent on purpose: it
- * re-exports `use-intl`, which is framework-free - and the theme switcher reads
- * its label through it, which is why it renders in `apps/web` unchanged.
- */
-const NEXT_INTL_RUNTIME = [
-  "next-intl/middleware",
-  "next-intl/navigation",
-  "next-intl/plugin",
-  "next-intl/server",
-];
-
 const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
   name,
   path,
 }));
-
-/** A file's code, with the prose stripped - which talks about the very imports
- * these assertions look for. */
 const withoutComments = (path: string): string =>
   readFileSync(path, "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\/\/.*$/gm, "");
-
-describe("the import scan finds what it is looking for", () => {
-  // Every assertion below is a "found nothing" one, which a scanner that
-  // silently matches nothing also satisfies. The Next wrappers are the control:
-  // they provably import the things the shared half must not.
-  it("finds `next-intl/server` in the Next header", () => {
-    expect(offenders(NEXT_WRAPPERS.header, NEXT_INTL_RUNTIME)).not.toEqual([]);
-  });
-
-  it("walks past the entry file into its dependencies", () => {
-    // `lib/navigation` is two hops from the header, never one - by way of
-    // `header-next.tsx` for the links and `language-switcher.tsx` for the
-    // switch. A scan that only read the entry file would find neither.
-    const chains = offenders(NEXT_WRAPPERS.header, ["next-intl/navigation"]);
-
-    expect(chains).not.toEqual([]);
-    expect(chains.every(one => one.includes(" -> "))).toBe(true);
-  });
-});
 
 describe("the shared header is framework-neutral", () => {
   it.each(sharedEntries)("$name reaches nothing from next/*", ({ path }) => {
@@ -176,7 +77,7 @@ describe("the shared header is framework-neutral", () => {
   it.each(sharedEntries)(
     "$name reaches none of next-intl's Next-only entrypoints",
     ({ path }) => {
-      expect(offenders(path, NEXT_INTL_RUNTIME)).toEqual([]);
+      expect(offenders(path, NEXT_INTL)).toEqual([]);
     },
   );
 
@@ -252,52 +153,38 @@ describe("the shared language switcher takes the navigation as a callback", () =
   });
 
   it("is the only copy of the dropdown", () => {
-    // The Next wrapper is the navigation and nothing else - if it grows a
-    // `DropdownMenu` again, `apps/web` is rendering different markup.
-    expect(withoutComments(NEXT_WRAPPERS.languageSwitcher)).not.toContain(
-      "DropdownMenu",
-    );
+    // There is one copy now, and this is it. The Next.js wrapper used to hold
+    // the navigation and nothing else, and the risk it carried was growing a
+    // second `DropdownMenu` - which would have meant two applications rendering
+    // different markup for the same control.
+    expect(code).toContain("DropdownMenu");
   });
 
-  /**
-   * The one piece of Next.js structure the shared control has to make room for.
-   *
-   * `useRouter()` and `usePathname()` read the current URL, and Next 16 refuses
-   * to prerender a client component that reads URL data outside a `<Suspense>` -
-   * so the AdminCP's prerendered routes fail `next build` outright without this
-   * boundary. It was there before the control was shared, and moving the hooks
-   * up out of it while extracting the markup is exactly how it got lost once.
-   */
-  it("keeps the URL-reading hooks inside a Suspense boundary", () => {
-    const next = withoutComments(NEXT_WRAPPERS.languageSwitcher);
-    const at = next.indexOf("export const LanguageSwitcher =");
-    const exported = next.slice(at);
-    const inner = next.slice(0, at);
-
-    // The exported component renders the boundary and reads no URL itself.
-    expect(exported).toContain("React.Suspense");
-    expect(exported).not.toContain("usePathname");
-    expect(exported).not.toContain("useRouter");
-
-    // Everything that does read one is in the component below it.
-    expect(inner).toContain("usePathname");
-    expect(inner).toContain("useRouter");
+  it("reads no URL itself, so no host has to wrap it in Suspense", () => {
+    /**
+     * What replaced a Next-specific structural requirement.
+     *
+     * The wrapper had to render `<React.Suspense>` around its own URL reads:
+     * Next 16 refuses to prerender a client component that reads URL data
+     * outside one, so the AdminCP's prerendered routes failed `next build`
+     * without it. The requirement came from where the hooks were, not from the
+     * control - and with the hooks gone from this package entirely, the shared
+     * control has no URL to read and nothing to wrap.
+     *
+     * Asserted rather than assumed because the tempting way to "restore" the
+     * language switcher's convenience is to put a router hook back into it.
+     */
+    expect(code).not.toContain("usePathname");
+    expect(code).not.toContain("useRouter");
+    expect(code).not.toContain("React.Suspense");
   });
 });
 
-describe("the Next wrappers keep the Next-only pieces", () => {
-  it.each(
-    Object.entries(NEXT_WRAPPERS).map(([name, path]) => ({ name, path })),
-  )("the $name wrapper is where Next.js enters", ({ path }) => {
-    expect(offenders(path, [...NEXT_ONLY, ...NEXT_INTL_RUNTIME])).not.toEqual(
-      [],
-    );
-  });
-
-  it("is the only half that knows about next-intl navigation", () => {
-    expect(
-      offenders(NEXT_WRAPPERS.headerLink, ["next-intl/navigation"]),
-    ).not.toEqual([]);
-    expect(offenders(SHARED.header, ["next-intl/navigation"])).toEqual([]);
-  });
+describe("the Next.js half of the header is gone", () => {
+  it.each(Object.entries(DELETED_NEXT_HALF))(
+    "%s no longer exists",
+    (_name, path) => {
+      expect(existsSync(path)).toBe(false);
+    },
+  );
 });

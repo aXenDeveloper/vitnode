@@ -110,21 +110,12 @@ Register that barrel in `config.tsx` (`buildPlugin`) with `messages`, and your s
 
 Keys have to sit under your plugin's namespace, or they collide with core. The details are in [Namespaces](/docs/dev/i18n/namespaces) and [Server-side](/docs/dev/i18n/server).
 
-## If your app is Next.js
+## Where your pages live
 
-A plugin's routes are read from `routes/manifest.ts` and imported from your
-package - nothing is copied, and there is no generated folder to know about.
+Your pages stay in your package. A plugin's routes are read from
+`routes/manifest.ts`, compiled into the app's generated route registry, and
+imported straight out of your `dist` - nothing is copied into the application,
+and there is no generated folder of your files to know about.
 
-A **Next.js** host is the exception, and only for the Next.js route files a
-plugin may also ship (`src/routes/main`, `src/routes/admin`,
-`src/routes/blank`, `src/routes/breadcrumb`). Those are copied into the app, into
-`(plugins)` folders. They are generated output: don't edit them, and exclude them
-from your editor's search. VS Code gets that from `.vscode/settings.json` out of
-the box.
-
-<Callout type="info" title="Two paths, and they never read each other">
-  The copier never consults the manifest and the manifest never consults the
-  copier, so a plugin can ship both. See [Layouts and
-  Pages](/docs/dev/plugins/layouts-and-pages) for the Next.js files and [Route
-  Manifest](/docs/dev/plugins/route-manifest) for the host-neutral ones.
-</Callout>
+That means a page has exactly one home: the file you are editing is the file
+that runs. See [Route Manifest](/docs/dev/plugins/route-manifest).

@@ -29,10 +29,8 @@ export interface AdminDebugRouteProps extends AdminDebugRouteData {
   /**
    * How the log's detail dialog links to the user who caused a line.
    *
-   * `/admin/core/users/{id}` is still the Next.js AdminCP's screen in Stage 12,
-   * so a host mid-migration passes a link that asks its route tree per href.
-   * Defaults to the router's own `Link`, which is the right answer once that
-   * screen has moved.
+   * Defaults to the router's own `Link`, which is the right answer whenever
+   * `/admin/core/users/{id}` is a route in the host's tree - and it is.
    */
   LinkComponent?: AuthLinkComponent;
   navigate: AdminTableNavigate<DebugRouteSearch>;

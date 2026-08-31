@@ -3,14 +3,12 @@ import type {
   PluginRouteManifest,
 } from "../../routing/types.js";
 import type { HostRoutePath } from "./host-routes.js";
-import type { LegacyRoutePath } from "./legacy-routes.js";
 import type { ResolvedPluginRouteModule } from "./types.js";
 
 import { buildPluginRouteManifest } from "../../routing/manifest.js";
 import { withPluginRouteDiagnostics } from "./diagnostics.js";
 import { generatePluginRouteRegistrySource } from "./generate.js";
 import { assertNoHostRouteCollision } from "./host-routes.js";
-import { assertNoLegacyRouteCollision } from "./legacy-routes.js";
 import { generatePluginRouteManifestSource } from "./manifest-source.js";
 import { assertPluginRouteRegistryParity } from "./parity.js";
 import {
@@ -62,15 +60,6 @@ export interface CompilePluginRoutesOptions {
    * {@link assertNoHostRouteCollision}.
    */
   hostRoutes?: readonly HostRoutePath[];
-  /**
-   * URLs another application still answers, which a plugin route may not take.
-   *
-   * **Migration-only**, and empty by default so that every caller which does not
-   * know about the Next.js half of the site is unaffected. See
-   * `./legacy-routes`, which is the whole of the mechanism and is deleted at the
-   * cutover along with this field.
-   */
-  legacyRoutes?: readonly LegacyRoutePath[];
   sources: readonly PluginRouteCompilerSource[];
 }
 
@@ -105,12 +94,16 @@ export interface CompilePluginRoutesOptions {
  *    one was declared in.
  * 2. `assertNoHostRouteCollision` - does a plugin route shadow one of the
  *    application's own pages.
- * 3. `assertNoLegacyRouteCollision` - does it take a URL the Next.js
- *    application still answers. Migration-only, and off unless a caller supplies
- *    the legacy routes.
- * 4. `resolvePluginRouteModules` - can each entry be written into an import.
- * 5. `assertPluginRouteRegistryParity` - do the two files describe one set of
+ * 3. `resolvePluginRouteModules` - can each entry be written into an import.
+ * 4. `assertPluginRouteRegistryParity` - do the two files describe one set of
  *    routes.
+ *
+ * There was a third check between 2 and 3 until the Next.js cutover -
+ * `assertNoLegacyRouteCollision`, which refused a plugin route claiming a URL
+ * the Next.js application still answered. It read those URLs off
+ * `@vitnode/core`'s own `src/routes/admin/**`, and that directory no longer
+ * exists: there is one application now, so `assertNoHostRouteCollision` against
+ * its real route files is the whole of the question.
  *
  * Deterministic: the manifest is sorted by path and the registry by key, both
  * with code-unit comparisons, so the same plugin configuration produces the same
@@ -118,7 +111,6 @@ export interface CompilePluginRoutesOptions {
  */
 export const compilePluginRoutes = ({
   hostRoutes = [],
-  legacyRoutes = [],
   sources,
 }: CompilePluginRoutesOptions): CompiledPluginRoutes => {
   const manifestSpecifiers = new Map(
@@ -138,7 +130,6 @@ export const compilePluginRoutes = ({
     );
 
     assertNoHostRouteCollision(manifest, hostRoutes);
-    assertNoLegacyRouteCollision(manifest, legacyRoutes);
 
     const modules = resolvePluginRouteModules(
       pluginRouteEntrySources(manifest),

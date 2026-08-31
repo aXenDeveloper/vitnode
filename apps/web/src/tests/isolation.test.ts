@@ -122,10 +122,22 @@ describe('the import scan finds what it is looking for', () => {
   // Every assertion below is a "found nothing" one, which an import scanner
   // that silently matches nothing also satisfies. These two are the control:
   // they point it at code that provably does import the forbidden things.
-  it('finds the Next.js imports in the layer that is allowed them', () => {
+  it('finds the Next.js imports in the specimen that carries them', () => {
+    // Stage 17 deleted `packages/vitnode/src/content/next`, which used to be
+    // this control. There is no Next-importing production code left to point
+    // at - which is the goal, and which would have quietly turned every
+    // assertion below into a tautology.
+    //
+    // `test-fixtures/next-specimen/` replaces it: a deliberate Next.js import
+    // graph that exists to be scanned and for no other reason. It lives outside
+    // `src` and outside `tsconfig.json`'s `include`, so `next` never has to be
+    // installed for it to sit there, and it cannot rot the way a real module
+    // can - production code moving on cannot take its specimen with it.
     expect(
       offendersIn(
-        filesUnder(join(repoRoot, 'packages/vitnode/src/content/next')),
+        filesUnder(
+          join(repoRoot, 'packages/vitnode/test-fixtures/next-specimen'),
+        ),
         NEXT_ONLY,
       ),
     ).not.toEqual([])
@@ -193,18 +205,19 @@ describe('adding TanStack Start does not reach the rest of the workspace', () =>
   )
 })
 
-describe('the existing Next.js application stays Next-only', () => {
-  const docsFiles = () => filesUnder(join(repoRoot, 'apps/docs'))
-
-  it('has files to check', () => {
-    expect(docsFiles().length).toBeGreaterThan(0)
-  })
-
-  it('never imports TanStack Start', () => {
-    expect(offendersIn(docsFiles(), TANSTACK_ONLY)).toEqual([])
-  })
-})
-
+/**
+ * There was a third party to this rule until Stage 17: `apps/docs`, the Next.js
+ * application, which this suite held to the mirror-image promise of never
+ * importing TanStack Start. It is deleted, so the promise has no subject and the
+ * `describe` block that stated it is gone rather than adjusted - a scan over a
+ * directory that does not exist passes by finding nothing, which is the shape of
+ * assertion worth deleting outright.
+ *
+ * What the two-way rule protected is still protected from the other side:
+ * `package-boundary.test.ts` holds `@vitnode/core` to reaching no TanStack
+ * runtime from anything outside its `tanstack/` namespace, which is the half
+ * that matters to somebody installing VitNode into a Next.js app of their own.
+ */
 describe('the TanStack Start application stays Next-free', () => {
   const webFiles = () => filesUnder(join(repoRoot, 'apps/web/src'))
 
@@ -241,18 +254,21 @@ describe('the TanStack Start application stays Next-free', () => {
     expect(offendersIn(runtime, ['next-intl'])).toEqual([])
   })
 
-  it('depends on use-intl at the same version next-intl resolves', () => {
+  it('depends on use-intl directly', () => {
     // Two copies of `use-intl` means two React contexts: the provider this app
     // mounts and the `useTranslations` inside a core component would each see
     // their own, and every shared string would throw `MISSING_MESSAGE`.
+    //
+    // This used to assert the version matched `next-intl`'s, because next-intl
+    // bundled its own copy of use-intl and that was the second copy. With
+    // next-intl gone there is only one path to it, so what is left to state is
+    // that this app declares it directly rather than borrowing @vitnode/core's
+    // - a transitive copy is the other way the second context appears.
     const manifest = JSON.parse(
       readFileSync(join(repoRoot, 'apps/web/package.json'), 'utf8'),
     ) as { dependencies?: Record<string, string> }
 
     expect(manifest.dependencies?.['use-intl']).toBeDefined()
-    expect(manifest.dependencies?.['use-intl']).toBe(
-      manifest.dependencies?.['next-intl'],
-    )
   })
 
   it('does not depend on next', () => {
@@ -364,8 +380,7 @@ describe('the whole graph this app imports stays Next-free', () => {
 
   /** Everything the app reaches, from every entry point it has. */
   const ENTRIES = [
-    'apps/web/src/migration/main-header.tsx',
-    'apps/web/src/migration/link.tsx',
+    'apps/web/src/components/main-header.tsx',
     // Stage 6. The auth surface reaches deepest into `@vitnode/core` of
     // anything this app renders - the shared login card pulls in `AutoForm`,
     // and with it the whole form and design-system stack. That graph was
@@ -392,7 +407,7 @@ describe('the whole graph this app imports stays Next-free', () => {
     // card, the mobile back link, the panel card - is mounted outside Next.js.
     // The devices panel is the one with data, so its graph reaches core's list,
     // its revoke and the confirm dialog behind the revoke button.
-    'apps/web/src/migration/settings-breadcrumb.tsx',
+    'apps/web/src/components/settings-breadcrumb.tsx',
     'apps/web/src/lib/settings/panel.ts',
     'apps/web/src/routes/_main/_authenticated/settings.tsx',
     'apps/web/src/routes/_main/_authenticated/settings/devices.tsx',
@@ -439,7 +454,7 @@ describe('the whole graph this app imports stays Next-free', () => {
     // `screen-boundaries.test.ts`, that let the roles screen ship reaching
     // `next-intl`: the note excluding it said "whoever migrates it will meet
     // it", the screen was migrated, and the exclusion quietly became cover.
-    'apps/web/src/migration/admin-shell.tsx',
+    'apps/web/src/components/admin-shell.tsx',
     'apps/web/src/lib/admin-auth.ts',
     'apps/web/src/lib/admin-nav.ts',
     'apps/web/src/lib/admin-search.ts',
@@ -482,15 +497,21 @@ describe('the whole graph this app imports stays Next-free', () => {
     // "reaches no next/*" below cannot pass because nothing was walked.
     //
     // Stage 12 used `plugins/blog/dist/src/config.js` for this, because a
-    // plugin's frontend registration was Next-bound and that was the reason
-    // `vitnode.config.ts` registered plugins by id instead of calling
-    // `blogPlugin()`. Stage 13 made that false - see below - so the specimen
-    // moved to a module that is Next-only *by design* and will stay that way:
-    // the Content Engine's server-side fetch, which carries `server-only` and
-    // reads `next/headers`.
+    // plugin's frontend registration was Next-bound. Stage 13 made that false,
+    // so it moved to the Content Engine's server-side fetch - and Stage 17
+    // deleted that too, along with every other Next-importing module in the
+    // repository.
+    //
+    // So the control is now a fixture rather than a real module:
+    // `test-fixtures/next-specimen/` is a deliberate Next.js import graph, kept
+    // outside `src` and outside tsconfig's `include`. It is two files deep on
+    // purpose - a one-file specimen would still satisfy a walker that read the
+    // entry and never followed an edge, and "the offending import is three
+    // files away from the one being written" is the whole reason this walk
+    // exists.
     expect(
       offenders(
-        ['packages/vitnode/dist/src/content/admin/fetch.server.js'],
+        ['packages/vitnode/test-fixtures/next-specimen/entry.ts'],
         [...NEXT_ONLY],
       ),
     ).not.toEqual([])
@@ -675,10 +696,10 @@ describe('the whole graph this app imports stays Next-free', () => {
    * for every logo in the marquee and every circle in the beam. Three separate
    * framework couplings on one page, none of which can exist here.
    *
-   * `fumadocs-core` is on the forbidden list rather than left to Stage 16: it is
-   * a Next.js library, `/docs` is not this application's until Stage 16, and a
-   * `fumadocs-core/link` copied across during this migration would compile,
-   * bundle and only fail once somebody clicked it.
+   * `fumadocs-core` is on the forbidden list even though this app now serves
+   * `/docs`: it is a Next.js library, and a `fumadocs-core/link` reaching the
+   * front page would compile, bundle and only fail once somebody clicked it.
+   * The documentation's own graph is walked separately, below.
    *
    * The walk follows dynamic `import()` as well as static imports, so the beam's
    * `React.lazy` chunk is in this graph - lazy is a bundling decision, not an
@@ -739,8 +760,8 @@ describe('the whole graph this app imports stays Next-free', () => {
      *
      * ## What this page *does* legitimately reach, and why it is named
      *
-     * Four AdminCP modules are in the graph, via `MigrationLink` ->
-     * `#/migration/navigation` -> `@vitnode/core/tanstack/auth` -> the auth
+     * Four AdminCP modules are in the graph, via `#/lib/navigation` ->
+     * `@vitnode/core/tanstack/auth` -> the auth
      * barrel -> its actions: `tanstack/admin/state.js` and `queries.js`, and
      * the two query-key leaves they read, `views/admin/table/query.js` and
      * `views/admin/layouts/search/search-users.js`. Together they are under
@@ -1132,8 +1153,8 @@ describe('the whole graph this app imports stays Next-free', () => {
       'apps/web/src/routes/login_.reset-password.tsx',
       'apps/web/src/routes/login_.sso.$providerId.tsx',
       'apps/web/src/routes/register.tsx',
-      'apps/web/src/migration/main-header.tsx',
-      'apps/web/src/migration/settings-breadcrumb.tsx',
+      'apps/web/src/components/main-header.tsx',
+      'apps/web/src/components/settings-breadcrumb.tsx',
     ]
 
     it('walks into the design system, where the imports it bans live', () => {

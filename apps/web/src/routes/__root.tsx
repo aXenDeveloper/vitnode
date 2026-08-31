@@ -16,11 +16,14 @@ import {
   resolveLocale,
   useLocale,
 } from '@vitnode/core/tanstack/i18n'
-import { NotFound, VitNodeRootProviders } from '@vitnode/core/tanstack/layout'
+import {
+  ErrorActions,
+  NotFound,
+  VitNodeRootProviders,
+} from '@vitnode/core/tanstack/layout'
 
 import type { Locale } from '#/lib/i18n/shared'
 
-import { ErrorActions } from '#/migration/error-actions'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 import appCss from '../styles.css?url'
@@ -30,18 +33,12 @@ const { debug, i18n, metadata, theme } = vitNodeShellConfig
 /**
  * What the router itself provides, before any route has run.
  *
- * The QueryClient, and the route tree's answer to "do I serve this path?".
- * `beforeLoad` below adds `locale` on top, so what a loader actually receives is
- * `{ ownsPath, queryClient, locale }` - the language included, because a loader
- * that fetches anything user-facing needs to know which one it is fetching.
- *
- * `ownsPath` is here rather than derived per route because `beforeLoad` receives
- * no router, and the login guard has to make the same migration decision
- * `MigrationLink` makes for a rendered link. See `src/router.tsx`, which wires
- * it, and `#/migration/navigation`, which owns the rule.
+ * The QueryClient, and nothing else. `beforeLoad` below adds `locale` on top, so
+ * what a loader actually receives is `{ queryClient, locale }` - the language
+ * included, because a loader that fetches anything user-facing needs to know
+ * which one it is fetching.
  */
 export interface RootRouterContext {
-  ownsPath: (href: string) => boolean
   queryClient: QueryClient
 }
 
@@ -118,21 +115,14 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
    * the panel rather than this - see `_admin`'s, which mounts the shell around
    * the same message.
    *
-   * ## It is a 404, not a redirect to the other application
+   * ## It is a 404, and not a redirect anywhere
    *
-   * During the migration plenty of unmatched paths *are* served by the Next.js
-   * app, and bouncing every one of them at `NEXT_PUBLIC_LEGACY_WEB_URL` was
-   * considered and rejected: it would hide a genuinely missing page behind a hop
-   * to a second application that 404s it anyway, and it degrades badly at the
-   * cutover, when there is no legacy origin left to bounce to. Links are already
-   * routed correctly - `MigrationLink` asks the route tree per href - so what
-   * reaches here is a URL somebody typed or a stale bookmark, and saying so is
-   * the honest answer. Which application serves a path is a deployment question,
-   * and a proxy in front of both answers it better than this route can.
-   *
-   * `ErrorActions` rather than core's default, for the reason it exists: `/` is
-   * this app on some installs and the Next.js one on others, and only the route
-   * tree knows which.
+   * The route tree is the whole application, so a URL that reaches here is one
+   * somebody typed or a stale bookmark, and saying so is the honest answer.
+   * Bouncing an unmatched path at some other origin would hide a genuinely
+   * missing page behind a hop to a server that 404s it anyway. Where a URL is
+   * served from is a deployment question, and a proxy in front of the app
+   * answers it better than this route can.
    */
   notFoundComponent: RootNotFound,
   shellComponent: RootDocument,

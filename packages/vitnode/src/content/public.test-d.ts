@@ -1,11 +1,11 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { testArticleContentType } from "@/tests/content-fixtures";
-
-import {
+import type {
+  testArticleContentType,
   testCategoryContentType,
-  testPostContentType,
 } from "@/tests/content-fixtures";
+
+import { testPostContentType } from "@/tests/content-fixtures";
 
 import type {
   ContentPublicReadOptions,
@@ -23,7 +23,6 @@ import type {
 
 import { defineContentType } from "./define";
 import { field } from "./fields";
-import { contentPublicFetch } from "./next/fetch.server";
 
 type Post = typeof testPostContentType;
 type Article = typeof testArticleContentType;
@@ -207,25 +206,6 @@ describe("publicApi types", () => {
     it("is still an AnyContentTypeDefinition", () => {
       // Narrowing one flag must not cost the erased form everything else takes.
       expectTypeOf<PublicContentTypeDefinition>().toExtend<AnyContentTypeDefinition>();
-    });
-  });
-});
-
-describe("contentPublicFetch", () => {
-  it("accepts a content type with a public API", () => {
-    void contentPublicFetch({
-      definition: testPostContentType,
-      pluginId: "@vitnode/example",
-    });
-  });
-
-  it("rejects one without", () => {
-    // A disabled `publicApi` has an empty `path`, so this would request
-    // `/api/@vitnode/example/content//` - a compile error, not a runtime one.
-    void contentPublicFetch({
-      // @ts-expect-error - no public API
-      definition: testCategoryContentType,
-      pluginId: "@vitnode/example",
     });
   });
 });

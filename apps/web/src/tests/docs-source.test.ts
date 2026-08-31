@@ -93,12 +93,13 @@ describe('the documentation source lives in this application', () => {
     expect(config).not.toMatch(/apps\/docs/)
   })
 
-  it('leaves the legacy copy in place for Stage 17', () => {
-    // Copied, not moved. The Next.js application still has to build while this
-    // stage is in review, and Stage 17 is what deletes it.
-    expect(
-      existsSync(join(repoRoot, 'apps/docs/content/docs/dev/index.mdx')),
-    ).toBe(true)
+  it('is the only copy, now that the legacy application is gone', () => {
+    // Stage 16 copied rather than moved, because the Next.js application still
+    // had to build while that stage was in review. Stage 17 deleted it, and this
+    // is the assertion that replaced the one saying so: a second copy of the
+    // documentation is how the two drift, and the deleted one is where every
+    // stale "the docs live in apps/docs" link used to point.
+    expect(existsSync(join(repoRoot, 'apps/docs'))).toBe(false)
   })
 })
 

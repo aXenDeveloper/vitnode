@@ -14,7 +14,6 @@
     "vitnode",
     "react",
     "hono.js",
-    "next.js",
     "typescript",
     "core"
   ],
@@ -41,8 +40,6 @@
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "^4.9.x",
     "motion": "^12.x.x",
-    "next": "^16.3.x",
-    "next-intl": "^4.x.x",
     "react": "^19.2.x",
     "react-dom": "^19.2.x",
     "react-hook-form": "^7.x.x",
@@ -68,7 +65,6 @@
     "@vitejs/plugin-react": "^6.0.4",
     "@vitest/coverage-v8": "^4.1.10",
     "@vitnode/config": "workspace:*",
-    "chokidar": "^5.0.0",
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",
     "eslint": "^10.7.0",
@@ -76,8 +72,6 @@
     "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
     "lucide-react": "^1.25.0",
-    "next": "16.3.1",
-    "next-intl": "^4.13.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-email": "^6.9.0",
@@ -106,16 +100,6 @@
       "import": "./dist/src/content/server/index.js",
       "types": "./dist/src/content/server/index.d.ts",
       "default": "./dist/src/content/server/index.js"
-    },
-    "./content/next": {
-      "import": "./dist/src/content/next/index.js",
-      "types": "./dist/src/content/next/index.d.ts",
-      "default": "./dist/src/content/next/index.js"
-    },
-    "./content/next/revalidate-route": {
-      "import": "./dist/src/content/next/revalidate-route.server.js",
-      "types": "./dist/src/content/next/revalidate-route.server.d.ts",
-      "default": "./dist/src/content/next/revalidate-route.server.js"
     },
     "./content/admin-form": {
       "import": "./dist/src/views/admin/views/content/form/index.js",
@@ -177,13 +161,12 @@
       "types": "./dist/src/*.d.ts",
       "default": "./dist/src/*.js"
     },
-    "./config/next.config": "./config/next.config.ts",
     "./locales/*.json": "./src/locales/*.json",
     "./styles/tiptap.css": "./src/tiptap.css"
   },
   "scripts": {
     "build:scripts": "tsup",
-    "start:scripts": "node dist/scripts/scripts.js init",
+    "start:scripts": "node dist/scripts/scripts.js db:prepare",
     "build:plugins": "tsc -p tsconfig.build.json && swc src -d dist --config-file .swcrc --copy-files && tsc-alias -p tsconfig.build.json",
     "dev": "node dist/scripts/scripts.js dev",
     "dev:email": "email dev --dir src/emails",
@@ -197,7 +180,6 @@
   "type": "module",
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@bprogress/next": "^3.2.12",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
@@ -219,7 +201,6 @@
     "input-otp": "^1.4.2",
     "jiti": "^2.7.0",
     "motion": "^12.42.2",
-    "next-themes": "^0.4.6",
     "postgres": "^3.4.9",
     "rate-limiter-flexible": "^11.2.0",
     "react-colorful": "^5.8.0",
@@ -228,7 +209,6 @@
     "react-scan": "^0.5.7",
     "recharts": "^3.10.0",
     "redis": "^6.2.1",
-    "server-only": "^0.0.1",
     "shadcn": "^4.14.0",
     "sharp": "^0.35.3",
     "tailwind-merge": "^3.6.0",
@@ -244,12 +224,6 @@
       "optional": true
     },
     "@tanstack/react-start": {
-      "optional": true
-    },
-    "next": {
-      "optional": true
-    },
-    "next-intl": {
       "optional": true
     },
     "vite": {

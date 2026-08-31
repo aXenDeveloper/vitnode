@@ -3,9 +3,9 @@
  *
  * Left out on purpose: `parent` (an `HTMLElement`), `barSelector`,
  * `indeterminateSelector`, `spinnerSelector` and `positionUsing`. The first is
- * a DOM node, which never survives the server-to-client hop a Next.js layout
- * hands this config over; the rest name internals of one implementation, which
- * is the opposite of what belongs in an app's configuration.
+ * a DOM node, which never survives the server-to-client hop this config is
+ * handed across; the rest name internals of one implementation, which is the
+ * opposite of what belongs in an app's configuration.
  */
 export interface ProgressBarOptions {
   direction?: "ltr" | "rtl";
@@ -27,12 +27,17 @@ export interface ProgressBarOptions {
  * `@bprogress/next`, which made the whole of `VitNodeConfig` unreadable outside
  * a Next.js app: every consumer of the config type - including one that never
  * renders a progress bar - had to resolve a package that only exists there.
+ * These are the fields an install actually sets, so the config describes the
+ * progress bar instead of naming somebody's implementation of it.
  *
- * These are the fields an install actually sets, so the config now describes
- * the progress bar instead of naming somebody's implementation of it. The
- * Next.js implementation still receives it whole: `progress-bar.test-d.ts`
- * holds this type to being assignable to `ProgressProvider`'s props, so a field
- * that drifts out of shape fails `pnpm test:types` rather than a build.
+ * NOTHING CURRENTLY READS THIS. Its only consumer was the Next.js provider tree
+ * deleted in Stage 17, which spread it into `@bprogress/next`; that dependency
+ * is gone, and so is the `progress-bar.test-d.ts` that used to pin this type to
+ * `ProgressProvider`'s props. The shape is kept because it is framework-neutral
+ * and describes a real feature a TanStack Router implementation could pick up -
+ * `useRouterState({ select: (s) => s.status })` is the hook it would need - but
+ * setting `progressBar` in a config today has no effect. Either wire it up or
+ * remove the field; leaving it as decoration is the one option that misleads.
  */
 export interface ProgressBarConfig {
   /** CSS colour of the bar. Defaults to `var(--primary)`. */

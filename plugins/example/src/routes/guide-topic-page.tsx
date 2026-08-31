@@ -30,7 +30,7 @@ const TOPICS: Record<string, { body: string; title: string }> = {
     title: "Entries",
   },
   manifest: {
-    body: "A manifest is plain data, read in Node with no framework loaded, which is why one plugin can serve a Next.js app and a TanStack Start app at once.",
+    body: "A manifest is plain data, read in Node with no framework loaded, which is why one plugin can serve any host that knows how to mount it.",
     title: "The manifest",
   },
   namespaces: {

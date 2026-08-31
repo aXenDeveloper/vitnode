@@ -19,9 +19,10 @@ import { DocsPage } from 'fumadocs-ui/page'
  * question nobody asked and would tell a crawler the page exists. So this route
  * answers not-found, which is what `throw notFound()` in `getDocsPage` asks for.
  *
- * `<Link>` rather than `MigrationLink`: both destinations are this application's
- * own routes, and the router writes the locale prefix into each of them - so
- * from `/pl/docs/nope` the buttons lead to `/pl/docs/dev` and `/pl`.
+ * The router's `<Link>` directly rather than an injected component: this file is
+ * a route's own screen rather than a shared view, both destinations are routes in
+ * this tree, and the rewrite writes the locale prefix into each - so from
+ * `/pl/docs/nope` the buttons lead to `/pl/docs/dev` and `/pl`.
  */
 export const DocsNotFoundContent = () => (
   <DocsPage toc={[]}>

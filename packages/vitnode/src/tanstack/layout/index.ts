@@ -6,10 +6,10 @@
  * here is orchestration over components the Next.js applications already render,
  * so the two frameworks cannot drift into two headers.
  *
- * The pieces a host still owns are the ones only it can answer - its route tree,
- * its mark, and, while half of VitNode is served by another application, how a
- * path becomes a navigation. Each of those is a prop with a default that is
- * correct for a finished install.
+ * The pieces a host still owns are the ones only it can answer - its route tree
+ * and its mark - plus, for a host that needs it, how a path becomes a
+ * navigation. Each of those is a prop with a default that is correct for an
+ * ordinary install.
  */
 export { ErrorActions } from "./error-actions";
 export {

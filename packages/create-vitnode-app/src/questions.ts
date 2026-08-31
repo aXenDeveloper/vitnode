@@ -56,20 +56,20 @@ export const createQuestionsCli = async (
       message: `What type of ${color.blue("app")} do you want to create?`,
       choices: [
         {
-          name: `Single App - ${color.blue("Next.js")} & ${color.blue("Hono.js")}`,
+          name: `Single App - ${color.blue("TanStack Start")} & ${color.blue("Hono.js")}`,
           description:
-            "Create a single app with Next.js and Hono.js in the same project.",
+            "One app: a TanStack Start frontend with the Hono API mounted inside it at /api.",
           value: "singleApp",
         },
         {
-          name: `Monorepo App - ${color.blue("Next.js")} & ${color.blue("Hono.js")}`,
+          name: `Monorepo App - ${color.blue("TanStack Start")} & ${color.blue("Hono.js")}`,
           description:
-            "Create a monorepo with both Next.js and Hono.js apps separately.",
+            "Two apps: a TanStack Start frontend and a Hono API served separately.",
           value: "apiMonorepo",
         },
         {
           name: `Only API - ${color.blue("Hono.js")}`,
-          description: "Create only an API app using Hono.js without Next.js.",
+          description: "Just the Hono API, with no frontend app.",
           value: "onlyApi",
         },
       ],

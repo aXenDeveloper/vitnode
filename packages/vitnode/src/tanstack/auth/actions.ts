@@ -91,13 +91,10 @@ export type AuthNavigate = (href: string) => Promise<void>;
  * the mark at all, so the guard would have decided on the anonymous session and
  * bounced a visitor who had just signed in. See the note on `ensureAuthState`.
  *
- * `navigate` is the caller's, and during the migration that matters: `?returnTo=`
- * names somewhere the visitor was heading, and most of VitNode has not moved
- * yet. `apps/web` passes `useMigrationNavigate`, which asks the route tree
- * whether this application serves the destination - `/discover` is a client-side
- * navigation, `/settings/security?tab=devices` is a full-document load into the
- * Next.js app that still serves it - so there is no list of migrated auth
- * destinations here or anywhere else.
+ * `navigate` is the caller's, because `?returnTo=` names a path and only the
+ * host knows what its router wants to be handed - `apps/web` de-localizes it
+ * first, so `/pl/discover` reaches the router as `/discover` and the rewrite
+ * writes the prefix back. Nothing here holds a list of auth destinations.
  */
 export const useSignInAction = ({
   destination,

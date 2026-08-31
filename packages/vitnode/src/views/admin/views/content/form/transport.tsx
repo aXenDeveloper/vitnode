@@ -175,7 +175,7 @@ export const ContentFormTransportProvider = ({
  * the sentence says what to do rather than what went wrong.
  */
 export const CONTENT_FORM_TRANSPORT_MISSING =
-  "A Content Engine form must be rendered inside a ContentFormTransportProvider. Next.js mounts one in NextContentFormHost; a TanStack Start route mounts one in ContentFormHost.";
+  "A Content Engine form must be rendered inside a ContentFormTransportProvider. A TanStack Start route mounts one in ContentFormHost.";
 
 export const useContentFormTransport = (): ContentFormTransport => {
   const transport = React.use(ContentFormTransportContext);

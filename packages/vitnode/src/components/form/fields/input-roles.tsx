@@ -54,11 +54,16 @@ export type AutoFormRolesProps = ItemAutoFormComponentProps & {
  * cannot run it, and now finds out inside a dropdown.
  *
  * So the dependency is injected and **required**. Reading roles is the host's
- * business - a TanStack app hands over a browser fetch to Hono
- * (`searchAdminRolesInBrowser`), a Next.js app uses `AutoFormRolesNext` beside
- * this file, which injects the action. There is deliberately no fallback and no
- * environment sniffing: a component that guessed its host would be a component
- * whose behaviour depends on how it was bundled.
+ * business: the AdminCP hands over `searchAdminRolesInBrowser`, a browser fetch
+ * to Hono, and a host with its own source of roles hands over that instead.
+ * There is deliberately no fallback and no environment sniffing - a component
+ * that guessed its host would be a component whose behaviour depends on how it
+ * was bundled.
+ *
+ * There was briefly a third option: an adapter beside this file that injected
+ * the Server Action as a default. It is gone with the rest of that surface, and
+ * it must not come back in the shape of a default parameter here - which is the
+ * one thing the boundary test below asserts about a file that no longer exists.
  *
  * `packages/vitnode/src/components/form/fields/roles-boundaries.test.ts` holds
  * all of it.

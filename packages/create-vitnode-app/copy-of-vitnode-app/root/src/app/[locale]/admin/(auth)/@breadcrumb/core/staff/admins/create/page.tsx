@@ -1,5 +1,0 @@
-import { BreadcrumbStaffCreateAdmin } from "@vitnode/core/views/admin/layouts/breadcrumb/breadcrumb-staff-create-admin";
-
-export default function BreadcrumbSlot() {
-  return <BreadcrumbStaffCreateAdmin type="admin" />;
-}

@@ -1,21 +1,25 @@
 # VitNode AI Coding Agent Guidelines (Extended)
 
-The repository is a monorepo for the VitNode framework, which includes a backend API, frontend documentation site, and shared packages. The codebase uses modern web technologies and follows specific conventions for development based on Next.js 15 and Hono.js 4.
+The repository is a monorepo for the VitNode framework, which includes a backend API, a web application that also serves the documentation, and shared packages. The codebase uses modern web technologies and follows specific conventions for development based on TanStack Start and Hono.js 4.
 
 - Do not nest ternary operators,
 
 ## Architecture & Key Patterns
 
 - **Monorepo Structure:**
-  - `apps/` contains main apps (`api` for backend, `docs` for docs site)
+  - `apps/` contains main apps (`web` for the site, AdminCP, mounted API and
+    documentation; `api` for deploying the backend on its own, and it owns
+    `migrations/`)
   - `packages/` holds shared code, core framework, ESLint and Prettier configs, and CLI tools
   - `plugins/` for extendable features
 - **Frontend:**
-  - Next.js 15, App Router, Server Components
-  - Avoid using `next/navigation` directly, use `vitnode/lib/navigation`
-  - Forms: Use `react-hook-form@7`, server actions for mutations
+  - TanStack Start on Vite, file-based routes under `apps/web/src/routes/`
+  - Navigation: use `@vitnode/core/tanstack/layout`'s `RouterLink`, or TanStack
+    Router's own `Link` / `useNavigate`. Next.js is not a dependency.
+  - Forms: Use `react-hook-form@7`, `createServerFn` for mutations
   - UI: Shadcn UI, Tailwind CSS 4, dark/light mode with system detection
-  - i18n: Use `next-intl`, `t('key')` for translations, `getTranslation` (server), `useTranslation` (client)
+  - i18n: Use `use-intl`, `t('key')` for translations, `createTranslator`
+    (server), `useTranslations` (client)
   - Accessibility: WCAG 2.1 AA, semantic HTML, ARIA, keyboard/screen reader support
 - **Backend:**
   - Hono.js 4, OpenAPI via `@hono/zod-openapi`, Zod 4 for validation
@@ -24,7 +28,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
   - Error handling: Use Hono's error middleware, log via `c.get('log')`
   - Plugins: Register via `VitNodeAPI` config, routes auto-mounted by pluginId
 - **Docs:**
-  - Written in `.mdx` using Fumadocs, main entry: `apps/docs/content/docs/dev/index.mdx`
+  - Written in `.mdx` using Fumadocs, main entry: `apps/web/content/docs/dev/index.mdx`
   - Use `// [!code ++]` to highlight code, `// [!code --]` to hide
   - No h1 tags, no emoji in headings
 
@@ -49,7 +53,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
 ## Integration & Conventions
 
 - **External:**
-  - Next.js, Hono.js, Drizzle ORM, Zod, react-hook-form, Shadcn UI, Tailwind, next-intl
+  - TanStack Start, TanStack Router, TanStack Query, Hono.js, Drizzle ORM, Zod, react-hook-form, Shadcn UI, Tailwind, use-intl
 - **Internal:**
   - Navigation, config, API, middleware, plugin system
 - **Security:**
@@ -59,8 +63,8 @@ The repository is a monorepo for the VitNode framework, which includes a backend
 
 - See `apps/api/src/index.ts` for backend API setup
 - See `packages/vitnode/src/api/config.ts` for API registration and middleware
-- See `packages/vitnode/src/lib/navigation.ts` for navigation API
-- See `apps/docs/next.config.ts` for docs site config
+- See `packages/vitnode/src/tanstack/layout/router-link.tsx` for the navigation API
+- See `apps/web/source.config.ts` and `apps/web/src/docs/` for docs site config
 
 ---
 

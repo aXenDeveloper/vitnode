@@ -3,9 +3,9 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
 
+import { resolvesToRoute } from './route-tree'
 import { withoutComments } from './source'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -22,7 +22,7 @@ const matchedIds = (pathname: string): string[] =>
     .matchRoutes(pathname, undefined)
     .map((match) => match.routeId)
 
-const owns = (href: string): boolean => isTanStackOwnedPath(getRouter(), href)
+const owns = (href: string): boolean => resolvesToRoute(getRouter(), href)
 
 /**
  * Which admin URLs this router owns, and - far more importantly - which it does
@@ -64,20 +64,15 @@ describe('the AdminCP entrance', () => {
 })
 
 /**
- * The single most breakable thing in this stage.
+ * The single most breakable thing about the Content Engine's URLs.
  *
- * `/admin/content/*` is the Content Engine, and it is still served by the
- * Next.js application until Stage 13, which moved it here - and the boundary
- * between "this router owns it" and "the legacy app does" is still decided by
- * the route tree alone, with no list of migrated paths anywhere.
- *
- * Stage 13 added exactly one splat, `/_admin/admin/content/$`, and the whole of
- * this suite is about how narrow it is. A splat one level up - `_admin/$`, or
- * `/_admin/admin/$`, or making `/admin` a nested layout - would consume every
- * AdminCP URL this app has *not* migrated, `isTanStackOwnedPath` would start
- * answering `true` for them, `MigrationLink` would render a client navigation,
- * and every unmigrated screen would become a TanStack not-found reached from a
- * working sidebar link. Silently, and all at once.
+ * `/admin/content/*` is served by exactly one splat, `/_admin/admin/content/$`,
+ * and the whole of this suite is about how narrow it is. A splat one level up -
+ * `_admin/$`, or `/_admin/admin/$`, or making `/admin` a nested layout - would
+ * consume every AdminCP URL beneath it, including the ones no route declares.
+ * The Content Engine would then render its own not-found for a plugin screen,
+ * a typo and a genuinely missing page alike, and the AdminCP's real 404 would
+ * become unreachable. Silently, and all at once.
  */
 describe('the Content Engine owns its namespace', () => {
   it.each([
@@ -105,24 +100,24 @@ describe('the Content Engine owns its namespace', () => {
   })
 
   /**
-   * The half that must not regress. Everything under `/admin` that this stage
-   * has *not* migrated keeps answering `false`, or the AdminCP loses the screens
-   * it has not moved yet.
+   * The half that must not regress. Everything under `/admin` that no route
+   * declares keeps answering `false`, or the splat has widened and the AdminCP's
+   * own not-found stops being reachable.
    */
   it.each([
     '/admin/nonexistent',
-    '/admin/core/not-migrated-yet',
+    '/admin/core/no-such-screen',
     '/admin/some/plugin/screen',
     // Adjacent to the namespace on both sides, and neither is inside it.
     '/admin/contents',
     '/admin/content-types',
-  ])('%s is left to the legacy app rather than claimed', (pathname) => {
+  ])('%s is not claimed by the splat', (pathname) => {
     expect(owns(pathname)).toBe(false)
   })
 
-  it('owns something under /admin, so the assertions above are real', () => {
-    // The control. A router that owned nothing at all would satisfy every
-    // "not owned" assertion above.
+  it('declares something under /admin, so the assertions above are real', () => {
+    // The control. A router that declared nothing at all would satisfy every
+    // "not claimed" assertion above.
     expect(owns('/admin')).toBe(true)
   })
 })
@@ -131,17 +126,16 @@ describe('the Content Engine owns its namespace', () => {
  * Wave 1: the dashboard, the two system screens, the three advanced ones and the
  * debug panel.
  *
- * Asserted as *whole-path* ownership rather than as "a route exists", because
- * that is the property `MigrationLink` and `useMigrationNavigate` actually read.
- * A route that matched only a prefix would still answer `false` here, and a
- * screen that answers `false` is a document load into the Next.js app - working,
- * but not migrated.
+ * Asserted as *whole-path* resolution rather than as "a route exists", because
+ * a prefix match is not a page: `matchRoutes` answers with the deepest ancestor
+ * it can resolve, so a screen whose route file was never added still "matches"
+ * at `/admin/core` and would pass a weaker assertion while 404ing on click.
  *
  * `/admin/core/debug` is in this list and not in the sidebar's: it has never had
  * a nav entry in either application and is reached by typing the URL, which is
  * why `admin-nav-destinations.test.ts` cannot speak for it.
  */
-describe('the AdminCP screens Wave 1 migrated', () => {
+describe('the AdminCP dashboard, system, advanced and debug screens', () => {
   it.each([
     '/admin/core',
     '/admin/core/system/integrations',
@@ -204,9 +198,9 @@ describe('nothing may claim the admin subtree by accident', () => {
   /**
    * The Content Engine's splat, and no other.
    *
-   * A catch-all child of `_admin` consumes every unmigrated admin URL, so the
+   * A catch-all child of `_admin` consumes every admin URL beneath it, so the
    * route file naming is the whole mechanism and the file names are what this
-   * checks. Stage 13 adds exactly one - `/admin/content/$`, the namespace the
+   * checks. There is exactly one - `/admin/content/$`, the namespace the
    * Content Engine owns outright - and this is the assertion that keeps it the
    * only one.
    *
@@ -428,10 +422,9 @@ describe('the sign-in screen', () => {
 /**
  * Wave 2 - users, roles and staff.
  *
- * Nine routes, and the two questions worth pinning about them: that the router
- * owns each one (so `MigrationLink` client-navigates instead of leaving for the
- * Next.js app), and that the one dynamic segment does not swallow its static
- * sibling.
+ * Nine routes, and the two questions worth pinning about them: that each one
+ * resolves to a route of its own, and that the single dynamic segment does not
+ * swallow its static sibling.
  */
 describe('the AdminCP users, roles and staff screens', () => {
   it.each([

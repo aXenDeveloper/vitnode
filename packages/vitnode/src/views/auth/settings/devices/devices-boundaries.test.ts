@@ -1,11 +1,18 @@
 // @vitest-environment node
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import {
+  externalGraph,
+  NEXT_INTL,
+  NEXT_ONLY,
+  offenders,
+  runtimeImports,
+} from "@/tests/import-graph";
+
 const here = dirname(fileURLToPath(import.meta.url));
-const srcRoot = resolve(here, "../../../..");
 
 /**
  * `/settings/devices`, split down the middle.
@@ -29,144 +36,22 @@ const SHARED = {
 };
 
 /** The Next.js half: `next/navigation`, `next/cache`, `fetcher()`, the action. */
-const NEXT_WRAPPERS = {
+/**
+ * The Next.js half, by path, so its absence can be asserted.
+ *
+ * Named rather than deleted along with the assertions that used them: each was
+ * the one place a Next.js API was allowed to appear in this subtree, and a test
+ * that stops naming them cannot notice one coming back.
+ */
+const DELETED_NEXT_HALF = {
   list: join(here, "devices-list.tsx"),
   page: join(here, "devices.tsx"),
 };
-
-const resolveSpecifier = (specifier: string, from: string): null | string => {
-  let base: string;
-
-  if (specifier.startsWith("@/")) base = join(srcRoot, specifier.slice(2));
-  else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
-  else return null;
-
-  for (const suffix of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
-    const candidate = base + suffix;
-    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
-  }
-
-  return existsSync(base) && statSync(base).isFile() ? base : null;
-};
-
-/**
- * Every specifier a file imports **at runtime**.
- *
- * `import type` statements are stripped first: the query module imports the users
- * API module's *type* to keep the fetcher's route literals inferring, and that
- * module is a Hono server module. It is erased at compile time and never reaches
- * a bundle, so counting it would fail this suite on something that cannot break.
- */
-const runtimeImports = (path: string): string[] => {
-  const source = readFileSync(path, "utf8").replace(
-    /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
-    "$1",
-  );
-
-  return [
-    ...source.matchAll(
-      /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']/g,
-    ),
-  ]
-    .map(match => match[1] ?? match[2] ?? match[3])
-    .filter((specifier): specifier is string => Boolean(specifier));
-};
-
-/** Every external specifier reachable from an entry, with the chain that got there. */
-const externalGraph = (entry: string): Map<string, string[]> => {
-  const found = new Map<string, string[]>();
-  const parents = new Map<string, string>();
-  const seen = new Set<string>();
-
-  const chain = (file: string): string => {
-    const parts: string[] = [];
-    for (let at: string | undefined = file; at; at = parents.get(at)) {
-      parts.unshift(relative(srcRoot, at));
-    }
-
-    return parts.join(" -> ");
-  };
-
-  const walk = (file: string) => {
-    if (seen.has(file)) return;
-    seen.add(file);
-
-    for (const specifier of runtimeImports(file)) {
-      const target = resolveSpecifier(specifier, file);
-
-      if (target) {
-        if (!parents.has(target)) parents.set(target, file);
-        walk(target);
-        continue;
-      }
-
-      found.set(specifier, [...(found.get(specifier) ?? []), chain(file)]);
-    }
-  };
-
-  walk(entry);
-
-  return found;
-};
-
-const matches = (specifier: string, forbidden: string): boolean =>
-  specifier === forbidden || specifier.startsWith(`${forbidden}/`);
-
-const offenders = (entry: string, forbidden: string[]): string[] =>
-  [...externalGraph(entry)]
-    .filter(([specifier]) => forbidden.some(one => matches(specifier, one)))
-    .flatMap(([specifier, chains]) => chains.map(at => `${specifier} in ${at}`))
-    .sort();
-
-/** Anything that only resolves inside a Next.js app. */
-const NEXT_ONLY = ["next", "server-only"];
-
-/**
- * `next-intl`'s Next-only halves.
- *
- * The root entry is deliberately absent: it re-exports `use-intl`, which is
- * framework-free, and `apps/web` already renders core components that import it -
- * `ConfirmActionAlertDialog`, which is what the revoke button's dialog is. These
- * four reach for Next's request scope, its middleware or its build plugin, and
- * `@/lib/navigation` is built on two of them.
- */
-const NEXT_INTL_RUNTIME = [
-  "next-intl/middleware",
-  "next-intl/navigation",
-  "next-intl/plugin",
-  "next-intl/server",
-];
 
 const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
   name,
   path,
 }));
-
-const wrapperEntries = Object.entries(NEXT_WRAPPERS).map(([name, path]) => ({
-  name,
-  path,
-}));
-
-describe("the import scan finds what it is looking for", () => {
-  // Most assertions below are "found nothing" ones, which a scanner that
-  // silently matches nothing also satisfies. The Next wrappers are the control:
-  // they provably import the things the shared modules must not.
-  it.each(wrapperEntries)(
-    "finds the Next-only imports in the $name wrapper",
-    ({ path }) => {
-      expect(offenders(path, NEXT_ONLY)).not.toEqual([]);
-    },
-  );
-
-  it("walks past the entry file into its dependencies", () => {
-    // `next/headers` is two hops from the list wrapper - through `@/lib/fetcher` -
-    // not one.
-    expect(offenders(NEXT_WRAPPERS.list, ["next/headers"]).join()).toContain(
-      "lib/fetcher.ts",
-    );
-  });
-});
-
 describe("the shared devices modules are framework-neutral", () => {
   it.each(sharedEntries)("$name reaches nothing from next/*", ({ path }) => {
     expect(offenders(path, NEXT_ONLY)).toEqual([]);
@@ -175,7 +60,7 @@ describe("the shared devices modules are framework-neutral", () => {
   it.each(sharedEntries)(
     "$name reaches none of next-intl's Next-only entrypoints",
     ({ path }) => {
-      expect(offenders(path, NEXT_INTL_RUNTIME)).toEqual([]);
+      expect(offenders(path, NEXT_INTL)).toEqual([]);
     },
   );
 
@@ -229,29 +114,11 @@ describe("the shared list takes its framework parts as props", () => {
   });
 });
 
-describe("the Next wrapper keeps the Next-only pieces", () => {
-  it("is the only half that fetches and refuses", () => {
-    const code = readFileSync(NEXT_WRAPPERS.list, "utf8");
-
-    expect(code).toContain("notFound");
-    expect(runtimeImports(NEXT_WRAPPERS.list)).toContain("@/lib/fetcher");
-  });
-
-  it("builds its request from the shared contract rather than its own", () => {
-    // The point of the split: a list means the same thing in both apps because
-    // both call the same function, not because two places look alike.
-    expect(readFileSync(NEXT_WRAPPERS.list, "utf8")).toContain(
-      "devicesRequest",
-    );
-  });
-
-  it("is where the server action and its revalidate live", () => {
-    const action = readFileSync(join(here, "revoke-action.server.ts"), "utf8");
-
-    expect(action).toContain('"use server"');
-    expect(action).toContain("revalidatePath");
-    // ...and it applies the shared refresh rule rather than a second copy of it.
-    expect(action).toContain("shouldRefreshAfterRevoke");
-    expect(action).toContain("revokeDeviceRequest");
-  });
+describe("the Next.js half of this subtree is gone", () => {
+  it.each(Object.entries(DELETED_NEXT_HALF))(
+    "%s no longer exists",
+    (_name, path) => {
+      expect(existsSync(path)).toBe(false);
+    },
+  );
 });

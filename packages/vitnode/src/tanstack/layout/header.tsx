@@ -73,9 +73,9 @@ interface HeaderNavMessages {
  * ## The two slots a host actually fills
  *
  * `logo`, because the mark belongs to the application rather than to VitNode,
- * and `LinkComponent`, because an application still mid-migration has to decide
- * per href whether this router can render the destination at all. Both have
- * defaults that are right for a finished install, so a plain `<Header />` works.
+ * and `LinkComponent`, for a host that needs a link built some other way. Both
+ * have defaults that are right for an ordinary install, so a plain `<Header />`
+ * works and most hosts pass only the mark.
  */
 export const Header = ({
   LinkComponent = RouterLink,
@@ -85,9 +85,8 @@ export const Header = ({
   /**
    * How a header path becomes a navigation. Defaults to the router's own `Link`.
    *
-   * A host still mid-migration passes one that asks its route tree per href, so
-   * a link pointing at a route the Next.js app still serves is a document
-   * navigation rather than a not-found in this one.
+   * Overridden only by a host that builds links differently - one mounting
+   * VitNode under a path prefix, say. An ordinary install wants the default.
    */
   LinkComponent?: HeaderLinkComponent;
   /**

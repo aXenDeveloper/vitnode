@@ -33,7 +33,7 @@
     "vitnode",
     "react",
     "hono.js",
-    "next.js",
+    "tanstack-start",
     "typescript"
   ],
   "dependencies": {

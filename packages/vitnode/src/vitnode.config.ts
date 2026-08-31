@@ -88,9 +88,14 @@ export interface VitNodeApiConfig {
     /**
      * Web origins to notify when background work changes what is public.
      *
-     * Defaults to `[NEXT_PUBLIC_WEB_URL]`, which is right for the usual one-web
-     * app install. Set it when one API serves several front ends: each origin
-     * owns its own Next cache, and each is posted independently.
+     * Opt-in, and empty by default: only a front end that holds its own render
+     * cache has anything to expire, and only that front end knows it. Set it to
+     * the origins that serve `POST /api/vitnode/content/revalidate`, and each is
+     * posted independently when one API serves several of them.
+     *
+     * Left unset, a background publish invalidates nothing beyond the API's own
+     * cache - which is the whole story for a front end that reads through the
+     * public content routes rather than caching renders of them.
      */
     revalidateOrigins?: string[];
   };

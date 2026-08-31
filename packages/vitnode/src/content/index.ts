@@ -4,8 +4,13 @@
  * Everything exported here is plain data plus zod: it is safe to import from a
  * client component, from `buildPlugin`, and from `src/database/*.ts` (which
  * Drizzle Kit executes). Anything that needs Drizzle or Hono lives in
- * `@vitnode/core/content/server`, and anything that needs `next/*` in
- * `@vitnode/core/content/next`.
+ * `@vitnode/core/content/server`.
+ *
+ * There was a third entrypoint, `@vitnode/core/content/next`, holding the host
+ * adapters that turned this surface into a framework's page, metadata and
+ * revalidation calls. It is gone: `resolveContentDelivery`, `contentDeliverySeo`
+ * and the sitemap builders here are the whole delivery surface, and a host maps
+ * them onto its own conventions.
  */
 export {
   contentEntityKey,

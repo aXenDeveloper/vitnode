@@ -29,11 +29,11 @@ export interface VitNodeEnvOptions {
    * know about. Anything named here is public by construction, so the list is
    * the place a reviewer looks to see what an app publishes.
    *
-   * VitNode's own TanStack migration is the worked example: `apps/web` adds
-   * `NEXT_PUBLIC_LEGACY_WEB_URL`, the origin still serving the routes it has not
-   * taken over. That is true for the length of a migration and false before and
-   * after it, which is exactly the kind of key that belongs to an app and not to
-   * this list.
+   * An analytics key, a public map token, a second origin an app genuinely
+   * talks to from the browser. The distinction is ownership rather than
+   * sensitivity: a value every VitNode install needs belongs on the list above,
+   * and a value one deployment happens to read belongs to that deployment. VitNode's
+   * own apps name nothing here.
    */
   clientEnv?: readonly string[];
 }

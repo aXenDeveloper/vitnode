@@ -9,14 +9,6 @@ vi.mock("node:child_process", () => ({
   spawn,
 }));
 
-const { processPlugin } = vi.hoisted(() => ({
-  processPlugin: vi.fn(),
-}));
-
-vi.mock("./plugin.js", () => ({
-  processPlugin,
-}));
-
 import { devPlugin } from "./dev";
 
 const createChild = () => ({
@@ -39,7 +31,6 @@ const withPlatform = (platform: NodeJS.Platform, run: () => void) => {
 describe("devPlugin", () => {
   beforeEach(() => {
     spawn.mockReset();
-    processPlugin.mockReset();
     spawn.mockImplementation(() => createChild());
   });
 
@@ -87,9 +78,17 @@ describe("devPlugin", () => {
     }
   });
 
-  it("delegates plugin processing with the init message", () => {
-    devPlugin({ initMessage: "hello" });
+  /**
+   * The route copier is gone, and `vitnode dev` must not grow it back.
+   *
+   * It used to start a fourth process - a chokidar watcher copying the plugin's
+   * `src/routes/{main,admin,blank,breadcrumb}/` into every Next.js app's
+   * `src/app/`. Asserting the exact list rather than a count, because what would
+   * regress here is a *named* watcher reappearing, and the name is the evidence.
+   */
+  it("spawns no fourth process for copying route files anywhere", () => {
+    devPlugin({ initMessage: "dev" });
 
-    expect(processPlugin).toHaveBeenCalledWith({ initMessage: "hello" });
+    expect(spawn).toHaveBeenCalledTimes(3);
   });
 });

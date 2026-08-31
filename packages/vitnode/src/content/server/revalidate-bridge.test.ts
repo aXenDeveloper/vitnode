@@ -18,13 +18,20 @@ const input = {
   wasPublic: false,
 };
 
+/**
+ * One configured origin unless a test says otherwise.
+ *
+ * Explicit because the bridge has no fallback: an install that names no origin
+ * is telling the API there is nothing to notify, so a helper that defaulted to
+ * `undefined` would make every test below assert the empty case by accident.
+ */
 const context = (overrides?: {
   cronSecret?: string;
   origins?: string[];
 }): { c: Context; logged: string[] } => {
   const logged: string[] = [];
   const core = {
-    contentRevalidateOrigins: overrides?.origins,
+    contentRevalidateOrigins: overrides?.origins ?? ["https://web.example.com"],
     cronSecret: overrides?.cronSecret ?? "shared-secret",
   };
 
@@ -166,14 +173,34 @@ describe("dispatchContentRevalidation", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("logs once and gives up when no origin is configured", async () => {
-    vi.stubEnv("NEXT_PUBLIC_WEB_URL", "");
-
+  it("posts nowhere, and says nothing, when no origin is configured", async () => {
+    // The default, not a misconfiguration. Only a front end that caches its own
+    // renders has anything to expire, and it opts in by naming its origin.
     const { c, logged } = context({ origins: [] });
     const result = await dispatchContentRevalidation(c, input);
 
     expect(result).toEqual({ attempted: 0, delivered: 0 });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(logged).toHaveLength(1);
+    expect(logged).toEqual([]);
+  });
+
+  it("does not fall back to the session-cookie origin", async () => {
+    // The regression this guards: a fallback to NEXT_PUBLIC_WEB_URL posts at an
+    // application whose `/api/*` is a Hono mount with no such route. The 404
+    // reads as a failed delivery, and `content-schedule-effects` fails the queue
+    // task on a partial one - so every scheduled publish would retry its effects
+    // forever over a cache that was never there.
+    vi.stubEnv("NEXT_PUBLIC_WEB_URL", "https://web.example.com");
+
+    const { c } = context({ origins: undefined });
+    // `contentRevalidateOrigins` is absent from the config, not empty.
+    (
+      c.get("core") as { contentRevalidateOrigins?: string[] }
+    ).contentRevalidateOrigins = undefined;
+
+    const result = await dispatchContentRevalidation(c, input);
+
+    expect(result).toEqual({ attempted: 0, delivered: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

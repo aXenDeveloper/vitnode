@@ -117,7 +117,8 @@ export const themeScriptSource = ({
  *
  * Framework-neutral on purpose: a TanStack Start app renders it in the document
  * head itself, and Next.js hoists it there through `useServerInsertedHTML` (see
- * `theme-script-next.tsx`). Both get the same script.
+ * a host that renders it into its own document head). Every host gets the same
+ * script.
  */
 export const ThemeScript = ({ nonce, ...props }: ThemeScriptProps) => (
   <script

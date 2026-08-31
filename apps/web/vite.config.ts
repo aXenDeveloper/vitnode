@@ -34,7 +34,7 @@ const config = defineConfig({
    * their route lists ever differ - which is precisely what happens when one was
    * started before a route file existed - they overwrite each other forever, and
    * every write is a full page reload. Without `strictPort` the second `pnpm dev`
-   * says "Port 3001 is in use, trying another one" and succeeds, so the fight
+   * says "Port 3000 is in use, trying another one" and succeeds, so the fight
    * starts silently and looks like an inexplicable refresh loop on the first
    * server.
    */
@@ -99,21 +99,20 @@ const config = defineConfig({
   },
   plugins: [
     /**
-     * Both from `@vitnode/core/framework/vite`, and what they take is the whole
-     * of what is this application's rather than VitNode's.
+     * Both from `@vitnode/core/framework/vite`.
      *
-     * `NEXT_PUBLIC_LEGACY_WEB_URL` is the origin still serving the routes this
-     * app has not taken over. It is inlined into the browser bundle because
-     * `src/migration/legacy-app.ts` reads it there - and it is passed in rather
-     * than living on the package's own list because "there is a second, older
-     * application" is true for the length of this migration and false before and
-     * after it.
+     * `vitNodeEnv` takes no `clientEnv`: this app publishes nothing to the
+     * browser beyond the two keys the package inlines for every VitNode install
+     * (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WEB_URL`). Anything named there is
+     * compiled into JavaScript anyone can read, so an empty list is the right
+     * default and a key is added only when something in the browser genuinely
+     * reads it.
      *
      * `appRoot` is `import.meta.dirname` because a Vite config is loaded with the
      * working directory set to wherever the command ran, which in this monorepo
      * is regularly the repository root.
      */
-    vitNodeEnv({ clientEnv: ['NEXT_PUBLIC_LEGACY_WEB_URL'] }),
+    vitNodeEnv(),
     vitNodePluginRoutes({ appRoot: import.meta.dirname }),
     /**
      * The documentation collection, compiled by Vite rather than by a Next.js

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { createTranslator } from "next-intl";
+import { createTranslator } from "use-intl";
 
 import type { LocaleConfig, Messages } from "@/lib/i18n/types";
 

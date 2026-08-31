@@ -15,8 +15,8 @@ export const POSTGRES_URL =
 
 /**
  * The API this app serves at `/api/*`, identical in shape to the config
- * `apps/api` and `apps/docs` build. Nothing here is TanStack-specific: the
- * Hono application is unchanged, only the runtime that hands it requests is.
+ * `apps/api` builds. Nothing here is TanStack-specific: the Hono application is
+ * unchanged, only the runtime that hands it requests is.
  *
  * Left out on purpose, because each one is a deployment decision rather than
  * part of the mount: `email`, `storage`, `ai`, `cron` and the SSO adapters. Add

@@ -19,7 +19,7 @@ import { categoryContentType } from "@/content/category";
  * an icon set.
  *
  * There is no second list. `config.tsx` spreads this straight into
- * `buildPlugin`, so the navigation a Next.js app renders and the navigation a
+ * `buildPlugin`, so the navigation a config-registering host renders and the one a
  * TanStack app renders are the same declarations read through two doors.
  *
  * The app that installs this plugin never imports it by name: the

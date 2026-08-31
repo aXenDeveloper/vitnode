@@ -12,7 +12,7 @@
  *     import { vitNodeEnv, vitNodePluginRoutes } from '@vitnode/core/framework/vite'
  *
  *     plugins: [
- *       vitNodeEnv({ clientEnv: ['NEXT_PUBLIC_LEGACY_WEB_URL'] }),
+ *       vitNodeEnv(),
  *       vitNodePluginRoutes({ appRoot: import.meta.dirname }),
  *       ...
  *     ]

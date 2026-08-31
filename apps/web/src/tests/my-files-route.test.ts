@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
+
+import { resolvesToRoute } from './route-tree'
 
 /**
  * `/files`' place in this app's route tree.
@@ -20,26 +21,24 @@ import { getRouter } from '#/router'
 describe('`/files` is this app’s route now', () => {
   const router = getRouter()
 
-  it('is owned, so MigrationLink navigates to it client-side', () => {
+  it('is a route in this tree, so a link to it navigates client-side', () => {
     // There is no list of migrated routes anywhere in that decision - the route
     // tree is the list. Adding the route file is the whole of the handover.
-    expect(isTanStackOwnedPath(router, '/files')).toBe(true)
+    expect(resolvesToRoute(router, '/files')).toBe(true)
   })
 
   it('is owned under the locale prefix too, because that is the same route', () => {
-    expect(isTanStackOwnedPath(router, '/pl/files')).toBe(true)
+    expect(resolvesToRoute(router, '/pl/files')).toBe(true)
   })
 
   it('is owned with the table’s own parameters on it', () => {
-    expect(isTanStackOwnedPath(router, '/files?orderBy=name&order=asc')).toBe(
-      true,
-    )
+    expect(resolvesToRoute(router, '/files?orderBy=name&order=asc')).toBe(true)
   })
 
   it('does not drag the routes underneath it away from Next.js', () => {
     // `matchRoutes` answers with the deepest *branch* it can resolve, so owning
     // `/files` used to make anything below it look owned as well.
-    expect(isTanStackOwnedPath(router, '/files/12')).toBe(false)
+    expect(resolvesToRoute(router, '/files/12')).toBe(false)
   })
 
   it('sits under the main shell and the pathless guard, not at the top of the tree', () => {

@@ -16,7 +16,7 @@ import { useTranslations } from "use-intl";
  *
  * **A framework.** The same two imports a public plugin page has: the routing
  * package, which is data and types with no framework in it, and `use-intl`,
- * which VitNode itself renders through. No router, no `next/*`, no host-specific
+ * which VitNode itself renders through. No router, no framework package, no host-specific
  * module - so this file is renderable by whichever application installs the
  * plugin.
  *

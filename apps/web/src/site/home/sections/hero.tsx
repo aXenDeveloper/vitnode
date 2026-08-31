@@ -35,22 +35,19 @@ const GitHubIcon = () => (
  *
  * ## The two links are two different kinds of link, deliberately
  *
- * **Get Started** goes to `/docs/dev`, which the Next.js application still
- * serves until Stage 16. It uses the injected {@link SiteLinkComponent}, which
- * asks the route tree whether *this* application can render the destination, and
- * for `/docs/dev` the answer is no - so it becomes a full-document navigation to
- * the legacy origin, with the locale prefix applied exactly once. When Stage 16
- * puts `/docs` in this route tree, the same component starts client-navigating
- * to it and this file does not change. There is no `startsWith('/docs')` here,
- * and there must not be: which application owns a path is one decision, made in
- * `#/migration/navigation`, not a special case a page gets to hold an opinion
- * about.
+ * **Get Started** goes to `/docs/dev` through the injected
+ * {@link SiteLinkComponent}, and this file has never known how that becomes a
+ * navigation. It has been a full-document load into a second application, then a
+ * per-href decision between two of them, and now an ordinary client-side
+ * navigation with the locale prefix applied exactly once - and none of those
+ * changes edited this file. There is no `startsWith('/docs')` here, and there
+ * must not be: how a path becomes a navigation is the route's decision, not a
+ * special case a page gets to hold an opinion about.
  *
- * **View on GitHub** is a plain `<a>`, because it leaves VitNode altogether.
- * The migration link answers "which of our two applications serves this", and
- * for `github.com` the answer is neither - handing it an absolute URL would ask
- * a question that has no true answer. `rel="noopener noreferrer"` with
- * `target="_blank"`.
+ * **View on GitHub** is a plain `<a>`, because it leaves VitNode altogether. A
+ * `LinkComponent` takes a *path*; handing it an absolute URL asks a router to
+ * match `github.com` against the route tree, which answers with something other
+ * than GitHub. `rel="noopener noreferrer"` with `target="_blank"`.
  *
  * `visual` is a slot rather than an import so that the hero does not decide how
  * the beam is loaded; see `home-content.tsx`, which puts a lazy boundary there.

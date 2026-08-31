@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 import React from "react";
+import { IntlProvider } from "use-intl";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import messages from "@/locales/en.json";
@@ -53,7 +53,7 @@ const gallery = (
   props: Partial<React.ComponentProps<typeof FileGallery>> = {},
 ) =>
   render(
-    <NextIntlClientProvider locale="en" messages={messages}>
+    <IntlProvider locale="en" messages={messages}>
       <FileGallery
         canRemove
         onRemove={() => undefined}
@@ -66,7 +66,7 @@ const gallery = (
         ]}
         {...props}
       />
-    </NextIntlClientProvider>,
+    </IntlProvider>,
   );
 
 const handles = () => screen.queryAllByRole("button", { name: /^Reorder / });

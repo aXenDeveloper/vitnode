@@ -13,12 +13,12 @@ import { useTranslations } from "use-intl";
  * and that is the one thing keeping a plugin layout framework-neutral: an
  * `Outlet` belongs to a router, and a plugin that imported one could be
  * installed into exactly one kind of application. It is also the same shape as a
- * Next.js `layout.tsx`, so a plugin that ships both writes the frame once.
+ * a framework's own nested-layout file, so a plugin writes the frame once.
  *
  * Two imports, and both are deliberate. `@vitnode/core/routing` is data and
  * types only - it is the same module a Node build reads, with no framework in
  * it. `use-intl` is the library VitNode itself renders through; a plugin that
- * reached for `next-intl` or a router's hooks instead would pin itself to one
+ * reached for a host-bound i18n package or a router's hooks would pin itself to one
  * host.
  */
 const GuideLayout = ({ children }: { children: React.ReactNode }) => {

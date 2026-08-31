@@ -42,10 +42,9 @@ import { navItemActivity } from "./nav-active";
  * ## Why `LinkComponent` is required rather than defaulting to `<a>`
  *
  * A missing wrapper would degrade silently into a full document reload on every
- * sidebar click - which during the migration is *sometimes* the right answer and
- * never the right default. `apps/web` passes one that asks its route tree per
- * href, so a nav entry pointing at a screen the Next.js app still serves becomes
- * a document load while `/admin/core` stays a client navigation.
+ * sidebar click - never the right default, and invisible until somebody notices
+ * the panel flashing. Required, so a host has to answer. An external entry is
+ * the one exception and is classified before it gets here: see `adminLinkFor`.
  */
 export interface ItemNavAdminContentProps extends AdminNavItem {
   LinkComponent: AuthLinkComponent;

@@ -13,9 +13,9 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import { isTanStackOwnedPath } from '#/migration/navigation'
 import { getRouter } from '#/router'
 
+import { resolvesToRoute } from './route-tree'
 import { withoutComments } from './source'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -46,7 +46,7 @@ describe('the settings navigation model', () => {
   })
 
   it('mentions no locale anywhere', () => {
-    // The prefix is the router's rewrite and `MigrationLink`'s job. An href
+    // The prefix is the router rewrite's job. An href
     // spelled `/pl/settings/...` here would be localized twice.
     for (const item of SETTINGS_NAV_ITEMS) {
       for (const href of [item.href, ...item.aliases]) {
@@ -93,7 +93,7 @@ describe('the settings navigation model', () => {
 
   it('never lights up a panel from a longer path that starts with it', () => {
     // A prefix rule would mark Security current on a child of it, which is the
-    // same mistake `isTanStackOwnedPath` guards against for ownership.
+    // same mistake `resolvesToRoute` guards against.
     expect(activeSettingsNavKey('/settings/security/sessions')).toBeUndefined()
   })
 
@@ -156,7 +156,7 @@ describe('every settings panel is a child of the layout and the guard', () => {
    *
    * This is what "the settings navigation is ordinary owned-route navigation"
    * amounts to, stated as a property rather than as a choice of component. The
-   * menu is handed `MigrationLink`, which asks the route tree per href and does a
+   * menu is handed `RouterLink`, which hands the href to the router and does a
    * full document load into the Next.js app for anything this one does not serve
    * - correct behaviour, and invisible when it happens. With every Stage 9 panel
    * migrated the answer should now be "owned" for all of them, so this fails if a
@@ -166,12 +166,12 @@ describe('every settings panel is a child of the layout and the guard', () => {
   it.each(SETTINGS_NAV_ITEMS)(
     'the $key menu entry is a client-side navigation',
     ({ href }) => {
-      expect(isTanStackOwnedPath(getRouter(), href)).toBe(true)
+      expect(resolvesToRoute(getRouter(), href)).toBe(true)
     },
   )
 
   it('and so is the settings root the menu falls back to', () => {
-    expect(isTanStackOwnedPath(getRouter(), SETTINGS_ROOT_HREF)).toBe(true)
+    expect(resolvesToRoute(getRouter(), SETTINGS_ROOT_HREF)).toBe(true)
   })
 
   /**

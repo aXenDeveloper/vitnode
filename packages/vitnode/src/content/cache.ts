@@ -7,9 +7,9 @@ import { contentLocalesMatch, normalizeContentLocale } from "./locale";
 /**
  * Cache tags for the generated public API.
  *
- * Pure strings, no `next/*`, and exported: an app can tag its own `fetch` calls
- * and its own `"use cache"` functions with exactly the same values, which is
- * the only way its pages get invalidated alongside the generated ones.
+ * Pure strings and exported, with no framework package behind them: a host can
+ * tag its own cached reads with exactly the same values, which is the only way
+ * its pages get invalidated alongside the generated ones.
  *
  * Format: `content:{contentTypeId}:{scope}[:{locale}][:{key}]`. No plugin id - a
  * content type id is already globally unique (`validateContentTypes` enforces it)
@@ -128,9 +128,10 @@ export const contentDeliverySitemapTag = (
  * How hard a mutation expires the tags it touched.
  *
  * Lives here, in the client-safe layer, because the background
- * [bridge](./server/revalidate-bridge.ts) has to name a mode from a process
- * where `next/cache` cannot even be imported. `content/next` re-exports it, so
- * the public name has not moved.
+ * [bridge](./server/revalidate-bridge.ts) has to name a mode from the queue
+ * process, which holds no cache of its own and cannot import the front end's.
+ * It is exported from `@vitnode/core/content`, which is where it has always
+ * resolved from - a deleted adapter used to re-export it as well.
  */
 export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
 

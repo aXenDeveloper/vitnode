@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -39,16 +39,18 @@ const importsFrom = (path: string): string[] =>
  * `src/database/*.ts` to read the tables. Both `next/*` and `server-only`
  * throw there, so an accidental import does not fail in CI: it fails when
  * somebody runs a migration.
+ *
+ * The rule used to have two halves, and only one of them is left. `content/next/`
+ * was the layer those imports were *allowed* in - the Next.js host adapter over
+ * `content/delivery.ts` and the Hono delivery routes - and `content/admin/` was
+ * excluded alongside it because `fetch.server.ts` there carried `server-only` on
+ * purpose. Both are gone, so the whole of `content/**` is now held to the rule
+ * that two thirds of it were held to before.
  */
 describe("layer boundaries", () => {
-  // The client-safe core and the server layer only. `content/admin/` is
-  // deliberately excluded: it is the AdminCP's own layer, it is only ever
-  // reached from Next, and `fetch.server.ts` there carries `server-only` on
-  // purpose. `content/next/` is excluded for the same reason.
-  const engineFiles = [
-    ...filesUnder(here, ["admin", "next", "server"]),
-    ...filesUnder(resolve(here, "server")),
-  ].filter(path => !/\.test(-d)?\.tsx?$/.test(path));
+  const engineFiles = filesUnder(here).filter(
+    path => !/\.test(-d)?\.tsx?$/.test(path),
+  );
 
   it("has files to check", () => {
     // A refactor that moved the engine should fail loudly here rather than
@@ -79,13 +81,28 @@ describe("layer boundaries", () => {
     expect(offenders.map(path => relative(here, path))).toEqual([]);
   });
 
-  it("is where the Next imports actually live", () => {
-    // The other half of the rule: `content/next/` exists precisely so those
-    // imports have somewhere legal to be.
-    const nextFiles = filesUnder(resolve(here, "next"));
-    const specifiers = nextFiles.flatMap(importsFrom);
+  it("has no layer left where those imports were legal", () => {
+    // `content/next/` was that layer. Asserted by absence rather than dropped,
+    // because the shape of the mistake this guards against is recreating it: the
+    // engine's public delivery surface is `content/delivery.ts` plus the Hono
+    // routes in `content/server/delivery-routes.ts`, and a host adapter over
+    // them belongs in the host.
+    expect(existsSync(resolve(here, "next"))).toBe(false);
+  });
 
-    expect(specifiers).toContain("next/cache");
-    expect(specifiers).toContain("server-only");
+  it("still exposes the framework-neutral delivery surface those adapters wrapped", () => {
+    // The capability, as opposed to the adapter. Deleting `content/next/` must
+    // not have taken delivery resolution, SEO or the sitemap with it.
+    const surface = readFileSync(join(here, "index.ts"), "utf8");
+
+    for (const name of [
+      "resolveContentDelivery",
+      "contentDeliverySeo",
+      "contentDeliveryPath",
+      "contentDeliveryRobots",
+      "parseContentDeliveryPath",
+    ]) {
+      expect(surface).toContain(name);
+    }
   });
 });

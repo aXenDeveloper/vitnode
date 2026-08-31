@@ -25,8 +25,9 @@ const devPort = (app: string): string => {
     readFileSync(join(repoRoot, 'apps', app, 'package.json'), 'utf8'),
   ) as { scripts?: Record<string, string> }
 
-  // `next dev` with no flag serves 3000; `vite dev` needs the flag to move off
-  // its own default, so an explicit `--port` is the only thing worth reading.
+  // `vite dev` needs an explicit flag to move off its own default, so the
+  // `--port` in the dev script is the only thing worth reading. The fallback
+  // matches Vite's own default rather than guessing.
   return /--port[= ](\d+)/.exec(manifest.scripts?.dev ?? '')?.[1] ?? '3000'
 }
 
@@ -86,8 +87,10 @@ describe('development configuration', () => {
   const env = exampleEnv('web')
 
   it('points both public URLs at the port this app serves', () => {
-    // The bug this pins: `vite dev --port 3001` with the URLs left on 3000.
-    // Every browser-side API call then leaves this app entirely.
+    // The bug this pins: the dev script's `--port` and the URLs in
+    // `.env.example` drifting apart. Every browser-side API call then leaves
+    // this app entirely. Both sides are read from disk, so moving the port
+    // without moving the URLs fails here rather than at runtime.
     const origin = `http://localhost:${devPort('web')}`
 
     expect(env.NEXT_PUBLIC_WEB_URL).toBe(origin)
@@ -102,15 +105,20 @@ describe('development configuration', () => {
     )
   })
 
-  it('does not share a development origin with the Next.js app', () => {
-    // `apps/docs` serves its own VitNode API on 3000 under a Next.js catch-all.
-    // Colliding with it means this app's calls are answered by that one - a
-    // different database connection, a different session store, and no error.
-    expect(env.NEXT_PUBLIC_API_URL).not.toBe(
-      exampleEnv('docs').NEXT_PUBLIC_API_URL,
-    )
-    expect(devPort('web')).not.toBe(devPort('docs'))
-  })
+  /**
+   * There used to be a third assertion here: that this app's development origin
+   * did not collide with `apps/docs`, which served its own VitNode API on 3000
+   * under a Next.js catch-all. Colliding meant this app's calls were answered by
+   * that one - a different database connection, a different session store, and
+   * no error anywhere. Stage 17 deleted that application, so there is no second
+   * origin left to collide with and the test went with it.
+   *
+   * The two assertions above are the ones that outlive the migration, and the
+   * `resolveApiOrigin` suite below still pins the behaviour that made the
+   * collision survivable: the origin comes off the request being handled, not
+   * off configuration, so a stale `NEXT_PUBLIC_API_URL` cannot redirect a call
+   * to another application.
+   */
 })
 
 describe('resolveApiOrigin', () => {
@@ -119,13 +127,15 @@ describe('resolveApiOrigin', () => {
   })
 
   it('is the origin of the request being handled', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:3000')
+    // A configured origin that is genuinely elsewhere - `apps/api` serves 8000
+    // when it is deployed on its own - so the two candidates are distinguishable.
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:8000')
 
     // Not the configured value: the API is served by this process, so the
     // origin that reached it is the origin to call back on.
     await expect(
-      withRequest('http://localhost:3001/', {}, resolveApiOrigin),
-    ).resolves.toBe('http://localhost:3001')
+      withRequest('http://localhost:3000/', {}, resolveApiOrigin),
+    ).resolves.toBe('http://localhost:3000')
   })
 
   it('works on a hostname nobody configured', async () => {
@@ -217,14 +227,17 @@ describe('SSR calls through fetcherServer', () => {
     })
   })
 
-  it('does not reach the Next.js app when the environment still names it', async () => {
-    // The regression: `NEXT_PUBLIC_API_URL` left on 3000, which in development
-    // is `apps/docs`. The call has to stay on 3001, where the mounted API is.
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:3000')
+  it('does not leave this app when the environment names another origin', async () => {
+    // The regression was `NEXT_PUBLIC_API_URL` left pointing at the Next.js app
+    // this one replaced, which sent every server-side session call to a
+    // different process. The app is gone, but the invariant is not about that
+    // app: a stale or inherited `NEXT_PUBLIC_API_URL` must never win over the
+    // origin the request arrived on, because the API is mounted right here.
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:8000')
 
-    await withRequest('http://localhost:3001/', {}, callSession)
+    await withRequest('http://localhost:3000/', {}, callSession)
 
-    expect(recorded.at(0)?.origin).toBe('http://localhost:3001')
+    expect(recorded.at(0)?.origin).toBe('http://localhost:3000')
   })
 
   it('lets an explicit origin on the call win', async () => {

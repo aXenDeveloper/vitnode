@@ -19,7 +19,7 @@ import messages from "./locales";
  *     admin/content.tsx  browser-safe   how it edits: fields, columns, layouts
  *     config.tsx         server         the whole plugin: the above, plus messages
  *
- * A Next.js application registers this file and walks the registry in its render
+ * A host registers this file and walks the registry in its render
  * pass. A TanStack Start application cannot - its config is server-side on
  * purpose - so it imports `admin/content` through a generated registry of
  * literal specifiers instead. Same declarations, same components, two doors.

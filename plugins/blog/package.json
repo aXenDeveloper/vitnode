@@ -1,7 +1,7 @@
 {
   "name": "@vitnode/blog",
   "version": "1.2.0-canary.78",
-  "description": "Blog plugin for VitNode, providing a blogging platform with Next.js and Hono.js.",
+  "description": "Blog plugin for VitNode, providing a blogging platform on Hono.js.",
   "author": "VitNode Team",
   "license": "MIT",
   "homepage": "https://vitnode.com",
@@ -14,7 +14,6 @@
     "vitnode",
     "react",
     "hono.js",
-    "next.js",
     "typescript",
     "blog"
   ],
@@ -45,8 +44,6 @@
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.12.31",
     "lucide-react": "^1.25.0",
-    "next": "16.3.1",
-    "next-intl": "^4.13.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-email": "^6.9.0",

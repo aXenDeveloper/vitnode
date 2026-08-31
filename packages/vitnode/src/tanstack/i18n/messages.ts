@@ -33,7 +33,7 @@ export interface BundledMessagesOptions {
    * The one part of the source list a package cannot supply. Every VitNode
    * package ships a locale barrel that loads its own files with a runtime
    * `import("./en.json", { with: { type: "json" } })`, which is exactly right
-   * under Node and is how `apps/api` and `apps/docs` read them. Rollup will not
+   * under Node and is how `apps/api` reads them. Rollup will not
    * follow a dynamic import carrying an import attribute, so in a bundled
    * runtime it neither emits the JSON nor rewrites the specifier, and every
    * string renders as its own key. A host declares static specifiers a bundler

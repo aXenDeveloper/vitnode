@@ -3,62 +3,52 @@ title: AdminCP Pages
 description: Create powerful admin interfaces for your plugins with protected pages, custom layouts, and integrated navigation.
 ---
 
-## Pages & Layouts
+## Pages
 
-There are two ways to put a page in the AdminCP, and the navigation below is
-shared by both.
+An AdminCP page is a route in `routes/manifest.ts` with `area: "admin"` and its
+full `/admin/…` path. The page stays in your package, the application imports it
+from your `dist`, and the navigation below is what puts it in the sidebar.
 
-**Host-neutral**, and what a new plugin should use: a route in
-`routes/manifest.ts` with `area: "admin"` and its full `/admin/…` path. The page
-stays in your package and renders on any VitNode host -
-[AdminCP routes](/docs/dev/tanstack/admin) is the short guide, and
+[AdminCP routes](/docs/dev/tanstack/admin) is the short guide and
 [Route Manifest](/docs/dev/plugins/route-manifest#admincp-pages) the reference.
-
-**Next.js only**: the `src/routes/admin` directory described below, whose files
-are copied into a Next.js application exactly as
-[Layouts and Pages](/docs/dev/plugins/layouts-and-pages) describes. Like
-everywhere in VitNode, render text with translations - see
+Like everywhere in VitNode, render text with translations - see
 [Messages](/docs/dev/i18n/messages).
 
-### Pages
+```ts title="plugins/{plugin_name}/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from "@vitnode/core/routing";
 
-```tsx title="plugins/{plugin_name}/src/routes/admin/blog/settings/page.tsx"
-import { getTranslations } from "next-intl/server";
-
-export default async function Page() {
-  const t = await getTranslations("@vitnode/blog.admin.settings"); // [!code highlight]
-
-  return (
-    <div>
-      <h1>{t("title")}</h1>
-      <p>{t("desc")}</p>
-    </div>
-  );
-}
+export const routes: PluginRouteDefinition[] = [
+  {
+    area: "admin", // [!code highlight]
+    entry: "routes/admin-settings",
+    id: "admin-settings",
+    path: "/admin/blog/settings", // [!code highlight]
+  },
+];
 ```
 
-### Layouts
+```tsx title="plugins/{plugin_name}/src/routes/admin-settings.tsx"
+import { useTranslations } from "use-intl";
 
-```tsx title="plugins/{plugin_name}/src/routes/admin/blog/settings/layout.tsx"
-import { getTranslations } from "next-intl/server";
-
-export default async function AdminRootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const t = await getTranslations("@vitnode/blog.admin.settings");
+const AdminSettingsPage = () => {
+  const t = useTranslations("@vitnode/blog.admin.settings"); // [!code highlight]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white p-4">
-        <h1 className="text-xl font-semibold">{t("title")}</h1>
-      </header>
-      {children}
+    <div className="flex flex-col gap-2">
+      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <p className="text-muted-foreground leading-relaxed">{t("desc")}</p>
     </div>
   );
-}
+};
+
+export default AdminSettingsPage;
 ```
+
+<Callout type="warn" title="The area chooses a shell, never a prefix">
+  `area: "admin"` says which shell frames your page - the sidebar, the
+  breadcrumb area, the admin session guard. It does **not** add `/admin` to your
+  path, so write the path out in full.
+</Callout>
 
 <Callout>
   Pages in the AdminCP are automatically behind the admin session guard,
@@ -223,18 +213,15 @@ VitNode automatically uses the `id` as translation key for the navigation item.
   
 </Steps>
 
-## Sharing navigation with a non-Next app
+## Keeping navigation out of the browser bundle
 
-Everything above lives in your plugin config, which is fine for a Next.js app:
-the config is only ever read on the server, so importing your content types -
-and the editor fields, form layouts and table cells attached to them - costs the
-browser nothing.
+Your plugin config carries your content types - and the editor fields, form
+layouts and table cells attached to them. The application's shell must not import
+any of that just to draw a list of links: anything the shell imports is in the
+browser bundle.
 
-An app built on TanStack Start has no such boundary. Anything its shell imports
-is in the browser bundle, so it can't reach for your config just to draw a list
-of links. Move the navigation half into a **browser-safe** module and spread it
-back into your config, and both kinds of app get the same sidebar from one
-declaration:
+So the navigation half goes in a **browser-safe** module of its own, spread back
+into your config, and one declaration feeds both:
 
 ```tsx title="plugins/{plugin_name}/src/admin/nav.tsx"
 import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
@@ -283,14 +270,13 @@ need from the entries themselves.
 
 <Callout type="warn" title="Keep it plain">
   `admin/nav` is imported by the browser bundle. Ids, hrefs, permissions, icons
-  and content type definitions only. A screen, a form field, a table cell or
-  anything that reaches `next/*` belongs in `config.tsx`, which is exactly what
-  the split is for.
+  and content type definitions only. A screen, a form field or a table cell
+  belongs in `config.tsx`, which is exactly what the split is for.
 </Callout>
 
 <Callout>
-  A plugin that ships no `admin/nav` simply contributes no sidebar entries to
-  such an app - it isn't an error, and Next.js apps are unaffected either way.
+  A plugin that ships no `admin/nav` simply contributes no sidebar entries - it
+  isn't an error.
 </Callout>
 
 ## Learn More
@@ -302,9 +288,9 @@ need from the entries themselves.
     href="/docs/dev/tanstack/admin"
   />
   <Card
-    title="Layouts and Pages"
-    description="The Next.js route files a plugin can also ship"
-    href="/docs/dev/plugins/layouts-and-pages"
+    title="Route Manifest"
+    description="Every field an AdminCP route can declare"
+    href="/docs/dev/plugins/route-manifest"
   />
   <Card
     title="Dashboard Widgets"

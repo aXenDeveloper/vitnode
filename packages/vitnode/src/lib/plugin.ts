@@ -6,13 +6,22 @@ import type {
   ContentSystemField,
 } from "../content/types";
 import type { PluginRouteDefinition } from "../routing/types";
-import type { ItemNavAdmin } from "../views/admin/layouts/sidebar/nav/item";
+import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { LocaleMessagesMap } from "./i18n/types";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
+/**
+ * Picked from the navigation *model* rather than from a component's props.
+ *
+ * The model is the framework-neutral declaration every host reads; a component
+ * is one host's way of drawing it. Picking from a component would put whichever
+ * host that component belongs to into the graph of `buildPlugin` - and this
+ * module is what every plugin imports, so that coupling would travel to all of
+ * them.
+ */
 interface AdminNavItem extends Pick<
-  React.ComponentProps<typeof ItemNavAdmin>,
+  ResolvedAdminNavItem,
   "href" | "icon" | "isOpenInNewTab"
 > {
   id: string;
@@ -267,13 +276,16 @@ export interface BuildPluginReturn<P extends string = string> {
    * Public pages this plugin contributes, declared rather than shipped as a
    * framework's route files.
    *
-   * Additive and optional: a plugin with a `src/routes/` tree keeps working
-   * exactly as it did, because that tree is still copied into every Next.js app
-   * by `scripts/prepare-plugins-files.ts`. This is the parallel path - the one an
-   * application that is not Next.js can read - and `buildPluginRouteManifest`
-   * turns every plugin's list into the application's route manifest.
+   * Optional: a plugin that contributes an API module, a content type or only
+   * strings declares no routes at all. `buildPluginRouteManifest` turns every
+   * plugin's list into the application's route manifest, which is compiled into
+   * a literal registry at build time.
    *
-   * Nothing in this package renders them yet. See `src/routing/`.
+   * There was a second, older path until the Next.js cutover: a plugin could
+   * instead ship a `src/routes/{main,admin,blank,breadcrumb}/` tree of App Router
+   * pages, which a copier wrote into every Next.js app's `src/app/`. Nothing is
+   * copied anywhere now - a route module stays in this package's own `dist` and
+   * the app imports it from there. See `src/routing/`.
    */
   routes?: PluginRouteDefinition[];
 }

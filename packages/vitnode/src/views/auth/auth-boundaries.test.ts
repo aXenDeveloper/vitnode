@@ -1,11 +1,18 @@
 // @vitest-environment node
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import {
+  externalGraph,
+  NEXT_INTL,
+  NEXT_ONLY,
+  offenders,
+  runtimeImports,
+} from "@/tests/import-graph";
+
 const here = dirname(fileURLToPath(import.meta.url));
-const srcRoot = resolve(here, "../..");
 
 /**
  * The auth screens, split down the middle.
@@ -44,7 +51,14 @@ const SHARED = {
 };
 
 /** The Next.js half: server actions, `next/cache`, locale-aware navigation. */
-const NEXT_WRAPPERS = {
+/**
+ * The Next.js half, by path, so its absence can be asserted.
+ *
+ * Named rather than deleted along with the assertions that used them: each was
+ * the one place a Next.js API was allowed to appear in this subtree, and a test
+ * that stops naming them cannot notice one coming back.
+ */
+const DELETED_NEXT_HALF = {
   breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-main.tsx"),
   card: join(here, "sign-in/sign-in-card.tsx"),
   changePasswordForm: join(
@@ -61,130 +75,10 @@ const NEXT_WRAPPERS = {
   ssoCallback: join(here, "sso/callback/client/client.tsx"),
 };
 
-const resolveSpecifier = (specifier: string, from: string): null | string => {
-  let base: string;
-
-  if (specifier.startsWith("@/")) base = join(srcRoot, specifier.slice(2));
-  else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
-  else return null;
-
-  for (const suffix of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
-    const candidate = base + suffix;
-    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
-  }
-
-  return existsSync(base) && statSync(base).isFile() ? base : null;
-};
-
-/**
- * Every specifier a file imports **at runtime**.
- *
- * `import type` statements are stripped first: a wrapper imports the *type* of
- * its server action's input, which is erased at compile time and never reaches
- * a bundle.
- */
-const runtimeImports = (path: string): string[] => {
-  const source = readFileSync(path, "utf8").replace(
-    /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
-    "$1",
-  );
-
-  return [
-    ...source.matchAll(
-      /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']/g,
-    ),
-  ]
-    .map(match => match[1] ?? match[2] ?? match[3])
-    .filter((specifier): specifier is string => Boolean(specifier));
-};
-
-/** Every external specifier reachable from an entry, with the chain that got there. */
-const externalGraph = (entry: string): Map<string, string[]> => {
-  const found = new Map<string, string[]>();
-  const parents = new Map<string, string>();
-  const seen = new Set<string>();
-
-  const chain = (file: string): string => {
-    const parts: string[] = [];
-    for (let at: string | undefined = file; at; at = parents.get(at)) {
-      parts.unshift(relative(srcRoot, at));
-    }
-
-    return parts.join(" -> ");
-  };
-
-  const walk = (file: string) => {
-    if (seen.has(file)) return;
-    seen.add(file);
-
-    for (const specifier of runtimeImports(file)) {
-      const target = resolveSpecifier(specifier, file);
-
-      if (target) {
-        if (!parents.has(target)) parents.set(target, file);
-        walk(target);
-        continue;
-      }
-
-      found.set(specifier, [...(found.get(specifier) ?? []), chain(file)]);
-    }
-  };
-
-  walk(entry);
-
-  return found;
-};
-
-const matches = (specifier: string, forbidden: string): boolean =>
-  specifier === forbidden || specifier.startsWith(`${forbidden}/`);
-
-const offenders = (entry: string, forbidden: string[]): string[] =>
-  [...externalGraph(entry)]
-    .filter(([specifier]) => forbidden.some(one => matches(specifier, one)))
-    .flatMap(([specifier, chains]) => chains.map(at => `${specifier} in ${at}`))
-    .sort();
-
-/** Anything that only resolves inside a Next.js app. */
-const NEXT_ONLY = ["next", "server-only"];
-
-/**
- * `next-intl`'s Next-only halves.
- *
- * The root entry is deliberately absent: it re-exports `use-intl`, which is
- * framework-free, and `apps/web` already renders core components that import it
- * (`ClientButton`, `AutoForm`). These four reach for Next's request scope, its
- * middleware or its build plugin - and `lib/navigation` is built on two of them.
- */
-const NEXT_INTL_RUNTIME = [
-  "next-intl/middleware",
-  "next-intl/navigation",
-  "next-intl/plugin",
-  "next-intl/server",
-];
-
 const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
   name,
   path,
 }));
-
-describe("the import scan finds what it is looking for", () => {
-  // Every assertion below is a "found nothing" one, which a scanner that
-  // silently matches nothing also satisfies. The Next wrappers are the control:
-  // they provably import the things the shared views must not.
-  it("finds the Next-only imports in the Next wrappers", () => {
-    expect(offenders(NEXT_WRAPPERS.signInForm, NEXT_INTL_RUNTIME)).not.toEqual(
-      [],
-    );
-    expect(offenders(NEXT_WRAPPERS.ssoButtons, NEXT_ONLY)).not.toEqual([]);
-  });
-
-  it("walks past the entry file into its dependencies", () => {
-    // `lib/navigation` is two hops from the wrapper, not one.
-    expect(
-      offenders(NEXT_WRAPPERS.card, ["next-intl/navigation"]).join(),
-    ).toContain("next-link");
-  });
-});
 
 describe("the shared auth views are framework-neutral", () => {
   it.each(sharedEntries)("$name reaches nothing from next/*", ({ path }) => {
@@ -194,7 +88,7 @@ describe("the shared auth views are framework-neutral", () => {
   it.each(sharedEntries)(
     "$name reaches none of next-intl's Next-only entrypoints",
     ({ path }) => {
-      expect(offenders(path, NEXT_INTL_RUNTIME)).toEqual([]);
+      expect(offenders(path, NEXT_INTL)).toEqual([]);
     },
   );
 
@@ -300,37 +194,6 @@ describe("the shared views take their framework parts as props", () => {
   });
 });
 
-describe("the Next wrappers keep the Next-only pieces", () => {
-  it("is the only half that knows about next-intl navigation", () => {
-    expect(offenders(NEXT_WRAPPERS.card, ["next-intl/navigation"])).not.toEqual(
-      [],
-    );
-    expect(offenders(SHARED.card, ["next-intl/navigation"])).toEqual([]);
-  });
-
-  it.each(
-    Object.entries(NEXT_WRAPPERS).map(([name, path]) => ({ name, path })),
-  )("the $name wrapper is where Next.js enters", ({ path }) => {
-    expect(offenders(path, [...NEXT_ONLY, ...NEXT_INTL_RUNTIME])).not.toEqual(
-      [],
-    );
-  });
-
-  it("keeps the server actions on its own side", () => {
-    for (const path of [
-      NEXT_WRAPPERS.changePasswordForm,
-      NEXT_WRAPPERS.passwordResetForm,
-      NEXT_WRAPPERS.signInForm,
-      NEXT_WRAPPERS.signUpForm,
-      NEXT_WRAPPERS.ssoCallback,
-    ]) {
-      expect(
-        runtimeImports(path).some(one => one.includes("mutation-api.server")),
-      ).toBe(true);
-    }
-  });
-});
-
 /**
  * The settings screens, split the same way.
  *
@@ -397,12 +260,14 @@ describe("the settings frame is told its framework parts", () => {
     }
   });
 
-  it("is the Next wrappers that know where the visitor is", () => {
-    for (const path of [
-      NEXT_WRAPPERS.settingsNav,
-      NEXT_WRAPPERS.settingsShell,
-    ]) {
-      expect(withoutComments(path)).toContain("usePathname");
+  it("has no half left that reads the pathname for itself", () => {
+    // This used to assert the opposite about the two Next.js wrappers: that they
+    // were where `usePathname` lived, so the shared frame could stay ignorant of
+    // it. Both are gone, and the invariant that survives them is that the shared
+    // frame never grew the hook back to fill the gap - which is what a host
+    // supplying `isRoot`/`pathname` would tempt somebody to do.
+    for (const path of Object.values(DELETED_NEXT_HALF)) {
+      expect(existsSync(path)).toBe(false);
     }
   });
 });

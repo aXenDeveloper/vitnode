@@ -15,9 +15,9 @@ import type { PluginRouteDefinition } from "@vitnode/core/routing";
  * before the bundler runs, so Rollup gives each page its own lazily fetched
  * chunk and the browser never has to ask which plugins are installed.
  *
- * `config.tsx` hands this same array to `buildPlugin({ routes })`, so a Next.js
- * app that registers the plugin the usual way declares exactly the same routes -
- * one list, read by both paths.
+ * `config.tsx` hands this same array to `buildPlugin({ routes })`, so a host that
+ * registers the plugin through its config declares exactly the same routes as one
+ * that reads the manifest at build time - one list, read by both paths.
  *
  * ## What this file is an example of
  *
@@ -124,10 +124,11 @@ export const routes: PluginRouteDefinition[] = [
    * session, and this page is already behind the AdminCP's own, under its own
    * cookie. A staff permission gates the page's content, inside the module.
    *
-   * The entry is `routes/admin-example-page` rather than anything under
-   * `routes/admin/`, which during the migration is where a plugin's **Next.js**
-   * admin pages live and is copied wholesale into any Next.js app that installs
-   * this plugin. A module in both places would be copied *and* bundled.
+   * The entry is a normal package export subpath like every other one here.
+   * There was briefly a second convention - `routes/admin/`, a directory of
+   * framework route files copied wholesale into a host's own app directory - and
+   * a module in both places was copied *and* bundled. Manifest entries are now
+   * the only way a plugin contributes a page.
    */
   {
     area: "admin",

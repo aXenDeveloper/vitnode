@@ -6,7 +6,6 @@ import type {
   ContentTypeFrontendRegistration,
 } from "@/lib/plugin";
 
-import type * as serverActions from "../actions/mutation-api.server";
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentFormTransport } from "./transport";
 
@@ -67,26 +66,18 @@ describe("a plugin's form layout", () => {
   });
 });
 
-describe("the two transports answer the same questions", () => {
+describe("the transport contract", () => {
   /**
-   * The Next.js AdminCP's transport *is* its Server Actions, handed over as an
-   * object in `form/host-next.tsx`. This is the assertion that makes that legal
-   * - and, more usefully, the thing that breaks if either side's signature moves
-   * without the other's.
+   * There is one implementation now - `tanstack/admin/content/form/transport.ts`
+   * - and it is annotated `: ContentFormTransport` at its definition, so tsc
+   * already refuses a signature that drifts. What used to be here was the same
+   * check for the Next.js AdminCP, whose transport *was* its Server Actions
+   * handed over as an object; that surface is gone, and asserting conformance
+   * twice for the one that remains would only restate the annotation.
+   *
+   * The assertions below are the ones the interface owes any implementation, so
+   * they stay: they pin what the *shape* means rather than who satisfies it.
    */
-  it("the Server Actions satisfy the transport interface", () => {
-    expectTypeOf<{
-      create: typeof serverActions.createContentAction;
-      createLocalized: typeof serverActions.createLocalizedContentAction;
-      edit: typeof serverActions.editContentAction;
-      editLocalized: typeof serverActions.editLocalizedContentAction;
-      loadOptions: typeof serverActions.loadContentOptionsAction;
-      publish: typeof serverActions.publishContentAction;
-      reloadRow: typeof serverActions.reloadContentRowAction;
-      unpublish: typeof serverActions.unpublishContentAction;
-    }>().toExtend<Omit<ContentFormTransport, "listTranslations">>();
-  });
-
   it("every write answers with the one result shape", () => {
     expectTypeOf<
       Awaited<ReturnType<ContentFormTransport["edit"]>>

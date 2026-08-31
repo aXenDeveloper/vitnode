@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "init": "vitnode init --api",
-    "dev": "tsx watch src/index.ts",
+    "db:prepare": "vitnode db:prepare",
+    "db:migrate": "vitnode migrate",
+    "docker:dev": "docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d",
+    "dev": "vitnode db:prepare && tsx watch src/index.ts",
     "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
@@ -29,9 +31,9 @@
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.12.31",
-    "next-intl": "^4.13.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "use-intl": "^4.13.7",
     "ws": "^8.21.1",
     "zod": "^4.4.3"
   },

@@ -44,8 +44,8 @@ export const AdminSearch = ({
   LinkComponent?: AuthLinkComponent;
   /**
    * How the palette goes somewhere. Defaults to a plain router navigation; a
-   * host mid-migration passes one that decides per href, so a result pointing at
-   * a screen the legacy application still serves becomes a document load.
+   * host passes its own when a destination needs preparing first - `apps/web`
+   * de-localizes the href so the router is handed the spelling its tree uses.
    */
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;

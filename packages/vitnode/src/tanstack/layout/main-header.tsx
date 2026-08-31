@@ -14,9 +14,8 @@ import { UserHeader } from "./user-header";
  * separate is what lets the bar render from the message cache alone while the
  * user area reads a query that may still be in flight.
  *
- * Both halves take the same link component, so a host mid-migration names it
- * once rather than in two places that could disagree about which application
- * serves `/settings`.
+ * Both halves take the same link component, so a host that overrides it names
+ * it once rather than in two places that could disagree.
  *
  * ## What the shell owes this
  *

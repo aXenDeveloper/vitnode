@@ -6,11 +6,11 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import { isTanStackOwnedPath } from '#/migration/navigation'
 import { pluginRouteManifest } from '#/plugin-route-manifest.gen'
 import { pluginRouteModules } from '#/plugin-routes.gen'
 import { getRouter } from '#/router'
 
+import { resolvesToRoute } from './route-tree'
 import { withoutComments } from './source'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -112,7 +112,7 @@ describe("the app's real route tree", () => {
   })
 
   /**
-   * `MigrationLink` asks the route tree what this app owns and there is no
+   * Every link asks the route tree rather than a list, and there is no
    * hand-written list of migrated routes - so registering a plugin route is all
    * it takes for the link to become a client-side navigation. Asserted through
    * the same helper the component calls, which is a plain function over a router.
@@ -188,9 +188,9 @@ describe("the app's real route tree", () => {
     // Stage 15 asserted these as `false` and said what would happen next: "when
     // Stage 16 migrates the docs these three flip to `true` on their own,
     // because the route tree is the table - nothing in the homepage, in
-    // `MigrationLink` or in this list is written per route". That is exactly
+    // a link component or in this list is written per route". That is exactly
     // what happened. Stage 16 added `routes/_docs/docs.$.tsx` and edited
-    // neither `hero.tsx` nor `MigrationLink`; the only change here is `false`
+    // neither `hero.tsx` nor a link component; the only change here is `false`
     // becoming `true`, and it is the strongest evidence in the suite that the
     // strangler seam works as designed. `home-route.test.ts` states the same
     // claim from the homepage's side.
@@ -207,14 +207,14 @@ describe("the app's real route tree", () => {
     ['/documentation', false],
     ['/docsomething', false],
   ])('answers %s as owned: %s', (href, owned) => {
-    expect(isTanStackOwnedPath(getRouter(), href)).toBe(owned)
+    expect(resolvesToRoute(getRouter(), href)).toBe(owned)
   })
 
   /**
    * Owning `/login` must not quietly annex the paths beneath it.
    *
    * If the SSO callback or the reset-password page were *children* of `/login`,
-   * that route would match every path below it as a prefix, and `MigrationLink`
+   * that route would match every path below it as a prefix, and a nav entry
    * would hand a page the Next.js app still serves to this router as a
    * client-side navigation - a working page turning into a TanStack not-found.
    * All three are therefore non-nested siblings (`login.tsx`,
@@ -224,10 +224,10 @@ describe("the app's real route tree", () => {
    * `/login/something-else` is the case that still exercises it now that both
    * real siblings are migrated - `matchRoutes` answers with the deepest
    * *ancestor* it can match and leaves the rest unconsumed, which is exactly why
-   * `isTanStackOwnedPath` compares the matched pathname to the requested one
+   * `resolvesToRoute` compares the matched pathname to the requested one
    * instead of counting matches.
    */
-  it('keeps /login an exact match, so unmigrated paths under it stay legacy', () => {
+  it('keeps /login an exact match, so paths under it need their own route', () => {
     const router = getRouter()
     const deepest = (pathname: string) =>
       router.matchRoutes(pathname, undefined).at(-1) as {
@@ -247,7 +247,7 @@ describe("the app's real route tree", () => {
       pathname: '/login',
       routeId: '/login',
     })
-    expect(isTanStackOwnedPath(router, '/login/something-else')).toBe(false)
+    expect(resolvesToRoute(router, '/login/something-else')).toBe(false)
   })
 
   /**
@@ -273,7 +273,7 @@ describe("the app's real route tree", () => {
    * prefix reaches the route tree intact and matches nothing.
    */
   it('does not invent locale-prefixed routes of its own', () => {
-    expect(isTanStackOwnedPath(getRouter(), '/xx/example')).toBe(false)
+    expect(resolvesToRoute(getRouter(), '/xx/example')).toBe(false)
     expect(
       fileRoutePaths(getRouter().routeTree).some((path) =>
         path.includes('/pl/'),
@@ -409,7 +409,7 @@ describe('the shells plugin routes mount under', () => {
     const matchedIds = (pathname: string): string[] =>
       router.matchRoutes(pathname, undefined).map((match) => match.routeId)
 
-    expect(isTanStackOwnedPath(router, '/admin/example')).toBe(true)
+    expect(resolvesToRoute(router, '/admin/example')).toBe(true)
     expect(matchedIds('/admin/example')).toContain(
       `/_admin/${PLUGIN_ROUTES_ROUTE_ID}/admin/example`,
     )

@@ -1,6 +1,0 @@
-{
-  "title": "Working with Users",
-  "description": "Learn how to manage users and roles in VitNode with our comprehensive guide.",
-  "icon": "Users",
-  "pages": ["users", "roles", "staff-permissions", "..."]
-}

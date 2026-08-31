@@ -44,11 +44,10 @@ export interface UserHeaderLinkProps extends Omit<
  * The one thing this header cannot decide for itself.
  *
  * Turning `/settings` into a navigation is the single question whose answer
- * differs between the two frameworks: Next.js wants `next-intl`'s locale-aware
- * `Link`, and TanStack Start wants one that asks the route tree whether *this*
- * application can render the destination at all - because half of VitNode is
- * still served by the other one. Both are a component taking
- * {@link UserHeaderLinkProps}, so the header takes one and stops caring.
+ * differs by host: a TanStack Start app wants the router's own `Link`, and a
+ * host that mounts VitNode differently wants its own. Each is a component taking
+ * {@link UserHeaderLinkProps}, so the header takes one and stops caring - and
+ * importing none of them is what keeps this file host-neutral.
  *
  * Required rather than defaulting to `<a>`: a missing wrapper would degrade
  * silently into a full document reload on every menu item.
@@ -93,18 +92,15 @@ export type UserHeaderState =
 /**
  * Where the header links to.
  *
- * Ordinary data, not a route table - nothing here knows or cares which
- * application currently serves a path. During the migration some of these are
- * rendered by TanStack Start and some still by Next.js, and the *link component*
- * is what decides which, per href, by asking the route tree. So a route that
- * moves needs no edit here.
+ * Ordinary data, not a route table - nothing here derives an href from a route
+ * file, and nothing here is conditional on a route existing. The *link
+ * component* turns each one into a navigation, so a route that moves needs no
+ * edit here.
  *
  * That is a claim worth having been tested rather than asserted, and it has
- * been: `/settings` and `/register` were Next.js pages when this record was
- * written and are TanStack Start routes now, and the change that moved them
- * added route files and touched neither this file nor `MigrationLink`. The
- * AdminCP and the profile page are still the other application's.
- * `apps/web/src/tests/header-navigation.test.ts` pins both halves.
+ * been: every href in this record has changed which framework renders it at
+ * least once, and none of those changes edited this file.
+ * `apps/web/src/tests/header-navigation.test.ts` pins it.
  */
 export const USER_HEADER_HREF = {
   adminCp: "/admin",
