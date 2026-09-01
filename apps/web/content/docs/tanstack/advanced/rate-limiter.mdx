@@ -1,0 +1,57 @@
+---
+title: Rate Limiter
+description: Stop brute-force attacks and abuse with rate limiting.
+---
+
+Rate limiting is a powerful feature that helps protect your API from abuse and brute-force attacks. It allows you to limit the number of requests a client can make within a specified time frame.
+
+## Usage
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:4]
+  rateLimiter: {
+    points: 40,
+    duration: 60,
+  },
+});
+```
+
+### Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    points: {
+      description:
+        'The number of requests allowed within the specified duration.',
+      type: 'number',
+      default: '80 (120 in dev)',
+    },
+    duration: {
+      description:
+        'The time window in seconds during which the requests are counted.',
+      type: 'number',
+      default: '60',
+    },
+    execEvenly: {
+      description:
+        'If true, the requests are distributed evenly over the duration. If false, the requests are counted in a sliding window.',
+      type: 'boolean',
+      default: 'false',
+    },
+    execEvenlyMinDelayMs: {
+      description:
+        'The minimum delay in milliseconds between requests when execEvenly is true.',
+      type: 'number',
+      default: 'duration * 1000 / points',
+    },
+    blockDuration: {
+      description:
+        'The duration in seconds for which the client is blocked after exceeding the rate limit.',
+      type: 'number',
+      default: '0',
+    },
+  }}
+/>

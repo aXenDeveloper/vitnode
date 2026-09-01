@@ -1,0 +1,517 @@
+---
+title: Pagination
+description: How to implement cursor-based pagination in VitNode applications.
+---
+
+VitNode provides a cursor-based pagination system that works seamlessly with the [DataTable](/docs/ui/data-table) component. This page covers both halves: the Hono route that serves a page, and the TanStack Start route that reads one.
+
+## Backend Implementation
+
+VitNode uses cursor-based pagination for optimal performance with large datasets. The pagination system is implemented through the `withPagination` helper function.
+
+### Basic Usage
+
+```ts
+import z from 'zod'
+import { buildRoute } from '@/api/lib/route'
+import {
+  withPagination,
+  zodPaginationPageInfo,
+  zodPaginationQuery,
+} from '@/api/lib/with-pagination'
+import { CONFIG_PLUGIN } from '@/config'
+import { core_cron } from '@/database/cron'
+
+export const getCronsRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: 'get',
+    description: 'Get Admin Cron Logs',
+    path: '/',
+    request: {
+      query: zodPaginationQuery.extend({
+        order: z.enum(['asc', 'desc']).optional(),
+        orderBy: z.enum(['lastRun']).optional(),
+      }),
+    },
+    responses: {
+      200: {
+        content: {
+          'application/json': {
+            schema: z.object({
+              edges: z.array(
+                z.object({
+                  id: z.number(),
+                  createdAt: z.date(),
+                  name: z.string(),
+                  description: z.string().nullable(),
+                  pluginId: z.string(),
+                  module: z.string(),
+                  lastRun: z.date().nullable(),
+                }),
+              ),
+              pageInfo: zodPaginationPageInfo,
+            }),
+          },
+        },
+        description: 'List of cron jobs',
+      },
+    },
+  },
+  handler: async (c) => {
+    const query = c.req.valid('query')
+    const data = await withPagination({
+      params: {
+        query,
+      },
+      c,
+      primaryCursor: core_cron.id,
+      query: async ({ limit, where, orderBy }) =>
+        await c
+          .get('db')
+          .select()
+          .from(core_cron)
+          .where(where)
+          .orderBy(orderBy)
+          .limit(limit),
+      table: core_cron,
+      orderBy: {
+        column: query.orderBy ? core_cron[query.orderBy] : core_cron.lastRun,
+        order: query.order ?? 'desc',
+      },
+    })
+
+    return c.json(data)
+  },
+})
+```
+
+### Pagination Parameters
+
+The `withPagination` function accepts the following parameters:
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    params: {
+      description: 'Contains the query parameters for pagination',
+      type: 'object',
+    },
+    primaryCursor: {
+      description: 'The primary key column used for pagination',
+      type: 'Column',
+    },
+    query: {
+      description: 'The database query function',
+      type: 'Function',
+    },
+    table: {
+      description: 'The database table being queried',
+      type: 'Table',
+    },
+    orderBy: {
+      description: 'The column and order to sort by',
+      type: 'object',
+    },
+  }}
+/>
+
+### Zod Schemas
+
+VitNode provides pre-defined Zod schemas for pagination:
+
+- `zodPaginationQuery`: Schema for pagination query parameters
+- `zodPaginationPageInfo`: Schema for pagination information in the response
+
+```ts
+const zodPaginationQuery = z
+  .object({
+    cursor: z.string().min(1).max(512).regex(/^[A-Za-z0-9_-]+$/).optional(),
+    first: zodPageSize.optional(),
+    last: zodPageSize.optional(),
+  })
+  .refine(
+    query => query.first === undefined || query.last === undefined,
+    'Use either "first" or "last", not both.',
+  )
+
+const zodPaginationPageInfo = z.object({
+  totalCount: z.number(),
+  count: z.number(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean(),
+  startCursor: z.string().nullable(),
+  endCursor: z.string().nullable(),
+})
+```
+
+`first` and `last` are mutually exclusive - asking for both is a `400`. The
+cursors are opaque: they encode the ordered tuple the next page continues from,
+so they are meaningless outside the ordering that produced them. Hand them back
+unchanged.
+
+## Frontend Implementation
+
+Nothing fetches from inside a component on a TanStack Start host. A paginated
+read is written once and reached from two sides - `fetcherServer` while the
+server renders the request, `fetcherClient` after hydration - then cached by
+TanStack Query, so a route's `loader` and its screen share one entry instead of
+fetching the same page twice.
+
+### The request, in one place
+
+`clientModule` takes your API module as a **type only** and keeps just its
+`pluginId` at runtime, so the browser bundle never pulls your Hono routes in
+behind it - while paths, methods and response types stay fully checked.
+
+```ts title="src/routes/-users/query.ts"
+import type {
+  AdminTableContract,
+  AdminTableParams,
+} from "@vitnode/core/tanstack/admin";
+
+import type { userModule } from "@/api/modules/user/user.module";
+
+import { clientModule } from "@vitnode/core/lib/fetcher-client";
+
+export type UsersOrderBy = "createdAt" | "name";
+export type UsersParams = AdminTableParams<UsersOrderBy>;
+
+export const USERS_TABLE_CONTRACT: AdminTableContract<UsersOrderBy> = {
+  orderBy: ["createdAt", "name"],
+  search: true,
+};
+
+export interface UsersPage {
+  edges: {
+    createdAt: string;
+    email: string;
+    id: number;
+    name: string;
+  }[];
+  pageInfo: {
+    count: number;
+    endCursor: null | string;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor: null | string;
+    totalCount: number;
+  };
+}
+
+export type UsersPageFetcher = (
+  params: UsersParams,
+  options?: { signal?: AbortSignal },
+) => Promise<UsersPage>;
+
+export const userModuleRef = clientModule<typeof userModule>("@vitnode/core");
+
+export const usersRequest = (params: UsersParams) =>
+  ({
+    args: { query: params },
+    method: "get" as const,
+    module: "user" as const,
+    path: "/users" as const,
+  }) as const;
+```
+
+Despite the name, `AdminTableParams` and `AdminTableContract` are not admin-only.
+The first is the normalised shape every VitNode list request is sent as; the
+second is the three things a table declares about itself - which columns it may
+be sorted by, whether it has a search box, and whether it has a status filter.
+
+<Callout type="warn" title="Leave withPagination off">
+  `withPagination: true` quietly appends `first=10` and `search=""` inside the
+  URL builder. A query key built from `params` cannot see that, so two genuinely
+  different requests end up sharing one cache entry. Put the page size in
+  `params` yourself and the key describes the request that is actually sent.
+</Callout>
+
+### Both halves of the fetch
+
+`fetcherServer` forwards the cookies, IP and user agent of the request being
+rendered, and resolves the API origin from that same request - so a signed-in
+visitor gets signed-in HTML, and a preview deployment calls its own hostname. It
+can only run on a server, which is what the `.server.ts` suffix marks:
+
+```ts title="src/routes/-users/fetch.server.ts"
+import { fetcherServer } from "@vitnode/core/tanstack/fetcher/server";
+
+import type { UsersPageFetcher } from "./query";
+
+import { userModuleRef, usersRequest } from "./query";
+
+export const fetchUsersPageOnServer: UsersPageFetcher = async params => {
+  const response = await fetcherServer(userModuleRef, usersRequest(params));
+
+  if (!response.ok) {
+    throw new Error(`The users list answered ${response.status}.`);
+  }
+
+  return await response.json();
+};
+```
+
+`fetcherClient` is the browser's half, and `createIsomorphicFn` picks between
+the two. Write that chained call at module scope: the TanStack Start compiler
+matches it there and drops the `.server.ts` import - and the whole API graph
+behind it - from the client bundle.
+
+```ts title="src/routes/-users/fetch.ts"
+import { queryOptions } from "@tanstack/react-query";
+import { createIsomorphicFn } from "@tanstack/react-start";
+import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
+
+import type { UsersPageFetcher, UsersParams } from "./query";
+
+import { fetchUsersPageOnServer } from "./fetch.server";
+import { userModuleRef, usersRequest } from "./query";
+
+const fetchUsersPageInBrowser: UsersPageFetcher = async (
+  params,
+  { signal } = {},
+) => {
+  const response = await fetcherClient(userModuleRef, {
+    ...usersRequest(params),
+    options: { credentials: "include", signal },
+  });
+
+  if (!response.ok) {
+    throw new Error(`The users list answered ${response.status}.`);
+  }
+
+  return await response.json();
+};
+
+const fetchUsersPage: UsersPageFetcher = createIsomorphicFn()
+  .server(fetchUsersPageOnServer)
+  .client(fetchUsersPageInBrowser);
+
+export const usersQuery = (params: UsersParams) =>
+  queryOptions({
+    queryFn: async ({ signal }) => await fetchUsersPage(params, { signal }),
+    queryKey: ["users", "list", params],
+    retry: false,
+  });
+```
+
+Passing `signal` through is what makes the read cancellable: re-sorting a table
+three times leaves one request in flight rather than three. A refusal throws
+rather than returning an empty page - `403` must never render as "there is
+nobody here".
+
+### The route
+
+The route file is topology and nothing else: the URL contract, the loader that
+warms the cache, and the component.
+
+```tsx title="src/routes/users.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import {
+  adminTableRouteParams,
+  normalizeAdminTableSearch,
+} from "@vitnode/core/tanstack/admin";
+import { TablePendingSkeleton } from "@vitnode/core/tanstack/pending";
+
+import { usersQuery } from "./-users/fetch";
+import { USERS_TABLE_CONTRACT } from "./-users/query";
+import { UsersScreen } from "./-users/screen";
+
+export const Route = createFileRoute("/users")({
+  validateSearch: search =>
+    normalizeAdminTableSearch(search, USERS_TABLE_CONTRACT),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData({
+      ...usersQuery(adminTableRouteParams(deps, USERS_TABLE_CONTRACT)),
+      revalidateIfStale: true,
+    });
+  },
+  component: UsersScreen,
+  pendingComponent: TablePendingSkeleton,
+});
+```
+
+`validateSearch` **normalises rather than rejects**. A list URL gets hand-edited
+and pasted between people, so `?first=5000`, `?orderBy=password` and `?cursor=💥`
+should all render the table the way it defaults to - not a router error screen.
+
+<Callout title="Three shapes, not one">
+  The URL (`?orderBy=name&first=20`), the route's validated search
+  (`{ orderBy: "name", first: 20 }`) and the request
+  (`{ orderBy: "name", first: "20" }`) are deliberately different objects.
+  `adminTableRouteParams` turns the middle one into the last, always naming a
+  page size - because a request needs one and a URL does not. That is what stops
+  `?first=10` being written into every link to a page whose canonical address has
+  no query string at all.
+</Callout>
+
+### The screen
+
+`useSuspenseQuery` reads back the entry the loader already warmed, so the first
+paint costs no second request. `getRouteApi` reaches the route's search and
+`navigate` without importing the route file back - the screen and the route would
+otherwise import each other. The table's controls need one thing the shared
+component cannot decide for itself, which is how to get to a new query string,
+and that arrives through `DataTableNavigationProvider`.
+
+`order.columns` lists only the columns the API will actually sort by, so no sort
+header is rendered for a column the route answers `400` for.
+
+```tsx title="src/routes/-users/screen.tsx"
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
+import { ContentDataTable } from "@vitnode/core/components/table/content";
+import { DataTableNavigationProvider } from "@vitnode/core/components/table/navigation";
+import {
+  adminTableRouteParams,
+  adminTableSearchFrom,
+  adminTableSearchParams,
+} from "@vitnode/core/tanstack/admin";
+import React from "react";
+
+import { usersQuery } from "./fetch";
+import { USERS_TABLE_CONTRACT } from "./query";
+
+const route = getRouteApi("/users");
+
+export const UsersScreen = () => {
+  const search = route.useSearch();
+  const navigate = route.useNavigate();
+  const params = adminTableRouteParams(search, USERS_TABLE_CONTRACT);
+  const { data } = useSuspenseQuery(usersQuery(params));
+
+  const navigation = React.useMemo(
+    () => ({
+      navigate: async (nextSearch: string) => {
+        await navigate({
+          resetScroll: false,
+          search: adminTableSearchFrom(nextSearch, USERS_TABLE_CONTRACT),
+        });
+      },
+      searchParams: adminTableSearchParams(search, USERS_TABLE_CONTRACT),
+    }),
+    [navigate, search],
+  );
+
+  return (
+    <DataTableNavigationProvider value={navigation}>
+      <ContentDataTable
+        id="users-table"
+        columns={[
+          { accessorKey: "id", header: "ID" },
+          { accessorKey: "name", header: "Name" },
+          { accessorKey: "email", header: "Email" },
+          { accessorKey: "createdAt", header: "Created at" },
+        ]}
+        edges={data.edges}
+        order={{
+          columns: ["name", "createdAt"],
+          defaultOrder: { column: "createdAt", order: "desc" },
+        }}
+        pageInfo={data.pageInfo}
+        search
+      />
+    </DataTableNavigationProvider>
+  );
+};
+```
+
+<Callout type="info" title="ContentDataTable, not DataTable">
+  `ContentDataTable` from `@vitnode/core/components/table/content` is the
+  framework-neutral table. Everything either side of the navigation seam - which
+  parameter a sort header rewrites, which ones a filter resets, what a page
+  button does with a cursor - is shared with the AdminCP's own tables.
+</Callout>
+
+## Pagination Object Structure
+
+The pagination object returned from the API has the following structure:
+
+```json
+{
+  "edges": [
+    {
+      "id": 1,
+      "username": "user1",
+      "email": "user1@example.com",
+      "createdAt": "2023-01-01T00:00:00.000Z"
+    }
+    // More items...
+  ],
+  "pageInfo": {
+    "totalCount": 148,
+    "count": 10,
+    "hasNextPage": true,
+    "hasPreviousPage": false,
+    "startCursor": "MQ",
+    "endCursor": "MTA"
+  }
+}
+```
+
+<Callout title="Pagination Controls">
+  `ContentDataTable` handles the pagination controls for you once it is given a
+  `pageInfo` object: next and previous buttons, the page size selector and the
+  current page information. Each of them writes a new query string and calls the
+  `navigate` you supplied through `DataTableNavigationProvider`.
+</Callout>
+
+## Advanced Usage
+
+### Custom Filtering
+
+You can extend the pagination query to include custom filtering:
+
+```ts
+const query = c.req.valid('query')
+const data = await withPagination({
+  params: {
+    query,
+    additionalWhere: eq(users.isActive, true), // Only active users
+  },
+  primaryCursor: users.id,
+  query: async ({ limit, where, orderBy }) =>
+    await dbClient
+      .select()
+      .from(users)
+      .where(and(where, eq(users.isActive, true)))
+      .orderBy(orderBy)
+      .limit(limit),
+  table: users,
+  orderBy: {
+    column: query.orderBy ? users[query.orderBy] : users.createdAt,
+    order: query.order ?? 'desc',
+  },
+})
+```
+
+### Loading UI
+
+There is no `<Suspense>` boundary to place by hand. The route's `loader` awaits
+the first page, so the router holds the previous screen and renders
+`pendingComponent` while it resolves - and on a warm cache `ensureQueryData`
+hands the entry back in a microtask, so nothing flashes at all.
+
+```tsx
+import { TablePendingSkeleton } from "@vitnode/core/tanstack/pending";
+
+export const Route = createFileRoute("/users")({
+  // ...
+  pendingComponent: () => (
+    <TablePendingSkeleton className="container mx-auto" />
+  ),
+});
+```
+
+Name the shape of *your own* content rather than falling back to the router's
+default spinner: a feed morphing into a data table reads as a broken page.
+`@vitnode/core/tanstack/pending` ships the skeletons VitNode's own screens use.
+
+<Callout type="info" title="Sorting and paging never blank the table">
+  A background refetch is not a cold navigation. When someone sorts a column or
+  turns a page, the controls run the navigation inside a transition, so the rows
+  already on screen stay put with a spinner over them instead of being replaced
+  by a skeleton.
+</Callout>

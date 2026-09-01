@@ -1,0 +1,117 @@
+---
+title: Getting Started
+description: Learn how to set up your VitNode community app.
+icon: Rocket
+---
+
+## Prerequisites
+
+To get started with VitNode, you will need the following prerequisites installed on your system:
+
+- Package Manager: [bun](https://bun.com/), [pnpm](https://pnpm.io/), or [npm](https://www.npmjs.com/)
+- [Node.js](https://nodejs.org/),
+- [Docker](https://www.docker.com/) or [PostgreSQL](https://www.postgresql.org/)
+
+## Create a new VitNode app
+
+<Steps>
+  <Step>
+  ### Run CLI
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun create vitnode-app@canary
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary
+```
+
+```bash tab="npm"
+npx create-vitnode-app@canary
+```
+
+</Tabs>
+
+  </Step>
+  <Step>
+  ### Go to the app directory
+
+Depend on the name you provided for your app, run the following command to navigate to the app directory:
+
+```bash
+cd my-app
+```
+
+  </Step>
+  <Step>
+  ### Connect to a database
+
+Choose one of the following options to connect your app to a database:
+
+#### Using Docker (Recommended)
+
+  <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun docker:dev
+```
+
+```bash tab="pnpm"
+pnpm docker:dev
+```
+
+```bash tab="npm"
+npm run docker:dev
+```
+
+</Tabs>
+
+<Callout type="info" title="Redis included">
+  VitNode comes with Redis included in the Docker setup. You can use it for
+  caching, session management, and other purposes. See the [Redis
+  documentation](/docs/dev/advanced/redis) for more information on how to use
+  Redis in your app.
+</Callout>
+
+### Using PostgreSQL
+
+In your app, create a `.env` file in the root directory and add the following environment variables:
+
+Single App / Only Api: `.env` directory.  
+Monorepo App: `apps/api/.env` directory
+
+```bash title=".env"
+DATABASE_URL=postgresql://username:password@localhost:5432/mydatabase
+```
+
+  </Step>
+  <Step>
+  ### Start development server
+
+  <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+When you start the development server, you should see output indicating that the server is running and listening on a specific port.
+
+Frontend _(Single App, Monorepo App)_: [http://localhost:3000](http://localhost:3000).  
+Backend _(Api Only, Monorepo App)_: [http://localhost:8000](http://localhost:8000).
+
+  </Step>
+</Steps>

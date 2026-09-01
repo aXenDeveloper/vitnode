@@ -1,0 +1,74 @@
+---
+title: Introduction
+description: Welcome to the VitNode documentation!
+icon: Power
+---
+
+<Callout type="warn" title="This documentation is under construction! 🚧">
+  We're working hard to bring you the best documentation experience.
+</Callout>
+
+## Support
+
+- [Postgres 18-19](https://www.postgresql.org/) (min: v18, recommended: v19) - database support.
+
+### Supported Package Managers
+
+- [bun](https://bun.com/) (min: v1.1, recommended: v1.3)
+- [pnpm](https://pnpm.io/) (min: v10, recommended: v11)
+- [node.js](https://nodejs.org/) (min: v22, recommended: v24)
+
+### Optional Support
+
+- [Redis](https://redis.io/) (min: v7, recommended: v8) - caching and session management.
+- [Docker](https://www.docker.com/) (min: v24, recommended: v25) - containerization and deployment.
+- [ElasticSearch](https://www.elastic.co/elasticsearch/) (min: v8, recommended: v9) - advanced search capabilities.
+- [NodeMailer](https://nodemailer.com/about/) - email sending capabilities.
+- [Resend](https://resend.com/) - email sending capabilities.
+- [S3](https://aws.amazon.com/s3/) - file storage.
+- [Supabase](https://supabase.com/) - database management and file storage.
+
+## Get started
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Create a Plugin'>
+
+```bash tab="bun"
+bun create vitnode-app@canary
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary
+```
+
+```bash tab="npm"
+npx create-vitnode-app@canary
+```
+
+</Tabs>
+
+## Where to go next
+
+<Cards>
+  <Card
+    title="TanStack Start"
+    description="The web runtime: routing, data, metadata, i18n"
+    href="/docs/dev/tanstack"
+  />
+  <Card
+    title="Create a plugin"
+    description="From zero to a live page"
+    href="/docs/dev/tanstack/plugin"
+  />
+  <Card
+    title="Plugins"
+    description="APIs, database tables, content types, AdminCP screens"
+    href="/docs/dev/plugins/create"
+  />
+  <Card
+    title="Contribution"
+    description="Run VitNode itself, and change these docs"
+    href="/docs/dev/contribution"
+  />
+</Cards>

@@ -208,7 +208,8 @@
   --guides-color: oklch(0.65 0.16 262.61);
 }
 
-.dev {
+.dev,
+.tanstack {
   --color-fd-primary: var(--dev-color);
 }
 

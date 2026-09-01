@@ -1,0 +1,252 @@
+---
+title: Redis
+description: Add a shared Redis cache to speed up your app and scale it across multiple instances.
+---
+
+VitNode can use [Redis](https://redis.io/) as a shared cache. Once configured,
+it is exposed on every request as `c.get("cache")`, speeds up authentication by
+caching session lookups, and backs the
+[rate limiter](/docs/dev/advanced/rate-limiter) so limits hold up when you run
+several instances behind a load balancer.
+
+<Callout type="info" title="Redis is optional">
+  Without it, the cache safely degrades to no-ops (reads return `null`,
+  `remember` just runs its loader) and the rate limiter falls back to in-memory
+  storage. A Redis outage at runtime never breaks a request.
+</Callout>
+
+## Setup
+
+<Steps>
+<Step>
+### Configure it
+
+Pass the `redis` object to `buildApiConfig`. Redis is **opt-in** - wire it up so
+it only turns on when `REDIS_URL` is set, so the app runs fine without Redis in
+environments where you don't need it:
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:3]
+  redis: process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
+    : undefined,
+})
+```
+
+</Step>
+
+<Step>
+### Set the connection URL
+
+Add `REDIS_URL` and `REDIS_PASSWORD` to your `.env` file. `REDIS_PASSWORD` is the
+single source of truth for the password - the Docker container requires it and
+the app authenticates with it - so the URL itself carries no credentials:
+
+```bash title=".env"
+REDIS_URL=redis://localhost:6379
+
+# Password the Docker Redis container requires (and the app authenticates with)
+REDIS_PASSWORD=root
+```
+
+<Callout type="warn" title="Change the password in production">
+  `root` is a convenience default for local development. Set a strong
+  `REDIS_PASSWORD` in production.
+</Callout>
+
+</Step>
+<Step>
+### Start Redis
+
+Run your service or on development run docker-compose with a `cache` service. Start it (alongside the database) with:
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun docker:dev
+```
+
+```bash tab="pnpm"
+pnpm docker:dev
+```
+
+```bash tab="npm"
+npm run docker:dev
+```
+
+</Tabs>
+</Step>
+</Steps>
+
+### Options
+
+The `redis` object is a
+[node-redis](https://github.com/redis/node-redis) `RedisClientOptions`.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    url: {
+      description:
+        'The Redis connection string (redis:// or rediss://). When omitted, node-redis connects to localhost:6379 using the other options.',
+      type: 'string',
+    },
+    password: {
+      description:
+        'Password used to authenticate. Pair it with username when your Redis uses ACL users.',
+      type: 'string',
+    },
+    socket: {
+      description:
+        'Connection-level options: host, port, tls, connectTimeout, reconnectStrategy.',
+      type: 'RedisSocketOptions',
+    },
+    '...RedisClientOptions': {
+      description:
+        'Any other node-redis option, e.g. database or name. disableOfflineQueue defaults to true so cache commands fail fast (and fall through) when Redis is unreachable - override it if you prefer queuing.',
+      type: 'RedisClientOptions',
+    },
+  }}
+/>
+
+## Using the cache
+
+Access the cache in any route or model with `c.get("cache")`.
+
+```ts title="plugins/{plugin_name}/src/api/routes/posts.route.ts"
+export const postsRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {},
+  handler: async (c) => {
+    const cache = c.get('cache')
+
+    await cache.set('hello', { world: true }, 60) // expires in 60s
+    const value = await cache.get<{ world: boolean }>('hello')
+
+    return c.json(value)
+  },
+})
+```
+
+<Callout type="info" title="Keys are namespaced per plugin">
+  You pass a short key like `hello`; VitNode automatically stores it under your
+  plugin's code - `vitnode:cache:{plugin_code}:hello`. So two plugins can both
+  use a `hello` key without clashing, and you never read another plugin's data
+  by accident. The plugin code is taken from the request context, so there is
+  nothing to prefix by hand.
+</Callout>
+
+### Methods
+
+<TypeTable
+  type={{
+    'get<T>(key)': {
+      description:
+        'Read a JSON value. Returns null on a miss, without Redis, or on error.',
+      type: 'Promise<T | null>',
+    },
+    'set<T>(key, value, ttlSeconds?)': {
+      description:
+        'Write a JSON value. Provide ttlSeconds to set an expiry; omit it to keep the value until deleted or flushed.',
+      type: 'Promise<void>',
+    },
+    'delete(key | key[])': {
+      description: 'Remove one or more keys.',
+      type: 'Promise<void>',
+    },
+    'has(key)': {
+      description: 'Whether a key currently exists.',
+      type: 'Promise<boolean>',
+    },
+    'remember<T>(key, ttlSeconds, loader)': {
+      description:
+        'Fetch-through: return the cached value, or run loader, cache its result, and return it.',
+      type: 'Promise<T>',
+    },
+    'flush()': {
+      description:
+        "Delete every cache key for the current plugin (vitnode:cache:{plugin_code}:*). Other plugins' keys and unrelated data are left untouched.",
+      type: 'Promise<void>',
+    },
+  }}
+/>
+
+## Caching database queries
+
+The most useful method is `remember` - it runs your loader only on a cache
+miss, which is perfect for hot, rarely-changing data. Good candidates are
+reference data such as role-name translations or resolved staff permissions.
+
+```ts title="Cache an expensive query"
+const roleNames = await c.get('cache').remember(
+  `role-names:${roleId}`,
+  // Cache for 5 minutes
+  60 * 5,
+  () => resolveRoleNames(c, [roleId]),
+)
+```
+
+<Callout type="warn" title="Remember to invalidate">
+  A cache is only correct if you clear stale entries. When the underlying data
+  changes (e.g. an admin edits a role), delete the affected key so the next read
+  reloads it:
+
+```ts
+await c.get('cache').delete(`role-names:${roleId}`)
+```
+
+Prefer a short TTL for data you cannot reliably invalidate. `null` results are
+never cached, so a loader that returns `null` runs every time.
+
+</Callout>
+
+## Rate limiting with Redis
+
+When `redis` is configured, the [rate limiter](/docs/dev/advanced/rate-limiter)
+automatically uses it as its store, so counters are shared across all
+instances. If Redis becomes unavailable, an in-memory insurance limiter keeps
+rate limiting working. There is nothing extra to enable.
+
+## Scaling WebSockets
+
+The [WebSocket](/docs/dev/websocket) connection registry lives in memory on each
+server process. So if you run **several instances** behind a load balancer, a
+`broadcast` or `sendToUser` would, on its own, only reach the clients connected
+to the same instance.
+
+**When `redis` is configured, VitNode bridges the instances for you** - there is
+nothing extra to enable. `broadcast` and `sendToUser` reach every matching
+client, no matter which instance they are connected to.
+
+### How it works
+
+Each instance keeps delivering to its own connected clients instantly, then
+publishes the message to a shared Redis pub/sub channel (`vitnode:ws`). Every
+other instance is subscribed, receives the message, and delivers it to its own
+clients:
+
+```text
+  realtime.broadcast(channel, data)   ← called on Instance A
+        │
+        ├─ 1. deliver to Instance A's own clients   (instant, local)
+        │
+        └─ 2. PUBLISH { id, data, origin: A } ─► Redis channel "vitnode:ws"
+                                                      │
+                                                      ▼  (all instances subscribe)
+                                        Instance A ── ignores its own echo (origin = A)
+                                        Instance B ── 3. deliver to Instance B's clients
+```
+
+Each message is tagged with the sending process's id, so an instance ignores the
+echo of its own messages (no double delivery).
+
+<Callout type="info" title="Requirements">
+  All instances must point at the **same** Redis. If Redis is unreachable,
+  realtime automatically falls back to single-instance delivery (local clients
+  still receive messages). This bridges message *delivery* only - each instance
+  still holds its own socket connections in memory.
+</Callout>

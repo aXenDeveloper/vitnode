@@ -1,0 +1,180 @@
+---
+title: Search
+description: How to add type-safe, full-text-like search to paginated VitNode routes.
+---
+
+VitNode's `withPagination` helper accepts an optional `search` array that lets you search across one or more columns of a table. It plugs directly into the cursor-based [Pagination](/docs/tanstack/database/pagination) system and the [DataTable](/docs/ui/data-table) component, so the same route powers both paging and searching.
+
+## Backend Implementation
+
+Pass a `search` array of columns to `withPagination`. The term is read from the `search` query parameter and matched against every column you list using a case-insensitive `ILIKE`, combined with `OR`.
+
+### Basic Usage
+
+```ts
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@/api/lib/route";
+import {
+  withPagination,
+  zodPaginationPageInfo,
+  zodPaginationQuery,
+} from "@/api/lib/with-pagination";
+import { CONFIG_PLUGIN } from "@/config";
+import { core_users } from "@/database/users";
+
+export const listUsersAdminRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    description: "Get list of all users",
+    path: "/list",
+    request: {
+      query: zodPaginationQuery.extend({
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["name", "createdAt"]).optional(),
+        search: z.string().optional(), // [!code ++]
+      }),
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              edges: z.array(
+                z.object({
+                  id: z.number(),
+                  name: z.string(),
+                  email: z.string(),
+                  createdAt: z.date(),
+                }),
+              ),
+              pageInfo: zodPaginationPageInfo,
+            }),
+          },
+        },
+        description: "List of users",
+      },
+    },
+  },
+  handler: async c => {
+    const query = c.req.valid("query");
+    const data = await withPagination({
+      params: {
+        query,
+      },
+      search: [core_users.name, core_users.email], // [!code ++]
+      primaryCursor: core_users.id,
+      query: async ({ limit, where, orderBy }) =>
+        await c
+          .get("db")
+          .select({
+            id: core_users.id,
+            name: core_users.name,
+            email: core_users.email,
+            createdAt: core_users.createdAt,
+          })
+          .from(core_users)
+          .where(where)
+          .orderBy(orderBy)
+          .limit(limit),
+      table: core_users,
+      orderBy: {
+        column: query.orderBy
+          ? core_users[query.orderBy]
+          : core_users.createdAt,
+        order: query.order ?? "desc",
+      },
+      c,
+    });
+
+    return c.json(data);
+  },
+});
+```
+
+There are only two additions compared to a plain paginated route:
+
+1. Add `search: z.string().optional()` to the request `query` schema so the term is validated and forwarded.
+2. Pass the `search` array of columns to `withPagination`.
+
+### How It Works
+
+When a `search` term is present, `withPagination` builds the following condition and `AND`-combines it with any existing `where` clause:
+
+```sql
+WHERE (name ILIKE '%term%' OR email ILIKE '%term%')
+```
+
+A few details worth knowing:
+
+- The term is **trimmed**; an empty or whitespace-only value is ignored and no search filter is applied.
+- Matching is **case-insensitive** (`ILIKE`) and substring-based (`%term%`).
+- The filter is applied to the `totalCount` as well, so the pagination info reflects the filtered result set.
+- If you don't pass `search`, the route behaves exactly like a normal paginated route - the `search` query parameter is simply ignored.
+
+<Callout type="warn" title="Wildcards">
+  The term is interpolated into the `ILIKE` pattern, so `%` and `_` entered by
+  the user act as SQL wildcards. The value is still parameterized, so this is
+  not an injection risk - but escape those characters yourself if you need
+  literal matching.
+</Callout>
+
+### Search Parameters
+
+| Parameter | Type       | Description                                                                  |
+| --------- | ---------- | ---------------------------------------------------------------------------- |
+| `search`  | `Column[]` | Columns to search across. Must belong to the `table` passed to the function. |
+
+The term itself is read from `params.query.search`, which comes from the `search` query parameter on the request.
+
+## Frontend Implementation
+
+Turn the search box on by setting `search` on the table. The term is debounced,
+written to the `?search=` query parameter, and read straight back out of it -
+there is no separate piece of state to keep in step.
+
+```tsx title="src/routes/-users/screen.tsx"
+<ContentDataTable
+  id="users-table"
+  // [!code ++]
+  search
+  // [!code ++]
+  searchPlaceholder="Search users..."
+  columns={[
+    { accessorKey: "name", header: "Name" },
+    { accessorKey: "email", header: "Email" },
+  ]}
+  edges={data.edges}
+  order={{
+    defaultOrder: { column: "name", order: "asc" },
+  }}
+  pageInfo={data.pageInfo}
+/>
+```
+
+### Declare it on the contract
+
+The route has to *recognise* `search` before it will carry it. That is one line
+on the table's contract - the same object that lists the sortable columns:
+
+```ts title="src/routes/-users/query.ts"
+export const USERS_TABLE_CONTRACT: AdminTableContract<UsersOrderBy> = {
+  orderBy: ["createdAt", "name"],
+  search: true, // [!code ++]
+};
+```
+
+Without it the normaliser drops the parameter, and the term never reaches the
+request. With it, `?search=ada` becomes `{ search: "ada" }` on the params object
+that `usersRequest` sends **and** that the query key is built from - so searching
+is a different cache entry rather than a stale page of unfiltered rows.
+
+<Callout title="A blank search is no search">
+  The normaliser trims the term and drops an empty one, exactly as the API does.
+  `?search=` and no `search` at all are the same request, so they must not become
+  two cache entries holding identical rows.
+</Callout>
+
+Since the same params object carries the cursor and the ordering, one request
+powers searching, sorting and paging at once - see
+[Pagination](/docs/tanstack/database/pagination) for how it is assembled.
