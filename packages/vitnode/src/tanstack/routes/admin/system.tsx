@@ -1,26 +1,21 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import type { AdminScreenContext } from "../../admin";
+import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreRouteFactory } from "../types";
 
-import { AdminBreadcrumb } from "../../admin";
+import { AdminBreadcrumb } from "../../admin/breadcrumb";
+import { loadAdminDebugRoute } from "../../admin/debug/route";
 import {
-  AdminDebugRouteContent,
   debugLogsRouteParams,
-  loadAdminDebugRoute,
   normalizeDebugRouteSearch,
-} from "../../admin/debug";
+} from "../../admin/debug/route-search";
+import { loadAdminFilesRoute } from "../../admin/files/route";
 import {
-  AdminFilesRouteContent,
   adminFilesRouteParams,
-  loadAdminFilesRoute,
   normalizeAdminFilesRouteSearch,
-} from "../../admin/files";
-import {
-  AdminIntegrationsRouteContent,
-  loadAdminIntegrationsRoute,
-} from "../../admin/integrations";
+} from "../../admin/files/route-search";
+import { loadAdminIntegrationsRoute } from "../../admin/integrations/route";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -57,28 +52,35 @@ const filesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function AdminFilesRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const { AdminFilesRouteContent } =
+        await import("../../admin/files/screen");
 
-      return (
-        <AdminFilesRouteContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeAdminFilesRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminFilesRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminFilesRouteContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeAdminFilesRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -115,9 +117,16 @@ const integrationsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
    * are the same string by construction.
    */
   route.update({
-    component: function AdminIntegrationsRoute() {
-      return <AdminIntegrationsRouteContent {...route.useLoaderData()} />;
-    },
+    component: lazyRouteComponent(async () => {
+      const { AdminIntegrationsRouteContent } =
+        await import("../../admin/integrations/screen");
+
+      return {
+        default: function AdminIntegrationsRoute() {
+          return <AdminIntegrationsRouteContent {...route.useLoaderData()} />;
+        },
+      };
+    }),
   });
 
   return route;
@@ -165,28 +174,35 @@ const debugRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function AdminDebugRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const { AdminDebugRouteContent } =
+        await import("../../admin/debug/screen");
 
-      return (
-        <AdminDebugRouteContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeDebugRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminDebugRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminDebugRouteContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeDebugRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

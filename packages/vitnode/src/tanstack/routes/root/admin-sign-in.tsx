@@ -1,16 +1,16 @@
-import { createRoute, redirect } from "@tanstack/react-router";
+import {
+  createRoute,
+  lazyRouteComponent,
+  redirect,
+} from "@tanstack/react-router";
 
 import type { CoreRootRouteFactory } from "./types";
 
-import {
-  ADMIN_RETURN_TO_PARAM,
-  AdminSignInRouteContent,
-  canEnterAdmin,
-  loadAdminSignInRoute,
-  prefetchAdminAccess,
-  sanitizeAdminReturnTo,
-} from "../../admin";
-import { createAuthNavigation } from "../../auth";
+import { sanitizeAdminReturnTo } from "../../admin/return-to";
+import { prefetchAdminAccess } from "../../admin/session-query";
+import { loadAdminSignInRoute } from "../../admin/sign-in-route";
+import { ADMIN_RETURN_TO_PARAM, canEnterAdmin } from "../../admin/state";
+import { createAuthNavigation } from "../../auth/redirects";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -80,14 +80,21 @@ export const adminSignInRoute: CoreRootRouteFactory = ({
   });
 
   route.update({
-    component: function AdminSignInRoute() {
-      return (
-        <AdminSignInRouteContent
-          navigate={useAppNavigate()}
-          returnTo={route.useSearch().returnTo}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const { AdminSignInRouteContent } =
+        await import("../../admin/sign-in-screen");
+
+      return {
+        default: function AdminSignInRoute() {
+          return (
+            <AdminSignInRouteContent
+              navigate={useAppNavigate()}
+              returnTo={route.useSearch().returnTo}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

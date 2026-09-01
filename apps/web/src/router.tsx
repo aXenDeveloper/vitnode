@@ -36,7 +36,6 @@ import './lib/auth'
  * VitNode may let the public session answer an admin question.
  */
 import './lib/admin-auth'
-import { contentRegistry } from './lib/content-registry'
 import { createLocaleRewrite, localeRouting } from './lib/i18n/runtime'
 import { pageHead } from './lib/page-head'
 import { pluginRouteManifest } from './plugin-route-manifest.gen'
@@ -47,6 +46,20 @@ import {
 import { Route as adminShellRoute } from './routes/_admin'
 import { Route as mainShellRoute } from './routes/_main'
 import { routeTree as fileRouteTree } from './routeTree.gen'
+
+/**
+ * The Content Engine registry, behind a literal dynamic import.
+ *
+ * Awaited by the one loader that needs it - `/admin/content/*` - rather than
+ * imported here. Building the registry reaches `@vitnode/core/content` and
+ * every configured plugin's admin form components, and this module is the one
+ * the client entry evaluates on every page: as a static import it put `zod`,
+ * both plugins' content registrations, the content form primitives and
+ * `react-hook-form` in front of the homepage's first paint. See
+ * `CoreAdminRouteContext.loadContentRegistry`.
+ */
+const loadContentRegistry = async () =>
+  (await import('#/lib/content-registry')).contentRegistry
 
 /**
  * One route tree: this app's route files, plus the AdminCP screens `@vitnode/core`
@@ -127,7 +140,7 @@ const routeTree = withCoreRootRoutes(
       ),
       { mountUnder: mainShellRoute, pageHead },
     ),
-    { contentRegistry, mountUnder: adminShellRoute, pageHead },
+    { loadContentRegistry, mountUnder: adminShellRoute, pageHead },
   ),
   { localeRouting, mountUnder: fileRouteTree, pageHead },
 )

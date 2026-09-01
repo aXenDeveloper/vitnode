@@ -11,7 +11,6 @@ import {
 import { ErrorActions } from "@vitnode/core/tanstack/layout";
 
 import { AdminShell } from "#/components/admin-shell";
-import { adminNav } from "#/lib/admin-nav";
 import { pageHead } from "#/lib/page-head";
 
 /**
@@ -144,8 +143,22 @@ export const Route = createFileRoute("/_admin")({
    * list because it cannot be - a plugin group's headings live under that
    * plugin's own id, and which plugins this installation configured is decided
    * in `src/admin-nav.gen.ts`.
+   *
+   * ## Imported inside the loader, not above it
+   *
+   * A route file's `loader` body runs only for a navigation into this shell; the
+   * file itself is evaluated in the client entry, on every page of the site. The
+   * generated navigation is not small - it carries every configured plugin's
+   * sidebar icons and its content type definitions, and through those the whole
+   * Content Engine and `zod` - so a static import here put ~45 KB of AdminCP
+   * data, plus `zod`, in front of the front page's first paint. `AdminShell`
+   * imports the same module, and `AdminShell` is this route's `component`, which
+   * is code-split: the two land in the same chunk, so an administrator pays for
+   * it once and everybody else not at all.
    */
   loader: async ({ context }) => {
+    const { adminNav } = await import("#/lib/admin-nav");
+
     await loadAdminMessages({ ...context, namespaces: adminNav.namespaces });
   },
   /**

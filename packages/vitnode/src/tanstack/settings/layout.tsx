@@ -9,7 +9,7 @@ import { isSettingsRootPath } from "@/views/auth/settings/settings-nav";
 import { SettingsShellContent } from "@/views/auth/settings/shell-content";
 
 import { RouteMessages } from "../i18n/route-messages";
-import { SETTINGS_NAMESPACES } from "./index";
+import { SETTINGS_NAMESPACES } from "./route";
 
 /**
  * The settings frame - the heading, the navigation card, and the panel every

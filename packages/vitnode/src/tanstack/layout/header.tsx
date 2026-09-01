@@ -20,8 +20,26 @@ import { intlQueryOptions } from "../i18n/query";
 import { LanguageSwitcher } from "./language-switcher";
 import { RouterLink } from "./router-link";
 
-/** What the header renders strings from: the shell's set, plus the nav labels. */
-export const HEADER_NAMESPACES = ["core.global", "core.search"] as const;
+/**
+ * What the header renders strings from - and *only* what the header renders.
+ *
+ * Two words: the `Discover` and `Search` labels in the nav. `core.global` is
+ * deliberately not here, and that is the whole point of the list.
+ *
+ * A namespace set is part of the query key, so asking for `["core.global",
+ * "core.search"]` is a *different cache entry* from the `["core.global"]` the
+ * root route already ensured - not a superset of it. Listing the global set
+ * here therefore bought nothing and cost twice: a second request for messages
+ * the root had already fetched, and a second copy of every global string
+ * dehydrated into the HTML of every page on the site.
+ *
+ * Nothing regresses by leaving it out, because nothing in this component reads
+ * it. The theme switcher and the language switcher translate through the
+ * provider the host's root mounts over `core.global`, which is above every
+ * route; the two nav labels are read from *this* query with `createTranslator`
+ * and never through a provider. See {@link Header}.
+ */
+export const HEADER_NAMESPACES = ["core.search"] as const;
 
 /**
  * The messages the header renders, as a query the shell's loader can ensure.
@@ -68,7 +86,9 @@ interface HeaderNavMessages {
  *
  * No message provider is mounted here. `core.global` - which the theme switcher
  * and the language switcher read - is provided by the host's root, and the two
- * extra words the nav needs are not worth replacing the message tree over.
+ * extra words the nav needs are not worth replacing the message tree over. They
+ * are read straight off this query with `createTranslator` instead, which is
+ * why this set holds `core.search` alone - see {@link HEADER_NAMESPACES}.
  *
  * ## The two slots a host actually fills
  *

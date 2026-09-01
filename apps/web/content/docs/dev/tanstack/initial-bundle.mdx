@@ -1,0 +1,217 @@
+---
+title: Initial bundle
+description: What a route puts in front of your first paint - and how to keep it out.
+---
+
+A router has to know quite a lot about a route before it can decide whether to
+render it: the path, the search contract, the guard, the loader. All of that is
+read while matching a URL, which means it lives in the **client entry** - the one
+bundle every page of your site downloads first, whether or not anyone ever visits
+that route.
+
+The page itself does not. That is the whole rule, and everything below is a
+consequence of it.
+
+## What is eager, and what is not
+
+| Route option                                                     | Read when                        | In the initial bundle |
+| ---------------------------------------------------------------- | -------------------------------- | --------------------- |
+| `path`, `id`                                                       | the tree is composed             | yes                   |
+| `validateSearch`                                                   | a URL is matched                 | yes                   |
+| `beforeLoad`, `loaderDeps`                                         | before the loader                | yes                   |
+| `loader`                                                           | before the match renders         | yes\*                 |
+| `head`                                                             | while the match is projected     | yes                   |
+| `staticData` - including your breadcrumb                           | the tree is composed             | yes                   |
+| `component`, `pendingComponent`, `errorComponent`, `notFoundComponent` | the match renders            | **no**                |
+
+\* The loader *function* is eager. What it `await`s inside is not - see
+[Let the loader fetch its own code](#let-the-loader-fetch-its-own-code).
+
+<Callout type="info" title="Your component is already split">
+  TanStack Start's compiler moves the four component options out of a route file
+  into a chunk of their own. You do not have to do anything for that, and it is
+  why a page's markup is almost never the problem. The problem is the other seven
+  rows.
+</Callout>
+
+## The shape that costs you
+
+Here is a real one, from this site's own front page. Both imports come from the
+same module, and only one of them is a component:
+
+```tsx title="A route file that ships its whole page to every URL"
+import { HomeRouteContent, HOME_TITLE } from "#/site/home/home-content";
+
+export const Route = createFileRoute("/_main/")({
+  head: () => pageHead({ title: HOME_TITLE }),
+  component: () => <HomeRouteContent />,
+});
+```
+
+`component` is split out. `head` is not - so `head` reaches
+`home-content.tsx`, and `home-content.tsx` brings the hero, the marquee and
+`motion` with it, into the bundle that `/login` and `/admin` download too.
+
+The fix is a module that holds nothing but the two strings:
+
+```tsx title="apps/web/src/routes/_main/index.tsx"
+import { HomeRouteContent } from "#/site/home/home-content";
+import { HOME_DESCRIPTION, HOME_TITLE } from "#/site/home/metadata";
+
+export const Route = createFileRoute("/_main/")({
+  head: () => pageHead({ description: HOME_DESCRIPTION, title: HOME_TITLE }),
+  component: () => <HomeRouteContent LinkComponent={RouterLink} />,
+});
+```
+
+Same page, same title, and `head` now reaches four lines of text.
+
+<Callout type="warn" title="Barrels are where this hides">
+  `import { loadThing, ThingScreen } from "./thing"` looks like two imports and is
+  one: whatever the barrel re-exports is in the graph. Reach for the leaf module -
+  `./thing/route` for the loader, `./thing/screen` for the screen - whenever a
+  route file is the one importing.
+</Callout>
+
+## Let the loader fetch its own code
+
+A loader is a function, and its body runs only when somebody navigates to that
+route. So anything it needs that is large, and needed nowhere else, can be an
+`await import()`:
+
+```tsx title="apps/web/src/routes/_admin.tsx"
+loader: async ({ context }) => {
+  const { adminNav } = await import("#/lib/admin-nav");
+
+  await loadAdminMessages({ ...context, namespaces: adminNav.namespaces });
+},
+```
+
+The generated AdminCP navigation carries every configured plugin's sidebar icons
+and content type definitions. Imported at the top of the file it is ~45 kB on
+your front page; imported here it is ~45 kB when somebody opens the AdminCP, in
+the same chunk as the shell that renders it.
+
+Keep the *decisions* eager, though. A guard belongs in `beforeLoad`, where it
+runs before a byte of the page is fetched, and it is small enough not to matter.
+
+## Breadcrumbs are elements
+
+`staticData.breadcrumb` is a rendered element, not a component reference, so it
+is built when the route tree is composed:
+
+```tsx
+staticData: { breadcrumb: <AdminBreadcrumb segments={["core", "users"]} /> },
+```
+
+That is deliberate - a crumb can then use hooks and read its own loader data -
+and it means the crumb's component is eager. Keep a crumb to a crumb: it should
+reach the breadcrumb view and the labels, never the screen underneath it.
+
+## Screens behind a code-based route
+
+If you are mounting screens rather than writing route files - a package, or
+anything using `createRoute` - the component option is yours to split, and
+`lazyRouteComponent` is how:
+
+```tsx
+const route = createRoute({
+  getParentRoute: () => parentRoute,
+  loaderDeps: ({ search }) => ({ params: usersRouteParams(search) }),
+  loader: async ({ context, deps }) => await loadAdminUsersRoute({ ...context, ...deps }),
+  head: ({ loaderData }) => pageHead({ ...loaderData }),
+  path: "/admin/core/users",
+  validateSearch: normalizeUsersRouteSearch,
+});
+
+route.update({
+  component: lazyRouteComponent(async () => {
+    const { AdminUsersRouteContent } = await import("../../admin/users/screen");
+
+    return {
+      default: function AdminUsersRoute() {
+        return <AdminUsersRouteContent {...route.useLoaderData()} />;
+      },
+    };
+  }),
+});
+```
+
+The component is declared inside the callback so it still closes over `route` and
+keeps its types; `lazyRouteComponent` caches the module, and the router awaits
+`preload()` before it renders, so nothing suspends during SSR.
+
+<Callout type="warn" title="Write the specifier out">
+  `import("../../admin/users/screen")` is followed by the bundler at build time.
+  `` import(`../../admin/${name}/screen`) `` is not: it type-checks, works in dev,
+  and ships a chunk that does not exist.
+</Callout>
+
+## Images below the fold
+
+React writes a `<link rel="preload" as="image">` into the document head for an
+image it renders eagerly during SSR - at the highest priority the browser has,
+competing with your stylesheet. For a screenshot two screens down, say so:
+
+```tsx
+import screenshot from "#/site/home/assets/admin-control-panel.png";
+
+<img
+  alt="The VitNode Admin Control Panel"
+  decoding="async"
+  fetchPriority="low"
+  height={1392}
+  loading="lazy"
+  src={screenshot}
+  width={2880}
+/>;
+```
+
+`loading="lazy"` is the one that withdraws the preload. Keep `width` and `height`
+(or an `aspect-*` frame) so nothing shifts when it arrives, and import the file
+rather than pointing at `public/` - an imported asset gets a content hash, so it
+can be cached forever instead of revalidated on every visit.
+
+## Measuring it
+
+Build, then run the app's budget test:
+
+```bash
+pnpm --filter web build
+pnpm --filter web test
+```
+
+`src/tests/asset-graph.test.ts` reads the emitted chunks and the manifest
+TanStack Start writes beside them, and fails if the front page's graph grows past
+its budget or picks up code it has no business having - AutoForm, `zod`, the
+editor, the command palette, the docs UI, the AdminCP's dashboard grid. Each of
+those is checked to exist *somewhere* in the build first, so a stale rule fails
+loudly rather than passing quietly.
+
+<Callout type="info" title="Bytes, not chunk count">
+  The budget is on both, and the byte one is the one that means something. Chunk
+  count measures how finely the bundler split the graph, not how much of it there
+  is: merging small chunks took this page from 97 preloads to 5 and from 860 kB
+  to 2.6 MB, because one shared chunk then held everything the split had just
+  removed.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Data loading"
+    description="Loader, Query and the API"
+    href="/docs/dev/tanstack/data-loading"
+  />
+  <Card
+    title="Route Manifest"
+    description="Why a plugin's search schema is the one eager part"
+    href="/docs/dev/plugins/route-manifest#what-it-costs"
+  />
+  <Card
+    title="Plugin registration"
+    description="Keeping a plugin's editors out of the AdminCP bundle"
+    href="/docs/dev/content-engine/plugin-registration#keep-expensive-editors-lazy"
+  />
+</Cards>

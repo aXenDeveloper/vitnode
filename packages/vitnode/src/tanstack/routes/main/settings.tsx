@@ -1,26 +1,27 @@
 import type { AnyRoute } from "@tanstack/react-router";
 
-import { createRoute, Outlet } from "@tanstack/react-router";
+import {
+  createRoute,
+  lazyRouteComponent,
+  Outlet,
+} from "@tanstack/react-router";
 
-import type { SettingsLoaderContext, SettingsNavKey } from "../../settings";
+import { SettingsBreadcrumbContent } from "@/views/auth/settings/settings-breadcrumb-content";
+
+import type {
+  SettingsLoaderContext,
+  SettingsNavKey,
+} from "../../settings/route";
 import type { CoreRouteFactory } from "../types";
 
-import {
-  DevicesPanelContent,
-  DevicesPanelPending,
-  devicesQuery,
-} from "../../devices";
-import { RouteMessages } from "../../i18n";
-import { RouterLink } from "../../layout";
+import { devicesQuery } from "../../devices/query";
+import { RouteMessages } from "../../i18n/route-messages";
+import { RouterLink } from "../../layout/router-link";
 import {
   loadSettingsPanel,
-  OverviewSettings,
-  SecuritySettings,
   SETTINGS_NAMESPACES,
-  SettingsBreadcrumbContent,
-  SettingsLayoutContent,
   settingsMessagesQueryOptions,
-} from "../../settings";
+} from "../../settings/route";
 import { routeContext } from "../types";
 
 /**
@@ -35,6 +36,13 @@ import { routeContext } from "../types";
  * The trail is derived from the shared navigation model rather than written
  * here, so a panel's crumb and its menu entry cannot drift into two spellings of
  * the same path.
+ *
+ * The crumb itself is imported straight from `views/` rather than through
+ * `../../settings`: that barrel also re-exports the frame and both panel
+ * bodies, and a `staticData` element is evaluated in the client entry - so the
+ * barrel would put the whole settings subtree in the first bundle of every page
+ * on the site. Same rule as the screens below, applied to the one part of a
+ * settings route that cannot be lazy.
  */
 const SettingsBreadcrumb = ({ navKey }: { navKey?: SettingsNavKey }) => (
   <RouteMessages namespaces={SETTINGS_NAMESPACES}>
@@ -61,6 +69,13 @@ const SettingsBreadcrumb = ({ navKey }: { navKey?: SettingsNavKey }) => (
  * desktop the two URLs look identical. They differ in exactly one visible way,
  * which is the breadcrumb: the index declares none and inherits the frame's
  * single crumb, while `/settings/overview` is two crumbs deep.
+ *
+ * ## Every panel body is behind a literal dynamic import
+ *
+ * The frame, the two static panels and the devices list are reached only through
+ * `lazyRouteComponent`, so they are Rollup chunks of their own rather than part
+ * of the client entry. What stays eager is what a router needs before it can
+ * render anything: the loader, the `head`, and the crumb.
  */
 export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   const layout = createRoute({
@@ -100,13 +115,22 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
      * declares its own two-crumb trail and wins by being deeper.
      */
     staticData: { breadcrumb: <SettingsBreadcrumb /> },
-    component: function SettingsLayout() {
-      return (
-        <SettingsLayoutContent LinkComponent={RouterLink}>
-          <Outlet />
-        </SettingsLayoutContent>
-      );
-    },
+  });
+
+  layout.update({
+    component: lazyRouteComponent(async () => {
+      const { SettingsLayoutContent } = await import("../../settings/layout");
+
+      return {
+        default: function SettingsLayout() {
+          return (
+            <SettingsLayoutContent LinkComponent={RouterLink}>
+              <Outlet />
+            </SettingsLayoutContent>
+          );
+        },
+      };
+    }),
   });
 
   /**
@@ -116,11 +140,14 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
    * component, the title and the crumb are all derived from it - so they are one
    * builder rather than three near-identical routes. `path` is relative to the
    * layout above.
+   *
+   * The panel body arrives through `loadPanel`, a literal dynamic import the
+   * caller supplies, so a panel's markup is never part of the eager route graph.
    */
   const panel = (
     navKey: SettingsNavKey,
     path: string,
-    Panel: React.FunctionComponent,
+    loadPanel: () => Promise<{ default: React.FunctionComponent }>,
     { crumb = true }: { crumb?: boolean } = {},
   ): AnyRoute =>
     createRoute({
@@ -130,7 +157,7 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
         await loadSettingsPanel(routeContext(context), navKey),
       head: ({ loaderData }) => pageHead({ ...loaderData }),
       path,
-      component: Panel,
+      component: lazyRouteComponent(loadPanel),
       ...(crumb
         ? { staticData: { breadcrumb: <SettingsBreadcrumb navKey={navKey} /> } }
         : {}),
@@ -175,20 +202,50 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     },
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/devices",
-    pendingComponent: DevicesPanelPending,
+    /**
+     * The skeleton is code-split alongside the panel it stands in for. The
+     * router preloads a route's `pendingComponent` together with its
+     * `component` - `loadComponents` asks for both - so the fallback is in hand
+     * exactly when the panel is, and neither is in the entry chunk.
+     */
+    pendingComponent: lazyRouteComponent(async () => ({
+      default: (await import("../../devices/panel")).DevicesPanelPending,
+    })),
     staticData: { breadcrumb: <SettingsBreadcrumb navKey="devices" /> },
   });
 
   devices.update({
-    component: function DevicesRoute() {
-      return <DevicesPanelContent userId={devices.useLoaderData().userId} />;
-    },
+    component: lazyRouteComponent(async () => {
+      const { DevicesPanelContent } = await import("../../devices/panel");
+
+      return {
+        default: function DevicesRoute() {
+          return (
+            <DevicesPanelContent userId={devices.useLoaderData().userId} />
+          );
+        },
+      };
+    }),
   });
 
   layout.addChildren([
-    panel("overview", "/", OverviewSettings, { crumb: false }),
-    panel("overview", "/overview", OverviewSettings),
-    panel("security", "/security", SecuritySettings),
+    panel(
+      "overview",
+      "/",
+      async () => ({
+        default: (await import("@/views/auth/settings/overview/overview"))
+          .OverviewSettings,
+      }),
+      { crumb: false },
+    ),
+    panel("overview", "/overview", async () => ({
+      default: (await import("@/views/auth/settings/overview/overview"))
+        .OverviewSettings,
+    })),
+    panel("security", "/security", async () => ({
+      default: (await import("@/views/auth/settings/security/security"))
+        .SecuritySettings,
+    })),
     devices,
   ]);
 

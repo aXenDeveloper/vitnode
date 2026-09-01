@@ -43,8 +43,8 @@ const DocsSearchDialog = React.lazy(async () => await import('./search-dialog'))
  * Mounting it **around the docs subtree rather than at the root** is the
  * difference between a front page that loads Fumadocs and one that does not. The
  * root document stays what Stage 14 left it: the VitNode providers, and nothing
- * a marketing page cannot justify. `src/tests/eager-graph.test.ts` and
- * `src/tests/isolation.test.ts` both hold that line.
+ * a marketing page cannot justify. `src/tests/asset-graph.test.ts` holds that
+ * line, by failing if the front page's own chunks contain Fumadocs at all.
  *
  * `theme={{ enabled: false }}` because VitNode ships its own theme provider -
  * mounted by `__root` - and two of them means two sources of truth for one

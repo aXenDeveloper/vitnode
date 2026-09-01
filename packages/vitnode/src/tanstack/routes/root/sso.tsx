@@ -1,13 +1,9 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 
 import type { CoreRootRouteFactory } from "./types";
 
-import {
-  loadSsoCallbackRoute,
-  normalizeSsoCallbackSearch,
-  SsoCallbackRouteContent,
-} from "../../auth";
-import { ErrorActions, RouterLink } from "../../layout";
+import { normalizeSsoCallbackSearch } from "../../auth/route-search";
+import { loadSsoCallbackRoute } from "../../auth/sso-route";
 import { routeContext } from "../types";
 
 /**
@@ -39,16 +35,27 @@ export const ssoCallbackRoute: CoreRootRouteFactory = ({ parentRoute }) => {
   });
 
   route.update({
-    component: function SsoCallbackRoute() {
-      return (
-        <SsoCallbackRouteContent
-          errorActions={<ErrorActions />}
-          LinkComponent={RouterLink}
-          providerId={route.useParams().providerId}
-          search={route.useSearch()}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const [{ SsoCallbackRouteContent }, { ErrorActions }, { RouterLink }] =
+        await Promise.all([
+          import("../../auth/sso-screen"),
+          import("../../layout/error-actions"),
+          import("../../layout/router-link"),
+        ]);
+
+      return {
+        default: function SsoCallbackRoute() {
+          return (
+            <SsoCallbackRouteContent
+              errorActions={<ErrorActions />}
+              LinkComponent={RouterLink}
+              providerId={route.useParams().providerId}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

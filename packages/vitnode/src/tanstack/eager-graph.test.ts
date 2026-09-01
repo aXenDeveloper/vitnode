@@ -36,7 +36,8 @@ import { describe, expect, it } from "vitest";
  * No bundle bytes are asserted anywhere here. A byte budget breaks on a
  * dependency bump and says nothing about *why*; this walks the same import graph
  * the bundler walks and names the edge that would cost the bytes. See the note
- * in `apps/web/src/tests/eager-graph.test.ts`, which asserts the host half.
+ * in `apps/web/src/tests/asset-graph.test.ts`, which asserts the host half from
+ * the other end: it reads the emitted chunks and fails on a budget.
  */
 const here = dirname(fileURLToPath(import.meta.url));
 const src = resolve(here, "..");
@@ -331,5 +332,134 @@ describe("screen modules", () => {
     const name = relative(dirname(file), file).replace(/\.tsx$/, "");
 
     expect(readFileSync(barrel, "utf8")).toContain(`"./${name}"`);
+  });
+});
+
+/**
+ * Core's own programmatic routes - the other half of the same rule, and the one
+ * that turned out to matter most.
+ *
+ * `withCoreAdminRoutes`, `withCoreMainRoutes` and `withCoreRootRoutes` are
+ * called from a host's `router.tsx`, which is the module the client entry loads
+ * before anything else. So *whatever a route module under `tanstack/routes`
+ * statically imports is downloaded by every page of the application* - the front
+ * page included, and the front page renders none of it.
+ *
+ * Measured on vitnode.com before this rule existed: the homepage's initial graph
+ * carried 117 module preloads and 1.47 MB of JavaScript, and in it were the
+ * AdminCP's users, staff, roles, cron, queue, files, debug and integrations
+ * screens, the Content Engine's admin form layer, AutoForm, `react-hook-form`,
+ * `cmdk` and the settings panels - because each route module imported its
+ * screen and its loader from the same namespace barrel, beside the
+ * `validateSearch` the router genuinely needs before it can match a path.
+ *
+ * The split these assertions enforce:
+ *
+ *     eager    path, id, validateSearch, loaderDeps, beforeLoad, loader, head,
+ *              staticData - everything the router consults before it renders
+ *     lazy     `component`, `pendingComponent`, `notFoundComponent` and
+ *              `errorComponent`, each behind `lazyRouteComponent` over a literal
+ *              `import()` the bundler can follow
+ *
+ * A breadcrumb is deliberately on the eager side: `staticData.breadcrumb` is an
+ * *element*, built when the route tree is composed, so its component has to be
+ * in hand. That is why the rule below is "reaches no screen module" rather than
+ * "reaches nothing under `views/`" - a crumb is a view, and a small one.
+ */
+describe("core route composers", () => {
+  const routeModules = walk(join(src, "tanstack", "routes")).filter(
+    file => file.endsWith(".tsx") && !/\.test\.tsx?$/.test(file),
+  );
+
+  it("exist, so a rename cannot silently empty this suite", () => {
+    expect(routeModules.length).toBeGreaterThan(7);
+  });
+
+  /**
+   * The screen modules are the ones `../eager-graph.test.ts`'s other half
+   * already names - `screen.tsx` and `*-screen.tsx` - so there is one spelling
+   * of "this is a rendered page" in the package rather than two.
+   */
+  const isScreenModule = (file: string): boolean =>
+    /(?:^|\/)(?:screen|[a-z-]+-screen)\.tsx$/.test(file);
+
+  it.each(routeModules)("%s statically reaches no screen module", file => {
+    const screens = [...reachableFrom(file).files]
+      .filter(isScreenModule)
+      .map(reached => relative(src, reached));
+
+    expect(screens).toEqual([]);
+  });
+
+  it.each(routeModules)("%s pulls in no screen-only library", file => {
+    const { packages } = reachableFrom(file);
+
+    expect([...packages].filter(isScreenOnlyPackage)).toEqual([]);
+  });
+
+  /**
+   * The control, for the same reason the loader suite has one: every assertion
+   * above is a "found nothing" assertion, and a walk that reached nothing would
+   * satisfy all of them.
+   */
+  it("reaches real modules, so the rules above are not vacuous", () => {
+    const reached = routeModules.flatMap(file => [
+      ...reachableFrom(file).files,
+    ]);
+
+    expect(reached.length).toBeGreaterThan(routeModules.length);
+    expect(
+      routeModules.flatMap(file => [...reachableFrom(file).packages]),
+    ).toContain("@tanstack/react-router");
+  });
+
+  /**
+   * And the screens are still rendered - through the one API that code-splits
+   * them.
+   *
+   * A route module that names a `component` at all must reach it through
+   * `lazyRouteComponent`, and the module it loads must be a literal `import()`
+   * so that Rollup can follow it into a chunk. A computed specifier compiles and
+   * then resolves to nothing in a production build.
+   */
+  it.each(routeModules)("%s renders every screen lazily", file => {
+    const source = readFileSync(file, "utf8");
+    const eager = [
+      ...source.matchAll(
+        /\b(component|pendingComponent|notFoundComponent|errorComponent):\s*(\S+)/g,
+      ),
+    ]
+      .filter(([, , value]) => !value.startsWith("lazyRouteComponent("))
+      .map(([, option, value]) => `${option}: ${value}`);
+
+    expect(eager).toEqual([]);
+  });
+
+  /**
+   * The control for the rule above: these routes do declare components, so
+   * "none of them is eager" is a statement about something rather than about an
+   * empty list.
+   */
+  it("declares components at all, so the rule above is not vacuous", () => {
+    const declared = routeModules.flatMap(file => [
+      ...readFileSync(file, "utf8").matchAll(
+        /\b(component|pendingComponent|notFoundComponent|errorComponent):/g,
+      ),
+    ]);
+
+    expect(declared.length).toBeGreaterThan(15);
+  });
+
+  it("imports its screens with specifiers a bundler can follow", () => {
+    const dynamic = routeModules.flatMap(file =>
+      [...readFileSync(file, "utf8").matchAll(/\bimport\(([^)]*)\)/g)].map(
+        match => match[1].trim(),
+      ),
+    );
+
+    expect(dynamic.length).toBeGreaterThan(15);
+    for (const specifier of dynamic) {
+      expect(specifier).toMatch(/^"[^"$`]+"$/);
+    }
   });
 });

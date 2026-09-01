@@ -35,14 +35,16 @@ import { pluginContentTypes } from '#/content-registry.gen'
  * bundle*: the browser has one instance and the server has one, and each
  * registers its own.
  *
- * This module is imported by the `/admin/content` route rather than by
- * `router.tsx`, and that is deliberate. Registration only has to happen before a
- * content screen runs, and importing it from the route is what lets Rollup put
- * this whole graph - every plugin's field components, table cells and form
- * layouts - in that route's chunk instead of the initial AdminCP bundle. A
- * plugin's own heavier parts stay lazier still: `@vitnode/blog` draws a
- * `React.lazy` boundary around its Tiptap editor, so even opening the article
- * list does not fetch it.
+ * This module is reached through a `() => import(...)` that `/admin/content`'s
+ * loader awaits, never through a static import, and that is deliberate.
+ * Registration only has to happen before a content screen runs, and deferring it
+ * to the route is what lets Rollup put this whole graph - every plugin's field
+ * components, table cells and form layouts, plus `zod` and the Content Engine
+ * itself - in that route's chunk instead of in the bundle every page of the site
+ * loads first. `router.tsx` holds the thunk because that is where the route tree
+ * is composed; what it does *not* hold is the value. A plugin's own heavier
+ * parts stay lazier still: `@vitnode/blog` draws a `React.lazy` boundary around
+ * its Tiptap editor, so even opening the article list does not fetch it.
  */
 export const contentRegistry = buildContentFrontendRegistry(pluginContentTypes)
 

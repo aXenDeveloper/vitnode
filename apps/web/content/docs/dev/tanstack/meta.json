@@ -8,6 +8,7 @@
     "routing",
     "metadata",
     "data-loading",
+    "initial-bundle",
     "navigation",
     "i18n",
     "server-functions",

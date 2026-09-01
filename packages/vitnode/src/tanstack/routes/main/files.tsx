@@ -1,14 +1,13 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { CoreRouteFactory } from "../types";
 
+import { loadMyFilesRoute } from "../../files/route";
 import {
-  loadMyFilesRoute,
-  MyFilesRouteContent,
   myFilesRouteParams,
   normalizeMyFilesRouteSearch,
-} from "../../files";
+} from "../../files/route-search";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -51,28 +50,34 @@ export const myFilesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function MyFilesRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const { MyFilesRouteContent } = await import("../../files/screen");
 
-      return (
-        <MyFilesRouteContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeMyFilesRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function MyFilesRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <MyFilesRouteContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeMyFilesRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

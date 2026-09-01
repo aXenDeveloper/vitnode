@@ -1,5 +1,7 @@
 import { CpuIcon, LockIcon, PlugIcon, SparklesIcon } from 'lucide-react'
 
+import adminControlPanel from '#/site/home/assets/admin-control-panel.png'
+
 /**
  * The four claims under the screenshot.
  *
@@ -40,13 +42,36 @@ const FEATURES = [
 /**
  * The Admin Control Panel section: one screenshot, four claims.
  *
- * ## The screenshot is a file this application serves, not an import
+ * ## The screenshot belongs to this application, and is imported
  *
- * `/admin-control-panel.png` lives in `apps/web/public`, which is the ownership
- * decision this section exists to record. It is a photograph of vitnode.com's
- * own AdminCP - a marketing asset for one website - and `@vitnode/core` is a
- * framework that thousands of installs render. A screenshot of *our* panel does
- * not belong in a package every one of them ships.
+ * `src/site/home/assets/admin-control-panel.png` is the ownership decision this
+ * section exists to record. It is a photograph of vitnode.com's own AdminCP - a
+ * marketing asset for one website - and `@vitnode/core` is a framework that
+ * thousands of installs render. A screenshot of *our* panel does not belong in
+ * a package every one of them ships.
+ *
+ * It is an *import* rather than a path into `public/` so that the URL Vite emits
+ * carries a content hash: the file may then be served immutable and for a year,
+ * which an unversioned `/admin-control-panel.png` can never be - a proxy has no
+ * way to tell a new screenshot from the old one, so the only safe answer for
+ * that URL is a short expiry and a revalidation on every visit.
+ *
+ * ## It is below the fold, and says so
+ *
+ * `loading="lazy"` is the load-bearing one: React 19 emits a
+ * `<link rel="preload" as="image">` into the document head for an eager image
+ * it renders during SSR, so this 264 KB screenshot was being fetched at the
+ * highest priority the browser has, in competition with the stylesheet and the
+ * hero - for a picture two screens down. Declaring it lazy withdraws the
+ * preload and defers the request until the visitor scrolls near it.
+ *
+ * `fetchPriority="low"` covers the case where a very tall viewport puts it in
+ * range immediately, and `decoding="async"` keeps the decode of a 2880px image
+ * off the main thread whenever it does arrive.
+ *
+ * None of this can shift the layout: the frame below reserves the space through
+ * `aspect-88/36`, and the intrinsic `width`/`height` reserve it again on the
+ * image itself.
  *
  * The Next.js page rendered the same file twice - once `dark:hidden`, once
  * `hidden dark:block` - from the same import, with the same pixels, under two
@@ -74,8 +99,11 @@ export const AdminSection = () => (
 
           <img
             alt="The VitNode Admin Control Panel, showing the debug screen alongside the sidebar of management sections."
+            decoding="async"
+            fetchPriority="low"
             height={1392}
-            src="/admin-control-panel.png"
+            loading="lazy"
+            src={adminControlPanel}
             width={2880}
           />
         </div>
