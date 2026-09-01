@@ -17,6 +17,7 @@ import {
 } from "../../admin/queue/route-search";
 import { loadAdminSearchIndexRoute } from "../../admin/search-index/route";
 import { normalizeSearchIndexRouteSearch } from "../../admin/search-index/route-search";
+import { TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -52,6 +53,7 @@ const cronRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/advanced/cron",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeCronRouteSearch,
     staticData: {
       breadcrumb: <AdminBreadcrumb segments={["core", "advanced", "cron"]} />,
@@ -117,6 +119,7 @@ const queueRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/advanced/queue",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeQueueRouteSearch,
     staticData: {
       breadcrumb: <AdminBreadcrumb segments={["core", "advanced", "queue"]} />,
@@ -179,6 +182,7 @@ const searchIndexRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       ),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/advanced/search",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeSearchIndexRouteSearch,
     staticData: {
       breadcrumb: <AdminBreadcrumb segments={["core", "advanced", "search"]} />,

@@ -8,6 +8,7 @@ import {
   myFilesRouteParams,
   normalizeMyFilesRouteSearch,
 } from "../../files/route-search";
+import { TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -46,6 +47,9 @@ export const myFilesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     head: ({ loaderData }) =>
       pageHead({ robots: "noindex, nofollow", ...loaderData }),
     path: "/files",
+    pendingComponent: () => (
+      <TablePendingSkeleton className="container mx-auto" />
+    ),
     validateSearch: normalizeMyFilesRouteSearch,
   });
 

@@ -4,6 +4,7 @@ import {
   AdminDashboardRouteContent,
   loadAdminDashboardRoute,
 } from '@vitnode/core/tanstack/admin/dashboard'
+import { CardsPendingSkeleton } from '@vitnode/core/tanstack/pending'
 
 /**
  * `/admin/core` - the AdminCP dashboard, and the one route file `_admin` keeps.
@@ -52,6 +53,7 @@ import {
 export const Route = createFileRoute('/_admin/admin/core/')({
   loader: async ({ context }) => await loadAdminDashboardRoute(context),
   component: AdminDashboardRoute,
+  pendingComponent: CardsPendingSkeleton,
   /**
    * The whole of how an admin route contributes to the trail in the shell's
    * header: the route declares its own crumb next to its own component, the

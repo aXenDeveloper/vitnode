@@ -16,6 +16,7 @@ import {
   normalizeAdminFilesRouteSearch,
 } from "../../admin/files/route-search";
 import { loadAdminIntegrationsRoute } from "../../admin/integrations/route";
+import { CardsPendingSkeleton, TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -45,6 +46,7 @@ const filesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/system/files",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeAdminFilesRouteSearch,
     staticData: {
       breadcrumb: <AdminBreadcrumb segments={["core", "system", "files"]} />,
@@ -105,6 +107,7 @@ const integrationsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       ),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/system/integrations",
+    pendingComponent: CardsPendingSkeleton,
     staticData: {
       breadcrumb: (
         <AdminBreadcrumb segments={["core", "system", "integrations"]} />
@@ -169,6 +172,7 @@ const debugRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/debug",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeDebugRouteSearch,
     staticData: { breadcrumb: null },
   });

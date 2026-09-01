@@ -3,16 +3,22 @@
  *
  * A `vite.config.ts` is the one file a framework cannot write for an
  * application: it names the app's own port, its Nitro options, its Tailwind
- * entry. But almost nothing in *these two* is the app's. They read the
- * environment the way VitNode's config expects it to be read, and they discover
- * the routes VitNode's plugins declare - the same work, in the same order, in
- * every install. Kept as files in each app they were 397 lines to copy and then
- * to keep in step; here they are two calls:
+ * entry. But almost nothing in *these three* is the app's. They read the
+ * environment the way VitNode's config expects it to be read, they discover
+ * the routes VitNode's plugins declare, and they name this package's own
+ * browser dependencies for the dev server's pre-bundler - the same work, in the
+ * same order, in every install. Kept as files in each app they were 397 lines to
+ * copy and then to keep in step; here they are three calls:
  *
- *     import { vitNodeEnv, vitNodePluginRoutes } from '@vitnode/core/framework/vite'
+ *     import {
+ *       vitNodeEnv,
+ *       vitNodeOptimizeDeps,
+ *       vitNodePluginRoutes,
+ *     } from '@vitnode/core/framework/vite'
  *
  *     plugins: [
  *       vitNodeEnv(),
+ *       vitNodeOptimizeDeps(),
  *       vitNodePluginRoutes({ appRoot: import.meta.dirname }),
  *       ...
  *     ]
@@ -32,5 +38,6 @@
 
 export type { VitNodeEnvOptions } from "./env";
 export { vitNodeEnv } from "./env";
+export { vitNodeOptimizeDeps } from "./optimize-deps";
 export type { VitNodePluginRoutesOptions } from "./plugin-routes";
 export { vitNodePluginRoutes } from "./plugin-routes";

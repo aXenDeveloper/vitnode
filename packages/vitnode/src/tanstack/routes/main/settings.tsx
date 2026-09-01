@@ -17,6 +17,7 @@ import type { CoreRouteFactory } from "../types";
 import { devicesQuery } from "../../devices/query";
 import { RouteMessages } from "../../i18n/route-messages";
 import { RouterLink } from "../../layout/router-link";
+import { FeedPendingSkeleton, FormPendingSkeleton } from "../../pending";
 import {
   loadSettingsPanel,
   SETTINGS_NAMESPACES,
@@ -110,6 +111,9 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
      */
     head: () => ({ meta: [{ content: "noindex, nofollow", name: "robots" }] }),
     path: "/settings",
+    pendingComponent: () => (
+      <FormPendingSkeleton className="container mx-auto" />
+    ),
     /**
      * The trail for `/settings` itself - a single "Settings" crumb. A panel
      * declares its own two-crumb trail and wins by being deeper.
@@ -158,6 +162,7 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       head: ({ loaderData }) => pageHead({ ...loaderData }),
       path,
       component: lazyRouteComponent(loadPanel),
+      pendingComponent: FormPendingSkeleton,
       ...(crumb
         ? { staticData: { breadcrumb: <SettingsBreadcrumb navKey={navKey} /> } }
         : {}),
@@ -202,15 +207,7 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     },
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/devices",
-    /**
-     * The skeleton is code-split alongside the panel it stands in for. The
-     * router preloads a route's `pendingComponent` together with its
-     * `component` - `loadComponents` asks for both - so the fallback is in hand
-     * exactly when the panel is, and neither is in the entry chunk.
-     */
-    pendingComponent: lazyRouteComponent(async () => ({
-      default: (await import("../../devices/panel")).DevicesPanelPending,
-    })),
+    pendingComponent: () => <FeedPendingSkeleton rows={4} />,
     staticData: { breadcrumb: <SettingsBreadcrumb navKey="devices" /> },
   });
 

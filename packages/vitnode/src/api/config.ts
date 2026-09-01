@@ -10,6 +10,7 @@ import type { VitNodeApiConfig } from "@/vitnode.config";
 
 import { createCacheClient } from "@/api/lib/cache-client";
 import { collectCronJobs } from "@/api/lib/cron";
+import { describeError } from "@/api/lib/error-details";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
 import { initRealtimePubSub } from "@/ws/registry";
@@ -115,15 +116,9 @@ export function VitNodeAPI({
 
   registerCronJobs(vitNodeApiConfig.dbProvider, collectCronJobs(plugins)).catch(
     (error: unknown) => {
-      // Drizzle wraps driver errors, keeping the actionable one in `cause`.
-      const cause =
-        error instanceof Error && error.cause instanceof Error
-          ? error.cause.message
-          : undefined;
-
       // eslint-disable-next-line no-console
       console.warn(
-        `\x1b[34m[VitNode]\x1b[0m \x1b[33mFailed to register cron jobs:\x1b[0m ${error}${cause ? `\n${cause}` : ""}`,
+        `\x1b[34m[VitNode]\x1b[0m \x1b[33mFailed to register cron jobs:\x1b[0m ${describeError(error)}`,
       );
     },
   );
@@ -133,7 +128,7 @@ export function VitNodeAPI({
       return error.getResponse();
     }
 
-    const errorMessage = error?.message ?? "Unknown error";
+    const errorMessage = describeError(error);
 
     try {
       const logger = c.get("log");

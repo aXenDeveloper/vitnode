@@ -285,6 +285,43 @@ describe("what a generated single app starts from", () => {
   });
 });
 
+describe("what a generated application shows during a slow navigation", () => {
+  const router = withoutComments(read(appTemplate, "root/src/router.tsx"));
+
+  it("imports the shared loader through the narrow package entry", () => {
+    expect(router).toContain(
+      'import { RoutePendingSpinner } from "@vitnode/core/tanstack/pending"',
+    );
+  });
+
+  it("hands it to the router as the default pending component", () => {
+    expect(router).toMatch(/defaultPendingComponent:\s*RoutePendingSpinner\b/);
+  });
+
+  it("declares how long a navigation may take before it appears", () => {
+    expect(router).toMatch(/defaultPendingMs:\s*150\b/);
+  });
+
+  it("keeps it up for at least 300ms once it is showing", () => {
+    expect(router).toMatch(/defaultPendingMinMs:\s*300\b/);
+  });
+
+  it("blocks on a stale reload, so a preloaded link still shows one", () => {
+    expect(router).toMatch(/defaultStaleReloadMode:\s*["']blocking["']/);
+  });
+
+  it("reaches it through no barrel a client entry would then have to download", () => {
+    const heavy = [
+      "@vitnode/core/tanstack/admin",
+      "@vitnode/core/tanstack/layout",
+      "@vitnode/core/tanstack/settings",
+      "@vitnode/core/content",
+    ];
+
+    expect(heavy.filter(entry => router.includes(`"${entry}"`))).toEqual([]);
+  });
+});
+
 describe("the generated plugin", () => {
   /**
    * A plugin declares its routes; it does not ship a directory of pages for

@@ -3,6 +3,7 @@ import type { AnyRouter } from "@tanstack/react-router";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { createVitNodeQueryClient } from "@vitnode/core/lib/query-client";
+import { RoutePendingSpinner } from "@vitnode/core/tanstack/pending";
 import {
   pluginRouteSpecs,
   withPluginRoutes,
@@ -171,6 +172,28 @@ const routeTree = withCoreRootRoutes(
  * `defaultPreloadStaleTime: 0` leaves caching to Query rather than having the
  * router keep a second copy of the same data with its own expiry.
  *
+ * `defaultStaleReloadMode: 'blocking'` is what makes a route's pending shape
+ * reachable at all once preloading is on. Router core's default is
+ * `'background'`, and a background reload never opens a pending window - but it
+ * still waits for the route's component chunk before it commits. So the common
+ * desktop path, hover a link and click it, took the one branch that renders
+ * nothing: the hover filled the loader, the click was therefore a background
+ * reload, and the chunk downloaded with the previous page still on screen and
+ * no skeleton in sight.
+ *
+ * It costs nothing here because a VitNode loader does not block on a warm cache:
+ * `ensureQueryData` with `revalidateIfStale` hands back the cached entry and
+ * refreshes behind it, so "blocking" describes a promise that resolves in a
+ * microtask. What changes is only that the router now marks the match pending
+ * while that happens, which is what `defaultPendingMs` is for.
+ *
+ * `defaultPendingMs: 150` is that threshold, and it is not zero for the same
+ * reason. At zero, every navigation opens a pending window, so
+ * `defaultPendingMinMs` holds a *fully cached* navigation behind a skeleton for
+ * 300ms - a page that could have been instant, made slow to look busy. At 150ms
+ * a cached navigation goes straight through with nothing shown and a slow one
+ * still gets its shape, in the content area and the breadcrumb together.
+ *
  * `rewrite` is what makes one route tree serve two public URL shapes: `/pl/...`
  * arrives, `/...` is matched, and every link the router builds gets the prefix
  * back. No route file mentions a locale, so nothing here has to be duplicated
@@ -187,8 +210,12 @@ export function getRouter() {
 
   const router = createTanStackRouter({
     context: { queryClient },
+    defaultPendingComponent: RoutePendingSpinner,
+    defaultPendingMs: 150,
+    defaultPendingMinMs: 300,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    defaultStaleReloadMode: "blocking",
     rewrite: createLocaleRewrite(() => holder.current),
     routeTree,
     scrollRestoration: true,

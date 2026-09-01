@@ -1,6 +1,6 @@
 "use client";
 
-import { useMatches } from "@tanstack/react-router";
+import { useMatches, useRouter } from "@tanstack/react-router";
 
 import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
@@ -8,6 +8,8 @@ import { BreadcrumbAdminContent } from "@/views/admin/layouts/breadcrumb/breadcr
 
 import { breadcrumbOf } from "../breadcrumb/model";
 import { RouterLink } from "../layout/router-link";
+import { useRouteNavigationPending } from "../pending/navigation-pending";
+import { BreadcrumbPendingSkeleton } from "../pending/shapes";
 import { useAdminNav } from "./nav";
 
 /**
@@ -35,9 +37,30 @@ import { useAdminNav } from "./nav";
  * Exposed separately from the component so the shell can tell an *absent* trail
  * from an empty one - it renders the header's separator only when there is
  * something to separate.
+ *
+ * ## Why it holds a shape rather than the destination's crumb
+ *
+ * A crumb is a route's `staticData`, but it is declared as an *element* so it
+ * may use hooks - a translated label, or one a dynamic route reads from its
+ * loader. That is exactly why the destination's cannot simply be drawn early:
+ * the data it would read is the data the navigation is still fetching. So the
+ * area holds a shape for as long as the content below it does, on the router's
+ * own `defaultPendingMs`, and the two change together.
+ *
+ * Only when there is a trail to replace. A shell whose current page declares no
+ * crumb shows nothing, and inventing a skeleton there would put a separator and
+ * two bars into a header that has neither before the navigation nor after it.
  */
-export const useAdminBreadcrumb = (): React.ReactNode =>
-  breadcrumbOf(useMatches());
+export const useAdminBreadcrumb = (): React.ReactNode => {
+  const breadcrumb = breadcrumbOf(useMatches());
+  const isNavigating = useRouteNavigationPending(
+    useRouter().options.defaultPendingMs ?? 0,
+  );
+
+  if (isNavigating && breadcrumb != null) return <BreadcrumbPendingSkeleton />;
+
+  return breadcrumb;
+};
 
 export const AdminBreadcrumb = ({
   labels,

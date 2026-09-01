@@ -95,6 +95,34 @@ the same chunk as the shell that renders it.
 Keep the *decisions* eager, though. A guard belongs in `beforeLoad`, where it
 runs before a byte of the page is fetched, and it is small enough not to matter.
 
+## The pending component is eager too
+
+One component escapes the "components are split" row above: the router's own
+`defaultPendingComponent`. It is a router *option*, set in `src/router.tsx`, so it
+is in the client entry with the rest of the routing table - the front page
+downloads it whether or not any navigation is ever slow.
+
+That is the right trade (a loading state that has to fetch a chunk is not a
+loading state), and it is why VitNode reaches it through a leaf entry point of its
+own:
+
+```tsx title="apps/web/src/router.tsx"
+import { RoutePendingSpinner } from '@vitnode/core/tanstack/pending'
+```
+
+`@vitnode/core/tanstack/pending` is markup over the `Skeleton` and `Spinner`
+primitives and `cn`, and nothing else - no layout barrel, no AdminCP module, no
+screen, no form library. Its only package dependencies are `clsx`,
+`tailwind-merge` and `lucide-react`, all three of which the client entry already
+downloads for the header. `packages/vitnode/src/tanstack/eager-graph.test.ts`
+pins that graph file by file, so the module cannot grow a dependency without a
+red test.
+
+Per-route shapes come from that same module, named directly rather than behind
+`lazyRouteComponent` - so they cost no extra bytes and no extra request, and a
+skeleton is never a chunk the browser has to fetch before it can show one. See
+[One shape per screen](/docs/dev/tanstack/data-loading#one-shape-per-screen).
+
 ## Breadcrumbs are elements
 
 `staticData.breadcrumb` is a rendered element, not a component reference, so it

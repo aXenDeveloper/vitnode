@@ -10,7 +10,6 @@ import type { EventsApiPlugin } from "./api/models/events";
 import type { SearchProviderApiPlugin } from "./api/models/search";
 import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
-import type { ProgressBarConfig } from "./components/progress-bar";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type {
@@ -30,7 +29,6 @@ export interface VitNodeConfig<
   i18n: VitNodeI18nConfig<AppLocales>;
   metadata: VitNodeMetadata;
   plugins: BuildPluginReturn[];
-  progressBar?: ProgressBarConfig;
   theme?: Omit<
     ThemeProviderProps,
     "attribute" | "children" | "disableTransitionOnChange" | "enableSystem"
