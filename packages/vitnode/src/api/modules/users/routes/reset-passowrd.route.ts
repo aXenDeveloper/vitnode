@@ -54,7 +54,14 @@ export const resetPasswordRoute = buildRoute({
       return RESPONSE_TEXT;
     }
 
-    const hashToken = new ForgotPasswordTokenModel().generateResetToken();
+    // Two values, deliberately: the raw token goes in the email and nowhere
+    // else, and only its digest is written down. A reset row used to hold the
+    // live token in plaintext, so anything that could read the table - a
+    // read-replica, a backup, a leaked dump, a stray log line - could reset
+    // every account on the install without knowing a single password.
+    const tokens = new ForgotPasswordTokenModel();
+    const resetToken = tokens.generateResetToken();
+    const hashToken = tokens.hashResetToken(resetToken);
 
     const [findLastRecord] = await c
       .get("db")
@@ -95,7 +102,7 @@ export const resetPasswordRoute = buildRoute({
 
     // Send email
     const resetUrlNative = new URL(
-      `login/reset-password?token=${hashToken}&userId=${findUser.id}`,
+      `login/reset-password?token=${encodeURIComponent(resetToken)}&userId=${findUser.id}`,
       CONFIG.web.href,
     );
 

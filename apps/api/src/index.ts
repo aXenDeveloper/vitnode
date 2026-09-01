@@ -4,6 +4,8 @@ import { serve, upgradeWebSocket } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { VitNodeAPI } from "@vitnode/core/api/config";
+import { storageStaticHeadersMiddleware } from "@vitnode/core/api/middlewares/storage-static.middleware";
+import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware";
 import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle";
 import { mkdirSync } from "node:fs";
 import { WebSocketServer } from "ws";
@@ -24,6 +26,10 @@ if (staticStorage) {
   mkdirSync(staticStorage.root, { recursive: true });
   app.get(
     staticStorage.mountPath,
+    // Stored files are served from this origin - the one the session cookie
+    // belongs to - so anything the browser would treat as a document has to be
+    // stopped from executing in it. See the middleware.
+    storageStaticHeadersMiddleware(),
     serveStatic({
       root: staticStorage.root,
       rewriteRequestPath: path =>
@@ -48,7 +54,14 @@ VitNodeAPI({
 
 const wss = new WebSocketServer({ noServer: true });
 
-app.get("/ws", upgradeWebSocket(handleVitNodeWebSocket()));
+// The handshake is a cookie-authenticated GET, which Hono's `csrf()` does not
+// cover and the same-origin policy does not apply to. Without this any site
+// could open a socket as a visiting user - see the middleware.
+app.get(
+  "/ws",
+  websocketOriginMiddleware({ origin: [webOrigin] }),
+  upgradeWebSocket(handleVitNodeWebSocket()),
+);
 
 serve(
   {

@@ -3,7 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
-import { PasswordModel } from "@/api/models/password";
+import { ForgotPasswordTokenModel, PasswordModel } from "@/api/models/password";
+import { revokeAllSessionsForUser } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 
@@ -49,6 +50,11 @@ export const changePasswordRoute = buildRoute({
   handler: async c => {
     const { password, userId, token } = c.req.valid("json");
 
+    // The column holds a digest, never the token itself - see the reset route.
+    // Matching on the digest is what lets the stored value be useless to anyone
+    // who reads the table.
+    const hashedToken = new ForgotPasswordTokenModel().hashResetToken(token);
+
     const [user] = await c
       .get("db")
       .select()
@@ -56,7 +62,7 @@ export const changePasswordRoute = buildRoute({
       .where(
         and(
           eq(core_users_forgot_password.userId, userId),
-          eq(core_users_forgot_password.token, token),
+          eq(core_users_forgot_password.token, hashedToken),
           gt(core_users_forgot_password.expiresAt, new Date()),
         ),
       )
@@ -78,6 +84,13 @@ export const changePasswordRoute = buildRoute({
         .delete(core_users_forgot_password)
         .where(eq(core_users_forgot_password.id, user.id)),
     ]);
+
+    // After the new password is in place, so a failure above cannot sign
+    // somebody out without having changed anything. Whoever reset this password
+    // is doing it because the old credential is not trusted any more, and every
+    // session opened with it is exactly as untrusted - including the attacker's,
+    // which would otherwise outlive the reset by up to ninety days.
+    await revokeAllSessionsForUser(c, userId);
 
     return c.text("Password changed", 201);
   },

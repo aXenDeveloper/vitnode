@@ -513,6 +513,7 @@ export class StorageModel {
       fileName: generateStorageFileName(
         file.name,
         processed.extension ?? undefined,
+        processed.mimeType,
       ),
     });
 

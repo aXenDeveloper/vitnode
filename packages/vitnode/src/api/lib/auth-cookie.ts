@@ -33,6 +33,14 @@ const authCookieOptions = (c: Context): CookieOptions => {
     domain: cookieDomain,
     httpOnly: true,
     path: "/",
+    // Stated rather than left to the browser. Chrome and Firefox default an
+    // omitted `SameSite` to `Lax`, but that is a default and not a rule: Safari
+    // and older engines have their own, and a cookie whose cross-site behaviour
+    // depends on which browser is reading it is one nobody can reason about.
+    // `Lax` and not `Strict` because the SSO round trip lands here as a
+    // top-level cross-site GET - `Strict` would drop the state cookie on the way
+    // back from the provider and break every social sign-in.
+    sameSite: "Lax",
     secure: cookieSecure,
   };
 };

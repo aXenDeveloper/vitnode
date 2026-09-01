@@ -8,7 +8,7 @@ import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 
 import {
-  assertCanAssignPrimaryRole,
+  assertCanAssignRoles,
   assertCanEditAdminTarget,
 } from "../lib/assert-edit-user-permission";
 
@@ -207,8 +207,16 @@ export const updateUserAdminRoute = buildRoute({
       }
     }
 
+    // Every role being attached, in one check, before any of them is written.
+    // Secondary roles carry the same weight as the primary one -
+    // `loadStaffPermissions` reads them all - so guarding only `body.roleId`
+    // left `secondaryRoleIds` as a way to hand out root without holding
+    // `can_edit_admin`.
+    if (roleIdsToValidate.length > 0) {
+      await assertCanAssignRoles(c, roleIdsToValidate);
+    }
+
     if (body.roleId !== undefined) {
-      await assertCanAssignPrimaryRole(c, body.roleId);
       values.roleId = body.roleId;
     }
 

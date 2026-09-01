@@ -7,6 +7,25 @@ export const INSECURE_DEFAULT_CRON_SECRET =
   "default-cron-secret-change-in-production";
 
 /**
+ * Every `CRON_SECRET` value that is published somewhere, and therefore is not a
+ * secret at all.
+ *
+ * More than one, because a value being *written down in this repository* is what
+ * makes it worthless - and the fallback above is not the only one that is. The
+ * scaffolded `.env.example` ships `your-secure-cron-secret-key`, which reads
+ * like a placeholder and works like a password, so an install that copied the
+ * file and never edited that line is exactly as open as one that set nothing.
+ *
+ * `cronAuthMiddleware` refuses production requests while any of these is in use.
+ */
+export const INSECURE_CRON_SECRETS: readonly string[] = [
+  INSECURE_DEFAULT_CRON_SECRET,
+  "your-secure-cron-secret-key",
+  "changeme",
+  "secret",
+];
+
+/**
  * The origin the page itself was served from, when there is one.
  *
  * VitNode mounts its API on the app's own origin - `https://example.com` serving

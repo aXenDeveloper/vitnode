@@ -9,10 +9,12 @@ import { HTTPException } from "hono/http-exception";
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
 import { createCacheClient } from "@/api/lib/cache-client";
+import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
 import { describeError } from "@/api/lib/error-details";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
+import { CONFIG } from "@/lib/config";
 import { initRealtimePubSub } from "@/ws/registry";
 
 import {
@@ -62,23 +64,38 @@ export function VitNodeAPI({
 
   const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
 
-  app.doc("/swagger/doc", {
-    openapi: "3.0.0",
-    info: {
-      version: CONFIG_PLUGIN.version,
-      title: "VitNode API",
-    },
-    tags: plugins.flatMap(
-      plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
-    ),
-  });
+  // The generated document names every route, parameter and response shape in
+  // the install, including the admin tree - a map of the attack surface, handed
+  // out unauthenticated. Published in development, where it is the point, and
+  // in production only when an install asks for it via `docs: { enabled: true }`.
+  const docsEnabled = vitNodeApiConfig.docs?.enabled ?? CONFIG.node_development;
+
+  if (docsEnabled) {
+    app.doc("/swagger/doc", {
+      openapi: "3.0.0",
+      info: {
+        version: CONFIG_PLUGIN.version,
+        title: "VitNode API",
+      },
+      tags: plugins.flatMap(
+        plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
+      ),
+    });
+  }
+
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
+  // Before the rate limiter, which keys its buckets on `ipAddress`. Resolving it
+  // later - as `globalMiddleware` used to - left every request in the
+  // deployment sharing one bucket named after `undefined`.
+  app.use("*", clientIpMiddleware(vitNodeApiConfig.trustProxy));
   app.use(
     "*",
     rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, redisClient),
   );
-  app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
+  if (docsEnabled) {
+    app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
+  }
   app.use(
     "*",
     globalMiddleware({
@@ -96,6 +113,7 @@ export function VitNodeAPI({
       storage: vitNodeApiConfig.storage,
       plugins,
       cacheClient: redisClient,
+      trustProxy: vitNodeApiConfig.trustProxy,
     }),
   );
   app.use(async (c, next) => {
