@@ -1,4 +1,9 @@
-import type { ColumnDataNumberConstraint, Placeholder, SQL } from "drizzle-orm";
+import type {
+  ColumnDataBigIntConstraint,
+  ColumnDataNumberConstraint,
+  Placeholder,
+  SQL,
+} from "drizzle-orm";
 import type {
   PgColumn,
   PgColumnBaseConfig,
@@ -28,12 +33,15 @@ import { HTTPException } from "hono/http-exception";
 import type { PaginationCursor } from "./pagination-cursor";
 
 import {
+  cursorIdentifierForColumn,
+  cursorIdentifierOf,
   cursorValueForColumn,
   cursorValueIsCanonicalText,
   cursorValueOf,
   decodePaginationCursor,
   encodePaginationCursor,
   isCursorSortableColumn,
+  isPaginationIdentifierColumn,
 } from "./pagination-cursor";
 
 /** Nobody may ask for more than this in one page, whatever they send. */
@@ -165,10 +173,14 @@ function buildCursorCondition({
   primary: PgColumn;
 }): SQL {
   const after = direction === "asc" ? gt : lt;
+  const identifier = sql`${sql.param(
+    cursorIdentifierForColumn(primary, cursor.id),
+    primary,
+  )}`;
 
   // The identifier is the whole tuple when the list is ordered by it, so there
   // is no second half to compare and no null block to worry about.
-  if (isPrimaryOrder) return after(primary, cursor.id);
+  if (isPrimaryOrder) return after(primary, identifier);
 
   const boundary = boundaryValue(column, cursor);
 
@@ -176,13 +188,13 @@ function buildCursorCondition({
     // NULLS LAST: a null cursor is inside the trailing block, and everything
     // that is not null is already behind us.
     if (cursor.value === null) {
-      return required(and(isNull(column), gt(primary, cursor.id)));
+      return required(and(isNull(column), gt(primary, identifier)));
     }
 
     return required(
       or(
         gt(column, boundary),
-        and(eq(column, boundary), gt(primary, cursor.id)),
+        and(eq(column, boundary), gt(primary, identifier)),
         isNull(column),
       ),
     );
@@ -192,12 +204,15 @@ function buildCursorCondition({
   // that block comes first and every non-null row follows it.
   if (cursor.value === null) {
     return required(
-      or(and(isNull(column), lt(primary, cursor.id)), isNotNull(column)),
+      or(and(isNull(column), lt(primary, identifier)), isNotNull(column)),
     );
   }
 
   return required(
-    or(lt(column, boundary), and(eq(column, boundary), lt(primary, cursor.id))),
+    or(
+      lt(column, boundary),
+      and(eq(column, boundary), lt(primary, identifier)),
+    ),
   );
 }
 
@@ -252,18 +267,24 @@ async function fetchTotalCount(
 }
 
 /**
- * A column that can carry the cursor: any numeric one.
+ * A stable row identifier: an integer, bigint or UUID column.
  *
- * Drizzle refines numeric column types (a `serial` is `number int32`, a
- * `doublePrecision` is `number double`), so the bound admits the whole
- * `number ...` family rather than the bare `number`. The data type is asserted
- * through the config - Drizzle leaves `PgColumn`'s first argument as `any` on
- * built columns, exactly as its own `AnyPgColumn` does.
+ * Drizzle refines these types (`serial` is `number int32`, bigint is
+ * `bigint int64`, UUID is `string uuid`), so the bound includes their refined
+ * forms. The first generic stays broad because built `PgColumn`s expose it that
+ * way, as Drizzle's own `AnyPgColumn` does.
  */
+type PaginationIdentifierDataType =
+  | "bigint"
+  | "number"
+  | "string uuid"
+  | `bigint ${ColumnDataBigIntConstraint}`
+  | `number ${ColumnDataNumberConstraint}`;
+
 export type PaginationCursorColumn = PgColumn<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   any,
-  PgColumnBaseConfig<"number" | `number ${ColumnDataNumberConstraint}`>
+  PgColumnBaseConfig<PaginationIdentifierDataType>
 >;
 
 export async function withPagination<
@@ -332,6 +353,12 @@ export async function withPagination<
   const orderColumn = table[orderName] as PgColumn;
   const isPrimaryOrder = orderName === primaryCursor.name;
 
+  if (!isPaginationIdentifierColumn(primary)) {
+    throw new HTTPException(400, {
+      message: `The "${primaryCursor.name}" primary cursor must be an integer, bigint or UUID column.`,
+    });
+  }
+
   // A column with no total order Postgres and JavaScript agree on cannot be
   // paged at all, so it is refused rather than served for one page and then
   // quietly wrong on the next.
@@ -359,7 +386,7 @@ export async function withPagination<
       ? undefined
       : decodePaginationCursor(rawCursor, {
           column: orderName,
-          primaryKey: primaryCursor.name,
+          primary,
         });
 
   const searchWhere = buildSearchWhere(search, params.query.search);
@@ -411,6 +438,7 @@ export async function withPagination<
     edges: finalEdges,
     orderColumn,
     orderName,
+    primaryColumn: primary,
     primaryName: primaryCursor.name,
   });
 
@@ -469,11 +497,13 @@ function cursorsFrom({
   edges,
   orderColumn,
   orderName,
+  primaryColumn,
   primaryName,
 }: {
   edges: readonly Record<string, unknown>[];
   orderColumn: PgColumn;
   orderName: string;
+  primaryColumn: PgColumn;
   primaryName: string;
 }): { endCursor: null | string; startCursor: null | string } {
   const first = edges[0];
@@ -505,7 +535,7 @@ function cursorsFrom({
   const mint = (row: Record<string, unknown>): string =>
     encodePaginationCursor({
       column: orderName,
-      id: Number(row[primaryName]),
+      id: cursorIdentifierOf(primaryColumn, row[primaryName]),
       value: cursorValueOf(orderColumn, valueOf(row)),
     });
 

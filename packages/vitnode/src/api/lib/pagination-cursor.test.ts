@@ -5,6 +5,7 @@ import {
   text,
   time,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
 // @vitest-environment node
 import { HTTPException } from "hono/http-exception";
@@ -12,13 +13,18 @@ import { describe, expect, it } from "vitest";
 
 import { core_users } from "@/database/users";
 
+import type { PaginationCursorColumn } from "./with-pagination";
+
 import {
+  cursorIdentifierForColumn,
+  cursorIdentifierOf,
   cursorValueForColumn,
   cursorValueIsCanonicalText,
   cursorValueOf,
   decodePaginationCursor,
   encodePaginationCursor,
   isCursorSortableColumn,
+  isPaginationIdentifierColumn,
 } from "./pagination-cursor";
 
 const probes = camelCase.table("cursor_probes", {
@@ -28,7 +34,10 @@ const probes = camelCase.table("cursor_probes", {
   day: date(),
   moment: timestamp(),
   tags: text().array("[]"),
+  uuid: uuid(),
 });
+
+const UUID_ID = "0198f6f7-d4a2-7ce1-a2ee-4f5f1f2f3a4b";
 
 const statusOf = (error: unknown): number =>
   error instanceof HTTPException ? error.status : 0;
@@ -44,7 +53,7 @@ describe("encoding", () => {
     expect(
       decodePaginationCursor(encodePaginationCursor(cursor), {
         column: "updatedAt",
-        primaryKey: "id",
+        primary: core_users.id,
       }),
     ).toEqual(cursor);
   });
@@ -66,7 +75,7 @@ describe("encoding", () => {
     expect(
       decodePaginationCursor(encodePaginationCursor(cursor), {
         column: "publishedAt",
-        primaryKey: "id",
+        primary: core_users.id,
       }),
     ).toEqual(cursor);
   });
@@ -81,15 +90,45 @@ describe("encoding", () => {
     expect(
       decodePaginationCursor(encodePaginationCursor(cursor), {
         column: "name",
-        primaryKey: "id",
+        primary: core_users.id,
       }).value,
     ).toEqual(value);
+  });
+
+  it("round-trips a bigint order value with a UUID tiebreaker", () => {
+    const cursor = {
+      column: "big",
+      id: UUID_ID,
+      value: "9007199254740993",
+    };
+
+    expect(
+      decodePaginationCursor(encodePaginationCursor(cursor), {
+        column: "big",
+        primary: probes.uuid,
+      }),
+    ).toEqual(cursor);
+  });
+
+  it("round-trips a bigint identifier without losing precision", () => {
+    const cursor = {
+      column: "big",
+      id: "9007199254740993",
+      value: "9007199254740993",
+    };
+
+    expect(
+      decodePaginationCursor(encodePaginationCursor(cursor), {
+        column: "big",
+        primary: probes.big,
+      }),
+    ).toEqual(cursor);
   });
 });
 
 describe("decoding refuses what it cannot trust", () => {
   const decode = (raw: string, column = "updatedAt") =>
-    decodePaginationCursor(raw, { column, primaryKey: "id" });
+    decodePaginationCursor(raw, { column, primary: core_users.id });
 
   it.each([
     ["garbage", "not-a-cursor!!"],
@@ -149,14 +188,66 @@ describe("decoding refuses what it cannot trust", () => {
 describe("legacy numeric cursors", () => {
   it("still works when the list is ordered by its identifier", () => {
     expect(
-      decodePaginationCursor("42", { column: "id", primaryKey: "id" }),
+      decodePaginationCursor("42", { column: "id", primary: core_users.id }),
     ).toEqual({ column: "id", id: 42, value: 42 });
   });
 
   it("is refused for any other ordering rather than guessed at", () => {
     expect(() =>
-      decodePaginationCursor("42", { column: "updatedAt", primaryKey: "id" }),
+      decodePaginationCursor("42", {
+        column: "updatedAt",
+        primary: core_users.id,
+      }),
     ).toThrow(/cannot be used with the "updatedAt" ordering/);
+  });
+});
+
+describe("cursor identifiers", () => {
+  it("accepts integer, bigint and UUID columns", () => {
+    const columns: PaginationCursorColumn[] = [
+      core_users.id,
+      probes.big,
+      probes.uuid,
+    ];
+
+    expect(columns.every(isPaginationIdentifierColumn)).toBe(true);
+  });
+
+  it("serializes and restores every supported identifier type", () => {
+    expect(cursorIdentifierOf(core_users.id, 42)).toBe(42);
+    expect(cursorIdentifierForColumn(core_users.id, 42)).toBe(42);
+
+    expect(cursorIdentifierOf(probes.big, 9007199254740993n)).toBe(
+      "9007199254740993",
+    );
+    expect(cursorIdentifierForColumn(probes.big, "9007199254740993")).toBe(
+      9007199254740993n,
+    );
+
+    expect(cursorIdentifierOf(probes.uuid, UUID_ID)).toBe(UUID_ID);
+    expect(cursorIdentifierForColumn(probes.uuid, UUID_ID)).toBe(UUID_ID);
+  });
+
+  it.each([
+    ["a bigint sent as a number", probes.big, 42],
+    ["a zero bigint", probes.big, "0"],
+    ["a malformed bigint", probes.big, "42n"],
+    ["a bigint outside PostgreSQL's range", probes.big, "9223372036854775808"],
+    ["a UUID sent as a number", probes.uuid, 42],
+    ["a malformed UUID", probes.uuid, "not-a-uuid"],
+  ])("refuses %s", (_why, column, value) => {
+    expect(() => cursorIdentifierForColumn(column, value)).toThrow(
+      HTTPException,
+    );
+  });
+
+  it("does not treat a legacy numeric cursor as a UUID", () => {
+    expect(() =>
+      decodePaginationCursor("42", {
+        column: "uuid",
+        primary: probes.uuid,
+      }),
+    ).toThrow(HTTPException);
   });
 });
 
@@ -176,6 +267,13 @@ describe("column values", () => {
   it("keeps a string a string", () => {
     expect(cursorValueOf(core_users.name, "Ada")).toBe("Ada");
     expect(cursorValueForColumn(core_users.name, "Ada")).toBe("Ada");
+  });
+
+  it("validates a UUID before it can reach Postgres", () => {
+    expect(cursorValueForColumn(probes.uuid, UUID_ID)).toBe(UUID_ID);
+    expect(() => cursorValueForColumn(probes.uuid, "not-a-uuid")).toThrow(
+      HTTPException,
+    );
   });
 
   it("keeps a number a number", () => {
@@ -273,6 +371,7 @@ describe("a tampered cursor value is refused, never coerced", () => {
       ["a number", 12],
       ["a boolean", false],
       ["whitespace", " 12 "],
+      ["outside PostgreSQL's range", "9223372036854775808"],
     ])("refuses %s", (_why, value) => {
       refuses(probes.big, value);
     });
