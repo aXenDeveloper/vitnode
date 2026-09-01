@@ -13,6 +13,7 @@ VitNode uses cursor-based pagination for optimal performance with large datasets
 
 ```ts
 import z from "zod";
+import { getTableColumns } from "drizzle-orm";
 import { buildRoute } from "@/api/lib/route";
 import {
   withPagination,
@@ -66,10 +67,10 @@ export const getCronsRoute = buildRoute({
       },
       c,
       primaryCursor: core_cron.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
-          .select()
+          .select({ ...getTableColumns(core_cron), ...cursorSelection })
           .from(core_cron)
           .where(where)
           .orderBy(orderBy)
@@ -93,10 +94,38 @@ The `withPagination` function accepts the following parameters:
 | Parameter       | Type     | Description                                  |
 | --------------- | -------- | -------------------------------------------- |
 | `params`        | Object   | Contains the query parameters for pagination |
-| `primaryCursor` | Column   | The primary key column used for pagination   |
+| `primaryCursor` | Column   | Integer, bigint or UUID row identifier       |
 | `query`         | Function | The database query function                  |
 | `table`         | Table    | The database table being queried             |
 | `orderBy`       | Object   | The column and order to sort by              |
+
+### Integer, bigint and UUID identifiers
+
+`primaryCursor` accepts integer, bigint and UUID columns. Bigints use decimal
+strings inside the opaque cursor, so values above JavaScript's safe-integer
+limit keep their precision. UUIDs stay strings and are validated before they
+reach PostgreSQL.
+
+The order column and identifier can use different types. For example, a bigint
+order column can use a UUID primary key as its stable tiebreaker:
+
+```ts
+import { bigint, pgTable, uuid } from "drizzle-orm/pg-core";
+
+const events = pgTable("events", {
+  id: uuid().defaultRandom().primaryKey(),
+  sequence: bigint({ mode: "bigint" }).notNull(),
+});
+
+await withPagination({
+  // ...
+  primaryCursor: events.id,
+  orderBy: { column: events.sequence, order: "asc" },
+});
+```
+
+Keep the cursor opaque on the client and return it unchanged in the next
+request.
 
 ### Zod Schemas
 

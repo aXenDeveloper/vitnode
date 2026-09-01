@@ -31,11 +31,14 @@ import { HTTPException } from "hono/http-exception";
 /** What an order column's value can be, once it has been through JSON. */
 export type PaginationCursorValue = boolean | null | number | string;
 
+/** Integer, bigint and UUID identifiers all have a JSON-safe wire form. */
+export type PaginationCursorIdentifier = number | string;
+
 export interface PaginationCursor {
   /** The order column this cursor was minted for. */
   column: string;
   /** The row's primary key - the tiebreaker half of the ordered tuple. */
-  id: number;
+  id: PaginationCursorIdentifier;
   /** The order column's value on that row. `null` is a real position. */
   value: PaginationCursorValue;
 }
@@ -48,7 +51,8 @@ export interface PaginationCursor {
  * answering it in one place is what stops the second answer being looser than
  * the first.
  */
-type CursorKind = "bigint" | "boolean" | "number" | "string" | "temporal";
+type CursorKind =
+  "bigint" | "boolean" | "number" | "string" | "temporal" | "uuid";
 
 const KIND_BY_DATA_TYPE: Record<string, CursorKind> = {
   bigint: "bigint",
@@ -69,6 +73,9 @@ const KIND_BY_DATA_TYPE: Record<string, CursorKind> = {
  */
 const baseDataTypeOf = (column: PgColumn): string =>
   column.dataType.split(" ")[0];
+
+const isUuidColumn = (column: PgColumn): boolean =>
+  column.getSQLType().toLowerCase() === "uuid";
 
 /**
  * Whether the column holds an array.
@@ -126,6 +133,7 @@ export const isCursorSortableColumn = (column: PgColumn): boolean =>
 
 const kindOf = (column: PgColumn): CursorKind => {
   if (!isArrayColumn(column) && temporalTypeOf(column)) return "temporal";
+  if (!isArrayColumn(column) && isUuidColumn(column)) return "uuid";
 
   const kind = isArrayColumn(column)
     ? undefined
@@ -251,6 +259,18 @@ const isRealTemporal = (
 };
 
 const DECIMAL_INTEGER = /^-?\d+$/;
+const POSITIVE_DECIMAL_INTEGER = /^[1-9]\d*$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PG_BIGINT_MIN = -9223372036854775808n;
+const PG_BIGINT_MAX = 9223372036854775807n;
+
+const postgresBigint = (value: string): bigint | undefined => {
+  const parsed = BigInt(value);
+
+  return parsed >= PG_BIGINT_MIN && parsed <= PG_BIGINT_MAX
+    ? parsed
+    : undefined;
+};
 
 const pad = (value: number, width = 2): string =>
   String(value).padStart(width, "0");
@@ -337,6 +357,10 @@ export const cursorValueOf = (
       if (typeof value === "string") return value;
       break;
     }
+    case "uuid": {
+      if (typeof value === "string" && UUID.test(value)) return value;
+      break;
+    }
     default: {
       if (typeof value === "string") return value;
       break;
@@ -384,7 +408,10 @@ export const cursorValueForColumn = (
         throw badRequest(INVALID_CURSOR);
       }
 
-      return BigInt(value);
+      const parsed = postgresBigint(value);
+      if (parsed === undefined) throw badRequest(INVALID_CURSOR);
+
+      return parsed;
     }
     case "boolean": {
       if (typeof value !== "boolean") throw badRequest(INVALID_CURSOR);
@@ -412,6 +439,13 @@ export const cursorValueForColumn = (
       // Postgres does the parsing - at the precision it stored.
       return value;
     }
+    case "uuid": {
+      if (typeof value !== "string" || !UUID.test(value)) {
+        throw badRequest(INVALID_CURSOR);
+      }
+
+      return value;
+    }
     default: {
       if (typeof value !== "string") throw badRequest(INVALID_CURSOR);
 
@@ -431,6 +465,78 @@ export const cursorValueForColumn = (
  */
 export const cursorValueIsCanonicalText = (column: PgColumn): boolean =>
   kindOf(column) === "temporal";
+
+type IdentifierKind = "bigint" | "number" | "uuid";
+
+const identifierKindOf = (column: PgColumn): IdentifierKind | undefined => {
+  if (isArrayColumn(column)) return undefined;
+  if (isUuidColumn(column)) return "uuid";
+
+  const baseDataType = baseDataTypeOf(column);
+  if (baseDataType === "bigint" || baseDataType === "number") {
+    return baseDataType;
+  }
+
+  return undefined;
+};
+
+export const isPaginationIdentifierColumn = (column: PgColumn): boolean =>
+  identifierKindOf(column) !== undefined;
+
+export const cursorIdentifierOf = (
+  column: PgColumn,
+  value: unknown,
+): PaginationCursorIdentifier => {
+  switch (identifierKindOf(column)) {
+    case "bigint":
+      if (typeof value === "bigint" && value > 0n) return value.toString();
+      break;
+    case "number":
+      if (
+        typeof value === "number" &&
+        Number.isSafeInteger(value) &&
+        value > 0
+      ) {
+        return value;
+      }
+      break;
+    case "uuid":
+      if (typeof value === "string" && UUID.test(value)) return value;
+      break;
+  }
+
+  throw new Error(
+    `Cannot build a pagination cursor from the identifier on "${column.name}".`,
+  );
+};
+
+export const cursorIdentifierForColumn = (
+  column: PgColumn,
+  value: PaginationCursorIdentifier,
+): bigint | number | string => {
+  switch (identifierKindOf(column)) {
+    case "bigint":
+      if (typeof value === "string" && POSITIVE_DECIMAL_INTEGER.test(value)) {
+        const parsed = postgresBigint(value);
+        if (parsed !== undefined) return parsed;
+      }
+      break;
+    case "number":
+      if (
+        typeof value === "number" &&
+        Number.isSafeInteger(value) &&
+        value > 0
+      ) {
+        return value;
+      }
+      break;
+    case "uuid":
+      if (typeof value === "string" && UUID.test(value)) return value;
+      break;
+  }
+
+  throw badRequest(INVALID_CURSOR);
+};
 
 export const encodePaginationCursor = (cursor: PaginationCursor): string =>
   Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
@@ -464,18 +570,19 @@ const isCursorValue = (value: unknown): value is PaginationCursorValue =>
  */
 export const decodePaginationCursor = (
   raw: string,
-  { column, primaryKey }: { column: string; primaryKey: string },
+  { column, primary }: { column: string; primary: PgColumn },
 ): PaginationCursor => {
   const trimmed = raw.trim();
   if (trimmed === "") throw badRequest(INVALID_CURSOR);
 
   if (LEGACY_CURSOR.test(trimmed)) {
-    if (column !== primaryKey) {
+    if (column !== primary.name) {
       throw badRequest(
         `This cursor cannot be used with the "${column}" ordering. Start from the first page.`,
       );
     }
     const id = Number(trimmed);
+    cursorIdentifierForColumn(primary, id);
 
     return { column, id, value: id };
   }
@@ -497,13 +604,13 @@ export const decodePaginationCursor = (
   const id = candidate.id;
   if (
     typeof candidate.column !== "string" ||
-    typeof id !== "number" ||
-    !Number.isSafeInteger(id) ||
-    id <= 0 ||
+    (typeof id !== "number" && typeof id !== "string") ||
     !isCursorValue(candidate.value)
   ) {
     throw badRequest(INVALID_CURSOR);
   }
+
+  cursorIdentifierForColumn(primary, id);
 
   if (candidate.column !== column) {
     throw badRequest(
