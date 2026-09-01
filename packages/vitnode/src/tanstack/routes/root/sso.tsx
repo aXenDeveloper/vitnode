@@ -4,6 +4,7 @@ import type { CoreRootRouteFactory } from "./types";
 
 import { normalizeSsoCallbackSearch } from "../../auth/route-search";
 import { loadSsoCallbackRoute } from "../../auth/sso-route";
+import { AuthPendingSkeleton } from "../../pending";
 import { routeContext } from "../types";
 
 /**
@@ -32,6 +33,7 @@ export const ssoCallbackRoute: CoreRootRouteFactory = ({ parentRoute }) => {
     loader: async ({ context }) =>
       await loadSsoCallbackRoute(routeContext(context)),
     path: "/login/sso/$providerId",
+    pendingComponent: AuthPendingSkeleton,
   });
 
   route.update({

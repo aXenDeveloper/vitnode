@@ -20,6 +20,7 @@ import {
   normalizeStaffRouteSearch,
   staffRouteParams,
 } from "../../admin/staff/route-search";
+import { FormPendingSkeleton, TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -81,6 +82,7 @@ const staffListRoute =
       head: ({ loaderData }) => pageHead({ ...loaderData }),
       path,
       validateSearch: normalizeStaffRouteSearch,
+      pendingComponent: TablePendingSkeleton,
       /**
        * A component rather than `<AdminBreadcrumb segments={...}>`, because two
        * of its crumbs are not in the sidebar under the spellings the page uses:
@@ -161,6 +163,7 @@ const staffCreateRoute =
         }),
       head: ({ loaderData }) => pageHead({ ...loaderData }),
       path,
+      pendingComponent: FormPendingSkeleton,
       staticData: {
         breadcrumb: <AdminStaffCreateBreadcrumbContent type={type} />,
       },
@@ -221,6 +224,7 @@ const staffEditRoute =
         }),
       head: ({ loaderData }) => pageHead({ ...loaderData }),
       path,
+      pendingComponent: FormPendingSkeleton,
       staticData: {
         breadcrumb: <AdminStaffEditBreadcrumbContent type={type} />,
       },

@@ -73,6 +73,247 @@ the cached rows immediately and refreshes them behind the scenes.
   route it calls.
 </Callout>
 
+## What the visitor sees while a loader runs
+
+A loader that `await`s means the destination component **has not mounted yet**.
+So a skeleton written inside that component cannot help: the code that would
+render it is not running. Without a pending state the router keeps the page the
+visitor came from on screen, the URL and the active nav item change instantly,
+and for a second or so it looks like the click did nothing.
+
+The router owns that gap, and VitNode configures it once:
+
+```tsx title="apps/web/src/router.tsx"
+import { RoutePendingSpinner } from '@vitnode/core/tanstack/pending'
+
+const router = createTanStackRouter({
+  context: { queryClient },
+  defaultPendingComponent: RoutePendingSpinner,
+  defaultPendingMinMs: 300,
+  defaultPendingMs: 150,
+  defaultPreload: 'intent',
+  defaultPreloadStaleTime: 0,
+  defaultStaleReloadMode: 'blocking',
+  routeTree,
+})
+```
+
+| Option                              | What it does                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `defaultPendingComponent`           | Rendered in place of a match whose loader has not resolved               |
+| `defaultPendingMs: 150`             | How long a navigation may take before that happens                       |
+| `defaultPendingMinMs: 300`          | How long it stays once it is up, however fast the loader then finishes   |
+| `defaultStaleReloadMode: 'blocking'` | Whether a *stale but cached* match is allowed to be pending at all       |
+
+The default is a centred `Spinner` - the same one buttons use, so a route with no
+opinion of its own shows a small, neutral "working on it" rather than a
+page-shaped guess that may be wrong. Routes that *do* know their shape say so;
+see below.
+
+Only the *pending match* is replaced. Its parents have already resolved, so the
+site header, the breadcrumb and the AdminCP sidebar stay mounted and keep their
+state - `Discover → Search` swaps the feed, not the page.
+
+<Callout type="warn" title="Why the threshold is not zero">
+  `defaultPendingMs` is the "was that even slow?" threshold and
+  `defaultPendingMinMs` is the anti-flicker floor - once the loader is up, it is
+  up long enough to read as loading rather than as a glitch.
+
+  Zero looks like the keen setting and is the wrong one: it opens a pending
+  window on *every* navigation, so the floor applies to all of them and a cached
+  read that resolves in a microtask is held behind a skeleton for 300ms - a page
+  that could have been instant, made slow in order to look busy. At 150ms a
+  cached navigation goes straight through with nothing shown, and a slow one
+  still gets its shape - in the content area and the breadcrumb together.
+</Callout>
+
+<Callout type="warn" title="`blocking` is not about blocking">
+  Router core's default is `'background'`, and it decides on one question: was
+  this match already a success? A hover under `defaultPreload: 'intent'` makes it
+  one, so the click that follows counts as a *background* reload - and a
+  background reload never opens a pending window, even though the router still
+  waits for the route's component chunk before it commits. Rest on a link, click
+  it, and the chunk downloads with the previous page on screen and no skeleton
+  at all.
+
+  `'blocking'` costs nothing to buy that back, because a VitNode loader does not
+  block on a warm cache: `ensureQueryData` with `revalidateIfStale` hands back
+  the cached entry and refreshes behind it, so the promise settles in a
+  microtask either way. What the mode changes is only whether the router is
+  willing to say a navigation is happening.
+</Callout>
+
+### Cold navigation vs. background revalidation
+
+Two different states, and the loader only has to cover the first:
+
+- **Cold.** Nothing is cached, so `ensureQueryData` has to go to Hono. The match
+  is pending and the loader takes the outlet.
+- **Stale but cached.** `ensureQueryData` hands back the cached entry
+  immediately, so the loader resolves in a microtask.
+  `revalidateIfStale: true` then refreshes in the background, under content that
+  never went away - a background refetch never replaces a page with a skeleton.
+
+That is why the loaders keep their `await`. Moving the first fetch into an effect
+would trade a brief pending state for an empty page on every first paint, SSR
+included - the router pending state asks for no change at all to the data flow.
+
+### One shape per screen
+
+A single generic skeleton on every route is worse than none: a feed morphing into
+a data table reads as a broken page. So `defaultPendingComponent` is only the
+fallback, and every core route names the shape of *its own* content next to its
+`path`:
+
+```tsx title="packages/vitnode/src/tanstack/routes/main/discovery.tsx"
+import { FeedPendingSkeleton } from "../../pending";
+
+const route = createRoute({
+  getParentRoute: () => parentRoute,
+  loader: async ({ context }) => await loadDiscoverRoute(routeContext(context)),
+  head: ({ loaderData }) => pageHead({ ...loaderData }),
+  path: "/discover",
+  pendingComponent: FeedPendingSkeleton,
+});
+```
+
+`@vitnode/core/tanstack/pending` ships the shapes VitNode's own screens are built
+from - all of them the same `Skeleton` primitive, the same container and the same
+loading semantics, arranged differently:
+
+| Shape                  | Looks like                              | Used by                                           |
+| ---------------------- | --------------------------------------- | ------------------------------------------------- |
+| `RoutePendingSpinner`  | A centred spinner                       | the router's default - shells, docs, plugin pages |
+| `RoutePendingSkeleton` | Heading and paragraph blocks            | prose pages that want more than a spinner         |
+| `FeedPendingSkeleton`  | Timeline cards with an avatar           | `/discover`, `/search`, `/settings/devices`       |
+| `BreadcrumbPendingSkeleton` | Two short bars and a separator     | both shells' breadcrumb areas, automatically      |
+| `TablePendingSkeleton` | Toolbar, table head, rows, pagination   | AdminCP lists, `/files`                           |
+| `FormPendingSkeleton`  | Labelled fields in a card, with actions | detail and create screens, `/settings`            |
+| `CardsPendingSkeleton` | Responsive card grid                    | `/admin/core`, `/admin/core/system/integrations`  |
+| `AuthPendingSkeleton`  | One centred card                        | `/login`, `/register`, `/admin`                   |
+
+Each takes `className`, `rows`, `label` and `withDescription`, so a screen that
+is close to a shape can tune it rather than draw a seventh one:
+
+```tsx
+pendingComponent: () => <TablePendingSkeleton className="container mx-auto" />,
+```
+
+A route file in your own application says exactly the same thing:
+
+```tsx title="apps/web/src/routes/_admin/admin.core.index.tsx"
+import { CardsPendingSkeleton } from '@vitnode/core/tanstack/pending'
+
+export const Route = createFileRoute('/_admin/admin/core/')({
+  loader: async ({ context }) => await loadAdminDashboardRoute(context),
+  component: AdminDashboardRoute,
+  pendingComponent: CardsPendingSkeleton,
+})
+```
+
+<Callout type="warn" title="A pending component is never lazy">
+  `component`, `errorComponent` and `notFoundComponent` go behind
+  `lazyRouteComponent`. `pendingComponent` does not, and the reason is the whole
+  point of it: a loading state that has to fetch a chunk before it can appear is
+  not a loading state. Naming a shape costs nothing either - the module is
+  already in the client entry as the router's `defaultPendingComponent`, so every
+  route referencing it shares that one copy.
+  `packages/vitnode/src/tanstack/eager-graph.test.ts` enforces both halves.
+</Callout>
+
+If a screen really is like nothing else, write a shape for it *in the pending
+module* rather than beside the screen - a skeleton that lives next to its page
+drags that page's imports along with it.
+
+### The gap a pending shape cannot cover
+
+A `pendingComponent` replaces **one match**. Router core will not replace a
+*retained* one - a parent whose match survives the navigation, like the shell you
+are already inside - and that is the right call: swapping the AdminCP sidebar for
+a skeleton because you clicked a link inside it would be worse than the wait.
+
+The cost is a blind spot, and it is bigger than it sounds. A route's
+`beforeLoad` runs **before** any pending window opens, and the router runs every
+matched route's `beforeLoad` from the top of the branch on every navigation. So
+when a retained shell guards itself with an `await`, the whole of that await is
+silent: the URL changes, the active nav item moves, and the page you came from
+sits there looking like the click missed.
+
+VitNode has exactly that shape in two places:
+
+| Shell            | Guards with                           | Would be silent for                 |
+| ---------------- | ------------------------------------- | ----------------------------------- |
+| `_admin`         | the admin access read, `staleTime: 0` | every AdminCP navigation            |
+| `_authenticated` | the session read, `staleTime: 30_000` | the first navigation after 30s idle |
+
+The admin one is deliberate - entering an AdminCP screen asks the API whether you
+may, every time, and that is the revocation guarantee - so the answer is not to
+make the guard lazier. It is to say something while it runs.
+
+### `GuardedOutlet`, for the shells that guard
+
+Both shells render their `<Outlet />` through `GuardedOutlet`, which draws the
+destination's own pending shape for exactly as long as the guard takes:
+
+```tsx title="packages/vitnode/src/tanstack/routes/main/index.tsx"
+import { GuardedOutlet } from '@vitnode/core/tanstack/pending'
+
+createRoute({
+  beforeLoad: async ({ context }) => ({
+    auth: await ensureAuthState(context.queryClient),
+  }),
+  component: GuardedOutlet,
+})
+```
+
+The AdminCP gets it from `AdminShellContent`, so an application that renders the
+shell has it already and there is nothing to wire.
+
+It reads one thing to decide *whether* - `isFetching === 'beforeLoad'` on its
+own match, which is the router's own word for "this route's guard is running
+right now" - and it looks the shape up the same way the router would: the
+destination's `pendingComponent`, or the nearest route above it that has one, or
+`defaultPendingComponent`. On `defaultPendingMs`, too, so a guard that answers
+inside the threshold still flashes nothing.
+
+It reads a *different* thing to decide when to stop, and that is the part worth
+stating. Not the guard finishing - `status === 'idle'`, the end of the whole
+navigation. Dropping the shape when the guard resolves looks right and is not:
+the router opens its own pending window one transition later, so between the two
+there is a frame or several of the page you were leaving, and what you see is
+the skeleton twice with the old screen flickering between them. Holding until
+the navigation lands makes it one continuous stretch, and it costs nothing to
+hold - the router would be rendering the same component for the rest of it
+anyway.
+
+`guard-pending.test.tsx` pins both ends: its first test asserts the blind spot is
+real by taking the wrapper away, and its last walks the ticks after the guard
+resolves asserting the shape is still up and the previous screen never returns.
+
+<Callout title="Not a second guard">
+  `GuardedOutlet` decides nothing and blocks nobody. The `beforeLoad` above it
+  is still the only thing that admits anybody, still runs on every navigation,
+  and still reads at `staleTime: 0` in the AdminCP's case. All this component
+  does is refuse to leave the previous screen on display while that happens.
+</Callout>
+
+### The breadcrumb area goes with it
+
+The trail is chrome the shell renders, not a match the router can replace, so
+during a navigation it sat there naming the page you had already left. Both
+shells now hand it `BreadcrumbPendingSkeleton` for the same window the content
+below it uses - the router's own `defaultPendingMs` - so the two change
+together.
+
+Not the destination's actual crumb, tempting as that is: `staticData.breadcrumb`
+is declared as an *element* precisely so a crumb may use hooks - a translated
+label, or one a dynamic route reads from its loader - and the data it would read
+is the data the navigation is still fetching.
+
+And only when there is a trail to replace. A page that declares no crumb shows
+nothing while it loads either; inventing a skeleton there would put a separator
+and two bars into a header that has neither before the navigation nor after it.
+
 ## Next
 
 <Cards>

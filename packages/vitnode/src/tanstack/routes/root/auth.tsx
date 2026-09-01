@@ -25,6 +25,7 @@ import { loadRegisterRoute } from "../../auth/register-route";
 import { normalizeLoginSearch } from "../../auth/route-search";
 import { ensureAuthState } from "../../auth/session-query";
 import { canAccessGuestRoute } from "../../auth/state";
+import { AuthPendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -95,6 +96,7 @@ const loginRoute: CoreRootRouteFactory = ({
     loader: async ({ context }) => await loadLoginRoute(routeContext(context)),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/login",
+    pendingComponent: AuthPendingSkeleton,
   });
 
   route.update({
@@ -164,6 +166,7 @@ const registerRoute: CoreRootRouteFactory = ({
       await loadRegisterRoute(routeContext(context)),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/register",
+    pendingComponent: AuthPendingSkeleton,
   });
 
   route.update({
@@ -257,6 +260,7 @@ const passwordResetRoute: CoreRootRouteFactory = ({
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/login/reset-password",
+    pendingComponent: AuthPendingSkeleton,
     /**
      * Code-split like the screen it belongs to: the router preloads a
      * `notFoundComponent` only once a route has actually answered `notFound()`,

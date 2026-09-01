@@ -18,6 +18,7 @@ import { SidebarAdminContent } from "@/views/admin/layouts/sidebar/sidebar-conte
 
 import { RouteMessages } from "../i18n/route-messages";
 import { RouterLink } from "../layout/router-link";
+import { RouteGuardPending } from "../pending/guard-pending";
 import { useAdminBreadcrumb } from "./breadcrumb";
 import { adminShellNamespaces } from "./intl";
 import { AdminNavProvider, useAdminNav } from "./nav";
@@ -138,7 +139,7 @@ export const AdminShellContent = ({
             onNavigate={onNavigate}
             searchUsers={searchUsers}
           >
-            {children}
+            <RouteGuardPending>{children}</RouteGuardPending>
           </AdminShellFrame>
         </AdminNavProvider>
       </AdminPermissionsProvider>

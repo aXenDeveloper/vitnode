@@ -11,6 +11,7 @@ import { prefetchAdminAccess } from "../../admin/session-query";
 import { loadAdminSignInRoute } from "../../admin/sign-in-route";
 import { ADMIN_RETURN_TO_PARAM, canEnterAdmin } from "../../admin/state";
 import { createAuthNavigation } from "../../auth/redirects";
+import { AuthPendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -77,6 +78,7 @@ export const adminSignInRoute: CoreRootRouteFactory = ({
       await loadAdminSignInRoute(routeContext(context)),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin",
+    pendingComponent: AuthPendingSkeleton,
   });
 
   route.update({

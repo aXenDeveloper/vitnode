@@ -2,6 +2,7 @@ import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 
 import type { CoreRouteFactory } from "../types";
 
+import { FeedPendingSkeleton } from "../../pending";
 import { loadDiscoverRoute } from "../../search/discover-route";
 import { normalizeSearchRouteSearch } from "../../search/route-search";
 import { loadSearchRoute } from "../../search/search-route";
@@ -34,6 +35,7 @@ const discoverRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     head: ({ loaderData }) =>
       pageHead({ robots: "index, follow", ...loaderData }),
     path: "/discover",
+    pendingComponent: FeedPendingSkeleton,
   });
 
   route.update({
@@ -88,6 +90,7 @@ const searchRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     head: ({ loaderData }) =>
       pageHead({ robots: "index, follow", ...loaderData }),
     path: "/search",
+    pendingComponent: FeedPendingSkeleton,
     validateSearch: normalizeSearchRouteSearch,
   });
 

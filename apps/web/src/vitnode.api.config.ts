@@ -2,6 +2,7 @@ import { blogApiPlugin } from '@vitnode/blog/config.api'
 import { coreRelations } from '@vitnode/core/database/relations'
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 import { exampleApiPlugin } from '@vitnode/example/config.api'
+import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
@@ -27,6 +28,27 @@ export const POSTGRES_URL =
  */
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin()],
+  storage: {
+    // Zero-config: writes to `public/uploads` and serves via Hono static files.
+    // adapter: LocalStorageAdapter(),
+    // Re-encode uploaded images with sharp to shrink them before storing.
+    image: {
+      quality: 85,
+    },
+    // adapter: S3StorageAdapter({
+    //   bucket: process.env.S3_BUCKET,
+    //   region: process.env.S3_REGION,
+    //   accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    //   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    //   endpoint: process.env.S3_ENDPOINT, // Cloudflare R2 endpoint
+    //   publicUrl: process.env.S3_PUBLIC_URL,
+    // }),
+    adapter: SupabaseStorageAdapter({
+      url: process.env.SUPABASE_URL,
+      secretKey: process.env.SUPABASE_SECRET_KEY,
+      bucket: process.env.SUPABASE_STORAGE_BUCKET,
+    }),
+  },
   /**
    * The same locale declaration `vitnode.shell.config.ts` spreads into
    * `buildConfig`, because this app serves the site and the API from one

@@ -7,6 +7,7 @@ import type { CorePageHead, CoreRouteFactory } from "../types";
 import { LOGIN_PATH, returnToFor } from "../../auth/redirects";
 import { ensureAuthState } from "../../auth/session-query";
 import { canAccessAuthenticatedRoute } from "../../auth/state";
+import { GuardedOutlet } from "../../pending/guard-pending";
 import { routeContext } from "../types";
 import { coreDiscoveryRoutes } from "./discovery";
 import { myFilesRoute } from "./files";
@@ -116,6 +117,18 @@ const authenticatedContainer = (parentRoute: AnyRoute): AnyRoute =>
 
       return { auth };
     },
+    /**
+     * The guard's own wait, given the shape of the page it is guarding.
+     *
+     * Router core will not open a pending window for a *retained* match, and
+     * once a visitor is inside this container every navigation within it is one
+     * - so the session read above ran with the previous page still on screen
+     * and nothing to say so. `RouteGuardPending` renders the destination's own
+     * `pendingComponent` for exactly as long as that read takes, on the router's
+     * own threshold, and hands back to the router the moment it opens its
+     * window - with the same component, so nothing on screen changes.
+     */
+    component: GuardedOutlet,
   });
 
 /**

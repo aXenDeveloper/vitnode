@@ -6,6 +6,7 @@ import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreAdminRouteContext, CoreRouteFactory } from "../types";
 
 import { ContentAdminBreadcrumbContent } from "../../admin/content/breadcrumb";
+import { TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -126,6 +127,7 @@ export const contentAdminRoute: CoreRouteFactory<CoreAdminRouteContext> = ({
     },
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/content/$",
+    pendingComponent: TablePendingSkeleton,
   });
 
   route.update({

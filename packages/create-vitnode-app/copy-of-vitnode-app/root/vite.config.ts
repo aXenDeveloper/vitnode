@@ -2,7 +2,11 @@ import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import { vitNodeEnv, vitNodePluginRoutes } from "@vitnode/core/framework/vite";
+import {
+  vitNodeEnv,
+  vitNodeOptimizeDeps,
+  vitNodePluginRoutes,
+} from "@vitnode/core/framework/vite";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
@@ -81,7 +85,14 @@ const config = defineConfig({
   },
   plugins: [
     /**
-     * Both from `@vitnode/core/framework/vite`.
+     * All three from `@vitnode/core/framework/vite`.
+     *
+     * `vitNodeOptimizeDeps` takes nothing at all: it names the browser
+     * dependencies of the package's own `dist` so `vite dev` pre-bundles them on
+     * a cold start. Nothing crawls that `dist` before it is requested, so
+     * without this list a screen that is opened for the first time discovers a
+     * dependency mid-session, the optimizer re-runs, and a page holding modules
+     * from the previous run ends up with two copies of React.
      *
      * `vitNodeEnv` takes no `clientEnv`: this app publishes nothing to the
      * browser beyond the two keys the package inlines for every VitNode install
@@ -95,6 +106,7 @@ const config = defineConfig({
      * is regularly the repository root.
      */
     vitNodeEnv(),
+    vitNodeOptimizeDeps(),
     vitNodePluginRoutes({ appRoot: import.meta.dirname }),
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),

@@ -17,6 +17,7 @@ import {
   normalizeUsersRouteSearch,
   usersRouteParams,
 } from "../../admin/users/route-search";
+import { FormPendingSkeleton, TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -59,6 +60,7 @@ const usersListRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/users",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeUsersRouteSearch,
     staticData: {
       breadcrumb: <AdminBreadcrumb segments={["core", "users"]} />,
@@ -129,6 +131,7 @@ const rolesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/users/roles",
+    pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeRolesRouteSearch,
     staticData: {
       breadcrumb: <AdminBreadcrumb segments={["core", "users", "roles"]} />,
@@ -203,6 +206,7 @@ const userRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/admin/core/users/$id",
+    pendingComponent: FormPendingSkeleton,
     staticData: {
       breadcrumb: <AdminUserBreadcrumbContent />,
     },

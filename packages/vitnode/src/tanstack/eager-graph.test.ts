@@ -357,9 +357,13 @@ describe("screen modules", () => {
  *
  *     eager    path, id, validateSearch, loaderDeps, beforeLoad, loader, head,
  *              staticData - everything the router consults before it renders
- *     lazy     `component`, `pendingComponent`, `notFoundComponent` and
- *              `errorComponent`, each behind `lazyRouteComponent` over a literal
- *              `import()` the bundler can follow
+ *     lazy     `component`, `notFoundComponent` and `errorComponent`, each
+ *              behind `lazyRouteComponent` over a literal `import()` the bundler
+ *              can follow
+ *     eager    `pendingComponent` - a loading state that has to fetch a chunk
+ *              before it can appear is not a loading state, and the module it
+ *              names is already in the client entry as the router's
+ *              `defaultPendingComponent`, so naming it costs no bytes
  *
  * A breadcrumb is deliberately on the eager side: `staticData.breadcrumb` is an
  * *element*, built when the route tree is composed, so its component has to be
@@ -367,6 +371,28 @@ describe("screen modules", () => {
  * "reaches nothing under `views/`" - a crumb is a view, and a small one.
  */
 describe("core route composers", () => {
+  const PENDING_SHAPES = new Set([
+    "AuthPendingSkeleton",
+    "BreadcrumbPendingSkeleton",
+    "CardsPendingSkeleton",
+    "FeedPendingSkeleton",
+    "FormPendingSkeleton",
+    "RoutePendingSkeleton",
+    "TablePendingSkeleton",
+  ]);
+
+  it("knows every shape the pending module exports", () => {
+    const barrel = readFileSync(
+      join(src, "tanstack", "pending", "index.ts"),
+      "utf8",
+    );
+    const exported = new Set(
+      [...barrel.matchAll(/\b(\w*PendingSkeleton)\b/g)].map(match => match[1]),
+    );
+
+    expect([...exported].sort()).toEqual([...PENDING_SHAPES].sort());
+  });
+
   const routeModules = walk(join(src, "tanstack", "routes")).filter(
     file => file.endsWith(".tsx") && !/\.test\.tsx?$/.test(file),
   );
@@ -421,15 +447,28 @@ describe("core route composers", () => {
    * `lazyRouteComponent`, and the module it loads must be a literal `import()`
    * so that Rollup can follow it into a chunk. A computed specifier compiles and
    * then resolves to nothing in a production build.
+   *
+   * `pendingComponent` is deliberately absent from the list: it is held to the
+   * opposite rule, two assertions below.
+   *
+   * `GuardedOutlet` is the one allowed eager `component`, and for that same
+   * opposite reason. It is not a screen - it is an `<Outlet />` wearing the
+   * destination's pending shape while a guard runs - so a lazy one would be a
+   * loading state that first has to download a chunk before it can say anything,
+   * which is the thing a loading state exists to avoid.
    */
   it.each(routeModules)("%s renders every screen lazily", file => {
     const source = readFileSync(file, "utf8");
     const eager = [
       ...source.matchAll(
-        /\b(component|pendingComponent|notFoundComponent|errorComponent):\s*(\S+)/g,
+        /\b(component|notFoundComponent|errorComponent):\s*(\S+)/g,
       ),
     ]
-      .filter(([, , value]) => !value.startsWith("lazyRouteComponent("))
+      .filter(
+        ([, , value]) =>
+          !value.startsWith("lazyRouteComponent(") &&
+          value !== "GuardedOutlet,",
+      )
       .map(([, option, value]) => `${option}: ${value}`);
 
     expect(eager).toEqual([]);
@@ -443,12 +482,102 @@ describe("core route composers", () => {
   it("declares components at all, so the rule above is not vacuous", () => {
     const declared = routeModules.flatMap(file => [
       ...readFileSync(file, "utf8").matchAll(
-        /\b(component|pendingComponent|notFoundComponent|errorComponent):/g,
+        /\b(component|notFoundComponent|errorComponent):/g,
       ),
     ]);
 
     expect(declared.length).toBeGreaterThan(15);
   });
+
+  /**
+   * One `pendingComponent` declaration, from its keyword to the comma that ends
+   * it - never spilling into the option that follows, which is what makes the
+   * assertions below about the declaration rather than about its neighbours.
+   */
+  const pendingDeclarations = (source: string): string[] => {
+    const lines = source.split("\n");
+    const declarations: string[] = [];
+
+    for (const [index, line] of lines.entries()) {
+      if (!line.includes("pendingComponent:")) continue;
+
+      const collected = [line];
+      let next = index + 1;
+
+      while (
+        next < lines.length &&
+        !(collected.at(-1) ?? "").trimEnd().endsWith(",")
+      ) {
+        collected.push(lines[next]);
+        next++;
+      }
+
+      declarations.push(collected.join("\n"));
+    }
+
+    return declarations;
+  };
+
+  it.each(routeModules)(
+    "%s names a pending shape rather than a chunk to go and fetch",
+    file => {
+      const declarations = pendingDeclarations(readFileSync(file, "utf8"));
+
+      for (const declaration of declarations) {
+        expect(declaration).not.toContain("lazyRouteComponent(");
+        expect(
+          [...PENDING_SHAPES].filter(name => declaration.includes(name)),
+        ).not.toEqual([]);
+      }
+    },
+  );
+
+  /**
+   * The control: the scan finds declarations at all, and the one shape used most
+   * is among them - so "none of them is lazy" is a statement about something.
+   */
+  it("finds the pending declarations it is asserting about", () => {
+    const declarations = routeModules.flatMap(file =>
+      pendingDeclarations(readFileSync(file, "utf8")),
+    );
+
+    expect(declarations.length).toBeGreaterThan(15);
+    expect(
+      declarations.filter(declaration =>
+        declaration.includes("TablePendingSkeleton"),
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it.each(routeModules)(
+    "%s takes its pending shapes from the one module that holds them",
+    file => {
+      const source = readFileSync(file, "utf8");
+      const mentioned = new Set(
+        [...source.matchAll(/\b(\w*PendingSkeleton)\b/g)].map(
+          match => match[1],
+        ),
+      );
+
+      if (mentioned.size === 0) return;
+
+      expect([...mentioned].filter(name => !PENDING_SHAPES.has(name))).toEqual(
+        [],
+      );
+      expect(source).toContain(`from "../../pending"`);
+    },
+  );
+
+  it.each(routeModules)(
+    "%s pairs every blocking loader with a pending shape of its own",
+    file => {
+      const source = readFileSync(file, "utf8");
+      const loaders = [...source.matchAll(/^\s*loader: /gm)].length;
+      const pending = [...source.matchAll(/^\s*pendingComponent: /gm)].length;
+
+      expect(pending).toBe(loaders);
+    },
+  );
 
   it("imports its screens with specifiers a bundler can follow", () => {
     const dynamic = routeModules.flatMap(file =>
@@ -461,5 +590,123 @@ describe("core route composers", () => {
     for (const specifier of dynamic) {
       expect(specifier).toMatch(/^"[^"$`]+"$/);
     }
+  });
+});
+
+describe("the router's default pending component", () => {
+  const directory = join(src, "tanstack", "pending");
+  const barrel = join(directory, "index.ts");
+  const leaves = [
+    join(directory, "route-pending-skeleton.tsx"),
+    join(directory, "shapes.tsx"),
+  ];
+  const routerOnlyLeaves = [join(directory, "guard-pending.tsx")];
+
+  it("is where a host's router.tsx imports it from", () => {
+    expect(existsSync(barrel)).toBe(true);
+  });
+
+  it("re-exports nothing but its own three leaf modules", () => {
+    const specifiers = [
+      ...readFileSync(barrel, "utf8").matchAll(/from\s+"([^"]+)"/g),
+    ].map(match => match[1]);
+
+    expect([...new Set(specifiers)].sort()).toEqual([
+      "./guard-pending",
+      "./route-pending-skeleton",
+      "./shapes",
+    ]);
+  });
+
+  /**
+   * The bar covering the gap a `pendingComponent` cannot - a retained parent's
+   * `beforeLoad` - is subject to the same rule as the shapes, and one more:
+   * it may reach the router, because the router is what tells it a navigation
+   * has started, and no other package at all. A navigation indicator that
+   * pulled an animation library into the client entry would cost every visitor
+   * the whole of it before the first paint, to draw two pixels.
+   */
+  it.each(routerOnlyLeaves)("%s reaches the router and nothing else", file => {
+    const graph = reachableFrom(file);
+
+    expect(
+      [...graph.files]
+        .map(reached => relative(src, reached))
+        .filter(reached => !reached.startsWith(join("tanstack", "pending")))
+        .sort(),
+    ).toEqual([]);
+    expect(
+      [...graph.packages]
+        .filter(name => name !== "clsx" && name !== "tailwind-merge")
+        .sort(),
+    ).toEqual(["@tanstack/react-router", "react"]);
+  });
+
+  it.each(leaves)(
+    "%s reaches nothing but the two primitives and the class-name helper",
+    file => {
+      const outside = [...reachableFrom(file).files]
+        .map(reached => relative(src, reached))
+        .filter(reached => !reached.startsWith(join("tanstack", "pending")))
+        .sort();
+
+      expect(outside).toEqual([
+        "components/ui/skeleton.tsx",
+        "components/ui/spinner.tsx",
+        "lib/utils.ts",
+      ]);
+    },
+  );
+
+  /**
+   * `lucide-react` is the spinner's icon, and it is on this list because the
+   * client entry already downloads it - the header, the breadcrumb and every
+   * button reach it. A loading state that pulled in an icon set of its own
+   * would not be allowed here.
+   */
+  it.each(leaves)("%s reaches only the packages those three need", file => {
+    expect([...reachableFrom(file).packages].sort()).toEqual([
+      "clsx",
+      "lucide-react",
+      "tailwind-merge",
+    ]);
+  });
+
+  it.each(leaves)("%s pulls in no screen-only library", file => {
+    expect(
+      [...reachableFrom(file).packages].filter(isScreenOnlyPackage),
+    ).toEqual([]);
+  });
+
+  it.each(leaves)(
+    "%s statically reaches no screen module and no view",
+    file => {
+      const offenders = [...reachableFrom(file).files]
+        .filter(
+          reached =>
+            /(?:^|\/)(?:screen|[a-z-]+-screen)\.tsx$/.test(reached) ||
+            reached.includes(`/views/`),
+        )
+        .map(reached => relative(src, reached));
+
+      expect(offenders).toEqual([]);
+    },
+  );
+
+  it("gives core's own routes more than one shape between them", () => {
+    const referenced = new Set(
+      walk(join(src, "tanstack", "routes"))
+        .filter(file => file.endsWith(".tsx") && !/\.test\.tsx?$/.test(file))
+        .flatMap(file =>
+          [
+            ...readFileSync(file, "utf8").matchAll(/\b(\w*PendingSkeleton)\b/g),
+          ].map(match => match[1]),
+        ),
+    );
+
+    const exported = readFileSync(barrel, "utf8");
+
+    expect(referenced.size).toBeGreaterThan(3);
+    for (const name of referenced) expect(exported).toContain(name);
   });
 });
