@@ -11,7 +11,6 @@ import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-r
 import type { SsoCallbackInput } from "./contract";
 
 import { removeAdminIdentityQueries } from "../admin/queries";
-import { shouldRefreshSessionAfterSignUp } from "./contract";
 import { removeUserIdentityQueries } from "./queries";
 import {
   anonymousSession,
@@ -27,6 +26,7 @@ import {
   sessionQueryOptions,
   setSessionData,
 } from "./session-query";
+import { shouldRefreshSessionAfterSignUp } from "./sign-up-session";
 import { authTransport } from "./transport";
 
 /**

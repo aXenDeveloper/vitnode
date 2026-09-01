@@ -1,28 +1,30 @@
-import { createRoute, notFound, redirect } from "@tanstack/react-router";
+import {
+  createRoute,
+  lazyRouteComponent,
+  notFound,
+  redirect,
+} from "@tanstack/react-router";
 
 import type { CoreRootRouteFactory } from "./types";
 
+import { loadLoginRoute } from "../../auth/login-route";
+import { middlewareConfigQueryOptions } from "../../auth/middleware-config";
 import {
-  canAccessGuestRoute,
-  createAuthNavigation,
-  ensureAuthState,
-  loadLoginRoute,
-  loadPasswordResetRoute,
-  loadRegisterRoute,
-  LoginRouteContent,
-  middlewareConfigQueryOptions,
-  normalizeLoginSearch,
   normalizePasswordResetSearch,
-  parseInternalDestination,
   passwordRecoveryAvailability,
-  PasswordRecoveryNotFound,
   PasswordRecoveryUnknownError,
   passwordResetMode,
-  PasswordResetRouteContent,
+} from "../../auth/recovery";
+import { loadPasswordResetRoute } from "../../auth/recovery-route";
+import {
+  createAuthNavigation,
+  parseInternalDestination,
   postAuthDestination,
-  RegisterRouteContent,
-} from "../../auth";
-import { ErrorActions, RouterLink } from "../../layout";
+} from "../../auth/redirects";
+import { loadRegisterRoute } from "../../auth/register-route";
+import { normalizeLoginSearch } from "../../auth/route-search";
+import { ensureAuthState } from "../../auth/session-query";
+import { canAccessGuestRoute } from "../../auth/state";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -96,15 +98,24 @@ const loginRoute: CoreRootRouteFactory = ({
   });
 
   route.update({
-    component: function LoginRoute() {
-      return (
-        <LoginRouteContent
-          LinkComponent={RouterLink}
-          navigate={useAppNavigate()}
-          returnTo={route.useSearch().returnTo}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const [{ LoginRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../auth/login-screen"),
+        import("../../layout/router-link"),
+      ]);
+
+      return {
+        default: function LoginRoute() {
+          return (
+            <LoginRouteContent
+              LinkComponent={RouterLink}
+              navigate={useAppNavigate()}
+              returnTo={route.useSearch().returnTo}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -153,14 +164,26 @@ const registerRoute: CoreRootRouteFactory = ({
       await loadRegisterRoute(routeContext(context)),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/register",
-    component: function RegisterRoute() {
-      return (
-        <RegisterRouteContent
-          LinkComponent={RouterLink}
-          navigate={useAppNavigate()}
-        />
-      );
-    },
+  });
+
+  route.update({
+    component: lazyRouteComponent(async () => {
+      const [{ RegisterRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../auth/register-screen"),
+        import("../../layout/router-link"),
+      ]);
+
+      return {
+        default: function RegisterRoute() {
+          return (
+            <RegisterRouteContent
+              LinkComponent={RouterLink}
+              navigate={useAppNavigate()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -234,20 +257,43 @@ const passwordResetRoute: CoreRootRouteFactory = ({
       }),
     head: ({ loaderData }) => pageHead({ ...loaderData }),
     path: "/login/reset-password",
-    notFoundComponent: () => (
-      <PasswordRecoveryNotFound actions={<ErrorActions />} />
-    ),
+    /**
+     * Code-split like the screen it belongs to: the router preloads a
+     * `notFoundComponent` only once a route has actually answered `notFound()`,
+     * so nothing about the eager graph pays for a deployment that *can* send
+     * email.
+     */
+    notFoundComponent: lazyRouteComponent(async () => {
+      const [{ PasswordRecoveryNotFound }, { ErrorActions }] =
+        await Promise.all([
+          import("../../auth/recovery-screen"),
+          import("../../layout/error-actions"),
+        ]);
+
+      return {
+        default: function PasswordRecoveryNotFoundScreen() {
+          return <PasswordRecoveryNotFound actions={<ErrorActions />} />;
+        },
+      };
+    }),
   });
 
   route.update({
-    component: function PasswordResetRoute() {
-      return (
-        <PasswordResetRouteContent
-          namespaces={route.useLoaderData().namespaces}
-          search={route.useSearch()}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const { PasswordResetRouteContent } =
+        await import("../../auth/recovery-screen");
+
+      return {
+        default: function PasswordResetRoute() {
+          return (
+            <PasswordResetRouteContent
+              namespaces={route.useLoaderData().namespaces}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

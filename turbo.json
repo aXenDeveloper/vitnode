@@ -11,7 +11,7 @@
       "cache": false
     },
     "web#test": {
-      "dependsOn": ["^build:plugins"],
+      "dependsOn": ["^build:plugins", "build"],
       "cache": false
     },
     "web#test:types": {

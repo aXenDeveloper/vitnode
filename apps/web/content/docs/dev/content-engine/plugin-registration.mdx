@@ -144,6 +144,27 @@ components stay compiled in your plugin's own `dist`.
   and they follow; edit them by hand and your change is gone on the next build.
 </Callout>
 
+### The app reaches it through a thunk
+
+`src/router.tsx` hands `withCoreAdminRoutes` a **function**, and `/admin/content/*`
+is the only thing that ever calls it:
+
+```tsx title="apps/web/src/router.tsx"
+const loadContentRegistry = async () =>
+  (await import("#/lib/content-registry")).contentRegistry;
+```
+
+Building the registry reaches `@vitnode/core/content` and every configured
+plugin's form components, and `router.tsx` is evaluated by every page of the
+site - so passing the registry itself would put the whole Content Engine, `zod`
+included, in front of your front page's first paint. Behind the thunk it is a
+chunk the AdminCP's content route awaits, and nobody else pays for it. See
+[Initial bundle](/docs/dev/tanstack/initial-bundle).
+
+This is also what registers the plugin screens: `lib/content-registry.ts` calls
+`setContentFrontendRegistry` at module scope, so importing it *is* the
+registration, and it happens before the first content screen renders.
+
 ---
 
 ## The two modules are independent
@@ -184,10 +205,12 @@ import { useTranslations } from "use-intl"; // not "next-intl"
 
 ## Keep expensive editors lazy
 
-An application's generated registry imports `admin/content` **eagerly**, so
-anything it reaches lands in the bundle for every content screen — including the
-list of a content type that has no editor at all. Draw the boundary in your own
-module, so the registration is a label and a `lazy()` call:
+The registry imports every plugin's `admin/content` module **eagerly** within its
+own chunk, so anything one of them reaches lands in the bundle for every content
+screen — including the list of a content type that has no editor at all. The
+thunk above keeps that chunk off the rest of the site; it does nothing for the
+AdminCP itself. Draw the boundary in your own module, so the registration is a
+label and a `lazy()` call:
 
 ```tsx title="src/views/admin/article/editor-field.tsx"
 "use client";
@@ -222,4 +245,12 @@ one of them exists outside Next.js.
 <Callout title="Never from admin/nav">
   A sidebar does not need an editor. Keep Tiptap — and anything else of that size
   — behind `admin/content`, so drawing navigation never fetches it.
+</Callout>
+
+<Callout type="info" title="`admin/nav` is lazy too, one level up">
+  The app's `_admin` route imports its generated navigation inside its loader
+  rather than at the top of the file, so the sidebar's icons and content type
+  definitions arrive with the AdminCP and not with the home page. Nothing is
+  asked of your plugin for that — but it is why `admin/nav` staying small still
+  matters: everything in it is downloaded the moment anybody opens `/admin`.
 </Callout>

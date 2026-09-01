@@ -1,27 +1,22 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import type { AdminScreenContext } from "../../admin";
+import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreRouteFactory } from "../types";
 
-import { AdminBreadcrumb } from "../../admin";
+import { AdminBreadcrumb } from "../../admin/breadcrumb";
+import { loadAdminCronRoute } from "../../admin/cron/route";
 import {
-  AdminCronRouteContent,
   cronRouteParams,
-  loadAdminCronRoute,
   normalizeCronRouteSearch,
-} from "../../admin/cron";
+} from "../../admin/cron/route-search";
+import { loadAdminQueueRoute } from "../../admin/queue/route";
 import {
-  AdminQueueRouteContent,
-  loadAdminQueueRoute,
   normalizeQueueRouteSearch,
   queueRouteParams,
-} from "../../admin/queue";
-import {
-  AdminSearchIndexRouteContent,
-  loadAdminSearchIndexRoute,
-  normalizeSearchIndexRouteSearch,
-} from "../../admin/search-index";
+} from "../../admin/queue/route-search";
+import { loadAdminSearchIndexRoute } from "../../admin/search-index/route";
+import { normalizeSearchIndexRouteSearch } from "../../admin/search-index/route-search";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -64,28 +59,34 @@ const cronRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function AdminCronRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const { AdminCronRouteContent } = await import("../../admin/cron/screen");
 
-      return (
-        <AdminCronRouteContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeCronRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminCronRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminCronRouteContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeCronRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -123,28 +124,35 @@ const queueRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function AdminQueueRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const { AdminQueueRouteContent } =
+        await import("../../admin/queue/screen");
 
-      return (
-        <AdminQueueRouteContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeQueueRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminQueueRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminQueueRouteContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeQueueRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -178,28 +186,35 @@ const searchIndexRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function AdminSearchIndexRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const { AdminSearchIndexRouteContent } =
+        await import("../../admin/search-index/screen");
 
-      return (
-        <AdminSearchIndexRouteContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeSearchIndexRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminSearchIndexRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminSearchIndexRouteContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeSearchIndexRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

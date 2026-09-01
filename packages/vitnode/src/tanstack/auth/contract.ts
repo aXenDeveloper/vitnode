@@ -574,28 +574,11 @@ export const changePasswordResultFromStatus = (
 };
 
 /**
- * Whether registration produced a session the canonical session query has to go
- * and read.
+ * Re-exported from `./sign-up-session`, which is where it lives now.
  *
- * The one decision that connects sign-up to the rest of the app, written as a
- * function so it is stated once and tested without a browser.
- *
- * `true` only for a successful sign-up with `emailVerified`. That is precisely
- * when the API called `createSessionByUserId` on the same request, which means
- * the `201` carried a `Set-Cookie`, which means `saveApiCookies` put it on the
- * response the browser is reading - so the *next* read of `/users/session`
- * answers with the new visitor and the cached one is stale.
- *
- * `false` for an unverified account, and that matters more than it looks:
- * inventing a refresh there would replace a known-anonymous session with another
- * known-anonymous session and, worse, invite a caller to navigate as though the
- * visitor were signed in. They are not - the account is waiting on a
- * confirmation link the API does not send yet (`// TODO: Send verification
- * email`), and the screen for that is the confirmation view.
- *
- * There is deliberately no equivalent for the two recovery mutations: neither
- * mints a session, so neither has a session to refresh.
+ * It reads {@link SignUpResult} and nothing else, so it needs no schema - and
+ * being the only *value* `./actions` took from this module, it was the edge
+ * that put `zod` on the public shell's path. Kept exported here so every
+ * existing importer, this package's barrel included, is unaffected.
  */
-export const shouldRefreshSessionAfterSignUp = (
-  result: SignUpResult,
-): boolean => result.ok && result.emailVerified;
+export { shouldRefreshSessionAfterSignUp } from "./sign-up-session";

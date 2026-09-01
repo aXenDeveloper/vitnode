@@ -4,12 +4,9 @@ import { createRoute, redirect } from "@tanstack/react-router";
 
 import type { CorePageHead, CoreRouteFactory } from "../types";
 
-import {
-  canAccessAuthenticatedRoute,
-  ensureAuthState,
-  LOGIN_PATH,
-  returnToFor,
-} from "../../auth";
+import { LOGIN_PATH, returnToFor } from "../../auth/redirects";
+import { ensureAuthState } from "../../auth/session-query";
+import { canAccessAuthenticatedRoute } from "../../auth/state";
 import { routeContext } from "../types";
 import { coreDiscoveryRoutes } from "./discovery";
 import { myFilesRoute } from "./files";

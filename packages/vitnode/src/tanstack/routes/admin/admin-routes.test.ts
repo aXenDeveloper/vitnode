@@ -125,12 +125,32 @@ describe("how they reach an application", () => {
    * One exported mount, and it takes what a package cannot know: the shell to
    * hang from, the site's name, and which content types this installation
    * configured.
+   *
+   * The registry arrives as `loadContentRegistry` - a thunk over a literal
+   * dynamic import - rather than as the registry itself, because building one
+   * reaches the whole Content Engine and every plugin's admin form components,
+   * and this composition is evaluated in the client entry of every page. See
+   * `CoreAdminRouteContext.loadContentRegistry`.
    */
   it("exports one mount that takes the host's own bindings", () => {
     expect(index).toContain("export const withCoreAdminRoutes");
     expect(index).toMatch(/mountUnder/);
     expect(index).toMatch(/pageHead/);
-    expect(index).toMatch(/contentRegistry/);
+    expect(index).toMatch(/loadContentRegistry/);
+  });
+
+  /**
+   * And it is a *function*, not the registry.
+   *
+   * The distinction is the whole optimisation: a value would be evaluated where
+   * the route tree is composed, which is the module every page of the
+   * application loads first.
+   */
+  it("takes the content registry as a thunk rather than as a value", () => {
+    expect(index).toMatch(
+      /loadContentRegistry: \(\) => Promise<ContentFrontendRegistry>/,
+    );
+    expect(index).not.toMatch(/contentRegistry: ContentFrontendRegistry/);
   });
 
   /**

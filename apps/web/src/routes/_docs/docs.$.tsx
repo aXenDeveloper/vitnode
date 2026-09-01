@@ -57,7 +57,8 @@ import { pageHead } from '#/lib/page-head'
  * The `await import()` around it is what keeps that chunk, `fumadocs-ui/page`
  * and the MDX component map out of the client entry: a static import here would
  * put the whole documentation runtime in front of every visitor to `/`, because
- * a route's `loader` is not code-split. See `src/tests/eager-graph.test.ts`.
+ * a route's `loader` is not code-split. See `src/tests/asset-graph.test.ts`,
+ * which fails if any chunk the front page preloads mentions Fumadocs.
  *
  * ## The 404 belongs here, not on the shell
  *

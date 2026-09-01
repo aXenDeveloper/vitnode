@@ -7,7 +7,7 @@ import { HeaderContent } from "@/components/ui/header-content";
 import { DevicesContent } from "@/views/auth/settings/devices/devices-content";
 import { DevicesListSkeleton } from "@/views/auth/settings/devices/devices-list-skeleton";
 
-import { devicesQuery, useRevokeDeviceCallback } from "./index";
+import { devicesQuery, useRevokeDeviceCallback } from "./query";
 
 /**
  * The panel heading, which both states below render identically.

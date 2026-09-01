@@ -1,15 +1,10 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 
 import type { CoreRouteFactory } from "../types";
 
-import { RouterLink } from "../../layout";
-import {
-  DiscoverRouteContent,
-  loadDiscoverRoute,
-  loadSearchRoute,
-  normalizeSearchRouteSearch,
-  SearchRouteContent,
-} from "../../search";
+import { loadDiscoverRoute } from "../../search/discover-route";
+import { normalizeSearchRouteSearch } from "../../search/route-search";
+import { loadSearchRoute } from "../../search/search-route";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -42,14 +37,23 @@ const discoverRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function DiscoverRoute() {
-      return (
-        <DiscoverRouteContent
-          {...route.useLoaderData()}
-          LinkComponent={RouterLink}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const [{ DiscoverRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../search/discover-screen"),
+        import("../../layout/router-link"),
+      ]);
+
+      return {
+        default: function DiscoverRoute() {
+          return (
+            <DiscoverRouteContent
+              {...route.useLoaderData()}
+              LinkComponent={RouterLink}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -88,14 +92,23 @@ const searchRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function SearchRoute() {
-      return (
-        <SearchRouteContent
-          {...route.useLoaderData()}
-          LinkComponent={RouterLink}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const [{ SearchRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../search/search-screen"),
+        import("../../layout/router-link"),
+      ]);
+
+      return {
+        default: function SearchRoute() {
+          return (
+            <SearchRouteContent
+              {...route.useLoaderData()}
+              LinkComponent={RouterLink}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;

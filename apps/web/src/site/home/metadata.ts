@@ -8,8 +8,9 @@
  * two strings from `home-content.tsx` would put the hero, the marquee, the
  * AdminCP screenshot and `motion` in that entry. It is the same split
  * `@vitnode/core/tanstack/*` makes between a namespace's `route.tsx` and its
- * `screen.tsx`, for the same reason, and `src/tests/eager-graph.test.ts` is what
- * holds the route files to it.
+ * `screen.tsx`, for the same reason. `src/tests/asset-graph.test.ts` holds the
+ * built page to it, and `@vitnode/core`'s `tanstack/eager-graph.test.ts` holds
+ * the package's own route modules to it.
  */
 
 /**

@@ -61,7 +61,7 @@ const CORE_ADMIN_ROUTES: CoreRouteFactory<CoreAdminRouteContext>[] = [
  *
  *     const routeTree = withCoreAdminRoutes(
  *       withPluginRoutes(fileRouteTree, specs, { mountUnder, pageHead }),
- *       { contentRegistry, mountUnder: adminShellRoute, pageHead },
+ *       { loadContentRegistry, mountUnder: adminShellRoute, pageHead },
  *     )
  *
  * ## Why not through the plugin route manifest
@@ -86,11 +86,11 @@ const CORE_ADMIN_ROUTES: CoreRouteFactory<CoreAdminRouteContext>[] = [
 export const withCoreAdminRoutes = <TRouteTree extends AnyRoute>(
   routeTree: TRouteTree,
   {
-    contentRegistry,
+    loadContentRegistry,
     mountUnder,
     pageHead,
   }: {
-    contentRegistry: ContentFrontendRegistry;
+    loadContentRegistry: () => Promise<ContentFrontendRegistry>;
     mountUnder: AnyRoute;
     pageHead: CorePageHead;
   },
@@ -108,7 +108,7 @@ export const withCoreAdminRoutes = <TRouteTree extends AnyRoute>(
 
   container.addChildren(
     CORE_ADMIN_ROUTES.map(build =>
-      build({ contentRegistry, pageHead, parentRoute: container }),
+      build({ loadContentRegistry, pageHead, parentRoute: container }),
     ),
   );
   mountUnder.addChildren([...siblings, container]);

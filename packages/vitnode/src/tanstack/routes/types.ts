@@ -37,14 +37,30 @@ export type CoreRouteFactory<
 /** What the Content Engine's splat needs beyond the usual two. */
 export interface CoreAdminRouteContext extends CoreRouteContext {
   /**
-   * The application's Content Engine registry - which content types the plugins
-   * it configured register, and the components that edit them.
+   * The application's Content Engine registry, behind a literal dynamic import.
    *
    * Injected for the same reason `pageHead` is: it is per-installation. The app
    * builds it from its generated `src/content-registry.gen.ts`, one literal
    * import per configured plugin, and only the Content Engine's splat reads it.
+   *
+   * ## Why a thunk rather than the registry itself
+   *
+   * Because the value is enormous and every page of the application would pay
+   * for it. A registry holds each configured plugin's field components, table
+   * cells and form layouts, and building one reaches `@vitnode/core/content` -
+   * which is the whole Content Engine, `zod` included. Handed over as a value,
+   * that graph is evaluated in the module that composes the route tree, which
+   * is the client entry: measured on vitnode.com it was `zod`, both plugins'
+   * admin registrations, the content form primitives and `react-hook-form`,
+   * downloaded before the front page could paint.
+   *
+   * A `() => import("./lib/content-registry")` is resolved by the bundler into
+   * a chunk of its own and awaited by the one loader that needs it, which runs
+   * only on `/admin/content/*`. Nothing about the route's identity depends on
+   * it: the path, the search contract and the crumb are all still eager, and
+   * the permission check still runs inside the loader, before anything renders.
    */
-  contentRegistry: ContentFrontendRegistry;
+  loadContentRegistry: () => Promise<ContentFrontendRegistry>;
 }
 
 /**

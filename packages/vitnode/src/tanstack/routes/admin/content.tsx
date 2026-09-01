@@ -1,17 +1,11 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import type { AdminScreenContext } from "../../admin";
-import type { ContentListRouteSearch } from "../../admin/content";
+import type { ContentListRouteSearch } from "../../admin/content/route-search";
+import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreAdminRouteContext, CoreRouteFactory } from "../types";
 
-import {
-  ContentAdminBreadcrumbContent,
-  ContentAdminScreenContent,
-  contentRouteSegments,
-  loadContentAdminRoute,
-  loadContentFormScreen,
-} from "../../admin/content";
+import { ContentAdminBreadcrumbContent } from "../../admin/content/breadcrumb";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -20,8 +14,8 @@ import { routeContext, routeSearch } from "../types";
  * The slug resolution, the permission, the namespaces, the labels, the list
  * query, the table, the row actions, the breadcrumb and the screen shell are
  * `../content`. The two things injected are the ones a package cannot know:
- * which plugins this installation configured (`contentRegistry`) and what the
- * site is called (`pageHead`).
+ * which plugins this installation configured (`loadContentRegistry`) and what
+ * the site is called (`pageHead`).
  *
  * ## One splat, three screens, and no file per content type
  *
@@ -60,7 +54,7 @@ import { routeContext, routeSearch } from "../types";
  * owns `/admin/content/*`, and that it owns nothing else.
  */
 export const contentAdminRoute: CoreRouteFactory<CoreAdminRouteContext> = ({
-  contentRegistry,
+  loadContentRegistry,
   pageHead,
   parentRoute,
 }) => {
@@ -81,12 +75,42 @@ export const contentAdminRoute: CoreRouteFactory<CoreAdminRouteContext> = ({
      * URL needs: `can_create` or `can_edit`, the record being edited and its
      * translations. It returns nothing at all for a list, so a list navigation
      * pays for one call and no requests.
+     *
+     * ## Why the Content Engine is imported *inside* the loader
+     *
+     * Because a `loader` is a function and a route file is a module. The route
+     * itself - its path, its search contract, its crumb - is evaluated in the
+     * client entry, on every page of the application; the body of this function
+     * runs only when somebody navigates to `/admin/content/*`. Reaching
+     * `@vitnode/core/content` at module scope put the whole engine on the front
+     * page's critical path: the resolver, the field specs, `zod`, and through
+     * the registry every configured plugin's admin form components.
+     *
+     * The three imports and the registry are awaited together rather than in
+     * sequence, so the chunks are fetched in parallel and the loader pays one
+     * round trip rather than four.
+     *
+     * Nothing about *when* the permission check happens changes.
+     * `loadContentAdminRoute` still calls `requireAdminPermission` inside this
+     * loader, which the router awaits before it renders the match - and the
+     * AdminCP session guard on the shell above is untouched and still entirely
+     * eager. What is deferred is the code, not the check.
      */
     // `head` after `loader`, always.
     loader: async ({ context, deps, params }) => {
+      const [
+        { contentRouteSegments, loadContentAdminRoute },
+        { loadContentFormScreen },
+        registry,
+      ] = await Promise.all([
+        import("../../admin/content/route"),
+        import("../../admin/content/form/route"),
+        loadContentRegistry(),
+      ]);
+
       const resolved = await loadContentAdminRoute({
         ...routeContext<AdminScreenContext>(context),
-        registry: contentRegistry,
+        registry,
         search: deps.search,
         segments: contentRouteSegments((params as { _splat?: string })._splat),
       });
@@ -95,7 +119,7 @@ export const contentAdminRoute: CoreRouteFactory<CoreAdminRouteContext> = ({
         ...resolved,
         ...(await loadContentFormScreen({
           ...routeContext<AdminScreenContext>(context),
-          registry: contentRegistry,
+          registry,
           route: resolved,
         })),
       };
@@ -116,29 +140,38 @@ export const contentAdminRoute: CoreRouteFactory<CoreAdminRouteContext> = ({
     staticData: {
       breadcrumb: <ContentAdminBreadcrumb />,
     },
-    component: function ContentAdminRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const [{ ContentAdminScreenContent }, registry] = await Promise.all([
+        import("../../admin/content/screen"),
+        loadContentRegistry(),
+      ]);
 
-      return (
-        <ContentAdminScreenContent
-          {...route.useLoaderData()}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ContentListRouteSearch;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          registry={contentRegistry}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function ContentAdminRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <ContentAdminScreenContent
+              {...route.useLoaderData()}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ContentListRouteSearch;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              registry={registry}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   function ContentAdminBreadcrumb() {

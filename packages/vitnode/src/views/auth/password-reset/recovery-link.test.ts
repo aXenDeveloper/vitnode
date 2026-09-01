@@ -64,6 +64,63 @@ describe("parsing a recovery link", () => {
     expect(parseRecoveryLink({ token, userId: "123" })).toBeNull();
   });
 
+  /**
+   * The same rejections, for a `userId` that arrives as a **number**.
+   *
+   * Which is the ordinary case on TanStack Start: the router's default search
+   * parsing is `JSON.parse` per value, so `?userId=1.5` reaches this as `1.5`
+   * and never as `"1.5"` - it does not go through the digit pattern at all, and
+   * the integer, sign and range checks after the coercion are what stop it.
+   */
+  it.each([
+    ["a fractional number", 1.5],
+    ["zero", 0],
+    ["a negative number", -1],
+    ["NaN", Number.NaN],
+    ["Infinity", Number.POSITIVE_INFINITY],
+    ["past the safe integer range", Number.MAX_SAFE_INTEGER + 1],
+  ])("rejects %s arriving as a number", (_case, userId) => {
+    expect(parseRecoveryLink({ token: TOKEN, userId })).toBeNull();
+  });
+
+  /**
+   * The edge of the accepted range, from both spellings.
+   *
+   * `Number.MAX_SAFE_INTEGER` is the last id two different accounts cannot share
+   * a representation of, so it is in and the next one is out - and the string
+   * form has to agree with the number form, because the coercion is where a
+   * larger value collapses onto a smaller one.
+   */
+  it.each([
+    ["as a number", Number.MAX_SAFE_INTEGER],
+    ["as a string", String(Number.MAX_SAFE_INTEGER)],
+  ])("accepts the largest safe userId %s", (_case, userId) => {
+    expect(parseRecoveryLink({ token: TOKEN, userId })).toEqual({
+      token: TOKEN,
+      userId: Number.MAX_SAFE_INTEGER,
+    });
+  });
+
+  /**
+   * The shortest and longest tokens the bounds allow.
+   *
+   * Pinned because the bounds are inclusive and an off-by-one either way would
+   * be invisible against a real 43-character token.
+   */
+  it.each([
+    ["the shortest allowed", "a".repeat(16)],
+    ["the longest allowed", "a".repeat(512)],
+  ])("accepts %s token", (_case, token) => {
+    expect(parseRecoveryLink({ token, userId: "1" })?.token).toBe(token);
+  });
+
+  it.each([
+    ["one character short", "a".repeat(15)],
+    ["one character long", "a".repeat(513)],
+  ])("rejects a token %s", (_case, token) => {
+    expect(parseRecoveryLink({ token, userId: "1" })).toBeNull();
+  });
+
   it("keeps the token exactly as it arrived", () => {
     // The API compares it byte for byte against the stored row, so any
     // normalisation here would break every real link.

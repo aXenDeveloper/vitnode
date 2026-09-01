@@ -1,26 +1,22 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import type { AdminScreenContext } from "../../admin";
+import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreRouteFactory } from "../types";
 
-import { AdminBreadcrumb } from "../../admin";
+import { AdminBreadcrumb } from "../../admin/breadcrumb";
+import { loadAdminRolesRoute } from "../../admin/roles/route";
 import {
-  AdminRolesRouteContent,
-  loadAdminRolesRoute,
   normalizeRolesRouteSearch,
   rolesRouteParams,
-} from "../../admin/roles";
+} from "../../admin/roles/route-search";
+import { AdminUserBreadcrumbContent } from "../../admin/users/detail-breadcrumb";
+import { loadAdminUserRoute } from "../../admin/users/detail-route";
+import { loadAdminUsersRoute } from "../../admin/users/route";
 import {
-  AdminUserBreadcrumbContent,
-  AdminUserRouteContent,
-  AdminUsersRouteContent,
-  loadAdminUserRoute,
-  loadAdminUsersRoute,
   normalizeUsersRouteSearch,
   usersRouteParams,
-} from "../../admin/users";
-import { RouterLink } from "../../layout";
+} from "../../admin/users/route-search";
 import { routeContext, routeSearch } from "../types";
 
 /**
@@ -70,29 +66,38 @@ const usersListRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   route.update({
-    component: function AdminUsersRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const [{ AdminUsersRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../admin/users/screen"),
+        import("../../layout/router-link"),
+      ]);
 
-      return (
-        <AdminUsersRouteContent
-          {...route.useLoaderData()}
-          LinkComponent={RouterLink}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeUsersRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminUsersRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminUsersRouteContent
+              {...route.useLoaderData()}
+              LinkComponent={RouterLink}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeUsersRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -103,9 +108,9 @@ const usersListRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
  *
  * A sibling of `users/$id` rather than a child of it: `roles` is a static
  * segment and TanStack ranks those above dynamic ones, so `/admin/core/users/roles`
- * matches this route and never `$id`. `apps/web/src/tests/admin-routes.test.ts`
- * pins it against the real tree, which is what makes the ranking a checked fact
- * rather than a remembered one.
+ * matches this route and never `$id`. `admin-routes.test.ts` pins it against the
+ * real tree, which is what makes the ranking a checked fact rather than a
+ * remembered one.
  *
  * The query, the six permissions the row actions apply, the namespaces, the
  * title, the table and both dialogs are `../roles`.
@@ -136,29 +141,38 @@ const rolesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
    * router, so it does.
    */
   route.update({
-    component: function AdminRolesRoute() {
-      const navigate = route.useNavigate();
+    component: lazyRouteComponent(async () => {
+      const [{ AdminRolesRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../admin/roles/screen"),
+        import("../../layout/router-link"),
+      ]);
 
-      return (
-        <AdminRolesRouteContent
-          {...route.useLoaderData()}
-          LinkComponent={RouterLink}
-          navigate={useCallback(
-            async ({
-              resetScroll,
-              search,
-            }: {
-              resetScroll: boolean;
-              search: ReturnType<typeof normalizeRolesRouteSearch>;
-            }) => {
-              await navigate({ resetScroll, search });
-            },
-            [navigate],
-          )}
-          search={route.useSearch()}
-        />
-      );
-    },
+      return {
+        default: function AdminRolesRoute() {
+          const navigate = route.useNavigate();
+
+          return (
+            <AdminRolesRouteContent
+              {...route.useLoaderData()}
+              LinkComponent={RouterLink}
+              navigate={useCallback(
+                async ({
+                  resetScroll,
+                  search,
+                }: {
+                  resetScroll: boolean;
+                  search: ReturnType<typeof normalizeRolesRouteSearch>;
+                }) => {
+                  await navigate({ resetScroll, search });
+                },
+                [navigate],
+              )}
+              search={route.useSearch()}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
@@ -200,14 +214,23 @@ const userRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
    * router themselves, so core's own `RouterLink` is supplied here.
    */
   route.update({
-    component: function AdminUserRoute() {
-      return (
-        <AdminUserRouteContent
-          {...route.useLoaderData()}
-          LinkComponent={RouterLink}
-        />
-      );
-    },
+    component: lazyRouteComponent(async () => {
+      const [{ AdminUserRouteContent }, { RouterLink }] = await Promise.all([
+        import("../../admin/users/detail-screen"),
+        import("../../layout/router-link"),
+      ]);
+
+      return {
+        default: function AdminUserRoute() {
+          return (
+            <AdminUserRouteContent
+              {...route.useLoaderData()}
+              LinkComponent={RouterLink}
+            />
+          );
+        },
+      };
+    }),
   });
 
   return route;
