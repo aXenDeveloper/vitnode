@@ -1,84 +1,102 @@
 ---
 title: Email
-description: How to use email functionality in your application.
+description: Send transactional emails with React Email templates, recipient-locale rendering, and pluggable delivery adapters.
+icon: Mail
 ---
 
-## Adapters
+VitNode provides a unified transactional email service accessible via `c.get("email")`. Emails are rendered using React components, localized to the recipient's language, and delivered through your chosen provider.
 
-Before you can use email functionality, you need to provide an adapter to your application.
+## Quick start
+
+Send an email directly from any Hono route handler:
+
+```ts title="plugins/blog/src/api/modules/newsletter/routes/welcome.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route"
+
+export const sendWelcomeRoute = buildRoute({
+  pluginId: "blog",
+  route: {
+    method: "post",
+    path: "/welcome",
+    responses: { 200: { description: "Email sent" } },
+  },
+  handler: async (c) => {
+    const user = c.get("user")
+
+    // [!code ++:6]
+    const email = await c.get("email").build({
+      user, // Resolves email address and preferred locale
+      subject: "Welcome to VitNode!",
+      content: () => "Thank you for joining our community.",
+    })
+
+    await c.get("email").deliver(email)
+
+    return c.json({ sent: true })
+  },
+})
+```
+
+---
+
+## Configuring Email Adapters
+
+Configure your delivery transport in `apps/api/src/vitnode.api.config.ts`:
+
+### 1. Resend Adapter
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { ResendEmailAdapter } from "@vitnode/core/api/adapters/email/resend"
+
+export const vitNodeApiConfig = buildApiConfig({
+  email: {
+    from: "noreply@yourdomain.com",
+    adapter: ResendEmailAdapter({
+      apiKey: process.env.RESEND_API_KEY!,
+    }),
+  },
+})
+```
+
+### 2. SMTP Adapter
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { SmtpEmailAdapter } from "@vitnode/core/api/adapters/email/smtp"
+
+export const vitNodeApiConfig = buildApiConfig({
+  email: {
+    from: "noreply@yourdomain.com",
+    adapter: SmtpEmailAdapter({
+      host: process.env.SMTP_HOST!,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      user: process.env.SMTP_USER!,
+      password: process.env.SMTP_PASSWORD!,
+    }),
+  },
+})
+```
+
+---
+
+## Testing Email in AdminCP
+
+{/* Image prompt: VitNode AdminCP System -> Integrations screen at /admin/core/system/integrations. Email card showing status "Configured" with a "Send Test Email" modal containing recipient address input and delivery confirmation toast. Dark theme, 1440x900. */}
+
+Verify email configuration in the AdminCP at **System → Integrations** (`/admin/core/system/integrations`):
+- Click **Test Email** on the email card.
+- Enter an email address to dispatch an immediate test delivery.
+
+## Learn More
 
 <Cards>
-  <Card title="Resend" href="/docs/dev/email/resend" />
-  <Card title="Nodemailer" href="/docs/dev/email/nodemailer" />
+  <Card
+    title="Email Templates"
+    description="Build beautiful React Email templates with DefaultTemplateEmail"
+    href="/docs/dev/email/templates"
+  />
+  <Card
+    title="Custom Email Adapter"
+    description="Implement custom email delivery backends"
+    href="/docs/dev/email/custom-adapter"
+  />
 </Cards>
-
-or create your own [custom email adapter](/docs/dev/email/custom-adapter).
-
-## Usage
-
-To send an email, you can use the context `c.get('email').send()` in your route handler.
-
-```ts
-import { z } from "zod";
-import { buildRoute } from "@vitnode/core/api/lib/route";
-import { UserModel } from "@vitnode/core/api/models/user";
-
-export const testRoute = buildRoute({
-  handler: async c => {
-    const user = await new UserModel().getUserById({
-      id: 3,
-      c,
-    });
-
-    if (!user) throw new Error("User not found");
-
-    // [!code ++:5]
-    await c.get("email").send({
-      subject: "Test Email",
-      content: () => "This is a test email.",
-      user,
-    });
-
-    return c.text("test");
-  },
-});
-```
-
-or if you don't want to use `user` then you can just pass `to` field with `locale`:
-
-```ts
-import { z } from "zod";
-import { buildRoute } from "@vitnode/core/api/lib/route";
-
-export const testRoute = buildRoute({
-  handler: async c => {
-    // [!code ++:6]
-    await c.get("email").send({
-      to: "test@test.com",
-      subject: "Test Email",
-      content: () => "This is a test email.",
-      locale: "en",
-    });
-
-    return c.text("test");
-  },
-});
-```
-
-## Language
-
-An email renders in the recipient's language, not the sender's. Pass `user` and VitNode uses their `core_users.language`; pass a bare `to` and you supply `locale` yourself. Either way, a language your app doesn't list in `i18n.locales` falls back to `defaultLocale` - the request is never consulted, so mail cannot arrive in the language of whoever triggered the send.
-
-Templates get an `i18n` prop to turn into a translator:
-
-```tsx
-import { createTranslator } from "next-intl";
-
-export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
-  const t = createTranslator(i18n);
-
-  return <Text>{t("welcome.email.body")}</Text>;
-}
-```
-
-See [Server-side i18n](/docs/dev/i18n/server) for the full resolution order.

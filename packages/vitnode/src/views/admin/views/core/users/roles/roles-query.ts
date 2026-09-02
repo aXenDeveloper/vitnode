@@ -75,14 +75,6 @@ export const normalizeAdminRolesParams = (
 ): AdminRolesParams =>
   normalizeAdminTableParams(raw, ADMIN_ROLES_TABLE_CONTRACT);
 
-export const adminRolesRequest = (params: AdminRolesParams) =>
-  ({
-    args: { query: params },
-    method: "get" as const,
-    module: "admin/roles" as const,
-    path: "/list" as const,
-  }) as const;
-
 /** One row of the roles table - everything the edit dialog re-opens with. */
 export interface AdminRoleRow {
   allowUploadFiles: boolean;
@@ -111,7 +103,10 @@ export type AdminRolesPageFetcher = (
 export const fetchAdminRolesPageInBrowser: AdminRolesPageFetcher =
   async params => {
     const response = await fetcherClient(adminModuleRef, {
-      ...adminRolesRequest(params),
+      args: { query: params },
+      method: "get",
+      module: "admin/roles",
+      path: "/list",
       options: { credentials: "include" },
     });
 
@@ -174,15 +169,6 @@ export interface AdminRoleOption {
 /** The signature every role picker takes, wherever the read comes from. */
 export type AdminRoleSearch = (search: string) => Promise<AdminRoleOption[]>;
 
-/** One search's request: bounded, and never past the first page. */
-export const adminRoleSearchRequest = (search: string) =>
-  ({
-    args: { query: { first: String(ADMIN_ROLE_SEARCH_LIMIT), search } },
-    method: "get" as const,
-    module: "admin/roles" as const,
-    path: "/list" as const,
-  }) as const;
-
 /**
  * The rows a search should offer, out of the page the API returned.
  *
@@ -213,7 +199,10 @@ export const adminRoleOptionsFrom = (
 export const searchAdminRolesInBrowser: AdminRoleSearch = async search => {
   try {
     const response = await fetcherClient(adminModuleRef, {
-      ...adminRoleSearchRequest(search),
+      args: { query: { first: String(ADMIN_ROLE_SEARCH_LIMIT), search } },
+      method: "get",
+      module: "admin/roles",
+      path: "/list",
       options: { credentials: "include" },
     });
     if (!response.ok) return [];

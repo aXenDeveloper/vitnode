@@ -5,7 +5,6 @@ import {
   DEVICE_TYPES,
   devicesQueryKey,
   devicesQueryOptions,
-  devicesRequest,
   DevicesRequestError,
   isDevicesRequestError,
 } from "./devices-query";
@@ -13,7 +12,6 @@ import {
   isDevicePublicId,
   isRevokableDevice,
   REVOKE_CURRENT_DEVICE_STATUS,
-  revokeDeviceRequest,
   revokeResultFromStatus,
   shouldRefreshAfterRevoke,
 } from "./devices-revoke";
@@ -27,28 +25,6 @@ import {
  * socket or renders a component - the API has its own suite, and how the cards
  * look is Playwright's.
  */
-
-describe("the request the API is asked for", () => {
-  it("names the list route on the users module, with no parameters", () => {
-    // No parameters is the point: the route takes none and derives whose devices
-    // these are from the session cookie. A query string here would be a second
-    // source of truth for something the cookie already decides.
-    expect(devicesRequest()).toEqual({
-      method: "get",
-      module: "users",
-      path: "/devices",
-    });
-  });
-
-  it("addresses one device by its public id for a revoke", () => {
-    expect(revokeDeviceRequest({ publicId: "a1b2c3" })).toEqual({
-      args: { params: { publicId: "a1b2c3" } },
-      method: "delete",
-      module: "users",
-      path: "/devices/{publicId}",
-    });
-  });
-});
 
 describe("one list per visitor, one cache entry each", () => {
   it("is keyed by the owner, under the devices domain", () => {
@@ -105,29 +81,14 @@ describe("one list per visitor, one cache entry each", () => {
 /**
  * The other half of the same rule: the id is a cache address, not a claim.
  *
- * If it ever reached the wire it would stop being a cache key and become an
- * access-control parameter supplied by the browser - so the request is asserted
- * to be exactly what it was before the key gained an owner.
+ * It is not asserted here any more, because it is no longer assertable - it is
+ * enforced. Both calls are written inline at their fetchers, so `FetcherParams`
+ * decides what may travel: `GET /devices` declares no body, params or query, so
+ * an `args` on it does not compile, and the revoke declares `publicId` and
+ * nothing else, so a second key is an excess-property error. A type that
+ * forbids the value is a stronger statement than a test that looks for its
+ * absence.
  */
-describe("the owner never leaves the browser", () => {
-  it("sends no arguments at all on the list request", () => {
-    // Not "no user id" - no arguments whatsoever. There is nowhere for one to
-    // travel, which is a stronger statement than any absence check.
-    expect(devicesRequest()).not.toHaveProperty("args");
-    expect(Object.keys(devicesRequest()).sort()).toEqual([
-      "method",
-      "module",
-      "path",
-    ]);
-  });
-
-  it("sends the device's public id on a revoke and nothing else", () => {
-    const request = revokeDeviceRequest({ publicId: "a1b2c3" });
-
-    expect(request.args).toEqual({ params: { publicId: "a1b2c3" } });
-    expect(Object.keys(request.args.params)).toEqual(["publicId"]);
-  });
-});
 
 describe("a refused read is not an empty list", () => {
   it.each([401, 403, 429, 500])(

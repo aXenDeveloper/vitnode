@@ -1,0 +1,144 @@
+---
+title: Getting Started
+description: Create a VitNode app, start Postgres, run the dev server, and sign in to the AdminCP as your first administrator.
+icon: Rocket
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+Get up and running with a complete VitNode application in under 5 minutes.
+
+## Prerequisites
+
+- **Node.js 22+** (Node 24 recommended)
+- Package manager: **pnpm**, **bun**, or **npm**
+- **PostgreSQL 15+** (or Docker to run the included compose file)
+
+---
+
+## Create and Run Your Application
+
+<Steps>
+<Step>
+
+### 1. Scaffold the Project
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create VitNode app">
+
+```bash tab="bun"
+bun create vitnode-app@canary
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary
+```
+
+```bash tab="npm"
+npx create-vitnode-app@canary
+```
+
+</Tabs>
+
+Select your preferred template when prompted:
+- **Single App**: Unified TanStack Start application with Hono API mounted at `/api` (Recommended).
+- **Monorepo App**: Turborepo setup separating `apps/web` and `apps/api`.
+- **Only API**: Standalone Hono REST/RPC server.
+
+</Step>
+<Step>
+
+### 2. Start PostgreSQL with Docker
+
+If you chose Docker during scaffolding, start Postgres and Redis in one command:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start database">
+
+```bash tab="bun"
+bun run docker:dev
+```
+
+```bash tab="pnpm"
+pnpm docker:dev
+```
+
+```bash tab="npm"
+npm run docker:dev
+```
+
+</Tabs>
+
+</Step>
+<Step>
+
+### 3. Run Migrations and Seed Initial Admin
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate and seed">
+
+```bash tab="bun"
+bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
+This creates all core schema tables and prompts you to configure your initial administrator account.
+
+</Step>
+<Step>
+
+### 4. Start the Development Server
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start dev server">
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Open `http://localhost:3000` to view your live application.
+
+</Step>
+<Step>
+
+### 5. Sign In to the AdminCP
+
+Visit `http://localhost:3000/admin` and sign in with the admin credentials created during migration.
+
+</Step>
+</Steps>
+
+## Next Steps
+
+<Cards>
+  <Card
+    title="Create a Plugin"
+    description="Build your first custom VitNode plugin"
+    href="/docs/dev/plugins/create"
+  />
+  <Card
+    title="Defining a Content Type"
+    description="Declare database schemas and AdminCP management screens"
+    href="/docs/dev/content-engine/defining-a-content-type"
+  />
+  <Card
+    title="Deployments"
+    description="Deploy VitNode to production servers or containers"
+    href="/docs/dev/deployments/self-hosted"
+  />
+</Cards>

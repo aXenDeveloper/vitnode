@@ -1,6 +1,7 @@
 ---
 title: Switch
 description: Toggle between checked and unchecked states.
+icon: ToggleRight
 ---
 
 ## Preview
@@ -9,23 +10,23 @@ description: Toggle between checked and unchecked states.
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormSwitch } from "@vitnode/core/components/form/fields/switch";
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormSwitch } from '@vitnode/core/components/form/fields/switch'
 ```
 
 ```ts
 const formSchema = z.object({
-  acceptTerms: z.boolean().refine(val => val, {
-    message: "You must accept the terms and conditions",
+  acceptTerms: z.boolean().refine((val) => val, {
+    message: 'You must accept the terms and conditions',
   }),
-});
+})
 ```
 
 ```tsx
@@ -33,8 +34,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "acceptTerms",
-      component: props => (
+      id: 'acceptTerms',
+      component: (props) => (
         <AutoFormSwitch {...props} label="I accept the terms and conditions" />
       ),
     },

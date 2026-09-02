@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
+import { movedDocsSlug } from '#/docs/moved-pages'
 import { DocsNotFoundContent } from '#/docs/not-found-content'
 import { DocsPageContent } from '#/docs/page-content'
 import { getDocsPage } from '#/docs/transport'
@@ -68,8 +69,27 @@ import { pageHead } from '#/lib/page-head'
  * the navigation with it - and Fumadocs' `DocsPage` throws outright without the
  * tree context that shell provides. Declared here it renders in the shell's
  * `<Outlet />`, which is what a reader who mistyped a URL actually wants.
+ *
+ * ## A moved document redirects before the lookup
+ *
+ * `beforeLoad` runs before the loader, so a slug that used to name a document
+ * never reaches `getDocsPage` and never becomes a 404. See
+ * `src/docs/moved-pages.ts` for the map, and note the `301`: the reorganisation
+ * is permanent, so the old URL should hand its ranking to the new one rather
+ * than keep it.
  */
 export const Route = createFileRoute('/_docs/docs/$')({
+  beforeLoad: ({ params }) => {
+    const moved = movedDocsSlug(params._splat ?? '')
+
+    if (moved) {
+      throw redirect({
+        params: { _splat: moved },
+        statusCode: 301,
+        to: '/docs/$',
+      })
+    }
+  },
   loader: async ({ params }) => {
     const page = await getDocsPage({ data: params._splat ?? '' })
     const { docsClientLoader } = await import('#/docs/client-loader')

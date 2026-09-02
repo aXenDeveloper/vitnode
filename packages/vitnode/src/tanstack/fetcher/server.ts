@@ -7,10 +7,29 @@ import {
 } from "@tanstack/react-start/server";
 import { config } from "dotenv";
 
+import type {
+  BaseBuildModuleReturn,
+  BuildModuleReturn,
+} from "@/api/lib/module";
+import type { Route } from "@/api/lib/route";
+import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
+import type {
+  FetcherParams,
+  FetcherRequestOptions,
+  GetModulePaths,
+  GetValidMethodForPath,
+  GetValidPathsForModule,
+  InferResponseType,
+} from "@/lib/fetcher/types";
+
 import { CONFIG } from "@/lib/config";
 import { coreFetcher } from "@/lib/fetcher/core";
+import { rawApiFetch } from "@/lib/fetcher/raw";
 import { buildForwardedHeaders } from "@/lib/fetcher/request-context";
-import { parseSetCookies } from "@/lib/fetcher/set-cookie";
+import {
+  parseSetCookies,
+  shouldSaveApiCookies,
+} from "@/lib/fetcher/set-cookie";
 
 /**
  * `.env` into `process.env`, for anything that still reads it: the browser
@@ -69,8 +88,8 @@ export const resolveApiOrigin = (): string => {
  * single rate-limit bucket - so this is the difference between signed-in HTML and
  * signed-out HTML, not a nicety.
  *
- * The allowlist itself lives in `@/lib/fetcher/request-context` because Next's
- * `fetcher()` sends exactly the same set; only the reading differs. Nothing else
+ * The allowlist itself lives in `@/lib/fetcher/request-context`, framework-free,
+ * because only the reading is this runtime's. Nothing else
  * is copied across: `host` and `content-length` describe the page request rather
  * than the API call, and `origin`, `referer` and `authorization` are values the
  * API trusts, so forwarding whatever a visitor put in them would hand them state
@@ -84,9 +103,8 @@ export const getForwardedApiHeaders = ({
   return buildForwardedHeaders({
     captchaToken,
     cookie: headers.get("cookie"),
-    // The header first, verbatim, chain included: that is what the API stores
-    // and what Next's `fetcher()` sends, and re-deriving it would log this
-    // server's hop as the visitor's IP. `getRequestIP()` is the fallback for a
+    // The header first, verbatim, chain included: that is what the API stores,
+    // and re-deriving it would log this server's hop as the visitor's IP. `getRequestIP()` is the fallback for a
     // directly-exposed server, where there is no proxy to have written one -
     // better than the `0.0.0.0` the header's absence would otherwise mean.
     forwardedFor: headers.get("x-forwarded-for") ?? getRequestIP(),
@@ -95,38 +113,8 @@ export const getForwardedApiHeaders = ({
 };
 
 /**
- * `coreFetcher` with this request's context attached.
- *
- * The context - locale, forwarded IP, user agent, cookies - is read off the
- * request currently being handled, through TanStack Start's own request scope.
- *
- * Typed as `typeof coreFetcher` so route literals, methods and response schemas
- * keep inferring exactly as they do everywhere else in VitNode.
- *
- * Server-side only, and only inside a request: the headers come from the request
- * currently being handled, so a module-scope call has nothing to read. In
- * TanStack Start that means a `createServerFn` handler, a server route, or the
- * `.server()` branch of a `createIsomorphicFn` - not a route `loader`, which
- * also runs in the browser on client-side navigation.
- */
-export const fetcherServer: typeof coreFetcher = async (
-  moduleReturn,
-  options,
-) =>
-  coreFetcher(moduleReturn, {
-    ...options,
-    additionalHeaders: {
-      ...getForwardedApiHeaders(),
-      ...options.additionalHeaders,
-    },
-    // Same-origin by construction, and ahead of `NEXT_PUBLIC_API_URL` - which
-    // an explicit `origin` on the call can still override.
-    origin: options.origin ?? resolveApiOrigin(),
-  });
-
-/**
- * Copies the cookies the API just minted onto this response - the counterpart of
- * `allowSaveCookies` on Next's `fetcher()`.
+ * Copies the cookies the API just minted onto this response - what
+ * `allowSaveCookies` below is built on.
  *
  * Sign-in, sign-up, sign-out and the SSO callback all answer with a
  * `Set-Cookie`, and so does any first call from a browser with no device cookie.
@@ -143,3 +131,122 @@ export const saveApiCookies = (response: Response): void => {
     setCookie(name, value, options);
   }
 };
+
+/**
+ * The same request context, for a module the type system cannot name.
+ *
+ * A Content Engine module is generated at runtime from a definition, so there is
+ * no `typeof` for {@link fetcher} to infer route literals from - see
+ * `views/admin/views/content/content-request.ts`. Those calls still need the
+ * visitor's cookies and this request's origin, and this is that half of
+ * `fetcher` without the typing, so the transport is decided in one place rather
+ * than reassembled per caller.
+ *
+ * Prefer {@link fetcher}. Reach for this only when the module is generated.
+ */
+export const rawFetcher = async ({
+  additionalHeaders,
+  origin,
+  ...args
+}: RawApiFetchArgs): Promise<Response> =>
+  await rawApiFetch({
+    ...args,
+    additionalHeaders: { ...getForwardedApiHeaders(), ...additionalHeaders },
+    origin: origin ?? resolveApiOrigin(),
+  });
+
+/**
+ * The server-side fetcher: one call, the API module it talks to, and the route
+ * on it.
+ *
+ *     const response = await fetcher(usersModule, {
+ *       method: "post",
+ *       module: "users",
+ *       path: "/sign_in",
+ *       allowSaveCookies: true,
+ *       args: { body: { email, password } },
+ *     });
+ *
+ * The same signature the Next.js `fetcher()` had, so a route literal, its
+ * method, its `args` and the response schema all infer from the module and
+ * nothing about a call is spelled twice. `args` is required exactly when the
+ * route declares a body, params or a query - see {@link FetcherParams}.
+ *
+ * What it adds to `coreFetcher` is this request:
+ *
+ * - the visitor's `Cookie`, `user-agent` and `x-forwarded-for`, so the API knows
+ *   who is asking and buckets the rate limiter correctly,
+ * - the origin the page request arrived on, so a preview deployment calls
+ *   itself,
+ * - `captchaToken` as the header `captchaMiddleware` reads, and
+ * - `allowSaveCookies`, which copies a `2xx`'s `Set-Cookie` onto the response
+ *   this server is building. Without it a freshly minted session lives for
+ *   exactly one render.
+ *
+ * Server-side only, and only inside a request: the headers come from the request
+ * currently being handled, so a module-scope call has nothing to read. In
+ * TanStack Start that means a `createServerFn` handler, a server route, or the
+ * `.server()` branch of a `createIsomorphicFn` - not a route `loader`, which
+ * also runs in the browser on client-side navigation.
+ */
+export async function fetcher<
+  M extends string,
+  Routes extends Route[],
+  Modules extends BaseBuildModuleReturn[],
+  ModuleName extends GetModulePaths<M, Modules>,
+  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
+  Method extends GetValidMethodForPath<
+    ModuleName,
+    SelectedPath,
+    M,
+    Routes,
+    Modules
+  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
+>(
+  moduleReturn: BuildModuleReturn<string, M, Routes, Modules>,
+  {
+    path,
+    method,
+    module,
+    args,
+    options,
+    formData,
+    additionalHeaders,
+    allowSaveCookies = false,
+    captchaToken,
+    origin,
+    prefixPath = "",
+    withPagination = false,
+  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
+    FetcherRequestOptions & {
+      allowSaveCookies?: boolean;
+      captchaToken?: string;
+    },
+): Promise<
+  InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
+> {
+  const response = await coreFetcher(moduleReturn, {
+    path,
+    method,
+    module,
+    args,
+    options,
+    formData,
+    prefixPath,
+    withPagination,
+    additionalHeaders: {
+      ...getForwardedApiHeaders({ captchaToken }),
+      ...additionalHeaders,
+    },
+    // Same-origin by construction, and ahead of `NEXT_PUBLIC_API_URL` - which
+    // an explicit `origin` on the call can still override.
+    origin: origin ?? resolveApiOrigin(),
+  } as FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
+    FetcherRequestOptions);
+
+  if (allowSaveCookies && shouldSaveApiCookies((response as Response).status)) {
+    saveApiCookies(response);
+  }
+
+  return response;
+}

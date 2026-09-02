@@ -27,21 +27,6 @@ import {
 import { STAFF_TYPE_SEGMENT } from "@/views/admin/views/core/staff/staff-model";
 import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
-/**
- * The two staff lists, the permission catalog and one staff entry, as query
- * definitions.
- *
- * Administrators and moderators are the *same screen* over two tables:
- * `GET /admin/staff/admins` behind `staff_admins:can_view`, and
- * `GET /admin/staff/moderators` behind `staff_moderators:can_view`. The rest of
- * the module - create, read, update, delete on one entry - is gated inside the
- * handlers by `assertStaffPermission(c, { module: staffPermissionModuleByType[type] })`
- * rather than by a route declaration, which is why nothing here can infer the
- * permission from the path alone. {@link staffPermissionModuleFor} is that
- * mapping, restated on the frontend so a button is hidden for the same reason
- * the API would refuse it.
- */
-
 /** The columns both staff lists sort by - `staffListAdminQuery`'s enum. */
 export const ADMIN_STAFF_ORDER_BY = ["id", "createdAt", "updatedAt"] as const;
 export type AdminStaffOrderBy = (typeof ADMIN_STAFF_ORDER_BY)[number];
@@ -77,24 +62,6 @@ import { RECORD_STALE_TIME } from "@/lib/query-freshness";
  * types are keyed on the path literal - `/admins` and `/moderators` are two
  * routes, and a template literal would infer as neither.
  */
-export const adminStaffRequest = (
-  type: PermissionStaffType,
-  params: AdminStaffParams,
-) =>
-  type === "admin"
-    ? ({
-        args: { query: params },
-        method: "get" as const,
-        module: "admin/staff" as const,
-        path: "/admins" as const,
-      } as const)
-    : ({
-        args: { query: params },
-        method: "get" as const,
-        module: "admin/staff" as const,
-        path: "/moderators" as const,
-      } as const);
-
 /** A role reference as a staff row renders it. */
 export interface AdminStaffRole {
   color: null | string;
@@ -154,7 +121,10 @@ export const fetchAdminStaffPageInBrowser: AdminStaffPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcherClient(adminModuleRef, {
-    ...adminStaffRequest(type, params),
+    args: { query: params },
+    method: "get",
+    module: "admin/staff",
+    path: type === "admin" ? "/admins" : "/moderators",
     options: { signal },
   });
 
@@ -209,21 +179,15 @@ export const adminStaffQueryOptions = ({
 /*                            The permission catalog                          */
 /* -------------------------------------------------------------------------- */
 
-export const adminStaffCatalogRequest = () =>
-  ({
-    method: "get" as const,
-    module: "admin/staff" as const,
-    path: "/permission-catalog" as const,
-  }) as const;
-
 export type AdminStaffCatalogFetcher = () => Promise<StaffCatalog>;
 
 export const fetchAdminStaffCatalogInBrowser: AdminStaffCatalogFetcher =
   async () => {
-    const response = await fetcherClient(
-      adminModuleRef,
-      adminStaffCatalogRequest(),
-    );
+    const response = await fetcherClient(adminModuleRef, {
+      method: "get",
+      module: "admin/staff",
+      path: "/permission-catalog",
+    });
 
     if (!response.ok) {
       throw new AdminRequestError(
@@ -267,14 +231,6 @@ export interface AdminStaffEntry extends AdminStaffRow {
   permissions: PermissionsStaffArgs[];
 }
 
-export const adminStaffEntryRequest = (type: PermissionStaffType, id: string) =>
-  ({
-    args: { params: { id, type } },
-    method: "get" as const,
-    module: "admin/staff" as const,
-    path: "/entry/{type}/{id}" as const,
-  }) as const;
-
 export type AdminStaffEntryFetcher = (
   type: PermissionStaffType,
   id: string,
@@ -284,10 +240,12 @@ export const fetchAdminStaffEntryInBrowser: AdminStaffEntryFetcher = async (
   type,
   id,
 ) => {
-  const response = await fetcherClient(
-    adminModuleRef,
-    adminStaffEntryRequest(type, id),
-  );
+  const response = await fetcherClient(adminModuleRef, {
+    args: { params: { id, type } },
+    method: "get",
+    module: "admin/staff",
+    path: "/entry/{type}/{id}",
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(

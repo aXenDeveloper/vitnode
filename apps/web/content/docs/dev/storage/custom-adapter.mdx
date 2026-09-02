@@ -1,78 +1,273 @@
 ---
-title: Custom Adapter
-description: Create your own custom storage adapter for VitNode.
+title: Custom adapter
+description: Write your own VitNode storage adapter - implement StorageApiPlugin's upload, delete and getUrl and store uploaded files anywhere.
+icon: Puzzle
 ---
 
-Want to store files somewhere else? Implement the `StorageApiPlugin` interface.
-An adapter is a plain factory returning three methods - `upload`, `delete` and
-`getUrl` - plus an optional `static` descriptor for disk-backed adapters that
-serve files through Hono's `serveStatic`.
+A storage adapter is a plain factory that returns three functions. VitNode has
+already validated the file, re-encoded the image and built a collision-free key
+before it calls you - your job is to put bytes somewhere and be able to name
+their URL afterwards.
 
-## Usage
+## Quick start
+
+The whole contract is one interface, and there is nothing to install to
+implement it:
+
+```ts title="packages/vitnode/src/api/models/storage.ts"
+export interface StorageApiPlugin {
+  delete: (key: string) => Promise<void>
+  getUrl: (key: string) => string
+  static?: StorageStaticConfig
+  upload: (args: StorageUploadArgs) => Promise<StorageUploadResult>
+}
+```
+
+Return an object of that shape from a factory, set it as `storage.adapter` in
+your API config, and VitNode stores files through it. The
+[working skeleton](#write-one) below is about 60 lines.
+
+## The three methods
+
+| Method                               | Gets                                                   | Must return                     | Rules                                                                        |
+| :----------------------------------- | :----------------------------------------------------- | :------------------------------ | :--------------------------------------------------------------------------- |
+| `upload({ key, body, contentType })` | A Node `Buffer`, the media type, and a pre-built `key` | `{ key, url }`                  | Store `body` **at that exact key**. The key is written to the database as-is |
+| `delete(key)`                        | The key from the `core_files` row                      | `Promise<void>`                 | An object that is already gone is a success, not an error                    |
+| `getUrl(key)`                        | The same key                                           | A public URL, **synchronously** | Build a string. No network, no `await` - it runs once per row in a listing   |
+
+`StorageUploadArgs` and `StorageUploadResult` are exported from the same module,
+so you never have to restate them:
+
+```ts title="packages/vitnode/src/api/models/storage.ts"
+export interface StorageUploadArgs {
+  body: Buffer
+  contentType?: string
+  key: string
+}
+
+export interface StorageUploadResult {
+  key: string
+  url: string
+}
+```
+
+## Write one
 
 <Steps>
 <Step>
-### Create the adapter
 
-```ts title="src/utils/storage/my-storage.ts"
-import type { StorageApiPlugin } from "@vitnode/core/api/models/storage";
+### Write the adapter
 
-export const MyStorageAdapter = ({
-  bucket = "",
+A complete adapter, against any object store that answers `PUT` and `DELETE` and
+serves the objects back from a public base URL. Both official cloud adapters
+default their arguments to `""` and check them lazily, so a missing environment
+variable fails on the first upload with a sentence rather than at import time
+with a stack trace.
+
+```ts title="src/utils/storage/http-storage.ts"
+import type {
+  StorageApiPlugin,
+  StorageUploadArgs,
+  StorageUploadResult,
+} from '@vitnode/core/api/models/storage'
+
+export const HttpStorageAdapter = ({
+  apiKey = '',
+  endpoint = '',
+  publicUrl = '',
 }: {
-  bucket: string | undefined;
-}): StorageApiPlugin => {};
+  apiKey: string | undefined
+  endpoint: string | undefined
+  publicUrl: string | undefined
+}): StorageApiPlugin => {
+  const requireConfig = () => {
+    if (!(apiKey && endpoint && publicUrl)) {
+      throw new Error('Missing HTTP storage configuration')
+    }
+
+    return { apiKey, endpoint: endpoint.replace(/\/$/, '') }
+  }
+
+  const getUrl = (key: string): string =>
+    `${publicUrl.replace(/\/$/, '')}/${key}`
+
+  return {
+    getUrl,
+    delete: async (key: string): Promise<void> => {
+      const { apiKey, endpoint } = requireConfig()
+
+      const res = await fetch(`${endpoint}/${key}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Storage delete failed with ${res.status}`)
+      }
+    },
+    upload: async ({
+      body,
+      contentType,
+      key,
+    }: StorageUploadArgs): Promise<StorageUploadResult> => {
+      const { apiKey, endpoint } = requireConfig()
+
+      const res = await fetch(`${endpoint}/${key}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': contentType ?? 'application/octet-stream',
+        },
+        body: new Uint8Array(body),
+      })
+      if (!res.ok) {
+        throw new Error(`Storage upload failed with ${res.status}`)
+      }
+
+      return { key, url: getUrl(key) }
+    },
+  }
+}
+```
+
+Two details worth copying rather than reinventing. `delete` treats a `404` as
+done, because `deleteFile` has already removed the database row by the time it
+runs - throwing there turns a finished delete into a failed request. And
+`upload` returns the key it was handed, never a rewritten one.
+
+</Step>
+<Step>
+
+### Register it
+
+An adapter needs no registry, no manifest and no plugin entry. It is a value on
+the API config:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+import { HttpStorageAdapter } from './utils/storage/http-storage' // [!code ++]
+
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    // [!code ++:5]
+    adapter: HttpStorageAdapter({
+      apiKey: process.env.STORAGE_API_KEY,
+      endpoint: process.env.STORAGE_ENDPOINT,
+      publicUrl: process.env.STORAGE_PUBLIC_URL,
+    }),
+  },
+})
 ```
 
 </Step>
 <Step>
-### Implement the methods
 
-- `upload({ key, body, contentType })` - persist the `Buffer` and return the
-  stored `key` and its public `url`.
-- `delete(key)` - remove a stored object.
-- `getUrl(key)` - build the public URL for a key.
+### Verify it round-trips
 
-```ts title="src/utils/storage/my-storage.ts"
-import type {
-  StorageApiPlugin,
-  StorageUploadArgs,
-} from "@vitnode/core/api/models/storage";
+Open **AdminCP → Core → System → Integrations** (`/admin/core/system/integrations`)
+and click **Test storage** on the Storage card. It uploads an image through your
+adapter, then the row shows up in **AdminCP → Core → System → Files** with a
+working thumbnail - which is `getUrl` proving itself, since the browser loads
+that URL directly.
 
-export const MyStorageAdapter = ({
-  bucket = "",
-}: {
-  bucket: string | undefined;
-}): StorageApiPlugin => {
-  const getUrl = (key: string) => `https://cdn.example.com/${bucket}/${key}`;
-
-  // [!code ++:12]
-  return {
-    getUrl,
-    upload: async ({ key, body, contentType }: StorageUploadArgs) => {
-      // ...persist `body` under `key`
-      return { key, url: getUrl(key) };
-    },
-    delete: async (key: string) => {
-      // ...remove `key`
-    },
-  };
-};
-```
+If the thumbnail is broken but the upload succeeded, `upload` and `getUrl`
+disagree about the URL. If the upload itself failed, the API log has your own
+error message in it.
 
 </Step>
 </Steps>
 
 <Callout type="info" title="Keys are pre-built for you">
-  The framework builds the `month_{month}_{year}/{folder}/<uuid>.<ext>` key
-  before calling `upload`, so an adapter just stores the `body` at the given
-  `key` - no path logic needed.
+  The framework builds `month_{month}_{year}/{folder}/<uuid>.<ext>` before
+  calling `upload`, checks every folder segment against the traversal guard, and
+  stores that key on the `core_files` row. So an adapter stores `body` at the
+  key it was handed and never invents path logic - see [storage
+  keys](/docs/dev/storage#storage-keys).
 </Callout>
 
-## Publish to NPM
+## The optional static descriptor
 
-If you want to share your adapter, publish it as an NPM package. Reference
-implementations:
+Disk-backed adapters can expose a fourth field, and only they should:
 
-- [S3 / R2 Adapter](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/s3)
-- [Supabase Storage Adapter](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/supabase-storage)
+```ts
+export interface StorageStaticConfig {
+  mountPath: string
+  root: string
+  stripPrefix: string
+}
+```
+
+It is not read by the storage layer at all - the app that boots the API reads it
+to mount Hono's `serveStatic` for the stored files, which is how the
+[Local adapter](/docs/dev/storage/local#serve-the-stored-files) serves what it
+writes. A cloud adapter omits it, and the mount is then skipped.
+
+| Field         | The Local adapter's value                              |
+| :------------ | :----------------------------------------------------- |
+| `mountPath`   | `publicPath` with a leading `/api` stripped, plus `/*` |
+| `root`        | `./public/uploads`                                     |
+| `stripPrefix` | `publicPath`, e.g. `/api/uploads`                      |
+
+## Gotchas
+
+<Callout type="warn" title="A thrown error becomes a 500">
+  Your errors are not `HTTPException`s, so the API's error handler answers `500`
+  - with your message in the body during development and a bare "Internal Server
+  Error" in production, where only the log has the reason. That is the same deal
+  the official adapters get. Throw an `HTTPException` from `hono/http-exception`
+  instead when the person uploading can act on the cause - a quota, say, rather
+  than a broken token.
+</Callout>
+
+<Callout type="warn" title="getUrl runs once per row">
+  The AdminCP Files table calls it for every file on the page, and it is
+  declared synchronous, so a signed URL that needs a round trip does not fit
+  here. Put a CDN or a public base URL in front of the store and build a string.
+</Callout>
+
+<Callout type="warn" title="Never rewrite the key">
+  Returning a different `key` than you were given stores that value on the row -
+  and every later read, download and delete uses it. If your provider mangles
+  the path (a leading slash, a normalised case), return the key **as the
+  provider will accept it back**, not as you wish it were.
+</Callout>
+
+<Callout type="info" title="Sizes and dimensions are already decided">
+  `body.length` is what lands in `core_files.size`, and the image pipeline has
+  already run. An adapter that compresses further would make the database
+  disagree with the object, so leave the bytes alone.
+</Callout>
+
+## Publish it
+
+If the adapter is useful to more than one installation, publish it as a package.
+Both official adapters are small enough to read in one sitting and are the best
+starting template:
+
+- [`@vitnode/s3`](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/s3) -
+  a lazily created SDK client, a URL built from three rules
+- [`@vitnode/supabase-storage`](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/supabase-storage) -
+  the shortest possible adapter, at under 60 lines
+
+Keep `@vitnode/core` a dev dependency (you only import types from it) and ship
+your provider's SDK as a real dependency, the way both of those do.
+
+## Next
+
+<Cards>
+  <Card
+    title="Storage overview"
+    description="upload(), keys, image optimization and deletes."
+    href="/docs/dev/storage"
+  />
+  <Card
+    title="Local (disk) adapter"
+    description="The one adapter that uses the static descriptor."
+    href="/docs/dev/storage/local"
+  />
+  <Card
+    title="AWS S3 / Cloudflare R2"
+    description="A production adapter worth copying."
+    href="/docs/dev/storage/s3-r2"
+  />
+</Cards>

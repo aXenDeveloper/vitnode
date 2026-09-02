@@ -1,18 +1,27 @@
 ---
 title: Card
-description: Display content in a card layout for emails.
+description: EmailCard gives a VitNode email a bordered container with header, title, description, content and footer sections.
+icon: SquareStack
 ---
+
+`EmailCard` is the container the framework's own mail puts its message in: a
+white panel with a border, a rounded corner and consistent padding. Six
+components, each a thin wrapper over a React Email primitive, so they compose
+like the app's card does.
 
 ## Preview
 
-import { ImgDocs } from '@/components/fumadocs/img';
-import cardPreviewImg from './card-preview.png';
+import { ImgDocs } from '@/components/fumadocs/img'
+import cardPreviewImg from './card-preview.png'
 
-<ImgDocs src={cardPreviewImg} alt="Card Preview" />
+<ImgDocs
+  src={cardPreviewImg}
+  alt="An email card on a pale background: bold Card Title, muted Card Description, a paragraph of content and a Footer line, all inside a rounded white panel"
+/>
 
 ## Usage
 
-```tsx
+```ts
 import {
   EmailCard,
   EmailCardContent,
@@ -20,8 +29,8 @@ import {
   EmailCardFooter,
   EmailCardHeader,
   EmailCardTitle,
-} from '@vitnode/core/emails/ui/card';
-import { Text } from 'react-email';
+} from '@vitnode/core/emails/ui/card'
+import { Text } from 'react-email'
 ```
 
 ```tsx
@@ -29,7 +38,7 @@ import { Text } from 'react-email';
   <EmailCardHeader>
     <EmailCardTitle>Card Title</EmailCardTitle>
     <EmailCardDescription>Card Description</EmailCardDescription>
-  </CardHeader>
+  </EmailCardHeader>
   <EmailCardContent>
     <Text className="m-0">
       This is the content of the card. You can put any content here.
@@ -40,3 +49,80 @@ import { Text } from 'react-email';
   </EmailCardFooter>
 </EmailCard>
 ```
+
+Every part is optional. A card with nothing but `EmailCardContent` inside it is
+a perfectly good panel.
+
+## Components
+
+| Component              | Renders                 | Styling it brings                                       |
+| ---------------------- | ----------------------- | ------------------------------------------------------- |
+| `EmailCard`            | `Section` (a `<table>`) | Card background, border, `rounded-xl`, vertical padding |
+| `EmailCardHeader`      | `Section`               | Horizontal padding and space below                      |
+| `EmailCardTitle`       | `Text` (a `<p>`)        | `text-xl font-semibold`, with the line height zeroed    |
+| `EmailCardDescription` | `Text`                  | Muted, small, no margin                                 |
+| `EmailCardContent`     | `Section`               | Horizontal padding                                      |
+| `EmailCardFooter`      | `Section`               | Horizontal padding and space above                      |
+
+## Props
+
+Each component takes the props of the primitive it renders - so `className`,
+`style` and children, plus the table or paragraph attributes underneath.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    className: {
+      description:
+        'Merged with the built-in classes, so padding or colours passed here win.',
+      type: 'string',
+    },
+    children: {
+      description: 'The section contents.',
+      type: 'React.ReactNode',
+    },
+  }}
+/>
+
+## Gotchas
+
+<Callout type="warn" title="The colours come from the template">
+  `bg-card`, `border-border` and `text-muted-foreground` are defined by
+  `DefaultTemplateEmail`, which wraps your content in a `<Tailwind>` carrying
+  VitNode's palette. In a template that builds its own document, those classes
+  resolve to nothing. [Templates](/docs/dev/email/templates#colour-tokens) lists
+  the tokens.
+</Callout>
+
+<Callout type="info" title="Reset the paragraph margins">
+  A React Email `Text` renders a `<p>` with its own margins, which stack oddly
+  inside a padded section. That is why the snippets above pass `m-0` on the
+  paragraphs they place directly in a card.
+</Callout>
+
+<Callout type="info" title="Sections are tables">
+  Each of these renders a `<table>`, because that is what survives Outlook.
+  Nesting them is fine and expected; floating or absolutely positioning them is
+  not a thing email can do.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Button"
+    description="The call-to-action link that usually sits in the card content"
+    href="/docs/dev/email/components/button"
+  />
+  <Card
+    title="Templates"
+    description="Where the Tailwind palette and the layout come from"
+    href="/docs/dev/email/templates"
+  />
+  <Card
+    title="React Email components"
+    description="Section, Row, Column and the rest of the primitives"
+    href="https://react.email/docs/components"
+  />
+</Cards>

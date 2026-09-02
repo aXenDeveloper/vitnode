@@ -1,4 +1,6 @@
 {
   "title": "AI",
+  "description": "Register Vercel AI SDK models once, then resolve them in any route with c.get(\"ai\")",
+  "icon": "Sparkles",
   "pages": ["index", "usage"]
 }

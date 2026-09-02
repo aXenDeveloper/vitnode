@@ -1,59 +1,155 @@
 ---
 title: Custom Adapter
-description: Create your own custom cron adapter for VitNode.
+description: Wrap any scheduler in VitNode's one-method CronAdapter interface - a plain setInterval, a cron library, or a platform trigger.
+icon: Puzzle
 ---
 
-VitNode supports custom cron adapters, allowing you to integrate with various scheduling libraries or services.
+A cron adapter is the thinnest interface in VitNode: one method, no return value,
+called once while the API boots. Its whole job is to call `handleCronJobs()` on a
+clock. Everything else - which jobs exist, which are due, what gets logged - is
+the [cron endpoint](/docs/dev/cron/rest-api)'s business, not the adapter's.
 
-## Usage
+Write one when the [Node CRON adapter](/docs/dev/cron/node-cron) is not the
+scheduler you want: you already run a job runner, you need the tick to carry a
+trace header, or the platform hands you a trigger of its own.
+
+## Quick start
+
+The shortest adapter that works is a timer:
+
+```ts title="src/adapters/interval-cron.adapter.ts"
+import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
+
+export const IntervalCronAdapter = (): CronAdapter => ({
+  schedule() {
+    setInterval(() => {
+      handleCronJobs().catch((error: unknown) => {
+        console.error('[cron] tick failed', error)
+      })
+    }, 60_000)
+  },
+})
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+import { IntervalCronAdapter } from './adapters/interval-cron.adapter' // [!code ++]
+
+export const vitNodeApiConfig = buildApiConfig({
+  cron: IntervalCronAdapter(), // [!code ++]
+  // ...
+})
+```
+
+That is a complete, working adapter. The rest of this page is about doing it with
+a real scheduler, and about the ways it can go quietly wrong.
+
+## The interface
+
+```ts title="packages/vitnode/src/api/lib/cron.ts"
+export interface CronAdapter {
+  schedule: () => void
+}
+```
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    schedule: {
+      description:
+        'Called once by VitNodeAPI while the application is being built, before any request is served. Register your timer or trigger here. Synchronous and void - nothing awaits it and nothing catches it.',
+      type: '() => void',
+      required: true,
+    },
+  }}
+/>
+
+`handleCronJobs()` comes from the same module and takes no arguments. It posts to
+`/api/@vitnode/core/cron` on the origin in `NEXT_PUBLIC_API_URL` (falling back to
+`http://localhost:3000`) with `Content-Type: application/json` and
+`Authorization: Bearer $CRON_SECRET`. It resolves as soon as the response
+arrives and never looks at it, so a `403` or a `500` resolves exactly like a
+`200` - only a network-level failure rejects.
+
+<Callout type="info" title="You do not have to use handleCronJobs">
+  It is a convenience, not a contract. An adapter whose scheduler lives outside
+  the process - a platform trigger, a separate worker - can leave `schedule()`
+  empty and let that scheduler [call the endpoint
+  directly](/docs/dev/cron/rest-api). The adapter still earns its place: setting
+  `cron` is what makes the AdminCP report a scheduler as configured.
+</Callout>
+
+## Build one with a library
 
 <Steps>
 <Step>
 
-### Create your custom adapter
+### Write the adapter
 
-As an example we will create a custom adapter using the popular `node-cron` library.
+Keep it in your app rather than in a plugin - a cron adapter is a deployment
+decision, and it is registered from the API config, which only the host has.
 
-```ts
-import { schedule } from "node-cron";
-import { type CronAdapter, handleCronJobs } from "@/api/lib/cron";
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="adapters" defaultOpen>
+      <File name="node-cron.adapter.ts" />
+    </Folder>
+    <File name="vitnode.api.config.ts" />
+  </Folder>
+</Files>
+
+The official package is the reference implementation, and it is short enough to
+read in one go:
+
+```ts title="src/adapters/node-cron.adapter.ts"
+import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
+import { schedule } from 'node-cron'
 
 export const NodeCronAdapter = (): CronAdapter => {
   return {
     schedule() {
-      schedule("*/1 * * * *", async () => {
-        await handleCronJobs(); // [!code ++]
-      });
+      schedule('*/1 * * * *', async () => {
+        await handleCronJobs() // [!code highlight]
+      })
     },
-  };
-};
+  }
+}
 ```
 
-</Step>
+Give the factory options if your scheduler has any worth exposing - a tick
+interval, a timezone, a logger. `CronAdapter` says nothing about the factory, so
+its signature is yours.
 
+</Step>
 <Step>
 
-### Integrate the adapter into your application
+### Register it in the API config
 
 ```ts title="src/vitnode.api.config.ts"
-import { NodeCronAdapter } from "./path/to/your/custom/node-cron.adapter";
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+import { NodeCronAdapter } from './adapters/node-cron.adapter' // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
-  cron: NodeCronAdapter(),
-});
+  cron: NodeCronAdapter(), // [!code ++]
+  // ...
+})
 ```
 
 </Step>
-
 <Step>
 
-### Restart server
+### Restart and verify the first tick
 
-After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
+`schedule()` runs at boot, so a running process never picks up the change.
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Restart the dev server'>
 
 ```bash tab="bun"
 bun dev
@@ -69,15 +165,73 @@ npm run dev
 
 </Tabs>
 
-That's it - your app now has a built-in task scheduler, ready to handle cron jobs with standard cron expressions.
+Open `/admin/core/advanced/cron` and watch the `process-queue` row - it is
+scheduled `* * * * *`, so a healthy adapter keeps its **Last Run** under a minute
+old. If it stays on _Never_, your `schedule()` ran but your tick is not landing:
+check the origin, then the secret, then whether the API can reach itself.
 
 </Step>
-<Step>
-
-### Check Your Cron Jobs
-
-You can check your cron jobs in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
-
-</Step>
-
 </Steps>
+
+## Gotchas
+
+<Callout type="warn" title="A throw in schedule() takes the API down">
+  VitNode calls `schedule()` synchronously while building the application and
+  does not wrap it. An adapter that validates its own options by throwing turns
+  a bad cron expression into a server that will not start. Validate, log, and
+  return instead.
+</Callout>
+
+<Callout
+  type="warn"
+  title="schedule() can be called more than once per process"
+>
+  There is no `stop` and no teardown hook, and a dev server that re-evaluates
+  its server modules can build the API again. VitNode's TanStack Start app parks
+  the API instance on `globalThis` for exactly this reason - if yours does not,
+  an adapter that keeps a timer should be able to notice it already has one
+  instead of stacking a second.
+</Callout>
+
+<Callout type="warn" title="Ticking faster does not make a job faster">
+  The endpoint runs what is due when it is called, so the tick interval is the
+  floor on every job's resolution - but it is not a speed control. A tick every
+  ten seconds on jobs that are all `*/5 * * * *` is five wasted requests a
+  minute, and a tick every five minutes silently downgrades `* * * * *` jobs,
+  [queue draining](/docs/dev/advanced/queue) included.
+</Callout>
+
+<Callout
+  type="warn"
+  title="Overlapping ticks are your problem, not the adapter's"
+>
+  Nothing locks a job while it runs. If your scheduler can fire again before the
+  previous tick's handlers have finished, the same handler can be running twice.
+  [The operational rules](/docs/dev/cron#jobs-must-be-idempotent) cover what to
+  do about it.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Declare a cron job"
+    href="/docs/dev/cron"
+    description="buildCron, where jobs are registered, and the operational rules that come with a scheduler."
+  />
+  <Card
+    title="Node CRON adapter"
+    href="/docs/dev/cron/node-cron"
+    description="The official in-process adapter, if a one-minute timer is all you needed."
+  />
+  <Card
+    title="Cron over REST"
+    href="/docs/dev/cron/rest-api"
+    description="The endpoint every adapter posts: its auth, its responses and a curl call."
+  />
+  <Card
+    title="Queue tasks"
+    href="/docs/dev/advanced/queue"
+    description="One-off background work with retries, drained by the process-queue job."
+  />
+</Cards>

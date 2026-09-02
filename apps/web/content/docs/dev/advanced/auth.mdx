@@ -1,120 +1,95 @@
 ---
-title: Authorization
-description: xddd
+title: Authorization & Sessions
+description: How VitNode manages public and admin sessions, HttpOnly cookies, device fingerprinting, and session expiration.
+icon: Cookie
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## Configuration
+VitNode implements two isolated sessions: a **public session** for the community site and a separate **admin session** for the AdminCP. Both use opaque random tokens stored as SHA-256 hashes in PostgreSQL.
 
-You can configure the authentication settings in the `VitNodeAPI` function and `authorization` param.
+## Quick start
 
-For example you can change the expiration time of the cookie:
+Customize session parameters in `apps/api/src/vitnode.api.config.ts`:
 
-```ts title="src/vitnode.api.config.ts"
-VitNodeAPI({
-  app,
-  plugins: [],
-  // [!code ++]
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:6]
   authorization: {
-    // [!code ++]
-    cookie_expires: 1000 * 60 * 60 * 24 * 90, // 90 days
-    // [!code ++]
+    cookieExpires: 1000 * 60 * 60 * 24 * 30, // 30 days for public users
+    adminCookieExpires: 1000 * 60 * 60 * 8, // 8 hours for AdminCP
+    cookieDomain: ".yourdomain.com", // Optional cross-subdomain sharing
   },
-});
+})
 ```
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+---
 
-### Options
+## The Two-Session Model
+
+| Session Type | Cookie Name | Default Lifetime | Storage Table | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **Public Session** | `vitnode_auth` | 90 days | `core_sessions` | Frontend member authentication |
+| **Admin Session** | `vitnode_auth_admin` | 1 day | `core_admin_sessions` | High-privilege AdminCP access |
+| **Known Device** | `vitnode_device` | 1 year | `core_sessions_known_devices` | Device authorization tracking |
+
+<Callout type="info" title="Session Isolation">
+  Signing out of the AdminCP does not terminate the user's public session, and vice versa. An administrator compromised in a public context cannot access the AdminCP without re-authenticating with staff credentials.
+</Callout>
+
+---
+
+## Security Guarantees
+
+- **SHA-256 Token Storage**: The raw token is stored only in the user's `HttpOnly` cookie. The database stores only its cryptographic hash.
+- **Device Pinning**: Tokens are bound to a verified device ID. Tokens copied to another device without the matching device cookie are rejected.
+- **Fast 60-Second Caching**: Active sessions are cached in Redis for up to 60 seconds, eliminating database query overhead on repeated requests.
+
+---
+
+## `authorization` Options Reference
 
 <TypeTable
   type={{
-    cookieName: {
-      description:
-        'The name of the cookie that will be used to store the session token.',
-      type: 'string',
-      default: 'vitnode-auth',
-    },
-    cookie_expires: {
-      description: 'The time in milliseconds that the cookie will expire.',
-      type: 'number',
-      default: '1000 * 60 * 60 * 24 * 90',
-    },
-    deviceCookieName: {
-      description:
-        'The name of the cookie that will be used to store the device token.',
-      type: 'string',
-      default: 'vitnode-device',
-    },
-    deviceCookieExpires: {
-      description:
-        'The time in milliseconds that the device cookie will expire.',
-      type: 'number',
-      default: '1000 * 60 * 60 * 24 * 365',
-    },
-    adminCookieName: {
-      description:
-        'The name of the cookie that will be used to store the admin token.',
-      type: 'string',
-      default: 'vitnode-admin',
+    cookieExpires: {
+      default: "90 days",
+      description: "Public user session lifetime in milliseconds.",
+      type: "number",
     },
     adminCookieExpires: {
-      description:
-        'The time in milliseconds that the admin cookie will expire.',
-      type: 'number',
-      default: '1000 * 60 * 60 * 24 * 1',
+      default: "1 day",
+      description: "AdminCP session lifetime in milliseconds.",
+      type: "number",
     },
     cookieSecure: {
-      description:
-        'If true, the cookie will only be sent over HTTPS. If you are using a reverse proxy, you may need to set this to false.',
-      type: 'boolean',
-      default: 'true',
+      default: "true (in production)",
+      description: "Require HTTPS for session cookies.",
+      type: "boolean",
     },
     cookieDomain: {
-      description:
-        'The Domain to stamp on the auth cookies. Leave it unset unless you share one session across subdomains - see below.',
-      type: 'string',
-      default: 'undefined (host-only)',
+      description: "Domain attribute for cross-subdomain cookie sharing.",
+      type: "string",
+    },
+    ssoAdapters: {
+      description: "Array of configured OAuth2 single sign-on adapters.",
+      type: "SSOApiPlugin[]",
     },
   }}
 />
 
-### Sharing a session across subdomains
+## Learn More
 
-By default VitNode sends no `Domain` attribute at all, which makes every auth
-cookie **host-only**: valid on exactly the host that issued it, and nowhere
-else. That is what you want almost always, because the web app serves `/api/*`
-on its own origin - there is no second host to share with.
-
-It is also the only setting that survives a hostname nobody configured. A
-preview deployment gets a fresh URL per branch, and a cookie stamped with a
-`Domain` the response did not come from is thrown away by the browser - so
-nobody can sign in, and nothing says why.
-
-If you genuinely run VitNode across several subdomains - say `app.example.com`
-and `admin.example.com` - opt in explicitly:
-
-```ts title="src/vitnode.api.config.ts"
-VitNodeAPI({
-  app,
-  plugins: [],
-  authorization: {
-    // [!code ++]
-    cookieDomain: '.example.com',
-  },
-});
-```
-
-<Callout type="warn" title="Pick a domain your app actually serves from">
-  The value has to be one the responding host falls under. `.example.com` works
-  for `app.example.com`; `example.com` does not work for `example.org`, and
-  nothing works for a preview URL on a hosting provider's domain. Get it wrong
-  and every browser silently drops the cookie.
-</Callout>
-
-Changing this later logs everyone out: the browser treats a host-only cookie and
-a `Domain` cookie of the same name as two different cookies, so the old one is
-no longer the one VitNode reads or removes.
+<Cards>
+  <Card
+    title="Users"
+    description="Access user context on Hono routes and React components"
+    href="/docs/dev/working-with-users/users"
+  />
+  <Card
+    title="Staff Permissions"
+    description="Granular permission gates for administrators"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+</Cards>

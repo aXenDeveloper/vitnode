@@ -1,442 +1,557 @@
 ---
 title: Built-in Events
-description: Reference of the events emitted by VitNode core and first-party plugins, with payloads and real use cases.
+description: Reference for every domain event VitNode core, the Content Engine and the blog plugin emit, with its trigger, its payload shape and a listener use case.
+icon: List
 ---
 
-Reference of every event VitNode and its first-party plugins emit today. Listen
-to any of them from your own plugin with
-[`buildEventListener`](/docs/dev/events#listening-to-an-event) - no imports from
-the emitting plugin are needed, the event map is global.
+Every event VitNode and its first-party plugins emit today, grouped by domain.
+Listen to any of them from your own plugin with
+[`buildEventListener`](/docs/dev/events) - no import from the emitting plugin is
+needed, because the event map is global.
 
-| Event                   | Payload                                  | Emitted when                                            |
-| ----------------------- | ---------------------------------------- | ------------------------------------------------------- |
-| `user.created`          | `{ userId, email, name, emailVerified }` | A user is created - sign-up, AdminCP, or SSO first sign-in |
-| `user.updated`          | `{ userId, email, name }`                | A user is edited in the AdminCP (profile or roles)      |
-| `user.deleted`          | `{ userId, email }`                      | _Declared only_ - core has no user deletion flow yet    |
-| `role.created`          | `{ roleId }`                             | A role is created in the AdminCP                        |
-| `role.updated`          | `{ roleId }`                             | A role is edited in the AdminCP                         |
-| `role.deleted`          | `{ roleId }`                             | A role is deleted in the AdminCP                        |
-| `blog.post.created`     | `{ postId, categoryId }`                 | A blog post is created                                  |
-| `blog.post.updated`     | `{ postId, categoryId }`                 | A blog post is edited                                   |
-| `blog.post.deleted`     | `{ postId }`                             | A blog post is deleted                                  |
-| `blog.category.created` | `{ categoryId }`                         | A blog category is created                              |
-| `blog.category.updated` | `{ categoryId }`                         | A blog category is edited                               |
-| `blog.category.deleted` | `{ categoryId, postIds }`                | A blog category is deleted (`postIds` is always empty)  |
+import { Accordion, Accordions } from 'fumadocs-ui/components/accordion'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-## Core
+## Quick start
 
-### user.created
+Pick a name from the tables below, write a listener for it, and register the
+listener on a top-level module's `events` array:
 
-Emitted after a user row is committed to `core_users`, from every creation
-path: the public sign-up form, user creation in the AdminCP, and the first
-sign-in through an [SSO provider](/docs/dev/sso).
+```ts title="plugins/shop/src/api/lib/events.ts"
+import { buildEventListener } from '@vitnode/core/api/lib/events'
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+export const welcomeListener = buildEventListener({
+  event: 'user.created', // [!code ++]
+  name: 'send-welcome-email',
+  handler: async (c, payload) => {
+    await c.get('queue').dispatch({
+      name: 'send-welcome-email',
+      payload: { userId: payload.userId, email: payload.email },
+    })
+  },
+})
+```
+
+Nothing else has to change: the payload type comes from the name, and the
+[delivery guarantees](/docs/dev/events#delivery-guarantees) are the same for a
+core event as for one of your own.
+
+## Core events (`@vitnode/core`)
+
+Six names, all declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
+the write it describes has committed.
+
+| Event          | Payload                                  | Fires when                                                                |
+| -------------- | ---------------------------------------- | ------------------------------------------------------------------------- |
+| `user.created` | `{ userId, email, name, emailVerified }` | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up |
+| `user.updated` | `{ userId, email, name }`                | A user is edited in the AdminCP (profile fields and/or role assignments)  |
+| `user.deleted` | `{ userId, email }`                      | Never - the name is declared for plugins, core has no deletion flow       |
+| `role.created` | `{ roleId }`                             | A role is created in the AdminCP                                          |
+| `role.updated` | `{ roleId }`                             | A role is edited in the AdminCP                                           |
+| `role.deleted` | `{ roleId }`                             | A role is deleted in the AdminCP                                          |
+
+<Accordions>
+<Accordion title="user.created">
+
+Emitted from `UserModel.signUp`, which is the one insert path into
+`core_users` - so it covers the public sign-up form, user creation in the
+AdminCP, and the first sign-in through an [SSO provider](/docs/dev/sso).
 
 <TypeTable
   type={{
     userId: {
-      description: "Id of the new user.",
-      type: "number",
+      description: 'Id of the new user.',
+      type: 'number',
     },
     email: {
-      description: "Email the account was registered with.",
-      type: "string",
+      description: 'Email the account was registered with.',
+      type: 'string',
     },
     name: {
-      description: "Display name.",
-      type: "string",
+      description: 'Display name.',
+      type: 'string',
     },
     emailVerified: {
       description:
-        "Whether the account starts verified (e.g. no email adapter configured, or created by an admin).",
-      type: "boolean",
+        'Whether the account starts verified. True for the very first user in an installation (the root account) and whenever no email adapter is configured, because nothing could send a verification mail.',
+      type: 'boolean',
     },
   }}
 />
 
-**Use cases:** send a welcome or verification email (dispatch a
-[queue task](/docs/dev/advanced/queue) so it retries), subscribe the user to a
-newsletter audience, provision plugin-owned data (a profile row, default
-settings), or notify moderators about new registrations via
-`c.get("realtime")`.
+**A listener would** send a welcome or verification email (via a
+[queue task](/docs/dev/advanced/queue) so it retries), subscribe the address to
+a newsletter audience, or provision plugin-owned data such as a profile row.
 
 ```ts title="Example: welcome email listener"
 export const welcomeListener = buildEventListener({
-  event: "user.created",
-  name: "send-welcome-email",
+  event: 'user.created',
+  name: 'send-welcome-email',
   handler: async (c, payload) => {
-    await c.get("queue").dispatch({
-      name: "send-welcome-email",
+    await c.get('queue').dispatch({
+      name: 'send-welcome-email',
       payload: { userId: payload.userId, email: payload.email },
-    });
+    })
   },
-});
+})
 ```
 
-### user.updated
+</Accordion>
+<Accordion title="user.updated">
 
-Emitted after a user is edited in the AdminCP - profile fields (email, name,
-name code) and/or role assignments. The payload carries the user's **current**
-values after the update.
+Emitted by the AdminCP user `PATCH` after it commits - profile fields (email,
+name, name code) and/or role assignments. The payload carries the user's
+**current** values.
 
 <TypeTable
   type={{
     userId: {
-      description: "Id of the updated user.",
-      type: "number",
+      description: 'Id of the updated user.',
+      type: 'number',
     },
     email: {
-      description: "Email after the update.",
-      type: "string",
+      description: 'Email after the update.',
+      type: 'string',
     },
     name: {
-      description: "Display name after the update.",
-      type: "string",
+      description: 'Display name after the update.',
+      type: 'string',
     },
   }}
 />
 
-**Use cases:** sync the user's identity into an external system (CRM, mailing
-list), invalidate plugin-owned caches keyed by user, or audit-log staff edits
-using the envelope's `actor`.
+**A listener would** sync the identity into an external system (CRM, mailing
+list), invalidate a plugin-owned cache keyed by user, or audit-log the staff
+edit using the envelope's `actor`.
 
-### role.created / role.updated
+</Accordion>
+<Accordion title="user.deleted (declared, never emitted)">
 
-Emitted after a role is created or edited in the AdminCP (including its
-translated names, which live in `core_languages_words`).
+The name and payload live on the `VitNodeEvents` map so listeners type-check,
+but **core never emits it**: there is no user-deletion flow yet. It is the
+agreed-upon name for plugins that implement account deletion themselves, and
+core will emit it once deletion lands.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the deleted user.',
+      type: 'number',
+    },
+    email: {
+      description: 'Email the account had.',
+      type: 'string',
+    },
+  }}
+/>
+
+</Accordion>
+<Accordion title="role.created and role.updated">
+
+Emitted after a role is created or edited in the AdminCP, including its
+translated names - those live in `core_languages_words`, so the payload has no
+name field to carry.
 
 <TypeTable
   type={{
     roleId: {
-      description: "Id of the affected role.",
-      type: "number",
+      description: 'Id of the affected role.',
+      type: 'number',
     },
   }}
 />
 
-**Use cases:** provision plugin-side permission defaults for a new role, or
-refresh externally-cached permission matrices when a role changes.
+**A listener would** provision plugin-side permission defaults for a new role,
+or refresh an externally-cached permission matrix when one changes.
 
-### role.deleted
+</Accordion>
+<Accordion title="role.deleted">
 
-Emitted after a role is deleted in the AdminCP. Its translated names in
-`core_languages_words` are removed with it, and its secondary-role assignments
-and staff-permission entries are dropped by database cascade. If the role still
-had members, they are reassigned to another role **before** the delete, so by
-the time this fires no user references the removed role.
+Emitted after the delete transaction commits. Its translated names are removed
+with it, and its secondary-role assignments and staff-permission entries are
+dropped by database cascade. Members point at their primary role through a
+`NOT NULL` restricted foreign key, so anyone in the role is reassigned
+**before** the delete - by the time this fires, no user references it.
 
 <TypeTable
   type={{
     roleId: {
-      description: "Id of the deleted role.",
-      type: "number",
+      description: 'Id of the deleted role.',
+      type: 'number',
     },
   }}
 />
 
-**Use cases:** clean up plugin-owned data keyed by role id (permission matrices,
-per-role settings, externally-cached role lists), or audit-log the removal using
-the envelope's `actor`.
-
-The event fires only after the delete transaction commits, so by the time your
-listener runs the role row is gone - key your cleanup off `payload.roleId`
-rather than re-reading `core_roles`:
+**A listener would** clean up plugin-owned rows keyed by role id. The role row
+is already gone, so key the cleanup off `payload.roleId` rather than re-reading
+`core_roles`:
 
 ```ts title="Example: clean up plugin data on role deletion"
 export const roleCleanupListener = buildEventListener({
-  event: "role.deleted",
-  name: "cleanup-role-settings",
+  event: 'role.deleted',
+  name: 'cleanup-role-settings',
   handler: async (c, payload) => {
-    // Remove any plugin-owned rows keyed by the deleted role.
     await c
-      .get("db")
-      .delete(blog_role_settings)
-      .where(eq(blog_role_settings.roleId, payload.roleId));
+      .get('db')
+      .delete(shop_role_settings)
+      .where(eq(shop_role_settings.roleId, payload.roleId))
   },
-});
+})
 ```
 
-### user.deleted (declared only)
-
-This event exists in the `VitNodeEvents` map so listeners and payloads are
-already typed, but **core never emits it today** - there is no user deletion
-flow yet. It is the agreed-upon name for plugins that implement account deletion
-themselves, and core will emit it once deletion lands.
-
-## Blog (`@vitnode/blog`)
-
-<Callout type="warn" title="These are compatibility adapters now">
-  The blog runs on the [Content
-  Engine](/docs/dev/content-engine), so the events that describe what actually
-  happened are `content.blog.post.*` and `content.blog.category.*` - they carry
-  changed fields, revision ids, publication transitions, per-locale translation
-  events and slug history. The four names below are re-emitted from those by
-  listeners in the plugin, so existing consumers keep working. Prefer the
-  `content.*` ones for anything new.
-</Callout>
-
-### blog.category.created / blog.category.updated
-
-Re-emitted after `content.blog.category.created` / `.updated`.
-
-<TypeTable
-  type={{
-    categoryId: {
-      description: "Id of the affected category.",
-      type: "number",
-    },
-  }}
-/>
-
-**Use cases:** keep navigation menus or externally-cached category trees in
-sync, or notify an external CMS/feed of taxonomy changes.
-
-### blog.post.created / blog.post.updated
-
-Re-emitted after `content.blog.post.created` / `.updated`. The listener reads
-the article back to fill in `categoryId`, so a record deleted in between is
-simply not announced - and so is one with no categories yet.
-
-<TypeTable
-  type={{
-    postId: {
-      description: "Id of the affected post.",
-      type: "number",
-    },
-    categoryId: {
-      description:
-        "The post's first category. An article is in many categories now and this payload has room for one - watch `content.blog.post.created` for the whole set.",
-      type: "number",
-    },
-  }}
-/>
-
-**Use cases:** push a realtime "new post" notification to subscribers, ping a
-webhook (via a queue task) that shares the post to social media, invalidate an
-external cache/CDN, or keep plugin-owned derived data (reading lists, related
-posts) in sync.
-
-### blog.post.deleted
-
-Re-emitted after `content.blog.post.deleted`.
-
-<TypeTable
-  type={{
-    postId: {
-      description: "Id of the deleted post.",
-      type: "number",
-    },
-  }}
-/>
-
-<Callout type="warn" title="No categoryId, unlike created and updated">
-  The row is gone by the time this is emitted, so there is nothing left to read
-  it from - and inventing one would put a wrong id into an audit trail. A
-  listener that needs the category should watch `content.blog.post.deleted` and
-  keep its own index.
-</Callout>
-
-### blog.category.deleted
-
-Re-emitted after `content.blog.category.deleted`.
-
-<TypeTable
-  type={{
-    categoryId: {
-      description: "Id of the deleted category.",
-      type: "number",
-    },
-    postIds: {
-      description:
-        "Always empty. The junction to `blog_categories` is ON DELETE RESTRICT, so a category with articles cannot be deleted at all - the field is kept so existing listeners still compile.",
-      type: "number[]",
-    },
-  }}
-/>
+</Accordion>
+</Accordions>
 
 ## Content Engine events
 
 Every content type declared with the
-[Content Engine](/docs/dev/content-engine) emits three events, named after its
-id. For `example.article` that means:
+[Content Engine](/docs/dev/content-engine) gets its own event names, built from
+its id: `content.<id>.<action>`. For the example plugin's `example.article`
+that means `content.example.article.created`, and for the blog's `blog.post` it
+means `content.blog.post.created`.
 
-```text
-content.example.article.created
-content.example.article.updated
-content.example.article.deleted
-```
+Which actions exist depends on what the definition opts into. A content type
+that declares nothing beyond its fields emits three events; one that declares
+everything emits sixteen.
 
-A content type that opts into
-[publication](/docs/dev/content-engine/publication-and-editorial) emits two more:
+| The definition declares              | Events it adds                                                      |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| nothing extra (always)               | `created`, `updated`, `deleted`                                     |
+| `publication`                        | `published`, `unpublished`                                          |
+| `editorial`                          | `restored`                                                          |
+| `editorial.scheduling`               | `scheduled`, `schedule_cancelled`                                   |
+| `localization`                       | `translation_created`, `translation_updated`, `translation_deleted` |
+| `localization` **and** `publication` | `translation_published`, `translation_unpublished`                  |
+| `localization` **and** `editorial`   | `translation_restored`                                              |
+| `delivery`                           | `delivery_slug_changed`, `delivery_redirect_created`                |
 
-```text
-content.example.article.published
-content.example.article.unpublished
-```
+The gating is in the types, not just at runtime: `ContentEventsFor` expands to
+literal keys only for the features the definition enables. The example plugin's
+`example.article` declares `editorial`, so
+`content.example.article.restored` type-checks; `example.category` is one text
+field and nothing else, so `content.example.category.restored` is not a key on
+the map and a listener for it does not compile.
 
-And one that opts into
-[`editorial`](/docs/dev/content-engine/publication-and-editorial) emits one more, plus two with
-[`editorial.scheduling`](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing):
+### Record events
 
-```text
-content.example.article.restored
-content.example.article.scheduled
-content.example.article.schedule_cancelled
-```
+| Event                | Payload                                                                     | Fires when                                                                        |
+| -------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `created`            | `{ contentId }`                                                             | A record is inserted                                                              |
+| `updated`            | `{ contentId, changedFields }`                                              | At least one declared field actually changed                                      |
+| `deleted`            | `{ contentId }`                                                             | A record is deleted                                                               |
+| `published`          | `{ contentId, publishedAt, scheduledBy?, scheduleId? }`                     | A record becomes publicly visible - interactively or when a schedule fires        |
+| `unpublished`        | `{ contentId, scheduledBy?, scheduleId? }`                                  | A record is withdrawn                                                             |
+| `restored`           | `{ contentId, changedFields, version, revisionId, restoredFromRevisionId }` | A record is rolled back to an earlier revision - emitted **instead of** `updated` |
+| `scheduled`          | `{ contentId, action, actorUserId, scheduledFor, scheduleId }`              | A publish or unpublish is booked for later                                        |
+| `schedule_cancelled` | `{ contentId, action, actorUserId, scheduleId }`                            | A pending booking is called off                                                   |
 
-A content type that opts into
-[`localization`](/docs/dev/content-engine/localization) emits three more, plus
-two with `publication` and one with `editorial`:
-
-```text
-content.example.article.translation_created
-content.example.article.translation_updated
-content.example.article.translation_deleted
-
-content.example.article.translation_published     (with publication)
-content.example.article.translation_unpublished   (with publication)
-
-content.example.article.translation_restored      (with editorial)
-```
-
-And one that opts into
-[`delivery`](/docs/dev/content-engine/content-delivery-and-seo) emits two more:
-
-```text
-content.example.article.delivery_slug_changed
-content.example.article.delivery_redirect_created
-```
-
-These arrive **alongside** `updated` (or `restored`, or `translation_updated`), never
-instead of one: a field moving and a URL moving are different facts with different
-audiences. A listener that mirrors content wants the first; one that warms a CDN, tells
-an external search engine or writes to an edge redirect table wants the second, and
-would otherwise have to inspect `changedFields` for a slug field whose name it cannot
-know.
-
-`delivery_redirect_created` fires only when the old address had genuinely been
-**publicly addressable** - so an article whose slug was corrected three times while it
-was still a draft emits nothing, and a published article that moves emits exactly one.
-That is the difference between "a URL now needs a redirect" and "somebody edited a
-field". Both payloads carry `previousPath` and `canonicalPath`, and `locale` is `null`
-when the slug is shared.
-
-There is deliberately no sitemap event: every mutation that changes a sitemap line
-already emits one of these or a publication event, and a third carrying no new
-information would be one more thing to keep consistent for no listener's benefit.
-
-Every translation event carries `locale` and `languageId`. They are deliberately
-**not** folded into `updated`: a shared update and a Polish translation update
-are different domain facts with different consequences - one invalidates every
-language, the other invalidates one - and a listener that had to inspect
-`changedFields` to tell them apart would get it wrong the first time a field was
-renamed. `changedFields` on a translation event names localized fields only,
-never a shared one.
-
-They are registered on the global map by the owning plugin with a single
-`declare module` block, so the names and payloads are as strongly typed as any
-core event - `changedFields` narrows to that content type's own field names.
+<Accordions>
+<Accordion title="created, updated and deleted">
 
 <TypeTable
   type={{
     contentId: {
-      description: "Id of the created, updated or deleted row.",
-      type: "number",
+      description: 'Id of the created, updated or deleted row.',
+      type: 'number',
     },
     changedFields: {
       description:
-        "Update only - the fields whose value actually changed. An update that changes nothing emits no event at all.",
-      type: "string[]",
-    },
-    publishedAt: {
-      description:
-        "Published only - when the row first went live. Never rewritten by a later unpublish/republish.",
-      type: "Date",
-    },
-    version: {
-      description:
-        "Restored only - the version the record holds after the restore. Always a new number; the restored version is never reinstated.",
-      type: "number",
-    },
-    revisionId: {
-      description: "Restored only - the revision this restore itself created.",
-      type: "number",
-    },
-    restoredFromRevisionId: {
-      description: "Restored only - the revision the values were taken from.",
-      type: "number",
-    },
-    previousSlug: {
-      description:
-        "Delivery only - the slug the record answered to before this mutation.",
-      type: "string",
-    },
-    previousPath: {
-      description:
-        "Delivery only - the full path it answered to before, e.g. `/pl/articles/stary-slug`.",
-      type: "string",
-    },
-    canonicalPath: {
-      description:
-        "Delivery only - the path it answers to now, and where the historical one redirects.",
-      type: "string",
-    },
-    locale: {
-      description:
-        "Translation events only - the canonical core_languages.code the mutation was made in. Always present, so a listener never has to go and ask which language.",
-      type: "string",
-    },
-    languageId: {
-      description:
-        "Translation events only - core_languages.id, for a listener joining against the languages table directly.",
-      type: "number",
-    },
-    scheduleId: {
-      description:
-        "The schedule row this is about. Always present on scheduled and schedule_cancelled; present on published and unpublished only when a schedule fired them, where it doubles as the idempotency key for at-least-once retries.",
-      type: "number",
-    },
-    scheduledFor: {
-      description: "Scheduled only - when the transition will happen.",
-      type: "Date",
-    },
-    action: {
-      description:
-        "Scheduled and schedule_cancelled only - which transition was booked.",
-      type: '"publish" | "unpublish"',
-    },
-    scheduledBy: {
-      description:
-        "Published and unpublished only, and only when a schedule fired them - the person who booked it. Absent on an interactive publish.",
-      type: "null | number",
+        "Update only - the fields whose value actually changed, narrowed to this content type's own field names. An update that changes nothing emits no event at all.",
+      type: 'ContentFieldName<TDefinition>[]',
     },
   }}
 />
 
-Booking a schedule changes no field value, so it consumes no version and writes
-no revision - `scheduled` is a different thing from `published`. When the
-schedule fires, the resulting transition emits the ordinary `published` or
-`unpublished` with `scheduledBy` and `scheduleId` set.
+**A listener would** mirror the row into a plugin-owned projection, reindex it
+for an external search engine, or purge a CDN entry. `changedFields` is what
+lets it skip the work when the field it cares about did not move.
+
+</Accordion>
+<Accordion title="published and unpublished">
+
+`publishedAt` is when the record went live for the **first** time and is never
+rewritten by a later unpublish and republish. `scheduledBy` and `scheduleId`
+are present only when a booking caused the transition; an interactive publish
+carries neither.
+
+<TypeTable
+  type={{
+    contentId: {
+      description: 'Id of the record whose visibility moved.',
+      type: 'number',
+    },
+    publishedAt: {
+      description:
+        'Published only - when the record first went live. Declared as a Date, but omitted when the engine could not read one back off the row, so guard for undefined.',
+      type: 'Date',
+    },
+    scheduledBy: {
+      description:
+        'Only when a schedule fired this - the staff member who booked it. Absent on an interactive publish, because the actor of a scheduled run genuinely is the system.',
+      type: 'null | number',
+    },
+    scheduleId: {
+      description:
+        'Only when a schedule fired this - the booking, which doubles as the idempotency key across the effects task retries.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** announce the record (a newsletter, a social post, a
+realtime toast), add or remove it from an external index, or expire a cache
+that only holds public rows. Because the same publish can arrive twice, key
+anything that must happen once off `scheduleId` - see
+[A scheduled event may arrive twice](#a-scheduled-event-may-arrive-twice).
+
+</Accordion>
+<Accordion title="restored">
+
+A rollback to an earlier revision's field values. It carries `changedFields`
+exactly like `updated`, so porting an `updated` listener is a rename rather
+than a rewrite - which is why a restore emits one event and not both.
+
+<TypeTable
+  type={{
+    contentId: {
+      description: 'Id of the restored record.',
+      type: 'number',
+    },
+    changedFields: {
+      description:
+        'The fields the rollback moved, in the same shape `updated` uses.',
+      type: 'ContentFieldName<TDefinition>[]',
+    },
+    version: {
+      description:
+        'The version the record holds after the restore. Always a new number; the restored version is never reinstated.',
+      type: 'number',
+    },
+    revisionId: {
+      description: 'The revision this restore itself created.',
+      type: 'number',
+    },
+    restoredFromRevisionId: {
+      description: 'The revision the values were taken from.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** do exactly what its `updated` listener does. A restore
+never moves `status` or `publishedAt`, so nothing watching visibility has to
+handle it.
+
+</Accordion>
+<Accordion title="scheduled and schedule_cancelled">
+
+Booking a transition changes no field value, so it consumes no version and
+writes no revision - `scheduled` is a different fact from `published`. When the
+booking fires, the transition emits the ordinary `published` or `unpublished`
+with `scheduleId` and `scheduledBy` set.
+
+<TypeTable
+  type={{
+    contentId: {
+      description: 'Id of the record the booking is about.',
+      type: 'number',
+    },
+    action: {
+      description: 'Which transition was booked, or cancelled.',
+      type: '"publish" | "unpublish"',
+    },
+    actorUserId: {
+      description:
+        'The staff member who booked or cancelled it. Note the name: the same person is called `scheduledBy` on the published/unpublished payloads.',
+      type: 'null | number',
+    },
+    scheduledFor: {
+      description: 'Scheduled only - when the transition will happen.',
+      type: 'Date',
+    },
+    scheduleId: {
+      description:
+        'The schedule row. Always present on both events, and the id the eventual published/unpublished will carry.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** show an editorial calendar, warn an author that two
+bookings collide, or pre-warm a render shortly before `scheduledFor`.
+
+</Accordion>
+</Accordions>
+
+### Translation events
+
+A content type with [`localization`](/docs/dev/content-engine/localization)
+emits one event per translation mutation, in addition to the record events
+above. Every one of them carries `locale` and `languageId`, so a listener never
+has to go and ask which language moved.
+
+| Event                     | Payload                                                          | Fires when                                |
+| ------------------------- | ---------------------------------------------------------------- | ----------------------------------------- |
+| `translation_created`     | `{ contentId, locale, languageId, version, revisionId? }`        | A language's translation row is written   |
+| `translation_updated`     | `{ ...base, changedFields }`                                     | A language's localized fields changed     |
+| `translation_deleted`     | `{ ...base }`                                                    | A language's translation is removed       |
+| `translation_published`   | `{ ...base, publishedAt }`                                       | One language becomes publicly visible     |
+| `translation_unpublished` | `{ ...base }`                                                    | One language is withdrawn                 |
+| `translation_restored`    | `{ ...base, changedFields, revisionId, restoredFromRevisionId }` | One language is rolled back to a revision |
+
+<Accordions>
+<Accordion title="The shared translation payload">
+
+<TypeTable
+  type={{
+    contentId: {
+      description:
+        'Id of the record the translation belongs to - the base row, not the translation row.',
+      type: 'number',
+    },
+    locale: {
+      description:
+        'The canonical core_languages.code the mutation was made in. Always present.',
+      type: 'string',
+    },
+    languageId: {
+      description:
+        'core_languages.id, for a listener joining against the languages table directly.',
+      type: 'number',
+    },
+    version: {
+      description:
+        'The version *this translation* holds after the mutation - each language has its own.',
+      type: 'number',
+    },
+    revisionId: {
+      description:
+        'The revision this mutation wrote. Absent - not null - for a localized content type without `editorial`, which keeps no history, so `"revisionId" in payload` is how a listener checks.',
+      type: 'number',
+    },
+    changedFields: {
+      description:
+        'Updated and restored only - localized field names this write moved. Never a shared field.',
+      type: 'ContentLocalizedFieldName<TDefinition>[]',
+    },
+    publishedAt: {
+      description:
+        'Published only - when this language first went live. Nullable, unlike its record-level counterpart.',
+      type: 'Date | null',
+    },
+    restoredFromRevisionId: {
+      description:
+        "Restored only - the revision the values came from, always one of this locale's own.",
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** invalidate one locale's cache, reindex one language's
+search document, or tell a translation vendor that the Polish copy moved.
+
+</Accordion>
+<Accordion title="Why translations are not folded into updated">
+
+A shared update and a Polish translation update are different domain facts with
+different consequences: one invalidates every language, the other invalidates
+one. A listener that had to inspect `changedFields` to tell them apart would get
+it wrong the first time a field was renamed - so `changedFields` on a
+translation event names localized fields only, and never a shared one.
+
+</Accordion>
+</Accordions>
+
+### Delivery events
+
+A content type with
+[`delivery`](/docs/dev/content-engine/content-delivery-and-seo) emits two more
+when its public URL moves. Both arrive **alongside** the lifecycle event that
+moved it - `updated`, `restored`, a publication transition or a
+`translation_*` - never instead of one: a field moving and a URL moving are
+different facts with different audiences.
+
+| Event                       | Payload                                                                  | Fires when                                                    |
+| --------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `delivery_slug_changed`     | `{ contentId, slug, previousSlug, previousPath, canonicalPath, locale }` | The canonical public path is different from what it was       |
+| `delivery_redirect_created` | `{ contentId, previousSlug, previousPath, canonicalPath, locale }`       | A path that had genuinely been live now answers as a redirect |
+
+<Accordions>
+<Accordion title="Delivery payloads">
+
+<TypeTable
+  type={{
+    contentId: {
+      description: 'Id of the record whose URL moved.',
+      type: 'number',
+    },
+    slug: {
+      description: 'Slug changed only - the slug the record answers to now.',
+      type: 'string',
+    },
+    previousSlug: {
+      description:
+        'The slug it answered to before. Declared nullable, but populated on both events in practice: neither fires unless the slug moved from one real value to another, so a record arriving at its first slug emits neither of them.',
+      type: 'null | string',
+    },
+    previousPath: {
+      description:
+        'The full path it answered to before, e.g. /pl/articles/stary-slug. Nullable for the same declared reason, and populated for the same real one.',
+      type: 'null | string',
+    },
+    canonicalPath: {
+      description:
+        'The path it answers to now, and where the historical one redirects.',
+      type: 'string',
+    },
+    locale: {
+      description:
+        'The language this URL belongs to, or null when the slug is shared - a content type that is not localized, or a localized one whose slug lives on the base row.',
+      type: 'null | string',
+    },
+  }}
+/>
+
+**A listener would** purge a CDN entry, write to an edge redirect table, or tell
+an external search engine the address changed. Without this event it would have
+to inspect `changedFields` for a slug field whose name it cannot know.
+
+</Accordion>
+<Accordion title="Why a redirect is a separate event">
+
+`delivery_redirect_created` fires only when the old address had genuinely been
+**publicly addressable** - the engine has a retired history row to prove it. An
+article whose slug was corrected three times while it was still a draft emits
+three `delivery_slug_changed` and not one redirect; a published article that
+moves emits one of each. That is the difference between "a URL now needs a
+redirect" and "somebody edited a field".
+
+There is deliberately no sitemap event either: every mutation that changes a
+sitemap line already emits `published`, `unpublished`, `deleted` or one of these
+two, and a third carrying no new information would be one more thing to keep
+consistent for no listener's benefit.
+
+</Accordion>
+</Accordions>
 
 ### A scheduled event may arrive twice
 
-Announcements for a scheduled transition run in a
-[durable queue task](/docs/dev/content-engine/publication-and-editorial#step-4-enable-scheduled-publishing)
-that retries whenever the event, the search write or a cache origin failed - and
-a retry re-emits an event that some listeners already received. Delivery is
-**at-least-once**, deliberately: the alternative is a transactional outbox,
-which Stage 4 does not have.
+Announcements for a scheduled transition run in a durable
+[queue task](/docs/dev/advanced/queue) that retries whenever the event, the
+search write or a cache origin failed - and a retry re-emits an event some
+listeners already received. Delivery is **at-least-once**, deliberately: the
+alternative is a transactional outbox, which the engine does not have.
 
 A listener whose work must happen exactly once keys off `scheduleId`, which is
 stable across every attempt at the same booking:
 
 ```ts
 handler: async (c, payload) => {
-  if (payload.scheduleId && (await alreadyDone(payload.scheduleId))) return;
+  if (payload.scheduleId && (await alreadyDone(payload.scheduleId))) return
 
-  await sendTheAnnouncement(payload.contentId);
-};
+  await sendTheAnnouncement(payload.contentId)
+}
 ```
 
 An interactive publish is emitted once, by the route that performed it, and
@@ -446,7 +561,7 @@ carries no `scheduleId`.
 
 `pluginId` on the envelope answers "whose event is this", not "who was running
 at the time". Those come apart the moment something happens on a schedule: core
-owns the queue handler, so `c.get("plugin")` says `@vitnode/core`, while
+owns the queue handler, so `c.get('plugin')` says `@vitnode/core`, while
 `content.example.article.published` belongs to the example plugin as much as it
 ever did.
 
@@ -455,62 +570,215 @@ queue task owner    @vitnode/core        ← who runs the handler
 event envelope      @vitnode/example     ← who owns the content type
 ```
 
-The Content Engine passes the owner explicitly on every emit, so ownership does
-not depend on which route module or queue handler invoked it. Your own code can
-do the same when it emits on someone else's behalf:
+The engine passes the owner explicitly on every emit, so ownership does not
+depend on which route module or queue handler invoked it. Your own code can do
+the same when it emits on someone else's behalf:
 
 ```ts
-await c.get("events").emit("blog.post.created", payload, {
-  pluginId: "@vitnode/blog",
-});
+await c.get('events').emit('blog.post.created', payload, {
+  pluginId: '@vitnode/blog', // [!code ++]
+})
 ```
 
 Omit the option and nothing changes: the envelope falls back to
-`c.get("plugin")` and then to `@vitnode/core`, exactly as before. Pass it
-rather than swapping `c.get("plugin")` - that context is shared with the
-logger, the permission checks and every other model on the request.
-
-The envelope also carries the actor and the timestamp, so the payloads stay
-minimal.
+`c.get('plugin')` and then to `@vitnode/core`.
 
 ### Failures are reported, not thrown
 
-`emit()` never throws. Listeners run after the write it describes has
-committed, and a broken listener is not a reason to tell somebody their save
-failed - so a failure comes back in the result instead:
+`emit()` reports rather than throws. Listeners run after the write it describes
+has committed, and a broken listener is not a reason to tell somebody their save
+failed - so a failure comes back in the result instead, and is written to
+`core_logs` twice over: once per listener by the transport
+(`Event listener "plugin:module:listener" for "<event>" failed: ...`), and once
+as a JSON summary behind the greppable `[content-effects]` prefix by whichever
+effects helper emitted it - the editorial, translation, delivery and scheduled
+paths. A plain `created`/`updated`/`deleted` on a content type without
+`editorial` goes straight to the transport, so it produces the first line only.
 
 ```ts
-const result = await c.get("events").emit("blog.post.created", payload);
+const result = await c.get('events').emit('blog.post.created', payload)
 
-result.delivered; // listeners that ran
-result.failures; // [{ pluginId, module, listener, error }]
+result.delivered // listeners that ran
+result.failures // [{ pluginId, module, listener, error }]
 ```
 
-Interactive routes ignore that result on purpose, because the mutation
-succeeded either way. Background work usually should not: the scheduled-effects
-task inspects `failures` and retries the whole delivery when it is non-empty.
+Interactive routes ignore that result on purpose, because the mutation succeeded
+either way. Background work usually should not: the scheduled-effects task
+inspects `failures` and retries the whole delivery when it is non-empty.
 
-These are emitted by the **generated routes**, not by the Content Service. A
-route emits exactly one event per successful mutation, after the database write
-has returned - a failed validation, a delete blocked by a foreign key, a no-op
-update, a no-op publish and a restore that changes nothing all emit nothing, and
-`published`, `unpublished` and `restored` never come with an `updated` alongside
-them. Calling `service.publish()` or any other service method directly changes
-the database and emits nothing; that code owns its own follow-up. See
-[Generated events](/docs/dev/content-engine/services-and-api#event-system).
+{/* Image prompt: A screenshot of the VitNode AdminCP debug panel at /admin/core/debug, dark theme, 1440x900, showing one red "error" log row whose content is the JSON line [content-effects] {"action":"published","contentTypeId":"blog.post","delivered":1,"eventId":"6f1c...","failures":[{"error":"fetch failed","listener":"@acme/shop:orders:mirror-post"}],"itemId":42}. */}
 
-`restored` carries `changedFields` exactly like `updated`, so a listener written
-for one ports to the other in a line - which is why a restore does not emit both.
+<Callout type="warn" title="The generated routes emit, the services do not">
+  A generated route emits one lifecycle event per successful mutation, after the
+  database write has returned - plus the delivery pair when the URL moved with
+  it. A failed validation, a delete blocked by a foreign key, a no-op update, a
+  no-op publish and a restore that changed nothing all emit nothing. Calling
+  `service.publish()` - or any other content service method - directly changes
+  the database and emits **nothing**; that code owns its own follow-up. See
+  [Services and API](/docs/dev/content-engine/services-and-api).
+</Callout>
 
-**Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
-change into a plugin-owned projection. See
-[Generated events](/docs/dev/content-engine/services-and-api#event-system).
+## Blog events (`@vitnode/blog`)
 
-## Deliberately not emitted (yet)
+<Callout type="warn" title="These six names are compatibility adapters">
+  The blog runs on the [Content Engine](/docs/dev/content-engine), so the events
+  that describe what actually happened are `content.blog.post.*` and
+  `content.blog.category.*` - they carry changed fields, revision ids,
+  publication transitions, per-locale translation events and slug history. The
+  six names below are re-emitted from those by listeners registered on the
+  plugin's own `admin` module, so existing consumers keep working. Prefer the
+  `content.*` ones for anything new.
+</Callout>
+
+| Event                   | Payload                   | Re-emitted from                 |
+| ----------------------- | ------------------------- | ------------------------------- |
+| `blog.post.created`     | `{ postId, categoryId }`  | `content.blog.post.created`     |
+| `blog.post.updated`     | `{ postId, categoryId }`  | `content.blog.post.updated`     |
+| `blog.post.deleted`     | `{ postId }`              | `content.blog.post.deleted`     |
+| `blog.category.created` | `{ categoryId }`          | `content.blog.category.created` |
+| `blog.category.updated` | `{ categoryId }`          | `content.blog.category.updated` |
+| `blog.category.deleted` | `{ categoryId, postIds }` | `content.blog.category.deleted` |
+
+### blog.post.created and blog.post.updated
+
+The adapter reads the article's categories back to fill in `categoryId`, so a
+record deleted in between is simply not announced - and so is one with no
+categories yet.
+
+<TypeTable
+  type={{
+    postId: {
+      description: 'Id of the affected post.',
+      type: 'number',
+    },
+    categoryId: {
+      description:
+        "The post's first category. An article is in many categories now and this payload has room for one - watch content.blog.post.created for the whole set.",
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** push a realtime "new post" notification, ping a webhook
+(from a queue task) that shares the post to social media, invalidate an external
+cache, or keep plugin-owned derived data such as related posts in sync.
+
+### blog.post.deleted
+
+<TypeTable
+  type={{
+    postId: {
+      description: 'Id of the deleted post.',
+      type: 'number',
+    },
+  }}
+/>
+
+No `categoryId`, unlike created and updated: the row is gone by the time this is
+emitted, so there is nothing left to read it from - and inventing one would put
+a wrong id into an audit trail. A listener that needs the category should watch
+`content.blog.post.deleted` and keep its own index.
+
+**A listener would** remove the post from an external index or feed.
+
+### blog.category.created and blog.category.updated
+
+<TypeTable
+  type={{
+    categoryId: {
+      description: 'Id of the affected category.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** keep a navigation menu or an externally-cached category
+tree in sync, or notify an external CMS of a taxonomy change.
+
+### blog.category.deleted
+
+<TypeTable
+  type={{
+    categoryId: {
+      description: 'Id of the deleted category.',
+      type: 'number',
+    },
+    postIds: {
+      description:
+        'Always empty. Article memberships live in the blog_posts_category_id junction table, which references the category with ON DELETE RESTRICT - so a deletion that succeeded had nothing to cascade, and the field is kept only so existing listeners still compile.',
+      type: 'number[]',
+    },
+  }}
+/>
+
+**A listener would** drop the category from a cached navigation tree. It never
+has to fan out to the category's posts, because a category with posts cannot be
+deleted in the first place.
+
+## Gotchas
+
+<Callout type="warn" title="Core's user and role events are not deduplicated">
+  The AdminCP user `PATCH` emits `user.updated` whenever it succeeds, even if
+  every field was written with the value it already had, and the role routes
+  behave the same way. Only the Content Engine's `updated` is gated on a real
+  diff. A listener that does expensive work should compare before acting.
+</Callout>
+
+<Callout type="warn" title="A content type is only typed once its plugin grafts it">
+  Events fire at runtime for every registered content type, but the names appear
+  on `VitNodeEvents` only where the owning plugin declares
+  `ContentEventsFor<typeof myContentType>`. The example plugin grafts
+  `example.article` and `example.category` but not its two localized fixtures,
+  so `content.example.localized-article.created` really is emitted and still
+  cannot be given a type-checked listener. If your event name does not
+  autocomplete, that declaration is what is missing - see
+  [Plugin registration](/docs/dev/content-engine/plugin-registration).
+</Callout>
+
+<Callout type="warn" title="Editorial payloads carry more than they declare">
+  A content type with `editorial` goes through the shared effects helper, which
+  stamps `version` and `revisionId` onto **every** payload it emits, including
+  `created` and `deleted`. Neither field is on the declared type for those
+  actions, so treat them as an implementation detail rather than a contract -
+  the fields you can rely on are the ones in the tables above.
+</Callout>
+
+<Callout type="warn" title="Names shift between scheduled and published">
+  The person who booked a transition is `actorUserId` on `scheduled` and
+  `schedule_cancelled`, and `scheduledBy` on the `published` and `unpublished`
+  that the booking eventually fires. Same human, two keys.
+</Callout>
+
+## Deliberately not emitted yet
 
 High-frequency or consumer-less events are added only when a listener needs
-them, to keep the catalog meaningful: there is currently no `user.signedIn`,
-`user.passwordResetRequested`, or `file.uploaded`. If you need one of these,
-open an issue or PR - adding an event is a one-line `emit` plus an entry in the
-`VitNodeEvents` map. (`user.deleted` is a special case: it is declared in the
-map already, but waits on core growing a user-deletion flow.)
+them, so the catalog stays meaningful. There is currently no `user.signedIn`,
+`user.passwordResetRequested`, or `file.uploaded`. If you need one, open an
+issue or PR - adding an event is a one-line `emit` plus an entry in the
+`VitNodeEvents` map. (`user.deleted` is the special case: it is already on the
+map, and waits on core growing a user-deletion flow.)
+
+## Next
+
+<Cards>
+  <Card
+    title="Events"
+    href="/docs/dev/events"
+    description="How the bus works, what it guarantees, and how to emit and subscribe from a plugin."
+  />
+  <Card
+    title="Custom Adapter"
+    href="/docs/dev/events/custom-adapter"
+    description="Replace the in-process transport with a broker so every instance reacts."
+  />
+  <Card
+    title="Content Engine"
+    href="/docs/dev/content-engine"
+    description="Declare a content type and its whole event set is generated for you."
+  />
+  <Card
+    title="Queue"
+    href="/docs/dev/advanced/queue"
+    description="Durable background work with retries - what a thin listener should hand off to."
+  />
+</Cards>

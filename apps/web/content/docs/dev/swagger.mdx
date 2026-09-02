@@ -1,37 +1,158 @@
 ---
 title: Swagger
-description: Generate API documentation with OpenAPI.
+description: Browse every endpoint your VitNode API serves at /api/swagger - an OpenAPI document generated from the Zod schemas your routes already declare.
 icon: ListCollapse
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+VitNode's API is built on [`@hono/zod-openapi`](https://hono.dev/examples/zod-openapi),
+so the Zod schemas a route declares are its documentation. Nothing is written
+twice and nothing can drift: if the schema changes, the spec changes, and the
+request that no longer matches it is rejected.
 
-Swagger is a tool that helps you generate API documentation with OpenAPI. It's a powerful tool that can help you write documentation automatically and validate the request.
+## Quick start
 
-## Usage
+Start the dev server and open Swagger UI in a browser:
 
-To check documentation, open the following URL in your browser:
+| App shape        | Swagger UI                                                             |
+| ---------------- | ---------------------------------------------------------------------- |
+| **Single App**   | [http://localhost:3000/api/swagger](http://localhost:3000/api/swagger) |
+| **Monorepo App** | [http://localhost:8000/api/swagger](http://localhost:8000/api/swagger) |
+| **Only API**     | [http://localhost:8000/api/swagger](http://localhost:8000/api/swagger) |
 
-[http://localhost:3000/api/swagger](http://localhost:3000/api/swagger)
+Whichever origin serves `/api/*` serves the UI, because it is a route on the
+same Hono app. The raw document is one path deeper, at `/api/swagger/doc` -
+OpenAPI 3.0.0, titled `VitNode API`, versioned with the `@vitnode/core` release
+you have installed. Point any OpenAPI tool at that URL.
 
-That is `apps/web`, which mounts the API at `/api/*` in its own process. If you
-are running `apps/api` on its own instead, it is
-[http://localhost:8000/api/swagger](http://localhost:8000/api/swagger).
+{/* Image prompt: A screenshot of Swagger UI at http://localhost:3000/api/swagger for the VitNode API - the "VitNode API" title bar at the top, and below it collapsed tag groups reading "(Core) - Users", "(Core) - Admin / Users", "(Core) - Admin / Debug" and "(Example) - Content / Articles", with the first group expanded to show a GET and a POST operation. Light theme, 1440x900. */}
+
+Every path reads `/api/{pluginId}/{module}/{route}`, which is why core's session
+endpoint is `/api/@vitnode/core/users/session`. That is not a Swagger
+convention - it is how the app is mounted, and
+[Architecture](/docs/dev/architecture) walks the whole request path.
+
+## Where the spec comes from
+
+You never register anything with Swagger. Four steps in the API's own build
+produce the document as a side effect:
+
+| Step             | What it contributes                                                                |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `buildRoute`     | The operation: method, path, `request` and `responses` schemas, `description`.     |
+| `buildModule`    | Registers it on the module's Hono app, and names the group it lands in.            |
+| `buildApiPlugin` | Mounts each module under its name and collects the group list for the document.    |
+| `VitNodeAPI`     | Mounts each plugin under its `pluginId` and serves `/swagger` plus `/swagger/doc`. |
+
+## Put a plugin route in the spec
+
+There is no extra work - the same three files that make a route reachable make
+it documented. What you control is how good the documentation is.
+
+<Steps>
+<Step>
+
+### Describe the route as you build it
+
+`description` becomes the operation's summary line, and every schema field can
+carry an `example`. This is the whole difference between a spec people use and a
+spec people ignore:
+
+```ts title="src/api/modules/orders/routes/show.route.ts"
+import { z } from '@hono/zod-openapi'
+import { buildRoute } from '@vitnode/core/api/lib/route'
+
+import { CONFIG_PLUGIN } from '@/const'
+
+export const showOrderRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: 'get',
+    path: '/{id}',
+    description: 'Get one order by id', // [!code ++]
+    request: {
+      params: z.object({
+        id: z.string().openapi({ example: '1' }), // [!code ++]
+      }),
+    },
+    responses: {
+      200: {
+        content: {
+          'application/json': {
+            schema: z.object({ id: z.string(), total: z.number() }),
+          },
+        },
+        description: 'The order',
+      },
+    },
+  },
+  handler: async (c) => c.json({ id: '1', total: 42 }),
+})
+```
+
+</Step>
+<Step>
+
+### Register it in a module
+
+```ts title="src/api/modules/orders/orders.module.ts"
+import { buildModule } from '@vitnode/core/api/lib/module'
+
+import { CONFIG_PLUGIN } from '@/const'
+import { showOrderRoute } from './routes/show.route'
+
+export const ordersModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: 'orders', // [!code ++]
+  routes: [showOrderRoute], // [!code ++]
+})
+```
+
+The `name` is the second half of the group heading, so pick the word you want to
+read in the sidebar.
+
+</Step>
+<Step>
+
+### Mount the module in the plugin
+
+```ts title="src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+import { ordersModule } from '@/api/modules/orders/orders.module'
+import { CONFIG_PLUGIN } from '@/const'
+
+export const shopApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [ordersModule], // [!code ++]
+  })
+```
+
+</Step>
+<Step>
+
+### Reload the UI
+
+Restart the dev server and refresh `/api/swagger`. A new group is at the bottom
+of the list - **(Shop) - Orders** - with `GET /api/@acme/shop/orders/{id}` in
+it, and "Try it out" sends a real request with your cookies attached.
+
+</Step>
+</Steps>
 
 ## Grouping
 
-Every route is tagged `(Plugin) - Module`, and that tag is the group Swagger UI
-puts it in. The plugin comes from `pluginId` with its npm scope dropped, the
-module from the `name` you gave `buildModule`:
+Swagger has exactly one grouping mechanism - the tag - so the tag carries both
+halves of "where does this endpoint live". The plugin comes from `pluginId` with
+its scope dropped and title-cased, the module from the `name` you gave
+`buildModule`:
 
 ```ts
 buildModule({
-  pluginId: "@vitnode/core", // (Core)
-  name: "users", // - Users
+  pluginId: '@vitnode/core', // (Core)
+  name: 'users', // - Users
   routes: [sessionRoute],
-});
+})
 ```
 
 A nested module is named after its whole chain, so `(Core) - Admin / Users`
@@ -39,17 +160,75 @@ stays a separate group from the top-level `(Core) - Users`:
 
 ```ts
 buildModule({
-  pluginId: "@vitnode/core",
-  name: "admin",
+  pluginId: '@vitnode/core',
+  name: 'admin',
   routes: [],
   modules: [usersAdminModule], // (Core) - Admin / Users
-});
+})
 ```
 
-The tags are declared on the document in the order each plugin declared its
-modules, which is the order the groups appear in.
+The chain matters because module names repeat across the tree - core has a
+`users` module and an `admin/users` one, plus `cron`, `queue` and `files` twice
+over. A leaf-only tag would merge the public and admin halves of each into one
+group.
 
-<Callout>
-  A route may add `tags` of its own - they are kept, after the generated one, so
+Groups appear in the order the plugins declared their modules, with core first.
+
+<Callout title="Your own tags are kept">
+  A route may add `tags` of its own. They survive, after the generated one - so
   the same operation can also show up under a tag you name yourself.
 </Callout>
+
+## Gotchas
+
+<Callout
+  type="warn"
+  title="Swagger has no login, and it is mounted in production"
+>
+  `/api/swagger` and `/api/swagger/doc` are registered unconditionally, before
+  the session middleware, and neither checks anything. Anyone who can reach your
+  API can read every route it serves, including the admin ones. Deny both paths
+  at your reverse proxy if that is not what you want - see
+  [Self-hosted](/docs/dev/deployments/self-hosted).
+</Callout>
+
+<Callout type="warn" title="A response with no content widens res.json() to unknown">
+  The [fetcher](/docs/dev/fetcher) infers its return type from the same
+  `responses` block Swagger reads. Declare a status with no `content` - a bare
+  `401: { description: 'Unauthorized' }` - and there is no response format to
+  infer from, so `await res.json()` resolves to `unknown` at every call site.
+  Give every documented response a `content` schema, or leave the status
+  undeclared and let `HTTPException` produce it.
+</Callout>
+
+<Callout type="info" title="The spec is per-installation, not per-package">
+  The document lists the plugins **this** app has in its
+  `vitnode.api.config.ts`. Install a plugin and its groups appear; remove it and
+  they are gone. So `/api/swagger` is a truthful inventory of one deployment
+  rather than a catalogue of what VitNode can do.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="API routes"
+    description="Path params, query params, bodies and permissions"
+    href="/docs/dev/plugins/api/routes"
+  />
+  <Card
+    title="API modules"
+    description="How routes are grouped, nested and mounted"
+    href="/docs/dev/plugins/api/modules"
+  />
+  <Card
+    title="Fetcher"
+    description="Call these endpoints with full type inference"
+    href="/docs/dev/fetcher"
+  />
+  <Card
+    title="Debugging"
+    description="When an endpoint answers, but not the way you expected"
+    href="/docs/dev/debugging"
+  />
+</Cards>

@@ -1,95 +1,244 @@
 ---
 title: Discord
-description: Integrate Discord Single Sign-On (SSO) in your application.
+description: Add Discord sign-in to VitNode - create an application, register the redirect URL and wire up the Discord SSO adapter in your API config.
+icon: MessagesSquare
 ---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Discord is the quickest of the three to set up: no consent screen review, no app
+modes, no verification. Create an application, add one redirect URL, copy two
+values.
+
+## Quick start
+
+If you already have a client ID and secret, this is the entire integration.
+
+```bash title=".env"
+DISCORD_CLIENT_ID=1234567890123456789
+DISCORD_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { DiscordSSOApiPlugin } from '@vitnode/core/api/adapters/sso/discord' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      DiscordSSOApiPlugin({
+        clientId: process.env.DISCORD_CLIENT_ID,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+Restart the API and a **Discord** button appears on `/login`.
+
+## Set up the application
 
 <Steps>
 <Step>
 
-## Sign in to Discord
+### Sign in to the Discord Developer Portal
 
-Go to [Discord Developer Portal](https://discord.com/developers/applications) and sign in.
-
-</Step>
-<Step>
-
-## Create a new application
-
-Click on the `New Application` button to create a new application.
+Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+and sign in with the Discord account that should own the application.
 
 </Step>
+
 <Step>
 
-## Redirect URL
+### Create a new application
 
-Go to `OAuth2` page and inside the `Redirects` section, add the redirect URL.
+Press **New Application**, give it the name visitors will see on the
+authorization screen, and accept the terms.
 
-<Callout title="redirect_uri">
-  Your redirect URL should be `https://your-domain.com/login/sso/discord`.
+{/* Image prompt: The Discord Developer Portal applications list with the "New Application" dialog open and a name typed into the field, dark theme, 1100x600. */}
+
+</Step>
+
+<Step>
+
+### Add the redirect URL
+
+Open **OAuth2** in the left navigation and, under **Redirects**, press **Add
+Redirect**. Paste the URI for the origin you are running and save.
+
+VitNode builds this URI from `NEXT_PUBLIC_WEB_URL`, so it has to match exactly -
+no trailing slash, no locale prefix.
+
+| Environment                               | Redirect URL                                |
+| ----------------------------------------- | ------------------------------------------- |
+| Development (`NEXT_PUBLIC_WEB_URL` unset) | `http://localhost:3000/login/sso/discord`   |
+| Production                                | `https://your-domain.com/login/sso/discord` |
+
+Add both entries so one application covers local development and your live site.
+
+{/* Image prompt: The Discord Developer Portal OAuth2 page with the "Redirects" section showing one entry reading http://localhost:3000/login/sso/discord and the "Save Changes" bar at the bottom, dark theme, 1100x500. */}
+
+<Callout type="warn" title="Invalid OAuth2 redirect_uri">
+  Discord rejects the authorization request outright if the URL is not in this
+  list, before the visitor sees anything. If pressing the button lands you on a
+  Discord error page rather than an authorization prompt, this is why.
 </Callout>
 
 </Step>
+
 <Step>
 
-## Get the Client ID and Client Secret
+### Copy the client ID and secret
 
-After creating the application, you will get the `Client ID` and `Client Secret`. Save them for later.
+Still on the **OAuth2** page, the **Client ID** and **Client Secret** are in the
+client information block at the top. Press **Reset Secret** if the secret was
+never revealed or you have lost it - Discord shows it once.
+
+{/* Image prompt: The Discord Developer Portal OAuth2 page client information block showing "Client ID" with a Copy button and "Client Secret" with a Reset Secret button, values redacted, dark theme, 1100x450. */}
 
 </Step>
 
 <Step>
 
-## Environment Variables (.env)
+### Set the environment variables
 
-Add the `Client ID` and `Client Secret` to your `.env` file.
+Server-side variables, so **no** `NEXT_PUBLIC_` prefix - that prefix is what
+marks a value for the browser bundle, and a client secret in the browser bundle
+is a client secret you have published.
+
+```bash title=".env"
+DISCORD_CLIENT_ID=1234567890123456789 # [!code ++]
+DISCORD_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter
+
+Add `DiscordSSOApiPlugin` to `authorization.ssoAdapters`. It is a plain factory
+function, not a class - there is no `new`.
+
+```ts title="src/vitnode.api.config.ts"
+import { DiscordSSOApiPlugin } from '@vitnode/core/api/adapters/sso/discord' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      DiscordSSOApiPlugin({
+        clientId: process.env.DISCORD_CLIENT_ID,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+The redirect URI is computed when this file is evaluated, so restart the API
+rather than relying on a hot reload:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Verify it works
+
+Ask the API what it thinks it supports:
 
 ```bash
-DISCORD_CLIENT_ID=XXX
-DISCORD_CLIENT_SECRET=XXX
+curl http://localhost:3000/api/@vitnode/core/middleware
+# {"isEmail":false,"sso":[{"id":"discord","name":"Discord"}]}
 ```
 
-</Step>
+Then open `/login` and press **Discord**. You should see Discord's "connect to"
+authorization prompt listing your username and email, get bounced back to
+`/login/sso/discord?code=...&state=...`, and land on the front page signed in.
 
-<Step>
-
-## Configuration in VitNode
-
-Add the Discord SSO plugin to your API routes.
-
-```ts title="src/app/api/[...route]/route.ts"
-// [!code ++]
-import { DiscordSSOApiPlugin } from '@vitnode/core/api/plugins/sso/discord';
-
-VitNodeAPI({
-  app,
-  plugins: [],
-  // [!code ++]
-  authorization: {
-    // [!code ++]
-    ssoAdapters: [
-      // [!code ++]
-      new DiscordSSOApiPlugin({
-        // [!code ++]
-        clientId: process.env.DISCORD_CLIENT_ID,
-        // [!code ++]
-        clientSecret: process.env.DISCORD_CLIENT_SECRET,
-        // [!code ++]
-      }),
-      // [!code ++]
-    ],
-    // [!code ++]
-  },
-});
-```
-
-</Step>
-
-<Step>
-
-## Test the SSO
-
-Go to the login page and click on the `Discord` button to test the SSO.
+{/* Image prompt: The VitNode /login page with the email and password fields above a divider reading "Or continue With" and an outline button labelled Discord beneath it, dark theme, 900x850. */}
 
 </Step>
 
 </Steps>
+
+## What the adapter asks Discord for
+
+Useful when you are debugging an authorization prompt that lists the wrong
+permissions.
+
+| Setting       | Value                                  |
+| ------------- | -------------------------------------- |
+| Authorize URL | `https://discord.com/oauth2/authorize` |
+| Token URL     | `https://discord.com/api/oauth2/token` |
+| Profile URL   | `https://discord.com/api/users/@me`    |
+| Scopes        | `identify email`                       |
+| Provider id   | `discord`                              |
+| Fields read   | `id`, `email`, `username`              |
+
+Both scopes are required: `identify` for the id and username, `email` for the
+address the account is created with.
+
+## Gotchas
+
+<Callout type="warn" title="An account with no email cannot sign in">
+  The adapter requires `email` in Discord's profile response and answers `400`
+  when it is absent - which is what happens if the `email` scope is dropped, or
+  if the Discord account genuinely has no address on it. The visitor sees the
+  generic error screen.
+</Callout>
+
+<Callout type="warn" title="Discord's email verification flag is not checked">
+  Unlike the Google adapter, which rejects an unverified address, this one takes
+  Discord's `email` at face value and never reads Discord's `verified` field. If
+  you need that guarantee, copy the adapter into your own project and add the
+  check - see [Custom adapter](/docs/dev/sso/custom-adapter).
+</Callout>
+
+<Callout type="warn" title="A missing key fails on click, not on boot">
+  A `DiscordSSOApiPlugin` whose `clientId` is `undefined` registers happily -
+  the button renders and the provider is listed - and throws `Missing Discord
+  client ID` the moment somebody presses it. A button that only raises an error
+  toast is an environment problem, not a portal problem.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="How SSO works"
+    description="The round trip, the state cookie and the security rules"
+    href="/docs/dev/sso"
+  />
+  <Card
+    title="Google"
+    description="Add a second provider"
+    href="/docs/dev/sso/google"
+  />
+  <Card
+    title="Custom adapter"
+    description="Any OAuth2 provider, in three functions"
+    href="/docs/dev/sso/custom-adapter"
+  />
+</Cards>

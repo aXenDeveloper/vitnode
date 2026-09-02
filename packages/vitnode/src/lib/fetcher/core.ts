@@ -6,6 +6,7 @@ import type { Route } from "@/api/lib/route";
 
 import type {
   FetcherParams,
+  FetcherRequestOptions,
   GetModulePaths,
   GetValidMethodForPath,
   GetValidPathsForModule,
@@ -14,7 +15,7 @@ import type {
 
 import { rawApiFetch } from "./raw";
 
-interface CoreFetcherOptions<
+type CoreFetcherOptions<
   M extends string,
   Routes extends Route[],
   Modules extends BaseBuildModuleReturn[],
@@ -27,40 +28,8 @@ interface CoreFetcherOptions<
     Routes,
     Modules
   > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
-> {
-  additionalHeaders?: HeadersInit;
-  args?: FetcherParams<
-    M,
-    Routes,
-    Modules,
-    ModuleName,
-    SelectedPath,
-    Method
-  >["args"];
-  /**
-   * Raw `multipart/form-data` body for file uploads. When set, the JSON
-   * `Content-Type` is omitted so the browser can add the multipart boundary,
-   * and this is sent as the request body instead of `JSON.stringify(args.body)`.
-   */
-  formData?: FormData;
-  method: Method;
-  module: ModuleName;
-  /**
-   * Extra `fetch` init - `credentials`, an {@link AbortSignal}, Next's `next`
-   * extension. `method` is omitted with `body` and `headers` because
-   * `rawApiFetch` spreads this *after* the three it computes; see its own note.
-   */
-  options?: Omit<RequestInit, "body" | "headers" | "method">;
-  /**
-   * Origin to call, instead of the `NEXT_PUBLIC_API_URL` one. Set by a runtime
-   * that serves the API itself and knows the origin only per request; see
-   * `RawApiFetchArgs["origin"]`.
-   */
-  origin?: string;
-  path: SelectedPath;
-  prefixPath?: string;
-  withPagination?: boolean;
-}
+> = FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
+  FetcherRequestOptions;
 
 export async function coreFetcher<
   M extends string,

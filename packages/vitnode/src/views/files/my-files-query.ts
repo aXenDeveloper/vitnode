@@ -47,7 +47,7 @@ export const userFilesModuleRef = clientModule<typeof userFilesModule>(
 );
 
 /** The module is mounted under `/users`, not at the plugin root. */
-const FILES_PREFIX_PATH = "/users";
+export const FILES_PREFIX_PATH = "/users";
 
 /** The columns the list route will sort by. Anything else is ignored. */
 export const MY_FILES_ORDER_BY = ["createdAt", "name", "size"] as const;
@@ -186,14 +186,6 @@ export const normalizeMyFilesParams = (
  * applied by {@link normalizeMyFilesParams} instead, in a value both the request
  * and the key are built from.
  */
-export const myFilesRequest = (params: MyFilesParams) => ({
-  args: { query: params },
-  method: "get" as const,
-  module: "files" as const,
-  path: "/" as const,
-  prefixPath: FILES_PREFIX_PATH,
-});
-
 /** One row of the table, as JSON delivers it. */
 export interface MyFile {
   /** ISO string over the wire; a `Date` when a Next.js render passes it in. */
@@ -303,8 +295,12 @@ export const fetchMyFilesPageInBrowser: MyFilesPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcherClient(userFilesModuleRef, {
-    ...myFilesRequest(params),
+    args: { query: params },
+    method: "get",
+    module: "files",
     options: { signal },
+    path: "/",
+    prefixPath: FILES_PREFIX_PATH,
   });
 
   if (!response.ok) throw new MyFilesRequestError(response.status, params);

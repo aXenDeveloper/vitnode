@@ -1,10 +1,15 @@
 {
   "title": "Email",
+  "description": "Transactional email with React Email templates and pluggable adapters",
+  "icon": "Mail",
   "pages": [
+    "index",
     "templates",
     "components",
     "---Adapters---",
-    "...",
+    "resend",
+    "nodemailer",
+    "---Advanced---",
     "custom-adapter"
   ]
 }

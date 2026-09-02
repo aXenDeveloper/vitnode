@@ -1,95 +1,274 @@
 ---
 title: Local (disk)
-description: Zero-config storage that writes uploads to the local disk.
+description: The zero-config VitNode storage adapter - writes uploads to public/uploads on the API server and serves them back as static files.
+icon: FolderOpen
 ---
 
-| Cloud          | Self-Hosted  |
-| -------------- | ------------ |
-| ⚠️ Not durable | ✅ Supported |
+The Local adapter is the one that needs no account, no keys and no extra package:
+it writes uploads into `public/uploads` next to your API and serves them back as
+static files. Perfect for development and for a single self-hosted server, and
+the wrong choice on serverless.
 
-The Local adapter ships with `@vitnode/core` - no extra package or cloud account
-needed. It writes files to a `public/uploads` directory and serves them as
-static files.
+| Cloud          | Self-hosted  | Package                      |
+| :------------- | :----------- | :--------------------------- |
+| ⚠️ Not durable | ✅ Supported | Ships inside `@vitnode/core` |
 
-<Callout type="warn" title="Not durable on serverless">
-  Serverless platforms (e.g. Vercel) have an ephemeral, read-only filesystem, so
-  locally stored files are lost between deploys and instances. Use a cloud
-  adapter ([S3 / R2](/docs/dev/storage/s3-r2) or
-  [Supabase](/docs/dev/storage/supabase)) in those environments.
-</Callout>
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
 
-## Usage
+## Quick start
 
-<Steps>
-<Step>
-### Import the adapter
-
-```ts title="vitnode.api.config.ts"
-// [!code ++]
-import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+```ts title="src/vitnode.api.config.ts"
+import { LocalStorageAdapter } from '@vitnode/core/api/adapters/storage/local' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   storage: {
-    // [!code ++]
-    adapter: LocalStorageAdapter(),
+    adapter: LocalStorageAdapter(), // [!code ++]
   },
-});
+})
 ```
+
+That is enough to store files. Serving them back is one more step, and it depends
+on which app runs the API - keep reading.
+
+## Set it up
+
+<Steps>
+<Step>
+
+### Register the adapter
+
+There is nothing to install - the adapter lives in `@vitnode/core`, which you
+already depend on. Import it and set `storage.adapter`, exactly as in the
+[Quick start](#quick-start) above.
+
+Uploads then land under the current working directory of the API process:
+
+<Files>
+  <Folder name="public" defaultOpen>
+    <Folder name="uploads" defaultOpen>
+      <Folder name="month_9_2026" defaultOpen>
+        <Folder name="avatars" defaultOpen>
+          <File name="1b9d3f7c-0e4a-4c21-9a77-5d6f0b8e1c22.webp" />
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
 
 </Step>
 <Step>
-### Serve the files
 
-On the standalone Node API, mount the adapter's `static` descriptor with Hono's
-`serveStatic` **before** `VitNodeAPI` so uploads are served at `/api/uploads/*`:
+### Serve the stored files
 
-```ts title="src/index.ts"
-import { serveStatic } from "@hono/node-server/serve-static";
+Writing a file is not the same as answering a request for it. The adapter exposes
+a `static` descriptor - `mountPath`, `root` and `stripPrefix` - so the mount is
+derived from your `publicPath` instead of hardcoded in two places.
 
-const staticStorage = vitNodeApiConfig.storage?.adapter?.static;
-// [!code ++:9]
+<Tabs groupId='storage-host' persist items={['Standalone API', 'TanStack Start app']}>
+
+```ts tab="Standalone API" title="apps/api/src/index.ts"
+import { serveStatic } from '@hono/node-server/serve-static'
+import { mkdirSync } from 'node:fs'
+
+// [!code ++:14]
+const staticStorage = vitNodeApiConfig.storage?.adapter?.static
 if (staticStorage) {
+  mkdirSync(staticStorage.root, { recursive: true })
   app.get(
     staticStorage.mountPath,
     serveStatic({
       root: staticStorage.root,
-      rewriteRequestPath: path =>
+      rewriteRequestPath: (path) =>
         path.startsWith(staticStorage.stripPrefix)
           ? path.slice(staticStorage.stripPrefix.length)
           : path,
     }),
-  );
+  )
 }
 
-VitNodeAPI({ app, vitNodeApiConfig });
+VitNodeAPI({ app, vitNodeApiConfig })
 ```
 
-Inside a **Next.js** app the `public/` directory is already served at the site
-root, so no `serveStatic` is needed - just point the adapter's public path at it:
+```ts tab="TanStack Start app" title="src/server/vitnode-api.server.ts"
+import { serveStatic } from '@hono/node-server/serve-static'
+import { mkdirSync } from 'node:fs'
 
-```ts title="vitnode.api.config.ts"
-adapter: LocalStorageAdapter({ publicPath: "/uploads" }),
+const createVitNodeApi = () => {
+  const app = new OpenAPIHono().basePath('/api')
+
+  // [!code ++:14]
+  const staticStorage = vitNodeApiConfig.storage?.adapter?.static
+  if (staticStorage) {
+    mkdirSync(staticStorage.root, { recursive: true })
+    app.get(
+      staticStorage.mountPath,
+      serveStatic({
+        root: staticStorage.root,
+        rewriteRequestPath: (path) =>
+          path.startsWith(staticStorage.stripPrefix)
+            ? path.slice(staticStorage.stripPrefix.length)
+            : path,
+      }),
+    )
+  }
+
+  VitNodeAPI({ app, vitNodeApiConfig })
+
+  return app
+}
 ```
+
+</Tabs>
+
+Mount `serveStatic` **before** `VitNodeAPI` on the standalone API: the request
+then skips the CORS, CSRF, rate-limiter and global middleware, which a static
+image has no use for. `mkdirSync` is only there so `serveStatic` does not warn
+about a missing root before the first upload.
+
+The TanStack Start app is the same code in a different file, because `/api/*` on
+that app is one catch-all route handing the request to the very same Hono
+application - so the mount belongs inside it, not in the router. `serveStatic`
+comes from `@hono/node-server`, which that app does not depend on yet:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun i @hono/node-server
+```
+
+```bash tab="pnpm"
+pnpm i @hono/node-server
+```
+
+```bash tab="npm"
+npm i @hono/node-server
+```
+
+</Tabs>
+
+<Callout type="warn" title="Vite's public/ is a build-time snapshot">
+  During `vite dev` the app's `public/` directory is served at the site root, so
+  setting `publicPath: "/uploads"` looks like it works with no mount at all.
+  `vite build` copies `public/` into the build output **once**, so files
+  uploaded at runtime are written somewhere the production server never reads
+  from. Keep the default `publicPath` and mount the `static` descriptor as
+  above, or use a cloud adapter - which is the honest answer for anything with
+  more than one instance.
+</Callout>
+
+</Step>
+<Step>
+
+### Point the URLs at the right origin
+
+The adapter builds absolute URLs as `{baseUrl}/{publicPath}/{key}`. `baseUrl`
+defaults to the configured API origin, so this env var is what decides whether
+your file URLs are reachable:
+
+| Variable              | Required    | What it is for                                                                                                                                                             |
+| :-------------------- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | Recommended | The public origin of the API. Used as the default `baseUrl`, so a wrong value produces URLs that 404. Falls back to the browser's own origin, then `http://localhost:3000` |
+
+```bash title=".env"
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Pass `baseUrl` explicitly if the files are fronted by a different hostname than
+the API itself.
+
+</Step>
+<Step>
+
+### Upload something and verify
+
+Open **AdminCP → Core → System → Integrations** and use **Test storage** on the
+Storage card: it uploads an image and tells you whether the round trip worked.
+
+Then check the file is really on disk and really served:
+
+```bash
+ls public/uploads
+curl -I http://localhost:8000/api/uploads/month_9_2026/admin-storage-test/<uuid>.webp
+```
+
+A `200` means the mount is right. A `404` with the file present on disk means the
+`publicPath` and the mount disagree.
 
 </Step>
 </Steps>
 
 ## Options
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
-
 <TypeTable
   type={{
     publicPath: {
-      description: "URL path prefix the files are served under.",
-      type: "string",
-      default: "/api/uploads",
+      description:
+        'URL path prefix the files are served under. The `static` descriptor is derived from it.',
+      type: 'string',
+      default: '/api/uploads',
     },
     baseUrl: {
       description:
-        "Origin used to build absolute URLs. Defaults to the configured API origin.",
-      type: "string",
+        'Origin used to build absolute URLs. Defaults to the configured API origin (`NEXT_PUBLIC_API_URL`).',
+      type: 'string',
     },
   }}
 />
+
+The default `publicPath` is `/api/uploads` because the API mounts everything under
+`/api`, and `mountPath` strips that prefix back off so the route is registered
+once, in the right place. Change `publicPath` and the descriptor follows it - but
+keep it under `/api`: `stripPrefix` is the whole `publicPath`, so a `publicPath`
+outside the API's own base path strips nothing and every file answers `404`.
+
+## Gotchas
+
+<Callout type="warn" title="Not durable on serverless">
+  Serverless platforms give every instance an ephemeral filesystem. Files
+  written by one instance are invisible to the next and gone after a deploy,
+  which shows up as images that worked this morning. Use [S3 or
+  R2](/docs/dev/storage/s3-r2) or [Supabase Storage](/docs/dev/storage/supabase)
+  there.
+</Callout>
+
+<Callout type="warn" title="Relative to the process, not to the file">
+  The upload path is resolved from `process.cwd()`, so starting the API from a
+  different directory points it at a different `public/uploads`. Old files do
+  not disappear - the keys on the `core_files` rows still name them - but the
+  new directory answers the requests.
+</Callout>
+
+<Callout type="warn" title="A missing file is a 404, not a repaired row">
+  Deleting a file from disk by hand leaves its `core_files` row behind, and the
+  AdminCP Files table will keep listing it with a broken preview. Delete through
+  the table (or `deleteFile`) so the row and the bytes go together.
+</Callout>
+
+<Callout type="info" title="Back it up like a database">
+  `public/uploads` is state. A container that recreates its filesystem on deploy
+  loses every upload, and no `core_files` row can bring the bytes back. Mount a
+  volume, or move to a cloud adapter.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Storage overview"
+    description="upload(), keys, image optimization and deletes."
+    href="/docs/dev/storage"
+  />
+  <Card
+    title="AWS S3 / Cloudflare R2"
+    description="The durable option, and still one adapter."
+    href="/docs/dev/storage/s3-r2"
+  />
+  <Card
+    title="Self-hosted deployment"
+    description="Where the uploads directory lives in production."
+    href="/docs/dev/deployments/self-hosted"
+  />
+</Cards>

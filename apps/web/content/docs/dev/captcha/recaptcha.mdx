@@ -1,72 +1,262 @@
 ---
-title: Google reCAPTCHA
-description: How to integrate Google reCAPTCHA in your application.
+title: Google reCAPTCHA v3
+description: Protect VitNode sign-up and password reset with Google reCAPTCHA v3 - register a score-based site, add your domains, and wire both keys.
+icon: BadgeCheck
 ---
 
-<Steps>
-<Step>
+reCAPTCHA v3 never asks the visitor to do anything. It watches the page, scores
+the request from `0.0` to `1.0`, and VitNode's API accepts anything at `0.5` or
+above. Nothing to install - the provider lives in core - so the whole job is two
+keys and one config block.
 
-## Sign in to Google reCAPTCHA
+import { ImgDocs } from '@/components/fumadocs/img'
 
-Go into [Google reCAPTCHA](https://www.google.com/recaptcha/admin/) and sign in.
+import recaptchaConsole from './recaptcha.png'
 
-</Step>
+## Quick start
 
-<Step>
+If you already have a v3 site key and secret key, this is the entire
+integration.
 
-## Register a new site
-
-Select `Create` button inside the `Register a new site` section.
-
-import homeRecaptcha from './recaptcha.png';
-
-import { ImgDocs } from '@/components/fumadocs/img';
-
-<ImgDocs
-  src={homeRecaptcha}
-  className="*:max-w-[75%]"
-  alt="Google reCAPTCHA Home"
-/>
-
-Add your domain and select the `reCAPTCHA v3` type.
-
-<Callout title="reCAPTCHA v2 is not supported!" type="error">
-  In VitNode, we want to move forward with the latest technologies and
-  standards. Therefore, we do not support reCAPTCHA v2.
-</Callout>
-
-</Step>
-
-<Step>
-
-## Add keys to .env
-
-Add the keys to your `.env` file.
-
-```bash
-RECAPTCHA_SITE_KEY=XXX
-RECAPTCHA_SECRET_KEY=XXX
+```bash title=".env"
+RECAPTCHA_SITE_KEY=6Lc...
+RECAPTCHA_SECRET_KEY=6Lc...
 ```
 
-</Step>
-
-<Step>
-
-## Provide keys to VitNode
-
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config';
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
   // [!code ++:5]
   captcha: {
     type: 'recaptcha_v3',
     siteKey: process.env.RECAPTCHA_SITE_KEY,
     secretKey: process.env.RECAPTCHA_SECRET_KEY,
   },
-});
+})
+```
+
+Restart the API and `/register` starts minting a token on submit. There is no
+widget to look at - a reCAPTCHA badge in the corner of the page is the only
+visible change.
+
+<Callout type="warn" title="Do not ship this block without both keys">
+
+An empty `secretKey` does not disable captcha - it breaks it. `captchaMiddleware`
+steps aside only when the whole `captcha` block is missing, so a deployment with
+the block and no keys **rejects** registration and password reset with `400`.
+Gate the block on the environment variable:
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:7]
+  captcha: process.env.RECAPTCHA_SECRET_KEY
+    ? {
+        type: 'recaptcha_v3',
+        siteKey: process.env.RECAPTCHA_SITE_KEY,
+        secretKey: process.env.RECAPTCHA_SECRET_KEY,
+      }
+    : undefined,
+})
+```
+
+</Callout>
+
+<Callout title="reCAPTCHA v2 is not supported" type="error">
+  `type` accepts `'cloudflare_turnstile'` and `'recaptcha_v3'`, and nothing
+  else. VitNode loads Google's script with `render=<siteKey>` and mints the
+  token through `grecaptcha.execute`, which a v2 key cannot do - so a v2 pair in
+  this block ends as a `400`, either because no token was minted or because the
+  verification came back without a score. Register a **score based (v3)** site,
+  or use [Cloudflare Turnstile](/docs/dev/captcha/cloudflare) if you want a
+  visible widget.
+</Callout>
+
+## Register the site
+
+<Steps>
+<Step>
+
+### Open the reCAPTCHA admin console
+
+Go to the [reCAPTCHA admin console](https://www.google.com/recaptcha/admin/) and
+sign in with the Google account that should own the keys.
+
+</Step>
+<Step>
+
+### Start a new registration
+
+Press the **+** button in the console's header to register another site.
+
+<ImgDocs
+  src={recaptchaConsole}
+  className="*:max-w-[75%]"
+  alt="The Google reCAPTCHA admin console header with the plus button for registering a new site marked with a red arrow"
+/>
+
+</Step>
+<Step>
+
+### Choose score based (v3) and add your domains
+
+Give the registration a **Label** - internal, so your site's name will do - and
+pick **Score based (v3)** as the reCAPTCHA type.
+
+Then list every domain the form is served from. Google allows first-level
+subdomains automatically, so `your-domain.com` also covers
+`www.your-domain.com`. For local development you have to add `localhost`
+explicitly; it is not implied.
+
+{/* Image prompt: The Google reCAPTCHA "Register a new site" form with a Label filled in, the "Score based (v3)" reCAPTCHA type radio selected, and two Domains entries reading your-domain.com and localhost, light theme, 1000x700. */}
+
+</Step>
+<Step>
+
+### Copy the site key and the secret key
+
+Google shows both on the next screen, and they stay available under the
+registration's **Settings** tab.
+
+The **site key** is public - the API publishes it so the browser can load
+Google's script. The **secret key** is not: it only ever travels from your API
+to Google's `siteverify` endpoint.
+
+{/* Image prompt: The Google reCAPTCHA admin console keys screen showing the "SITE KEY" and "SECRET KEY" values with their copy buttons, values partially redacted, light theme, 1000x500. */}
+
+</Step>
+<Step>
+
+### Set the environment variables
+
+These names are not magic - they are whatever you read in your config on the
+next step. What matters is that both are server-side variables, because the
+secret key must never reach a browser bundle.
+
+```bash title=".env"
+RECAPTCHA_SITE_KEY=6Lc... # [!code ++]
+RECAPTCHA_SECRET_KEY=6Lc... # [!code ++]
 ```
 
 </Step>
+<Step>
 
+### Register the provider
+
+Add the `captcha` block to your API config with `type: 'recaptcha_v3'`.
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:5]
+  captcha: {
+    type: 'recaptcha_v3',
+    siteKey: process.env.RECAPTCHA_SITE_KEY,
+    secretKey: process.env.RECAPTCHA_SECRET_KEY,
+  },
+})
+```
+
+The config is evaluated when the process boots, so restart the API rather than
+waiting for a hot reload to notice.
+
+</Step>
+<Step>
+
+### Verify it works
+
+Ask the API what it thinks it has configured. The site key comes back on the
+public middleware route:
+
+```bash
+curl http://localhost:3000/api/@vitnode/core/middleware
+# {"isEmail":false,"sso":[],"captcha":{"siteKey":"6Lc...","type":"recaptcha_v3"}}
+```
+
+Then open `/register`. Google's badge appears in the bottom corner of the page,
+the **Register** button is enabled as soon as the script loads, and a completed
+registration means the score cleared `0.5`.
+
+The AdminCP confirms it from the other side: **AdminCP → System →
+Integrations** (`/admin/core/system/integrations`) shows the **Captcha** card as
+_Active_, with **reCAPTCHA v3** underneath.
+
+Google's own console is the third view. Under the registration's analytics you
+should see the request appear, with the score it was given.
+
+</Step>
 </Steps>
+
+## What VitNode sends and checks
+
+Useful when the console's numbers and your form's behaviour disagree.
+
+| Thing            | Value                                                                  |
+| ---------------- | ---------------------------------------------------------------------- |
+| Script           | `https://www.google.com/recaptcha/api.js?hl=<locale>&render=<siteKey>` |
+| Token minted by  | `grecaptcha.execute(siteKey, { action: 'submit' })`                    |
+| Action name      | `submit` - always, and the API does not verify it                      |
+| Verify endpoint  | `https://www.google.com/recaptcha/api/siteverify`                      |
+| Accepted when    | `success === true` **and** `score >= 0.5`                              |
+| Threshold        | `0.5`, hardcoded in `captchaMiddleware`                                |
+| Token travels as | the header `x-vitnode-captcha-token`                                   |
+
+The visitor's IP is forwarded as `remoteip`, so the score reflects the person
+filling the form rather than your server. It is read from the first proxy header
+that has a value - `x-forwarded-for` first, then `x-real-ip`,
+`cf-connecting-ip` and a dozen more - and falls back to `127.0.0.1` when a
+request arrives with none of them.
+
+## Gotchas
+
+<Callout type="warn" title="The 0.5 threshold is not configurable">
+  It is a constant in the middleware, not a config option, so you cannot loosen
+  it for a site that keeps scoring low or tighten it for one under attack. If
+  you need a different number, the honest options are a pull request or
+  [Cloudflare Turnstile](/docs/dev/captcha/cloudflare), which has no score in
+  the first place.
+</Callout>
+
+<Callout type="warn" title="A low score looks exactly like a wrong key">
+  Both come back as `400 Captcha validation failed`, because the middleware does
+  not pass Google's `error-codes` through to the response. Check the
+  registration's analytics in the admin console: a request that arrived with a
+  low score is a scoring problem, and no request at all is a key or domain
+  problem.
+</Callout>
+
+<Callout type="warn" title="A rejected submit leaves the button disabled">
+  `AutoForm` calls `onReset()` after every submission, which clears `isReady` -
+  and with v3 there is no widget callback to set it back. A form that stays on
+  screen after a failure ("email already exists") therefore has a dead submit
+  button until it is remounted. Turnstile does not have this problem, because
+  `turnstile.reset()` makes the widget call back again.
+</Callout>
+
+<Callout type="info" title="Env changes need a restart">
+  The API config reads `process.env` when the process starts, so a new key in
+  `.env` only takes effect after you restart the dev server.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Captcha overview"
+    description="Gate your own routes with withCaptcha and forward the token from a form."
+    href="/docs/dev/captcha"
+  />
+  <Card
+    title="Cloudflare Turnstile"
+    description="The other provider: a visible widget, no score, and dummy keys for localhost."
+    href="/docs/dev/captcha/cloudflare"
+  />
+  <Card
+    title="Custom forms"
+    description="Use the useCaptcha hook directly when AutoForm is not what you are rendering."
+    href="/docs/dev/captcha/custom-adapter"
+  />
+</Cards>

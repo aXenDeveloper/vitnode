@@ -1,47 +1,27 @@
 import "@tanstack/react-start/server-only";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
-import type {
-  AdminStaffCatalogFetcher,
-  AdminStaffEntryFetcher,
-  AdminStaffPageFetcher,
-  AdminStaffParams,
-} from "@/views/admin/views/core/staff/staff-query";
+import type { AdminStaffParams } from "@/views/admin/views/core/staff/staff-query";
 
+import { adminModule } from "@/api/modules/admin/admin.module";
 import {
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { STAFF_TYPE_SEGMENT } from "@/views/admin/views/core/staff/staff-model";
-import {
-  adminStaffCatalogRequest,
-  adminStaffEntryRequest,
-  adminStaffRequest,
-} from "@/views/admin/views/core/staff/staff-query";
-import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
-import { fetcherServer } from "../../fetcher/server";
+import { fetcher } from "../../fetcher/server";
 
-/**
- * The three staff reads, during SSR.
- *
- * The requests and the refusal checks are the shared ones; only the transport is
- * this module's. `fetcherServer` forwards the admin cookie the page request
- * arrived with, which is what makes these answerable at all - `/admin/staff/*`
- * is behind `globalAdminMiddleware` and every handler re-checks the staff
- * tables.
- *
- * Only ever reached through the isomorphic transports in `./query`.
- */
-
-export const fetchAdminStaffPageOnServer: AdminStaffPageFetcher = async (
+export const fetchAdminStaffPageOnServer = async (
   type: PermissionStaffType,
   params: AdminStaffParams,
 ) => {
-  const response = await fetcherServer(
-    adminModuleRef,
-    adminStaffRequest(type, params),
-  );
+  const response = await fetcher(adminModule, {
+    args: { query: params },
+    method: "get",
+    module: "admin/staff",
+    path: type === "admin" ? "/admins" : "/moderators",
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(
@@ -54,31 +34,33 @@ export const fetchAdminStaffPageOnServer: AdminStaffPageFetcher = async (
   return await response.json();
 };
 
-export const fetchAdminStaffCatalogOnServer: AdminStaffCatalogFetcher =
-  async () => {
-    const response = await fetcherServer(
-      adminModuleRef,
-      adminStaffCatalogRequest(),
+export const fetchAdminStaffCatalogOnServer = async () => {
+  const response = await fetcher(adminModule, {
+    method: "get",
+    module: "admin/staff",
+    path: "/permission-catalog",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the staff permission catalog",
     );
+  }
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the staff permission catalog",
-      );
-    }
+  return await response.json();
+};
 
-    return await response.json();
-  };
-
-export const fetchAdminStaffEntryOnServer: AdminStaffEntryFetcher = async (
+export const fetchAdminStaffEntryOnServer = async (
   type: PermissionStaffType,
   id: string,
 ) => {
-  const response = await fetcherServer(
-    adminModuleRef,
-    adminStaffEntryRequest(type, id),
-  );
+  const response = await fetcher(adminModule, {
+    args: { params: { id, type } },
+    method: "get",
+    module: "admin/staff",
+    path: "/entry/{type}/{id}",
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(

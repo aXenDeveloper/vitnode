@@ -21,25 +21,14 @@ export interface RawApiFetchArgs {
    * `method` this call was built from, and a `get` would leave as a `post`. The
    * three fields this function computes are the three it does not accept.
    */
-  options?: Omit<RequestInit, "body" | "headers" | "method"> & {
-    /**
-     * Next's own `fetch` extension, for cache tags and revalidation.
-     *
-     * Spelled out rather than inherited: Next augments the global `RequestInit`
-     * from its own type declarations, and `@vitnode/core` compiles in contexts
-     * where those are not loaded - `apps/api` is plain Node. Declaring the
-     * shape here keeps every caller on the shared fetcher instead of reaching
-     * for `fetch` directly to get one property.
-     */
-    next?: { revalidate?: false | number; tags?: string[] };
-  };
+  options?: Omit<RequestInit, "body" | "headers" | "method">;
   /**
    * Origin to build the URL against, instead of `NEXT_PUBLIC_API_URL`.
    *
    * For a runtime that serves the API itself, the right origin is the one the
    * request being handled arrived on: it is only knowable per request, and on a
-   * preview deployment it is a hostname nobody configured. Left unset
-   * everywhere else, so Next.js and the browser keep reading `CONFIG.api`.
+   * preview deployment it is a hostname nobody configured. Left unset in the
+   * browser, which keeps reading `CONFIG.api`.
    */
   origin?: string;
   params?: Record<string, unknown>;

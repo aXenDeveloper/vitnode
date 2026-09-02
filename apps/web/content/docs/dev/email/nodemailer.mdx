@@ -1,71 +1,272 @@
 ---
 title: Nodemailer (SMTP)
-description: Send emails using SMTP with the Nodemailer adapter.
+description: Deliver VitNode email over SMTP with the Nodemailer adapter - local mail catcher for development, any relay in production.
+icon: Server
 ---
 
-| Cloud            | Self-Hosted  | Links                                                   |
-| ---------------- | ------------ | ------------------------------------------------------- |
-| ❌ Not Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/nodemailer) |
+The Nodemailer adapter speaks plain SMTP, so it works with anything that has a
+host, a port and a login: your own Postfix, a provider's relay, or a mail
+catcher running on your laptop.
 
-## Usage
+| Cloud                | Self-Hosted  | Links                                                                                                         |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
+| ⚠️ Runtime-dependent | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@vitnode/nodemailer) · [Nodemailer docs](https://nodemailer.com/) |
+
+SMTP needs an outbound TCP connection, which edge runtimes cannot open and many
+serverless platforms block on the usual mail ports. If that is where you deploy,
+use [Resend](/docs/dev/email/resend) instead.
+
+## Quick start
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { NodemailerEmailAdapter } from '@vitnode/nodemailer'
+
+export const vitNodeApiConfig = buildApiConfig({
+  email: {
+    adapter: NodemailerEmailAdapter({
+      from: process.env.NODE_MAILER_FROM,
+      host: process.env.NODE_MAILER_HOST,
+      user: process.env.NODE_MAILER_USER,
+      password: process.env.NODE_MAILER_PASSWORD,
+    }),
+  },
+})
+```
+
+`port` defaults to `587` and `secure` to `false`, which is the STARTTLS
+combination almost every relay wants.
+
+## Setup
 
 <Steps>
 <Step>
-### Installation
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+### Install the adapter
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install nodemailer adapter'>
+`nodemailer` itself ships as a dependency of the adapter.
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install the Nodemailer adapter'>
 
 ```bash tab="bun"
-bun i @vitnode/nodemailer -D
+bun i @vitnode/nodemailer
 ```
 
 ```bash tab="pnpm"
-pnpm i @vitnode/nodemailer -D
+pnpm i @vitnode/nodemailer
 ```
 
 ```bash tab="npm"
-npm i @vitnode/nodemailer -D
+npm i @vitnode/nodemailer
 ```
 
 </Tabs>
 
 </Step>
 <Step>
-### Import the adapter
 
-```ts title="vitnode.api.config.ts"
-// [!code ++]
-import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+### Get an SMTP server to talk to
 
-export const vitNodeApiConfig = buildApiConfig({
-  email: {
-    // [!code ++:6]
-    adapter: NodemailerEmailAdapter({
-      from: process.env.NODE_MAILER_FROM,
-      host: process.env.NODE_MAILER_HOST,
-      password: process.env.NODE_MAILER_PASSWORD,
-      user: process.env.NOD_EMAILER_USER,
-    }),
-  },
-});
+In development, catch the mail locally instead of posting it to strangers.
+[Mailpit](https://mailpit.axllent.org/) is one binary: an SMTP server on `1025`
+and a web inbox on `8025`.
+
+```bash title="Catch mail locally"
+docker run -p 8025:8025 -p 1025:1025 \
+  -e MP_SMTP_AUTH_ACCEPT_ANY=1 \
+  -e MP_SMTP_AUTH_ALLOW_INSECURE=1 \
+  axllent/mailpit
 ```
+
+Both flags matter: the adapter always authenticates, and it does so over an
+unencrypted local connection, which Mailpit refuses by default.
+
+In production, take the four values from your provider's SMTP page - it is
+usually called "SMTP relay", "Sending" or "Integration".
+
+{/* Image prompt: A screenshot of a transactional email provider's SMTP credentials page, showing the server host, port 587, username and a masked password, with a copy button beside each field. Neutral light theme, 1440x900. */}
 
 </Step>
 <Step>
 
-### Environment Variables
+### Register the adapter
 
-Add the following environment variables to your `.env` file:
+The adapter reads options, not the environment, so a port other than `587` has
+to be passed through as well:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { NodemailerEmailAdapter } from '@vitnode/nodemailer' // [!code ++]
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:10]
+  email: {
+    adapter: NodemailerEmailAdapter({
+      from: process.env.NODE_MAILER_FROM,
+      host: process.env.NODE_MAILER_HOST,
+      user: process.env.NODE_MAILER_USER,
+      password: process.env.NODE_MAILER_PASSWORD,
+      port: Number(process.env.NODE_MAILER_PORT ?? 587),
+      secure: process.env.NODE_MAILER_PORT === '465',
+    }),
+  },
+  metadata: {
+    title: 'My Community',
+    shortTitle: 'Community',
+  },
+})
+```
+
+Recipients see `Community <hello@example.com>`: the display name is
+`metadata.shortTitle ?? metadata.title`, and `from` supplies only the address.
+
+</Step>
+<Step>
+
+### Set the environment variables
+
+Mailpit accepts any credentials, so locally the username and password only have
+to be non-empty:
 
 ```bash title=".env"
-NODE_MAILER_FROM=your_verified_email
-NODE_MAILER_HOST=smtp.your-email-provider.com
-NODE_MAILER_PASSWORD=your_email_password
-NOD_EMAILER_USER=your_email_username
+NODE_MAILER_HOST=localhost
+NODE_MAILER_PORT=1025
+NODE_MAILER_USER=dev
+NODE_MAILER_PASSWORD=dev
+NODE_MAILER_FROM=hello@localhost
+```
+
+Production is the same five lines with your provider's values and, on most
+relays, `NODE_MAILER_PORT=587`.
+
+</Step>
+<Step>
+
+### Send a test mail
+
+Send one from a route - the [email overview](/docs/dev/email#quick-start) has the
+`build()` plus `deliver()` form that works from any plugin - then open
+[localhost:8025](http://localhost:8025). The message appears in Mailpit's inbox,
+where you can read the rendered HTML and the raw source that left your app.
+
+{/* Image prompt: A screenshot of the Mailpit web inbox at localhost:8025 with one captured message selected, showing the rendered HTML email in the reading pane and the HTML/Text/Raw tabs above it. Light theme, 1440x900. */}
+
+Nothing there? `deliver()` throws inside the request, so the failing request is
+where Nodemailer's own message is - in the response body while `NODE_ENV` is
+`development`, in the log otherwise. Mail sent with the queued `send()` is a
+tick behind instead, and its story is in the row:
+
+```sql
+select status, attempts, "lastError"
+from core_queue
+where name = 'send-email'
+order by id desc
+limit 1;
 ```
 
 </Step>
 </Steps>
+
+## Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    host: {
+      description: 'SMTP server hostname.',
+      type: 'string | undefined',
+      required: true,
+    },
+    user: {
+      description: 'SMTP username.',
+      type: 'string | undefined',
+      required: true,
+    },
+    password: {
+      description: 'SMTP password. Passed to Nodemailer as `auth.pass`.',
+      type: 'string | undefined',
+      required: true,
+    },
+    from: {
+      description:
+        'Sending address. Only the address - the display name comes from `metadata.shortTitle ?? metadata.title`.',
+      type: 'string | undefined',
+      required: true,
+    },
+    port: {
+      description: 'SMTP port.',
+      type: 'number',
+      default: '587',
+    },
+    secure: {
+      description:
+        'Connect with TLS from the first byte. Leave it false for 587 (STARTTLS); set it true for 465.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+## Environment variables
+
+The adapter takes values, not variable names, so these are yours to rename -
+just keep both sides in step.
+
+| Variable               | Maps to    | Example         | Notes                                                            |
+| ---------------------- | ---------- | --------------- | ---------------------------------------------------------------- |
+| `NODE_MAILER_HOST`     | `host`     | `smtp.host.com` | Required                                                         |
+| `NODE_MAILER_USER`     | `user`     | `apikey`        | Required. Some providers use a fixed literal here                |
+| `NODE_MAILER_PASSWORD` | `password` | -               | Required                                                         |
+| `NODE_MAILER_FROM`     | `from`     | `hi@you.com`    | Required. Address only                                           |
+| `NODE_MAILER_PORT`     | `port`     | `587`           | Optional - pass it through yourself, the adapter defaults to 587 |
+
+## Gotchas
+
+<Callout type="warn" title="Missing settings fail at delivery, not at boot">
+  The adapter checks `host`, `user`, `password` and `from` inside `sendEmail`,
+  so a half-configured app still starts. With `deliver()` the failure is the
+  route's own 500, throwing `Missing nodemailer configuration`. With the queued
+  `send()` the request returns 200 and the same message turns up in
+  `core_queue.lastError` three attempts later.
+</Callout>
+
+<Callout type="warn" title="Port 465 needs secure: true">
+  Port 465 expects TLS immediately, while 587 negotiates it with STARTTLS.
+  Leaving `secure` at its default on 465 gives you a connection that hangs and
+  then times out rather than a clear error.
+</Callout>
+
+<Callout type="info" title="One connection per email">
+  The transport is created inside `sendEmail`, so each message opens its own
+  SMTP connection - simple and stateless, and fine at the volumes a queue
+  drained once a minute produces. A relay that rate-limits connections rather
+  than messages is the case to watch.
+</Callout>
+
+<Callout type="info" title="Only the HTML part is sent">
+  VitNode renders both an HTML and a plain-text version of every email, but this
+  adapter passes `html` alone.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Templates"
+    description="Give the mail a layout, a button and translated copy"
+    href="/docs/dev/email/templates"
+  />
+  <Card
+    title="Resend"
+    description="The HTTPS adapter, for serverless and edge deployments"
+    href="/docs/dev/email/resend"
+  />
+  <Card
+    title="Email overview"
+    description="How a send travels from a route to an inbox"
+    href="/docs/dev/email"
+  />
+</Cards>

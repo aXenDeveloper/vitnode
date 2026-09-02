@@ -130,16 +130,14 @@ export type CompleteSsoResult =
   | { ok: true };
 
 /**
- * Whether a reply's cookies may be copied onto the application's response.
+ * Re-exported from `./sign-up-session`, which is where it lives now.
  *
- * 2xx only, which is the rule Next's `fetcher()` applies to `allowSaveCookies`
- * and therefore the rule the legacy flow was built on. It matters in both
- * directions: the session cookie arrives on a 201 and the deletion arrives on a
- * 200, while a 403 sign-in attempt has nothing anybody should be writing to
- * the visitor's browser.
+ * It reads {@link SignUpResult} and nothing else, so it needs no schema - and
+ * being the only *value* `./actions` took from this module, it was the edge
+ * that put `zod` on the public shell's path. Kept exported here so every
+ * existing importer, this package's barrel included, is unaffected.
  */
-export const shouldSaveApiCookies = (status: number): boolean =>
-  status >= 200 && status < 300;
+export { shouldRefreshSessionAfterSignUp } from "./sign-up-session";
 
 /**
  * Whether a session response can be read as a session at all.
@@ -573,12 +571,4 @@ export const changePasswordResultFromStatus = (
   return { ok: false, reason: "server_error" };
 };
 
-/**
- * Re-exported from `./sign-up-session`, which is where it lives now.
- *
- * It reads {@link SignUpResult} and nothing else, so it needs no schema - and
- * being the only *value* `./actions` took from this module, it was the edge
- * that put `zod` on the public shell's path. Kept exported here so every
- * existing importer, this package's barrel included, is unaffected.
- */
-export { shouldRefreshSessionAfterSignUp } from "./sign-up-session";
+export { shouldSaveApiCookies } from "@/lib/fetcher/set-cookie";

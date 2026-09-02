@@ -1,6 +1,7 @@
 ---
 title: User
 description: Pick a person by name, with their avatar, for an Auto Form field.
+icon: User
 ---
 
 ## Preview
@@ -10,9 +11,9 @@ description: Pick a person by name, with their avatar, for an Auto Form field.
 ## Usage
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormUser } from "@vitnode/core/components/form/fields/input-users";
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormUser } from '@vitnode/core/components/form/fields/input-users'
 ```
 
 The value is the **user id**, so the schema is a plain number and the payload
@@ -21,7 +22,7 @@ needs no unwrapping:
 ```ts
 const formSchema = z.object({
   authorId: z.number(),
-});
+})
 ```
 
 ```tsx
@@ -29,8 +30,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "authorId",
-      component: props => (
+      id: 'authorId',
+      component: (props) => (
         <AutoFormUser
           {...props}
           description="Search by name, pick one person."
@@ -85,7 +86,7 @@ different endpoint, or fixtures in a test:
 <AutoFormUser
   {...props}
   label="Reviewer"
-  search={async value => await searchReviewers(value)}
+  search={async (value) => await searchReviewers(value)}
 />
 ```
 

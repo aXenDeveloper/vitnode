@@ -1,137 +1,93 @@
 ---
 title: AI Setup
-description: Easily configure and resolve AI models in VitNode using the native Vercel AI SDK.
+description: Configure Vercel AI SDK providers and models in VitNode API config to use with c.get("ai").
+icon: Sparkles
 ---
 
-// Image prompt: Modern minimalist illustration showing a sleek AI node connecting various LLM providers (OpenAI, Anthropic, Google) to a server core with glowing energy paths, dark UI theme.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
-VitNode brings AI powers straight into your backend via the built-in [Vercel AI SDK](https://ai-sdk.dev/). Configure your models once in `buildApiConfig`, grab them in any route handler using `c.get("ai")`, and call native AI SDK functions directly. Zero wrappers, zero hassle! 🚀
+VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Register models in `vitnode.api.config.ts` once, then resolve them inside any API handler via `c.get("ai")`.
 
-AI is completely **optional** - if you don't configure any models, VitNode won't touch any external services.
+## Quick start
 
-## Quick Setup
+### 1. Configure Models in API Config
 
-<Steps>
-<Step>
-### Install AI SDK
+You can configure models via string identifiers (using AI Gateway) or direct provider instances:
 
-Add `ai` (and optionally a provider package like `@ai-sdk/anthropic`) to your app or plugin:
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { openai } from "@ai-sdk/openai"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-
-<Tabs groupId='ai-provider' persist items={['AI Gateway', 'Provider package']}>
-
-```bash tab="AI Gateway"
-# AI Gateway: use one key for Anthropic, OpenAI, Google & more!
-pnpm i ai
-```
-
-```bash tab="Provider package"
-# Talk directly to a provider with their dedicated SDK
-pnpm i ai @ai-sdk/anthropic
-```
-
-</Tabs>
-
-</Step>
-<Step>
-### Add API Key
-
-Add your secret API key to `.env`:
-
-```bash title=".env"
-# AI Gateway (Recommended)
-AI_GATEWAY_API_KEY=your_ai_gateway_api_key
-
-# Or provider key (e.g., Anthropic)
-# ANTHROPIC_API_KEY=your_anthropic_api_key
-```
-
-</Step>
-<Step>
-### Configure Models
-
-Define your model registry in `buildApiConfig`. The **first model** listed acts as the default!
-
-<Tabs groupId='ai-provider' persist items={['AI Gateway', 'Provider package']}>
-
-```ts tab="AI Gateway" title="src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:10]
   ai: {
     models: [
       {
         id: "default",
-        name: "Claude Sonnet 5",
-        model: "anthropic/claude-sonnet-5",
-      },
-      {
-        id: "fast",
-        name: "Claude Haiku 4.5",
-        model: "anthropic/claude-haiku-4.5",
-      },
-    ],
-    embeddingModels: [
-      {
-        id: "default",
-        name: "Text Embedding 3 Small",
-        model: "openai/text-embedding-3-small",
-      },
-    ],
-    imageModels: [
-      { id: "default", name: "GPT Image 1", model: "openai/gpt-image-1" },
-    ],
-  },
-});
-```
-
-```ts tab="Provider package" title="src/vitnode.api.config.ts"
-import { anthropic } from "@ai-sdk/anthropic";
-
-export const vitNodeApiConfig = buildApiConfig({
-  ai: {
-    models: [
-      {
-        id: "default",
-        name: "Claude Sonnet 5",
-        model: anthropic("claude-sonnet-5"),
-      },
-      {
-        id: "fast",
-        name: "Claude Haiku 4.5",
-        model: anthropic("claude-haiku-4.5"),
+        name: "GPT-4o Mini",
+        model: openai("gpt-4o-mini"),
       },
     ],
   },
-});
+})
 ```
 
-</Tabs>
+Set `OPENAI_API_KEY` in your `.env` file.
 
-</Step>
-</Steps>
+---
 
-## Model Options
+### 2. Use in Route Handlers
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+```ts
+import { generateText } from "ai"
 
-<TypeTable
-  type={{
-    models: {
-      description:
-        'Language models resolved with c.get("ai").model(id?). First entry is default.',
-      type: "AIModelDefinition[]",
-    },
-    embeddingModels: {
-      description:
-        'Text embedding models resolved with c.get("ai").embeddingModel(id?).',
-      type: "AIEmbeddingModelDefinition[]",
-    },
-    imageModels: {
-      description:
-        'Image generation models resolved with c.get("ai").imageModel(id?).',
-      type: "AIImageModelDefinition[]",
-    },
-  }}
-/>
+handler: async (c) => {
+  // [!code ++:4]
+  const { text } = await generateText({
+    model: c.get("ai").model(), // Resolves the configured "default" model
+    prompt: "Write a summary of this discussion.",
+  })
 
-Ready to generate text or create embeddings? Check out the [Usage](/docs/dev/ai/usage) guide!
+  return c.json({ text })
+}
+```
+
+---
+
+## Multiple Models & Embeddings
+
+Configure dedicated models for fast completions, reasoning, and vector embeddings:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+ai: {
+  models: [
+    { id: "default", name: "GPT-4o Mini", model: openai("gpt-4o-mini") },
+    { id: "reasoning", name: "Claude 3.5 Sonnet", model: anthropic("claude-3-5-sonnet-20241022") },
+  ],
+  embeddingModels: [
+    { id: "default", name: "Text Embedding 3", model: openai.embedding("text-embedding-3-small") },
+  ],
+}
+```
+
+Resolve specific models by ID:
+
+```ts
+const smartModel = c.get("ai").model("reasoning")
+const embedModel = c.get("ai").embeddingModel()
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="AI Usage"
+    description="Streaming text, structured outputs, and embeddings"
+    href="/docs/dev/ai/usage"
+  />
+  <Card
+    title="Search & Discovery"
+    description="Semantic vector search across plugin collections"
+    href="/docs/dev/search"
+  />
+</Cards>

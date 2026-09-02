@@ -1,197 +1,108 @@
 ---
-title: Database
-description: Learn how to work with databases in VitNode plugins using Drizzle ORM and PostgreSQL.
+title: Database & Migrations
+description: Define PostgreSQL schemas with Drizzle ORM in VitNode plugins, generate migrations, and execute queries.
+icon: Database
 ---
 
-VitNode plugins seamlessly integrate with databases using [Drizzle ORM](https://orm.drizzle.team/) and [PostgreSQL](https://www.postgresql.org/). This guide shows you how to define schemas, perform database operations, and manage migrations.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
-## Defining Schema
+VitNode uses [PostgreSQL](https://www.postgresql.org) and [Drizzle ORM](https://orm.drizzle.team). Plugins define typed schema files, compile them into SQL migrations, and query tables via `c.get("db")`.
 
-Create your database schema in the `database` directory of your plugin. Each table should be defined in its own file for better organization.
+## Quick start
 
-```ts title="plugins/{plugin_name}/src/database/categories.ts"
-import { camelCase } from 'drizzle-orm/pg-core'
+### 1. Define the Schema
 
-export const blog_categories = camelCase.table.withRLS(
-  'blog_categories',
-  (t) => ({
-    id: t.serial().primaryKey(),
-    createdAt: t.timestamp().notNull().defaultNow(),
-    updatedAt: t
-      .timestamp()
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  }),
-)
-```
+Create a database model in `plugins/{plugin}/src/database/{table}.ts`:
 
-Two pieces of that are worth naming, because both moved in Drizzle v1:
+```ts title="plugins/reactions/src/database/reactions.ts"
+import { camelCase } from "drizzle-orm/pg-core"
 
-- **`camelCase.table`** rather than `pgTable`. Column names are derived from the
-  object keys, so `createdAt` is `"createdAt"` in Postgres rather than
-  `created_at`. This used to be a client-wide `casing: "camelCase"` option; it is
-  now chosen per table, and every VitNode table uses `camelCase` - so match it,
-  or your columns will not line up with the rest of the schema.
-- **`.withRLS(...)`** rather than a trailing `.enableRLS()`. Row level security
-  is now part of building the table. The old method still exists and still works,
-  but it is deprecated.
-
-<Callout type="info" title="Let the Content Engine write this for you">
-  Hand-writing the table, its schemas, its routes and its AdminCP screen is a
-  lot of repetition. The [Content Engine](/docs/dev/content-engine) generates
-  all of it from one declaration - and produces exactly this kind of table.
-</Callout>
-
-## Accessing Database
-
-Access the database in your plugin handlers using `c.get("db")` from the Hono context. This provides a Drizzle ORM instance for all your database operations.
-
-```ts title="plugins/{plugin_name}/src/routes/posts.ts"
-export const postsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  route: {},
-  handler: async (c) => {
-    // [!code ++:7]
-    const data = await c
-      .get('db')
-      .select({
-        id: blog_posts.id,
-        status: blog_posts.status,
-      })
-      .from(blog_posts)
-
-    return c.json(data)
-  },
-})
-```
-
-## Relational Queries
-
-`c.get("db")` is built with the core schema's relations, so `db.query` can load a
-record together with what it points at - one round trip, and no join to write:
-
-```ts
-const user = await c.get('db').query.core_users.findFirst({
-  where: { id: 1 },
-  with: { group: true, secondary_roles: true },
-})
-```
-
-Filters and ordering are plain objects rather than callbacks:
-
-```ts
-await c.get('db').query.core_users.findMany({
-  where: { emailVerified: true, name: { like: 'A%' } },
-  orderBy: { createdAt: 'desc' },
-  limit: 20,
-})
-```
-
-Relations live in one place - `@vitnode/core/database/relations` - rather than
-beside each table, and a relation is named on the side that reads it:
-
-```ts title="src/database/relations.ts"
-import { defineRelations } from 'drizzle-orm'
-
-export const coreRelations = defineRelations(schema, (r) => ({
-  core_users: {
-    group: r.one.core_roles({ from: r.core_users.roleId, to: r.core_roles.id }),
-    secondary_roles: r.many.core_users_secondary_roles(),
-  },
+// [!code ++:7]
+export const reactions = camelCase.table.withRLS("reactions", (t) => ({
+  id: t.serial().primaryKey(),
+  itemId: t.integer().notNull(),
+  emoji: t.varchar({ length: 32 }).notNull(),
+  createdAt: t.timestamp().notNull().defaultNow(),
 }))
 ```
 
-<Callout type="warn" title="A relation cannot reuse a column name">
-  Relations and columns share one namespace. `core_users` already has a
-  `language` column, so its relation to `core_languages` is called
-  `language_ref` - naming it `language` is an error, not a shadow.
-</Callout>
+---
 
-## Database Operations
+### 2. Query in an API Route
 
-VitNode provides convenient commands for managing your database schema and migrations.
+Access the typed Drizzle instance using `c.get("db")`:
 
-### Creating Migrations
+```ts title="plugins/reactions/src/api/modules/reactions/routes/get.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route"
+import { reactions } from "@/database/reactions"
 
-Generate migration files when you modify your database schema:
+export const getReactionsRoute = buildRoute({
+  pluginId: "reactions",
+  route: {
+    method: "get",
+    path: "/",
+    responses: { 200: { description: "List of reactions" } },
+  },
+  handler: async (c) => {
+    // [!code ++:2]
+    const rows = await c.get("db").select().from(reactions)
+    return c.json(rows)
+  },
+})
+```
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+---
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+### 3. Build & Apply Migrations
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
 
 ```bash tab="bun"
-bun db:migrate
+bun run build:plugins && bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm db:migrate
+pnpm build:plugins && pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run db:migrate
+npm run build:plugins && npm run db:migrate
 ```
 
 </Tabs>
 
-<Callout type="info" title="Automatic Updates in Development">
-  VitNode automatically runs migrations and schema updates when you start your
-  application in development mode, keeping your database in sync with your code.
+`build:plugins` compiles your TypeScript models and exports, and `db:migrate` updates PostgreSQL.
+
+---
+
+## Migration Commands
+
+| Command | Action |
+| :--- | :--- |
+| `pnpm db:generate` | Inspects schema diffs and writes timestamped SQL migrations |
+| `pnpm db:migrate` | Applies pending migrations against the target database |
+| `pnpm db:studio` | Opens Drizzle Studio to inspect and edit database rows visually |
+
+<Callout type="info" title="Content Engine Alternative">
+  If your table represents an editorial entity (articles, FAQs, products), consider [Content Engine](/docs/dev/content-engine/defining-a-content-type) to generate your Drizzle table, API routes, and AdminCP screens from one definition.
 </Callout>
 
-### The development bootstrap
+## Learn More
 
-You rarely need to run anything by hand. **Every app that reads the schema gates
-its own `dev` script** on `vitnode db:prepare`, so a fresh clone prepares the
-database before a single request can be served - whichever way you start it:
-
-```bash
-pnpm dev                    # the monorepo root: prepares once, then starts everything
-cd apps/api && pnpm dev     # gated on its own
-cd apps/web && pnpm dev     # gated too, if it mounts the API in-process
-turbo dev --filter=web      # gated, because the gate lives in the script
-```
-
-The rule is ownership of _reads_, not of migration files: an app is gated if it
-serves `/api/*` from its own process. A frontend that talks to a separate API
-over HTTP is not gated, because it has no schema to prepare.
-
-`db:prepare` does three things, in this order:
-
-1. **Generate** any migration your schema changes imply. A no-op when nothing
-   changed.
-2. **Apply** every pending migration. Drizzle's own `__drizzle_migrations` table
-   decides what is pending - there is no marker file and no "first run" state, so
-   this is safe to run before every start.
-3. **Ensure initial data** - the languages, the Guest/Member/Moderator/Administrator
-   roles and their permission rows. A fresh database needs more than tables.
-
-Every step is idempotent, and the chain is `&&` rather than `&` on purpose: if a
-migration fails, the dev server does not start. A schema that failed to migrate
-is never served.
-
-<Callout type="info" title="Two gates at once are safe">
-  A monorepo starts more than one gated app, so more than one bootstrap can run
-  at the same time. VitNode takes a Postgres advisory lock around the whole
-  bootstrap: the first process does the work, the second waits and then finds
-  nothing pending. Without it the two race on `CREATE SCHEMA IF NOT EXISTS
-  drizzle` - Postgres' `IF NOT EXISTS` is not race-safe against a concurrent
-  creator - and one dev server fails to start.
-</Callout>
-
-<Callout type="warn" title="Only one package owns the migrations">
-  A gated app is not necessarily a migration *owner*. In a split deployment the
-  frontend talks to the API over HTTP and ships no `db:prepare`, `db:migrate` or
-  `drizzle-kit` at all. And where a web app does serve the API but the
-  migrations live next door, its gate delegates - `pnpm --filter api db:prepare`
-  - so the `migrations/` directory has exactly one owner and `turbo db:prepare`
-  runs exactly one bootstrap.
-</Callout>
-
-### In production
-
-Production is a separate contract, and it is deliberately **not** automatic: a
-horizontally scaled deployment would have every replica racing to migrate the
-same database on boot. Run the migration as its own deployment step instead -
-`pnpm db:migrate` - the way the [Vercel guide](/docs/dev/deployments/cloud/vercel)
-does. `start` never migrates.
+<Cards>
+  <Card
+    title="Pagination"
+    description="Implement cursor-based table pagination"
+    href="/docs/dev/database/pagination"
+  />
+  <Card
+    title="Search Tables"
+    description="Add search filters to single table queries"
+    href="/docs/dev/database/search"
+  />
+  <Card
+    title="Defining a Content Type"
+    description="Generate database models with Content Engine"
+    href="/docs/dev/content-engine/defining-a-content-type"
+  />
+</Cards>

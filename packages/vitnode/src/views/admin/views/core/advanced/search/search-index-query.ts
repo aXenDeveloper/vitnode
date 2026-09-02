@@ -6,6 +6,7 @@ import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import { adminModuleRef, AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
+import { ADMIN_DEBUG_PREFIX_PATH } from "@/views/admin/views/core/system/integrations/integrations-query";
 
 import type { SearchCollection } from "./collection-status";
 import type { SearchSyncError } from "./sync-errors";
@@ -45,23 +46,18 @@ export interface SearchIndexStatus {
 }
 
 /** The read, as arguments to whichever fetcher is carrying it. */
-export const searchIndexStatusRequest = {
-  method: "get" as const,
-  module: "debug" as const,
-  path: "/search/status" as const,
-  prefixPath: "/admin" as const,
-} as const;
-
 /** How the status is actually fetched. */
 export type SearchIndexStatusFetcher = () => Promise<SearchIndexStatus>;
 
 /** The status, fetched from the browser. */
 export const fetchSearchIndexStatusInBrowser: SearchIndexStatusFetcher =
   async () => {
-    const response = await fetcherClient(
-      searchDebugAdminModuleRef,
-      searchIndexStatusRequest,
-    );
+    const response = await fetcherClient(searchDebugAdminModuleRef, {
+      method: "get",
+      module: "debug",
+      path: "/search/status",
+      prefixPath: ADMIN_DEBUG_PREFIX_PATH,
+    });
 
     if (!response.ok) {
       throw new AdminRequestError(response.status, "the search index status");

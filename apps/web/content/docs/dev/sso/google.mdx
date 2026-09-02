@@ -1,161 +1,297 @@
 ---
 title: Google
-description: Integrate Google Single Sign-On (SSO) in your application.
+description: Add Google sign-in to VitNode - create an OAuth client, set the exact redirect URI and register the Google SSO adapter in your API config.
+icon: BadgeCheck
 ---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Google is the provider most people want first. The whole job is: create an OAuth
+client in the Google Auth Platform, give it the redirect URI VitNode already
+decided on, and pass the two credentials to `GoogleSSOApiPlugin`.
+
+## Quick start
+
+If you already have a client ID and secret, this is the entire integration.
+
+```bash title=".env"
+GOOGLE_CLIENT_ID=1234567890-abc.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      GoogleSSOApiPlugin({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+Restart the API and a **Google** button appears on `/login`. The rest of this
+page is how to get those two values.
+
+## Set up the OAuth client
 
 <Steps>
 <Step>
 
-## Sign in to Google
+### Sign in to Google Cloud
 
-Go to [Google Cloud Platform Console](https://console.cloud.google.com/) and sign in.
-
-</Step>
-
-<Step>
-
-## Choose project
-
-Select the project you want to use for the SSO integration. If you don't have a project, you can create one.
-
-// import googleProject from '@/assets/guides/sso/google/project.png';
-
-{/* <ImgDocs className="max-w-sm" src={googleProject} alt="Google Cloud Platform Console" /> */}
+Go to the [Google Cloud Console](https://console.cloud.google.com/) and sign in
+with the account that should own the OAuth client. It does not have to be the
+account you sign in to your own site with.
 
 </Step>
 
 <Step>
 
-## Open Google Auth Platform
+### Pick or create a project
 
-Now let's open the `Google Auth Platform`. We will use a search bar to find it.
+An OAuth client belongs to a project, so select one from the project picker in
+the top bar - or create one if this is a fresh account. Name it after your site;
+the name is internal and never shown to visitors.
 
-// import searchBar from '@/assets/guides/sso/google/search.png';
-
-{/* <ImgDocs src={searchBar} alt="Google Auth Platform in search bar" /> */}
-
-</Step>
-
-<Step>
-
-## Configure Google Auth Platform
-
-First you need to configure the Google Auth Platform. You need to provide the `App name` and `Support email`.
-
-### Audience
-
-Pick the `External` option to allow all users to use the SSO.
-
-// import audience from '@/assets/guides/sso/google/audience.png';
-
-{/* <ImgDocs className="max-w-lg" src={audience} alt="Audience in Google Auth Platform" /> */}
+{/* Image prompt: The Google Cloud Console project picker dialog open, showing the "Select a project" list with a "New project" button in the top right, light theme, 1200x700. */}
 
 </Step>
 
 <Step>
 
-## Create OAuth Client
+### Open the Google Auth Platform
 
-In navigation select `Clients` and click `Create Client` button.
+Type `Google Auth Platform` into the console's search bar and open the first
+result. This is the section that used to be called "OAuth consent screen", and
+it is where both the consent details and the clients live.
 
-// import createClient from '@/assets/guides/sso/google/create_client.png';
+{/* Image prompt: The Google Cloud Console top search bar with "Google Auth Platform" typed in and the matching product result highlighted in the dropdown, light theme, 1200x400. */}
 
-{/* <ImgDocs className="max-w-lg" src={createClient} alt="Create OAuth Client in Google Auth Platform" /> */}
+</Step>
 
-### Configure OAuth Client
+<Step>
 
-1. Select `Web application` as the application type,
-2. Provide the `Name` of the application,
-3. Add the `Authorized redirect URIs` for the callback URL.
+### Fill in the consent details
 
-<Callout title="redirect_uri">
-  Your redirect URL should be `https://your-domain.com/login/sso/google`.
+Google will not issue a client until it knows what to show on the consent
+screen. Provide the **App name** - this is the name visitors read in "Sign in to
+continue to ..." - and a **Support email**.
+
+Then, under **Audience**, choose **External** so anyone with a Google account can
+sign in. **Internal** restricts sign-in to a single Google Workspace
+organisation, which is almost never what a public site wants.
+
+{/* Image prompt: The Google Auth Platform "Audience" step with the "External" radio option selected and the "Internal" option visible above it, light theme, 1000x600. */}
+
+</Step>
+
+<Step>
+
+### Create the client and set the redirect URI
+
+Go to **Clients** in the left navigation and press **Create client**.
+
+1. Application type: **Web application**.
+2. Name: anything - this one is internal too.
+3. Under **Authorized redirect URIs**, add the URI for every origin you run.
+
+VitNode builds this URI itself, from `NEXT_PUBLIC_WEB_URL`, so it has to match
+character for character - no trailing slash, no locale prefix.
+
+| Environment                               | Authorized redirect URI                    |
+| ----------------------------------------- | ------------------------------------------ |
+| Development (`NEXT_PUBLIC_WEB_URL` unset) | `http://localhost:3000/login/sso/google`   |
+| Production                                | `https://your-domain.com/login/sso/google` |
+
+Add both. Google allows several redirect URIs per client, and one client for dev
+and prod is fine while you are getting started.
+
+{/* Image prompt: The Google Auth Platform "Create OAuth client" form with Application type set to "Web application" and one entry under "Authorized redirect URIs" reading http://localhost:3000/login/sso/google, light theme, 1000x700. */}
+
+<Callout type="warn" title="redirect_uri_mismatch">
+  This is the error you will get if the URI differs by so much as a trailing
+  slash. It comes from Google, not from VitNode, and it is always this field.
 </Callout>
 
-// import configureClient from '@/assets/guides/sso/google/configure_client.png';
+</Step>
 
-{/* <ImgDocs className="max-w-lg" src={configureClient} alt="Configure OAuth Client in Google Auth Platform" /> */}
+<Step>
+
+### Copy the client ID and secret
+
+Open the client you just created from the **Clients** list. The **Client ID** and
+**Client secret** are on the right-hand side of the detail panel. Copy both -
+Google will let you see the secret again, but you may as well paste it straight
+into `.env`.
+
+{/* Image prompt: The Google Auth Platform OAuth client detail panel with the "Client ID" and "Client secret" fields visible on the right, values redacted, light theme, 1100x600. */}
 
 </Step>
 
 <Step>
 
-## Get Client ID & Secret
+### Set the environment variables
 
-After you create the OAuth Client, you need to get the `Client ID` and `Client Secret`. Choose your `0Auth Client` and click edit button.
+These names are not magic - they are whatever you read in your config on the
+next step. What matters is that they are server-side variables, so **no**
+`NEXT_PUBLIC_` prefix: that prefix is what marks a value for the browser bundle,
+and a client secret in the browser bundle is a client secret you have published.
 
-On the right side, you will see the `Client ID` and `Client Secret`.
-
-// import secretClient from '@/assets/guides/sso/google/secret_client.png';
-
-{/* <ImgDocs className="max-w-lg" src={secretClient} alt="Get Client ID & Secret in Google Auth Platform" /> */}
-
-Save the `Client ID` and `Client Secret`. You will need these keys to integrate the SSO into your application.
+```bash title=".env"
+GOOGLE_CLIENT_ID=1234567890-abc.apps.googleusercontent.com # [!code ++]
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx # [!code ++]
+```
 
 </Step>
+
 <Step>
 
-## Environment Variables (.env)
+### Register the adapter
 
-Add the `Client ID` and `Client Secret` to your `.env` file.
+Add `GoogleSSOApiPlugin` to `authorization.ssoAdapters` in your API config.
+Note that it is a plain factory function, not a class - there is no `new`.
+
+```ts title="src/vitnode.api.config.ts"
+import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      GoogleSSOApiPlugin({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+The redirect URI is computed when this file is evaluated, so restart the API
+rather than relying on a hot reload:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Verify it works
+
+Ask the API what it thinks it supports:
 
 ```bash
-GOOGLE_CLIENT_ID=XXX
-GOOGLE_CLIENT_SECRET=XXX
+curl http://localhost:3000/api/@vitnode/core/middleware
+# {"isEmail":false,"sso":[{"id":"google","name":"Google"}]}
 ```
 
-</Step>
-<Step>
+Then open `/login` and press **Google**. You should be sent to Google's consent
+screen, bounced back to `/login/sso/google?code=...&state=...`, and land on the
+front page signed in. Your account now has a row in `core_users_sso` with
+`providerId` `google`.
 
-## Configuration in VitNode
-
-Add the Discord SSO plugin to your API routes.
-
-```ts title="src/app/api/[...route]/route.ts"
-// [!code ++]
-import { GoogleSSOApiPlugin } from '@vitnode/core/api/plugins/sso/google';
-
-VitNodeAPI({
-  app,
-  plugins: [],
-  // [!code ++]
-  authorization: {
-    // [!code ++]
-    ssoAdapters: [
-      // [!code ++]
-      new GoogleSSOApiPlugin({
-        // [!code ++]
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        // [!code ++]
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        // [!code ++]
-      }),
-      // [!code ++]
-    ],
-    // [!code ++]
-  },
-});
-```
-
-</Step>
-<Step>
-
-## Test the SSO
-
-Now you can test the SSO. Go to the login page and click the `Google` button.
+{/* Image prompt: The VitNode /login page with the email and password fields above a divider reading "Or continue With" and an outline button labelled Google beneath it, light theme, 900x850. */}
 
 </Step>
 
 <Step>
 
-## Publish OAuth Client
+### Publish the app
 
-If everything works fine, you can publish the OAuth Client. Go to the `OAuth Consent Screen` => `Audience` and click the `Publish App` button.
+While the client is unpublished, Google restricts sign-in to the test users you
+listed and shows an "unverified app" warning. Once the round trip works, go to
+**Google Auth Platform → Audience** and press **Publish app**.
 
-// import publish from '@/assets/guides/sso/google/publish.png';
-
-{/* <ImgDocs className="max-w-lg" src={publish} alt="Publish OAuth Client in Google Auth Platform" /> */}
+{/* Image prompt: The Google Auth Platform "Audience" page showing publishing status "Testing" with the "Publish app" button highlighted, light theme, 1000x500. */}
 
 </Step>
 
 </Steps>
+
+## What the adapter asks Google for
+
+Useful when you are debugging a consent screen that shows more or fewer
+permissions than you expected.
+
+| Setting       | Value                                           |
+| ------------- | ----------------------------------------------- |
+| Authorize URL | `https://accounts.google.com/o/oauth2/auth`     |
+| Token URL     | `https://oauth2.googleapis.com/token`           |
+| Profile URL   | `https://www.googleapis.com/oauth2/v1/userinfo` |
+| Scopes        | `openid profile email`                          |
+| Provider id   | `google`                                        |
+| Fields read   | `id`, `email`, `name`, `verified_email`         |
+
+The account name VitNode creates comes from Google's `name` field, stripped of
+characters that cannot appear in a profile URL.
+
+## Gotchas
+
+<Callout type="warn" title="Unverified Google emails are rejected">
+  The adapter reads `verified_email` and throws a `400` when it is `false`, so a
+  Google account with an unconfirmed address cannot sign in at all. The visitor
+  sees the generic error screen rather than an explanation, which is the one
+  place this is worth knowing about in advance.
+</Callout>
+
+<Callout type="warn" title="A missing key fails on click, not on boot">
+  A `GoogleSSOApiPlugin` whose `clientId` is `undefined` registers happily - the
+  button renders and the provider is listed - and throws `Missing Google client
+  ID` the moment somebody presses it. If the button is there but does nothing
+  except raise an error toast, check the environment before you check the
+  console.
+</Callout>
+
+<Callout
+  type="warn"
+  title="An email that already has a password account is a dead end"
+>
+  If someone registered with the same address using the password form, the
+  callback answers `409` and offers them the login page instead. There is no
+  link-an-existing-account screen yet - see [how the callback handles
+  accounts](/docs/dev/sso#what-the-callback-does-with-the-account).
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="How SSO works"
+    description="The round trip, the state cookie and the security rules"
+    href="/docs/dev/sso"
+  />
+  <Card
+    title="Discord"
+    description="Add a second provider"
+    href="/docs/dev/sso/discord"
+  />
+  <Card
+    title="Custom adapter"
+    description="Any OAuth2 provider, in three functions"
+    href="/docs/dev/sso/custom-adapter"
+  />
+</Cards>

@@ -4,6 +4,7 @@ import type { DeleteFileResult } from "@/lib/files/in-use";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { runBulkFileDelete } from "@/lib/files/bulk-delete";
 import { readFileInUse } from "@/lib/files/in-use";
+import { ADMIN_FILES_PREFIX_PATH } from "@/views/admin/views/core/system/files/files-query";
 
 import { filesAdminModuleRef } from "./files-query";
 
@@ -57,21 +58,6 @@ export type DeleteAdminFiles = (
  * delete says nothing about forcing at all - the route's schema accepts both,
  * but a request that never mentions it cannot be misread by a proxy or a log.
  */
-export const deleteAdminFileRequest = ({
-  force = false,
-  id,
-}: DeleteAdminFileArgs) =>
-  ({
-    args: {
-      params: { id: String(id) },
-      query: force ? { force: "true" as const } : {},
-    },
-    method: "delete" as const,
-    module: "files" as const,
-    path: "/{id}" as const,
-    prefixPath: "/admin",
-  }) as const;
-
 /**
  * Deletes one uploaded file from the browser.
  *
@@ -89,8 +75,15 @@ export const deleteAdminFileInBrowser: DeleteAdminFile = async ({
 }) => {
   try {
     const response = await fetcherClient(filesAdminModuleRef, {
-      ...deleteAdminFileRequest({ force, id }),
+      args: {
+        params: { id: String(id) },
+        query: force ? { force: "true" } : {},
+      },
+      method: "delete",
+      module: "files",
       options: { credentials: "include" },
+      path: "/{id}",
+      prefixPath: ADMIN_FILES_PREFIX_PATH,
     });
 
     if (response.status !== 200) {

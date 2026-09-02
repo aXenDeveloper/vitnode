@@ -1,0 +1,97 @@
+---
+title: Server Functions & Isomorphic Fetching
+description: When to use TanStack Start server functions, createIsomorphicFn, and Hono API routes in VitNode.
+icon: ServerCog
+---
+
+VitNode separates backend business logic into Hono API routes while using `createIsomorphicFn` for data fetching across SSR and client-side navigation.
+
+## Decision Matrix
+
+| Goal | Recommended Tool | Rationale |
+| :--- | :--- | :--- |
+| **Route Data Fetching** | `createIsomorphicFn` | SSR fetches directly on server; client fetches via `fetcherClient`. |
+| **API Endpoints & Mutations** | Hono API routes | Enforces staff permissions, validation schemas, and database transactions. |
+| **Cookie Minting on Host** | `createServerFn` (App only) | Only code inside the host request can set response headers directly. |
+| **Plugin Server Code** | Hono API modules | **Plugins must never declare `createServerFn`** (uncompiled handlers resolve to `undefined`). |
+
+<Callout type="warn" title="No createServerFn in Plugins">
+  A plugin package may declare `createIsomorphicFn`, but never `createServerFn`. Server functions belong exclusively to the host application.
+</Callout>
+
+---
+
+## Isomorphic Data Fetching (`createIsomorphicFn`)
+
+TanStack Router loaders run on the server during the initial paint, and on the client for subsequent navigations. `createIsomorphicFn` bridges both environments seamlessly:
+
+```ts title="src/features/devices/fetcher.ts"
+import { createIsomorphicFn } from "@tanstack/react-start"
+import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client"
+import { fetcher } from "@vitnode/core/tanstack/fetcher/server"
+import type { usersModule } from "@vitnode/core/api/modules/users/users.module"
+
+const moduleRef = clientModule<typeof usersModule>("@vitnode/core")
+
+export const fetchDevices = createIsomorphicFn()
+  // Server execution (SSR)
+  .server(async () => {
+    const res = await fetcher(usersModule, {
+      method: "get",
+      module: "users",
+      path: "/devices",
+    })
+    return await res.json()
+  })
+  // Client execution (SPA navigation)
+  .client(async () => {
+    const res = await fetcherClient(moduleRef, {
+      method: "get",
+      module: "users",
+      path: "/devices",
+    })
+    return await res.json()
+  })
+```
+
+Consume `fetchDevices` directly in your route loader:
+
+```tsx title="apps/web/src/routes/_main/devices.tsx"
+export const Route = createFileRoute("/_main/devices")({
+  loader: async () => await fetchDevices(),
+  component: DevicesPage,
+})
+```
+
+---
+
+## When to use `createServerFn` (Host App Only)
+
+Use `createServerFn` only when your host application needs to modify response cookies directly:
+
+```ts title="apps/web/src/features/auth/server-fn.ts"
+import { createServerFn } from "@tanstack/react-start"
+import { setCookie } from "vinxi/http"
+
+export const setSessionTheme = createServerFn({ method: "POST" })
+  .validator((theme: string) => theme)
+  .handler(async ({ data }) => {
+    setCookie("theme", data, { path: "/", httpOnly: true })
+    return { success: true }
+  })
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Data Loading"
+    description="Query warming with TanStack Query and route loaders"
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    title="Fetcher"
+    description="Type-safe API client and header forwarding"
+    href="/docs/dev/fetcher"
+  />
+</Cards>

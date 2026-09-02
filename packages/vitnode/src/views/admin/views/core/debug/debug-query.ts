@@ -36,7 +36,7 @@ import { adminQueryRoot } from "@/views/admin/table/query";
 export const debugAdminModuleRef = adminModuleRef<typeof debugAdminModule>();
 
 /** The debug module is mounted under `/admin`, not at the plugin root. */
-const DEBUG_PREFIX_PATH = "/admin";
+export const DEBUG_PREFIX_PATH = "/admin";
 
 // ------------------------------------------------------------ system log ---
 
@@ -68,15 +68,6 @@ export interface DebugLogRow {
 export type DebugLogsPage = AdminTablePage<DebugLogRow>;
 
 /** One page of the log, as arguments to whichever fetcher is carrying it. */
-export const debugLogsRequest = (params: DebugLogsParams) =>
-  ({
-    args: { query: params },
-    method: "get" as const,
-    module: "debug" as const,
-    path: "/logs" as const,
-    prefixPath: DEBUG_PREFIX_PATH,
-  }) as const;
-
 export type DebugLogsPageFetcher = (
   params: DebugLogsParams,
 ) => Promise<DebugLogsPage>;
@@ -84,10 +75,13 @@ export type DebugLogsPageFetcher = (
 /** One page of the log, fetched from the browser. */
 export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
   async params => {
-    const response = await fetcherClient(
-      debugAdminModuleRef,
-      debugLogsRequest(params),
-    );
+    const response = await fetcherClient(debugAdminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "debug",
+      path: "/logs",
+      prefixPath: DEBUG_PREFIX_PATH,
+    });
 
     if (!response.ok) {
       throw new AdminRequestError(
@@ -154,18 +148,16 @@ export interface DebugQueueSnapshot {
 }
 
 /** The read, as arguments to whichever fetcher is carrying it. */
-export const debugQueueRequest = {
-  method: "get" as const,
-  module: "debug" as const,
-  path: "/queue" as const,
-  prefixPath: DEBUG_PREFIX_PATH,
-} as const;
-
 export type DebugQueueFetcher = () => Promise<DebugQueueSnapshot>;
 
 /** The snapshot, fetched from the browser. */
 export const fetchDebugQueueInBrowser: DebugQueueFetcher = async () => {
-  const response = await fetcherClient(debugAdminModuleRef, debugQueueRequest);
+  const response = await fetcherClient(debugAdminModuleRef, {
+    method: "get",
+    module: "debug",
+    path: "/queue",
+    prefixPath: DEBUG_PREFIX_PATH,
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(response.status, "the queue snapshot");

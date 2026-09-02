@@ -159,6 +159,37 @@ interface BaseFetcherParams<
   path: SelectedPath;
 }
 
+/**
+ * Everything a fetcher takes that is *not* the route.
+ *
+ * Shared so `coreFetcher`, `fetcher` and `fetcherClient` describe one transport
+ * rather than three that drift, and so the route half of every call stays
+ * exactly {@link FetcherParams} - which is what makes a missing `args` an error.
+ */
+export interface FetcherRequestOptions {
+  additionalHeaders?: HeadersInit;
+  /**
+   * Raw `multipart/form-data` body for file uploads. When set, the JSON
+   * `Content-Type` is omitted so the runtime can add the multipart boundary,
+   * and this is sent as the request body instead of `JSON.stringify(args.body)`.
+   */
+  formData?: FormData;
+  /**
+   * Extra `fetch` init - `credentials`, an {@link AbortSignal}. `method` is
+   * omitted with `body` and `headers` because `rawApiFetch` computes those
+   * three itself; see its own note.
+   */
+  options?: Omit<RequestInit, "body" | "headers" | "method">;
+  /**
+   * Origin to call, instead of the `NEXT_PUBLIC_API_URL` one. Set by a runtime
+   * that serves the API itself and knows the origin only per request; see
+   * `RawApiFetchArgs["origin"]`.
+   */
+  origin?: string;
+  prefixPath?: string;
+  withPagination?: boolean;
+}
+
 export type FetcherParams<
   M extends string,
   Routes extends Route[],

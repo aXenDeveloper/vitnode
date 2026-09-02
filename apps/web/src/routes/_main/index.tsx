@@ -40,7 +40,7 @@ import { HOME_DESCRIPTION, HOME_TITLE } from '#/site/home/metadata'
  * in the client entry, on every page of the application - so importing them from
  * `home-content.tsx` would put the hero, the marquee and `motion` in the entry
  * chunk. `src/tests/asset-graph.test.ts` is the budget that catches it, and
- * `/docs/dev/tanstack/initial-bundle` is the rule written out.
+ * `/docs/dev/performance` is the rule written out.
  */
 export const Route = createFileRoute('/_main/')({
   head: () =>

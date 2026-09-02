@@ -1,0 +1,117 @@
+---
+title: Metadata & SEO
+description: Give every page a title, description, robots directive, and Open Graph tags with TanStack Router head.
+icon: Tags
+---
+
+import { TypeTable } from "fumadocs-ui/components/type-table"
+
+VitNode manages SEO metadata through TanStack Router's `head` option. Titles are formatted against your site's global name, emitting standard `<title>`, `<meta name="description">`, and Open Graph tags.
+
+## Quick start
+
+### 1. In a Plugin Route (Recommended)
+
+Plugins declare metadata using `definePluginRoute`. Metadata can read dynamically from `loaderData`:
+
+```tsx title="plugins/blog/src/routes/article-page.tsx"
+import { definePluginRoute } from "@vitnode/core/routing"
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await fetchArticle(params.slug),
+  // [!code ++:6]
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+    description: loaderData?.summary,
+    robots: "index, follow",
+  }),
+})
+```
+
+The browser tab automatically displays **Article Title - VitNode**.
+
+### 2. In an Application Route File
+
+For host app routes, call `pageHead` inside `createFileRoute`:
+
+```tsx title="apps/web/src/routes/_main/about.tsx"
+import { createFileRoute } from "@tanstack/react-router"
+import { pageHead } from "#/lib/page-head"
+
+export const Route = createFileRoute("/_main/about")({
+  // [!code ++:6]
+  head: () =>
+    pageHead({
+      title: "About Us",
+      description: "Learn more about our team and vision.",
+      robots: "index, follow",
+    }),
+  component: AboutPage,
+})
+```
+
+`pageHead` is created from `createRouteHead(metadata)` in `src/lib/page-head.ts`, formatting `"<page> - <site>"` consistently across all pages.
+
+---
+
+## Open Graph & Social Sharing
+
+Add Open Graph card attributes for rich social previews on Twitter, Facebook, and Discord:
+
+```tsx title="apps/web/src/routes/_main/about.tsx"
+head: () =>
+  pageHead({
+    title: "About Us",
+    description: "Building the modern community platform.",
+    openGraph: {
+      type: "website",
+      image: "https://vitnode.com/og-image.png",
+    },
+  }),
+```
+
+---
+
+## `pageHead` Options Reference
+
+<TypeTable
+  type={{
+    title: {
+      description: "Page name, automatically formatted into '<title> - <siteName>'.",
+      required: true,
+      type: "string",
+    },
+    description: {
+      description: "Meta description rendered in <meta name='description'>.",
+      type: "string",
+    },
+    robots: {
+      default: "'index, follow'",
+      description: "Search engine crawling directive.",
+      type: "'index, follow' | 'noindex, nofollow'",
+    },
+    canonical: {
+      description: "Canonical URL override for duplicate or paginated content.",
+      type: "string",
+    },
+    openGraph: {
+      description: "Open Graph metadata object (image, type, title).",
+      type: "OpenGraphOptions",
+    },
+  }}
+/>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Routing"
+    description="Overview of TanStack Start routing and shells"
+    href="/docs/dev/routing"
+  />
+  <Card
+    title="Route Manifest"
+    description="Full options for plugin route definitions"
+    href="/docs/dev/plugins/route-manifest"
+  />
+</Cards>

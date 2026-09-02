@@ -1,0 +1,148 @@
+---
+title: Performance
+description: Optimize bundle sizes, code splitting, and loading performance in VitNode and TanStack Start.
+icon: Gauge
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+TanStack Start splits components into separate lazy chunks by default, keeping the initial entry bundle light. Follow these key practices to maintain instant page loads.
+
+## Performance Checklist
+
+1. **Keep `head` metadata isolated**: Never import UI components into route `head`.
+2. **Lazy-load heavy dialogs**: Use `React.lazy` + `Suspense` for complex editors and dialogs.
+3. **Dynamic imports inside loaders**: Lazy-load heavy server/client utilities with `await import(...)`.
+4. **Optimize images**: Use `loading="lazy"`, responsive widths, and explicit dimensions.
+5. **Analyze your bundle**: Regularly check client chunk sizes.
+
+---
+
+## What Lands in the Client Entry Bundle
+
+TanStack Router automatically extracts route `component`, `errorComponent`, and `notFoundComponent` into lazy chunks:
+
+| Route Option | Read When | In Initial Bundle? | Optimization |
+| :--- | :--- | :--- | :--- |
+| `path`, `id` | Route tree generation | **Yes** | Keep route paths concise |
+| `head` | Page navigation | **Yes** | Isolate metadata strings in leaf files |
+| `loader` | Pre-render | **Yes (fn only)** | `await import()` large dependencies inside fn |
+| `pendingComponent` | Route loading | **Yes** | Use lightweight SVG/CSS skeleton primitives |
+| `component` | Render | **No (Lazy Chunk)** | Automatically code-split |
+
+---
+
+## Best Practices
+
+### 1. Isolate Metadata from Components
+
+Because `head` is evaluated in the main route bundle, importing strings from component files accidentally pulls entire component trees into the initial download:
+
+```tsx title="apps/web/src/routes/_main/index.tsx"
+// BAD: Pulls HomeRouteContent and all its heavy icons/charts into main entry
+import { HOME_TITLE, HomeRouteContent } from "#/site/home/home-content" // [!code --]
+
+// GOOD: Metadata strings live in a lightweight leaf file
+import { HomeRouteContent } from "#/site/home/home-content" // [!code ++]
+import { HOME_DESCRIPTION, HOME_TITLE } from "#/site/home/metadata" // [!code ++]
+
+export const Route = createFileRoute("/_main/")({
+  head: () =>
+    pageHead({
+      title: HOME_TITLE,
+      description: HOME_DESCRIPTION,
+    }),
+  component: HomeRouteContent,
+})
+```
+
+### 2. Lazy Dialogs and Heavy Form Editors
+
+Heavy editors (like Tiptap) or complex modals should be lazy-loaded with `React.lazy` and `Suspense`:
+
+```tsx title="plugins/blog/src/views/admin/article-editor.tsx"
+import React, { Suspense } from "react"
+import { Loader } from "@vitnode/core/components/ui/loader"
+
+// [!code ++:6]
+const RichEditor = React.lazy(async () =>
+  import("@vitnode/core/components/form/fields/editor").then((mod) => ({
+    default: mod.AutoFormEditor,
+  }))
+)
+
+export const ArticleEditor = (props) => (
+  <Suspense fallback={<Loader />}>
+    <RichEditor {...props} />
+  </Suspense>
+)
+```
+
+### 3. Dynamic Imports Inside Loaders
+
+When a route loader requires a heavy calculation or parsing library, import it dynamically:
+
+```tsx title="apps/web/src/routes/_main/stats.tsx"
+export const Route = createFileRoute("/_main/stats")({
+  loader: async () => {
+    // Only downloaded when visitor navigates to /stats
+    const { calculateStats } = await import("#/features/stats/calculator") // [!code ++]
+    return calculateStats()
+  },
+})
+```
+
+### 4. Lazy Images Below the Fold
+
+Always specify explicit aspect ratios and `loading="lazy"` on images outside the initial viewport:
+
+```tsx
+<img
+  src="/photo.webp"
+  alt="Community event"
+  width={800}
+  height={600}
+  loading="lazy"
+  decoding="async"
+  className="aspect-4/3 object-cover rounded-lg"
+/>
+```
+
+---
+
+## Measuring Bundle Size
+
+Analyze your client bundle with Vite:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and analyze">
+
+```bash tab="bun"
+bun run build
+```
+
+```bash tab="pnpm"
+pnpm build
+```
+
+```bash tab="npm"
+npm run build
+```
+
+</Tabs>
+
+Inspect the output chunk sizes in `apps/web/dist/`. Keep any single lazy chunk below **150 KB** for optimal mobile performance.
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Data Loading"
+    description="Warming TanStack Query and cache management"
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    title="Loading States"
+    description="Pre-built skeletons and instant navigation UI"
+    href="/docs/dev/routing/loading-states"
+  />
+</Cards>

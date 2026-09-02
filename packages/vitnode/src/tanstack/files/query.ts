@@ -55,7 +55,7 @@ import { fetchMyFilesPageOnServer } from "./server";
  * real rather than stylistic: nothing here needs a `Set-Cookie` copied onto the
  * app's own response.
  *
- * The cookie still travels on both branches. On the server `fetcherServer`
+ * The cookie still travels on both branches. On the server `fetcher`
  * forwards the one the page request arrived with; in the browser the call is
  * same-origin, so the browser attaches it without being asked. That is what
  * makes a `401` here mean "the session ended", never "we forgot to say who was

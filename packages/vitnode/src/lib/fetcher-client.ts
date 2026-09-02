@@ -6,6 +6,7 @@ import type { Route } from "@/api/lib/route";
 
 import type {
   FetcherParams,
+  FetcherRequestOptions,
   GetModulePaths,
   GetValidMethodForPath,
   GetValidPathsForModule,
@@ -14,6 +15,7 @@ import type {
 
 import { coreFetcher } from "./fetcher/core";
 import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
+import { CAPTCHA_TOKEN_HEADER } from "./fetcher/request-context";
 
 /**
  * Typed reference to a server module for use with {@link fetcherClient} inside
@@ -54,20 +56,17 @@ export async function fetcherClient<
     prefixPath = "",
     captchaToken,
     formData,
-  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
-    captchaToken?: string;
-    formData?: FormData;
-    options?: Omit<RequestInit, "body" | "headers" | "method">;
-    prefixPath?: string;
-    withPagination?: boolean;
-  },
+  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
+    Omit<FetcherRequestOptions, "additionalHeaders" | "origin"> & {
+      captchaToken?: string;
+    },
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
 > {
   const additionalHeaders: Record<string, string> = {};
 
   if (captchaToken) {
-    additionalHeaders["x-vitnode-captcha-token"] = captchaToken;
+    additionalHeaders[CAPTCHA_TOKEN_HEADER] = captchaToken;
   }
 
   const response = await coreFetcher(moduleReturn, {
@@ -80,10 +79,9 @@ export async function fetcherClient<
     prefixPath,
     additionalHeaders,
     formData,
-  });
+  } as FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
+    FetcherRequestOptions);
 
-  // Surface rate limiting to the user via a globally-mounted listener. The raw
-  // response is still returned so callers keep their existing status handling.
   if (isRateLimited(response)) {
     notifyRateLimited(response);
   }

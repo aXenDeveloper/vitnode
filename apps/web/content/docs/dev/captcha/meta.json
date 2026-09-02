@@ -1,4 +1,13 @@
 {
   "title": "Captcha",
-  "pages": ["...", "custom-adapter"]
+  "description": "Bot protection with Cloudflare Turnstile or reCAPTCHA v3",
+  "icon": "ShieldCheck",
+  "pages": [
+    "index",
+    "---Providers---",
+    "cloudflare",
+    "recaptcha",
+    "---Advanced---",
+    "custom-adapter"
+  ]
 }

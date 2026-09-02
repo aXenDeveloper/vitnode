@@ -1,45 +1,24 @@
 import "@tanstack/react-start/server-only";
 
-import type {
-  CronPageFetcher,
-  CronParams,
-} from "@/views/admin/views/core/advanced/cron/cron-query";
+import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-query";
 
+import { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
 import {
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
-import {
-  cronAdminModuleRef,
-  cronRequest,
-} from "@/views/admin/views/core/advanced/cron/cron-query";
+import { CRON_PREFIX_PATH } from "@/views/admin/views/core/advanced/cron/cron-query";
 
-import { fetcherServer } from "../../fetcher/server";
+import { fetcher } from "../../fetcher/server";
 
-/**
- * One page of the cron list, fetched during SSR.
- *
- * The request and the refusal check are the shared ones - the same two the
- * browser fetcher uses - so a page rendered on the server and a page fetched
- * after hydration are the same request with the same failure semantics. Only
- * the *transport* is this module's, and it is the only part that genuinely
- * cannot be shared.
- *
- * `fetcherServer` rather than a bare `fetch`, and here that is not a nicety: the
- * admin API decides who is asking from the `Cookie` header. A render that
- * forwarded nothing would be answered as an anonymous visitor - `403` - so this
- * is the difference between an AdminCP screen and an error. It also resolves the
- * API origin from the request being rendered, so a preview deployment calls its
- * own hostname.
- *
- * Only ever reached through the isomorphic transport in `./query`, which is what
- * keeps this module - and the `server-only` marker above it - out of the browser
- * bundle.
- */
-export const fetchCronPageOnServer: CronPageFetcher = async (
-  params: CronParams,
-) => {
-  const response = await fetcherServer(cronAdminModuleRef, cronRequest(params));
+export const fetchCronPageOnServer = async (params: CronParams) => {
+  const response = await fetcher(cronAdminModule, {
+    args: { query: params },
+    method: "get",
+    module: "cron",
+    path: "/",
+    prefixPath: CRON_PREFIX_PATH,
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(

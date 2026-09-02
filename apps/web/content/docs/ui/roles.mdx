@@ -1,6 +1,7 @@
 ---
 title: Roles
 description: Search and pick roles for an Auto Form field - one, or as many as you like.
+icon: Shield
 ---
 
 ## Preview
@@ -10,16 +11,16 @@ description: Search and pick roles for an Auto Form field - one, or as many as y
 ## Usage
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormRoles } from "@vitnode/core/components/form/fields/input-roles";
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormRoles } from '@vitnode/core/components/form/fields/input-roles'
 ```
 
 One component covers both shapes, because the difference is the value and
 nothing else - the search, the colour, the language resolution and the empty
 state are identical, and two copies is how they drift.
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Single', 'Multiple']}>
   <Tab value="Single">
@@ -27,7 +28,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 ```ts
 const formSchema = z.object({
   roleId: z.number(),
-});
+})
 ```
 
 ```tsx
@@ -35,8 +36,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "roleId",
-      component: props => (
+      id: 'roleId',
+      component: (props) => (
         <AutoFormRoles
           {...props}
           description="One role, replaced each time you pick."
@@ -58,7 +59,7 @@ The value is a single id, and picking again replaces it.
 ```ts
 const formSchema = z.object({
   roleIds: z.array(z.number()).min(1),
-});
+})
 ```
 
 ```tsx
@@ -66,8 +67,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "roleIds",
-      component: props => (
+      id: 'roleIds',
+      component: (props) => (
         <AutoFormRoles
           {...props}
           label="Additional roles"
@@ -121,9 +122,9 @@ falls back to the first translation rather than to the id - a role with no
 translation in your language is still a role somebody named:
 
 ```ts
-import { roleOptionName } from "@vitnode/core/components/form/fields/input-roles";
+import { roleOptionName } from '@vitnode/core/components/form/fields/input-roles'
 
-roleOptionName(role, "pl"); // "Administrator PL", or the first name it has
+roleOptionName(role, 'pl') // "Administrator PL", or the first name it has
 ```
 
 ## Props

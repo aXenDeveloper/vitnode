@@ -124,14 +124,6 @@ export const isDevicePublicId = (publicId: string): boolean =>
  * Shared with the Next.js server action, so a revoke is the same request in both
  * applications rather than two places that merely look alike.
  */
-export const revokeDeviceRequest = ({ publicId }: RevokeDeviceArgs) =>
-  ({
-    args: { params: { publicId } },
-    method: "delete" as const,
-    module: "users" as const,
-    path: "/devices/{publicId}" as const,
-  }) as const;
-
 /**
  * The result a refused status becomes.
  *
@@ -168,8 +160,11 @@ export const revokeDeviceInBrowser: RevokeDevice = async ({ publicId }) => {
 
   try {
     const response = await fetcherClient(usersModuleRef, {
-      ...revokeDeviceRequest({ publicId }),
+      args: { params: { publicId } },
+      method: "delete",
+      module: "users",
       options: { credentials: "include" },
+      path: "/devices/{publicId}",
     });
 
     return revokeResultFromStatus(response.status);

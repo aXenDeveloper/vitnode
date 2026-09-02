@@ -1,5 +1,6 @@
 {
   "title": "Deployments",
+  "description": "Take a VitNode app to production",
   "icon": "HardDriveUpload",
-  "pages": ["cloud", "self-hosted"]
+  "pages": ["self-hosted", "cloud"]
 }

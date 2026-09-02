@@ -1,67 +1,225 @@
 ---
 title: Resend
-description: Send emails using Resend with the Resend adapter.
+description: Deliver VitNode email through Resend's HTTPS API - install the adapter, add a key, verify the domain, watch the first mail land.
+icon: Send
 ---
 
-| Cloud        | Self-Hosted  | Links                                               |
-| ------------ | ------------ | --------------------------------------------------- |
-| ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/resend) |
+[Resend](https://resend.com/) sends mail over an ordinary HTTPS request, which
+makes it the adapter that works everywhere your app can `fetch` - including
+serverless and edge deployments where an SMTP connection would never open.
 
-## Usage
+| Cloud        | Self-Hosted  | Links                                                                                                 |
+| ------------ | ------------ | ----------------------------------------------------------------------------------------------------- |
+| ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@vitnode/resend) · [Resend docs](https://resend.com/docs) |
+
+## Quick start
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { ResendEmailAdapter } from '@vitnode/resend'
+
+export const vitNodeApiConfig = buildApiConfig({
+  email: {
+    adapter: ResendEmailAdapter({
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.RESEND_FROM_EMAIL,
+    }),
+  },
+})
+```
+
+That is the whole integration. The steps below are the account setup around it.
+
+## Setup
 
 <Steps>
 <Step>
-### Installation
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+### Install the adapter
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install resend adapter'>
+The `resend` SDK ships as a dependency of the adapter, so this is the only
+package you add.
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install the Resend adapter'>
 
 ```bash tab="bun"
-bun i @vitnode/resend -D
+bun i @vitnode/resend
 ```
 
 ```bash tab="pnpm"
-pnpm i @vitnode/resend -D
+pnpm i @vitnode/resend
 ```
 
 ```bash tab="npm"
-npm i @vitnode/resend -D
+npm i @vitnode/resend
 ```
 
 </Tabs>
 
 </Step>
 <Step>
-### Import the adapter
 
-```ts title="vitnode.api.config.ts"
-// [!code ++]
-import { ResendEmailAdapter } from "@vitnode/resend";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+### Create an API key
+
+In the Resend dashboard, open **API Keys** and create one with send permission.
+The value starts with `re_` and is shown exactly once, so copy it now.
+
+{/* Image prompt: A screenshot of the Resend dashboard API Keys page with the "Create API Key" dialog open - name field filled in, permission set to sending access, the generated re_ key partially masked. Dark theme, 1440x900. */}
+
+</Step>
+<Step>
+
+### Verify a sending domain
+
+Resend only delivers from a domain you own. Add yours under **Domains**, copy
+the DKIM and SPF records it gives you into your DNS, and wait for the status to
+go green.
+
+For a first local test you can skip this and send from
+`onboarding@resend.dev`, which Resend allows for testing only - it will not
+carry your production mail.
+
+{/* Image prompt: A screenshot of the Resend dashboard Domains page showing one domain with a green "Verified" status and its DKIM/SPF DNS records listed below. Dark theme, 1440x900. */}
+
+</Step>
+<Step>
+
+### Register the adapter
+
+Add the `email` block to your API config. Both values come from the
+environment, so nothing secret lives in the repository:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { ResendEmailAdapter } from '@vitnode/resend' // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:6]
   email: {
-    // [!code ++:4]
     adapter: ResendEmailAdapter({
       apiKey: process.env.RESEND_API_KEY,
       from: process.env.RESEND_FROM_EMAIL,
     }),
   },
-});
+  metadata: {
+    title: 'My Community',
+    shortTitle: 'Community',
+  },
+})
+```
+
+Recipients see `Community <hello@example.com>`: the display name is
+`metadata.shortTitle ?? metadata.title`, and `from` supplies only the address.
+
+</Step>
+<Step>
+
+### Set the environment variables
+
+```bash title=".env"
+RESEND_API_KEY=re_your_api_key
+RESEND_FROM_EMAIL=hello@your-verified-domain.com
 ```
 
 </Step>
 <Step>
 
-### Environment Variables
+### Send a test mail
 
-Add the following environment variables to your `.env` file:
+Send one from a route - the [email overview](/docs/dev/email#quick-start) has the
+`build()` plus `deliver()` form that works from any plugin. Because `deliver()`
+runs inside the request, a rejection fails that request: the adapter rethrows
+Resend's error as `[error_name]: message`, which is the response body in
+development and a log line in production.
 
-```bash title=".env"
-RESEND_API_KEY=your_resend_api_key
-RESEND_FROM_EMAIL=your_verified_resend_email
+An accepted message appears under **Emails** in the dashboard within seconds,
+with its delivery events.
+
+Mail sent with the queued `send()` - core's password resets, for instance - is
+one tick behind, and the row tells you where it got to:
+
+```sql
+select status, attempts, "lastError"
+from core_queue
+where name = 'send-email'
+order by id desc
+limit 1;
 ```
 
 </Step>
 </Steps>
+
+## Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    apiKey: {
+      description:
+        'Resend API key, from the dashboard. Read it from the environment - never inline it.',
+      type: 'string | undefined',
+      required: true,
+    },
+    from: {
+      description:
+        'Sending address on a verified domain. Only the address - the display name comes from `metadata.shortTitle ?? metadata.title`.',
+      type: 'string | undefined',
+      required: true,
+    },
+  }}
+/>
+
+## Environment variables
+
+Both are read in `src/vitnode.api.config.ts`, so the names are yours to choose;
+these are the ones this documentation uses.
+
+| Variable            | Maps to  | Example                 | Notes                                                                      |
+| ------------------- | -------- | ----------------------- | -------------------------------------------------------------------------- |
+| `RESEND_API_KEY`    | `apiKey` | `re_123...`             | Created under **API Keys**. Needs sending permission                       |
+| `RESEND_FROM_EMAIL` | `from`   | `hello@your-domain.com` | Must sit on a verified domain, or be `onboarding@resend.dev` while testing |
+
+## Gotchas
+
+<Callout type="warn" title="Missing keys fail at delivery, not at boot">
+  The adapter validates its own config inside `sendEmail`, so an unset
+  `RESEND_API_KEY` never stops the API from starting. With `deliver()` the
+  failure is the route's own 500, throwing `Missing Resend configuration`. With
+  the queued `send()` the request still returns 200 and the same message turns
+  up in `core_queue.lastError` three attempts later.
+</Callout>
+
+<Callout type="warn" title="An unverified From fails at delivery">
+  Resend answers with an error rather than holding the mail, and the adapter
+  rethrows it as `[error_name]: message`. If sends start failing the moment you
+  switch from `onboarding@resend.dev` to your own domain, check the domain
+  status before you check your code.
+</Callout>
+
+<Callout type="info" title="Only the HTML part is sent">
+  VitNode renders both an HTML and a plain-text version of every email, but this
+  adapter passes `html` alone - the `text` argument reaches it and goes unused.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Templates"
+    description="Give the mail a layout, a button and translated copy"
+    href="/docs/dev/email/templates"
+  />
+  <Card
+    title="Nodemailer (SMTP)"
+    description="The other official adapter, for your own SMTP server"
+    href="/docs/dev/email/nodemailer"
+  />
+  <Card
+    title="Email overview"
+    description="How a send travels from a route to an inbox"
+    href="/docs/dev/email"
+  />
+</Cards>

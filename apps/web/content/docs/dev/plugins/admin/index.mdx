@@ -1,0 +1,183 @@
+---
+title: AdminCP Pages
+description: Ship custom plugin pages inside the VitNode admin panel with sidebar navigation, breadcrumbs, and staff permission gates.
+icon: PanelsTopLeft
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+An AdminCP page is an ordinary plugin route configured with `area: "admin"`. VitNode frames your page with the admin panel's sidebar, breadcrumbs header, command palette, and authenticated staff session.
+
+## Add an AdminCP Page
+
+<Steps>
+<Step>
+
+### 1. Declare Route in Manifest
+
+Add the route to `src/routes/manifest.ts` with `area: "admin"`:
+
+```ts title="plugins/blog/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from "@vitnode/core/routing"
+
+export const routes: PluginRouteDefinition[] = [
+  // [!code ++:7]
+  {
+    area: "admin",
+    entry: "routes/admin-settings",
+    id: "settings",
+    namespaces: ["@vitnode/blog.admin.settings"],
+    path: "/admin/blog/settings",
+  },
+]
+```
+
+</Step>
+<Step>
+
+### 2. Create the Page Component
+
+Export a React component as `default`:
+
+```tsx title="plugins/blog/src/routes/admin-settings.tsx"
+import { useTranslations } from "use-intl"
+
+const AdminSettingsPage = () => {
+  const t = useTranslations("@vitnode/blog.admin.settings")
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("desc")}</p>
+      </header>
+    </div>
+  )
+}
+
+export default AdminSettingsPage
+```
+
+</Step>
+<Step>
+
+### 3. Add to AdminCP Sidebar Navigation
+
+Export `adminNav` from `src/admin/nav.tsx` to display a link in the AdminCP sidebar:
+
+```tsx title="plugins/blog/src/admin/nav.tsx"
+import type { PluginAdminNav } from "@vitnode/core/lib/plugin"
+import { SettingsIcon } from "lucide-react"
+
+export const adminNav: PluginAdminNav = {
+  nav: [
+    {
+      id: "settings",
+      icon: <SettingsIcon />,
+      href: "/admin/blog/settings",
+      // Restrict visibility to authorized staff
+      permission: { module: "blog", permission: "can_manage_settings" },
+    },
+  ],
+}
+```
+
+Export the module in `package.json`:
+
+```json title="plugins/blog/package.json"
+"exports": {
+  "./admin/nav": "./dist/src/admin/nav.js"
+}
+```
+
+</Step>
+<Step>
+
+### 4. Add Localization Messages
+
+Provide translations for the page and sidebar link in `src/locales/en.json`:
+
+```json title="plugins/blog/src/locales/en.json"
+{
+  "@vitnode/blog": {
+    "admin": {
+      "nav": {
+        "settings": "Settings"
+      },
+      "settings": {
+        "title": "Blog Settings",
+        "desc": "Configure blog comments, moderation, and notifications."
+      }
+    }
+  }
+}
+```
+
+</Step>
+<Step>
+
+### 5. Verify the Page
+
+Start the dev server:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Open `http://localhost:3000/admin/blog/settings` to see your admin screen integrated into the panel.
+
+</Step>
+</Steps>
+
+---
+
+## Gating What the Page Shows
+
+Protect administrative actions inside your component using `useStaffPermissions`:
+
+```tsx title="plugins/blog/src/routes/admin-settings.tsx"
+import { useStaffPermissions } from "@vitnode/core/hooks/use-staff-permissions"
+
+const AdminSettingsPage = () => {
+  const { hasPermission } = useStaffPermissions()
+  const canDelete = hasPermission({ module: "blog", permission: "can_delete_posts" })
+
+  return (
+    <div className="p-4">
+      {canDelete && <button className="text-destructive">Delete All Posts</button>}
+    </div>
+  )
+}
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Dashboard Widgets"
+    description="Build drag-and-drop dashboard widgets for AdminCP"
+    href="/docs/dev/plugins/admin/dashboard-widgets"
+  />
+  <Card
+    title="Staff Permissions"
+    description="Define and enforce administrative role permissions"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+  <Card
+    title="Route Manifest"
+    description="Declare public and admin routes across your plugin"
+    href="/docs/dev/plugins/route-manifest"
+  />
+</Cards>

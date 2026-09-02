@@ -1,95 +1,138 @@
 ---
-title: Custom Adapter
-description: Create your own custom email adapter for VitNode.
+title: Custom Email Adapter
+description: Build a custom VitNode email adapter for any third-party provider like Postmark, AWS SES, or Mailgun.
+icon: Puzzle
 ---
 
-Want to create your own email adapter? You can do it by implementing the `EmailApiPlugin` interface. This allows you to define how emails are sent in your application.
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## Usage
+You can connect any transactional email service (e.g. Postmark, AWS SES, SendGrid, Mailgun) by implementing the `EmailApiPlugin` interface. VitNode handles template rendering, i18n localization, and recipient resolution; your adapter just sends the email.
 
-<Steps>
-<Step>
-### Create adapter
+## The `EmailApiPlugin` Interface
 
-Here is your template for a custom email adapter.
+The adapter contract consists of a single `sendEmail` method:
 
-```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
-
-export const MailerEmailAdapter = (): EmailApiPlugin => {};
+```ts
+export interface EmailApiPlugin {
+  sendEmail: (args: {
+    to: string
+    subject: string
+    html: string
+    text: string
+    metadata: { title: string; shortTitle?: string }
+    replyTo?: string
+  }) => Promise<void>
+}
 ```
 
-</Step>
-<Step>
+---
 
-### Add config
+## Quick start: Implementing an Adapter
 
-If you want to provide config for you adapter, you can do it like this:
+### 1. Create the Adapter Factory
 
-```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
+```ts title="apps/api/src/lib/email/postmark-adapter.ts"
+import type { EmailApiPlugin } from "@vitnode/core/api/models/email"
 
-export const MailerEmailAdapter = ({
-  // [!code ++:13]
-  host = "",
-  port = 587,
-  secure = false,
-  user = "",
-  password = "",
-  from = "",
+export const PostmarkEmailAdapter = ({
+  serverToken,
+  from,
 }: {
-  from: string | undefined;
-  host: string | undefined;
-  password: string | undefined;
-  port?: number;
-  secure?: boolean;
-  user: string | undefined;
-}): EmailApiPlugin => {};
+  serverToken: string
+  from: string
+}): EmailApiPlugin => ({
+  // [!code ++:16]
+  sendEmail: async ({ to, subject, html, text, metadata }) => {
+    const res = await fetch("https://api.postmarkapp.com/email", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Postmark-Server-Token": serverToken,
+      },
+      body: JSON.stringify({
+        From: `${metadata.shortTitle ?? metadata.title} <${from}>`,
+        To: to,
+        Subject: subject,
+        HtmlBody: html,
+        TextBody: text,
+      }),
+    })
+
+    if (!res.ok) throw new Error(`Postmark error: ${res.statusText}`)
+  },
+})
 ```
 
-</Step>
+---
 
-<Step>
+### 2. Register in API Configuration
 
-### Add `sendEmail()` method
+Attach the adapter to `vitNodeApiConfig` in `apps/api/src/vitnode.api.config.ts`:
 
-Implement the `sendEmail()` method to send emails using your custom logic. You can use any email sending library or service.
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+import { PostmarkEmailAdapter } from "./lib/email/postmark-adapter"
 
-```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
-
-export const MailerEmailAdapter = ({
-  host = "",
-  port = 587,
-  secure = false,
-  user = "",
-  password = "",
-  from = "",
-}: {
-  from: string | undefined;
-  host: string | undefined;
-  password: string | undefined;
-  port?: number;
-  secure?: boolean;
-  user: string | undefined;
-}): EmailApiPlugin => {
-  // [!code ++:3]
-  return {
-    sendEmail: async ({ metadata, to, subject, html, replyTo, text }) => {},
-  };
-};
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:7]
+  email: {
+    adapter: PostmarkEmailAdapter({
+      serverToken: process.env.POSTMARK_SERVER_TOKEN!,
+      from: "notifications@yourdomain.com",
+    }),
+  },
+})
 ```
 
-</Step>
-</Steps>
+---
 
-## Publish to NPM
+## `sendEmail` Arguments
 
-If you want to share your custom adapter with the community, you can publish it as an NPM package.
+<TypeTable
+  type={{
+    to: {
+      description: "Resolved recipient email address.",
+      required: true,
+      type: "string",
+    },
+    subject: {
+      description: "Localized email subject line.",
+      required: true,
+      type: "string",
+    },
+    html: {
+      description: "Rendered HTML email body from React Email.",
+      required: true,
+      type: "string",
+    },
+    text: {
+      description: "Plain-text fallback representation.",
+      required: true,
+      type: "string",
+    },
+    metadata: {
+      description: "Site title and short title configured in vitNodeApiConfig.",
+      type: "{ title: string; shortTitle?: string }",
+    },
+    replyTo: {
+      description: "Optional reply-to email address.",
+      type: "string",
+    },
+  }}
+/>
 
-Example source code for NPM packages:
+## Learn More
 
-- [Resend Adapter](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/resend),
-- [Nodemailer Adapter](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/nodemailer)
-
-Make sure to follow best practices for package development and include proper documentation.
+<Cards>
+  <Card
+    title="Email Service"
+    description="Overview of transactional email features"
+    href="/docs/dev/email"
+  />
+  <Card
+    title="Email Templates"
+    description="Build React Email templates with DefaultTemplateEmail"
+    href="/docs/dev/email/templates"
+  />
+</Cards>

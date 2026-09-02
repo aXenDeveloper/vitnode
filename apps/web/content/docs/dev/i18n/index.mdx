@@ -1,327 +1,103 @@
 ---
-title: Add a Language
-description: Ship your VitNode app in more than one language.
+title: Languages & Localization
+description: How VitNode merges translations from installed packages, and how to add, translate, and override languages.
+icon: Globe
 ---
 
-VitNode is English (`en`) out of the box. Every package - `@vitnode/core` and each plugin - carries its own translations inside `node_modules`, and VitNode merges them at request time. Nothing is copied into your app, so adding a language is two files and a config entry.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
-## How messages are put together
+VitNode provides full internationalization out of the box. Every package (`@vitnode/core` and plugins) maintains its own locale files, which VitNode merges per request: core strings first, plugin strings second, and your host app overrides last.
 
-Sources are merged in order, and later ones win:
+{/* Image prompt: Layered merge diagram showing @vitnode/core strings, plugin strings, and app overrides merging into a unified message tree with defaultLocale fallback. Dark theme, 1600x700. */}
 
-```
-@vitnode/core  →  plugin A  →  plugin B  →  your app
-```
+## Quick start
 
-On top of that, the default locale is merged _underneath_ the language being rendered. A half-finished translation therefore degrades key by key - untranslated strings show up in your default language instead of leaking `core.global.save` into the page.
+Add a new language in two CLI commands:
 
-<Callout title="You only write what you change" type="info">
-  Your app's locale files are overrides. A file with three keys in it is
-  perfectly valid; the other few hundred come from the packages.
-</Callout>
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Add a language">
 
-## Adding one
-
-The CLI does the whole thing. It asks for the language's code and name, scaffolds an override file for every installed package, and wires the locale into your `i18n` config:
-
-```bash
-vitnode i18n:create
+```bash tab="bun"
+bun run vitnode i18n:create de Deutsch
+bun run vitnode i18n:check
 ```
 
-```text
-[VitNode] Add a language. Press Ctrl+C to abort.
-
-? Locale code (e.g. pl, de, pt-BR): de
-? Language name (e.g. Polski, Deutsch): Deutsch
-
-  created  src/locales/@vitnode/core/de.json
-  created  src/locales/@vitnode/blog/de.json
-  updated  src/i18n.ts
-
-[VitNode] Deutsch (de) added. Translate the files above, then run vitnode i18n:check.
+```bash tab="pnpm"
+pnpm vitnode i18n:create de Deutsch
+pnpm vitnode i18n:check
 ```
 
-Pass both inline to skip the prompts - handy in scripts and CI: `vitnode i18n:create de Deutsch`.
+```bash tab="npm"
+npx vitnode i18n:create de Deutsch
+npx vitnode i18n:check
+```
 
-<Callout title="What it changes" type="info">
-  Two things: one override file per installed package under
-  `src/locales/{pluginId}/{locale}.json`, each seeded with that package's English
-  strings so they are right there to translate in place, and your `i18n` config -
-  the `{ code, name }` entry in `locales` plus a `messages` block pointing at
-  those files. An app with no `i18n` config yet - an API-only app, say - gets a
-  fresh `src/i18n.ts` instead, and the command prints the one line to import it
-  into your config.
-</Callout>
+</Tabs>
 
-<Callout title="It seeds only what the app renders" type="info">
-  The seed matches the app's shape. An **API-only** app is seeded with each
-  package's server strings alone - the emails, a few keys - not the admin UI it
-  never renders. A **frontend** app gets the UI strings, and a **single app**
-  (frontend and API together) gets both. A package that ships nothing for the
-  app's shape - a plugin with no emails in an API-only app - is skipped rather
-  than seeded with an empty file. See [Server-side](/docs/dev/i18n/server) for
-  the two trees.
-</Callout>
+`i18n:create` creates translation files across your workspace and registers the language in your configuration. `i18n:check` scans for missing or untranslated keys.
 
-Fill in the files it lists and you are done - the rest of this page is what `create` does under the hood, for when you would rather wire a language up by hand or the command meets an unusual config it will not edit blindly.
+---
 
-### By hand
+## Language Configuration
 
-<Steps>
+Declare supported languages in `apps/web/src/i18n.ts`:
 
-<Step>
+```ts title="apps/web/src/i18n.ts"
+export const i18n = {
+  defaultLocale: "en",
+  locales: [
+    { code: "en", name: "English" },
+    // [!code ++:1]
+    { code: "de", name: "Deutsch" },
+  ],
+}
+```
 
-### Create the locale file
+---
 
-App translations live in `src/locales/{pluginId}/{locale}.json`, one file per package you want to translate. Keys mirror the package's own `en.json`.
+## Overriding Strings
 
-```json title="src/locales/@vitnode/core/pl.json"
+To customize existing text from core or a third-party plugin, add an override file in `apps/web/src/locales/{pluginId}/{locale}.json`:
+
+```json title="apps/web/src/locales/@vitnode/core/en.json"
 {
   "core": {
     "global": {
-      "save": "Zapisz",
-      "cancel": "Anuluj"
+      "save": "Update Changes"
     }
   }
 }
 ```
 
-</Step>
+Because your app overrides are merged last, only the keys you specify are overwritten. Everything else continues to fall back to the package defaults.
 
-<Step>
+---
 
-### Declare the locale and point at the file
+## Translation Architecture
 
-Both entries live in your `i18n` config. Keep it in its own file when your app serves the web and the API together, so the two configs cannot drift apart.
+| Source | Role | Order |
+| :--- | :--- | :--- |
+| `@vitnode/core` | Base strings for auth, admin shells, and dialogs | Base layer |
+| **Plugins** | Domain strings declared in `plugins/*/src/locales` | Second layer |
+| **Host Application** | Custom overrides in `apps/web/src/locales` | Highest priority (wins) |
 
-```ts title="src/i18n.ts"
-import type { VitNodeI18nConfig } from "@vitnode/core/lib/i18n/types";
+Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw key paths from displaying in production.
 
-export const i18n = {
-  defaultLocale: "en",
-  locales: [
-    { code: "en", name: "English" },
-    { code: "pl", name: "Polski" }, // [!code ++]
-  ],
-  messages: {
-    // [!code ++:5]
-    pl: {
-      "@vitnode/core": () => import("./locales/@vitnode/core/pl.json"),
-      "@vitnode/blog": () => import("./locales/@vitnode/blog/pl.json"),
-    },
-  },
-} satisfies VitNodeI18nConfig;
-```
+## Learn More
 
-<Callout title="Write the path out in full" type="warn">
-  It has to be a literal path. A template literal such as ``() =>
-  import(`./locales/${pluginId}/${locale}.json`)`` is invisible to TypeScript
-  and to the bundler, so the JSON never makes it into your production build and
-  every string renders as its raw key.
-</Callout>
-
-Then hand that object to whichever configs your app has:
-
-```ts title="src/vitnode.config.ts"
-import { i18n } from "./i18n"; // [!code ++]
-
-export const vitNodeConfig = buildConfig({
-  i18n, // [!code ++]
-  plugins: [blogPlugin()],
-  metadata: { title: "VitNode" },
-});
-```
-
-```ts title="src/vitnode.api.config.ts"
-import { coreRelations } from "@vitnode/core/database/relations";
-
-import { i18n } from "./i18n"; // [!code ++]
-
-export const vitNodeApiConfig = buildApiConfig({
-  i18n, // [!code ++]
-  plugins: [blogApiPlugin()],
-  dbProvider: drizzle({ connection: POSTGRES_URL, relations: coreRelations }),
-});
-```
-
-</Step>
-
-<Step>
-
-### Check your work
-
-```bash
-vitnode i18n:check
-```
-
-It lists every key the new language is still missing and flags keys that no longer exist in the default locale. It **fails outright** - a non-zero exit on its own - when a declared language is missing a package's locale file, or when a file you created was never wired into `i18n.messages`. Those are hard errors, since both leave strings silently untranslated at runtime. Missing individual _keys_ are only warnings; add `--ci` to make those fail a pipeline too.
-
-</Step>
-
-</Steps>
-
-## Keeping them in sync
-
-Packages gain and lose keys as they evolve. `i18n:update` reconciles every translation file you have against the current English source in one pass:
-
-```bash
-vitnode i18n:update
-```
-
-For each of your override files it:
-
-- **adds** keys English has but the file is missing, seeded with the English string so they are ready to translate in place;
-- **removes** keys the file still carries that English no longer defines;
-- **keeps** every existing translation untouched - it never overwrites a string you have already translated.
-
-```text
-[VitNode] Syncing 2 translation file(s) against en.
-  updated  src/locales/@vitnode/core/pl.json  +75 -7
-      + core.search.admin.reindex
-      - core.search.admin.engine
-      ... and 80 more
-
-[VitNode] 2 file(s) updated: +75 added, -7 removed. Translate the added keys, then run vitnode i18n:check.
-```
-
-Like the other commands it is scoped: an API-only app is synced against each package's server strings alone, a single app against both trees. A file whose package ships nothing for the app's shape is left untouched rather than emptied.
-
-<Callout title="Added keys arrive in English" type="info">
-  A freshly added key holds the English text until you translate it, so
-  `i18n:check` will report it as present. Run `i18n:update` to pull in new
-  strings, then work through the ones it added.
-</Callout>
-
-## Translating with AI
-
-`i18n:update:ai` does everything `i18n:update` does, then hands the keys that are still in English to a configured AI model to fill in. It reconciles each file against the English source first, so newly added keys are translated in the same pass:
-
-```bash
-vitnode i18n:update:ai
-```
-
-It asks two things:
-
-1. **Which languages to translate** - a checklist of every language you have, all ticked by default. `space` toggles one, `a` toggles all, `Enter` confirms.
-2. **Which model to translate with** - the list comes straight from the `ai.models` in your [`vitnode.api.config.ts`](/docs/dev/ai). The first entry is the default.
-
-```text
-? Which languages should be translated from English?
-❯◉ Polski (pl)
- ◉ Deutsch (de)
-  (space to toggle, a to select all, enter to confirm)
-
-? Which AI model should translate? (from vitnode.api.config.ts)
-❯ Claude Sonnet 5 anthropic/claude-sonnet-5
-  Google Gemini 3.5 Flash Lite gemini-3.5-flash-lite
-
-[VitNode] Translating with Claude Sonnet 5 (anthropic/claude-sonnet-5) into: pl
-  pl  128 string(s) (96 unique)
-  96 unique string(s) in 3 batch(es), up to 3 in parallel
-  translated 3/3 batch(es)
-
-  updated  src/locales/@vitnode/core/pl.json → pl  +112
-  updated  src/locales/@vitnode/blog/pl.json → pl  +16
-
-[VitNode] 2 file(s) updated, 128 string(s) translated.
-```
-
-Translation runs through the [Vercel AI SDK](/docs/dev/ai), so it works with any model you have configured - a Gateway id string or a provider instance. Make sure the matching credentials are set (e.g. `AI_GATEWAY_API_KEY`) before you run it.
-
-### How it stays fast and cheap
-
-The work is network-bound - almost all the time is spent waiting on the model - and tokens are the cost, so the command is built to overlap the waiting and send as little as possible:
-
-- **Batches run concurrently.** All the strings across every selected language and file are cut into fixed-size batches and pushed through a bounded pool (6 at a time by default). Tune it with `--concurrency <n>` - raise it if your provider's rate limits allow, lower it if you hit `429`s.
-- **Identical strings are translated once.** `Save`, `Cancel`, and friends recur across many keys; each unique English string is sent once per language and the result is fanned back out to every key that used it (see the `(96 unique)` count above).
-- **Only untranslated strings are sent.** Keys you have already translated, and values with nothing to translate (a lone `{count}`, punctuation), never reach the model.
-- **Compact wire format.** Each batch is a bare JSON array of strings in, a JSON array of translations out - no per-item keys - which roughly halves the tokens versus a labelled `{ id, value }` shape. `temperature: 0` keeps it deterministic, so re-runs don't churn.
-- **A failed batch doesn't sink the run.** Each batch retries with backoff; if it still fails, those strings are left in English and reported so a re-run picks them up - the rest are written normally.
-
-<Callout title="Monorepo layouts" type="info">
-  When the app you run this from has no `ai.models` of its own - a web app whose
-  API lives in a sibling package (`apps/web` next to `apps/api`) - it looks one
-  directory up for a `vitnode.api.config.ts` that does. Only the model list is
-  borrowed; which files are translated still comes from the app you are in. That
-  API app's `.env` is loaded too, so the provider keys (`AI_GATEWAY_API_KEY`,
-  `GOOGLE_GENERATIVE_AI_API_KEY`, ...) come from where the models are defined.
-</Callout>
-
-- It **only** translates leaves that still equal the English source, so a string you have already translated is never touched - run it as often as you like.
-- Placeholders (`{name}`, ICU plurals, `<b></b>` tags) and pure-punctuation values are preserved; the latter are skipped rather than sent to the model.
-- Pass the languages, model, and concurrency inline to skip the prompts in CI: `vitnode i18n:update:ai pl,de --model fast --concurrency 8`.
-
-<Callout title="Review machine translations" type="warn">
-  AI translations are a strong first draft, not a final one. Skim what it wrote -
-  especially product terms and tone - before you ship. The files are already
-  reconciled and translated in the same pass, so there is nothing to re-check.
-</Callout>
-
-## Removing one
-
-To drop a language, hand `i18n:delete` its code. It deletes that locale's override files, prunes the folders they leave empty, and unwires the `{ code, name }` and `messages` entries from your config:
-
-```bash
-vitnode i18n:delete pl
-```
-
-Run it without a code to be asked for one. When interactive it lists everything it will remove and waits for a `y` before touching anything.
-
-<Callout title="English and the default locale stay put" type="warn">
-  `i18n:delete` refuses to remove `en` - the built-in fallback every translation
-  degrades to - or whatever your `defaultLocale` is. Point `defaultLocale` at
-  another language first if you really mean to retire the current one. To take a
-  language out of circulation without deleting it - English included - **disable**
-  it instead (below).
-</Callout>
-
-## Disabling one
-
-Deleting a language throws its files away. When you only want to take a language
-out of circulation - keep the translations on disk, just stop offering it - set
-`enabled: false` on its `locales` entry instead:
-
-```ts title="src/i18n.ts"
-export const i18n = {
-  defaultLocale: "en",
-  locales: [
-    { code: "en", name: "English" },
-    { code: "pl", name: "Polski", enabled: false }, // [!code ++]
-  ],
-  // ...messages unchanged
-} satisfies VitNodeI18nConfig;
-```
-
-A disabled locale is no longer **selectable**: it drops out of the language
-pickers built on it (the multi-language form field) and search stops indexing
-documents for it. Everything else stays put - its `src/locales` files remain on
-disk, its row and translated words in the database are untouched, and it still
-resolves at runtime as a fallback. Flip `enabled` back to `true` (or drop the
-field) and it returns exactly as it was.
-
-<Callout title="You can disable the default locale too" type="info">
-  Unlike deletion, disabling works on any locale, `en` and your `defaultLocale`
-  included - handy for a site that runs in another language but keeps English as
-  the technical fallback. The default locale still merges underneath every other
-  language whether or not it is enabled, so disabling it only hides it from the
-  pickers; it never leaves strings untranslated.
-</Callout>
-
-## The API side
-
-An API-only app needs no `i18n` block at all. The languages the installed packages ship are picked up on their own, and `defaultLocale` is `en`:
-
-```ts title="src/vitnode.api.config.ts"
-import { coreRelations } from "@vitnode/core/database/relations";
-
-export const vitNodeApiConfig = buildApiConfig({
-  plugins: [blogApiPlugin()],
-  dbProvider: drizzle({ connection: POSTGRES_URL, relations: coreRelations }),
-});
-```
-
-Add one when you want to restrict the locale list, change the default, or override strings. See [Server-side](/docs/dev/i18n/server) for what the API does with them.
-
-## Searching in several languages
-
-Each row in `core_search_index` carries a `languageCode`, so a post indexed in Polish is only matched by Polish queries. Rows with an empty `languageCode` match every language - see [Search](/docs/dev/search) for indexing multi-language content.
+<Cards>
+  <Card
+    title="Translating Pages"
+    description="Using use-intl hooks and declaring route namespaces"
+    href="/docs/dev/i18n/pages"
+  />
+  <Card
+    title="Messages Reference"
+    description="ICU formatting, pluralization, and placeholders"
+    href="/docs/dev/i18n/messages"
+  />
+  <Card
+    title="Server-Side i18n"
+    description="Localize transactional emails and error responses"
+    href="/docs/dev/i18n/server"
+  />
+</Cards>

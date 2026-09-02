@@ -1,45 +1,132 @@
 ---
 title: Button
-description: A button or link component for emails.
+description: EmailButton renders a call-to-action link for VitNode emails, with the same variants and sizes as the app button.
+icon: MousePointerClick
 ---
+
+`EmailButton` wraps React Email's `Button` with the variants the app's own
+button uses, so a call to action in a mail looks like a call to action on the
+site. It renders an `<a>`, which is the only thing every mail client agrees to
+style.
 
 ## Preview
 
-import { ImgDocs } from "@/components/fumadocs/img";
-import buttonPreviewImg from "./button-preview.png";
+import { ImgDocs } from '@/components/fumadocs/img'
+import buttonPreviewImg from './button-preview.png'
 
-<ImgDocs src={buttonPreviewImg} alt="Buttons Preview" />
+<ImgDocs
+  src={buttonPreviewImg}
+  alt="Six email buttons stacked in a white card under the VitNode logo: a blue Default, a pale Secondary, a bordered Outline, a plain Ghost, a blue Link and a red Destructive"
+/>
 
 ## Usage
 
 ```ts
-import { EmailButton } from "@vitnode/core/emails/ui/button";
+import { EmailButton } from '@vitnode/core/emails/ui/button'
 ```
 
 ```tsx
 <EmailButton href="https://vitnode.com/">Default</EmailButton>
 ```
 
+Centre it the way the framework's own password-reset mail does - a `Section`
+does the alignment, because margins are not to be trusted in email:
+
+```tsx
+<Section className="text-center">
+  <EmailButton className="min-w-[200px]" href={resetUrl} size="lg">
+    Reset your password
+  </EmailButton>
+</Section>
+```
+
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+Everything an `<a>` takes, plus two of its own.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
+    href: {
+      description:
+        "Where the button goes. Always absolute - a mail client has no origin to resolve a relative URL against. Optional in the type, because the component takes an anchor's props, but a button without one is a dead link.",
+      type: 'string',
+    },
     variant: {
-      description: "The variant of the button.",
-      type: "default | secondary | outline | ghost | link | destructive | destructiveGhost",
-      default: "default",
+      description: 'Which of the seven styles to render.',
+      type: 'default | secondary | outline | ghost | link | destructive | destructiveGhost',
+      default: 'default',
     },
     size: {
-      description: "The size of the button.",
-      type: "default | sm | lg",
-      default: "default",
+      description: 'Padding scale. Nothing else changes.',
+      type: 'default | sm | lg',
+      default: 'default',
     },
-    href: {
-      description: "The URL the button links to.",
-      type: "string",
-      default: "",
+    className: {
+      description:
+        'Merged with the variant classes, so a width or a margin here wins.',
+      type: 'string',
+    },
+    children: {
+      description: 'The label. Keep it short enough not to wrap on mobile.',
+      type: 'React.ReactNode',
     },
   }}
 />
+
+### Variants
+
+| Variant            | Looks like                     | Use it for                                 |
+| ------------------ | ------------------------------ | ------------------------------------------ |
+| `default`          | Solid primary fill, light text | The one action the email is asking for     |
+| `secondary`        | Soft tinted fill, dark text    | A second, lesser action                    |
+| `outline`          | Border, page-background fill   | A neutral action next to a primary one     |
+| `ghost`            | Text only, no fill or border   | Tertiary actions                           |
+| `link`             | Primary-coloured text, no fill | Inline links styled as buttons             |
+| `destructive`      | Solid red fill, white text     | Delete, revoke, cancel                     |
+| `destructiveGhost` | Red text, no fill              | A destructive action that should not shout |
+
+### Sizes
+
+| Size      | Padding       |
+| --------- | ------------- |
+| `sm`      | `px-3 py-1.5` |
+| `default` | `px-4 py-2`   |
+| `lg`      | `px-6 py-2.5` |
+
+## Gotchas
+
+<Callout type="warn" title="The colours come from the template">
+  `bg-primary` and friends are defined by `DefaultTemplateEmail`, which wraps
+  your content in a `<Tailwind>` with VitNode's palette. Drop an `EmailButton`
+  into a template that builds its own document and the classes resolve to
+  nothing. [Templates](/docs/dev/email/templates#colour-tokens) lists the
+  tokens.
+</Callout>
+
+<Callout type="info" title="It is a link, not a button">
+  There is no `onClick` and no `type="submit"` to reach for - email has no
+  JavaScript. Every action is a URL, which usually means a signed link into your
+  app.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Card"
+    description="The bordered container this button usually sits inside"
+    href="/docs/dev/email/components/card"
+  />
+  <Card
+    title="Templates"
+    description="Where the Tailwind palette and the layout come from"
+    href="/docs/dev/email/templates"
+  />
+  <Card
+    title="React Email components"
+    description="Section, Row, Column and the rest of the primitives"
+    href="https://react.email/docs/components"
+  />
+</Cards>

@@ -75,17 +75,17 @@ export interface SearchFeedPageArgs {
 }
 
 /**
- * One page of a feed, as arguments to whichever fetcher is carrying it.
+ * One page of a feed, as the query string the API reads it from.
  *
  * `first` is a string because the query schema reads it off a query string, and
  * every optional key is omitted rather than set to `undefined` so it never
  * reaches the URL at all.
  */
-export const searchFeedRequest = ({
+export const searchFeedQuery = ({
   cursor,
   locale,
   params,
-}: SearchFeedPageArgs) => {
+}: SearchFeedPageArgs): Record<string, string> => {
   const query: Record<string, string> = {
     first: String(SEARCH_FEED_PAGE_SIZE),
     lang: locale,
@@ -99,12 +99,7 @@ export const searchFeedRequest = ({
   if (params.to) query.to = params.to;
   if (cursor !== null) query.cursor = cursor;
 
-  return {
-    args: { query },
-    method: "get" as const,
-    module: "search" as const,
-    path: "/" as const,
-  };
+  return query;
 };
 
 /**
@@ -201,8 +196,11 @@ export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcherClient(searchModuleRef, {
-    ...searchFeedRequest(args),
+    args: { query: searchFeedQuery(args) },
+    method: "get",
+    module: "search",
     options: { signal },
+    path: "/",
   });
 
   assertSearchFeedResponse(response, args);

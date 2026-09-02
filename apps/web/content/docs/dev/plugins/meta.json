@@ -1,15 +1,7 @@
 {
   "title": "Plugins",
-  "description": "Make plugins and APIs",
+  "description": "Build a VitNode plugin: pages, API modules, database tables, AdminCP screens and translations in one installable package",
   "icon": "Plug",
   "defaultOpen": true,
-  "pages": [
-    "create",
-    "route-manifest",
-    "admin-page",
-    "dashboard-widgets",
-    "breadcrumbs",
-    "api",
-    "..."
-  ]
+  "pages": ["create", "route-manifest", "api", "admin", "breadcrumbs", "..."]
 }

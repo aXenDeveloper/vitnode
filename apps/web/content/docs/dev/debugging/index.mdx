@@ -1,19 +1,123 @@
 ---
 title: Debugging
-description: Master VitNode's powerful debugging features to squash those bugs faster!
-icon: BugOff
+description: Find out what a VitNode app is actually doing - the AdminCP Debug Panel, the system log, the Router and Query devtools, and React Scan.
+icon: Bug
 ---
+
+Four surfaces, each answering a different question. Two of them exist only in
+development - the devtools and React Scan. The other two, the AdminCP Debug
+Panel and the server's own output, are how you see inside a production
+deployment, which is exactly when you need to.
+
+## Where to look first
+
+| Symptom                                     | Look here                                                 |
+| ------------------------------------------- | --------------------------------------------------------- |
+| A request 500s in production                | [Debug Panel](#the-debug-panel) → System Logs             |
+| A screen shows data that has moved on       | [Query devtools](#devtools-in-development) → find the key |
+| A route loaded the wrong thing              | [Router devtools](#devtools-in-development) → loader data |
+| A page feels slow to type in or scroll      | [React Scan](#react-scan) → count the re-renders          |
+| A service looks configured but does nothing | **Core → System → Integrations** in the AdminCP           |
+| A background job never ran                  | [Debug Panel](#the-debug-panel) → Queue Tasks             |
+
+## The Debug Panel
+
+`/admin/core/debug`, and the quickest way in is the avatar menu in the top-right
+of the AdminCP: **Debug Panel**. It is also the one AdminCP screen with no
+sidebar entry, so that menu (or the admin search) is how you get there.
+
+Three sections, top to bottom:
+
+| Section         | What it shows                                                                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Clear Cache** | A button, top-right. Marks every cached query stale and re-runs every matched route loader.                                                                            |
+| **Queue Tasks** | Four counters - pending, processing, completed, failed - and a table of what is pending or processing right now, with its attempt count and when it is next available. |
+| **System Logs** | Every line anything wrote with `c.get('log')`, newest first, sortable by type, plugin or date.                                                                         |
+
+{/* Image prompt: A screenshot of the VitNode AdminCP Debug Panel at /admin/core/debug - heading "Debug Panel" with a "Clear Cache" button, below it a row of four queue counters (Pending, Processing, Completed, Failed), and below that the System Logs table with Plugin, Type, Status Code, Created At and Content columns, one row carrying a red "Error" badge. Dark theme, 1440x900. */}
+
+Click any log row for the full record: the log id, the request method and path,
+the status code, the IP address, the user agent, the user who caused it (linked
+straight to their AdminCP profile) and the untruncated message. That detail
+dialog is usually the whole debugging session.
+
+The screen is gated on the `debug` staff module - `can_view` to open it,
+`can_clear_cache` for the button - and Hono re-checks that on every request, so
+hiding the menu entry is a courtesy rather than the boundary. See
+[staff permissions](/docs/dev/working-with-users/staff-permissions).
+
+<Callout
+  type="warn"
+  title="In production, the log is the only copy of the error"
+>
+  An unhandled error in a route is caught by the API's error handler, written to
+  the system log as `Unhandled error: …`, and answered to the browser as the
+  string `Internal Server Error` with no detail at all. In development the same
+  handler returns the real message in the response body instead. So a 500 you
+  cannot reproduce locally is a 500 you read in the Debug Panel.
+</Callout>
+
+## Devtools in development
+
+The scaffold mounts a floating devtools button in the bottom-right corner of
+every page, with two panels behind it. It comes from two places, and both are in
+a generated app already:
+
+```ts title="vite.config.ts"
+import { devtools } from '@tanstack/devtools-vite'
+
+plugins: [
+  devtools(), // [!code ++]
+]
+```
+
+```tsx title="src/routes/__root.tsx"
+<body suppressHydrationWarning>
+  {children}
+
+  {import.meta.env.DEV ? ( // [!code ++]
+    <TanStackDevtools
+      config={{ position: 'bottom-right' }}
+      plugins={[
+        { name: 'TanStack Router', render: <TanStackRouterDevtoolsPanel /> },
+        { name: 'TanStack Query', render: <ReactQueryDevtoolsPanel /> },
+      ]}
+    />
+  ) : null}
+
+  <Scripts />
+</body>
+```
+
+That `import.meta.env.DEV` is why nothing ships to production: the whole block
+is compiled out of a `vite build`.
+
+| Panel               | Reach for it when                                                                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TanStack Router** | You want the matches for the current URL, each route's loader data, and what its `head` resolved to. The answer to "why is this page rendering that". |
+| **TanStack Query**  | A screen is showing stale data. Find the key, then find the mutation that should have invalidated it.                                                 |
+
+{/* Image prompt: A screenshot of a VitNode dev server at localhost:3000 with the TanStack Devtools panel open on the TanStack Query tab - a list of cached query keys down the left, one selected, its cached JSON and a fresh/stale badge in the detail pane on the right. Dark theme, 1440x900. */}
+
+Navigate around with the Query panel open and the shape of
+[data loading](/docs/dev/data-loading) becomes obvious: a route's loader warms
+its entries before React renders, and the screen reads the same ones back.
+
+<Callout type="info" title="Server-side requests are not in the panel">
+  A loader that runs during SSR runs in the Node process, so its output lands in
+  the terminal running `vite dev` - not in a browser panel. The Query panel
+  shows the entry once it is dehydrated into the page.
+</Callout>
 
 ## React Scan
 
-Ever wondered which components are secretly re-rendering and slowing down your app? Say hello to [React Scan](https://react-scan.com/)! This awesome feature shows you component re-renders in real-time, helping you catch performance bottlenecks before they catch you.
-
-Want to become a performance detective? Here's how to enable **React Scan**:
+[React Scan](https://react-scan.com/) draws an outline around every component as
+it re-renders, which turns "this page feels heavy" into a number. It is off by
+default; flip `debug` in the shell config:
 
 ```ts title="src/vitnode.shell.config.ts"
 export const vitNodeShellConfig = {
-  // [!code ++]
-  debug: true,
+  debug: true, // [!code ++]
   i18n,
   metadata: {
     shortTitle: 'VitNode',
@@ -25,34 +129,73 @@ export const vitNodeShellConfig = {
 } satisfies Omit<VitNodeConfig, 'plugins'>
 ```
 
-Just add that magical `debug` prop, and you're ready to hunt down those unnecessary re-renders! 🎯
+The provider loads `react-scan` lazily and only when `debug` is on **and**
+`NODE_ENV` is `development`, so leaving `debug: true` committed cannot leak the
+overlay into production. It is still worth turning back off - the outlines are
+distracting once you have your answer.
 
-## Fetch Detective
+Once you have found the culprit, [Performance](/docs/dev/performance) covers
+what to do about it.
 
-Want to know exactly what's happening with your API calls, your route loaders and
-your cache? The TanStack devtools are already mounted in a generated app - the
-floating badge in the corner of every page in development.
+## Where output goes
 
-`vite.config.ts` is where they come from:
+| Destination           | What arrives there                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| The `core_logs` table | Every `c.get('log')` call, with the request that made it. Read it in the Debug Panel.  |
+| The server's stdout   | The same lines, colour-coded and prefixed `[VitNode] Error (@your/plugin):`.           |
+| The browser console   | Client-side errors, and React Scan's own output.                                       |
+| The terminal          | Vite's dev-server output, plus anything a loader or server function logged during SSR. |
 
-```ts title="vite.config.ts"
-import { devtools } from '@tanstack/devtools-vite';
+There is no request logger, and no log-level switch: every level is written
+every time, to both the table and the console. If you want less noise, log less.
+[Logging](/docs/dev/debugging/logging) is the whole surface.
 
-plugins: [
-  // [!code ++]
-  devtools(),
-  // ...
-];
-```
+## Gotchas
 
-Open it and you get three panels worth knowing about:
+<Callout
+  type="warn"
+  title="Every log line is a database INSERT, and nothing prunes them"
+>
+  `c.get('log')` writes a row per call and no cron job deletes any of them, so a
+  `debug` line in a hot request path grows the table for as long as the
+  installation runs. Log events, not traffic.
+</Callout>
 
-- **Router** - every match for the current URL, each route's loader data, and
-  what its `head` resolved to.
-- **Query** - every cached query, whether it is fresh or stale, and what refetched
-  it. This is the one to reach for when a screen shows old data: find the key,
-  and the mutation that should have invalidated it.
-- **Pacer** - what is in flight right now.
+<Callout type="warn" title="Behind a proxy, every log line says 127.0.0.1">
+  The IP on a log row - and the rate-limit bucket - comes from the request's
+  `X-Forwarded-For` header, falling back to `127.0.0.1` when there is none. A
+  reverse proxy that does not set it makes every visitor look like the same one.
+  See the [reverse proxy step](/docs/dev/deployments/self-hosted).
+</Callout>
 
-Server-side requests show up in the terminal running `vite dev`, since that is
-the process making them.
+<Callout type="info" title="Clear Cache clears the front end, not Redis">
+  The button invalidates the TanStack Query cache and the router's loaders,
+  which is the front end's memory of the API. The API's own [Redis-backed
+  cache](/docs/dev/advanced/redis) is expired by the mutations that change the
+  data, not from this screen.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Logging"
+    description="Write to the system log from a route handler"
+    href="/docs/dev/debugging/logging"
+  />
+  <Card
+    title="Swagger"
+    description="Every endpoint the API serves, generated from its Zod schemas"
+    href="/docs/dev/swagger"
+  />
+  <Card
+    title="Queue"
+    description="Background tasks, attempts and failures"
+    href="/docs/dev/advanced/queue"
+  />
+  <Card
+    title="Performance"
+    description="What to do once you know what is slow"
+    href="/docs/dev/performance"
+  />
+</Cards>

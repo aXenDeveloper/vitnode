@@ -1,109 +1,97 @@
 ---
-title: Content Engine
-description: Declare a content type once in TypeScript and get a real Postgres table, Zod schemas, a typed service, CRUD routes, staff permissions, an AdminCP screen, and typed events.
+title: Content Engine Overview
+description: Declare a content type once in TypeScript and get a Postgres table, Zod schemas, CRUD routes, staff permissions, and AdminCP screens.
 icon: Boxes
 ---
 
-Writing CRUD boilerplate for plugins — Drizzle tables, Zod schemas, Hono routes, permissions, data tables, auto-forms, and events — takes a lot of time.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
-The **Content Engine** generates all of it from a single client-safe declaration:
+Content Engine eliminates boilerplate for structured data. From a single TypeScript definition, it automatically generates a PostgreSQL table, Zod validation schemas, Hono CRUD endpoints, staff permissions, and AdminCP data management screens.
 
-```ts title="src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content";
+## Quick start
 
-export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+### 1. Declare the Definition
+
+```ts title="plugins/blog/src/content/category.ts"
+import { defineContentType, field } from "@vitnode/core/content"
+
+export const categoryContentType = defineContentType({
+  id: "blog.category",
+  tableName: "blog_categories",
   fields: {
-    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    code: field.text({ required: true, maxLength: 100, unique: true }),
-    status: field.enum({ values: ["draft", "published"], defaultValue: "draft" }),
-    publishedAt: field.dateTime({ nullable: true }),
-    author: field.user(),
+    name: field.text({ required: true, minLength: 2, maxLength: 100 }),
+    slug: field.slug({ from: "name", required: true }),
   },
-  admin: {
-  },
-});
+})
 ```
-
-## What You Get
-
-A single definition gives you:
-- **Database Table**: Dedicated `example_articles` Postgres table with primary keys, indexes, and standard Drizzle migrations.
-- **Zod Schemas**: Pre-built schemas for create, update, select, filters, ordering, and forms.
-- **Typed Service**: Self-validating service methods (`findById`, `findMany`, `create`, `update`, `delete`).
-- **Staff Permissions**: Automatic staff permission checks (`can_view`, `can_create`, `can_edit`, `can_delete`, `can_publish`).
-- **Zero-Code AdminCP**: Fully interactive list, search, sorting, and form dialogs without writing Next.js pages.
-- **Typed Events**: `content.example.article.created`, `.updated`, and `.deleted` event hooks.
-
-## How the Three Files Fit Together
-
-Content Engine keeps definitions separate from database and UI logic so your browser bundle stays lightweight while backend APIs gain full access to Drizzle ORM:
-
-| File | Purpose | Why It's Separate |
-| :--- | :--- | :--- |
-| **`src/content/article.ts`** | Definition | **Client-Safe**. Imports `zod` only. Shared between browser and server without dragging Drizzle ORM to the client. |
-| **`src/database/articles.ts`** | Database Model | **Server-Only**. Calls `createContentModel` to generate raw Drizzle tables (`.table`) and typed CRUD service methods (`.service(c)`). |
-| **`src/config.tsx` & `src/api/`** | Integration | **App Registration**. Registers zero-code AdminCP management screens (`contentTypeAdmin`) and secure backend routes (`buildContentAdminModule`). |
 
 ---
 
-## Explore Content Engine
+### 2. Compile the Database Model
+
+```ts title="plugins/blog/src/database/categories.ts"
+import { createContentModel } from "@vitnode/core/content/server"
+import { categoryContentType } from "../content/category"
+
+export const categoryContent = createContentModel(categoryContentType)
+export const blog_categories = categoryContent.table
+```
+
+---
+
+### 3. Build & Migrate
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+PostgreSQL now contains your table, and AdminCP screens are ready at `/admin/content/blog/categories`.
+
+---
+
+## Generated Features
+
+| Layer | Output |
+| :--- | :--- |
+| **Database** | Drizzle schema table with foreign keys and index constraints |
+| **Validation** | Strongly typed Zod schemas for create, update, and filter operations |
+| **Hono API** | Complete CRUD endpoints with staff permission protection |
+| **AdminCP UI** | Data table with cursor pagination, sorting, search, and AutoForm dialogs |
+| **Events** | `content.{id}.created`, `content.{id}.updated`, and `content.{id}.deleted` |
+
+## Documentation Guides
 
 <Cards>
   <Card
-    href="/docs/dev/content-engine/defining-a-content-type"
     title="Defining a Content Type"
-    description="The three-file rule, model setup, plugin registration, and i18n."
+    description="Step-by-step tutorial creating models, API modules, and UI"
+    href="/docs/dev/content-engine/defining-a-content-type"
   />
   <Card
-    href="/docs/dev/content-engine/fields"
     title="Field Reference"
-    description="Text, numbers, enums, dates, users, slugs, relations, and structured fields."
+    description="Text, numbers, slugs, files, users, and relation fields"
+    href="/docs/dev/content-engine/fields"
   />
   <Card
-    href="/docs/dev/content-engine/database-and-migrations"
-    title="Database & Migrations"
-    description="How Drizzle Kit compiles models and manages schema migrations."
-  />
-  <Card
-    href="/docs/dev/content-engine/services-and-api"
-    title="Services & API"
-    description="Typed CRUD service methods, Zod schemas, permissions, and events."
-  />
-  <Card
-    href="/docs/dev/content-engine/publication-and-editorial"
-    title="Publication & Editorial"
-    description="Draft/published states, versioning, optimistic locks, revisions, and scheduling."
-  />
-  <Card
-    href="/docs/dev/content-engine/public-api-and-caching"
-    title="Public API & Caching"
-    description="Read-only public endpoints, search indexing, and SWR tag invalidation."
-  />
-  <Card
-    href="/docs/dev/content-engine/localization"
-    title="Localization & Translations"
-    description="Multi-language support, per-locale tables, translation services, and public routes."
-  />
-  <Card
+    title="Relations & Modeling"
+    description="Foreign keys, junction tables, and repeatable groups"
     href="/docs/dev/content-engine/relations-and-advanced-modeling"
-    title="Relations & Advanced Modeling"
-    description="1:N & N:M relations, relation pickers, JSON objects, and arrays."
   />
   <Card
-    href="/docs/dev/content-engine/content-delivery-and-seo"
-    title="Content Delivery & SEO"
-    description="Next.js App Router integration, slug history, 308 redirects, SEO meta, and sitemaps."
-  />
-  <Card
-    href="/docs/dev/content-engine/admincp"
     title="AdminCP Integration"
-    description="DataTable controls, form layout customization, and screen overrides."
-  />
-  <Card
-    href="/docs/dev/content-engine/production-and-security"
-    title="Production & Security"
-    description="Concurrency handling, failure retries, security, performance, and limitations."
+    description="Customize columns, search inputs, and form sections"
+    href="/docs/dev/content-engine/admincp"
   />
 </Cards>

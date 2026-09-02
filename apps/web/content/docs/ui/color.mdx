@@ -1,6 +1,7 @@
 ---
 title: Color
 description: Color picker field built on react-colorful that outputs an HSL string.
+icon: Palette
 ---
 
 ## Preview
@@ -9,7 +10,7 @@ description: Color picker field built on react-colorful that outputs an HSL stri
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
@@ -21,8 +22,8 @@ import { AutoFormColor } from "@vitnode/core/components/form/fields/color";
 
 ```ts
 const formSchema = z.object({
-  color: z.string().default("hsl(240, 80%, 60%)"),
-});
+  color: z.string().default('hsl(240, 80%, 60%)'),
+})
 ```
 
 ```tsx
@@ -30,8 +31,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "color",
-      component: props => <AutoFormColor {...props} label="Color" />,
+      id: 'color',
+      component: (props) => <AutoFormColor {...props} label="Color" />,
     },
   ]}
 />
@@ -48,9 +49,9 @@ The `ColorPicker` is controlled - pass the current `value` (an HSL string) and
 handle `onChange`, which receives the new HSL string:
 
 ```tsx
-const [color, setColor] = useState("hsl(240, 80%, 60%)");
+const [color, setColor] = useState('hsl(240, 80%, 60%)')
 
-<ColorPicker value={color} onChange={setColor} />;
+;<ColorPicker value={color} onChange={setColor} />
 ```
 
   </Tab>
@@ -67,31 +68,31 @@ const [color, setColor] = useState("hsl(240, 80%, 60%)");
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description: "The label displayed above the field.",
-      type: "string",
-      default: "",
+      description: 'The label displayed above the field.',
+      type: 'string',
+      default: '',
     },
     description: {
-      description: "A short description displayed below the field.",
-      type: "string",
-      default: "",
+      description: 'A short description displayed below the field.',
+      type: 'string',
+      default: '',
     },
     placeholder: {
       description:
-        "Text shown on the trigger button when no color is selected.",
-      type: "string",
-      default: "",
+        'Text shown on the trigger button when no color is selected.',
+      type: 'string',
+      default: '',
     },
     allowRemoveColor: {
       description:
         "Show a 'Remove' button in the picker to clear the value back to an empty string.",
-      type: "boolean",
-      default: "false",
+      type: 'boolean',
+      default: 'false',
     },
   }}
 />

@@ -1,19 +1,20 @@
 ---
 title: useMobile
 description: A custom hook to determine if the user is on a mobile device
+icon: Smartphone
 ---
 
 ## Example
 
 ```tsx
-import { useIsMobile } from '@vitnode/core/hooks/use-mobile';
+import { useIsMobile } from '@vitnode/core/hooks/use-mobile'
 ```
 
 ```tsx
-import { useIsMobile } from '@vitnode/core/hooks/use-mobile';
+import { useIsMobile } from '@vitnode/core/hooks/use-mobile'
 
 export const ExampleComponent = () => {
-  const isMobile = useIsMobile(); // [!code ++]
+  const isMobile = useIsMobile() // [!code ++]
 
   return (
     <div>
@@ -23,6 +24,6 @@ export const ExampleComponent = () => {
         <p>You are using a desktop device.</p>
       )}
     </div>
-  );
-};
+  )
+}
 ```

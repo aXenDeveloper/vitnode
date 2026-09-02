@@ -1,187 +1,126 @@
 ---
 title: Captcha
-description: Protect your forms and API call with captcha validation.
+description: Protect registration, password reset, and custom API routes against bots with Cloudflare Turnstile or Google reCAPTCHA v3.
+icon: ShieldCheck
 ---
 
-import captchaPreview from "./captcha_preview.png";
+import { ImgDocs } from "@/components/fumadocs/img"
+import { TypeTable } from "fumadocs-ui/components/type-table"
+import captchaPreview from "./captcha_preview.png"
 
-import { ImgDocs } from "@/components/fumadocs/img";
+VitNode provides built-in bot protection. When enabled in your API configuration, gated routes automatically demand and verify a challenge token before handler execution.
 
-<ImgDocs src={captchaPreview} alt="Captcha Preview" />
+## Quick start
 
-## Providers
+### 1. Configure Captcha in API Config
 
-VitNode supports multiple captcha providers. You can choose the one that fits your needs. Currently, we support:
+Add the `captcha` configuration to `apps/api/src/vitnode.api.config.ts`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:8]
+  captcha: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
+    ? {
+        type: "cloudflare_turnstile",
+        siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+        secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+      }
+    : undefined,
+})
+```
+
+Built-in user registration and password recovery routes are protected immediately:
+
+<ImgDocs
+  src={captchaPreview}
+  alt="Cloudflare Turnstile widget showing success checkmark on VitNode sign-up form"
+/>
+
+---
+
+### 2. Protect Custom API Routes
+
+Enable captcha verification on any custom Hono endpoint with `withCaptcha: true`:
+
+```ts title="plugins/blog/src/api/modules/comments/routes/create.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route"
+
+export const createCommentRoute = buildRoute({
+  pluginId: "blog",
+  withCaptcha: true, // [!code ++]
+  route: {
+    method: "post",
+    path: "/",
+    responses: { 201: { description: "Comment created" } },
+  },
+  handler: async (c) => {
+    // Execution only reaches here if the captcha token is valid
+  },
+})
+```
+
+---
+
+### 3. Render the Frontend Widget
+
+Include `<Captcha />` in your form and supply the received token to `fetcherClient`:
+
+```tsx title="plugins/blog/src/views/comment-form.tsx"
+import { Captcha } from "@vitnode/core/components/captcha"
+import { fetcherClient } from "@vitnode/core/lib/fetcher-client"
+
+export const CommentForm = () => {
+  const [captchaToken, setCaptchaToken] = React.useState<string>()
+
+  const handleSubmit = async () => {
+    await fetcherClient(commentsModule, {
+      method: "post",
+      path: "/",
+      captchaToken, // [!code ++]
+      body: { text: "Nice article!" },
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <textarea />
+      <Captcha onVerify={setCaptchaToken} />
+      <button disabled={!captchaToken}>Submit Comment</button>
+    </form>
+  )
+}
+```
+
+---
+
+## Supported Providers
 
 <Cards>
   <Card
     title="Cloudflare Turnstile"
-    description="By Cloudflare"
+    description="Privacy-friendly visible widget with dummy test keys for local dev"
     href="/docs/dev/captcha/cloudflare"
   />
   <Card
-    title="reCAPTCHA v3"
-    description="By Google"
+    title="Google reCAPTCHA v3"
+    description="Invisible background score verification (0.5 default threshold)"
     href="/docs/dev/captcha/recaptcha"
   />
 </Cards>
 
-If you need more providers, feel free to open a **Feature Request** on our [GitHub repository](https://github.com/aXenDeveloper/vitnode/issues) :)
+## Learn More
 
-## Usage
-
-In this example, we will show you how to use captcha in your forms. We will use the `AutoForm` component to render the form and handle the captcha validation.
-
-<Steps>
-<Step>
-
-### Activate captcha in route
-
-Add `withCaptcha` to your route config to enable captcha validation for this route.
-
-```ts title="plugins/{plugin_name}/src/routes/example.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
-
-export const exampleRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  route: {
-    method: "post",
-    description: "Create a new user",
-    path: "/sign_up",
-    withCaptcha: true, // [!code ++]
-  },
-  handler: async c => {},
-});
-```
-
-</Step>
-<Step>
-
-### Get config from middleware API
-
-Get captcha config from middleware API in your view and pass it to your `'use client';` component.
-
-```tsx title="plugins/{plugin_name}/src/app/sing_up/page.tsx"
-import { getMiddlewareApi } from "@vitnode/core/lib/api/get-middleware-api"; // [!code ++]
-
-export const SignUpView = async () => {
-  const { captcha } = await getMiddlewareApi(); // [!code ++]
-
-  return <FormSignUp captcha={captcha} />;
-};
-```
-
-</Step>
-<Step>
-
-### Use in form
-
-Get the `captcha` config from the props and pass it to the `AutoForm` component. This will render the captcha widget in your form.
-
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/sign-up.tsx"
-"use client";
-
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-
-export const FormSignUp = ({
-  captcha, // [!code ++]
-}: {
-  captcha: z.infer<typeof routeMiddlewareSchema>["captcha"]; // [!code ++]
-}) => {
-  return (
-    <AutoForm<typeof formSchema>
-      captcha={captcha} // [!code ++]
-      fields={[]}
-      formSchema={formSchema}
-    />
-  );
-};
-```
-
-<Card
-  title="AutoForm"
-  description="Lear more about the AutoForm component and how to use it."
-  href="/docs/ui/auto-form"
-/>
-
-</Step>
-<Step>
-
-### Submit form with captcha
-
-In your form submission handler, you can get the `captchaToken` from the form submission context and pass it to your mutation API.
-
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/sign-up.tsx"
-"use client";
-
-import {
-  AutoForm,
-  type AutoFormOnSubmit, // [!code ++]
-} from "@vitnode/core/components/form/auto-form";
-
-export const FormSignUp = ({
-  captcha,
-}: {
-  captcha: z.infer<typeof routeMiddlewareSchema>["captcha"];
-}) => {
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
-    values,
-    form,
-    { captchaToken }, // [!code ++]
-  ) => {
-    // Call your mutation API with captcha token
-    await mutationApi({
-      ...values,
-      captchaToken, // [!code ++]
-    });
-
-    // Handle success or error
-  };
-
-  return (
-    <AutoForm<typeof formSchema>
-      captcha={captcha}
-      fields={[]}
-      onSubmit={onSubmit} // [!code ++]
-      formSchema={formSchema}
-    />
-  );
-};
-```
-
-Next, you need to set `captchaToken` in your mutation API call. This token is provided by the `AutoForm` component when the form is submitted.
-
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/mutation-api.server.ts"
-"use server";
-
-import type { z } from "zod";
-
-import { fetcher } from "@vitnode/core/lib/fetcher";
-
-export const mutationApi = async ({
-  captchaToken, // [!code ++]
-  ...input
-}: // [!code ++]
-z.infer<typeof zodSignUpSchema> & { captchaToken: string }) => {
-  const res = await fetcher(usersModule, {
-    path: "/sign_up",
-    method: "post",
-    module: "users",
-    captchaToken, // [!code ++]
-    args: {
-      body: input,
-    },
-  });
-
-  if (res.status !== 201) {
-    return { error: await res.text() };
-  }
-
-  const data = await res.json();
-
-  return { data };
-};
-```
-
-</Step>
-</Steps>
+<Cards>
+  <Card
+    title="Rate Limiter"
+    description="Limit IP request rates and defend against brute-force attacks"
+    href="/docs/dev/advanced/rate-limiter"
+  />
+  <Card
+    title="Fetcher Client"
+    description="Type-safe API client with automatic captcha token handling"
+    href="/docs/dev/fetcher"
+  />
+</Cards>

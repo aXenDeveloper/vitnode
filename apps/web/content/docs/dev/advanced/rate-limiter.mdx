@@ -1,57 +1,99 @@
 ---
 title: Rate Limiter
-description: Stop brute-force attacks and abuse with rate limiting.
+description: Restrict API request rates per client IP, return 429 responses with Retry-After headers, and share counters across clusters with Redis.
+icon: ShieldAlert
 ---
 
-Rate limiting is a powerful feature that helps protect your API from abuse and brute-force attacks. It allows you to limit the number of requests a client can make within a specified time frame.
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## Usage
+VitNode includes automated IP-based rate limiting middleware. Exceeding the request budget immediately returns `429 Too Many Requests` with a `Retry-After` header, protecting authentication and public endpoints from brute-force attacks.
 
-```ts title="src/vitnode.api.config.ts"
+## Quick start
+
+Customize the rate limiter budget in `apps/api/src/vitnode.api.config.ts`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
 export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:4]
   rateLimiter: {
-    points: 40,
-    duration: 60,
+    points: 60, // Max requests allowed
+    duration: 60, // Window in seconds
   },
-});
+})
 ```
 
-### Options
+The default configuration allows **80 requests per 60 seconds** per IP address.
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+<Callout type="info" title="Disabled in development">
+  Rate limiting is automatically bypassed when `NODE_ENV=development` to prevent interruptions during local coding.
+</Callout>
+
+---
+
+## 429 Error Response Format
+
+When a client exhausts their request allowance, the API returns a structured JSON error:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 24
+Content-Type: application/json
+
+{
+  "error": "Too Many Requests",
+  "retryAfter": 24
+}
+```
+
+---
+
+## Distributed Rate Limiting (Redis)
+
+- **Without Redis**: Counters are tracked in local memory per server instance.
+- **With Redis**: Counters are synchronized across all API containers using a distributed sliding window.
+
+Configure Redis in `vitnode.api.config.ts`:
+
+```ts
+export const vitNodeApiConfig = buildApiConfig({
+  redis: process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
+    : undefined,
+})
+```
+
+---
+
+## `rateLimiter` Options
 
 <TypeTable
   type={{
     points: {
-      description:
-        'The number of requests allowed within the specified duration.',
-      type: 'number',
-      default: '80 (120 in dev)',
+      default: "80",
+      description: "Total number of request points allowed within the duration window.",
+      type: "number",
     },
     duration: {
-      description:
-        'The time window in seconds during which the requests are counted.',
-      type: 'number',
-      default: '60',
-    },
-    execEvenly: {
-      description:
-        'If true, the requests are distributed evenly over the duration. If false, the requests are counted in a sliding window.',
-      type: 'boolean',
-      default: 'false',
-    },
-    execEvenlyMinDelayMs: {
-      description:
-        'The minimum delay in milliseconds between requests when execEvenly is true.',
-      type: 'number',
-      default: 'duration * 1000 / points',
-    },
-    blockDuration: {
-      description:
-        'The duration in seconds for which the client is blocked after exceeding the rate limit.',
-      type: 'number',
-      default: '0',
+      default: "60",
+      description: "Window length in seconds before points reset.",
+      type: "number",
     },
   }}
 />
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Redis"
+    description="Setup Redis for distributed caching and clustering"
+    href="/docs/dev/advanced/redis"
+  />
+  <Card
+    title="Captcha"
+    description="Bot protection on sign-up and password reset forms"
+    href="/docs/dev/captcha"
+  />
+</Cards>

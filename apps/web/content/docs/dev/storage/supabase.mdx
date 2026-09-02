@@ -1,44 +1,25 @@
 ---
 title: Supabase Storage
-description: Store uploads in a Supabase Storage bucket.
+description: Store VitNode uploads in a Supabase Storage bucket with @vitnode/supabase-storage - a secret key, a bucket name and one adapter call.
+icon: CloudUpload
 ---
 
-| Cloud        | Self-Hosted  | Links                                                             |
-| ------------ | ------------ | ----------------------------------------------------------------- |
-| ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@supabase/storage-js) |
+`@vitnode/supabase-storage` puts your uploads in a bucket on your Supabase
+project. If Supabase is already your database, this is the shortest path off the
+local disk: no IAM policy, no endpoint, three values and you are done.
 
-## Usage
+| Cloud        | Self-hosted  | Package                                                                                |
+| :----------- | :----------- | :------------------------------------------------------------------------------------- |
+| ✅ Supported | ✅ Supported | [`@vitnode/supabase-storage`](https://www.npmjs.com/package/@vitnode/supabase-storage) |
 
-<Steps>
-<Step>
-### Installation
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+## Quick start
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
-
-```bash tab="bun"
-bun i @vitnode/supabase-storage -D
-```
-
-```bash tab="pnpm"
-pnpm i @vitnode/supabase-storage -D
-```
-
-```bash tab="npm"
-npm i @vitnode/supabase-storage -D
-```
-
-</Tabs>
-
-</Step>
-<Step>
-### Import the adapter
-
-```ts title="vitnode.api.config.ts"
-// [!code ++]
-import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+```ts title="src/vitnode.api.config.ts"
+import { SupabaseStorageAdapter } from '@vitnode/supabase-storage' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   storage: {
@@ -49,16 +30,85 @@ export const vitNodeApiConfig = buildApiConfig({
       bucket: process.env.SUPABASE_STORAGE_BUCKET,
     }),
   },
-});
+})
 ```
+
+## Set it up
+
+<Steps>
+<Step>
+
+### Install the adapter
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun i @vitnode/supabase-storage
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/supabase-storage
+```
+
+```bash tab="npm"
+npm i @vitnode/supabase-storage
+```
+
+</Tabs>
+
+A runtime dependency of the app that serves your API, not a dev dependency - the
+API imports it on every boot. `@supabase/storage-js` comes with it, so there is
+nothing else to add.
 
 </Step>
 <Step>
-### Environment variables
 
-A **secret key** (`sb_secret_…`) is required so the server can write to the
-bucket. Keep it secret - never expose it to the client. Create one under
-**Project Settings → API Keys**.
+### Create the bucket
+
+In the Supabase dashboard, open **Storage → Buckets → New bucket**, give it a
+name and turn **Public bucket** on. Public is not optional here for anything a
+visitor has to see: VitNode serves files by URL, and so do the built-in download
+routes - see [the private-bucket gotcha](#gotchas) below.
+
+{/* Image prompt: The Supabase dashboard "New bucket" panel open over the Storage → Buckets list, with a bucket name typed in, the "Public bucket" toggle switched on, and the collapsed "Additional configuration" section showing file size limit and allowed MIME types. Dark theme, 1440x900. */}
+
+Leave the bucket's own **file size limit** and **allowed MIME types** generous
+and enforce your real limits in your route with `maxBytes` and
+`allowedMimeTypes` - the bucket rejects a file with a Supabase error, your route
+rejects it with a sentence somebody can act on.
+
+</Step>
+<Step>
+
+### Copy the secret key
+
+Open **Project Settings → API Keys** and copy a **secret key** - the value
+starting `sb_secret_`. That is the modern replacement for the legacy
+`service_role` key; a still-valid legacy key works too, because the adapter sends
+whatever you give it verbatim as the `apikey` and `Authorization: Bearer` header.
+
+{/* Image prompt: The Supabase dashboard Project Settings → API Keys page, showing the publishable key in full and a secret key row with its value masked behind a "Reveal" control and a copy button. Light theme, 1440x900. */}
+
+<Callout type="error" title="A secret key is a server-only key">
+  It bypasses row level security, which is exactly why the API can write to the
+  bucket. Never put it in client code, a `VITE_*` variable or anything else that
+  reaches a browser: a secret key that ships to a visitor is a secret key you
+  have to rotate.
+</Callout>
+
+</Step>
+<Step>
+
+### Put the credentials in the environment
+
+The adapter takes plain arguments, so the names are yours. These are the ones the
+API configs in this repository read, and the ones the snippets here use:
+
+| Variable                  | Required | What it is for                                                                             |
+| :------------------------ | :------- | :----------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`            | Yes      | Project URL, e.g. `https://abcdefgh.supabase.co`. The adapter appends `/storage/v1` itself |
+| `SUPABASE_SECRET_KEY`     | Yes      | The `sb_secret_…` key. Server-side only                                                    |
+| `SUPABASE_STORAGE_BUCKET` | Yes      | Bucket name, exactly as you created it                                                     |
 
 ```bash title=".env"
 SUPABASE_URL=https://your-project.supabase.co
@@ -66,32 +116,132 @@ SUPABASE_SECRET_KEY=sb_secret_...
 SUPABASE_STORAGE_BUCKET=your-bucket
 ```
 
-<Callout type="warn" title="Public bucket for public URLs">
-  `getUrl` returns the bucket's public URL. Make the bucket public (or serve
-  through a CDN) if you want the returned URLs to be directly accessible.
-</Callout>
+Miss any one of the three and the first upload throws
+`Missing Supabase Storage configuration` - the client is created lazily, so a
+typo waits for a file rather than failing at boot.
+
+</Step>
+<Step>
+
+### Register the adapter
+
+```ts title="src/vitnode.api.config.ts"
+import { SupabaseStorageAdapter } from '@vitnode/supabase-storage' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    // [!code ++:5]
+    adapter: SupabaseStorageAdapter({
+      url: process.env.SUPABASE_URL,
+      secretKey: process.env.SUPABASE_SECRET_KEY,
+      bucket: process.env.SUPABASE_STORAGE_BUCKET,
+    }),
+    image: {
+      quality: 85,
+    },
+  },
+})
+```
+
+That is the config `apps/web` in this repository actually runs, image pipeline
+included.
+
+</Step>
+<Step>
+
+### Upload a test file
+
+Open **AdminCP → Core → System → Integrations** (`/admin/core/system/integrations`).
+The Storage card now reads active; click **Test storage** and upload an image.
+
+On success the object appears in the bucket under
+`month_{month}_{year}/admin-storage-test/…`, and the row appears in
+**AdminCP → Core → System → Files** with its size and pixel dimensions - proof
+that both the object and its `core_files` row were written. On failure the API log
+carries the Supabase error, and the two usual suspects are a bucket name that does
+not exist and a key pasted with its `sb_secret_` prefix trimmed.
 
 </Step>
 </Steps>
 
-## Options
+## How the public URL is built
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+`getUrl` asks `@supabase/storage-js` for the bucket's public URL, which is a
+string it builds rather than a request it makes:
+
+```txt
+{SUPABASE_URL}/storage/v1/object/public/{bucket}/{key}
+```
+
+So every file URL in the installation is that shape, and on a private bucket
+Supabase's object API refuses it rather than serving the file - which is why
+public matters more here than it looks.
+
+## Options
 
 <TypeTable
   type={{
     url: {
-      description: "Your Supabase project URL.",
-      type: "string",
+      description:
+        'Your Supabase project URL. A trailing slash is trimmed and `/storage/v1` is appended.',
+      type: 'string',
+      required: true,
     },
     secretKey: {
       description:
-        "Supabase secret key `sb_secret_…` (server-side only). Replaces the legacy service role key.",
-      type: "string",
+        'Supabase secret key `sb_secret_…` (server-side only). Replaces the legacy service role key, and sent as both the `apikey` and `Authorization` header.',
+      type: 'string',
+      required: true,
     },
     bucket: {
-      description: "Storage bucket name.",
-      type: "string",
+      description: 'Storage bucket name.',
+      type: 'string',
+      required: true,
     },
   }}
 />
+
+## Gotchas
+
+<Callout type="warn" title="A private bucket breaks previews and downloads">
+  `getUrl` returns the bucket's public URL, and the built-in download routes
+  fetch that URL server-side before re-streaming it. On a private bucket
+  Supabase refuses that URL, so the thumbnails in the AdminCP Files table never
+  load and both download routes turn the refused fetch into a `404`. Make the
+  bucket public, or front it with a CDN.
+</Callout>
+
+<Callout type="warn" title="The bucket's own limits answer with a 500">
+  A bucket configured with a file size limit or an allowed-MIME-type list
+  rejects the upload inside Supabase, and that error is not an `HTTPException` -
+  so it reaches the browser as a `500` with the useful sentence in the API log.
+  Set `maxBytes` and `allowedMimeTypes` on your `upload()` call so the refusal
+  happens in VitNode, where the message is written for a person.
+</Callout>
+
+<Callout type="info" title="Uploads upsert">
+  The adapter uploads with `upsert: true`, so writing to an existing key
+  replaces it instead of failing. Keys carry a UUID, so this is not a collision
+  risk - it is what makes a retried upload idempotent rather than a duplicate.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Storage overview"
+    description="upload(), keys, image optimization and deletes."
+    href="/docs/dev/storage"
+  />
+  <Card
+    title="AWS S3 / Cloudflare R2"
+    description="The other managed option, and anything S3-compatible."
+    href="/docs/dev/storage/s3-r2"
+  />
+  <Card
+    title="Custom adapter"
+    description="Implement StorageApiPlugin and store files anywhere."
+    href="/docs/dev/storage/custom-adapter"
+  />
+</Cards>

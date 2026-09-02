@@ -1,78 +1,209 @@
 ---
-title: REST API
-description: Run cron jobs by triggering REST API endpoints from an external scheduler.
+title: Cron over REST
+description: Trigger VitNode's cron endpoint from an external scheduler - the URL, the CRON_SECRET bearer token, a curl call, and what the response means.
+icon: Webhook
 ---
 
-This method lets you use external services to manage and run your cron jobs through simple HTTP requests. It's flexible and works with many providers, so you can pick the scheduling tool that best fits your infrastructure.
+Every cron run in VitNode is one HTTP request, so the simplest adapter is no
+adapter at all: point something at the endpoint once a minute. That something can
+be GitHub Actions, a managed scheduler, a Kubernetes `CronJob` or a systemd
+timer. Because it lives outside your app, this is also the only option that works
+on serverless hosting, where nothing stays alive long enough to hold a timer.
 
-| Cloud        | Self-Hosted  |
-| ------------ | ------------ |
-| ✅ Supported | ✅ Supported |
+| Cloud (serverless) | Self-hosted  |
+| ------------------ | ------------ |
+| ✅ Supported       | ✅ Supported |
+
+## Quick start
+
+```bash
+curl -X POST https://example.com/api/@vitnode/core/cron \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+```text
+Cron jobs processed. Executed 2 jobs.
+```
+
+Both headers are load-bearing. The `Authorization` one is the endpoint's only
+auth; the `Content-Type` one gets you past CSRF protection, which treats a
+`POST` with no content type as a form submission and answers `403 Forbidden`.
+
+## Set it up
 
 <Steps>
 <Step>
-## Add a Secret Key
 
-Define a secret key that will be required for authentication when calling your cron endpoint.
+### Set a real CRON_SECRET
 
-Add it to your `.env` file:
+The endpoint compares the bearer token against `CRON_SECRET` and refuses
+anything else with a `403`. Leave the variable unset and VitNode falls back to
+`default-cron-secret-change-in-production` - a value published in this
+documentation, which makes the endpoint effectively open to anyone who can guess
+your domain.
 
 ```bash title=".env"
-CRON_SECRET=your_secret_key
+CRON_SECRET=b7c1f0e2d9a84c53b6e1f7a02d48c9e5
 ```
 
-<Callout>
-  We recommend using a random string of at least **16 characters** for better
-  security.
+<Callout
+  type="warn"
+  title="This is the one secret an external scheduler carries"
+>
+  Use at least 16 random characters, and store it in your scheduler as a secret
+  rather than in a URL. Do not expect the AdminCP to nag you about it: the
+  Integrations screen only reports the default secret once a `cron` adapter is
+  registered in the API config, and an external scheduler registers none - so
+  the cron card there says "No cron adapter configured" and stops. On this
+  deployment shape, remembering the secret is on you.
 </Callout>
 
 </Step>
 <Step>
 
-## Configure an External Scheduler
+### Point a scheduler at the endpoint
 
-Next, configure a scheduler that will send HTTP requests to your cron endpoint. Most modern platforms allow you to set up scheduled jobs that call URLs at defined intervals. Some popular options include:
+Once a minute, whatever the schedules on your jobs say. The endpoint runs what is
+due _at the moment it is called_, so the tick interval is the finest resolution
+any job can have - and core's own `process-queue` job is `* * * * *`, so a
+slower tick means [queue tasks](/docs/dev/advanced/queue) sit around waiting.
 
-- [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs/quickstart)
-- [GitHub Actions](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
-- [AWS Lambda with CloudWatch Events](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html)
-- [Google Cloud Functions with Cloud Scheduler](https://cloud.google.com/scheduler/docs/tut-pub-sub)
-- [EasyCron](https://www.easycron.com/)
+Your scheduler needs three things, and this is where providers differ:
 
-<Callout type="warn" title="Run Frequency">
-  You need to set schedule for every minute to ensure that your cron jobs are
-  executed on time. Some schedulers may have limitations on minimum intervals,
-  so choose one that fits your needs.
-</Callout>
+| Requirement                     | Why                                                        |
+| ------------------------------- | ---------------------------------------------------------- |
+| `POST`                          | the route declares `method: "post"` and nothing else       |
+| a custom `Authorization` header | the bearer token is the whole of the auth                  |
+| a custom `Content-Type` header  | `application/json`, or CSRF protection rejects the request |
 
-<Callout type="error" title="Authentication Required">
-  Make sure to include the `Authorization` header with the value `Bearer{" "}
-  {your_key}` in your requests, where `{your_key}` is the value of the
-  `CRON_SECRET` variable you set in your `.env` file.
-</Callout>
+{/* Image prompt: A generic external cron scheduler's "new job" form, light theme, 1200x800, showing the four fields a reader has to fill in: URL set to https://example.com/api/@vitnode/core/cron, method dropdown set to POST, a schedule field reading "every minute", and a custom-headers table with two rows - "Content-Type: application/json" and "Authorization: Bearer ***". No real vendor branding. */}
 
-</Step>
+A GitHub Actions workflow is the version with no account to create:
 
-<Step>
+```yaml title=".github/workflows/cron.yml"
+name: VitNode cron
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
-## Example Request
-
-Here's an example of how to set up a cron job that runs every minute using `curl`:
-
-```bash title="cURL Example"
-curl -X POST https://your-domain.com/api/cron \
-  -H "Authorization {{your_key}}"
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl --fail-with-body -X POST "$API_URL/api/@vitnode/core/cron" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CRON_SECRET"
+        env:
+          API_URL: ${{ vars.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
 ```
 
-Replace `https://your-domain.com/api/cron` with your actual domain and `{{your_key}}` with the secret key you defined earlier.
+Five minutes, not one: GitHub's shortest schedule interval is five minutes, and
+runs on a busy shared queue are often later than that. It is a fine way to keep
+daily jobs honest and a poor way to drain a queue.
 
 </Step>
 <Step>
 
-## Check Your Cron Jobs
+### Verify it from the AdminCP
 
-You can check your cron jobs in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
+Send the request by hand once. A `200` with a job count means the endpoint
+accepted you; open `/admin/core/advanced/cron` and the rows you expected to run
+now show a **Last Run** of a moment ago.
+
+Then leave the scheduler to it and check back. **Last Run** drifting behind a
+job's schedule is the symptom of a tick that is not arriving, and it is the only
+signal that reflects an external scheduler - see the gotcha about the
+Integrations screen below.
 
 </Step>
-
 </Steps>
+
+## Endpoint reference
+
+| Property         | Value                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| Method           | `POST`                                                                                                       |
+| Path             | `/api/@vitnode/core/cron`                                                                                    |
+| Auth             | `Authorization: Bearer $CRON_SECRET` - the prefix is stripped before comparing, so a bare secret matches too |
+| Body             | none                                                                                                         |
+| Calling it twice | safe: the second call runs only what has become due since the first                                          |
+
+| Response | Body                                    | Means                                                                                               |
+| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `200`    | `Cron jobs processed. Executed N jobs.` | the tick completed; `N` counts the jobs whose handler did **not** throw                             |
+| `403`    | `Forbidden`                             | CSRF: a `POST` whose content type is missing, `text/plain` or a form type, with no trusted `Origin` |
+| `403`    | `Invalid cron authorization`            | the bearer token does not match `CRON_SECRET`                                                       |
+| `500`    | `Error processing cron jobs`            | the bookkeeping itself failed - usually the database                                                |
+
+## Gotchas
+
+<Callout type="warn" title="Vercel Cron Jobs cannot call this endpoint">
+  Vercel triggers a cron path with a `GET`; this route only answers `POST`, so a
+  `vercel.json` entry pointed straight at it never runs a job. Use a scheduler
+  that can send a `POST` with headers - the [Vercel deployment
+  guide](/docs/dev/deployments/cloud/vercel) says the same thing from the other
+  side.
+</Callout>
+
+<Callout type="warn" title="A 200 does not mean every job succeeded">
+  A handler that throws is logged and skipped - the tick still answers `200`,
+  and the failed job is simply missing from the count. Worse, its `lastRun` is
+  not written, so it is due again on the next tick. Read the failures in the
+  [Debug Panel](/docs/dev/debugging/logging); the response only tells you the
+  endpoint was reached.
+</Callout>
+
+<Callout type="warn" title="Ticking from two places doubles the ticks">
+  An external scheduler and the [Node CRON adapter](/docs/dev/cron/node-cron)
+  are alternatives, not layers. Configure both and two callers race for the same
+  due jobs, which is the situation [idempotent
+  handlers](/docs/dev/cron#jobs-must-be-idempotent) exist for.
+</Callout>
+
+<Callout type="warn" title="The Integrations screen still calls cron inactive">
+  `/admin/core/system/integrations` reports cron as active when the API config
+  registers a `cron` adapter - it is reading the config, not counting ticks.
+  Tick from outside and that card stays grey however healthy the schedule is,
+  and the queue card with it, because the queue's status is derived from cron's.
+  The honest signal for an external scheduler is the **Last Run** column on
+  `/admin/core/advanced/cron`.
+</Callout>
+
+<Callout
+  type="info"
+  title="The endpoint is public in the sense that it answers"
+>
+  There is no allowlist and no signature - a correct bearer token is the whole
+  gate, and the route is mounted on your public API alongside everything else.
+  If your platform can restrict the path to your scheduler's egress addresses,
+  that is a second lock worth having.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Declare a cron job"
+    href="/docs/dev/cron"
+    description="buildCron, where jobs are registered, and the operational rules that come with a scheduler."
+  />
+  <Card
+    title="Node CRON adapter"
+    href="/docs/dev/cron/node-cron"
+    description="The in-process alternative for a long-lived server: one package, no external scheduler."
+  />
+  <Card
+    title="Queue tasks"
+    href="/docs/dev/advanced/queue"
+    description="One-off background work with retries, drained by the process-queue job on every tick."
+  />
+  <Card
+    title="Self-hosted deployment"
+    href="/docs/dev/deployments/self-hosted"
+    description="Where to put the secret, and what else a long-running VitNode process needs."
+  />
+</Cards>

@@ -1,90 +1,285 @@
 ---
 title: Cloudflare Turnstile
-description: How to integrate Cloudflare Turnstile in your application.
+description: Protect VitNode sign-up and password reset with Cloudflare Turnstile - create a widget, copy both keys, and test locally with the dummy keys.
+icon: Cloud
 ---
 
-<Steps>
+Turnstile is the provider to reach for first: a visible widget, no score to
+tune, and a set of dummy keys that work on `localhost`. There is nothing to
+install - the provider lives in core - so the whole job is two keys and one
+config block.
 
-<Step>
+import { ImgDocs } from '@/components/fumadocs/img'
 
-## Sign in to Cloudflare
+import captchaPreview from './captcha_preview.png'
+import turnstileSidebar from './cloudflare.png'
 
-Go into [Cloudflare](https://dash.cloudflare.com/) and sign in.
+## Quick start
 
-</Step>
+If you already have a site key and a secret key, this is the entire
+integration.
 
-<Step>
-
-## Add a domain
-
-Select `Add a domain` button and add your domain.
-
-Follow the instructions to add your domain. If you have any trouble, you can check the [Cloudflare documentation](https://developers.cloudflare.com/fundamentals/setup/manage-domains/add-site/).
-
-</Step>
-
-<Step>
-
-## Create a widget
-
-Go to the `Turnstile` section and create a new widget.
-
-import homeTurnstile from './cloudflare.png';
-
-import { ImgDocs } from '@/components/fumadocs/img';
-
-<ImgDocs src={homeTurnstile} alt="Cloudflare Turnstile Home" />
-
-</Step>
-
-<Step>
-
-## Configure the widget
-
-Configure the widget to your needs. We support all the mods that Cloudflare provides like `Managed`, `Non-interactive` and `Invisible`.
-
-Remember to add your hostname to the `Hostname Management` list.
-
-</Step>
-
-<Step>
-
-## Get the Site Key & Secret Key
-
-After you create the widget, you will get the `Site Key` and `Secret Key`. Save it, You will need these keys to integrate the widget into your application.
-
-</Step>
-
-<Step>
-
-## Add keys to .env
-
-Add the keys to your `.env` file.
-
-```bash
-CLOUDFLARE_TURNSTILE_SITE_KEY=XXX
-CLOUDFLARE_TURNSTILE_SECRET_KEY=XXX
+```bash title=".env"
+CLOUDFLARE_TURNSTILE_SITE_KEY=0x4AAAAAAA...
+CLOUDFLARE_TURNSTILE_SECRET_KEY=0x4AAAAAAA...
 ```
 
-</Step>
-
-<Step>
-
-## Provide keys to VitNode
-
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config';
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
   // [!code ++:5]
   captcha: {
     type: 'cloudflare_turnstile',
     siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
     secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
   },
-});
+})
+```
+
+Restart the API and the widget appears on `/register`, and on
+`/login/reset-password` on a deployment that has an
+[email adapter](/docs/dev/email) to send the link with. The rest of this page is
+how to get those two values.
+
+<Callout type="warn" title="Do not ship this block without both keys">
+
+An empty `secretKey` does not disable captcha - it breaks it. `captchaMiddleware`
+steps aside only when the whole `captcha` block is missing, so a deployment with
+the block and no keys **rejects** registration and password reset with `400`.
+Gate the block on the environment variable:
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:7]
+  captcha: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
+    ? {
+        type: 'cloudflare_turnstile',
+        siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+        secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+      }
+    : undefined,
+})
+```
+
+</Callout>
+
+## Create the widget
+
+<Steps>
+<Step>
+
+### Sign in to Cloudflare
+
+Open the [Cloudflare dashboard](https://dash.cloudflare.com/) and sign in.
+
+Turnstile is an independent product - Cloudflare's own words are that you can
+use it "on any website, regardless of whether it is proxied through the
+Cloudflare network" - so there is no DNS to move before you start.
+
+</Step>
+<Step>
+
+### Open Turnstile
+
+Pick **Turnstile** in the account sidebar, below **WAF**.
+
+<ImgDocs
+  src={turnstileSidebar}
+  alt="The Cloudflare account sidebar with the Turnstile entry outlined in red, below WAF and above Load Balancing"
+/>
+
+</Step>
+<Step>
+
+### Add a widget
+
+Press **Add widget** and fill in three things, then **Create**:
+
+| Field                   | What to put in it                                                        |
+| ----------------------- | ------------------------------------------------------------------------ |
+| **Widget name**         | Anything - it is internal. Your site's name is a fine answer.            |
+| **Hostname management** | Every hostname you serve the form from, e.g. `your-domain.com`.          |
+| **Widget mode**         | **Managed** unless you have a reason. All three modes work with VitNode. |
+
+{/* Image prompt: The Cloudflare Turnstile "Add widget" form filled in with a widget name, one entry under Hostname management, and the "Managed" widget mode option selected out of Managed / Non-Interactive / Invisible, light theme, 1100x700. */}
+
+</Step>
+<Step>
+
+### Copy the site key and the secret key
+
+Cloudflare shows both immediately after the widget is created, and you can come
+back to them from the widget's **Settings** tab at any time.
+
+The **site key** is public - the API publishes it so the browser can load the
+widget. The **secret key** is not: it is only ever sent from your API to
+Cloudflare's `siteverify` endpoint.
+
+{/* Image prompt: The Cloudflare Turnstile widget detail page showing the "Site Key" and "Secret Key" fields with copy buttons, values partially redacted, light theme, 1100x500. */}
+
+</Step>
+<Step>
+
+### Set the environment variables
+
+These names are not magic - they are whatever you read in your config on the
+next step. What matters is that both are server-side variables, because the
+secret key must never reach a browser bundle.
+
+```bash title=".env"
+CLOUDFLARE_TURNSTILE_SITE_KEY=0x4AAAAAAA... # [!code ++]
+CLOUDFLARE_TURNSTILE_SECRET_KEY=0x4AAAAAAA... # [!code ++]
 ```
 
 </Step>
+<Step>
 
+### Register the provider
+
+Add the `captcha` block to your API config with `type: 'cloudflare_turnstile'`.
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:5]
+  captcha: {
+    type: 'cloudflare_turnstile',
+    siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+    secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+  },
+})
+```
+
+The config is evaluated when the process boots, so restart the API rather than
+waiting for a hot reload to notice.
+
+</Step>
+<Step>
+
+### Verify it works
+
+Ask the API what it thinks it has configured. The site key comes back on the
+public middleware route:
+
+```bash
+curl http://localhost:3000/api/@vitnode/core/middleware
+# {"isEmail":false,"sso":[],"captcha":{"siteKey":"0x4AAAAAAA...","type":"cloudflare_turnstile"}}
+```
+
+Then open `/register`. A Turnstile widget renders just above the **Register**
+button, and the button stays disabled until the widget reports success.
+
+<ImgDocs
+  src={captchaPreview}
+  alt="A solved Cloudflare Turnstile widget showing a green tick and 'Success!' above the Register button on VitNode's sign-up form"
+/>
+
+The AdminCP confirms it from the other side: **AdminCP → System →
+Integrations** (`/admin/core/system/integrations`) shows the **Captcha** card as
+_Active_, with **Cloudflare Turnstile** underneath.
+
+</Step>
 </Steps>
+
+## Test keys for local development
+
+Cloudflare publishes dummy keys that work on any hostname, `localhost`
+included. Use them while you are wiring the form up, and to reproduce failures
+on purpose.
+
+The two halves are independent: a site key decides what the widget does in the
+browser, a secret key decides what `siteverify` answers. Pick one of each.
+
+### Test site keys
+
+| Site key                   | Widget    | What it does                    |
+| -------------------------- | --------- | ------------------------------- |
+| `1x00000000000000000000AA` | Visible   | Always passes                   |
+| `2x00000000000000000000AB` | Visible   | Always fails                    |
+| `1x00000000000000000000BB` | Invisible | Always passes                   |
+| `2x00000000000000000000BB` | Invisible | Always fails                    |
+| `3x00000000000000000000FF` | Visible   | Forces an interactive challenge |
+
+### Test secret keys
+
+| Secret key                            | What `siteverify` answers |
+| ------------------------------------- | ------------------------- |
+| `1x0000000000000000000000000000000AA` | Always passes             |
+| `2x0000000000000000000000000000000AA` | Always fails              |
+| `3x0000000000000000000000000000000AA` | `token already spent`     |
+
+A test site key mints the token `XXXX.DUMMY.TOKEN.XXXX`, which a real secret key
+rejects - so mixing a dummy site key with a production secret is its own kind of
+`400`.
+
+All of them come from
+[Cloudflare's testing reference](https://developers.cloudflare.com/turnstile/troubleshooting/testing/),
+which is also where the failure modes each one reproduces are spelled out.
+
+## Widget modes
+
+All three of Cloudflare's modes work, because VitNode renders the widget through
+`turnstile.render` and waits for its callback either way.
+
+| Mode                | What the visitor sees                      | Submit button                      |
+| ------------------- | ------------------------------------------ | ---------------------------------- |
+| **Managed**         | A checkbox, only when Cloudflare wants one | Unlocks when the widget calls back |
+| **Non-Interactive** | A spinner, and never a checkbox            | Unlocks when the widget calls back |
+| **Invisible**       | Nothing at all                             | Unlocks when the widget calls back |
+
+Invisible mode is the one worth thinking twice about: the button is disabled for
+a moment with nothing on screen explaining why.
+
+The widget also inherits two things from the page it renders on - the visitor's
+locale, and your site's resolved theme - so it follows the language switcher and
+dark mode with no configuration of its own.
+
+## Gotchas
+
+<Callout type="warn" title="A hostname you did not list fails silently">
+  Turnstile refuses to render for a hostname that is not on the widget's list,
+  and VitNode's submit button simply never unlocks. There is no toast and no
+  server error, because nothing was ever submitted. Check the browser console
+  for Turnstile's own message, then add the hostname - or switch to the test
+  keys above while developing.
+</Callout>
+
+<Callout
+  type="warn"
+  title="Turnstile has no score, so there is nothing to tune"
+>
+  `siteverify` answers `success: true` or `success: false`, and VitNode scores
+  that as `1` or `0`. How much the visitor is asked to do is the widget mode you
+  picked in Cloudflare's dashboard; how suspicious they looked is Cloudflare's
+  call, and it is not a number you get to see or set. If you want one to tune,
+  that is [reCAPTCHA v3](/docs/dev/captcha/recaptcha).
+</Callout>
+
+<Callout type="info" title="Env changes need a restart">
+  The API config reads `process.env` when the process starts, so a new key in
+  `.env` only takes effect after you restart the dev server.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Captcha overview"
+    description="Gate your own routes with withCaptcha and forward the token from a form."
+    href="/docs/dev/captcha"
+  />
+  <Card
+    title="Google reCAPTCHA v3"
+    description="The other provider: invisible scoring, verified against a 0.5 threshold."
+    href="/docs/dev/captcha/recaptcha"
+  />
+  <Card
+    title="Custom forms"
+    description="Use the useCaptcha hook directly when AutoForm is not what you are rendering."
+    href="/docs/dev/captcha/custom-adapter"
+  />
+</Cards>

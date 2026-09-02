@@ -1,0 +1,206 @@
+---
+title: Navigation
+description: Link between pages with the router's own Link, let VitNode write the locale prefix, and navigate from code after a form submits.
+icon: Signpost
+---
+
+Inside the app, use TanStack Router's `Link`. It builds the href, applies the
+locale prefix, and preloads the destination on hover. You write the logical
+path; the router writes the language.
+
+## Example
+
+```tsx
+import { Link } from '@tanstack/react-router'
+
+const DiscoverLink = () => <Link to="/discover">Discover</Link>
+```
+
+That renders `/discover` for an English reader and `/pl/discover` for a Polish
+one. Same component, same `to`, no branch and no `useLocale()` call.
+
+## One route, two URLs
+
+`/discover` and `/pl/discover` are **one route**. The router's `rewrite` is what
+makes that work, and it runs in both directions:
+
+| Stage                                         | Value            |
+| --------------------------------------------- | ---------------- |
+| The address bar                               | `/pl/discover`   |
+| What the route tree matches (`rewrite.input`) | `/discover`      |
+| What you write                                | `to="/discover"` |
+| What React renders (`rewrite.output`)         | `/pl/discover`   |
+
+`input` is why no route file anywhere in the app mentions a locale - there is no
+`routes/pl/` directory and there is not going to be one. `output` reads the
+locale off the router's own current location rather than off `window`, so the
+href rendered during SSR is byte-identical to the one rendered after hydration.
+
+So write the logical path. Two things that look reasonable and are not:
+
+- **Building the prefix yourself.** ``to={`/${locale}/discover`}`` does not
+  double up, because `localizeUrl` de-localizes before it prefixes and is
+  therefore idempotent. What it does instead is discard the prefix you wrote and
+  re-apply the reader's _current_ locale, so an English reader following your
+  `/pl/discover` link lands on `/discover`. Not honoured; overwritten.
+- **Naming a prefixed route.** `to="/pl/discover"` is not a path in the route
+  tree, so the router's typed `to` refuses it.
+
+<Callout type="info" title="`/admin` and `/api` carry no prefix at all">
+  Both sit outside the localized URL space, so nothing is stripped from them and
+  nothing is added. `/pl/admin/core` is therefore a mistake rather than a Polish
+  page, and the app's request middleware 308-redirects it to `/admin/core` while
+  storing `pl` in the language cookie - so the AdminCP still renders in the
+  language the visitor just asked for. The same middleware canonicalises
+  `/en/discover` to `/discover`, because the default locale is unprefixed and
+  two indexable URLs for one page is one too many.
+</Callout>
+
+<Callout type="warn" title="An unknown prefix is a 404, not a fallback">
+  Only a prefix the app would itself emit gets stripped, so `/xx/discover`
+  reaches the route tree intact and matches nothing. That is deliberate: a
+  silent fallback would serve the same page at infinitely many URLs.
+</Callout>
+
+## Navigate from code
+
+When the destination is decided by your code rather than by a click - after a
+form submits, after a mutation resolves - use the route's own `useNavigate`:
+
+```tsx title="apps/web/src/routes/_main/contact.tsx"
+export const Route = createFileRoute('/_main/contact')({
+  component: ContactPage,
+})
+
+const ContactPage = () => {
+  const navigate = Route.useNavigate() // [!code ++]
+
+  const onSubmit = async (values: ContactValues) => {
+    const message = await sendMessage(values)
+
+    await navigate({ params: { id: message.id }, to: '/contact/$id' }) // [!code ++]
+  }
+
+  return <ContactForm onSubmit={onSubmit} />
+}
+```
+
+`Route.useNavigate()` is that route's own, so `to` and `params` are typed
+against the route tree - a typo in the destination is a compile error rather
+than a 404. The locale rewrite applies here exactly as it does to a `Link`,
+because both go through the router's `buildLocation`: a Polish visitor ends up
+on `/pl/contact/42`.
+
+### Replace, when the page behind you is a dead end
+
+VitNode's own password-reset screen navigates with `replace: true` once the
+password has changed, and the reason is worth copying: the URL being left behind
+carries a recovery token, and a push would leave it one Back press away.
+
+```tsx
+await navigate({ replace: true, to: '/login' })
+```
+
+### Redirecting before a page renders
+
+If the decision is "this visitor may not be here at all", make it in
+`beforeLoad` rather than in a component. Core's own authenticated container does
+exactly that, and a `redirect()` thrown there means an anonymous visitor never
+receives a byte of the protected page - not a flash, not a hydration, not a
+`useEffect` that takes it away afterwards:
+
+```tsx
+throw redirect({
+  search: { returnTo: returnToFor(location) },
+  to: '/login',
+})
+```
+
+<Callout type="warn" title="Use `to` in a redirect, never `href`">
+  A redirect carrying `href` is used verbatim by the router - it short-circuits
+  before `buildLocation`, which is where the locale rewrite lives - so it would
+  drop a Polish visitor on the English page. Split the destination into `to`,
+  `search` and `hash` instead, and the prefix is written back for free.
+</Callout>
+
+## Plugin route modules
+
+A plugin page must not import a router. That is the whole of what keeps one
+plugin installable into any VitNode host, and it means a plugin route module
+cannot build a locale-correct href for itself.
+
+Here is exactly what does and does not exist today:
+
+| Thing                                             | Status                                                                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| A router-neutral `Link` exported for plugin pages | **Does not exist.** `@vitnode/core/routing` exports no link component at all.                                                              |
+| `RouterLink`                                      | Real, from `@vitnode/core/tanstack/layout` - but it imports `@tanstack/react-router`, so importing it pins your plugin to a TanStack host. |
+| The `LinkComponent` prop convention               | Real, and used by every shared view in core. It takes an anchor's props with `href` required, and defaults to `RouterLink`.                |
+| `navigate`, handed to a plugin page               | Real, and narrow: it replaces **this page's query string** and nothing else.                                                               |
+
+So `LinkComponent` is a genuine seam - it is how core's own screens render under
+two frameworks without either being imported - but it is a prop a _host_ passes
+to a component it renders. The plugin route runtime renders your page itself,
+with a fixed set of props: `loaderData`, `params`, `search` and `navigate`. No
+link component among them.
+
+What works today:
+
+- **Render text instead of a link** where you can. This is why a plugin
+  breadcrumb is a label: the example plugin's own crumb is a `<span>`, next to a
+  comment saying that a locale-correct href needs the host's link component and
+  a plugin route module is handed nothing to build one with.
+- **Use `navigate` for query-string state.** A paginated list, a filter or a
+  sort control is not really a link - it is the same page with a different query
+  string, and that means the same thing under every router:
+
+  ```tsx
+  <button
+    onClick={() => {
+      void navigate({ resetScroll: false, search: { page: search.page + 1 } })
+    }}
+    type="button"
+  >
+    Next
+  </button>
+  ```
+
+  `resetScroll: false` is what stops a table jumping to the top when only the
+  page number changed.
+
+- **Accept a link component as a prop** in the presentational components your
+  page composes, and let whatever renders them decide. That is the shape core
+  uses, and it is what will make your components portable the day a
+  router-neutral link does arrive.
+- **Use a plain `<a href>` only for another origin.** An internal one triggers a
+  full page load and loses the locale prefix.
+
+## When to use what
+
+- **`<Link to>`** - anything inside this app. Typed against the route tree,
+  preloaded on hover, locale handled.
+- **`<a href>`** - another origin: GitHub, a status page, a provider's docs.
+- **`useNavigate()`** - a destination your code decided, such as after a form
+  submits or a record is created.
+- **`redirect()` in `beforeLoad`** - a visitor who should never see this page at
+  all.
+
+## Next
+
+<Cards>
+  <Card
+    title="Routing"
+    description="How a URL gets claimed, by your app or by a plugin"
+    href="/docs/dev/routing"
+  />
+  <Card
+    title="Translating a page"
+    description="Warm the right namespaces for the route you link to"
+    href="/docs/dev/i18n/pages"
+  />
+  <Card
+    title="Breadcrumbs"
+    description="What the shell shows above your page"
+    href="/docs/dev/plugins/breadcrumbs"
+  />
+</Cards>

@@ -1,116 +1,307 @@
 ---
-title: Custom Adapter
-description: Create your own custom captcha adapter for VitNode.
+title: Custom forms
+description: Solve a captcha challenge in a form you built yourself - the useCaptcha hook's isReady, getToken and onReset, and where to mount the widget.
+icon: SquarePen
 ---
 
-If you want to use captcha in your custom form or somewhere else, follow these steps.
+`AutoForm` handles captcha for you, and most of the time that is the end of it.
+When you are rendering the form yourself - a hand-built `<form>`, a wizard, a
+component that is not an `AutoForm` at all - `useCaptcha` is the same three
+values `AutoForm` uses internally.
 
-## Usage
+There is no captcha _adapter_ to write: the two providers live in core, and
+`type` is a closed union. What this page is about is the client half.
+
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+## Quick start
+
+Three values, and a `<div>` for the widget to land in.
+
+```tsx title="src/site/contact/contact-form.tsx"
+import type React from 'react'
+
+import { useCaptcha } from '@vitnode/core/hooks/use-captcha' // [!code ++]
+import { type MiddlewareConfig } from '@vitnode/core/tanstack/auth'
+
+import { sendMessage } from './send-message'
+
+export const ContactForm = ({
+  captcha,
+}: {
+  captcha: MiddlewareConfig['captcha']
+}) => {
+  const { isReady, getToken, onReset } = useCaptcha(captcha) // [!code ++]
+
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    await sendMessage({
+      message: new FormData(event.currentTarget).get('message') as string,
+      captchaToken: await getToken(), // [!code ++]
+    })
+
+    onReset() // [!code ++]
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <textarea name="message" />
+
+      {/* [!code ++] */}
+      <div id="vitnode_captcha" />
+
+      <button disabled={!isReady} type="submit">
+        Send
+      </button>
+    </form>
+  )
+}
+```
+
+On an installation with no captcha configured, `captcha` is `undefined`,
+`getToken()` resolves to `''` and `isReady` flips to `true` as soon as the
+hook's effect runs - so this is one code path, not two. `isReady` starts `false`
+either way, which means a server-rendered submit button is disabled in the
+initial HTML and unlocks on hydration.
+
+## The hook
+
+```ts
+const { isReady, getToken, onReset } = useCaptcha(captcha)
+```
+
+It takes exactly what the API publishes on
+`GET /api/@vitnode/core/middleware`, so you pass the value through rather than
+building it.
+
+<TypeTable
+  type={{
+    captcha: {
+      description:
+        "The deployment's captcha configuration, or undefined when none is configured. Read it from middlewareConfigQueryOptions().",
+      type: "{ siteKey: string; type: 'cloudflare_turnstile' | 'recaptcha_v3' } | undefined",
+      required: true,
+    },
+    isReady: {
+      description:
+        'Whether a token can be obtained. Starts false and becomes true on mount when no captcha is configured, when a Turnstile widget has called back, or when the reCAPTCHA script has fired its load event. Wire it to your submit button.',
+      type: 'boolean',
+    },
+    getToken: {
+      description:
+        "The solved token. Turnstile returns the one the widget already handed over; reCAPTCHA v3 mints a fresh one with grecaptcha.execute at call time. Resolves to '' when there is no captcha, and when the provider script never loaded.",
+      type: '() => Promise<string>',
+    },
+    onReset: {
+      description:
+        'Clears the stored token and sets isReady back to false, and on Turnstile also calls turnstile.reset() so the widget re-arms. Call it after every submission so one token cannot be replayed.',
+      type: '() => void',
+    },
+  }}
+/>
+
+## Wire it up
 
 <Steps>
 <Step>
 
-### Activate captcha in route
+### Gate the route
 
-```ts title="plugins/{plugin_name}/src/routes/example.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
+Nothing on the client makes a route require a token - `withCaptcha: true` on the
+route does, in a [plugin](/docs/dev/plugins/create) exactly as in core.
 
-export const exampleRoute = buildRoute({
+```ts title="plugins/my-plugin/src/api/modules/contact/routes/create.route.ts"
+export const createContactRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
-    method: "post",
-    description: "Create a new user",
-    path: "/sign_up",
+    method: 'post',
+    path: '/',
+    description: 'Send a message to the site owner',
     withCaptcha: true, // [!code ++]
+    // ...
   },
-  handler: async c => {},
-});
+  handler: async (c) => c.text('Message sent', 201),
+})
 ```
 
 </Step>
 <Step>
 
-### Get config from middleware API
+### Read the deployment's config
 
-```tsx title="plugins/{plugin_name}/src/app/sing_up/page.tsx"
-import { getMiddlewareApi } from "@vitnode/core/lib/api/get-middleware-api"; // [!code ++]
+The site key is public, and `middlewareConfigQueryOptions()` is the read as a
+TanStack Query definition. Warm it in the route's `loader` so the widget is not
+waiting on a request after hydration.
 
-export const SignUpView = async () => {
-  const { captcha } = await getMiddlewareApi(); // [!code ++]
+```tsx title="src/routes/_main/contact.tsx"
+import { createFileRoute } from '@tanstack/react-router'
+import { middlewareConfigQueryOptions } from '@vitnode/core/tanstack/auth' // [!code ++]
 
-  return <FormSignUp captcha={captcha} />;
-};
+import { ContactScreen } from '#/site/contact/contact-screen'
+
+export const Route = createFileRoute('/_main/contact')({
+  // [!code ++:2]
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(middlewareConfigQueryOptions()),
+  component: ContactScreen,
+})
+```
+
+```tsx title="src/site/contact/contact-screen.tsx"
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { middlewareConfigQueryOptions } from '@vitnode/core/tanstack/auth'
+
+import { ContactForm } from './contact-form'
+
+export const ContactScreen = () => {
+  const { data: config } = useSuspenseQuery(middlewareConfigQueryOptions())
+
+  return <ContactForm captcha={config.captcha} />
+}
 ```
 
 </Step>
 <Step>
 
-### Use `useCaptcha` hook
+### Mount the widget
 
-Inside your client component, use the `useCaptcha` hook to handle captcha rendering and validation. Remember to add `div` with `id="vitnode_captcha"` where you want the captcha widget to appear.
+`useCaptcha` finds its container by id, so the element has to exist in the DOM
+before the provider script finishes loading. Render it unconditionally inside
+the form:
 
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/sign-up.tsx"
-"use client";
+```tsx
+<div id="vitnode_captcha" />
+```
 
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
+Turnstile renders into it. reCAPTCHA v3 has nothing to draw, so the `<div>` is
+harmless there and keeping it means the two providers swap without a code
+change.
 
-export const FormSignUp = ({
-  captcha, // [!code ++]
+</Step>
+<Step>
+
+### Send the token
+
+`captchaToken` is a first-class fetcher option, on both the browser fetcher and
+the server one, and it spells the `x-vitnode-captcha-token` header for you. An
+empty string sends no header at all.
+
+```ts title="src/site/contact/send-message.ts"
+import type { contactModule } from '@vitnode/my-plugin/api/modules/contact/contact.module'
+
+import { clientModule, fetcherClient } from '@vitnode/core/lib/fetcher-client'
+
+const contact = clientModule<typeof contactModule>('@vitnode/my-plugin')
+
+export const sendMessage = async ({
+  captchaToken,
+  ...body
 }: {
-  captcha: z.infer<typeof routeMiddlewareSchema>["captcha"]; // [!code ++]
-}) => {
-  // [!code ++]
-  const { isReady, getToken, onReset } = useCaptcha(captcha);
-
-  const onSubmit = async () => {
-    await mutationApi({
-      // ...other values,
-      captchaToken: await getToken(), // [!code ++]
-    });
-
-    // Handle success or error
-    // [!code ++]
-    onReset(); // Reset captcha after submission
-  };
-
-  return (
-    <form onSubmit={onSubmit}>
-      {/* Render captcha widget */}
-      {/* [!code ++] */}
-      <div id="vitnode_captcha" />
-
-      <Button disabled={!isReady}>Submit</Button>
-    </form>
-  );
-};
-```
-
-</Step>
-<Step>
-
-### Submit form with captcha
-
-```tsx title="plugins/{plugin_name}/src/components/form/sign-up/mutation-api.server.ts"
-"use server";
-
-import type { z } from "zod";
-
-import { fetcher } from "@vitnode/core/lib/fetcher";
-
-export const mutationApi = async ({
-  captchaToken, // [!code ++]
-}: {
-  // [!code ++]
-  captchaToken;
-}) => {
-  await fetcher(usersModule, {
-    path: "/test",
-    method: "post",
-    module: "blog",
+  captchaToken: string
+  message: string
+}) =>
+  await fetcherClient(contact, {
+    method: 'post',
+    module: 'contact',
+    path: '/',
     captchaToken, // [!code ++]
-  });
-};
+    args: { body },
+  })
 ```
+
+</Step>
+<Step>
+
+### Verify it is really gated
+
+Call the route with no token. It answers `400` before your handler runs:
+
+```bash
+curl -i -X POST 'http://localhost:3000/api/@vitnode/my-plugin/contact' \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Hello from curl"}'
+```
+
+```text
+HTTP/1.1 400 Bad Request
+
+Captcha token is required
+```
+
+Then open the form. With Turnstile the widget appears where you put the `<div>`
+and the submit button unlocks on success; with reCAPTCHA v3 the button is
+enabled from the start and the token is minted on submit.
 
 </Step>
 </Steps>
+
+## Where the pieces live
+
+A minimal captcha-gated feature is four files, and only one of them knows the
+hook exists.
+
+<Files>
+  <Folder defaultOpen name="src">
+    <Folder defaultOpen name="routes/_main">
+      <File name="contact.tsx" />
+    </Folder>
+    <Folder defaultOpen name="site/contact">
+      <File name="contact-screen.tsx" />
+      <File name="contact-form.tsx" />
+      <File name="send-message.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Gotchas
+
+<Callout type="warn" title="One #vitnode_captcha per page">
+  The container is found by id, so two captcha forms on one page fight over it:
+  the challenge lands in whichever rendered first and the other's submit button
+  never unlocks. Put the second form behind a dialog, a tab or its own route.
+</Callout>
+
+<Callout type="warn" title="The hook needs VitNode's providers above it">
+  `useCaptcha` reads the visitor's locale and its error copy through `use-intl`,
+  and the resolved theme through VitNode's `ThemeProvider` - the widget is
+  rendered in both. `use-intl` throws without a provider, so the hook has to be
+  mounted under `VitNodeRootProviders`, which every VitNode TanStack Start app
+  already has above its route tree. Mount it outside and you get an intl context
+  error, not a captcha.
+</Callout>
+
+<Callout type="warn" title="Call onReset(), but know what it costs on v3">
+  Without it a visitor can submit the same token twice. With it, `isReady` goes
+  back to `false` - and on reCAPTCHA v3 nothing sets it back to `true`, because
+  there is no widget callback. A form that stays on screen after a failed
+  submission ends up with a dead button until it remounts. Turnstile re-arms
+  itself.
+</Callout>
+
+<Callout type="info" title="A missing script is not an error you can catch">
+  If the provider's script is blocked, `getToken()` resolves to `''` rather than
+  rejecting. Treat the API's `400` as the real signal - it is the only place
+  that knows whether the token was any good.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Captcha overview"
+    description="The config block, what is gated out of the box, and the AutoForm route."
+    href="/docs/dev/captcha"
+  />
+  <Card
+    title="Auto Form"
+    description="Fields, validation, tabs and submit states - and captcha handled for you."
+    href="/docs/ui/auto-form"
+  />
+  <Card
+    title="Fetcher"
+    description="How captchaToken, cookies and args travel to your Hono API."
+    href="/docs/dev/fetcher#captcha"
+  />
+</Cards>

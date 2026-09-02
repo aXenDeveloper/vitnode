@@ -16,23 +16,10 @@ import {
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
 
-/**
- * The AdminCP queue list, as one query definition.
- *
- * The same shape as the cron list beside it, with one extra parameter: the
- * `status` filter the toolbar writes. Everything about *what* the list is - the
- * request, the sortable columns, the filter's allowed values, the cache entry -
- * lives here, and both applications read through it.
- *
- * `GET /api/@vitnode/core/admin/advanced/queue` declares
- * `adminStaffPermission: { module: "queue", permission: "can_view" }` and
- * re-checks it on every request, so nothing below authorizes anything.
- */
-
 export const queueAdminModuleRef = adminModuleRef<typeof queueAdminModule>();
 
 /** The module is mounted under `/admin/advanced`, not at the plugin root. */
-const QUEUE_PREFIX_PATH = "/admin/advanced";
+export const QUEUE_PREFIX_PATH = "/admin/advanced";
 
 /** The statuses a task can be in - `QUEUE_STATUSES` on `getQueueTasksRoute`. */
 export const QUEUE_STATUSES = [
@@ -46,14 +33,6 @@ export type QueueStatus = (typeof QUEUE_STATUSES)[number];
 export const QUEUE_ORDER_BY = ["createdAt", "availableAt", "status"] as const;
 export type QueueOrderBy = (typeof QUEUE_ORDER_BY)[number];
 
-/**
- * The queue table's URL contract.
- *
- * `status` is declared so an unrecognised value is dropped here rather than sent
- * - the route splits the comma-separated list and ignores anything it does not
- * know, so `?status=nonsense` and no `status` are the same query and must be the
- * same cache entry.
- */
 export const QUEUE_TABLE_CONTRACT: AdminTableContract<QueueOrderBy> = {
   orderBy: QUEUE_ORDER_BY,
   status: QUEUE_STATUSES,
@@ -81,24 +60,18 @@ export interface QueueTaskRow {
 export type QueuePage = AdminTablePage<QueueTaskRow>;
 
 /** One page of the list, as arguments to whichever fetcher is carrying it. */
-export const queueRequest = (params: QueueParams) =>
-  ({
-    args: { query: params },
-    method: "get" as const,
-    module: "queue" as const,
-    path: "/" as const,
-    prefixPath: QUEUE_PREFIX_PATH,
-  }) as const;
-
 /** How a page is actually fetched. See {@link queueQueryOptions}. */
 export type QueuePageFetcher = (params: QueueParams) => Promise<QueuePage>;
 
 /** One page, fetched from the browser. */
 export const fetchQueuePageInBrowser: QueuePageFetcher = async params => {
-  const response = await fetcherClient(
-    queueAdminModuleRef,
-    queueRequest(params),
-  );
+  const response = await fetcherClient(queueAdminModuleRef, {
+    args: { query: params },
+    method: "get",
+    module: "queue",
+    path: "/",
+    prefixPath: QUEUE_PREFIX_PATH,
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(

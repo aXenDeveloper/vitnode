@@ -1,6 +1,7 @@
 ---
 title: Scroll Area
 description: Container for scrollable content with custom scrollbars.
+icon: ChevronsDownUp
 ---
 
 ## Preview
@@ -10,13 +11,15 @@ description: Container for scrollable content with custom scrollbars.
 ## Usage
 
 ```ts
-import { ScrollArea } from "@vitnode/core/components/ui/scroll-area";
-import { Separator } from "@vitnode/core/components/ui/separator";
-import React from "react";
+import { ScrollArea } from '@vitnode/core/components/ui/scroll-area'
+import { Separator } from '@vitnode/core/components/ui/separator'
+import React from 'react'
 ```
 
 ```tsx
-const tags = Array.from({ length: 50 }).map((_, i, a) => `v1.2.0-beta.${a.length - i}`);
+const tags = Array.from({ length: 50 }).map(
+  (_, i, a) => `v1.2.0-beta.${a.length - i}`,
+)
 
 export function ScrollAreaDemo() {
   return (
@@ -31,7 +34,7 @@ export function ScrollAreaDemo() {
         ))}
       </div>
     </ScrollArea>
-  );
+  )
 }
 ```
 

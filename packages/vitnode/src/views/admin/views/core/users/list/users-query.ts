@@ -141,14 +141,6 @@ export const normalizeAdminUsersParams = (
  * `withPagination` is deliberately absent - see `views/admin/table/params.ts`
  * for why an invisible default is a cache-key bug rather than a convenience.
  */
-export const adminUsersRequest = (params: AdminUsersParams) =>
-  ({
-    args: { query: params },
-    method: "get" as const,
-    module: "admin/users" as const,
-    path: "/list" as const,
-  }) as const;
-
 /** One role, with every translation of its name - resolved where it is rendered. */
 export interface AdminUserRole {
   color: null | string;
@@ -210,8 +202,11 @@ export const fetchAdminUsersPageInBrowser: AdminUsersPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcherClient(adminModuleRef, {
-    ...adminUsersRequest(params),
+    args: { query: params },
+    method: "get",
+    module: "admin/users",
     options: { credentials: "include", signal },
+    path: "/list",
   });
 
   if (!response.ok) {
@@ -300,15 +295,6 @@ export type AdminUserSearchOptions = (
 /** How many matches a picker asks for. */
 export const ADMIN_USER_SEARCH_LIMIT = 20;
 
-/** One search's request: bounded, and never past the first page. */
-export const adminUserSearchRequest = (search: string) =>
-  ({
-    args: { query: { first: String(ADMIN_USER_SEARCH_LIMIT), search } },
-    method: "get" as const,
-    module: "admin/users" as const,
-    path: "/list" as const,
-  }) as const;
-
 /** The rows a picker should offer, out of the page the API returned. Pure. */
 export const adminUserOptionsFrom = (
   page: Pick<AdminUsersPage, "edges">,
@@ -335,7 +321,10 @@ export const searchAdminUsersInBrowser: AdminUserSearchOptions =
   async search => {
     try {
       const response = await fetcherClient(adminModuleRef, {
-        ...adminUserSearchRequest(search),
+        args: { query: { first: String(ADMIN_USER_SEARCH_LIMIT), search } },
+        method: "get",
+        module: "admin/users",
+        path: "/list",
         options: { credentials: "include" },
       });
       if (!response.ok) return [];

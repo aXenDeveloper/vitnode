@@ -52,7 +52,7 @@ import { fetchDevicesOnServer } from "./server";
  * nothing here needs a `Set-Cookie` copied onto the app's own response.
  *
  * The cookies still travel on both branches, and this read needs two of them. On
- * the server `fetcherServer` forwards the whole `Cookie` header the page request
+ * the server `fetcher` forwards the whole `Cookie` header the page request
  * arrived with; in the browser the call is same-origin, so the browser attaches
  * it without being asked. That is what makes a `401` here mean "the session
  * ended" rather than "we forgot to say who was asking" - and what makes

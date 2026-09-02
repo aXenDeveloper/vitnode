@@ -1,14 +1,18 @@
 ---
 title: Events
-description: Emit typed domain events and react to them from any plugin, with per-listener error isolation and a pluggable transport.
+description: Emit typed domain events from VitNode plugins and subscribe with isolated, typed event listeners.
 icon: Radio
 ---
 
-Events let plugins react to things happening elsewhere in your app - "a user
-signed up", "a blog category was deleted" - without the emitting code knowing
-who is listening. An event is a typed name + payload; listeners are plain
-handlers registered by modules, exactly like [queue tasks](/docs/dev/advanced/queue)
-and cron jobs.
+import { TypeTable } from "fumadocs-ui/components/type-table"
+
+VitNode includes an in-process event bus accessible via `c.get("events")`. Events decouple features across plugins (e.g. sending a welcome email when a user registers) without direct inter-plugin dependencies.
+
+## Quick start
+
+### 1. Emit an Event
+
+Emit events from any Hono route or service after a database write:
 
 ```ts
 await c.get("events").emit("user.created", {
@@ -16,276 +20,18 @@ await c.get("events").emit("user.created", {
   email: user.email,
   name: user.name,
   emailVerified: user.emailVerified,
-});
+})
 ```
 
-See [Built-in Events](/docs/dev/events/built-in-events) for the events VitNode
-and its plugins already emit.
+---
 
-## How it works
+### 2. Subscribe with an Event Listener
 
-```text
-c.get("events").emit(name, payload)
-   1. build an envelope  (eventId, emittedAt, actor, emitting pluginId)
-   2. hand it to the configured adapter  (Local by default)
-   3. Local adapter: run matching listeners sequentially, in registration order
-      · a listener that throws is logged to core_logs - the rest still run
-   4. resolve with an EventEmitResult  { eventId, status, delivered, failures }
-```
+Define a listener in your plugin:
 
-<Callout type="warn" title="Single-process delivery">
-  The default **Local** adapter runs listeners in-process, inside the request
-  that emitted the event, on that instance only. It is **not** distributed event
-  delivery: with multiple instances, only the emitting instance runs listeners.
-  The `events.adapter` config slot exists so a broker transport (Redis Streams,
-  RabbitMQ, NATS, ...) can be plugged in later without changing any `emit` call -
-  see [Custom Adapter](/docs/dev/events/custom-adapter).
-</Callout>
+```ts title="plugins/shop/src/api/lib/events.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events"
 
-## Listening to an event
-
-A listener is a named handler bound to one event, registered in a module - the
-same shape as `queueTasks` and `cronJobs`.
-
-<Steps>
-<Step>
-### Create the listener
-
-The handler receives the request context, the typed payload, and the full
-envelope. This is the real listener shipped with the blog plugin - it removes
-search index rows of posts that were cascade-deleted with their category:
-
-```ts title="plugins/blog/src/api/lib/events.ts"
-import { buildEventListener } from "@vitnode/core/api/lib/events";
-
-export const cleanupCategorySearchListener = buildEventListener({
-  event: "blog.category.deleted",
-  name: "cleanup-category-search",
-  description:
-    "Remove search index rows of posts cascade-deleted with a category",
-  handler: async (c, payload) => {
-    for (const postId of payload.postIds) {
-      await c.get("search").delete("blog_post", postId);
-    }
-  },
-});
-```
-
-</Step>
-<Step>
-### Register it in a module
-
-```ts title="modules/admin/admin.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
-import { CONFIG_PLUGIN } from "@/const";
-
-// [!code ++]
-import { cleanupCategorySearchListener } from "../../lib/events";
-
-export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  name: "admin",
-  routes: [],
-  // [!code ++]
-  events: [cleanupCategorySearchListener],
-});
-```
-
-<Callout type="info" title="Top-level modules only">
-  Like `cronJobs` and `queueTasks`, `events` are only collected from the modules
-  passed directly to `buildApiPlugin` - listeners declared on nested submodules
-  are not registered.
-</Callout>
-
-Ownership is tracked automatically: every listener carries the `pluginId` and
-module it was registered by, which is used for failure attribution and logging.
-Removing a plugin from `vitnode.api.config.ts` removes its listeners - there is
-nothing else to clean up.
-
-</Step>
-</Steps>
-
-## Emitting an event
-
-Emit from any route or model via `c.get("events")` - **after** the writes the
-event describes have succeeded, so listeners never see an event for data that
-doesn't exist:
-
-```ts title="modules/admin/categories/routes/delete.route.ts"
-const result = await c
-  .get("db")
-  .delete(blog_categories)
-  .where(eq(blog_categories.id, id))
-  .returning();
-
-if (result.length === 0) {
-  throw new HTTPException(404);
-}
-
-await c.get("events").emit("blog.category.deleted", {
-  categoryId: id,
-  postIds: posts.map(post => post.id),
-});
-```
-
-`emit()` **never throws**. A broken listener in one plugin cannot break the
-request or other plugins' listeners - failures are caught per listener, logged,
-and reported in the result. If you care whether listeners succeeded, inspect it:
-
-```ts
-const result = await c.get("events").emit("blog.category.deleted", payload);
-
-if (result.failures.length > 0) {
-  // each failure: { pluginId, module, listener, error }
-}
-```
-
-### EventEmitResult
-
-import { TypeTable } from "fumadocs-ui/components/type-table";
-
-<TypeTable
-  type={{
-    eventId: {
-      description: "Unique id of this emission (UUID).",
-      type: "string",
-    },
-    status: {
-      description:
-        '"delivered" - listeners ran in-process before emit() resolved (Local adapter). "queued" - the envelope was handed to a broker and delivery happens out-of-band.',
-      type: '"delivered" | "queued"',
-    },
-    delivered: {
-      description: "Number of listeners that ran successfully.",
-      type: "number",
-    },
-    failures: {
-      description:
-        "One entry per failed listener: { pluginId, module, listener, error }.",
-      type: "EventEmitFailure[]",
-    },
-  }}
-/>
-
-### The envelope
-
-Listeners receive the payload directly plus the full envelope as a third
-argument:
-
-<TypeTable
-  type={{
-    eventId: {
-      description: "Unique id of this emission (UUID).",
-      type: "string",
-    },
-    name: {
-      description: 'The event name, e.g. "user.created".',
-      type: "string",
-    },
-    payload: {
-      description: "The typed payload passed to emit().",
-      type: "VitNodeEvents[name]",
-    },
-    emittedAt: {
-      description: "When emit() was called.",
-      type: "Date",
-    },
-    actor: {
-      description:
-        "Who triggered the request: { type: 'admin' | 'user' | 'system', id? } - derived from the session.",
-      type: "EventActor",
-    },
-    pluginId: {
-      description: "Plugin that emitted the event.",
-      type: "string",
-    },
-  }}
-/>
-
-## Execution and failure semantics
-
-- Listeners run **sequentially**, in deterministic registration order: core
-  first, then your `plugins` array order, then module order, then the `events`
-  array order within the module.
-- Each listener is awaited. A slow listener delays the request that emitted the
-  event (see the queue tip below).
-- A listener that throws is **isolated**: the error is written to `core_logs`
-  (visible in **AdminCP → Logs**) with `pluginId:module:listener` attribution,
-  and the remaining listeners still run.
-- `emit()` resolves with the result - it never rejects, even if every listener
-  (or the adapter itself) fails.
-
-<Callout title="Need retries or heavy work? Compose with the queue">
-  Listeners run inline and are not retried. For work that should survive a crash
-  or retry on failure, keep the listener thin and dispatch a
-  [queue task](/docs/dev/advanced/queue) from it - the queue adds persistence,
-  backoff, and retries.
-
-```ts
-handler: async (c, payload) => {
-  await c.get("queue").dispatch({
-    name: "send-welcome-email",
-    payload: { userId: payload.userId },
-  });
-};
-```
-
-</Callout>
-
-## Events and transactions
-
-Emit **after** your awaited writes succeed. Because a route handler that throws
-before `emit()` never emits, listeners can trust the event describes committed
-data.
-
-If you wrap writes in `db.transaction`, emit **after the transaction callback
-returns** - never inside it. Inside the callback the data is not committed yet,
-and the transaction may still roll back:
-
-```ts
-const post = await c.get("db").transaction(async tx => {
-  // ...writes on tx
-  return created;
-});
-
-// ✅ transaction committed - safe to emit
-await c.get("events").emit("blog.post.created", { postId: post.id, ... });
-```
-
-There is no outbox in the first version: if the process crashes between the
-commit and the emit, the event is lost. Design listeners so a missed event is
-recoverable (e.g. the search rebuild exists for exactly this) rather than
-load-bearing for correctness.
-
-## Adding your own events
-
-Events are typed through a single global map, `VitNodeEvents`. Plugins extend
-it with module augmentation, then emit and listen with full type safety - other
-plugins see your events too.
-
-```ts title="plugins/my-plugin/src/api/lib/events.ts"
-declare module "@vitnode/core/api/models/events" {
-  interface VitNodeEvents {
-    "shop.order.placed": {
-      orderId: number;
-      total: number;
-      userId: number;
-    };
-  }
-}
-```
-
-<Callout type="info" title="Payloads are plain JSON">
-  Keep payloads JSON-serializable (no class instances, Maps, or functions). A
-  broker adapter serializes the envelope to move it between processes. Prefer
-  ids over whole records - listeners can load what they need.
-</Callout>
-
-Cross-plugin subscriptions just work: any plugin can listen to core's
-`user.created` (or another plugin's events) by importing nothing more than
-`buildEventListener`:
-
-```ts
 export const welcomeListener = buildEventListener({
   event: "user.created",
   name: "send-welcome-email",
@@ -293,7 +39,74 @@ export const welcomeListener = buildEventListener({
     await c.get("queue").dispatch({
       name: "send-welcome-email",
       payload: { userId: payload.userId, email: payload.email },
-    });
+    })
   },
-});
+})
 ```
+
+Register the listener in your module's `events` array:
+
+```ts title="plugins/shop/src/api/modules/orders/orders.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module"
+import { welcomeListener } from "../../lib/events"
+
+export const ordersModule = buildModule({
+  name: "orders",
+  routes: [listOrdersRoute],
+  events: [welcomeListener], // [!code ++]
+})
+```
+
+---
+
+## Declare Custom Event Types
+
+Extend VitNode's global `EventMap` interface in your plugin so payload types are strictly enforced and autocompleted:
+
+```ts title="plugins/shop/src/api/lib/events.ts"
+export interface OrderPlacedPayload {
+  orderId: number
+  userId: number
+  total: number
+}
+
+// [!code ++:7]
+declare module "@vitnode/core/lib/events" {
+  interface EventMap {
+    "shop.order.placed": OrderPlacedPayload
+  }
+}
+```
+
+Now `emit("shop.order.placed", ...)` and `buildEventListener({ event: "shop.order.placed", ... })` are strictly type-checked.
+
+---
+
+## Delivery Guarantees
+
+| Feature | Local Transport |
+| :--- | :--- |
+| **Execution** | Runs in-process on the emitting instance. |
+| **Ordering** | Sequential execution in registration order. |
+| **Error Isolation** | Per listener. An exception in one listener does not affect others. |
+| **Durability** | In-memory. For distributed brokers, see [Custom Adapter](/docs/dev/events/custom-adapter). |
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Built-in Events"
+    description="Catalog of standard events emitted by core and Content Engine"
+    href="/docs/dev/events/built-in-events"
+  />
+  <Card
+    title="Background Queues"
+    description="Asynchronous persistent jobs and background workers"
+    href="/docs/dev/advanced/queue"
+  />
+  <Card
+    title="Cron Tasks"
+    description="Scheduled recurring jobs and automated maintenance"
+    href="/docs/dev/cron"
+  />
+</Cards>

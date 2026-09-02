@@ -25,18 +25,20 @@ Set `localization` settings and add `localized: true` to translatable fields in 
 
 ```ts title="src/content/article.ts"
 export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
-  localization: { // [!code ++]
-    defaultLanguage: "en", // [!code ++]
+  id: 'example.article',
+  tableName: 'example_articles',
+  localization: {
+    // [!code ++]
+    defaultLanguage: 'en', // [!code ++]
   }, // [!code ++]
   fields: {
     code: field.text({ required: true }), // Shared field in main table
     title: field.text({ required: true, localized: true }), // Translatable field // [!code ++]
     content: field.textarea({ localized: true }), // Translatable field // [!code ++]
   },
-});
+})
 ```
+
 </Step>
 
 <Step>
@@ -56,6 +58,7 @@ Compiling this model automatically builds two PostgreSQL tables:
   └─────┴────────┴──────────┘       │ 102 │     1      │   fr   │ Bonjour│ Monde   │
                                     └─────┴────────────┴────────┴────────┴─────────┘
 ```
+
 </Step>
 
 <Step>
@@ -63,35 +66,38 @@ Compiling this model automatically builds two PostgreSQL tables:
 
 When fetching localized content via public API or `resolveContentDelivery`, translatable fields (`title`, `content`) resolve in the active locale.
 
-For UI wrapper elements (e.g. status badges, section headers), use `useTranslations` from `next-intl`:
+For UI wrapper elements (e.g. status badges, section headers), use `useTranslations` from `use-intl`:
 
 ```tsx title="src/components/article-card.tsx"
-import { useTranslations } from "next-intl"; // [!code ++]
+import { useTranslations } from 'use-intl' // [!code ++]
 
 interface Props {
   article: {
-    title: string; // Already resolved to current locale by Content Engine
-    content: string;
-  };
+    title: string // Already resolved to current locale by Content Engine
+    content: string
+  }
 }
 
 export const ArticleCard = ({ article }: Props) => {
-  const t = useTranslations("@vitnode/example"); // [!code ++]
+  const t = useTranslations('@vitnode/example') // [!code ++]
 
   return (
     <div className="card">
-      <span className="badge">{t("content.article.badge_label")}</span> {/* [!code ++] */}
+      <span className="badge">{t('content.article.badge_label')}</span>{' '}
+      {/* [!code ++] */}
       <h3>{article.title}</h3>
       <p>{article.content}</p>
     </div>
-  );
-};
+  )
+}
 ```
 
 **Fallback Flow**:
+
 1. Returns `fr` translation if published.
 2. Falls back to `defaultLanguage` (`en`) if published.
 3. Returns `404 Not Found` if no published translation exists.
+
 </Step>
 
 </Steps>

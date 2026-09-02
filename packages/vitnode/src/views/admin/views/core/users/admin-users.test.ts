@@ -15,15 +15,10 @@ import {
 import {
   adminUsersQueryKey,
   adminUsersQueryRoot,
-  adminUsersRequest,
   normalizeAdminRoleFilter,
   normalizeAdminUsersParams,
 } from "./list/users-query";
-import {
-  ADMIN_ROLE_SEARCH_LIMIT,
-  adminRoleOptionsFrom,
-  adminRoleSearchRequest,
-} from "./roles/roles-query";
+import { adminRoleOptionsFrom } from "./roles/roles-query";
 import { adminUserCreateConflictField } from "./users-mutations";
 
 const CORE = "@vitnode/core";
@@ -178,17 +173,6 @@ describe("the users list request", () => {
 
     expect(normalizeAdminUsersParams(once)).toEqual(once);
   });
-
-  it("sends the parameters as the query, and nothing else", () => {
-    const params = normalizeAdminUsersParams({ roleId: "2" });
-
-    expect(adminUsersRequest(params)).toEqual({
-      args: { query: params },
-      method: "get",
-      module: "admin/users",
-      path: "/list",
-    });
-  });
 });
 
 describe("cache partitioning", () => {
@@ -238,9 +222,12 @@ describe("cache partitioning", () => {
   });
 
   it("never puts the identity anywhere near the request", () => {
-    const params = normalizeAdminUsersParams({ roleId: "2" });
-
-    expect(JSON.stringify(adminUsersRequest(params))).not.toContain("7");
+    // The administrator's id partitions the cache key and nothing else - the
+    // call site sends `args: { query: params }`, and the API answers from the
+    // cookie.
+    expect(
+      JSON.stringify(normalizeAdminUsersParams({ roleId: "2" })),
+    ).not.toContain("7");
   });
 });
 
@@ -267,17 +254,6 @@ describe("the role search", () => {
       },
     ],
   } as unknown as AdminRolesPage;
-
-  it("asks for one bounded page", () => {
-    expect(adminRoleSearchRequest("ann")).toEqual({
-      args: {
-        query: { first: String(ADMIN_ROLE_SEARCH_LIMIT), search: "ann" },
-      },
-      method: "get",
-      module: "admin/roles",
-      path: "/list",
-    });
-  });
 
   it("drops the guest role, which is never assignable", () => {
     expect(adminRoleOptionsFrom(page).map(role => role.id)).toEqual([1, 3]);

@@ -9,10 +9,10 @@
  * different request than the one being made, and `origin`, `referer` or
  * `authorization` would let a visitor hand the API state it trusts.
  *
- * Lives here, framework-free, because two frontends need the same contract -
- * {@link fetcher} reads the request through `next/headers`, a TanStack Start app
- * reads it through `@tanstack/react-start/server`. Only the reading differs;
- * what gets sent must not.
+ * Lives here, framework-free, because the reading is the only part that is a
+ * runtime's: a TanStack Start server reads the request through
+ * `@tanstack/react-start/server`, a browser attaches its own cookies. Only the
+ * reading differs; what gets sent must not.
  */
 
 /** Header the captcha middleware reads the client's solved token from. */

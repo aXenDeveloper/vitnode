@@ -1,6 +1,7 @@
 ---
 title: Editor
 description: Rich text editor built on TipTap for editing and rendering HTML content.
+icon: PenTool
 ---
 
 ## Preview
@@ -9,24 +10,24 @@ description: Rich text editor built on TipTap for editing and rendering HTML con
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormEditor } from '@vitnode/core/components/form/fields/editor'
 ```
 
 ```ts
 const formSchema = z.object({
   content: z
     .string()
-    .min(1, "Content is required")
-    .default("<p>Write your content here...</p>"),
-});
+    .min(1, 'Content is required')
+    .default('<p>Write your content here...</p>'),
+})
 ```
 
 ```tsx
@@ -34,8 +35,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "content",
-      component: props => (
+      id: 'content',
+      component: (props) => (
         <AutoFormEditor
           {...props}
           description="Rich text content powered by the Editor."
@@ -52,16 +53,16 @@ const formSchema = z.object({
   <Tab value="Manual">
 
 ```ts
-import { Editor } from "@vitnode/core/components/ui/editor";
+import { Editor } from '@vitnode/core/components/ui/editor'
 ```
 
 The `Editor` is uncontrolled by default - pass `value` as the initial HTML and
 listen for changes with `onChange`, which receives the current HTML string:
 
 ```tsx
-const [content, setContent] = useState("<p>Hello World! 🌎️</p>");
+const [content, setContent] = useState('<p>Hello World! 🌎️</p>')
 
-<Editor value={content} onChange={setContent} />;
+;<Editor value={content} onChange={setContent} />
 ```
 
   </Tab>
@@ -77,20 +78,20 @@ only the content inside this editor.
 The value becomes an array matching the `core_languages_words` table:
 
 ```ts
-[
-  { languageCode: "en", value: "<p>Hello</p>" },
-  { languageCode: "pl", value: "<p>Cześć</p>" },
-];
+;[
+  { languageCode: 'en', value: '<p>Hello</p>' },
+  { languageCode: 'pl', value: '<p>Cześć</p>' },
+]
 ```
 
 Declare the field with the `multiLangValueSchema` helper and enable `multiLang`:
 
 ```ts
-import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+import { multiLangValueSchema } from '@vitnode/core/lib/helpers/multi-lang'
 
 const formSchema = z.object({
   content: multiLangValueSchema({ minLength: 1 }).min(1),
-});
+})
 ```
 
 ```tsx
@@ -109,7 +110,7 @@ Use `EditorContent` to render the stored HTML as read-only content outside of
 the editor (e.g. on a public page):
 
 ```ts
-import { EditorContent } from "@vitnode/core/components/ui/editor-content";
+import { EditorContent } from '@vitnode/core/components/ui/editor-content'
 ```
 
 ```tsx
@@ -118,37 +119,37 @@ import { EditorContent } from "@vitnode/core/components/ui/editor-content";
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     value: {
-      description: "Initial HTML content rendered inside the editor.",
-      type: "string",
+      description: 'Initial HTML content rendered inside the editor.',
+      type: 'string',
       default: '""',
     },
     onChange: {
       description:
-        "Called on every change with the current content as an HTML string.",
-      type: "(value: string) => void",
-      default: "",
+        'Called on every change with the current content as an HTML string.',
+      type: '(value: string) => void',
+      default: '',
     },
     disableScroll: {
       description:
-        "Disables the internal max-height scroll area so the editor grows with its content.",
-      type: "boolean",
-      default: "false",
+        'Disables the internal max-height scroll area so the editor grows with its content.',
+      type: 'boolean',
+      default: 'false',
     },
     className: {
-      description: "Additional classes applied to the editor wrapper.",
-      type: "string",
-      default: "",
+      description: 'Additional classes applied to the editor wrapper.',
+      type: 'string',
+      default: '',
     },
     multiLang: {
       description:
-        "Edit the content per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
-      type: "boolean",
-      default: "false",
+        'Edit the content per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.',
+      type: 'boolean',
+      default: 'false',
     },
   }}
 />

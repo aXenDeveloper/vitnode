@@ -26,18 +26,23 @@ Production hardening applies to both your client definition `articleContentType`
 When `editorial` is enabled, update operations expect a matching `version` integer. Handle `ContentVersionConflict` by re-fetching and retrying:
 
 ```ts
-import { ContentVersionConflict } from "@vitnode/core/content";
+import { ContentVersionConflict } from '@vitnode/core/content'
 
 try {
-  await service.update(articleId, { title: "New Title", version: 2 });
+  await service.update(articleId, { title: 'New Title', version: 2 })
 } catch (err) {
-  if (err instanceof ContentVersionConflict) { // [!code ++]
+  if (err instanceof ContentVersionConflict) {
+    // [!code ++]
     // Refetch latest record version and retry update // [!code ++]
-    const latest = await service.findById(articleId); // [!code ++]
-    await service.update(articleId, { title: "New Title", version: latest.version }); // [!code ++]
+    const latest = await service.findById(articleId) // [!code ++]
+    await service.update(articleId, {
+      title: 'New Title',
+      version: latest.version,
+    }) // [!code ++]
   }
 }
 ```
+
 </Step>
 
 <Step>
@@ -47,11 +52,11 @@ Ensure all custom administrative actions check staff permissions, and verify tha
 
 ```ts title="src/content/article.ts"
 export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+  id: 'example.article',
+  tableName: 'example_articles',
   publication: true,
   publicApi: {
-    fields: ["title", "code", "excerpt"],
+    fields: ['title', 'code', 'excerpt'],
   },
   fields: {
     title: field.text({ required: true }),
@@ -59,8 +64,9 @@ export const articleContentType = defineContentType({
     excerpt: field.textarea({ nullable: true }),
     internalNotes: field.textarea({ nullable: true }), // Private internal column
   },
-});
+})
 ```
+
 </Step>
 
 <Step>
@@ -69,11 +75,12 @@ export const articleContentType = defineContentType({
 Log diagnostic info during startup or debugging:
 
 ```ts
-import { getContentEngineDiagnostics } from "@vitnode/core/content/server";
+import { getContentEngineDiagnostics } from '@vitnode/core/content/server'
 
-const diagnostics = getContentEngineDiagnostics();
-console.log(`Registered Content Types: ${diagnostics.totalContentTypes}`);
+const diagnostics = getContentEngineDiagnostics()
+console.log(`Registered Content Types: ${diagnostics.totalContentTypes}`)
 ```
+
 </Step>
 
 </Steps>

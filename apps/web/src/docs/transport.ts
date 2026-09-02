@@ -31,7 +31,7 @@ import { docsGithubUrl } from './github'
  *
  * ## Why these are `createServerFn` when almost nothing else in this app is
  *
- * `content/docs/dev/tanstack/server-functions.mdx` says it out loud, and it is
+ * `content/docs/dev/server-functions.mdx` says it out loud, and it is
  * worth restating where the exception actually lives: ordinary VitNode reads go
  * to Hono, which is this application's real API and security boundary.
  * Documentation is neither - it is build output that exists only inside this
