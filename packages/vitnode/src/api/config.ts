@@ -2,6 +2,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Env, Schema } from "hono";
 
 import { swaggerUI } from "@hono/swagger-ui";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
@@ -23,6 +24,9 @@ import {
 } from "./middlewares/global.middleware";
 import { rateLimiterMiddleware } from "./middlewares/rate-limiter.middleware";
 import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
+
+/** 25 MB: room for an image upload, and nothing like enough to be a weapon. */
+const DEFAULT_MAX_BODY_SIZE = 25 * 1024 * 1024;
 
 interface CORSOptions {
   allowHeaders?: string[];
@@ -89,6 +93,19 @@ export function VitNodeAPI({
   // later - as `globalMiddleware` used to - left every request in the
   // deployment sharing one bucket named after `undefined`.
   app.use("*", clientIpMiddleware(vitNodeApiConfig.trustProxy));
+  // Nothing bounded a request body before this. `POST /sign_in` reads its JSON
+  // and then runs scrypt unconditionally, so a body the server is willing to
+  // buffer is memory *and* CPU an unauthenticated caller gets to choose the size
+  // of. Uploads are the one thing that legitimately needs room, and they are
+  // bounded per field by the Content Engine's own `maxBytes`; this is the outer
+  // wall, and `maxBodySize` moves it for an install that stores large media.
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: vitNodeApiConfig.maxBodySize ?? DEFAULT_MAX_BODY_SIZE,
+      onError: c => c.json({ error: "Payload Too Large" }, 413),
+    }),
+  );
   app.use(
     "*",
     rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, redisClient),

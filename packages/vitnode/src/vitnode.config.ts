@@ -135,6 +135,16 @@ export interface VitNodeApiConfig {
    * web and the API together, point this and `buildConfig` at the same object.
    */
   i18n?: VitNodeApiI18nConfig;
+  /**
+   * Largest request body the API will read, in bytes. Defaults to 25 MB.
+   *
+   * The outer wall, not the upload rule: a Content Engine file field has its own
+   * `maxBytes` and is checked before a byte reaches storage. This exists because
+   * without it nothing bounded a body at all, and `POST /sign_in` buffers its
+   * JSON and then runs scrypt on it - memory and CPU whose size an
+   * unauthenticated caller was choosing.
+   */
+  maxBodySize?: number;
   metadata: VitNodeMetadata;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;

@@ -45,7 +45,7 @@ export class SessionModel {
       token += byte.toString(16).padStart(2, "0");
     }
 
-    const device = await new DeviceModel(this.c).getDeviceId();
+    const device = await new DeviceModel(this.c).getOrCreateDeviceId();
     const hashedToken = await this.hashToken(token);
 
     await this.c
@@ -77,10 +77,10 @@ export class SessionModel {
       this.c,
       this.c.get("core").authorization.cookieName,
     );
-    const device = await new DeviceModel(this.c).getDeviceId();
+    const device = await new DeviceModel(this.c).getExistingDeviceId();
 
     // Ensure both token and deviceId exist before proceeding
-    if (!(token && device.id)) {
+    if (!(token && device?.id)) {
       deleteAuthCookie(this.c, this.c.get("core").authorization.cookieName);
 
       return;
@@ -113,7 +113,7 @@ export class SessionModel {
     );
     if (!token) return null;
 
-    const device = await new DeviceModel(this.c).getDeviceId();
+    const device = await new DeviceModel(this.c).getExistingDeviceId();
     if (!device) return null;
 
     const hashedToken = await this.hashToken(token);

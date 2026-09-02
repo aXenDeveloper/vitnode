@@ -23,6 +23,19 @@ config({
 export const POSTGRES_URL =
   process.env.POSTGRES_URL ?? "postgresql://root:root@localhost:5432/vitnode";
 
+/**
+ * How many reverse proxies stand in front of this API, from `TRUST_PROXY`.
+ *
+ * Unset means none, and the client address is then the socket's - the only one a
+ * caller cannot choose. Behind nginx, Traefik, Cloudflare or a platform edge,
+ * set `TRUST_PROXY=1` (or the real hop count) so `X-Forwarded-For` is read
+ * instead; otherwise every visitor behind that proxy shares one rate-limit
+ * bucket and the audit trail records the proxy.
+ */
+const trustProxy = process.env.TRUST_PROXY
+  ? Number(process.env.TRUST_PROXY)
+  : undefined;
+
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin()],
   ai: {
@@ -157,4 +170,5 @@ export const vitNodeApiConfig = buildApiConfig({
     title: "VitNode API",
     shortTitle: "VitNode",
   },
+  trustProxy,
 });
