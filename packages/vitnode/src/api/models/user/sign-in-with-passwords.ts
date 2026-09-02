@@ -27,14 +27,19 @@ export const signInWithPassword = async ({
     .where(eq(core_users.email, email))
     .limit(1);
 
+  const passwords = new PasswordModel();
+
+  // Both branches derive a key before answering. Returning early here - which is
+  // what this did - made "no account with that email" measurably faster than
+  // "wrong password", so anyone could sift a list of addresses for the ones that
+  // are registered simply by timing the 403s.
   if (!user?.password) {
+    await passwords.verifyDummyPassword(password);
+
     throw new HTTPException(403);
   }
 
-  const validPassword = await new PasswordModel().verifyPassword(
-    password,
-    user.password,
-  );
+  const validPassword = await passwords.verifyPassword(password, user.password);
 
   if (!validPassword) {
     throw new HTTPException(403);

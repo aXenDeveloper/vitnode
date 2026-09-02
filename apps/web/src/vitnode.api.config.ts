@@ -26,6 +26,19 @@ export const POSTGRES_URL =
  * them exactly as `apps/api/src/vitnode.api.config.ts` does when this app needs
  * them - `buildApiConfig` treats all of them as optional.
  */
+/**
+ * How many reverse proxies stand in front of this app, from `TRUST_PROXY`.
+ *
+ * Unset means none, and the client address is then the socket's - the only one a
+ * caller cannot choose. Behind nginx, Traefik, Cloudflare or a platform edge,
+ * set `TRUST_PROXY=1` (or the real hop count) so `X-Forwarded-For` is read
+ * instead; otherwise every visitor shares one rate-limit bucket and the audit
+ * trail records the proxy.
+ */
+const trustProxy = process.env.TRUST_PROXY
+  ? Number(process.env.TRUST_PROXY)
+  : undefined
+
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin()],
   storage: {
@@ -74,4 +87,9 @@ export const vitNodeApiConfig = buildApiConfig({
     title: 'VitNode API',
     shortTitle: 'VitNode',
   },
+  // This mount has no socket to read: the bridge hands Hono a bare `Request`,
+  // so without this every caller resolves to the same fallback address and the
+  // rate limiter degrades to one bucket for the whole site. The API warns at
+  // boot when that is happening.
+  trustProxy,
 })

@@ -20,6 +20,7 @@ export const DiscordSSOApiPlugin = ({
     id: z.string(),
     email: z.string(),
     username: z.string(),
+    verified: z.boolean(),
   });
   const tokenSchema = z.object({
     access_token: z.string(),
@@ -75,6 +76,16 @@ export const DiscordSSOApiPlugin = ({
       if (error || !data) {
         throw new HTTPException(400, {
           message: "Invalid user response",
+        });
+      }
+
+      // As the Google adapter does. An address Discord has not confirmed is an
+      // address the person signing in may not own, and VitNode keys an account
+      // on it - so accepting one lets somebody register under an address they
+      // cannot read, and hold the account the real owner would have had.
+      if (!data.verified) {
+        throw new HTTPException(400, {
+          message: "Email not verified",
         });
       }
 

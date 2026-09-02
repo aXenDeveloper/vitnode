@@ -47,6 +47,35 @@ export const zodSearchHitSchema = z.object({
     .nullable(),
 });
 
+/**
+ * A query parameter as a positive integer, or nothing.
+ *
+ * `Number("abc")` is `NaN` and `new Date("abc")` is an Invalid Date, and both
+ * used to travel straight into the query builder - where Postgres rejects them,
+ * which reaches the caller as a `500` and writes a `core_logs` row on the way.
+ * This is a public, unauthenticated endpoint, so that was a log-flooding
+ * primitive as much as it was a bad status code. A filter nobody can parse is
+ * not an error; it is a filter that was not asked for.
+ */
+const positiveIntOrUndefined = (
+  value: string | undefined,
+): number | undefined => {
+  if (value === undefined || value === "") return undefined;
+
+  const parsed = Number(value);
+
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+/** A query parameter as a real date, or nothing. See above. */
+const dateOrUndefined = (value: string | undefined): Date | undefined => {
+  if (value === undefined || value === "") return undefined;
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
 export const searchRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
@@ -91,12 +120,12 @@ export const searchRoute = buildRoute({
       itemTypes: query.types
         ? query.types.split(",").filter(Boolean)
         : undefined,
-      authorId: query.authorId ? Number(query.authorId) : undefined,
-      containerId: query.containerId ? Number(query.containerId) : undefined,
+      authorId: positiveIntOrUndefined(query.authorId),
+      containerId: positiveIntOrUndefined(query.containerId),
       sort: query.sort,
-      dateFrom: query.from ? new Date(query.from) : undefined,
-      dateTo: query.to ? new Date(query.to) : undefined,
-      first: query.first ? Number(query.first) : undefined,
+      dateFrom: dateOrUndefined(query.from),
+      dateTo: dateOrUndefined(query.to),
+      first: positiveIntOrUndefined(query.first),
       cursor: query.cursor,
       languageCode: query.lang,
       includePrivate: false,

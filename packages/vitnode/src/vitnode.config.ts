@@ -2,6 +2,7 @@ import type { drizzle } from "drizzle-orm/postgres-js";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
 import type { CacheConfig } from "./api/lib/cache";
+import type { TrustProxyConfig } from "./api/lib/client-ip";
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { AIConfig } from "./api/models/ai";
@@ -99,6 +100,17 @@ export interface VitNodeApiConfig {
   };
   cron?: CronAdapter;
   dbProvider: ReturnType<typeof drizzle>;
+  /**
+   * Publishes the OpenAPI document at `/swagger/doc` and Swagger UI at
+   * `/swagger`.
+   *
+   * Defaults to on in development and **off** in production. The document names
+   * every route, parameter and response shape the install has, the admin tree
+   * included, and it is served without authentication - which is a map of the
+   * attack surface handed to anyone who asks. Turn it on deliberately, and put
+   * something in front of it if the install is public.
+   */
+  docs?: { enabled?: boolean };
   email?: {
     adapter?: EmailApiPlugin;
     logo?: DefaultTemplateEmailProps["templateProps"]["logo"];
@@ -123,6 +135,16 @@ export interface VitNodeApiConfig {
    * web and the API together, point this and `buildConfig` at the same object.
    */
   i18n?: VitNodeApiI18nConfig;
+  /**
+   * Largest request body the API will read, in bytes. Defaults to 25 MB.
+   *
+   * The outer wall, not the upload rule: a Content Engine file field has its own
+   * `maxBytes` and is checked before a byte reaches storage. This exists because
+   * without it nothing bounded a body at all, and `POST /sign_in` buffers its
+   * JSON and then runs scrypt on it - memory and CPU whose size an
+   * unauthenticated caller was choosing.
+   */
+  maxBodySize?: number;
   metadata: VitNodeMetadata;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
@@ -166,6 +188,27 @@ export interface VitNodeApiConfig {
       webp?: boolean;
     };
   };
+  /**
+   * How many reverse proxies stand between the internet and this API.
+   *
+   * Left unset, no forwarded header is believed at all and the client address is
+   * the socket's - the one thing a caller cannot choose for itself. That is the
+   * right answer when the API is reached directly, and the only safe default:
+   * `X-Forwarded-For` is a *request* header, so trusting it unconditionally lets
+   * every caller pick their own rate-limit bucket and their own line in the
+   * audit trail.
+   *
+   * Set it to the number of proxies actually in front of the app - `true` means
+   * one, the ordinary nginx / Traefik / platform-edge deployment - and the
+   * address that proxy observed is used instead. The count is what makes the
+   * header trustworthy: it is read that many entries from the *right*, so
+   * anything a client wrote itself stays to the left of the answer and is
+   * stepped over rather than believed.
+   *
+   * Getting it too high is the failure worth avoiding: it reaches past the
+   * entries real proxies appended and back into client-supplied text.
+   */
+  trustProxy?: TrustProxyConfig;
 }
 
 let registeredVitNodeConfig: undefined | VitNodeConfig;

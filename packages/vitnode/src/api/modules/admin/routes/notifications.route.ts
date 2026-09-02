@@ -14,6 +14,13 @@ export const zodSendNotificationSchema = z.object({
 
 export const sendNotificationRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  // The send-notification dashboard widget is the only caller, and its sibling
+  // (`PUT /admin/dashboard/widget-settings`) is gated the same way. Without a
+  // declaration the route asked only for *an* admin session, so an
+  // administrator restricted to one unrelated screen could still push arbitrary
+  // titles and bodies to any user id - a message that arrives inside the
+  // product, wearing the product's own notification UI.
+  adminStaffPermission: { module: "dashboard", permission: "can_edit" },
   route: {
     method: "post",
     description: "Send a notification to a user",

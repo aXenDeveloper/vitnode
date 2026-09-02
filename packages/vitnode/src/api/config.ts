@@ -2,6 +2,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Env, Schema } from "hono";
 
 import { swaggerUI } from "@hono/swagger-ui";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
@@ -9,10 +10,12 @@ import { HTTPException } from "hono/http-exception";
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
 import { createCacheClient } from "@/api/lib/cache-client";
+import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
 import { describeError } from "@/api/lib/error-details";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
+import { CONFIG } from "@/lib/config";
 import { initRealtimePubSub } from "@/ws/registry";
 
 import {
@@ -21,6 +24,9 @@ import {
 } from "./middlewares/global.middleware";
 import { rateLimiterMiddleware } from "./middlewares/rate-limiter.middleware";
 import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
+
+/** 25 MB: room for an image upload, and nothing like enough to be a weapon. */
+const DEFAULT_MAX_BODY_SIZE = 25 * 1024 * 1024;
 
 interface CORSOptions {
   allowHeaders?: string[];
@@ -62,23 +68,51 @@ export function VitNodeAPI({
 
   const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
 
-  app.doc("/swagger/doc", {
-    openapi: "3.0.0",
-    info: {
-      version: CONFIG_PLUGIN.version,
-      title: "VitNode API",
-    },
-    tags: plugins.flatMap(
-      plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
-    ),
-  });
+  // The generated document names every route, parameter and response shape in
+  // the install, including the admin tree - a map of the attack surface, handed
+  // out unauthenticated. Published in development, where it is the point, and
+  // in production only when an install asks for it via `docs: { enabled: true }`.
+  const docsEnabled = vitNodeApiConfig.docs?.enabled ?? CONFIG.node_development;
+
+  if (docsEnabled) {
+    app.doc("/swagger/doc", {
+      openapi: "3.0.0",
+      info: {
+        version: CONFIG_PLUGIN.version,
+        title: "VitNode API",
+      },
+      tags: plugins.flatMap(
+        plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
+      ),
+    });
+  }
+
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
+  // Before the rate limiter, which keys its buckets on `ipAddress`. Resolving it
+  // later - as `globalMiddleware` used to - left every request in the
+  // deployment sharing one bucket named after `undefined`.
+  app.use("*", clientIpMiddleware(vitNodeApiConfig.trustProxy));
+  // Nothing bounded a request body before this. `POST /sign_in` reads its JSON
+  // and then runs scrypt unconditionally, so a body the server is willing to
+  // buffer is memory *and* CPU an unauthenticated caller gets to choose the size
+  // of. Uploads are the one thing that legitimately needs room, and they are
+  // bounded per field by the Content Engine's own `maxBytes`; this is the outer
+  // wall, and `maxBodySize` moves it for an install that stores large media.
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: vitNodeApiConfig.maxBodySize ?? DEFAULT_MAX_BODY_SIZE,
+      onError: c => c.json({ error: "Payload Too Large" }, 413),
+    }),
+  );
   app.use(
     "*",
     rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, redisClient),
   );
-  app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
+  if (docsEnabled) {
+    app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
+  }
   app.use(
     "*",
     globalMiddleware({
@@ -96,6 +130,7 @@ export function VitNodeAPI({
       storage: vitNodeApiConfig.storage,
       plugins,
       cacheClient: redisClient,
+      trustProxy: vitNodeApiConfig.trustProxy,
     }),
   );
   app.use(async (c, next) => {

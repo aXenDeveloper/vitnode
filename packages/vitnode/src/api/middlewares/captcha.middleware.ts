@@ -13,13 +13,22 @@ const getResFromReCaptcha = async ({
   token: string;
   userIp: string;
 }): Promise<{ "error-codes"?: string[]; score: number; success: boolean }> => {
+  // An install that configured a captcha but no secret key cannot verify
+  // anything. Said here rather than left to the provider to reject a malformed
+  // request: the answer is the same either way, but only one of them is a
+  // decision this code made on purpose.
+  const { secretKey } = captchaConfig;
+  if (!secretKey) {
+    return { success: false, score: 0, "error-codes": ["missing-secret-key"] };
+  }
+
   if (captchaConfig.type === "cloudflare_turnstile") {
     const res = await fetch(
       "https://challenges.cloudflare.com/turnstile/v0/siteverify",
       {
         method: "POST",
         body: JSON.stringify({
-          secret: captchaConfig.secretKey,
+          secret: secretKey,
           response: token,
           remoteip: userIp,
         }),
@@ -41,12 +50,22 @@ const getResFromReCaptcha = async ({
     };
   }
   if (captchaConfig.type === "recaptcha_v3") {
-    const res = await fetch(
-      `https://www.google.com/recaptcha/api/siteverify?secret=${captchaConfig.secretKey}&response=${token}&remoteip=${userIp}`,
-      {
-        method: "POST",
+    // Form-encoded body rather than a query string. Interpolating the
+    // client-supplied token straight into the URL let it carry `&` and add
+    // parameters of its own to the request - and it put the site's secret key in
+    // a URL, which is the part of a request that ends up in proxy logs and
+    // error reports.
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-    );
+      body: new URLSearchParams({
+        secret: secretKey,
+        response: token,
+        remoteip: userIp,
+      }),
+    });
 
     const data: {
       "error-codes"?: string[];

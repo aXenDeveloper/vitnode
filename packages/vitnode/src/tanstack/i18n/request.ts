@@ -106,7 +106,14 @@ export const handleLocaleRequest = (
   if (redirectTo === undefined) return setCookie ? { setCookie } : {};
 
   const target = new URL(url);
-  target.pathname = redirectTo;
+  // Leading slashes collapsed to exactly one. A `Location` of `//example.com` is
+  // not a path at all - it is a *protocol-relative URL*, and the browser reads
+  // everything after the two slashes as a host. Canonicalising `/en//evil.com`
+  // strips the `/en` and leaves precisely that, so the site answered a request
+  // for one of its own URLs with a 308 to somebody else's - a phishing link that
+  // is genuinely hosted on this domain. A backslash is folded in too, because
+  // browsers treat it as a separator here even though the URL parser does not.
+  target.pathname = redirectTo.replace(/^[/\\]+/, "/");
 
   const headers = new Headers({
     location: target.pathname + target.search + target.hash,

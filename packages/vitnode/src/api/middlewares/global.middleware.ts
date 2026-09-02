@@ -34,6 +34,7 @@ import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { realtime } from "@/ws/registry";
 
+import type { TrustProxyConfig } from "../lib/client-ip";
 import type { BuildCronReturn } from "../lib/cron";
 import type { EventListenerConfig } from "../lib/events";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
@@ -46,6 +47,7 @@ import type {
 } from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
 
+import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
 import {
   loggerMiddleware,
@@ -182,6 +184,7 @@ export const globalMiddleware = ({
   search,
   storage,
   cacheClient,
+  trustProxy,
 }: Pick<
   VitNodeApiConfig,
   | "ai"
@@ -197,7 +200,10 @@ export const globalMiddleware = ({
   | "search"
   | "storage"
 > &
-  Pick<VitNodeConfig, "metadata"> & { cacheClient: CacheClient | null }) => {
+  Pick<VitNodeConfig, "metadata"> & {
+    cacheClient: CacheClient | null;
+    trustProxy: TrustProxyConfig | undefined;
+  }) => {
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -324,38 +330,14 @@ export const globalMiddleware = ({
     }),
   );
 
-  const ipHeaderKeys = [
-    "x-forwarded-for",
-    "x-real-ip",
-    "cf-connecting-ip",
-    "x-client-ip",
-    "x-forwarded",
-    "x-cluster-client-ip",
-    "forwarded-for",
-    "forwarded",
-    "via",
-    "remote-addr",
-    "client-ip",
-    "ip",
-    "x-ip",
-    "true-client-ip",
-    "fastly-client-ip",
-    "x-fastly-client-ip",
-  ];
-
   return async (c: Context, next: Next) => {
-    let ipAddress: string | undefined;
-
-    for (const key of ipHeaderKeys) {
-      ipAddress = c.req.header(key);
-      if (ipAddress) break;
-
-      ipAddress = c.req.raw.headers.get(key) ?? undefined;
-      if (ipAddress) break;
+    // Normally already resolved by `clientIpMiddleware`, which `VitNodeAPI`
+    // registers ahead of the rate limiter. Repeated here only so that composing
+    // this middleware by hand still yields an `ipAddress`, rather than leaving
+    // an `undefined` one to be used silently as a rate-limit key.
+    if (!c.get("ipAddress")) {
+      c.set("ipAddress", resolveClientIp(c, trustProxy));
     }
-
-    // Fallback to localhost if nothing found
-    c.set("ipAddress", ipAddress ?? "127.0.0.1");
     c.set("db", dbProvider);
     c.set("ai", new AIModel(c));
     c.set("cache", new CacheModel(cacheClient, c));

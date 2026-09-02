@@ -262,7 +262,8 @@ describe("admin session cookie", () => {
 });
 
 describe("device cookie", () => {
-  const create = async (c: Context) => await new DeviceModel(c).getDeviceId();
+  const create = async (c: Context) =>
+    await new DeviceModel(c).getOrCreateDeviceId();
 
   it.each(HOSTS)("is host-only on %s", async (_label, url) => {
     const cookie = named(

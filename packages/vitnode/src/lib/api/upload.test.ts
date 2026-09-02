@@ -7,6 +7,7 @@ import {
   getFileExtension,
   parseImageDimensions,
   replaceFileExtension,
+  safeStorageExtension,
   sanitizeFolder,
 } from "./upload";
 
@@ -131,5 +132,103 @@ describe("parseImageDimensions", () => {
       parseImageDimensions({ dimensions: { width: "320", height: 180 } }),
     ).toBeNull();
     expect(parseImageDimensions({ dimensions: { width: 320 } })).toBeNull();
+  });
+});
+
+describe("safeStorageExtension", () => {
+  describe("when the media type is one VitNode knows", () => {
+    it("keeps an extension that belongs to it", () => {
+      expect(safeStorageExtension(".png", "image/png")).toBe(".png");
+      expect(safeStorageExtension(".jpeg", "image/jpeg")).toBe(".jpeg");
+    });
+
+    it("replaces one that does not", () => {
+      // The attack this exists for: the browser announces `image/gif`, the file
+      // passes the media-type check, and the name decides what it is written to
+      // disk as. Served back from the site's own origin, `.html` is a page.
+      expect(safeStorageExtension(".html", "image/gif")).toBe(".gif");
+      expect(safeStorageExtension(".svg", "image/png")).toBe(".png");
+      expect(safeStorageExtension("", "image/webp")).toBe(".webp");
+    });
+
+    it("reads the type without its parameters", () => {
+      expect(safeStorageExtension(".png", "image/png; charset=binary")).toBe(
+        ".png",
+      );
+    });
+
+    it("is case-insensitive on both sides", () => {
+      expect(safeStorageExtension(".PNG", "IMAGE/PNG")).toBe(".png");
+    });
+
+    it("still stores SVG as SVG", () => {
+      // A real image type. Script inside one is the serving layer's problem -
+      // see the sandbox headers on the uploads mount.
+      expect(safeStorageExtension(".svg", "image/svg+xml")).toBe(".svg");
+    });
+  });
+
+  describe("when the media type is unknown", () => {
+    it("keeps an inert extension", () => {
+      expect(safeStorageExtension(".psd", "application/octet-stream")).toBe(
+        ".psd",
+      );
+      expect(safeStorageExtension(".docx")).toBe(".docx");
+    });
+
+    it.each([
+      ".html",
+      ".htm",
+      ".xhtml",
+      ".js",
+      ".mjs",
+      ".php",
+      ".phtml",
+      ".jsp",
+      ".aspx",
+      ".xml",
+      ".xsl",
+      ".svgz",
+      ".swf",
+      ".sh",
+    ])("neutralises %s", extension => {
+      expect(safeStorageExtension(extension)).toBe(".bin");
+    });
+
+    it("neutralises them case-insensitively", () => {
+      expect(safeStorageExtension(".HTML")).toBe(".bin");
+      expect(safeStorageExtension(".PhP")).toBe(".bin");
+    });
+
+    it.each([
+      ["", "no extension"],
+      [".", "a bare dot"],
+      ["..", "a climb"],
+      [".a b", "a space"],
+      [".ht/ml", "a separator"],
+      [".verylongextensionindeed", "an overlong one"],
+    ])("neutralises %s (%s)", extension => {
+      expect(safeStorageExtension(extension)).toBe(".bin");
+    });
+  });
+});
+
+describe("generateStorageFileName with a media type", () => {
+  it("stores a mislabelled name under the media type's extension", () => {
+    expect(
+      generateStorageFileName("payload.html", undefined, "image/gif"),
+    ).toMatch(/^[0-9a-f-]{36}\.gif$/);
+  });
+
+  it("keeps a server-derived override that fits the type", () => {
+    expect(generateStorageFileName("photo.png", ".webp", "image/webp")).toMatch(
+      /^[0-9a-f-]{36}\.webp$/,
+    );
+  });
+
+  it("neutralises an executable extension when the type is unknown", () => {
+    expect(generateStorageFileName("payload.php")).toMatch(
+      /^[0-9a-f-]{36}\.bin$/,
+    );
   });
 });

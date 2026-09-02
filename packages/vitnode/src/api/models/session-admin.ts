@@ -70,7 +70,7 @@ export class SessionAdminModel {
     }
 
     const hashedToken = await this.hashToken(token);
-    const device = await new DeviceModel(this.c).getDeviceId();
+    const device = await new DeviceModel(this.c).getOrCreateDeviceId();
 
     await this.c
       .get("db")
@@ -106,7 +106,7 @@ export class SessionAdminModel {
     if (!token) return;
 
     const hashedToken = await this.hashToken(token);
-    const device = await new DeviceModel(this.c).getDeviceId();
+    const device = await new DeviceModel(this.c).getExistingDeviceId();
 
     await this.c
       .get("db")
@@ -114,10 +114,13 @@ export class SessionAdminModel {
       .where(eq(core_admin_sessions.token, hashedToken));
 
     // Drop the cached resolution so getUser stops returning this admin before
-    // the TTL would naturally expire it.
-    await this.c
-      .get("cache")
-      .deleteSystem(adminSessionCacheKey(hashedToken, device.id));
+    // the TTL would naturally expire it. Nothing to drop when the device is
+    // unknown - the key is built from its id, so no entry was ever written.
+    if (device) {
+      await this.c
+        .get("cache")
+        .deleteSystem(adminSessionCacheKey(hashedToken, device.id));
+    }
 
     deleteAuthCookie(this.c, this.c.get("core").authorization.adminCookieName);
   }
@@ -127,7 +130,7 @@ export class SessionAdminModel {
     const token = getCookie(this.c, authorization.adminCookieName);
     if (!token) return null;
 
-    const device = await new DeviceModel(this.c).getDeviceId();
+    const device = await new DeviceModel(this.c).getExistingDeviceId();
     if (!device) return null;
 
     const hashedToken = await this.hashToken(token);
