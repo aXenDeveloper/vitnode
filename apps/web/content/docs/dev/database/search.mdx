@@ -1,18 +1,26 @@
 ---
-title: Search Your Tables
-description: Add case-insensitive search filtering to paginated database tables with withPagination.
+title: Search
+description: Add case-insensitive search to one paginated plugin table with withPagination and the shared table UI.
 icon: Search
 ---
 
 `withPagination` includes built-in multi-column search filtering. When `search` columns are specified, incoming `?search=` query parameters automatically apply case-insensitive `ILIKE` clauses across the chosen columns.
 
 <Callout type="info" title="Site-Wide Search">
-  For site-wide search across multiple collections and models, see [Search & Discovery](/docs/dev/search).
+  For site-wide search across multiple collections and models, see [Search &
+  Discovery](/docs/dev/search).
 </Callout>
 
 ## Quick start
 
-### 1. Accept `search` in Route Query Schema
+`ContentDataTable` is VitNode's reusable table UI: it renders rows, toolbar,
+search, sorting, and pagination. It does not fetch data. See [Data
+Table](/docs/ui/data-table) for the navigation provider it needs around it.
+
+<Steps>
+<Step>
+
+### Accept `search` in the route query
 
 Extend `zodPaginationQuery` to accept the optional search string:
 
@@ -27,9 +35,10 @@ request: {
 }
 ```
 
----
+</Step>
+<Step>
 
-### 2. Supply Search Columns to `withPagination`
+### Supply searchable columns
 
 List the columns to filter in the `search` array:
 
@@ -43,7 +52,7 @@ const data = await withPagination({
   search: [reactions.emoji, reactions.description], // Filters across both columns
   query: async ({ cursorSelection, limit, where, orderBy }) =>
     await c
-      .get("db")
+      .get('db')
       .select({ ...getColumns(reactions), ...cursorSelection })
       .from(reactions)
       .where(where)
@@ -52,25 +61,29 @@ const data = await withPagination({
 })
 ```
 
----
+</Step>
+<Step>
 
-### 3. Enable in Data Table
+### Show the table search input
 
-Pass the `search` configuration to `<ContentDataTable />`:
+Enable the shared table UI after its route loader returns `{ edges, pageInfo }`:
 
 ```tsx title="src/views/reactions-table.tsx"
 <ContentDataTable
   id="reactions-table"
   columns={columns}
-  data={data}
-  // [!code ++:3]
-  search={{
-    placeholder: "Search reactions...",
-  }}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'emoji', order: 'asc' } }}
+  search // [!code ++]
+  searchPlaceholder="Search reactions..." // [!code ++]
 />
 ```
 
 The table automatically updates the `?search=` query parameter as the user types with debouncing.
+
+</Step>
+</Steps>
 
 ## Learn More
 
@@ -81,7 +94,7 @@ The table automatically updates the `?search=` query parameter as the user types
     href="/docs/dev/database/pagination"
   />
   <Card
-    title="Data Table Component"
+    title="Data table"
     description="Render searchable and sortable data tables"
     href="/docs/ui/data-table"
   />

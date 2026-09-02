@@ -1,6 +1,6 @@
 ---
 title: Pagination
-description: Cursor pagination in VitNode - the withPagination helper on your Hono route, and the validated search, query, and data table that consume it.
+description: Add stable cursor pagination to a plugin API route and navigate its results from a typed plugin page.
 icon: ChevronsRight
 ---
 
@@ -10,7 +10,10 @@ VitNode uses cursor-based pagination rather than offset pagination. Cursors ensu
 
 ## Quick start
 
-### 1. Backend: Paginated API Route
+<Steps>
+<Step>
+
+### Add a paginated API route
 
 Use `withPagination` from `@vitnode/core/api/lib/with-pagination`:
 
@@ -55,7 +58,8 @@ export const getPostsRoute = buildRoute({
 
 The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pageInfo }`.
 
----
+</Step>
+</Steps>
 
 ## Why Cursors Over Offsets
 
@@ -167,7 +171,10 @@ The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pag
 
 ## Frontend Integration
 
-### Add pagination to a plugin route
+<Steps>
+<Step>
+
+### Move through results from a plugin page
 
 Plugin routes normalize their own query string with `parseSearch`, then receive
 the typed `search`, `loaderData`, and same-page `navigate` function. That is all
@@ -204,25 +211,28 @@ const PostsPage = ({
   Awaited<ReturnType<typeof fetchPosts>>,
   PostsSearch
 >) => (
-  <div className="flex flex-col gap-4">
-    <ContentDataTable
-      columns={columns}
-      data={loaderData}
-      defaultPageSize={search.first}
-    />
-    <button
-      onClick={() => void navigate({ resetScroll: false, search })}
-      type="button"
-    >
-      Refresh this page
-    </button>
-  </div>
+  <button
+    disabled={!loaderData.pageInfo.hasNextPage}
+    onClick={() =>
+      void navigate({
+        resetScroll: false,
+        search: {
+          ...search,
+          cursor: loaderData.pageInfo.endCursor ?? undefined, // [!code ++]
+        },
+      })
+    }
+    type="button"
+  >
+    Next page
+  </button>
 )
 
 export default PostsPage
 ```
 
----
+</Step>
+</Steps>
 
 ## Custom Filtering and Search
 

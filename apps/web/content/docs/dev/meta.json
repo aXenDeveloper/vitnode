@@ -26,6 +26,7 @@
     "---Services---",
     "ai",
     "search",
+    "search-elasticsearch",
     "storage",
     "email",
     "captcha",
@@ -36,7 +37,6 @@
     "---Operate---",
     "debugging",
     "swagger",
-    "documentation",
     "contribution",
     "..."
   ]

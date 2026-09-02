@@ -4,7 +4,7 @@ description: How VitNode merges translations from installed packages, and how to
 icon: Globe
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 VitNode provides full internationalization out of the box. Every package (`@vitnode/core` and plugins) maintains its own locale files, which VitNode merges per request: core strings first, plugin strings second, and your host app overrides last.
 
@@ -43,11 +43,11 @@ Declare supported languages in `apps/web/src/i18n.ts`:
 
 ```ts title="apps/web/src/i18n.ts"
 export const i18n = {
-  defaultLocale: "en",
+  defaultLocale: 'en',
   locales: [
-    { code: "en", name: "English" },
+    { code: 'en', name: 'English' },
     // [!code ++:1]
-    { code: "de", name: "Deutsch" },
+    { code: 'de', name: 'Deutsch' },
   ],
 }
 ```
@@ -74,11 +74,11 @@ Because your app overrides are merged last, only the keys you specify are overwr
 
 ## Translation Architecture
 
-| Source | Role | Order |
-| :--- | :--- | :--- |
-| `@vitnode/core` | Base strings for auth, admin shells, and dialogs | Base layer |
-| **Plugins** | Domain strings declared in `plugins/*/src/locales` | Second layer |
-| **Host Application** | Custom overrides in `apps/web/src/locales` | Highest priority (wins) |
+| Source               | Role                                               | Order                   |
+| :------------------- | :------------------------------------------------- | :---------------------- |
+| `@vitnode/core`      | Base strings for auth, admin shells, and dialogs   | Base layer              |
+| **Plugins**          | Domain strings declared in `plugins/*/src/locales` | Second layer            |
+| **Host Application** | Custom overrides in `apps/web/src/locales`         | Highest priority (wins) |
 
 Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw key paths from displaying in production.
 
@@ -96,7 +96,7 @@ Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw k
     href="/docs/dev/i18n/messages"
   />
   <Card
-    title="Server-Side i18n"
+    title="API i18n"
     description="Localize transactional emails and error responses"
     href="/docs/dev/i18n/server"
   />

@@ -8,36 +8,47 @@ VitNode provides a unified transactional email service accessible via `c.get("em
 
 ## Quick start
 
-Send an email directly from any Hono route handler:
+<Steps>
+<Step>
+
+### Queue an email from a Hono route
 
 ```ts title="plugins/blog/src/api/modules/newsletter/routes/welcome.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route"
+import { buildRoute } from '@vitnode/core/api/lib/route'
 
 export const sendWelcomeRoute = buildRoute({
-  pluginId: "blog",
+  pluginId: 'blog',
   route: {
-    method: "post",
-    path: "/welcome",
-    responses: { 200: { description: "Email sent" } },
+    method: 'post',
+    path: '/welcome',
+    responses: { 200: { description: 'Email sent' } },
   },
   handler: async (c) => {
-    const user = c.get("user")
+    const user = c.get('user')
 
-    // [!code ++:6]
-    const email = await c.get("email").build({
+    // [!code ++:5]
+    await c.get('email').send({
       user, // Resolves email address and preferred locale
-      subject: "Welcome to VitNode!",
-      content: () => "Thank you for joining our community.",
+      subject: 'Welcome to VitNode!',
+      content: () => 'Thank you for joining our community.',
     })
-
-    await c.get("email").deliver(email)
 
     return c.json({ sent: true })
   },
 })
 ```
 
----
+`send()` renders the template and queues delivery. It keeps a successful API
+response quick even when the mail provider is having a moody afternoon.
+
+</Step>
+</Steps>
+
+<Callout type="info" title="`build()` and `deliver()` do exist">
+  Use `await c.get('email').build(args)` followed by `deliver(email)` only when
+  a route truly needs immediate delivery. `send(args)` is the normal, queued
+  path.
+</Callout>
 
 ## Configuring Email Adapters
 
@@ -46,11 +57,11 @@ Configure your delivery transport in `apps/api/src/vitnode.api.config.ts`:
 ### 1. Resend Adapter
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { ResendEmailAdapter } from "@vitnode/core/api/adapters/email/resend"
+import { ResendEmailAdapter } from '@vitnode/core/api/adapters/email/resend'
 
 export const vitNodeApiConfig = buildApiConfig({
   email: {
-    from: "noreply@yourdomain.com",
+    from: 'noreply@yourdomain.com',
     adapter: ResendEmailAdapter({
       apiKey: process.env.RESEND_API_KEY!,
     }),
@@ -61,11 +72,11 @@ export const vitNodeApiConfig = buildApiConfig({
 ### 2. SMTP Adapter
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { SmtpEmailAdapter } from "@vitnode/core/api/adapters/email/smtp"
+import { SmtpEmailAdapter } from '@vitnode/core/api/adapters/email/smtp'
 
 export const vitNodeApiConfig = buildApiConfig({
   email: {
-    from: "noreply@yourdomain.com",
+    from: 'noreply@yourdomain.com',
     adapter: SmtpEmailAdapter({
       host: process.env.SMTP_HOST!,
       port: Number(process.env.SMTP_PORT ?? 587),
@@ -83,6 +94,7 @@ export const vitNodeApiConfig = buildApiConfig({
 {/* Image prompt: VitNode AdminCP System -> Integrations screen at /admin/core/system/integrations. Email card showing status "Configured" with a "Send Test Email" modal containing recipient address input and delivery confirmation toast. Dark theme, 1440x900. */}
 
 Verify email configuration in the AdminCP at **System → Integrations** (`/admin/core/system/integrations`):
+
 - Click **Test Email** on the email card.
 - Enter an email address to dispatch an immediate test delivery.
 
