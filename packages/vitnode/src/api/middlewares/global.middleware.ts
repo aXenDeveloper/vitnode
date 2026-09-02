@@ -25,6 +25,8 @@ import {
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
+import { WorkflowModel } from "@/api/models/workflow";
+import { validateWorkflowDefinitions } from "@/api/workflows/registry";
 import { validateContentTypes } from "@/content/registry";
 import { ensureContentLocalizationLanguages } from "@/content/server/language-resolver";
 import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
@@ -45,6 +47,7 @@ import type {
   SearchProviderApiPlugin,
 } from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
+import type { RegisteredWorkflowDefinition } from "../workflows/types";
 
 import { collectCronJobs } from "../lib/cron";
 import {
@@ -138,6 +141,15 @@ export interface EnvVariablesVitNode {
     searchIndexers: SearchIndexerConfig[];
     storage?: VitNodeApiConfig["storage"];
     webSockets: WebSocketConfig[];
+    /**
+     * Every registered workflow definition, with the plugin that owns it.
+     *
+     * The runner picks a `workflow-step` task up in a cron request that has no
+     * plugin context at all, so the only way back from an execution row to the
+     * code it names is a lookup by `pluginId + workflowId + version` - which
+     * has to live somewhere that request can reach.
+     */
+    workflows: RegisteredWorkflowDefinition[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: EmailModel;
@@ -165,6 +177,7 @@ export interface EnvVariablesVitNode {
     newsletter: boolean;
     roleId: number;
   };
+  workflow: WorkflowModel;
 }
 
 export const globalMiddleware = ({
@@ -237,6 +250,20 @@ export const globalMiddleware = ({
       maxAttempts: task.maxAttempts,
     })),
   );
+
+  // Validated once more across *all* plugins, for the same reason content types
+  // and search indexers are: `buildApiPlugin` can only see one plugin's modules,
+  // and `pluginId + workflowId + version` has to be unique installation-wide
+  // before any execution row can be resolved back to code.
+  const workflowsMetadata: RegisteredWorkflowDefinition[] =
+    validateWorkflowDefinitions(
+      plugins.flatMap(plugin =>
+        (plugin.workflows ?? []).map(workflow => ({
+          ...workflow,
+          pluginId: plugin.pluginId,
+        })),
+      ),
+    );
 
   const webSocketsMetadata: WebSocketConfig[] = plugins.flatMap(plugin =>
     (plugin.webSockets ?? []).map(webSocket => ({
@@ -365,6 +392,7 @@ export const globalMiddleware = ({
     c.set("queue", new QueueModel(c));
     c.set("search", new SearchModel(c));
     c.set("storage", new StorageModel(c));
+    c.set("workflow", new WorkflowModel(c));
     c.set("realtime", realtime);
 
     // Resolved before `core` is set rather than per mint, so the integrations
@@ -414,6 +442,7 @@ export const globalMiddleware = ({
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
+      workflows: workflowsMetadata,
     });
 
     // Whether a localized content type's `defaultLocale` names a row in

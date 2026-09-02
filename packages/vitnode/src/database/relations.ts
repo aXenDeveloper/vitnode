@@ -14,6 +14,7 @@ import * as search from "./search";
 import * as secrets from "./secrets";
 import * as sessions from "./sessions";
 import * as users from "./users";
+import * as workflows from "./workflows";
 
 /**
  * Every table `@vitnode/core` ships, in one object.
@@ -37,6 +38,7 @@ export const coreSchema = {
   ...secrets,
   ...sessions,
   ...users,
+  ...workflows,
 };
 
 /**
@@ -175,6 +177,17 @@ export const coreRelations = defineRelations(coreSchema, r => ({
     user: r.one.core_users({
       from: r.core_files.userId,
       to: r.core_users.id,
+    }),
+  },
+
+  core_workflow_executions: {
+    steps: r.many.core_workflow_step_executions(),
+  },
+
+  core_workflow_step_executions: {
+    execution: r.one.core_workflow_executions({
+      from: r.core_workflow_step_executions.executionId,
+      to: r.core_workflow_executions.id,
     }),
   },
 }));

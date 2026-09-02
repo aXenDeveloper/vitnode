@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   testArticleContentType,
@@ -9,6 +10,7 @@ import {
 import type { SearchIndexer } from "../models/search";
 
 import { validateSearchIndexers } from "../models/search";
+import { defineWorkflow } from "../workflows/define";
 import { buildModule } from "./module";
 import { buildApiPlugin } from "./plugin";
 
@@ -215,5 +217,80 @@ describe("validateSearchIndexers", () => {
         { ...indexer("test.article"), pluginId: "@vitnode/example" },
       ]).map(item => item.itemType),
     ).toEqual(["blog_post", "test.article"]);
+  });
+});
+
+describe("buildApiPlugin workflows", () => {
+  const workflow = (id: string, version: number) =>
+    defineWorkflow({
+      id,
+      input: z.object({ orderId: z.number() }),
+      steps: ({ step }) => [step({ id: "reserve", run: () => undefined })],
+      version,
+    });
+
+  it("collects workflows from nested modules, keeping the owning module", () => {
+    const plugin = buildApiPlugin({
+      pluginId: "@vitnode/example",
+      modules: [
+        buildModule({
+          pluginId: "@vitnode/example",
+          name: "admin",
+          routes: [],
+          modules: [
+            buildModule({
+              pluginId: "@vitnode/example",
+              name: "orders",
+              routes: [],
+              workflows: [workflow("place-order", 1)],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    expect(
+      plugin.workflows?.map(entry => [entry.definition.id, entry.module]),
+    ).toEqual([["place-order", "orders"]]);
+  });
+
+  it("registers two versions of one workflow side by side", () => {
+    const plugin = buildApiPlugin({
+      pluginId: "@vitnode/example",
+      modules: [
+        buildModule({
+          pluginId: "@vitnode/example",
+          name: "orders",
+          routes: [],
+          workflows: [workflow("place-order", 1), workflow("place-order", 2)],
+        }),
+      ],
+    });
+
+    expect(plugin.workflows?.map(entry => entry.definition.version)).toEqual([
+      1, 2,
+    ]);
+  });
+
+  it("refuses the same workflow id and version twice inside one plugin", () => {
+    expect(() =>
+      buildApiPlugin({
+        pluginId: "@vitnode/example",
+        modules: [
+          buildModule({
+            pluginId: "@vitnode/example",
+            name: "orders",
+            routes: [],
+            workflows: [workflow("place-order", 1)],
+          }),
+          buildModule({
+            pluginId: "@vitnode/example",
+            name: "checkout",
+            routes: [],
+            workflows: [workflow("place-order", 1)],
+          }),
+        ],
+      }),
+    ).toThrow(/already registered by module "orders" and again by "checkout"/);
   });
 });

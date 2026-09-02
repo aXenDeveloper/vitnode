@@ -6,6 +6,10 @@ import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { core_queue } from "@/database/queue";
 import { resolveQueueTaskOutcome } from "@/lib/api/resolve-queue-task-outcome";
+import {
+  queueLeaseCutoff,
+  resolveStaleQueueLease,
+} from "@/lib/api/resolve-stale-queue-lease";
 
 const QUEUE_BATCH_SIZE = 25;
 const QUEUE_LOCK_KEY = "queue:process";
@@ -29,6 +33,8 @@ export const processQueueTasks = async (
   try {
     const db = c.get("db");
     const now = new Date();
+
+    await recoverStaleQueueLeases(c, now);
 
     const claimed = await db.transaction(async tx => {
       const rows = await tx
@@ -119,4 +125,72 @@ export const processQueueTasks = async (
   } finally {
     await c.get("cache").releaseLock(QUEUE_LOCK_KEY);
   }
+};
+
+/**
+ * Give back tasks whose worker never came back.
+ *
+ * The claim in `processQueueTasks` is a lease: a row is flipped to `processing`
+ * before its handler runs, and the finishing update only happens if the process
+ * survives. A deploy, an OOM kill or a container reschedule in between leaves
+ * the row `processing` forever, and every later tick ignores it - the claim
+ * query only ever selects `pending`.
+ *
+ * Runs before the claim so a recovered task can be picked up in the same tick.
+ * Recovery counts against the task's own `maxAttempts` (the attempt was already
+ * incremented when it was claimed), so a handler that reliably takes its
+ * process down still fails eventually instead of cycling forever.
+ */
+const recoverStaleQueueLeases = async (
+  c: Context<EnvVitNode>,
+  now: Date,
+): Promise<void> => {
+  const db = c.get("db");
+  const stale = await db
+    .select({
+      attempts: core_queue.attempts,
+      id: core_queue.id,
+      maxAttempts: core_queue.maxAttempts,
+      name: core_queue.name,
+      pluginId: core_queue.pluginId,
+    })
+    .from(core_queue)
+    .where(
+      and(
+        eq(core_queue.status, "processing"),
+        lt(core_queue.reservedAt, queueLeaseCutoff(now)),
+      ),
+    )
+    .limit(QUEUE_BATCH_SIZE);
+
+  if (stale.length === 0) return;
+
+  for (const task of stale) {
+    const outcome = resolveStaleQueueLease({
+      attempts: task.attempts,
+      maxAttempts: task.maxAttempts,
+      now,
+    });
+
+    await db
+      .update(core_queue)
+      .set({
+        availableAt: outcome.availableAt ?? now,
+        completedAt: outcome.completedAt ?? null,
+        lastError: outcome.lastError,
+        reservedAt: null,
+        status: outcome.status,
+      })
+      .where(
+        and(eq(core_queue.id, task.id), eq(core_queue.status, "processing")),
+      );
+  }
+
+  await c
+    .get("log")
+    .warn(
+      `Recovered ${stale.length} queue task(s) left in "processing" by a worker that stopped: ${stale
+        .map(task => `${task.pluginId}:${task.name}#${task.id}`)
+        .join(", ")}`,
+    );
 };

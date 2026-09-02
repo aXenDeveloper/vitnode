@@ -8,6 +8,7 @@ import { middlewareModule } from "./modules/middleware/middleware.module";
 import { queueModule } from "./modules/queue/queue.module";
 import { searchModule } from "./modules/search/search.module";
 import { usersModule } from "./modules/users/users.module";
+import { workflowsModule } from "./modules/workflows/workflows.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -19,6 +20,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     cronModule,
     queueModule,
     searchModule,
+    workflowsModule,
   ],
   permissionStaff: {
     moderator: {
