@@ -4,9 +4,10 @@ description: End-to-end type-safe RPC client for calling your Hono API from SSR 
 icon: ArrowRightLeft
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 VitNode provides type-safe RPC fetchers directly linked to your Hono API modules:
+
 - `fetcher` on the **server** (SSR / server functions) using the real API module.
 - `fetcherClient` in the **browser** using a lightweight module type reference.
 
@@ -15,14 +16,14 @@ VitNode provides type-safe RPC fetchers directly linked to your Hono API modules
 Use `fetcher` in SSR renders and `.server()` branches of `createIsomorphicFn`:
 
 ```ts
-import { usersModule } from "@vitnode/core/api/modules/users/users.module"
-import { fetcher } from "@vitnode/core/tanstack/fetcher/server"
+import { usersModule } from '@vitnode/core/api/modules/users/users.module'
+import { fetcher } from '@vitnode/core/tanstack/fetcher/server'
 
 // [!code ++:8]
 const response = await fetcher(usersModule, {
-  method: "get",
-  module: "users",
-  path: "/session",
+  method: 'get',
+  module: 'users',
+  path: '/session',
 })
 
 if (response.ok) {
@@ -39,21 +40,21 @@ if (response.ok) {
 In client components and browser query functions, use `fetcherClient`:
 
 ```ts
-import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client"
-import type { usersModule } from "@vitnode/core/api/modules/users/users.module"
+import { clientModule, fetcherClient } from '@vitnode/core/lib/fetcher-client'
+import type { usersModule } from '@vitnode/core/api/modules/users/users.module'
 
 // Create lightweight module reference (no runtime backend imports bundled)
-const moduleRef = clientModule<typeof usersModule>("@vitnode/core")
+const moduleRef = clientModule<typeof usersModule>('@vitnode/core')
 
 // [!code ++:13]
 const response = await fetcherClient(moduleRef, {
-  method: "post",
-  module: "users",
-  path: "/sign_in",
+  method: 'post',
+  module: 'users',
+  path: '/sign_in',
   args: {
     body: {
-      email: "user@example.com",
-      password: "password123",
+      email: 'user@example.com',
+      password: 'password123',
     },
   },
   allowSaveCookies: true, // Necessary when the route mints a session
@@ -62,16 +63,63 @@ const response = await fetcherClient(moduleRef, {
 
 ---
 
+## 3. Use it on a plugin page
+
+Plugin route loaders run for SSR and client navigation. Wrap both transports
+once, then call that function from the page that owns the feature:
+
+```ts title="plugins/devices/src/lib/fetch-devices.ts"
+import { createIsomorphicFn } from '@tanstack/react-start'
+import { clientModule, fetcherClient } from '@vitnode/core/lib/fetcher-client'
+import { fetcher } from '@vitnode/core/tanstack/fetcher/server'
+import type { usersModule } from '@vitnode/core/api/modules/users/users.module'
+
+const usersModuleRef = clientModule<typeof usersModule>('@vitnode/core')
+
+export const fetchDevices = createIsomorphicFn()
+  .server(async () => {
+    const response = await fetcher(usersModule, {
+      method: 'get',
+      module: 'users',
+      path: '/devices',
+    })
+    return await response.json()
+  })
+  .client(async () => {
+    const response = await fetcherClient(usersModuleRef, {
+      method: 'get',
+      module: 'users',
+      path: '/devices',
+    })
+    return await response.json()
+  })
+```
+
+```tsx title="plugins/devices/src/routes/devices-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+import { fetchDevices } from '../lib/fetch-devices'
+
+// [!code ++:3]
+export const route = definePluginRoute({
+  load: async () => await fetchDevices(),
+})
+```
+
+That is the page-level usage: the initial render uses `fetcher`; later
+navigations use `fetcherClient`. Same result, no extra host route file.
+
+---
+
 ## Fetcher Options
 
-| Option | Required When | Description |
-| :--- | :--- | :--- |
-| `module` | **Always** | Target module key declared on API |
-| `method` | **Always** | HTTP method (`get`, `post`, `put`, `delete`) |
-| `path` | **Always** | Route path pattern (e.g. `/`, `/:id`) |
-| `args` | Body / params / query exist | Strongly typed payload: `{ body?, params?, query? }` |
-| `allowSaveCookies` | Optional | Set `true` when logging in or saving session cookies |
-| `captchaToken` | Optional | Challenge token for routes guarded by `withCaptcha` |
+| Option             | Required When               | Description                                          |
+| :----------------- | :-------------------------- | :--------------------------------------------------- |
+| `module`           | **Always**                  | Target module key declared on API                    |
+| `method`           | **Always**                  | HTTP method (`get`, `post`, `put`, `delete`)         |
+| `path`             | **Always**                  | Route path pattern (e.g. `/`, `/:id`)                |
+| `args`             | Body / params / query exist | Strongly typed payload: `{ body?, params?, query? }` |
+| `allowSaveCookies` | Optional                    | Set `true` when logging in or saving session cookies |
+| `captchaToken`     | Optional                    | Challenge token for routes guarded by `withCaptcha`  |
 
 <Callout type="info" title="Dynamic Content Engine Modules (rawFetcher)">
   For generated Content Engine routes that have no static TypeScript module definitions, use `rawFetcher({ pluginId, path, method })`.

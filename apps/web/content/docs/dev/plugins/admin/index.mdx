@@ -7,9 +7,9 @@ icon: PanelsTopLeft
 import { LayoutDashboardIcon, RouteIcon, ShieldCheckIcon } from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-AdminCP is a plugin surface. First [create the plugin](/docs/dev/plugins/create),
-then give it an `area: 'admin'` route and a browser-safe navigation declaration.
-The host app supplies the panel shell; your plugin supplies the useful bit.
+AdminCP is a plugin surface. Give the plugin an `area: 'admin'` route and a
+browser-safe navigation declaration. The host supplies the panel shell; your
+plugin supplies the useful bit.
 
 <Steps>
   <Step>
@@ -20,12 +20,11 @@ The host app supplies the panel shell; your plugin supplies the useful bit.
 import type { PluginRouteDefinition } from '@vitnode/core/routing'
 
 export const routes: PluginRouteDefinition[] = [
-  // [!code ++:7]
+  // [!code ++:6]
   {
     area: 'admin',
     entry: 'routes/admin-settings-page',
     id: 'settings',
-    namespaces: ['@acme/site-notes.admin'],
     path: '/admin/site-notes/settings',
   },
 ]
@@ -37,18 +36,12 @@ export const routes: PluginRouteDefinition[] = [
 ### Render the plugin page
 
 ```tsx title="plugins/site-notes/src/routes/admin-settings-page.tsx"
-import { useTranslations } from 'use-intl'
-
-const AdminSettingsPage = () => {
-  const t = useTranslations('@acme/site-notes.admin')
-
-  return (
-    <div className="flex flex-col gap-2 p-4">
-      <h2 className="text-2xl font-semibold">{t('settings.title')}</h2>
-      <p className="text-muted-foreground">{t('settings.desc')}</p>
-    </div>
-  )
-}
+const AdminSettingsPage = () => (
+  <div className="flex flex-col gap-2 p-4">
+    <h2 className="text-2xl font-semibold">Site notes settings</h2>
+    <p className="text-muted-foreground">Manage the notes plugin.</p>
+  </div>
+)
 
 export default AdminSettingsPage
 ```

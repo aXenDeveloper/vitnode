@@ -53,11 +53,16 @@ can sit for minutes; anything per-visitor should be short or zero:
 ```ts
 export const announcementsQueryOptions = () =>
   queryOptions({
-    queryKey: ['announcements'],
+    queryKey: ['@acme/announcements', 'announcements'], // [!code ++]
     queryFn: fetchAnnouncements,
     staleTime: 5 * 60 * 1000,
   })
 ```
+
+<Callout type="warn" title="Start every key with your plugin ID">
+  `invalidateQueries` matches prefixes. Put the plugin ID first so one plugin
+  cannot read from or invalidate another plugin's similarly named key.
+</Callout>
 
 <Callout type="warn" title="Per-visitor data is per-visitor">
   A session, a permission set or a personal file list must not share a cache
@@ -79,7 +84,9 @@ moved:
 const queryClient = useQueryClient()
 
 await publishAnnouncement(id)
-await queryClient.invalidateQueries({ queryKey: ['announcements'] })
+await queryClient.invalidateQueries({
+  queryKey: ['@acme/announcements', 'announcements'], // [!code ++]
+})
 ```
 
 A row that could be on any page under any sort means invalidating the list's

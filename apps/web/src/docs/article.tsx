@@ -1,6 +1,5 @@
 import type { TOCItemType } from 'fumadocs-core/toc'
 
-import { Callout } from 'fumadocs-ui/components/callout'
 import { DocsBody, DocsPage } from 'fumadocs-ui/page'
 
 import { ViewOptions } from './view-options'
@@ -48,9 +47,6 @@ export const DocsArticle = ({
   children: React.ReactNode
   toc: TOCItemType[]
 }) => {
-  const isPluginFirstGuide =
-    url.startsWith('/docs/dev/') && !url.startsWith('/docs/dev/plugins')
-
   return (
     <DocsPage
       full={full}
@@ -72,15 +68,6 @@ export const DocsArticle = ({
           </p>
         ) : null}
       </div>
-
-      {isPluginFirstGuide ? (
-        <Callout title="Plugin first" type="idea">
-          Building a page, API, AdminCP screen, or feature? Put it in a plugin.
-          Keep the host for composition and site-wide infrastructure; otherwise
-          it becomes a very expensive junk drawer.{' '}
-          <a href="/docs/dev/plugins/create">Create a plugin first.</a>
-        </Callout>
-      ) : null}
 
       <DocsBody>{children}</DocsBody>
     </DocsPage>

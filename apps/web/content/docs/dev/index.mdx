@@ -24,20 +24,20 @@ extensions, so your host app does not become a drawer full of mystery cables.
   code and prose disagree, trust the code and send the prose a friendly PR.
 </Callout>
 
-## Start with a plugin
+## Start with a running app
 
 <Cards>
-  <Card
-    icon={<PackagePlusIcon />}
-    title="Create a plugin"
-    description="Make the package that will own your first feature."
-    href="/docs/dev/plugins/create"
-  />
   <Card
     icon={<RocketIcon />}
     title="Get an app running"
     description="Scaffold VitNode, migrate Postgres, and enter AdminCP."
     href="/docs/dev/setup"
+  />
+  <Card
+    icon={<PackagePlusIcon />}
+    title="Create a plugin"
+    description="Make the package that will own your first feature."
+    href="/docs/dev/plugins/create"
   />
   <Card
     icon={<ServerIcon />}
@@ -80,7 +80,7 @@ enable **Turborepo** during setup: the generator needs a workspace root.
 1. Start Postgres (Docker is the low-drama local choice).
 2. Run `db:migrate` to create core tables and your first administrator.
 3. Run `dev`, then visit `http://localhost:3000/admin`.
-4. Create a plugin before adding a product page, API endpoint, content type, or
+4. Create a plugin for your first product page, API endpoint, content type, or
    dashboard widget.
 
 Every command above is expanded in [Getting started](/docs/dev/setup). From
