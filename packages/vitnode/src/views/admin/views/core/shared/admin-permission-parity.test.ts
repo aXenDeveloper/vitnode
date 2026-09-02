@@ -105,10 +105,11 @@ describe("the scan is reading real declarations", () => {
     ]);
   });
 
-  it("finds the three roles routes that declare one", () => {
+  it("finds the four roles routes that declare one", () => {
     expect([...declarationsIn("roles").keys()]).toEqual([
       "create.route.ts",
       "delete.route.ts",
+      "show.route.ts",
       "update.route.ts",
     ]);
   });
@@ -157,6 +158,7 @@ describe("the roles screen names the API's own permissions", () => {
 
   it.each([
     ["create.route.ts", "create"],
+    ["show.route.ts", "view"],
     ["update.route.ts", "edit"],
     ["delete.route.ts", "delete"],
   ] as const)("%s is %s", (file, tuple) => {
@@ -168,6 +170,10 @@ describe("the roles screen names the API's own permissions", () => {
     // role *picker* has to work for an administrator who cannot open the roles
     // *screen*. So `roles.can_view` decides which page is reachable and nothing
     // else, and this says so on purpose rather than by omission.
+    //
+    // `show.route.ts` is *not* covered by that rationale and does declare one:
+    // the picker reads `/list`, and one role's full record is the edit screen's
+    // read and nobody else's.
     expect(declared.has("list.route.ts")).toBe(false);
     expect(ADMIN_ROLE_PERMISSIONS.view).toEqual({
       module: "roles",

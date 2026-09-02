@@ -3,6 +3,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
+import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
@@ -254,7 +255,14 @@ export const updateUserAdminRoute = buildRoute({
         });
 
       if (rolesChanged) {
-        await invalidateStaffPermissionsForUser(c, user.id);
+        // Both caches, not just the permission one. `resolveStaffPermissions`
+        // reads the primary role off the *cached user object*, so recomputing
+        // from a stale `roleId` reaches the same answer it just discarded - and
+        // a demotion applied here would not take effect for another minute.
+        await Promise.all([
+          invalidateStaffPermissionsForUser(c, user.id),
+          invalidateSessionCacheForUser(c, user.id),
+        ]);
       }
 
       await c.get("events").emit("user.updated", {
@@ -279,7 +287,12 @@ export const updateUserAdminRoute = buildRoute({
       .limit(1);
 
     if (rolesChanged) {
-      await invalidateStaffPermissionsForUser(c, user.id);
+      // The same pair as above - and this is the likelier path of the two, since
+      // a request that changes only roles never reaches the `values` branch.
+      await Promise.all([
+        invalidateStaffPermissionsForUser(c, user.id),
+        invalidateSessionCacheForUser(c, user.id),
+      ]);
     }
 
     await c.get("events").emit("user.updated", {
