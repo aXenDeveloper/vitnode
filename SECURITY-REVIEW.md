@@ -6,19 +6,34 @@ Content Engine, the TanStack Start web app, the storage/SSO/search adapters, the
 plugins, the scaffolding templates and the CI workflows.
 **Branch:** `claude/vitnode-security-review-5ly6gw`
 
+## How this was done, and how far to trust it
+
 Fourteen parallel auditors covered one attack surface each — authentication, authorisation,
 password recovery, SSO, uploads, injection, XSS, CSRF/CORS/headers, rate limiting, SSRF,
-secrets, response shape, cron/queue/WebSocket, and dependencies/CI. Every candidate finding
-was then re-read by three independent verifiers with different briefs (one trying to refute
-it, one trying to write the exploit, one judging whether the fix was right), and only
-findings a majority upheld are listed here. Most candidates did not survive that pass, which
-is the point of having it.
+secrets, response shape, cron/queue/WebSocket, and dependencies/CI. They produced 47
+candidate findings. A completeness critic then went looking for surface none of them had
+covered and named eleven gaps, which were audited in turn for 16 more candidates. Each
+candidate was re-read by three independent verifiers with different briefs: one trying to
+refute it, one trying to write the exploit, one judging whether the proposed fix was right.
+
+**Every issue below I also read and confirmed in the source myself before changing anything**,
+and that — not the panel — is what each fix rests on. One caveat worth stating plainly,
+because it affects how the machine-generated verdicts read: the verifiers ran _after_ the
+first round of fixes was already committed, so they were reading patched code. Findings like
+the plaintext reset tokens and the broken rate limiter come back from that pass marked "not
+real" for exactly the reason you would hope — they had been fixed. Their evidence is the
+original auditors' reading of the pre-fix code, quoted in each entry below, plus my own.
+
+Where I could make a fix falsifiable I did. The open redirect (finding 9) is the clearest
+case: I reverted the patch, watched all five payloads redirect to `evil.example`, and put
+the patch back. Findings that depend on a live database or a real browser are argued from
+the code rather than demonstrated, and I have said so where that is true.
 
 ---
 
 ## Summary
 
-**16 issues fixed.** 2 critical, 3 high, 7 medium, 4 low.
+**24 issues fixed.** 2 critical, 4 high, 9 medium, 9 low.
 
 Two of them are worth reading first, because they are the ones an attacker reaches without
 help:
@@ -36,26 +51,34 @@ than they look — there was nothing throttling the attempts.
 Nothing here required a database migration, and no existing data or credential is
 invalidated by any of it.
 
-| # | Severity | Issue | File |
-|---|---|---|---|
-| 1 | Critical | Privilege escalation to root via `secondaryRoleIds` | `admin/users/routes/update.route.ts` |
-| 2 | Critical | World-runnable cron on the published default secret | `middlewares/cron-auth.middleware.ts` |
-| 3 | High | Rate limiter keyed on `undefined` — one global bucket | `api/config.ts` |
-| 4 | High | Live password-reset links readable from the admin queue list | `admin/advanced/queue/routes/get.route.ts` |
-| 5 | High | Reset tokens stored in plaintext | `users/routes/reset-passowrd.route.ts` |
-| 6 | Medium | Cross-site WebSocket hijacking | `apps/api/src/index.ts` |
-| 7 | Medium | Client-chosen IP address | `middlewares/global.middleware.ts` |
-| 8 | Medium | Stored XSS through the upload file extension | `api/models/storage.ts` |
-| 9 | Medium | Open redirect off the origin | `tanstack/i18n/request.ts` |
-| 10 | Medium | Password reset left every old session alive | `users/routes/change-password.route.ts` |
-| 11 | Medium | Unguarded admin notification push | `admin/routes/notifications.route.ts` |
-| 12 | Medium | OpenAPI document and Swagger UI public in production | `api/config.ts` |
-| 13 | Low | Account enumeration by sign-in timing | `models/user/sign-in-with-passwords.ts` |
-| 14 | Low | Captcha token injected into the verification URL | `middlewares/captcha.middleware.ts` |
-| 15 | Low | Auth cookies stated no `SameSite` | `api/lib/auth-cookie.ts` |
-| 16 | Low | Unauthenticated debug route writing a log row per call | `users/routes/test.route.ts` |
+| #   | Severity | Issue                                                        | File                                       |
+| --- | -------- | ------------------------------------------------------------ | ------------------------------------------ |
+| 1   | Critical | Privilege escalation to root via `secondaryRoleIds`          | `admin/users/routes/update.route.ts`       |
+| 2   | Critical | World-runnable cron on the published default secret          | `middlewares/cron-auth.middleware.ts`      |
+| 3   | High     | Rate limiter keyed on `undefined` — one global bucket        | `api/config.ts`                            |
+| 4   | High     | Live password-reset links readable from the admin queue list | `admin/advanced/queue/routes/get.route.ts` |
+| 5   | High     | Reset tokens stored in plaintext                             | `users/routes/reset-passowrd.route.ts`     |
+| 6   | Medium   | Cross-site WebSocket hijacking                               | `apps/api/src/index.ts`                    |
+| 7   | Medium   | Client-chosen IP address                                     | `middlewares/global.middleware.ts`         |
+| 8   | Medium   | Stored XSS through the upload file extension                 | `api/models/storage.ts`                    |
+| 9   | Medium   | Open redirect off the origin                                 | `tanstack/i18n/request.ts`                 |
+| 10  | Medium   | Password reset left every old session alive                  | `users/routes/change-password.route.ts`    |
+| 11  | Medium   | Unguarded admin notification push                            | `admin/routes/notifications.route.ts`      |
+| 12  | Medium   | OpenAPI document and Swagger UI public in production         | `api/config.ts`                            |
+| 13  | Low      | Account enumeration by sign-in timing                        | `models/user/sign-in-with-passwords.ts`    |
+| 14  | Low      | Captcha token injected into the verification URL             | `middlewares/captcha.middleware.ts`        |
+| 15  | Low      | Auth cookies stated no `SameSite`                            | `api/lib/auth-cookie.ts`                   |
+| 16  | Low      | Unauthenticated debug route writing a log row per call       | `users/routes/test.route.ts`               |
+| 17  | High     | Start mount resolves every caller to one address             | `apps/web/src/vitnode.api.config.ts`       |
+| 18  | Medium   | No request body size limit, in front of scrypt               | `api/config.ts`                            |
+| 19  | Medium   | Discord SSO accepted an unverified provider email            | `adapters/sso/discord.ts`                  |
+| 20  | Medium   | Demotion did not take effect for a minute                    | `admin/users/routes/update.route.ts`       |
+| 21  | Low      | Unauthenticated requests wrote unbounded device rows         | `api/models/device.ts`                     |
+| 22  | Low      | Unvalidated search params became 500s and log rows           | `modules/search/routes/search.route.ts`    |
+| 23  | Low      | One role's full record readable without `roles:can_view`     | `admin/roles/routes/show.route.ts`         |
+| 24  | Low      | Dev databases published on every interface                   | `docker-compose.yml` (both)                |
 
-Three further issues are **reported but deliberately not fixed** — they need a product
+Eight further issues are **reported but deliberately not fixed** — they need a product
 decision or a deployment decision rather than a patch. They are in
 [Not fixed](#not-fixed-needs-a-decision) at the end.
 
@@ -93,7 +116,7 @@ PATCH /api/@vitnode/core/admin/users/{their own id}
 { "secondaryRoleIds": [4] }        # 4 = the seeded Administrator role
 ```
 
-`assertCanEditAdminTarget` passes — it only fires when the *target* is already an admin, and
+`assertCanEditAdminTarget` passes — it only fires when the _target_ is already an admin, and
 it reads the primary role. The route's own validation only rejects `guest` roles. The write
 lands, and on the next request their permission set resolves to `root`. They now hold every
 permission on the install, including the `can_edit_admin` they were denied a moment earlier.
@@ -119,7 +142,8 @@ The middleware guarding `POST /api/@vitnode/core/cron/` began:
 
 ```ts
 const cronSecret = c.get("core").cronSecret;
-if (!cronSecret) throw new HTTPException(403, { message: "Cron access not configured" });
+if (!cronSecret)
+  throw new HTTPException(403, { message: "Cron access not configured" });
 ```
 
 That check can never fire, because the fallback above means `cronSecret` is never empty. So
@@ -147,7 +171,7 @@ faults in the same twenty lines went with it:
   bytes differ. Now `timingSafeEqual`, with the length branch also doing a comparison so the
   timing does not leak the secret's length either.
 - `authHeader?.replace("Bearer ", "")` removed the first occurrence of that substring
-  *anywhere* in the header, so `Basic Bearer <secret>` parsed as a credential and a secret
+  _anywhere_ in the header, so `Basic Bearer <secret>` parsed as a credential and a secret
   containing the word "Bearer " lost part of itself. Now an anchored prefix match.
 
 Twelve tests in `cron-auth.middleware.test.ts`.
@@ -179,7 +203,7 @@ Two consequences, in opposite directions:
   requests a second holds the entire site at `429` for everybody.
 
 The unit test did not catch it because it installs its own middleware setting `ipAddress`
-*before* the limiter — the exact opposite of the real wiring.
+_before_ the limiter — the exact opposite of the real wiring.
 
 **Fixed.** IP resolution moved into its own `clientIpMiddleware`, registered ahead of the
 limiter. `globalMiddleware` keeps a fallback for anyone composing middleware by hand, so a
@@ -189,12 +213,17 @@ missing address can no longer become a rate-limit key silently.
 
 `packages/vitnode/src/api/modules/admin/advanced/queue/routes/get.route.ts:79`
 
-`EmailModel.send` queues the *fully rendered* message:
+`EmailModel.send` queues the _fully rendered_ message:
 
 ```ts
 await this.c.get("queue").dispatch({
   name: "send-email",
-  payload: { to: email.to, subject: email.subject, html: email.html, text: email.text },
+  payload: {
+    to: email.to,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  },
 });
 ```
 
@@ -234,7 +263,7 @@ The reset route generated a token, wrote it to `core_users_forgot_password.token
 under a variable helpfully named `hashToken` — and mailed the same value:
 
 ```ts
-const hashToken = new ForgotPasswordTokenModel().generateResetToken();  // not hashed
+const hashToken = new ForgotPasswordTokenModel().generateResetToken(); // not hashed
 ```
 
 So the table held a set of live, unexpired credentials in the clear. Any read of it is
@@ -298,7 +327,7 @@ leftmost entry, which is the usual way this is got wrong, returns the forgery.
 Seventeen tests cover forged chains of arbitrary length, multiple hops, and each of the
 sixteen old headers being ignored.
 
-> **Deployment note.** `trustProxy` defaults to *off*, which is correct for a directly
+> **Deployment note.** `trustProxy` defaults to _off_, which is correct for a directly
 > reachable API and safe everywhere. **If VitNode runs behind nginx, Traefik, Cloudflare or a
 > platform edge, set it** — otherwise every visitor resolves to the proxy's address and shares
 > one rate-limit bucket. On the TanStack Start mount there is no socket at all (the bridge
@@ -316,10 +345,10 @@ was checked against the allowlist:
 if (allowedMimeTypes && !allowedMimeTypes.includes(file.type)) throw ...
 ```
 
-and then the stored extension was taken from the *filename*:
+and then the stored extension was taken from the _filename_:
 
 ```ts
-generateStorageFileName(file.name)   // → `${randomUUID()}${getFileExtension(originalName)}`
+generateStorageFileName(file.name); // → `${randomUUID()}${getFileExtension(originalName)}`
 ```
 
 `image/gif` and `image/svg+xml` are deliberately excluded from sharp's re-encode list, so for
@@ -339,7 +368,7 @@ Content Engine file field allows it wherever `allowedMimeTypes` is set without
   name in `core_files` is untouched, so downloads keep the name the user gave.
 - The uploads mount now sends `Content-Security-Policy: sandbox` and
   `X-Content-Type-Options: nosniff`. `sandbox` applies only to documents, so images —
-  including SVG loaded through `<img>` — are unaffected, but anything *navigated to* lands in
+  including SVG loaded through `<img>` — are unaffected, but anything _navigated to_ lands in
   an opaque origin with no cookies and no same-origin API.
 
 `.svg` is still storable on purpose: it is a real image type a CMS should accept, and the
@@ -372,7 +401,7 @@ without the fix, which was checked by reverting it.
 The route set the new hash and deleted the reset row, and stopped. Sessions last ninety days
 by default, so an attacker holding one kept it — which inverts the meaning of the action.
 Somebody resetting a password after a compromise believes they have just locked the intruder
-out; they had locked them out of *signing in again* and nothing else.
+out; they had locked them out of _signing in again_ and nothing else.
 
 **Fixed.** A completed reset revokes every session and admin session for that user and drops
 them from the session cache (new `api/models/session-revoke.ts`). It runs after the password
@@ -382,7 +411,7 @@ write, so a failure there cannot sign somebody out without having changed anythi
 
 `packages/vitnode/src/api/modules/admin/routes/notifications.route.ts`
 
-`POST /admin/notifications/send` checked for *an* admin session and no permission, so any
+`POST /admin/notifications/send` checked for _an_ admin session and no permission, so any
 administrator — including one restricted to a single unrelated screen — could push an
 arbitrary title and body to any user id. Notifications arrive inside the product wearing the
 product's own UI, which makes them a good phishing surface.
@@ -434,7 +463,9 @@ the same. Two smaller faults in the same class went with it:
 `packages/vitnode/src/api/middlewares/captcha.middleware.ts:45`
 
 ```ts
-fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}&remoteip=${userIp}`)
+fetch(
+  `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}&remoteip=${userIp}`,
+);
 ```
 
 `token` is a client-supplied header, interpolated unencoded, so it could carry `&` and append
@@ -465,6 +496,157 @@ the state cookie on the way back from the provider and break every social sign-i
 to `core_logs` on every call. With the rate limiter broken it was a cheap way to fill a disk.
 
 **Fixed.** Removed, along with its registration.
+
+---
+
+## Found by the completeness pass
+
+The critic that went looking for missed surface earned its keep: these eight are all things
+the fourteen dimension auditors walked past.
+
+### 17. On the TanStack Start mount, every caller resolved to the same address (high)
+
+`apps/web/src/server/api-bridge.ts:22`
+
+The bridge is one line, and deliberately so:
+
+```ts
+export const createApiBridge =
+  (app: FetchableApp): ApiBridge =>
+  async request =>
+    app.fetch(request);
+```
+
+Hono's signature is `fetch(request, env, executionCtx)`, so calling it with one argument
+leaves `c.env` undefined — and `socketAddress()` starts by checking exactly that, meaning it
+can never find a peer address on this mount. With `trustProxy` unset there is nothing else to
+fall back to, so **100% of requests through the web app resolved to `127.0.0.1`.**
+
+This is finding 3 again, arriving by a different road: one shared rate-limit bucket for the
+whole site, exhaustible by one host at ~1.3 requests a second, plus a password-reset audit
+trail that records `127.0.0.1` for everybody. `apps/api` is unaffected — `@hono/node-server`
+passes `{ incoming, outgoing }` as the env, so the Node branch of the probe resolves.
+
+**Fixed**, as far as it can be. There is no socket to read here — Start's handler is given a
+`Request` and nothing else — so this is a deployment fact rather than a bug to patch out:
+
+- Both reference apps now read `TRUST_PROXY` for the hop count, documented in both
+  `.env.example` files, so the operator has a switch and does not have to edit code.
+- The API prints a one-time warning at boot when it has neither a socket nor a trusted
+  header, naming the setting. Silently degrading to one bucket was the real defect; being
+  told is the fix.
+
+### 18. No request body size limit, in front of scrypt (medium)
+
+`packages/vitnode/src/api/config.ts`
+
+Nothing anywhere in the stack bounded a request body. `POST /sign_in` reads its JSON and then
+runs scrypt unconditionally, so an unauthenticated caller was choosing both how much memory
+the server buffers and how much CPU it then spends. The two compose: a handful of large
+bodies against an endpoint that always hashes is a cheaper denial of service than either half
+alone.
+
+**Fixed.** A 25 MB default via Hono's `bodyLimit`, answering `413`, with `maxBodySize` to move
+it. Uploads are unaffected — a Content Engine file field enforces its own `maxBytes` before a
+byte reaches storage — so this is the outer wall, not the upload rule.
+
+### 19. Discord SSO accepted an unverified provider email (medium)
+
+`packages/vitnode/src/api/adapters/sso/discord.ts:19`
+
+The Google adapter reads `verified_email` and refuses when it is false. Discord's user schema
+did not include `verified` at all, so an account whose email Discord has never confirmed
+could sign in and have a VitNode account created keyed on that address.
+
+The worst case is closed elsewhere — `SSOModel.callback` answers `409` rather than
+auto-linking when the email already exists, so this is not takeover of an existing account.
+What it does allow is registering under an address you cannot read, holding the account the
+real owner would have had, and being bound to it if the install ever adds email recovery.
+
+**Fixed.** Discord now refuses an unverified email, in the same shape as Google. Facebook is
+noted below: its Graph API exposes no equivalent flag, so there is nothing to check.
+
+### 20. A demotion did not take effect for about a minute (medium)
+
+`packages/vitnode/src/api/modules/admin/users/routes/update.route.ts`
+
+A role change expired the staff-permission cache — correctly — and stopped there. But
+`resolveStaffPermissions` is handed `c.get("user")`, which is the _session_ cache's copy of
+the user, and reads the primary role straight off it:
+
+```ts
+const roleIds = await getUserRoleIds(c, user); // [user.roleId, ...secondary]
+```
+
+So recomputing after the invalidation reached the same answer it had just thrown away, out of
+a stale `roleId`. Somebody demoted out of an administrator role kept its powers for up to the
+session cache's 60-second TTL — a minute in which the AdminCP said the demotion had been
+applied and it had not.
+
+**Fixed.** Both caches now go, on both write paths — and the second one matters more, because
+a request that changes only roles never reaches the branch the first invalidation sat in.
+
+### 21. Unauthenticated requests wrote unbounded device rows (low)
+
+`packages/vitnode/src/api/models/device.ts`
+
+`SessionModel.getUser` resolved the device _before_ it knew the session was real, and
+resolving created one if the device cookie named nothing. So any request carrying a made-up
+`vitnode_auth` cookie inserted a `core_sessions_known_devices` row and then discovered there
+was no session — one row per request, unauthenticated, for as long as anybody cared to keep
+sending them.
+
+**Fixed** by splitting the model in two, which also makes the intent legible:
+`getExistingDeviceId` is a read, used by session resolution — where a missing device already
+means no session, since a session row is tied to one — and `getOrCreateDeviceId` is used by
+sign-in and sign-up, where minting a device record is the point rather than a side effect.
+Five tests count the inserts.
+
+### 22. Unvalidated search parameters became 500s and log rows (low)
+
+`packages/vitnode/src/api/modules/search/routes/search.route.ts:94`
+
+```ts
+authorId: query.authorId ? Number(query.authorId) : undefined,
+dateFrom: query.from ? new Date(query.from) : undefined,
+```
+
+`Number("abc")` is `NaN` and `new Date("abc")` is an Invalid Date, and both went straight into
+the query builder, where Postgres rejects them. That reaches the caller as a `500` — and
+writes a `core_logs` row on the way out, on a public unauthenticated endpoint. So it was a
+log-flooding primitive as much as a wrong status code.
+
+**Fixed.** A filter nobody can parse is not an error; it is a filter that was not asked for.
+Also on the same endpoint's cursor: it becomes the query's `OFFSET` on the relevance path,
+where there is no stable key to seek on, so it is now a checked integer capped at 10,000.
+
+### 23. One role's full record readable without `roles:can_view` (low)
+
+`packages/vitnode/src/api/modules/admin/roles/routes/show.route.ts`
+
+`GET /admin/roles/{id}` was reachable on an admin session alone. `GET /admin/roles/list`
+is ungated _deliberately_ — the parity test documents why, and it is a good reason: a role
+picker has to work for an administrator who cannot open the roles screen. That reasoning does
+not extend to one role's full record, which only the edit screen reads.
+
+**Fixed.** Gated on `roles:can_view`, which `can_edit` already depends on, so nobody who could
+open the screen loses access. The parity test's pinned expectations move with it.
+
+### 24. Dev databases published on every interface (low)
+
+`apps/api/docker-compose.yml`, `packages/create-vitnode-app/copy-of-vitnode-app/docker/docker-compose.yml`
+
+```yaml
+ports:
+  - "5432:5432"
+```
+
+Docker's short form binds to `0.0.0.0`, and the password defaults to `root`. On a laptop that
+means whatever café or office network it is joined to; on a VPS it means the internet. This
+ships in the scaffolding, so it is the default every generated project starts from.
+
+**Fixed.** Both bound to `127.0.0.1`. These are development containers reached from the host,
+so loopback loses nothing.
 
 ---
 
@@ -518,6 +700,83 @@ password on every install — a lockout, not an upgrade. Doing it properly means
 hash format that records its own parameters and re-hashes on next successful sign-in. Worth
 doing; too large to slip into a security pass.
 
+### Sign-in has no captcha and no account lockout
+
+`packages/vitnode/src/api/modules/users/routes/sign-in.route.ts`
+
+`sign-up` and `reset-password` both declare `withCaptcha: true`. `sign-in` declares nothing,
+and there is no per-account lockout or backoff anywhere. With the rate limiter fixed
+(findings 3 and 17) there is now a real per-client limit in front of it, which is why this is
+here rather than higher up — but 80 attempts a minute per address is a credential-stuffing
+budget, not a lockout.
+
+Not fixed because adding `withCaptcha` to sign-in changes the client contract: the form must
+attach `x-vitnode-captcha-token`, and any install with a captcha configured would have
+sign-in break the moment this shipped without the matching frontend change. That is a
+coordinated change, not a patch. The recommendation is `withCaptcha: true` on sign-in plus
+the form change, and a per-account attempt counter with backoff.
+
+### Revoking sessions does not close live WebSockets
+
+`packages/vitnode/src/ws/registry.ts`
+
+A connection's identity is fixed at handshake and held in `wsRegistry`. Nothing closes it
+when the underlying session goes away, so after a password reset (finding 10) or a device
+revoke, an already-open socket keeps receiving that user's pushes until it disconnects on its
+own.
+
+Not fixed because it needs a registry API that does not exist yet — closing by user id, called
+from `revokeAllSessionsForUser`, with a decision about what a plugin's open handlers should
+see. Bounded in practice by how long a socket stays open, and it hands over no new data the
+holder was not already receiving, but it is a real gap in what "signed out everywhere" means.
+
+### Third-party GitHub Actions are pinned to mutable tags
+
+`.github/workflows/*`
+
+Actions are referenced by tag rather than commit SHA, in jobs that hold `NPM_TOKEN` and
+`pull-requests: write`. A tag is mutable, so an upstream compromise reaches this repository
+on its next run. I checked the higher-severity CI shapes and they are clean: no
+`pull_request_target` with a PR-head checkout, and no `${{ github.event.* }}` interpolated
+into a `run:` block.
+
+Not fixed because pinning to SHAs is a maintenance decision — it wants Dependabot configured
+to bump them, or the pins rot and nobody updates them.
+
+### Plugin routes are mounted before core's screens
+
+`apps/web/src/router.tsx`
+
+The anti-shadowing guard cannot see conflicts it is registered after, so a plugin can claim a
+path the core app also serves. Related: the routing manifest does not reserve the `/admin`
+URL namespace to the admin _area_, so a plugin page in the `main` area can answer at an
+`/admin/...` path and be rendered by the unguarded public shell.
+
+Neither is exploitable by an outside attacker — both require installing a hostile or careless
+plugin, which is already trusted code — but they are the kind of structural gap worth closing
+before a third-party plugin ecosystem exists.
+
+### The admin gate is a substring test on the path
+
+`packages/vitnode/src/api/config.ts:119`
+
+```ts
+if (c.req.path.includes("/admin/")) {
+  return await globalAdminMiddleware()(c, next);
+}
+```
+
+Whether a route is admin-gated depends on where its author happened to mount it, rather than
+on how it was registered. A route at an admin module's root (`path: "/"`, no trailing
+segment) misses the gate; a public route whose path happens to contain the substring gets it.
+In this repository every admin route also carries its own `adminStaffPermission` — which
+re-checks the staff tables and fails closed without an admin session — so nothing is
+currently exposed by it, and findings 11 and 23 were the two that had been relying on this
+alone.
+
+Not fixed because the right change is structural: derive the gate from route registration.
+Worth doing before a plugin author trips over it.
+
 ---
 
 ## Checked and found sound
@@ -534,7 +793,10 @@ obvious guess would have been wrong.
 - **Password comparison.** `timingSafeEqual`, with the length-mismatch branch also comparing.
 - **SQL injection.** No `sql.raw` reaching request data anywhere. Every `orderBy` is a Zod
   enum resolved to a column object, never a string; pagination is cursor-based and capped at
-  100 rows; `first=0` and `first=abc` are stable `400`s rather than silent defaults.
+  100 rows; `first=0` and `first=abc` are stable `400`s rather than silent defaults. The
+  search adapter's cursor was flagged as a "raw SQL `OFFSET`" and is not one — it goes through
+  Drizzle's parameter binding. It was unvalidated, which is finding 22, and that is a
+  different and much smaller problem than injection.
 - **Path traversal in storage keys.** `sanitizeFolder` validates per segment, so `..`, `a//b`,
   `/a`, `a/` and backslashes all fail on the same rule; the filename is a fresh UUID, so the
   user-supplied name never reaches the path.
@@ -542,7 +804,9 @@ obvious guess would have been wrong.
   no IDOR.
 - **SSO CSRF.** The `state` parameter is generated, stored in a cookie as a scrypt digest, and
   verified and cleared on callback. A provider email matching an existing local account is
-  refused with a `409` rather than auto-linked, which is the takeover this usually is.
+  refused with a `409` rather than auto-linked, which is the takeover this usually is. On
+  email verification: Google checked its flag already and Discord now does too (finding 19);
+  Facebook's Graph API exposes no equivalent, so there is nothing there to check.
 - **Staff permission model.** Root and `unrestricted` short-circuits are consistent; the
   permission cache has an epoch and is expired explicitly on every role and staff-entry write;
   granted permissions are filtered against the catalog, so a forged permission key is dropped;
@@ -564,19 +828,45 @@ obvious guess would have been wrong.
 
 ```bash
 pnpm install
-cd packages/vitnode && npx vitest run     # 303 files, 6255 tests
+cd packages/vitnode && npx vitest run     # 304 files, 6261 tests
 npx tsc -p tsconfig.json --noEmit
 npx eslint .
 ```
 
-All green as of this review. 104 tests were added across seven files, each one written
-against the behaviour that was wrong — the open-redirect test was checked by reverting the fix and
-confirming all five payloads escape the origin.
+All green as of this review. 109 tests were added across eight files, each one written
+against the behaviour that was wrong rather than against the fix — the open-redirect test was
+checked by reverting the patch and confirming all five payloads escape the origin, and the
+device test counts inserts so the unauthenticated-row-flood case fails loudly if it returns.
 
-**Two things to do after deploying**, neither of which is code:
+One test's expectations were deliberately changed rather than merely kept passing:
+`admin-permission-parity.test.ts` pins exactly which admin routes declare a permission, and
+finding 23 adds one. That is the test doing its job.
 
-1. Set `CRON_SECRET` to a random value on every install. Finding 2 now fails *closed*, so an
-   install still on the placeholder will find its cron endpoint returning `403` — that is the
-   fix working, and setting the variable is the answer.
-2. Set `trustProxy` in the API config if anything sits in front of the app. See the note
-   under finding 7; the API will warn at boot where it can tell.
+**Three things to do after deploying**, none of which is code:
+
+1. **Set `CRON_SECRET`** to a random value on every install. Finding 2 now fails _closed_, so
+   an install still on the placeholder will find its cron endpoint returning `403` — that is
+   the fix working, and setting the variable is the answer.
+2. **Set `TRUST_PROXY`** if anything sits in front of the app — and on the TanStack Start
+   deployment, effectively always, because that mount has no socket to fall back to
+   (findings 7 and 17). The API warns at boot where it can tell.
+3. **Validate `Host` at the proxy** — nginx `server_name` with a default-server reject, or the
+   platform equivalent. See the `Host` entry under _Not fixed_.
+
+---
+
+## What this review did not cover
+
+Worth stating so the gaps are known rather than assumed away:
+
+- **No running instance.** Everything here is source analysis. The one exception is finding 9,
+  where the redirect behaviour was reproduced directly against the URL parser.
+- **No database.** Findings that depend on live data — the exact blast radius of the queue
+  payload leak, say — are argued from the schema and the query.
+- **No browser.** The XSS and CSWSH findings (8, 6) are argued from how browsers are specified
+  to behave, not from a demonstration.
+- **No dependency CVE scan.** `pnpm audit` was not run; the dependency work here was limited
+  to lifecycle scripts, install sources and CI shape.
+- **Plugins were covered lightly.** `plugins/blog` and `plugins/example` are small and mostly
+  admin-side today. The plugin _isolation_ model — what a hostile plugin could reach — is
+  called out under _Not fixed_ but was not audited as an attack surface in its own right.
