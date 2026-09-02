@@ -1,122 +1,167 @@
 ---
 title: Content Delivery & SEO
-description: Step-by-step guide to integrating content types with Next.js App Router, managing slug redirect history, auto-generating SEO metadata, canonical links, hreflang tags, and XML sitemaps.
+description: Deliver Content Engine records over the web with TanStack Start, automatic 308 redirects, plugin route manifests, and rich SEO metadata.
 icon: Compass
 ---
 
-Content Engine provides frontend content delivery abstractions (`delivery: true`) to streamline routing, automatic 308 redirects, SEO meta generation, and XML sitemap creation.
+import { Step, Steps } from 'fumadocs-ui/components/steps'
 
-## Prerequisites & Context
+Content Engine provides delivery abstractions to turn your schema into public URLs. It handles the heavy lifting: automatic 308 redirects when slugs change, Open Graph tags, canonical links, hreflang alternates, and XML sitemaps.
 
-Frontend content delivery maps a client definition (e.g. `articleContentType`) and server model (`articleContent`) directly into Next.js App Router dynamic routes:
+Best of all: in VitNode, delivery lives in your **plugin** first. That means your content types and their public views ship together as one reusable package.
 
-- **`delivery: { basePath: "/articles", ... }`**: Configures route bases, automatic slug 308 redirects, SEO meta fields, and sitemap frequency.
-- **`resolveContentDelivery(articleContent, { slug, locale })`**: A Next.js server utility from `@vitnode/core/content/next` that fetches content, resolves slug redirects, generates SEO metadata, and handles 404 fallbacks.
-
----
+{/* Image prompt: A clean infographic showing a Content Engine article moving through TanStack Start routing. Left: Database record with slug "launch-day". Middle: Plugin route manifest resolving /articles/:slug with automatic 308 redirect logic. Right: Rendered HTML page with rich SEO tags in the head and localized strings in the body. Dark theme, 1600x800. */}
 
 ## Step-by-Step Delivery Setup
 
 <Steps>
 
 <Step>
-### Step 1: Enable Content Delivery in Definition
+### Enable Delivery in your Content Definition
 
-Add `delivery` settings to `src/content/article.ts`:
+Define your content type with `delivery` enabled. Configure its base path, SEO fields, and sitemap settings:
 
-```ts title="src/content/article.ts"
+```ts title="plugins/example/src/content/article.ts"
+import { defineContentType, field } from '@vitnode/core/content'
+
 export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+  id: 'example.article',
+  tableName: 'example_articles',
   publication: true,
   editorial: true,
-  delivery: { // [!code ++]
-    basePath: "/articles", // [!code ++]
-    redirects: true, // Auto 308 redirects on slug rename // [!code ++]
-    seo: { // [!code ++]
-      titleField: "title", // [!code ++]
-      descriptionField: "excerpt", // [!code ++]
-    }, // [!code ++]
-    sitemap: { // [!code ++]
-      changefreq: "weekly", // [!code ++]
-      priority: 0.8, // [!code ++]
-    }, // [!code ++]
-  }, // [!code ++]
+  // [!code ++:13]
+  delivery: {
+    basePath: '/articles',
+    redirects: true, // Automatically 308-redirects old slugs on rename
+    seo: {
+      titleField: 'title',
+      descriptionField: 'excerpt',
+    },
+    sitemap: {
+      changefreq: 'weekly',
+      priority: 0.8,
+    },
+  },
   fields: {
     title: field.text({ required: true }),
-    slug: field.slug({ from: "title" }),
+    slug: field.slug({ from: 'title' }),
     excerpt: field.textarea({ nullable: true }),
   },
-});
+})
 ```
+
 </Step>
 
 <Step>
-### Step 2: Implement Next.js Dynamic Route with i18n & Metadata
+### Claim the Dynamic URL in your Plugin Manifest
 
-Create `app/[locale]/articles/[slug]/page.tsx`. Use `useTranslations` from `next-intl` to localize UI labels instead of hardcoding plain text strings:
+Plugins claim routes as plain data. Notice VitNode's parameter spelling: `:slug`, which TanStack Start maps directly to `$slug`.
 
-```tsx title="app/[locale]/articles/[slug]/page.tsx"
-import { notFound, redirect } from "next/navigation";
-import { useTranslations } from "next-intl"; // [!code ++]
-import { resolveContentDelivery } from "@vitnode/core/content/next";
-import { articleContent } from "@/database/articles";
+```ts title="plugins/example/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from '@vitnode/core/routing'
 
-interface Props {
-  params: Promise<{ locale: string; slug: string }>;
+export const routes: PluginRouteDefinition[] = [
+  // [!code ++:6]
+  {
+    entry: 'routes/article-page',
+    id: 'article-view',
+    namespaces: ['@vitnode/example.articles'],
+    path: '/articles/:slug',
+  },
+]
+```
+
+</Step>
+
+<Step>
+### Implement the Plugin Route Module
+
+Export a default component and a `route` definition using `definePluginRoute`. No framework dependencies needed—just clean, isomorphic code:
+
+```tsx title="plugins/example/src/routes/article-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
+import { useTranslations } from 'use-intl' // [!code ++]
+import { fetchArticle } from '../api/fetch-article'
+
+interface ArticleData {
+  excerpt: string
+  publishedAt: string
+  title: string
 }
 
-export async function generateMetadata({ params }: Props) {
-  const { locale, slug } = await params;
-  const delivery = await resolveContentDelivery(articleContent, { slug, locale });
+// [!code ++:9]
+export const route = definePluginRoute({
+  load: async ({ params }) => {
+    const article = await fetchArticle(params.slug)
+    return article
+  },
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+    description: loaderData?.excerpt,
+  }),
+})
 
-  if (delivery.type !== "found") return {};
-
-  return delivery.seo; // Generates title, description, openGraph, canonical URLs
-}
-
-export default async function ArticlePage({ params }: Props) {
-  const { locale, slug } = await params;
-  const delivery = await resolveContentDelivery(articleContent, { slug, locale });
-
-  if (delivery.type === "redirect") {
-    redirect(delivery.destination, delivery.status); // 308 permanent redirect
-  }
-
-  if (delivery.type === "not_found") {
-    notFound();
-  }
-
-  const t = useTranslations("@vitnode/example"); // [!code ++]
-  const { item } = delivery;
+const ArticlePage = ({ loaderData }: PluginRoutePageProps<ArticleData>) => {
+  const t = useTranslations('@vitnode/example.articles') // [!code ++]
 
   return (
-    <article className="container py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">{item.title}</h1>
-        <p className="text-muted-foreground">{t("articles.published_on", { date: item.publishedAt })}</p> {/* [!code ++] */}
+    <article className="container mx-auto max-w-3xl py-8 px-4">
+      <header className="mb-6 flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight text-balance">
+          {loaderData.title}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {t('published_on', { date: loaderData.publishedAt })}
+        </p>
       </header>
 
-      <div className="prose">
-        <p>{item.excerpt}</p>
+      <div className="prose leading-relaxed">
+        <p>{loaderData.excerpt}</p>
       </div>
-
-      <footer className="mt-8 border-t pt-4">
-        <p>{t("articles.author_label", { name: item.author.name })}</p> {/* [!code ++] */}
-      </footer>
     </article>
-  );
+  )
+}
+
+export default ArticlePage
+```
+
+</Step>
+
+<Step>
+### Optional: Override from the Host Application
+
+Need a totally unique design for this one site? You can declare a route file directly in your TanStack Start app:
+
+```tsx title="apps/web/src/routes/_main/articles.$slug.tsx"
+import { createFileRoute } from '@tanstack/react-router'
+import { pageHead } from '#/lib/page-head' // [!code ++]
+
+export const Route = createFileRoute('/_main/articles/$slug')({
+  // [!code ++:4]
+  head: () =>
+    pageHead({
+      title: 'Article - VitNode',
+      robots: 'index, follow',
+    }),
+  component: AppArticlePage,
+})
+
+function AppArticlePage() {
+  const { slug } = Route.useParams()
+  return <div>Custom host layout for article: {slug}</div>
 }
 ```
+
 </Step>
 
 </Steps>
 
----
-
 ## Automatic SEO Capabilities
 
-- **308 Permanent Redirects**: Renaming an item's slug preserves historical URLs, issuing automatic 308 redirects to preserve SEO rank.
-- **Canonical URLs**: Constructed using the application's base URL and current slug.
-- **Hreflang Tags**: Outputs `<link rel="alternate" hreflang="..." />` tags for active translations.
-- **XML Sitemaps**: Serves paginated XML sitemaps at `/sitemap-articles.xml`.
+VitNode gives your content search engine superpowers without the manual headaches:
+
+- **308 Permanent Redirects**: Renaming a slug automatically issues a 308 redirect from the old URL to the new one, saving your Google rank from 404 disasters.
+- **Canonical URLs**: Formatted cleanly using your application's base URL and canonical slug.
+- **Hreflang Tags**: Emits `<link rel="alternate" hreflang="..." />` tags for active translations so multilingual crawlers stay happy.
+- **XML Sitemaps**: Pre-configured XML sitemaps served straight from the API.

@@ -39,7 +39,7 @@ import { adminQueryRoot } from "@/views/admin/table/query";
 export const cronAdminModuleRef = adminModuleRef<typeof cronAdminModule>();
 
 /** The module is mounted under `/admin/advanced`, not at the plugin root. */
-const CRON_PREFIX_PATH = "/admin/advanced";
+export const CRON_PREFIX_PATH = "/admin/advanced";
 
 /**
  * The columns this list sorts by - the `orderBy` enum on `getCronsRoute`,
@@ -62,15 +62,6 @@ export type CronParams = AdminTableParams<CronOrderBy>;
  * `withPagination` is deliberately absent - see `views/admin/table/params.ts`
  * for why an invisible default is a cache-key bug rather than a convenience.
  */
-export const cronRequest = (params: CronParams) =>
-  ({
-    args: { query: params },
-    method: "get" as const,
-    module: "cron" as const,
-    path: "/" as const,
-    prefixPath: CRON_PREFIX_PATH,
-  }) as const;
-
 /**
  * One row of the table, as JSON delivers it.
  *
@@ -109,7 +100,13 @@ export type CronPageFetcher = (params: CronParams) => Promise<CronPage>;
  * routed to the global rate-limit notice on the way through.
  */
 export const fetchCronPageInBrowser: CronPageFetcher = async params => {
-  const response = await fetcherClient(cronAdminModuleRef, cronRequest(params));
+  const response = await fetcherClient(cronAdminModuleRef, {
+    args: { query: params },
+    method: "get",
+    module: "cron",
+    path: "/",
+    prefixPath: CRON_PREFIX_PATH,
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(

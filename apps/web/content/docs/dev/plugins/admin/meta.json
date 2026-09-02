@@ -1,0 +1,6 @@
+{
+  "title": "Admin",
+  "description": "Give your plugin pages, navigation and dashboard widgets inside the VitNode Admin Control Panel",
+  "icon": "LayoutDashboard",
+  "pages": ["index", "dashboard-widgets"]
+}

@@ -1,0 +1,69 @@
+---
+title: Architecture
+description: How VitNode combines TanStack Start for UI and isomorphic routing with Hono for API authorization and database access.
+icon: Blocks
+---
+
+VitNode separates concerns between two core layers:
+1. **TanStack Start**: Frontend UI, SSR, isomorphic routing, and client caching.
+2. **Hono API**: Backend routing, session management, staff permissions, and database operations.
+
+{/* Image prompt: VitNode architectural flow diagram displaying TanStack Start (SSR, route loaders, TanStack Query) communicating across an HTTP/RPC boundary with Hono API (middleware, sessions, Drizzle ORM) and PostgreSQL/Redis storage. Dark theme, 1600x900. */}
+
+## System Boundaries
+
+| Responsibility | TanStack Start (Web App) | Hono (API) |
+| :--- | :--- | :--- |
+| **Routing** | Page URLs, dynamic parameters, nested layouts | REST/RPC endpoints under `/api/*` |
+| **Data Fetching** | Route loaders and `createIsomorphicFn` | Query execution via Drizzle ORM |
+| **State & Cache** | TanStack Query client cache | Redis domain cache & database storage |
+| **Security Boundary** | UI guards (redirecting unauthenticated users) | **Enforces authentication, permissions, CSRF, and rate limits** |
+
+<Callout type="warn" title="Security Boundary">
+  Route guards (`beforeLoad`) enhance UX by redirecting visitors early, but the Hono API is the true security boundary. All private endpoints strictly verify cookies and permissions on every request.
+</Callout>
+
+---
+
+## End-to-End Request Flow
+
+When a user visits a page (e.g. `/blog`):
+
+| Phase | Runtime | Action |
+| :--- | :--- | :--- |
+| **1. Request** | Browser | Visitor navigates to `/blog` |
+| **2. Routing** | Server (SSR) / Browser | TanStack Router matches route and executes `loader` |
+| **3. Query Warming** | Server / Browser | `context.queryClient.ensureQueryData` executes isomorphic fetcher |
+| **4. RPC Call** | Server / Browser | `fetcher` (server) or `fetcherClient` (browser) calls Hono endpoint |
+| **5. API Middleware** | Server (Hono) | Verifies session cookie, applies rate limits, injects `c.get(db)` |
+| **6. Handler & Database** | Server (Hono) | Handler validates input and queries PostgreSQL via Drizzle |
+| **7. Response** | Server / Browser | JSON data hydrates TanStack Query cache and paints component |
+
+---
+
+## Plugin System Architecture
+
+VitNode is built around modular plugins located in `plugins/*`:
+- **Independent Packages**: Plugins compile to their own `dist/` with isolated dependencies.
+- **Unified Manifest**: Routes, AdminCP navigation, and database models are registered declaratively.
+- **Zero Overhead**: Inactive plugins contribute no code or overhead to production bundles.
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Create a Plugin"
+    description="Scaffold and build your first VitNode plugin"
+    href="/docs/dev/plugins/create"
+  />
+  <Card
+    title="Routing"
+    description="TanStack Start file-based and plugin-manifest routing"
+    href="/docs/dev/routing"
+  />
+  <Card
+    title="Fetcher"
+    description="Type-safe RPC communication between frontend and API"
+    href="/docs/dev/fetcher"
+  />
+</Cards>

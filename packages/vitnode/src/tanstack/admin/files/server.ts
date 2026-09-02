@@ -1,36 +1,24 @@
 import "@tanstack/react-start/server-only";
 
-import type {
-  AdminFilesPageFetcher,
-  AdminFilesParams,
-} from "@/views/admin/views/core/system/files/files-query";
+import type { AdminFilesParams } from "@/views/admin/views/core/system/files/files-query";
 
+import { filesAdminModule } from "@/api/modules/admin/files/files.admin.module";
 import {
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
-import {
-  adminFilesRequest,
-  filesAdminModuleRef,
-} from "@/views/admin/views/core/system/files/files-query";
+import { ADMIN_FILES_PREFIX_PATH } from "@/views/admin/views/core/system/files/files-query";
 
-import { fetcherServer } from "../../fetcher/server";
+import { fetcher } from "../../fetcher/server";
 
-/**
- * One page of the uploaded-file list, fetched during SSR.
- *
- * `fetcherServer` forwards the admin cookie the page request arrived with, which
- * here is the difference between the AdminCP's file list and a `403`. Reached
- * only through `./query`'s isomorphic function, so this module - and the
- * `server-only` marker above it - never reaches the browser bundle.
- */
-export const fetchAdminFilesPageOnServer: AdminFilesPageFetcher = async (
-  params: AdminFilesParams,
-) => {
-  const response = await fetcherServer(
-    filesAdminModuleRef,
-    adminFilesRequest(params),
-  );
+export const fetchAdminFilesPageOnServer = async (params: AdminFilesParams) => {
+  const response = await fetcher(filesAdminModule, {
+    args: { query: params },
+    method: "get",
+    module: "files",
+    path: "/",
+    prefixPath: ADMIN_FILES_PREFIX_PATH,
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(

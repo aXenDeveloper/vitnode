@@ -1,6 +1,7 @@
 ---
 title: Input
 description: Component used for collecting data from users
+icon: TextCursorInput
 ---
 
 ## Preview
@@ -9,7 +10,7 @@ description: Component used for collecting data from users
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
@@ -21,9 +22,9 @@ import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
 
 ```ts
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.email("Please enter a valid email address"),
-});
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  email: z.email('Please enter a valid email address'),
+})
 ```
 
 ```tsx
@@ -31,8 +32,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "username",
-      component: props => (
+      id: 'username',
+      component: (props) => (
         <AutoFormInput
           {...props}
           description="This is the username for your application. It should be unique and not shared with anyone."
@@ -41,8 +42,8 @@ const formSchema = z.object({
       ),
     },
     {
-      id: "email",
-      component: props => (
+      id: 'email',
+      component: (props) => (
         <AutoFormInput
           {...props}
           description="We'll use this email to contact you."
@@ -79,21 +80,21 @@ The value becomes an array matching the `core_languages_words` table, one entry
 per language you edited:
 
 ```ts
-[
-  { languageCode: "en", value: "Category" },
-  { languageCode: "pl", value: "Kategoria" },
-];
+;[
+  { languageCode: 'en', value: 'Category' },
+  { languageCode: 'pl', value: 'Kategoria' },
+]
 ```
 
 Declare the field with the `multiLangValueSchema` helper so the schema matches
 the array shape (its `minLength` / `maxLength` apply to each language's value):
 
 ```ts
-import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+import { multiLangValueSchema } from '@vitnode/core/lib/helpers/multi-lang'
 
 const formSchema = z.object({
   name: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
-});
+})
 ```
 
 ```tsx
@@ -109,38 +110,38 @@ remaining `core_languages_words` columns. See
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
       description:
-        "The label for the input field. This is displayed above the input.",
-      type: "string",
-      default: "",
+        'The label for the input field. This is displayed above the input.',
+      type: 'string',
+      default: '',
     },
     description: {
       description:
-        "A short description of the input field. This is displayed below the input.",
-      type: "string",
-      default: "",
+        'A short description of the input field. This is displayed below the input.',
+      type: 'string',
+      default: '',
     },
     type: {
       description:
-        "The type of the input field. This is passed to the native input element.",
-      type: "string",
-      default: "text",
+        'The type of the input field. This is passed to the native input element.',
+      type: 'string',
+      default: 'text',
     },
     placeholder: {
-      description: "Placeholder text to display when the input is empty.",
-      type: "string",
-      default: "",
+      description: 'Placeholder text to display when the input is empty.',
+      type: 'string',
+      default: '',
     },
     multiLang: {
       description:
-        "Collect the value per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
-      type: "boolean",
-      default: "false",
+        'Collect the value per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.',
+      type: 'boolean',
+      default: 'false',
     },
   }}
 />

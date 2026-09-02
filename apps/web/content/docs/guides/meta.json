@@ -1,6 +1,6 @@
 {
   "title": "Guides",
-  "description": "Learn how to use VitNode",
+  "description": "End-to-end walkthroughs that build a real feature on VitNode, one ordered step at a time.",
   "icon": "BookOpenText",
   "root": true,
   "pages": ["index", "...", "---Plugins by VitNode---", "blog"]

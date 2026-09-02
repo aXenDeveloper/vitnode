@@ -1,220 +1,153 @@
 ---
 title: Combobox
-description: Select from a list of options with a search input.
+description: Searchable dropdown select input for picking single or multiple options with static lists or async API queries.
+icon: ChevronsUpDown
 ---
+
+import { TypeTable } from "fumadocs-ui/components/type-table"
+
+A combobox provides a searchable dropdown interface, ideal for long lists such as categories, users, or tags.
 
 ## Preview
 
 <Preview name="combobox" />
 
-## Usage
+---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+## 1. Static Options (AutoForm)
 
-<Tabs items={['Auto Form', 'Async Auto Form', 'Manual']}>
-  <Tab value="Auto Form">
+Use `AutoFormCombobox` inside an `AutoForm` with a predefined set of choices:
 
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
-```
+```tsx
+import { AutoForm } from "@vitnode/core/components/form/auto-form"
+import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox"
+import { z } from "zod"
 
-```ts
 const formSchema = z.object({
-  type: z.enum(["option-one", "option-two"]),
-});
+  category: z.enum(["tech", "news", "design"]),
+})
+
+export const CategorySelect = () => (
+  // [!code ++:16]
+  <AutoForm
+    formSchema={formSchema}
+    fields={[
+      {
+        id: "category",
+        component: (props) => (
+          <AutoFormCombobox
+            {...props}
+            label="Category"
+            labels={[
+              { value: "tech", label: "Technology" },
+              { value: "news", label: "News & Releases" },
+              { value: "design", label: "UI / UX Design" },
+            ]}
+          />
+        ),
+      },
+    ]}
+  />
+)
 ```
+
+---
+
+## 2. Async API Search
+
+For large datasets, query the API dynamically as the user types:
 
 ```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "type",
-      component: props => (
-        <AutoFormCombobox
-          {...props}
-          description="Select an option from the list"
-          label="Type"
-          labels={[
-            {
-              value: "option-one",
-              label: "Option One",
-            },
-            {
-              value: "option-two",
-              label: "Option Two",
-            },
-          ]}
-        />
-      ),
-    },
-  ]}
-/>
-```
+import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox"
+import { fetcherClient } from "@vitnode/core/lib/fetcher-client"
 
-  </Tab>
+const searchUsers = async ({ search }: { search: string }) => {
+  const res = await fetcherClient(usersModule, {
+    method: "get",
+    module: "users",
+    path: "/search",
+    args: { query: { search } },
+  })
+  const json = await res.json()
+  return json.map((u) => ({ value: String(u.id), label: u.name }))
+}
 
-  <Tab value="Async Auto Form">
-
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
-import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
-```
-
-```ts
-const formSchema = z.object({
-  categoryId: z.object({ value: z.string(), label: z.string() }),
-});
-```
-
-```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "categoryId",
-      component: props => (
-        <AutoFormCombobox
-          {...props}
-          fetchData={async ({ search }) => {
-            const res = await fetcherClient(categoriesModule, {
-              path: "/",
-              method: "get",
-              module: "categories",
-              args: {
-                query: {
-                  search,
-                },
-              },
-            });
-            const data = await res.json();
-
-            return data.edges.map(category => ({
-              label: getLangValue(category.titleTranslations, locale),
-              value: category.id.toString(),
-            }));
-          }}
-          id="categoryId"
-          label="Category"
-          placeholder="Select a category"
-          searchPlaceholder="Search categories"
-        />
-      ),
-    },
-  ]}
-/>
-```
-
-  </Tab>
-
-  <Tab value="Manual">
-
-```tsx
-"use client";
-
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@vitnode/core/components/ui/combobox";
-
-const frameworks = [
-  "Next.js",
-  "SvelteKit",
-  "Nuxt.js",
-  "Remix",
-  "Astro",
-] as const;
-
-export function ComboboxBasic() {
-  return (
-    <Combobox items={frameworks}>
-      <ComboboxInput placeholder="Select a framework" />
-      <ComboboxContent>
-        <ComboboxEmpty>No items found.</ComboboxEmpty>
-        <ComboboxList>
-          {item => (
-            <ComboboxItem key={item} value={item}>
-              {item}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  );
+// In field configuration:
+{
+  id: "author",
+  component: (props) => (
+    // [!code ++:7]
+    <AutoFormCombobox
+      {...props}
+      label="Author"
+      fetchData={searchUsers}
+      searchPlaceholder="Search users by name..."
+    />
+  ),
 }
 ```
 
-  </Tab>
+---
 
-</Tabs>
+## 3. Multiple Selection
 
-## Props
+Allow picking multiple options by specifying `multiple: true`:
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+```tsx
+{
+  id: "tags",
+  component: (props) => (
+    <AutoFormCombobox
+      {...props}
+      multiple // [!code ++]
+      label="Tags"
+      labels={[
+        { value: "react", label: "React" },
+        { value: "tanstack", label: "TanStack" },
+      ]}
+    />
+  ),
+}
+```
+
+---
+
+## `AutoFormCombobox` Props
 
 <TypeTable
   type={{
-    label: {
-      description: "The label for the combobox, displayed above the input.",
-      type: "string",
-      default: "",
-    },
-    description: {
-      description:
-        "An optional description for the combobox, displayed below the input.",
-      type: "string",
-      default: "",
+    labels: {
+      description: "Array of static { label, value } options.",
+      type: "{ label: string; value: string }[]",
     },
     fetchData: {
-      description:
-        "Callback to load options based on the search query. When provided, the combobox switches to async search.",
-      type: "(params: { search: string }) => Promise<Array<{ value: string; label: string }>> | Array<{ value: string; label: string }>",
-      default: "",
-    },
-    id: {
-      description: "Stable id for query caching and list updates.",
-      type: "string",
-      default: "",
-    },
-    labels: {
-      description:
-        "An array of options for the combobox, each with a value and label. Used for static options.",
-      type: "Array<{ value: string; label: string }>",
-      default: "[]",
-    },
-    placeholder: {
-      description: "Placeholder text for the combobox input.",
-      type: "string",
-      default: "Select an option",
-    },
-    searchPlaceholder: {
-      description: "Placeholder text for the search input within the combobox.",
-      type: "string",
-      default: "Search...",
-    },
-    disabled: {
-      description: "Whether the combobox is disabled.",
-      type: "boolean",
-      default: "false",
+      description: "Async search function returning options based on user typing.",
+      type: "({ search: string }) => Promise<{ label: string; value: string }[]>",
     },
     multiple: {
-      description:
-        "Whether multiple selections are allowed. Not used when fetchData is provided.",
-      type: "boolean",
       default: "false",
+      description: "Enable multi-option badge selection.",
+      type: "boolean",
     },
-    showClear: {
-      description: "Whether to show a clear button when a value is selected.",
-      type: "boolean",
-      default: "false",
+    searchPlaceholder: {
+      default: "'Search...'",
+      description: "Placeholder text shown in the search input.",
+      type: "string",
     },
   }}
 />
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Auto Form"
+    description="Render complete forms with Zod validation"
+    href="/docs/ui/auto-form"
+  />
+  <Card
+    title="Select Component"
+    description="Simple dropdown component for small option sets"
+    href="/docs/ui/select"
+  />
+</Cards>

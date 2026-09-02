@@ -30,6 +30,15 @@ import { Activity } from "react";
 - A package may declare `createIsomorphicFn` but never `createServerFn` - uncompiled on the server, its handler silently resolves to `undefined`. Server functions belong to the host app.
 - New admin APIs always require staff permissions.
 
+### Fetching APIs
+
+- `fetcher(module, {...})` on the server (takes the real API module), `fetcherClient(clientModule<typeof x>(pluginId), {...})` in the browser.
+- Write the route inline at the call site - never build a request object elsewhere and pass it in.
+- Never annotate the result; the fetcher infers it. Put the shared contract on the `createIsomorphicFn` result instead.
+- `args` is required exactly when the route declares a body, params or a query.
+- `allowSaveCookies: true` when a route mints a session; `captchaToken` for captcha-gated routes.
+- `rawFetcher` only for generated Content Engine modules, which have no type to infer from.
+
 ### Caching APIs
 
 - Client and SSR caching is TanStack Query. Invalidate with `queryClient.invalidateQueries` after a write; warm a route's data in its `loader` with `ensureQueryData`.

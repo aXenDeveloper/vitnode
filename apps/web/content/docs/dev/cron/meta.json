@@ -1,4 +1,12 @@
 {
-  "title": "CRON Jobs",
-  "pages": ["rest-api", "...", "custom-adapter"]
+  "title": "Cron Jobs",
+  "description": "Recurring background jobs, the adapters that tick them, and the AdminCP screen that runs them",
+  "icon": "Clock",
+  "pages": [
+    "index",
+    "---Adapters---",
+    "node-cron",
+    "rest-api",
+    "custom-adapter"
+  ]
 }

@@ -1,189 +1,96 @@
 ---
-title: Users
-description: Helper functions and components to work with users.
+title: Users & Sessions
+description: Access signed-in user context in Hono API handlers, route loaders, and React components.
+icon: UserRound
 ---
 
-VitNode ships with a small set of helpers for reading the currently authenticated user and for looking users up by their `id` or `nameCode`. Backend helpers run inside your API route handlers (Hono context), while frontend helpers run in your React Server Components.
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## Backend
+Every incoming request in VitNode resolves the session cookie prior to route execution. The current user profile is accessible on both server handlers and frontend components.
 
-### Current user
+## Quick start
 
-The global middleware resolves the session cookie on every request and exposes the authenticated user through the Hono context. Read it with `c.get("user")` inside any route handler - it returns the user object, or `null` for guests.
+### 1. In Hono API Routes
 
-```ts title="plugins/{plugin_name}/src/api/routes/me.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
+Access the authenticated user via `c.get("user")`:
 
-export const meRoute = buildRoute({
-  handler: async c => {
-    const user = c.get("user");
+```ts title="plugins/blog/src/api/modules/posts/routes/create.route.ts"
+import { HTTPException } from "hono/http-exception"
 
-    if (!user) {
-      return c.json({ message: "Not signed in" }, 401);
-    }
-
-    return c.json({ user });
-  },
-});
-```
-
-The user object has the following shape:
-
-```ts
-{
-  id: number;
-  email: string;
-  name: string;
-  nameCode: string;
-  avatarColor: string;
-  newsletter: boolean;
-  emailVerified: boolean;
-  roleId: number;
-  birthday: Date | null;
-  createdAt: Date;
-}
-```
-
-<Callout type="info" title="Roles">
-  `roleId` points to the role the user belongs to. See
-  [Roles](/docs/dev/working-with-users/roles) for more.
-</Callout>
-
-### Looking up a user
-
-Use the `UserModel` when you need to fetch a user that is **not** the one making the request. It exposes `getUserById` and `getUserByNameCode`, both of which return the user, or `null` when no match is found.
-
-```ts title="plugins/{plugin_name}/src/api/routes/user.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
-import { UserModel } from "@vitnode/core/api/models/user";
-
-export const userRoute = buildRoute({
-  handler: async c => {
-    const user = await new UserModel().getUserById({ id: 3, c });
-    // or: getUserByNameCode({ nameCode: "john_doe", c })
-
-    if (!user) {
-      return c.json({ message: "User not found" }, 404);
-    }
-
-    return c.json({ user });
-  },
-});
-```
-
-## Frontend
-
-### Current session
-
-On the server (React Server Components) read the current session with `getSessionApi()`. It returns `{ user }`, where `user` is the authenticated user - including an `isAdmin` flag - or `null` for guests.
-
-```tsx title="app/[locale]/profile/page.tsx"
-import { getSessionApi } from "@vitnode/core/lib/api/get-session-api";
-
-export default async function Page() {
-  const { user } = await getSessionApi();
-
+handler: async (c) => {
+  // [!code ++:4]
+  const user = c.get("user")
   if (!user) {
-    return <p>You are not signed in.</p>;
+    throw new HTTPException(401, { message: "Unauthorized" })
   }
 
-  return <p>Welcome back, {user.name}!</p>;
+  const newPost = await createPost({ authorId: user.id })
+  return c.json(newPost)
 }
 ```
 
-To type a Client Component that receives the user as a prop, use the exported `SessionApi` type:
+---
 
-```tsx title="profile.tsx"
-"use client";
+### 2. In Frontend Components
 
-import type { SessionApi } from "@vitnode/core/lib/api/get-session-api";
+Consume the user session via TanStack Query:
 
-export const Profile = ({
-  user,
-}: {
-  user: NonNullable<SessionApi["user"]>;
-}) => {
-  return <span>{user.name}</span>;
-};
-```
+```tsx title="src/components/user-greeting.tsx"
+import { useQuery } from "@tanstack/react-query"
+import { sessionQueryOptions } from "@vitnode/core/tanstack/auth"
 
-<Callout type="warn" title="Server-side only">
-  `getSessionApi()` relies on the [`fetcher`](/docs/dev/fetcher), so it can only
-  run on the server. Fetch the session in a Server Component and pass what you
-  need down to Client Components as props.
-</Callout>
+export const UserGreeting = () => {
+  // [!code ++:2]
+  const { data } = useQuery(sessionQueryOptions())
+  const user = data?.user
 
-### Current admin session
+  if (!user) return <span>Welcome, guest!</span>
 
-Admin pages have their own session, separate from the public one. Read it on the server with `getSessionAdminApi()` - it returns the admin `user` and the current `vitnode_version`, and automatically redirects to `/admin` when the visitor is not an authenticated administrator.
-
-```tsx title="app/[locale]/admin/page.tsx"
-import { getSessionAdminApi } from "@vitnode/core/lib/api/get-session-admin-api";
-
-export default async function Page() {
-  const session = await getSessionAdminApi();
-  if (!session) return null;
-
-  return <p>Signed in as {session.user.name}</p>;
+  return <span>Welcome back, {user.name}!</span>
 }
 ```
 
-### Avatar
+---
 
-Render a user's avatar with the `Avatar` component. It generates a letter avatar from the user's `name` and `avatarColor`.
+## User Model (`core_users`)
 
-```tsx title="user-card.tsx"
-import { Avatar } from "@vitnode/core/components/avatar";
+The canonical user table contains:
 
-<Avatar size={24} user={user} />;
-```
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `serial` | Unique permanent identifier |
+| `name` | `varchar(255)` | Display name |
+| `nameCode` | `varchar(255)` | URL-safe slug for profile URLs (`/profile/[nameCode]`) |
+| `email` | `varchar(255)` | Unique account login email |
+| `roleId` | `integer` | Primary role ID (FK to `core_roles`) |
+| `avatarColor` | `varchar(6)` | Hex color for letter avatars |
+| `language` | `varchar(32)` | Preferred UI locale (defaults to `en`) |
+| `emailVerified` | `boolean` | Verification status |
 
-The `user` prop requires `name`, `nameCode`, and `avatarColor`, and `size` sets the avatar's width and height in pixels.
+---
 
-### Formatting a user
+## AdminCP User Management
 
-Use the `UserFormat` component to render a user's nickname together with their role. Pass the `format` prop to color the nickname with the role's `color`.
+{/* Image prompt: VitNode AdminCP User management screen at /admin/core/users. Data table listing registered accounts with columns for Avatar, Name, Email, Primary Role badge, Status, and action dropdowns (Edit, Ban, Delete). Dark theme, 1440x900. */}
 
-```tsx title="user-link.tsx"
-import { UserFormat } from "@vitnode/core/components/user-format";
+Administrators can view, edit, ban, and assign roles to users at **Core → Users** (`/admin/core/users`).
 
-<UserFormat
-  format
-  user={{
-    id: 1,
-    name: "John Doe",
-    nameCode: "john_doe",
-    role: {
-      id: 2,
-      name: "Administrator",
-      color: "#ef4444",
-    },
-  }}
-/>;
-```
+## Learn More
 
-The `user` prop has the following shape:
-
-```ts
-{
-  id: number;
-  name: string;
-  nameCode: string;
-  role: {
-    id: number;
-    name: string;
-    color: string | null;
-  }
-}
-```
-
-| Prop     | Description                                             |
-| -------- | ------------------------------------------------------- |
-| `user`   | The user to render, including their `role`.             |
-| `format` | When set, colors the nickname using the role's `color`. |
-
-<Callout type="info" title="Roles">
-  To render a role on its own, use the
-  [`RoleFormat`](/docs/dev/working-with-users/roles#formatting-a-role)
-  component.
-</Callout>
+<Cards>
+  <Card
+    title="Roles"
+    description="Configure permissions, color badges, and user groups"
+    href="/docs/dev/working-with-users/roles"
+  />
+  <Card
+    title="Staff Permissions"
+    description="Grant administrative and moderation privileges"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+  <Card
+    title="SSO"
+    description="Configure social login providers"
+    href="/docs/dev/sso"
+  />
+</Cards>

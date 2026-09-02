@@ -33,7 +33,7 @@ import { adminQueryRoot } from "@/views/admin/table/query";
 export const filesAdminModuleRef = adminModuleRef<typeof filesAdminModule>();
 
 /** The module is mounted under `/admin`, not at the plugin root. */
-const ADMIN_FILES_PREFIX_PATH = "/admin";
+export const ADMIN_FILES_PREFIX_PATH = "/admin";
 
 export const ADMIN_FILES_ORDER_BY = ["name", "size", "createdAt"] as const;
 export type AdminFilesOrderBy = (typeof ADMIN_FILES_ORDER_BY)[number];
@@ -78,15 +78,6 @@ export interface AdminFileRow {
 export type AdminFilesPage = AdminTablePage<AdminFileRow>;
 
 /** One page of the list, as arguments to whichever fetcher is carrying it. */
-export const adminFilesRequest = (params: AdminFilesParams) =>
-  ({
-    args: { query: params },
-    method: "get" as const,
-    module: "files" as const,
-    path: "/" as const,
-    prefixPath: ADMIN_FILES_PREFIX_PATH,
-  }) as const;
-
 /** How a page is actually fetched. See {@link adminFilesQueryOptions}. */
 export type AdminFilesPageFetcher = (
   params: AdminFilesParams,
@@ -95,10 +86,13 @@ export type AdminFilesPageFetcher = (
 /** One page, fetched from the browser. */
 export const fetchAdminFilesPageInBrowser: AdminFilesPageFetcher =
   async params => {
-    const response = await fetcherClient(
-      filesAdminModuleRef,
-      adminFilesRequest(params),
-    );
+    const response = await fetcherClient(filesAdminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "files",
+      path: "/",
+      prefixPath: ADMIN_FILES_PREFIX_PATH,
+    });
 
     if (!response.ok) {
       throw new AdminRequestError(

@@ -1,360 +1,159 @@
 ---
 title: Search & Discovery
-description: Full-text content search and activity discovery, with a pluggable search engine.
+description: Enable site-wide full-text search across plugin content with Postgres or Elasticsearch ranking engines.
 icon: Search
 ---
 
-VitNode ships a content **search & discovery** system. Every searchable item is
-projected into a single canonical table, `core_search_index`, which powers two
-public pages and the AdminCP:
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-- **`/search`** - full-text search with relevance ranking and filters.
-- **`/discover`** - the same index sorted newest-first (a community timeline).
-- **AdminCP → user profile → Timeline** - a single member's indexed activity.
+VitNode includes a unified site-wide search and discovery engine. Searchable records across all plugins are projected into the `core_search_index` table, powering `/search` and `/discover`.
 
-Search and discovery are **locale-aware**: results follow the active language, so
-a member browsing in Polish sees Polish titles, snippets and links. See
-[Multi-language content](#multi-language-content) below.
-
-The query engine is **pluggable**. The default requires zero setup:
-
-- **Postgres** (default) - Postgres full-text search (`tsvector` + GIN, title
-  weighted above body). Great for small and medium communities.
-- **Elasticsearch** (`@vitnode/elasticsearch`) - offloads querying to an external
-  cluster and unlocks advanced ranking (time-decay, author-boost).
-
-`core_search_index` is always the source of truth, so switching engines is a
-config change followed by a rebuild.
-
-## Indexing content
-
-<Callout type="info" title="Using the Content Engine?">
-  A content type only needs a [`search`
-  block](/docs/dev/content-engine/public-api-and-caching#2-full-text-search-indexing)
-  - publishing, editing, unpublishing and deleting a record then keep its
-  document in step automatically, and it joins the rebuild without any of the
-  wiring below.
+<Callout type="info" title="Single table filtering">
+  This guide covers **site-wide search**. For search boxes on individual tables, see [Search your tables](/docs/dev/database/search).
 </Callout>
 
-Any API handler can (re)index or remove an item through `c.get("search")`. It is
-an **API-process** model: a Next.js server action or server component cannot
-reach `c.get("search")` at all, so anything Next-side goes over HTTP.
+## Quick start
+
+### 1. Indexing on Create / Update
+
+Index or update an item from any Hono route handler via `c.get("search")`:
 
 ```ts
-// After creating or updating an item
+// [!code ++:10]
 await c.get("search").index({
-  itemType: "blog_post",
-  itemId: post.id,
-  title: post.title,
-  content: post.content, // HTML is stripped to plain text automatically
-  containerType: "blog_category",
-  containerId: post.categoryId,
-  url: `/blog/${post.categoryId}/${post.slug}`,
-  isPublic: true,
-  createdAt: post.createdAt,
-});
-
-// After deleting an item
-await c.get("search").delete("blog_post", post.id);
+  itemType: "article",
+  itemId: article.id,
+  title: article.title,
+  content: article.content, // HTML automatically stripped to plain text
+  url: `/articles/${article.slug}`,
+  authorId: article.authorId,
+  createdAt: article.createdAt,
+})
 ```
 
-`index` upserts the canonical row and mirrors the change into an external engine
-when one is configured. `isPublic: false` hides an item from the public feed
-(admins and the item's author still see it).
+---
 
-## Multi-language content
+### 2. Removing from Search Index
 
-The index holds **one row per `(itemType, itemId, languageCode)`**, so translated
-content is projected once per language and search/discovery can be scoped to the
-viewer's locale. Emit one document per language, each with that language's title,
-content and URL:
+When an item is deleted, remove it from the index:
 
 ```ts
-for (const languageCode of enabledLanguageCodes) {
-  await c.get("search").index({
-    itemType: "blog_post",
-    itemId: post.id,
-    languageCode, // [!code highlight]
-    title:
-      getLangValue(titleTranslations, languageCode) ||
-      getLangValue(titleTranslations, defaultLanguageCode),
-    content:
-      getLangValue(contentTranslations, languageCode) ||
-      getLangValue(contentTranslations, defaultLanguageCode),
-    url: `/blog/${post.categoryId}/${getLangValue(urlTranslations, languageCode) || getLangValue(urlTranslations, defaultLanguageCode)}`,
-    createdAt: post.createdAt,
-  });
-}
+await c.get("search").delete("article", article.id)
 ```
 
-The `/search` and `/discover` requests send the active locale as a `lang` query
-param, and the query keeps only rows for that locale. Content that isn't
-translated can leave `languageCode` empty (`""`) - those rows are **language
-agnostic** and match every locale, so single-language plugins need no changes.
+---
 
-<Callout type="info">
-  Postgres full-text ranking picks a text-search configuration per locale
-  (`polish` for `pl`, `german` for `de`, and so on), falling back to `simple`
-  for a locale with no bundled dictionary - and for a document with no
-  `languageCode`, which matches every locale. Matching works across languages
-  either way; only stemming and stop-words differ.
-</Callout>
+## Rebuild Indexers
 
-## Registering a rebuild indexer
+To allow admins to re-index all historical content from the AdminCP, register a search indexer in your plugin's `config.api.ts`:
 
-So the whole index can be rebuilt (for example after switching engines), register
-an indexer on your API plugin. It streams existing rows one page at a time:
+```ts title="plugins/blog/src/api/indexers/post.indexer.ts"
+import { buildSearchIndexer } from "@vitnode/core/api/lib/search"
+import { blog_posts } from "@/database/posts"
 
-```ts title="src/config.api.ts"
-import type { SearchIndexer } from "@vitnode/core/api/models/search";
-
-export const blogPostSearchIndexer: SearchIndexer = {
-  itemType: "blog_post",
-  load: async (c, offset, limit) => {
-    const rows = await c
-      .get("db")
-      .select(/* ... */)
-      .from(blog_posts)
-      .limit(limit)
-      .offset(offset);
-
-    // Two counts, and they are not interchangeable: one item can emit several
-    // documents (one per language) or none at all. `itemsRead` is what the
-    // rebuild pages by, and `itemsRead: 0` is what ends it.
-    return {
-      documents: rows.flatMap(buildSearchDocumentsForPost),
-      itemsRead: rows.length,
-    };
+export const postSearchIndexer = buildSearchIndexer({
+  itemType: "article",
+  totalCount: async (c) => {
+    return await c.get("db").$count(blog_posts)
   },
-};
+  batch: async (c, { limit, offset }) => {
+    const posts = await c.get("db").select().from(blog_posts).limit(limit).offset(offset)
 
+    return posts.map((post) => ({
+      itemType: "article",
+      itemId: post.id,
+      title: post.title,
+      content: post.content,
+      url: `/articles/${post.slug}`,
+      authorId: post.authorId,
+      createdAt: post.createdAt,
+    }))
+  },
+})
+```
+
+Register it in `config.api.ts`:
+
+```ts title="plugins/blog/src/config.api.ts"
 export const blogApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    modules: [/* ... */],
-    searchIndexers: [blogPostSearchIndexer], // [!code highlight]
-  });
+    pluginId: "blog",
+    searchIndexers: [postSearchIndexer], // [!code ++]
+  })
 ```
 
-One item type may only have **one** indexer. Two plugins claiming the same
-`itemType` is a startup error naming both, because they would otherwise overwrite
-each other's documents on every rebuild.
+---
 
-`itemsRead` is the number of **source items** the page read, not the number of
-search documents it produced. They differ whenever one item emits several
-documents (one per language) or none at all (a row that cannot be projected).
+## Pluggable Search Engines
 
-<Callout type="warn" title="Never page by document count">
-  Returning `documents.length` as `itemsRead`, or ending the loop on an empty
-  `documents` array, silently truncates the index: a page whose rows all fail to
-  project would stop the rebuild before the valid rows behind it. Report the
-  rows you read.
-</Callout>
+VitNode supports two search engines:
 
-### The older array result
+1. **PostgreSQL Full-Text Search (Default)**:
+   - Uses native `tsvector` + GIN indexes with weighted ranking (`title` weighted above `content`).
+   - Zero additional infrastructure required.
+2. **Elasticsearch (`@vitnode/elasticsearch`)**:
+   - Offloads indexing and search to an Elasticsearch or OpenSearch cluster.
+   - Unlocks fuzzy matching, phrase boosts, and decay scoring.
 
-`load` may still return a bare `SearchDocument[]`:
+---
 
-```ts
-load: async (c, offset, limit) => await buildDocuments(c, offset, limit),
-```
+## AdminCP Search Management
 
-It keeps working, so an indexer written before the page contract needs no
-changes. It is **deprecated**, though, and it is not equally safe:
+{/* Image prompt: VitNode AdminCP Search settings screen at /admin/core/advanced/search. Dashboard displaying search index statistics, engine status (PostgreSQL / Elasticsearch), registered item types with indexed document counts, and a "Rebuild Index" button. Dark theme, 1440x900. */}
 
-- it carries no source count, so the rebuild advances by the **requested page
-  size** and waits for an empty array to stop;
-- it therefore cannot express "rows were read, none could be projected" - such a
-  page looks exactly like the end of the source, and the rows behind it are never
-  indexed.
+Manage search status at **Core → Advanced → Search** (`/admin/core/advanced/search`):
+- View indexed record counts across all collections.
+- Trigger background rebuilds of specific collections or the entire site.
 
-Return a `SearchIndexerPage` in new code. The array form is removed only in a
-future major release.
+---
 
-### Ownership
+## Search Document Reference
 
-A document may name the plugin that owns it:
+<TypeTable
+  type={{
+    itemType: {
+      description: "Unique collection identifier (e.g. 'article', 'wiki_page').",
+      required: true,
+      type: "string",
+    },
+    itemId: {
+      description: "Primary key of the indexed record.",
+      required: true,
+      type: "number",
+    },
+    title: {
+      description: "Document title (indexed with highest search relevance).",
+      required: true,
+      type: "string",
+    },
+    content: {
+      description: "Body text (HTML is stripped to plain text automatically).",
+      required: true,
+      type: "string",
+    },
+    url: {
+      description: "Canonical destination URL for search result clicks.",
+      required: true,
+      type: "string",
+    },
+    authorId: {
+      description: "User ID of creator (powers member profile activity).",
+      type: "number",
+    },
+  }}
+/>
 
-```ts
-{ itemType: "blog_post", itemId: 1, pluginId: "@vitnode/blog", /* ... */ }
-```
+## Learn More
 
-Set it whenever you know the owner. A rebuild runs inside the **core** cron
-request, so the request's plugin is not the owner - an explicit `pluginId` is what
-makes a rebuilt document identical to a live-indexed one. An indexer that names
-none has its registering plugin stamped on during the rebuild, so existing
-indexers keep working; the request's plugin, then `"core"`, are the remaining
-fallbacks. An empty or whitespace-only value counts as naming nobody. Ownership is
-resolved once, in the search model, so the canonical row and the mirrored document
-can never disagree.
-
-**AdminCP → Advanced → Search** shows the registered indexer's plugin. When a
-collection has documents but no registered indexer, it shows the owner stored on
-those documents instead, and `unknown` only when neither source knows. Such a
-collection is never relabelled as core.
-
-Trigger a rebuild from **AdminCP → Advanced → Search → Rebuild index**. It runs as
-a background queue task, so a [cron adapter](/docs/dev/cron) must be configured
-for the queue to drain.
-
-<Callout type="warn" title="A rebuild clears before it writes">
-  Rebuilding drops the documents it is about to replace first - the whole index
-  for "rebuild everything", or one collection for a single reindex. So search
-  returns less while it runs.
-</Callout>
-
-The two rebuilds differ in what they are allowed to destroy:
-
-- **A scoped rebuild requires a registered `SearchIndexer`.** It never clears an
-  item type it cannot rebuild - the request is rejected with a 404, and the queue
-  task refuses it too, in case it was dispatched directly or queued while the
-  indexer was still there.
-- **A full rebuild clears the whole index and recreates only collections with a
-  registered indexer.** Documents belonging to an item type with no indexer are
-  therefore removed, and come back only when their plugin writes them again. On a
-  site with live-only indexers, that is worth knowing before clicking it.
-
-## Unmanaged collections
-
-Indexing and rebuilding are **two independent capabilities**:
-
-- `c.get("search").index(document)` keeps a collection current as your plugin
-  writes. This is all a plugin needs to be searchable.
-- A registered `SearchIndexer` additionally lets the whole collection be
-  reproduced from its source, which is what a rebuild does.
-
-Registering an indexer is optional, so a plugin may write documents live and
-register none. That collection works perfectly during normal operation; it simply
-cannot take part in a deterministic rebuild.
-
-A collection is **unmanaged by the rebuild system** when documents for its
-`itemType` are in the index but no `SearchIndexer` is registered for it.
-
-<Callout type="info" title="Unmanaged is not abandoned">
-  It does **not** prove the plugin is uninstalled or inactive. A live-only
-  plugin looks exactly the same from the index's point of view, and may be
-  keeping the collection completely up to date. All VitNode can tell is that it
-  has no way to rebuild it.
-</Callout>
-
-**AdminCP → Advanced → Search** labels those rows _Unmanaged_, shows the plugin
-stored on their documents, and says no rebuild indexer is registered. Coverage is
-left blank rather than calculated: with no indexer there is no source count, and
-`11 / 11` would claim a collection nothing can rebuild is fully covered.
-
-_Reindex_ is replaced by **Remove documents**, behind a confirmation. It deletes
-what is currently indexed and rebuilds nothing - but it does not stop anything
-either, so a live-writing plugin may recreate those documents on its next write.
-It is a way to clear a stale indexed state, not a way to uninstall a collection.
-
-Registering an indexer for the item type makes the collection rebuildable, and the
-row becomes an ordinary one.
-
-## Giving a type an icon and label
-
-Result cards look up an icon and label by `itemType`. Add an entry to the render
-registry (`@vitnode/core/views/search/registry`); unknown types fall back to a
-generic renderer, so nothing breaks if an entry is missing.
-
-## Rendering search in your own app
-
-The search UI ships in three framework-neutral pieces, so a Next.js page and a
-TanStack Start route render the same components:
-
-| Module                                               | What it is                                                                                       |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `@vitnode/core/views/search/search-params`           | Pure functions: normalise a term from a URL, pick the default sort, build the feed's parameters. |
-| `@vitnode/core/views/search/search-feed-query`       | The feed as one query definition - request, page size, cursor rule, response check, cache key.   |
-| `@vitnode/core/views/search/search-controls-content` | The search box, type filters, sort and results, ready to mount.                                  |
-
-Two things are injected, because they are the only two a shared component cannot
-answer for itself: how a page is fetched, and how an internal link becomes a
-navigation.
-
-```tsx title="A search page, in any framework"
-import { SearchControlsContent } from "@vitnode/core/views/search/search-controls-content";
-import { searchFeedQueryOptions } from "@vitnode/core/views/search/search-feed-query";
-import { searchFeedParamsFor } from "@vitnode/core/views/search/search-params";
-
-<SearchControlsContent
-  defaultParams={searchFeedParamsFor({ search: termFromTheUrl })}
-  feedQuery={params => searchFeedQueryOptions({ locale, params })}
-  LinkComponent={MyLink}
-  variant="timeline"
-/>;
-```
-
-<Callout type="info">
-  Warm the *same* `searchFeedQueryOptions` in your loader
-  (`ensureInfiniteQueryData`) and the first page is already in the cache when
-  the component mounts - no `initialData`, no second copy of the same bytes.
-</Callout>
-
-Only the term belongs in the URL. The sort and the type filters are controls the
-visitor drives after the page loads, so they stay component state - and a
-malformed `?search=` normalises to the browse feed rather than breaking the page.
-
-## Choosing the engine
-
-The engine is set in `vitnode.api.config.ts`, exactly like the storage and email
-adapters. Omit it to use the built-in Postgres engine.
-
-<Callout type="info">
-  Elasticsearch is provided by the separate `@vitnode/elasticsearch` package.
-</Callout>
-
-```ts title="src/vitnode.api.config.ts"
-import { ElasticsearchSearchAdapter } from "@vitnode/elasticsearch";
-
-export const vitNodeApiConfig = buildApiConfig({
-  search: {
-    adapter: ElasticsearchSearchAdapter({
-      node: process.env.ELASTICSEARCH_NODE,
-      apiKey: process.env.ELASTICSEARCH_API_KEY,
-      index: "vitnode",
-    }),
-  },
-});
-```
-
-After changing the engine, run a rebuild so the new engine is populated from
-`core_search_index`.
-
-### Provider capabilities
-
-A provider may declare what it can do. Most of it is about ranking and is purely
-optional, but one entry is a hard requirement for multi-language content:
-
-```ts
-capabilities: {
-  authorBoost: false,
-  facets: false,
-  languageScopedDelete: true, // [!code highlight]
-  timeDecay: false,
-},
-```
-
-`languageScopedDelete` says that `delete(c, itemType, itemId, languageCode)`
-honours its fourth argument. It has to be **declared** because JavaScript cannot
-tell: a provider written as `delete(c, itemType, itemId)` accepts the extra
-argument and drops it, so taking one translation down would remove every language
-from that provider's store while `core_search_index` removed one - silently, and
-permanently.
-
-So an install that pairs a provider without it with a content type that is both
-[localized](/docs/dev/content-engine/localization) and searchable refuses to boot:
-
-```text
-[Search] The "legacy-engine" search provider does not support language-scoped
-deletion, but the content type "example.article" is localized and searchable …
-```
-
-Both bundled providers declare it. Nothing changes for a provider that indexes
-single-language content only - the capability is checked when a content type
-needs it, and not otherwise.
-
-## Admin status
-
-**AdminCP → System → Search** shows the active engine, its health, how many items
-are indexed (broken down by type), when the index was last updated, and a button
-to queue a full rebuild.
+<Cards>
+  <Card
+    title="Search Tables"
+    description="Add search filtering to a single database table"
+    href="/docs/dev/database/search"
+  />
+  <Card
+    title="Content Engine Delivery"
+    description="Automatic search indexing with Content Engine"
+    href="/docs/dev/content-engine/content-delivery-and-seo"
+  />
+</Cards>

@@ -1,6 +1,7 @@
 ---
 title: Cache
-description: Learn how caching works in VitNode across the app runtime and Redis.
+description: VitNode's two caching layers - TanStack Query entries on the front end, and a Redis-backed cache inside Hono route handlers on the API.
+icon: Zap
 ---
 
 VitNode uses a simple two-layer caching model:
@@ -11,186 +12,180 @@ VitNode uses a simple two-layer caching model:
 
 Caching is **opt-in**. Dynamic data stays fresh by default.
 
-<Callout type="info" title="Which app cache you have depends on the runtime">
-  On **TanStack Start** the app cache is TanStack Query - a route loader warms an
-  entry, the component reads the same one back, and a mutation invalidates
-  exactly what it changed. See [Data
-  loading](/docs/dev/tanstack/data-loading).
-
-On **Next.js** it is `"use cache"` and the tag API, which is what the rest of
-this page describes. The Redis layer below is shared by both, because it lives
-in the API.
-
+<Callout type="info" title="Caching is not the fetcher's job">
+  [`fetcher()`](/docs/dev/fetcher) forwards the visitor's cookies, so a stored
+  response is one visitor's data handed to another. It never caches. The two
+  layers below are where caching belongs.
 </Callout>
 
 ---
 
-## App Caching (Next.js)
+## App Caching (TanStack Query)
 
-### Public Data (`"use cache"`)
+Every read a route makes goes through TanStack Query, and that _is_ the app
+cache: a route's `loader` warms an entry, the component reads the same one back,
+and a mutation invalidates exactly what it changed. One request per navigation
+instead of one per component.
 
-For public data shared by all visitors (e.g. blog posts, site configuration), use Next.js `"use cache"`.
+### Warm it in the loader, read it in the screen
 
-Always use `coreFetcher` (which skips request cookies) and call `await connection()` so Next.js can prerender safely:
-
-```ts title="services/announcements.ts"
-import { coreFetcher } from '@vitnode/core/lib/fetcher/core';
-import { cacheLife, cacheTag } from 'next/cache';
-import { connection } from 'next/server';
-
-export const getAnnouncements = async (locale: string) => {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('announcements');
-  await connection();
-
-  const res = await coreFetcher(announcementsModule, {
-    module: 'announcements',
-    path: '/',
-    method: 'get',
-    args: { query: { lang: locale } },
-  });
-
-  return await res.json();
-};
+```ts title="src/routes/announcements.tsx"
+export const Route = createFileRoute('/announcements')({
+  loader: async ({ context }) =>
+    await context.queryClient.ensureQueryData(announcementsQueryOptions()),
+})
 ```
 
-Render cached data inside a `<Suspense>` boundary in your page:
-
-```tsx title="page.tsx"
-<React.Suspense fallback={<Skeleton className="h-64 w-full" />}>
-  <Announcements />
-</React.Suspense>
+```tsx title="announcements-screen.tsx"
+const { data } = useSuspenseQuery(announcementsQueryOptions())
 ```
 
-<Callout type="info" title="cacheLife Presets">
-  Common presets: `'seconds'`, `'minutes'`, `'hours'`, `'days'`, `'weeks'`, `'max'`, or custom `{ stale, revalidate, expire }`.
+The `queryOptions` object is what the two halves share - the same key, the same
+fetcher, the same `staleTime` - so the screen can never ask for something the
+loader did not warm. See [Data loading](/docs/dev/data-loading) for the
+isomorphic fetcher that sits behind it, and [Loading
+states](/docs/dev/routing/loading-states) for what the screen shows while an
+entry is still cold.
+
+### Pick a lifetime that matches the data
+
+`staleTime` is the whole configuration surface. Public data that changes rarely
+can sit for minutes; anything per-visitor should be short or zero:
+
+```ts
+export const announcementsQueryOptions = () =>
+  queryOptions({
+    queryKey: ['announcements'],
+    queryFn: fetchAnnouncements,
+    staleTime: 5 * 60 * 1000,
+  })
+```
+
+<Callout type="warn" title="Per-visitor data is per-visitor">
+  A session, a permission set or a personal file list must not share a cache
+  entry with anybody else. Key it by the identity it belongs to, and keep the
+  database work behind it in the API's Redis layer instead - that is where a
+  session read is already cached, with explicit invalidation on every mutation
+  that changes the answer.
 </Callout>
-
-### Per-User Data (`React.cache`)
-
-Never cache user-specific data (such as sessions or permissions) with `"use cache"`.
-
-Instead, use React's `cache()` to deduplicate calls within a single render pass without sharing data between visitors:
-
-```ts title="services/profile.ts"
-import { fetcher } from '@vitnode/core/lib/fetcher';
-import { cache } from 'react';
-
-export const getMyProfile = cache(async () => {
-  const res = await fetcher(usersModule, {
-    module: 'users',
-    path: '/me',
-    method: 'get',
-  });
-
-  return await res.json();
-});
-```
 
 ---
 
-## Invalidation APIs
+## Invalidation
 
-When data changes, expire the cached entries using the appropriate helper:
+A write invalidates what it changed. `invalidateQueries` matches by key prefix,
+so invalidate the narrowest root that covers the rows a mutation could have
+moved:
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+```ts title="publish-announcement.ts"
+const queryClient = useQueryClient()
 
-<TypeTable
-  type={{
-    "updateTag(tag)": {
-      description:
-        "Server Actions only. Instantly purges the tag and refreshes the current page (read-your-writes semantics).",
-      type: "void",
-    },
-    "revalidateTag(tag, profile)": {
-      description:
-        "Route Handlers, webhooks, or background jobs. Profile is required for SWR: revalidateTag('posts', 'max') or inline { revalidate: 3600 }.",
-      type: "void",
-    },
-    "refresh()": {
-      description:
-        "Server Actions only. Refreshes uncached dynamic data on the page without touching the cache.",
-      type: "void",
-    },
-  }}
-/>
-
-### Invalidation Example
-
-Call `updateTag` inside a Server Action after mutating data:
-
-```ts title="mutation-api.server.ts"
-'use server';
-
-import { fetcher } from '@vitnode/core/lib/fetcher';
-import { updateTag } from 'next/cache';
-
-export const publishAnnouncement = async (id: number) => {
-  const res = await fetcher(announcementsModule, {
-    module: 'announcements',
-    path: '/{id}/publish',
-    method: 'post',
-    args: { params: { id } },
-  });
-
-  // Purge the cache immediately
-  updateTag('announcements');
-
-  return await res.json();
-};
+await publishAnnouncement(id)
+await queryClient.invalidateQueries({ queryKey: ['announcements'] })
 ```
+
+A row that could be on any page under any sort means invalidating the list's
+root, not one page of it - the changed row may have moved.
 
 <Callout type="info" title="Content Engine">
-  Content Engine entries are automatically tagged and revalidated for you via `revalidateContent`. See [Content Engine Caching](/docs/dev/content-engine/public-api-and-caching).
+  Content Engine entries are tagged and expired for you. A background mutation
+  cannot expire a frontend's cache by calling a function, so
+  `dispatchContentRevalidation` posts to the origins an install opts into via
+  `content.revalidateOrigins`. See [Content Engine
+  Caching](/docs/dev/content-engine/public-api-and-caching).
 </Callout>
 
 ---
-
-## Where the App cache is stored
-
-By default Next.js keeps `"use cache"` entries in a per-process memory cache and everything else on local disk. That is fine for one instance and wrong for several: an `updateTag` runs on whichever instance handled the Server Action, and the others keep serving what they already had.
-
-**Set `REDIS_URL` and VitNode swaps both Next.js cache handlers for Redis-backed ones.** No `next.config.ts` change is required - `vitNodeNextConfig` registers them:
-
-```ts title="src/next.config.ts"
-// Unchanged. The handlers follow REDIS_URL.
-export default vitNodeNextConfig(nextConfig);
-```
-
-What that buys you:
-
-- `"use cache"` entries are stored in Redis, so they survive restarts and rolling deploys and are shared between instances.
-- `fetch` Data Cache responses are shared too.
-- **Every tag revalidation is shared**, so `updateTag` on one instance invalidates all of them - including for prerendered pages, which stay on each instance's own disk and are rebuilt individually.
-
-<Callout type="warn" title="The web process needs the env vars">
-  The handlers are loaded by Next.js itself and read `REDIS_URL` / `REDIS_PASSWORD` straight from the environment - they cannot see `vitnode.api.config.ts`. In a split deployment, set them on the **frontend** service as well as the API.
-</Callout>
-
-See [Redis](/docs/dev/advanced/redis#caching-nextjs-output) for what each handler covers, TTLs, and how to opt out.
 
 ## API Caching (Redis)
 
-Inside your Hono API route handlers, use `c.get("cache")` to store expensive query results in Redis:
+Inside your Hono route handlers, `c.get("cache")` stores expensive query results
+in Redis. Keys are namespaced per plugin, so the `stats:42` your plugin writes
+actually lives at `vitnode:cache:@vitnode/example:stats:42` and cannot collide
+with another plugin's.
 
-```ts title="plugins/stats/src/routes/stats.ts"
-// Cache result on miss for 5 minutes
-const stats = await c.get('cache').remember(
-  `stats:${containerId}`,
-  60 * 5, // TTL in seconds
-  async () => await calculateHeavyStats(c, containerId),
-);
+<Steps>
+<Step>
+
+### Wrap the read in `remember`
+
+`remember` takes a key, a TTL in seconds, and the loader to run on a miss. It
+returns the value either way, so the call site never branches:
+
+```ts title="src/api/modules/stats/routes/overview.route.ts"
+handler: async c => {
+  // [!code ++:5]
+  const stats = await c.get('cache').remember(
+    `stats:${containerId}`,
+    60 * 5,
+    async () => await calculateHeavyStats(c, containerId),
+  )
+
+  return c.json(stats)
+},
 ```
 
-### Invalidation
+Only a non-`null` value counts as a hit, so a loader that legitimately answers
+`null` re-runs every time. Wrap it - `{ stats }` rather than a bare nullable - if
+that is a miss you cannot afford.
 
-Delete the key whenever the underlying record changes:
+</Step>
+<Step>
 
-```ts title="plugins/stats/src/routes/update.ts"
-await c.get('cache').delete(`stats:${containerId}`);
+### Delete the key when the record changes
+
+The write that changes the answer is the write that expires it. There is no TTL
+short enough to substitute for this:
+
+```ts title="src/api/modules/stats/routes/update.route.ts"
+await c.get('cache').delete(`stats:${containerId}`) // [!code ++]
 ```
+
+`delete` also takes an array of keys. `flush()` drops every key belonging to the
+current plugin and leaves other plugins - and any unrelated data in the same
+Redis instance - untouched.
+
+</Step>
+<Step>
+
+### Verify it is actually caching
+
+Wire up `redis` in `buildApiConfig` (see [Redis
+setup](/docs/dev/advanced/redis)), restart, then open **System → Integrations**
+in the AdminCP: Redis reads _active_ when it is connected and _configured but
+unreachable_ when the URL is wrong. Call the route twice and only the first call
+should reach the database.
+
+</Step>
+</Steps>
 
 <Callout type="info" title="Optional Redis">
-  Redis is optional. If not configured, `c.get("cache")` gracefully acts as a no-op and runs the callback directly. See [Redis Setup](/docs/dev/advanced/redis).
+  Redis is optional. If not configured, `c.get("cache")` gracefully acts as a
+  no-op and runs the callback directly - which is one way to spell "runs your
+  loader". Nothing you write against it needs a fallback branch.
 </Callout>
+
+## Next
+
+<Cards>
+  <Card
+    href="/docs/dev/data-loading"
+    title="Data loading"
+    description="Query options, route loaders and the invalidation that keeps the app cache honest."
+  />
+  <Card
+    href="/docs/dev/advanced/redis"
+    title="Redis"
+    description="Configure the shared cache that also backs the rate limiter and realtime pub/sub."
+  />
+  <Card
+    href="/docs/dev/fetcher"
+    title="Fetcher"
+    description="The typed call into your Hono API - and why it deliberately caches nothing."
+  />
+  <Card
+    href="/docs/dev/content-engine/public-api-and-caching"
+    title="Content Engine caching"
+    description="Tagged public reads, revalidation origins and what a background mutation can expire."
+  />
+</Cards>

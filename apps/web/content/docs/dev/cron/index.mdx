@@ -1,72 +1,129 @@
 ---
-title: CRON Jobs
-description: Automate and manage recurring tasks in your VitNode app with cron jobs - perfect for cleanups, emails, reports, and more.
+title: Cron Jobs
+description: Declare recurring background jobs in VitNode plugins and execute them via internal or external cron triggers.
+icon: Clock
 ---
 
-## Adapters
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-Before you can use cron functionality, you need to provide an adapter to your application.
+A cron job in VitNode consists of a named handler and a standard 5-field cron expression. Cron definitions are automatically registered in the `core_cron` database table and manageable through the AdminCP.
+
+## Quick start
+
+### 1. Define a Cron Job
+
+Create a cron definition in your plugin:
+
+```ts title="plugins/blog/src/api/cron/cleanup.cron.ts"
+import { buildCron } from "@vitnode/core/api/lib/cron"
+
+export const cleanupCron = buildCron({
+  name: "cleanup-drafts",
+  description: "Remove expired post drafts every midnight",
+  schedule: "0 0 * * *", // Standard cron syntax
+  handler: async (c) => {
+    await c.get("log").info("Running midnight cleanup...")
+  },
+})
+```
+
+---
+
+### 2. Register in an API Module
+
+Attach the cron job to a module in `src/api/modules/`:
+
+```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module"
+import { cleanupCron } from "../../cron/cleanup.cron"
+
+export const postsModule = buildModule({
+  name: "posts",
+  routes: [listPostsRoute],
+  cronJobs: [cleanupCron], // [!code ++]
+})
+```
+
+When your plugin is mounted in `config.api.ts`, the cron job is automatically registered.
+
+---
+
+## Execution Adapters
+
+VitNode does not hold persistent timers in the HTTP worker. Instead, jobs are triggered via an adapter:
+
+### Option A: In-Process Node CRON (Single Server)
+
+Best for single-instance or local development. Configure in `vitnode.api.config.ts`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
+export const vitNodeApiConfig = buildApiConfig({
+  cron: {
+    adapter: NodeCronAdapter(), // [!code ++]
+  },
+})
+```
+
+### Option B: External Webhook (Multi-Instance / Serverless)
+
+Trigger runs via external HTTP schedulers (AWS EventBridge, GitHub Actions, or crontab):
+
+```bash
+curl -X POST https://your-domain.com/api/@vitnode/core/cron   -H "Authorization: Bearer $CRON_SECRET"
+```
+
+---
+
+## AdminCP Management
+
+{/* Image prompt: VitNode AdminCP Cron management page at /admin/core/advanced/cron. Data table displaying scheduled jobs with columns: Name, Schedule, Status, Last Run, Next Run, and an action button "Run Now". Dark theme, 1440x900. */}
+
+Manage and inspect cron jobs in the AdminCP at **Core → Advanced → Cron Jobs** (`/admin/core/advanced/cron`):
+- View status, schedules, and last execution logs.
+- Click **Run Now** to execute any job manually on demand.
+
+---
+
+## `buildCron` Options
+
+<TypeTable
+  type={{
+    name: {
+      description: "Unique identifier within the plugin (e.g. 'cleanup-drafts').",
+      required: true,
+      type: "string",
+    },
+    schedule: {
+      description: "Standard 5-part cron pattern (minute hour dom month dow).",
+      required: true,
+      type: "string",
+    },
+    handler: {
+      description: "Async function executed when the job is triggered.",
+      required: true,
+      type: "(c: Context) => Promise<void>",
+    },
+    description: {
+      description: "Human-readable purpose shown in AdminCP list.",
+      type: "string",
+    },
+  }}
+/>
+
+## Learn More
 
 <Cards>
   <Card
-    title="REST API"
-    href="/docs/dev/cron/rest-api"
-    description="Run cron jobs by triggering REST API endpoints from an external scheduler."
+    title="Background Queues"
+    description="Process async persistent tasks and background workers"
+    href="/docs/dev/advanced/queue"
   />
   <Card
-    title="Node CRON"
-    href="/docs/dev/cron/node-cron"
-    description="In-memory tiny task scheduler in pure JavaScript for node.js based on GNU crontab."
+    title="Events"
+    description="Emit and subscribe to application domain events"
+    href="/docs/dev/events"
   />
 </Cards>
-
-## Usage
-
-<Steps>
-<Step>
-### Create CRON file
-
-```ts title="cron/clean.cron.ts"
-import { buildCron } from "@vitnode/core/api/lib/cron";
-
-export const cleanCron = buildCron({
-  name: "clean",
-  description: "Clean up expired sessions and tokens",
-  // Run every 1 hour
-  schedule: "0 * * * *",
-  handler: async c => {
-    console.log("Running cleanup cron job...");
-  },
-});
-```
-
-</Step>
-<Step>
-### Register CRON in module
-
-```ts title="modules/clean/clean.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
-
-// [!code ++]
-import { cleanCron } from "./cron/clean.cron";
-
-export const cronModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  name: "clean",
-  routes: [],
-  // [!code ++]
-  cronJobs: [cleanCron],
-});
-```
-
-</Step>
-<Step>
-
-### Check Your Cron Job
-
-When your CRON job will run first time, you should see your job in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
-
-</Step>
-
-</Steps>

@@ -1,4 +1,10 @@
 {
   "title": "Components",
-  "pages": ["...", "[More Components](https://react.email/components)"]
+  "description": "Buttons and cards for VitNode email templates",
+  "icon": "Component",
+  "pages": [
+    "button",
+    "card",
+    "[More Components](https://react.email/components)"
+  ]
 }

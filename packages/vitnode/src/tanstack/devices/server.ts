@@ -1,25 +1,18 @@
 import "@tanstack/react-start/server-only";
 
-import type { DevicesFetcher } from "@/views/auth/settings/devices/devices-query";
+import { usersModule } from "@/api/modules/users/users.module";
+import { DevicesRequestError } from "@/views/auth/settings/devices/devices-query";
 
-import {
-  devicesRequest,
-  DevicesRequestError,
-  usersModuleRef,
-} from "@/views/auth/settings/devices/devices-query";
-
-import { fetcherServer } from "../fetcher/server";
+import { fetcher } from "../fetcher/server";
 
 /**
  * The visitor's devices, fetched during SSR.
  *
- * The request and the refusal check are the shared ones - the same two the
- * browser fetcher uses - so a list rendered on the server and a list refetched
- * after a revoke are the same request with the same failure semantics. Only the
- * *transport* is this module's, and it is the only part that genuinely cannot be
- * shared.
+ * The route is written here rather than handed in, so the call says what it is
+ * asking for. The refusal check is the shared one, so a list rendered on the
+ * server and one refetched after a revoke fail the same way.
  *
- * `fetcherServer` rather than a bare `fetch`, and here it carries two things
+ * `fetcher` rather than a bare `fetch`, and here it carries two things
  * rather than one:
  *
  * - **The session cookie**, which is whose devices these are. A render that
@@ -38,8 +31,12 @@ import { fetcherServer } from "../fetcher/server";
  * keeps this module - and the `server-only` marker above it - out of the browser
  * bundle.
  */
-export const fetchDevicesOnServer: DevicesFetcher = async () => {
-  const response = await fetcherServer(usersModuleRef, devicesRequest());
+export const fetchDevicesOnServer = async () => {
+  const response = await fetcher(usersModule, {
+    method: "get",
+    module: "users",
+    path: "/devices",
+  });
 
   if (!response.ok) throw new DevicesRequestError(response.status);
 

@@ -1,6 +1,6 @@
 {
   "title": "User Interface (UI)",
-  "description": "Make it pretty",
+  "description": "Base UI components, the AutoForm field set, a URL-driven data table and the design tokens behind them - every page with a live demo",
   "icon": "Paintbrush",
   "root": true,
   "pages": [
@@ -8,7 +8,6 @@
     "hooks",
     "typography",
     "colors",
-    "not-found",
     "---Components---",
     "data-table",
     "confirm-action-alert-dialog",

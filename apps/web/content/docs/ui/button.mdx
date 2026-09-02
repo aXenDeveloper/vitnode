@@ -1,83 +1,208 @@
 ---
 title: Button
-description: A button component for triggering actions in your application.
+description: The button every VitNode action goes through - six variants, a built-in loading spinner, and a render prop that turns it into a router link.
+icon: MousePointerClick
 ---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+A [Base UI](https://base-ui.com/react/components/button) button with VitNode's
+variants painted on top. It handles the two things a hand-rolled `<button>`
+always gets wrong: a pending state that does not resize the button, and being
+something other than a `<button>` when it needs to be a link.
 
 ## Preview
 
 <Preview name="button" />
 
-## Usage
-
-```ts
-import { Home } from "lucide-react";
-import { Button } from "@vitnode/core/components/ui/button";
-```
+## Quick start
 
 ```tsx
-<Button>
-  <Home />
+import { Button } from '@vitnode/core/components/ui/button'
+import { HomeIcon } from 'lucide-react'
+
+;<Button>
+  <HomeIcon />
   Default
 </Button>
 ```
 
-## Link
+Icons are children, not a prop. The button spaces them, sizes them to match its
+own size, and marks them `pointer-events-none` so a click always lands on the
+button.
 
-Use the `render` prop to swap the underlying element or compose the button with
-another component, such as a link. Set `nativeButton={false}` when the rendered
-element is not a native `<button>`.
+## Variants
+
+| `variant`     | Use it for                                                  |
+| ------------- | ----------------------------------------------------------- |
+| `default`     | The one action you want clicked on this screen              |
+| `secondary`   | A second action of equal weight                             |
+| `outline`     | Toolbars, filters, anything sitting on a card               |
+| `ghost`       | Icon buttons and row actions, where a border would be noise |
+| `link`        | A button that must look like prose                          |
+| `destructive` | Delete, ban, revoke - tinted rather than filled, on purpose |
+
+## Sizes
+
+| `size`    | Height  | Notes                          |
+| --------- | ------- | ------------------------------ |
+| `sm`      | 2rem    |                                |
+| `default` | 2.25rem |                                |
+| `lg`      | 2.5rem  |                                |
+| `icon-xs` | 1.5rem  | Square. `aria-label` required. |
+| `icon-sm` | 2rem    | Square. `aria-label` required. |
+| `icon`    | 2.25rem | Square. `aria-label` required. |
+| `icon-lg` | 2.5rem  | Square. `aria-label` required. |
 
 ```tsx
-import Link from "next/link";
-
-<Button nativeButton={false} render={<Link href="/home" />}>
-  Home
+<Button aria-label="Delete" size="icon" variant="destructive">
+  <Trash2Icon />
 </Button>
 ```
 
 ## Loading
 
-Pass `isLoading` to render a spinner and disable the button while an action is
-in progress.
+Pass `isLoading` and the label fades out while a spinner springs in over it. The
+button is disabled for the duration and keeps its width, so nothing around it
+moves:
 
 ```tsx
-<Button isLoading>Save changes</Button>
+const [isLoading, setIsLoading] = React.useState(false)
+
+;<Button isLoading={isLoading} onClick={save}>
+  Save changes
+</Button>
+```
+
+While it is `true` and the button has no `aria-label` of its own, the accessible
+name becomes the translated "loading" string - so a spinner in place of a label
+still announces itself. An `aria-label` you pass is spread on last and keeps
+winning, in both states.
+
+## Render as a link
+
+A button that navigates should be an `<a>`, not a `<button>` with an `onClick`.
+Use `render` to swap the element and `nativeButton={false}` to tell Base UI what
+it is now:
+
+```tsx
+import { Link } from '@tanstack/react-router' // [!code ++]
+import { Button } from '@vitnode/core/components/ui/button'
+
+;<Button nativeButton={false} render={<Link to="/settings" />}>
+  Settings
+</Button>
+```
+
+Inside a shared VitNode view that takes a `LinkComponent`, pass that instead -
+it is the same thing with `href` in place of `to`, and it is what lets one
+component render correctly in a host that mounts VitNode under a path prefix:
+
+```tsx
+<Button nativeButton={false} render={<LinkComponent href="/settings" />}>
+  Settings
+</Button>
 ```
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+Everything [Base UI's Button](https://base-ui.com/react/components/button#api-reference)
+accepts, plus:
 
 <TypeTable
   type={{
     variant: {
-      description: "The variant of the button.",
-      type: "default | secondary | outline | ghost | link | destructive",
-      default: "default",
+      description: 'The visual weight of the button.',
+      type: 'default | secondary | outline | ghost | link | destructive',
+      default: 'default',
     },
     size: {
-      description: "The size of the button.",
-      type: "default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg",
-      default: "default",
+      description:
+        'The size of the button. The four icon sizes are square and make aria-label required.',
+      type: 'default | sm | lg | icon | icon-xs | icon-sm | icon-lg',
+      default: 'default',
     },
     isLoading: {
-      description: "Shows a loading spinner and disables the button.",
-      type: "boolean",
+      description:
+        'Fades the label out, springs a spinner in over it, and disables the button. It also names the button "loading" for a screen reader, unless you pass an `aria-label` of your own.',
+      type: 'boolean',
+    },
+    disabled: {
+      description:
+        'Disables the button. It is applied after `isLoading`, so an explicit `disabled={false}` keeps a loading button clickable - leave it off and let `isLoading` do the disabling.',
+      type: 'boolean',
+    },
+    focusableWhenDisabled: {
+      description:
+        'Keeps a disabled button in the tab order, so a screen reader can still find it and read why it is disabled.',
+      type: 'boolean',
+      default: 'false',
     },
     render: {
       description:
-        "A React element to render in place of the default button element.",
-      type: "ReactElement",
+        'What to render instead of the default `<button>` - a router link, most often. An element is cloned with the button props; a function receives them.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
     },
     nativeButton: {
       description:
-        "Whether the rendered element is a native button. Set to false when using `render` with a non-button element.",
-      type: "boolean",
-      default: "true",
+        'Whether the rendered element is a native button. Set it to false whenever `render` supplies something that is not one.',
+      type: 'boolean',
+      default: 'true',
+    },
+    className: {
+      description:
+        'Merged over the variant classes, so a token you set here wins.',
+      type: 'string',
     },
   }}
 />
 
-## API Reference
+## Gotchas
 
-[Base UI - Button](https://base-ui.com/react/components/button#api-reference)
+<Callout
+  type="warn"
+  title="An icon-only button will not compile without a label"
+>
+  The props type is a union: choosing any of the four `icon*` sizes makes
+  `aria-label` **required**. That is deliberate - an icon button has no text
+  node, so without it the accessible name is empty - and it is `tsc` that stops
+  you, not a lint rule you can suppress.
+</Callout>
+
+<Callout type="warn" title="`xs` is a stylesheet variant, not a prop">
+  `buttonVariants` defines an `xs` size, but the component's props type does not
+  accept it: `<Button size="xs">` is a type error. Use `sm`, or call
+  `buttonVariants({ size: 'xs' })` yourself if you need that geometry on
+  something else.
+</Callout>
+
+<Callout type="warn" title="`render` without `nativeButton={false}`">
+  Base UI keeps applying native-button semantics - so an anchor gets attributes
+  a `<button>` would want and behaves subtly wrong for keyboard users. If the
+  rendered element is not a `<button>`, say so.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    href="/docs/ui/confirm-action-alert-dialog"
+    title="Confirm Action"
+    description="Put this in front of the destructive button instead of hoping."
+  />
+  <Card
+    href="/docs/ui/toggle"
+    title="Toggle"
+    description="A button that stays pressed."
+  />
+  <Card
+    href="/docs/ui/auto-form"
+    title="Auto Form"
+    description="Forms bring their own submit button, wired to the submit state."
+  />
+  <Card
+    href="/docs/dev/routing/navigation"
+    title="Navigation"
+    description="How a link becomes a navigation, and where the locale prefix comes from."
+  />
+</Cards>

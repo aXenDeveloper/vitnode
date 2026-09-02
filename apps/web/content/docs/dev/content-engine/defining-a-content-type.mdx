@@ -1,130 +1,45 @@
 ---
 title: Defining a Content Type
-description: Learn the three-file architecture, how to declare content models, register them step-by-step, generate database migrations, and configure i18n keys.
-icon: FilePlus2
+description: Declare a Content Engine content type once to get a Postgres table, typed CRUD routes, and interactive AdminCP screens.
+icon: FileCode
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { File, Files, Folder } from "fumadocs-ui/components/files"
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-Every content type in VitNode consists of three compact, dedicated files. This strict division keeps your client bundle lightweight while giving server APIs full access to Drizzle ORM.
+Content Engine generates a complete CRUD ecosystem from one declaration: a PostgreSQL table, Zod validation schemas, API endpoints, staff permissions, and AdminCP management screens.
 
-## The Three-File Architecture
+## Quick start
 
-| File Path | Role | Allowed Dependencies |
-| :--- | :--- | :--- |
-| `src/content/*.ts` | **Client-Safe Definition** | `zod`, `@vitnode/core/content` |
-| `src/database/*.ts` | **Database Model** | Drizzle ORM, `@vitnode/core/content/server` |
-| `src/config.tsx` | **AdminCP Frontend** | React, Lucide Icons, `@vitnode/core/lib/plugin` |
+### 1. Define the Content Type
 
----
+```ts title="plugins/example/src/content/category.ts"
+import { defineContentType, field } from "@vitnode/core/content"
 
-## Step-by-Step Implementation Guide
-
-<Steps>
-
-<Step>
-### Step 1: Declare the Content Definition
-
-Create a new file `src/content/article.ts`. Import `defineContentType` and `field` from `@vitnode/core/content`. Do **not** import Drizzle, React, or server utilities here to keep it client-safe.
-
-```ts title="src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content";
-
-export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+export const categoryContentType = defineContentType({
+  id: "example.category",
+  tableName: "example_categories",
   fields: {
-    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    code: field.text({ required: true, maxLength: 100, unique: true }),
-    excerpt: field.textarea({ maxLength: 500, nullable: true }),
-    status: field.enum({
-      values: ["draft", "published"],
-      defaultValue: "draft",
-    }),
-    publishedAt: field.dateTime({ nullable: true }),
-    author: field.user(),
+    name: field.text({ required: true, minLength: 2, maxLength: 100 }),
+    slug: field.slug({ from: "name", required: true }),
   },
-  admin: {
-    titleField: "title",
-    list: {
-      columns: ["title", "code", "status", "author", "updatedAt"],
-      searchableFields: ["title", "code", "excerpt"],
-      orderableFields: ["title", "code", "status"],
-      defaultOrderBy: "updatedAt",
-      defaultOrder: "desc",
-    },
-  },
-});
-```
-</Step>
-
-<Step>
-### Step 2: Build the Database Table Model
-
-Create `src/database/articles.ts`. Pass the definition to `createContentModel` to compile the database table representation.
-
-```ts title="src/database/articles.ts"
-import { createContentModel } from "@vitnode/core/content/server";
-import { articleContentType } from "@/content/article";
-
-export const articleContent = createContentModel(articleContentType);
-
-// Export the table directly so Drizzle Kit discovers it during migrations
-export const example_articles = articleContent.table;
-```
-</Step>
-
-<Step>
-### Step 3: Register Content Types in API & Frontend
-
-First, attach the content module to your plugin's admin module on the API side:
-
-```ts title="src/api/modules/admin/admin.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
-import { buildContentAdminModule } from "@vitnode/core/content/server"; // [!code ++]
-import { articleContent } from "@/database/articles"; // [!code ++]
-import { CONFIG_PLUGIN } from "@/const";
-
-export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  name: "admin",
-  routes: [],
-  modules: [
-    buildContentAdminModule({ // [!code ++]
-      pluginId: CONFIG_PLUGIN.pluginId, // [!code ++]
-      contentTypes: [articleContent], // [!code ++]
-    }), // [!code ++]
-  ],
-});
+})
 ```
 
-Second, register `contentTypeAdmin` in your plugin's frontend configuration:
+### 2. Create the Database Model
 
-```tsx title="src/config.tsx"
-import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
-import { NotebookPenIcon } from "lucide-react";
-import { articleContentType } from "@/content/article"; // [!code ++]
+```ts title="plugins/example/src/database/categories.ts"
+import { createContentModel } from "@vitnode/core/content/server"
+import { categoryContentType } from "@/content/category"
 
-export const examplePlugin = () =>
-  buildPlugin({
-    pluginId: "@vitnode/example",
-    messages,
-    contentTypes: [
-      contentTypeAdmin({ // [!code ++]
-        definition: articleContentType, // [!code ++]
-        icon: <NotebookPenIcon />, // [!code ++]
-      }), // [!code ++]
-    ],
-  });
+export const categoryContent = createContentModel(categoryContentType)
+export const example_categories = categoryContent.table
 ```
-</Step>
 
-<Step>
-### Step 4: Build Plugins and Run Database Migrations
+### 3. Build & Run Migrations
 
-Generate Drizzle Kit migrations and apply schema updates to your database:
-
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
 
 ```bash tab="bun"
 bun run build:plugins && bun run db:migrate
@@ -139,57 +54,142 @@ npm run build:plugins && npm run db:migrate
 ```
 
 </Tabs>
-</Step>
 
-</Steps>
+Your table now exists in PostgreSQL.
 
 ---
 
-## Internationalization (i18n) Configuration
+## Wire into API and AdminCP
 
-Instead of relying on hardcoded plain text strings in UI components, VitNode humanizes field names automatically and resolves translation keys from your plugin's locale files.
+<Steps>
+<Step>
 
-Add i18n translation keys under your plugin namespace in `src/locales/en.json`:
+### 1. Register CRUD Routes on the API
 
-```json title="src/locales/en.json"
+Add the model to your plugin's `config.api.ts`:
+
+```ts title="plugins/example/src/config.api.ts"
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
+import { categoryContent } from "./database/categories"
+
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: "@vitnode/example",
+    // [!code ++:3]
+    contentTypes: [
+      categoryContent,
+    ],
+  })
+```
+
+This immediately registers full CRUD routes under `/api/@vitnode/example/admin/content/category`.
+
+</Step>
+<Step>
+
+### 2. Register Screens in the AdminCP
+
+Connect the definition in `src/config.tsx`:
+
+```tsx title="plugins/example/src/config.tsx"
+import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin"
+import { FolderIcon } from "lucide-react"
+import { categoryContentType } from "./content/category"
+
+export const examplePlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/example",
+    // [!code ++:6]
+    contentTypes: [
+      contentTypeAdmin({
+        definition: categoryContentType,
+        icon: <FolderIcon />,
+      }),
+    ],
+  })
+```
+
+</Step>
+<Step>
+
+### 3. Add Translations
+
+Name the record in your locale file using ICU cardinal plural:
+
+```json title="plugins/example/src/locales/en.json"
 {
   "@vitnode/example": {
     "content": {
-      "article": {
-        "label": "{count, plural, one {Article} other {Articles}}",
-        "title": "Articles",
-        "desc": "Manage blog articles and news releases.",
-        "fields": {
-          "title": "Article Title",
-          "code": "Article Code",
-          "excerpt": "Short Excerpt",
-          "publishedAt": "Publication Date"
-        },
-        "enums": {
-          "status": {
-            "draft": "Draft Copy",
-            "published": "Live"
-          }
-        },
-        "form": {
-          "general": { "title": "General information" }
-        }
+      "category": {
+        "label": "{count, plural, one {Category} other {Categories}}",
+        "title": "Categories",
+        "desc": "Organize posts into categories."
       }
     }
   }
 }
 ```
 
-The translation key convention follows `{pluginId}.content.{entity}` where `entity` corresponds to your content type ID without the plugin prefix (e.g. `example.article` → `article`).
+</Step>
+<Step>
 
-`label` is the record's own noun, written as an [ICU cardinal
-plural](https://next-intl.dev/docs/usage/translations#cardinal-pluralization) so a
-language with more than two number forms can supply all of them. It is what the
-AdminCP interpolates into `Create {name}`, `{name} has been deleted` and every
-confirmation, and it is the **only** place that noun is written - a definition
-declares no display name. Untranslated, the screens fall back to a name derived from
-the id (`example.article` → "Article"). Keys
-under `form` title the sections declared in
-[`admin.form.sections`](/docs/dev/content-engine/admincp). See [AdminCP
-Integration](/docs/dev/content-engine/admincp) for the full key list and its
-fallbacks.
+### 4. Open the Management Screen
+
+Visit `http://localhost:3000/admin/content/example/category`.
+
+You have a complete AdminCP data table with search, sorting, pagination, and modal dialogs to create, edit, and delete records.
+
+</Step>
+</Steps>
+
+---
+
+## `defineContentType` Options
+
+<TypeTable
+  type={{
+    id: {
+      description: "Unique identifier formatted as '<plugin>.<name>'.",
+      required: true,
+      type: "string",
+    },
+    tableName: {
+      description: "Postgres table name (e.g. 'example_categories').",
+      required: true,
+      type: "string",
+    },
+    fields: {
+      description: "Record containing field descriptors created with field.*.",
+      required: true,
+      type: "Record<string, ContentField>",
+    },
+    publication: {
+      description: "Enables draft/published workflows and publishedAt timestamps.",
+      type: "{ enabled: boolean }",
+    },
+    indexes: {
+      description: "Custom single or composite database indexes.",
+      type: "IndexDefinition[]",
+    },
+  }}
+/>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Field Reference"
+    description="All available field types and options"
+    href="/docs/dev/content-engine/fields"
+  />
+  <Card
+    title="AdminCP Integration"
+    description="Custom table layouts, filters, and AutoForm dialogs"
+    href="/docs/dev/content-engine/admincp"
+  />
+  <Card
+    title="Content Delivery & SEO"
+    description="Render content items on the public website with TanStack Start"
+    href="/docs/dev/content-engine/content-delivery-and-seo"
+  />
+</Cards>

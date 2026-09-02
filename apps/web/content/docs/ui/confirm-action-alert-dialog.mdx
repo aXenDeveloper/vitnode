@@ -1,6 +1,7 @@
 ---
 title: Confirm Action Alert Dialog
 description: A dialog component for confirming destructive actions like delete operations, built on top of the Alert Dialog.
+icon: HelpCircle
 ---
 
 The Confirm Action Alert Dialog is a specialized dialog component built on top of the [Alert Dialog](/docs/ui/alert-dialog) that provides a consistent way to confirm potentially destructive or irreversible actions before they're executed.
@@ -19,26 +20,26 @@ It's particularly useful for:
 ## Usage
 
 ```tsx
-import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog';
-import { Button } from '@vitnode/core/components/ui/button';
+import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog'
+import { Button } from '@vitnode/core/components/ui/button'
 ```
 
 ```tsx
 <ConfirmActionAlertDialog
   onSubmit={async ({ onClose }) => {
-    const result = await deleteCategoryApi(id);
+    const result = await deleteCategoryApi(id)
 
     if (result?.error) {
       toast.error(tGlobal('errors.title'), {
         description: tGlobal('errors.internal_server_error'),
-      });
-      return; // Keep dialog open on error
+      })
+      return // Keep dialog open on error
     }
 
     toast.success(t('success'), {
       description: title,
-    });
-    onClose(); // Close dialog on success
+    })
+    onClose() // Close dialog on success
   }}
 >
   <Button variant="destructive">Delete Category</Button>
@@ -47,7 +48,7 @@ import { Button } from '@vitnode/core/components/ui/button';
 
 ## Props
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{

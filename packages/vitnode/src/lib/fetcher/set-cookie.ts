@@ -1,13 +1,24 @@
 import { cookieFromStringToObject } from "./cookie-from-string-to-object";
 
 /**
+ * Whether a reply's cookies may be copied onto the application's response.
+ *
+ * 2xx only, which is the rule `fetcher()`'s `allowSaveCookies` applies. It
+ * matters in both directions: the session cookie arrives on a 201 and the
+ * deletion arrives on a 200, while a 403 sign-in attempt has nothing anybody
+ * should be writing to the visitor's browser.
+ */
+export const shouldSaveApiCookies = (status: number): boolean =>
+  status >= 200 && status < 300;
+
+/**
  * A `Set-Cookie` header from the API, split into the shape every cookie store
  * takes: a name, a value, and the attributes.
  *
  * Framework-free on purpose. The API mints the session and device cookies, so
  * whichever frontend made the call has to copy them onto its own response -
- * Next through `cookies().set()`, TanStack Start through `setCookie()`. Parsing
- * them twice is how the two drift apart.
+ * TanStack Start through `setCookie()`. Parsing them per runtime is how the
+ * copies drift apart.
  */
 export interface ParsedSetCookie {
   name: string;

@@ -1,81 +1,308 @@
 ---
 title: Facebook
-description: Integrate Facebook Single Sign-On (SSO) in your application.
+description: Add Facebook sign-in to VitNode - create a Meta app with the Facebook Login use case, set the OAuth redirect URI and register the Facebook SSO adapter.
+icon: ThumbsUp
 ---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { ImgDocs } from '@/components/fumadocs/img'
+
+import createAppDetails from './facebook/create-app-details.png'
+import createAppUseCases from './facebook/use-cases-facebook-login.png'
+import appSettingsBasic from './facebook/app-settings-basic.png'
+
+Facebook sign-in goes through a Meta app with the **Facebook Login** use case
+switched on. Meta calls the two credentials an **App ID** and an **App Secret**;
+VitNode calls them `clientId` and `clientSecret`, and they are the same two
+strings.
+
+## Quick start
+
+If you already have an App ID and App Secret, this is the entire integration.
+
+```bash title=".env"
+FACEBOOK_CLIENT_ID=1234567890123456
+FACEBOOK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { FacebookSSOApiPlugin } from '@vitnode/core/api/adapters/sso/facebook' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      FacebookSSOApiPlugin({
+        clientId: process.env.FACEBOOK_CLIENT_ID,
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+Restart the API and a **Facebook** button appears on `/login`. The rest of this
+page is how to get those two values.
+
+## Set up the Meta app
 
 <Steps>
 <Step>
 
-## Sign in to Discord
+### Sign in to Meta for Developers
 
-Go to [Facebook Developers](https://developers.facebook.com/) and sign in.
-
-</Step>
-<Step>
-
-## Create a new application
-
-Click on the `Create App` button to create a new application.
+Go to [developers.facebook.com](https://developers.facebook.com/) and sign in
+with the Facebook account that should own the app. Meta walks you through
+registering as a developer the first time, which means confirming your contact
+details before you can create anything.
 
 </Step>
+
 <Step>
 
-## Add use cases
+### Create an app
 
-Chose `Authenticate and request data from users with Facebook Login` as the use case.
+From **My Apps**, press **Create App**. The first screen wants an **App name** -
+this is what visitors read on the login dialog - and an **App contact email**.
+
+<ImgDocs
+  src={createAppDetails}
+  alt="Meta's Create an app wizard on the App details step, with App name set to VitNode Test and an App contact email filled in"
+/>
 
 </Step>
+
 <Step>
 
-## Get the App ID and App Secret
+### Choose the Facebook Login use case
 
-After creating the application, go to `Settings => Basic` to get the `App ID` and `App Secret`. Save them for later.
+On the **Use cases** step, tick **Authenticate and request data from users with
+Facebook Login**. This is the one that gives the app an OAuth dialog; the others
+(Ads Manager, Threads, games) do not, and Meta will not let you combine some of
+them on one app.
+
+<ImgDocs
+  src={createAppUseCases}
+  alt="The Use cases step of Meta's app wizard with Authenticate and request data from users with Facebook Login selected"
+/>
+
+Finish the wizard - the **Business** step lets you skip connecting a business
+portfolio, and **Finalize** creates the app.
 
 </Step>
+
 <Step>
 
-## Environment Variables (.env)
+### Add the OAuth redirect URI
 
-Add the `App ID` and `App Secret` to your `.env` file.
+In the app dashboard, open the Facebook Login use case's settings - **Use cases →
+Authenticate and request data from users with Facebook Login → Customize →
+Settings** on a new app, or **Products → Facebook Login → Settings** on an older
+one. Paste your URI into **Valid OAuth Redirect URIs** and save.
+
+VitNode builds this URI itself, from `NEXT_PUBLIC_WEB_URL`, so it has to match
+character for character - no trailing slash, no locale prefix.
+
+| Environment                               | Valid OAuth Redirect URI                     |
+| ----------------------------------------- | -------------------------------------------- |
+| Development (`NEXT_PUBLIC_WEB_URL` unset) | `http://localhost:3000/login/sso/facebook`   |
+| Production                                | `https://your-domain.com/login/sso/facebook` |
+
+{/* Image prompt: The Meta app dashboard Facebook Login Settings panel with "Valid OAuth Redirect URIs" holding one entry reading https://your-domain.com/login/sso/facebook, the "Client OAuth login" and "Web OAuth login" toggles visible above it, light theme, 1200x700. */}
+
+<Callout type="warn" title="Meta wants HTTPS in production">
+  **Valid OAuth Redirect URIs** rejects a plain `http://` URL for a public
+  domain, so a production entry has to be `https://`. `http://localhost` is the
+  exception Meta makes for development, which is why the table above has two
+  rows rather than one.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Copy the App ID and App Secret
+
+Go to **App settings → Basic** in the left navigation. The **App ID** is in plain
+text; the **App Secret** is behind a **Show** button and your password.
+
+<ImgDocs
+  src={appSettingsBasic}
+  alt="The Meta app dashboard sidebar for an app named VitNode Test, with a red arrow pointing at Basic under the expanded App settings section, and an Unpublished badge next to Publish above it"
+/>
+
+</Step>
+
+<Step>
+
+### Set the environment variables
+
+Server-side variables, so **no** `NEXT_PUBLIC_` prefix - that prefix is what
+marks a value for the browser bundle, and an app secret in the browser bundle is
+an app secret you have published.
+
+```bash title=".env"
+FACEBOOK_CLIENT_ID=1234567890123456 # [!code ++]
+FACEBOOK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter
+
+Add `FacebookSSOApiPlugin` to `authorization.ssoAdapters` in your API config. It
+is a plain factory function, not a class - there is no `new`.
+
+```ts title="src/vitnode.api.config.ts"
+import { FacebookSSOApiPlugin } from '@vitnode/core/api/adapters/sso/facebook' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      FacebookSSOApiPlugin({
+        clientId: process.env.FACEBOOK_CLIENT_ID,
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+The redirect URI is computed when this file is evaluated, so restart the API
+rather than relying on a hot reload:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Verify it works
+
+Ask the API what it thinks it supports:
 
 ```bash
-FACEBOOK_CLIENT_ID={app-id}
-FACEBOOK_CLIENT_SECRET={app-secret}
+curl http://localhost:3000/api/@vitnode/core/middleware
+# {"isEmail":false,"sso":[{"id":"facebook","name":"Facebook"}]}
 ```
+
+Then open `/login` and press **Facebook**. You should get Meta's "Continue as
+..." dialog, be bounced back to `/login/sso/facebook?code=...&state=...`, and
+land on the front page signed in. Your account now has a row in `core_users_sso`
+with `providerId` `facebook`.
+
+{/* Image prompt: The VitNode /login page with the password form above a divider reading "Or continue With" and two outline buttons labelled Google and Facebook side by side, dark theme, 900x800. */}
 
 </Step>
+
 <Step>
 
-## Configuration in VitNode
+### Publish the app
 
-Add the Facebook SSO plugin to your API routes.
+While the app is **Unpublished** (the badge next to **Publish** in the
+screenshot above), only people with a role on it - admins, developers, testers -
+can sign in. Everyone else is turned away at Meta's dialog before VitNode ever
+sees a callback. Go to **Publish** and switch the app live once the round trip
+works.
 
-```ts title="src/app/api/[...route]/route.ts"
-// [!code ++]
-import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
+`public_profile` and `email` are both standard-access permissions, so this does
+not require App Review. Ask for anything beyond them and it will.
 
-VitNodeAPI({
-  app,
-  plugins: [],
-  // [!code ++]
-  authorization
-    // [!code ++]
-    ssoAdapters: [
-      // [!code ++]
-      new FacebookSSOApiPlugin({
-        // [!code ++]
-        clientId: process.env.FACEBOOK_CLIENT_ID,
-        // [!code ++]
-        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-        // [!code ++]
-      }),
-      // [!code ++]
-    ],
-    // [!code ++]
-  },
-});
-```
+{/* Image prompt: The Meta app dashboard Publish page showing the app status as Unpublished with the requirements checklist and the go-live button, light theme, 1100x600. */}
 
 </Step>
 
 </Steps>
+
+## What the adapter asks Facebook for
+
+Useful when you are debugging a login dialog that shows more or fewer
+permissions than you expected.
+
+| Setting       | Value                                                      |
+| ------------- | ---------------------------------------------------------- |
+| Authorize URL | `https://www.facebook.com/v22.0/dialog/oauth`              |
+| Token URL     | `https://graph.facebook.com/v22.0/oauth/access_token`      |
+| Profile URL   | `https://graph.facebook.com/v22.0/me?fields=id,name,email` |
+| Scopes        | `public_profile,email`                                     |
+| Provider id   | `facebook`                                                 |
+| Fields read   | `id`, `name`, `email`                                      |
+
+The account name VitNode creates comes from Facebook's `name` field, stripped of
+characters that cannot appear in a profile URL. The Graph API version is pinned
+to `v22.0` in the adapter, so a Meta version bump never changes what this
+install sends.
+
+## Gotchas
+
+<Callout type="warn" title="An account with no email cannot sign in">
+  The adapter requires `email` in the Graph response and answers `400` when it
+  is missing - which happens if the visitor unticks the email permission on the
+  login dialog, or if the account was created with a phone number and has no
+  address at all. The visitor sees the generic error screen, not an explanation.
+</Callout>
+
+<Callout type="warn" title="Facebook's own email verification is not checked">
+  Unlike the [Google adapter](/docs/dev/sso/google), which rejects an unverified
+  address, this one takes the Graph API's `email` at face value. If you need a
+  stronger guarantee, copy the adapter into your own project and add the check -
+  see [Custom adapter](/docs/dev/sso/custom-adapter).
+</Callout>
+
+<Callout type="warn" title="A missing key fails on click, not on boot">
+  A `FacebookSSOApiPlugin` whose `clientId` is `undefined` registers happily -
+  the button renders and the provider is listed - and throws `Missing Facebook
+  client ID` the moment somebody presses it. A button that only raises an error
+  toast is an environment problem, not a dashboard problem.
+</Callout>
+
+<Callout
+  type="warn"
+  title="An email that already has a password account is a dead end"
+>
+  If someone registered with the same address using the password form, the
+  callback answers `409` and offers them the login page instead. There is no
+  link-an-existing-account screen yet - see [how the callback handles
+  accounts](/docs/dev/sso#what-the-callback-does-with-the-account).
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="How SSO works"
+    description="The round trip, the state cookie and the security rules"
+    href="/docs/dev/sso"
+  />
+  <Card
+    title="Google"
+    description="Add a second provider"
+    href="/docs/dev/sso/google"
+  />
+  <Card
+    title="Custom adapter"
+    description="Any OAuth2 provider, in three functions"
+    href="/docs/dev/sso/custom-adapter"
+  />
+</Cards>

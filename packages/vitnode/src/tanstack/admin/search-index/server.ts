@@ -1,34 +1,22 @@
 import "@tanstack/react-start/server-only";
 
-import type { SearchIndexStatusFetcher } from "@/views/admin/views/core/advanced/search/search-index-query";
-
+import { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
 import { AdminRequestError } from "@/views/admin/admin-request";
-import {
-  searchDebugAdminModuleRef,
-  searchIndexStatusRequest,
-} from "@/views/admin/views/core/advanced/search/search-index-query";
+import { ADMIN_DEBUG_PREFIX_PATH } from "@/views/admin/views/core/system/integrations/integrations-query";
 
-import { fetcherServer } from "../../fetcher/server";
+import { fetcher } from "../../fetcher/server";
 
-/**
- * The search index's status, fetched during SSR.
- *
- * The request and the refusal check are the shared ones; only the transport is
- * this module's. `fetcherServer` forwards the admin cookie the page request
- * arrived with, without which the API answers `403`. Reached only through
- * `./query`'s isomorphic function, so the `server-only` marker above never
- * reaches the browser bundle.
- */
-export const fetchSearchIndexStatusOnServer: SearchIndexStatusFetcher =
-  async () => {
-    const response = await fetcherServer(
-      searchDebugAdminModuleRef,
-      searchIndexStatusRequest,
-    );
+export const fetchSearchIndexStatusOnServer = async () => {
+  const response = await fetcher(debugAdminModule, {
+    method: "get",
+    module: "debug",
+    path: "/search/status",
+    prefixPath: ADMIN_DEBUG_PREFIX_PATH,
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(response.status, "the search index status");
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the search index status");
+  }
 
-    return await response.json();
-  };
+  return await response.json();
+};

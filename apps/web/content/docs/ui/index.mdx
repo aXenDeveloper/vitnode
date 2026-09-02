@@ -1,18 +1,76 @@
 ---
-title: Introduction
-description: Welcome to the VitNode documentation!
-icon: Power
+title: UI Components Overview
+description: Accessible, composable UI primitives, form inputs, and data tables built with Base UI and Tailwind CSS.
+icon: Blocks
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+VitNode provides an accessible component suite built on [Base UI](https://base-ui.com) and styled with Tailwind CSS in the shadcn `base-vega` design language.
+
+## Quick start
+
+Import components directly from `@vitnode/core/components/ui/*`:
+
+```tsx title="src/components/action-button.tsx"
+import { Button } from "@vitnode/core/components/ui/button"
+import { ArrowRightIcon } from "lucide-react"
+
+export const ActionButton = () => (
+  // [!code ++:4]
+  <Button variant="default">
+    Get Started
+    <ArrowRightIcon className="size-4" />
+  </Button>
+)
+```
+
+No copy-pasting is required: all primitives and form components are exported ready-to-use from `@vitnode/core`.
+
+---
+
+## Component Layers
+
+| Layer | Import Path | Examples |
+| :--- | :--- | :--- |
+| **Primitives** | `@vitnode/core/components/ui/*` | `Button`, `Dialog`, `DropdownMenu`, `Card`, `Badge` |
+| **Form Inputs** | `@vitnode/core/components/form/fields/*` | `AutoFormInput`, `AutoFormSelect`, `AutoFormCombobox` |
+| **Complex Views** | `@vitnode/core/components/*` | `AutoForm`, `ContentDataTable` |
+
+---
+
+## Design Tokens & Semantic Styling
+
+VitNode adheres strictly to semantic Tailwind tokens for dark/light mode parity:
+- **Backgrounds**: `bg-background`, `bg-card`, `bg-muted`, `bg-popover`
+- **Text & Foreground**: `text-foreground`, `text-muted-foreground`, `text-primary`
+- **Borders & Rings**: `border-border`, `ring-ring`
+
+<Callout type="info" title="Color Palette Convention">
+  VitNode uses exactly 3-5 colors across the UI, avoiding prominent purple/violet styling in favor of modern, high-contrast semantic palettes.
 </Callout>
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
-
-## What is Next?
+## Key Components
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.vercel.app" />
+  <Card
+    title="Data Table"
+    description="URL-driven sorting, searching, and cursor pagination"
+    href="/docs/ui/data-table"
+  />
+  <Card
+    title="Auto Form"
+    description="Auto-generated forms with Zod validation"
+    href="/docs/ui/auto-form"
+  />
+  <Card
+    title="Combobox"
+    description="Searchable dropdown inputs with static and async modes"
+    href="/docs/ui/combobox"
+  />
+  <Card
+    title="Button"
+    description="Primary, secondary, destructive, and icon button variants"
+    href="/docs/ui/button"
+  />
 </Cards>

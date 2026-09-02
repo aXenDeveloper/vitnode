@@ -1,4 +1,13 @@
 {
   "title": "Single Sign-On (SSO)",
-  "pages": ["...", "custom-adapter"]
+  "description": "OAuth2 sign-in with Google, Discord, Facebook or your own adapter",
+  "icon": "KeyRound",
+  "pages": [
+    "index",
+    "---Providers---",
+    "google",
+    "discord",
+    "facebook",
+    "custom-adapter"
+  ]
 }

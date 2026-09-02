@@ -1,60 +1,78 @@
 ---
 title: Node CRON
-description: In-memory tiny task scheduler in pure JavaScript for node.js based on GNU crontab.
+description: Tick VitNode's cron jobs from an in-process scheduler with the @vitnode/node-cron adapter - one package, one line of config.
+icon: Timer
 ---
 
-This adapter lets you run scheduled jobs directly inside your Node.js app. It's simple, lightweight, and doesn't require any external services - great for when you just need cron tasks running locally or in memory.
+`@vitnode/node-cron` is the in-process [cron adapter](/docs/dev/cron): a
+[node-cron](https://www.npmjs.com/package/node-cron) timer that lives inside your
+API process and posts to the cron endpoint once a minute. No external service, no
+scheduler dashboard, nothing to keep in sync - which is exactly why it only works
+where your API is a long-lived process.
 
-| Cloud            | Self-Hosted  | Links                                                  |
-| ---------------- | ------------ | ------------------------------------------------------ |
-| ❌ Not Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/node-cron) |
+| Cloud (serverless) | Self-hosted  | Links                                                                                                                                       |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| ❌ Not supported   | ✅ Supported | [npm](https://www.npmjs.com/package/@vitnode/node-cron) · [source](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/node-cron) |
+
+## Quick start
 
 <Steps>
 <Step>
-## Installation
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+### Install the adapter
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install node-cron adapter'>
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install the Node CRON adapter'>
 
 ```bash tab="bun"
-bun i @vitnode/node-cron -D
+bun i @vitnode/node-cron
 ```
 
 ```bash tab="pnpm"
-pnpm i @vitnode/node-cron -D
+pnpm i @vitnode/node-cron
 ```
 
 ```bash tab="npm"
-npm i @vitnode/node-cron -D
+npm i @vitnode/node-cron
 ```
 
 </Tabs>
+
+A runtime dependency, not a dev one - the adapter is imported by the server that
+serves your API, so it has to survive a production install.
+
 </Step>
 <Step>
 
-## Usage
+### Register it in the API config
+
+`NodeCronAdapter()` takes no arguments. There is nothing to configure, because
+the schedule it keeps is not yours: each job carries its own expression, and this
+only decides how often VitNode looks.
 
 ```ts title="src/vitnode.api.config.ts"
-// [!code ++]
-import { NodeCronAdapter } from "@vitnode/node-cron";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { NodeCronAdapter } from '@vitnode/node-cron' // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++]
-  cron: NodeCronAdapter(),
-});
+  cron: NodeCronAdapter(), // [!code ++]
+  // ...
+})
 ```
 
-</Step>
+This repository's own standalone API does exactly that - see
+`apps/api/src/vitnode.api.config.ts`.
 
+</Step>
 <Step>
 
-## Restart server
+### Restart the server
 
-After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
+`schedule()` is a boot step, not a request step: VitNode calls it once while the
+API is being built, so a running process never picks the adapter up.
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Restart your dev server'>
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Restart the dev server'>
 
 ```bash tab="bun"
 bun dev
@@ -70,15 +88,116 @@ npm run dev
 
 </Tabs>
 
-That's it - your app now has a built-in task scheduler, ready to handle cron jobs with standard cron expressions.
-
 </Step>
 <Step>
 
-## Check Your Cron Jobs
+### Verify the first tick
 
-You can check your cron jobs in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
+Open `/admin/core/advanced/cron` and watch the `clean` row - core's hourly
+session cleanup, which every installation has. Within a minute of the restart
+**Last Run** stops saying _Never_ and **Next Run** fills in.
+
+Nothing else needs to happen for the clock to be proven: `process-queue` runs
+every minute, so its **Last Run** should never be more than a minute old while
+the adapter is alive.
 
 </Step>
-
 </Steps>
+
+## What the adapter actually does
+
+The whole package is the file below, and knowing it saves an afternoon of
+debugging:
+
+```ts title="packages/node-cron/src/index.ts"
+import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
+import { schedule } from 'node-cron'
+
+export const NodeCronAdapter = (): CronAdapter => {
+  return {
+    schedule() {
+      schedule('*/1 * * * *', async () => {
+        await handleCronJobs()
+      })
+    },
+  }
+}
+```
+
+`handleCronJobs()` is an **HTTP request to your own API** -
+`POST /api/@vitnode/core/cron`, with `Content-Type: application/json` and
+`Authorization: Bearer $CRON_SECRET`. The adapter never touches the database and
+never calls a job handler; it only knocks on the door once a minute, and the
+[cron endpoint](/docs/dev/cron/rest-api) decides what is due.
+
+Three consequences worth writing down:
+
+| Because the tick is an HTTP call…                     | …this is true                                                                          |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| it needs a URL                                        | the origin comes from `NEXT_PUBLIC_API_URL`, falling back to `http://localhost:3000`   |
+| the API must be able to reach itself over the network | a tick dies where that origin is wrong, unreachable, or fronted by an auth proxy       |
+| the request is authenticated like any other           | an unset `CRON_SECRET` means both sides use the well-known default, and the tick works |
+
+## Gotchas
+
+<Callout
+  type="warn"
+  title="The tick posts to NEXT_PUBLIC_API_URL, not to the port you booted"
+>
+  `handleCronJobs()` builds its URL from `NEXT_PUBLIC_API_URL` and falls back to
+  `http://localhost:3000`. This repo's standalone API listens on **8000** -
+  which is exactly why `apps/api/.env.example` sets the variable - so leaving it
+  unset sends every tick to port 3000, where the web app lives. Symptom: the
+  scheduler is configured, the boot log is clean, and **Last Run** stays _Never_
+  forever.
+</Callout>
+
+<Callout type="warn" title="A rejected tick leaves no trace">
+  `handleCronJobs()` awaits the `fetch` and then discards the response, and a
+  `403` is answered by middleware rather than by the route: the CSRF check runs
+  before the logger even exists, and a mismatched secret raises an
+  `HTTPException` that the API's error handler returns without logging. So the
+  failure you are most likely to hit writes nothing to the console and nothing
+  to the [Debug Panel](/docs/dev/debugging/logging). The AdminCP's **Last Run**
+  column is the health check.
+</Callout>
+
+<Callout type="warn" title="Every instance runs its own timer">
+  The adapter schedules per process, so four instances send four ticks a minute.
+  That is safe - the endpoint runs only what is due - but it does not
+  de-duplicate the work, so two ticks can start the same job at once. Write
+  [idempotent handlers](/docs/dev/cron#jobs-must-be-idempotent), or move the
+  clock to a single [external scheduler](/docs/dev/cron/rest-api).
+</Callout>
+
+<Callout type="warn" title="Serverless has nowhere to keep the timer">
+  A function that is frozen between requests cannot hold a one-minute interval,
+  so this adapter is not a deployment choice on Vercel-style hosting - it is a
+  no-op with a package to maintain. Use the [REST
+  endpoint](/docs/dev/cron/rest-api) there.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Declare a cron job"
+    href="/docs/dev/cron"
+    description="buildCron, where jobs are registered, and the operational rules that come with a scheduler."
+  />
+  <Card
+    title="Trigger cron over REST"
+    href="/docs/dev/cron/rest-api"
+    description="The same endpoint this adapter posts, called from an external scheduler instead."
+  />
+  <Card
+    title="Custom adapter"
+    href="/docs/dev/cron/custom-adapter"
+    description="Wrap a different scheduling library in the one-method CronAdapter interface."
+  />
+  <Card
+    title="Queue tasks"
+    href="/docs/dev/advanced/queue"
+    description="One-off background work, drained by the process-queue job this adapter ticks."
+  />
+</Cards>

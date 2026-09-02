@@ -1,76 +1,101 @@
 ---
-title: Messages
-description: Display text from i18n messages.
+title: Messages & ICU Syntax
+description: Format strings with ICU message syntax in VitNode, including variables, pluralization, rich text tags, and select rules.
+icon: MessageSquare
 ---
 
-## Basic usage
+VitNode localizes strings using standard ICU MessageFormat, parsed and rendered through [`use-intl`](https://use-intl.dev).
 
-Inside `getTranslations` or `useTranslations` pass the namespace of the message.
+## Quick start
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+### 1. Define Message Strings
 
-<Tabs id='async-sync' persist items={['Async (RSC)', 'Sync (Client / RSC)']}>
-
-```tsx tab="Async (RSC)"
-import { getTranslations } from "next-intl/server";
-
-export const ExampleComponent = async () => {
-  const t = await getTranslations("welcome.home"); // [!code highlight]
-
-  return <div>{t("hello")}</div>;
-};
-```
-
-```tsx tab="Sync (Client / RSC)"
-import { useTranslations } from "next-intl";
-
-export const ExampleComponent = () => {
-  const t = useTranslations("welcome.home"); // [!code highlight]
-
-  return <div>{t("hello")}</div>;
-};
-```
-
-</Tabs>
-
-## Example of usage
-
-### Dynamic values
-
-```json title="en.json"
-"message": "Hello {name}!"
-```
-
-```ts
-t("message", { name: "Jane" }); // "Hello Jane!"
-```
-
-### Pluralization
-
-```json title="en.json"
-"message": "You have {count, plural, one {# message} other {# messages}}"
-```
-
-```ts
-t("message", { count: 1 }); // "You have 1 message"
-t("message", { count: 2 }); // "You have 2 messages"
-```
-
-### Rich text
-
-```json title="en.json"
+```json title="plugins/blog/src/locales/en.json"
 {
-  "message": "Please refer to <guidelines>the guidelines</guidelines>."
+  "@vitnode/blog": {
+    "welcome": "Welcome back, {name}!",
+    "articles_count": "{count, plural, =0 {No articles} one {1 article} other {# articles}}",
+    "terms_notice": "By clicking continue, you agree to our <link>Terms of Service</link>."
+  }
 }
 ```
 
-```tsx
-// Returns `<>Please refer to <a href="/guidelines">the guidelines</a>.</>`
-t.rich("message", {
-  guidelines: (chunks) => <a href="/guidelines">{chunks}</a>
-});
+---
+
+### 2. Render in React Components
+
+```tsx title="plugins/blog/src/views/blog-header.tsx"
+import { useTranslations } from "use-intl"
+import { Link } from "@tanstack/react-router"
+
+export const BlogHeader = ({ count, name }: { count: number; name: string }) => {
+  const t = useTranslations("@vitnode/blog")
+
+  return (
+    <header className="flex flex-col gap-2">
+      <h1>{t("welcome", { name })}</h1>
+      <p>{t("articles_count", { count })}</p>
+
+      {/* Rich text with custom tags */}
+      <small className="text-muted-foreground">
+        {t.rich("terms_notice", {
+          link: (chunks) => <Link to="/terms" className="underline">{chunks}</Link>,
+        })}
+      </small>
+    </header>
+  )
+}
 ```
 
-## next-intl Docs
+---
 
-For more information, check the [next-intl documentation](https://next-intl.dev/docs/usage/messages).
+## ICU Syntax Reference
+
+### 1. Variables & Numbers
+
+```json
+{
+  "price": "Total: {amount, number, ::currency/USD}",
+  "date": "Published on {date, date, medium}"
+}
+```
+
+### 2. Cardinal Pluralization
+
+```json
+{
+  "unread": "{count, plural, =0 {No unread messages} one {1 unread message} other {# unread messages}}"
+}
+```
+
+### 3. Select / Enums
+
+```json
+{
+  "status": "{status, select, draft {Draft} published {Published} other {Archived}}"
+}
+```
+
+---
+
+## Where Message Files Live
+
+| Folder | Audience | Purpose |
+| :--- | :--- | :--- |
+| `src/locales/{locale}.json` | **Frontend** | Browser UI, page text, and AdminCP navigation |
+| `src/locales/api/{locale}.json` | **API Server** | Transactional emails and backend validation errors |
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Translating Pages"
+    description="Route namespace loading and useTranslations hook"
+    href="/docs/dev/i18n/pages"
+  />
+  <Card
+    title="Languages"
+    description="Add, check, and override application languages"
+    href="/docs/dev/i18n"
+  />
+</Cards>

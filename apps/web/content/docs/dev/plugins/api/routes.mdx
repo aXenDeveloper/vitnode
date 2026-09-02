@@ -1,95 +1,30 @@
 ---
-title: Routes
-description: Learn how to create API routes in your VitNode plugins, including handling path parameters, query parameters, and request bodies.
+title: API Routes
+description: Build OpenAPI-validated Hono API routes in VitNode plugins with path params, query validation, and typed response bodies.
+icon: Network
 ---
 
-## Usage
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-Now for the fun part - creating actual endpoints! Each route is a small but mighty function that handles HTTP requests.
+Every API route in VitNode is defined with `buildRoute` from `@vitnode/core/api/lib/route`. It validates incoming requests with Zod, infers types for `fetcherClient`, and generates interactive OpenAPI/Swagger documentation automatically.
 
-```ts title="plugins/blog/src/api/modules/categories/routes/get.route.ts"
-import { z } from "@hono/zod-openapi";
-import { buildRoute } from "@vitnode/core/api/lib/route";
+## Quick start
 
-import { CONFIG_PLUGIN } from "@/config";
+Define an API route with validation schemas:
 
-export const getCategoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
+```ts title="plugins/blog/src/api/modules/posts/routes/get-by-id.route.ts"
+import { z } from "@hono/zod-openapi"
+import { buildRoute } from "@vitnode/core/api/lib/route"
+
+// [!code ++:27]
+export const getPostByIdRoute = buildRoute({
+  pluginId: "blog",
   route: {
     method: "get",
-    path: "/",
-    responses: {
-      200: {
-        content: {
-          "application/json": {
-            schema: z.object({
-              categories: z.array(
-                z.object({
-                  id: z.string(),
-                  name: z.string(),
-                  description: z.string().optional(),
-                }),
-              ),
-            }),
-          },
-        },
-        description: "Successfully retrieved categories",
-      },
-    },
-  },
-  handler: c => {
-    // Your business logic goes here
-    return c.json({
-      categories: [
-        { id: "1", name: "Technology", description: "All things tech" },
-        { id: "2", name: "Lifestyle" },
-      ],
-    });
-  },
-});
-```
-
-### Connecting Routes to Modules
-
-```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
-
-import { CONFIG_PLUGIN } from "@/config";
-import { getCategoriesRoute } from "./routes/get.route"; // [!code ++]
-
-export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
-  name: "categories",
-  routes: [getCategoriesRoute], // [!code ++]
-});
-```
-
-## Inputs
-
-### Path Parameters
-
-Path parameters are perfect when you need to identify specific resources. They're like the ID card of your API endpoints!
-
-```ts title="plugins/blog/src/api/modules/categories/routes/get_by_id.route.ts"
-import { z } from "@hono/zod-openapi";
-import { buildRoute } from "@vitnode/core/api/lib/route";
-import { HTTPException } from "hono/http-exception";
-
-import { CONFIG_PLUGIN } from "@/config";
-
-export const getCategoryByIdRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  route: {
-    method: "get",
-    // [!code highlight]
-    path: "/{id}", // Dynamic path parameter
+    path: "/{id}",
     request: {
-      // [!code highlight:6]
       params: z.object({
-        id: z.string().openapi({
-          description: "Unique identifier for the category",
-          example: "tech-category-123",
-        }),
+        id: z.coerce.number(),
       }),
     },
     responses: {
@@ -97,183 +32,119 @@ export const getCategoryByIdRoute = buildRoute({
         content: {
           "application/json": {
             schema: z.object({
-              id: z.string(),
-              name: z.string(),
-              description: z.string().optional(),
+              id: z.number(),
+              title: z.string(),
             }),
           },
         },
-        description: "Category details retrieved successfully",
-      },
-      404: {
-        description: "Category not found",
+        description: "Post details",
       },
     },
   },
-  handler: c => {
-    // [!code highlight]
-    const { id } = c.req.valid("param"); // Extract the path parameter
-
-    // Simulate database lookup
-    if (id === "nonexistent") {
-      throw new HTTPException(404);
-    }
-
-    return c.json({
-      id,
-      name: `Category ${id}`,
-      description: "A fantastic category for amazing content",
-    });
+  handler: async (c) => {
+    const { id } = c.req.valid("param")
+    return c.json({ id, title: "Getting started with VitNode" })
   },
-});
+})
 ```
 
-### Query Parameters
+Register the route inside a module's `routes` array:
 
-Query parameters are your best friends for filtering, searching, and pagination. They make your API flexible and user-friendly!
+```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
+export const postsModule = buildModule({
+  pluginId: "blog",
+  name: "posts",
+  routes: [getPostByIdRoute], // [!code ++]
+})
+```
 
-```ts title="plugins/blog/src/api/modules/categories/routes/search.route.ts"
-import { z } from "@hono/zod-openapi";
-import { buildRoute } from "@vitnode/core/api/lib/route";
+---
 
-import { CONFIG_PLUGIN } from "@/config";
+## Handling Inputs
 
-export const searchCategoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  route: {
-    method: "get",
-    path: "/search",
-    request: {
-      // [!code highlight:6]
-      query: z.object({
-        search: z.string().optional().openapi({
-          description: "Search term to filter categories",
-          example: "technology",
+### 1. Request Body (JSON)
+
+```ts
+request: {
+  body: {
+    content: {
+      "application/json": {
+        schema: z.object({
+          title: z.string().min(3),
+          content: z.string(),
         }),
-      }),
-    },
-    responses: {
-      200: {
-        content: {
-          "application/json": {
-            schema: z.object({
-              categories: z.array(
-                z.object({
-                  id: z.string(),
-                  name: z.string(),
-                  description: z.string().optional(),
-                }),
-              ),
-              total: z.number(),
-            }),
-          },
-        },
-        description: "Search results with pagination info",
       },
     },
   },
-  handler: c => {
-    const { search } = c.req.valid("query"); // [!code highlight]
+}
 
-    // Your search logic here
-    const mockResults = [
-      { id: "1", name: "Technology", description: "Tech-related posts" },
-      { id: "2", name: "Lifestyle" },
-    ];
-
-    const filteredResults = search
-      ? mockResults.filter(cat =>
-          cat.name.toLowerCase().includes(search.toLowerCase()),
-        )
-      : mockResults;
-
-    const paginatedResults = filteredResults.slice(offset, offset + limit);
-
-    return c.json({
-      categories: paginatedResults,
-      total: filteredResults.length,
-    });
-  },
-});
+// In handler:
+const { title, content } = c.req.valid("json")
 ```
 
-### Request Body (JSON Payload)
+### 2. Query Parameters
 
-When you need to send complex data (creating, updating), request bodies are your go-to solution. Perfect for forms and JSON payloads!
-
-```ts title="plugins/blog/src/api/modules/categories/routes/create.route.ts"
-import { z } from "@hono/zod-openapi";
-import { buildRoute } from "@vitnode/core/api/lib/route";
-
-import { CONFIG_PLUGIN } from "@/config";
-
-const createCategorySchema = z.object({
-  name: z.string().min(1).max(100).openapi({
-    description: "Name of the category",
-    example: "Web Development",
+```ts
+request: {
+  query: z.object({
+    page: z.coerce.number().default(1),
+    filter: z.string().optional(),
   }),
-  description: z.string().optional().openapi({
-    description: "Optional description for the category",
-    example: "Everything about building websites and web applications",
-  }),
-  color: z
-    .string()
-    .regex(/^#[0-9A-F]{6}$/i)
-    .optional()
-    .openapi({
-      description: "Hex color code for the category",
-      example: "#3B82F6",
-    }),
-});
+}
 
-export const createCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  route: {
-    method: "post",
-    path: "/",
-    request: {
-      // [!code highlight:9]
-      body: {
-        content: {
-          "application/json": {
-            schema: createCategorySchema,
-          },
-        },
-        description: "Category data to create",
-        required: true,
-      },
-    },
-    responses: {
-      201: {
-        content: {
-          "application/json": {
-            schema: z.object({
-              id: z.string(),
-              name: z.string(),
-              description: z.string().optional(),
-              color: z.string().optional(),
-              createdAt: z.string(),
-            }),
-          },
-        },
-        description: "Category created successfully",
-      },
-      400: {
-        description: "Invalid input data",
-      },
-    },
-  },
-  handler: async c => {
-    const data = c.req.valid("json"); // [!code highlight]
-
-    // Simulate category creation
-    const newCategory = {
-      id: `cat_${Date.now()}`,
-      ...data,
-      createdAt: new Date().toISOString(),
-    };
-
-    return c.json(newCategory, 201);
-  },
-});
+// In handler:
+const { page, filter } = c.req.valid("query")
 ```
+
+---
+
+## `buildRoute` Options
+
+<TypeTable
+  type={{
+    pluginId: {
+      description: "Plugin identifier owning this route.",
+      required: true,
+      type: "string",
+    },
+    route: {
+      description: "OpenAPI route specification (method, path, request, responses).",
+      required: true,
+      type: "RouteConfig",
+    },
+    handler: {
+      description: "Route execution function taking Hono context c.",
+      required: true,
+      type: "(c: Context) => Promise<Response> | Response",
+    },
+    adminStaffPermission: {
+      description: "Restricts endpoint access to staff holding this permission.",
+      type: "{ module: string; permission: string }",
+    },
+    withCaptcha: {
+      default: "false",
+      description: "Demands and verifies challenge token before execution.",
+      type: "boolean",
+    },
+  }}
+/>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="API Modules"
+    description="Organize routes into sub-applications"
+    href="/docs/dev/plugins/api/modules"
+  />
+  <Card
+    title="Fetcher"
+    description="Call plugin routes from frontend components"
+    href="/docs/dev/fetcher"
+  />
+  <Card
+    title="Staff Permissions"
+    description="Protect endpoints with permission gates"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+</Cards>

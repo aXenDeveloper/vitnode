@@ -1,6 +1,6 @@
 {
   "title": "Working with Users",
-  "description": "Learn how to manage users and roles in VitNode with our comprehensive guide.",
+  "description": "The user model, roles, and the staff permission system - how VitNode decides who somebody is and what they are allowed to do.",
   "icon": "Users",
   "pages": ["users", "roles", "staff-permissions", "..."]
 }

@@ -5,35 +5,19 @@ import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 
 import { readFileInUse, STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 
-import {
-  deleteMyFileRequest,
-  shouldRefreshAfterBulkDelete,
-} from "./my-files-delete";
+import { shouldRefreshAfterBulkDelete } from "./my-files-delete";
 import {
   describeMyFilesParams,
   isMyFilesRequestError,
   MY_FILES_MAX_PAGE_SIZE,
   myFilesQueryKey,
   myFilesQueryRoot,
-  myFilesRequest,
   MyFilesRequestError,
   normalizeMyFilesParams,
 } from "./my-files-query";
 
-/**
- * The pure half of the files contract.
- *
- * Everything below is a function over plain values: a URL becomes parameters,
- * parameters become a request and a cache key, a response status becomes an
- * error, and a bulk result becomes a yes-or-no about refreshing. Nothing here
- * opens a socket or renders a component - the API has its own suite, and how the
- * table looks is Playwright's.
- */
-
 describe("normalizeMyFilesParams", () => {
   it("always asks for a page, so the size is never invented later", () => {
-    // The old code left this to `withPagination`, which wrote `first=10` inside
-    // the URL builder where the cache key could not see it.
     expect(normalizeMyFilesParams()).toEqual({ first: "10" });
     expect(normalizeMyFilesParams({})).toEqual({ first: "10" });
   });
@@ -118,8 +102,6 @@ describe("normalizeMyFilesParams", () => {
   });
 
   it("takes the first value when a key is repeated in the query string", () => {
-    // Both routers surface `?orderBy=name&orderBy=size` as an array, and only
-    // one value can reach the API.
     expect(normalizeMyFilesParams({ orderBy: ["name", "size"] }).orderBy).toBe(
       "name",
     );
@@ -139,26 +121,16 @@ describe("normalizeMyFilesParams", () => {
   });
 });
 
-describe("myFilesRequest", () => {
-  it("names the route the list actually lives at", () => {
-    expect(myFilesRequest(normalizeMyFilesParams())).toEqual({
-      args: { query: { first: "10" } },
-      method: "get",
-      module: "files",
-      path: "/",
-      prefixPath: "/users",
-    });
-  });
-
+describe("the parameters a page is asked for", () => {
   it("sends the normalised parameters and nothing else", () => {
-    const params = normalizeMyFilesParams({
-      cursor: "abc",
-      orderBy: "size",
-      search: " report ",
-      unknown: "value",
-    } as Parameters<typeof normalizeMyFilesParams>[0]);
-
-    expect(myFilesRequest(params).args.query).toEqual({
+    expect(
+      normalizeMyFilesParams({
+        cursor: "abc",
+        orderBy: "size",
+        search: " report ",
+        unknown: "value",
+      } as Parameters<typeof normalizeMyFilesParams>[0]),
+    ).toEqual({
       cursor: "abc",
       first: "10",
       orderBy: "size",
@@ -198,16 +170,6 @@ describe("myFilesQueryKey", () => {
     }
   });
 
-  /**
-   * The privacy invariant, as the key contract rather than as a browser test.
-   *
-   * The browser's `QueryClient` is created once per document and outlives a
-   * sign-out, so one document can hold two visitors. Under the
-   * `["files", "me", params]` this replaces, B's loader asked for the entry A
-   * had already filled - and with `refetchOnMount` and `refetchOnWindowFocus`
-   * both off, nothing refetched it. No request was made, so Hono never saw the
-   * read it would have refused, and B was shown A's file names.
-   */
   it("gives two visitors two keys for identical parameters", () => {
     const params = normalizeMyFilesParams({ first: "10" });
 
@@ -220,8 +182,6 @@ describe("myFilesQueryKey", () => {
   });
 
   it("keeps one visitor's pages, sorts and searches under one root", () => {
-    // What a delete invalidates: the family, so every page and sort of *this*
-    // visitor's files goes stale rather than only the one on screen.
     const root = myFilesQueryRoot(10);
 
     for (const raw of [
@@ -234,24 +194,17 @@ describe("myFilesQueryKey", () => {
   });
 
   it("puts another visitor outside that root, so a delete cannot reach them", () => {
-    // Query matches by prefix, so this is the whole of "invalidate only mine".
     const root = myFilesQueryRoot(10);
 
     expect(keyFor(20).slice(0, root.length)).not.toEqual([...root]);
   });
 
   it("does not vary by language, because the rows do not", () => {
-    // Only the column headings are translated, and the renderer resolves those.
-    // A locale in the key would refetch an identical list on every switch.
     expect(JSON.stringify(keyFor(10))).not.toContain("locale");
   });
 
   it("sends no owner to the API, which reads it from the session cookie", () => {
-    // The id addresses a cache slot. If it reached the wire it would become an
-    // access-control parameter the browser supplies.
-    expect(
-      myFilesRequest(normalizeMyFilesParams()).args.query,
-    ).not.toHaveProperty("userId");
+    expect(normalizeMyFilesParams()).not.toHaveProperty("userId");
   });
 });
 
@@ -271,8 +224,6 @@ describe("MyFilesRequestError", () => {
   });
 
   it("is recognised across two copies of the module", () => {
-    // `@vitnode/core` is imported from `dist` by the apps and from `src` by its
-    // own tests, so `instanceof` can answer `false` for a genuine one.
     const fromAnotherCopy = Object.assign(new Error("..."), {
       name: "MyFilesRequestError",
       status: 403,
@@ -292,25 +243,6 @@ describe("MyFilesRequestError", () => {
 describe("describeMyFilesParams", () => {
   it("says so when there is nothing to say", () => {
     expect(describeMyFilesParams({})).toBe("no filters");
-  });
-});
-
-describe("deleteMyFileRequest", () => {
-  it("addresses one file by id", () => {
-    expect(deleteMyFileRequest({ id: 7 })).toEqual({
-      args: { params: { id: "7" }, query: {} },
-      method: "delete",
-      module: "files",
-      path: "/{id}",
-      prefixPath: "/users",
-    });
-  });
-
-  it("mentions forcing only when it is forcing", () => {
-    expect(deleteMyFileRequest({ force: true, id: 7 }).args.query).toEqual({
-      force: "true",
-    });
-    expect(deleteMyFileRequest({ force: false, id: 7 }).args.query).toEqual({});
   });
 });
 

@@ -1,4 +1,5 @@
 {
   "title": "Cloud",
-  "pages": ["..."]
+  "description": "Managed platforms, and what they cannot run",
+  "pages": ["vercel", "..."]
 }

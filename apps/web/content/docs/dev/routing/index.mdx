@@ -1,0 +1,197 @@
+---
+title: Routing
+description: Claim a URL in VitNode - plugin manifest routes for reusable packages, and host app routes for site-specific pages.
+icon: Route
+---
+
+import { File, Files, Folder } from "fumadocs-ui/components/files"
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+VitNode uses TanStack Start for routing. Routes are divided into three tiers:
+
+| Tier | Declaration | Location | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Plugin Routes** | `routes/manifest.ts` | `plugins/*/src/routes/manifest.ts` | **Recommended**. Reusable across any VitNode install. |
+| **Application Routes** | File-based routes | `apps/web/src/routes/**` | Site-specific pages owned directly by your app. |
+| **Core Routes** | Code-based routes | Built into `@vitnode/core` | System routes (`/login`, `/admin/*`, `/search`). |
+
+---
+
+## 1. Create a Page in a Plugin (Recommended)
+
+Plugins declare routes as serializable data. The build system mounts them into the route tree with SSR and automatic code splitting.
+
+<Steps>
+<Step>
+
+### Declare the Route in `routes/manifest.ts`
+
+```ts title="plugins/blog/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from "@vitnode/core/routing"
+
+export const routes: PluginRouteDefinition[] = [
+  // [!code ++:5]
+  {
+    entry: "routes/blog-page",
+    id: "blog",
+    path: "/blog",
+  },
+]
+```
+
+</Step>
+<Step>
+
+### Create the Page Component
+
+```tsx title="plugins/blog/src/routes/blog-page.tsx"
+const BlogPage = () => (
+  <div className="container mx-auto p-4">
+    <h1 className="text-3xl font-bold">Blog Overview</h1>
+  </div>
+)
+
+export default BlogPage
+```
+
+</Step>
+<Step>
+
+### View the Page
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Open `http://localhost:3000/blog`.
+
+</Step>
+</Steps>
+
+---
+
+## 2. Create a Page in Your Application
+
+When creating a page that belongs only to your host site, add a file in `apps/web/src/routes/`:
+
+<Steps>
+<Step>
+
+### Choose a Pathless Shell
+
+- `_main/` for public pages (with header, navigation, and footer).
+- `_admin/` for administrative screens.
+
+</Step>
+<Step>
+
+### Create the Route File
+
+```tsx title="apps/web/src/routes/_main/about.tsx"
+import { createFileRoute } from "@tanstack/react-router"
+import { pageHead } from "#/lib/page-head"
+
+export const Route = createFileRoute("/_main/about")({
+  head: () =>
+    pageHead({
+      title: "About Us",
+      description: "Learn more about our team and mission.",
+    }),
+  component: AboutPage,
+})
+
+function AboutPage() {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold">About Us</h1>
+    </div>
+  )
+}
+```
+
+</Step>
+</Steps>
+
+---
+
+## Dynamic Segments & Parameters
+
+Dynamic parameters differ slightly between manifests and route files:
+
+| Context | Syntax | Example | Access Parameter |
+| :--- | :--- | :--- | :--- |
+| **Plugin Manifest** | `:param` | `path: "/blog/:slug"` | `params.slug` in `load` / props |
+| **App Route File** | `$param` | `_main/blog.$slug.tsx` | `Route.useParams().slug` |
+
+VitNode compiles `:slug` into TanStack Router's `$slug` syntax automatically.
+
+---
+
+## Plugin Route Lifecycle (`definePluginRoute`)
+
+To load data, define metadata, or customize breadcrumbs in a plugin route module, export `route`:
+
+```tsx title="plugins/blog/src/routes/post-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing"
+import { definePluginRoute } from "@vitnode/core/routing"
+
+interface Post {
+  title: string
+  body: string
+}
+
+// [!code ++:10]
+export const route = definePluginRoute({
+  load: async ({ params }) => {
+    return await fetchPostBySlug(params.slug)
+  },
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+  }),
+})
+
+const PostPage = ({ loaderData }: PluginRoutePageProps<Post>) => (
+  <article className="container mx-auto p-4">
+    <h1 className="text-3xl font-bold">{loaderData.title}</h1>
+    <p>{loaderData.body}</p>
+  </article>
+)
+
+export default PostPage
+```
+
+<Callout type="info" title="Declare load above head">
+  TypeScript infers `loaderData` in `head` and the page component from what `load` returns. Always declare `load` before `head`.
+</Callout>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Route Manifest"
+    description="Complete reference for layouts, admin areas, and guards"
+    href="/docs/dev/plugins/route-manifest"
+  />
+  <Card
+    title="Data Loading"
+    description="Server data loading and client hydration"
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    title="Metadata & SEO"
+    description="Page titles, descriptions, and Open Graph tags"
+    href="/docs/dev/routing/metadata"
+  />
+</Cards>

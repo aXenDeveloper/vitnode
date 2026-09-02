@@ -1,8 +1,124 @@
 ---
-title: Self-Hosted
-description: How to deploy your Vitnode app on your own infrastructure.
+title: Self-Hosted Deployment
+description: Build, migrate, and run VitNode on your own server or Docker container with a reverse proxy.
+icon: Server
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+VitNode compiles into a standard Node.js server and static assets. The only required dependency is a PostgreSQL database (Redis is optional for caching and multi-instance scaling).
+
+## Quick start
+
+Run these 4 commands on your deployment server:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Deploy VitNode">
+
+```bash tab="bun"
+bun install --frozen-lockfile
+bun run build
+bun run db:migrate
+bun start
+```
+
+```bash tab="pnpm"
+pnpm install --frozen-lockfile
+pnpm build
+pnpm db:migrate
+pnpm start
+```
+
+```bash tab="npm"
+npm ci
+npm run build
+npm run db:migrate
+npm start
+```
+
+</Tabs>
+
+<Callout type="warn" title="Always run db:migrate before start">
+  Production processes do not automatically run migrations at boot. Running `db:migrate` ensures the database schema matches your compiled application before traffic is served.
 </Callout>
+
+---
+
+## Required Environment Variables
+
+Configure these in your production `.env` file:
+
+```bash title=".env"
+# Database (PostgreSQL 15+)
+DATABASE_URL=postgresql://user:password@localhost:5432/vitnode_db
+
+# Security & Sessions
+COOKIE_SECRET=change_me_to_a_long_random_secret_string
+
+# App Networking
+PORT=3000
+API_URL=http://localhost:8000
+WEB_URL=http://localhost:3000
+
+# Optional: Shared Cache & Realtime
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=change_me_redis_password
+```
+
+---
+
+## Reverse Proxy (Nginx Configuration)
+
+Proxy traffic to VitNode while forwarding client headers and supporting WebSocket upgrades:
+
+```nginx title="/etc/nginx/sites-available/vitnode.conf"
+server {
+    listen 80;
+    server_name example.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Forwarded identity
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+---
+
+## Running with PM2 (Process Manager)
+
+Keep VitNode running continuously with automatic restarts on crash:
+
+```bash
+# Install PM2
+npm install -g pm2
+
+# Start both web and api processes
+pm2 start "pnpm start" --name "vitnode-web"
+pm2 save
+pm2 startup
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Redis Setup"
+    description="Configure Redis for clustered caching and WebSockets"
+    href="/docs/dev/advanced/redis"
+  />
+  <Card
+    title="Database Migrations"
+    description="Drizzle migration workflows and commands"
+    href="/docs/dev/database"
+  />
+</Cards>

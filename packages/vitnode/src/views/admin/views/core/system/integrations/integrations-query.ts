@@ -68,22 +68,17 @@ export interface AdminIntegrations {
 }
 
 /** The read, as arguments to whichever fetcher is carrying it. */
-export const integrationsRequest = {
-  method: "get" as const,
-  module: "debug" as const,
-  path: "/integrations" as const,
-  prefixPath: ADMIN_DEBUG_PREFIX_PATH,
-} as const;
-
 /** How the board's data is actually fetched. */
 export type IntegrationsFetcher = () => Promise<AdminIntegrations>;
 
 /** The board's data, fetched from the browser. */
 export const fetchIntegrationsInBrowser: IntegrationsFetcher = async () => {
-  const response = await fetcherClient(
-    debugAdminModuleRef,
-    integrationsRequest,
-  );
+  const response = await fetcherClient(debugAdminModuleRef, {
+    method: "get",
+    module: "debug",
+    path: "/integrations",
+    prefixPath: ADMIN_DEBUG_PREFIX_PATH,
+  });
 
   if (!response.ok) {
     throw new AdminRequestError(response.status, "the integrations board");

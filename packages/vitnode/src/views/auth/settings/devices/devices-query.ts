@@ -100,13 +100,6 @@ export interface DevicesApi {
  * come back. Adding an owner here would move authorization onto a value the
  * browser supplies.
  */
-export const devicesRequest = () =>
-  ({
-    method: "get" as const,
-    module: "users" as const,
-    path: "/devices" as const,
-  }) as const;
-
 /** How the list is actually fetched. See {@link devicesQueryOptions}. */
 export type DevicesFetcher = () => Promise<DevicesApi>;
 
@@ -167,7 +160,11 @@ export const isDevicesRequestError = (
  * `429` is routed to the global rate-limit notice on the way through.
  */
 export const fetchDevicesInBrowser: DevicesFetcher = async () => {
-  const response = await fetcherClient(usersModuleRef, devicesRequest());
+  const response = await fetcherClient(usersModuleRef, {
+    method: "get",
+    module: "users",
+    path: "/devices",
+  });
 
   if (!response.ok) throw new DevicesRequestError(response.status);
 

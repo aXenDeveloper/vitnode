@@ -1,47 +1,164 @@
 ---
 title: Logging
-description: Structured logging system for VitNode applications
+description: Write log lines from a Hono route with c.get('log') - three levels, stored in the database and printed to the server console at the same time.
+icon: ScrollText
 ---
 
-VitNode provides a logging system that allows you to log messages at different levels _(debug, warn, error)_ with structured logs. This is useful for debugging and monitoring your application.
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-All logs are stored in your database. You can view them in the `Debug Panel`.
+Every VitNode request carries a logger. Call it and you get two things at once:
+a row in the `core_logs` table, readable in the AdminCP
+[Debug Panel](/docs/dev/debugging#the-debug-panel), and a coloured line on the
+server's stdout. No setup, no adapter, no configuration.
 
-## Usage
+## Quick start
 
-```ts
-import { buildRoute } from '@vitnode/core/api/lib/route';
-```
+`c.get('log')` is available in any handler that has a Hono context - a route, a
+middleware, a cron job, a queue task, an event listener:
 
-```ts
-export const testRoute = buildRoute(
-  {},
-  {
-    handler: async c => {
-      await c.get('log').warn('This is a test warn log'); // [!code ++]
+```ts title="src/api/modules/orders/routes/refund.route.ts"
+import { buildRoute } from '@vitnode/core/api/lib/route'
 
-      return c.text('test');
-    },
+import { CONFIG_PLUGIN } from '@/const'
+
+export const refundOrderRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: { method: 'post', path: '/refund' },
+  handler: async (c) => {
+    await c.get('log').warn('Refund requested with no matching payment') // [!code ++]
+
+    return c.json({ ok: true })
   },
-);
+})
 ```
 
-### Variants
+Open the **Debug Panel** from the AdminCP avatar menu and the line is in
+**System Logs**, with the plugin, the path, the status code and the signed-in
+user already attached.
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+## The three levels
+
+There is no filtering: all three are always written, to both destinations. The
+level is a label for whoever reads the log later, and it decides the badge
+colour in the AdminCP and which `console` method the server uses.
 
 <Tabs id='logging-variants' persist items={['Debug', 'Warn', 'Error']}>
 
 ```ts tab="Debug"
-await c.get('log').debug('This is a test debug log');
+await c.get('log').debug('Search index rebuilt in 412ms')
 ```
 
 ```ts tab="Warn"
-await c.get('log').warn('This is a test warning log');
+await c.get('log').warn('Storage adapter returned no public URL')
 ```
 
 ```ts tab="Error"
-await c.get('log').error('This is a test error log');
+await c.get('log').error(`Payment webhook rejected: ${reason}`)
 ```
 
 </Tabs>
+
+| Level   | Console         | Use it for                                                          |
+| ------- | --------------- | ------------------------------------------------------------------- |
+| `debug` | `console.debug` | Something you want to see once while you work out what happened.    |
+| `warn`  | `console.warn`  | A recoverable surprise - a fallback taken, a retry, a skipped step. |
+| `error` | `console.error` | Something failed and somebody has to know.                          |
+
+## What every line records
+
+You pass a string. The logger reads the rest off the request, so a log row is
+already an audit record:
+
+| Column       | Where it comes from                                                                      |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| `content`    | Your message.                                                                            |
+| `type`       | The method you called.                                                                   |
+| `pluginId`   | The `pluginId` the route was built with - `core` when there is no plugin on the context. |
+| `method`     | The request method, upper-cased.                                                         |
+| `path`       | The request path.                                                                        |
+| `statusCode` | `c.res.status` **at the moment you call it** - see the gotcha below.                     |
+| `ipAddress`  | The request's forwarded IP, or `127.0.0.1` when no proxy header is present.              |
+| `userAgent`  | The `User-Agent` header.                                                                 |
+| `userId`     | The signed-in user, or null for a guest.                                                 |
+| `createdAt`  | Now.                                                                                     |
+
+That is also why you should not build any of it into the message yourself: the
+Debug Panel's detail dialog shows every column, and a message that repeats the
+path just makes the table harder to scan.
+
+## Read it back
+
+Three ways, in descending order of convenience:
+
+1. **The Debug Panel** at `/admin/core/debug` - sortable by type, plugin or
+   date, with a detail dialog per row.
+2. **The server console** - the same lines, live, prefixed
+   `[VitNode] Error (@your/plugin):`.
+3. **The API**, if you want to build your own view:
+   `GET /api/@vitnode/core/admin/debug/logs`, cursor-paginated, `orderBy` one of
+   `type`, `createdAt` or `pluginId`, gated on the `debug.can_view` staff
+   permission.
+
+## Gotchas
+
+<Callout type="warn" title="Nothing prunes core_logs">
+  There is no retention policy and no cleanup job - the hourly `clean` cron
+  removes expired sessions and tokens, and never touches logs. Every call is an
+  `INSERT` that stays. So log events, not requests: a `debug` line in a handler
+  that runs on every page view will outgrow the rest of your database.
+</Callout>
+
+<Callout type="warn" title="Await it">
+  All three methods are `async` because they hit the database. A floating
+  promise can lose the row if the response ends first, and an insert that fails
+  becomes an unhandled rejection instead of an error you can see. `await` every
+  call.
+</Callout>
+
+<Callout type="warn" title="The status code is the status so far">
+  `statusCode` is read off `c.res` when you log, and a Hono response you have
+  not built yet reads as `200`. A line written before `return c.json(…, 400)`
+  records `200`. If the status is the interesting part, log after you know it,
+  or put it in the message.
+</Callout>
+
+<Callout
+  type="info"
+  title="The plugin column follows the route, not the caller"
+>
+  It comes from the `pluginId` passed to `buildRoute`, so a plugin's cron job -
+  which runs inside core's cron endpoint - is logged as `@vitnode/core`. Name
+  your plugin in the message when the attribution matters.
+</Callout>
+
+<Callout type="info" title="Unhandled errors are logged for you">
+  Anything a handler throws that is not an `HTTPException` is caught by the
+  API's error handler, written here as `Unhandled error: …`, and answered to the
+  browser as a bare `Internal Server Error` in production. You do not need a
+  `try/catch` just to get a stack into the log.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Debugging"
+    description="The Debug Panel, the devtools and React Scan"
+    href="/docs/dev/debugging"
+  />
+  <Card
+    title="API routes"
+    description="Where c.get('log') and the rest of the context come from"
+    href="/docs/dev/plugins/api/routes"
+  />
+  <Card
+    title="Events"
+    description="A failing listener reports itself into this same log"
+    href="/docs/dev/events"
+  />
+  <Card
+    title="Queue"
+    description="Background tasks, their attempts and their failures"
+    href="/docs/dev/advanced/queue"
+  />
+</Cards>

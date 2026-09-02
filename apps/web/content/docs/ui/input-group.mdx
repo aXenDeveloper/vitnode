@@ -1,6 +1,7 @@
 ---
 title: Input Group
 description: Component used for grouping related input fields together
+icon: Group
 ---
 
 ## Preview
@@ -9,7 +10,7 @@ description: Component used for grouping related input fields together
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
@@ -23,11 +24,11 @@ import { InputGroupAddon, InputGroupText } from "@vitnode/core/components/ui/inp
 
 ```ts
 const formSchema = z.object({
-  search: z.string().min(1, "Search is required"),
+  search: z.string().min(1, 'Search is required'),
   description: z
     .string()
-    .max(500, "Description must be less than 500 characters"),
-});
+    .max(500, 'Description must be less than 500 characters'),
+})
 ```
 
 ```tsx
@@ -35,8 +36,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "search",
-      component: props => (
+      id: 'search',
+      component: (props) => (
         <AutoFormInput {...props} placeholder="Search..." label="Search">
           <InputGroupAddon>
             <Search />
@@ -46,8 +47,8 @@ const formSchema = z.object({
       ),
     },
     {
-      id: "description",
-      component: props => (
+      id: 'description',
+      component: (props) => (
         <AutoFormTextarea
           {...props}
           className="min-h-24 resize-none"

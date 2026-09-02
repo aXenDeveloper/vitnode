@@ -1,58 +1,160 @@
 ---
-title: Modules
-description: Learn how to organize your API routes into modules for better structure and maintainability.
+title: API Modules
+description: Group plugin endpoints into named Hono modules and mount them under your plugin API namespace.
+icon: Box
 ---
 
-## Usage
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-Think of modules as containers for related API endpoints. They help organize your routes logically - perfect for keeping your sanity intact!
+A module is a Hono sub-application in VitNode. It organizes related routes, cron tasks, queue handlers, and event listeners under a common URL prefix.
 
-```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
+## Quick start
 
-import { CONFIG_PLUGIN } from "@/config";
+### 1. Create a Module
 
-export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
-  name: "categories",
-  routes: [], // We'll populate this soon!
-});
-```
-
-#### Nested Modules
-
-Want to create a module hierarchy? VitNode's got your back! Nested modules are perfect for complex APIs.
+Define a module with routes:
 
 ```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
+import { z } from "@hono/zod-openapi"
+import { buildModule } from "@vitnode/core/api/lib/module"
+import { buildRoute } from "@vitnode/core/api/lib/route"
 
-import { CONFIG_PLUGIN } from "@/config";
+const listCategoriesRoute = buildRoute({
+  pluginId: "blog",
+  route: {
+    method: "get",
+    path: "/",
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ categories: z.array(z.string()) }),
+          },
+        },
+        description: "List of categories",
+      },
+    },
+  },
+  handler: (c) => c.json({ categories: ["news", "tech"] }),
+})
 
-import { postsModule } from "./posts/posts.module"; // [!code ++]
-
+// [!code ++:5]
 export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
+  pluginId: "blog",
   name: "categories",
-  routes: [],
-  modules: [postsModule], // [!code ++]
-});
+  routes: [listCategoriesRoute],
+})
 ```
 
-This creates a structure: `/api/{plugin_id}/categories/posts/*`
+---
 
-## Connecting Modules to the API
+### 2. Register Module in Plugin API Config
+
+Mount the module in `src/config.api.ts`:
 
 ```ts title="plugins/blog/src/config.api.ts"
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
+import { categoriesModule } from "./api/modules/categories/categories.module"
 
-import { CONFIG_PLUGIN } from "@/config";
-
-import { categoriesModule } from "./api/modules/categories/categories.module"; // [!code ++]
-
-export const blogApiPlugin = () => {
-  return buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    modules: [categoriesModule], // [!code ++]
-  });
-};
+export const blogApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: "blog",
+    // [!code ++:3]
+    modules: [
+      categoriesModule,
+    ],
+  })
 ```
+
+The route is now mounted at `GET /api/blog/categories`.
+
+---
+
+## URL Path Assembly
+
+Endpoint URLs are composed automatically:
+
+| Segment | Origin | Example |
+| :--- | :--- | :--- |
+| `/api` | Root API route prefix | `/api` |
+| `/{pluginId}` | `pluginId` on `buildApiPlugin` | `/blog` |
+| `/{moduleName}` | `name` on `buildModule` | `/categories` |
+| `/{routePath}` | `path` on `buildRoute` | `/` $ightarrow$ `/api/blog/categories` |
+
+---
+
+## Submodules
+
+Nest modules to organize complex features:
+
+```ts
+export const adminModule = buildModule({
+  pluginId: "blog",
+  name: "admin",
+  subModules: [
+    postsAdminModule,
+    categoriesAdminModule,
+  ],
+})
+```
+
+Routes in `postsAdminModule` answer under `/api/blog/admin/posts/...`.
+
+---
+
+## `buildModule` Options
+
+<TypeTable
+  type={{
+    name: {
+      description: "URL segment for this module.",
+      required: true,
+      type: "string",
+    },
+    pluginId: {
+      description: "Identifier of the declaring plugin.",
+      required: true,
+      type: "string",
+    },
+    routes: {
+      default: "[]",
+      description: "Array of Hono routes built with buildRoute.",
+      type: "Route[]",
+    },
+    subModules: {
+      default: "[]",
+      description: "Child modules nested under this module.",
+      type: "Module[]",
+    },
+    cronJobs: {
+      default: "[]",
+      description: "Scheduled background jobs owned by this module.",
+      type: "CronJob[]",
+    },
+    queueTasks: {
+      default: "[]",
+      description: "Asynchronous tasks dispatched to the queue.",
+      type: "QueueTask[]",
+    },
+    events: {
+      default: "[]",
+      description: "Domain event listeners registered by this module.",
+      type: "EventListener[]",
+    },
+  }}
+/>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Create a Plugin"
+    description="Full plugin scaffolding and registration workflow"
+    href="/docs/dev/plugins/create"
+  />
+  <Card
+    title="Fetcher"
+    description="Call Hono module routes with end-to-end type safety"
+    href="/docs/dev/fetcher"
+  />
+</Cards>

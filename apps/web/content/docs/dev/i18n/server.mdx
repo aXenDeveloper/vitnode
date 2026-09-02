@@ -1,14 +1,15 @@
 ---
 title: Server-side
 description: Translate emails and API responses with the request-scoped translator.
+icon: Server
 ---
 
 The API gets the same message tree the frontend does, reachable in any route as `c.get("i18n")`.
 
 ```ts
-const t = await c.get("i18n").getTranslator();
+const t = await c.get('i18n').getTranslator()
 
-return c.json({ message: t("core.global.save") });
+return c.json({ message: t('core.global.save') })
 ```
 
 <Callout title="Nothing is copied" type="info">
@@ -63,46 +64,46 @@ Anything not in `i18n.locales` is skipped rather than used, so a stale language 
 
 ### Rendering for someone else
 
-That chain describes the *caller*. When the language belongs to whoever you are rendering for rather than to whoever made the request - an email recipient, a queued job's target - reach for `resolveSupportedLocale` instead:
+That chain describes the _caller_. When the language belongs to whoever you are rendering for rather than to whoever made the request - an email recipient, a queued job's target - reach for `resolveSupportedLocale` instead:
 
 ```ts
-const locale = c.get("i18n").resolveSupportedLocale(recipient.language);
+const locale = c.get('i18n').resolveSupportedLocale(recipient.language)
 ```
 
 It takes the language you hand it when the app ships it and `defaultLocale` when it doesn't, and it never touches the request. Dropping a language from `i18n.locales` should send that user English, not the language of the admin who clicked the button.
 
 ## The API
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     getTranslator: {
       description:
-        "next-intl translator for the resolved locale. Pass a locale to override the resolution.",
-      type: "(locale?: string) => Promise<Translator>",
+        'use-intl translator for the resolved locale. Pass a locale to override the resolution.',
+      type: '(locale?: string) => Promise<Translator>',
     },
     getMessages: {
-      description: "The merged message tree, if you need the raw object.",
-      type: "(locale?: string) => Promise<Messages>",
+      description: 'The merged message tree, if you need the raw object.',
+      type: '(locale?: string) => Promise<Messages>',
     },
     resolveLocale: {
       description:
-        "Runs the resolution above for the caller, without loading anything.",
-      type: "(explicit?: string) => string",
+        'Runs the resolution above for the caller, without loading anything.',
+      type: '(explicit?: string) => string',
     },
     resolveSupportedLocale: {
       description:
-        "A locale you already have, or defaultLocale if the app does not ship it. Never reads the request.",
-      type: "(preferred?: string) => string",
+        'A locale you already have, or defaultLocale if the app does not ship it. Never reads the request.',
+      type: '(preferred?: string) => string',
     },
     locales: {
-      description: "Every locale the app accepts.",
-      type: "LocaleConfig[]",
+      description: 'Every locale the app accepts.',
+      type: 'LocaleConfig[]',
     },
     defaultLocale: {
-      description: "The fallback locale.",
-      type: "string",
+      description: 'The fallback locale.',
+      type: 'string',
     },
   }}
 />
@@ -132,15 +133,15 @@ await c.get("email").send({
 });
 ```
 
-The template receives `i18n` as a prop and turns it into a translator with `createTranslator` from `next-intl`:
+The template receives `i18n` as a prop and turns it into a translator with `createTranslator` from `use-intl`:
 
 ```tsx title="src/emails/welcome.tsx"
-import { createTranslator } from "next-intl";
+import { createTranslator } from 'use-intl' // [!code ++]
 
 export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
-  const t = createTranslator(i18n);
+  const t = createTranslator(i18n)
 
-  return <Text>{t("welcome.email.body")}</Text>;
+  return <Text>{t('welcome.email.body')}</Text>
 }
 ```
 
@@ -151,41 +152,41 @@ A plugin owns its languages, and it splits them the same way the framework does:
 Most plugins render nothing server-side, so they ship only the frontend tree and register `messages` in `config.tsx` alone. Add the `api/` tree only when your plugin sends email:
 
 ```ts title="plugins/{your_plugin}/src/locales/api/index.ts"
-import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+import type { LocaleMessagesMap } from '@vitnode/core/lib/i18n/types'
 
 const messages: LocaleMessagesMap = {
-  en: async () => await import("./en.json", { with: { type: "json" } }),
-};
+  en: async () => await import('./en.json', { with: { type: 'json' } }),
+}
 
-export default messages;
+export default messages
 ```
 
 ```ts title="plugins/{your_plugin}/src/config.api.ts"
-import messages from "./locales/api"; // [!code ++]
+import messages from './locales/api' // [!code ++]
 
 export const yourApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
     messages, // [!code ++]
     modules: [postsModule],
-  });
+  })
 ```
 
 Adding a language later is a new file plus one line in the barrel - apps pick it up on their next install, and can translate your plugin without forking it by dropping a file in their own `src/locales/{your_plugin}/`.
 
 ## Typing the keys
 
-`t()` autocompletes from a `global.d.ts` that augments next-intl's `Messages`. Import the tree an app actually uses: an API-only app types against the server tree alone, a frontend-only app against the frontend tree, and a single app - one that serves the frontend and runs the API together - against both.
+`t()` autocompletes from a `global.d.ts` that augments use-intl's `Messages`. Import the tree an app actually uses: an API-only app types against the server tree alone, a frontend-only app against the frontend tree, and a single app - one that serves the frontend and runs the API together - against both.
 
 ```ts title="global.d.ts (single app)"
-/// <reference types="next-intl" />
+/// <reference types="use-intl" />
 
-import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
-import core from "@vitnode/core/locales/en.json" with { type: "json" };
+import coreApi from '@vitnode/core/locales/api/en.json' with { type: 'json' }
+import core from '@vitnode/core/locales/en.json' with { type: 'json' }
 
-declare module "next-intl" {
+declare module 'use-intl' {
   interface AppConfig {
-    Messages: typeof core & typeof coreApi; // [!code highlight]
+    Messages: typeof core & typeof coreApi // [!code highlight]
   }
 }
 ```

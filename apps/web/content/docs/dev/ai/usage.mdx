@@ -1,184 +1,144 @@
 ---
 title: AI Usage
-description: Learn how to resolve models with c.get("ai") and call native Vercel AI SDK functions in VitNode.
+description: Text generation, streaming responses, structured output, and embeddings using the Vercel AI SDK and VitNode model registry.
+icon: Bot
 ---
 
-import img from "./ai-registry-routing.svg";
+import { ImgDocs } from "@/components/fumadocs/img"
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import routing from "./ai-registry-routing.svg"
 
-import { ImgDocs } from "@/components/fumadocs/img";
+VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from `c.get("ai")` and call native SDK functions directly.
 
 <ImgDocs
-  src={img}
-  alt="Flowchart showing request handling in a VitNode route: c.get('ai') model registry resolving model instance to Vercel AI SDK functions (generateText, streamText, embed, generateImage)."
+  src={routing}
+  alt="Request passing through c.get('ai') model registry and invoking AI SDK functions"
   withoutBackground
 />
 
-Using AI in your backend routes is as simple as getting the model from `c.get("ai")` and passing it to native [Vercel AI SDK](https://ai-sdk.dev/) functions!
+## Model Resolvers
 
-## Quick Reference
-
-| Function                          | Method          | Description                                    |
-| --------------------------------- | --------------- | ---------------------------------------------- |
-| `c.get("ai").model(id?)`          | Language Model  | Text generation, streaming, structured outputs |
-| `c.get("ai").embeddingModel(id?)` | Embedding Model | Vector embeddings for search and RAG           |
-| `c.get("ai").imageModel(id?)`     | Image Model     | Image generation                               |
-
-Omit the `id` argument to get the **default model** (first one in config).
+| Resolver | Returned Type | Used By |
+| :--- | :--- | :--- |
+| `c.get("ai").model(id?)` | `LanguageModel` | `generateText`, `streamText`, `generateObject` |
+| `c.get("ai").embeddingModel(id?)` | `EmbeddingModel` | `embed`, `embedMany` |
+| `c.get("ai").imageModel(id?)` | `ImageModel` | `generateImage` |
 
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+## 1. Text Generation
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+Generate text responses in a Hono API route:
 
-```bash tab="bun"
-bun i ai
-```
-
-```bash tab="pnpm"
-pnpm i ai
-```
-
-```bash tab="npm"
-npm i ai
-```
-
-</Tabs>
-
-## Examples
-
-### 1. Generate Text
-
-```ts title="Generate Text"
-import { buildRoute } from "@vitnode/core/api/lib/route";
-import { generateText } from "ai";
-import { z } from "@hono/zod-openapi";
+```ts title="plugins/blog/src/api/modules/posts/routes/summarize.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route"
+import { generateText } from "ai"
+import { z } from "zod"
 
 export const summarizeRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: "blog",
   route: {
     method: "post",
     path: "/summarize",
     request: {
       body: {
         content: {
-          "application/json": { schema: z.object({ text: z.string() }) },
+          "application/json": { schema: z.object({ text: z.string().min(1) }) },
         },
       },
     },
     responses: {
-      200: {
-        content: {
-          "application/json": { schema: z.object({ summary: z.string() }) },
-        },
-        description: "Summary",
-      },
+      200: { description: "Text summary" },
     },
   },
-  handler: async c => {
-    const { text } = c.req.valid("json");
+  handler: async (c) => {
+    const { text } = c.req.valid("json")
 
-    const result = await generateText({
-      model: c.get("ai").model(), // default model
-      system: "You are a concise summarizer.",
-      prompt: `Summarize:\n\n${text}`,
-    });
+    // [!code ++:6]
+    const { text: summary } = await generateText({
+      model: c.get("ai").model(),
+      system: "You are a concise summary assistant.",
+      prompt: `Summarize the following content:
 
-    return c.json({ summary: result.text });
+${text}`,
+    })
+
+    return c.json({ summary })
   },
-});
-```
-
-### 2. Stream Text
-
-```ts title="Stream Text"
-import { createTextStreamResponse, streamText } from "ai";
-
-handler: c => {
-  const result = streamText({
-    model: c.get("ai").model(),
-    prompt: "Write a haiku about databases.",
-  });
-
-  return createTextStreamResponse({ stream: result.textStream });
-};
-```
-
-### 3. Structured Output
-
-```ts title="Generate Structured Object"
-import { generateText, Output } from "ai";
-import { z } from "zod";
-
-const result = await generateText({
-  model: c.get("ai").model(),
-  output: Output.object({
-    schema: z.object({
-      title: z.string(),
-      tags: z.array(z.string()),
-    }),
-  }),
-  prompt:
-    "Suggest a title and tags for a post about Postgres full-text search.",
-});
-
-// Access typed output safely:
-result.output.title; // string
-result.output.tags; // string[]
-```
-
-### 4. Embeddings
-
-```ts title="Generate Embeddings"
-import { embed, embedMany } from "ai";
-
-// Single value
-const { embedding } = await embed({
-  model: c.get("ai").embeddingModel(),
-  value: "sunny day at the beach",
-});
-
-// Batch values
-const { embeddings } = await embedMany({
-  model: c.get("ai").embeddingModel(),
-  values: ["first document", "second document"],
-});
-```
-
-### 5. Image Generation
-
-```ts title="Generate Image"
-import { generateImage } from "ai";
-
-const { image } = await generateImage({
-  model: c.get("ai").imageModel(),
-  prompt: "A watercolor fox reading a book",
-});
+})
 ```
 
 ---
 
-## Client-Side Integration
+## 2. Streaming Responses
 
-The `GET /api/{core}/session` API automatically includes the configured AI models for the frontend:
+Stream LLM responses directly to the client:
 
-```jsonc title="Session Response (excerpt)"
-{
-  "ai": {
-    "models": [
-      {
-        "id": "default",
-        "name": "Claude Sonnet 5",
-        "model": "anthropic/claude-sonnet-5",
-      },
-      {
-        "id": "fast",
-        "name": "Claude Haiku 4.5",
-        "model": "anthropic/claude-haiku-4.5",
-      },
-    ],
-  },
+```ts
+import { streamText } from "ai"
+
+handler: async (c) => {
+  const result = streamText({
+    model: c.get("ai").model(),
+    prompt: "Write an introduction to WebSockets.",
+  })
+
+  // [!code ++:1]
+  return result.toDataStreamResponse()
 }
 ```
 
-Use these IDs to build model pickers or select dynamic models on the client side! 🎨
+---
+
+## 3. Structured Output (`generateObject`)
+
+Extract strongly typed JSON from model completions using Zod:
+
+```ts
+import { generateObject } from "ai"
+import { z } from "zod"
+
+const postMetadataSchema = z.object({
+  title: z.string(),
+  tags: z.array(z.string()),
+  estimatedReadingMinutes: z.number(),
+})
+
+// [!code ++:6]
+const { object } = await generateObject({
+  model: c.get("ai").model(),
+  schema: postMetadataSchema,
+  prompt: "Generate SEO metadata for an article on Postgres indexing.",
+})
+```
+
+---
+
+## 4. Generating Embeddings
+
+Calculate vector embeddings for semantic search:
+
+```ts
+import { embed } from "ai"
+
+// [!code ++:4]
+const { embedding } = await embed({
+  model: c.get("ai").embeddingModel(),
+  value: "How to configure Redis caching in VitNode",
+})
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="AI Setup"
+    description="Configure providers (OpenAI, Anthropic, Ollama) in API config"
+    href="/docs/dev/ai"
+  />
+  <Card
+    title="Search & Discovery"
+    description="Full-text and semantic search across site collections"
+    href="/docs/dev/search"
+  />
+</Cards>

@@ -1,6 +1,7 @@
 ---
 title: Radio Group
-description: Pick one option from a list.
+description: Pick exactly one option from a short list of Zod enum values, as plain radio buttons or as clickable blocks, with a description under each label.
+icon: CircleDot
 ---
 
 ## Preview
@@ -9,7 +10,7 @@ description: Pick one option from a list.
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
@@ -21,8 +22,8 @@ import { AutoFormRadioGroup } from '@vitnode/core/components/form/fields/radio-g
 
 ```ts
 const formSchema = z.object({
-  options: z.enum(["option1", "option2", "option3"]),
-});
+  options: z.enum(['option1', 'option2', 'option3']),
+})
 ```
 
 ```tsx
@@ -30,26 +31,26 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "options",
-      component: props => (
+      id: 'options',
+      component: (props) => (
         <AutoFormRadioGroup
           {...props}
           description="By checking this box, you agree to the terms and conditions."
           label="I agree to the terms and conditions"
           labels={[
             {
-              value: "option1",
-              label: "Option 1",
-              description: "This is the description for option 1",
+              value: 'option1',
+              label: 'Option 1',
+              description: 'This is the description for option 1',
             },
             {
-              value: "option2",
-              label: "Option 2",
+              value: 'option2',
+              label: 'Option 2',
             },
             {
-              value: "option3",
-              label: "Option 3",
-              description: "This is the description for option 3",
+              value: 'option3',
+              label: 'Option 3',
+              description: 'This is the description for option 3',
               disabled: true,
             },
           ]}
@@ -116,8 +117,8 @@ You can also use the `block` variant to display the radio buttons in a block sty
   formSchema={formSchema}
   fields={[
     {
-      id: "options",
-      component: props => (
+      id: 'options',
+      component: (props) => (
         <AutoFormRadioGroup
           {...props}
           description="By checking this box, you agree to the terms and conditions."
@@ -126,18 +127,18 @@ You can also use the `block` variant to display the radio buttons in a block sty
           variant="block"
           labels={[
             {
-              value: "option1",
-              label: "Option 1",
-              description: "This is the description for option 1",
+              value: 'option1',
+              label: 'Option 1',
+              description: 'This is the description for option 1',
             },
             {
-              value: "option2",
-              label: "Option 2",
+              value: 'option2',
+              label: 'Option 2',
             },
             {
-              value: "option3",
-              label: "Option 3",
-              description: "This is the description for option 3",
+              value: 'option3',
+              label: 'Option 3',
+              description: 'This is the description for option 3',
               disabled: true,
             },
           ]}
@@ -150,31 +151,31 @@ You can also use the `block` variant to display the radio buttons in a block sty
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
       description:
-        "The label for the input field. This is displayed above the input.",
-      type: "string",
-      default: "",
+        'The label for the input field. This is displayed above the input.',
+      type: 'string',
+      default: '',
     },
     description: {
       description:
-        "A short description of the input field. This is displayed below the input.",
-      type: "string",
-      default: "",
+        'A short description of the input field. This is displayed below the input.',
+      type: 'string',
+      default: '',
     },
     labels: {
       description:
-        "An array of objects representing the radio button options. Each object should have a `value` and a `label` property.",
-      type: "{ value: string; label: string }[]",
-      default: "[]",
+        'An array of objects representing the radio button options. Each object should have a `value` and a `label` property.',
+      type: '{ value: string; label: string }[]',
+      default: '[]',
     },
     variant: {
       description:
-        "The variant of the radio group. The `default` variant displays the radio buttons in a horizontal layout, while the `block` variant displays them in a block layout.",
+        'The variant of the radio group. The `default` variant displays the radio buttons in a horizontal layout, while the `block` variant displays them in a block layout.',
       type: "'default' | 'block'",
       default: "'default'",
     },

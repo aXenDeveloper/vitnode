@@ -1,4 +1,5 @@
 {
   "title": "Events",
-  "pages": ["built-in-events", "...", "custom-adapter"]
+  "description": "Emit typed domain events and react to them from any plugin",
+  "pages": ["index", "built-in-events", "custom-adapter"]
 }

@@ -1,686 +1,360 @@
 ---
 title: Route Manifest
-description: Declare a plugin's public pages as data, so any VitNode app can serve them - and never edit the app to add one.
+description: Declare plugin routes cleanly as serializable data with routes/manifest.ts - dynamic paths, layouts, guards, and module exports.
+icon: Map
 ---
 
-A plugin owns its pages. It declares _what_ pages it has and _where_ they live,
-as plain data; the application reads that list at build time and serves them. You
-add a route by editing your plugin and nothing else - no application file, no
-generated file, no route copied anywhere.
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion"
+import { File, Files, Folder } from "fumadocs-ui/components/files"
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## The layout
+A plugin owns its pages. It declares what pages it has and where they live in `src/routes/manifest.ts`. VitNode reads this manifest at build time and mounts each page into TanStack Router with code splitting and SSR out of the box.
 
-Everything a route needs lives in your plugin:
+## Quick start
 
-```txt
-plugins/my-plugin/
-└── src/
-    ├── config.tsx              hands the routes to buildPlugin
-    ├── locales/en.json         the strings your pages render
-    └── routes/
-        ├── manifest.ts         what routes exist
-        ├── home-page.tsx       what one of them renders
-        └── home-page.search.ts optional - see searchEntry
-```
+Three fields define a complete route:
 
-`create-vitnode-app --plugin` writes all four for you. If you already have a
-plugin, the two files below are the whole of it.
-
-## Declaring a route
-
-`src/routes/manifest.ts` exports a `routes` array:
-
-```ts title="plugins/blog/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from "@vitnode/core/routing";
+```ts title="plugins/my-plugin/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from "@vitnode/core/routing"
 
 export const routes: PluginRouteDefinition[] = [
-  {
-    entry: "routes/post-page", // [!code highlight]
-    id: "post",
-    path: "/blog/:slug", // [!code highlight]
-  },
-];
-```
-
-Three fields have no default. The others describe the cases beyond one flat
-public page:
-
-| Field        | What it is                                                                                                                            |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`         | Stable name for the page, unique inside your plugin. Name it after the page, not the URL - it survives a path change.                 |
-| `path`       | The public URL, in VitNode's canonical spelling (below). Always the **full** path, even for a nested route.                           |
-| `entry`      | Package export subpath of the module that renders it - `"routes/post-page"`, no file extension.                                       |
-| `kind`       | `"page"` (default) or `"layout"`. A layout claims no URL of its own.                                                                  |
-| `parentId`   | Another route's `id` **from the same plugin** that this one renders inside.                                                           |
-| `namespaces` | The message namespaces this route renders, fetched alongside its code rather than after it.                                           |
-| `requires`   | `"authenticated"` or `"guest"`. A navigation rule, never the security boundary.                                                       |
-| `area`       | Which shell frames the page: `"main"` (the default, the public site) or `"admin"` (the AdminCP). See [AdminCP pages](#admincp-pages). |
-| `searchEntry` | Export subpath of a module exporting this route's `validateSearch`, imported **eagerly**. Only for a page whose URL is its state - see [When the URL is the state](#when-the-url-is-the-state). |
-
-Then hand the same array to `buildPlugin`, so an app that registers your plugin
-the usual way declares the same routes:
-
-```tsx title="plugins/blog/src/config.tsx"
-import { buildPlugin } from "@vitnode/core/lib/plugin";
-
-import { routes } from "./routes/manifest"; // [!code highlight]
-
-export const blogPlugin = () =>
-  buildPlugin({
-    pluginId: "@vitnode/blog",
-    routes, // [!code highlight]
-  });
-```
-
-One list, read by both paths - so the two can never disagree.
-
-### Why these fields and not others
-
-Everything on a definition is **data**: serialisable, and meaningful in a Node
-process with no framework loaded. That is not tidiness. This list is read while a
-Next.js app builds, while a TanStack Start app builds, and frozen into a literal
-a browser imports.
-
-What earns a place is a question the runtime has to answer **before** it can
-fetch your page's code: which URL is this, what shape is it in the tree, which
-strings must be in flight alongside the chunk, and may this visitor be sent here
-at all. A loader, a component or page metadata is behaviour, and behaviour lives
-in the route _module_ - which is fetched as its own chunk. That is the next
-section.
-
-## Writing paths
-
-VitNode has its own spelling, and it is neither framework's:
-
-| Shape           | VitNode                | Next.js                 | TanStack Router        |
-| --------------- | ---------------------- | ----------------------- | ---------------------- |
-| Static          | `/blog`                | `/blog`                 | `/blog`                |
-| Dynamic segment | `/blog/:slug`          | `/blog/[slug]`          | `/blog/$slug`          |
-| Nested          | `/blog/:slug/comments` | `/blog/[slug]/comments` | `/blog/$slug/comments` |
-
-Write the VitNode one. If you paste `[slug]` or `$slug` in by muscle memory, the
-error tells you so by name and hands you the right spelling - it doesn't just say
-"invalid path".
-
-Catch-all (`/blog/*`), optional (`/blog/:slug?`) and repeating (`/blog/:slug+`)
-segments are **not** supported yet. They're rejected on purpose rather than
-half-guessed at.
-
-And never a locale. `/blog/hello` and `/pl/blog/hello` are the same route: the
-app strips the prefix before matching and writes it back into every link it
-builds. Declare the logical path; the locale layer owns the public one.
-
-### Static segments are lowercase
-
-`/blog/post` is valid; `/Blog/Post` is not. Routers match URLs
-case-insensitively, so `/Blog` and `/blog` are one page to a browser but two
-different strings to VitNode's collision check - and a collision it can't see is
-the one thing this whole layer exists to prevent.
-
-VitNode rejects the uppercase spelling instead of quietly lowercasing it, because
-your public URL silently changing is worse than a build error that tells you what
-to write:
-
-```txt
-Plugin route "post" from @vitnode/blog has an invalid path: "/Blog/post" is not a
-valid path: "Blog" has uppercase letters - VitNode route paths are lowercase,
-because a router matches them case-insensitively and "/Blog" and "/blog" would be
-one URL. Write "blog" instead.
-```
-
-Parameter names are variable names, not URL text, so `:postId` stays exactly as
-camelCase as you like.
-
-## Writing the page
-
-A route module exports a component as its default export, and that alone is a
-complete module:
-
-```tsx title="plugins/blog/src/routes/post-page.tsx"
-const PostPage = () => <div className="container mx-auto p-4">Hello</div>;
-
-export default PostPage;
-```
-
-<Callout type="info">
-  Keep these modules framework-neutral. Your plugin can be installed into a
-  Next.js app *and* a TanStack Start app at the same time, so anything from
-  `next/*`, `next-intl` or a router pins the page to one of them. Plain JSX,
-  `use-intl` and shared VitNode components are pinned to neither.
-</Callout>
-
-No `<main>`. The application shell renders the document's one `main` landmark,
-and a page that renders a second gives a screen reader two to choose between.
-Your page owns its container - width, padding, vertical rhythm - and nothing
-above it.
-
-### Adding behaviour
-
-A module may also export a `route`, with up to four members. Use
-`definePluginRoute` rather than a bare object:
-
-```tsx title="plugins/blog/src/routes/post-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing";
-
-import { definePluginRoute } from "@vitnode/core/routing";
-
-const PostPage = ({ loaderData }: PluginRoutePageProps<Post>) => (
-  <article>{loaderData.title}</article>
-);
-
-export const route = definePluginRoute({
-  load: ({ context, params }) => fetchPost(context.locale, params.slug), // [!code highlight]
-  head: ({ loaderData }) => ({ title: loaderData?.title }), // [!code highlight]
-});
-
-export default PostPage;
-```
-
-| Member        | What it does                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| `load`        | Everything the route needs before it renders. Runs on the server and in the browser, before React.         |
-| `head`        | The page's `title`, `description` and `robots` - usually read off `loaderData`.                            |
-| `breadcrumb`  | A component contributing to the shell's breadcrumb area. The deepest matched route that declares one wins. |
-| `parseSearch` | Normalises the query string into the `search` your `load`, `head` and component are handed.                |
-
-<Callout type="warn" title="Write `load` above `head`">
-  TypeScript resolves an object literal's members in order, so `head`'s
-  `loaderData` is only typed once `load` has been read. Get it the wrong way
-  round and `definePluginRoute` says so in those words - but it is easier to
-  just put `load` first.
-</Callout>
-
-`definePluginRoute` is not decoration. It infers what your loader returns and
-flows it into `head` and into your component, so one object types all three. A
-plain `satisfies` clause cannot - `satisfies` checks a value against a type and
-never infers that type's arguments from the value, so `loaderData` collapses to
-`{}` and reading `loaderData.title` fails to compile.
-
-Your component is handed the same three names `load` and `head` receive:
-
-```ts
-interface PluginRoutePageProps<TData, TSearch> {
-  loaderData: TData; // exactly what `load` returned
-  params: Readonly<Record<string, string>>;
-  search: TSearch; // validated - never raw query params
-  navigate: (options: {
-    // replaces this page's query string
-    resetScroll?: boolean;
-    search: TSearch;
-  }) => Promise<void>;
-}
-```
-
-`navigate` is the narrowest useful navigation, and narrow on purpose: a plugin
-page handed a router's own `navigate` would be handed that router's whole route
-table with it, and would then compile against exactly the hosts that have the
-same one. This changes the search of the URL your page is already on - which is
-what a paginated table, a filter or a sort control actually needs - and means the
-same thing under any router.
-
-`loaderData` is optional in `head` and not in your component, and the asymmetry
-is real: `head` runs on passes where the loader hasn't resolved, and a route
-doesn't render until it has.
-
-<Callout type="info" title="A breadcrumb can translate">
-  The shell draws the breadcrumb area *above* your page, so a crumb renders
-  outside its own route's content. VitNode still gives it your route's declared
-  `namespaces`, so `useTranslations` works there exactly as it does in the page
-  - you don't have to pass the label down or provide anything yourself.
-
-A `breadcrumb` is handed **no props** - no `loaderData`, no `params`, no
-`search`. It renders a translated, route-owned label. If you need the crumb to
-say "the article's title", put that title in the page instead for now.
-
-</Callout>
-
-<Callout type="warn" title="`parseSearch` is not `validateSearch`">
-  It does **not** shape TanStack Router's own search schema for the route, does
-  not validate a `<Link>`, and cannot reject a URL. It cannot: a router's real
-  `validateSearch` runs while the URL is being matched, which is *before* your
-  page's chunk has been fetched, and a plugin route module is lazy on purpose.
-  `parseSearch` runs in the loader instead, once your module has arrived, and
-  normalises the query string for your `load`, `head` and component.
-
-So it **must be total**. It normalises, it does not reject - a pasted or
-hand-edited query string should render the page it would have rendered anyway,
-because throwing turns `?first=abc` into an error screen.
-
-```ts
-parseSearch: input => {
-  const { from } = input as { from?: unknown };
-
-  return { from: from === "index" ? "index" : "" };
-},
-```
-
-If you need the real thing, see the next section.
-
-</Callout>
-
-## When the URL is the state
-
-`parseSearch` is the right answer for a page that _reads_ a query parameter. It
-is the wrong answer for a page whose URL **is** its state - a paginated table
-where `?page=999` has to be clamped and the browser redirected to the last real
-page, or a filter whose links you want the router to build and check.
-
-Those need the schema before the router matches, not after. So a route may name a
-**second** module, and the build imports that one eagerly:
-
-```ts title="plugins/blog/src/routes/manifest.ts"
-export const routes: PluginRouteDefinition[] = [
-  {
-    entry: "routes/browse-page",
-    id: "browse",
-    path: "/blog/browse",
-    searchEntry: "routes/browse-page.search", // [!code highlight]
-  },
-];
-```
-
-The module exports `validateSearch`, and nothing that renders:
-
-```ts title="plugins/blog/src/routes/browse-page.search.ts"
-export const LAST_PAGE = 3;
-
-export interface BrowseSearch {
-  page: number;
-}
-
-export const validateSearch = (
-  input: Record<string, unknown>,
-): BrowseSearch => {
-  const parsed = typeof input.page === "number" ? input.page : Number.NaN;
-
-  if (!Number.isFinite(parsed)) return { page: 1 };
-
-  return { page: Math.min(Math.max(Math.trunc(parsed), 1), LAST_PAGE) }; // [!code highlight]
-};
-```
-
-Your page then gets a typed `search` and a `navigate` that writes back to it, and
-no `parseSearch` - the router has already validated the query string, so a second
-normaliser would disagree with the one your links were built from:
-
-```tsx title="plugins/blog/src/routes/browse-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing";
-
-import type { BrowseSearch } from "./browse-page.search";
-
-const BrowsePage = ({
-  navigate,
-  search,
-}: PluginRoutePageProps<undefined, BrowseSearch>) => (
-  <button
-    onClick={() => {
-      void navigate({ resetScroll: false, search: { page: search.page + 1 } }); // [!code highlight]
-    }}
-    type="button"
-  >
-    Page {search.page}
-  </button>
-);
-
-export default BrowsePage;
-```
-
-With that, `?page=999` is a **307 to `?page=3`** before anything renders, and
-`?page=banana` a 307 to `?page=1`. Neither is possible with `parseSearch`, which
-runs too late to change a URL.
-
-### What it costs
-
-The search module is in the **initial bundle**. That is the whole price of being
-early, and it is why the contract on it is narrow:
-
-- it exports `validateSearch`, and nothing that renders;
-- it must not import React, a component, or the page it belongs to;
-- it must be **total**, exactly as `parseSearch` is - the router calls it on
-  whatever somebody typed, and a throw there is an error screen rather than a
-  page.
-
-Keep it to the schema, not the screen. Your page still gets its own chunk, and a
-route that declares no `searchEntry` adds nothing to the bundle at all.
-
-<Callout type="info" title="Numbers, not strings">
-  The router's default search serialisation JSON-encodes what it doesn't
-  recognise, so a `page` kept as `"2"` comes back as `?page=%222%22`. Parse to a
-  number in `validateSearch` and the URL stays `?page=2`.
-</Callout>
-
-<Callout type="warn" title="A layout may not declare one">
-  A layout claims no URL of its own and is only ever reached through a child, so
-  a `validateSearch` on it would shape the search of pages that never asked for
-  it. It is refused with a message saying so, rather than ignored.
-</Callout>
-
-## Layouts and nesting
-
-A plugin with more than one page usually wants a frame around them. That is a
-route with `kind: "layout"`, and the pages inside it name it as their `parentId`:
-
-```ts title="plugins/blog/src/routes/manifest.ts"
-export const routes: PluginRouteDefinition[] = [
-  {
-    entry: "routes/blog-layout",
-    id: "blog",
-    kind: "layout", // [!code highlight]
-    namespaces: ["@vitnode/blog.feed"],
-    path: "/blog",
-  },
-  {
-    entry: "routes/blog-index-page",
-    id: "index",
-    parentId: "blog", // [!code highlight]
-    path: "/blog", // the layout's index page: same path
-  },
+  // [!code ++:5]
   {
     entry: "routes/post-page",
     id: "post",
-    parentId: "blog", // [!code highlight]
     path: "/blog/:slug",
   },
-];
+]
 ```
 
-A layout renders its children as a **prop**, which is what keeps it neutral - an
-`<Outlet />` belongs to a router:
+And the page module it points to:
 
-```tsx title="plugins/blog/src/routes/blog-layout.tsx"
-const BlogLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="container mx-auto flex max-w-2xl flex-col gap-6 p-4">
-    <h1 className="text-2xl font-semibold tracking-tight text-balance">Blog</h1>
-    {children}
+```tsx title="plugins/my-plugin/src/routes/post-page.tsx"
+const PostPage = () => (
+  <div className="container mx-auto max-w-2xl p-4">
+    <h1 className="text-2xl font-bold">Hello from plugin!</h1>
   </div>
-);
+)
 
-export default BlogLayout;
+export default PostPage
 ```
 
-Four rules, all checked at build time:
+## Directory Structure
 
-- A layout claims **no URL**, so a layout and a page may share a path - that pair
-  is `layout.tsx` and `page.tsx`. Two _pages_ at one path is still a collision.
-- A layout must have children. One that doesn't is a route nothing can reach.
-- A child's `path` must be the parent's or extend it.
-- `parentId` is your **own** route id. There is nowhere in that string to put
-  another plugin's name, so no plugin can reach into another's frame and no
-  plugin's tree depends on which other plugins happen to be installed.
+All route files live inside your plugin's `src/routes/` directory:
 
-## Translations
+<Files>
+  <Folder name="plugins/my-plugin/src" defaultOpen>
+    <File name="config.tsx" />
+    <Folder name="routes" defaultOpen>
+      <File name="manifest.ts" />
+      <File name="post-page.tsx" />
+      <File name="guide-layout.tsx" />
+    </Folder>
+  </Folder>
+</Files>
 
-Your plugin owns its strings and hands them to VitNode. Nothing is copied into
-the app - it reads your package's own build output.
+## Add a route step by step
 
-Keys sit under your plugin's own namespace, which is its package name:
+<Steps>
+<Step>
 
-```json title="plugins/blog/src/locales/en.json"
-{
-  "@vitnode/blog": {
-    "feed": {
-      "title": "The blog"
-    }
-  }
-}
-```
+### 1. Declare the route in manifest.ts
 
-A route declares the namespaces it renders, as a dot path into that tree:
+Export an array of routes from `src/routes/manifest.ts`:
 
-```ts
-{
-  entry: "routes/blog-layout",
-  id: "blog",
-  kind: "layout",
-  namespaces: ["@vitnode/blog.feed"], // [!code highlight]
-  path: "/blog",
-}
-```
+```ts title="plugins/my-plugin/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from "@vitnode/core/routing"
 
-Then read them with `use-intl`:
-
-```tsx
-import { useTranslations } from "use-intl";
-
-const BlogLayout = ({ children }: { children: React.ReactNode }) => {
-  const t = useTranslations("@vitnode/blog.feed");
-
-  return <h1>{t("title")}</h1>;
-};
-```
-
-Two things worth knowing:
-
-- **Declare namespaces on the route, not inside the module.** Your strings and
-  your code are two fetches. Declared on the route, the app starts both at once;
-  inside the module, the list can only be read after downloading the page it
-  describes.
-- **Children inherit.** Name a namespace on a layout and every route under it
-  has it, so a subtree declares its strings once.
-
-Name what the page renders, not everything your plugin has. `core.global` is
-always provided; everything else is your page's to ask for.
-
-## Package exports
-
-An entry is a _package export subpath_, not a file path, so a plugin can move a
-page inside its own `dist` without breaking any app that installed it. Your
-`package.json` needs both of these:
-
-```json title="plugins/blog/package.json"
-{
-  "exports": {
-    "./locales/*.json": "./src/locales/*.json",
-    "./*": {
-      "import": "./dist/src/*.js",
-      "types": "./dist/src/*.d.ts",
-      "default": "./dist/src/*.js"
-    }
-  }
-}
-```
-
-The wildcard is what makes `entry: "routes/post-page"` resolve to
-`dist/src/routes/post-page.js`. The locales line is separate because the wildcard
-appends `.js` and cannot answer a `.json` subpath - without it, an app can import
-your pages and not your strings.
-
-<Callout type="warn">
-  Apps resolve these exactly as a published `npm install` would. A deep source
-  import works in a monorepo and nowhere else, so there is never a reason to
-  point an entry anywhere but at your build output.
-</Callout>
-
-## How an app serves them
-
-The manifest says _what_ exists. Serving it is the application's job. Two files
-are generated for a Vite app at build time, and neither of them is a page:
-
-```txt
-src/plugin-route-manifest.gen.ts   what routes exist, validated
-src/plugin-routes.gen.ts           how each route's module is imported
-```
-
-Both come from the plugins listed in `src/vitnode.config.ts` and the
-`routes/manifest.ts` each of them ships. A plugin that is installed but not
-configured contributes nothing - no directory is ever scanned.
-
-**Your page is not copied anywhere.** It stays in your plugin, compiled in your
-own `dist`, and the app holds one generated line per route:
-
-```ts title="src/plugin-routes.gen.ts"
-export const pluginRouteModules = {
-  "@vitnode/blog:post": () => import("@vitnode/blog/routes/post-page"),
-};
-```
-
-That line is a literal `import()`, which is the whole reason it is generated
-rather than assembled at runtime: the bundler can follow it, so your page gets
-its own chunk and stays out of the app's initial download until somebody visits
-it. Nothing in the browser ever asks which plugins are installed.
-
-A route that declared a [`searchEntry`](#when-the-url-is-the-state) gets a second
-line in the same file, and this one is a _static_ import - the visible form of the
-trade that section describes:
-
-```ts title="src/plugin-routes.gen.ts"
-import { validateSearch as pluginRouteSearch0 } from "@vitnode/blog/routes/browse-page.search";
-
-export const pluginRouteSearchSchemas = {
-  "@vitnode/blog:browse": pluginRouteSearch0,
-};
-```
-
-The app then joins the two by route id and registers each one on its **existing**
-route tree - the same tree its own pages are in. There is no second router and no
-separate route tree for plugins.
-
-### What you get for free
-
-Everything the app's own pages get, because your page is in the same route tree:
-locale prefixes, client-side navigation, and lazy loading per the chunk above.
-
-## AdminCP pages
-
-Most plugins want a public page, which is why `area` has a default and you have
-read this far without meeting it. If your plugin needs a screen in the **AdminCP**
-instead - a settings panel, a moderation queue, a dashboard of its own - say so:
-
-```ts title="plugins/blog/src/routes/manifest.ts"
 export const routes: PluginRouteDefinition[] = [
+  // [!code ++:5]
   {
-    area: "admin", // [!code highlight]
-    entry: "routes/admin-reports",
-    id: "reports",
-    namespaces: ["@vitnode/blog.admin"],
-    path: "/admin/blog/reports", // [!code highlight]
+    entry: "routes/post-page",
+    id: "post",
+    path: "/blog/:slug",
   },
-];
+]
 ```
 
-Two things about that, and the second one surprises people:
+</Step>
+<Step>
 
-**`area` picks the frame, not the URL.** Setting `area: "admin"` gives your page
-the AdminCP's sidebar, its breadcrumb area and its session guard. It does **not**
-put `/admin` in front of your path - you still write the whole URL yourself. It
-would have been easy to make VitNode prepend it for you, and then nobody could
-read a manifest and know where a page actually lives. Write the full path.
+### 2. Create the route component module
 
-Because the frame is pathless, an area is not part of a URL and so it is not
-part of a collision either: an admin page at `/reports` competes with a public
-page at `/reports`, and the build refuses the pair.
+Export a React component as `default`. Optionally export `route = definePluginRoute({ ... })` for data loading and metadata:
 
-**Everything else works exactly as it does for a public page.** Same `kind`, same
-`parentId`, same `namespaces`, same route module with the same `route` export, the
-same breadcrumb and metadata APIs. A layout with pages inside it nests in the
-AdminCP the way it nests on the public site. There is no `defineAdminPluginRoute`,
-because there is nothing an admin page needs that a page doesn't.
+```tsx title="plugins/my-plugin/src/routes/post-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing"
+import { definePluginRoute } from "@vitnode/core/routing"
 
-### Permissions
+interface Post {
+  title: string
+  content: string
+}
 
-`requires` is for the **public** session, so an admin route may not declare it -
-the build says so if you try. The AdminCP has its own session under its own
-cookie, and your page is already behind its guard by virtue of being in the area.
+// [!code ++:6]
+export const route = definePluginRoute({
+  load: async ({ params }) => ({
+    title: `Post ${params.slug}`,
+    content: "Welcome to this post!",
+  }),
+})
 
-To gate on a **staff permission**, gate the page's _content_, the same way every
-AdminCP screen already does:
+const PostPage = ({ loaderData }: PluginRoutePageProps<Post>) => (
+  <article className="container mx-auto max-w-2xl p-4 flex flex-col gap-2">
+    <h1 className="text-3xl font-bold">{loaderData.title}</h1>
+    <p>{loaderData.content}</p>
+  </article>
+)
 
-```tsx title="plugins/blog/src/routes/admin-reports.tsx"
-import { AdminStaffPermissionGate } from "@vitnode/core/components/staff-permission/provider";
-
-const ReportsPage = () => (
-  <AdminStaffPermissionGate
-    module="reports"
-    permission="can_view"
-    plugin="@vitnode/blog" // [!code highlight]
-  >
-    <ReportsTable />
-  </AdminStaffPermissionGate>
-);
-
-export default ReportsPage;
+export default PostPage
 ```
 
-Name your own `pluginId` in `plugin`. A permission is a `plugin` / `module` /
-`permission` triple, so `reports.can_view` granted under core is a different
-permission from yours and does not open your page.
+</Step>
+<Step>
 
-That component reads the AdminCP's permission set from context, which both the
-Next.js and the TanStack AdminCP provide - so your page renders identically in
-either, which is the whole reason to import it from `components/` rather than
-from a host-specific module.
+### 3. Register routes in your plugin config
 
-<Callout type="warn" title="A hidden link is not a locked door">
-  Hiding a nav entry or a button hides a *link*. The page is still reachable by
-  URL, and it must be - your API is the boundary. Every admin endpoint re-checks
-  the staff tables on the server, on every request, so an administrator who
-  edits their cached permissions in devtools gets a visible button and an API
-  that still refuses them. Keep it that way.
+Pass the `routes` array into `buildPlugin`:
+
+```tsx title="plugins/my-plugin/src/config.tsx"
+import { buildPlugin } from "@vitnode/core/lib/plugin"
+import messages from "./locales"
+import { routes } from "./routes/manifest" // [!code ++]
+
+export const myPlugin = () =>
+  buildPlugin({
+    pluginId: "my-plugin",
+    messages,
+    routes, // [!code ++]
+  })
+```
+
+</Step>
+<Step>
+
+### 4. Run the app
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Visit `/blog/hello` to see your route rendered live.
+
+</Step>
+</Steps>
+
+## Field Reference
+
+Nine fields configure a `PluginRouteDefinition`. Only `id`, `path`, and `entry` are required:
+
+<TypeTable
+  type={{
+    id: {
+      description: "Stable unique ID within your plugin (e.g. \"post\", \"settings\").",
+      required: true,
+      type: "string",
+    },
+    path: {
+      description: "Public URL pattern using :slug for dynamic parameters (e.g. \"/blog/:slug\").",
+      required: true,
+      type: "string",
+    },
+    entry: {
+      description: "Export subpath without file extension (e.g. \"routes/post-page\").",
+      required: true,
+      type: "string",
+    },
+    kind: {
+      default: "'page'",
+      description: "'page' claims and renders a URL; 'layout' frames child routes.",
+      type: "'layout' | 'page'",
+    },
+    parentId: {
+      description: "Parent layout route ID within this plugin.",
+      type: "string",
+    },
+    area: {
+      default: "'main'",
+      description: "'main' uses the public site shell; 'admin' uses the AdminCP shell.",
+      type: "'admin' | 'main'",
+    },
+    namespaces: {
+      default: "[]",
+      description: "Localization namespaces loaded alongside the route chunk.",
+      type: "string[]",
+    },
+    requires: {
+      description: "Route access guard: \"authenticated\" or \"guest\".",
+      type: "'authenticated' | 'guest'",
+    },
+    searchEntry: {
+      description: "Export subpath for eager search params validation schema.",
+      type: "string",
+    },
+  }}
+/>
+
+## Path Syntax Rules
+
+| Shape           | Write this             | Not this                                  |
+| --------------- | ---------------------- | ----------------------------------------- |
+| Static          | `/blog`                | -                                         |
+| Dynamic segment | `/blog/:slug`          | `/blog/[slug]`, `/blog/$slug`             |
+| Nested          | `/blog/:slug/comments` | `/blog/$slug/comments`                    |
+| Root            | `/`                    | `""`, `blog` (a path must start with `/`) |
+
+- **Use `:slug` in manifests**: VitNode compiles `:slug` into TanStack Router's `$slug` syntax automatically.
+- **Lowercase static segments**: Paths match case-insensitively. Always write `/blog/post`, not `/Blog/Post`.
+- **Never include locale prefixes**: `/blog` automatically serves `/pl/blog` or any configured locale.
+
+## Layouts and Nesting
+
+Group related routes inside a shared layout using `kind: 'layout'` and `parentId`:
+
+```ts title="plugins/my-plugin/src/routes/manifest.ts"
+export const routes: PluginRouteDefinition[] = [
+  // Parent layout
+  {
+    id: "docs",
+    entry: "routes/docs-layout",
+    path: "/docs",
+    kind: "layout", // [!code ++]
+  },
+  // Child pages
+  {
+    id: "docs-index",
+    entry: "routes/docs-index-page",
+    path: "/docs",
+    parentId: "docs", // [!code ++]
+  },
+  {
+    id: "docs-topic",
+    entry: "routes/docs-topic-page",
+    path: "/docs/:topic",
+    parentId: "docs", // [!code ++]
+  },
+]
+```
+
+In the layout component, render `<Outlet />` where child routes appear:
+
+```tsx title="plugins/my-plugin/src/routes/docs-layout.tsx"
+import { Outlet } from "@tanstack/react-router"
+
+const DocsLayout = () => (
+  <div className="flex gap-6">
+    <aside className="w-64 border-r p-4">Sidebar</aside>
+    <main className="flex-1 p-4">
+      <Outlet />
+    </main>
+  </div>
+)
+
+export default DocsLayout
+```
+
+## AdminCP Pages
+
+Set `area: "admin"` to mount your route inside the AdminCP shell (with sidebar, breadcrumbs, and staff auth):
+
+```ts title="plugins/my-plugin/src/routes/manifest.ts"
+{
+  id: "settings",
+  entry: "routes/admin-settings-page",
+  path: "/admin/my-plugin/settings",
+  area: "admin", // [!code ++]
+}
+```
+
+To add an item in the AdminCP sidebar, register it in `src/admin/nav.tsx` as well. See [AdminCP Pages](/docs/dev/plugins/admin) for details.
+
+## What the Route Module Exports
+
+A route module exports a default component and an optional `definePluginRoute` configuration:
+
+```tsx title="plugins/my-plugin/src/routes/topic-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing"
+import { definePluginRoute } from "@vitnode/core/routing"
+
+interface Topic {
+  title: string
+  description: string
+}
+
+// [!code ++:8]
+export const route = definePluginRoute({
+  load: async ({ context, params }) => {
+    return await fetchTopic(params.topic, context.locale)
+  },
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+    description: loaderData?.description,
+  }),
+})
+
+const TopicPage = ({ loaderData }: PluginRoutePageProps<Topic>) => (
+  <article>
+    <h1>{loaderData.title}</h1>
+    <p>{loaderData.description}</p>
+  </article>
+)
+
+export default TopicPage
+```
+
+### Route Lifecycle Hooks
+
+| Hook | Description |
+| ---- | ----------- |
+| `load` | Runs on server and client before render to load data. Receives `{ context, params, search }`. |
+| `head` | Emits page `<title>`, `<meta>`, and Open Graph tags. Receives `{ loaderData, params }`. |
+| `breadcrumb` | Component rendering breadcrumb item in shell header. |
+| `parseSearch` | Normalizes URL query string parameters for typed `search` access. |
+
+<Callout type="info" title="Declare load above head">
+  TypeScript infers `loaderData` type in `head` and the page component from what `load` returns. Always declare `load` above `head` in `definePluginRoute`.
 </Callout>
 
-### The sidebar is a separate list
+## Best Practices & Gotchas
 
-A route in the admin area does not appear in the AdminCP sidebar on its own, and
-that is deliberate. `admin.nav` and `routes` are independent: a nav entry may
-point at one of your admin routes, at an external URL or at another application,
-and an admin route may deliberately have no sidebar entry at all - a detail page
-you only ever reach from a table, say. Declare both if you want both.
+<Callout type="warn" title="No file extensions in entry">
+  Write `entry: 'routes/post-page'`, never `'routes/post-page.tsx'`. Export subpaths resolve automatically via your plugin's `package.json` export map.
+</Callout>
 
-## What the build catches
-
-Loudly, at build time, naming your plugin - never as a silent default:
-
-- A manifest that doesn't export `routes`, or exports the wrong shape.
-- An `entry` the app cannot import, or one with a file extension on it (`"./*"`
-  adds that, so `routes/post-page.tsx` would resolve to `post-page.tsx.js`).
-- Two routes with the same `id`, or two plugins claiming one URL - naming both
-  sides. `/blog/:slug` and `/blog/:postId` collide too: different spelling, same
-  URLs.
-- A path that can't be parsed, a `parentId` that doesn't exist, a parent that
-  isn't a layout, a layout with no children, a cycle.
-- A collision against the **application's own** pages. If the app serves
-  `/users/$id` and your plugin declares `/users/:userId`, that's one URL claimed
-  twice. `/users/new` beside `/users/:id` is fine - a router tells a static
-  segment from a dynamic one.
-- An `area` VitNode doesn't have. There are two, and a page in `"admin"` whose
-  `parentId` points at a layout in `"main"` (or the other way round) - nesting is
-  how a shell is chosen, so the two have to agree.
-- `requires` on an admin route. It's about the public session, and the AdminCP
-  has its own.
-- A `searchEntry` the app cannot import, or one on a `kind: "layout"` route. The
-  first fails the build naming your plugin, the route and the entry - and it
-  matters more than a bad `entry` does, because a static import the bundler
-  cannot resolve fails the whole build rather than one page.
-- An area the **application** hasn't given a shell to. Nothing falls back to the
-  other one: a page framed by the wrong shell renders outside the guards and
-  chrome its area was the whole statement about.
-
-Two routes that spell the same path in _different_ areas **are** a collision.
-Both shells are pathless - they frame a page, they don't move it - so
-`main /reports` and `admin /reports` are one URL claimed twice, and the build
-says so. `main /reports` beside `admin /admin/reports` is fine: those are two
-URLs, and the `/admin` came from the path.
-
-And at runtime, if a module doesn't export a component as its default export, the
-error names your plugin route rather than surfacing as React's "type is invalid"
-three frames away.
+<Callout type="info" title="Rebuilding after adding new routes">
+  When you add a brand new route to `manifest.ts`, restart your dev server so the Vite plugin recognizes the new file and updates generated registries.
+</Callout>
 
 ## Learn More
 
 <Cards>
   <Card
-    title="Routing"
-    description="The short version of this page"
-    href="/docs/dev/tanstack/routing"
-  />
-  <Card
     title="Create a Plugin"
-    description="Start here if you haven't built one yet"
+    description="Scaffold a plugin and understand the core package structure"
     href="/docs/dev/plugins/create"
   />
   <Card
-    title="Namespaces"
-    description="How a plugin's translations are structured"
-    href="/docs/dev/i18n/namespaces"
+    title="AdminCP Pages"
+    description="Add admin navigation, layouts, and permissions"
+    href="/docs/dev/plugins/admin"
+  />
+  <Card
+    title="Data Loading"
+    description="SSR query hydration and client caching"
+    href="/docs/dev/data-loading"
   />
 </Cards>

@@ -38,12 +38,6 @@ import type { DashboardLayoutItem } from "./types";
 const adminModuleClientRef = adminModuleRef<typeof adminModule>();
 
 /** The read, as arguments to whichever fetcher is carrying it. */
-export const dashboardLayoutRequest = {
-  method: "get" as const,
-  module: "admin/dashboard" as const,
-  path: "/" as const,
-} as const;
-
 /** What the layout read resolves to: the stored items, or none. */
 export type DashboardStoredLayout = AdminDashboardWidgetLayoutItem[];
 
@@ -52,10 +46,11 @@ export type DashboardLayoutFetcher = () => Promise<DashboardStoredLayout>;
 /** The stored layout, fetched from the browser. */
 export const fetchDashboardLayoutInBrowser: DashboardLayoutFetcher =
   async () => {
-    const response = await fetcherClient(
-      adminModuleClientRef,
-      dashboardLayoutRequest,
-    );
+    const response = await fetcherClient(adminModuleClientRef, {
+      method: "get",
+      module: "admin/dashboard",
+      path: "/",
+    });
 
     if (!response.ok) return [];
 

@@ -1,649 +1,189 @@
 ---
 title: Data Table
-description: A table component with sorting, filtering, and pagination compatible with VitNode API.
+description: A sortable, searchable, filterable data table for TanStack Router with cursor pagination and URL state persistence.
+icon: Table
 ---
+
+import { TypeTable } from "fumadocs-ui/components/type-table"
+
+`ContentDataTable` is the core data table component powering VitNode AdminCP lists. Every user interaction - page navigation, column sorting, search queries, and filters - writes directly to the URL query string, making table state fully bookmarkable and shareable.
 
 ## Preview
 
 <Preview name="data-table" withoutBackground />
 
-## Usage
+---
 
-```ts
-import {
-  type ColumnDef,
-  DataTable,
-} from "@vitnode/core/components/table/data-table";
-```
+## Quick start
 
-Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe - it only accepts a `keyof T`, just like TanStack Table. A **display column** (for actions, selection, etc.) has no `accessorKey` and instead requires a string `id`.
+Render the table inside a `DataTableNavigationProvider`:
 
-```tsx
-const columns: ColumnDef<User>[] = [
-  { accessorKey: "name", header: "Name" },
+```tsx title="src/features/members/members-table.tsx"
+import type { ColumnDef } from "@vitnode/core/components/table/data-table-content"
+import { ContentDataTable } from "@vitnode/core/components/table/content"
+import { DataTableNavigationProvider } from "@vitnode/core/components/table/provider"
+import { Route } from "#/routes/_admin/admin.members"
+
+interface Member {
+  id: number
+  name: string
+  email: string
+  role: string
+}
+
+const columns: ColumnDef<Member>[] = [
+  { accessorKey: "name", header: "Name", enableSorting: true },
   { accessorKey: "email", header: "Email" },
   { accessorKey: "role", header: "Role" },
-  { accessorKey: "status", header: "Status", align: "center" },
-  {
-    id: "actions",
-    header: "",
-    align: "right",
-    cell: () => (
-      <Button size="sm" variant="outline">
-        Edit
-      </Button>
-    ),
-  },
-];
+]
 
-<DataTable
-  id="users-table"
-  columns={columns}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: "name",
-      order: "asc",
-    },
-  }}
-/>;
+export const MembersTable = ({ data }: { data: any }) => {
+  const navigate = Route.useNavigate()
+  const search = Route.useSearch()
+
+  return (
+    // [!code ++:13]
+    <DataTableNavigationProvider navigate={navigate} search={search}>
+      <ContentDataTable
+        id="members-table"
+        columns={columns}
+        data={data}
+        order={{
+          defaultOrder: { column: "name", order: "asc" },
+        }}
+        search={{ placeholder: "Search members..." }}
+      />
+    </DataTableNavigationProvider>
+  )
+}
 ```
 
-<Callout type="info" title="Type-safe columns">
-  `accessorKey` autocompletes and is checked against the row type `T` - passing
-  a key that doesn't exist on `T` is a compile-time error. Use `id` (a plain
-  `string`) for display columns that aren't backed by a data field.
-</Callout>
+---
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+## Route Integration
 
-<TypeTable
-  type={{
-    columns: {
-      description:
-        "Array of column definitions. Accessor columns bind to data via a type-safe accessorKey (keyof T); display columns (e.g. actions) use a string id instead.",
-      required: true,
-      type: `ColumnDef<T>[] where ColumnDef<T> is:
-        // accessor column
-        {
-          accessorKey: keyof T;
-          header: ReactNode;
-          id?: string;
-          align?: 'left' | 'center' | 'right';
-          className?: string;
-          cell?: (props: { row: T; allData: T[] }) => ReactNode;
-        }
-        // or display column
-        {
-          id: string;
-          header: ReactNode;
-          align?: 'left' | 'center' | 'right';
-          className?: string;
-          cell?: (props: { row: T; allData: T[] }) => ReactNode;
-        }`,
-    },
-    edges: {
-      description: "Data to be displayed in the table",
-      required: true,
-      type: "Array",
-    },
-    order: {
-      description: "Column sorting configuration",
-      required: true,
-      type: `{
-        columns?: string[];
-        defaultOrder: {
-          column: string;
-          order: 'asc' | 'desc';
-        };
-      }`,
-    },
-    pageInfo: {
-      description: "Pagination information from the API",
-      required: true,
-      type: `{
-        hasNextPage: boolean;
-        hasPreviousPage: boolean;
-        startCursor: string;
-        endCursor: string;
-      }`,
-    },
-    search: {
-      description:
-        "Renders a search input above the table. Requires the API route to define the searchable columns.",
-      required: false,
-      type: "boolean",
-    },
-    searchPlaceholder: {
-      description: "Custom placeholder text for the search input",
-      required: false,
-      type: "string",
-    },
-    bulkActions: {
-      description:
-        "Actions for the rows a person ticked, rendered in a bar that floats at the bottom centre of the viewport. Passing this turns row selection on: the table grows a leading checkbox column, and the nodes here read the ticked ids with useDataTableSelection().",
-      required: false,
-      type: "ReactNode",
-    },
-    filters: {
-      description:
-        "Renders one or more faceted multi-select dropdowns above the table. Each filter controls its own URL query parameter.",
-      required: false,
-      type: `{
-        id: string;
-        label: string;
-        options?: {
-          value: string;
-          label: ReactNode;
-          keywords?: string[];
-        }[];
-        onSearch?: (search: string) => Promise<{
-          value: string;
-          label: ReactNode;
-          keywords?: string[];
-        }[]>;
-      }[]`,
-    },
-  }}
-/>
+Wire the table into a TanStack Router route with `zodPaginationQuery`:
 
-## Cell Renderer
+```tsx title="apps/web/src/routes/_admin/admin.members.tsx"
+import { createFileRoute } from "@tanstack/react-router"
+import { zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
+import { membersQuery } from "#/features/members/query"
+import { MembersTable } from "#/features/members/members-table"
 
-You can customize how each cell is rendered using the `cell` property. The renderer function receives the current row data and all table data as parameters.
+export const Route = createFileRoute("/_admin/admin/members")({
+  validateSearch: (search) => zodPaginationQuery.parse(search),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) =>
+    await context.queryClient.ensureQueryData(membersQuery(deps)),
+  component: MembersRoute,
+})
 
-```tsx
-<DataTable
-  id="users-table"
-  columns={[
-    {
-      accessorKey: "id",
-      header: "Id",
-      // [!code ++]
-      cell: ({ row, allData }) => (
-        // [!code ++]
-        <span>
-          // [!code ++]
-          {row.id} - all data {allData.length}
-          // [!code ++]
-        </span>
-        // [!code ++]
-      ),
-    },
-    { accessorKey: "createdAt", header: "Created at" },
-  ]}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    columns: ["createdAt", "id"],
-    defaultOrder: {
-      order: "desc",
-    },
-  }}
-/>
+function MembersRoute() {
+  const { data } = useSuspenseQuery(membersQuery(Route.useSearch()))
+  return <MembersTable data={data} />
+}
 ```
 
-### Order Configuration
-
-If you want to enable sorting on specific columns, you can specify them in the `columns` property.
-
-```tsx
-order={{
-  // [!code ++]
-  columns: ['createdAt', 'id', 'name'],
-  defaultOrder: {
-    column: 'createdAt',
-    order: 'desc',
-  }
-}}
-```
-
-## Column Alignment
-
-Use the `align` property to control the horizontal alignment of a column's header and cells. It accepts `"left"` (default), `"center"`, or `"right"`. This is handy for numeric values and action buttons.
-
-```tsx
-columns={[
-  { accessorKey: "name", header: "Name" },
-  // [!code ++]
-  { accessorKey: "status", header: "Status", align: "center" },
-  {
-    id: "actions",
-    header: "",
-    // [!code ++]
-    align: "right",
-    cell: ({ row }) => <RowActions id={row.id} />,
-  },
-]}
-```
-
-## Search
-
-Set the `search` prop to `true` to render a search input above the table. You can optionally customize the placeholder with `searchPlaceholder`.
-
-```tsx
-<DataTable
-  id="users-table"
-  // [!code ++]
-  search
-  // [!code ++]
-  searchPlaceholder="Search users..."
-  columns={[
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
-  ]}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: "name",
-      order: "asc",
-    },
-  }}
-/>
-```
-
-The input writes the term to the `?search=` query parameter (debounced) and reloads the page, so it works out of the box with server-side data fetching. The columns that are actually searched are defined on the API route.
-
-<Callout type="info" title="Configure the API route">
-  Enabling `search` only renders the input. You must also tell the backend which
-  columns to search across - see the [Search](/docs/dev/database/search) guide.
-</Callout>
+---
 
 ## Filters
 
-Pass the `filters` prop to render one or more faceted, multi-select dropdowns above the table (next to the search input). Each filter controls its own URL query parameter, so it works out of the box with server-side data fetching. Multiple selected values are stored as a comma-separated list, e.g. `?roleId=1,3`, and changing a filter resets the pagination cursor.
+Add static or asynchronous dropdown filters to the table toolbar:
+
+```tsx
+<ContentDataTable
+  id="members-table"
+  columns={columns}
+  data={data}
+  // [!code ++:12]
+  filters={[
+    {
+      id: "role",
+      title: "Role",
+      options: [
+        { label: "Admin", value: "admin" },
+        { label: "Member", value: "member" },
+      ],
+    },
+  ]}
+/>
+```
+
+---
+
+## Bulk Selection & Actions
+
+Enable row checkboxes and execute bulk operations with `useDataTableSelection`:
+
+```tsx
+import { useDataTableSelection } from "@vitnode/core/components/table/hooks/use-data-table-selection"
+
+export const BulkActionsToolbar = () => {
+  const { selectedRows, resetSelection } = useDataTableSelection()
+
+  if (!selectedRows.length) return null
+
+  return (
+    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+      <span>{selectedRows.length} selected</span>
+      <button onClick={() => deleteSelected(selectedRows)}>Delete</button>
+    </div>
+  )
+}
+```
+
+---
+
+## `ContentDataTable` Props
 
 <TypeTable
   type={{
     id: {
-      description: "The URL query parameter this filter reads and writes.",
+      description: "Unique identifier used to isolate table state.",
       required: true,
       type: "string",
     },
-    label: {
-      description:
-        "Text shown on the filter trigger and as the search placeholder.",
+    columns: {
+      description: "TanStack Table column definitions.",
       required: true,
-      type: "string",
+      type: "ColumnDef<TData, TValue>[]",
     },
-    options: {
-      description:
-        "Static options, filtered on the client. `label` can be any node; provide `keywords` so typing can search a node-based label.",
-      required: false,
-      type: `{
-        value: string;
-        label: ReactNode;
-        keywords?: string[];
-      }[]`,
+    data: {
+      description: "Paginated payload containing edges and pageInfo.",
+      required: true,
+      type: "{ edges: TData[]; pageInfo: PageInfo }",
     },
-    onSearch: {
-      description:
-        "Async source called (debounced) as the user types. The API is expected to return results already filtered and capped (e.g. 20 per request).",
-      required: false,
-      type: "(search: string) => Promise<Option[]>",
+    search: {
+      description: "Search input configuration ({ placeholder }).",
+      type: "{ placeholder?: string }",
+    },
+    filters: {
+      description: "Array of toolbar filter descriptors.",
+      type: "DataTableFilter[]",
+    },
+    order: {
+      description: "Default sort column and direction.",
+      type: "{ defaultOrder?: { column: string; order: 'asc' | 'desc' } }",
+    },
+    defaultPageSize: {
+      default: "10",
+      description: "Rows per page when not specified in URL.",
+      type: "number",
     },
   }}
 />
 
-### Static filters
+## Learn More
 
-When the set of options is small and known ahead of time, pass them directly via `options`. The dropdown list is filtered on the client.
-
-```tsx
-<DataTable
-  id="users-table"
-  // [!code ++]
-  filters={[
-    // [!code ++]
-    {
-      // [!code ++]
-      id: "status",
-      // [!code ++]
-      label: "Status",
-      // [!code ++]
-      options: [
-        // [!code ++]
-        { value: "active", label: "Active" },
-        // [!code ++]
-        { value: "banned", label: "Banned" },
-        // [!code ++]
-      ],
-      // [!code ++]
-    },
-    // [!code ++]
-  ]}
-  columns={[
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
-  ]}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: "name",
-      order: "asc",
-    },
-  }}
-/>
-```
-
-### Async filters
-
-When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server.
-
-The filter is a client component, so `onSearch` is an ordinary function. Read the API directly with `fetcherClient`:
-
-```tsx title="search-roles.tsx"
-"use client";
-
-import type { FilterOption } from "@vitnode/core/components/table/filters";
-
-import type { adminModule } from "@/api/modules/admin/admin.module";
-
-import { RoleFormatContent } from "@vitnode/core/components/role-format-content";
-import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client";
-
-// The module is imported as a *type*, so the response still infers while the
-// browser bundle carries only a plugin id.
-const admin = clientModule<typeof adminModule>("@vitnode/core");
-
-export const searchRoles = async (search: string): Promise<FilterOption[]> => {
-  const res = await fetcherClient(admin, {
-    path: "/list",
-    method: "get",
-    module: "admin/roles",
-    args: {
-      query: { search, first: "20" },
-    },
-    // The session is a cookie, and the API may be on another origin.
-    options: { credentials: "include" },
-  });
-
-  if (res.status !== 200) {
-    return [];
-  }
-
-  const data = await res.json();
-
-  return data.edges.map(role => ({
-    value: String(role.id),
-    label: <RoleFormatContent role={role} />,
-    keywords: role.name.map(item => item.name),
-  }));
-};
-```
-
-<Callout type="info" title="A Server Action works too, with one catch">
-  `onSearch` accepts any function returning a promise, so a [Server
-  Action](https://react.dev/reference/rsc/server-functions) is a valid answer
-  when the lookup genuinely needs a server-only secret. It is the wrong default
-  for a read the browser can already make: it is a `POST` back to your app that
-  then calls the API - two round trips instead of one - and a Server Action
-  cannot be called from an application that is not Next.js.
-</Callout>
-
-```tsx
-filters={[
-  {
-    id: "roleId",
-    label: "Group",
-    // [!code ++]
-    onSearch: searchRoles,
-  },
-]}
-```
-
-<Callout type="info" title="Configure the API route">
-  A filter only writes its values to the URL - the backend must read the query
-  parameter and apply the matching `where` clause. For a comma-separated
-  multi-select, split the value and use `inArray`:
-
-```ts
-const roleIds = (query.roleId?.split(",") ?? [])
-  .filter(Boolean)
-  .map(Number)
-  .filter((id) => !Number.isNaN(id));
-
-// pass to withPagination:
-where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
-```
-
-</Callout>
-
-## Bulk Actions
-
-Pass `bulkActions` to let a person act on several rows at once. That single prop is what turns selection on: the table grows a leading checkbox column - one per row, plus a header checkbox that ticks the whole page - and while anything is ticked, a bar floats at the bottom centre of the viewport with the count, your actions, and a button to clear the selection.
-
-<Preview name="data-table-bulk-actions" withoutBackground />
-
-Your actions read the ticked ids with the `useDataTableSelection` hook. They are rendered inside the bar, which lives inside the table's selection provider, so nothing has to be threaded through props:
-
-```tsx title="delete-bulk-action.tsx"
-"use client";
-
-import { useDataTableSelection } from "@vitnode/core/components/table/selection";
-import { Button } from "@vitnode/core/components/ui/button";
-
-export const DeleteBulkAction = () => {
-  // [!code ++]
-  const { clear, selected } = useDataTableSelection();
-
-  return (
-    <Button
-      onClick={() => deleteUsersAction({ ids: selected })}
-      variant="destructive"
-    >
-      <Trash2Icon />
-      Delete
-    </Button>
-  );
-};
-```
-
-```tsx
-<DataTable
-  id="users-table"
-  // [!code ++]
-  bulkActions={<DeleteBulkAction />}
-  columns={[
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
-  ]}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: "name",
-      order: "asc",
-    },
-  }}
-/>
-```
-
-### What the hook returns
-
-<TypeTable
-  type={{
-    selected: {
-      description: "The ticked row ids, in the order they were ticked.",
-      required: true,
-      type: "number[]",
-    },
-    isSelected: {
-      description: "Whether one row id is ticked.",
-      required: true,
-      type: "(id: number) => boolean",
-    },
-    allSelected: {
-      description: "Every row on the page is ticked.",
-      required: true,
-      type: "boolean",
-    },
-    someSelected: {
-      description:
-        "Some but not all rows are ticked - the header checkbox's indeterminate state.",
-      required: true,
-      type: "boolean",
-    },
-    toggle: {
-      description: "Ticks or unticks one row.",
-      required: true,
-      type: "(id: number) => void",
-    },
-    toggleAll: {
-      description: "Ticks or unticks every row on the page.",
-      required: true,
-      type: "(next: boolean) => void",
-    },
-    clear: {
-      description: "Unticks everything, which hides the bar.",
-      required: true,
-      type: "() => void",
-    },
-  }}
-/>
-
-### Selection is per page
-
-The selection only ever covers the rows currently on screen. Whenever the server sends a different set of row ids - paging, searching, changing a filter - the selection is pruned to what is still there, so paging away empties it on its own and a bulk action can never touch a row nobody can see.
-
-That pruning is also what makes a partly-successful action readable: revalidate after deleting 3 of 5 rows and the 2 that were refused stay on screen _and_ stay ticked, so the bar is still pointed at exactly the work that is left.
-
-<Callout type="warn" title="Bulk actions run per row">
-  There is no bulk endpoint behind `bulkActions` - it hands you ids, and what
-  you do with them is yours. When your action loops the single-row endpoint, cap
-  the fan-out and report the outcomes per reason rather than as one pass/fail,
-  so a run that partly succeeded can say so.
-</Callout>
-
-## URL State
-
-Every control on the table is really a URL editor. Sorting writes `?orderBy=` and `?order=`, paging writes `?first=`/`?last=` and `?cursor=`, the search box writes `?search=`, and each filter writes its own parameter. Nothing is kept in React state, which is why a table link can be bookmarked, shared, or opened in a new tab and show the same rows.
-
-The rules those controls follow live in one framework-free module, so you can reuse them - or test them - without a router:
-
-```ts
-import {
-  readTableOrder,
-  readTablePageSize,
-  readTableSearch,
-  toggleTableOrder,
-  withTableFilter,
-  withTableOrder,
-  withTablePage,
-  withTablePageSize,
-  withTableSearch,
-} from "@vitnode/core/components/table/url-state";
-
-withTableSearch("page=3&tab=media", "vitnode");
-// → "page=3&tab=media&search=vitnode"
-```
-
-Each `with*` helper takes the current query string (or a `URLSearchParams`) and returns a new one. They never mutate what you hand them, they always keep parameters they don't own - your own `?tab=` survives a sort click - and they remove a parameter rather than leaving it empty. Filtering and changing the page size drop the pagination cursor, because the rows underneath it changed; sorting and searching leave it alone.
-
-### Using the table outside Next.js
-
-`DataTable` is the Next.js binding: it supplies the current search parameters and a locale-aware, scroll-free push, and every page in this documentation uses it. Under it sits the same table with that one decision taken as an argument, which is all another router needs to render it.
-
-Give `DataTableNavigationProvider` where you are and how to move, and render `ContentDataTable` inside it:
-
-```tsx
-import { ContentDataTable } from "@vitnode/core/components/table/content";
-import { DataTableNavigationProvider } from "@vitnode/core/components/table/navigation";
-
-<DataTableNavigationProvider
-  value={{
-    navigate: nextSearch => router.navigate({ search: nextSearch }),
-    searchParams: new URLSearchParams(location.searchStr),
-  }}
->
-  <ContentDataTable
-    id="users-table"
-    columns={columns}
-    edges={data.edges}
-    pageInfo={data.pageInfo}
-    order={{ defaultOrder: { column: "createdAt", order: "desc" } }}
+<Cards>
+  <Card
+    title="Pagination"
+    description="Cursor pagination API on backend Hono routes"
+    href="/docs/dev/database/pagination"
   />
-</DataTableNavigationProvider>;
-```
-
-<TypeTable
-  type={{
-    navigate: {
-      description:
-        "Goes to a query string with no leading '?', exactly as URLSearchParams.toString() produces it. Must not scroll - somebody sorting the last column is looking at the header they clicked. Return the router's promise if it has one and the pending spinner will last as long as the navigation does.",
-      required: true,
-      type: "(nextSearch: string) => Promise<void> | void",
-    },
-    searchParams: {
-      description:
-        "The query string the table is currently rendering. Never mutated.",
-      required: true,
-      type: "URLSearchParams",
-    },
-  }}
-/>
-
-The types, and the `DataTableSkeleton` you render as a loading fallback, come from `@vitnode/core/components/table/data-table-content` - importing them from `data-table` would pull Next.js in behind them.
-
-## Complete Example
-
-Here's a complete example showing how to use the `DataTable` component in a page:
-
-```tsx
-import {
-  DataTable,
-  SearchParamsDataTable,
-} from "@vitnode/core/components/table/data-table";
-import { userModule } from "@/api/modules/user/user.module";
-import { fetcher } from "@vitnode/core/lib/fetcher";
-
-export const UsersView = async ({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParamsDataTable>;
-}) => {
-  const query = await searchParams;
-  const res = await fetcher(userModule, {
-    path: "/users",
-    method: "get",
-    module: "user",
-    args: {
-      query,
-    },
-    withPagination: true,
-  });
-  const data = await res.json();
-
-  return (
-    <DataTable
-      id="users-table"
-      columns={[
-        {
-          accessorKey: "id",
-          header: "ID",
-        },
-        {
-          accessorKey: "username",
-          header: "Username",
-          cell: ({ row }) => (
-            <span className="font-medium">{row.username}</span>
-          ),
-        },
-        { accessorKey: "email", header: "Email" },
-        { accessorKey: "createdAt", header: "Created at" },
-      ]}
-      edges={data.edges}
-      order={{
-        columns: ["id", "username", "email", "createdAt"],
-        defaultOrder: {
-          column: "createdAt",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-    />
-  );
-};
-```
+  <Card
+    title="Auto Form"
+    description="Render modal forms and edit dialogs with Zod validation"
+    href="/docs/ui/auto-form"
+  />
+</Cards>

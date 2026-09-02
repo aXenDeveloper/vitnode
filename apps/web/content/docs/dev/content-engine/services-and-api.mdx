@@ -1,111 +1,124 @@
 ---
-title: Services, API & Events
-description: Step-by-step guide to using typed CRUD service methods, Zod schemas, staff permissions, and typed event handlers.
+title: Content Services & API
+description: Call generated Content Engine services from custom Hono routes, use typed Zod schemas, and listen to content events.
 icon: Server
 ---
 
-When you instantiate a content model with `createContentModel`, Content Engine builds a fully typed service, Zod validation schemas, staff permissions, and event emissions.
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## Prerequisites & Context
+When you compile a content type with `createContentModel`, it provides a typed service, Zod validation schemas, and database events that can be used directly inside custom Hono endpoints.
 
-This guide assumes you have compiled your content definition into a server model using `createContentModel` in `src/database/articles.ts`:
+## Quick start
 
-```ts title="src/database/articles.ts"
-import { createContentModel } from "@vitnode/core/content/server";
-import { articleContentType } from "@/content/article";
+Access the typed repository in any Hono route via `model.service(c)`:
 
-// articleContent is the compiled model instance
-export const articleContent = createContentModel(articleContentType);
+```ts title="plugins/blog/src/api/modules/articles/routes/featured.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route"
+import { articleContent } from "@/database/articles"
+
+export const featuredRoute = buildRoute({
+  pluginId: "blog",
+  route: {
+    method: "get",
+    path: "/featured",
+    responses: { 200: { description: "Featured articles" } },
+  },
+  handler: async (c) => {
+    // [!code ++:6]
+    const { edges, pageInfo } = await articleContent.service(c).findMany({
+      filters: { featured: true },
+      orderBy: { column: "createdAt", order: "desc" },
+      query: { first: "5" },
+    })
+
+    return c.json({ edges, pageInfo })
+  },
+})
 ```
 
-- **`articleContent.service(c)`**: Returns a self-validating service scoped to the current Hono request context `c`, executing queries with database connection and user credentials.
-- **`articleContent.schemas`**: An object containing pre-built Zod schemas (`create`, `update`, `select`, `filter`, `order`).
+`findMany` returns `{ edges, pageInfo }` formatted for cursor-based pagination.
 
 ---
 
-## Step-by-Step API & Service Usage
+## Service Methods Reference
 
-<Steps>
+The service returned by `model.service(c)` includes standard repository methods:
 
-<Step>
-### Step 1: Query Records with Service Methods
-
-Access the service via `articleContent.service(c)` inside custom Hono route handlers:
-
-```ts title="src/api/routes/articles.route.ts"
-import { Hono } from "hono";
-import { articleContent } from "@/database/articles";
-
-const app = new Hono();
-
-app.get("/custom-articles", async (c) => {
-  const service = articleContent.service(c);
-
-  // Query paginated list with sorting and filtering
-  const { data, total } = await service.findMany({
-    page: 1,
-    limit: 10,
-    sort: { column: "createdAt", order: "desc" },
-    filter: { status: "published" },
-  });
-
-  return c.json({ data, total });
-});
-```
-</Step>
-
-<Step>
-### Step 2: Use Generated Zod Schemas
-
-Validate request bodies using pre-compiled Zod schemas:
-
-```ts title="src/api/routes/articles.route.ts"
-app.post("/custom-articles", async (c) => {
-  const schemas = articleContent.schemas; // [!code ++]
-  const body = schemas.create.parse(await c.req.json()); // [!code ++]
-
-  const newArticle = await articleContent.service(c).create(body); // [!code ++]
-  return c.json(newArticle);
-});
-```
-</Step>
-
-<Step>
-### Step 3: Listen to Typed Content Events
-
-Register event handlers using `eventEngine.on` to react whenever content is created, updated, or deleted:
-
-```ts title="src/hooks/on-article-created.ts"
-import { eventEngine } from "@vitnode/core/events";
-
-eventEngine.on("content.example.article.created", async (payload) => {
-  console.log(`Article #${payload.id} created by user #${payload.actor.id}`);
-});
-```
-</Step>
-
-</Steps>
+| Method | Parameters | Returns |
+| :--- | :--- | :--- |
+| `findMany` | `{ query, filters?, orderBy? }` | `{ edges: T[], pageInfo: PageInfo }` |
+| `findById` | `id: number` | `Promise<T \| null>` |
+| `create` | `data: CreateInput` | `Promise<T>` |
+| `update` | `id: number, data: UpdateInput` | `Promise<T>` |
+| `delete` | `id: number` | `Promise<void>` |
 
 ---
 
-## Core Service Methods Reference
+## Generated Zod Schemas
 
-| Method | Parameters | Return Type | Description |
-| :--- | :--- | :--- | :--- |
-| `findById(id)` | `number` | `Promise<Item \| null>` | Find single record by primary key |
-| `findMany(options)` | `{ page, limit, sort, filter }` | `Promise<{ data, total }>` | Query paginated list with sorting and filtering |
-| `create(data)` | `CreateInput` | `Promise<Item>` | Insert record and emit `created` event |
-| `update(id, data)` | `id, UpdateInput` | `Promise<Item>` | Update record and emit `updated` event |
-| `delete(id)` | `number` | `Promise<void>` | Delete record and emit `deleted` event |
+Use generated validation schemas in custom routes:
+
+```ts
+import { articleContent } from "@/database/articles"
+
+export const createArticleRoute = buildRoute({
+  pluginId: "blog",
+  route: {
+    method: "post",
+    path: "/",
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            // [!code ++:1]
+            schema: articleContent.schemas.create,
+          },
+        },
+      },
+    },
+  },
+  handler: async (c) => {
+    const data = c.req.valid("json")
+    const article = await articleContent.service(c).create(data)
+    return c.json(article, 201)
+  },
+})
+```
 
 ---
 
-## Automatic Staff Permissions
+## Content Engine Events
 
-Registering `buildContentAdminModule` automatically seeds staff permissions based on your content type ID:
+Content modifications automatically emit typed domain events on the event bus:
 
-- `admin_{plugin}_content_{entity}_view`
-- `admin_{plugin}_content_{entity}_create`
-- `admin_{plugin}_content_{entity}_edit`
-- `admin_{plugin}_content_{entity}_delete`
-- `admin_{plugin}_content_{entity}_publish` (if publication is enabled)
+```ts title="plugins/blog/src/api/lib/listeners.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events"
+
+export const onArticleCreated = buildEventListener({
+  event: "content.article.created",
+  name: "notify-subscribers",
+  handler: async (c, payload) => {
+    await c.get("queue").dispatch({
+      name: "broadcast-new-article",
+      payload: { articleId: payload.id },
+    })
+  },
+})
+```
+
+Standard events include `content.{id}.created`, `content.{id}.updated`, and `content.{id}.deleted`.
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Defining a Content Type"
+    description="Overview of Content Engine declarations"
+    href="/docs/dev/content-engine/defining-a-content-type"
+  />
+  <Card
+    title="Events"
+    description="Emit and subscribe to application domain events"
+    href="/docs/dev/events"
+  />
+</Cards>

@@ -1,47 +1,262 @@
 ---
 title: Namespaces
-description: Provide a way to get access to the translation strings in client components on frontend.
+description: How VitNode partitions its message tree per plugin, how a page asks for only the branches it renders, and the limits a namespace has to satisfy.
+icon: Layers
 ---
 
-By default VitNode provide a way to get access to the translation strings only for `core.global` namespace. But sometimes you need to get access to the translation strings in other namespaces.
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-For example, you have a component that needs to get access to the translation strings in the `core.global` and `welcome.home` namespaces.
+A namespace is a dotted path into the merged message tree - `core.global`,
+`@vitnode/blog.admin.article`. It is the unit of two things at once: what
+`useTranslations` reads from, and what a page is allowed to download. The merged
+tree holds every installed plugin's copy, and no page should ship all of it, so a
+page names the branches it renders and gets exactly those.
 
-<Callout title="Client Component Only">
-  Provide namespaces into components is only for client components. If you want
-  to use translation strings in server components you can avoid this guide.
-</Callout>
+## Example
 
-## Structuring
-
-A plugin's strings live in `src/locales/{locale}.json`, and every one of them belongs under the plugin's own namespace. A top-level key outside it collides with core and other plugins, so VitNode ignores it.
-
-```json title="plugins/{your_plugin}/src/locales/en.json"
+```json title="plugins/my-plugin/src/locales/en.json"
 {
-  "{your_plugin}": {
-    "hello": "Hello World" // ✅ This will work
+  "my-plugin": {
+    "home": { "title": "Hello World" },
+    "admin": { "overview": { "title": "My plugin" } }
+  }
+}
+```
+
+```tsx
+const t = useTranslations('my-plugin.home')
+```
+
+Two namespaces exist there - `my-plugin.home` and `my-plugin.admin.overview` -
+and a page that renders the public one never downloads the admin one.
+
+## The tree
+
+Everything sits under the id of the package that owns it. Core owns three
+branches; a plugin owns exactly one, named after itself.
+
+| Namespace         | Owner           | What is in it                                               |
+| ----------------- | --------------- | ----------------------------------------------------------- |
+| `core.global`     | core            | Design-system strings every VitNode page needs              |
+| `core.*`          | core            | Auth, files, search, content - the public site              |
+| `admin.*`         | core            | The AdminCP: `admin.global`, `admin.user`, `admin.staff`, … |
+| `@vitnode/blog.*` | `@vitnode/blog` | Everything that plugin ships                                |
+| `{your-plugin}.*` | your plugin     | Everything yours ships                                      |
+
+`core.global` is special only in that it is provided above every route, so any
+shared component can translate itself wherever it is mounted. Everything else is
+asked for.
+
+## The per-plugin prefix rule
+
+**Every top-level key a plugin ships is the plugin's own id.** A key outside it
+collides with core and with every other plugin, so VitNode ignores it rather than
+letting two packages fight over one path.
+
+```json title="plugins/my-plugin/src/locales/en.json"
+{
+  "my-plugin": {
+    "hello": "Hello World" // [!code ++]
   },
-  "world": "World" // ❌ This will not work
+  "world": "World" // [!code --]
 }
 ```
 
-See [Server-side](/docs/dev/i18n/server) for registering that file with your plugin.
+Scoped ids work exactly the same way - `@vitnode/blog` is one path segment even
+though it contains a slash, so `@vitnode/blog.admin` is a legal two-segment
+namespace.
 
-## Usage
-
-To get access to the translation strings in other namespaces you need to use the `I18nProvider` component.
-
-```tsx title="plugins/{your_plugin}/src/app/blog/layout.tsx"
-import { I18nProvider } from '@vitnode/core/components/i18n-provider';
-
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <I18nProvider namespaces={['blog.home']}>{children}</I18nProvider>;
-}
-```
-
-Provide the list of namespaces that you want to get access to the translation strings in the `namespaces` prop.
-
-<Callout title="Global namespace">
-  You don't need to include the `core.global` namespace in the `namespaces`
-  prop. It's already included by default.
+<Callout title="Permission labels are the one exception" type="info">
+  A staff permission's label is a **flat top-level key**, not a branch:
+  `@vitnode/blog:posts:can_view`. There is nothing to slice a namespace out of,
+  so the AdminCP asks for those keys as if they were namespaces and has to chunk
+  the request to stay under the limit below. If you are writing them, see [Staff
+  permissions](/docs/dev/working-with-users/staff-permissions).
 </Callout>
+
+## Asking for a namespace
+
+A plugin route declares its namespaces in the route manifest, which is covered in
+[Pages](/docs/dev/i18n/pages). A route in your own app does the same thing in two
+lines: warm the query in the loader, mount the provider in the component.
+
+<Steps>
+
+<Step>
+
+### Warm the messages in the loader
+
+```tsx title="src/routes/_main/reports.tsx"
+import { intlQueryOptions } from '@vitnode/core/tanstack/i18n' // [!code ++]
+
+const REPORTS_NAMESPACES = ['core.global', 'my-app.reports'] as const // [!code ++]
+
+export const Route = createFileRoute('/_main/reports')({
+  loader: async ({ context }) => {
+    // [!code ++:3]
+    await context.queryClient.ensureQueryData(
+      intlQueryOptions({
+        locale: context.locale,
+        namespaces: REPORTS_NAMESPACES,
+      }),
+    )
+  },
+  component: ReportsPage,
+})
+```
+
+`context.locale` comes from the root route, so `/pl/reports` arrives with Polish
+already in the cache instead of painting English and flipping after hydration.
+
+</Step>
+
+<Step>
+
+### Mount `RouteMessages` with the same list
+
+```tsx title="src/routes/_main/reports.tsx"
+import { RouteMessages } from '@vitnode/core/tanstack/i18n' // [!code ++]
+
+function ReportsPage() {
+  return (
+    <RouteMessages namespaces={REPORTS_NAMESPACES}>
+      {/* [!code ++] */}
+      <ReportsScreen />
+    </RouteMessages>
+  )
+}
+```
+
+`RouteMessages` **reads**, it does not fetch: it runs `useSuspenseQuery` over the
+same `intlQueryOptions` the loader already warmed. Same locale, same namespaces,
+same cache key - so on the first render the entry is there and nothing suspends.
+
+</Step>
+
+<Step>
+
+### Read the strings
+
+```tsx
+const t = useTranslations('my-app.reports')
+
+return <h1>{t('title')}</h1>
+```
+
+Load the page and the heading is translated. If it renders as
+`my-app.reports.title` instead, the namespace is not in the list above it.
+
+</Step>
+
+</Steps>
+
+<Callout title="One list, declared once" type="warn">
+  The loader and the provider must ask for the **identical** set. A loader that
+  warms `["core.global"]` under a provider asking for `["core.global",
+  "my-app.reports"]` fills an entry nothing reads, the provider suspends, and
+  the first paint costs a round trip. Hoist the array into a `const` and pass
+  that to both, the way `SETTINGS_NAMESPACES` does in core.
+</Callout>
+
+Providers nest, and the inner one wins for the keys it names - so a layout can
+name the set once for the pages under it, and a page can add its own on top.
+
+## Limits
+
+A namespace list reaches the server through a server function, which is a public
+`POST` endpoint once the app is built. So the rules are enforced rather than
+assumed, and the same rules validate a plugin's build-time declaration - one
+definition, in `@vitnode/core/routing`, so a manifest cannot accept something the
+server refuses.
+
+<TypeTable
+  type={{
+    MAX_NAMESPACES: {
+      description:
+        'Namespaces per request. More than any page has needed; a caller asking for thousands is refused rather than served.',
+      type: 'number',
+      default: '16',
+    },
+    MAX_NAMESPACE_DEPTH: {
+      description:
+        'Dot-separated segments in one namespace. "@vitnode/blog.a.b.c" is four.',
+      type: 'number',
+      default: '8',
+    },
+    MAX_NAMESPACE_LENGTH: {
+      description:
+        'Characters in one namespace - comfortably longer than the longest plugin id plus a path.',
+      type: 'number',
+      default: '128',
+    },
+  }}
+/>
+
+On top of the numbers: a namespace must be a non-empty string, must not contain
+an empty segment (`core..global`, a leading or trailing dot), and must not
+contain `__proto__`, `constructor` or `prototype` in any segment. All three are
+rejected outright rather than filtered away - a namespace containing one is not a
+namespace with a typo in it.
+
+Import the constants if you need to budget against them:
+
+```ts
+import { MAX_NAMESPACES } from '@vitnode/core/tanstack/i18n'
+```
+
+## Gotchas
+
+<Callout title="Every string renders as its own key" type="error">
+  The symptom of a namespace that was never asked for. Check that the route
+  declares it (a plugin's `manifest.ts`) or that a `RouteMessages` above the
+  component names it - and that the loader warms the same list.
+</Callout>
+
+<Callout
+  title="Over sixteen namespaces means chunking, not raising the cap"
+  type="warn"
+>
+  `At most 16 namespaces may be requested.` is a thrown error, not a truncation.
+  If you genuinely need more - a screen rendering one flat key per permission -
+  split the request the way the staff screens do and merge the results, rather
+  than reaching for a bigger number.
+</Callout>
+
+<Callout title="Namespaces are per route, not per plugin" type="info">
+  Name what the page renders. Declaring your plugin's whole tree on every route
+  puts your AdminCP copy in the bundle of a public page nobody logged in is
+  looking at.
+</Callout>
+
+<Callout title="A pendingComponent renders above its own provider" type="warn">
+  A layout route's `pendingComponent` renders *in place of* the layout, so it is
+  outside the `RouteMessages` that layout mounts. Either keep it free of
+  translated text or mount a provider inside it. A child route's
+  `pendingComponent` is fine - it renders into the layout's `<Outlet />
+  `, which only exists once the provider has.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Pages"
+    description="Declare a plugin route's namespaces in the manifest"
+    href="/docs/dev/i18n/pages"
+  />
+  <Card
+    title="Messages"
+    description="Message file shape, ICU placeholders, plurals and rich text"
+    href="/docs/dev/i18n/messages"
+  />
+  <Card
+    title="Route manifest"
+    description="The full grammar a plugin route is declared with"
+    href="/docs/dev/plugins/route-manifest"
+  />
+  <Card
+    title="Server-side"
+    description="Translate emails and API responses with c.get('i18n')"
+    href="/docs/dev/i18n/server"
+  />
+</Cards>

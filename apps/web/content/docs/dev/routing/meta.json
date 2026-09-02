@@ -1,0 +1,6 @@
+{
+  "title": "Routing",
+  "description": "Claim a URL, name the page, and let the router handle locales",
+  "icon": "Route",
+  "pages": ["index", "navigation", "metadata", "loading-states", "not-found"]
+}

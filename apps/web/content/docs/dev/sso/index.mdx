@@ -1,24 +1,92 @@
 ---
 title: Single Sign-On (SSO)
-description: Simplifies the user experience by allowing access to multiple systems with a single authentication process.
+description: Enable social authentication with Google, Discord, Facebook, or custom OAuth2 providers in VitNode.
+icon: KeyRound
 ---
 
-## How it works
+VitNode provides built-in OAuth2 single sign-on. Register an adapter in your API configuration, and authentication buttons automatically appear on `/login` and `/register`.
 
-1. The user clicks on the SSO button.
-2. The user is redirected to the SSO provider's login page.
-3. The user logs in.
-4. The user is redirected back to your application with a token.
-5. Your application verifies the token and logs in the user.
+## Quick start
 
-## Adapters
+Register an SSO adapter in `apps/api/src/vitnode.api.config.ts`:
 
-Before you can use SSO, you need to provide an adapter to your application.
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      GoogleSSOApiPlugin({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      }),
+    ],
+  },
+})
+```
+
+A **Continue with Google** button automatically renders on your login and registration forms.
+
+---
+
+## Supported Providers
 
 <Cards>
-  <Card title="Discord" href="/docs/dev/sso/discord" />
-  <Card title="Facebook" href="/docs/dev/sso/facebook" />
-  <Card title="Google" href="/docs/dev/sso/google" />
+  <Card
+    title="Google"
+    description="Google Cloud Console setup with OpenID email verification"
+    href="/docs/dev/sso/google"
+  />
+  <Card
+    title="Discord"
+    description="Discord Developer Portal with identify and email scopes"
+    href="/docs/dev/sso/discord"
+  />
+  <Card
+    title="Facebook"
+    description="Meta Developers app with Facebook Login"
+    href="/docs/dev/sso/facebook"
+  />
+  <Card
+    title="Custom OAuth2 Adapter"
+    description="Connect GitHub, Apple, or any OAuth2 provider"
+    href="/docs/dev/sso/custom-adapter"
+  />
 </Cards>
 
-or create your own custom SSO adapter...
+---
+
+## Callback URLs
+
+When configuring OAuth2 applications in provider developer consoles, use the following redirect URI pattern:
+
+```text
+https://your-domain.com/login/sso/{provider_id}
+```
+
+For example: `https://your-domain.com/login/sso/google`.
+
+---
+
+## How Accounts Link
+
+When a user signs in via SSO:
+1. **Existing Email Match**: If an existing account shares the verified email, the SSO identity is automatically linked.
+2. **New Visitor**: A new user is created with their social display name, email, and avatar.
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Users"
+    description="Session cookies and user model structure"
+    href="/docs/dev/working-with-users/users"
+  />
+  <Card
+    title="Custom SSO Adapter"
+    description="Implement SSOApiPlugin for other providers"
+    href="/docs/dev/sso/custom-adapter"
+  />
+</Cards>

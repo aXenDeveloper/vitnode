@@ -1,0 +1,84 @@
+---
+title: 404 Not Found
+description: Configure root and per-route 404 error boundaries and throw notFound() from TanStack Start loaders.
+icon: SearchX
+---
+
+In TanStack Start, 404 handling is configured as a route option via `notFoundComponent` rather than a static file. VitNode provides localized 404 layouts with history-aware navigation buttons out of the box.
+
+{/* Image prompt: VitNode 404 error page showing large 404 typography, localized "Page Not Found" title, descriptive message, and "Go back" / "Back to home" action buttons. Dark theme, 1440x900. */}
+
+## Root 404 Handler
+
+Your `apps/web/src/routes/__root.tsx` defines the fallback boundary for all unmatched URLs:
+
+```tsx title="apps/web/src/routes/__root.tsx"
+import { createRootRouteWithContext } from "@tanstack/react-router"
+import { ErrorActions, NotFound } from "@vitnode/core/tanstack/layout"
+
+export const Route = createRootRouteWithContext<RootRouterContext>()({
+  // [!code ++:4]
+  notFoundComponent: () => (
+    <NotFound actions={<ErrorActions />} />
+  ),
+  component: RootComponent,
+})
+```
+
+`NotFound` automatically renders translated text from `core.global.errors.404`. `ErrorActions` renders **Go Back** (`history.back()`) and **Back to Home** (`/`) buttons.
+
+---
+
+## Triggering 404 in Loaders
+
+When a requested resource (like an article slug or user ID) is not found in the database, throw `notFound()` inside the loader:
+
+```tsx title="apps/web/src/routes/_main/blog/$slug.tsx"
+import { createFileRoute, notFound } from "@tanstack/react-router"
+
+export const Route = createFileRoute("/_main/blog/$slug")({
+  loader: async ({ params }) => {
+    const post = await fetchPost(params.slug)
+    // [!code ++:3]
+    if (!post) {
+      throw notFound()
+    }
+    return post
+  },
+  component: PostPage,
+})
+```
+
+---
+
+## Custom Route-Level 404 Components
+
+You can assign a customized `notFoundComponent` to specific routes or layout shells:
+
+```tsx title="apps/web/src/routes/_main/blog/$slug.tsx"
+export const Route = createFileRoute("/_main/blog/$slug")({
+  loader: async ({ params }) => { /* ... */ },
+  // [!code ++:3]
+  notFoundComponent: () => (
+    <div className="p-8 text-center">
+      <h2>Article Not Found</h2>
+      <p>The post you are looking for may have been removed.</p>
+    </div>
+  ),
+})
+```
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Routing"
+    description="Overview of TanStack Router and layouts"
+    href="/docs/dev/routing"
+  />
+  <Card
+    title="Loading States"
+    description="Render skeletons during route transitions"
+    href="/docs/dev/routing/loading-states"
+  />
+</Cards>

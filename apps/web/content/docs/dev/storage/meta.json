@@ -1,5 +1,7 @@
 {
   "title": "Storage",
+  "description": "Pluggable file uploads - local disk, AWS S3, Cloudflare R2 or Supabase Storage",
+  "icon": "HardDrive",
   "pages": [
     "index",
     "local",

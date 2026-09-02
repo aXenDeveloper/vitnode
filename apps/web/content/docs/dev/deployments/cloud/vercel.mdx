@@ -1,72 +1,224 @@
 ---
 title: Vercel
-description: How to deploy your Vitnode app on Vercel.
+description: 'Deploy a VitNode app to Vercel: the settings that work, the features that need a server which stays up, and where migrations have to run instead.'
+icon: Cloud
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-## Limitations
+A VitNode app builds with Nitro, and Nitro knows Vercel. Push the repository,
+point a project at it, and the site plus the Hono API mounted at `/api/*` come
+up as one serverless function - no adapter, no `vercel.json`.
 
-Some features of Vitnode are not supported on Vercel due to its serverless architecture. These include:
+Serverless is the catch, not the build. Three things VitNode can do need a
+process that is still alive between requests, and Vercel does not have one - and
+nothing there will run your migrations either.
 
-- Self-hosted static files
-- WebSockets
+## What works, and what does not
 
-## Requirements
+| Feature                                                | On Vercel      | Why                                                                         |
+| ------------------------------------------------------ | -------------- | --------------------------------------------------------------------------- |
+| The site, SSR, and `/api/*`                            | ✅ Works       | One Nitro function answers every route.                                     |
+| Postgres, [Redis](/docs/dev/advanced/redis), email, AI | ✅ Works       | All reached over the network. Bring managed ones.                           |
+| [S3 / R2](/docs/dev/storage/s3-r2) or Supabase storage | ✅ Works       | Uploads go straight to the bucket.                                          |
+| [Local file storage](/docs/dev/storage/local)          | ❌ Not durable | The adapter writes to `public/uploads` on a filesystem that disappears.     |
+| [WebSockets](/docs/dev/websocket)                      | ❌ Unsupported | The `/ws` upgrade needs a long-lived `serve()` with a WebSocket server.     |
+| [In-process cron](/docs/dev/cron/node-cron)            | ❌ Unsupported | The adapter runs a `*/1 * * * *` timer inside the process.                  |
+| Migrating on deploy                                    | ⚠️ Your job    | Nothing on Vercel runs `db:migrate` for you. See [Migrations](#migrations). |
 
-- A Vercel account
-- Your project pushed to a Git repository (GitHub, GitLab, or Bitbucket)
-- PostgreSQL database (can be hosted on Supabase)
-
-## Deployment Guide
+## Deploy it
 
 <Steps>
 <Step>
 
-### Generate migrations
+### Bring a managed Postgres
 
-Run the following command to generate migrations for your Vitnode project:
+Anything reachable over the internet: Supabase, Neon, RDS, your own box. Create
+the database and keep the connection string.
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+Use the **pooled** connection string if your provider offers one. VitNode
+connects with `postgres.js`, which opens a pool of up to 10 connections per
+process, and a serverless platform will happily run a lot of processes at once.
+If you would rather keep the direct string, shrink the pool instead:
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Generate Migrations'>
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  dbProvider: drizzle({
+    connection: { url: POSTGRES_URL, max: 1 }, // [!code ++]
+    relations: coreRelations,
+  }),
+})
+```
+
+</Step>
+<Step>
+
+### Set the environment variables first
+
+In the Vercel project, before the first build - two of them are compiled into
+the browser bundle and cannot be changed afterwards without building again.
+
+| Variable                     | Notes                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_URL`               | Required. Nothing works without it.                                                                     |
+| `NEXT_PUBLIC_WEB_URL`        | Your production origin. Email links, SSO callbacks and password-reset links use it.                     |
+| `CRON_SECRET`                | Required if anything schedules cron. A long random string.                                              |
+| `REDIS_URL` `REDIS_PASSWORD` | Strongly recommended - see the rate-limiter gotcha below.                                               |
+| `NEXT_PUBLIC_API_URL`        | Leave it unset. The single app answers `/api/*` itself, and both halves work that out from the request. |
+
+<Callout
+  type="warn"
+  title="Do not set NEXT_PUBLIC_API_URL on preview deployments"
+>
+  A preview gets a generated hostname, so no configured value can name it. Left
+  unset, the server takes the API origin off the request being rendered and the
+  browser falls back to the origin the page came from - which is right on every
+  deployment, including ones that did not exist when you configured the project.
+  Set it only when the API genuinely lives somewhere else.
+</Callout>
+
+</Step>
+<Step>
+
+### Create the project
+
+Import the Git repository in Vercel. Three settings matter:
+
+| Setting             | Value                                                                      |
+| ------------------- | -------------------------------------------------------------------------- |
+| **Root Directory**  | The app folder - `apps/web` for a monorepo, the repository root otherwise. |
+| **Build Command**   | Your `build` script. For a Single App that is `vite build`.                |
+| **Node.js Version** | 22 or newer.                                                               |
+
+Leave the output directory alone. Nitro reads `VERCEL` from the build
+environment, resolves its `vercel` preset without being told to, and writes
+`.vercel/output` in the Build Output API format that Vercel picks up on its own.
+
+</Step>
+<Step>
+
+### Migrate the database
+
+Not from Vercel. Run it yourself, against the production connection string,
+from a checkout of the commit you are deploying:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Migrate'>
 
 ```bash tab="bun"
-bun db:migrate
+POSTGRES_URL="postgresql://…" bun db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm db:migrate
+POSTGRES_URL="postgresql://…" pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run db:migrate
+POSTGRES_URL="postgresql://…" npm run db:migrate
 ```
 
 </Tabs>
 
-</Step>
-<Step>
-
-### Upload your project / changes to Git
-
-Make sure your Vitnode project is pushed to a Git repository.
+See [Migrations](#migrations) for why this is not part of the build command, and
+what happens if you make it one anyway.
 
 </Step>
 <Step>
 
-### Sign in to Vercel
+### Register the first account
 
-Go to [Vercel](https://vercel.com/) and sign in.
+Deploy, open the site, and go to `/register`. The first account created in an
+empty database becomes the **Administrator** - so do it before you tell anybody
+the URL. Then sign in at `/admin` and open **Core → System → Integrations** to
+see which services actually came up.
 
-</Step>
-<Step>
-
-### Create a New Project
-
-Click on "New Project" in your Vercel dashboard. Select the repository where your Vitnode project is hosted.
+{/* Image prompt: A screenshot of the VitNode AdminCP Integrations board at /admin/core/system/integrations on a production deployment - nine service cards, Redis and Storage showing "Active" badges, WebSocket and Cron showing "Inactive". Dark theme, 1440x900. */}
 
 </Step>
 </Steps>
+
+## Migrations
+
+`start` never migrates, and on Vercel there is no `start` at all - your code is
+invoked per request. So the schema has to be changed by something outside the
+deployment, and there are exactly two honest ways to do it:
+
+1. **From your own machine or CI**, pointing `POSTGRES_URL` at production, as a
+   deliberate step before you promote the build. This is the one to prefer.
+2. **In front of the build command** - `pnpm db:migrate && pnpm build`. It
+   works, and it also runs on every preview deployment against whatever
+   `POSTGRES_URL` that environment has.
+
+<Callout type="warn" title="db:migrate can generate as well as apply">
+  `db:migrate` is `vitnode migrate`, which generates a migration for any
+  uncommitted schema change, then applies everything pending, then seeds. On a
+  deploy there should be nothing to generate - so commit your `migrations/`
+  folder, and treat a freshly generated migration on a build machine as a sign
+  that something never made it into the repository.
+</Callout>
+
+## Gotchas
+
+<Callout
+  type="warn"
+  title="Without Redis, the rate limiter counts per instance"
+>
+  It falls back to in-memory storage, and on serverless "in memory" means one
+  counter per cold start. The limit is still there; it just stops meaning
+  anything. Set `REDIS_URL` and the counters become shared - the same switch
+  also gives you a real cache.
+</Callout>
+
+<Callout type="warn" title="Vercel's own Cron Jobs cannot drive VitNode's cron">
+  VitNode's endpoint is `POST /api/@vitnode/core/cron` with an `Authorization:
+  Bearer $CRON_SECRET` header, and [Vercel Cron
+  Jobs](https://vercel.com/docs/cron-jobs) invoke a path with a `GET`. Use a
+  scheduler that can send a `POST` - GitHub Actions, an uptime service, anything
+  on the [REST API](/docs/dev/cron/rest-api) page - and point it at that path
+  once a minute.
+</Callout>
+
+<Callout type="warn" title="Leave cookieDomain unset">
+  `authorization.cookieDomain` is empty by default, which makes every auth
+  cookie host-only and therefore correct on a hostname nobody configured. Set it
+  to your production domain and preview deployments stop being able to sign
+  anyone in, because a browser rejects a `Domain` the response did not come
+  from.
+</Callout>
+
+<Callout type="info" title="Swagger ships with the deployment">
+  `/api/swagger` is mounted with no session check, so it is public on your
+  production URL too. There is no proxy in front of a Vercel function to deny it
+  at, so if that matters, keep the deployment behind Vercel's own access
+  controls - see [Swagger](/docs/dev/swagger).
+</Callout>
+
+<Callout type="info" title="Need any of the three?">
+  Run the app on a server instead. Long-lived WebSocket connections, an
+  in-process scheduler and local disk are all ordinary there - see
+  [Self-hosted](/docs/dev/deployments/self-hosted).
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Self-hosted"
+    description="Build, migrate, start and reverse-proxy on your own server"
+    href="/docs/dev/deployments/self-hosted"
+  />
+  <Card
+    title="Redis"
+    description="The one service worth adding before you go live"
+    href="/docs/dev/advanced/redis"
+  />
+  <Card
+    title="Cron over REST"
+    description="Point an external scheduler at the cron endpoint"
+    href="/docs/dev/cron/rest-api"
+  />
+  <Card
+    title="Storage"
+    description="Move uploads off the filesystem and into a bucket"
+    href="/docs/dev/storage"
+  />
+</Cards>

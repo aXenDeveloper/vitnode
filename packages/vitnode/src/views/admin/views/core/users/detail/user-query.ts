@@ -82,14 +82,6 @@ export interface AdminUserDetail {
 
 export type AdminUserFetcher = (id: string) => Promise<AdminUserDetail>;
 
-export const adminUserRequest = (id: string) =>
-  ({
-    args: { params: { id } },
-    method: "get" as const,
-    module: "admin/users" as const,
-    path: "/{id}" as const,
-  }) as const;
-
 /**
  * One user, fetched from the browser.
  *
@@ -99,8 +91,11 @@ export const adminUserRequest = (id: string) =>
  */
 export const fetchAdminUserInBrowser: AdminUserFetcher = async id => {
   const response = await fetcherClient(adminModuleRef, {
-    ...adminUserRequest(id),
+    args: { params: { id } },
+    method: "get",
+    module: "admin/users",
     options: { credentials: "include" },
+    path: "/{id}",
   });
 
   if (!response.ok) {

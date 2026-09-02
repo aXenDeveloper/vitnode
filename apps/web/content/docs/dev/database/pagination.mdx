@@ -1,289 +1,249 @@
 ---
 title: Pagination
-description: How to implement cursor-based pagination in VitNode applications.
+description: Cursor pagination in VitNode - the withPagination helper on your Hono route, and the validated search, query, and data table that consume it.
+icon: ChevronsRight
 ---
 
-VitNode provides a powerful cursor-based pagination system that works seamlessly with the DataTable component. This documentation covers both backend implementation and frontend consumption of paginated data.
+import { TypeTable } from "fumadocs-ui/components/type-table"
 
-## Backend Implementation
+VitNode uses cursor-based pagination rather than offset pagination. Cursors ensure stable page boundaries even while records are created or deleted, with zero database performance degradation on large tables.
 
-VitNode uses cursor-based pagination for optimal performance with large datasets. The pagination system is implemented through the `withPagination` helper function.
+## Quick start
 
-### Basic Usage
+### 1. Backend: Paginated API Route
 
-```ts
-import z from "zod";
-import { buildRoute } from "@/api/lib/route";
-import {
-  withPagination,
-  zodPaginationPageInfo,
-  zodPaginationQuery,
-} from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
-import { core_cron } from "@/database/cron";
+Use `withPagination` from `@vitnode/core/api/lib/with-pagination`:
 
-export const getCronsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
+```ts title="plugins/blog/src/api/modules/posts/routes/get.route.ts"
+import { getColumns } from "drizzle-orm"
+import { withPagination, zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
+import { blog_posts } from "@/database/posts"
+
+export const getPostsRoute = buildRoute({
+  pluginId: "blog",
   route: {
     method: "get",
-    description: "Get Admin Cron Logs",
     path: "/",
     request: {
-      query: zodPaginationQuery.extend({
-        order: z.enum(["asc", "desc"]).optional(),
-        orderBy: z.enum(["lastRun"]).optional(),
-      }),
-    },
-    responses: {
-      200: {
-        content: {
-          "application/json": {
-            schema: z.object({
-              edges: z.array(
-                z.object({
-                  id: z.number(),
-                  createdAt: z.date(),
-                  name: z.string(),
-                  description: z.string().nullable(),
-                  pluginId: z.string(),
-                  module: z.string(),
-                  lastRun: z.date().nullable(),
-                }),
-              ),
-              pageInfo: zodPaginationPageInfo,
-            }),
-          },
-        },
-        description: "List of cron jobs",
-      },
+      query: zodPaginationQuery,
     },
   },
-  handler: async c => {
-    const query = c.req.valid("query");
+  handler: async (c) => {
     const data = await withPagination({
-      params: {
-        query,
-      },
       c,
-      primaryCursor: core_cron.id,
-      query: async ({ limit, where, orderBy }) =>
+      params: { query: c.req.valid("query") },
+      primaryCursor: blog_posts.id,
+      table: blog_posts,
+      orderBy: { column: blog_posts.createdAt, order: "desc" },
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
-          .select()
-          .from(core_cron)
+          .select({ ...getColumns(blog_posts), ...cursorSelection })
+          .from(blog_posts)
           .where(where)
           .orderBy(orderBy)
           .limit(limit),
-      table: core_cron,
-      orderBy: {
-        column: query.orderBy ? core_cron[query.orderBy] : core_cron.lastRun,
-        order: query.order ?? "desc",
-      },
-    });
+    })
 
-    return c.json(data);
+    return c.json(data)
   },
-});
+})
 ```
 
-### Pagination Parameters
+The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pageInfo }`.
 
-The `withPagination` function accepts the following parameters:
+---
 
-| Parameter       | Type     | Description                                  |
-| --------------- | -------- | -------------------------------------------- |
-| `params`        | Object   | Contains the query parameters for pagination |
-| `primaryCursor` | Column   | The primary key column used for pagination   |
-| `query`         | Function | The database query function                  |
-| `table`         | Table    | The database table being queried             |
-| `orderBy`       | Object   | The column and order to sort by              |
+## Why Cursors Over Offsets
 
-### Zod Schemas
+| Metric | `LIMIT ... OFFSET` | Keyset Cursor |
+| ------ | ------------------ | ------------- |
+| Insert / Delete mid-walk | Rows shift, duplicate, or skip | Unaffected (stable pointer) |
+| Deep pagination (Page 10,000) | Full table scan up to offset | Single indexed B-tree lookup |
+| Sort order stability | Prone to non-deterministic ties | Guaranteed by primaryCursor tiebreaker |
 
-VitNode provides pre-defined Zod schemas for pagination:
+---
 
-- `zodPaginationQuery`: Schema for pagination query parameters
-- `zodPaginationPageInfo`: Schema for pagination information in the response
+## `withPagination` Options
 
-```ts
-// Example of zodPaginationQuery
-const zodPaginationQuery = z.object({
-  cursor: z.string().optional(),
-  first: z.string().transform(Number).optional(),
-  last: z.string().transform(Number).optional(),
-});
-
-// Example of zodPaginationPageInfo
-const zodPaginationPageInfo = z.object({
-  startCursor: z.string().nullable(),
-  endCursor: z.string().nullable(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean(),
-});
-```
-
-## Frontend Implementation
-
-On the frontend, the pagination system works seamlessly with the DataTable component.
-
-### Query Parameters
-
-When fetching data from the API, include the pagination parameters in your request:
-
-```tsx
-const query = await searchParams; // Assume searchParams is a Promise from the Next.js page context
-const res = await fetcher(userModule, {
-  path: "/users",
-  method: "get",
-  module: "user",
-  args: {
-    query,
-  },
-  withPagination: true, // Important flag for pagination
-});
-```
-
-### SearchParamsDataTable Interface
-
-VitNode provides a `SearchParamsDataTable` interface to type the search parameters:
-
-```tsx
-export interface SearchParamsDataTable {
-  cursor?: string;
-  first?: string;
-  last?: string;
-  order?: "asc" | "desc";
-  orderBy?: keyof DataTableTMin;
-}
-```
-
-### Complete Example
-
-Here's a complete example showing how to implement pagination in a Next.js page:
-
-```tsx
-import { middlewareModule } from "@/api/modules/middleware/middleware.module";
-import {
-  DataTable,
-  SearchParamsDataTable,
-} from "@vitnode/core/components/table/data-table";
-import { fetcher } from "@vitnode/core/lib/fetcher";
-
-export const UsersAdminView = async ({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParamsDataTable>;
-}) => {
-  const query = await searchParams;
-  const res = await fetcher(middlewareModule, {
-    path: "/users",
-    method: "get",
-    module: "middleware",
-    args: {
-      query,
+<TypeTable
+  type={{
+    c: {
+      description: "Hono request context.",
+      required: true,
+      type: "Context",
     },
-    withPagination: true,
-  });
-  const data = await res.json();
+    params: {
+      description: "Validated query parameters: { query: { cursor, first, last, search } }.",
+      required: true,
+      type: "object",
+    },
+    table: {
+      description: "Drizzle table being paged (used for total count).",
+      required: true,
+      type: "PgTable",
+    },
+    primaryCursor: {
+      description: "Unique numeric column acting as deterministic tiebreaker.",
+      required: true,
+      type: "PaginationCursorColumn",
+    },
+    orderBy: {
+      description: "Sorting column and direction.",
+      required: true,
+      type: "{ column: PgColumn; order: 'asc' | 'desc' }",
+    },
+    query: {
+      description: "Callback executing the paged Drizzle select query.",
+      required: true,
+      type: "(args) => Promise<Row[]>",
+    },
+    where: {
+      description: "Additional SQL filter conditions applied before pagination.",
+      required: false,
+      type: "SQL",
+    },
+    search: {
+      description: "Array of text columns to match against ?search= with ILIKE.",
+      required: false,
+      type: "PgColumn[]",
+    },
+  }}
+/>
 
-  return (
-    <DataTable
-      id="users-table"
-      columns={[
-        { id: "id", label: "ID" },
-        { id: "username", label: "Username" },
-        { id: "email", label: "Email" },
-        { id: "createdAt", label: "Created at" },
-      ]}
-      edges={data.edges}
-      order={{
-        columns: ["id", "username", "email", "createdAt"],
-        defaultOrder: {
-          column: "createdAt",
-          order: "desc",
-        },
-      }}
-      pageInfo={data.pageInfo}
-    />
-  );
-};
-```
+---
 
-## Pagination Object Structure
-
-The pagination object returned from the API has the following structure:
+## Response Structure (`pageInfo`)
 
 ```json
 {
   "edges": [
-    {
-      "id": 1,
-      "username": "user1",
-      "email": "user1@example.com",
-      "createdAt": "2023-01-01T00:00:00.000Z"
-    }
-    // More items...
+    { "id": 1, "title": "First post", "createdAt": "2026-01-01T00:00:00.000Z" }
   ],
   "pageInfo": {
-    "startCursor": 1,
-    "endCursor": 10,
+    "totalCount": 120,
+    "count": 10,
     "hasNextPage": true,
-    "hasPreviousPage": false
+    "hasPreviousPage": false,
+    "startCursor": "eyJjIjoiY3Jl...",
+    "endCursor": "eyJjIjoiY3Jl..."
   }
 }
 ```
 
-<Callout title="Pagination Controls">
-  The DataTable component automatically handles pagination controls when
-  provided with the correct `pageInfo` object, allowing users to navigate
-  through data with next/previous buttons and showing the current page
-  information.
-</Callout>
+<TypeTable
+  type={{
+    totalCount: { description: "Total rows matching criteria across all pages.", type: "number" },
+    count: { description: "Number of rows in current page.", type: "number" },
+    hasNextPage: { description: "True if another page exists forward.", type: "boolean" },
+    hasPreviousPage: { description: "True if a previous page exists backward.", type: "boolean" },
+    startCursor: { description: "Cursor for first row in page (null if empty).", type: "string | null" },
+    endCursor: { description: "Cursor for last row in page (null if empty).", type: "string | null" },
+  }}
+/>
 
-## Advanced Usage
+---
 
-### Custom Filtering
+## Frontend Integration
 
-You can extend the pagination query to include custom filtering:
+### 1. Route Search Schema
 
-```ts
-const query = c.req.valid("query");
-const data = await withPagination({
-  params: {
-    query,
-    additionalWhere: eq(users.isActive, true), // Only active users
-  },
-  primaryCursor: users.id,
-  query: async ({ limit, where, orderBy }) =>
-    await dbClient
-      .select()
-      .from(users)
-      .where(and(where, eq(users.isActive, true)))
-      .orderBy(orderBy)
-      .limit(limit),
-  table: users,
-  orderBy: {
-    column: query.orderBy ? users[query.orderBy] : users.createdAt,
-    order: query.order ?? "desc",
-  },
-});
+In your route file, validate pagination search parameters using `zodPaginationQuery`:
+
+```tsx title="apps/web/src/routes/_main/posts.tsx"
+import { createFileRoute } from "@tanstack/react-router"
+import { zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
+import { postsQuery } from "#/features/posts/query"
+
+export const Route = createFileRoute("/_main/posts")({
+  validateSearch: (search) => zodPaginationQuery.parse(search),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) =>
+    await context.queryClient.ensureQueryData(postsQuery(deps)),
+  component: PostsPage,
+})
 ```
 
-### React Suspense
+### 2. Render `ContentDataTable`
 
-To not block the UI while fetching data, you can use React Suspense:
+Feed the paginated data directly into VitNode's `ContentDataTable`:
 
-```tsx title="page.tsx"
-import React from "react";
-import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
+```tsx title="apps/web/src/features/posts/posts-table.tsx"
+import { ContentDataTable } from "@vitnode/core/components/table/content"
+import { DataTableNavigationProvider } from "@vitnode/core/components/table/provider"
+import { useSuspenseQuery } from "@tanstack/react-query"
+import { Route } from "#/routes/_main/posts"
+import { postsQuery } from "./query"
 
-import { UsersAdminView } from "@/components/UsersAdminView";
+export const PostsTable = () => {
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const { data } = useSuspenseQuery(postsQuery(search))
 
-export default function UsersPage() {
   return (
-    <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
-      <UsersAdminView searchParams={getSearchParams()} />
-    </React.Suspense>
-  );
+    <DataTableNavigationProvider navigate={navigate} search={search}>
+      <ContentDataTable
+        columns={columns}
+        data={data}
+        defaultPageSize={10}
+      />
+    </DataTableNavigationProvider>
+  )
 }
 ```
+
+---
+
+## Custom Filtering and Search
+
+To add search and custom filters, pass the parameters into `withPagination`:
+
+```ts title="plugins/blog/src/api/modules/posts/routes/get.route.ts"
+import { eq } from "drizzle-orm"
+
+const data = await withPagination({
+  c,
+  params: { query: c.req.valid("query") },
+  table: blog_posts,
+  primaryCursor: blog_posts.id,
+  orderBy: { column: blog_posts.createdAt, order: "desc" },
+  // [!code ++:3]
+  search: [blog_posts.title, blog_posts.content],
+  where: categoryId ? eq(blog_posts.categoryId, categoryId) : undefined,
+  query: async ({ cursorSelection, limit, where, orderBy }) =>
+    await c
+      .get("db")
+      .select({ ...getColumns(blog_posts), ...cursorSelection })
+      .from(blog_posts)
+      .where(where)
+      .orderBy(orderBy)
+      .limit(limit),
+})
+```
+
+---
+
+## Best Practices
+
+<Callout type="info" title="Opaque cursors">
+  Cursors encode the specific column ordering. If the user changes sort order or filter criteria, reset the cursor to `undefined` so pagination starts from the first page.
+</Callout>
+
+<Callout type="warn" title="Always apply callback where and orderBy">
+  `withPagination` injects cursor conditions directly into the callback's `where` and `orderBy`. Always pass those arguments straight to Drizzle's query methods without rebuilding them.
+</Callout>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Data Table UI"
+    description="Render sortable, searchable data tables on the frontend"
+    href="/docs/ui/data-table"
+  />
+  <Card
+    title="Search & Discovery"
+    description="Full-text search indexing across VitNode"
+    href="/docs/dev/search"
+  />
+</Cards>
