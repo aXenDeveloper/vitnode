@@ -27,12 +27,13 @@ cache: a route's `loader` warms an entry, the component reads the same one back,
 and a mutation invalidates exactly what it changed. One request per navigation
 instead of one per component.
 
-### Warm it in the loader, read it in the screen
+### Load it from the plugin route
 
-```ts title="src/routes/announcements.tsx"
-export const Route = createFileRoute('/announcements')({
-  loader: async ({ context }) =>
-    await context.queryClient.ensureQueryData(announcementsQueryOptions()),
+```ts title="plugins/announcements/src/routes/announcements-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+
+export const route = definePluginRoute({
+  load: async () => await fetchAnnouncements(), // [!code ++]
 })
 ```
 
@@ -40,12 +41,9 @@ export const Route = createFileRoute('/announcements')({
 const { data } = useSuspenseQuery(announcementsQueryOptions())
 ```
 
-The `queryOptions` object is what the two halves share - the same key, the same
-fetcher, the same `staleTime` - so the screen can never ask for something the
-loader did not warm. See [Data loading](/docs/dev/data-loading) for the
-isomorphic fetcher that sits behind it, and [Loading
-states](/docs/dev/routing/loading-states) for what the screen shows while an
-entry is still cold.
+Keep the fetcher and any `queryOptions` helper inside the plugin too. The plugin
+route is the SSR boundary; its screen can reuse the same query key for client
+updates. See [Data loading](/docs/dev/data-loading) for the isomorphic fetcher.
 
 ### Pick a lifetime that matches the data
 
@@ -112,7 +110,7 @@ with another plugin's.
 `remember` takes a key, a TTL in seconds, and the loader to run on a miss. It
 returns the value either way, so the call site never branches:
 
-```ts title="src/api/modules/stats/routes/overview.route.ts"
+```ts title="plugins/announcements/src/api/modules/stats/routes/overview.route.ts"
 handler: async c => {
   // [!code ++:5]
   const stats = await c.get('cache').remember(
@@ -137,7 +135,7 @@ that is a miss you cannot afford.
 The write that changes the answer is the write that expires it. There is no TTL
 short enough to substitute for this:
 
-```ts title="src/api/modules/stats/routes/update.route.ts"
+```ts title="plugins/announcements/src/api/modules/stats/routes/update.route.ts"
 await c.get('cache').delete(`stats:${containerId}`) // [!code ++]
 ```
 

@@ -4,7 +4,7 @@ description: Render localized strings with use-intl, declare route namespaces, a
 icon: Languages
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 VitNode uses [`use-intl`](https://use-intl.dev) for frontend translations. To keep initial payloads small, pages only download the translation namespaces they explicitly declare.
 
@@ -17,10 +17,10 @@ Plugin routes declare namespaces in `routes/manifest.ts`. VitNode loads the stri
 ```ts title="plugins/blog/src/routes/manifest.ts"
 export const routes: PluginRouteDefinition[] = [
   {
-    entry: "routes/about-page",
-    id: "about",
-    path: "/blog/about",
-    namespaces: ["@vitnode/blog.about"], // [!code ++]
+    entry: 'routes/about-page',
+    id: 'about',
+    path: '/blog/about',
+    namespaces: ['@vitnode/blog.about'], // [!code ++]
   },
 ]
 ```
@@ -28,12 +28,12 @@ export const routes: PluginRouteDefinition[] = [
 Read strings directly with `useTranslations`:
 
 ```tsx title="plugins/blog/src/routes/about-page.tsx"
-import { useTranslations } from "use-intl"
+import { useTranslations } from 'use-intl'
 
 const AboutPage = () => {
-  const t = useTranslations("@vitnode/blog.about")
+  const t = useTranslations('@vitnode/blog.about')
 
-  return <h1>{t("title")}</h1>
+  return <h1>{t('title')}</h1>
 }
 
 export default AboutPage
@@ -51,52 +51,16 @@ And define the messages in `plugins/blog/src/locales/en.json`:
 }
 ```
 
----
-
-### 2. In an Application Route File
-
-For host app routes, warm the translation query in your `loader` and wrap the component in `<RouteMessages>`:
-
-```tsx title="apps/web/src/routes/_main/about.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { intlQueryOptions, RouteMessages } from "@vitnode/core/tanstack/i18n"
-import { useTranslations } from "use-intl"
-
-const ABOUT_NAMESPACES = ["core.global", "app.about"]
-
-export const Route = createFileRoute("/_main/about")({
-  // [!code ++:7]
-  loader: async ({ context }) =>
-    await context.queryClient.ensureQueryData(
-      intlQueryOptions({
-        locale: context.locale,
-        namespaces: ABOUT_NAMESPACES,
-      }),
-    ),
-  component: AboutRoute,
-})
-
-function AboutRoute() {
-  return (
-    <RouteMessages namespaces={ABOUT_NAMESPACES}>
-      <AboutContent />
-    </RouteMessages>
-  )
-}
-
-function AboutContent() {
-  const t = useTranslations("app.about")
-  return <h1>{t("title")}</h1>
-}
-```
-
----
+<Callout type="idea" title="Keep feature copy in the plugin">
+  Host messages are for the site shell. A product page should declare its plugin
+  namespace in the manifest and keep its locale JSON beside the route.
+</Callout>
 
 ## Placeholders and Pluralization
 
 VitNode supports ICU message syntax out of the box:
 
-```json title="src/locales/en.json"
+```json title="plugins/blog/src/locales/en.json"
 {
   "cart": {
     "greeting": "Hello, {name}!",
@@ -108,18 +72,19 @@ VitNode supports ICU message syntax out of the box:
 In your React component:
 
 ```tsx
-const t = useTranslations("cart")
+const t = useTranslations('cart')
 
 return (
   <div>
-    <p>{t("greeting", { name: "Alex" })}</p>
-    <p>{t("items", { count: 3 })}</p>
+    <p>{t('greeting', { name: 'Alex' })}</p>
+    <p>{t('items', { count: 3 })}</p>
   </div>
 )
 ```
 
 <Callout type="info" title="Global namespaces">
-  `core.global` is provided by the root shell to every route, supplying shared strings for dialogs, toasts, and buttons.
+  `core.global` is provided by the root shell to every route, supplying shared
+  strings for dialogs, toasts, and buttons.
 </Callout>
 
 ## Learn More

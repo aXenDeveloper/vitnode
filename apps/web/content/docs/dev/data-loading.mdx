@@ -4,9 +4,8 @@ description: Load data in TanStack Start routes with server-side query warming a
 icon: DownloadCloud
 ---
 
-VitNode loads data through two primary mechanisms:
-1. **Plugin Routes**: Loaded through `definePluginRoute({ load })` with isomorphic data passing.
-2. **Host App Routes**: Warmed in the route `loader` via TanStack Query and read in components via `useSuspenseQuery`.
+VitNode loads feature data through plugin routes. `definePluginRoute({ load })`
+runs for SSR and client navigation, then hands typed data to the plugin page.
 
 ## Quick start
 
@@ -15,8 +14,8 @@ VitNode loads data through two primary mechanisms:
 Plugins load data using `definePluginRoute`. The loader runs during SSR and client navigation, handing typed `loaderData` to the page component:
 
 ```tsx title="plugins/blog/src/routes/announcements-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing"
-import { definePluginRoute } from "@vitnode/core/routing"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
 
 interface Announcement {
   id: string
@@ -30,7 +29,9 @@ export const route = definePluginRoute({
   },
 })
 
-const AnnouncementsPage = ({ loaderData }: PluginRoutePageProps<Announcement[]>) => (
+const AnnouncementsPage = ({
+  loaderData,
+}: PluginRoutePageProps<Announcement[]>) => (
   <div className="container mx-auto p-4 flex flex-col gap-4">
     {loaderData.map((item) => (
       <h2 key={item.id} className="text-xl font-semibold">
@@ -43,74 +44,14 @@ const AnnouncementsPage = ({ loaderData }: PluginRoutePageProps<Announcement[]>)
 export default AnnouncementsPage
 ```
 
----
-
-### 2. In an Application Route File
-
-For application-owned routes, warm TanStack Query in the route loader and consume it with `useSuspenseQuery`:
-
-#### Step 1: Define the Query
-
-```ts title="apps/web/src/features/announcements/query.ts"
-import { queryOptions } from "@tanstack/react-query"
-import { RECORD_STALE_TIME } from "@vitnode/core/lib/query-freshness"
-
-export const announcementsQueryKey = () => ["announcements"] as const
-
-export const announcementsQuery = () =>
-  queryOptions({
-    queryKey: announcementsQueryKey(),
-    queryFn: async () => await fetchAnnouncements(),
-    staleTime: RECORD_STALE_TIME,
-  })
-```
-
-#### Step 2: Warm in Route Loader
-
-```tsx title="apps/web/src/routes/_main/announcements.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { announcementsQuery } from "#/features/announcements/query"
-
-export const Route = createFileRoute("/_main/announcements")({
-  // [!code ++:6]
-  loader: async ({ context }) =>
-    await context.queryClient.ensureQueryData({
-      ...announcementsQuery(),
-      revalidateIfStale: true,
-    }),
-  component: AnnouncementsPage,
-})
-```
-
-#### Step 3: Consume in Component
-
-```tsx title="apps/web/src/features/announcements/announcements-page.tsx"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { announcementsQuery } from "./query"
-
-export const AnnouncementsPage = () => {
-  const { data } = useSuspenseQuery(announcementsQuery())
-
-  return (
-    <div className="p-4">
-      {data.map((item) => (
-        <div key={item.id}>{item.title}</div>
-      ))}
-    </div>
-  )
-}
-```
-
----
-
 ## Invalidating After Mutations
 
 After creating, editing, or deleting a record, invalidate the query key so TanStack Query refetches fresh data:
 
 ```tsx
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
-import { announcementsQueryKey } from "./query"
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { announcementsQueryKey } from './query'
 
 const queryClient = useQueryClient()
 
@@ -119,7 +60,7 @@ const mutation = useMutation({
   onSuccess: async () => {
     // [!code ++:2]
     await queryClient.invalidateQueries({ queryKey: announcementsQueryKey() })
-    toast.success("Announcement published!")
+    toast.success('Announcement published!')
   },
 })
 ```
@@ -130,10 +71,10 @@ const mutation = useMutation({
 
 VitNode provides standard stale times in `@vitnode/core/lib/query-freshness`:
 
-| Constant | Duration | Use Case |
-| :--- | :--- | :--- |
-| `RECORD_STALE_TIME` | 30 seconds | Fast-changing user feeds, announcements |
-| `STATIC_STALE_TIME` | 5 minutes | Site configuration, navigation, permissions |
+| Constant            | Duration   | Use Case                                    |
+| :------------------ | :--------- | :------------------------------------------ |
+| `RECORD_STALE_TIME` | 30 seconds | Fast-changing user feeds, announcements     |
+| `STATIC_STALE_TIME` | 5 minutes  | Site configuration, navigation, permissions |
 
 ## Learn More
 

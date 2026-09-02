@@ -1,26 +1,31 @@
 ---
 title: Create a Plugin
-description: Scaffold a VitNode plugin with one command, register it in your app, and open the page it serves.
+description: Scaffold a VitNode plugin, register its package in your host app, and serve its first TanStack Start page.
 icon: PackagePlus
 ---
 
-import { File, Files, Folder } from "fumadocs-ui/components/files"
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { DatabaseIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-VitNode plugins are workspace packages containing a route manifest, API modules, and database models. Plugin code remains isolated inside `plugins/*` and compiles into its own `dist/`.
+A plugin is the starting point for a VitNode feature. It keeps routes, API
+modules, data, translations, and AdminCP extensions together in one installable
+package. Nice boundaries; fewer archaeological digs later.
 
-## Prerequisites
-
-Run the plugin generator from your repository root (where `turbo.json` and `pnpm-workspace.yaml` reside):
-
-## Scaffold and Register a Plugin
+<Callout type="warn" title="Plugins need a workspace">
+  Run the generator from a repository with `turbo.json`. When creating an app,
+  turn on Turborepo first; a plain single-folder app has nowhere for
+  `plugins/*`.
+</Callout>
 
 <Steps>
-<Step>
+  <Step>
 
-### 1. Run the Generator
+### Generate the package
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a plugin">
+Run this at the workspace root and enter a package name such as
+`@acme/site-notes` when prompted:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a VitNode plugin">
 
 ```bash tab="bun"
 bun create vitnode-app@canary --plugin
@@ -31,94 +36,63 @@ pnpm create vitnode-app@canary --plugin
 ```
 
 ```bash tab="npm"
-npx create-vitnode-app@canary --plugin
+npm create vitnode-app@canary -- --plugin
 ```
 
 </Tabs>
 
-Specify your plugin name (e.g., `my-plugin`). The CLI creates `plugins/my-plugin/` and registers it across your workspace dependencies.
+The CLI creates `plugins/site-notes`, adds it as a workspace dependency, and
+gives it a route, locale, and config skeleton. It does **not** enable the
+feature for the host—that explicit switch is next.
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 2. Inspect the Plugin Contract
+### Keep the route in the plugin
 
-A new plugin contains two essential setup files under `src/`:
+The generated manifest is the public contract. Add another record here when the
+plugin needs another URL; never copy its page into `apps/web/src/routes`.
 
-#### The Route Manifest
-Defines which URLs the plugin serves:
-
-```ts title="plugins/my-plugin/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from "@vitnode/core/routing"
+```ts title="plugins/site-notes/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from '@vitnode/core/routing'
 
 export const routes: PluginRouteDefinition[] = [
+  // [!code ++:5]
   {
-    entry: "routes/home-page",
-    id: "home",
-    path: "/my-plugin",
-    namespaces: ["my-plugin"],
+    entry: 'routes/home-page',
+    id: 'home',
+    path: '/site-notes',
   },
 ]
 ```
 
-#### The Plugin Config
-Exports the plugin definition consumed by the host application:
+  </Step>
+  <Step>
 
-```tsx title="plugins/my-plugin/src/config.tsx"
-import { buildPlugin } from "@vitnode/core/lib/plugin"
-import messages from "./locales"
-import { routes } from "./routes/manifest"
+### Register the plugin with the host
 
-export const myPlugin = () =>
-  buildPlugin({
-    pluginId: "my-plugin",
-    messages,
-    routes,
-  })
-```
-
-</Step>
-<Step>
-
-### 3. Register Plugin in Your Host Application
-
-Add the plugin factory to `apps/web/src/vitnode.config.ts`:
+Import the plugin factory in the host config and add it to `plugins`:
 
 ```ts title="apps/web/src/vitnode.config.ts"
-import { buildConfig } from "@vitnode/core/vitnode.config"
-import { myPlugin } from "my-plugin/config" // [!code ++]
-import { appMessages } from "./locales/app"
-import { vitNodeShellConfig } from "./vitnode.shell.config"
+import { buildConfig } from '@vitnode/core/vitnode.config'
+import { siteNotesPlugin } from '@acme/site-notes/config' // [!code ++]
 
 export const vitNodeConfig = buildConfig({
-  ...vitNodeShellConfig,
-  i18n: { ...vitNodeShellConfig.i18n, messages: appMessages },
   plugins: [
-    myPlugin(), // [!code ++]
+    siteNotesPlugin(), // [!code ++]
   ],
 })
 ```
 
-And connect your plugin's localization messages in `apps/web/src/locales/packages.ts`:
+The factory already carries the plugin's manifest and message loaders. Keep host
+configuration to composition; the feature stays in its package.
 
-```ts title="apps/web/src/locales/packages.ts"
-export const packageMessages: Record<string, LocaleMessagesMap> = {
-  [CORE.pluginId]: {
-    en: async () => await import("@vitnode/core/locales/en.json"),
-  },
-  // [!code ++:3]
-  "my-plugin": {
-    en: async () => await import("my-plugin/locales/en.json"),
-  },
-}
-```
+  </Step>
+  <Step>
 
-</Step>
-<Step>
+### Run it and visit the route
 
-### 4. Start the Dev Server
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start dev server">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start the plugin in development">
 
 ```bash tab="bun"
 bun dev
@@ -134,44 +108,33 @@ npm run dev
 
 </Tabs>
 
-Visit `http://localhost:3000/my-plugin` to view your new plugin live.
+Open `http://localhost:3000/site-notes`. The page comes from the plugin, gets
+its own chunk, and never moves house. Tiny victory dance optional.
 
-</Step>
+{/* Image prompt: Split-screen developer tutorial image. Left shows a plugin folder with manifest, locale, and route files. Right shows the resulting /site-notes page in a VitNode app. Dark theme, precise code-like labels, 1600x900. */}
+
+  </Step>
 </Steps>
 
----
-
-## Generated Files Reference
-
-During dev or build, Vite inspects your configured plugins and automatically synchronizes these files:
-
-| Generated File | Content |
-| :--- | :--- |
-| `src/plugin-route-manifest.gen.ts` | Route table with paths and layout trees |
-| `src/plugin-routes.gen.ts` | Lazy `import()` statements for route chunks |
-| `src/admin-nav.gen.ts` | AdminCP navigation items from plugins |
-| `src/content-registry.gen.ts` | Content Engine administrative screens |
-
-<Callout type="info" title="Do not manually edit generated files">
-  Files ending in `.gen.ts` are regenerated automatically. Always edit your plugin's source files instead.
-</Callout>
-
-## Learn More
+## Add the next capability
 
 <Cards>
   <Card
-    title="Route Manifest"
-    description="Full options reference for plugin routing"
+    icon={<RouteIcon />}
+    title="Route manifest"
+    description="Add dynamic URLs, loaders, metadata, and route guards."
     href="/docs/dev/plugins/route-manifest"
   />
   <Card
-    title="AdminCP Pages"
-    description="Add admin navigation and staff-permission protected screens"
-    href="/docs/dev/plugins/admin"
+    icon={<DatabaseIcon />}
+    title="Database models"
+    description="Put Drizzle models and migrations beside the feature that owns them."
+    href="/docs/dev/database"
   />
   <Card
-    title="Database Models"
-    description="Define Drizzle schemas and migrations in plugins"
-    href="/docs/dev/database"
+    icon={<LayoutDashboardIcon />}
+    title="Admin Control Panel"
+    description="Ship staff screens, navigation, permissions, and dashboard widgets."
+    href="/docs/dev/plugins/admin"
   />
 </Cards>

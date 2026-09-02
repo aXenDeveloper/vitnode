@@ -1,58 +1,78 @@
-# (VitNode) Create App
+# Create VitNode App
 
-This package is a CLI tool to create a new VitNode app quickly.
-
-Script based on [Create Next App](https://nextjs.org/).
+`create-vitnode-app` scaffolds a TanStack Start and Hono VitNode application,
+or an installable plugin for an existing VitNode workspace.
 
 <p align="center">
-  <br>
   <a href="https://vitnode.com/" target="_blank">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_dark.svg">
       <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_light.svg">
-      <img alt="VitNode Logo" src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_light.svg" width="400">
+      <img alt="VitNode" src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_light.svg" width="400">
     </picture>
   </a>
-  <br>
-  <br>
 </p>
 
-## Usage
+## Create an app
 
-```bash
-npx create-vitnode-app@latest
-```
-
-or
-
-```bash
-pnpm create vitnode-app@latest
-```
-
-or
+### Bun
 
 ```bash
 bun create vitnode-app@latest
 ```
 
+### pnpm
+
+```bash
+pnpm create vitnode-app@latest
+```
+
+### npm
+
+```bash
+npm create vitnode-app@latest
+```
+
+Choose Turborepo during setup if you will build plugins. It gives your project a
+workspace root and a `plugins/*` home.
+
+## Create a plugin
+
+Run this from an existing VitNode workspace, then enter the plugin package name
+when prompted:
+
+### Bun
+
+```bash
+bun create vitnode-app@latest --plugin
+```
+
+### pnpm
+
+```bash
+pnpm create vitnode-app@latest --plugin
+```
+
+### npm
+
+```bash
+npm create vitnode-app@latest -- --plugin
+```
+
+The generator creates the package and adds its workspace dependency. Register it
+in the host’s `vitnode.config.ts` to enable the feature.
+
 ## Options
 
-| Option              | Description                                                                       |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `--package-manager` | Specify the package manager to use. Support `npm`, `pnpm`.                        |
-| `--eslint`          | Initialize with ESLint & Prettier config.                                         |
-| `--skip-install`    | Skip installing packages after initializing the project.                          |
-| `--mode`            | Specify the type of app to create. Support `singleApp`, `apiMonorepo`, `onlyApi`. |
-| `--monorepo`        | Create project with monorepo structure.                                           |
-| `--docker`          | Initialize with Docker support.                                                   |
-| `--plugin`          | Create a VitNode plugin project.                                                  |
+| Option | Description |
+| --- | --- |
+| `--package-manager` | Choose `npm` or `pnpm` for the generated project. |
+| `--eslint` | Include ESLint and Prettier configuration. |
+| `--skip-install` | Skip dependency installation after scaffolding. |
+| `--mode` | Choose `singleApp`, `apiMonorepo`, or `onlyApi`. |
+| `--monorepo` | Create a workspace layout for plugins and multiple applications. |
+| `--docker` | Include local Docker services. |
+| `--plugin` | Create a VitNode plugin package. |
 
-## Create Plugin
-
-Use the `--plugin` flag to create a VitNode plugin project.
-
-### Options
-
-| Option           | Description                                              |
-| ---------------- | -------------------------------------------------------- |
-| `--skip-install` | Skip installing packages after initializing the project. |
+Read the [VitNode documentation](https://vitnode.com/docs/dev) for setup,
+plugins, deployment, and AdminCP guides.

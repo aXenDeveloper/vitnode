@@ -1,40 +1,47 @@
 ---
-title: Building a Blog
-description: Install @vitnode/blog, manage articles in AdminCP, and render them with TanStack Start - the Content Engine reference plugin.
+title: Install the Blog Plugin
+description: Install @vitnode/blog, enable its API and TanStack Start integration, then publish your first article in AdminCP.
 icon: NotebookPen
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { CompassIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-`@vitnode/blog` is the official reference plugin for Content Engine. It ships article and category models, AdminCP editorial screens, revision histories, draft/publish workflows, and public API endpoints without writing manual CRUD code.
+`@vitnode/blog` is the Content Engine reference plugin. It brings articles,
+categories, editorial screens, revisions, public delivery data, and search
+indexing—without making your host app impersonate a blog plugin.
 
-## Quick start
+<Steps>
+  <Step>
 
-### 1. Install the Plugin
+### Install the package
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Install @vitnode/blog">
 
 ```bash tab="bun"
-bun i @vitnode/blog@canary
+bun add @vitnode/blog@canary
 ```
 
 ```bash tab="pnpm"
-pnpm i @vitnode/blog@canary
+pnpm add @vitnode/blog@canary
 ```
 
 ```bash tab="npm"
-npm i @vitnode/blog@canary
+npm install @vitnode/blog@canary
 ```
 
 </Tabs>
 
----
+  </Step>
+  <Step>
 
-### 2. Register the Plugin
+### Enable the API plugin
 
-#### On the API:
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { blogApiPlugin } from "@vitnode/blog/api/config"
+For a Single App, edit `apps/web/src/vitnode.api.config.ts`; a split deployment
+uses the same change in `apps/api/src/vitnode.api.config.ts`.
+
+```ts title="apps/web/src/vitnode.api.config.ts"
+import { blogApiPlugin } from '@vitnode/blog/config.api' // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [
@@ -43,169 +50,94 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-#### In the Web App:
-```ts title="apps/web/src/vitnode.config.ts"
-import { blogPlugin } from "@vitnode/blog/config"
+  </Step>
+  <Step>
 
-export const vitNodeConfig = buildConfig({
-  ...vitNodeShellConfig,
-  plugins: [
-    blogPlugin(), // [!code ++]
-  ],
-})
-```
+### Enable the web plugin and its messages
 
-#### Localization Messages:
+The host registers the lightweight plugin identity and static locale loaders:
+
 ```ts title="apps/web/src/locales/packages.ts"
+import { CONFIG_PLUGIN as BLOG } from '@vitnode/blog/const' // [!code ++]
+
 export const packageMessages = {
   // [!code ++:3]
-  blog: {
-    en: async () => await import("@vitnode/blog/locales/en.json"),
+  [BLOG.pluginId]: {
+    en: async () => await import('@vitnode/blog/locales/en.json'),
   },
 }
 ```
 
----
+```ts title="apps/web/src/vitnode.config.ts"
+import { CONFIG_PLUGIN as BLOG } from '@vitnode/blog/const' // [!code ++]
+import { buildPlugin } from '@vitnode/core/lib/plugin' // [!code ++]
 
-## Managing Articles in AdminCP
+export const vitNodeConfig = buildConfig({
+  plugins: [
+    buildPlugin({
+      messages: packageMessages[BLOG.pluginId],
+      pluginId: BLOG.pluginId,
+    }), // [!code ++]
+  ],
+})
+```
 
-{/* Image prompt: VitNode AdminCP Blog article management screen at /admin/content/blog/articles. Table displaying published and draft posts with badges, authors, categories, and an "Add Article" button. Dark theme, 1440x900. */}
+  </Step>
+  <Step>
 
-Start your dev server:
+### Migrate, run, and publish
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Prepare and start the blog">
 
 ```bash tab="bun"
+bun run db:migrate
 bun dev
 ```
 
 ```bash tab="pnpm"
+pnpm db:migrate
 pnpm dev
 ```
 
 ```bash tab="npm"
+npm run db:migrate
 npm run dev
 ```
 
 </Tabs>
 
-1. Navigate to **AdminCP → Blog → Categories** (`/admin/content/blog/categories`) and create your first category.
-2. Go to **AdminCP → Blog → Articles** (`/admin/content/blog/articles`) and click **Create Article**.
-3. Write your post with the rich text editor, choose a category, and click **Publish**.
+In AdminCP, create a category at **Blog → Categories**, then publish an article
+at **Blog → Articles**. The plugin owns the editorial work so the host can stay
+boringly reliable.
 
----
+{/* Image prompt: VitNode AdminCP Blog article management screen. Show categories in a side navigation, article list with draft and published badges, and a prominent “Create article” button. Dark theme, 1440x900. */}
 
-## Render Articles on Your Website
+  </Step>
+</Steps>
 
-Build public blog pages in your web application using TanStack Start routes:
+## Deliver it from a plugin
 
-### 1. Blog Overview Page
-
-```tsx title="apps/web/src/routes/_main/blog/index.tsx"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { fetcherClient } from "@vitnode/core/lib/fetcher-client"
-
-export const Route = createFileRoute("/_main/blog/")({
-  loader: async ({ context }) =>
-    await context.queryClient.ensureQueryData({
-      queryKey: ["blog_articles"],
-      queryFn: async () => {
-        const res = await fetch("/api/@vitnode/blog/content/blog")
-        return await res.json()
-      },
-    }),
-  component: BlogIndexPage,
-})
-
-function BlogIndexPage() {
-  const { data } = useSuspenseQuery({
-    queryKey: ["blog_articles"],
-    queryFn: async () => {
-      const res = await fetch("/api/@vitnode/blog/content/blog")
-      return await res.json()
-    },
-  })
-
-  return (
-    <div className="container mx-auto py-8 flex flex-col gap-6">
-      <h1 className="text-4xl font-bold tracking-tight">Blog</h1>
-      <div className="grid md:grid-cols-2 gap-6">
-        {data.edges.map((article: any) => (
-          <article key={article.id} className="p-4 border rounded-lg flex flex-col gap-2">
-            <h2 className="text-2xl font-semibold">
-              <Link to="/blog/$slug" params={{ slug: article.slug }}>
-                {article.title}
-              </Link>
-            </h2>
-            <p className="text-muted-foreground">{article.summary}</p>
-          </article>
-        ))}
-      </div>
-    </div>
-  )
-}
-```
-
----
-
-### 2. Single Article Page
-
-```tsx title="apps/web/src/routes/_main/blog/$slug.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { pageHead } from "#/lib/page-head"
-
-export const Route = createFileRoute("/_main/blog/$slug")({
-  loader: async ({ params }) => {
-    const res = await fetch(`/api/@vitnode/blog/content/blog/${params.slug}`)
-    return await res.json()
-  },
-  head: ({ loaderData }) =>
-    pageHead({
-      title: loaderData?.title,
-      description: loaderData?.summary,
-    }),
-  component: ArticlePage,
-})
-
-function ArticlePage() {
-  const article = Route.useLoaderData()
-
-  return (
-    <main className="container mx-auto max-w-3xl py-8 flex flex-col gap-4">
-      <h1 className="text-4xl font-bold">{article.title}</h1>
-      <div
-        className="prose dark:prose-invert"
-        dangerouslySetInnerHTML={{ __html: article.content }}
-      />
-    </main>
-  )
-}
-```
-
----
-
-## What the Plugin Provides Automatically
-
-| Feature | Details |
-| :--- | :--- |
-| **PostgreSQL Models** | `blog_articles` and `blog_categories` tables via Drizzle |
-| **AdminCP Screens** | Full CRUD, multi-author picker, category relation, image uploads |
-| **Editorial Workflow** | Draft/published states, scheduled publication dates, and 20 revision histories |
-| **Public API Routes** | `GET /api/@vitnode/blog/content/blog` and `/{slug}` |
-| **Global Search** | Automatic index sync to `core_search_index` for site-wide search |
-
-## Learn More
+Build the public article page in a plugin too, then use the Content Engine
+delivery guide for loaders and SEO. That keeps the data model and its public URL
+together.
 
 <Cards>
   <Card
-    title="Defining a Content Type"
-    description="Build your own custom content types with Content Engine"
-    href="/docs/dev/content-engine/defining-a-content-type"
+    icon={<RouteIcon />}
+    title="Build your first plugin"
+    description="Create the plugin that will own your site’s public blog route."
+    href="/docs/guides/first-plugin"
   />
   <Card
-    title="Content Delivery & SEO"
-    description="Query caching, slug redirects, and Open Graph previews"
+    icon={<CompassIcon />}
+    title="Content delivery and SEO"
+    description="Add plugin routes, redirects, canonical metadata, and sitemaps."
     href="/docs/dev/content-engine/content-delivery-and-seo"
+  />
+  <Card
+    icon={<LayoutDashboardIcon />}
+    title="Admin Control Panel"
+    description="Extend the staff experience with pages, navigation, and widgets."
+    href="/docs/dev/plugins/admin"
   />
 </Cards>

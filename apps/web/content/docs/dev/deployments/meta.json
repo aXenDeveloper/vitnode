@@ -1,6 +1,6 @@
 {
   "title": "Deployments",
-  "description": "Take a VitNode app to production",
+  "description": "Deploy a VitNode application to production with cloud or self-hosted infrastructure",
   "icon": "HardDriveUpload",
   "pages": ["self-hosted", "cloud"]
 }

@@ -13,14 +13,12 @@ In TanStack Start, 404 handling is configured as a route option via `notFoundCom
 Your `apps/web/src/routes/__root.tsx` defines the fallback boundary for all unmatched URLs:
 
 ```tsx title="apps/web/src/routes/__root.tsx"
-import { createRootRouteWithContext } from "@tanstack/react-router"
-import { ErrorActions, NotFound } from "@vitnode/core/tanstack/layout"
+import { createRootRouteWithContext } from '@tanstack/react-router'
+import { ErrorActions, NotFound } from '@vitnode/core/tanstack/layout'
 
 export const Route = createRootRouteWithContext<RootRouterContext>()({
   // [!code ++:4]
-  notFoundComponent: () => (
-    <NotFound actions={<ErrorActions />} />
-  ),
+  notFoundComponent: () => <NotFound actions={<ErrorActions />} />,
   component: RootComponent,
 })
 ```
@@ -33,11 +31,12 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
 
 When a requested resource (like an article slug or user ID) is not found in the database, throw `notFound()` inside the loader:
 
-```tsx title="apps/web/src/routes/_main/blog/$slug.tsx"
-import { createFileRoute, notFound } from "@tanstack/react-router"
+```tsx title="plugins/blog/src/routes/article-page.tsx"
+import { notFound } from '@tanstack/react-router'
+import { definePluginRoute } from '@vitnode/core/routing'
 
-export const Route = createFileRoute("/_main/blog/$slug")({
-  loader: async ({ params }) => {
+export const route = definePluginRoute({
+  load: async ({ params }) => {
     const post = await fetchPost(params.slug)
     // [!code ++:3]
     if (!post) {
@@ -51,22 +50,11 @@ export const Route = createFileRoute("/_main/blog/$slug")({
 
 ---
 
-## Custom Route-Level 404 Components
+## Keep the fallback in the host
 
-You can assign a customized `notFoundComponent` to specific routes or layout shells:
-
-```tsx title="apps/web/src/routes/_main/blog/$slug.tsx"
-export const Route = createFileRoute("/_main/blog/$slug")({
-  loader: async ({ params }) => { /* ... */ },
-  // [!code ++:3]
-  notFoundComponent: () => (
-    <div className="p-8 text-center">
-      <h2>Article Not Found</h2>
-      <p>The post you are looking for may have been removed.</p>
-    </div>
-  ),
-})
-```
+The root 404 boundary is host infrastructure, so configure it once. Feature
+routes should throw `notFound()` from their plugin loader and let that shared,
+localized fallback do its work.
 
 ## Learn More
 

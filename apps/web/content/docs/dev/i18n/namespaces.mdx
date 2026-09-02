@@ -76,90 +76,24 @@ namespace.
 
 ## Asking for a namespace
 
-A plugin route declares its namespaces in the route manifest, which is covered in
-[Pages](/docs/dev/i18n/pages). A route in your own app does the same thing in two
-lines: warm the query in the loader, mount the provider in the component.
+Declare the exact branches a plugin page renders in the manifest. VitNode loads
+them with the route chunk, so public pages do not download a plugin’s AdminCP
+copy just because it exists.
 
-<Steps>
-
-<Step>
-
-### Warm the messages in the loader
-
-```tsx title="src/routes/_main/reports.tsx"
-import { intlQueryOptions } from '@vitnode/core/tanstack/i18n' // [!code ++]
-
-const REPORTS_NAMESPACES = ['core.global', 'my-app.reports'] as const // [!code ++]
-
-export const Route = createFileRoute('/_main/reports')({
-  loader: async ({ context }) => {
-    // [!code ++:3]
-    await context.queryClient.ensureQueryData(
-      intlQueryOptions({
-        locale: context.locale,
-        namespaces: REPORTS_NAMESPACES,
-      }),
-    )
+```ts title="plugins/my-plugin/src/routes/manifest.ts"
+export const routes = [
+  {
+    entry: 'routes/reports-page',
+    id: 'reports',
+    // [!code ++]
+    namespaces: ['my-plugin.reports'],
+    path: '/reports',
   },
-  component: ReportsPage,
-})
+]
 ```
 
-`context.locale` comes from the root route, so `/pl/reports` arrives with Polish
-already in the cache instead of painting English and flipping after hydration.
-
-</Step>
-
-<Step>
-
-### Mount `RouteMessages` with the same list
-
-```tsx title="src/routes/_main/reports.tsx"
-import { RouteMessages } from '@vitnode/core/tanstack/i18n' // [!code ++]
-
-function ReportsPage() {
-  return (
-    <RouteMessages namespaces={REPORTS_NAMESPACES}>
-      {/* [!code ++] */}
-      <ReportsScreen />
-    </RouteMessages>
-  )
-}
-```
-
-`RouteMessages` **reads**, it does not fetch: it runs `useSuspenseQuery` over the
-same `intlQueryOptions` the loader already warmed. Same locale, same namespaces,
-same cache key - so on the first render the entry is there and nothing suspends.
-
-</Step>
-
-<Step>
-
-### Read the strings
-
-```tsx
-const t = useTranslations('my-app.reports')
-
-return <h1>{t('title')}</h1>
-```
-
-Load the page and the heading is translated. If it renders as
-`my-app.reports.title` instead, the namespace is not in the list above it.
-
-</Step>
-
-</Steps>
-
-<Callout title="One list, declared once" type="warn">
-  The loader and the provider must ask for the **identical** set. A loader that
-  warms `["core.global"]` under a provider asking for `["core.global",
-  "my-app.reports"]` fills an entry nothing reads, the provider suspends, and
-  the first paint costs a round trip. Hoist the array into a `const` and pass
-  that to both, the way `SETTINGS_NAMESPACES` does in core.
-</Callout>
-
-Providers nest, and the inner one wins for the keys it names - so a layout can
-name the set once for the pages under it, and a page can add its own on top.
+The route module can then call `useTranslations('my-plugin.reports')`. If a key
+renders as its own name, confirm the manifest declared the matching namespace.
 
 ## Limits
 
@@ -208,8 +142,7 @@ import { MAX_NAMESPACES } from '@vitnode/core/tanstack/i18n'
 
 <Callout title="Every string renders as its own key" type="error">
   The symptom of a namespace that was never asked for. Check that the route
-  declares it (a plugin's `manifest.ts`) or that a `RouteMessages` above the
-  component names it - and that the loader warms the same list.
+  declares it in the plugin's `manifest.ts`.
 </Callout>
 
 <Callout

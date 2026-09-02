@@ -1,5 +1,6 @@
 import type { TOCItemType } from 'fumadocs-core/toc'
 
+import { Callout } from 'fumadocs-ui/components/callout'
 import { DocsBody, DocsPage } from 'fumadocs-ui/page'
 
 import { ViewOptions } from './view-options'
@@ -46,28 +47,42 @@ export const DocsArticle = ({
 }: DocsArticleMeta & {
   children: React.ReactNode
   toc: TOCItemType[]
-}) => (
-  <DocsPage
-    full={full}
-    tableOfContent={{ single: false, style: 'clerk' }}
-    toc={toc}
-  >
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-foreground text-3xl font-bold text-balance sm:text-4xl">
-          {title}
-        </h1>
+}) => {
+  const isPluginFirstGuide =
+    url.startsWith('/docs/dev/') && !url.startsWith('/docs/dev/plugins')
 
-        <ViewOptions githubUrl={githubUrl} markdownUrl={url} />
+  return (
+    <DocsPage
+      full={full}
+      tableOfContent={{ single: false, style: 'clerk' }}
+      toc={toc}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-foreground text-3xl font-bold text-balance sm:text-4xl">
+            {title}
+          </h1>
+
+          <ViewOptions githubUrl={githubUrl} markdownUrl={url} />
+        </div>
+
+        {description ? (
+          <p className="text-muted-foreground text-lg leading-relaxed text-pretty">
+            {description}
+          </p>
+        ) : null}
       </div>
 
-      {description ? (
-        <p className="text-muted-foreground text-lg leading-relaxed text-pretty">
-          {description}
-        </p>
+      {isPluginFirstGuide ? (
+        <Callout title="Plugin first" type="idea">
+          Building a page, API, AdminCP screen, or feature? Put it in a plugin.
+          Keep the host for composition and site-wide infrastructure; otherwise
+          it becomes a very expensive junk drawer.{' '}
+          <a href="/docs/dev/plugins/create">Create a plugin first.</a>
+        </Callout>
       ) : null}
-    </div>
 
-    <DocsBody>{children}</DocsBody>
-  </DocsPage>
-)
+      <DocsBody>{children}</DocsBody>
+    </DocsPage>
+  )
+}

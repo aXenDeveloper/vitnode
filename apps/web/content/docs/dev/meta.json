@@ -6,8 +6,8 @@
   "pages": [
     "---Start here---",
     "index",
-    "setup",
     "plugins",
+    "setup",
     "deployments",
     "architecture",
     "---Framework---",
@@ -36,6 +36,7 @@
     "---Operate---",
     "debugging",
     "swagger",
+    "documentation",
     "contribution",
     "..."
   ]

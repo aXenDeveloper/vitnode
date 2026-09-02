@@ -19,7 +19,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 Three values, and a `<div>` for the widget to land in.
 
-```tsx title="src/site/contact/contact-form.tsx"
+```tsx title="plugins/contact/src/views/contact/contact-form.tsx"
 import type React from 'react'
 
 import { useCaptcha } from '@vitnode/core/hooks/use-captcha' // [!code ++]
@@ -129,31 +129,16 @@ export const createContactRoute = buildRoute({
 </Step>
 <Step>
 
-### Read the deployment's config
+### Read the deployment's config in the plugin screen
 
-The site key is public, and `middlewareConfigQueryOptions()` is the read as a
-TanStack Query definition. Warm it in the route's `loader` so the widget is not
-waiting on a request after hydration.
+The site key is public. A plugin page can read it with the shared TanStack Query
+definition before rendering its form:
 
-```tsx title="src/routes/_main/contact.tsx"
-import { createFileRoute } from '@tanstack/react-router'
-import { middlewareConfigQueryOptions } from '@vitnode/core/tanstack/auth' // [!code ++]
-
-import { ContactScreen } from '#/site/contact/contact-screen'
-
-export const Route = createFileRoute('/_main/contact')({
-  // [!code ++:2]
-  loader: async ({ context }) =>
-    await context.queryClient.ensureQueryData(middlewareConfigQueryOptions()),
-  component: ContactScreen,
-})
-```
-
-```tsx title="src/site/contact/contact-screen.tsx"
+```tsx title="plugins/contact/src/routes/contact-page.tsx"
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { middlewareConfigQueryOptions } from '@vitnode/core/tanstack/auth'
 
-import { ContactForm } from './contact-form'
+import { ContactForm } from '../views/contact-form'
 
 export const ContactScreen = () => {
   const { data: config } = useSuspenseQuery(middlewareConfigQueryOptions())
@@ -243,11 +228,11 @@ A minimal captcha-gated feature is four files, and only one of them knows the
 hook exists.
 
 <Files>
-  <Folder defaultOpen name="src">
-    <Folder defaultOpen name="routes/_main">
-      <File name="contact.tsx" />
+  <Folder defaultOpen name="plugins/contact/src">
+    <Folder defaultOpen name="routes">
+      <File name="contact-page.tsx" />
     </Folder>
-    <Folder defaultOpen name="site/contact">
+    <Folder defaultOpen name="views/contact">
       <File name="contact-screen.tsx" />
       <File name="contact-form.tsx" />
       <File name="send-message.ts" />

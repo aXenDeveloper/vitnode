@@ -1,27 +1,20 @@
 ---
 title: Getting Started
-description: Create a VitNode app, start Postgres, run the dev server, and sign in to the AdminCP as your first administrator.
+description: Create a VitNode app, prepare Postgres, start TanStack Start, and sign in to AdminCP in five small steps.
 icon: Rocket
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { BookOpenIcon, PackagePlusIcon, ServerIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-Get up and running with a complete VitNode application in under 5 minutes.
-
-## Prerequisites
-
-- **Node.js 22+** (Node 24 recommended)
-- Package manager: **pnpm**, **bun**, or **npm**
-- **PostgreSQL 15+** (or Docker to run the included compose file)
-
----
-
-## Create and Run Your Application
+You need Node.js 22+, Postgres (or Docker), and your favorite package manager.
+Choose a workspace with Turborepo if you will create plugins; plugins are the
+home for product work, not an optional side quest.
 
 <Steps>
-<Step>
+  <Step>
 
-### 1. Scaffold the Project
+### Scaffold the app
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create VitNode app">
 
@@ -34,24 +27,23 @@ pnpm create vitnode-app@canary
 ```
 
 ```bash tab="npm"
-npx create-vitnode-app@canary
+npm create vitnode-app@canary
 ```
 
 </Tabs>
 
-Select your preferred template when prompted:
-- **Single App**: Unified TanStack Start application with Hono API mounted at `/api` (Recommended).
-- **Monorepo App**: Turborepo setup separating `apps/web` and `apps/api`.
-- **Only API**: Standalone Hono REST/RPC server.
+Pick **Single App** for TanStack Start plus Hono at `/api`. Turn on
+**Turborepo** if you intend to use `--plugin`; it gives the generator a
+workspace root and a place for `plugins/*`.
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 2. Start PostgreSQL with Docker
+### Start the database
 
-If you chose Docker during scaffolding, start Postgres and Redis in one command:
+If you selected Docker, start Postgres and Redis locally:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start database">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start local services">
 
 ```bash tab="bun"
 bun run docker:dev
@@ -67,12 +59,12 @@ npm run docker:dev
 
 </Tabs>
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 3. Run Migrations and Seed Initial Admin
+### Migrate and create your administrator
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate and seed">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Prepare the database">
 
 ```bash tab="bun"
 bun run db:migrate
@@ -88,14 +80,14 @@ npm run db:migrate
 
 </Tabs>
 
-This creates all core schema tables and prompts you to configure your initial administrator account.
+The migration creates core tables and asks for the first admin account.
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 4. Start the Development Server
+### Start VitNode
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start dev server">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start the development server">
 
 ```bash tab="bun"
 bun dev
@@ -111,34 +103,41 @@ npm run dev
 
 </Tabs>
 
-Open `http://localhost:3000` to view your live application.
+Open `http://localhost:3000`.
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 5. Sign In to the AdminCP
+### Check AdminCP, then build a plugin
 
-Visit `http://localhost:3000/admin` and sign in with the admin credentials created during migration.
+Sign in at `http://localhost:3000/admin`. When the shell works, resist the
+temptation to drop feature files into the host: [create a plugin](/docs/dev/plugins/create)
+and let it own the feature.
 
-</Step>
+{/* Image prompt: A polished VitNode AdminCP sign-in screen and dashboard overview, dark theme, with a clearly visible sidebar and a subtle callout pointing to the plugin-oriented AdminCP area. 1440x900. */}
+
+  </Step>
 </Steps>
 
-## Next Steps
+## Keep going
 
 <Cards>
   <Card
-    title="Create a Plugin"
-    description="Build your first custom VitNode plugin"
+    icon={<PackagePlusIcon />}
+    title="Create a plugin"
+    description="Scaffold, register, and visit an installable feature package."
     href="/docs/dev/plugins/create"
   />
   <Card
-    title="Defining a Content Type"
-    description="Declare database schemas and AdminCP management screens"
-    href="/docs/dev/content-engine/defining-a-content-type"
+    icon={<ServerIcon />}
+    title="Deployments"
+    description="Move your TanStack Start and Hono app to production."
+    href="/docs/dev/deployments/self-hosted"
   />
   <Card
-    title="Deployments"
-    description="Deploy VitNode to production servers or containers"
-    href="/docs/dev/deployments/self-hosted"
+    icon={<BookOpenIcon />}
+    title="First plugin tutorial"
+    description="Follow a compact example that adds a real plugin page."
+    href="/docs/guides/first-plugin"
   />
 </Cards>

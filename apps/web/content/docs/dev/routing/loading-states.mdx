@@ -4,19 +4,19 @@ description: Render instant skeleton shapes while TanStack Start routes load dat
 icon: Loader2
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 While a route's loader runs or its code chunk downloads, TanStack Router displays a pending component. VitNode provides pre-built skeleton layouts matching common UI patterns.
 
 ## Quick start
 
-### 1. In a Plugin Component (Suspense)
+### Use Suspense in a plugin component
 
 Plugin routes load dynamically. Use React `Suspense` with VitNode's pending skeletons:
 
 ```tsx title="plugins/blog/src/routes/posts-page.tsx"
-import { FeedPendingSkeleton } from "@vitnode/core/tanstack/pending"
-import React, { Suspense } from "react"
+import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
+import React, { Suspense } from 'react'
 
 const PostsList = () => {
   // Data loading component
@@ -33,35 +33,18 @@ const PostsPage = () => (
 export default PostsPage
 ```
 
-### 2. In an Application Route File
-
-Attach `pendingComponent` directly to `createFileRoute`:
-
-```tsx title="apps/web/src/routes/_main/posts.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { FeedPendingSkeleton } from "@vitnode/core/tanstack/pending" // [!code ++]
-
-export const Route = createFileRoute("/_main/posts")({
-  loader: async () => await fetchPosts(),
-  component: PostsPage,
-  pendingComponent: FeedPendingSkeleton, // [!code ++]
-})
-```
-
----
-
 ## Pre-Built Pending Skeletons
 
 Import these shapes from `@vitnode/core/tanstack/pending`:
 
-| Shape | Layout | Typical Use Case |
-| :--- | :--- | :--- |
-| `FeedPendingSkeleton` | Card timeline with avatars | Activity feeds, search results, articles |
-| `TablePendingSkeleton` | Toolbar, table header, and rows | Data tables, AdminCP lists, files |
-| `FormPendingSkeleton` | Card with inputs and button actions | Settings pages, edit dialogs |
-| `CardsPendingSkeleton` | Responsive 1/2/3 column card grid | Dashboard overview, integrations |
-| `AuthPendingSkeleton` | Centered authentication card | Sign in, registration, password reset |
-| `RoutePendingSpinner` | Centered accessible spinner | Minimalistic or unconventional pages |
+| Shape                  | Layout                              | Typical Use Case                         |
+| :--------------------- | :---------------------------------- | :--------------------------------------- |
+| `FeedPendingSkeleton`  | Card timeline with avatars          | Activity feeds, search results, articles |
+| `TablePendingSkeleton` | Toolbar, table header, and rows     | Data tables, AdminCP lists, files        |
+| `FormPendingSkeleton`  | Card with inputs and button actions | Settings pages, edit dialogs             |
+| `CardsPendingSkeleton` | Responsive 1/2/3 column card grid   | Dashboard overview, integrations         |
+| `AuthPendingSkeleton`  | Centered authentication card        | Sign in, registration, password reset    |
+| `RoutePendingSpinner`  | Centered accessible spinner         | Minimalistic or unconventional pages     |
 
 ---
 
@@ -72,18 +55,18 @@ Standard skeleton shapes accept custom classes and row counts:
 <TypeTable
   type={{
     className: {
-      description: "Additional CSS classes merged onto outer container.",
-      type: "string",
+      description: 'Additional CSS classes merged onto outer container.',
+      type: 'string',
     },
     rows: {
-      default: "3 to 6",
-      description: "Number of skeleton rows or cards to display.",
-      type: "number",
+      default: '3 to 6',
+      description: 'Number of skeleton rows or cards to display.',
+      type: 'number',
     },
     label: {
       default: "'Loading'",
-      description: "Screen-reader text rendered for accessibility.",
-      type: "string",
+      description: 'Screen-reader text rendered for accessibility.',
+      type: 'string',
     },
   }}
 />

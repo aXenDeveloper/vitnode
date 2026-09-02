@@ -1,0 +1,166 @@
+---
+title: Build Your First Plugin
+description: Create a VitNode plugin step by step, add a TanStack Start route, register it, and open a working page.
+icon: PackagePlus
+---
+
+import { LayoutDashboardIcon, NetworkIcon, RouteIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+This tutorial builds `@acme/site-notes`, a tiny plugin with a page at
+`/site-notes`. Start from a VitNode workspace with Turborepo enabled; it gives
+the plugin generator a shared home.
+
+<Steps>
+  <Step>
+
+### Generate `@acme/site-notes`
+
+Run the generator from the workspace root and enter `@acme/site-notes` when it
+asks for a name:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Generate the plugin">
+
+```bash tab="bun"
+bun create vitnode-app@canary --plugin
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary --plugin
+```
+
+```bash tab="npm"
+npm create vitnode-app@canary -- --plugin
+```
+
+</Tabs>
+
+The result has `routes/manifest.ts`, `routes/home-page.tsx`, `locales/en.json`,
+and `config.tsx`. The CLI adds a workspace dependency but leaves activation to
+you, which makes installed plugins predictable.
+
+  </Step>
+  <Step>
+
+### Claim the page URL
+
+The manifest belongs to the plugin and is all the host needs to discover a
+route:
+
+```ts title="plugins/site-notes/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from '@vitnode/core/routing'
+
+export const routes: PluginRouteDefinition[] = [
+  // [!code ++:5]
+  {
+    entry: 'routes/home-page',
+    id: 'home',
+    path: '/site-notes',
+  },
+]
+```
+
+  </Step>
+  <Step>
+
+### Render a translated page
+
+Edit the generated route module. It stays framework-neutral and is lazily
+loaded by the TanStack Start host:
+
+```tsx title="plugins/site-notes/src/routes/home-page.tsx"
+import { useTranslations } from 'use-intl'
+
+const HomePage = () => {
+  const t = useTranslations('@acme/site-notes') // [!code ++]
+
+  return (
+    <div className="container mx-auto flex max-w-2xl flex-col gap-4 p-4">
+      <h2 className="text-2xl font-semibold">{t('home.title')}</h2>
+      <p className="text-muted-foreground">{t('home.desc')}</p>
+    </div>
+  )
+}
+
+export default HomePage
+```
+
+```json title="plugins/site-notes/src/locales/en.json"
+{
+  "@acme/site-notes": {
+    "home": {
+      "title": "Site notes",
+      "desc": "This page ships from a plugin. Neat, right?"
+    }
+  }
+}
+```
+
+  </Step>
+  <Step>
+
+### Enable it in the host
+
+The package must be in the host's `plugins` array. This is the only composition
+step; routes and pages remain inside `plugins/site-notes`:
+
+```ts title="apps/web/src/vitnode.config.ts"
+import { siteNotesPlugin } from '@acme/site-notes/config' // [!code ++]
+
+export const vitNodeConfig = buildConfig({
+  plugins: [
+    siteNotesPlugin(), // [!code ++]
+  ],
+})
+```
+
+  </Step>
+  <Step>
+
+### Run and inspect the result
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run the plugin">
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Visit `http://localhost:3000/site-notes`.
+
+{/* Image prompt: Tutorial verification screenshot for a VitNode app at /site-notes. Show a simple “Site notes” page, browser address bar, and a compact visual hint that it is loaded from a plugin package. Dark theme, 1440x900. */}
+
+  </Step>
+</Steps>
+
+## Grow the same plugin
+
+<Cards>
+  <Card
+    icon={<RouteIcon />}
+    title="Add route behavior"
+    description="Use loaders, metadata, breadcrumbs, and parameters in the plugin route."
+    href="/docs/dev/routing"
+  />
+  <Card
+    icon={<NetworkIcon />}
+    title="Add an API module"
+    description="Keep typed Hono routes beside the page that needs them."
+    href="/docs/dev/plugins/api/modules"
+  />
+  <Card
+    icon={<LayoutDashboardIcon />}
+    title="Add AdminCP tools"
+    description="Give staff a plugin-owned screen or dashboard widget."
+    href="/docs/dev/plugins/admin"
+  />
+</Cards>

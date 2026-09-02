@@ -1,66 +1,31 @@
 ---
 title: Guides
-description: End-to-end walkthroughs that build something real with VitNode - install a plugin, publish content in the AdminCP, and serve it from your own pages.
+description: Follow concise VitNode tutorials that build real plugin-owned features from the first command to a working result.
 icon: Compass
 ---
 
-A guide takes you from nothing to a working feature in one sitting. You follow it
-top to bottom, you type what it says, and at the end something works that did not
-work before.
+import { NotebookPenIcon, PackagePlusIcon } from 'lucide-react'
 
-## Guides vs reference
-
-The two halves of these docs answer different questions, and knowing which one
-you are in saves a lot of scrolling.
-
-|                    | Guides                            | [Development](/docs/dev)              |
-| ------------------ | --------------------------------- | ------------------------------------- |
-| **Answers**        | "How do I build X?"               | "What does this option do?"           |
-| **Shape**          | One ordered path, start to finish | Tables, type references, every branch |
-| **You bring**      | An empty app and half an hour     | A specific question                   |
-| **You leave with** | A running feature                 | The exact signature you needed        |
-
-Both are true of the same codebase. A guide picks one honest route through it and
-leaves the alternatives to the reference pages it links.
-
-## The guides
+Guides are the shortest trustworthy path from an empty workspace to a feature
+you can click. They start in a plugin on purpose: reusable code deserves a
+proper home before it acquires a spare drawer in the host app.
 
 <Cards>
   <Card
+    icon={<PackagePlusIcon />}
+    href="/docs/guides/first-plugin"
+    title="Build your first plugin"
+    description="Generate a plugin, add a page, register it, and visit its route."
+  />
+  <Card
+    icon={<NotebookPenIcon />}
     href="/docs/guides/blog"
-    title="Build a blog"
-    description="Install @vitnode/blog, publish an article in the AdminCP, and render it on your own /blog page."
+    title="Install the Blog plugin"
+    description="Enable @vitnode/blog, publish an article in AdminCP, and deliver it from a plugin."
   />
 </Cards>
 
-Every guide assumes you already have an app running - if you do not,
-[Getting started](/docs/dev/setup) is seven steps from an empty folder to an
-AdminCP you are signed in to.
-
-<Callout type="info" title="More guides are on the way">
-  One guide today, and it is the one worth having first: the blog plugin is the
-  Content Engine's reference implementation, so building it teaches most of what
-  a second plugin would repeat. Guides for search, file storage and a
-  from-scratch plugin are queued behind it. Until then, the
-  [Development](/docs/dev) section covers every one of those in reference form.
-</Callout>
-
-## Next
-
-<Cards>
-  <Card
-    href="/docs/dev/architecture"
-    title="Architecture"
-    description="Where a VitNode app keeps its routes, its API and its plugins - the map behind every guide."
-  />
-  <Card
-    href="/docs/dev/plugins/create"
-    title="Create a plugin"
-    description="Scaffold your own plugin, register it, and open the page it serves."
-  />
-  <Card
-    href="/docs/dev/content-engine"
-    title="Content Engine"
-    description="Declare a content type once and get a table, an API, permissions and AdminCP screens."
-  />
-</Cards>
+Already have an app? Great. If not, [Getting started](/docs/dev/setup) prepares
+the database and your first AdminCP account. Need a precise option instead of a
+walkthrough? The [development reference](/docs/dev) is close by, wearing its
+tiny lab coat.

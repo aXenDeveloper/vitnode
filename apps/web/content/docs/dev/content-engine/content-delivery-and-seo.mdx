@@ -1,167 +1,131 @@
 ---
-title: Content Delivery & SEO
-description: Deliver Content Engine records over the web with TanStack Start, automatic 308 redirects, plugin route manifests, and rich SEO metadata.
+title: Content Delivery and SEO
+description: Deliver Content Engine records from a plugin with canonical metadata, slug redirects, hreflang, and XML sitemap support.
 icon: Compass
 ---
 
-import { Step, Steps } from 'fumadocs-ui/components/steps'
+import { RouteIcon, SearchIcon } from 'lucide-react'
 
-Content Engine provides delivery abstractions to turn your schema into public URLs. It handles the heavy lifting: automatic 308 redirects when slugs change, Open Graph tags, canonical links, hreflang alternates, and XML sitemaps.
+Content delivery starts in the plugin that owns the content type. Opt into the
+public API first, then let the same plugin claim the page URL. Search engines
+get a stable story; future you gets fewer scattered files.
 
-Best of all: in VitNode, delivery lives in your **plugin** first. That means your content types and their public views ship together as one reusable package.
-
-{/* Image prompt: A clean infographic showing a Content Engine article moving through TanStack Start routing. Left: Database record with slug "launch-day". Middle: Plugin route manifest resolving /articles/:slug with automatic 308 redirect logic. Right: Rendered HTML page with rich SEO tags in the head and localized strings in the body. Dark theme, 1600x800. */}
-
-## Step-by-Step Delivery Setup
+{/* Image prompt: Dark-theme flow diagram showing a Content Engine record with a slug, a plugin route manifest for /articles/:slug, and a rendered page head containing title, description, canonical URL, Open Graph, hreflang, and sitemap symbols. 1600x900. */}
 
 <Steps>
+  <Step>
 
-<Step>
-### Enable Delivery in your Content Definition
+### Enable public delivery on the content type
 
-Define your content type with `delivery` enabled. Configure its base path, SEO fields, and sitemap settings:
+`publicApi` explicitly chooses exposed fields. Delivery then projects only those
+fields into metadata and sitemap entries.
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/site-notes/src/content/article.ts"
 import { defineContentType, field } from '@vitnode/core/content'
 
 export const articleContentType = defineContentType({
-  id: 'example.article',
-  tableName: 'example_articles',
-  publication: true,
-  editorial: true,
-  // [!code ++:13]
-  delivery: {
-    basePath: '/articles',
-    redirects: true, // Automatically 308-redirects old slugs on rename
-    seo: {
-      titleField: 'title',
-      descriptionField: 'excerpt',
-    },
-    sitemap: {
-      changefreq: 'weekly',
-      priority: 0.8,
-    },
-  },
+  id: '@acme/site-notes.article',
+  tableName: 'site_notes_articles',
+  publication: { enabled: true },
+  editorial: { enabled: true },
   fields: {
-    title: field.text({ required: true }),
-    slug: field.slug({ from: 'title' }),
     excerpt: field.textarea({ nullable: true }),
+    slug: field.slug({ source: 'title' }),
+    title: field.text({ required: true }),
+  },
+  // [!code ++:17]
+  publicApi: {
+    enabled: true,
+    fields: ['id', 'title', 'slug', 'excerpt', 'publishedAt'],
+    path: 'articles',
+  },
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    seo: {
+      descriptionField: 'excerpt',
+      titleField: 'title',
+    },
+    sitemap: { enabled: true, changeFrequency: 'weekly', priority: 0.8 },
   },
 })
 ```
 
-</Step>
+  </Step>
+  <Step>
 
-<Step>
-### Claim the Dynamic URL in your Plugin Manifest
+### Claim the public URL in the plugin
 
-Plugins claim routes as plain data. Notice VitNode's parameter spelling: `:slug`, which TanStack Start maps directly to `$slug`.
-
-```ts title="plugins/example/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from '@vitnode/core/routing'
-
-export const routes: PluginRouteDefinition[] = [
+```ts title="plugins/site-notes/src/routes/manifest.ts"
+export const routes = [
   // [!code ++:6]
   {
     entry: 'routes/article-page',
-    id: 'article-view',
-    namespaces: ['@vitnode/example.articles'],
+    id: 'article',
     path: '/articles/:slug',
   },
 ]
 ```
 
-</Step>
+  </Step>
+  <Step>
 
-<Step>
-### Implement the Plugin Route Module
+### Render data and metadata from the plugin route
 
-Export a default component and a `route` definition using `definePluginRoute`. No framework dependencies needed—just clean, isomorphic code:
-
-```tsx title="plugins/example/src/routes/article-page.tsx"
+```tsx title="plugins/site-notes/src/routes/article-page.tsx"
 import type { PluginRoutePageProps } from '@vitnode/core/routing'
 import { definePluginRoute } from '@vitnode/core/routing'
-import { useTranslations } from 'use-intl' // [!code ++]
-import { fetchArticle } from '../api/fetch-article'
 
-interface ArticleData {
-  excerpt: string
-  publishedAt: string
+interface Article {
+  excerpt: string | null
   title: string
 }
 
-// [!code ++:9]
+// [!code ++:8]
 export const route = definePluginRoute({
-  load: async ({ params }) => {
-    const article = await fetchArticle(params.slug)
-    return article
-  },
+  load: async ({ params }) => await fetchArticle(params.slug),
   head: ({ loaderData }) => ({
-    title: loaderData?.title,
     description: loaderData?.excerpt,
+    title: loaderData?.title,
   }),
 })
 
-const ArticlePage = ({ loaderData }: PluginRoutePageProps<ArticleData>) => {
-  const t = useTranslations('@vitnode/example.articles') // [!code ++]
-
-  return (
-    <article className="container mx-auto max-w-3xl py-8 px-4">
-      <header className="mb-6 flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
-          {loaderData.title}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {t('published_on', { date: loaderData.publishedAt })}
-        </p>
-      </header>
-
-      <div className="prose leading-relaxed">
-        <p>{loaderData.excerpt}</p>
-      </div>
-    </article>
-  )
-}
+const ArticlePage = ({ loaderData }: PluginRoutePageProps<Article>) => (
+  <article className="container mx-auto max-w-3xl p-4">
+    <h2 className="text-3xl font-semibold">{loaderData.title}</h2>
+    <p>{loaderData.excerpt}</p>
+  </article>
+)
 
 export default ArticlePage
 ```
 
-</Step>
-
-<Step>
-### Optional: Override from the Host Application
-
-Need a totally unique design for this one site? You can declare a route file directly in your TanStack Start app:
-
-```tsx title="apps/web/src/routes/_main/articles.$slug.tsx"
-import { createFileRoute } from '@tanstack/react-router'
-import { pageHead } from '#/lib/page-head' // [!code ++]
-
-export const Route = createFileRoute('/_main/articles/$slug')({
-  // [!code ++:4]
-  head: () =>
-    pageHead({
-      title: 'Article - VitNode',
-      robots: 'index, follow',
-    }),
-  component: AppArticlePage,
-})
-
-function AppArticlePage() {
-  const { slug } = Route.useParams()
-  return <div>Custom host layout for article: {slug}</div>
-}
-```
-
-</Step>
-
+  </Step>
 </Steps>
 
-## Automatic SEO Capabilities
+<Callout type="success" title="Keep delivery with its plugin">
+  Do not recreate the article page in the host app. The content type, slug
+  rules, public API, and public route evolve together, so they belong together.
+</Callout>
 
-VitNode gives your content search engine superpowers without the manual headaches:
+## What search engines receive
 
-- **308 Permanent Redirects**: Renaming a slug automatically issues a 308 redirect from the old URL to the new one, saving your Google rank from 404 disasters.
-- **Canonical URLs**: Formatted cleanly using your application's base URL and canonical slug.
-- **Hreflang Tags**: Emits `<link rel="alternate" hreflang="..." />` tags for active translations so multilingual crawlers stay happy.
-- **XML Sitemaps**: Pre-configured XML sitemaps served straight from the API.
+- Canonical URLs and optional Open Graph fields from `delivery.seo`.
+- Redirect history for editorial content when a public slug changes.
+- Localized alternates when you configure `hreflang`.
+- Sitemap entries for public records when `sitemap.enabled` is true.
+
+<Cards>
+  <Card
+    icon={<RouteIcon />}
+    title="Plugin routing"
+    description="Add a route module with loaders, metadata, and a stable URL contract."
+    href="/docs/dev/routing"
+  />
+  <Card
+    icon={<SearchIcon />}
+    title="Public API and caching"
+    description="Expose deliberate fields and understand cache invalidation."
+    href="/docs/dev/content-engine/public-api-and-caching"
+  />
+</Cards>

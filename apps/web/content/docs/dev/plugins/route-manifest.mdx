@@ -1,142 +1,76 @@
 ---
 title: Route Manifest
-description: Declare plugin routes cleanly as serializable data with routes/manifest.ts - dynamic paths, layouts, guards, and module exports.
+description: Declare a plugin-owned TanStack Start route with a stable URL, loader data, metadata, and no host page files.
 icon: Map
 ---
 
-import { Accordion, Accordions } from "fumadocs-ui/components/accordion"
-import { File, Files, Folder } from "fumadocs-ui/components/files"
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { DatabaseIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-A plugin owns its pages. It declares what pages it has and where they live in `src/routes/manifest.ts`. VitNode reads this manifest at build time and mounts each page into TanStack Router with code splitting and SSR out of the box.
+Start by [creating a plugin](/docs/dev/plugins/create). A route manifest is the
+plugin's promise: which URL it owns and which module renders it. The host turns
+that promise into a lazy TanStack Start route—no copied page files, no drama.
 
-## Quick start
-
-Three fields define a complete route:
-
-```ts title="plugins/my-plugin/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from "@vitnode/core/routing"
-
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:5]
-  {
-    entry: "routes/post-page",
-    id: "post",
-    path: "/blog/:slug",
-  },
-]
-```
-
-And the page module it points to:
-
-```tsx title="plugins/my-plugin/src/routes/post-page.tsx"
-const PostPage = () => (
-  <div className="container mx-auto max-w-2xl p-4">
-    <h1 className="text-2xl font-bold">Hello from plugin!</h1>
-  </div>
-)
-
-export default PostPage
-```
-
-## Directory Structure
-
-All route files live inside your plugin's `src/routes/` directory:
-
-<Files>
-  <Folder name="plugins/my-plugin/src" defaultOpen>
-    <File name="config.tsx" />
-    <Folder name="routes" defaultOpen>
-      <File name="manifest.ts" />
-      <File name="post-page.tsx" />
-      <File name="guide-layout.tsx" />
-    </Folder>
-  </Folder>
-</Files>
-
-## Add a route step by step
+{/* Image prompt: Dark-theme developer diagram: a plugin route manifest points to a route module, then into a TanStack Start route inside the app shell. Emphasize “plugin owns feature” and “host composes”. Clean labels, 1600x900. */}
 
 <Steps>
-<Step>
+  <Step>
 
-### 1. Declare the route in manifest.ts
+### Declare the URL in the plugin
 
-Export an array of routes from `src/routes/manifest.ts`:
-
-```ts title="plugins/my-plugin/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from "@vitnode/core/routing"
+```ts title="plugins/site-notes/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from '@vitnode/core/routing'
 
 export const routes: PluginRouteDefinition[] = [
   // [!code ++:5]
   {
-    entry: "routes/post-page",
-    id: "post",
-    path: "/blog/:slug",
+    entry: 'routes/note-page',
+    id: 'note',
+    path: '/notes/:slug',
   },
 ]
 ```
 
-</Step>
-<Step>
+Use `:slug` for dynamic segments. VitNode converts it to TanStack Start's
+internal `$slug` spelling while keeping your plugin manifest portable.
 
-### 2. Create the route component module
+  </Step>
+  <Step>
 
-Export a React component as `default`. Optionally export `route = definePluginRoute({ ... })` for data loading and metadata:
+### Keep behavior beside the page
 
-```tsx title="plugins/my-plugin/src/routes/post-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing"
-import { definePluginRoute } from "@vitnode/core/routing"
+```tsx title="plugins/site-notes/src/routes/note-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
 
-interface Post {
+interface Note {
   title: string
-  content: string
 }
 
-// [!code ++:6]
+// [!code ++:8]
 export const route = definePluginRoute({
-  load: async ({ params }) => ({
-    title: `Post ${params.slug}`,
-    content: "Welcome to this post!",
+  load: async ({ params }) => ({ title: `Note: ${params.slug}` }),
+  head: ({ loaderData }) => ({
+    description: 'A note delivered by the Site notes plugin.',
+    title: loaderData?.title,
   }),
 })
 
-const PostPage = ({ loaderData }: PluginRoutePageProps<Post>) => (
-  <article className="container mx-auto max-w-2xl p-4 flex flex-col gap-2">
-    <h1 className="text-3xl font-bold">{loaderData.title}</h1>
-    <p>{loaderData.content}</p>
+const NotePage = ({ loaderData }: PluginRoutePageProps<Note>) => (
+  <article className="container mx-auto max-w-3xl p-4">
+    <h2 className="text-3xl font-semibold">{loaderData.title}</h2>
   </article>
 )
 
-export default PostPage
+export default NotePage
 ```
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 3. Register routes in your plugin config
+### Run the plugin route
 
-Pass the `routes` array into `buildPlugin`:
-
-```tsx title="plugins/my-plugin/src/config.tsx"
-import { buildPlugin } from "@vitnode/core/lib/plugin"
-import messages from "./locales"
-import { routes } from "./routes/manifest" // [!code ++]
-
-export const myPlugin = () =>
-  buildPlugin({
-    pluginId: "my-plugin",
-    messages,
-    routes, // [!code ++]
-  })
-```
-
-</Step>
-<Step>
-
-### 4. Run the app
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run a plugin route">
 
 ```bash tab="bun"
 bun dev
@@ -152,209 +86,43 @@ npm run dev
 
 </Tabs>
 
-Visit `/blog/hello` to see your route rendered live.
+Visit `http://localhost:3000/notes/hello`. The page's code, data, and SEO stay
+with the feature that needs them. A surprisingly polite route.
 
-</Step>
+  </Step>
 </Steps>
 
-## Field Reference
+## Choose the route shape
 
-Nine fields configure a `PluginRouteDefinition`. Only `id`, `path`, and `entry` are required:
+| Need                 | Add to the manifest                                    |
+| -------------------- | ------------------------------------------------------ |
+| Public feature page  | `path: '/notes'` (the default `area` is `main`)        |
+| Staff screen         | `area: 'admin'` and a full path such as `/admin/notes` |
+| Signed-in visitor    | `requires: 'authenticated'`                            |
+| Shared plugin layout | `kind: 'layout'` plus child `parentId` values          |
 
-<TypeTable
-  type={{
-    id: {
-      description: "Stable unique ID within your plugin (e.g. \"post\", \"settings\").",
-      required: true,
-      type: "string",
-    },
-    path: {
-      description: "Public URL pattern using :slug for dynamic parameters (e.g. \"/blog/:slug\").",
-      required: true,
-      type: "string",
-    },
-    entry: {
-      description: "Export subpath without file extension (e.g. \"routes/post-page\").",
-      required: true,
-      type: "string",
-    },
-    kind: {
-      default: "'page'",
-      description: "'page' claims and renders a URL; 'layout' frames child routes.",
-      type: "'layout' | 'page'",
-    },
-    parentId: {
-      description: "Parent layout route ID within this plugin.",
-      type: "string",
-    },
-    area: {
-      default: "'main'",
-      description: "'main' uses the public site shell; 'admin' uses the AdminCP shell.",
-      type: "'admin' | 'main'",
-    },
-    namespaces: {
-      default: "[]",
-      description: "Localization namespaces loaded alongside the route chunk.",
-      type: "string[]",
-    },
-    requires: {
-      description: "Route access guard: \"authenticated\" or \"guest\".",
-      type: "'authenticated' | 'guest'",
-    },
-    searchEntry: {
-      description: "Export subpath for eager search params validation schema.",
-      type: "string",
-    },
-  }}
-/>
-
-## Path Syntax Rules
-
-| Shape           | Write this             | Not this                                  |
-| --------------- | ---------------------- | ----------------------------------------- |
-| Static          | `/blog`                | -                                         |
-| Dynamic segment | `/blog/:slug`          | `/blog/[slug]`, `/blog/$slug`             |
-| Nested          | `/blog/:slug/comments` | `/blog/$slug/comments`                    |
-| Root            | `/`                    | `""`, `blog` (a path must start with `/`) |
-
-- **Use `:slug` in manifests**: VitNode compiles `:slug` into TanStack Router's `$slug` syntax automatically.
-- **Lowercase static segments**: Paths match case-insensitively. Always write `/blog/post`, not `/Blog/Post`.
-- **Never include locale prefixes**: `/blog` automatically serves `/pl/blog` or any configured locale.
-
-## Layouts and Nesting
-
-Group related routes inside a shared layout using `kind: 'layout'` and `parentId`:
-
-```ts title="plugins/my-plugin/src/routes/manifest.ts"
-export const routes: PluginRouteDefinition[] = [
-  // Parent layout
-  {
-    id: "docs",
-    entry: "routes/docs-layout",
-    path: "/docs",
-    kind: "layout", // [!code ++]
-  },
-  // Child pages
-  {
-    id: "docs-index",
-    entry: "routes/docs-index-page",
-    path: "/docs",
-    parentId: "docs", // [!code ++]
-  },
-  {
-    id: "docs-topic",
-    entry: "routes/docs-topic-page",
-    path: "/docs/:topic",
-    parentId: "docs", // [!code ++]
-  },
-]
-```
-
-In the layout component, render `<Outlet />` where child routes appear:
-
-```tsx title="plugins/my-plugin/src/routes/docs-layout.tsx"
-import { Outlet } from "@tanstack/react-router"
-
-const DocsLayout = () => (
-  <div className="flex gap-6">
-    <aside className="w-64 border-r p-4">Sidebar</aside>
-    <main className="flex-1 p-4">
-      <Outlet />
-    </main>
-  </div>
-)
-
-export default DocsLayout
-```
-
-## AdminCP Pages
-
-Set `area: "admin"` to mount your route inside the AdminCP shell (with sidebar, breadcrumbs, and staff auth):
-
-```ts title="plugins/my-plugin/src/routes/manifest.ts"
-{
-  id: "settings",
-  entry: "routes/admin-settings-page",
-  path: "/admin/my-plugin/settings",
-  area: "admin", // [!code ++]
-}
-```
-
-To add an item in the AdminCP sidebar, register it in `src/admin/nav.tsx` as well. See [AdminCP Pages](/docs/dev/plugins/admin) for details.
-
-## What the Route Module Exports
-
-A route module exports a default component and an optional `definePluginRoute` configuration:
-
-```tsx title="plugins/my-plugin/src/routes/topic-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing"
-import { definePluginRoute } from "@vitnode/core/routing"
-
-interface Topic {
-  title: string
-  description: string
-}
-
-// [!code ++:8]
-export const route = definePluginRoute({
-  load: async ({ context, params }) => {
-    return await fetchTopic(params.topic, context.locale)
-  },
-  head: ({ loaderData }) => ({
-    title: loaderData?.title,
-    description: loaderData?.description,
-  }),
-})
-
-const TopicPage = ({ loaderData }: PluginRoutePageProps<Topic>) => (
-  <article>
-    <h1>{loaderData.title}</h1>
-    <p>{loaderData.description}</p>
-  </article>
-)
-
-export default TopicPage
-```
-
-### Route Lifecycle Hooks
-
-| Hook | Description |
-| ---- | ----------- |
-| `load` | Runs on server and client before render to load data. Receives `{ context, params, search }`. |
-| `head` | Emits page `<title>`, `<meta>`, and Open Graph tags. Receives `{ loaderData, params }`. |
-| `breadcrumb` | Component rendering breadcrumb item in shell header. |
-| `parseSearch` | Normalizes URL query string parameters for typed `search` access. |
-
-<Callout type="info" title="Declare load above head">
-  TypeScript infers `loaderData` type in `head` and the page component from what `load` returns. Always declare `load` above `head` in `definePluginRoute`.
+<Callout type="idea" title="The host is the exception">
+  Use host routes only for shells, docs, or site-wide infrastructure. A product
+  page belongs in its plugin, even when it starts life as one brave little URL.
 </Callout>
-
-## Best Practices & Gotchas
-
-<Callout type="warn" title="No file extensions in entry">
-  Write `entry: 'routes/post-page'`, never `'routes/post-page.tsx'`. Export subpaths resolve automatically via your plugin's `package.json` export map.
-</Callout>
-
-<Callout type="info" title="Rebuilding after adding new routes">
-  When you add a brand new route to `manifest.ts`, restart your dev server so the Vite plugin recognizes the new file and updates generated registries.
-</Callout>
-
-## Learn More
 
 <Cards>
   <Card
-    title="Create a Plugin"
-    description="Scaffold a plugin and understand the core package structure"
-    href="/docs/dev/plugins/create"
+    icon={<DatabaseIcon />}
+    title="Load data"
+    description="Use plugin loaders with cache-aware data and query state."
+    href="/docs/dev/data-loading"
   />
   <Card
-    title="AdminCP Pages"
-    description="Add admin navigation, layouts, and permissions"
+    icon={<LayoutDashboardIcon />}
+    title="AdminCP pages"
+    description="Mount a plugin screen in the staff-only Admin Control Panel."
     href="/docs/dev/plugins/admin"
   />
   <Card
-    title="Data Loading"
-    description="SSR query hydration and client caching"
-    href="/docs/dev/data-loading"
+    icon={<RouteIcon />}
+    title="Build the plugin"
+    description="Generate the package before adding its next route or capability."
+    href="/docs/dev/plugins/create"
   />
 </Cards>

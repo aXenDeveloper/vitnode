@@ -1,12 +1,12 @@
 ---
 title: Metadata & SEO
-description: Give every page a title, description, robots directive, and Open Graph tags with TanStack Router head.
+description: Give plugin pages concise titles, descriptions, and robots directives through TanStack Start route metadata.
 icon: Tags
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
-
-VitNode manages SEO metadata through TanStack Router's `head` option. Titles are formatted against your site's global name, emitting standard `<title>`, `<meta name="description">`, and Open Graph tags.
+VitNode plugin routes declare their own metadata through `head`. Keep it short,
+specific, and useful enough that a search result does not sound like it was
+written by a toaster.
 
 ## Quick start
 
@@ -15,7 +15,7 @@ VitNode manages SEO metadata through TanStack Router's `head` option. Titles are
 Plugins declare metadata using `definePluginRoute`. Metadata can read dynamically from `loaderData`:
 
 ```tsx title="plugins/blog/src/routes/article-page.tsx"
-import { definePluginRoute } from "@vitnode/core/routing"
+import { definePluginRoute } from '@vitnode/core/routing'
 
 export const route = definePluginRoute({
   load: async ({ params }) => await fetchArticle(params.slug),
@@ -23,83 +23,24 @@ export const route = definePluginRoute({
   head: ({ loaderData }) => ({
     title: loaderData?.title,
     description: loaderData?.summary,
-    robots: "index, follow",
+    robots: 'index, follow',
   }),
 })
 ```
 
 The browser tab automatically displays **Article Title - VitNode**.
 
-### 2. In an Application Route File
+## Plugin metadata fields
 
-For host app routes, call `pageHead` inside `createFileRoute`:
+| Field         | Use it for                                                                |
+| ------------- | ------------------------------------------------------------------------- |
+| `title`       | A specific, human-readable page title.                                    |
+| `description` | A concise search snippet that explains the page’s value.                  |
+| `robots`      | `index, follow` for public pages or `noindex, nofollow` for private ones. |
 
-```tsx title="apps/web/src/routes/_main/about.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { pageHead } from "#/lib/page-head"
-
-export const Route = createFileRoute("/_main/about")({
-  // [!code ++:6]
-  head: () =>
-    pageHead({
-      title: "About Us",
-      description: "Learn more about our team and vision.",
-      robots: "index, follow",
-    }),
-  component: AboutPage,
-})
-```
-
-`pageHead` is created from `createRouteHead(metadata)` in `src/lib/page-head.ts`, formatting `"<page> - <site>"` consistently across all pages.
-
----
-
-## Open Graph & Social Sharing
-
-Add Open Graph card attributes for rich social previews on Twitter, Facebook, and Discord:
-
-```tsx title="apps/web/src/routes/_main/about.tsx"
-head: () =>
-  pageHead({
-    title: "About Us",
-    description: "Building the modern community platform.",
-    openGraph: {
-      type: "website",
-      image: "https://vitnode.com/og-image.png",
-    },
-  }),
-```
-
----
-
-## `pageHead` Options Reference
-
-<TypeTable
-  type={{
-    title: {
-      description: "Page name, automatically formatted into '<title> - <siteName>'.",
-      required: true,
-      type: "string",
-    },
-    description: {
-      description: "Meta description rendered in <meta name='description'>.",
-      type: "string",
-    },
-    robots: {
-      default: "'index, follow'",
-      description: "Search engine crawling directive.",
-      type: "'index, follow' | 'noindex, nofollow'",
-    },
-    canonical: {
-      description: "Canonical URL override for duplicate or paginated content.",
-      type: "string",
-    },
-    openGraph: {
-      description: "Open Graph metadata object (image, type, title).",
-      type: "OpenGraphOptions",
-    },
-  }}
-/>
+For canonical URLs, redirects, Open Graph fields, and XML sitemaps on Content
+Engine records, configure [Content delivery and SEO](/docs/dev/content-engine/content-delivery-and-seo)
+inside the plugin that owns those records.
 
 ## Learn More
 

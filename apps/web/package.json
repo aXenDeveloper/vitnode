@@ -15,6 +15,7 @@
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
+    "docs:check": "node scripts/check-docs.mjs",
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {

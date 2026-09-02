@@ -4,7 +4,7 @@ description: Build, migrate, and run VitNode on your own server or Docker contai
 icon: Server
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 VitNode compiles into a standard Node.js server and static assets. The only required dependency is a PostgreSQL database (Redis is optional for caching and multi-instance scaling).
 
@@ -38,7 +38,9 @@ npm start
 </Tabs>
 
 <Callout type="warn" title="Always run db:migrate before start">
-  Production processes do not automatically run migrations at boot. Running `db:migrate` ensures the database schema matches your compiled application before traffic is served.
+  Production processes do not automatically run migrations at boot. Running
+  `db:migrate` ensures the database schema matches your compiled application
+  before traffic is served.
 </Callout>
 
 ---
@@ -98,15 +100,39 @@ server {
 
 Keep VitNode running continuously with automatic restarts on crash:
 
-```bash
-# Install PM2
-npm install -g pm2
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run VitNode with PM2">
 
-# Start both web and api processes
+```bash tab="bun"
+# Install PM2
+bun add -g pm2
+
+# Start both web and API processes
+pm2 start "bun start" --name "vitnode-web"
+pm2 save
+pm2 startup
+```
+
+```bash tab="pnpm"
+# Install PM2
+pnpm add -g pm2
+
+# Start both web and API processes
 pm2 start "pnpm start" --name "vitnode-web"
 pm2 save
 pm2 startup
 ```
+
+```bash tab="npm"
+# Install PM2
+npm install -g pm2
+
+# Start both web and API processes
+pm2 start "npm start" --name "vitnode-web"
+pm2 save
+pm2 startup
+```
+
+</Tabs>
 
 ## Learn More
 

@@ -4,7 +4,7 @@ description: A sortable, searchable, filterable data table for TanStack Router w
 icon: Table
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 `ContentDataTable` is the core data table component powering VitNode AdminCP lists. Every user interaction - page navigation, column sorting, search queries, and filters - writes directly to the URL query string, making table state fully bookmarkable and shareable.
 
@@ -18,11 +18,10 @@ import { TypeTable } from "fumadocs-ui/components/type-table"
 
 Render the table inside a `DataTableNavigationProvider`:
 
-```tsx title="src/features/members/members-table.tsx"
-import type { ColumnDef } from "@vitnode/core/components/table/data-table-content"
-import { ContentDataTable } from "@vitnode/core/components/table/content"
-import { DataTableNavigationProvider } from "@vitnode/core/components/table/provider"
-import { Route } from "#/routes/_admin/admin.members"
+```tsx title="plugins/members/src/views/members-table.tsx"
+import type { ColumnDef } from '@vitnode/core/components/table/data-table-content'
+import { ContentDataTable } from '@vitnode/core/components/table/content'
+import { DataTableNavigationProvider } from '@vitnode/core/components/table/provider'
 
 interface Member {
   id: number
@@ -32,15 +31,22 @@ interface Member {
 }
 
 const columns: ColumnDef<Member>[] = [
-  { accessorKey: "name", header: "Name", enableSorting: true },
-  { accessorKey: "email", header: "Email" },
-  { accessorKey: "role", header: "Role" },
+  { accessorKey: 'name', header: 'Name', enableSorting: true },
+  { accessorKey: 'email', header: 'Email' },
+  { accessorKey: 'role', header: 'Role' },
 ]
 
-export const MembersTable = ({ data }: { data: any }) => {
-  const navigate = Route.useNavigate()
-  const search = Route.useSearch()
+interface MembersSearch {
+  cursor?: string
+}
 
+interface MembersTableProps {
+  data: Member[]
+  navigate: (options: { search: MembersSearch }) => Promise<void>
+  search: MembersSearch
+}
+
+export const MembersTable = ({ data, navigate, search }: MembersTableProps) => {
   return (
     // [!code ++:13]
     <DataTableNavigationProvider navigate={navigate} search={search}>
@@ -49,9 +55,9 @@ export const MembersTable = ({ data }: { data: any }) => {
         columns={columns}
         data={data}
         order={{
-          defaultOrder: { column: "name", order: "asc" },
+          defaultOrder: { column: 'name', order: 'asc' },
         }}
-        search={{ placeholder: "Search members..." }}
+        search={{ placeholder: 'Search members...' }}
       />
     </DataTableNavigationProvider>
   )
@@ -60,28 +66,40 @@ export const MembersTable = ({ data }: { data: any }) => {
 
 ---
 
-## Route Integration
+## Plugin Route Integration
 
-Wire the table into a TanStack Router route with `zodPaginationQuery`:
+Give an AdminCP route to the plugin, then pass its typed `search` and `navigate`
+props into the table. The table remains reusable and the host stays out of it.
 
-```tsx title="apps/web/src/routes/_admin/admin.members.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
-import { membersQuery } from "#/features/members/query"
-import { MembersTable } from "#/features/members/members-table"
+```tsx title="plugins/members/src/routes/admin-members-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
 
-export const Route = createFileRoute("/_admin/admin/members")({
-  validateSearch: (search) => zodPaginationQuery.parse(search),
-  loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) =>
-    await context.queryClient.ensureQueryData(membersQuery(deps)),
-  component: MembersRoute,
+import { MembersTable } from '../views/members-table'
+
+interface MembersSearch {
+  cursor?: string
+}
+
+export const route = definePluginRoute({
+  parseSearch: (input) => {
+    const search = input as Record<string, unknown>
+    return {
+      cursor: typeof search.cursor === 'string' ? search.cursor : undefined,
+    }
+  },
+  load: async ({ search }) => await fetchMembers(search),
 })
 
-function MembersRoute() {
-  const { data } = useSuspenseQuery(membersQuery(Route.useSearch()))
-  return <MembersTable data={data} />
-}
+const AdminMembersPage = ({
+  loaderData,
+  navigate,
+  search,
+}: PluginRoutePageProps<Member[], MembersSearch>) => (
+  <MembersTable data={loaderData} navigate={navigate} search={search} />
+)
+
+export default AdminMembersPage
 ```
 
 ---
@@ -98,11 +116,11 @@ Add static or asynchronous dropdown filters to the table toolbar:
   // [!code ++:12]
   filters={[
     {
-      id: "role",
-      title: "Role",
+      id: 'role',
+      title: 'Role',
       options: [
-        { label: "Admin", value: "admin" },
-        { label: "Member", value: "member" },
+        { label: 'Admin', value: 'admin' },
+        { label: 'Member', value: 'member' },
       ],
     },
   ]}
@@ -116,7 +134,7 @@ Add static or asynchronous dropdown filters to the table toolbar:
 Enable row checkboxes and execute bulk operations with `useDataTableSelection`:
 
 ```tsx
-import { useDataTableSelection } from "@vitnode/core/components/table/hooks/use-data-table-selection"
+import { useDataTableSelection } from '@vitnode/core/components/table/hooks/use-data-table-selection'
 
 export const BulkActionsToolbar = () => {
   const { selectedRows, resetSelection } = useDataTableSelection()
@@ -139,36 +157,36 @@ export const BulkActionsToolbar = () => {
 <TypeTable
   type={{
     id: {
-      description: "Unique identifier used to isolate table state.",
+      description: 'Unique identifier used to isolate table state.',
       required: true,
-      type: "string",
+      type: 'string',
     },
     columns: {
-      description: "TanStack Table column definitions.",
+      description: 'TanStack Table column definitions.',
       required: true,
-      type: "ColumnDef<TData, TValue>[]",
+      type: 'ColumnDef<TData, TValue>[]',
     },
     data: {
-      description: "Paginated payload containing edges and pageInfo.",
+      description: 'Paginated payload containing edges and pageInfo.',
       required: true,
-      type: "{ edges: TData[]; pageInfo: PageInfo }",
+      type: '{ edges: TData[]; pageInfo: PageInfo }',
     },
     search: {
-      description: "Search input configuration ({ placeholder }).",
-      type: "{ placeholder?: string }",
+      description: 'Search input configuration ({ placeholder }).',
+      type: '{ placeholder?: string }',
     },
     filters: {
-      description: "Array of toolbar filter descriptors.",
-      type: "DataTableFilter[]",
+      description: 'Array of toolbar filter descriptors.',
+      type: 'DataTableFilter[]',
     },
     order: {
-      description: "Default sort column and direction.",
+      description: 'Default sort column and direction.',
       type: "{ defaultOrder?: { column: string; order: 'asc' | 'desc' } }",
     },
     defaultPageSize: {
-      default: "10",
-      description: "Rows per page when not specified in URL.",
-      type: "number",
+      default: '10',
+      description: 'Rows per page when not specified in URL.',
+      type: 'number',
     },
   }}
 />
