@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { movedDocsSlug } from '#/docs/moved-pages'
 import { DocsPageContent } from '#/docs/page-content'
+import { DocsPagePendingSkeleton } from '#/docs/pending'
 import { getDocsPage } from '#/docs/transport'
 import { pageHead } from '#/lib/page-head'
 
@@ -38,6 +39,7 @@ export const Route = createFileRoute('/_docs/docs/$')({
       title: loaderData?.metaTitle,
     }),
   component: DocsRoute,
+  pendingComponent: DocsPagePendingSkeleton,
 })
 
 function DocsRoute() {
