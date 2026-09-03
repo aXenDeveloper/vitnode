@@ -1,248 +1,138 @@
 ---
 title: Fetcher
-description: End-to-end type-safe RPC client for calling your Hono API from SSR server renders or the browser.
+description: Call your Hono API with end-to-end type safety.
 icon: ArrowRightLeft
 ---
 
-VitNode's fetchers are type-safe RPC clients wired straight to your Hono API
-modules: the route, the method, the arguments and the response body all come
-from the module's own Zod schemas.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
-There are three of them, and the first one is almost always the right answer.
+<Callout type="info" title="Use this by default">
+  In a TanStack Start app, import `fetcher` from
+  `@vitnode/core/tanstack/fetcher`. The same call works during SSR and browser
+  navigation.
+</Callout>
 
-| Import                                               | Use it for                                                                      |
-| :--------------------------------------------------- | :------------------------------------------------------------------------------ |
-| `@vitnode/core/tanstack/fetcher` → `fetcher`         | Normal TanStack Start reads and mutations. Works in SSR and browser navigation. |
-| `@vitnode/core/tanstack/fetcher/server` → `fetcher`  | Explicit server-only work: cookie relay, server functions, cron, upstream keys. |
-| `@vitnode/core/lib/fetcher-client` → `fetcherClient` | Framework-neutral browser components, or a host that is not TanStack Start.     |
+During SSR, it forwards the visitor's request to the API. In the browser, it
+calls `/api/*` directly. You do not need to write `createIsomorphicFn()`.
 
-## 1. The universal fetcher
+## Use the universal fetcher
 
-One function, one call site, both runtimes:
+<Steps>
 
-```ts title="plugins/devices/src/lib/devices-query.ts"
-import type { usersModule } from '@vitnode/core/api/modules/users/users.module'
+<Step>
 
-import { clientModule } from '@vitnode/core/lib/fetcher-client'
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
+### Create a typed module reference
 
-// A lightweight typed reference: the module's *type* for inference, its
-// plugin id at runtime. No API code reaches the browser bundle.
-const users = clientModule<typeof usersModule>('@vitnode/core')
+Import the API module as a type, then give VitNode its plugin id at runtime.
 
-// [!code ++:9]
-export const fetchDevices = async ({
-  signal,
-}: { signal?: AbortSignal } = {}) => {
+```ts
+import type { usersModule } from "@vitnode/core/api/modules/users/users.module"
+
+import { clientModule } from "@vitnode/core/tanstack/fetcher"
+
+const users = clientModule<typeof usersModule>("@vitnode/core")
+```
+
+</Step>
+
+<Step>
+
+### Make the request
+
+```ts
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
+
+export const fetchDevices = async ({ signal }: { signal?: AbortSignal } = {}) => {
   const response = await fetcher(users, {
-    method: 'get',
-    module: 'users',
+    method: "get",
+    module: "users",
     options: { signal },
-    path: '/devices',
+    path: "/devices",
   })
 
-  if (!response.ok)
+  if (!response.ok) {
     throw new Error(`The devices API answered ${response.status}.`)
+  }
 
-  return await response.json() // Typed from the route's Zod schema
+  return await response.json()
 }
 ```
 
-Drop it into a query definition and hand that one definition to both the route
-loader and the component:
+Use this function in your TanStack Query options. See
+[Data Loading](/docs/dev/data-loading) for loading it in a route and component.
 
-```ts title="plugins/devices/src/lib/devices-query.ts"
-import { queryOptions } from '@tanstack/react-query'
+</Step>
 
-export const devicesQueryOptions = () =>
-  queryOptions({
-    queryFn: async ({ signal }) => await fetchDevices({ signal }),
-    queryKey: ['devices'],
-  })
-```
+</Steps>
 
-```tsx title="plugins/devices/src/pages/devices-page.tsx"
-import { definePluginRoute } from '@vitnode/core/routing'
-import { devicesQueryOptions } from '../lib/devices-query'
+## Exceptions
 
-export const route = definePluginRoute({
-  // [!code ++]
-  load: async ({ context }) =>
-    await context.queryClient.ensureQueryData(devicesQueryOptions()),
+<Tabs items={["Server only", "Outside TanStack Start"]}>
+  <Tab value="Server only">
+
+Use the explicit server fetcher only when the server itself needs to handle the
+request: a server function, cookie relay, cron/job, secret, or custom API
+origin.
+
+```ts
+import { usersModule } from "@vitnode/core/api/modules/users/users.module"
+import { fetcher } from "@vitnode/core/tanstack/fetcher/server"
+
+const response = await fetcher(usersModule, {
+  allowSaveCookies: true,
+  args: { body: { email, password } },
+  method: "post",
+  module: "users",
+  path: "/sign_in",
 })
 ```
 
-### Which transport it picks, and when
-
-You never choose. TanStack Start's compiler resolves the branch per bundle:
-
-- **During SSR** the call uses the request-aware server transport. It forwards
-  the visitor's `Cookie`, `user-agent` and client IP, and resolves the API
-  origin from the request being served (or `NEXT_PUBLIC_API_URL` when a separate
-  API server is configured).
-- **After hydration** the call is a plain same-origin `fetch` to `/api/…`,
-  straight from the browser to Hono. Cookies ride along through normal browser
-  behaviour. There is **no** server-function hop and no extra round trip.
-
-Because it is one function, the browser build never contains the server
-transport - the compiler drops that branch, along with
-`@tanstack/react-start/server-only` and everything behind it.
-
-<Callout type="info" title="Only what both runtimes can honour">
-  The universal `fetcher` deliberately does not accept `allowSaveCookies`,
-  `additionalHeaders` or `origin`. A browser cannot honour any of them, so
-  TypeScript rejects them here and points you at the server fetcher.
+<Callout type="warn" title="Keep it server-only">
+  Put code that imports this fetcher in a `*.server.ts` file, or call it only
+  from a server function.
 </Callout>
 
----
+  </Tab>
 
-## 2. The server fetcher
+  <Tab value="Outside TanStack Start">
 
-`@vitnode/core/tanstack/fetcher/server` is the same client with the server-only
-options still on it. Reach for it when the request itself is the point:
-
-- a `createServerFn` in your host application;
-- login, registration and other flows that must relay the API's `Set-Cookie`
-  onto the response (`allowSaveCookies: true`);
-- cron jobs and queue workers, which serve no visitor request;
-- calls that need a server secret or a different upstream `origin`.
-
-```ts title="apps/web/src/lib/auth.ts"
-import { createServerFn } from '@tanstack/react-start'
-import { usersModule } from '@vitnode/core/api/modules/users/users.module'
-import { fetcher } from '@vitnode/core/tanstack/fetcher/server'
-
-export const signIn = createServerFn({ method: 'POST' })
-  .validator((body: { email: string; password: string }) => body)
-  .handler(async ({ data }) => {
-    const response = await fetcher(usersModule, {
-      allowSaveCookies: true, // [!code ++]
-      args: { body: data },
-      method: 'post',
-      module: 'users',
-      path: '/sign_in',
-    })
-
-    return { ok: response.ok }
-  })
-```
-
-Note it takes the **real** API module (`usersModule`), not a `clientModule`
-reference - it only ever runs on the server, so importing the module is free.
-
-<Callout type="warn" title="Name the file so it cannot slip">
-  A module that imports the server fetcher must never be reachable from a client
-  component. Keep it in `*.server.ts`, or behind the universal `fetcher`.
-</Callout>
-
----
-
-## 3. The framework-neutral browser fetcher
-
-`fetcherClient` is the direct Hono transport. Use it in components and query
-modules that must stay usable outside TanStack Start - the shared views inside
-`@vitnode/core` do exactly that, and default to it.
-
-```ts title="plugins/blog/src/views/comments-query.ts"
-import type { commentsModule } from '@vitnode/blog/api/modules/comments/comments.module'
-
-import { clientModule, fetcherClient } from '@vitnode/core/lib/fetcher-client'
-
-const comments = clientModule<typeof commentsModule>('@vitnode/blog')
-
-// [!code ++:8]
-export const postComment = async (body: { text: string }) =>
-  await fetcherClient(comments, {
-    args: { body },
-    method: 'post',
-    module: 'comments',
-    path: '/',
-  })
-```
-
-It sends `credentials: "include"`, so the session cookie reaches the API even
-when `NEXT_PUBLIC_API_URL` points at a separate host, and it routes a `429` to
-the global rate-limit notice.
-
-<Callout type="info" title="Sessions need nothing extra here">
-  A browser response's `Set-Cookie` is applied by the browser itself. There is
-  no `allowSaveCookies` on `fetcherClient` - that option exists only so a
-  *server* render can copy the API's cookies onto the response it is building.
-</Callout>
-
-### Taking the transport as an argument
-
-A shared query module that wants to serve both hosts should take the transport
-in and keep `fetcherClient` as its default. `UniversalFetcher` is the signature
-both fetchers satisfy:
+For framework-neutral shared browser code, or a host that is not TanStack Start,
+use `fetcherClient`.
 
 ```ts
-import type { UniversalFetcher } from '@vitnode/core/lib/fetcher-client'
+import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client"
 
-import { fetcherClient } from '@vitnode/core/lib/fetcher-client'
+const comments = clientModule<typeof commentsModule>("@vitnode/blog")
 
-export const commentsFetcher =
-  (transport: UniversalFetcher) => async (postId: number) =>
-    await transport(comments, {
-      args: { params: { postId: String(postId) } },
-      method: 'get',
-      module: 'comments',
-      path: '/{postId}',
-    })
-
-/** The neutral default, for a non-TanStack host. */
-export const fetchCommentsInBrowser = commentsFetcher(fetcherClient)
+const response = await fetcherClient(comments, {
+  args: { body: { text } },
+  method: "post",
+  module: "comments",
+  path: "/",
+})
 ```
 
-A TanStack Start adapter then binds the universal one instead:
+  </Tab>
+</Tabs>
 
-```ts
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
+## What the types do
 
-const fetchComments = commentsFetcher(fetcher)
-```
+- `method`, `module`, and `path` are always required.
+- `args` is required when the route declares a body, params, or query.
+- TypeScript infers the valid route, arguments, response status, and JSON body.
 
----
-
-## Fetcher Options
-
-| Option              | Required when                 | Description                                                    |
-| :------------------ | :---------------------------- | :------------------------------------------------------------- |
-| `module`            | Always                        | Target module key declared on the API                          |
-| `method`            | Always                        | HTTP method (`get`, `post`, `put`, `delete`)                   |
-| `path`              | Always                        | Route path pattern, e.g. `/` or `/{id}`                        |
-| `args`              | The route declares one        | Strongly typed payload: `{ body?, params?, query? }`           |
-| `options`           | Optional                      | Extra `fetch` init - an `AbortSignal`, `credentials`           |
-| `prefixPath`        | The module is not at the root | Mount prefix, e.g. `/admin` or `/users`                        |
-| `captchaToken`      | The route uses `withCaptcha`  | Solved token; an empty string sends no header at all           |
-| `allowSaveCookies`  | **Server fetcher only**       | Copies the API's `Set-Cookie` onto the response being rendered |
-| `additionalHeaders` | **Server fetcher only**       | Extra request headers, on top of the forwarded ones            |
-| `origin`            | **Server fetcher only**       | Call a different upstream instead of the resolved API origin   |
-
-<Callout type="info" title="Dynamic Content Engine modules (rawFetcher)">
-  Generated Content Engine routes have no static TypeScript module to infer
-  from, so they use `rawFetcher` instead of `fetcher`. It is universal in the
-  same way - `@vitnode/core/tanstack/fetcher` exports one, and
-  `@vitnode/core/tanstack/fetcher/server` the explicit server-only one - and
-  takes `{ pluginId, module, path, method }` directly.
-</Callout>
-
-## Learn More
+Generated Content Engine modules have no static module type, so use
+`rawFetcher` for them instead.
 
 <Cards>
   <Card
-    title="Server Functions"
-    description="When a call genuinely needs the request"
-    href="/docs/dev/server-functions"
-  />
-  <Card
     title="Data Loading"
-    description="Query warming with TanStack Query and route loaders"
+    description="Load and cache API data with TanStack Query"
     href="/docs/dev/data-loading"
   />
   <Card
-    title="API Modules"
-    description="Declare typed Hono API modules and routes"
-    href="/docs/dev/plugins/api/modules"
+    title="Server Functions"
+    description="Use server-only code when a request needs it"
+    href="/docs/dev/server-functions"
   />
 </Cards>
