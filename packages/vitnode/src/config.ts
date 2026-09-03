@@ -1,4 +1,4 @@
 export const CONFIG_PLUGIN = {
   pluginId: "@vitnode/core" as const,
-  version: "1.2.0-canary.78",
+  version: "0.0.1-canary.0",
 };

@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/example",
-  "version": "0.0.0",
+  "version": "0.0.1-canary.0",
   "description": "Reference plugin exercising the VitNode Content Engine end to end.",
   "license": "MIT",
   "private": true,
