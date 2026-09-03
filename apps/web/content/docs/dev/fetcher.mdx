@@ -7,71 +7,125 @@ icon: ArrowRightLeft
 import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
 <Callout type="info" title="Use this by default">
-  In a TanStack Start app, import `fetcher` from
-  `@vitnode/core/tanstack/fetcher`. The same call works during SSR and browser
-  navigation.
+  In a TanStack Start app, use `fetcher` from
+  `@vitnode/core/tanstack/fetcher`. The same request works during SSR and
+  browser navigation.
 </Callout>
 
 During SSR, it forwards the visitor's request to the API. In the browser, it
 calls `/api/*` directly. You do not need to write `createIsomorphicFn()`.
 
-## Use the universal fetcher
+## Set up your plugin API client once
 
-<Steps>
+Keep the module reference in one plugin file. Features import your API client;
+they do not create references themselves.
 
-<Step>
+```ts title="plugins/site-notes/src/api/client.ts"
+import type { notesModule } from "../api/notes.module"
 
-### Create a typed module reference
+import { clientModule } from "@vitnode/core/lib/fetcher-client"
 
-Import the API module as a type, then give VitNode its plugin id at runtime.
-
-```ts
-import type { usersModule } from "@vitnode/core/api/modules/users/users.module"
-
-import { clientModule } from "@vitnode/core/tanstack/fetcher"
-
-const users = clientModule<typeof usersModule>("@vitnode/core")
-```
-
-</Step>
-
-<Step>
-
-### Make the request
-
-```ts
-import { fetcher } from "@vitnode/core/tanstack/fetcher"
-
-export const fetchDevices = async ({ signal }: { signal?: AbortSignal } = {}) => {
-  const response = await fetcher(users, {
-    method: "get",
-    module: "users",
-    options: { signal },
-    path: "/devices",
-  })
-
-  if (!response.ok) {
-    throw new Error(`The devices API answered ${response.status}.`)
-  }
-
-  return await response.json()
+export const notesApi = {
+  module: clientModule<typeof notesModule>("@acme/site-notes"),
 }
 ```
 
-Use this function in your TanStack Query options. See
-[Data Loading](/docs/dev/data-loading) for loading it in a route and component.
+## Use it in a query
 
-</Step>
+```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
+import { queryOptions } from "@tanstack/react-query"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
 
-</Steps>
+import { notesApi } from "../../api/client"
+
+export const notesQueryKey = ["@acme/site-notes", "notes"] as const
+
+export const notesQuery = () =>
+  queryOptions({
+    queryKey: notesQueryKey,
+    queryFn: async ({ signal }) => {
+      const response = await fetcher(notesApi.module, {
+        method: "get",
+        module: "notes",
+        options: { signal },
+        path: "/",
+      })
+
+      if (!response.ok) {
+        throw new Error(`The notes API answered ${response.status}.`)
+      }
+
+      return await response.json()
+    },
+  })
+```
+
+## Load the initial page or make a mutation
+
+<Tabs items={["Initial page", "Mutation"]}>
+  <Tab value="Initial page">
+
+Warm the same query in the route loader. The component then reads that cache
+entry with `useQuery(notesQuery())`.
+
+```ts title="plugins/site-notes/src/routes/notes.tsx"
+import { definePluginRoute } from "@vitnode/core/routing"
+
+import { notesQuery } from "../features/notes/notes-query"
+
+export const route = definePluginRoute({
+  load: async ({ context }) =>
+    await context.queryClient.ensureQueryData(notesQuery()),
+})
+```
+
+  </Tab>
+
+  <Tab value="Mutation">
+
+Use the same `fetcher` in a mutation, then invalidate the affected query.
+
+```tsx title="plugins/site-notes/src/features/notes/create-note.tsx"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
+
+import { notesApi } from "../../api/client"
+import { notesQueryKey } from "./notes-query"
+
+export const useCreateNote = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (title: string) => {
+      const response = await fetcher(notesApi.module, {
+        args: { body: { title } },
+        method: "post",
+        module: "notes",
+        path: "/",
+      })
+
+      if (!response.ok) {
+        throw new Error(`Could not create the note (${response.status}).`)
+      }
+
+      return await response.json()
+    },
+    onSuccess: async () =>
+      await queryClient.invalidateQueries({ queryKey: notesQueryKey }),
+  })
+}
+```
+
+  </Tab>
+</Tabs>
 
 ## Exceptions
 
 <Tabs items={["Server only", "Outside TanStack Start"]}>
   <Tab value="Server only">
 
-Use the explicit server fetcher only when the server itself needs to handle the
-request: a server function, cookie relay, cron/job, secret, or custom API
+Use `@vitnode/core/tanstack/fetcher/server` only when the server must handle
+the request: cookie relay, a server function, cron/job, secret, or custom API
 origin.
 
 ```ts
@@ -98,21 +152,6 @@ const response = await fetcher(usersModule, {
 
 For framework-neutral shared browser code, or a host that is not TanStack Start,
 use `fetcherClient`.
-
-```ts
-import type { commentsModule } from "@vitnode/blog/api/modules/comments/comments.module"
-
-import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client"
-
-const comments = clientModule<typeof commentsModule>("@vitnode/blog")
-
-const response = await fetcherClient(comments, {
-  args: { body: { text } },
-  method: "post",
-  module: "comments",
-  path: "/",
-})
-```
 
   </Tab>
 </Tabs>
