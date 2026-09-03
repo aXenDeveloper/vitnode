@@ -17,13 +17,13 @@ import { pluginAdminNav } from '#/admin-nav.gen'
  *
  * ## Why it is not read from `vitnode.config.ts`
  *
- * That config is server-side on purpose (`vitnode.shell.config.ts` explains the
- * split): it carries message loaders and API wiring, which a browser bundle has
- * no business holding. A sidebar needs the ids, the hrefs, the permissions, the
- * icons and the content type definitions, all of which are plain data. The
- * generated projection is exactly that half, so the browser gets the navigation
- * without the Content Engine's UI - which arrives, when a content screen
- * actually renders, through `src/lib/content-registry.ts` instead.
+ * The config does carry each plugin's registration, and a Next.js host walks it
+ * in its render pass. Reading it here would make every configured plugin's
+ * editing screens reachable from the module the document shell imports, which is
+ * the one graph that is never lazy. The generated projection carries exactly
+ * what a sidebar needs instead - ids, hrefs, permissions, icons and content type
+ * definitions, all plain data - and the Content Engine's UI arrives separately,
+ * when a content screen actually renders, through `src/lib/content-registry.ts`.
  *
  * ## Module scope, and why that matters twice
  *

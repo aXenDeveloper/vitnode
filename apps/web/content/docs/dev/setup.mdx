@@ -4,7 +4,12 @@ description: Create a VitNode app, prepare Postgres, start TanStack Start, and s
 icon: Rocket
 ---
 
-import { BookOpenIcon, PackagePlusIcon, ServerIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  PackagePlusIcon,
+  ServerIcon,
+  SettingsIcon,
+} from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 You need Node.js 22+, Postgres (or Docker), and your favorite package manager.
@@ -122,6 +127,12 @@ and let it own the feature.
 ## Keep going
 
 <Cards>
+  <Card
+    icon={<SettingsIcon />}
+    title="Configuration"
+    description="Locales, plugins, request middleware, and what a browser may hold."
+    href="/docs/dev/configuration"
+  />
   <Card
     icon={<PackagePlusIcon />}
     title="Create a plugin"

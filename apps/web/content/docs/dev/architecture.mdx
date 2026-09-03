@@ -41,6 +41,26 @@ When a user visits a page (e.g. `/blog`):
 
 ---
 
+## The Request Pipeline
+
+Before route matching, every request passes through the middleware
+`createVitNodeStart` installs - in this order, and an app cannot get in front of
+any of it:
+
+| Order | Middleware | Applies to |
+| :--- | :--- | :--- |
+| 1 | **CSRF** | Server function calls (`handlerType === 'serverFn'`) |
+| 2 | **Locale** | Page requests: canonical `308` redirects and the locale cookie |
+| 3 | **Document cache** | HTML responses: forced `Cache-Control: private, no-store` |
+| 4 | Your own | Whatever `requestMiddleware` lists |
+
+`/api/*` reaches the same middleware and passes through untouched - no redirect,
+no rewrite, no cache directive - so the Hono bridge sees the request exactly as
+the client sent it and keeps its own caching policy. See
+[Configuration](/docs/dev/configuration).
+
+---
+
 ## Plugin System Architecture
 
 VitNode is built around modular plugins located in `plugins/*`:
@@ -65,5 +85,10 @@ VitNode is built around modular plugins located in `plugins/*`:
     title="Fetcher"
     description="Type-safe RPC communication between frontend and API"
     href="/docs/dev/fetcher"
+  />
+  <Card
+    title="Configuration"
+    description="The shared config, the server-only companion, and the Start factory"
+    href="/docs/dev/configuration"
   />
 </Cards>

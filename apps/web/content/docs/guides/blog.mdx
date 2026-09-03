@@ -69,15 +69,11 @@ export const packageMessages = {
 ```
 
 ```ts title="apps/web/src/vitnode.config.ts"
-import { CONFIG_PLUGIN as BLOG } from '@vitnode/blog/const' // [!code ++]
-import { buildPlugin } from '@vitnode/core/lib/plugin' // [!code ++]
+import { blogPlugin } from '@vitnode/blog/config' // [!code ++]
 
 export const vitNodeConfig = buildConfig({
   plugins: [
-    buildPlugin({
-      messages: packageMessages[BLOG.pluginId],
-      pluginId: BLOG.pluginId,
-    }), // [!code ++]
+    blogPlugin(), // [!code ++]
   ],
 })
 ```

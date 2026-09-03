@@ -41,13 +41,12 @@ import {
  *
  * ## `pluginWidgets` is not passed
  *
- * A plugin's dashboard widgets reach the Next.js board through
- * `getVitNodeConfig()`, which is server-side config kept out of this app's
- * browser bundle by `vitnode.shell.config.ts` - and this app registers its
- * plugins by id and messages only (see `src/vitnode.config.ts`). So the board
- * shows core's own widgets, which is the complete set for this install. It is
- * the same seam `AdminShell` leaves open for nav `declarations`, and it changes
- * here when plugin AdminCP registration moves over.
+ * A plugin declares widgets in its `admin.dashboard.widgets`, which reaches a
+ * Next.js board through `getVitNodeConfig()`. This route does not read the
+ * config - the AdminCP takes its plugin data from the generated projections, and
+ * neither of those carries widgets - so the board shows core's own, which is the
+ * complete set for this install because no configured plugin declares any. It is
+ * the same seam `AdminShell` leaves open for nav `declarations`.
  */
 export const Route = createFileRoute("/_admin/admin/core/")({
   loader: async ({ context }) => await loadAdminDashboardRoute(context),

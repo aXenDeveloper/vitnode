@@ -2,11 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import {
-  vitNodeEnv,
-  vitNodeOptimizeDeps,
-  vitNodePluginRoutes,
-} from "@vitnode/core/framework/vite";
+import { vitnode } from "@vitnode/core/framework/vite";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
@@ -85,29 +81,20 @@ const config = defineConfig({
   },
   plugins: [
     /**
-     * All three from `@vitnode/core/framework/vite`.
+     * Environment handling, the dev server's dependency pre-bundling and the
+     * plugin route registry, in the order they have to run.
      *
-     * `vitNodeOptimizeDeps` takes nothing at all: it names the browser
-     * dependencies of the package's own `dist` so `vite dev` pre-bundles them on
-     * a cold start. Nothing crawls that `dist` before it is requested, so
-     * without this list a screen that is opened for the first time discovers a
-     * dependency mid-session, the optimizer re-runs, and a page holding modules
-     * from the previous run ends up with two copies of React.
+     * `appRoot` is `import.meta.dirname` because a Vite config is loaded with
+     * the working directory set to wherever the command ran, which in a
+     * monorepo is regularly the repository root.
      *
-     * `vitNodeEnv` takes no `clientEnv`: this app publishes nothing to the
-     * browser beyond the two keys the package inlines for every VitNode install
+     * `clientEnv` is not passed: this app publishes nothing to the browser
+     * beyond the two keys VitNode inlines for every install
      * (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WEB_URL`). Anything named there is
-     * compiled into JavaScript anyone can read, so an empty list is the right
-     * default and a key is added only when something in the browser genuinely
-     * reads it.
-     *
-     * `appRoot` is `import.meta.dirname` because a Vite config is loaded with the
-     * working directory set to wherever the command ran, which in this monorepo
-     * is regularly the repository root.
+     * compiled into JavaScript anyone can read, so a key is added only when
+     * something in the browser genuinely reads it.
      */
-    vitNodeEnv(),
-    vitNodeOptimizeDeps(),
-    vitNodePluginRoutes({ appRoot: import.meta.dirname }),
+    vitnode({ appRoot: import.meta.dirname }),
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
     tailwindcss(),

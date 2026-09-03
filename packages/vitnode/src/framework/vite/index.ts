@@ -8,20 +8,17 @@
  * the routes VitNode's plugins declare, and they name this package's own
  * browser dependencies for the dev server's pre-bundler - the same work, in the
  * same order, in every install. Kept as files in each app they were 397 lines to
- * copy and then to keep in step; here they are three calls:
+ * copy and then to keep in step; here they are one call:
  *
- *     import {
- *       vitNodeEnv,
- *       vitNodeOptimizeDeps,
- *       vitNodePluginRoutes,
- *     } from '@vitnode/core/framework/vite'
+ *     import { vitnode } from '@vitnode/core/framework/vite'
  *
  *     plugins: [
- *       vitNodeEnv(),
- *       vitNodeOptimizeDeps(),
- *       vitNodePluginRoutes({ appRoot: import.meta.dirname }),
+ *       vitnode({ appRoot: import.meta.dirname }),
  *       ...
  *     ]
+ *
+ * The three are still exported individually, for an app that wants to drop or
+ * reorder one - {@link vitnode} is their composition, not a wrapper around them.
  *
  * ## Why this is `framework/` and not `tanstack/`
  *
@@ -41,3 +38,5 @@ export { vitNodeEnv } from "./env";
 export { vitNodeOptimizeDeps } from "./optimize-deps";
 export type { VitNodePluginRoutesOptions } from "./plugin-routes";
 export { vitNodePluginRoutes } from "./plugin-routes";
+export type { VitNodeViteOptions } from "./vitnode";
+export { vitnode } from "./vitnode";

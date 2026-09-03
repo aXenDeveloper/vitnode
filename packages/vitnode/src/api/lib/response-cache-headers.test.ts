@@ -76,17 +76,43 @@ const codeOf = (path: string): string =>
 /**
  * Every `Cache-Control` value a source sets, however it spells the assignment.
  *
- * Both forms are matched: the object literal a `c.json(body, status, headers)`
- * takes, and the `c.header("Cache-Control", value)` call. A value built from a
- * variable rather than a literal would not be captured - and would fail the
- * "only these files" assertion below, which is the point.
+ * Three forms are matched: the object literal a `c.json(body, status, headers)`
+ * takes, the `c.header("Cache-Control", value)` call, and a
+ * `headers.set("cache-control", NAME)` whose value is a `const` declared in the
+ * same file. That last one is not a convenience - the document rule is a named
+ * constant on purpose, so the invariant can be documented once and referred to,
+ * and a scan that could not follow it would report the file with no value and
+ * pin nothing.
+ *
+ * A value assembled at runtime is still not captured, and would show up here as
+ * a file with no values - which fails the "exactly the declared values"
+ * assertion below rather than passing quietly.
+ *
+ * De-duplicated: what matters is which directives a file can produce, not how
+ * many statements produce each one.
  */
-const cacheControlValues = (path: string): string[] =>
-  [
-    ...codeOf(path).matchAll(
-      /["'`]?[Cc]ache-[Cc]ontrol["'`]?\s*[,:]\s*["'`]([^"'`]*)["'`]/g,
+const cacheControlValues = (path: string): string[] => {
+  const code = codeOf(path);
+  const constants = new Map(
+    [
+      ...code.matchAll(
+        /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*["'`]([^"'`]*)["'`]/g,
+      ),
+    ].map(match => [match[1], match[2]] as const),
+  );
+
+  return [
+    ...new Set(
+      [
+        ...code.matchAll(
+          /["'`]?[Cc]ache-[Cc]ontrol["'`]?\s*[,:]\s*(?:["'`]([^"'`]*)["'`]|([A-Za-z_$][\w$]*))/g,
+        ),
+      ]
+        .map(match => match[1] ?? constants.get(match[2]))
+        .filter((value): value is string => value !== undefined),
     ),
-  ].map(match => match[1]);
+  ];
+};
 
 const mentionsCacheControl = (path: string): boolean =>
   /[Cc]ache-[Cc]ontrol/.test(codeOf(path));
@@ -119,11 +145,19 @@ const isSharedCacheable = (value: string): boolean => {
 /**
  * Every response header this package sets deliberately, and why.
  *
- * One entry. Adding a second is a decision about who may store a response, so it
- * belongs in a diff somebody reads rather than in a route nobody re-reads.
+ * Two entries, and both say the same thing for the same reason:
+ *
+ * - `content/server/public-routes.ts` - the one public read that can return an
+ *   unpublished record to whoever is allowed to preview it.
+ * - `tanstack/start/document-headers.ts` - every rendered document, which
+ *   carries a dehydrated Query cache holding the visitor's session.
+ *
+ * Adding a third is a decision about who may store a response, so it belongs in
+ * a diff somebody reads rather than in a route nobody re-reads.
  */
 const DECLARED = {
   "content/server/public-routes.ts": ["private, no-store"],
+  "tanstack/start/document-headers.ts": ["private, no-store"],
 } satisfies Record<string, string[]>;
 
 describe("the cacheability predicate says what it means", () => {

@@ -11,8 +11,8 @@ import type { AppMessagesMap } from '@vitnode/core/lib/i18n/types'
  *
  * `@vitnode/blog`'s `pl.json` was the last entry, and it was here for a reason
  * that has been fixed rather than a reason that stands: it arrived from
- * `apps/docs/src/i18n.ts` when Stage 17 deleted that application, and the plugin
- * shipped no Polish of its own to fall back to. It does now
+ * `apps/docs` when Stage 17 deleted that application, and the plugin shipped no
+ * Polish of its own to fall back to. It does now
  * (`plugins/blog/src/locales/pl.json`), registered in the plugin's own locale
  * barrel and in `src/locales/packages.ts` beside its English - so the blog's
  * AdminCP copy is Polish in this app, in `apps/api`'s emails, and in anybody
@@ -25,8 +25,8 @@ import type { AppMessagesMap } from '@vitnode/core/lib/i18n/types'
  * left out falls back to the package's, and then to the default locale, key by
  * key.
  *
- * Server-side only, and kept out of `src/i18n.ts` on purpose: these are
- * functions, and `src/i18n.ts` is spread into the shell config, which crosses to
- * the browser and has to stay serializable.
+ * Server-side only, and kept out of `src/vitnode.config.ts` on purpose: these
+ * are functions, and the shared config crosses to the browser and has to stay
+ * serializable. `src/vitnode.server.config.ts` is what registers this map.
  */
 export const appMessages: AppMessagesMap = {}

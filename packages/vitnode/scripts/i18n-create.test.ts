@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addLocaleToAppMessages,
   addLocaleToConfig,
   addMessagesToConfig,
   buildI18nFile,
@@ -203,6 +204,82 @@ describe("addMessagesToConfig", () => {
     const out = notNull(result);
     expect(out.indexOf("messages:")).toBeGreaterThan(out.indexOf("locales:"));
     expect(out.indexOf("messages:")).toBeLessThan(out.indexOf("satisfies"));
+  });
+});
+
+describe("addLocaleToAppMessages", () => {
+  /**
+   * The loaders go in `src/locales/app.ts`, not in the config.
+   *
+   * `vitnode.config.ts` is browser-safe and is executed by Vite at build time,
+   * so a `() => import(...)` written into its `i18n` block is both in the
+   * browser bundle and in the build. `appMessages` is the map
+   * `vitnode.server.config.ts` registers, and its loaders are relative to
+   * `src/locales/` rather than to `src/`.
+   */
+  it("adds a locale block to an empty map", () => {
+    expect(
+      addLocaleToAppMessages(
+        "export const appMessages: AppMessagesMap = {};\n",
+        { code: "pl", pluginIds: ["@vitnode/core"] },
+      ),
+    ).toBe(
+      [
+        "export const appMessages: AppMessagesMap = {",
+        '  "pl": {',
+        '    "@vitnode/core": () => import("./@vitnode/core/pl.json"),',
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("extends a map that already has a locale", () => {
+    const source = [
+      "export const appMessages: AppMessagesMap = {",
+      "  en: {",
+      '    "@vitnode/core": () => import("./@vitnode/core/en.json"),',
+      "  },",
+      "};",
+      "",
+    ].join("\n");
+
+    expect(
+      addLocaleToAppMessages(source, { code: "de", pluginIds: ["a", "b"] }),
+    ).toBe(
+      [
+        "export const appMessages: AppMessagesMap = {",
+        '  "de": {',
+        '    "a": () => import("./a/de.json"),',
+        '    "b": () => import("./b/de.json"),',
+        "  },",
+        "  en: {",
+        '    "@vitnode/core": () => import("./@vitnode/core/en.json"),',
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("handles a plain `const appMessages = {}` with no annotation", () => {
+    expect(
+      addLocaleToAppMessages("const appMessages = {\n};\n", {
+        code: "pl",
+        pluginIds: ["a"],
+      }),
+    ).toContain('"pl": {');
+  });
+
+  it("returns null when there is no map to edit", () => {
+    // The caller then prints the lines to add rather than writing a broken file.
+    expect(
+      addLocaleToAppMessages("export const other = {};", {
+        code: "pl",
+        pluginIds: ["a"],
+      }),
+    ).toBeNull();
   });
 });
 

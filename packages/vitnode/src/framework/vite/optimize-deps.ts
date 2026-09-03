@@ -41,6 +41,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "@dnd-kit/sortable",
   "@dnd-kit/utilities",
   "@hookform/resolvers/zod",
+  "@tanstack/react-query",
   "@tiptap/extension-text-align",
   "@tiptap/react",
   "@tiptap/starter-kit",

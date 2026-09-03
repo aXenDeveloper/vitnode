@@ -1,58 +1,73 @@
 import { buildConfig } from "@vitnode/core/vitnode.config";
 
-import { appMessages } from "./locales/app";
-import { vitNodeShellConfig } from "./vitnode.shell.config";
-
 /**
- * This app's frontend config, in the shape every VitNode app builds it.
+ * This app's configuration - the one file every VitNode app edits first.
  *
- * `plugins` is empty, and a plugin is added here by id and translations rather
- * than through its own `blogPlugin()` entry:
+ * **Browser-safe, and everything here has to stay that way.** Three very
+ * different readers depend on it: `routes/__root.tsx` renders the document shell
+ * from `metadata`, `theme` and `debug`; `lib/i18n/runtime.ts` derives the locale
+ * routing from `i18n`; and Vite's own plugin registry loads this file with
+ * `jiti` while it is still resolving its config, to find out which plugins to
+ * generate route, navigation and content-registry imports for. So it is plain
+ * data and plugin *identity* - never a `() => import(...)` message loader, never
+ * a module that reaches a database. Anything like that goes in
+ * `vitnode.server.config.ts`.
  *
- *     import { buildPlugin } from '@vitnode/core/lib/plugin'
- *     import { CONFIG_PLUGIN as BLOG } from '@acme/blog/const'
+ * ## Adding a language
  *
- *     import { packageMessages } from './locales/packages'
+ * Add an entry to `locales`. Packages ship their own translations, so a new
+ * locale needs nothing else: anything a package has not translated falls back to
+ * `defaultLocale` key by key. Register the package's file for that language in
+ * `src/locales/packages.ts`, and put your own rewording in
+ * `src/locales/app.ts` - both of which `vitnode.server.config.ts` picks up.
  *
- *     plugins: [
- *       buildPlugin({
- *         messages: packageMessages[BLOG.pluginId],
- *         pluginId: BLOG.pluginId,
- *       }),
- *     ]
+ * `vitnode i18n:create de Deutsch` does all of it for you.
  *
- * That is a *scope* decision rather than a compatibility one. This object's one
- * reader takes `pluginId` and `messages` off each plugin and nothing else, so a
- * full registration would add every content type's editing screen to a
- * server-only graph where nothing would ever look at them. The AdminCP gets its
- * content types from `src/content-registry.gen.ts` instead - one literal import
- * per configured plugin - so a browser loads them with the content route and not
- * before.
+ * ## Adding a plugin
  *
- * The same split, one layer up, feeds the sidebar: `src/admin-nav.gen.ts` is the
- * navigation half - ids, hrefs, permissions, icons - and nothing that renders a
- * screen. See `src/lib/admin-nav.ts` and `src/lib/content-registry.ts`; both
- * explain why they are generated rather than read from here.
+ * With the plugin's own factory:
+ *
+ *     import { blogPlugin } from '@acme/blog/config'
+ *
+ *     plugins: [blogPlugin()]
+ *
+ * That is the whole registration - the factory carries the plugin's content
+ * types, its AdminCP navigation and its translations. Register its locale files
+ * in `src/locales/packages.ts` as well, which is what the message loader
+ * actually reads.
+ *
+ * What the AdminCP renders comes back through `src/admin-nav.gen.ts` and
+ * `src/content-registry.gen.ts` rather than out of this object: the build writes
+ * one literal import per configured plugin, and `src/router.tsx` loads the
+ * content registry behind a dynamic `import()`, so a content type's editing
+ * screen arrives with the route that renders it.
  *
  * A plugin's *pages* need nothing in this file at all. It declares them in its
  * own `src/routes.ts`, and this app's Vite build compiles them into
  * `src/plugin-routes.gen.ts`, which `src/router.tsx` mounts under the shell the
  * plugin's `area` names. No page is ever copied into `src/routes`.
  *
- * Server-side only, and deliberately so - see `vitnode.shell.config.ts`.
- * `src/server/messages.server.ts` is the only importer, and it carries the
- * `server-only` guard that keeps it that way.
- *
  * `buildConfig` also registers this object process-wide, which is how core's own
  * route files find it without being handed it as a prop.
  */
 export const vitNodeConfig = buildConfig({
-  ...vitNodeShellConfig,
-  /**
-   * The shell's locale declaration, plus the message loaders that must not be in
-   * it: `src/i18n.ts` is spread into the browser-facing shell config, and these
-   * are functions.
-   */
-  i18n: { ...vitNodeShellConfig.i18n, messages: appMessages },
+  debug: false,
+  i18n: {
+    defaultLocale: "en",
+    locales: [{ code: "en", name: "English" }],
+    /**
+     * Explicit, because the app renders on a server: without one, `use-intl`
+     * formats dates in whatever zone the server happens to run in and warns
+     * that the client will disagree.
+     */
+    timeZone: "UTC",
+  },
+  metadata: {
+    shortTitle: "VitNode",
+    title: "VitNode",
+  },
   plugins: [],
+  theme: {
+    defaultTheme: "system",
+  },
 });

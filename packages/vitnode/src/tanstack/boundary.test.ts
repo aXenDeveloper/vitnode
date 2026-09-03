@@ -161,21 +161,41 @@ const NEXT_INTL_RUNTIME = [
 ];
 
 /**
- * The Start compiler's own entry points.
+ * The Start primitives no module in this package may declare.
  *
- * `createServerFn` and `createMiddleware` need the module they sit in to be
- * transformed on *both* sides; `createStart` and `createFileRoute` name the
- * host's own composition (its Start instance and its route tree), which a
- * package cannot own. All four stay in `apps/web`.
+ * `createServerFn` is the one that actually breaks. It needs the module it sits
+ * in to be transformed on *both* sides; uncompiled - which is how this package
+ * reaches a server - its `.handler()` receives one argument where the compiler
+ * passes two, and the call resolves to `undefined` with no error at all. The
+ * route builders name the host's own route tree, which a package cannot own.
  */
 const HOST_ONLY_PRIMITIVES = [
   "createFileRoute",
-  "createMiddleware",
   "createRootRoute",
   "createRootRouteWithContext",
   "createServerFn",
-  "createStart",
 ];
+
+/**
+ * The request pipeline, which is the one feature allowed to build a Start
+ * instance.
+ *
+ * `createStart` and `createMiddleware` used to sit on the list above, and the
+ * reason given was the compiler. That reason is wrong for these two and worth
+ * correcting rather than working around: both are plain builders - read
+ * `createStart.ts` and `createMiddleware.ts` in `@tanstack/start-client-core`
+ * and neither does anything but return the options object it was handed - so
+ * being uncompiled costs them nothing.
+ *
+ * What genuinely needs the compiler on both sides is a *function* middleware,
+ * whose `.client()` branch runs in a browser. A **request** middleware has only
+ * a `.server()` branch and runs only in the server entry, which is the whole of
+ * what `tanstack/start` declares. The host still owns the composition: it calls
+ * `createVitNodeStart(...)` from its own `src/start.ts` and exports the result
+ * as `startInstance`, which is what the framework reads.
+ */
+const REQUEST_PIPELINE_PRIMITIVES = ["createMiddleware", "createStart"];
+const REQUEST_PIPELINE_DIRECTORY = join(tanstackRoot, "start");
 
 describe("this test is looking at the right tree", () => {
   it("finds the package root", () => {
@@ -315,6 +335,89 @@ describe("the namespace holds nothing the Start compiler has to see twice", () =
         .filter(({ code }) => new RegExp(`\\b${primitive}\\s*[(<]`).test(code))
         .map(({ path }) => path),
     ).toEqual([]);
+  });
+
+  const outsideRequestPipeline = () =>
+    sources().filter(
+      ({ path }) =>
+        !join(packageRoot, path).startsWith(
+          `${REQUEST_PIPELINE_DIRECTORY}${sep}`,
+        ),
+    );
+
+  it.each(REQUEST_PIPELINE_PRIMITIVES)(
+    "declares %s in the request pipeline only",
+    primitive => {
+      expect(
+        outsideRequestPipeline()
+          .filter(({ code }) =>
+            new RegExp(`\\b${primitive}\\s*[(<]`).test(code),
+          )
+          .map(({ path }) => path),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(REQUEST_PIPELINE_PRIMITIVES)(
+    "finds %s where it is allowed, so the scope is real",
+    primitive => {
+      // The control. Both assertions above are "found nothing" ones, which a
+      // scan whose directory filter excluded everything also satisfies.
+      expect(
+        sources().filter(({ code }) =>
+          new RegExp(`\\b${primitive}\\s*[(<]`).test(code),
+        ),
+      ).not.toEqual([]);
+    },
+  );
+});
+
+describe("the request pipeline is safe in the client bundle too", () => {
+  /**
+   * `src/start.ts` is a *client* entry as well as a server one.
+   *
+   * `hydrateStart` imports `startInstance` from `#tanstack-start-entry`, which
+   * resolves to the host's `src/start.ts` - so everything `createVitNodeStart`
+   * reaches is in the browser build's module graph. A top-level
+   * `import "@tanstack/react-start/server-only"` anywhere in that chain is
+   * therefore an import-protection *error* rather than a safeguard:
+   *
+   *     [import-protection] Import denied in client environment
+   *       Importer: dist/src/tanstack/start/create-start.js
+   *
+   * What actually keeps the server half out of the browser is the Start
+   * compiler, which strips a middleware's `.server()` callback from the client
+   * bundle. That kills the only live reference to `handleLocaleRequest`, and
+   * `tanstack/i18n/request` - which is marked server-only - shakes out with it.
+   *
+   * So the marker is forbidden here and the discipline is the other one:
+   * anything a browser must not hold stays reachable only from inside a
+   * `.server()` callback.
+   */
+  const startFiles = () => runtimeFilesUnder(join(tanstackRoot, "start"));
+
+  it("has the pipeline to check", () => {
+    expect(startFiles().length).toBeGreaterThan(0);
+  });
+
+  it("carries no server-only marker", () => {
+    const offenders = startFiles()
+      .filter(path =>
+        importsFrom(path).some(specifier =>
+          specifier.startsWith("@tanstack/react-start/server-only"),
+        ),
+      )
+      .map(path => relative(packageRoot, path));
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("finds the marker where it does belong, so the scan is real", () => {
+    // The control: `tanstack/i18n/server` is server-only and says so, and it is
+    // never in a client graph because nothing a browser reaches imports it.
+    expect(importsFrom(join(tanstackRoot, "i18n", "server.ts"))).toContain(
+      "@tanstack/react-start/server-only",
+    );
   });
 });
 

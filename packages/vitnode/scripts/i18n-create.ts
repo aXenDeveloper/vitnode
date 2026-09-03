@@ -21,9 +21,21 @@ import { findRepoRoot } from "./shared/file-utils.js";
 
 const LOCALE_CODE_PATTERN = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 
-/** One `import("./locales/<pluginId>/<code>.json")` loader, indented. */
-const messageEntry = (indent: string, pluginId: string, code: string) =>
-  `${indent}"${pluginId}": () => import("./locales/${pluginId}/${code}.json"),`;
+/**
+ * One message loader, indented, with the path spelled relative to the file it
+ * is being written into.
+ *
+ * `src/locales/app.ts` sits inside `src/locales`, so its loaders are
+ * `./<pluginId>/<code>.json`. A config at `src/` reaches the same file through
+ * `./locales/<pluginId>/<code>.json`.
+ */
+const messageEntry = (
+  indent: string,
+  pluginId: string,
+  code: string,
+  prefixPath = "./locales",
+) =>
+  `${indent}"${pluginId}": () => import("${prefixPath}/${pluginId}/${code}.json"),`;
 
 /**
  * A TypeScript string literal for arbitrary text. `JSON.stringify` escapes
@@ -37,6 +49,42 @@ const stringLiteral = (value: string): string => JSON.stringify(value);
 const opensOnNewLine = (source: string, afterOpen: number): boolean =>
   /^[^\S\n]*\n/.test(source.slice(afterOpen));
 
+/** Where an app keeps the message overrides its server config registers. */
+const APP_MESSAGES_FILE = join("src", "locales", "app.ts");
+
+/**
+ * Adds a `<code>: { ...loaders }` block to an app's `appMessages` map.
+ *
+ * The map that `vitnode.server.config.ts` hands to the messages loader, and the
+ * only correct target when an app has one: the shared `vitnode.config.ts` is
+ * browser-safe by contract, so a `() => import(...)` written into its `i18n`
+ * block is both in the browser bundle and in the file Vite loads with `jiti` to
+ * discover plugins.
+ *
+ * Returns `null` when the file has no `appMessages` object to edit, so the
+ * caller can fall back to the config or to printing instructions.
+ */
+export const addLocaleToAppMessages = (
+  source: string,
+  { code, pluginIds }: { code: string; pluginIds: string[] },
+): null | string => {
+  const anchor = /\bappMessages\s*(?::[^=]*)?=\s*\{/.exec(source);
+  if (anchor?.index === undefined) return null;
+
+  const at = anchor.index + anchor[0].length;
+  const entries = pluginIds
+    .map(id => messageEntry("    ", id, code, "."))
+    .join("\n");
+  const inner = `\n  "${code}": {\n${entries}\n  },`;
+
+  // Close the object onto its own line when it was written inline (`{}`).
+  return (
+    source.slice(0, at) +
+    (opensOnNewLine(source, at) ? inner : `${inner}\n`) +
+    source.slice(at)
+  );
+};
+
 /**
  * Bounds of the app's `i18n` config object, `{ start, end }` pointing at its
  * opening and closing braces. Both edits below must land *inside* this object:
@@ -45,8 +93,8 @@ const opensOnNewLine = (source: string, afterOpen: number): boolean =>
  * splice the new language into that first match instead - reporting success
  * while the runtime config stays untouched.
  *
- * The object is always introduced by `i18n = {` (a dedicated `src/i18n.ts`) or
- * `i18n: {` (inline in a config), which a plugin's option block can't spoof.
+ * The object is always introduced by `i18n: {` inside a config, or `i18n = {` in
+ * a standalone declaration - neither of which a plugin's option block can spoof.
  * Returns `null` when no such object is found, so callers fall back to printing
  * manual instructions rather than editing blindly.
  */
@@ -203,7 +251,16 @@ export const addMessagesToConfig = (
   return source.slice(0, at) + block + source.slice(at);
 };
 
-/** A complete `src/i18n.ts` for an app that has no i18n config yet. */
+/**
+ * A standalone `src/i18n.ts` for an app whose config declares no languages at
+ * all.
+ *
+ * The last resort, and it should stay unreachable: every VitNode app declares
+ * `i18n` inside `vitnode.config.ts` (web) or `vitnode.api.config.ts` (API), and
+ * that is what {@link findI18nSourceFile} finds. This exists so an
+ * API-only project that opted out of the block entirely gets a file to import
+ * rather than a silent no-op.
+ */
 export const buildI18nFile = ({
   code,
   defaultLocale,
@@ -392,7 +449,28 @@ export const i18nCreate = async () => {
     console.log(dim(`  skipped  ${pluginId} (no strings for this app)`));
   }
 
-  // 2. Wire the locale into the i18n config.
+  // 2. Wire the loaders into the app's own message map, which is where a
+  //    server config reads them from. Attempted first and independently of the
+  //    locale list below: the two live in different files now - the loaders in
+  //    `src/locales/app.ts`, the languages in the shared config - and a project
+  //    that has one and not the other should still get the half it has.
+  const appMessagesPath = join(appDir, APP_MESSAGES_FILE);
+  let wroteAppMessages = false;
+
+  if (existsSync(appMessagesPath) && wiredPluginIds.length > 0) {
+    const wired = addLocaleToAppMessages(
+      readFileSync(appMessagesPath, "utf-8"),
+      { code, pluginIds: wiredPluginIds },
+    );
+
+    if (wired) {
+      writeFileSync(appMessagesPath, wired);
+      console.log(green(`  updated  ${APP_MESSAGES_FILE}`));
+      wroteAppMessages = true;
+    }
+  }
+
+  // 3. Wire the locale into the i18n config.
   const sourceFile = findI18nSourceFile(appDir);
 
   if (!sourceFile) {
@@ -417,9 +495,13 @@ export const i18nCreate = async () => {
   } else {
     const original = readFileSync(sourceFile, "utf-8");
     const withLocale = addLocaleToConfig(original, { code, name });
-    const wired = withLocale
-      ? addMessagesToConfig(withLocale, { code, pluginIds: wiredPluginIds })
-      : null;
+    // Only fall back to the config's own `messages` block when the app has no
+    // `src/locales/app.ts` - a browser-safe config is the wrong home for a
+    // loader, and writing to both would merge the same file twice.
+    const wired =
+      withLocale && !wroteAppMessages && wiredPluginIds.length > 0
+        ? addMessagesToConfig(withLocale, { code, pluginIds: wiredPluginIds })
+        : withLocale;
 
     if (wired) {
       writeFileSync(sourceFile, wired);
@@ -427,17 +509,21 @@ export const i18nCreate = async () => {
     } else {
       // The config is shaped in a way we will not edit blindly - show the
       // exact lines to add instead of risking a broken file.
-      const messages = wiredPluginIds
-        .map(
-          id => `      "${id}": () => import("./locales/${id}/${code}.json"),`,
-        )
-        .join("\n");
       console.log(
         `\n${prefix} Couldn't edit ${relative(appDir, sourceFile)} automatically. Add:\n` +
           dim(
-            `  locales: [{ code: ${stringLiteral(code)}, name: ${stringLiteral(name)} }, /* ... */]\n`,
-          ) +
-          dim(`  messages: {\n    "${code}": {\n${messages}\n    },\n  }`),
+            `  locales: [{ code: ${stringLiteral(code)}, name: ${stringLiteral(name)} }, /* ... */]`,
+          ),
+      );
+    }
+
+    if (!wroteAppMessages && wiredPluginIds.length > 0) {
+      const messages = wiredPluginIds
+        .map(id => `    "${id}": () => import("./${id}/${code}.json"),`)
+        .join("\n");
+      console.log(
+        `\n${prefix} And register the files in ${APP_MESSAGES_FILE}:\n` +
+          dim(`  "${code}": {\n${messages}\n  },`),
       );
     }
   }

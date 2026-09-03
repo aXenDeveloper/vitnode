@@ -1,4 +1,4 @@
-import type { i18n } from '#/i18n'
+import type { vitNodeConfig } from '#/vitnode.config'
 
 import { localeRouting } from '#/lib/i18n/runtime'
 
@@ -11,7 +11,7 @@ import { localeRouting } from '#/lib/i18n/runtime'
  * `string` and takes this union as a type argument where the value originates
  * (`useLocale<Locale>()`, `resolveLocale<Locale>()`).
  */
-export type Locale = (typeof i18n.locales)[number]['code']
+export type Locale = (typeof vitNodeConfig.i18n.locales)[number]['code']
 
 export { defaultLocale, localeRouting } from '#/lib/i18n/runtime'
 

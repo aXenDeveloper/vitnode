@@ -2,8 +2,8 @@ import { createServerFn } from '@tanstack/react-start'
 import { configureIntl, validateIntlInput } from '@vitnode/core/tanstack/i18n'
 import { IntlProvider } from 'use-intl'
 
-import { i18n } from '#/i18n'
 import { loadIntlMessages } from '#/server/messages.server'
+import { vitNodeConfig } from '#/vitnode.config'
 
 /**
  * One language's messages for one set of namespaces, fetched on the server.
@@ -29,9 +29,9 @@ export const getIntlMessages = createServerFn()
  * Everything in `@vitnode/core/tanstack/i18n` reads what this registers, so a
  * route file imports `RouteMessages` and `intlQueryOptions` straight from the
  * package. What must not happen is a route running before this module has been
- * evaluated - so the two framework entry points, `src/router.tsx` and
- * `src/start.ts`, both import from here, and `src/tests/intl-runtime.test.ts`
- * fails if either stops doing so.
+ * evaluated - so `src/router.tsx`, which owns the route tree, imports from
+ * here. The request pipeline needs no such guarantee: `createVitNodeStart`
+ * derives its own locale routing from the config it is handed.
  *
  * The registration is at module scope but reads `getIntlMessages` above only by
  * reference, so the order within this file does not matter: the validator and
@@ -61,7 +61,7 @@ export const {
    * back to client rendering, and the page still appears.
    */
   hostIntlProvider: IntlProvider,
-  i18n,
+  i18n: vitNodeConfig.i18n,
 })
 
 /**

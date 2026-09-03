@@ -21,8 +21,8 @@ import type { AppMessagesMap } from "@vitnode/core/lib/i18n/types";
  * everything it leaves out falls back to the package's, and then to the default
  * locale, key by key.
  *
- * Server-side only, and kept out of `src/i18n.ts` on purpose: these are
- * functions, and `src/i18n.ts` is spread into the shell config, which crosses to
- * the browser and has to stay serializable.
+ * Server-side only, and kept out of `src/vitnode.config.ts` on purpose: these
+ * are functions, and the shared config crosses to the browser and has to stay
+ * serializable. `src/vitnode.server.config.ts` is what registers this map.
  */
 export const appMessages: AppMessagesMap = {};

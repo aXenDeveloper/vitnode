@@ -1,6 +1,6 @@
 import { createRouteHead } from '@vitnode/core/tanstack/metadata'
 
-import { vitNodeShellConfig } from '#/vitnode.shell.config'
+import { vitNodeConfig } from '#/vitnode.config'
 
 /**
  * A route's `head`, bound to this app's name.
@@ -16,4 +16,4 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
  *
  *     head: ({ loaderData }) => pageHead({ robots: 'index, follow', ...loaderData })
  */
-export const pageHead = createRouteHead(vitNodeShellConfig.metadata)
+export const pageHead = createRouteHead(vitNodeConfig.metadata)

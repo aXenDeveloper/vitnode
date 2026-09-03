@@ -59,8 +59,14 @@ pnpm create vitnode-app@latest --plugin
 npm create vitnode-app@latest -- --plugin
 ```
 
-The generator creates the package and adds its workspace dependency. Register it
-in the host’s `vitnode.config.ts` to enable the feature.
+The generator creates the package and adds its workspace dependency. Enable the
+feature by registering it in the host’s `vitnode.config.ts`:
+
+```ts
+import { myPlugin } from '@acme/my-plugin/config'
+
+plugins: [myPlugin()]
+```
 
 ## Options
 

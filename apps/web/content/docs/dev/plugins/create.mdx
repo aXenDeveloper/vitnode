@@ -72,8 +72,8 @@ export const routes = definePluginRoutes([
 Import the plugin factory in the host config and add it to `plugins`:
 
 ```ts title="apps/web/src/vitnode.config.ts"
-import { buildConfig } from '@vitnode/core/vitnode.config'
 import { siteNotesPlugin } from '@acme/site-notes/config' // [!code ++]
+import { buildConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeConfig = buildConfig({
   plugins: [
@@ -82,8 +82,14 @@ export const vitNodeConfig = buildConfig({
 })
 ```
 
-The factory already carries the plugin's route tree and message loaders. Keep
-host configuration to composition; the feature stays in its package.
+That is the only composition step - the factory carries the plugin's routes,
+content types and AdminCP navigation, and the feature stays in its package. Your
+build reads this list and generates one literal import per plugin for each of
+those, so a page or an editing screen loads with the route that needs it rather
+than with the config. See [Configuration](/docs/dev/configuration).
+
+Its translations need one more line, in `src/locales/packages.ts` - see
+[Languages & Localization](/docs/dev/i18n).
 
   </Step>
   <Step>

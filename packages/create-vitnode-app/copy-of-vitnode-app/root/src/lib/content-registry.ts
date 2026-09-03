@@ -20,12 +20,13 @@ import { pluginContentTypes } from "#/content-registry.gen";
  *
  * ## Why it is not read from `vitnode.config.ts`
  *
- * That config is server-side on purpose (`vitnode.shell.config.ts` explains the
- * split): it carries message loaders and API wiring, which a browser bundle has
- * no business holding. The generated projection is the browser-safe half - the
- * definitions, the icons and the override components - so the AdminCP gets the
- * content screens without the server config. The same arrangement
- * `src/lib/admin-nav.ts` uses for the sidebar, one layer deeper.
+ * The config does carry each plugin's registration, and a Next.js host reads it
+ * from there. What it cannot give is *when*: it is imported by the document
+ * shell, so anything reachable from it is reachable eagerly. This module is
+ * loaded behind a dynamic `import()` in `src/router.tsx` instead, so the
+ * definitions, the icons and the override components arrive with the content
+ * route - the same arrangement `src/lib/admin-nav.ts` uses for the sidebar, one
+ * layer deeper.
  *
  * ## Registration, and where it belongs in the import graph
  *

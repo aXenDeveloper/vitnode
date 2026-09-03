@@ -13,7 +13,9 @@ import type { StorageApiPlugin } from "./api/models/storage";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type {
+  AppMessagesMap,
   LocaleConfig,
+  LocaleMessagesMap,
   VitNodeApiI18nConfig,
   VitNodeI18nConfig,
 } from "./lib/i18n/types";
@@ -22,6 +24,27 @@ import type { BuildPluginReturn } from "./lib/plugin";
 
 export type { LocaleConfig };
 
+/**
+ * An installation's shared configuration - `src/vitnode.config.ts`.
+ *
+ * **Browser-safe, and that is a contract rather than a happy accident.** The
+ * document shell reads `metadata`, `theme` and `debug`; the locale runtime reads
+ * `i18n`; the Vite plugin registry reads `plugins` while Vite is still loading
+ * its config. So every value here has to survive being bundled for a browser and
+ * being executed by `jiti` in Node - which means plain data and plugin
+ * *identity*, never a `() => import(...)` message loader and never a module that
+ * reaches a database.
+ *
+ * `plugins` holds each enabled plugin's registration - normally the plugin's own
+ * factory, `blogPlugin()`. A Next.js host walks that list directly. A TanStack
+ * Start host reads the same declarations back through build-time projections of
+ * each plugin's `admin/nav` and `admin/content` exports, which is what gets an
+ * editing screen loaded with the route that renders it rather than with the
+ * config; `buildPlugin({ pluginId })` is the minimum such a host needs.
+ *
+ * Everything that cannot honour the browser-safe contract lives in
+ * {@link VitNodeServerConfig}.
+ */
 export interface VitNodeConfig<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
@@ -33,6 +56,42 @@ export interface VitNodeConfig<
     ThemeProviderProps,
     "attribute" | "children" | "disableTransitionOnChange" | "enableSystem"
   >;
+}
+
+/**
+ * The half of an installation's configuration a browser may never hold -
+ * `src/vitnode.server.config.ts`.
+ *
+ * Two things, and both are functions that read files out of a package's build
+ * output: the app's own message overrides and the per-package loaders a bundled
+ * runtime has to declare for itself (see `BundledMessagesOptions.packageMessages`).
+ * Putting them beside `metadata` and `theme` is what used to force an app to
+ * keep two configs that agreed until they didn't.
+ *
+ * It holds the shared config rather than repeating any of it, so the locale
+ * list a message loader is resolved against is the same object the router and
+ * the document shell read.
+ */
+export interface VitNodeServerConfig<
+  AppLocales extends LocaleConfig[] = LocaleConfig[],
+> {
+  /** The shared config this app also serves to the browser. */
+  config: VitNodeConfig<AppLocales>;
+  /**
+   * Translations owned by the app rather than by a package, keyed by locale and
+   * then by the plugin whose namespace they extend. Files live in
+   * `src/locales/<pluginId>/<locale>.json`.
+   */
+  messages?: AppMessagesMap;
+  /**
+   * Where each installed package's translations are read from, keyed by plugin
+   * id - core included.
+   *
+   * A bundled runtime cannot use the locale barrel a package ships, because
+   * Rollup will not follow its `import("./en.json", { with: { type: "json" } })`.
+   * An app declares static specifiers a bundler can follow instead.
+   */
+  packageMessages?: Record<string, LocaleMessagesMap | undefined>;
 }
 
 export interface VitNodeApiConfig {
@@ -170,7 +229,17 @@ export interface VitNodeApiConfig {
 
 let registeredVitNodeConfig: undefined | VitNodeConfig;
 
-export function buildConfig<AppLocales extends LocaleConfig[]>(
+/**
+ * Builds an installation's shared config - the one call in
+ * `src/vitnode.config.ts`.
+ *
+ * `const AppLocales` is what keeps `locales` a tuple of literal types through
+ * inference, so `Locale` derived from the result is `"en" | "pl"` rather than
+ * `string` and `defaultLocale` is checked against the list beside it. Without
+ * it every code widens to `string` and each app has to write `as const` on
+ * every entry.
+ */
+export function buildConfig<const AppLocales extends LocaleConfig[]>(
   args: VitNodeConfig<AppLocales>,
 ): VitNodeConfig<AppLocales> {
   const config = {
@@ -186,6 +255,21 @@ export function buildConfig<AppLocales extends LocaleConfig[]>(
   registeredVitNodeConfig = config;
 
   return config;
+}
+
+/**
+ * Builds the server-only companion to {@link buildConfig} - the one call in
+ * `src/vitnode.server.config.ts`.
+ *
+ * Identity, deliberately: there is nothing to normalise, and the value of the
+ * function is the type it pins and the file it names. Nothing registers it
+ * process-wide either, because everything that reads it is already on the
+ * server and can import it.
+ */
+export function buildServerConfig<const AppLocales extends LocaleConfig[]>(
+  args: VitNodeServerConfig<AppLocales>,
+): VitNodeServerConfig<AppLocales> {
+  return args;
 }
 
 /**

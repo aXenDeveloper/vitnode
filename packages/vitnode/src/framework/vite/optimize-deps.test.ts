@@ -22,7 +22,8 @@ const sourceRoot = resolve(here, "../..");
 const CLIENT_TREES = ["components", "hooks", "lib", "tanstack", "views", "ws"];
 const SERVER_DIRECTORIES = ["api", "dist", "node_modules", "server", "tests"];
 const HOST_OWNED = [
-  "@tanstack",
+  "@tanstack/react-router",
+  "@tanstack/react-start",
   "@vitnode",
   "dotenv",
   "react",

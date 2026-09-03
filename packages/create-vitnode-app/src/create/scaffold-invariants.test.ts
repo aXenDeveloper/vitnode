@@ -251,37 +251,137 @@ describe("what a generated single app starts from", () => {
   });
 
   /**
-   * One locale declaration, read by both configs.
+   * One locale declaration, in the shared config, read by both configs.
    *
    * `vitnode db:prepare` seeds `core_languages` from the *API* config, and a
-   * single app owns its schema - so a language added to `src/i18n.ts` has to
-   * reach the seed without a second edit. It does, because there is only one
-   * list.
+   * single app owns its schema - so a language added to `src/vitnode.config.ts`
+   * has to reach the seed without a second edit. It does, because there is only
+   * one list.
+   *
+   * The standalone `src/i18n.ts` this replaced must not come back: two files
+   * that agree until they don't is exactly the failure the single declaration
+   * exists to prevent.
    */
   it("declares its languages once and reads them from both configs", () => {
-    expect(appFiles).toContain("root/src/i18n.ts");
-    expect(appFiles).not.toContain("api-single-app/src/i18n.ts");
+    expect(allFiles.filter(file => /(^|\/)src\/i18n\.ts$/.test(file))).toEqual(
+      [],
+    );
+    expect(appFiles).not.toContain("root/src/vitnode.shell.config.ts");
 
-    for (const file of [
-      "root/src/vitnode.shell.config.ts",
-      "api-single-app/src/vitnode.api.config.ts",
-    ]) {
-      expect(withoutComments(read(appTemplate, file))).toMatch(
-        /import \{ i18n \} from ['"]\.\/i18n['"]/,
-      );
-    }
+    const shared = withoutComments(
+      read(appTemplate, "root/src/vitnode.config.ts"),
+    );
+    expect(shared).toMatch(/defaultLocale:\s*"en"/);
+    expect(shared).toMatch(/locales:\s*\[/);
+
+    expect(
+      withoutComments(
+        read(appTemplate, "api-single-app/src/vitnode.api.config.ts"),
+      ),
+    ).toMatch(/i18n:\s*vitNodeConfig\.i18n/);
   });
 
   /**
-   * The split shape has the same obligation, one file each: two packages, so
-   * neither can import the other's, and the API's is the one the seed reads.
+   * The split shape has the same obligation, one declaration each: two packages,
+   * so neither can import the other's, and the API's is the one the seed reads.
    */
   it("gives a split deployment an API locale declaration of its own", () => {
-    expect(appFiles).toContain("api/src/i18n.ts");
-    // `.js` here: the split API compiles with `moduleResolution: nodenext`.
+    const api = withoutComments(
+      read(appTemplate, "api/src/vitnode.api.config.ts"),
+    );
+
+    expect(api).toMatch(/defaultLocale:\s*"en"/);
+    expect(api).toMatch(/locales:\s*\[/);
+  });
+
+  /**
+   * The app's *own* message loaders are registered through the server config.
+   *
+   * `src/locales/app.ts` and `src/locales/packages.ts` are the two modules an app
+   * edits to add a translation, and both are `() => import(...)` of JSON. They
+   * reach the message loader through `vitnode.server.config.ts`, which carries
+   * the `server-only` marker, rather than through the shared config that the
+   * document shell holds and that Vite executes with `jiti`.
+   *
+   * A plugin's own registration factory is a separate question and is not what
+   * this pins - see `root/src/vitnode.config.ts`.
+   */
+  it("registers the app's message loaders through the server config", () => {
+    const shared = withoutComments(
+      read(appTemplate, "root/src/vitnode.config.ts"),
+    );
+
+    expect(shared).not.toMatch(/from\s*['"]\.\/locales/);
+    expect(shared).not.toMatch(/from\s*['"]#\/locales/);
+
+    expect(appFiles).toContain("root/src/vitnode.server.config.ts");
+    const server = withoutComments(
+      read(appTemplate, "root/src/vitnode.server.config.ts"),
+    );
+    expect(server).toContain('import "@tanstack/react-start/server-only"');
+    expect(server).toContain("buildServerConfig");
+    expect(server).toMatch(/config:\s*vitNodeConfig/);
+    expect(server).toMatch(/messages:\s*appMessages/);
+    expect(server).toContain("packageMessages");
+  });
+});
+
+describe("what a generated application does to every request", () => {
+  const start = withoutComments(read(appTemplate, "root/src/start.ts"));
+
+  /**
+   * `src/start.ts` is a composition root, not a pipeline.
+   *
+   * Start replaces its own default CSRF middleware the moment an app declares
+   * `requestMiddleware` of its own, so a scaffold that shipped a hand-written
+   * list was one deletion away from exposing every server function as an
+   * unauthenticated cross-site endpoint. `createVitNodeStart` owns the list and
+   * an app cannot omit or reorder what is in it.
+   */
+  it("builds its Start instance through the Core factory", () => {
+    expect(start).toContain(
+      'import { createVitNodeStart } from "@vitnode/core/tanstack/start"',
+    );
+    expect(start).toMatch(
+      /export const startInstance = createVitNodeStart\(\{\s*config: vitNodeConfig,?\s*\}\)/,
+    );
+  });
+
+  it("hand-rolls none of the pipeline the factory owns", () => {
+    for (const primitive of [
+      "createStart",
+      "createMiddleware",
+      "createCsrfMiddleware",
+      "handleLocaleRequest",
+      "localeRouting",
+    ]) {
+      expect(start).not.toContain(primitive);
+    }
+
+    // The header rule moved into Core with the middleware that applies it.
     expect(
-      withoutComments(read(appTemplate, "api/src/vitnode.api.config.ts")),
-    ).toMatch(/import \{ i18n \} from ['"]\.\/i18n\.js['"]/);
+      allFiles.filter(file => file.endsWith("lib/document-headers.ts")),
+    ).toEqual([]);
+  });
+
+  /**
+   * One VitNode plugin in the Vite config, for the same reason: three calls in
+   * a fixed order is three things to copy wrong.
+   */
+  it("configures Vite through one VitNode plugin", () => {
+    const vite = withoutComments(read(appTemplate, "root/vite.config.ts"));
+
+    expect(vite).toContain(
+      'import { vitnode } from "@vitnode/core/framework/vite"',
+    );
+    expect(vite).toMatch(/vitnode\(\{ appRoot: import\.meta\.dirname \}\)/);
+    for (const removed of [
+      "vitNodeEnv",
+      "vitNodeOptimizeDeps",
+      "vitNodePluginRoutes",
+    ]) {
+      expect(vite).not.toContain(removed);
+    }
   });
 });
 

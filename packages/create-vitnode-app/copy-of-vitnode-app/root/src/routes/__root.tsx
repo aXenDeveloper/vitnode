@@ -24,11 +24,11 @@ import {
 
 import type { Locale } from "#/lib/i18n/shared";
 
-import { vitNodeShellConfig } from "#/vitnode.shell.config";
+import { vitNodeConfig } from "#/vitnode.config";
 
 import appCss from "../styles.css?url";
 
-const { debug, i18n, metadata, theme } = vitNodeShellConfig;
+const { debug, i18n, metadata, theme } = vitNodeConfig;
 
 /**
  * What the router itself provides, before any route has run.

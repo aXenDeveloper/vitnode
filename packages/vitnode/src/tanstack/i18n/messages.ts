@@ -6,6 +6,7 @@ import type {
   LocaleMessagesMap,
   MessagesSource,
 } from "@/lib/i18n/types";
+import type { VitNodeServerConfig } from "@/vitnode.config";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { loadMessages } from "@/lib/i18n/load-messages";
@@ -74,6 +75,28 @@ export interface IntlMessagesLoaderOptions extends BundledMessagesOptions {
   defaultLocale: string;
 }
 
+/** The messages one page needs, in one language. */
+export type IntlMessagesLoader = (args: {
+  locale: string;
+  namespaces: readonly string[];
+}) => Promise<IntlMessages>;
+
+const isServerConfig = (
+  options: IntlMessagesLoaderOptions | VitNodeServerConfig,
+): options is VitNodeServerConfig => "config" in options;
+
+const loaderOptionsFrom = (
+  options: IntlMessagesLoaderOptions | VitNodeServerConfig,
+): IntlMessagesLoaderOptions =>
+  isServerConfig(options)
+    ? {
+        appMessages: options.messages,
+        defaultLocale: options.config.i18n.defaultLocale,
+        packageMessages: options.packageMessages ?? {},
+        plugins: options.config.plugins,
+      }
+    : options;
+
 /**
  * The messages one page needs, in one language - as a loader bound to an app.
  *
@@ -96,11 +119,15 @@ export interface IntlMessagesLoaderOptions extends BundledMessagesOptions {
  * plugins and the app's overrides for `locale`, with the default locale
  * underneath as a per-key fallback, so a half-translated language degrades one
  * string at a time instead of showing raw keys.
+ *
+ * Takes the app's `vitnode.server.config.ts` directly - which is the whole of
+ * what it needs - or the four options spelled out, for a host that assembles
+ * them itself.
  */
-export const createIntlMessagesLoader = ({
-  defaultLocale,
-  ...sourceOptions
-}: IntlMessagesLoaderOptions) => {
+export function createIntlMessagesLoader(
+  options: IntlMessagesLoaderOptions | VitNodeServerConfig,
+): IntlMessagesLoader {
+  const { defaultLocale, ...sourceOptions } = loaderOptionsFrom(options);
   const sources = buildBundledMessagesSources(sourceOptions);
 
   return async ({
@@ -120,4 +147,4 @@ export const createIntlMessagesLoader = ({
       messages: pickMessages(merged, namespaces) as AbstractIntlMessages,
     };
   };
-};
+}

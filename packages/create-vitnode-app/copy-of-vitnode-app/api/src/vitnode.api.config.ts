@@ -3,8 +3,6 @@ import { config } from "dotenv";
 import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
-import { i18n } from "./i18n.js";
-
 config({
   quiet: true,
 });
@@ -15,14 +13,33 @@ export const POSTGRES_URL =
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
   /**
-   * The installation's languages - see `src/i18n.ts`, and keep it in step with
-   * the web app's file of the same name.
+   * The languages this installation serves.
    *
-   * This app owns the schema, so `vitnode db:prepare` seeds `core_languages`
-   * from this list. Leave it out and the seed falls back to `en` alone, whatever
-   * the site serves.
+   * The API half of a split deployment. `apps/web/src/vitnode.config.ts`
+   * declares the same list, and the two are one declaration in two places by
+   * necessity rather than by design: they are separate packages, so neither can
+   * import the other's. Nothing walks the filesystem looking for the web app's
+   * config either - a bootstrap that guessed at a sibling application is exactly
+   * what that replaced, and it guessed wrong the moment the two were not laid
+   * out the way it expected.
+   *
+   * They have to agree, and this is the copy that matters most: this app owns
+   * the schema, so `vitnode db:prepare` seeds `core_languages` from *this* list.
+   * A language that is here and not in the web app's renders nowhere; one that
+   * is in the web app's and not here has no row in the database.
+   *
+   * Packages ship their own translations, so a new locale needs no `messages`
+   * entry - anything untranslated falls back to `defaultLocale` key by key.
    */
-  i18n,
+  i18n: {
+    defaultLocale: "en",
+    locales: [{ code: "en", name: "English" }],
+    /**
+     * Explicit, because this API renders emails on a server: without one, dates
+     * format in whatever zone the host happens to run in.
+     */
+    timeZone: "UTC",
+  },
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,

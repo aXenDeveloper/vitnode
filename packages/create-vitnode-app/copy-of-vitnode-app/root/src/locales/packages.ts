@@ -33,8 +33,8 @@ import { CONFIG_PLUGIN as CORE } from "@vitnode/core/config";
  *       en: async () => await import('@acme/blog/locales/en.json'),
  *     },
  *
- * This is the app's *only* copy of that list - `vitnode.config.ts` and
- * `server/messages.server.ts` both read it from here.
+ * This is the app's only copy of that list - `vitnode.server.config.ts` reads it
+ * from here.
  */
 export const packageMessages: Record<string, LocaleMessagesMap> = {
   [CORE.pluginId]: {

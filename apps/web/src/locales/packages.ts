@@ -33,12 +33,11 @@ import { CONFIG_PLUGIN as EXAMPLE } from '@vitnode/example/const'
  * real file and lands in the build as a chunk fetched on demand, which is the
  * same laziness the barrels wanted.
  *
- * This is the app's *only* copy of that list - `vitnode.config.ts` and
- * `server/messages.server.ts` both read it from here - and the cost is one line
- * per language a package ships. Removing it means making the barrels
- * bundler-safe (locale files as modules rather than JSON, or the packages left
- * external through Nitro), which is a packaging change, not an i18n one.
- * `src/tests/messages.test.ts` fails if a registered package is missing a line.
+ * This is the app's only copy of that list - `vitnode.server.config.ts` reads it
+ * from here - and the cost is one line per language a package ships. Removing it
+ * means making the barrels bundler-safe (locale files as modules rather than
+ * JSON, or the packages left external through Nitro), which is a packaging
+ * change, not an i18n one.
  */
 export const packageMessages: Record<string, LocaleMessagesMap> = {
   [BLOG.pluginId]: {
