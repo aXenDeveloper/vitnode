@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -72,14 +73,14 @@ export type AdminRolesPageFetcher = (
   params: AdminRolesParams,
 ) => Promise<AdminRolesPage>;
 
-export const fetchAdminRolesPageInBrowser: AdminRolesPageFetcher =
+export const adminRolesPageFetcher =
+  (transport: UniversalFetcher): AdminRolesPageFetcher =>
   async params => {
-    const response = await fetcherClient(adminModuleRef, {
+    const response = await transport(adminModuleRef, {
       args: { query: params },
       method: "get",
       module: "admin/roles",
       path: "/list",
-      options: { credentials: "include" },
     });
 
     if (!response.ok) {
@@ -92,6 +93,9 @@ export const fetchAdminRolesPageInBrowser: AdminRolesPageFetcher =
 
     return await response.json();
   };
+
+export const fetchAdminRolesPageInBrowser: AdminRolesPageFetcher =
+  adminRolesPageFetcher(fetcherClient);
 
 export const adminRolesQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_ROLES_SCREEN, adminUserId);

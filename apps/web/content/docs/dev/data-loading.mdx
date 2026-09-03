@@ -7,6 +7,10 @@ icon: DownloadCloud
 VitNode loads feature data through plugin routes. `definePluginRoute({ load })`
 runs for SSR and client navigation, then hands typed data to the plugin page.
 
+Fetch with the universal [`fetcher`](/docs/dev/fetcher): one call site serves
+both, forwarding the visitor's request during SSR and calling `/api/*` directly
+from the browser afterwards.
+
 ## Quick start
 
 ### 1. In a Plugin Route (Recommended)

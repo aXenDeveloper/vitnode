@@ -1,8 +1,9 @@
 import type { z } from "zod";
 
+import type { UniversalRawFetcher } from "@/lib/fetcher-client";
 import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
 
-import { rawApiFetch } from "@/lib/fetcher/raw";
+import { rawFetcherClient } from "@/lib/fetcher-client";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
 /** Which generated module a request is for. */
@@ -39,38 +40,35 @@ export const contentApiFetchArgs = ({
 });
 
 /**
- * The browser half of the transport.
+ * One request to a generated content module, over whichever transport it is
+ * handed. See {@link ContentApiFetch}.
  *
- * No headers of its own - the admin cookie is the browser's to attach, and the
- * API derives who is asking from it. The server half lives in
- * `tanstack/admin/content/server.ts`, where the request scope it needs actually
- * exists.
- *
- * `credentials: "include"` because the API's origin is `NEXT_PUBLIC_API_URL`,
- * which an installation is free to point at a separate host - and a
- * cross-origin `fetch` sends no cookie at all without it. It is a no-op when the
- * two are the same origin, which is the default (`CONFIG.api` falls through to
- * `location.origin`), so this is right in both deployments rather than in one.
- * Every other AdminCP write in this package does the same, and the API's CORS is
- * configured `credentials: true` for exactly this.
+ * No headers of its own - the session cookie is the browser's to attach and the
+ * server transport's to forward, and the API derives who is asking from it.
  */
-export const contentApiFetchInBrowser = async (
+export const contentApiFetcher =
+  (transport: UniversalRawFetcher): ContentApiFetch =>
+  async (request, { signal } = {}) =>
+    await transport({ ...contentApiFetchArgs(request), options: { signal } });
+
+/**
+ * How one content request is carried.
+ *
+ * `signal` is the read's cancellation, when it has one. It reaches `fetch`
+ * untouched, and an abort therefore rejects at the transport rather than
+ * anywhere downstream: there is no response for `readContentApiJson` to inspect
+ * and no `catch` in the way, so a cancelled read cannot be mistaken for a
+ * refusal or for an empty list. Writes never pass one - a cancelled write leaves
+ * the server's state unknown and the cache un-invalidated.
+ */
+export type ContentApiFetch = (
   request: ContentApiRequest,
-  /**
-   * The read's cancellation, when it has one.
-   *
-   * Reaches `fetch` untouched, and an abort therefore rejects here rather than
-   * anywhere downstream: there is no response for `readContentApiJson` to
-   * inspect and no `catch` in the way, so a cancelled read cannot be mistaken
-   * for a refusal or for an empty list. Writes never pass one - a cancelled
-   * write leaves the server's state unknown and the cache un-invalidated.
-   */
-  { signal }: { signal?: AbortSignal } = {},
-): Promise<Response> =>
-  await rawApiFetch({
-    ...contentApiFetchArgs(request),
-    options: { credentials: "include", signal },
-  });
+  options?: { signal?: AbortSignal },
+) => Promise<Response>;
+
+/** The browser half of the transport. */
+export const contentApiFetchInBrowser: ContentApiFetch =
+  contentApiFetcher(rawFetcherClient);
 
 /** A request paired with what it was for, so a failure can say. */
 export interface ContentApiRead<TSchema extends z.ZodType> {

@@ -5,6 +5,7 @@ icon: Blocks
 ---
 
 VitNode separates concerns between two core layers:
+
 1. **TanStack Start**: Frontend UI, SSR, isomorphic routing, and client caching.
 2. **Hono API**: Backend routing, session management, staff permissions, and database operations.
 
@@ -12,15 +13,17 @@ VitNode separates concerns between two core layers:
 
 ## System Boundaries
 
-| Responsibility | TanStack Start (Web App) | Hono (API) |
-| :--- | :--- | :--- |
-| **Routing** | Page URLs, dynamic parameters, nested layouts | REST/RPC endpoints under `/api/*` |
-| **Data Fetching** | Route loaders and `createIsomorphicFn` | Query execution via Drizzle ORM |
-| **State & Cache** | TanStack Query client cache | Redis domain cache & database storage |
+| Responsibility        | TanStack Start (Web App)                      | Hono (API)                                                      |
+| :-------------------- | :-------------------------------------------- | :-------------------------------------------------------------- |
+| **Routing**           | Page URLs, dynamic parameters, nested layouts | REST/RPC endpoints under `/api/*`                               |
+| **Data Fetching**     | Route loaders and the universal `fetcher`     | Query execution via Drizzle ORM                                 |
+| **State & Cache**     | TanStack Query client cache                   | Redis domain cache & database storage                           |
 | **Security Boundary** | UI guards (redirecting unauthenticated users) | **Enforces authentication, permissions, CSRF, and rate limits** |
 
 <Callout type="warn" title="Security Boundary">
-  Route guards (`beforeLoad`) enhance UX by redirecting visitors early, but the Hono API is the true security boundary. All private endpoints strictly verify cookies and permissions on every request.
+  Route guards (`beforeLoad`) enhance UX by redirecting visitors early, but the
+  Hono API is the true security boundary. All private endpoints strictly verify
+  cookies and permissions on every request.
 </Callout>
 
 ---
@@ -29,15 +32,15 @@ VitNode separates concerns between two core layers:
 
 When a user visits a page (e.g. `/blog`):
 
-| Phase | Runtime | Action |
-| :--- | :--- | :--- |
-| **1. Request** | Browser | Visitor navigates to `/blog` |
-| **2. Routing** | Server (SSR) / Browser | TanStack Router matches route and executes `loader` |
-| **3. Query Warming** | Server / Browser | `context.queryClient.ensureQueryData` executes isomorphic fetcher |
-| **4. RPC Call** | Server / Browser | `fetcher` (server) or `fetcherClient` (browser) calls Hono endpoint |
-| **5. API Middleware** | Server (Hono) | Verifies session cookie, applies rate limits, injects `c.get(db)` |
-| **6. Handler & Database** | Server (Hono) | Handler validates input and queries PostgreSQL via Drizzle |
-| **7. Response** | Server / Browser | JSON data hydrates TanStack Query cache and paints component |
+| Phase                     | Runtime                | Action                                                              |
+| :------------------------ | :--------------------- | :------------------------------------------------------------------ |
+| **1. Request**            | Browser                | Visitor navigates to `/blog`                                        |
+| **2. Routing**            | Server (SSR) / Browser | TanStack Router matches route and executes `loader`                 |
+| **3. Query Warming**      | Server / Browser       | `context.queryClient.ensureQueryData` executes isomorphic fetcher   |
+| **4. RPC Call**           | Server / Browser       | `fetcher` (server) or `fetcherClient` (browser) calls Hono endpoint |
+| **5. API Middleware**     | Server (Hono)          | Verifies session cookie, applies rate limits, injects `c.get(db)`   |
+| **6. Handler & Database** | Server (Hono)          | Handler validates input and queries PostgreSQL via Drizzle          |
+| **7. Response**           | Server / Browser       | JSON data hydrates TanStack Query cache and paints component        |
 
 ---
 
@@ -47,12 +50,12 @@ Before route matching, every request passes through the middleware
 `createVitNodeStart` installs - in this order, and an app cannot get in front of
 any of it:
 
-| Order | Middleware | Applies to |
-| :--- | :--- | :--- |
-| 1 | **CSRF** | Server function calls (`handlerType === 'serverFn'`) |
-| 2 | **Locale** | Page requests: canonical `308` redirects and the locale cookie |
-| 3 | **Document cache** | HTML responses: forced `Cache-Control: private, no-store` |
-| 4 | Your own | Whatever `requestMiddleware` lists |
+| Order | Middleware         | Applies to                                                     |
+| :---- | :----------------- | :------------------------------------------------------------- |
+| 1     | **CSRF**           | Server function calls (`handlerType === 'serverFn'`)           |
+| 2     | **Locale**         | Page requests: canonical `308` redirects and the locale cookie |
+| 3     | **Document cache** | HTML responses: forced `Cache-Control: private, no-store`      |
+| 4     | Your own           | Whatever `requestMiddleware` lists                             |
 
 `/api/*` reaches the same middleware and passes through untouched - no redirect,
 no rewrite, no cache directive - so the Hono bridge sees the request exactly as
@@ -64,6 +67,7 @@ the client sent it and keeps its own caching policy. See
 ## Plugin System Architecture
 
 VitNode is built around modular plugins located in `plugins/*`:
+
 - **Independent Packages**: Plugins compile to their own `dist/` with isolated dependencies.
 - **Unified Manifest**: Routes, AdminCP navigation, and database models are registered declaratively.
 - **Zero Overhead**: Inactive plugins contribute no code or overhead to production bundles.

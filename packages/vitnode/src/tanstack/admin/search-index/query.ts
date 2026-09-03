@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type {
@@ -10,21 +9,19 @@ import type {
 } from "@/views/admin/views/core/advanced/search/search-index-mutations";
 import type { SearchIndexStatusFetcher } from "@/views/admin/views/core/advanced/search/search-index-query";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
   clearSearchCollectionInBrowser,
   rebuildSearchIndexInBrowser,
 } from "@/views/admin/views/core/advanced/search/search-index-mutations";
 import {
-  fetchSearchIndexStatusInBrowser,
   searchIndexQueryKey,
   searchIndexQueryOptions,
+  searchIndexStatusFetcher,
 } from "@/views/admin/views/core/advanced/search/search-index-query";
 
-import { fetchSearchIndexStatusOnServer } from "./server";
-
-const fetchSearchIndexStatus: SearchIndexStatusFetcher = createIsomorphicFn()
-  .server(fetchSearchIndexStatusOnServer)
-  .client(fetchSearchIndexStatusInBrowser);
+const fetchSearchIndexStatus: SearchIndexStatusFetcher =
+  searchIndexStatusFetcher(fetcher);
 
 /** The status, as the one query definition the loader and the component share. */
 export const searchIndexQuery = () =>

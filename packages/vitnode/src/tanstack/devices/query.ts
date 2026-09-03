@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type { DevicesFetcher } from "@/views/auth/settings/devices/devices-query";
@@ -11,21 +10,18 @@ import type {
   RevokeDeviceResult,
 } from "@/views/auth/settings/devices/devices-revoke";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
+  devicesFetcher,
   devicesQueryKey,
   devicesQueryOptions,
-  fetchDevicesInBrowser,
 } from "@/views/auth/settings/devices/devices-query";
 import {
   revokeDeviceInBrowser,
   shouldRefreshAfterRevoke,
 } from "@/views/auth/settings/devices/devices-revoke";
 
-import { fetchDevicesOnServer } from "./server";
-
-const fetchDevices: DevicesFetcher = createIsomorphicFn()
-  .server(fetchDevicesOnServer)
-  .client(fetchDevicesInBrowser);
+const fetchDevices: DevicesFetcher = devicesFetcher(fetcher);
 
 export const devicesQuery = (userId: number) =>
   devicesQueryOptions({ fetchDevices, userId });

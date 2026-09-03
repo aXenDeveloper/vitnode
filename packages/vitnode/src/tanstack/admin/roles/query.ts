@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
@@ -12,30 +11,28 @@ import type {
 } from "@/views/admin/views/core/users/roles/roles-query";
 import type { RolesAdminTableProps } from "@/views/admin/views/core/users/roles/roles-table-content";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
   createAdminRole,
   deleteAdminRole,
   updateAdminRole,
 } from "@/views/admin/views/core/users/roles/roles-mutations";
 import {
+  adminRolesPageFetcher,
   adminRolesQueryOptions,
   adminRolesQueryRoot,
-  fetchAdminRolesPageInBrowser,
 } from "@/views/admin/views/core/users/roles/roles-query";
 
 import { useAdminIdentity } from "../identity";
 import { invalidateAdminSession } from "../session-query";
 import { invalidateAdminUsers } from "../users/query";
-import { fetchAdminRolesPageOnServer } from "./server";
 
 /**
  * The AdminCP roles screen for a TanStack Start host: one query definition and
  * three mutations.
  */
 
-const fetchRolesPage: AdminRolesPageFetcher = createIsomorphicFn()
-  .server(fetchAdminRolesPageOnServer)
-  .client(fetchAdminRolesPageInBrowser);
+const fetchRolesPage: AdminRolesPageFetcher = adminRolesPageFetcher(fetcher);
 
 export const adminRolesQuery = ({
   adminUserId,

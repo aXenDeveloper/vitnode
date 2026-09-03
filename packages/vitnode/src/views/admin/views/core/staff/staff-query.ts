@@ -4,6 +4,7 @@ import type {
   PermissionsStaffArgs,
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -90,29 +91,30 @@ export type AdminStaffPageFetcher = (
   options?: { signal?: AbortSignal },
 ) => Promise<AdminStaffPage>;
 
-export const fetchAdminStaffPageInBrowser: AdminStaffPageFetcher = async (
-  type,
-  params,
-  { signal } = {},
-) => {
-  const response = await fetcherClient(adminModuleRef, {
-    args: { query: params },
-    method: "get",
-    module: "admin/staff",
-    path: type === "admin" ? "/admins" : "/moderators",
-    options: { signal },
-  });
+export const adminStaffPageFetcher =
+  (transport: UniversalFetcher): AdminStaffPageFetcher =>
+  async (type, params, { signal } = {}) => {
+    const response = await transport(adminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "admin/staff",
+      options: { signal },
+      path: type === "admin" ? "/admins" : "/moderators",
+    });
 
-  if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      `the ${STAFF_TYPE_SEGMENT[type]} staff list`,
-      describeAdminParams(params),
-    );
-  }
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        `the ${STAFF_TYPE_SEGMENT[type]} staff list`,
+        describeAdminParams(params),
+      );
+    }
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchAdminStaffPageInBrowser: AdminStaffPageFetcher =
+  adminStaffPageFetcher(fetcherClient);
 
 export const adminStaffQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_STAFF_SCREEN, adminUserId);
@@ -156,9 +158,10 @@ export const adminStaffQueryOptions = ({
 
 export type AdminStaffCatalogFetcher = () => Promise<StaffCatalog>;
 
-export const fetchAdminStaffCatalogInBrowser: AdminStaffCatalogFetcher =
+export const adminStaffCatalogFetcher =
+  (transport: UniversalFetcher): AdminStaffCatalogFetcher =>
   async () => {
-    const response = await fetcherClient(adminModuleRef, {
+    const response = await transport(adminModuleRef, {
       method: "get",
       module: "admin/staff",
       path: "/permission-catalog",
@@ -173,6 +176,9 @@ export const fetchAdminStaffCatalogInBrowser: AdminStaffCatalogFetcher =
 
     return await response.json();
   };
+
+export const fetchAdminStaffCatalogInBrowser: AdminStaffCatalogFetcher =
+  adminStaffCatalogFetcher(fetcherClient);
 
 /**
  * The catalog is what the *installation* declares, not what one administrator
@@ -211,27 +217,29 @@ export type AdminStaffEntryFetcher = (
   id: string,
 ) => Promise<AdminStaffEntry>;
 
-export const fetchAdminStaffEntryInBrowser: AdminStaffEntryFetcher = async (
-  type,
-  id,
-) => {
-  const response = await fetcherClient(adminModuleRef, {
-    args: { params: { id, type } },
-    method: "get",
-    module: "admin/staff",
-    path: "/entry/{type}/{id}",
-  });
+export const adminStaffEntryFetcher =
+  (transport: UniversalFetcher): AdminStaffEntryFetcher =>
+  async (type, id) => {
+    const response = await transport(adminModuleRef, {
+      args: { params: { id, type } },
+      method: "get",
+      module: "admin/staff",
+      path: "/entry/{type}/{id}",
+    });
 
-  if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      "a staff entry",
-      `type=${type}, id=${id}`,
-    );
-  }
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "a staff entry",
+        `type=${type}, id=${id}`,
+      );
+    }
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchAdminStaffEntryInBrowser: AdminStaffEntryFetcher =
+  adminStaffEntryFetcher(fetcherClient);
 
 export const adminStaffEntryQueryKey = ({
   adminUserId,

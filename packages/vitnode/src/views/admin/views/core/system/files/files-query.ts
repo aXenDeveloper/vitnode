@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { filesAdminModule } from "@/api/modules/admin/files/files.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -69,10 +70,11 @@ export type AdminFilesPageFetcher = (
   params: AdminFilesParams,
 ) => Promise<AdminFilesPage>;
 
-/** One page, fetched from the browser. */
-export const fetchAdminFilesPageInBrowser: AdminFilesPageFetcher =
+/** One page, over whichever transport the host hands in. */
+export const adminFilesPageFetcher =
+  (transport: UniversalFetcher): AdminFilesPageFetcher =>
   async params => {
-    const response = await fetcherClient(filesAdminModuleRef, {
+    const response = await transport(filesAdminModuleRef, {
       args: { query: params },
       method: "get",
       module: "files",
@@ -90,6 +92,10 @@ export const fetchAdminFilesPageInBrowser: AdminFilesPageFetcher =
 
     return await response.json();
   };
+
+/** One page, fetched from the browser. */
+export const fetchAdminFilesPageInBrowser: AdminFilesPageFetcher =
+  adminFilesPageFetcher(fetcherClient);
 
 /** The root every cached page of the admin file list hangs off. */
 export const adminFilesQueryRoot = adminQueryRoot("files");

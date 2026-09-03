@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
@@ -17,14 +16,15 @@ import type {
 } from "@/views/admin/views/core/users/list/users-query";
 import type { VerifyAdminUserEmail } from "@/views/admin/views/core/users/list/users-table-content";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
+  adminUserFetcher,
   adminUserQueryOptions,
-  fetchAdminUserInBrowser,
 } from "@/views/admin/views/core/users/detail/user-query";
 import {
+  adminUsersPageFetcher,
   adminUsersQueryOptions,
   adminUsersQueryRoot,
-  fetchAdminUsersPageInBrowser,
 } from "@/views/admin/views/core/users/list/users-query";
 import {
   updateAdminUser,
@@ -34,15 +34,10 @@ import {
 
 import { useAdminIdentity } from "../identity";
 import { invalidateAdminSession } from "../session-query";
-import { fetchAdminUserOnServer, fetchAdminUsersPageOnServer } from "./server";
 
-const fetchUsersPage: AdminUsersPageFetcher = createIsomorphicFn()
-  .server(fetchAdminUsersPageOnServer)
-  .client(fetchAdminUsersPageInBrowser);
+const fetchUsersPage: AdminUsersPageFetcher = adminUsersPageFetcher(fetcher);
 
-const fetchUser: AdminUserFetcher = createIsomorphicFn()
-  .server(fetchAdminUserOnServer)
-  .client(fetchAdminUserInBrowser);
+const fetchUser: AdminUserFetcher = adminUserFetcher(fetcher);
 
 export const adminUsersQuery = ({
   adminUserId,

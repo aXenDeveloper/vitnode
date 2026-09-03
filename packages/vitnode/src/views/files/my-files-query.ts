@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { userFilesModule } from "@/api/modules/users/files/files.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import { CONFIG_PLUGIN } from "@/config";
@@ -166,23 +167,25 @@ export const isMyFilesRequestError = (
 ): error is MyFilesRequestError =>
   error instanceof Error && error.name === MY_FILES_REQUEST_ERROR;
 
-export const fetchMyFilesPageInBrowser: MyFilesPageFetcher = async (
-  params,
-  { signal } = {},
-) => {
-  const response = await fetcherClient(userFilesModuleRef, {
-    args: { query: params },
-    method: "get",
-    module: "files",
-    options: { signal },
-    path: "/",
-    prefixPath: FILES_PREFIX_PATH,
-  });
+export const myFilesPageFetcher =
+  (transport: UniversalFetcher): MyFilesPageFetcher =>
+  async (params, { signal } = {}) => {
+    const response = await transport(userFilesModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "files",
+      options: { signal },
+      path: "/",
+      prefixPath: FILES_PREFIX_PATH,
+    });
 
-  if (!response.ok) throw new MyFilesRequestError(response.status, params);
+    if (!response.ok) throw new MyFilesRequestError(response.status, params);
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchMyFilesPageInBrowser: MyFilesPageFetcher =
+  myFilesPageFetcher(fetcherClient);
 
 export const MY_FILES_IDENTITY_ROOT = ["files", "user"] as const;
 

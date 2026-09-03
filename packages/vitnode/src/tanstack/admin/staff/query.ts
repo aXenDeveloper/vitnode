@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
@@ -16,45 +15,36 @@ import type {
 } from "@/views/admin/views/core/staff/staff-query";
 import type { StaffTableProps } from "@/views/admin/views/core/staff/table/staff-table-content";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
   createStaffEntry,
   deleteStaffEntry,
   updateStaffPermissions,
 } from "@/views/admin/views/core/staff/staff-mutations";
 import {
+  adminStaffCatalogFetcher,
   adminStaffCatalogQueryOptions,
+  adminStaffEntryFetcher,
   adminStaffEntryQueryOptions,
+  adminStaffPageFetcher,
   adminStaffQueryOptions,
   adminStaffQueryRoot,
-  fetchAdminStaffCatalogInBrowser,
-  fetchAdminStaffEntryInBrowser,
-  fetchAdminStaffPageInBrowser,
 } from "@/views/admin/views/core/staff/staff-query";
 
 import { useAdminIdentity } from "../identity";
 import { invalidateAdminSession } from "../session-query";
-import {
-  fetchAdminStaffCatalogOnServer,
-  fetchAdminStaffEntryOnServer,
-  fetchAdminStaffPageOnServer,
-} from "./server";
 
 /**
  * The AdminCP staff screens for a TanStack Start host: three query definitions
  * and three mutations.
  */
 
-const fetchStaffPage: AdminStaffPageFetcher = createIsomorphicFn()
-  .server(fetchAdminStaffPageOnServer)
-  .client(fetchAdminStaffPageInBrowser);
+const fetchStaffPage: AdminStaffPageFetcher = adminStaffPageFetcher(fetcher);
 
-const fetchCatalog: AdminStaffCatalogFetcher = createIsomorphicFn()
-  .server(fetchAdminStaffCatalogOnServer)
-  .client(fetchAdminStaffCatalogInBrowser);
+const fetchCatalog: AdminStaffCatalogFetcher =
+  adminStaffCatalogFetcher(fetcher);
 
-const fetchEntry: AdminStaffEntryFetcher = createIsomorphicFn()
-  .server(fetchAdminStaffEntryOnServer)
-  .client(fetchAdminStaffEntryInBrowser);
+const fetchEntry: AdminStaffEntryFetcher = adminStaffEntryFetcher(fetcher);
 
 export const adminStaffQuery = ({
   adminUserId,

@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
@@ -29,10 +30,11 @@ export interface SearchIndexStatus {
 /** How the status is actually fetched. */
 export type SearchIndexStatusFetcher = () => Promise<SearchIndexStatus>;
 
-/** The status, fetched from the browser. */
-export const fetchSearchIndexStatusInBrowser: SearchIndexStatusFetcher =
+/** The status, over whichever transport the host hands in. */
+export const searchIndexStatusFetcher =
+  (transport: UniversalFetcher): SearchIndexStatusFetcher =>
   async () => {
-    const response = await fetcherClient(searchDebugAdminModuleRef, {
+    const response = await transport(searchDebugAdminModuleRef, {
       method: "get",
       module: "debug",
       path: "/search/status",
@@ -45,6 +47,10 @@ export const fetchSearchIndexStatusInBrowser: SearchIndexStatusFetcher =
 
     return await response.json();
   };
+
+/** The status, fetched from the browser. */
+export const fetchSearchIndexStatusInBrowser: SearchIndexStatusFetcher =
+  searchIndexStatusFetcher(fetcherClient);
 
 /** The cache entry this screen reads and writes. */
 export const searchIndexQueryKey = adminQueryRoot("search-index");

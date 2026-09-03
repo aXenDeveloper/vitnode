@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { usersModule } from "@/api/modules/users/users.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
@@ -52,17 +53,22 @@ export const isDevicesRequestError = (
 ): error is DevicesRequestError =>
   error instanceof Error && error.name === DEVICES_REQUEST_ERROR;
 
-export const fetchDevicesInBrowser: DevicesFetcher = async () => {
-  const response = await fetcherClient(usersModuleRef, {
-    method: "get",
-    module: "users",
-    path: "/devices",
-  });
+export const devicesFetcher =
+  (transport: UniversalFetcher): DevicesFetcher =>
+  async () => {
+    const response = await transport(usersModuleRef, {
+      method: "get",
+      module: "users",
+      path: "/devices",
+    });
 
-  if (!response.ok) throw new DevicesRequestError(response.status);
+    if (!response.ok) throw new DevicesRequestError(response.status);
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchDevicesInBrowser: DevicesFetcher =
+  devicesFetcher(fetcherClient);
 
 export const DEVICES_IDENTITY_ROOT = ["devices", "user"] as const;
 

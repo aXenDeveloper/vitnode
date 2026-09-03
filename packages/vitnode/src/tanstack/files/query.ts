@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type {
@@ -17,22 +16,19 @@ import type {
   MyFilesParams,
 } from "@/views/files/my-files-query";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
   deleteMyFileInBrowser,
   deleteMyFilesInBrowser,
   shouldRefreshAfterBulkDelete,
 } from "@/views/files/my-files-delete";
 import {
-  fetchMyFilesPageInBrowser,
+  myFilesPageFetcher,
   myFilesQueryOptions,
   myFilesQueryRoot,
 } from "@/views/files/my-files-query";
 
-import { fetchMyFilesPageOnServer } from "./server";
-
-const fetchMyFilesPage: MyFilesPageFetcher = createIsomorphicFn()
-  .server(fetchMyFilesPageOnServer)
-  .client(fetchMyFilesPageInBrowser);
+const fetchMyFilesPage: MyFilesPageFetcher = myFilesPageFetcher(fetcher);
 
 export const myFilesQuery = ({
   params,

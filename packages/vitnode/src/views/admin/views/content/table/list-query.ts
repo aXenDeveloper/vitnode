@@ -8,7 +8,11 @@ import type {
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
-import type { ContentApiRequest, ContentApiTarget } from "../content-request";
+import type {
+  ContentApiFetch,
+  ContentApiRequest,
+  ContentApiTarget,
+} from "../content-request";
 import type { ContentRowData } from "./cells";
 
 import { contentListQueryKey } from "../content-query";
@@ -103,24 +107,27 @@ export const describeContentList = (request: ContentListRequest): string =>
   `the ${request.contentTypeId} list`;
 
 /**
- * One page, fetched from the browser against the same origin.
+ * One page, over whichever transport carries the content request.
  *
  * `readContentApiJson` throws on a refusal and on a schema mismatch, and an
  * abort throws earlier still - `fetch` rejects before there is a response to
  * parse. So a cancelled sort cannot reach the table as a content type with no
  * records in it, which is the one thing a list must never look like.
  */
-export const fetchContentListPageInBrowser: ContentListPageFetcher = async (
-  request,
-  { signal } = {},
-) =>
-  await readContentApiJson(
-    await contentApiFetchInBrowser(contentListApiRequest(request), { signal }),
-    {
-      describe: describeContentList(request),
-      schema: zodContentListPage,
-    },
-  );
+export const contentListPageFetcher =
+  (fetchApi: ContentApiFetch): ContentListPageFetcher =>
+  async (request, { signal } = {}) =>
+    await readContentApiJson(
+      await fetchApi(contentListApiRequest(request), { signal }),
+      {
+        describe: describeContentList(request),
+        schema: zodContentListPage,
+      },
+    );
+
+/** One page, fetched from the browser against the same origin. */
+export const fetchContentListPageInBrowser: ContentListPageFetcher =
+  contentListPageFetcher(contentApiFetchInBrowser);
 
 /**
  * The list, as the query definition a loader warms and a component reads back.

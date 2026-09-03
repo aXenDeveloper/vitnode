@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
@@ -18,21 +17,19 @@ import type {
 } from "@/views/admin/views/core/system/files/files-query";
 
 import { shouldRefreshAfterBulkDelete } from "@/lib/files/bulk-delete";
+import { fetcher } from "@/tanstack/fetcher";
 import {
   deleteAdminFileInBrowser,
   deleteAdminFilesInBrowser,
 } from "@/views/admin/views/core/system/files/files-delete";
 import {
+  adminFilesPageFetcher,
   adminFilesQueryOptions,
   adminFilesQueryRoot,
-  fetchAdminFilesPageInBrowser,
 } from "@/views/admin/views/core/system/files/files-query";
 
-import { fetchAdminFilesPageOnServer } from "./server";
-
-const fetchAdminFilesPage: AdminFilesPageFetcher = createIsomorphicFn()
-  .server(fetchAdminFilesPageOnServer)
-  .client(fetchAdminFilesPageInBrowser);
+const fetchAdminFilesPage: AdminFilesPageFetcher =
+  adminFilesPageFetcher(fetcher);
 
 export const adminFilesQuery = ({ params }: { params: AdminFilesParams }) =>
   adminFilesQueryOptions({ fetchPage: fetchAdminFilesPage, params });

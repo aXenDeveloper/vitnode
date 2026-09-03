@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { adminModule } from "@/api/modules/admin/admin.module";
 import type { AdminDashboardWidgetLayoutItem } from "@/database/dashboard";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { fetcherClient } from "@/lib/fetcher-client";
@@ -23,10 +24,11 @@ export type DashboardStoredLayout = AdminDashboardWidgetLayoutItem[];
 
 export type DashboardLayoutFetcher = () => Promise<DashboardStoredLayout>;
 
-/** The stored layout, fetched from the browser. */
-export const fetchDashboardLayoutInBrowser: DashboardLayoutFetcher =
+/** The stored layout, over whichever transport the host hands in. */
+export const dashboardLayoutFetcher =
+  (transport: UniversalFetcher): DashboardLayoutFetcher =>
   async () => {
-    const response = await fetcherClient(adminModuleClientRef, {
+    const response = await transport(adminModuleClientRef, {
       method: "get",
       module: "admin/dashboard",
       path: "/",
@@ -36,6 +38,10 @@ export const fetchDashboardLayoutInBrowser: DashboardLayoutFetcher =
 
     return (await response.json()).widgets;
   };
+
+/** The stored layout, fetched from the browser. */
+export const fetchDashboardLayoutInBrowser: DashboardLayoutFetcher =
+  dashboardLayoutFetcher(fetcherClient);
 
 export const dashboardLayoutQueryKey = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_DASHBOARD_SCREEN, adminUserId);

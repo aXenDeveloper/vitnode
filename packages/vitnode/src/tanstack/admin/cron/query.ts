@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type {
@@ -13,18 +12,15 @@ import type {
   RunCronResult,
 } from "@/views/admin/views/core/advanced/cron/run-action/run-cron";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
+  cronPageFetcher,
   cronQueryOptions,
   cronQueryRoot,
-  fetchCronPageInBrowser,
 } from "@/views/admin/views/core/advanced/cron/cron-query";
 import { runCronInBrowser } from "@/views/admin/views/core/advanced/cron/run-action/run-cron";
 
-import { fetchCronPageOnServer } from "./server";
-
-const fetchCronPage: CronPageFetcher = createIsomorphicFn()
-  .server(fetchCronPageOnServer)
-  .client(fetchCronPageInBrowser);
+const fetchCronPage: CronPageFetcher = cronPageFetcher(fetcher);
 
 export const cronQuery = ({ params }: { params: CronParams }) =>
   cronQueryOptions({ fetchPage: fetchCronPage, params });

@@ -6,7 +6,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { TranslationRow } from "../content-mutation";
-import type { ContentApiTarget } from "../content-request";
+import type { ContentApiFetch, ContentApiTarget } from "../content-request";
 
 import {
   contentItemQueryKey,
@@ -53,21 +53,24 @@ export type ContentTranslationsFetcher = (
   request: ContentItemRequest,
 ) => Promise<TranslationRow[]>;
 
-export const fetchContentItemInBrowser: ContentItemFetcher = async request =>
-  await readContentApiJson(
-    await contentApiFetchInBrowser({
-      method: "get",
-      path: `/${request.itemId}`,
-      target: request.target,
-    }),
-    { describe: describeContentItem(request), schema: zodContentItem },
-  );
+export const contentItemFetcher =
+  (fetchApi: ContentApiFetch): ContentItemFetcher =>
+  async request =>
+    await readContentApiJson(
+      await fetchApi({
+        method: "get",
+        path: `/${request.itemId}`,
+        target: request.target,
+      }),
+      { describe: describeContentItem(request), schema: zodContentItem },
+    );
 
-export const fetchContentTranslationsInBrowser: ContentTranslationsFetcher =
+export const contentTranslationsFetcher =
+  (fetchApi: ContentApiFetch): ContentTranslationsFetcher =>
   async request =>
     (
       await readContentApiJson(
-        await contentApiFetchInBrowser({
+        await fetchApi({
           method: "get",
           path: `/${request.itemId}/translations`,
           target: request.target,
@@ -78,6 +81,13 @@ export const fetchContentTranslationsInBrowser: ContentTranslationsFetcher =
         },
       )
     ).edges as unknown as TranslationRow[];
+
+export const fetchContentItemInBrowser: ContentItemFetcher = contentItemFetcher(
+  contentApiFetchInBrowser,
+);
+
+export const fetchContentTranslationsInBrowser: ContentTranslationsFetcher =
+  contentTranslationsFetcher(contentApiFetchInBrowser);
 
 /**
  * The record, as the one query definition a loader warms and a screen reads.

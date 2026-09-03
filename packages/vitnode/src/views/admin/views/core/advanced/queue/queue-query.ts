@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { queueAdminModule } from "@/api/modules/admin/advanced/queue/queue.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -63,26 +64,32 @@ export type QueuePage = AdminTablePage<QueueTaskRow>;
 /** How a page is actually fetched. See {@link queueQueryOptions}. */
 export type QueuePageFetcher = (params: QueueParams) => Promise<QueuePage>;
 
+/** One page, over whichever transport the host hands in. */
+export const queuePageFetcher =
+  (transport: UniversalFetcher): QueuePageFetcher =>
+  async params => {
+    const response = await transport(queueAdminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "queue",
+      path: "/",
+      prefixPath: QUEUE_PREFIX_PATH,
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the queue list",
+        describeAdminParams(params),
+      );
+    }
+
+    return await response.json();
+  };
+
 /** One page, fetched from the browser. */
-export const fetchQueuePageInBrowser: QueuePageFetcher = async params => {
-  const response = await fetcherClient(queueAdminModuleRef, {
-    args: { query: params },
-    method: "get",
-    module: "queue",
-    path: "/",
-    prefixPath: QUEUE_PREFIX_PATH,
-  });
-
-  if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      "the queue list",
-      describeAdminParams(params),
-    );
-  }
-
-  return await response.json();
-};
+export const fetchQueuePageInBrowser: QueuePageFetcher =
+  queuePageFetcher(fetcherClient);
 
 /** The root every cached page of the queue list hangs off. */
 export const queueQueryRoot = adminQueryRoot("queue");

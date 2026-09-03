@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { adminModule } from "@/api/modules/admin/admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -115,28 +116,30 @@ export type AdminUsersPageFetcher = (
   options?: { signal?: AbortSignal },
 ) => Promise<AdminUsersPage>;
 
-export const fetchAdminUsersPageInBrowser: AdminUsersPageFetcher = async (
-  params,
-  { signal } = {},
-) => {
-  const response = await fetcherClient(adminModuleRef, {
-    args: { query: params },
-    method: "get",
-    module: "admin/users",
-    options: { credentials: "include", signal },
-    path: "/list",
-  });
+export const adminUsersPageFetcher =
+  (transport: UniversalFetcher): AdminUsersPageFetcher =>
+  async (params, { signal } = {}) => {
+    const response = await transport(adminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "admin/users",
+      options: { signal },
+      path: "/list",
+    });
 
-  if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      "the users list",
-      describeAdminParams(params),
-    );
-  }
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the users list",
+        describeAdminParams(params),
+      );
+    }
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchAdminUsersPageInBrowser: AdminUsersPageFetcher =
+  adminUsersPageFetcher(fetcherClient);
 
 export const adminUsersQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_USERS_SCREEN, adminUserId);

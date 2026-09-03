@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { StaffPermissionSet } from "@/api/lib/permission-staff";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminUserRole } from "@/views/admin/views/core/users/list/users-query";
 
@@ -48,21 +49,25 @@ export interface AdminUserDetail {
 
 export type AdminUserFetcher = (id: string) => Promise<AdminUserDetail>;
 
-export const fetchAdminUserInBrowser: AdminUserFetcher = async id => {
-  const response = await fetcherClient(adminModuleRef, {
-    args: { params: { id } },
-    method: "get",
-    module: "admin/users",
-    options: { credentials: "include" },
-    path: "/{id}",
-  });
+export const adminUserFetcher =
+  (transport: UniversalFetcher): AdminUserFetcher =>
+  async id => {
+    const response = await transport(adminModuleRef, {
+      args: { params: { id } },
+      method: "get",
+      module: "admin/users",
+      path: "/{id}",
+    });
 
-  if (!response.ok) {
-    throw new AdminRequestError(response.status, "a user", `id=${id}`);
-  }
+    if (!response.ok) {
+      throw new AdminRequestError(response.status, "a user", `id=${id}`);
+    }
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchAdminUserInBrowser: AdminUserFetcher =
+  adminUserFetcher(fetcherClient);
 
 export const adminUserQueryKey = ({
   adminUserId,

@@ -1,7 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { createIsomorphicFn } from "@tanstack/react-start";
-
 import type { ContentPublicationAction } from "@/content/publication";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
@@ -25,18 +23,17 @@ import {
   setContentPublicationInBrowser,
 } from "@/views/admin/views/content/table/list-mutations";
 import {
+  contentListPageFetcher,
   contentListQueryOptions,
-  fetchContentListPageInBrowser,
 } from "@/views/admin/views/content/table/list-query";
 
 import type { ContentListParams } from "./route-search";
 
 import { contentListQuery } from "./route-search";
-import { fetchContentListPageOnServer } from "./server";
+import { contentApiFetch } from "./transport";
 
-const fetchContentListPage: ContentListPageFetcher = createIsomorphicFn()
-  .server(fetchContentListPageOnServer)
-  .client(fetchContentListPageInBrowser);
+const fetchContentListPage: ContentListPageFetcher =
+  contentListPageFetcher(contentApiFetch);
 
 /** Which generated module serves one content type's admin routes. */
 export const contentApiTarget = (

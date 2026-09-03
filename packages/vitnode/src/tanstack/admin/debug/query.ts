@@ -3,7 +3,6 @@ import type { AnyRouter } from "@tanstack/react-router";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { createIsomorphicFn } from "@tanstack/react-start";
 import React from "react";
 
 import type {
@@ -12,22 +11,17 @@ import type {
   DebugQueueFetcher,
 } from "@/views/admin/views/core/debug/debug-query";
 
+import { fetcher } from "@/tanstack/fetcher";
 import {
+  debugLogsPageFetcher,
   debugLogsQueryOptions,
+  debugQueueFetcher,
   debugQueueQueryOptions,
-  fetchDebugLogsPageInBrowser,
-  fetchDebugQueueInBrowser,
 } from "@/views/admin/views/core/debug/debug-query";
 
-import { fetchDebugLogsPageOnServer, fetchDebugQueueOnServer } from "./server";
+const fetchDebugLogsPage: DebugLogsPageFetcher = debugLogsPageFetcher(fetcher);
 
-const fetchDebugLogsPage: DebugLogsPageFetcher = createIsomorphicFn()
-  .server(fetchDebugLogsPageOnServer)
-  .client(fetchDebugLogsPageInBrowser);
-
-const fetchDebugQueue: DebugQueueFetcher = createIsomorphicFn()
-  .server(fetchDebugQueueOnServer)
-  .client(fetchDebugQueueInBrowser);
+const fetchDebugQueue: DebugQueueFetcher = debugQueueFetcher(fetcher);
 
 export const debugLogsQuery = ({ params }: { params: DebugLogsParams }) =>
   debugLogsQueryOptions({ fetchPage: fetchDebugLogsPage, params });

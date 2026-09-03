@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -56,10 +57,11 @@ export type DebugLogsPageFetcher = (
   params: DebugLogsParams,
 ) => Promise<DebugLogsPage>;
 
-/** One page of the log, fetched from the browser. */
-export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
+/** One page of the log, over whichever transport the host hands in. */
+export const debugLogsPageFetcher =
+  (transport: UniversalFetcher): DebugLogsPageFetcher =>
   async params => {
-    const response = await fetcherClient(debugAdminModuleRef, {
+    const response = await transport(debugAdminModuleRef, {
       args: { query: params },
       method: "get",
       module: "debug",
@@ -77,6 +79,10 @@ export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
 
     return await response.json();
   };
+
+/** One page of the log, fetched from the browser. */
+export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
+  debugLogsPageFetcher(fetcherClient);
 
 /** The root every cached page of the system log hangs off. */
 export const debugLogsQueryRoot = adminQueryRoot("debug-logs");
@@ -129,21 +135,27 @@ export interface DebugQueueSnapshot {
 /** The read, as arguments to whichever fetcher is carrying it. */
 export type DebugQueueFetcher = () => Promise<DebugQueueSnapshot>;
 
+/** The snapshot, over whichever transport the host hands in. */
+export const debugQueueFetcher =
+  (transport: UniversalFetcher): DebugQueueFetcher =>
+  async () => {
+    const response = await transport(debugAdminModuleRef, {
+      method: "get",
+      module: "debug",
+      path: "/queue",
+      prefixPath: DEBUG_PREFIX_PATH,
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(response.status, "the queue snapshot");
+    }
+
+    return await response.json();
+  };
+
 /** The snapshot, fetched from the browser. */
-export const fetchDebugQueueInBrowser: DebugQueueFetcher = async () => {
-  const response = await fetcherClient(debugAdminModuleRef, {
-    method: "get",
-    module: "debug",
-    path: "/queue",
-    prefixPath: DEBUG_PREFIX_PATH,
-  });
-
-  if (!response.ok) {
-    throw new AdminRequestError(response.status, "the queue snapshot");
-  }
-
-  return await response.json();
-};
+export const fetchDebugQueueInBrowser: DebugQueueFetcher =
+  debugQueueFetcher(fetcherClient);
 
 /** The cache entry the queue snapshot reads and writes. */
 export const debugQueueQueryKey = adminQueryRoot("debug-queue");

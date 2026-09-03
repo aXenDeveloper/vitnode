@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -49,25 +50,30 @@ export type CronPage = AdminTablePage<CronJobRow>;
 /** How a page is actually fetched. See {@link cronQueryOptions}. */
 export type CronPageFetcher = (params: CronParams) => Promise<CronPage>;
 
-export const fetchCronPageInBrowser: CronPageFetcher = async params => {
-  const response = await fetcherClient(cronAdminModuleRef, {
-    args: { query: params },
-    method: "get",
-    module: "cron",
-    path: "/",
-    prefixPath: CRON_PREFIX_PATH,
-  });
+export const cronPageFetcher =
+  (transport: UniversalFetcher): CronPageFetcher =>
+  async params => {
+    const response = await transport(cronAdminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "cron",
+      path: "/",
+      prefixPath: CRON_PREFIX_PATH,
+    });
 
-  if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      "the cron list",
-      describeAdminParams(params),
-    );
-  }
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the cron list",
+        describeAdminParams(params),
+      );
+    }
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export const fetchCronPageInBrowser: CronPageFetcher =
+  cronPageFetcher(fetcherClient);
 
 /** The root every cached page of the cron list hangs off. */
 export const cronQueryRoot = adminQueryRoot("cron");

@@ -1,7 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { createIsomorphicFn } from "@tanstack/react-start";
-
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
 import type {
   ContentItemFetcher,
@@ -11,8 +9,8 @@ import type { ContentFormTransport } from "@/views/admin/views/content/form/tran
 
 import { contentFrontendRegistry } from "@/content/index";
 import {
-  fetchContentItemInBrowser,
-  fetchContentTranslationsInBrowser,
+  contentItemFetcher,
+  contentTranslationsFetcher,
 } from "@/views/admin/views/content/form/item-query";
 import {
   createContentInBrowser,
@@ -26,19 +24,13 @@ import {
 } from "@/views/admin/views/content/form/mutations-api";
 
 import { contentApiTarget, invalidateContentAfterWrite } from "../query";
-import {
-  fetchContentItemOnServer,
-  fetchContentTranslationsOnServer,
-} from "./server";
+import { contentApiFetch } from "../transport";
 
-const fetchContentItem: ContentItemFetcher = createIsomorphicFn()
-  .server(fetchContentItemOnServer)
-  .client(fetchContentItemInBrowser);
+const fetchContentItem: ContentItemFetcher =
+  contentItemFetcher(contentApiFetch);
 
 const fetchContentTranslations: ContentTranslationsFetcher =
-  createIsomorphicFn()
-    .server(fetchContentTranslationsOnServer)
-    .client(fetchContentTranslationsInBrowser);
+  contentTranslationsFetcher(contentApiFetch);
 
 export { fetchContentItem, fetchContentTranslations };
 
