@@ -7,34 +7,41 @@ icon: ArrowRightLeft
 import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
 <Callout type="info" title="Use this by default">
-  In a TanStack Start app, use `fetcher` from
-  `@vitnode/core/tanstack/fetcher`. The same request works during SSR and
-  browser navigation.
+  In a TanStack Start app, use `fetcher` through a plugin API client. The same
+  request works during SSR and browser navigation.
 </Callout>
 
-During SSR, it forwards the visitor's request to the API. In the browser, it
-calls `/api/*` directly. You do not need to write `createIsomorphicFn()`.
+During SSR, VitNode forwards the visitor’s request to the API. In the browser,
+it calls `/api/*` directly. You do not need to write `createIsomorphicFn()` or
+choose a transport.
 
-## Set up your plugin API client once
+## Create your API client once
 
-Keep the module reference in one plugin file. Features import your API client;
-they do not create references themselves.
+<Steps>
+
+<Step>
+
+### Define it in your plugin
+
+Keep this in one plugin file. Features import `notesApi`; they never set up a
+module reference themselves.
 
 ```ts title="plugins/site-notes/src/api/client.ts"
 import type { notesModule } from "../api/notes.module"
 
-import { clientModule } from "@vitnode/core/lib/fetcher-client"
+import { createApiClient } from "@vitnode/core/tanstack/fetcher"
 
-export const notesApi = {
-  module: clientModule<typeof notesModule>("@acme/site-notes"),
-}
+export const notesApi = createApiClient<typeof notesModule>("@acme/site-notes")
 ```
 
-## Use it in a query
+</Step>
+
+<Step>
+
+### Fetch data
 
 ```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
 import { queryOptions } from "@tanstack/react-query"
-import { fetcher } from "@vitnode/core/tanstack/fetcher"
 
 import { notesApi } from "../../api/client"
 
@@ -44,7 +51,7 @@ export const notesQuery = () =>
   queryOptions({
     queryKey: notesQueryKey,
     queryFn: async ({ signal }) => {
-      const response = await fetcher(notesApi.module, {
+      const response = await notesApi.fetch({
         method: "get",
         module: "notes",
         options: { signal },
@@ -60,13 +67,17 @@ export const notesQuery = () =>
   })
 ```
 
-## Load the initial page or make a mutation
+</Step>
+
+</Steps>
+
+## Use it on a page or in a mutation
 
 <Tabs items={["Initial page", "Mutation"]}>
   <Tab value="Initial page">
 
-Warm the same query in the route loader. The component then reads that cache
-entry with `useQuery(notesQuery())`.
+Warm the query in the route loader. The component reads that same cache entry
+with `useQuery(notesQuery())`.
 
 ```ts title="plugins/site-notes/src/routes/notes.tsx"
 import { definePluginRoute } from "@vitnode/core/routing"
@@ -83,11 +94,10 @@ export const route = definePluginRoute({
 
   <Tab value="Mutation">
 
-Use the same `fetcher` in a mutation, then invalidate the affected query.
+Use the same API client, then invalidate the data that changed.
 
 ```tsx title="plugins/site-notes/src/features/notes/create-note.tsx"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { fetcher } from "@vitnode/core/tanstack/fetcher"
 
 import { notesApi } from "../../api/client"
 import { notesQueryKey } from "./notes-query"
@@ -97,16 +107,14 @@ export const useCreateNote = () => {
 
   return useMutation({
     mutationFn: async (title: string) => {
-      const response = await fetcher(notesApi.module, {
+      const response = await notesApi.fetch({
         args: { body: { title } },
         method: "post",
         module: "notes",
         path: "/",
       })
 
-      if (!response.ok) {
-        throw new Error(`Could not create the note (${response.status}).`)
-      }
+      if (!response.ok) throw new Error("Could not create the note.")
 
       return await response.json()
     },
@@ -119,42 +127,15 @@ export const useCreateNote = () => {
   </Tab>
 </Tabs>
 
-## Exceptions
+## Server-only work
 
-<Tabs items={["Server only", "Outside TanStack Start"]}>
-  <Tab value="Server only">
-
-Use `@vitnode/core/tanstack/fetcher/server` only when the server must handle
-the request: cookie relay, a server function, cron/job, secret, or custom API
-origin.
-
-```ts
-import { usersModule } from "@vitnode/core/api/modules/users/users.module"
-import { fetcher } from "@vitnode/core/tanstack/fetcher/server"
-
-const response = await fetcher(usersModule, {
-  allowSaveCookies: true,
-  args: { body: { email, password } },
-  method: "post",
-  module: "users",
-  path: "/sign_in",
-})
-```
+Use `@vitnode/core/tanstack/fetcher/server` only for a server function, cookie
+relay, cron/job, secret, or a custom API origin.
 
 <Callout type="warn" title="Keep it server-only">
   Put code that imports this fetcher in a `*.server.ts` file, or call it only
   from a server function.
 </Callout>
-
-  </Tab>
-
-  <Tab value="Outside TanStack Start">
-
-For framework-neutral shared browser code, or a host that is not TanStack Start,
-use `fetcherClient`.
-
-  </Tab>
-</Tabs>
 
 ## What the types do
 
