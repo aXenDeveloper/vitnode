@@ -24,7 +24,7 @@ const here = dirname(fileURLToPath(import.meta.url));
  * visible until somebody tries.
  */
 const SHARED = {
-  breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-main-content.tsx"),
+  breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-trail-content.tsx"),
   card: join(here, "sign-in/sign-in-content.tsx"),
   changePasswordForm: join(
     here,

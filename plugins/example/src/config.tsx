@@ -3,7 +3,7 @@ import { buildPlugin } from "@vitnode/core/lib/plugin";
 import { adminContent } from "./admin/content";
 import { adminNav } from "./admin/nav";
 import messages from "./locales";
-import { routes } from "./routes/manifest";
+import { routes } from "./routes";
 
 /**
  * Registering the content types is the whole frontend integration: the AdminCP
@@ -32,7 +32,7 @@ export const examplePlugin = () =>
     ...adminNav,
     contentTypes: adminContent.contentTypes,
     messages,
-    // Stage 5: the same list `routes/manifest.ts` hands the build tool, so a
-    // route is declared once whichever path an app reads it through.
+    // The same tree `routes.ts` hands the build tool, so a route is declared
+    // once whichever path an app reads it through.
     routes,
   });

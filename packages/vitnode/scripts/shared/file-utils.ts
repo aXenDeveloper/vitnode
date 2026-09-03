@@ -9,7 +9,7 @@ import { join, resolve } from "node:path";
  * also held the plugin **route copier** - the machinery that read a plugin's
  * `src/routes/{main,admin,blank,breadcrumb}/` and wrote copies of those pages
  * into every Next.js app's `src/app/[locale]/…`, rewriting each import as it
- * went. A plugin's pages are no longer copied anywhere: its route manifest is
+ * went. A plugin's pages are no longer copied anywhere: its route tree is
  * compiled into a literal registry and the app imports the page out of the
  * plugin's own `dist`, so there is nothing to copy, nothing to clean up when a
  * source file is deleted, and no import to rewrite.

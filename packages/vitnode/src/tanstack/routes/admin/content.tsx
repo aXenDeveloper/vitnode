@@ -6,6 +6,7 @@ import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreAdminRouteContext, CoreRouteFactory } from "../types";
 
 import { ContentAdminBreadcrumbContent } from "../../admin/content/breadcrumb";
+import { breadcrumbGroup } from "../../breadcrumb/model";
 import { TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
@@ -140,7 +141,7 @@ export const contentAdminRoute: CoreRouteFactory<CoreAdminRouteContext> = ({
      * router, which is what makes the hook legal.
      */
     staticData: {
-      breadcrumb: <ContentAdminBreadcrumb />,
+      breadcrumb: breadcrumbGroup(ContentAdminBreadcrumb),
     },
     component: lazyRouteComponent(async () => {
       const [{ ContentAdminScreenContent }, registry] = await Promise.all([

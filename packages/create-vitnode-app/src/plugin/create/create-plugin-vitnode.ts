@@ -19,9 +19,9 @@ import { pluginRouteScaffold } from "./route-templates.js";
  * registers both.
  *
  * Written rather than copied, because every one of these files names the plugin
- * - the manifest names the module it imports, the page names the message
- * namespace it renders, the config names the id both are keyed by - and a static
- * template under `copy-of-vitnode-plugin/` cannot. What each file contains is
+ * - the route tree names the URL it claims, the page names the message namespace
+ * it renders, the config names the id both are keyed by - and a static template
+ * under `copy-of-vitnode-plugin/` cannot. What each file contains is
  * `route-templates.ts`, which is pure and asserted byte for byte; this is only
  * the part that has a disk.
  *

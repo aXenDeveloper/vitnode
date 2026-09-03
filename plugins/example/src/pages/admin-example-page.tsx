@@ -5,11 +5,10 @@ import { useTranslations } from "use-intl";
  * A plugin page inside the AdminCP - `area: "admin"`, and the smallest real one
  * that can be written.
  *
- * It exists to prove the runtime rather than to do a job: a declaration in
- * `routes/manifest.ts` becomes a generated manifest entry, a generated literal
- * `import()`, a route mounted under the host's `_admin` shell, and a URL at
- * `/admin/example` with the sidebar, the breadcrumb and the admin session guard
- * around it. Nothing about the page itself is special, which is the point - the
+ * It exists to prove the runtime rather than to do a job: one `page()` in
+ * `routes.ts` becomes a route mounted under the host's `_admin` shell and a URL
+ * at `/admin/example` with the sidebar, the breadcrumb and the admin session
+ * guard around it, with this module in a chunk of its own. Nothing about the page itself is special, which is the point - the
  * contract is the same one a public page has.
  *
  * ## What is *not* here
@@ -60,10 +59,9 @@ const AdminExamplePage = () => {
 /**
  * The crumb the AdminCP header renders for this page.
  *
- * Owned by the plugin, exactly as a public plugin route's is: the deepest
- * matched route that declares one wins, and the host's shell mounts whatever it
- * finds. Text rather than a link - a locale-correct href needs the host's own
- * link component, and a plugin route module is handed nothing to build one with.
+ * Owned by the plugin, exactly as a public plugin route's is: this route
+ * contributes one item to the trail and the shell renders it. A label rather
+ * than a link - the shell owns the href, the separators and the `aria-current`.
  */
 const AdminExampleBreadcrumb = () => {
   const t = useTranslations("@vitnode/example.admin.overview");

@@ -39,11 +39,7 @@ import "./lib/auth";
 import "./lib/admin-auth";
 import { createLocaleRewrite, localeRouting } from "./lib/i18n/runtime";
 import { pageHead } from "./lib/page-head";
-import { pluginRouteManifest } from "./plugin-route-manifest.gen";
-import {
-  pluginRouteModules,
-  pluginRouteSearchSchemas,
-} from "./plugin-routes.gen";
+import { pluginRouteSources } from "./plugin-routes.gen";
 import { Route as adminShellRoute } from "./routes/_admin";
 import { Route as mainShellRoute } from "./routes/_main";
 import { routeTree as fileRouteTree } from "./routeTree.gen";
@@ -71,16 +67,16 @@ const loadContentRegistry = async () =>
  * generated tree is a module singleton. `withPluginRoutes` is idempotent anyway;
  * doing it once is simply where it belongs.
  *
- * The plugin half comes from two generated files and is joined by route id. No
- * plugin page is copied into `src/routes`, no route path is written by hand, and
- * nothing here knows which plugins are installed - see
- * `@vitnode/core/tanstack/plugin-routes`.
+ * The plugin half comes from one generated file: a static import of each
+ * configured plugin's own route tree. No plugin page is copied into
+ * `src/routes`, no route path is written by hand, and nothing here knows which
+ * plugins are installed - see `@vitnode/core/tanstack/plugin-routes`.
  *
- * `pluginRouteSearchSchemas` is the third argument and the one part of a plugin
- * route that is not lazy: a router's `validateSearch` runs during path matching,
- * before any chunk is fetched, so a route that needs a real one is imported
- * statically by the generated registry. Usually empty. See
- * `PluginRouteDefinition.searchEntry`.
+ * A page is reached only through the literal `lazy(() => import(...))` its route
+ * declared, so every one of them is a chunk of its own. The one part of a plugin
+ * route that is not lazy is a `search` schema: a router's `validateSearch` runs
+ * during path matching, before any chunk is fetched, so it lives in the tree
+ * rather than in the page.
  *
  * `mountUnder` names one route per shell, which is the whole of what "a plugin
  * route renders in the application shell" amounts to here. A plugin declares
@@ -93,7 +89,7 @@ const loadContentRegistry = async () =>
  * the area declaration already described.
  *
  * Neither shell changes a path: both are pathless, so `/example` stays
- * `/example` and an admin plugin route's `/admin/…` is the path its manifest
+ * `/example` and an admin plugin route's `/admin/…` is the path its own route
  * spells out in full. An area VitNode knows and this app has not named here
  * fails the composition rather than being mounted under the other one.
  *
@@ -110,10 +106,10 @@ const loadContentRegistry = async () =>
  * `@vitnode/core/tanstack/routes` existed, every one of them pure wiring around
  * something imported from the package - so an app carried a copy of VitNode's own
  * routing table and core adding a screen meant an edit here. They are code-based
- * rather than manifest-declared because they need the router's full option set: a
- * real `validateSearch` that clamps `?page=999` before anything renders, a
- * `beforeLoad` guard that runs before any chunk is fetched, and a splat path the
- * manifest's grammar does not represent.
+ * rather than declared as plugin routes because they need the router's full
+ * option set: a real `validateSearch` that clamps `?page=999` before anything
+ * renders, a `beforeLoad` guard that runs before any chunk is fetched, and a
+ * splat path a plugin route path does not represent.
  *
  * `localeRouting` goes to the last of the three because a sign-in navigates to a
  * path a *visitor* supplied: the route tree carries no locale, so the prefix has
@@ -130,11 +126,7 @@ const routeTree = withCoreRootRoutes(
     withCoreMainRoutes(
       withPluginRoutes(
         fileRouteTree,
-        pluginRouteSpecs(
-          pluginRouteManifest,
-          pluginRouteModules,
-          pluginRouteSearchSchemas,
-        ),
+        pluginRouteSpecs(pluginRouteSources),
         {
           mountUnder: { admin: adminShellRoute, main: mainShellRoute },
           pageHead,

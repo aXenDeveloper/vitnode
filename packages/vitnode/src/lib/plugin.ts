@@ -5,7 +5,7 @@ import type {
   ContentSelect,
   ContentSystemField,
 } from "../content/types";
-import type { PluginRouteDefinition } from "../routing/types";
+import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { LocaleMessagesMap } from "./i18n/types";
 
@@ -273,21 +273,20 @@ export interface BuildPluginReturn<P extends string = string> {
   messages?: LocaleMessagesMap;
   pluginId: P;
   /**
-   * Public pages this plugin contributes, declared rather than shipped as a
-   * framework's route files.
+   * The pages this plugin contributes, as the tree its own `src/routes.ts`
+   * declares.
    *
    * Optional: a plugin that contributes an API module, a content type or only
-   * strings declares no routes at all. `buildPluginRouteManifest` turns every
-   * plugin's list into the application's route manifest, which is compiled into
-   * a literal registry at build time.
+   * strings declares no routes at all. Hand over the same `routes` export the
+   * plugin's `routes.ts` has, so a host that registers the plugin through this
+   * config and a build that reads the module directly describe one set of
+   * routes.
    *
-   * There was a second, older path until the Next.js cutover: a plugin could
-   * instead ship a `src/routes/{main,admin,blank,breadcrumb}/` tree of App Router
-   * pages, which a copier wrote into every Next.js app's `src/app/`. Nothing is
-   * copied anywhere now - a route module stays in this package's own `dist` and
-   * the app imports it from there. See `src/routing/`.
+   * Nothing is copied anywhere: a page module stays in this package's own `dist`
+   * behind the `lazy(() => import(...))` its route declared, and the app holds
+   * one static import of this tree. See `src/routing/`.
    */
-  routes?: PluginRouteDefinition[];
+  routes?: PluginRoutes;
 }
 
 export function buildPlugin<P extends string>(

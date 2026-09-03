@@ -50,20 +50,18 @@ feature for the host—that explicit switch is next.
 
 ### Keep the route in the plugin
 
-The generated manifest is the public contract. Add another record here when the
-plugin needs another URL; never copy its page into `apps/web/src/routes`.
+The generated `routes.ts` is the public contract. Add another `page()` here when
+the plugin needs another URL; never copy its page into `apps/web/src/routes`.
 
-```ts title="plugins/site-notes/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from '@vitnode/core/routing'
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:5]
-  {
-    entry: 'routes/home-page',
-    id: 'home',
-    path: '/site-notes',
-  },
-]
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/site-notes', {
+    component: lazy(() => import('./pages/home-page')),
+  }),
+])
 ```
 
   </Step>
@@ -84,8 +82,8 @@ export const vitNodeConfig = buildConfig({
 })
 ```
 
-The factory already carries the plugin's manifest and message loaders. Keep host
-configuration to composition; the feature stays in its package.
+The factory already carries the plugin's route tree and message loaders. Keep
+host configuration to composition; the feature stays in its package.
 
   </Step>
   <Step>
@@ -111,7 +109,7 @@ npm run dev
 Open `http://localhost:3000/site-notes`. The page comes from the plugin, gets
 its own chunk, and never moves house. Tiny victory dance optional.
 
-{/* Image prompt: Split-screen developer tutorial image. Left shows a plugin folder with manifest, locale, and route files. Right shows the resulting /site-notes page in a VitNode app. Dark theme, precise code-like labels, 1600x900. */}
+{/* Image prompt: Split-screen developer tutorial image. Left shows a plugin folder with routes.ts, locale, and pages files. Right shows the resulting /site-notes page in a VitNode app. Dark theme, precise code-like labels, 1600x900. */}
 
   </Step>
 </Steps>
@@ -121,9 +119,9 @@ its own chunk, and never moves house. Tiny victory dance optional.
 <Cards>
   <Card
     icon={<RouteIcon />}
-    title="Route manifest"
-    description="Add dynamic URLs, loaders, metadata, and route guards."
-    href="/docs/dev/plugins/route-manifest"
+    title="Plugin routes"
+    description="Add nested layouts, dynamic URLs, loaders, metadata, and guards."
+    href="/docs/dev/plugins/routes"
   />
   <Card
     icon={<DatabaseIcon />}

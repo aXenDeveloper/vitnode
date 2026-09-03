@@ -153,7 +153,7 @@ const authenticatedContainer = (parentRoute: AnyRoute): AnyRoute =>
  *       pageHead,
  *     })
  *
- * ## Why not through the plugin route manifest
+ * ## Why not declared as plugin routes
  *
  * Because these need options a lazily-imported module cannot provide.
  * `validateSearch` runs during path matching, before any chunk is fetched, and

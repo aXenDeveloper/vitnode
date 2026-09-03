@@ -26,17 +26,13 @@ import {
 import { routeContext } from "../types";
 
 /**
- * The settings trail.
+ * One crumb of the settings trail: the frame's own name, or a panel's.
  *
- * Two things, and the rest is `SettingsBreadcrumbContent`: the strings this
- * subtree renders in - the same set every settings route warms - and the link
- * component. `RouterLink` is passed rather than defaulted because the crumb
- * itself lives in `views/`, which is shared with hosts on other frameworks and
- * may not import a router.
- *
- * The trail is derived from the shared navigation model rather than written
- * here, so a panel's crumb and its menu entry cannot drift into two spellings of
- * the same path.
+ * The frame declares the first and each panel declares its own, so the shell
+ * renders `Settings / Devices` from two routes rather than from one route that
+ * knew about both. All this adds to `SettingsBreadcrumbContent` is the strings it
+ * renders in - the same set every settings route warms - because the shell draws
+ * the breadcrumb *above* the outlet, outside the provider the panel mounts.
  *
  * The crumb itself is imported straight from `views/` rather than through
  * `../../settings`: that barrel also re-exports the frame and both panel
@@ -47,7 +43,7 @@ import { routeContext } from "../types";
  */
 const SettingsBreadcrumb = ({ navKey }: { navKey?: SettingsNavKey }) => (
   <RouteMessages namespaces={SETTINGS_NAMESPACES}>
-    <SettingsBreadcrumbContent LinkComponent={RouterLink} navKey={navKey} />
+    <SettingsBreadcrumbContent navKey={navKey} />
   </RouteMessages>
 );
 
@@ -68,8 +64,8 @@ const SettingsBreadcrumb = ({ navKey }: { navKey?: SettingsNavKey }) => (
  * `/settings` on a phone is looking at a menu; redirecting would skip the menu
  * entirely and leave the mobile back link as the only way to reach it. On a
  * desktop the two URLs look identical. They differ in exactly one visible way,
- * which is the breadcrumb: the index declares none and inherits the frame's
- * single crumb, while `/settings/overview` is two crumbs deep.
+ * which is the breadcrumb: the index declares none, so the trail is the frame's
+ * single crumb, while `/settings/overview` adds its own and is two deep.
  *
  * ## Every panel body is behind a literal dynamic import
  *
@@ -115,8 +111,8 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       <FormPendingSkeleton className="container mx-auto" />
     ),
     /**
-     * The trail for `/settings` itself - a single "Settings" crumb. A panel
-     * declares its own two-crumb trail and wins by being deeper.
+     * The first crumb of the trail - "Settings", linking to this frame's own
+     * URL. Each panel adds its own after it.
      */
     staticData: { breadcrumb: <SettingsBreadcrumb /> },
   });

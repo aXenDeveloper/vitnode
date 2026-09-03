@@ -4,25 +4,25 @@ import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PluginRouteCompilerSource } from "../plugin-routes";
 
+import { definePluginRoutes, lazy, page } from "../../routing/tree";
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
 import { compilePluginRoutes } from "../plugin-routes";
 import { readOptionalPluginModules } from "./plugin-routes";
 
 /**
- * All four generated projections, from one configured plugin list, in one pass.
+ * All three generated projections, from one configured plugin list, in one pass.
  *
  * Each generator has its own determinism test beside it, and each says the same
  * thing about itself: sorted input, sorted output, same bytes. What none of them
  * can say is the thing that actually matters to an installation - that the four
  * are projections of **one list**, so a plugin cannot be half-enabled.
  *
- * That is the property this file is for, and it is not hypothetical. The four
- * files are read by four different parts of the app, and they used to be written
- * by separate passes:
+ * That is the property this file is for, and it is not hypothetical. The three
+ * files are read by three different parts of the app, and they used to be
+ * written by separate passes:
  *
- *     plugin-route-manifest.gen.ts   what routes exist
- *     plugin-routes.gen.ts           how each route's module is imported
+ *     plugin-routes.gen.ts           which plugins have routes, and their trees
  *     admin-nav.gen.ts               what the AdminCP sidebar shows
  *     content-registry.gen.ts        which content types have screens
  *
@@ -30,8 +30,8 @@ import { readOptionalPluginModules } from "./plugin-routes";
  * - each file is individually valid - and the symptoms are all somewhere else: a
  * sidebar entry whose page 404s, a content screen with no route, a route the
  * router still claims for a plugin nobody configured. So "removed from the
- * config" has to mean removed from all four, and that is asserted here rather
- * than left to four files each checking its own half.
+ * config" has to mean removed from all three, and that is asserted here rather
+ * than left to three files each checking its own half.
  *
  * Pure throughout: a resolver over a fixed map stands in for `node_modules`, and
  * every generator takes data and returns a string. There is no dev server here -
@@ -47,28 +47,33 @@ const resolverFor =
 
 /**
  * Two plugins that contribute to every projection, so "disappears from all
- * four" is a statement with four things in it rather than one.
+ * three" is a statement with three things in it rather than one.
  */
 const WORKSPACE = resolverFor({
   "@acme/blog/admin/content": "/pkg/blog/dist/admin/content.js",
   "@acme/blog/admin/nav": "/pkg/blog/dist/admin/nav.js",
-  "@acme/blog/routes/post": "/pkg/blog/dist/routes/post.js",
+  "@acme/blog/routes": "/pkg/blog/dist/routes.js",
   "@acme/shop/admin/content": "/pkg/shop/dist/admin/content.js",
   "@acme/shop/admin/nav": "/pkg/shop/dist/admin/nav.js",
-  "@acme/shop/routes/product": "/pkg/shop/dist/routes/product.js",
+  "@acme/shop/routes": "/pkg/shop/dist/routes.js",
 });
 
-/** What each plugin's route manifest declares, keyed by plugin id. */
+const lazyPage = () =>
+  lazy(async () => await Promise.resolve({ default: () => null }));
+
+/** What each plugin's routes module declares, keyed by plugin id. */
 const ROUTES: Record<string, PluginRouteCompilerSource> = {
   "@acme/blog": {
-    manifestSpecifier: "@acme/blog/routes/manifest",
     pluginId: "@acme/blog",
-    routes: [{ entry: "routes/post", id: "post", path: "/blog/:slug" }],
+    routes: definePluginRoutes([
+      page("/blog/:slug", { component: lazyPage() }),
+    ]),
+    routesSpecifier: "@acme/blog/routes",
   },
   "@acme/shop": {
-    manifestSpecifier: "@acme/shop/routes/manifest",
     pluginId: "@acme/shop",
-    routes: [{ entry: "routes/product", id: "product", path: "/shop/:id" }],
+    routes: definePluginRoutes([page("/shop/:id", { component: lazyPage() })]),
+    routesSpecifier: "@acme/shop/routes",
   },
 };
 
@@ -93,12 +98,11 @@ const projectionsFor = (pluginIds: readonly string[]) => {
         WORKSPACE,
       ).modules,
     ),
-    manifest: compiled.manifestSource,
-    registry: compiled.registrySource,
+    registry: compiled.source,
   };
 };
 
-const FILES = ["adminNav", "contentRegistry", "manifest", "registry"] as const;
+const FILES = ["adminNav", "contentRegistry", "registry"] as const;
 
 const BOTH = ["@acme/blog", "@acme/shop"];
 
@@ -142,9 +146,6 @@ describe("determinism, across every projection at once", () => {
     expect(shuffled.contentRegistry.indexOf("@acme/blog")).toBeLessThan(
       shuffled.contentRegistry.indexOf("@acme/shop"),
     );
-    expect(shuffled.manifest.indexOf("/blog/")).toBeLessThan(
-      shuffled.manifest.indexOf("/shop/"),
-    );
     expect(shuffled.registry.indexOf("@acme/blog")).toBeLessThan(
       shuffled.registry.indexOf("@acme/shop"),
     );
@@ -152,7 +153,7 @@ describe("determinism, across every projection at once", () => {
 });
 
 describe("a plugin is enabled, or it is not - never half of each", () => {
-  it("puts an enabled plugin in all four projections", () => {
+  it("puts an enabled plugin in all three projections", () => {
     const enabled = projectionsFor(BOTH);
 
     FILES.forEach(file => {
@@ -161,12 +162,11 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
   });
 
   /**
-   * The one that matters. Disabling a plugin has to take its routes, its module
-   * imports, its sidebar entries and its content screens away together - a
-   * sidebar entry that outlived its route is a 404 nobody can attribute to a
-   * config edit.
+   * The one that matters. Disabling a plugin has to take its routes, its
+   * sidebar entries and its content screens away together - a sidebar entry that
+   * outlived its route is a 404 nobody can attribute to a config edit.
    */
-  it("removes a disabled plugin from all four, in one step", () => {
+  it("removes a disabled plugin from all three, in one step", () => {
     const disabled = projectionsFor(["@acme/blog"]);
 
     FILES.forEach(file => {

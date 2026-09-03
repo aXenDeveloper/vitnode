@@ -74,7 +74,11 @@ export * from "./actions";
  * barrel is the model's public vocabulary, so a TanStack host has one specifier
  * to import rather than a deep path into `views/`.
  */
-export { AdminBreadcrumb, useAdminBreadcrumb } from "./breadcrumb";
+export {
+  AdminBreadcrumb,
+  adminBreadcrumb,
+  useAdminBreadcrumb,
+} from "./breadcrumb";
 export * from "./intl";
 export { AdminNavProvider, useAdminNav, useAdminSearchNavItems } from "./nav";
 export { AdminNotFound } from "./not-found";

@@ -86,7 +86,7 @@ feature. That boundary pays rent surprisingly quickly.
 
 - [Getting started](https://vitnode.com/docs/dev/setup)
 - [Build your first plugin](https://vitnode.com/docs/guides/first-plugin)
-- [Plugin routes](https://vitnode.com/docs/dev/routing)
+- [Plugin routes](https://vitnode.com/docs/dev/plugins/routes)
 - [Admin Control Panel](https://vitnode.com/docs/dev/plugins/admin)
 - [Content delivery and SEO](https://vitnode.com/docs/dev/content-engine/content-delivery-and-seo)
 - [Write documentation](https://vitnode.com/docs/dev/documentation)

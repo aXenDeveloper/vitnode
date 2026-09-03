@@ -35,6 +35,10 @@
  *
  * Keeping the list *here* rather than letting every route invent its own string
  * is the point: an area is a statement about layout, and a layout is a parent.
+ *
+ * Declared by a **top-level** route only. Every route inside a layout renders in
+ * the shell its layout renders in, so a nested route that declared one would be
+ * describing something it cannot change.
  */
 export type PluginRouteArea = "admin" | "main";
 
@@ -58,12 +62,12 @@ export const PLUGIN_ROUTE_AREAS: PluginRouteArea[] = ["admin", "main"];
  * siblings under it, and rebuilding that as four independent pages means four
  * copies of the frame and four chances for them to drift.
  *
- * - `page` claims a URL and renders it. The default, and what every route the
- *   prototype could describe is.
- * - `layout` claims **no URL of its own**. It renders a frame around its
- *   children and is only ever reached through one of them, which is why two
- *   layouts may not sit at the same path and why a layout with no children is
- *   rejected: it would be a route nothing can ever match.
+ * - `page` claims a URL and renders it - `page()` and `index()`, which is that
+ *   layout's page at its own URL.
+ * - `layout` claims **no URL of its own** - `layout()`. It renders a frame
+ *   around its `children` and is only ever reached through one of them, which is
+ *   why two layouts may not sit at the same path and why a layout with no
+ *   children is rejected: it would be a route nothing can ever match.
  *
  * A third kind for a *pathless* group - Next's `(group)` folders - is
  * deliberately absent. No plugin has ever needed one, and a layout that adds no
@@ -116,10 +120,9 @@ export const PLUGIN_ROUTE_REQUIREMENTS: PluginRouteRequirement[] = [
 /**
  * Separates a plugin id from a route id. Not legal inside either half.
  *
- * The same separator `framework/plugin-routes` keys its generated module
- * registry by, so a manifest entry's `id` *is* the key that registry is looked
- * up with. Two layers, one identifier, and nothing has to translate between
- * them.
+ * A route's `id` is the key its component loader and its search schema are
+ * registered under, so one identifier addresses a route everywhere and nothing
+ * has to translate between layers.
  */
 export const PLUGIN_ROUTE_ID_SEPARATOR = ":";
 
@@ -128,160 +131,37 @@ export type PluginRouteSegment =
   { kind: "param"; name: string } | { kind: "static"; value: string };
 
 /**
- * A page route contributed by a plugin, as the plugin declares it.
+ * One route's `validateSearch`, as the router will call it.
  *
- * Eight fields, five of which are optional and default to "the simple case", so
- * the prototype's declaration still says exactly what it used to:
- *
- *     { entry: "routes/example-page", id: "example-page", path: "/example" }
- *
- * Every field here is **data**: serialisable, deterministic, meaningful in a
- * Node process with no framework loaded, and free of React and TanStack Router.
- * That is not an aesthetic rule - this list is read while an app builds, and
- * frozen into a generated literal that a browser imports. A `loader`, a `component`, a `beforeLoad` or a `head`
- * is executable behaviour and belongs in the route *module*, which is fetched
- * as its own chunk; see `./module` for that half of the contract.
- *
- * What earns a place here is a question the runtime has to answer **before** it
- * can fetch that module: which URL is this (`path`), what shape is it in the
- * tree (`kind`, `parentId`), which strings must be in flight alongside its chunk
- * rather than a round trip after it (`namespaces`), and may this visitor be sent
- * here at all (`requires`).
+ * Total by contract. TanStack calls this during path matching, on whatever was
+ * in the query string, and a throw there is a router error screen rather than a
+ * page - so a validator normalises and clamps, it does not reject.
  */
-export interface PluginRouteDefinition {
-  /**
-   * Which shell frames this page. Defaults to `"main"`.
-   *
-   * It chooses a parent, never a prefix: an `admin` route still writes its full
-   * `/admin/…` path below. See {@link PluginRouteArea}.
-   */
-  area?: PluginRouteArea;
-  /**
-   * Package export subpath of the module that renders this route, e.g.
-   * `"routes/example-page"`, imported as
-   * `"@vitnode/example/routes/example-page"`.
-   *
-   * A subpath rather than a full specifier, because the plugin id is already on
-   * the record; a subpath rather than a file path, so a plugin can move the
-   * implementation inside its `dist` without breaking every app that installs
-   * it; extensionless, because the plugin's export map adds the extension.
-   */
-  entry: string;
-  /**
-   * Stable identifier, unique within the plugin. It survives a path change -
-   * that is what makes it worth having - so name it after the page, not the URL.
-   */
-  id: string;
-  /** Defaults to `"page"`. See {@link PluginRouteKind}. */
-  kind?: PluginRouteKind;
-  /**
-   * The message namespaces this route renders, warmed before it does.
-   *
-   * Here rather than in the module because of a waterfall that is otherwise
-   * unavoidable: a route's messages and a route's code are two network fetches,
-   * and if the list of namespaces is *inside* the code they can only happen one
-   * after the other. Declared here, the runtime starts both at once.
-   *
-   * Name what the page renders, not what the plugin has. The root provides
-   * `core.global` and nothing else deliberately - the merged message tree holds
-   * every plugin's copy, and a page should ship only the branches it uses.
-   */
-  namespaces?: string[];
-  /**
-   * The `id` of another route **from the same plugin** that this one renders
-   * inside, if any.
-   *
-   * Plugin-local by construction, which is how cross-plugin parenting is made
-   * unrepresentable rather than merely forbidden: there is nowhere in this
-   * string to put another plugin's name. A plugin cannot reach into another
-   * plugin's frame, and no plugin's route tree depends on which plugins happen
-   * to be installed beside it.
-   *
-   * The parent must be a `layout`, and this route's `path` must be the parent's
-   * path or extend it - a child that claimed an unrelated URL would be a
-   * manifest that lies about where its pages are. A child whose path is
-   * *exactly* the parent's is that layout's index route: `/settings` under the
-   * `/settings` layout, which is `page.tsx` beside `layout.tsx`.
-   */
-  parentId?: string;
-  /**
-   * Canonical VitNode path: `/blog`, `/blog/:slug`, `/blog/:slug/comments`.
-   *
-   * Neither Next's `[slug]` nor TanStack's `$slug`. See `./path` for the
-   * conversions, and for the shapes this layer rejects rather than guesses at.
-   *
-   * Always the **full** public path, including a parent layout's segments, even
-   * for a nested route. A relative fragment would make a manifest unreadable
-   * without walking the graph, and would make a collision impossible to see in
-   * a diff.
-   */
-  path: string;
-  /** Who this route is offered to. See {@link PluginRouteRequirement}. */
-  requires?: PluginRouteRequirement;
-  /**
-   * Package export subpath of a module exporting this route's `validateSearch`,
-   * e.g. `"routes/admin-staff.search"` - the one piece of a route's behaviour
-   * that may not be lazy.
-   *
-   * ## Why this is a second entry rather than a field in the module
-   *
-   * A router's `validateSearch` runs during **path matching**, which is before
-   * any chunk is fetched. A route whose whole module is lazy therefore cannot
-   * have one, and that is why {@link PluginRoutePageModule.parseSearch} exists
-   * and is careful to say it is not a URL schema: it runs in the loader, it
-   * normalises rather than validates, and the router's own search type for the
-   * route stays untouched.
-   *
-   * `parseSearch` is the right answer for most pages. It is not the right answer
-   * for a screen whose URL *is* its state - a paginated table where `?page=999`
-   * has to be clamped and redirected to the last real page, a filter whose links
-   * must be typed. Those need the router to know the shape before it matches.
-   *
-   * So a route may name a second module, and the build imports it **eagerly**,
-   * as a literal static import in the generated registry. That is the whole cost
-   * and it is deliberately visible: a route that declares one puts a module in
-   * the initial bundle. Which is why the contract on it is narrow -
-   *
-   * - it exports `validateSearch`, and nothing that renders;
-   * - it must not import React, a component, or the page it belongs to;
-   * - it must be **total** in the same sense `parseSearch` is: a hand-typed
-   *   query string is normalised, never thrown on.
-   *
-   * Keep it small. It is the schema, not the screen.
-   *
-   * A route that declares one gets a real router-level `validateSearch`, a
-   * `loaderDeps` derived from it, and typed `search` and `navigate` handed to
-   * its component - while its page stays in its own chunk exactly as before.
-   */
-  searchEntry?: string;
-}
+export type PluginRouteSearchValidator = (
+  input: Record<string, unknown>,
+) => unknown;
 
 /**
  * One route in a built manifest: validated, normalised and parsed.
  *
- * Every optional field of a {@link PluginRouteDefinition} is present here, with
- * its default filled in - so nothing downstream re-implements "and if it is
- * missing, it means". The generated manifest is a literal of exactly this shape,
- * checked with `satisfies`, which is what makes a generator that forgets a field
- * a compile error rather than a route that silently loses its parent.
+ * Every optional field of a declaration is present here with its default filled
+ * in, so nothing downstream re-implements "and if it is missing, it means", and
+ * every path is the full canonical one even for a route whose author wrote it
+ * relative to its parent.
  */
 export interface PluginRoute {
   area: PluginRouteArea;
-  entry: string;
-  /**
-   * Globally unique, `"<pluginId>:<routeId>"` - and the key
-   * `framework/plugin-routes` registers the route's module loader under.
-   */
+  /** Globally unique, `"<pluginId>:<routeId>"`. */
   id: string;
   kind: PluginRouteKind;
-  /** Declared namespaces, de-duplicated and sorted. Empty if none. */
-  namespaces: string[];
+  /** Declared message namespaces, de-duplicated and sorted. Empty if none. */
+  messages: string[];
   /**
-   * The **global** id of this route's parent, or `null`.
+   * The **global** id of the layout this route is nested inside, or `null`.
    *
-   * Namespaced on the way in, so the runtime looks a parent up by the same id
-   * everything else addresses a route by, while a plugin still declares only its
-   * own local one.
+   * Namespaced by plugin, exactly like {@link PluginRoute.id}, so a parent is
+   * looked up by the id everything else addresses a route by - and so there is
+   * no spelling of it that reaches another plugin's layout.
    */
   parentId: null | string;
   /** Canonical path, normalised (no trailing slash). */
@@ -289,13 +169,11 @@ export interface PluginRoute {
   pluginId: string;
   /** As declared. `null` means the route is offered to everybody. */
   requires: null | PluginRouteRequirement;
-  /** The plugin-local half of {@link PluginRoute.id}, as declared. */
-  routeId: string;
   /**
-   * As declared. `null` means this route has no eager search schema, which is
-   * the ordinary case - see {@link PluginRouteDefinition.searchEntry}.
+   * The plugin-local half of {@link PluginRoute.id}, derived by VitNode from the
+   * route's kind and its full path while the tree was flattened.
    */
-  searchEntry: null | string;
+  routeId: string;
   /** `path`, already parsed - so nothing downstream has to parse it again. */
   segments: PluginRouteSegment[];
 }
@@ -311,13 +189,14 @@ export interface PluginRoute {
 export type PluginRouteManifest = PluginRoute[];
 
 /**
- * The part of a registered plugin the manifest reads.
+ * One plugin, and the route tree it declares.
  *
- * Structural, not `BuildPluginReturn`: that type reaches the AdminCP nav and the
- * Content Engine, which reach React and Next, and this module has to stay
- * loadable anywhere. A `BuildPluginReturn` satisfies this shape as it is.
+ * `routes` is `unknown` rather than `PluginRoutes` because a plugin is compiled
+ * JavaScript by the time a host reads it: the tree is validated from `unknown`
+ * by `flattenPluginRoutes`, which is what turns a plugin built against an older
+ * VitNode into a diagnostic rather than a crash.
  */
 export interface PluginRouteSource {
   pluginId: string;
-  routes?: PluginRouteDefinition[];
+  routes?: unknown;
 }

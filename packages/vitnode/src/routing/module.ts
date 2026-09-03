@@ -136,6 +136,45 @@ export interface PluginRouteHeadArgs<TData = unknown, TSearch = unknown> {
 }
 
 /**
+ * What a plugin route's breadcrumb component is handed.
+ *
+ * The same three names `load`, `head` and the page component receive, taken from
+ * the match that declared the crumb rather than from the deepest one - so a
+ * layout's crumb reads the layout's own loader data even while a page inside it
+ * is what the visitor is looking at.
+ *
+ * A crumb that only needs a translated string declares no props at all:
+ * `() => useTranslations("@acme/catalog")("breadcrumbs.products")` is assignable
+ * to a component type that supplies these and simply ignores them.
+ */
+export interface PluginRouteBreadcrumbProps<
+  TData = undefined,
+  TSearch = unknown,
+> {
+  /**
+   * Exactly what this route's `load` returned, or `undefined` for a module that
+   * declares no loader.
+   *
+   * Optional in one case the type cannot express and the runtime can: the shell
+   * renders the trail for every *matched* route, and a match whose loader threw
+   * is still a match. A crumb on a route whose data may fail to resolve should
+   * read it defensively.
+   */
+  loaderData: TData;
+  /** This route's own dynamic segments, e.g. `{ productId: "42" }`. */
+  params: Readonly<Record<string, string>>;
+  /**
+   * This route's query string, validated the same way its page's is.
+   *
+   * `unknown` unless the crumb names the type, which most do not: a crumb that
+   * reads the search is rare, and defaulting to the empty record would make a
+   * crumb that ignores it *incompatible* with a route that has one - the props
+   * are checked contravariantly against what the route provides.
+   */
+  search: TSearch;
+}
+
+/**
  * The behaviour a plugin route module may declare, and the whole of it.
  *
  * Four members, every one optional, every one traced to something a migrated
@@ -143,29 +182,30 @@ export interface PluginRouteHeadArgs<TData = unknown, TSearch = unknown> {
  */
 export interface PluginRouteOptions<TData = unknown, TSearch = unknown> {
   /**
-   * What this route contributes to the shell's breadcrumb area.
+   * This route's **one crumb** in the shell's breadcrumb trail.
    *
-   * A **component**, not an element, because the label is translated - so it has
-   * to be able to call `useTranslations` from `use-intl`, through the namespaces
-   * its route declared - and because the runtime is the only thing that can
-   * decide where in the shell to mount it. The deepest matched route that
-   * declares one wins, which is Stage 8's rule (`breadcrumbOf`) and therefore
-   * the same rule the host's own routes follow.
+   * A **component**, not an element, for two reasons: the label is usually
+   * translated, so it has to be able to call `useTranslations` from `use-intl`
+   * through the message namespaces its route declared; and the runtime hands it
+   * this route's own {@link PluginRouteBreadcrumbProps} - the loader data, the
+   * params and the search of the match that declared it - which an element
+   * written in a route module could not be given.
    *
-   * **It is handed no props.** No `loaderData`, no `params`, no `search`: a
-   * crumb is rendered from the route's own module and its namespaces, and
-   * nothing else. That is enough for a translated, route-owned label, which is
-   * what every crumb in this repository is; it is not enough for "the article's
-   * own title", and this contract does not pretend otherwise. A plugin route
-   * module is framework-neutral and so cannot reach for `useLoaderData` to close
-   * the gap itself. Giving a crumb its route's data is a future extension - a
-   * typed `PluginRouteBreadcrumbProps<TData, TSearch>` - not something to work
-   * around here.
+   * Return the label and nothing else. VitNode owns the trail: the separators,
+   * the `nav`/`aria-current` semantics, and the locale-aware link to this
+   * route's own URL. A plugin never builds a router link for a crumb, and never
+   * restates its layouts' crumbs - every matched route contributes its own, in
+   * parent-to-child order.
+   *
+   * `false` omits this route from the trail explicitly, which is what a page
+   * whose parent layout already names the screen wants. Declaring nothing does
+   * the same thing; `false` is for saying so on purpose.
    *
    * There is deliberately no pathname-to-label registry anywhere: a route
    * declares its own crumb, next to its own component.
    */
-  breadcrumb?: React.FunctionComponent;
+  breadcrumb?:
+    false | React.ComponentType<PluginRouteBreadcrumbProps<TData, TSearch>>;
   /**
    * The page's title, description and robots directive - translated, and
    * usually read off `loaderData` so the `<title>` and the `<h1>` are the same
@@ -207,7 +247,10 @@ export interface PluginRouteOptions<TData = unknown, TSearch = unknown> {
    * which is *before* any chunk is fetched, and a plugin's module is lazy. The
    * router matches the route without it; this runs in the loader, once the
    * module has arrived. So the raw query string is what the router sees, and
-   * this is what everything downstream of the module sees.
+   * this is what everything downstream of the module sees. For a screen whose
+   * URL *is* its state, declare `search` on the route in `routes.ts` instead -
+   * that one the router does see, and it is the one field of a route that is
+   * deliberately eager.
    *
    * **Must be total.** It normalises, it does not reject - a hand-edited or
    * pasted query string should render the page it would have rendered anyway,
@@ -271,10 +314,10 @@ export interface PluginRoutePageProps<
    * `resetScroll` defaults to the router's own behaviour; pass `false` for a
    * table whose page should not jump to the top when the page number changes.
    *
-   * Pairs with {@link PluginRouteDefinition.searchEntry}: a route with an eager
-   * search schema gets a validated {@link PluginRoutePageProps.search} in and a
-   * typed one out, which together are what make the query string usable as
-   * state rather than as a string.
+   * Pairs with a route's eager `search` schema: a route that declares one gets a
+   * validated {@link PluginRoutePageProps.search} in and a typed one out, which
+   * together are what make the query string usable as state rather than as a
+   * string.
    */
   navigate: (options: {
     resetScroll?: boolean;
@@ -285,14 +328,14 @@ export interface PluginRoutePageProps<
   /**
    * The route's query string, validated.
    *
-   * Whatever the route's eager `validateSearch` returned when its manifest entry
-   * declares a `searchEntry`, and whatever the module's own `parseSearch`
-   * returned otherwise. Never raw query parameters in either case.
+   * Whatever the route's eager `search` schema returned when its declaration
+   * has one, and whatever this module's own `parseSearch` returned otherwise.
+   * Never raw query parameters in either case.
    */
   search: TSearch;
 }
 
-/** A plugin route module that renders a page - `kind: "page"`. */
+/** A plugin route module that renders a page - `page()` or `index()`. */
 export interface PluginRoutePageModule<TData = unknown, TSearch = unknown> {
   /**
    * The page.
@@ -309,7 +352,7 @@ export interface PluginRoutePageModule<TData = unknown, TSearch = unknown> {
   route?: PluginRouteOptions<TData, TSearch>;
 }
 
-/** A plugin route module that renders a frame - `kind: "layout"`. */
+/** A plugin route module that renders a frame - `layout()`. */
 export interface PluginRouteLayoutModule<TData = unknown, TSearch = unknown> {
   /**
    * The frame, which renders its children where they belong.
@@ -348,7 +391,7 @@ export type PluginRouteModule<TData = unknown, TSearch = unknown> =
  * is what checked that they line up.
  */
 export interface CheckedPluginRouteOptions {
-  breadcrumb?: React.FunctionComponent;
+  breadcrumb?: false | React.ComponentType<PluginRouteBreadcrumbProps<unknown>>;
   head?: (args: PluginRouteHeadArgs) => PluginRouteHead;
   load?: (args: PluginRouteLoadArgs) => unknown;
   parseSearch?: (input: unknown) => unknown;
@@ -436,9 +479,16 @@ export const readPluginRouteModule = (
 
     if (value === undefined) continue;
 
+    if (key === "breadcrumb" && value === false) {
+      options[key] = false;
+      continue;
+    }
+
     if (typeof value !== "function") {
       return fail(
-        `declares \`route.${key}\`, which must be a function (got ${typeof value}).`,
+        key === "breadcrumb"
+          ? `declares \`route.breadcrumb\`, which must be a component or \`false\` (got ${typeof value}).`
+          : `declares \`route.${key}\`, which must be a function (got ${typeof value}).`,
       );
     }
 

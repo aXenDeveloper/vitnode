@@ -174,7 +174,7 @@ export const singleAppScripts = (
  * is also what keeps schema lifecycle out of the frontend: a root `turbo
  * db:prepare` resolves to the API package, never to this one.
  *
- * Its own generated artefacts - the plugin route manifest, the module registry,
+ * Its own generated artefacts - the plugin route registry,
  * the AdminCP navigation and content projections - are written by the Vite
  * plugin on every `vite dev` and `vite build`, so there is nothing to prepare
  * here either.

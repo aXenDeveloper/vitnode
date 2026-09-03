@@ -1,53 +1,118 @@
 ---
 title: Breadcrumbs
-description: Declare localized breadcrumbs in plugin route modules for public pages and AdminCP screens.
+description: Contribute one localized crumb per plugin route and let VitNode assemble the trail for public pages and AdminCP screens.
 icon: Milestone
 ---
 
-VitNode provides breadcrumb slots in both the AdminCP header and public site
-layout. The deepest plugin route that declares a breadcrumb wins.
+VitNode renders a breadcrumb trail in both the AdminCP header and the public
+site layout. **Every matched route contributes one crumb**, parent to child:
+
+```text
+Home / Catalog / Products / Laptops / MacBook Pro
+```
+
+So a route says what it is called and nothing else. VitNode owns the separators,
+the `nav` and `aria-current` semantics, and the locale-aware link to each
+route's own URL—a plugin never builds a router link, and never restates the
+crumbs of the layouts above it.
 
 ## Quick start
 
-### Add a plugin breadcrumb
+### A static, translated crumb
 
-Plugin routes export a breadcrumb component on `definePluginRoute`:
+Declare a component on `definePluginRoute`. It renders inside the message
+namespaces the route declared, so `useTranslations` just works:
 
-```tsx title="plugins/blog/src/routes/overview-page.tsx"
+```tsx title="plugins/catalog/src/pages/products-layout.tsx"
 import { definePluginRoute } from '@vitnode/core/routing'
 import { useTranslations } from 'use-intl'
 
-const OverviewBreadcrumb = () => {
-  const t = useTranslations('@vitnode/blog')
-  return <span>{t('overview')}</span>
+function ProductsBreadcrumb() {
+  const t = useTranslations('@acme/catalog')
+
+  return t('breadcrumbs.products')
 }
 
 // [!code ++:3]
 export const route = definePluginRoute({
-  breadcrumb: OverviewBreadcrumb,
+  breadcrumb: ProductsBreadcrumb,
 })
 ```
 
-The crumb inherits the route's declared `namespaces`, so `useTranslations` resolves seamlessly.
+### A crumb read from the loader
 
-## Best Practices
+The crumb is handed **its own** match's data, so a dynamic route can name itself
+with what it fetched—no second request, and no guessing from the URL:
 
-<Callout type="info" title="AdminCP Automatic Labels">
-  AdminCP labels resolve from the plugin navigation dictionary. Keep the route,
-  sidebar entry, and translations in the same package.
+```tsx title="plugins/catalog/src/pages/category-layout.tsx"
+import type { PluginRouteBreadcrumbProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
+
+interface Category {
+  name: string
+}
+
+function CategoryBreadcrumb({
+  loaderData,
+}: PluginRouteBreadcrumbProps<Category>) {
+  return loaderData.name
+}
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await fetchCategory(params.categorySlug),
+  breadcrumb: CategoryBreadcrumb,
+})
+```
+
+`PluginRouteBreadcrumbProps<TData, TSearch>` carries `loaderData`, `params` and
+`search`—the same three names the loader, `head` and the page component receive.
+
+### Leaving a route out
+
+A route that declares no `breadcrumb` contributes nothing, and its parents' crumbs
+stay exactly where they were. `false` says the same thing on purpose, which is
+worth doing when a page's frame already names the screen:
+
+```tsx title="plugins/catalog/src/pages/products-index-page.tsx"
+export const route = definePluginRoute({
+  breadcrumb: false, // [!code ++]
+})
+```
+
+## Rules
+
+| Declaration            | What the trail does                                     |
+| ---------------------- | ------------------------------------------------------- |
+| A component            | One crumb, given this route's loader data and params    |
+| `false`                | This route is left out; its parents' crumbs remain      |
+| Nothing at all         | The same, said by omission                              |
+| The last crumb         | Rendered as the current page, not as a link             |
+| Every other crumb      | A locale-aware link to that route's own URL             |
+
+<Callout type="info" title="AdminCP labels come from the navigation">
+  An AdminCP screen's trail is named by the sidebar this administrator can
+  actually see, so a plugin that adds a nav entry gets its label for free—in
+  every language. Keep the route, the sidebar entry and the translations in the
+  same package.
+</Callout>
+
+<Callout type="warn" title="Return a label, not a trail">
+  A crumb returns text or an element. Do not render a `<Breadcrumb>`, a
+  separator, or a link: the shell draws the trail *above* the page outlet and
+  needs each crumb as one item so it can put them in one navigation landmark.
 </Callout>
 
 ## Learn More
 
 <Cards>
   <Card
+    title="Plugin Routes"
+    description="Declare the tree the trail is built from: layouts, index routes, and pages"
+    href="/docs/dev/plugins/routes"
+  />
+  <Card
     title="AdminCP Pages"
     description="Sidebar navigation and admin header layout"
     href="/docs/dev/plugins/admin"
-  />
-  <Card
-    title="Route Manifest"
-    description="Plugin routing and module configuration"
-    href="/docs/dev/plugins/route-manifest"
   />
 </Cards>

@@ -76,31 +76,33 @@ namespace.
 
 ## Asking for a namespace
 
-Declare the exact branches a plugin page renders in the manifest. VitNode loads
-them with the route chunk, so public pages do not download a plugin’s AdminCP
-copy just because it exists.
+Declare the exact branches a plugin page renders as the route's `messages`.
+VitNode loads them with the route chunk, so public pages do not download a
+plugin’s AdminCP copy just because it exists.
 
-```ts title="plugins/my-plugin/src/routes/manifest.ts"
-export const routes = [
-  {
-    entry: 'routes/reports-page',
-    id: 'reports',
+```ts title="plugins/my-plugin/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/reports', {
+    component: lazy(() => import('./pages/reports-page')),
     // [!code ++]
-    namespaces: ['my-plugin.reports'],
-    path: '/reports',
-  },
-]
+    messages: ['my-plugin.reports'],
+  }),
+])
 ```
 
-The route module can then call `useTranslations('my-plugin.reports')`. If a key
-renders as its own name, confirm the manifest declared the matching namespace.
+A route inherits every namespace its layouts declare, so a shared frame can name
+them once for a whole subtree. The route module then calls
+`useTranslations('my-plugin.reports')`; if a key renders as its own name, confirm
+the route declared the matching namespace.
 
 ## Limits
 
 A namespace list reaches the server through a server function, which is a public
 `POST` endpoint once the app is built. So the rules are enforced rather than
 assumed, and the same rules validate a plugin's build-time declaration - one
-definition, in `@vitnode/core/routing`, so a manifest cannot accept something the
+definition, in `@vitnode/core/routing`, so a route tree cannot accept something the
 server refuses.
 
 <TypeTable
@@ -142,7 +144,7 @@ import { MAX_NAMESPACES } from '@vitnode/core/tanstack/i18n'
 
 <Callout title="Every string renders as its own key" type="error">
   The symptom of a namespace that was never asked for. Check that the route
-  declares it in the plugin's `manifest.ts`.
+  declares it in the plugin's `routes.ts`.
 </Callout>
 
 <Callout
@@ -174,7 +176,7 @@ import { MAX_NAMESPACES } from '@vitnode/core/tanstack/i18n'
 <Cards>
   <Card
     title="Pages"
-    description="Declare a plugin route's namespaces in the manifest"
+    description="Declare a plugin route's namespaces as its messages"
     href="/docs/dev/i18n/pages"
   />
   <Card
@@ -183,9 +185,9 @@ import { MAX_NAMESPACES } from '@vitnode/core/tanstack/i18n'
     href="/docs/dev/i18n/messages"
   />
   <Card
-    title="Route manifest"
+    title="Plugin routes"
     description="The full grammar a plugin route is declared with"
-    href="/docs/dev/plugins/route-manifest"
+    href="/docs/dev/plugins/routes"
   />
   <Card
     title="Server-side"

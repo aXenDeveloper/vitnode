@@ -18,9 +18,9 @@ export interface PluginRouteLoaderData {
   /** Whatever the module's `load` returned, or `undefined` if it declares none. */
   data: unknown;
   /**
-   * The route's validated search: its eager `validateSearch` when its manifest
-   * entry declares a `searchEntry`, its module's `parseSearch` otherwise, or
-   * `{}` when it declares neither.
+   * The route's validated search: its eager `search` schema when its declaration
+   * has one, its module's `parseSearch` otherwise, or `{}` when it declares
+   * neither.
    */
   search: unknown;
 }
@@ -45,6 +45,24 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
+ * Whatever this route's `load` returned, out of the runtime's envelope.
+ *
+ * Total: a loader that has not run - or a match whose loader threw, which is
+ * still a match and still renders its crumb - reads as `undefined` rather than
+ * throwing on a property of nothing.
+ */
+export const pluginRouteLoaderData = (loaderData: unknown): unknown =>
+  isRecord(loaderData)
+    ? (loaderData as Partial<PluginRouteLoaderData>).data
+    : undefined;
+
+/** This route's validated search, out of the same envelope. */
+export const pluginRouteSearch = (loaderData: unknown): unknown =>
+  (isRecord(loaderData)
+    ? (loaderData as Partial<PluginRouteLoaderData>).search
+    : undefined) ?? {};
+
+/**
  * The loader's envelope and the match's params, as the props a plugin page
  * renders with.
  *
@@ -56,15 +74,9 @@ export const pluginRoutePageProps = (
   loaderData: unknown,
   params: Readonly<Record<string, string>>,
   navigate: RuntimePluginRoutePageProps["navigate"],
-): RuntimePluginRoutePageProps => {
-  const envelope: Partial<PluginRouteLoaderData> = isRecord(loaderData)
-    ? loaderData
-    : {};
-
-  return {
-    loaderData: envelope.data,
-    navigate,
-    params,
-    search: envelope.search ?? {},
-  };
-};
+): RuntimePluginRoutePageProps => ({
+  loaderData: pluginRouteLoaderData(loaderData),
+  navigate,
+  params,
+  search: pluginRouteSearch(loaderData),
+});

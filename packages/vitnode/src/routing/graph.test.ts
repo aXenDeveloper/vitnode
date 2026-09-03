@@ -2,23 +2,76 @@
 import { describe, expect, it } from "vitest";
 
 import type { PluginRouteGraph, PluginRouteNode } from "./graph";
-import type { PluginRoute, PluginRouteDefinition } from "./types";
+import type {
+  PluginRoute,
+  PluginRouteArea,
+  PluginRouteKind,
+  PluginRouteRequirement,
+} from "./types";
 
 import { PluginRouteError } from "./errors";
 import { buildPluginRouteGraph, pluginRouteNamespaces } from "./graph";
-import { buildPluginRouteManifest } from "./manifest";
+import { pluginRouteId } from "./manifest";
+import { comparePluginRoutes } from "./order";
+import { parseRoutePath } from "./path";
 
-/** The manifest a plugin's declarations build into, which is what a graph reads. */
+/**
+ * A built route, written directly rather than flattened from a declaration.
+ *
+ * The graph reads a manifest, so these tests hand it one: ids, parents and
+ * kinds are stated rather than derived, which is what lets a case like "a route
+ * whose parent is in another plugin" exist at all - `flattenPluginRoutes` cannot
+ * produce it, and this layer still has to refuse it, because it also runs over
+ * declarations a plugin compiled against another version of VitNode.
+ */
+interface RouteFixture {
+  area?: PluginRouteArea;
+  id: string;
+  kind?: PluginRouteKind;
+  messages?: string[];
+  parentId?: string;
+  path: string;
+  requires?: PluginRouteRequirement;
+}
+
+const routeOf = (pluginId: string, fixture: RouteFixture): PluginRoute => {
+  const parsed = parseRoutePath(fixture.path);
+
+  if (!parsed.ok) throw new Error(`bad fixture path "${fixture.path}"`);
+
+  return {
+    area: fixture.area ?? "main",
+    id: pluginRouteId(pluginId, fixture.id),
+    kind: fixture.kind ?? "page",
+    messages: fixture.messages ?? [],
+    parentId:
+      fixture.parentId === undefined
+        ? null
+        : pluginRouteId(pluginId, fixture.parentId),
+    path: parsed.path,
+    pluginId,
+    requires: fixture.requires ?? null,
+    routeId: fixture.id,
+    segments: parsed.segments,
+  };
+};
+
+/** Every plugin's routes, in the order a built manifest has them. */
 const manifestOf = (
-  ...sources: { pluginId: string; routes: PluginRouteDefinition[] }[]
-): PluginRoute[] => buildPluginRouteManifest(sources);
+  ...sources: { pluginId: string; routes: RouteFixture[] }[]
+): PluginRoute[] =>
+  sources
+    .flatMap(source =>
+      source.routes.map(fixture => routeOf(source.pluginId, fixture)),
+    )
+    .sort(comparePluginRoutes);
 
-const example = (...routes: PluginRouteDefinition[]) => ({
+const example = (...routes: RouteFixture[]) => ({
   pluginId: "@vitnode/example",
   routes,
 });
 
-const blog = (...routes: PluginRouteDefinition[]) => ({
+const blog = (...routes: RouteFixture[]) => ({
   pluginId: "@vitnode/blog",
   routes,
 });
@@ -26,14 +79,14 @@ const blog = (...routes: PluginRouteDefinition[]) => ({
 const page = (
   id: string,
   path: string,
-  rest: Partial<PluginRouteDefinition> = {},
-): PluginRouteDefinition => ({ entry: `routes/${id}`, id, path, ...rest });
+  rest: Partial<RouteFixture> = {},
+): RouteFixture => ({ id, path, ...rest });
 
 const layout = (
   id: string,
   path: string,
-  rest: Partial<PluginRouteDefinition> = {},
-): PluginRouteDefinition => page(id, path, { kind: "layout", ...rest });
+  rest: Partial<RouteFixture> = {},
+): RouteFixture => page(id, path, { kind: "layout", ...rest });
 
 /** One node of a graph, or a failure that names the id rather than `undefined`. */
 const nodeOf = (graph: PluginRouteGraph, id: string): PluginRouteNode => {
@@ -203,7 +256,7 @@ describe("nesting", () => {
    * machine the build ran on.
    */
   it("does not depend on declaration order", () => {
-    const shape = (routes: PluginRouteDefinition[]) =>
+    const shape = (routes: RouteFixture[]) =>
       buildPluginRouteGraph(manifestOf(example(...routes))).nodes.map(node => [
         node.route.id,
         node.relativePath,
@@ -398,7 +451,6 @@ describe("a hierarchy that does not hold together", () => {
     );
     const inner: PluginRoute = {
       ...outer,
-      entry: "routes/inner",
       id: "@vitnode/example:inner",
       parentId: outer.id,
       routeId: "inner",
@@ -763,9 +815,9 @@ describe("pluginRouteNamespaces", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
         example(
-          layout("settings", "/settings", { namespaces: ["core.global"] }),
+          layout("settings", "/settings", { messages: ["core.global"] }),
           page("security", "/settings/security", {
-            namespaces: ["@vitnode/example.security"],
+            messages: ["@vitnode/example.security"],
             parentId: "settings",
           }),
         ),
@@ -786,8 +838,8 @@ describe("pluginRouteNamespaces", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
         example(
-          layout("a", "/a", { namespaces: ["core.global"] }),
-          page("b", "/a/b", { namespaces: ["core.global"], parentId: "a" }),
+          layout("a", "/a", { messages: ["core.global"] }),
+          page("b", "/a/b", { messages: ["core.global"], parentId: "a" }),
         ),
       ),
     );

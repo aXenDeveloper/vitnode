@@ -1,4 +1,7 @@
-import type { PluginRoutePageProps } from "@vitnode/core/routing";
+import type {
+  PluginRouteBreadcrumbProps,
+  PluginRoutePageProps,
+} from "@vitnode/core/routing";
 
 import { definePluginRoute } from "@vitnode/core/routing";
 import { useTranslations } from "use-intl";
@@ -7,7 +10,7 @@ import { useTranslations } from "use-intl";
  * The three seams of a route, in one file: what it accepts, what it resolves,
  * and what it renders.
  *
- * This is the page `routes/manifest.ts` declares at `/example/guide/:topic`, and
+ * This is the page `routes.ts` declares at `:topic` inside the guide layout, and
  * it is here to be the smallest honest example of a route that is *about*
  * something. Everything it needs arrives through the contract rather than
  * through a router: `load` is handed the parsed `params`, the component is
@@ -25,17 +28,17 @@ import { useTranslations } from "use-intl";
  * *awaited*, not a second transport.
  */
 const TOPICS: Record<string, { body: string; title: string }> = {
-  entries: {
-    body: "An entry is a package export subpath, so a plugin can move a page inside its own dist without breaking any app that installed it.",
-    title: "Entries",
+  layouts: {
+    body: "A layout claims no URL of its own: it frames its children, and the index() route inside it renders at the layout's own path.",
+    title: "Layouts",
   },
-  manifest: {
-    body: "A manifest is plain data, read in Node with no framework loaded, which is why one plugin can serve any host that knows how to mount it.",
-    title: "The manifest",
+  lazy: {
+    body: 'lazy(() => import("./pages/...")) names the module a route renders. The import is a literal the bundler follows, so the page gets a chunk of its own and nothing runs until the route is matched.',
+    title: "Lazy pages",
   },
-  namespaces: {
-    body: "Namespaces are declared on the route rather than inside the module, so a page's strings and a page's code are fetched at the same time instead of one after the other.",
-    title: "Namespaces",
+  messages: {
+    body: "Messages are declared on the route rather than inside the module, so a page's strings and a page's code are fetched at the same time instead of one after the other.",
+    title: "Messages",
   },
 };
 
@@ -85,6 +88,19 @@ interface TopicSearch {
 }
 
 /**
+ * The crumb this page contributes, read from what its loader resolved.
+ *
+ * One item of the trail, not the trail: the layout above contributes "Plugin
+ * routing guide" and this adds the topic's own title after it, so the shell
+ * renders `Plugin routing guide / Layouts` without either route knowing about
+ * the other. The props are the ones `load` and the component get - this route's
+ * own, and typed by the same loader.
+ */
+const GuideTopicBreadcrumb = ({
+  loaderData,
+}: PluginRouteBreadcrumbProps<Topic>) => loaderData.title;
+
+/**
  * `load` above `head`, and that order is load-bearing.
  *
  * TypeScript resolves an object literal's context-sensitive members in the order
@@ -124,6 +140,7 @@ export const route = definePluginRoute({
    * matched routes, and a child inherits by saying nothing.
    */
   head: ({ loaderData }) => ({ title: loaderData?.title }),
+  breadcrumb: GuideTopicBreadcrumb,
 });
 
 export default GuideTopicPage;

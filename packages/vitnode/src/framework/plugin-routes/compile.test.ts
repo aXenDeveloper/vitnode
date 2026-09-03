@@ -1,605 +1,340 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import type { PluginRouteDefinition } from "../../routing/types.js";
+import type { PluginRouteDeclaration } from "../../routing/tree.js";
 import type { PluginRouteCompilerSource } from "./compile.js";
 
 import { PluginRouteError } from "../../routing/errors.js";
+import {
+  definePluginRoutes,
+  index,
+  layout,
+  lazy,
+  page,
+} from "../../routing/tree.js";
 import { compilePluginRoutes } from "./compile.js";
+import { hostRoutePathsFromFiles } from "./host-routes.js";
 
-const page = (id: string, path: string): PluginRouteDefinition => ({
-  entry: `routes/${id}`,
-  id,
-  path,
-});
+/**
+ * The whole build-time compilation, from what plugins declare to the one file an
+ * app holds.
+ *
+ * Nothing here touches a filesystem: what is asserted is the part that has to be
+ * *exactly* reproducible, and the diagnostics a plugin author actually reads.
+ * Whether a page's module exists on disk is the Vite layer's question, and
+ * `lazyImportSpecifier` is what lets it ask.
+ */
+const lazyPage = () =>
+  lazy(async () => await Promise.resolve({ default: () => null }));
 
-const plugin = (
+const source = (
   pluginId: string,
-  ...routes: PluginRouteDefinition[]
+  ...routes: PluginRouteDeclaration[]
 ): PluginRouteCompilerSource => ({
-  manifestSpecifier: `${pluginId}/routes/manifest`,
   pluginId,
-  routes,
+  routes: definePluginRoutes(routes),
+  routesSpecifier: `${pluginId}/routes`,
 });
-
-const example = (...routes: PluginRouteDefinition[]) =>
-  plugin("@vitnode/example", ...routes);
-
-const blog = (...routes: PluginRouteDefinition[]) =>
-  plugin("@vitnode/blog", ...routes);
 
 const compile = (...sources: PluginRouteCompilerSource[]) =>
   compilePluginRoutes({ sources });
 
-/** The message a call threw. `expect().toThrow` cannot narrow to a type. */
-const messageOf = (run: () => unknown): string => {
+const thrownBy = (build: () => unknown): Error => {
   try {
-    run();
+    build();
   } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+    if (error instanceof Error) return error;
+
+    throw error;
   }
 
   throw new Error("expected a failure");
 };
 
 describe("compilePluginRoutes", () => {
-  it("compiles a plugin's routes into a manifest and a module registry", () => {
-    const { manifest, modules } = compile(example(page("hello", "/hello")));
-
-    expect(manifest).toEqual([
-      {
-        area: "main",
-        entry: "routes/hello",
-        id: "@vitnode/example:hello",
-        kind: "page",
-        namespaces: [],
-        parentId: null,
-        path: "/hello",
-        pluginId: "@vitnode/example",
-        requires: null,
-        routeId: "hello",
-        searchEntry: null,
-        segments: [{ kind: "static", value: "hello" }],
-      },
-    ]);
-    expect(modules).toEqual([
-      {
-        entry: "routes/hello",
-        key: "@vitnode/example:hello",
-        pluginId: "@vitnode/example",
-        routeId: "hello",
-        specifier: "@vitnode/example/routes/hello",
-      },
-    ]);
-  });
-
-  it("compiles nothing at all for an app with no plugins", () => {
-    const { manifest, manifestSource, modules, registrySource } =
-      compilePluginRoutes({ sources: [] });
-
-    expect(manifest).toEqual([]);
-    expect(modules).toEqual([]);
-    expect(manifestSource).toContain("export const pluginRouteManifest = []");
-    expect(registrySource).toContain("export const pluginRouteModules = {}");
-  });
-
-  it("compiles nothing for a plugin that ships no routes", () => {
-    // Most plugins are AdminCP content types with no pages at all, and a
-    // missing route manifest has to mean "none" rather than failing a build.
-    expect(
-      compile({ pluginId: "@vitnode/blog" }, example(page("hello", "/hello")))
-        .modules,
-    ).toHaveLength(1);
-  });
-
-  it("carries every field of the contract into the generated manifest", () => {
-    const { manifestSource } = compile(
-      example(
-        { entry: "routes/frame", id: "frame", kind: "layout", path: "/x" },
-        {
-          entry: "routes/inner",
-          id: "inner",
-          namespaces: ["@vitnode/example.b", "@vitnode/example.a"],
-          parentId: "frame",
-          path: "/x/inner",
-          requires: "authenticated",
-        },
+  it("compiles a plugin's tree into a manifest, its components and one source", () => {
+    const compiled = compile(
+      source(
+        "@vitnode/example",
+        page("/example", { component: lazyPage() }),
+        layout("/example/guide", {
+          component: lazyPage(),
+          messages: ["@vitnode/example.guide"],
+          children: [
+            index({ component: lazyPage() }),
+            page(":topic", { component: lazyPage() }),
+          ],
+        }),
       ),
     );
 
-    expect(manifestSource).toContain("kind: 'layout',");
-    expect(manifestSource).toContain(
-      "namespaces: ['@vitnode/example.a', '@vitnode/example.b'],",
+    expect(compiled.manifest.map(route => [route.kind, route.path])).toEqual([
+      ["page", "/example"],
+      ["layout", "/example/guide"],
+      ["page", "/example/guide"],
+      ["page", "/example/guide/:topic"],
+    ]);
+    expect(compiled.components.size).toBe(4);
+    expect(compiled.modules).toEqual([
+      { pluginId: "@vitnode/example", specifier: "@vitnode/example/routes" },
+    ]);
+    expect(compiled.source).toContain(
+      "import { routes as pluginRoutes0 } from '@vitnode/example/routes'",
     );
-    expect(manifestSource).toContain("parentId: '@vitnode/example:frame',");
-    expect(manifestSource).toContain("requires: 'authenticated',");
   });
 
-  it("normalises once, so nothing downstream has to", () => {
-    const [route] = compile(
-      example({
-        entry: "routes/hello",
-        id: "hello",
-        namespaces: ["b", "a", "b"],
-        path: "/hello/",
-      }),
-    ).manifest;
+  it("compiles nothing at all for an app with no plugins", () => {
+    const compiled = compile();
 
-    // A trailing slash is formatting, and a namespace list is a set.
-    expect(route.path).toBe("/hello");
-    expect(route.namespaces).toEqual(["a", "b"]);
+    expect(compiled.manifest).toEqual([]);
+    expect(compiled.modules).toEqual([]);
+    expect(compiled.source).toContain("export const pluginRouteSources = []");
+  });
+
+  it("imports a plugin that resolves a routes module but declares none", () => {
+    // Importing it is harmless and keeps the dev server's watcher meaningful:
+    // the file exists, so adding the first route to it regenerates rather than
+    // requiring a restart.
+    const compiled = compile(source("@vitnode/example"));
+
+    expect(compiled.manifest).toEqual([]);
+    expect(compiled.modules).toHaveLength(1);
+  });
+
+  it("leaves out a plugin with no routes module at all", () => {
+    const compiled = compilePluginRoutes({
+      sources: [{ pluginId: "@vitnode/blog" }],
+    });
+
+    expect(compiled.modules).toEqual([]);
+    expect(compiled.source).toContain("export const pluginRouteSources = []");
   });
 });
 
 describe("determinism", () => {
-  it("produces the same bytes whichever order the plugins were configured in", () => {
-    const forwards = compile(example(page("b", "/b")), blog(page("a", "/a")));
-    const backwards = compile(blog(page("a", "/a")), example(page("b", "/b")));
+  const one = () =>
+    source("@vitnode/example", page("/example", { component: lazyPage() }));
+  const two = () =>
+    source("@acme/blog", page("/blog", { component: lazyPage() }));
 
-    expect(backwards.manifestSource).toBe(forwards.manifestSource);
-    expect(backwards.registrySource).toBe(forwards.registrySource);
+  it("produces the same bytes whichever order the plugins were configured in", () => {
+    expect(compile(one(), two()).source).toBe(compile(two(), one()).source);
   });
 
-  it("produces the same bytes whichever order one plugin declared its routes in", () => {
-    const forwards = compile(example(page("a", "/a"), page("b", "/b")));
-    const backwards = compile(example(page("b", "/b"), page("a", "/a")));
-
-    expect(backwards.manifestSource).toBe(forwards.manifestSource);
-    expect(backwards.registrySource).toBe(forwards.registrySource);
+  it("produces the same manifest whichever order they were configured in", () => {
+    expect(compile(one(), two()).manifest).toEqual(
+      compile(two(), one()).manifest,
+    );
   });
 
   it("sorts static paths before the dynamic ones that shadow them", () => {
     expect(
       compile(
-        example(page("show", "/member/:id"), page("new", "/member/new")),
+        source(
+          "@vitnode/example",
+          page("/example/:id", { component: lazyPage() }),
+          page("/example/new", { component: lazyPage() }),
+        ),
       ).manifest.map(route => route.path),
-    ).toEqual(["/member/new", "/member/:id"]);
+    ).toEqual(["/example/new", "/example/:id"]);
   });
 });
 
-describe("the two generated files describe one set of routes", () => {
-  it("registers a module for every route in the manifest, under its id", () => {
-    const { manifest, modules } = compile(
-      example(page("a", "/a")),
-      blog(page("b", "/b"), page("c", "/c")),
+describe("one snapshot, one file", () => {
+  it("keys a component for every route in the manifest", () => {
+    const compiled = compile(
+      source(
+        "@vitnode/example",
+        layout("/example", {
+          component: lazyPage(),
+          children: [index({ component: lazyPage() })],
+        }),
+      ),
     );
 
-    expect(modules.map(module => module.key)).toEqual(
-      [...manifest].map(route => route.id).sort(),
-    );
+    for (const route of compiled.manifest) {
+      expect(compiled.components.get(route.id)).toBeDefined();
+    }
   });
 
-  it("derives the registry from the manifest, so a rejected route reaches neither", () => {
-    // The manifest is built first and the registry from it, which is what makes
-    // "a route that fails validation cannot leave an import behind" structural
-    // rather than something the two steps have to agree about.
-    const failed = messageOf(() =>
-      compile(example(page("ok", "/ok"), page("bad", "/BAD"))),
-    );
-
-    expect(failed).toContain("uppercase letters");
+  it("writes the file from the plugins that survived validation", () => {
+    // A tree that cannot be flattened fails the whole compilation, so there is
+    // no state in which a broken plugin leaves a stale import behind.
+    expect(
+      thrownBy(() =>
+        compile(
+          source(
+            "@vitnode/example",
+            page("/example", { component: lazyPage() }),
+          ),
+          source("@acme/blog", page("blog", { component: lazyPage() })),
+        ),
+      ).message,
+    ).toContain("A top-level page in @acme/blog");
   });
 
-  it("writes one literal import per route, and never a computed specifier", () => {
-    const { registrySource } = compile(
-      example(page("a", "/a")),
-      blog(page("b", "/b")),
+  it("names no page module in the generated source", () => {
+    const compiled = compile(
+      source("@vitnode/example", page("/example", { component: lazyPage() })),
     );
 
-    expect(registrySource).toContain(
-      "'@vitnode/blog:b': () => import('@vitnode/blog/routes/b'),",
-    );
-    expect(registrySource).toContain(
-      "'@vitnode/example:a': () => import('@vitnode/example/routes/a'),",
-    );
-    // Every specifier a bundler has to follow is a literal string in the source.
-    expect(registrySource).not.toMatch(/import\((?!')/);
+    expect(compiled.source).not.toContain("pages/");
   });
 });
 
 describe("enabling and disabling a plugin", () => {
-  const both = () => compile(example(page("a", "/a")), blog(page("b", "/b")));
-  const one = () => compile(example(page("a", "/a")));
+  const example = () =>
+    source("@vitnode/example", page("/example", { component: lazyPage() }));
+  const blog = () =>
+    source("@acme/blog", page("/blog", { component: lazyPage() }));
 
-  it("leaves a disabled plugin no route and no module import", () => {
-    const { manifestSource, registrySource } = one();
+  it("leaves a disabled plugin no route and no import", () => {
+    const compiled = compile(example());
 
-    expect(manifestSource).not.toContain("@vitnode/blog");
-    expect(registrySource).not.toContain("@vitnode/blog");
+    expect(compiled.source).not.toContain("@acme/blog");
+    expect(compiled.manifest.map(route => route.pluginId)).toEqual([
+      "@vitnode/example",
+    ]);
   });
 
   it("is the same compilation whether a plugin was never there or removed", () => {
-    // Both generated files are written from the list the plugin's routes are no
-    // longer in, so "disabled" and "never installed" cannot differ.
-    expect(one().registrySource).toBe(
-      compilePluginRoutes({
-        sources: [example(page("a", "/a")), { pluginId: "@vitnode/blog" }],
-      }).registrySource,
+    expect(compile(example()).source).toBe(compile(example()).source);
+    expect(compile(example(), blog()).source).not.toBe(
+      compile(example()).source,
     );
   });
 
-  it("adds exactly the enabled plugin's routes back", () => {
-    expect(both().manifest.map(route => route.id)).toEqual([
-      "@vitnode/example:a",
-      "@vitnode/blog:b",
-    ]);
-  });
-
-  it("follows a changed path without changing the route's identity", () => {
-    const before = compile(example(page("a", "/a")));
-    const after = compile(example({ entry: "routes/a", id: "a", path: "/z" }));
-
-    expect(after.manifest[0].id).toBe(before.manifest[0].id);
-    expect(after.manifest[0].path).toBe("/z");
-    expect(after.registrySource).toBe(before.registrySource);
-  });
-
-  it("follows a changed entry into the generated import", () => {
-    const { registrySource } = compile(
-      example({ entry: "routes/moved", id: "a", path: "/a" }),
+  it("follows a changed path", () => {
+    const moved = compile(
+      source("@vitnode/example", page("/moved", { component: lazyPage() })),
     );
 
-    expect(registrySource).toContain(
-      "'@vitnode/example:a': () => import('@vitnode/example/routes/moved'),",
-    );
-  });
-});
-
-describe("collisions", () => {
-  it("rejects two plugins claiming one path", () => {
-    expect(
-      messageOf(() => compile(example(page("a", "/x")), blog(page("b", "/x")))),
-    ).toContain("Plugin route path collision");
-  });
-
-  it("rejects two paths that are one route space spelled twice", () => {
-    // `/member/:id` and `/member/:slug` match exactly the same URLs.
-    expect(
-      messageOf(() =>
-        compile(
-          example(page("mine", "/member/:id")),
-          blog(page("theirs", "/member/:slug")),
-        ),
-      ),
-    ).toContain("collision");
-  });
-
-  it("does not confuse a static path with the dynamic one beside it", () => {
-    expect(
-      compile(
-        example(page("new", "/member/new")),
-        blog(page("show", "/member/:id")),
-      ).manifest,
-    ).toHaveLength(2);
-  });
-
-  it("rejects a duplicate route id within one plugin", () => {
-    expect(
-      messageOf(() => compile(example(page("a", "/a"), page("a", "/b")))),
-    ).toContain('Duplicate plugin route id "@vitnode/example:a"');
-  });
-
-  it("lets two plugins use the same local route id", () => {
-    expect(
-      compile(
-        example(page("index", "/a")),
-        blog(page("index", "/b")),
-      ).modules.map(module => module.key),
-    ).toEqual(["@vitnode/blog:index", "@vitnode/example:index"]);
-  });
-
-  it("rejects a plugin route that shadows one of the application's own", () => {
-    const message = messageOf(() =>
-      compilePluginRoutes({
-        hostRoutes: [{ file: "src/routes/_main/search.tsx", path: "/search" }],
-        sources: [example(page("search", "/search"))],
-      }),
-    );
-
-    expect(message).toContain('claims "/search"');
-    expect(message).toContain("src/routes/_main/search.tsx");
-  });
-
-  /**
-   * `/admin/content/blog` used to be refused here.
-   *
-   * A build-time strangler - `assertNoLegacyRouteCollision` - read every URL the
-   * Next.js AdminCP answered off `@vitnode/core`'s own `src/routes/admin/**` and
-   * refused a plugin route that claimed one, because a TanStack route at that
-   * path turned a working Next.js screen into a not-found. There is one
-   * application now and that directory is gone, so a plugin may claim any URL
-   * the host's own route files do not - which is exactly what
-   * `assertNoHostRouteCollision` above checks, against the real route tree
-   * rather than against a second application.
-   */
-  it("compiles a plugin route under /admin/content, which no other app answers", () => {
-    expect(
-      compile(
-        example({
-          area: "admin",
-          entry: "routes/posts",
-          id: "posts",
-          path: "/admin/content/blog",
-        }),
-      ).manifest,
-    ).toHaveLength(1);
-  });
-});
-
-/**
- * The AdminCP as a destination for a plugin page, through the whole compiler.
- *
- * The unit rules are `routing/manifest.test.ts`'s and `routing/graph.test.ts`'s.
- * What is asserted here is that an admin route survives the parts a build adds -
- * the generated literal, the registry, the parity check - unchanged.
- */
-describe("the admin area", () => {
-  const reports = (): PluginRouteCompilerSource =>
-    example({
-      area: "admin",
-      entry: "routes/reports",
-      id: "reports",
-      namespaces: ["@vitnode/example.admin"],
-      path: "/admin/reports",
-    });
-
-  it("carries the area into the generated manifest", () => {
-    const { manifest, manifestSource } = compile(reports());
-
-    expect(manifest[0]).toMatchObject({
-      area: "admin",
-      path: "/admin/reports",
-    });
-    expect(manifestSource).toContain("area: 'admin'");
-    expect(manifestSource).toContain("path: '/admin/reports'");
-  });
-
-  /**
-   * The generated registry is the *how*, and an area is not part of it: a module
-   * is imported the same way wherever its page is framed. One literal `import()`
-   * per route, exactly as Stage 11 emits for a public page.
-   */
-  it("generates the same one literal import a public route gets", () => {
-    expect(compile(reports()).registrySource).toContain(
-      "'@vitnode/example:reports': () => import('@vitnode/example/routes/reports'),",
-    );
-  });
-
-  /**
-   * An area frames a page; it does not move it. Both shells are pathless, so an
-   * admin route and a public route spelling one pathname are one URL claimed
-   * twice - and the compiler refuses it with both plugins and both manifests
-   * named, which is the whole value of catching it here rather than in a router.
-   */
-  it("refuses an admin route and a public route at one pathname", () => {
-    expect(() =>
-      compile(
-        example(
-          { area: "admin", entry: "routes/a", id: "a", path: "/reports" },
-          { entry: "routes/b", id: "b", path: "/reports" },
-        ),
-      ),
-    ).toThrow(/collision on "\/reports"/);
-  });
-
-  /** The pair that is actually two URLs, and is accepted. */
-  it("keeps an admin route and a public route with different paths", () => {
-    expect(
-      compile(
-        example(
-          { area: "admin", entry: "routes/a", id: "a", path: "/admin/reports" },
-          { entry: "routes/b", id: "b", path: "/reports" },
-        ),
-      ).manifest.map(route => [route.area, route.path]),
-    ).toEqual([
-      ["admin", "/admin/reports"],
-      ["main", "/reports"],
-    ]);
-  });
-});
-
-describe("hierarchy", () => {
-  const frame = (id: string, path: string): PluginRouteDefinition => ({
-    entry: `routes/${id}`,
-    id,
-    kind: "layout",
-    path,
-  });
-
-  const child = (
-    id: string,
-    path: string,
-    parentId: string,
-  ): PluginRouteDefinition => ({ entry: `routes/${id}`, id, parentId, path });
-
-  it("namespaces a declared parent id, so a manifest addresses one id space", () => {
-    const manifest = compile(
-      example(
-        frame("settings", "/settings"),
-        child("index", "/settings", "settings"),
-      ),
-    ).manifest;
-
-    expect(manifest.find(route => route.routeId === "index")?.parentId).toBe(
-      "@vitnode/example:settings",
-    );
-  });
-
-  it("rejects a parent no route in the manifest has", () => {
-    expect(
-      messageOf(() => compile(example(child("a", "/a", "nope")))),
-    ).toContain("declares the parent");
-  });
-
-  it("rejects a route that is its own parent", () => {
-    expect(messageOf(() => compile(example(child("a", "/a", "a"))))).toContain(
-      "is its own parent",
-    );
-  });
-
-  it("rejects a cycle", () => {
-    expect(
-      messageOf(() =>
-        compile(
-          example(
-            { ...frame("a", "/a"), parentId: "b" },
-            { ...frame("b", "/b"), parentId: "a" },
-          ),
-        ),
-      ),
-    ).toContain("parent cycle");
-  });
-
-  it("rejects a parent that is not a layout", () => {
-    expect(
-      messageOf(() =>
-        compile(example(page("a", "/a"), child("b", "/a/b", "a"))),
-      ),
-    ).toContain("rather than a layout");
-  });
-
-  it("rejects a layout with nothing inside it", () => {
-    expect(
-      messageOf(() => compile(example(frame("frame", "/frame")))),
-    ).toContain("layout with no routes inside it");
-  });
-
-  it("rejects a child that claims a path outside its parent", () => {
-    expect(
-      messageOf(() =>
-        compile(
-          example(
-            frame("frame", "/frame"),
-            child("away", "/elsewhere", "frame"),
-          ),
-        ),
-      ),
-    ).toContain("not inside its parent");
-  });
-
-  it("cannot express a parent in another plugin", () => {
-    // A `parentId` is plugin-local, so the id is namespaced into the declaring
-    // plugin and the other plugin's route is simply not found.
-    expect(
-      messageOf(() =>
-        compile(
-          blog(frame("frame", "/frame"), child("in", "/frame/in", "frame")),
-          example(child("stolen", "/frame/mine", "frame")),
-        ),
-      ),
-    ).toContain('"@vitnode/example:frame"');
-  });
-
-  it("keeps a parent in front of its children in the compiled manifest", () => {
-    expect(
-      compile(
-        example(
-          child("security", "/settings/security", "settings"),
-          child("index", "/settings", "settings"),
-          frame("settings", "/settings"),
-        ),
-      ).manifest.map(route => route.routeId),
-    ).toEqual(["index", "settings", "security"]);
+    expect(moved.manifest[0].path).toBe("/moved");
+    expect(moved.manifest[0].id).toBe("@vitnode/example:page#/moved");
   });
 });
 
 describe("diagnostics", () => {
-  it("names the manifest a bad route was declared in", () => {
-    expect(messageOf(() => compile(example(page("a", "/A"))))).toContain(
-      'Declared in "@vitnode/example/routes/manifest".',
-    );
-  });
-
-  it("names both manifests in a collision between two plugins", () => {
-    const message = messageOf(() =>
-      compile(example(page("a", "/x")), blog(page("b", "/x"))),
-    );
-
-    expect(message).toContain('Declared in "@vitnode/blog/routes/manifest".');
-    expect(message).toContain(
-      'is declared in "@vitnode/example/routes/manifest".',
-    );
-  });
-
-  it("prefixes every failure so it can be found in a Vite log", () => {
-    expect(messageOf(() => compile(example(page("a", "/A"))))).toContain(
-      "[VitNode plugin routes]",
-    );
-  });
-
-  it("keeps the structured fields a build tool can render itself", () => {
-    let thrown: unknown;
-
-    try {
-      compile(example(page("a", "/A")));
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(PluginRouteError);
-    expect(thrown).toMatchObject({
-      code: "invalid-path",
-      path: "/A",
-      pluginId: "@vitnode/example",
-      routeId: "a",
-    });
-  });
-
-  it("says which property is wrong, not just that the route is", () => {
-    expect(
-      messageOf(() =>
-        compile(example({ entry: "routes/a.tsx", id: "a", path: "/a" })),
+  it("names the module a colliding route was declared in", () => {
+    const error = thrownBy(() =>
+      compile(
+        source("@vitnode/example", page("/example", { component: lazyPage() })),
+        source("@acme/blog", page("/example", { component: lazyPage() })),
       ),
-    ).toContain("invalid entry");
-    expect(
-      messageOf(() =>
-        compile(
-          example({
-            entry: "routes/a",
-            id: "a",
-            namespaces: ["__proto__"],
-            path: "/a",
-          }),
-        ),
-      ),
-    ).toContain("namespaces[0]");
+    );
+
+    expect(error).toBeInstanceOf(PluginRouteError);
+    expect(error.message).toContain("[VitNode plugin routes]");
+    expect(error.message).toContain('Declared in "@acme/blog/routes"');
+    expect(error.message).toContain('is declared in "@vitnode/example/routes"');
   });
 
-  it("still fails clearly for a plugin that declared no manifest specifier", () => {
+  it("names the module of a route that is illegal on its own", () => {
     expect(
-      messageOf(() =>
-        compilePluginRoutes({
-          sources: [
-            { pluginId: "@vitnode/example", routes: [page("a", "/A")] },
-          ],
-        }),
-      ),
-    ).toContain("uppercase letters");
+      thrownBy(() =>
+        compile(source("@acme/blog", page("/Blog", { component: lazyPage() }))),
+      ).message,
+    ).toContain('Declared in "@acme/blog/routes"');
+  });
+
+  it("rejects a plugin route that shadows one of the application's own", () => {
+    const error = thrownBy(() =>
+      compilePluginRoutes({
+        hostRoutes: hostRoutePathsFromFiles(["_main/discover.tsx"]),
+        sources: [
+          source(
+            "@vitnode/example",
+            page("/discover", { component: lazyPage() }),
+          ),
+        ],
+      }),
+    );
+
+    expect(error.message).toContain("/discover");
+    expect(error.message).toContain("_main/discover.tsx");
+  });
+
+  it("does not confuse a static host route with a dynamic plugin one", () => {
+    expect(() =>
+      compilePluginRoutes({
+        hostRoutes: hostRoutePathsFromFiles(["_main/example.new.tsx"]),
+        sources: [
+          source(
+            "@vitnode/example",
+            page("/example/:id", { component: lazyPage() }),
+          ),
+        ],
+      }),
+    ).not.toThrow();
   });
 });
 
-describe("escaping", () => {
-  it("escapes a value that would otherwise close its own string literal", () => {
-    // Nothing that reaches here can contain a quote today - every field is
-    // matched against a pattern first - and a generator that concatenates
-    // unescaped strings is one refactor away from writing a plugin's data into
-    // an app's source.
-    const { manifestSource } = compilePluginRoutes({
-      sources: [
-        {
-          pluginId: "@vitnode/example",
-          routes: [
-            {
-              entry: "routes/a",
-              id: "a",
-              namespaces: ["it's"],
-              path: "/a",
-            },
-          ],
-        },
-      ],
-    });
+describe("the admin area", () => {
+  const admin = () =>
+    source(
+      "@vitnode/example",
+      page("/admin/example", { area: "admin", component: lazyPage() }),
+    );
 
-    expect(manifestSource).toContain("namespaces: ['it\\'s'],");
+  it("carries the area into the manifest", () => {
+    expect(compile(admin()).manifest[0]).toMatchObject({
+      area: "admin",
+      path: "/admin/example",
+    });
+  });
+
+  it("generates the same one static import a public route gets", () => {
+    expect(compile(admin()).modules).toEqual([
+      { pluginId: "@vitnode/example", specifier: "@vitnode/example/routes" },
+    ]);
+  });
+
+  it("refuses an admin route and a public route at one pathname", () => {
+    expect(
+      thrownBy(() =>
+        compile(
+          admin(),
+          source(
+            "@acme/blog",
+            page("/admin/example", { component: lazyPage() }),
+          ),
+        ),
+      ).message,
+    ).toContain("path collision");
+  });
+});
+
+describe("hierarchy", () => {
+  it("carries a nested route's parent as a namespaced id", () => {
+    const compiled = compile(
+      source(
+        "@vitnode/example",
+        layout("/example/guide", {
+          component: lazyPage(),
+          children: [page(":topic", { component: lazyPage() })],
+        }),
+      ),
+    );
+
+    expect(compiled.manifest.map(route => [route.id, route.parentId])).toEqual([
+      ["@vitnode/example:layout#/example/guide", null],
+      [
+        "@vitnode/example:page#/example/guide/:topic",
+        "@vitnode/example:layout#/example/guide",
+      ],
+    ]);
+  });
+
+  it("fails the build on a layout with nothing inside it", () => {
+    expect(
+      thrownBy(() =>
+        compile(
+          source(
+            "@vitnode/example",
+            layout("/example", { component: lazyPage(), children: [] }),
+          ),
+        ),
+      ).message,
+    ).toContain("layout with no `children`");
   });
 });

@@ -15,11 +15,16 @@ import {
 
 import type { CheckedPluginRouteModule } from "@/routing";
 
+import type { RouteBreadcrumbProps } from "../breadcrumb/model";
 import type { RuntimePluginRoutePageProps } from "./loader-data";
 import type { PluginRouteModuleRef } from "./module-ref";
 
 import { RouteMessages } from "../i18n/route-messages";
-import { pluginRoutePageProps } from "./loader-data";
+import {
+  pluginRouteLoaderData,
+  pluginRoutePageProps,
+  pluginRouteSearch,
+} from "./loader-data";
 
 /**
  * The React half of a plugin route: what actually renders once the module has
@@ -163,26 +168,13 @@ export const pluginLayoutComponent = (
 };
 
 /**
- * One candidate for a plugin route's crumb: a module, and the strings it
- * renders in.
- */
-export interface PluginRouteCrumb {
-  module: PluginRouteModuleRef;
-  /** The owning route's own namespace list - see `./specs`. */
-  namespaces: readonly string[];
-}
-
-/**
- * What a plugin route contributes to the shell's breadcrumb area.
+ * A plugin route's own crumb, rendered in the shell's trail.
  *
- * Stage 8's rule is "the deepest matched route that declared a crumb wins", read
- * off `staticData` - and a plugin route cannot answer it there, because whether
- * it declares a crumb is in its *module*, which has not been fetched when
- * `staticData` is written. So every plugin route declares this one component
- * instead, handed the chain from itself up through its layouts, and it applies
- * the same rule at render time over what has actually arrived. The outcome is
- * identical to each route having declared its own crumb; what is different is
- * only when the question can be asked.
+ * Every plugin route declares this one component and the shell collects one item
+ * per matched route, so a page inside two layouts contributes the third crumb of
+ * three and never restates the two above it. What the plugin's own component
+ * returns is the label; the separator, the `aria-current`, the locale-aware link
+ * to this route's URL and the position in the trail are all the shell's.
  *
  * ## The provider, and why it is here rather than in the plugin
  *
@@ -192,8 +184,8 @@ export interface PluginRouteCrumb {
  * `RouteMessages`, which is what `SettingsBreadcrumb` does by hand; a plugin
  * cannot, because `RouteMessages` is a TanStack component and a plugin route
  * module may not import one. So the runtime mounts it, with the namespaces of
- * the route that *declared* the crumb - the same list that route's loader
- * already warmed, so it reads a cache entry rather than fetching one.
+ * the route that declared the crumb - the same list that route's loader already
+ * warmed, so it reads a cache entry rather than fetching one.
  *
  * `Suspense` around it because the loader warms the messages and the module in
  * parallel: if the module wins that race the crumb can render a moment before
@@ -203,52 +195,41 @@ export interface PluginRouteCrumb {
  * ## Why it may not suspend on the module itself
  *
  * Same reason. It reads what has already arrived (`ref.current`) and subscribes
- * for the rest: before the modules resolve it renders nothing, and the moment
- * they do it renders the crumb. `useSyncExternalStore` is exactly this,
- * including the case a plainer implementation gets wrong - a module that
- * resolves between the first render and the subscription.
+ * for the rest: before the module resolves it renders nothing, and the moment it
+ * does it renders the crumb. `useSyncExternalStore` is exactly this, including
+ * the case a plainer implementation gets wrong - a module that resolves between
+ * the first render and the subscription.
  *
- * The chunk is never fetched *for* the breadcrumb. The refs are the same
- * memoised imports the route's component and loader are already waiting on.
+ * The chunk is never fetched *for* the breadcrumb, and never split from the page
+ * it belongs to: the ref is the same memoised import the route's component and
+ * loader are already waiting on.
  */
-export const PluginRouteBreadcrumb = ({
-  crumbs,
-}: {
-  crumbs: readonly PluginRouteCrumb[];
-}) => {
-  const subscribe = useCallback(
-    (listener: () => void) => {
-      const unsubscribes = crumbs.map(crumb =>
-        crumb.module.subscribe(listener),
-      );
+export const pluginRouteBreadcrumb = (
+  module: PluginRouteModuleRef,
+  namespaces: readonly string[],
+): React.FunctionComponent<RouteBreadcrumbProps> => {
+  // Defined once per route rather than per render, which is what
+  // `useSyncExternalStore` needs of them - and there is nothing reactive to
+  // depend on: one component is built per module.
+  const subscribe = (listener: () => void) => module.subscribe(listener);
+  const snapshot = () => module.current?.route.breadcrumb;
 
-      return () => {
-        for (const unsubscribe of unsubscribes) unsubscribe();
-      };
-    },
-    [crumbs],
-  );
+  return function PluginRouteBreadcrumb(props: RouteBreadcrumbProps) {
+    const Breadcrumb = useSyncExternalStore(subscribe, snapshot, snapshot);
 
-  // An index rather than the crumb itself, so the snapshot is a primitive that
-  // only changes when a module arrives - which is what `useSyncExternalStore`
-  // requires of it.
-  const snapshot = useCallback(
-    () =>
-      crumbs.findIndex(
-        crumb => crumb.module.current?.route.breadcrumb !== undefined,
-      ),
-    [crumbs],
-  );
+    if (!Breadcrumb) return null;
 
-  const index = useSyncExternalStore(subscribe, snapshot, snapshot);
-  const declared = index < 0 ? undefined : crumbs[index];
-  const Breadcrumb = declared?.module.current?.route.breadcrumb;
-
-  if (!declared || !Breadcrumb) return null;
-
-  return (
-    <Suspense>
-      {withMessages(declared.namespaces, createElement(Breadcrumb))}
-    </Suspense>
-  );
+    return (
+      <Suspense>
+        {withMessages(
+          namespaces,
+          createElement(Breadcrumb, {
+            loaderData: pluginRouteLoaderData(props.loaderData),
+            params: props.params,
+            search: pluginRouteSearch(props.loaderData),
+          }),
+        )}
+      </Suspense>
+    );
+  };
 };

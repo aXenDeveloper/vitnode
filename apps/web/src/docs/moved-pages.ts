@@ -20,6 +20,7 @@ const EXACT_MOVES: Record<string, string> = {
   'dev/not-found': 'dev/routing/not-found',
   'dev/plugins/admin-page': 'dev/plugins/admin',
   'dev/plugins/dashboard-widgets': 'dev/plugins/admin/dashboard-widgets',
+  'dev/plugins/route-manifest': 'dev/plugins/routes',
   'dev/tanstack': 'dev/architecture',
   'dev/tanstack/admin': 'dev/plugins/admin-page',
   'dev/tanstack/data-loading': 'dev/data-loading',

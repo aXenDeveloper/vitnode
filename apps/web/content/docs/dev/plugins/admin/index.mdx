@@ -16,18 +16,16 @@ plugin supplies the useful bit.
 
 ### Claim an AdminCP route
 
-```ts title="plugins/site-notes/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from '@vitnode/core/routing'
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:6]
-  {
+export const routes = definePluginRoutes([
+  // [!code ++:4]
+  page('/admin/site-notes/settings', {
     area: 'admin',
-    entry: 'routes/admin-settings-page',
-    id: 'settings',
-    path: '/admin/site-notes/settings',
-  },
-]
+    component: lazy(() => import('./pages/admin-settings-page')),
+  }),
+])
 ```
 
   </Step>
@@ -35,7 +33,7 @@ export const routes: PluginRouteDefinition[] = [
 
 ### Render the plugin page
 
-```tsx title="plugins/site-notes/src/routes/admin-settings-page.tsx"
+```tsx title="plugins/site-notes/src/pages/admin-settings-page.tsx"
 const AdminSettingsPage = () => (
   <div className="flex flex-col gap-2 p-4">
     <h2 className="text-2xl font-semibold">Site notes settings</h2>
@@ -135,8 +133,8 @@ the declared permission.
   />
   <Card
     icon={<RouteIcon />}
-    title="Route manifest"
+    title="Plugin routes"
     description="Configure route areas, namespaces, guards, and parameters."
-    href="/docs/dev/plugins/route-manifest"
+    href="/docs/dev/plugins/routes"
   />
 </Cards>

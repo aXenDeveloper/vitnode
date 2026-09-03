@@ -7,8 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
-import type { PluginRouteModuleRegistry } from "@/framework/plugin-routes";
-import type { PluginRoute } from "@/routing";
+import type { PluginRouteDeclarationSource } from "@/routing";
+
+import { definePluginRoutes, lazy, page } from "@/routing";
 
 import type { PluginRoutePageHead } from "./mount";
 
@@ -39,65 +40,40 @@ import { pluginRouteSpecs } from "./specs";
  * expected paths would be asserting against its own copy of the answer.
  */
 
-const route = (overrides: Partial<PluginRoute> = {}): PluginRoute => ({
-  area: "main",
-  entry: "routes/page",
-  id: "plugin:page",
-  kind: "page",
-  namespaces: [],
-  parentId: null,
-  path: "/page",
-  pluginId: "plugin",
-  requires: null,
-  routeId: "page",
-  searchEntry: null,
-  segments: [{ kind: "static", value: "page" }],
-  ...overrides,
-});
-
-const registryOf = (...keys: string[]): PluginRouteModuleRegistry =>
-  Object.fromEntries(
-    keys.map(key => [
-      key,
-      async () => Promise.resolve({ default: () => null }),
-    ]),
-  );
-
 const pageHead: PluginRoutePageHead = ({ title }) => ({
   meta: title ? [{ title }] : [],
 });
 
-/** One plugin's page, at `/example`. */
-const EXAMPLE = route({
-  entry: "routes/example",
-  id: "example:page",
-  path: "/example",
-  pluginId: "example",
-  routeId: "page",
-  segments: [{ kind: "static", value: "example" }],
+/** One configured plugin with one page, as the generated file holds it. */
+const plugin = (
+  pluginId: string,
+  path: string,
+): PluginRouteDeclarationSource => ({
+  pluginId,
+  routes: definePluginRoutes([
+    page(path, {
+      component: lazy(
+        async () => await Promise.resolve({ default: () => null }),
+      ),
+    }),
+  ]),
 });
+
+/** One plugin's page, at `/example`. */
+const EXAMPLE = plugin("example", "/example");
 
 /** A second plugin's page, at `/reports`, so removal can be told from a reset. */
-const REPORTS = route({
-  entry: "routes/reports",
-  id: "reports:page",
-  path: "/reports",
-  pluginId: "reports",
-  routeId: "page",
-  segments: [{ kind: "static", value: "reports" }],
-});
+const REPORTS = plugin("reports", "/reports");
 
 /**
- * The two generated files for a given configuration, as one call.
+ * The generated file for a given configuration, as one call.
  *
- * The registry is derived from the same route list rather than being a fixed
- * superset, because that is the invariant the real build has: both generated
- * files are written from one pass over one configured plugin list, so a disabled
- * plugin loses its manifest entry and its module import together.
- * `pluginRouteSpecs` refuses anything else, which is how this was found.
+ * A plugin's routes and the modules behind them are one declaration, so a
+ * disabled plugin loses both together - there is no second list that could stay
+ * behind.
  */
-const specsFor = (...routes: PluginRoute[]) =>
-  pluginRouteSpecs(routes, registryOf(...routes.map(entry => entry.id)));
+const specsFor = (...sources: PluginRouteDeclarationSource[]) =>
+  pluginRouteSpecs(sources);
 
 /**
  * The app's own tree, built once - which is the point. Every mount below
@@ -214,8 +190,8 @@ describe("enabling, disabling and re-enabling a plugin on a live route tree", ()
   });
 
   /**
-   * A path *edit* rather than a removal - the same route id, moved. Both halves
-   * have to hold, and only the removal half is easy to get wrong.
+   * A path *edit* rather than a removal - the same plugin, a different URL. Both
+   * halves have to hold, and only the removal half is easy to get wrong.
    */
   it("follows a route that moved, and drops the path it left", () => {
     const { admin, main, root } = appTree();
@@ -224,15 +200,10 @@ describe("enabling, disabling and re-enabling a plugin on a live route tree", ()
     withPluginRoutes(root, specsFor(EXAMPLE), { mountUnder, pageHead });
     expect(owns(root, "/example")).toBe(true);
 
-    withPluginRoutes(
-      root,
-      specsFor({
-        ...EXAMPLE,
-        path: "/showcase",
-        segments: [{ kind: "static", value: "showcase" }],
-      }),
-      { mountUnder, pageHead },
-    );
+    withPluginRoutes(root, specsFor(plugin("example", "/showcase")), {
+      mountUnder,
+      pageHead,
+    });
 
     expect(owns(root, "/example")).toBe(false);
     expect(owns(root, "/showcase")).toBe(true);
@@ -285,18 +256,17 @@ describe("no orphan routes are left on the tree", () => {
   it("clears one shell's plugin subtree without touching the other's", () => {
     const { admin, main, root } = appTree();
     const mountUnder = { admin, main };
-    const ADMIN_PAGE = route({
-      area: "admin",
-      entry: "routes/admin",
-      id: "admin:page",
-      path: "/admin/reports",
+    const ADMIN_PAGE: PluginRouteDeclarationSource = {
       pluginId: "admin",
-      routeId: "page",
-      segments: [
-        { kind: "static", value: "admin" },
-        { kind: "static", value: "reports" },
-      ],
-    });
+      routes: definePluginRoutes([
+        page("/admin/reports", {
+          area: "admin",
+          component: lazy(
+            async () => await Promise.resolve({ default: () => null }),
+          ),
+        }),
+      ]),
+    };
 
     withPluginRoutes(root, specsFor(EXAMPLE, ADMIN_PAGE), {
       mountUnder,

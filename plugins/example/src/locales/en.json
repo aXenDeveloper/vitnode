@@ -10,7 +10,7 @@
         "desc": "A plugin page inside the AdminCP, shipped by @vitnode/example and served by the app that installed it.",
         "points": {
           "shell": "The sidebar, the breadcrumb and the admin session guard around this page are the AdminCP's - the route declared area: \"admin\" and nothing else.",
-          "path": "The URL is the one the route manifest spells out in full. An area chooses the frame; it never adds a prefix.",
+          "path": "The URL is the one the route spells out in full. An area chooses the frame; it never adds a prefix.",
           "nav": "The sidebar entry that led here is a separate declaration. A plugin page may have no entry, and an entry may point anywhere."
         }
       }
@@ -46,7 +46,7 @@
       "title": "Plugin routing guide",
       "desc": "A nested route shipped by @vitnode/example, served by the app that installed it.",
       "index": {
-        "intro": "This page and the frame around it are two routes declared in one plugin manifest. Neither was copied into the application - both are lazily imported from the plugin's own build output.",
+        "intro": "This page and the frame around it are two routes declared in one plugin's routes.ts. Neither was copied into the application - both are lazily imported from the plugin's own build output.",
         "points": {
           "nested": "A layout claims no URL; this index page claims the layout's.",
           "messages": "The layout declares the messages both pages render in, so they are warmed alongside the code.",

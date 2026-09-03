@@ -38,7 +38,7 @@ TanStack Router automatically extracts route `component`, `errorComponent`, and 
 
 Because `head` is evaluated in the main route bundle, importing strings from component files accidentally pulls entire component trees into the initial download:
 
-```tsx title="plugins/home/src/routes/home-page.tsx"
+```tsx title="plugins/home/src/pages/home-page.tsx"
 import { definePluginRoute } from '@vitnode/core/routing'
 
 // BAD: Pulls HomeRouteContent and all its heavy icons/charts into main entry
@@ -85,7 +85,7 @@ export const ArticleEditor = (props) => (
 
 When a route loader requires a heavy calculation or parsing library, import it dynamically:
 
-```tsx title="plugins/stats/src/routes/stats-page.tsx"
+```tsx title="plugins/stats/src/pages/stats-page.tsx"
 import { definePluginRoute } from '@vitnode/core/routing'
 
 export const route = definePluginRoute({

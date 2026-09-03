@@ -49,7 +49,7 @@ import { useAdminPermissions } from "./permissions";
  * and `adminNavBundle` turns those into declarations plus the message namespaces
  * they need. Nothing here changes either way.
  *
- * No navigation is derived from the route manifest: routes and navigation stay
+ * No navigation is derived from a plugin's route tree: routes and navigation stay
  * separate concepts, and a nav entry may point at a plugin route, at a screen
  * another application serves, or at another origin entirely.
  */

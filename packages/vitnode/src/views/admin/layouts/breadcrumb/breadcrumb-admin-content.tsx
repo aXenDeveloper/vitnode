@@ -1,6 +1,6 @@
 import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
-import { BreadcrumbRenderContent } from "@/views/breadcrumb/breadcrumb-render-content";
+import { BreadcrumbCrumbItems } from "@/views/breadcrumb/breadcrumb-render-content";
 
 import type { NavAdminParent } from "../sidebar/nav/nav-model";
 
@@ -36,11 +36,14 @@ export interface BreadcrumbAdminContentProps {
  *
  * ## What decides which trail is shown
  *
- * Not this component. In Next.js the `@breadcrumb` parallel route whose folder
- * matches the page renders it with that page's segments; in TanStack Start the
- * matched route declares it as `staticData.breadcrumb` and the shell renders the
- * deepest declaration. Both are route-owned - there is no map from pathname to
- * trail anywhere, and nothing registers into one.
+ * Not this component. The matched route declares it as `staticData.breadcrumb`,
+ * and because one AdminCP route is usually several segments deep it declares a
+ * `breadcrumbGroup` - so these items go straight into the shell's own list,
+ * separators and all. There is no map from pathname to trail anywhere, and
+ * nothing registers into one.
+ *
+ * Items rather than a list of its own: the shell renders one navigation landmark
+ * and one `<ol>` for the whole trail, whichever routes contributed to it.
  */
 export const BreadcrumbAdminContent = ({
   labels,
@@ -67,11 +70,5 @@ export const BreadcrumbAdminContent = ({
     crumbs[crumbs.length - 1].label = overrideLastLabel;
   }
 
-  return (
-    <BreadcrumbRenderContent
-      crumbs={crumbs}
-      LinkComponent={LinkComponent}
-      scrollable
-    />
-  );
+  return <BreadcrumbCrumbItems crumbs={crumbs} LinkComponent={LinkComponent} />;
 };

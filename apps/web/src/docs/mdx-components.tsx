@@ -9,7 +9,7 @@ import { Preview } from './preview'
  * Fumadocs' defaults carry the bulk of it: `Callout`, `Card`, `Cards`, the code
  * block and its tabs, the heading anchors, the table wrapper, and - the one that
  * matters most here - `a`, which is the framework link. That is why a Markdown
- * link like `[the manifest](/docs/dev/plugins/route-manifest)` becomes a
+ * link like `[plugin routes](/docs/dev/plugins/routes)` becomes a
  * client-side navigation that keeps the locale prefix: the anchor resolves
  * through `fumadocs-core/framework/tanstack`, which renders TanStack Router's
  * own `<Link>`, which builds its href through this app's `rewrite`. There is no

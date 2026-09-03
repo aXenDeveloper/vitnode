@@ -2,13 +2,13 @@
  * Plugin pages, as real routes in a TanStack Start application's route tree -
  * `@vitnode/core/tanstack/plugin-routes`.
  *
- * An application hands the two generated files to {@link pluginRouteSpecs} and
- * the result to {@link withPluginRoutes}, and that is the whole of its
- * plugin-routing code:
+ * An application hands the one generated file to {@link pluginRouteSpecs} and the
+ * result to {@link withPluginRoutes}, and that is the whole of its plugin-routing
+ * code:
  *
  *     const routeTree = withPluginRoutes(
  *       fileRouteTree,
- *       pluginRouteSpecs(pluginRouteManifest, pluginRouteModules),
+ *       pluginRouteSpecs(pluginRouteSources),
  *       {
  *         mountUnder: { admin: adminShellRoute, main: mainShellRoute },
  *         pageHead,
@@ -22,10 +22,9 @@
  *
  * Everything else is here, because the composition is identical in every
  * installation: the graph, the lazy import, the message provider, the guard, the
- * metadata, the breadcrumb and the refusal to shadow one of the host's own
- * pages.
+ * metadata, the crumb and the refusal to shadow one of the host's own pages.
  *
- *     ./specs        the manifest and the registry, joined and read as a tree
+ *     ./specs        the plugins' trees, flattened, validated and read as a tree
  *     ./module-ref   one memoised, checked import per route
  *     ./mount        that tree, as TanStack routes
  *     ./components   what renders once a module has arrived

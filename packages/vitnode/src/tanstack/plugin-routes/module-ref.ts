@@ -1,4 +1,3 @@
-import type { PluginRouteModuleLoader } from "@/framework/plugin-routes";
 import type { CheckedPluginRouteModule } from "@/routing";
 
 import { readPluginRouteModule } from "@/routing";
@@ -9,12 +8,12 @@ import { readPluginRouteModule } from "@/routing";
  * A plugin route's chunk is wanted by four different things at four different
  * moments - the router's own `component.preload()`, the route's loader, its
  * `head`, and the shell's breadcrumb - and every one of them is on the critical
- * path of the same navigation. Four calls to the registry's loader would be four
- * `import()` expressions of the same specifier: the bundler dedupes the *fetch*,
- * but each caller would still run {@link readPluginRouteModule} again and hold
- * its own copy of the answer, and the breadcrumb - which renders while the match
- * is still pending - would have no way to find out that one of the others had
- * finished.
+ * path of the same navigation. Four calls to the route's own `lazy()` callback
+ * would be four `import()` expressions of the same specifier: the bundler
+ * dedupes the *fetch*, but each caller would still run
+ * {@link readPluginRouteModule} again and hold its own copy of the answer, and
+ * the breadcrumb - which renders while the match is still pending - would have
+ * no way to find out that one of the others had finished.
  *
  * So the import is memoised here, once per route, and exposed as the three
  * shapes those callers actually need:
@@ -45,15 +44,15 @@ export interface PluginRouteModuleRef {
 /**
  * A memoised, checked loader for one plugin route module.
  *
- * The registry's loaders are typed `() => Promise<unknown>` deliberately - what
- * a module is expected to export is not the registry's contract - so this is
- * where that `unknown` is turned into something a router can be handed, by
- * `readPluginRouteModule`, which checks rather than asserts and throws with the
- * route id in the message. Without it the failure is React's "type is invalid"
- * from inside a lazy component, three frames from the plugin that caused it.
+ * A `lazy()` callback is typed `() => Promise<unknown>` here deliberately - what
+ * a page module is expected to export is checked rather than assumed - so this
+ * is where that `unknown` is turned into something a router can be handed, by
+ * `readPluginRouteModule`, which throws with the route id in the message.
+ * Without it the failure is React's "type is invalid" from inside a lazy
+ * component, three frames from the plugin that caused it.
  */
 export const pluginRouteModuleRef = (
-  load: PluginRouteModuleLoader,
+  load: () => Promise<unknown>,
   routeId: string,
 ): PluginRouteModuleRef => {
   const listeners = new Set<() => void>();

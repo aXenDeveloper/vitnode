@@ -35,29 +35,28 @@ npm create vitnode-app@canary -- --plugin
 
 </Tabs>
 
-The result has `routes/manifest.ts`, `routes/home-page.tsx`, `locales/en.json`,
-and `config.tsx`. The CLI adds a workspace dependency but leaves activation to
-you, which makes installed plugins predictable.
+The result has `routes.ts`, `pages/home-page.tsx`, `locales/en.json`, and
+`config.tsx`. The CLI adds a workspace dependency but leaves activation to you,
+which makes installed plugins predictable.
 
   </Step>
   <Step>
 
 ### Claim the page URL
 
-The manifest belongs to the plugin and is all the host needs to discover a
-route:
+The route tree belongs to the plugin and is all the host needs to discover a
+route. `lazy` names the page module without importing it, so the page gets a
+chunk of its own:
 
-```ts title="plugins/site-notes/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from '@vitnode/core/routing'
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:5]
-  {
-    entry: 'routes/home-page',
-    id: 'home',
-    path: '/site-notes',
-  },
-]
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/site-notes', {
+    component: lazy(() => import('./pages/home-page')),
+  }),
+])
 ```
 
   </Step>
@@ -68,7 +67,7 @@ export const routes: PluginRouteDefinition[] = [
 Edit the generated route module. It stays framework-neutral and is lazily
 loaded by the TanStack Start host:
 
-```tsx title="plugins/site-notes/src/routes/home-page.tsx"
+```tsx title="plugins/site-notes/src/pages/home-page.tsx"
 import { useTranslations } from 'use-intl'
 
 const HomePage = () => {

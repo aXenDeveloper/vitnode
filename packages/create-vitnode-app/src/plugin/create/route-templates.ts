@@ -2,12 +2,12 @@
  * The source a scaffolded plugin starts with, as pure functions of its name.
  *
  * Templates as strings rather than as files under `copy-of-vitnode-plugin/`,
- * and the reason is that every one of them has to say the plugin's own name: a
- * route manifest names the module it imports, a page names the message namespace
- * it renders, and `config.tsx` names the plugin id all three are keyed by. A
- * static file cannot, so the scaffold used to copy no `src/` at all - which left
- * a new plugin with a `global.d.ts` importing `./src/locales/en.json` that did
- * not exist, and nothing to point `vitnode dev` at.
+ * and the reason is that every one of them has to say the plugin's own name: the
+ * route tree names the URL it claims, a page names the message namespace it
+ * renders, and `config.tsx` names the plugin id all three are keyed by. A static
+ * file cannot, so the scaffold used to copy no `src/` at all - which left a new
+ * plugin with a `global.d.ts` importing `./src/locales/en.json` that did not
+ * exist, and nothing to point `vitnode dev` at.
  *
  * Pure, and separated from the writing, so what a plugin author is handed can be
  * asserted byte for byte without a filesystem. `route-templates.test.ts` is that
@@ -39,64 +39,60 @@ export const routeSlugFor = (pluginName: string): string =>
     : pluginName;
 
 /**
- * `src/routes/manifest.ts` - the file an app reads to find out this plugin has
- * a page.
+ * `src/routes.ts` - the file an app reads to find out this plugin has a page.
  *
- * One route, with the three fields that have no default. Everything else on a
- * `PluginRouteDefinition` - the area, the kind, the parent, the namespaces, the
- * requirement - is left out rather than written with its default value, so what
- * a new plugin's manifest shows is the minimum rather than a form to fill in.
+ * One `page()`, with the two fields that have no default. Everything else on a
+ * route - the area, the messages, the requirement, the search schema - is left
+ * out rather than written with its default value, so what a new plugin's tree
+ * shows is the minimum rather than a form to fill in.
  */
-export const pluginRouteManifestTemplate = (pluginName: string): string => {
+export const pluginRoutesTemplate = (pluginName: string): string => {
   const slug = routeSlugFor(pluginName);
 
-  return `import type { PluginRouteDefinition } from "@vitnode/core/routing";
+  return `import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
 
 /**
  * The routes this plugin contributes to whatever app installs it.
  *
- * Plain data: an \`entry\` is a *package export subpath*, so
- * \`"routes/home-page"\` is imported as \`"${pluginName}/routes/home-page"\` and
- * resolves through this package's export map to its build output. Nothing here
- * imports a router and nothing here imports a page, so an app can read this list
- * at build time, in Node, without loading a single React component.
+ * Browser-safe data: a path, and the module that renders it. \`lazy\` keeps that
+ * \`import()\` a literal the bundler can follow *without running it*, so your page
+ * gets a chunk of its own and is fetched when somebody navigates to it - not
+ * before. Never import a page into this file: a component named here is in the
+ * initial bundle of every page on the site, which is why VitNode refuses one.
  *
- * Your page is never copied into the application. The app generates a literal
- * \`import()\` for it, the bundler gives it its own chunk, and it stays in this
- * package.
+ * Your page is never copied into the application either. The app holds one static
+ * import of this tree, and nothing else.
  *
- * Add a route by adding a record. \`id\` is a stable name for the page - name it
- * after the page, not the URL, because it survives a path change. \`path\` is the
- * public URL, written in VitNode's own spelling: a dynamic segment is \`:id\`,
- * never Next's \`[id]\` and never TanStack's \`$id\`.
+ * Add a route by adding a \`page()\`. \`path\` is the public URL, written in
+ * VitNode's own spelling: a dynamic segment is \`:id\`, never Next's \`[id]\` and
+ * never TanStack's \`$id\`. To nest pages inside a shared frame, wrap them in a
+ * \`layout()\` and give each child a path relative to it.
  */
-export const routes: PluginRouteDefinition[] = [
-  {
-    entry: "routes/home-page",
-    id: "home",
-    path: "/${slug}",
-  },
-];
+export const routes = definePluginRoutes([
+  page("/${slug}", {
+    component: lazy(() => import("./pages/home-page")),
+  }),
+]);
 `;
 };
 
 /**
- * `src/routes/home-page.tsx` - the page itself.
+ * `src/pages/home-page.tsx` - the page itself.
  *
  * Deliberately the *minimum* module: a default export and nothing else. A route
- * module may also export a \`route\` for its loader, metadata and breadcrumb, and
+ * module may also export a `route` for its loader, metadata and breadcrumb, and
  * the comment says where to read about that rather than scaffolding an empty one
- * - a generated \`route = definePluginRoute({})\` would be a thing to delete.
+ * - a generated `route = definePluginRoute({})` would be a thing to delete.
  */
 export const pluginRouteModuleTemplate = (pluginName: string): string =>
   `import { useTranslations } from "use-intl";
 
 /**
- * The page \`routes/manifest.ts\` declares.
+ * The page \`routes.ts\` declares.
  *
  * Keep it framework-neutral. This module is compiled into the package's own
  * \`dist\` and imported by whichever app installed the plugin, so anything from
- * \`next/*\`, \`next-intl\` or a router pins the plugin to one kind of host.
+ * a router or a host-bound i18n package pins the plugin to one kind of host.
  * \`use-intl\` - which is what VitNode itself renders through - and plain JSX are
  * pinned to neither.
  *
@@ -207,24 +203,23 @@ export const pluginVariableName = (pluginName: string): string => {
 /**
  * `src/config.tsx` - what an application registers.
  *
- * The routes and the messages, and nothing else. `routes` is the same array
- * `routes/manifest.ts` exports, handed on unchanged: an app on Vite reads that
- * file directly at build time and an app that registers the plugin the ordinary
- * way reads it through here, so the two paths cannot describe different routes.
+ * The routes and the messages, and nothing else. `routes` is the same tree
+ * `routes.ts` exports, handed on unchanged: an app on Vite reads that file
+ * directly at build time and an app that registers the plugin the ordinary way
+ * reads it through here, so the two paths cannot describe different routes.
  */
 export const pluginConfigTemplate = (pluginName: string): string =>
   `import { buildPlugin } from "@vitnode/core/lib/plugin";
 
 import messages from "./locales";
-import { routes } from "./routes/manifest";
+import { routes } from "./routes";
 
 /**
  * This plugin, as an application registers it.
  *
- * \`pluginId\` is the package name, and that is not a convention - it is how a
- * route module is imported (\`${pluginName}/routes/home-page\`) and how this
- * plugin's messages are namespaced. The three cannot drift because they are one
- * string.
+ * \`pluginId\` is the package name, and that is not a convention - it is how this
+ * plugin's route tree is imported (\`${pluginName}/routes\`) and how its messages
+ * are namespaced. The two cannot drift because they are one string.
  *
  * Add this to an app's \`src/vitnode.config.ts\` \`plugins\` array. A plugin that
  * is installed but not listed there contributes nothing - no directory is ever
@@ -239,15 +234,13 @@ export const ${pluginVariableName(pluginName)} = () =>
 `;
 
 /**
- * What an app may import from this plugin, and the reason a plugin route
- * `entry` is a subpath rather than a file path.
+ * What an app may import from this plugin.
  *
- * `"./*"` maps every subpath to the build output, so `routes/manifest` is
- * imported as `<name>/routes/manifest` and resolves to
- * `dist/src/routes/manifest.js`. The plugin can move a page inside its own
- * `dist` without breaking any app that installed it, and an app resolves
- * these exactly as a published install would - there is no deep source
- * import anywhere in the path.
+ * `"./*"` maps every subpath to the build output, so `routes` is imported as
+ * `<name>/routes` and resolves to `dist/src/routes.js`. An app resolves it
+ * exactly as a published install would - there is no deep source import
+ * anywhere in the path - and the pages that tree names are reached from inside
+ * it, relative to that same `dist`.
  *
  * `"./locales/*.json"` is separate and points at **source**, because it maps
  * to JSON that is copied rather than compiled: `dist/src/locales/en.json`
@@ -274,6 +267,6 @@ export const pluginRouteScaffold = (
   "src/config.tsx": pluginConfigTemplate(pluginName),
   "src/locales/en.json": pluginMessagesTemplate(pluginName),
   "src/locales/index.ts": pluginMessagesBarrelTemplate(),
-  "src/routes/home-page.tsx": pluginRouteModuleTemplate(pluginName),
-  "src/routes/manifest.ts": pluginRouteManifestTemplate(pluginName),
+  "src/pages/home-page.tsx": pluginRouteModuleTemplate(pluginName),
+  "src/routes.ts": pluginRoutesTemplate(pluginName),
 });

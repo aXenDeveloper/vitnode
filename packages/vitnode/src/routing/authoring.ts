@@ -1,4 +1,5 @@
 import type {
+  PluginRouteBreadcrumbProps,
   PluginRouteHead,
   PluginRouteHeadArgs,
   PluginRouteLoadArgs,
@@ -90,8 +91,16 @@ type UnknownLoaderData =
  * `NoInfer` states which member is the source of truth for each type, so the
  * order stops mattering:
  *
- * - `TData` from what `load` returns. `head` only reads it.
- * - `TSearch` from what `parseSearch` returns. `head` and `load` only read it.
+ * - `TData` from what `load` returns, or from a `breadcrumb` that annotates it.
+ *   `head` only reads it.
+ * - `TSearch` from what `parseSearch` returns. `head`, `load` and `breadcrumb`
+ *   only read it.
+ *
+ * `breadcrumb`'s *second* argument is the one worth naming: a crumb declared as
+ * `({ loaderData }: PluginRouteBreadcrumbProps<Topic>) => loaderData.title`
+ * leaves `PluginRouteBreadcrumbProps` to fill in its default search type, so
+ * without `NoInfer` a route with a `parseSearch` *and* a crumb inferred
+ * `TSearch` from whichever of the two TypeScript happened to read first.
  *
  * There is deliberately no `TContext`. What a plugin's `load` is handed is
  * {@link PluginRouteContext} and only that - see `./module` for why a contract
@@ -105,8 +114,11 @@ type UnknownLoaderData =
  */
 type AuthoredPluginRouteOptions<TData, TSearch> = Omit<
   PluginRouteOptions<TData, TSearch>,
-  "head" | "load"
+  "breadcrumb" | "head" | "load"
 > & {
+  breadcrumb?:
+    | false
+    | React.ComponentType<PluginRouteBreadcrumbProps<TData, NoInfer<TSearch>>>;
   head?: (
     args: PluginRouteHeadArgs<NoInfer<TData>, NoInfer<TSearch>>,
   ) => PluginRouteHead;
@@ -127,7 +139,7 @@ type AuthoredPluginRouteOptions<TData, TSearch> = Omit<
  *     export const route = definePluginRoute({
  *       load: ({ context, params }) => fetchTopic(context.locale, params.topic),
  *       head: ({ loaderData }) => ({ title: loaderData?.title }),
- *       breadcrumb: () => <span>{useTranslations("my-plugin")("title")}</span>,
+ *       breadcrumb: ({ loaderData }) => loaderData.title,
  *     });
  *
  * `context` is {@link PluginRouteContext} - the locale - and there is no way to

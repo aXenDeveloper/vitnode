@@ -23,11 +23,11 @@ export const PLUGIN_ROUTES_ERROR_PREFIX = "[VitNode plugin routes]";
  * So the message a plugin author actually sees is assembled here:
  *
  *     [VitNode plugin routes] Plugin route path collision on "/example" (main):
- *     @vitnode/example already owns "/example" as "@vitnode/example:example-page",
- *     and @vitnode/blog declares "/example" as "@vitnode/blog:example".
- *     Two plugins cannot serve the same path - rename one of them.
- *     Declared in "@vitnode/blog/routes/manifest".
- *     The route it conflicts with is declared in "@vitnode/example/routes/manifest".
+ *     @vitnode/example already owns "/example" (main), and @vitnode/blog declares
+ *     "/example". Give one of them a different path.
+ *     Declared in "@vitnode/blog/routes".
+ *     The route it conflicts with, "@vitnode/example:page#/example", is declared
+ *     in "@vitnode/example/routes".
  *
  * A new error rather than a mutated one, and a `PluginRouteError` rather than a
  * plain `Error`: `code`, `pluginId`, `routeId` and `path` are structured fields a
@@ -35,23 +35,23 @@ export const PLUGIN_ROUTES_ERROR_PREFIX = "[VitNode plugin routes]";
  * annotation cost the caller the machine-readable half of the failure.
  *
  * Anything that is not a `PluginRouteError` is returned untouched - the resolver
- * and the parity check write their own messages, already prefixed.
+ * and the generator write their own messages, already prefixed.
  */
 export const annotatePluginRouteError = (
   error: unknown,
-  manifestSpecifiers: ReadonlyMap<string, string>,
+  routesSpecifiers: ReadonlyMap<string, string>,
 ): unknown => {
   if (!(error instanceof PluginRouteError)) return error;
 
   const parts = [`${PLUGIN_ROUTES_ERROR_PREFIX} ${error.message}`];
-  const declaredIn = manifestSpecifiers.get(error.pluginId);
+  const declaredIn = routesSpecifiers.get(error.pluginId);
 
   if (declaredIn !== undefined) {
     parts.push(`Declared in "${declaredIn}".`);
   }
 
   if (error.conflictsWith) {
-    const otherIn = manifestSpecifiers.get(error.conflictsWith.pluginId);
+    const otherIn = routesSpecifiers.get(error.conflictsWith.pluginId);
 
     parts.push(
       otherIn === undefined
@@ -76,12 +76,12 @@ export const annotatePluginRouteError = (
  * compiler is annotated the same way and adding one cannot mean forgetting to.
  */
 export const withPluginRouteDiagnostics = <T>(
-  manifestSpecifiers: ReadonlyMap<string, string>,
+  routesSpecifiers: ReadonlyMap<string, string>,
   step: () => T,
 ): T => {
   try {
     return step();
   } catch (error) {
-    throw annotatePluginRouteError(error, manifestSpecifiers);
+    throw annotatePluginRouteError(error, routesSpecifiers);
   }
 };

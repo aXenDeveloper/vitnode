@@ -20,6 +20,7 @@ import {
   normalizeStaffRouteSearch,
   staffRouteParams,
 } from "../../admin/staff/route-search";
+import { breadcrumbGroup } from "../../breadcrumb/model";
 import { FormPendingSkeleton, TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
@@ -84,12 +85,14 @@ const staffListRoute =
       validateSearch: normalizeStaffRouteSearch,
       pendingComponent: TablePendingSkeleton,
       /**
-       * A component rather than `<AdminBreadcrumb segments={...}>`, because two
-       * of its crumbs are not in the sidebar under the spellings the page uses:
-       * `/admin/core/staff` is a nav *group* with no page of its own.
+       * Its own component rather than `adminBreadcrumb({ segments })`, because
+       * two of its crumbs are not in the sidebar under the spellings the page
+       * uses: `/admin/core/staff` is a nav *group* with no page of its own.
        */
       staticData: {
-        breadcrumb: <AdminStaffBreadcrumbContent type={type} />,
+        breadcrumb: breadcrumbGroup(function StaffBreadcrumb() {
+          return <AdminStaffBreadcrumbContent type={type} />;
+        }),
       },
     });
 
@@ -165,7 +168,9 @@ const staffCreateRoute =
       path,
       pendingComponent: FormPendingSkeleton,
       staticData: {
-        breadcrumb: <AdminStaffCreateBreadcrumbContent type={type} />,
+        breadcrumb: breadcrumbGroup(function StaffCreateBreadcrumb() {
+          return <AdminStaffCreateBreadcrumbContent type={type} />;
+        }),
       },
     });
 
@@ -226,7 +231,9 @@ const staffEditRoute =
       path,
       pendingComponent: FormPendingSkeleton,
       staticData: {
-        breadcrumb: <AdminStaffEditBreadcrumbContent type={type} />,
+        breadcrumb: breadcrumbGroup(function StaffEditBreadcrumb() {
+          return <AdminStaffEditBreadcrumbContent type={type} />;
+        }),
       },
     });
 

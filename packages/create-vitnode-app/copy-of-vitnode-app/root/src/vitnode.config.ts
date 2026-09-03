@@ -35,10 +35,9 @@ import { vitNodeShellConfig } from "./vitnode.shell.config";
  * explain why they are generated rather than read from here.
  *
  * A plugin's *pages* need nothing in this file at all. It declares them in its
- * own `src/routes/manifest.ts`, and this app's Vite build compiles them into
- * `src/plugin-route-manifest.gen.ts` and `src/plugin-routes.gen.ts`, which
- * `src/router.tsx` mounts under the shell the plugin's `area` names. No page is
- * ever copied into `src/routes`.
+ * own `src/routes.ts`, and this app's Vite build compiles them into
+ * `src/plugin-routes.gen.ts`, which `src/router.tsx` mounts under the shell the
+ * plugin's `area` names. No page is ever copied into `src/routes`.
  *
  * Server-side only, and deliberately so - see `vitnode.shell.config.ts`.
  * `src/server/messages.server.ts` is the only importer, and it carries the

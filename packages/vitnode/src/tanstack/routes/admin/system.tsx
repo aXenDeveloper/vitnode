@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreRouteFactory } from "../types";
 
-import { AdminBreadcrumb } from "../../admin/breadcrumb";
+import { adminBreadcrumb } from "../../admin/breadcrumb";
 import { loadAdminDebugRoute } from "../../admin/debug/route";
 import {
   debugLogsRouteParams,
@@ -49,7 +49,7 @@ const filesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeAdminFilesRouteSearch,
     staticData: {
-      breadcrumb: <AdminBreadcrumb segments={["core", "system", "files"]} />,
+      breadcrumb: adminBreadcrumb({ segments: ["core", "system", "files"] }),
     },
   });
 
@@ -109,9 +109,9 @@ const integrationsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     path: "/admin/core/system/integrations",
     pendingComponent: CardsPendingSkeleton,
     staticData: {
-      breadcrumb: (
-        <AdminBreadcrumb segments={["core", "system", "integrations"]} />
-      ),
+      breadcrumb: adminBreadcrumb({
+        segments: ["core", "system", "integrations"],
+      }),
     },
   });
 

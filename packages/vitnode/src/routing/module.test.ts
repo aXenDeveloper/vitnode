@@ -69,7 +69,7 @@ describe("readPluginRouteModule", () => {
     ).toThrow(/exports a `route` that is not an object/);
   });
 
-  it.each(["breadcrumb", "head", "load", "parseSearch"])(
+  it.each(["head", "load", "parseSearch"])(
     "refuses a non-function `route.%s`",
     key => {
       expect(() =>
@@ -84,6 +84,30 @@ describe("readPluginRouteModule", () => {
   );
 
   /**
+   * `false` is the one non-function a `breadcrumb` may be: it is how a page says
+   * "leave me out of the trail" on purpose, rather than by saying nothing.
+   */
+  it("keeps `breadcrumb: false`", () => {
+    const checked = readPluginRouteModule(
+      { default: Page, route: { breadcrumb: false } },
+      "p:page",
+    );
+
+    expect(checked.route.breadcrumb).toBe(false);
+  });
+
+  it("refuses a `route.breadcrumb` that is neither a component nor false", () => {
+    expect(() =>
+      readPluginRouteModule(
+        { default: Page, route: { breadcrumb: "nope" } },
+        "p:page",
+      ),
+    ).toThrow(
+      /`route\.breadcrumb`, which must be a component or `false` \(got string\)/,
+    );
+  });
+
+  /**
    * A breadcrumb is a *component*, not an element - the label is translated and
    * on a dynamic route comes from the loader, so it has to be able to use hooks.
    * A plugin that exported `<Crumb />` by mistake is caught here rather than by
@@ -95,7 +119,9 @@ describe("readPluginRouteModule", () => {
         { default: Page, route: { breadcrumb: { props: {}, type: "span" } } },
         "p:page",
       ),
-    ).toThrow(/`route\.breadcrumb`, which must be a function \(got object\)/);
+    ).toThrow(
+      /`route\.breadcrumb`, which must be a component or `false` \(got object\)/,
+    );
   });
 
   it("does not carry unknown members of `route` through", () => {

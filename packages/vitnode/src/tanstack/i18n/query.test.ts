@@ -132,11 +132,11 @@ describe("the query key names the language", () => {
    *
    * Both halves of VitNode now normalise a namespace list with the same
    * function - `normalizeNamespaceList`, which sorts by code unit and is the
-   * one the route manifest is generated with. This pins that they agree: a
+   * one a plugin's route tree is validated with. This pins that they agree: a
    * manifest declaring namespaces at build time and a browser asking for them at
    * runtime cannot spell one list two ways.
    */
-  it("orders the namespaces the way a route manifest does", () => {
+  it("orders the namespaces the way a plugin route tree does", () => {
     const declared = [
       "core.search",
       "Core.Global",

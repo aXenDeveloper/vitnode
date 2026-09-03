@@ -24,7 +24,7 @@ import {
 import {
   pluginLayoutComponent,
   pluginPageComponent,
-  PluginRouteBreadcrumb,
+  pluginRouteBreadcrumb,
 } from "./components";
 import { PLUGIN_ROUTES_ROUTE_ID } from "./container";
 import { pluginRouteGuard } from "./guard";
@@ -34,21 +34,20 @@ import { pluginRouteSearchDeps } from "./specs";
 /**
  * Plugin pages, in a TanStack Start application's route tree.
  *
- * Three inputs, and the whole point of the design is that each one answers
- * exactly one question:
+ * Two inputs, and the whole point of the design is that each one answers exactly
+ * one question:
  *
- *     plugin-route-manifest.gen.ts   what routes exist, where, in which shape
- *     plugin-routes.gen.ts           how each route's module is imported
- *     this module                    how that becomes a TanStack route
+ *     plugin-routes.gen.ts   which plugins are configured, and their route trees
+ *     this module            how that becomes a TanStack route
  *
- * The first two are generated *per application*, because only an installation
- * knows which plugins it has and a bundler needs a literal `import()` per module
- * to follow. This one is the composition, which is identical everywhere, so it
- * lives here rather than once per host.
+ * The first is generated *per application*, because only an installation knows
+ * which plugins it has. This one is the composition, which is identical
+ * everywhere, so it lives here rather than once per host.
  *
- * Neither generated file mentions a router, and no plugin page is copied into
- * the host's `src/routes` - the component stays compiled in the plugin's own
- * `dist` and arrives here as a lazy import the bundler resolved at build time.
+ * The generated file does not mention a router, and no plugin page is copied
+ * into the host's `src/routes` - a page stays compiled in the plugin's own
+ * `dist` and is reached only through the literal `import()` its own route
+ * declared, which the bundler resolved at build time.
  *
  * What is deliberately *not* here: a locale. `/example` and `/pl/example` are the
  * same route, because the router's rewrite strips the prefix before matching and
@@ -236,7 +235,7 @@ const pluginRouteLoader =
      * The eager schema wins, and the module's `parseSearch` is not consulted
      * when there is one.
      *
-     * `deps` for a route with a `searchEntry` is already the router's validated
+     * `deps` for a route with a `search` schema is already the router's validated
      * search - `validateSearch` ran during path matching and `loaderDeps` reads
      * its output - so running `parseSearch` over it would normalise a normalised
      * value, with the module's answer silently overriding the one the router
@@ -271,7 +270,7 @@ const pluginRouteLoader =
  * Everything a plugin can contribute passes through here, and every one of them
  * is reached through the same memoised module ref - so a route's component, its
  * loader, its metadata and its breadcrumb are four readers of one import rather
- * than four imports.
+ * than four imports, and a crumb is never a chunk of its own.
  *
  * `lazyRouteComponent` over that ref is the supported way to code-split a
  * code-based route: the plugin's page gets its own Rollup chunk, stays out of
@@ -283,7 +282,6 @@ const pluginRouteLoader =
  */
 const pluginRouteOptions = (
   spec: PluginRouteSpec,
-  byId: ReadonlyMap<string, PluginRouteSpec>,
   pageHead: PluginRoutePageHead,
 ) => {
   const beforeLoad = pluginRouteGuard(spec.route.requires);
@@ -291,19 +289,19 @@ const pluginRouteOptions = (
   return {
     ...(beforeLoad ? { beforeLoad } : {}),
     /**
-     * The route's own `validateSearch`, when its manifest declared one.
+     * The route's own `validateSearch`, when its declaration had a `search`.
      *
      * This is the seam a lazy module cannot reach: it runs during path matching,
      * so the function has to be in hand before any chunk is fetched, which is
-     * exactly what a `searchEntry` buys - a static import in the generated
-     * registry rather than a `() => import()`. A route that declares one gets
-     * everything a host's own route file gets from the same option: a typed
-     * search, links the router can build and check, and a clamped value that
-     * redirects instead of rendering a page that does not exist.
+     * exactly what declaring it in `routes.ts` buys - that module is imported
+     * statically by the host, the page it belongs to is not. A route that
+     * declares one gets everything a host's own route file gets from the same
+     * option: a typed search, links the router can build and check, and a clamped
+     * value that redirects instead of rendering a page that does not exist.
      *
      * Spread rather than set to `undefined`, because TanStack reads the presence
-     * of the key: a route without one keeps the raw query string, which is what
-     * every plugin route did before this existed and is still the right default.
+     * of the key: a route without one keeps the raw query string, which is the
+     * right default for a page that reads no state out of its URL.
      */
     ...(spec.validateSearch ? { validateSearch: spec.validateSearch } : {}),
     component: lazyRouteComponent(async () => ({
@@ -319,7 +317,7 @@ const pluginRouteOptions = (
      * The query string, normalised - and what "the query string" is depends on
      * which of the two search contracts the route chose.
      *
-     * With a `searchEntry`, `search` here is already the router's validated
+     * With a `search` schema, `search` here is already the router's validated
      * output, so this passes the route's own schema through and the loader
      * re-runs exactly when a parameter the schema keeps changes. Without one,
      * the runtime cannot know before the chunk loads whether this route reads
@@ -335,29 +333,18 @@ const pluginRouteOptions = (
       pluginRouteSearchDeps(search),
     path: spec.path,
     /**
-     * The crumb, as the chain of routes that could own it.
+     * This route's own crumb - a component, so the shell can hand it this
+     * match's loader data, params and search.
      *
-     * Resolved to the specs themselves rather than left as ids, so the component
-     * has both halves it needs of each candidate - the module that may declare a
-     * crumb, and the namespaces that crumb translates through.
+     * Declared for every plugin route rather than only for the ones that have a
+     * crumb, because whether a module declares one is *in* the module, which has
+     * not been fetched when `staticData` is written. The component renders
+     * nothing when its module turns out to declare none, so a page that wants no
+     * crumb - or declares `breadcrumb: false` - contributes nothing to the trail
+     * while its layouts' crumbs stay exactly where they were.
      */
     staticData: {
-      breadcrumb: (
-        <PluginRouteBreadcrumb
-          crumbs={spec.breadcrumbChain.flatMap(id => {
-            const candidate = byId.get(id);
-
-            return candidate
-              ? [
-                  {
-                    module: candidate.module,
-                    namespaces: candidate.namespaces,
-                  },
-                ]
-              : [];
-          })}
-        />
-      ),
+      breadcrumb: pluginRouteBreadcrumb(spec.module, spec.namespaces),
     },
   };
 };
@@ -435,7 +422,6 @@ const specsByMountPoint = (
 const mountPluginSubtree = (
   mountPoint: AnyRoute,
   specs: readonly PluginRouteSpec[],
-  byId: ReadonlyMap<string, PluginRouteSpec>,
   pageHead: PluginRoutePageHead,
 ): void => {
   const mounted: AnyRoute[] = mountPoint.children ?? [];
@@ -475,7 +461,7 @@ const mountPluginSubtree = (
     }
 
     const route: AnyRoute = createRoute({
-      ...pluginRouteOptions(spec, byId, pageHead),
+      ...pluginRouteOptions(spec, pageHead),
       getParentRoute: () => parent,
     });
 
@@ -540,10 +526,8 @@ export const withPluginRoutes = <TRouteTree extends AnyRoute>(
   // renders in.
   if (specs.length > 0) assertNoAppCollision(specs, fileRoutePaths(routeTree));
 
-  const byId = new Map(specs.map(spec => [spec.route.id, spec]));
-
   for (const [mountPoint, mountedSpecs] of byMountPoint) {
-    mountPluginSubtree(mountPoint, mountedSpecs, byId, pageHead);
+    mountPluginSubtree(mountPoint, mountedSpecs, pageHead);
   }
 
   return routeTree;

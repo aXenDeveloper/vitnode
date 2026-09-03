@@ -83,6 +83,7 @@ export const Route = createFileRoute('/_docs/docs/$')({
     const moved = movedDocsSlug(params._splat ?? '')
 
     if (moved) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({
         params: { _splat: moved },
         statusCode: 301,

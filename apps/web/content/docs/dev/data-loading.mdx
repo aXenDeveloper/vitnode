@@ -13,7 +13,7 @@ runs for SSR and client navigation, then hands typed data to the plugin page.
 
 Plugins load data using `definePluginRoute`. The loader runs during SSR and client navigation, handing typed `loaderData` to the page component:
 
-```tsx title="plugins/blog/src/routes/announcements-page.tsx"
+```tsx title="plugins/blog/src/pages/announcements-page.tsx"
 import type { PluginRoutePageProps } from '@vitnode/core/routing'
 import { definePluginRoute } from '@vitnode/core/routing'
 

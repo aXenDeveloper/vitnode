@@ -3,5 +3,5 @@
   "description": "Build installable VitNode plugins for pages, APIs, data, AdminCP screens, and translations",
   "icon": "Plug",
   "defaultOpen": true,
-  "pages": ["create", "route-manifest", "api", "admin", "breadcrumbs", "..."]
+  "pages": ["create", "routes", "api", "admin", "breadcrumbs", "..."]
 }

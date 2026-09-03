@@ -1,0 +1,435 @@
+---
+title: Plugin Routes
+description: Declare plugin-owned URLs as a nested route tree with lazy pages, loaders, metadata, messages, and breadcrumbs.
+icon: Map
+---
+
+import { DatabaseIcon, LayoutDashboardIcon, MilestoneIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Start by [creating a plugin](/docs/dev/plugins/create). A plugin's `src/routes.ts`
+is its promise to the app: which URLs it owns, and which module renders each one.
+The host turns that promise into lazy TanStack Start routes—no copied page files,
+no drama.
+
+{/* Image prompt: Dark-theme developer diagram: a plugin routes.ts tree (layout → index → dynamic page) on the left, each node pointing at a lazily loaded page chunk on the right, then into a TanStack Start route inside the app shell. Emphasize “plugin owns feature”, “one chunk per page”, “host composes”. Clean labels, 1600x900. */}
+
+<Steps>
+  <Step>
+
+### Declare the URL in the plugin
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/notes/:slug', {
+    component: lazy(() => import('./pages/note-page')),
+  }),
+])
+```
+
+Use `:slug` for dynamic segments. VitNode converts it to TanStack Start's
+internal `$slug` spelling while keeping your plugin portable.
+
+  </Step>
+  <Step>
+
+### Keep behavior beside the page
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
+
+interface Note {
+  title: string
+}
+
+// [!code ++:8]
+export const route = definePluginRoute({
+  load: async ({ params }) => ({ title: `Note: ${params.slug}` }),
+  head: ({ loaderData }) => ({
+    description: 'A note delivered by the Site notes plugin.',
+    title: loaderData?.title,
+  }),
+})
+
+const NotePage = ({ loaderData }: PluginRoutePageProps<Note>) => (
+  <article className="container mx-auto max-w-3xl p-4">
+    <h2 className="text-3xl font-semibold">{loaderData.title}</h2>
+  </article>
+)
+
+export default NotePage
+```
+
+  </Step>
+  <Step>
+
+### Run the plugin route
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run a plugin route">
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Visit `http://localhost:3000/notes/hello`. The page's code, data, and SEO stay
+with the feature that needs them. A surprisingly polite route.
+
+  </Step>
+</Steps>
+
+## What `lazy(() => import('./pages/note-page'))` means
+
+It names the module VitNode loads **when the route is needed**—on a navigation,
+or a moment earlier when the visitor hovers a link and the router preloads it.
+
+Nothing about that import runs while your app boots. `lazy` stores the callback;
+Vite reads the literal `import()` inside it at build time and Rollup gives that
+page a chunk of its own. So `routes.ts` stays a few lines of data the app can
+hold cheaply, and a visitor downloads a page only if they open it.
+
+<Callout type="warn" title="component: NotePage is rejected on purpose">
+  Importing the component at the top of `routes.ts` would put it in the initial
+  bundle of *every* page on the site, and route-level splitting would be gone.
+  VitNode refuses it in the types and again at build time, with the replacement
+  in the message:
+
+```ts
+import NotePage from './pages/note-page'
+
+page('/notes/:slug', {
+  component: NotePage, // [!code --]
+  component: lazy(() => import('./pages/note-page')), // [!code ++]
+})
+```
+
+</Callout>
+
+Keep the `import()` literal. A specifier built from a variable is not something
+a bundler can follow, so the page never gets a chunk and the build cannot tell
+you the module is missing:
+
+```ts
+page('/notes/:slug', {
+  component: lazy(() => import(`./pages/${slug}-page`)), // [!code --]
+  component: lazy(() => import('./pages/note-page')), // [!code ++]
+})
+```
+
+## Nest routes with `layout()` and `index()`
+
+A `layout()` renders a frame around its `children` and claims no URL of its own.
+`index()` is the route that renders at the layout's own URL. Every path inside a
+layout is **relative** to it, so moving a subtree is one edit:
+
+```ts title="plugins/catalog/src/routes.ts"
+import {
+  definePluginRoutes,
+  index,
+  layout,
+  lazy,
+  page,
+} from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  layout('/catalog', {
+    component: lazy(() => import('./pages/catalog-layout')),
+    messages: ['@acme/catalog'],
+    children: [
+      page('dashboard', {
+        component: lazy(() => import('./pages/dashboard-page')),
+      }),
+
+      layout('products', {
+        component: lazy(() => import('./pages/products-layout')),
+        children: [
+          index({
+            component: lazy(() => import('./pages/products-index-page')),
+          }),
+
+          layout(':categorySlug', {
+            component: lazy(() => import('./pages/category-layout')),
+            children: [
+              index({
+                component: lazy(() => import('./pages/category-index-page')),
+              }),
+
+              page(':productId', {
+                component: lazy(() => import('./pages/product-page')),
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  }),
+])
+```
+
+That tree serves `/catalog/dashboard`, `/catalog/products`,
+`/catalog/products/laptops` and `/catalog/products/laptops/42`, and a page opens
+inside every frame above it.
+
+| Rule                     | What VitNode does                                             |
+| ------------------------ | ------------------------------------------------------------- |
+| Top-level path           | Absolute: `page('/catalog', …)`                               |
+| Nested path              | Relative: `page('dashboard', …)` joins onto its parent        |
+| `index()`                | The child at the layout's exact URL—no path of its own        |
+| Layout with no `children`| A build error: nothing could ever render it                   |
+| Route ids                | Derived by VitNode while flattening. You never write one      |
+
+A layout's frame is a component with `children`:
+
+```tsx title="plugins/catalog/src/pages/catalog-layout.tsx"
+const CatalogLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="container mx-auto flex max-w-5xl flex-col gap-6 p-4">
+    <h1 className="text-2xl font-semibold tracking-tight">Catalog</h1>
+    {children}
+  </div>
+)
+
+export default CatalogLayout
+```
+
+`children`, not an `<Outlet />`: a plugin layout that imported a router's outlet
+could only be installed into one kind of app.
+
+## Choose the route shape
+
+| Need                 | Add to the tree                                                |
+| -------------------- | -------------------------------------------------------------- |
+| Public feature page  | `page('/notes', { component })`—`area` defaults to `main`      |
+| Staff screen         | `area: 'admin'` and a full path such as `/admin/notes`         |
+| Signed-in visitor    | `requires: 'authenticated'`                                    |
+| Shared frame         | `layout()` with `children`                                     |
+| Translated strings   | `messages: ['@acme/catalog']`                                  |
+| URL-as-state         | `search: productsSearchSchema`                                 |
+
+## An AdminCP route
+
+`area: 'admin'` picks the shell—the sidebar, the breadcrumb area, the command
+palette, and the admin session guard. It never changes the path, so write the
+`/admin/…` URL in full:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/admin/notes', {
+  area: 'admin', // [!code ++]
+  component: lazy(() => import('./pages/admin-notes-page')),
+  messages: ['@acme/site-notes.admin'],
+})
+```
+
+`area` belongs to top-level routes only. Everything inside a layout renders in
+the shell that layout renders in, and `requires` is refused in the admin
+area—the AdminCP has its own session, and a staff permission gates the page's
+*content*. See [AdminCP pages](/docs/dev/plugins/admin).
+
+## Route messages
+
+`messages` lists the translation namespaces the route renders. VitNode warms
+them **alongside** the page's chunk instead of after it, which is the whole
+reason they are declared on the route rather than inside the module:
+
+```ts
+layout('/catalog', {
+  component: lazy(() => import('./pages/catalog-layout')),
+  messages: ['@acme/catalog'], // [!code ++]
+  children: [index({ component: lazy(() => import('./pages/index-page')) })],
+})
+```
+
+A route inherits every namespace its layouts declare, so naming them once on the
+frame is enough for the whole subtree. Inside the module, read them with
+`use-intl`:
+
+```tsx
+import { useTranslations } from 'use-intl'
+
+const CatalogIndexPage = () => {
+  const t = useTranslations('@acme/catalog')
+
+  return <p>{t('index.intro')}</p>
+}
+```
+
+See [namespaces](/docs/dev/i18n/namespaces) for how a namespace is named and
+where its JSON lives.
+
+## `search` is the one eager field
+
+TanStack Router validates a URL's query string **while it matches the URL**,
+before any chunk is fetched. A schema inside the lazy page module would arrive
+too late, so a route declares it in `routes.ts`:
+
+```ts title="plugins/catalog/src/routes.ts"
+import { productsSearchSchema } from './pages/products-search'
+
+page('/catalog/products', {
+  component: lazy(() => import('./pages/products-page')),
+  search: productsSearchSchema, // [!code ++]
+})
+```
+
+```ts title="plugins/catalog/src/pages/products-search.ts"
+export interface ProductsSearch {
+  page: number
+}
+
+export const productsSearchSchema = (
+  input: Record<string, unknown>,
+): ProductsSearch => {
+  const parsed = Number.parseInt(String(input.page ?? ''), 10)
+
+  // Total, never throwing: the router calls this on whatever somebody pasted.
+  return { page: Number.isFinite(parsed) ? Math.max(parsed, 1) : 1 }
+}
+```
+
+The page then gets a typed `search` and a `navigate` that changes it:
+
+```tsx title="plugins/catalog/src/pages/products-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+import type { ProductsSearch } from './products-search'
+
+const ProductsPage = ({
+  navigate,
+  search,
+}: PluginRoutePageProps<undefined, ProductsSearch>) => (
+  <button
+    onClick={() => void navigate({ search: { page: search.page + 1 } })}
+    type="button"
+  >
+    Page {search.page}
+  </button>
+)
+
+export default ProductsPage
+```
+
+TypeScript checks the two halves against each other: the schema has to return
+what the page says it reads, even though the page itself is lazy.
+
+<Callout type="info" title="Why this one is eager, and what it costs">
+  `search` is a function, so it lives in `routes.ts`—which the app imports
+  statically. Everything that file imports is in the initial bundle with it, so
+  keep the schema module small: no React, no component, no import of the page it
+  belongs to.
+
+  Declare it only for a screen whose URL *is* its state—a paginated list whose
+  `?page=999` has to be clamped, a filter whose links must be typed. For a page
+  that merely reads a parameter, use the module's own lazy `parseSearch`
+  instead; it normalises in the loader and adds nothing to the initial bundle.
+</Callout>
+
+## Dynamic breadcrumbs
+
+Every matched route contributes **one crumb**, parent to child, and VitNode owns
+the separators, the accessibility semantics, and the locale-aware links. A crumb
+returns a label:
+
+```tsx title="plugins/catalog/src/pages/product-page.tsx"
+import type {
+  PluginRouteBreadcrumbProps,
+  PluginRoutePageProps,
+} from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
+
+interface Product {
+  description: string
+  name: string
+}
+
+function ProductBreadcrumb({ loaderData }: PluginRouteBreadcrumbProps<Product>) {
+  return loaderData.name
+}
+
+export const route = definePluginRoute({
+  load: async ({ params }) =>
+    await fetchProduct({
+      categorySlug: params.categorySlug,
+      productId: params.productId,
+    }),
+
+  head: ({ loaderData }) => ({
+    description: loaderData?.description,
+    title: loaderData?.name,
+  }),
+
+  breadcrumb: ProductBreadcrumb,
+})
+
+export default function ProductPage({
+  loaderData,
+}: PluginRoutePageProps<Product>) {
+  return (
+    <article>
+      <h1>{loaderData.name}</h1>
+      <p>{loaderData.description}</p>
+    </article>
+  )
+}
+```
+
+With the catalog tree above, that renders `Catalog / Products / Laptops /
+MacBook Pro`—each crumb from the route that owns it. See
+[breadcrumbs](/docs/dev/plugins/breadcrumbs) for static crumbs, `breadcrumb:
+false`, and how the trail is assembled.
+
+<Callout type="idea" title="The host is the exception">
+  Use host routes only for shells, docs, or site-wide infrastructure. A product
+  page belongs in its plugin, even when it starts life as one brave little URL.
+</Callout>
+
+## How the app picks this up
+
+The `vitnode:plugin-routes` Vite plugin reads the plugins in
+`src/vitnode.config.ts`, imports each one's `routes` module in Node, validates
+and flattens every tree, refuses two routes that claim one URL—including one of
+the app's own—and writes a single `src/plugin-routes.gen.ts`:
+
+```ts title="apps/web/src/plugin-routes.gen.ts"
+import { routes as pluginRoutes0 } from '@acme/catalog/routes'
+
+export const pluginRouteSources = [
+  { pluginId: '@acme/catalog', routes: pluginRoutes0 },
+] as const satisfies readonly PluginRouteDeclarationSource[]
+```
+
+That is the only generated file, it names no page module, and it is committed
+like any other generated artefact. Your pages stay in your package's own
+`dist`, one chunk each.
+
+<Cards>
+  <Card
+    icon={<DatabaseIcon />}
+    title="Load data"
+    description="Use plugin loaders with cache-aware data and query state."
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    icon={<MilestoneIcon />}
+    title="Breadcrumbs"
+    description="Contribute one crumb per route, translated or read from a loader."
+    href="/docs/dev/plugins/breadcrumbs"
+  />
+  <Card
+    icon={<LayoutDashboardIcon />}
+    title="AdminCP pages"
+    description="Mount a plugin screen in the staff-only Admin Control Panel."
+    href="/docs/dev/plugins/admin"
+  />
+</Cards>

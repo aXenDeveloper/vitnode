@@ -31,7 +31,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
 
 When a requested resource (like an article slug or user ID) is not found in the database, throw `notFound()` inside the loader:
 
-```tsx title="plugins/blog/src/routes/article-page.tsx"
+```tsx title="plugins/blog/src/pages/article-page.tsx"
 import { notFound } from '@tanstack/react-router'
 import { definePluginRoute } from '@vitnode/core/routing'
 

@@ -2,19 +2,23 @@ import type { Plugin } from "vite";
 
 import { createJiti } from "jiti";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, unlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { join, relative, resolve as resolvePath, sep } from "node:path";
+import {
+  dirname,
+  join,
+  relative,
+  resolve as resolvePath,
+  sep,
+} from "node:path";
 import { pathToFileURL } from "node:url";
-
-import type { PluginRouteDefinition } from "@/routing";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type {
+  CompiledPluginRoutes,
   HostRoutePath,
   PluginRouteCompilerSource,
-  ResolvedPluginRouteModule,
 } from "../plugin-routes";
 
 import { generateAdminNavSource } from "../admin-nav";
@@ -22,8 +26,9 @@ import { generateContentRegistrySource } from "../content-registry";
 import {
   compilePluginRoutes,
   hostRoutePathsFromFiles,
+  lazyImportSpecifier,
   pluginIdsFromLoadedConfig,
-  routeDeclarationsFromManifest,
+  routeDeclarationsFromRoutesModule,
 } from "../plugin-routes";
 import { createGenerationQueue } from "./generation-queue";
 import { versionedModuleUrl } from "./module-version";
@@ -31,12 +36,25 @@ import { versionedModuleUrl } from "./module-version";
 /**
  * Where a plugin declares its routes, as a package export subpath.
  *
- * A plugin that does not export it - `@vitnode/blog` today - simply contributes
- * no routes. That is not an error: most plugins are AdminCP content types and
- * ship no pages at all, and a missing manifest has to mean "none" rather than
+ * `@vitnode/example/routes`, backed by the plugin's own `src/routes.ts`. A
+ * plugin that does not export it - `@vitnode/blog` today - simply contributes no
+ * routes. That is not an error: most plugins are AdminCP content types and ship
+ * no pages at all, and a missing routes module has to mean "none" rather than
  * failing the build of every app that installs one.
  */
-const MANIFEST_SUBPATH = "routes/manifest";
+const ROUTES_SUBPATH = "routes";
+
+/**
+ * Where a plugin declared its routes before they were a tree.
+ *
+ * Resolved for one reason: to say so. A plugin still shipping the flat manifest
+ * has an `entry`, an `id`, a `kind` and a `parentId` per route, and no adapter
+ * can turn those into `lazy(() => import(...))` - the module a page lives in was
+ * a string the *app* imported, and it is now the plugin's own literal import.
+ * Left undetected, such a plugin contributes nothing at all and the page simply
+ * 404s.
+ */
+const LEGACY_MANIFEST_SUBPATH = "routes/manifest";
 
 /**
  * Where a plugin declares its AdminCP navigation, as a package export subpath.
@@ -104,17 +122,6 @@ const pathsFor = (appRoot: string) => ({
   /** The configured plugin list, and the only place it is read from. */
   config: join(appRoot, "src", "vitnode.config.ts"),
   /**
-   * The two generated files. Both committed, and both rewritten only when they
-   * change.
-   *
-   * Split because they answer different questions and are read by different
-   * things. The manifest says *what* routes exist and at which canonical VitNode
-   * path - framework-neutral data, which is what makes it worth generating once
-   * and reading from any router. The registry says *how* each route's module is
-   * imported, as one literal `import()` per route. The host's router joins them
-   * by route id and is the only place that knows about TanStack.
-   */
-  /**
    * The AdminCP navigation projection: one literal import per configured plugin
    * that has navigation to declare. Committed and rewritten like the other two,
    * and written from the same pass over the same configured plugin list - so a
@@ -130,8 +137,22 @@ const pathsFor = (appRoot: string) => ({
    * one step rather than three.
    */
   contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
-  manifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
+  /**
+   * The plugin route registry: one static import per configured plugin that
+   * declares routes, and the trees they declared. Committed, and rewritten only
+   * when it changes.
+   */
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
+  /**
+   * The data file the registry replaced.
+   *
+   * Deleted rather than ignored. It was a literal copy of every route's manifest
+   * entry, and a route's `entry` and `searchEntry` are not fields a plugin has
+   * any more - so a stale copy left in `src/` is a file that still compiles,
+   * still imports `@vitnode/core/routing`, and describes routes the app no
+   * longer has.
+   */
+  staleManifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
   /** The file-based router's config, read only for where the routes are. */
   routerConfig: join(appRoot, "tsr.config.json"),
 });
@@ -214,35 +235,41 @@ const readConfiguredPluginIds = async (
 };
 
 /**
- * One plugin's route declarations, loaded from its compiled manifest.
+ * One plugin's route tree, loaded from its compiled `routes` module.
  *
- * The manifest is plain data by contract, so this is a normal `import()` of the
- * plugin's build output in Node - no React, no router and no app code is
- * evaluated to find out which routes exist.
+ * A route tree is browser-safe data by contract - paths, shells, message lists
+ * and one `lazy()` per page - so this is a normal `import()` of the plugin's
+ * build output in Node. No page, no layout, no React and no router is evaluated
+ * to find out which routes exist: `lazy()` stores the import callback without
+ * calling it, which is the whole point of it.
  *
- * `routeDeclarationsFromManifest` checks the *module* is a route manifest at all
- * - it exports a `routes` array of records - and names the specifier when it is
- * not. What each record then means is `buildPluginRouteManifest`'s to decide, and
- * the array is handed on untouched for it: it validates every field it reads,
- * defensively, from `unknown`. Two readers rather than one shared narrowed shape,
- * so neither layer has to know what the other requires.
+ * `routeDeclarationsFromRoutesModule` checks the *module* is a routes module at
+ * all - it exports a `routes` array - and names the specifier when it is not.
+ * What each node then means is `flattenPluginRoutes`' to decide, and the array is
+ * handed on untouched for it: it validates every field it reads, defensively,
+ * from `unknown`. Two readers rather than one shared narrowed shape, so neither
+ * layer has to know what the other requires.
+ *
+ * A plugin with no `routes` module contributes nothing, and one still shipping
+ * the old flat `routes/manifest` is told so rather than silently contributing
+ * nothing - see {@link LEGACY_MANIFEST_SUBPATH}.
  *
  * ## Why the URL carries an mtime
  *
  * Node's ESM loader caches modules by URL, permanently and with no eviction. The
  * dev server therefore had a watcher that worked and a regeneration that could
- * not: edit a plugin's manifest, the watcher fires, a regeneration pass runs, and
+ * not: edit a plugin's routes, the watcher fires, a regeneration pass runs, and
  * `import()` of the same URL hands back the module Node parsed minutes ago - so
- * the generated files were rewritten from stale declarations, or more often not
+ * the generated file was rewritten from stale declarations, or more often not
  * rewritten at all because the bytes had not changed.
  *
  * A version taken off the file itself is the smallest thing that fixes it and
  * keeps every property that matters: it changes when the file changes, so an
- * untouched manifest keeps its cache entry across regenerations rather than
+ * untouched module keeps its cache entry across regenerations rather than
  * leaking a new one, and it is read off disk rather than invented, so two builds
  * of the same tree ask for the same URL. It never reaches the generated output -
- * the generated bytes are a function of the declarations alone - so the browser
- * never sees any of this.
+ * the generated bytes are a function of the configured plugins alone - so the
+ * browser never sees any of this.
  *
  * `./module-version` is the rule itself, and why it is a fingerprint rather
  * than a clock. `statSync` is here because this is the layer that has a
@@ -252,26 +279,49 @@ const readPluginRoutes = async (
   pluginId: string,
   resolvePackageFile: (specifier: string) => null | string,
 ): Promise<{ source: PluginRouteCompilerSource; watch: null | string }> => {
-  const specifier = `${pluginId}/${MANIFEST_SUBPATH}`;
+  const specifier = `${pluginId}/${ROUTES_SUBPATH}`;
   const file = resolvePackageFile(specifier);
 
-  if (file === null) return { source: { pluginId, routes: [] }, watch: null };
+  if (file === null) {
+    assertNoLegacyRouteManifest(pluginId, resolvePackageFile);
 
-  const loaded = await import(versionedModuleUrl(file, statSync(file)));
+    return { source: { pluginId }, watch: null };
+  }
 
-  routeDeclarationsFromManifest(loaded, specifier);
+  const loaded: unknown = await import(
+    versionedModuleUrl(file, statSync(file))
+  );
 
   return {
     source: {
-      manifestSpecifier: specifier,
       pluginId,
-      // Safe by the line above: it threw unless `routes` is an array of records
-      // with a string `id` and `entry`. Everything past that is
-      // `buildPluginRouteManifest`'s to check, which it does from `unknown`.
-      routes: (loaded as { routes: PluginRouteDefinition[] }).routes,
+      routes: routeDeclarationsFromRoutesModule(loaded, specifier),
+      routesSpecifier: specifier,
     },
     watch: file,
   };
+};
+
+/**
+ * Fails the build for a plugin that still declares the flat route manifest.
+ *
+ * Only reached when the plugin exports no `routes` module, which is exactly the
+ * shape a plugin written against the previous API has: `routes/manifest`
+ * resolves and `routes` does not. Without this it is indistinguishable from a
+ * plugin that ships no pages, so every one of its URLs would 404 with nothing
+ * anywhere saying why.
+ */
+const assertNoLegacyRouteManifest = (
+  pluginId: string,
+  resolvePackageFile: (specifier: string) => null | string,
+): void => {
+  const legacy = `${pluginId}/${LEGACY_MANIFEST_SUBPATH}`;
+
+  if (resolvePackageFile(legacy) === null) return;
+
+  throw new Error(
+    `${ERROR_PREFIX} Plugin "${pluginId}" exports "${legacy}" but no "${pluginId}/${ROUTES_SUBPATH}". Plugin routes are now a nested tree in the plugin's own \`src/routes.ts\`: export \`routes = definePluginRoutes([...])\` built from \`page()\`, \`layout()\` and \`index()\`, with each module named by \`component: lazy(() => import("./pages/..."))\` instead of an \`entry\` string. See https://vitnode.com/docs/dev/plugins/routes.`,
+  );
 };
 
 /** Where an app's own route files are, and which of them are not routes. */
@@ -452,21 +502,48 @@ export const readOptionalPluginModules = <
 };
 
 /**
- * Fails the build for a route module the app cannot import.
+ * Fails the build for a page or layout module the plugin names and does not
+ * have.
  *
- * The alternative is a generated `import()` of a specifier that does not
- * resolve, which Vite reports from inside the module graph long after anyone can
- * tell which plugin caused it - or worse, in the browser.
+ * The one check in this layer that cannot be pure, and the one thing a generated
+ * file no longer does on the app's behalf: a page is reached through the literal
+ * `import()` inside its own plugin's `lazy()` call, so nothing in the app's
+ * source names it and nothing in the app's build resolves it until a visitor
+ * navigates. Left unchecked, a mistyped page path is a broken chunk request in a
+ * browser rather than a failed build.
+ *
+ * Best effort by construction, and deliberately so. `lazyImportSpecifier` reads
+ * the specifier off the compiled callback and answers `null` for anything it
+ * cannot be sure about - a bundler-rewritten import, a computed one, a bare
+ * package specifier - and this skips those rather than guessing. A check that
+ * failed a build over a callback it misread would be worse than no check.
  */
-const assertImportable = (
-  module: ResolvedPluginRouteModule,
-  resolvePackageFile: (specifier: string) => null | string,
+const assertComponentsImportable = (
+  compiled: CompiledPluginRoutes,
+  routesFiles: ReadonlyMap<string, string>,
 ): void => {
-  if (resolvePackageFile(module.specifier) !== null) return;
+  for (const route of compiled.manifest) {
+    const component = compiled.components.get(route.id);
+    const specifier =
+      component === undefined ? null : lazyImportSpecifier(component.load);
+    const from = routesFiles.get(route.pluginId);
 
-  throw new Error(
-    `${ERROR_PREFIX} Plugin "${module.pluginId}", route "${module.routeId}", declares the entry "${module.entry}", which cannot be imported as "${module.specifier}". Check that ${module.pluginId} exports "./${module.entry}" and that its build output is up to date.`,
-  );
+    if (specifier === null || from === undefined) continue;
+
+    const file = resolvePath(dirname(from), specifier);
+    const candidates = [
+      file,
+      `${file}.js`,
+      `${file}.mjs`,
+      join(file, "index.js"),
+    ];
+
+    if (candidates.some(candidate => existsSync(candidate))) continue;
+
+    throw new Error(
+      `${ERROR_PREFIX} Plugin "${route.pluginId}" declares the ${route.kind} at "${route.path}" with \`lazy(() => import("${specifier}"))\`, which does not resolve to a file next to ${relative(process.cwd(), from)}. Check the path and that ${route.pluginId}'s build output is up to date.`,
+    );
+  }
 };
 
 /**
@@ -477,14 +554,15 @@ const assertImportable = (
  * bytes depend on the configuration and nothing else.
  *
  * The split here is the one this whole layer is arranged around: *this* function
- * owns the filesystem - the config, the plugin manifests, the app's own route
- * files, package resolution - and `compilePluginRoutes` owns every decision made
- * from what it finds. Which is why the only thing left below it is the one check
- * that cannot be pure: does each entry resolve to a file that exists.
+ * owns the filesystem - the config, the plugins' route modules, the app's own
+ * route files, package resolution - and `compilePluginRoutes` owns every decision
+ * made from what it finds. Which is why the only thing left below it is the one
+ * check that cannot be pure: does each lazily imported page resolve to a file
+ * that exists.
  *
  * `onLoaded` is called with the files this pass read *before* anything can fail,
- * so a dev server watching them still learns about a manifest that threw - which
- * is exactly the one an author is about to edit again.
+ * so a dev server watching them still learns about a routes module that threw -
+ * which is exactly the one an author is about to edit again.
  */
 const discover = async (
   appRoot: string,
@@ -527,52 +605,20 @@ const discover = async (
     sources: loaded.map(({ source }) => source),
   });
 
-  compiled.modules.forEach(module => {
-    assertImportable(module, resolvePackageFile);
-  });
-
-  /**
-   * A search schema is checked the same way, and it matters more.
-   *
-   * An unresolvable lazy entry is a broken `import()` a visitor reaches when
-   * they open the page. An unresolvable *static* one is a module the app cannot
-   * build at all - Vite fails on the generated file rather than on the plugin,
-   * with a specifier nobody in the app wrote. Failing here names the plugin, the
-   * route and the entry.
-   */
-  compiled.searchModules.forEach(module => {
-    if (resolvePackageFile(module.specifier) !== null) return;
-
-    throw new Error(
-      `${ERROR_PREFIX} Plugin "${module.pluginId}", route "${module.routeId}", declares the search entry "${module.searchEntry}", which cannot be imported as "${module.specifier}". Check that ${module.pluginId} exports "./${module.searchEntry}" and that its build output is up to date.`,
-    );
-  });
-
-  /**
-   * The search modules join the watch list, a second call later than the rest.
-   *
-   * They cannot be in the first one: which routes declare a `searchEntry` is
-   * only known once the manifests have been read *and* compiled, and the first
-   * call deliberately happens before anything can fail so that a manifest which
-   * threw is still watched. `onLoaded` is additive - the dev server folds each
-   * call into one set - so two calls is the honest shape rather than a
-   * workaround.
-   *
-   * Worth watching for the same reason a manifest is: editing a route's
-   * `validateSearch` changes what the app does with a URL, and no other file
-   * this pass reads would have noticed.
-   */
-  const searchFiles = compiled.searchModules.flatMap(
-    module => resolvePackageFile(module.specifier) ?? [],
+  assertComponentsImportable(
+    compiled,
+    new Map(
+      loaded.flatMap(({ source, watch: file }) =>
+        file === null ? [] : [[source.pluginId, file] as const],
+      ),
+    ),
   );
-
-  if (searchFiles.length > 0) onLoaded?.(searchFiles);
 
   return {
     adminNav: adminNav.modules,
     compiled,
     contentRegistry: contentRegistry.modules,
-    watch: [...watch, ...searchFiles],
+    watch,
   };
 };
 
@@ -590,7 +636,21 @@ const writeIfChanged = async (path: string, source: string): Promise<void> => {
   if (current !== source) await writeFile(path, source, "utf8");
 };
 
-/** All four generated files, from one discovery pass. */
+/**
+ * Removes a generated file this build no longer writes.
+ *
+ * Only ever pointed at a path VitNode itself generated, and only when that file
+ * has been replaced rather than merely emptied: a stale generated module in
+ * `src/` still compiles and still describes routes, which is a worse failure
+ * than a missing one.
+ */
+const removeIfPresent = async (path: string): Promise<void> => {
+  if (!existsSync(path)) return;
+
+  await unlink(path);
+};
+
+/** All three generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -604,13 +664,13 @@ const writeGenerated = async (
   );
 
   await Promise.all([
-    writeIfChanged(paths.manifest, compiled.manifestSource),
-    writeIfChanged(paths.registry, compiled.registrySource),
+    writeIfChanged(paths.registry, compiled.source),
     writeIfChanged(paths.adminNav, generateAdminNavSource(adminNav)),
     writeIfChanged(
       paths.contentRegistry,
       generateContentRegistrySource(contentRegistry),
     ),
+    removeIfPresent(paths.staleManifest),
   ]);
 };
 
@@ -623,10 +683,10 @@ const writeGenerated = async (
  * - **Here, at build time.** Read the configured plugins, load their route
  *   manifests from `node_modules`, check every entry resolves to a real file,
  *   validate every route, reject two plugins claiming one URL and a plugin
- *   claiming one of the app's own, then write `src/plugin-route-manifest.gen.ts`
- *   and `src/plugin-routes.gen.ts` - and, from the same configured plugin list,
- *   `src/admin-nav.gen.ts`, one literal import per plugin that exports an
- *   `admin/nav` module.
+ *   claiming one of the app's own, then write `src/plugin-routes.gen.ts` - one
+ *   static import per plugin that exports a `routes` module - and, from the same
+ *   configured plugin list, `src/admin-nav.gen.ts` and
+ *   `src/content-registry.gen.ts`.
  * - **In the browser.** Import those three files. They contain literal data,
  *   literal `import()` calls and literal specifiers and nothing else - no
  *   `node:fs`, no package resolution, no validation to repeat and no specifier

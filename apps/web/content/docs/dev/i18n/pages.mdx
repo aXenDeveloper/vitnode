@@ -12,22 +12,22 @@ VitNode uses [`use-intl`](https://use-intl.dev) for frontend translations. To ke
 
 ### 1. In a Plugin Route (Recommended)
 
-Plugin routes declare namespaces in `routes/manifest.ts`. VitNode loads the strings in parallel with the route chunk automatically:
+Plugin routes declare their namespaces as `messages` in `routes.ts`. VitNode loads the strings in parallel with the route chunk automatically:
 
-```ts title="plugins/blog/src/routes/manifest.ts"
-export const routes: PluginRouteDefinition[] = [
-  {
-    entry: 'routes/about-page',
-    id: 'about',
-    path: '/blog/about',
-    namespaces: ['@vitnode/blog.about'], // [!code ++]
-  },
-]
+```ts title="plugins/blog/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/blog/about', {
+    component: lazy(() => import('./pages/about-page')),
+    messages: ['@vitnode/blog.about'], // [!code ++]
+  }),
+])
 ```
 
 Read strings directly with `useTranslations`:
 
-```tsx title="plugins/blog/src/routes/about-page.tsx"
+```tsx title="plugins/blog/src/pages/about-page.tsx"
 import { useTranslations } from 'use-intl'
 
 const AboutPage = () => {
@@ -53,7 +53,7 @@ And define the messages in `plugins/blog/src/locales/en.json`:
 
 <Callout type="idea" title="Keep feature copy in the plugin">
   Host messages are for the site shell. A product page should declare its plugin
-  namespace in the manifest and keep its locale JSON beside the route.
+  namespace as the route's `messages` and keep its locale JSON beside the route.
 </Callout>
 
 ## Placeholders and Pluralization

@@ -3,9 +3,8 @@ import { useTranslations } from "use-intl";
 /**
  * What `/example/guide` renders inside the layout beside it.
  *
- * The `page.tsx` next to a `layout.tsx`, said as data: same path, `parentId` set
- * to the layout's own route id. It renders no heading of its own - the frame
- * owns that - and no `<main>`, because the application shell owns the document's
+ * The `page.tsx` next to a `layout.tsx`, said as a tree: `index()` inside the
+ * layout's `children`. It renders no heading of its own - the frame owns that - and no `<main>`, because the application shell owns the document's
  * one `main` landmark and a plugin page that rendered a second would give a
  * screen reader two to choose between.
  *
@@ -15,8 +14,8 @@ import { useTranslations } from "use-intl";
  * export is a component is a complete module.
  *
  * The strings come from `@vitnode/example.guide`, which the *layout* declares in
- * the manifest. Namespaces are inherited by every descendant, so a page renders
- * in strings it never had to ask for - and the host warms them alongside this
+ * `routes.ts`. Message namespaces are inherited by every descendant, so a page
+ * renders in strings it never had to ask for - and the host warms them alongside this
  * module's chunk rather than in a round trip after it.
  */
 const GuideIndexPage = () => {

@@ -2,12 +2,12 @@ import { definePluginRoute } from "@vitnode/core/routing";
 import { useTranslations } from "use-intl";
 
 /**
- * The frame `routes/manifest.ts` declares as `kind: "layout"`.
+ * The frame `routes.ts` declares with `layout()`.
  *
  * A layout claims no URL of its own. It is only ever reached through one of its
- * children, which is why the manifest rejects one with no children, and why the
- * index page beside it - `guide-index-page` - is a separate route at the same
- * path rather than something this file renders itself.
+ * children, which is why VitNode rejects one with no `children`, and why the
+ * index page beside it - `guide-index-page` - is a separate `index()` route
+ * rather than something this file renders itself.
  *
  * `children` arrives as a **prop**, not as an `<Outlet />` this module imports,
  * and that is the one thing keeping a plugin layout framework-neutral: an
@@ -42,16 +42,16 @@ const GuideLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 /**
- * The crumb every page under this frame shows, unless one of them declares its
- * own.
+ * This frame's own crumb - one item of the trail, not the trail.
  *
  * A component rather than an element, because the label is translated and so has
- * to be able to call a hook - and because the runtime is the only thing that
- * knows where in the shell to mount it. The deepest matched route that declares
- * one wins, which is the same rule the host's own routes follow.
+ * to be able to call a hook. Every matched route contributes its own crumb in
+ * parent-to-child order, so `/example/guide/:topic` reads `Plugin routing guide / Layouts`
+ * without either route knowing about the other.
  *
- * Text, not a link: building a locale-correct href needs the host's own link
- * component, and a plugin route module is handed nothing to build one with.
+ * A label, not a link: the shell turns each crumb into a locale-aware link to
+ * its own route's URL, and adds the separators and the `aria-current`. A plugin
+ * route module is handed nothing to build a link with, and needs nothing.
  */
 const GuideBreadcrumb = () => {
   const t = useTranslations("@vitnode/example.guide");
@@ -65,6 +65,7 @@ const GuideBreadcrumb = () => {
  * `head` is merged down the matched routes and the deepest wins per field, so
  * declaring `robots` here is how the whole subtree inherits it by saying
  * nothing. A child that needs a different directive overrides just that field.
+ * The crumb is not merged: it is this route's own item in the trail.
  *
  * `definePluginRoute` rather than a `satisfies` clause: it infers the types this
  * object's own members share. Nothing on this layout needs that yet - it is used

@@ -64,14 +64,14 @@ const CORE_ADMIN_ROUTES: CoreRouteFactory<CoreAdminRouteContext>[] = [
  *       { loadContentRegistry, mountUnder: adminShellRoute, pageHead },
  *     )
  *
- * ## Why not through the plugin route manifest
+ * ## Why not declared as plugin routes
  *
  * Because these screens need options a lazily-imported module cannot provide.
  * `validateSearch` runs during path matching, before any chunk is fetched, and
  * an AdminCP list keeps its whole state in the query string - `?page=999` is
  * clamped and *redirected* before anything renders, which no loader-time
  * normaliser can do. A splat route (`/admin/content/$`) is not representable in
- * the manifest's path grammar either. Core is not a third-party package and does
+ * a plugin route's path grammar either. Core is not a third-party package and does
  * not need that layer's guarantees about untrusted plugins; what it needs is the
  * router's own option set, which is what a code-based route is.
  *

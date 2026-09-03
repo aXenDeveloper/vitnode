@@ -15,25 +15,35 @@
  *
  * ## Two halves, fetched at two different times
  *
- *     ./types ./manifest ./graph   WHAT routes exist, WHERE, in WHICH shape
- *     ./module                     HOW one behaves once its chunk has arrived
+ *     ./tree ./flatten ./manifest ./graph   WHAT routes exist, WHERE, WHICH shape
+ *     ./module                              HOW one behaves once its chunk lands
  *
- * The first is frozen into the application at build time and read before a
- * single byte of a plugin's code is downloaded - which is why the guard, the
- * URL, the tree shape and the message namespaces live there and not in the
- * module. The second is the contract that module satisfies, and it is a
- * VitNode-owned shape rather than a re-exported router type, so a plugin is
- * coupled to VitNode and not to whichever router its host happens to run.
+ * The first is a plugin's `routes.ts`: a nested tree of `page()`, `layout()` and
+ * `index()` declarations, read before a single byte of a page's code is
+ * downloaded - which is why the guard, the URL, the tree shape, the message
+ * namespaces and the one eager `search` schema live there and not in the module.
+ * The second is the contract each lazily imported page or layout module
+ * satisfies, and it is a VitNode-owned shape rather than a re-exported router
+ * type, so a plugin is coupled to VitNode and not to whichever router its host
+ * happens to run.
  */
 export { definePluginRoute } from "./authoring";
 export type { PluginRouteErrorCode, PluginRouteErrorDetails } from "./errors";
 export { PluginRouteError } from "./errors";
+export type { FlatPluginRoute } from "./flatten";
+export { flattenPluginRoutes, pluginRouteIdFor } from "./flatten";
 export type { PluginRouteGraph, PluginRouteNode } from "./graph";
 export { buildPluginRouteGraph, pluginRouteNamespaces } from "./graph";
-export { buildPluginRouteManifest, pluginRouteId } from "./manifest";
+export type { CompiledPluginRouteTrees } from "./manifest";
+export {
+  buildPluginRouteManifest,
+  compilePluginRouteTrees,
+  pluginRouteId,
+} from "./manifest";
 export type {
   CheckedPluginRouteModule,
   CheckedPluginRouteOptions,
+  PluginRouteBreadcrumbProps,
   PluginRouteContext,
   PluginRouteHead,
   PluginRouteHeadArgs,
@@ -66,12 +76,33 @@ export {
   toTanStackRoutePath,
 } from "./path";
 export type {
+  PluginRouteComponent,
+  PluginRouteDeclaration,
+  PluginRouteDeclarationSource,
+  PluginRouteEagerComponentRejected,
+  PluginRouteIndexOptions,
+  PluginRouteLayoutOptions,
+  PluginRouteLazyComponent,
+  PluginRoutePageOptions,
+  PluginRoutes,
+  PluginRouteSearchSchema,
+} from "./tree";
+export {
+  definePluginRoutes,
+  index,
+  isPluginRouteDeclaration,
+  isPluginRouteLazyComponent,
+  layout,
+  lazy,
+  page,
+} from "./tree";
+export type {
   PluginRoute,
   PluginRouteArea,
-  PluginRouteDefinition,
   PluginRouteKind,
   PluginRouteManifest,
   PluginRouteRequirement,
+  PluginRouteSearchValidator,
   PluginRouteSegment,
   PluginRouteSource,
 } from "./types";

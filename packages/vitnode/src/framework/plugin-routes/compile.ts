@@ -1,62 +1,50 @@
-import type {
-  PluginRouteDefinition,
-  PluginRouteManifest,
-} from "../../routing/types.js";
+import type { PluginRouteLazyComponent } from "../../routing/tree.js";
+import type { PluginRouteManifest } from "../../routing/types.js";
 import type { HostRoutePath } from "./host-routes.js";
-import type {
-  ResolvedPluginRouteModule,
-  ResolvedPluginRouteSearchModule,
-} from "./types.js";
+import type { ResolvedPluginRoutesModule } from "./types.js";
 
-import { buildPluginRouteManifest } from "../../routing/manifest.js";
+import { compilePluginRouteTrees } from "../../routing/manifest.js";
 import { withPluginRouteDiagnostics } from "./diagnostics.js";
-import { generatePluginRouteRegistrySource } from "./generate.js";
+import { generatePluginRoutesSource } from "./generate.js";
 import { assertNoHostRouteCollision } from "./host-routes.js";
-import { generatePluginRouteManifestSource } from "./manifest-source.js";
-import { assertPluginRouteRegistryParity } from "./parity.js";
-import {
-  pluginRouteEntrySources,
-  pluginRouteSearchModules,
-  resolvePluginRouteModules,
-} from "./resolve.js";
 
 /**
- * One configured plugin's route declarations, exactly as its manifest exported
- * them.
+ * One configured plugin's route tree, exactly as its `routes` module exported
+ * it.
  *
- * `routes` is typed but not trusted: a plugin is JavaScript by the time it is
- * installed, and every field is re-read defensively by
- * `buildPluginRouteManifest`. What this layer adds is `manifestSpecifier` -
- * where the declarations came from - which is not part of what a plugin declares
- * and is the one thing a plugin author needs to know to fix any of these errors.
+ * `routes` is `unknown` because a plugin is compiled JavaScript by the time it
+ * is installed: every field is re-read defensively by `flattenPluginRoutes`.
+ * What this layer adds is `routesSpecifier` - where the tree came from - which
+ * is not part of what a plugin declares and is the one thing a plugin author
+ * needs in order to fix any of these errors.
  */
 export interface PluginRouteCompilerSource {
-  /**
-   * The specifier the declarations were loaded from, e.g.
-   * `"@vitnode/example/routes/manifest"`. Optional so a caller with declarations
-   * from somewhere else - a test, a Next.js host reading a registered plugin -
-   * is not made to invent one.
-   */
-  manifestSpecifier?: string;
   pluginId: string;
-  routes?: readonly PluginRouteDefinition[];
+  routes?: unknown;
+  /**
+   * The specifier the tree was loaded from, e.g. `"@vitnode/example/routes"`.
+   * Optional so a caller with declarations from somewhere else - a test, or a
+   * host reading a registered plugin - is not made to invent one.
+   */
+  routesSpecifier?: string;
 }
 
 /** What one compilation produced. */
 export interface CompiledPluginRoutes {
-  /** The resolved snapshot both sources below were written from. */
-  manifest: PluginRouteManifest;
-  /** The source of `src/plugin-route-manifest.gen.ts`. */
-  manifestSource: string;
-  /** The manifest's routes, paired with the specifiers they are imported by. */
-  modules: ResolvedPluginRouteModule[];
-  /** The source of `src/plugin-routes.gen.ts`. */
-  registrySource: string;
   /**
-   * The routes that declared an eager search schema, paired with the specifiers
-   * the generated file imports them by. Usually empty.
+   * Each route's lazy component, keyed by route id.
+   *
+   * Here so a build can ask the one question a generated file no longer answers
+   * for it: does the module this page names actually exist. See
+   * `lazyImportSpecifier`.
    */
-  searchModules: ResolvedPluginRouteSearchModule[];
+  components: Map<string, PluginRouteLazyComponent>;
+  /** The resolved snapshot the source below was written from. */
+  manifest: PluginRouteManifest;
+  /** The plugins whose route modules the generated file imports. */
+  modules: ResolvedPluginRoutesModule[];
+  /** The source of `src/plugin-routes.gen.ts`. */
+  source: string;
 }
 
 export interface CompilePluginRoutesOptions {
@@ -73,87 +61,71 @@ export interface CompilePluginRoutesOptions {
 }
 
 /**
- * Every configured plugin's routes, compiled into the two files an app holds.
+ * Every configured plugin's routes, compiled into the one file an app holds.
  *
- * Pure: plain declarations in, validated data and two source strings out. There
- * is no filesystem here, no package resolution and no framework - the build tool
- * that owns those (`@vitnode/core/framework/vite`) loads the declarations, checks
- * each entry resolves, and writes what this returns. That split is what makes
- * the part that has to be *exactly* reproducible testable without a fixture app.
+ * Pure: plain declarations in, a validated manifest and one source string out.
+ * There is no filesystem here, no package resolution and no framework - the
+ * build tool that owns those (`@vitnode/core/framework/vite`) loads the
+ * declarations and writes what this returns. That split is what makes the part
+ * that has to be *exactly* reproducible testable without a fixture app.
  *
- * ## One snapshot, two files
+ * ## One snapshot, one file
  *
- * The manifest is built first and the registry is derived **from it**, rather
- * than from a second pass over the same plugins. That ordering is the entire
- * anti-drift argument: a route reaches `plugin-routes.gen.ts` only by being in
- * the manifest, under the id the manifest gave it, with the entry the manifest
- * validated. A route that fails validation cannot leave a stale import behind,
- * and a disabled plugin cannot leave one either, because both files are written
- * from the list its routes are no longer in.
+ * The manifest is built first and the generated file is written **from the
+ * plugins that survived it**, rather than from a second pass over the same
+ * configuration. That ordering is the whole anti-drift argument: a plugin
+ * reaches `plugin-routes.gen.ts` only by having declared a tree that validates,
+ * and a plugin removed from the config cannot leave a stale import behind
+ * because the file is written from the list it is no longer in.
  *
- * {@link assertPluginRouteRegistryParity} then checks in both directions anyway,
- * which is belt and braces on purpose: it is what keeps the derivation honest if
- * somebody later gives the registry its own source of truth back.
+ * There is no second generated file to keep in step, and that is the point.
+ * Every route's component is the `lazy()` the plugin's own tree carries, so the
+ * route and the module it renders cannot describe different things - they are
+ * one declaration.
  *
  * ## The order of the checks, which is the order of the diagnostics
  *
- * 1. `buildPluginRouteManifest` - is each route legal on its own, do two of them
- *    claim one URL, and does the hierarchy they describe hold together. Every
- *    failure names the plugin and the route; this layer adds the manifest each
- *    one was declared in.
+ * 1. `compilePluginRouteTrees` - is each route legal on its own, does the tree
+ *    it sits in hold together, and do two of them claim one URL. Every failure
+ *    names the plugin and the route; this layer adds the module each one was
+ *    declared in.
  * 2. `assertNoHostRouteCollision` - does a plugin route shadow one of the
  *    application's own pages.
- * 3. `resolvePluginRouteModules` - can each entry be written into an import.
- * 4. `assertPluginRouteRegistryParity` - do the two files describe one set of
- *    routes.
  *
- * There was a third check between 2 and 3 until the Next.js cutover -
- * `assertNoLegacyRouteCollision`, which refused a plugin route claiming a URL
- * the Next.js application still answered. It read those URLs off
- * `@vitnode/core`'s own `src/routes/admin/**`, and that directory no longer
- * exists: there is one application now, so `assertNoHostRouteCollision` against
- * its real route files is the whole of the question.
- *
- * Deterministic: the manifest is sorted by path and the registry by key, both
- * with code-unit comparisons, so the same plugin configuration produces the same
- * bytes on any machine and in any registration order.
+ * Deterministic: the manifest is sorted by path and the generated file by plugin
+ * id, both with code-unit comparisons, so the same plugin configuration produces
+ * the same bytes on any machine and in any registration order.
  */
 export const compilePluginRoutes = ({
   hostRoutes = [],
   sources,
 }: CompilePluginRoutesOptions): CompiledPluginRoutes => {
-  const manifestSpecifiers = new Map(
+  const specifiers = new Map(
     sources.flatMap(source =>
-      source.manifestSpecifier === undefined
+      source.routesSpecifier === undefined
         ? []
-        : [[source.pluginId, source.manifestSpecifier] as const],
+        : [[source.pluginId, source.routesSpecifier] as const],
     ),
   );
 
-  return withPluginRouteDiagnostics(manifestSpecifiers, () => {
-    const manifest = buildPluginRouteManifest(
-      sources.map(({ pluginId, routes }) => ({
-        pluginId,
-        routes: routes === undefined ? [] : [...routes],
-      })),
+  return withPluginRouteDiagnostics(specifiers, () => {
+    const { components, manifest } = compilePluginRouteTrees(
+      sources.map(({ pluginId, routes }) => ({ pluginId, routes })),
     );
 
     assertNoHostRouteCollision(manifest, hostRoutes);
 
-    const modules = resolvePluginRouteModules(
-      pluginRouteEntrySources(manifest),
+    const modules: ResolvedPluginRoutesModule[] = sources.flatMap(source =>
+      source.routesSpecifier === undefined
+        ? []
+        : [{ pluginId: source.pluginId, specifier: source.routesSpecifier }],
     );
 
-    assertPluginRouteRegistryParity(manifest, modules);
-
-    const searchModules = pluginRouteSearchModules(manifest);
-
     return {
+      components,
       manifest,
-      manifestSource: generatePluginRouteManifestSource(manifest),
       modules,
-      registrySource: generatePluginRouteRegistrySource(modules, searchModules),
-      searchModules,
+      source: generatePluginRoutesSource(modules),
     };
   });
 };

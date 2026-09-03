@@ -1,15 +1,16 @@
 ---
 title: Routing
-description: Add public and AdminCP URLs through plugin route manifests, with TanStack Start loaders, metadata, and code splitting.
+description: Add public and AdminCP URLs through a plugin's route tree, with TanStack Start loaders, metadata, and code splitting.
 icon: Route
 ---
 
 import { DatabaseIcon, FileTextIcon, RouteIcon } from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-VitNode uses TanStack Start, but feature routes begin in a plugin. The manifest
-is plain data that the host compiles into lazy route imports, so the package owns
-the page without copying files into `apps/web/src/routes`.
+VitNode uses TanStack Start, but feature routes begin in a plugin. A plugin's
+`routes.ts` is a small tree of declarations - a path, and the module that renders
+it - so the package owns the page without copying files into
+`apps/web/src/routes`.
 
 | Put it in        | Use it for                                                      | Default  |
 | ---------------- | --------------------------------------------------------------- | -------- |
@@ -22,28 +23,30 @@ the page without copying files into `apps/web/src/routes`.
 
 ### Declare the plugin URL
 
-```ts title="plugins/site-notes/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from '@vitnode/core/routing'
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:5]
-  {
-    entry: 'routes/notes-page',
-    id: 'notes',
-    path: '/notes',
-  },
-]
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/notes', {
+    component: lazy(() => import('./pages/notes-page')),
+  }),
+])
 ```
 
-Use `:slug` for a dynamic segment, such as `path: '/notes/:slug'`. VitNode
+Use `:slug` for a dynamic segment, such as `page('/notes/:slug', …)`. VitNode
 maps it to TanStack Start’s internal `$slug` spelling for you.
+
+`lazy` names the page module without importing it: the literal `import()` is
+what Vite follows to give the page a chunk of its own, and it does not run until
+somebody opens the route.
 
   </Step>
   <Step>
 
 ### Add the page module
 
-```tsx title="plugins/site-notes/src/routes/notes-page.tsx"
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
 const NotesPage = () => (
   <div className="container mx-auto flex max-w-3xl flex-col gap-4 p-4">
     <h2 className="text-3xl font-semibold">Site notes</h2>
@@ -87,7 +90,7 @@ Open `http://localhost:3000/notes`.
 Export `route` from the same plugin module. Declare `load` before `head` so
 TypeScript carries the inferred data into your metadata:
 
-```tsx title="plugins/site-notes/src/routes/note-page.tsx"
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
 import type { PluginRoutePageProps } from '@vitnode/core/routing'
 import { definePluginRoute } from '@vitnode/core/routing'
 
@@ -126,9 +129,9 @@ export default NotePage
 <Cards>
   <Card
     icon={<RouteIcon />}
-    title="Route manifest reference"
-    description="Configure areas, layouts, namespaces, guards, and dynamic paths."
-    href="/docs/dev/plugins/route-manifest"
+    title="Plugin routes reference"
+    description="Configure areas, layouts, messages, guards, search, and dynamic paths."
+    href="/docs/dev/plugins/routes"
   />
   <Card
     icon={<DatabaseIcon />}

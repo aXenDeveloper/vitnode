@@ -14,7 +14,7 @@ written by a toaster.
 
 Plugins declare metadata using `definePluginRoute`. Metadata can read dynamically from `loaderData`:
 
-```tsx title="plugins/blog/src/routes/article-page.tsx"
+```tsx title="plugins/blog/src/pages/article-page.tsx"
 import { definePluginRoute } from '@vitnode/core/routing'
 
 export const route = definePluginRoute({
@@ -51,8 +51,8 @@ inside the plugin that owns those records.
     href="/docs/dev/routing"
   />
   <Card
-    title="Route Manifest"
-    description="Full options for plugin route definitions"
-    href="/docs/dev/plugins/route-manifest"
+    title="Plugin Routes"
+    description="Full options for a plugin's route tree"
+    href="/docs/dev/plugins/routes"
   />
 </Cards>

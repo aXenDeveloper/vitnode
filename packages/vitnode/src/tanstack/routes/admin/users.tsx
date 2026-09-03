@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreRouteFactory } from "../types";
 
-import { AdminBreadcrumb } from "../../admin/breadcrumb";
+import { adminBreadcrumb } from "../../admin/breadcrumb";
 import { loadAdminRolesRoute } from "../../admin/roles/route";
 import {
   normalizeRolesRouteSearch,
@@ -17,6 +17,7 @@ import {
   normalizeUsersRouteSearch,
   usersRouteParams,
 } from "../../admin/users/route-search";
+import { breadcrumbGroup } from "../../breadcrumb/model";
 import { FormPendingSkeleton, TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
@@ -63,7 +64,7 @@ const usersListRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeUsersRouteSearch,
     staticData: {
-      breadcrumb: <AdminBreadcrumb segments={["core", "users"]} />,
+      breadcrumb: adminBreadcrumb({ segments: ["core", "users"] }),
     },
   });
 
@@ -134,7 +135,7 @@ const rolesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeRolesRouteSearch,
     staticData: {
-      breadcrumb: <AdminBreadcrumb segments={["core", "users", "roles"]} />,
+      breadcrumb: adminBreadcrumb({ segments: ["core", "users", "roles"] }),
     },
   });
 
@@ -208,7 +209,9 @@ const userRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     path: "/admin/core/users/$id",
     pendingComponent: FormPendingSkeleton,
     staticData: {
-      breadcrumb: <AdminUserBreadcrumbContent />,
+      breadcrumb: breadcrumbGroup(function AdminUserBreadcrumb({ params }) {
+        return <AdminUserBreadcrumbContent params={params} />;
+      }),
     },
   });
 

@@ -1,5 +1,5 @@
 /**
- * The page `routes/manifest.ts` declares, and the first plugin route module a
+ * The page `routes.ts` declares, and the first plugin route module a
  * VitNode app bundles rather than copies.
  *
  * Zero imports, which is the point rather than an accident. It is compiled into
@@ -14,8 +14,8 @@
  * generated registry can rely on without being told.
  *
  * No `<main>`, and that is part of the contract rather than a style choice. A
- * plugin route declares `area: "main"`, which puts it inside the application
- * shell - and the shell renders the document's one `<main>` landmark. A page
+ * plugin route renders inside the application shell - and the shell renders the
+ * document's one `<main>` landmark. A page
  * that renders its own produces `<main><main>`: invalid HTML, and two "main"
  * landmarks for a screen reader to choose between. A plugin page owns its
  * container - its width, its padding, its vertical rhythm - and nothing above
@@ -29,9 +29,10 @@ const ExamplePage = () => (
 
     <p className="text-muted-foreground leading-relaxed text-pretty">
       This page lives in <code>@vitnode/example</code> and is served by the app
-      that installed it. It was never copied into the app&apos;s source: the app
-      generated a literal import for it from the plugin&apos;s route manifest,
-      and the bundler put it in its own chunk.
+      that installed it. It was never copied into the app&apos;s source: the
+      plugin&apos;s <code>routes.ts</code> names this module with{" "}
+      <code>lazy(() =&gt; import(&quot;./pages/example-page&quot;))</code>, and
+      the bundler put it in its own chunk.
     </p>
   </div>
 );

@@ -19,15 +19,15 @@ import {
  *
  *     create-vitnode-app                 create-vitnode-app --plugin
  *     ──────────────────────             ──────────────────────────
- *     apps/web/src/routes/**             plugins/<name>/src/routes/manifest.ts
+ *     apps/web/src/routes/**             plugins/<name>/src/routes.ts
  *       the application's own pages        the routes this plugin contributes
- *     apps/web/src/router.tsx            plugins/<name>/src/routes/*.tsx
+ *     apps/web/src/router.tsx            plugins/<name>/src/pages/*.tsx
  *       withPluginRoutes(...)              the pages themselves
  *     apps/web/src/vitnode.config.ts     plugins/<name>/src/config.tsx
  *       plugins: []
  *
  * The line between them is the whole subject of this file. A plugin author writes
- * a route module and declares it in their manifest; the app's Vite build compiles
+ * a route module and names it in their route tree; the app's Vite build compiles
  * that into two generated registries and `withPluginRoutes` mounts them. There is
  * no third step in which the page becomes a file in the application, and a
  * scaffold that produced one would be teaching the deleted architecture to every
@@ -99,14 +99,14 @@ const DEFAULT_PLUGIN_NAME = "my-vitnode-plugin";
 describe("the scaffolded plugin", () => {
   const scaffold = pluginRouteScaffold(DEFAULT_PLUGIN_NAME);
   const slug = routeSlugFor(DEFAULT_PLUGIN_NAME);
-  const manifest = scaffold["src/routes/manifest.ts"];
+  const routes = scaffold["src/routes.ts"];
 
-  it("declares one route, in its own manifest", () => {
-    expect(manifest).toBeDefined();
-    expect(manifest).toContain(`path: "/${slug}"`);
-    expect(manifest.match(/path: "/g)).toHaveLength(1);
-    expect(manifest).toContain('entry: "routes/home-page"');
-    expect(Object.keys(scaffold)).toContain("src/routes/home-page.tsx");
+  it("declares one route, in its own route tree", () => {
+    expect(routes).toBeDefined();
+    expect(routes).toContain(`page("/${slug}", {`);
+    expect(routes.match(/^ {2}page\("/gm)).toHaveLength(1);
+    expect(routes).toContain('lazy(() => import("./pages/home-page"))');
+    expect(Object.keys(scaffold)).toContain("src/pages/home-page.tsx");
   });
 
   /**
@@ -142,6 +142,12 @@ describe("the scaffolded plugin", () => {
     },
   );
 
+  /** And no flat route manifest, which is the API this replaced. */
+  it("scaffolds no routes/manifest.ts", () => {
+    expect(Object.keys(scaffold)).not.toContain("src/routes/manifest.ts");
+    expect(routes).not.toContain("entry:");
+  });
+
   /**
    * The page is framework-neutral, which is what lets it stay in the plugin.
    *
@@ -151,7 +157,7 @@ describe("the scaffolded plugin", () => {
    * by whichever app installed it.
    */
   it("scaffolds a plain component, not a framework route file", () => {
-    const page = scaffold["src/routes/home-page.tsx"];
+    const page = scaffold["src/pages/home-page.tsx"];
 
     expect(page).toContain("export default");
     expect(page).not.toContain("createFileRoute");
@@ -315,17 +321,17 @@ describe("the generated application", () => {
    * starter already mounts whatever a plugin declares.
    *
    * A plugin author adds their package to `plugins` and their route to their own
-   * manifest, and the page is served. No file in `src/routes` is created, edited
-   * or copied - which is exactly what the authoring guide promises, said here as
-   * a property of the bytes a new project starts from.
+   * `routes.ts`, and the page is served. No file in `src/routes` is created,
+   * edited or copied - which is exactly what the authoring guide promises, said
+   * here as a property of the bytes a new project starts from.
    */
-  it("mounts plugin routes from the generated registries", () => {
+  it("mounts plugin routes from the generated registry", () => {
     const router = withoutComments(readTemplate("root/src/router.tsx"));
 
     expect(router).toContain("withPluginRoutes");
     expect(router).toContain("pluginRouteSpecs");
-    expect(router).toContain("./plugin-route-manifest.gen");
     expect(router).toContain("./plugin-routes.gen");
+    expect(router).not.toContain("./plugin-route-manifest.gen");
     // Both shells, so a plugin declaring either area is composed rather than
     // refused - and an admin plugin page needs no `_admin` file of its own.
     expect(router).toMatch(/mountUnder:\s*\{[^}]*\badmin:/);

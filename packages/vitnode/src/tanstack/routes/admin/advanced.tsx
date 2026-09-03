@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { AdminScreenContext } from "../../admin/screen";
 import type { CoreRouteFactory } from "../types";
 
-import { AdminBreadcrumb } from "../../admin/breadcrumb";
+import { adminBreadcrumb } from "../../admin/breadcrumb";
 import { loadAdminCronRoute } from "../../admin/cron/route";
 import {
   cronRouteParams,
@@ -56,7 +56,7 @@ const cronRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeCronRouteSearch,
     staticData: {
-      breadcrumb: <AdminBreadcrumb segments={["core", "advanced", "cron"]} />,
+      breadcrumb: adminBreadcrumb({ segments: ["core", "advanced", "cron"] }),
     },
   });
 
@@ -122,7 +122,7 @@ const queueRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeQueueRouteSearch,
     staticData: {
-      breadcrumb: <AdminBreadcrumb segments={["core", "advanced", "queue"]} />,
+      breadcrumb: adminBreadcrumb({ segments: ["core", "advanced", "queue"] }),
     },
   });
 
@@ -185,7 +185,7 @@ const searchIndexRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     pendingComponent: TablePendingSkeleton,
     validateSearch: normalizeSearchIndexRouteSearch,
     staticData: {
-      breadcrumb: <AdminBreadcrumb segments={["core", "advanced", "search"]} />,
+      breadcrumb: adminBreadcrumb({ segments: ["core", "advanced", "search"] }),
     },
   });
 

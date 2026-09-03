@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
 
 import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { normalizeAdminUserId } from "@/views/admin/views/core/users/detail/user-query";
+
+import type { RouteBreadcrumbProps } from "../../breadcrumb/model";
 
 import { RouteMessages } from "../../i18n/route-messages";
 import { AdminBreadcrumb } from "../breadcrumb";
@@ -21,13 +22,14 @@ import { adminUserQuery } from "./query";
  * fetching the user a second time; this reads the entry the loader already
  * filled, so there is no second request and no second answer.
  *
- * ## Why it reads the id off the router rather than taking it as a prop
+ * ## Where the id comes from
  *
- * `staticData.breadcrumb` is a fixed `ReactNode`, declared next to the route
- * options and evaluated before any of this route's params exist - so a crumb
- * that needs one has to ask. `useParams({ strict: false })` is the router's own
- * answer to that, and it is the *parsed* value: a route's `params.parse` runs
- * first, so what arrives here has already been through `normalizeAdminUserId`.
+ * The shell hands every crumb the match that declared it, so the params arrive
+ * as a prop - this route's own, not the deepest match's - and they are the
+ * *parsed* value: a route's `params.parse` runs first, so what arrives here has
+ * already been through `normalizeAdminUserId`. It is narrowed rather than
+ * trusted all the same: a package cannot name a host's route types, so a
+ * `params` reaching a crumb proves nothing about an `$id` being in scope.
  *
  * ## Why it mounts `RouteMessages` of its own
  *
@@ -41,19 +43,12 @@ import { adminUserQuery } from "./query";
  */
 export const AdminUserBreadcrumbContent = ({
   LinkComponent,
-}: {
+  params,
+}: Partial<Pick<RouteBreadcrumbProps, "params">> & {
   LinkComponent?: AuthLinkComponent;
 }) => {
   const adminUserId = useAdminIdentity();
-  /**
-   * `strict: false` because a package cannot name a host's route id, so the
-   * params come back untyped - which is honest: the shell renders this component
-   * from `staticData`, and nothing there proves a `$id` is in scope. Narrowed
-   * rather than asserted, and normalised rather than trusted: the crumb reads
-   * the cache entry the loader filled, and only one spelling of an id names it.
-   */
-  const params: unknown = useParams({ strict: false });
-  const raw = (params as { id?: unknown }).id;
+  const raw: unknown = params?.id;
   const id = normalizeAdminUserId(typeof raw === "string" ? raw : undefined);
   const { data } = useQuery({
     ...adminUserQuery({ adminUserId, id: id ?? "" }),

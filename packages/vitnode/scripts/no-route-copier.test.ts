@@ -19,20 +19,20 @@ import { describe, expect, it } from "vitest";
  *     src/routes/blank/…             copied without the site chrome
  *     src/routes/breadcrumb/…        copied into a @breadcrumb parallel-route slot
  *
- *     src/routes/manifest.ts         declared, never copied
+ *     src/routes.ts                  declared, never copied
  *
  * `scripts/prepare-plugins-files.ts` did the copy once per `vitnode init`,
  * `scripts/plugin.ts` watched and re-copied on every save, and
  * `scripts/shared/file-utils.ts` rewrote each import on the way through so a
  * page's `@/` still resolved after it landed in somebody else's `src/`.
- * `scripts/legacy-route-overlap.ts` warned when a manifest entry pointed inside
+ * `scripts/legacy-route-overlap.ts` warned when a route declaration pointed inside
  * one of those four directories, and
  * `src/framework/plugin-routes/legacy-routes.ts` refused a plugin route whose
  * URL a Next.js page still answered.
  *
  * ## What replaced it, and why a copy may never come back
  *
- * A plugin declares its routes in `src/routes/manifest.ts`; the app's Vite build
+ * A plugin declares its routes in `src/routes.ts`; the app's Vite build
  * compiles that into a literal registry it imports from the plugin's own `dist`.
  * The page has exactly one home, so there is no copy to go stale, no import to
  * rewrite, and no generated directory in an application that nobody wrote.
@@ -217,6 +217,5 @@ describe("the build-time strangler", () => {
     const compiler = codeOf("src/framework/plugin-routes/compile.ts");
 
     expect(compiler).toContain("assertNoHostRouteCollision");
-    expect(compiler).toContain("assertPluginRouteRegistryParity");
   });
 });

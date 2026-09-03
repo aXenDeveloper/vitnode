@@ -19,7 +19,6 @@ export default [
       "dist/**",
       "src/routeTree.gen.ts",
       "src/plugin-routes.gen.ts",
-      "src/plugin-route-manifest.gen.ts",
       "src/admin-nav.gen.ts",
       "src/content-registry.gen.ts",
       "scripts/**",

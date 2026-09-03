@@ -47,7 +47,7 @@ import { useAppNavigate } from "#/lib/navigation";
  * live under that plugin's own id and the shell would otherwise render them as
  * dotted identifiers. `_admin`'s loader warms the same list.
  *
- * No navigation is derived from the route manifest, in either direction: the
+ * No navigation is derived from a plugin's route tree, in either direction: the
  * navigation model is complete regardless of which screen a click lands on, and
  * a nav entry is a product decision rather than a consequence of the route tree.
  */

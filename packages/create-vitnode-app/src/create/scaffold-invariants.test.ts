@@ -327,15 +327,13 @@ describe("the generated plugin", () => {
    * A plugin declares its routes; it does not ship a directory of pages for
    * something else to copy.
    */
-  it("scaffolds a route manifest rather than route directories", async () => {
+  it("scaffolds a route tree rather than route directories", async () => {
     const { pluginRouteScaffold } =
       await import("../plugin/create/route-templates.js");
     const scaffold = pluginRouteScaffold("@acme/blog");
 
-    expect(Object.keys(scaffold)).toContain("src/routes/manifest.ts");
-    expect(scaffold["src/routes/manifest.ts"]).toContain(
-      "PluginRouteDefinition",
-    );
+    expect(Object.keys(scaffold)).toContain("src/routes.ts");
+    expect(scaffold["src/routes.ts"]).toContain("definePluginRoutes");
 
     for (const legacy of ["main", "admin", "blank", "breadcrumb"]) {
       expect(Object.keys(scaffold)).not.toContain(

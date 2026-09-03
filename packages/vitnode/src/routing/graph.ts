@@ -1,8 +1,8 @@
 import type { PluginRoute, PluginRouteSegment } from "./types";
 
 import { PluginRouteError } from "./errors";
-import { comparePluginRoutes } from "./manifest";
 import { normalizeNamespaceList } from "./namespaces";
+import { comparePluginRoutes } from "./order";
 import { formatRoutePath, relativeRouteSegments, routeMatchKey } from "./path";
 
 /**
@@ -74,12 +74,13 @@ const fail = (
 /**
  * A manifest, read as a tree - and every way that could be wrong, refused.
  *
- * Called twice on the same data by design: once while an application is built,
- * where it is what turns a bad `parentId` into a failed build, and once by the
- * runtime over the generated manifest, where it is what decides the order routes
- * are mounted in. One function, so a tree an application builds is provably the
- * tree its build validated - a second implementation for the runtime is exactly
- * how a check ends up passing at build time and being wrong in production.
+ * Called twice on the same declarations by design: once while an application is
+ * built, where it is what turns a tree that cannot hold together into a failed
+ * build, and once by the runtime over the same plugins' own modules, where it is
+ * what decides the order routes are mounted in. One function, so the tree an
+ * application mounts is provably the tree its build validated - a second
+ * implementation for the runtime is exactly how a check ends up passing at build
+ * time and being wrong in production.
  *
  * It is pure and it is cheap: a map, four passes over a list that has as many
  * entries as the app has plugin pages.
@@ -89,11 +90,11 @@ const fail = (
  * - **A duplicate id.** Two routes cannot share the key their module is
  *   registered under.
  * - **A parent that does not exist**, in a manifest that ought to contain it.
- * - **A parent in another plugin.** Unrepresentable in a declaration - a
- *   `parentId` is plugin-local - and still checked here, because this also runs
- *   over a generated manifest where ids are already global. One plugin's page
- *   inside another plugin's frame would make a route tree depend on which
- *   plugins happen to be installed beside it.
+ * - **A parent in another plugin.** Unrepresentable in a declaration - a parent
+ *   is the layout a route was nested inside, in its own plugin's tree - and
+ *   still checked here, because ids are global by the time this runs. One
+ *   plugin's page inside another plugin's frame would make a route tree depend
+ *   on which plugins happen to be installed beside it.
  * - **A parent that is not a layout.** A page has no children; a route under one
  *   would never render.
  * - **A parent in another area.** Nesting is how a shell is chosen, so a route
@@ -175,7 +176,7 @@ export const buildPluginRouteGraph = (
       fail(
         "unknown-parent",
         route,
-        `Plugin route "${route.id}" declares the parent "${parentId}", which no route in the manifest has. A parent is another route from the same plugin, named by its plugin-local id.`,
+        `Plugin route "${route.id}" declares the parent "${parentId}", which no route in the manifest has. A parent is the layout this route was nested inside in its plugin's own route tree.`,
       );
 
       continue;
@@ -331,7 +332,7 @@ export const buildPluginRouteGraph = (
       fail(
         "childless-layout",
         node.route,
-        `Plugin route "${node.route.id}" is a layout with no routes inside it. A layout claims no URL of its own, so nothing would ever render it - give it a route with \`parentId: "${node.route.routeId}"\`, or make it a page.`,
+        `Plugin route "${node.route.id}" is a layout with no routes inside it. A layout claims no URL of its own, so nothing would ever render it - give it an \`index()\` route, or make it a \`page()\`.`,
       );
     }
   }
@@ -432,7 +433,7 @@ export const pluginRouteNamespaces = (node: PluginRouteNode): string[] => {
     current !== null;
     current = current.parent
   ) {
-    namespaces.push(...current.route.namespaces);
+    namespaces.push(...current.route.messages);
   }
 
   return normalizeNamespaceList(namespaces);

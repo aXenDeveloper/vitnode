@@ -10,7 +10,7 @@ Content delivery starts in the plugin that owns the content type. Opt into the
 public API first, then let the same plugin claim the page URL. Search engines
 get a stable story; future you gets fewer scattered files.
 
-{/* Image prompt: Dark-theme flow diagram showing a Content Engine record with a slug, a plugin route manifest for /articles/:slug, and a rendered page head containing title, description, canonical URL, Open Graph, hreflang, and sitemap symbols. 1600x900. */}
+{/* Image prompt: Dark-theme flow diagram showing a Content Engine record with a slug, a plugin route tree entry for /articles/:slug, and a rendered page head containing title, description, canonical URL, Open Graph, hreflang, and sitemap symbols. 1600x900. */}
 
 <Steps>
   <Step>
@@ -56,15 +56,15 @@ export const articleContentType = defineContentType({
 
 ### Claim the public URL in the plugin
 
-```ts title="plugins/site-notes/src/routes/manifest.ts"
-export const routes = [
-  // [!code ++:6]
-  {
-    entry: 'routes/article-page',
-    id: 'article',
-    path: '/articles/:slug',
-  },
-]
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/articles/:slug', {
+    component: lazy(() => import('./pages/article-page')),
+  }),
+])
 ```
 
   </Step>
@@ -72,7 +72,7 @@ export const routes = [
 
 ### Render data and metadata from the plugin route
 
-```tsx title="plugins/site-notes/src/routes/article-page.tsx"
+```tsx title="plugins/site-notes/src/pages/article-page.tsx"
 import type { PluginRoutePageProps } from '@vitnode/core/routing'
 import { definePluginRoute } from '@vitnode/core/routing'
 

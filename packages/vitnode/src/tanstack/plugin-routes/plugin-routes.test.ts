@@ -3,8 +3,9 @@ import type { AnyRoute } from "@tanstack/react-router";
 import { createRootRoute, createRoute } from "@tanstack/react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import type { PluginRouteModuleRegistry } from "@/framework/plugin-routes";
-import type { PluginRoute } from "@/routing";
+import type { PluginRouteDeclaration } from "@/routing";
+
+import { definePluginRoutes, index, layout, lazy, page } from "@/routing";
 
 import type { PluginRoutePageHead } from "./mount";
 
@@ -14,7 +15,8 @@ import { withPluginRoutes } from "./mount";
 import { pluginRouteSpecs } from "./specs";
 
 /**
- * Plugin routes, from a manifest to a mounted TanStack route *tree*.
+ * Plugin routes, from a plugin's declared tree to a mounted TanStack route
+ * *tree*.
  *
  * Route structure only: which routes exist, what they claim, who their parent
  * is, and what the composition refuses. Nothing renders - whether a plugin's
@@ -28,29 +30,21 @@ import { pluginRouteSpecs } from "./specs";
  * `apps/web/src/tests/plugin-routes.test.ts`.
  */
 
-const route = (overrides: Partial<PluginRoute> = {}): PluginRoute => ({
-  area: "main",
-  entry: "routes/page",
-  id: "plugin:page",
-  kind: "page",
-  namespaces: [],
-  parentId: null,
-  path: "/page",
-  pluginId: "plugin",
-  requires: null,
-  routeId: "page",
-  searchEntry: null,
-  segments: [{ kind: "static", value: "page" }],
-  ...overrides,
-});
+/** A page module, as a `lazy()` that resolves without a bundler. */
+const lazyModule = (
+  module: Record<string, unknown> = { default: () => null },
+) => lazy(async () => await Promise.resolve(module));
 
-const registryOf = (...keys: string[]): PluginRouteModuleRegistry =>
-  Object.fromEntries(
-    keys.map(key => [
-      key,
-      async () => Promise.resolve({ default: () => null }),
-    ]),
-  );
+/** One plugin's tree, as the specs a router is built from. */
+const specsOf = (...routes: PluginRouteDeclaration[]) =>
+  pluginRouteSpecs([
+    { pluginId: "plugin", routes: definePluginRoutes(routes) },
+  ]);
+
+const pageAt = (path: string) => page(path, { component: lazyModule() });
+
+/** The id VitNode derives for a page at `path`, which diagnostics name. */
+const idOf = (path: string) => `plugin:page#${path}`;
 
 /** The host's own binding, which is all this composition needs of one. */
 const pageHead: PluginRoutePageHead = ({ description, robots, title }) => ({
@@ -88,15 +82,9 @@ describe("withPluginRoutes", () => {
     );
 
   it("mounts one route per plugin route, under the plugin container", () => {
-    const tree = mount(
-      appTree(),
-      pluginRouteSpecs(
-        [route({ path: "/example" })],
-        registryOf("plugin:page"),
-      ),
-    );
+    const tree = mount(appTree(), specsOf(pageAt("/example")));
 
-    expect(pluginChildren(tree)).toEqual(["/page"]);
+    expect(pluginChildren(tree)).toEqual(["/example"]);
     expect(fileRoutePaths(tree)).toEqual(["/", "/discover"]);
   });
 
@@ -117,8 +105,8 @@ describe("withPluginRoutes", () => {
   it("replaces the plugin subtree rather than appending a second copy", () => {
     const tree = appTree();
 
-    mount(tree, pluginRouteSpecs([route()], registryOf("plugin:page")));
-    mount(tree, pluginRouteSpecs([route()], registryOf("plugin:page")));
+    mount(tree, specsOf(pageAt("/page")));
+    mount(tree, specsOf(pageAt("/page")));
 
     expect(pluginChildren(tree)).toEqual(["/page"]);
     expect(tree.children).toHaveLength(3);
@@ -136,7 +124,7 @@ describe("withPluginRoutes", () => {
   it("takes the plugin subtree off again when the last plugin goes away", () => {
     const tree = appTree();
 
-    mount(tree, pluginRouteSpecs([route()], registryOf("plugin:page")));
+    mount(tree, specsOf(pageAt("/page")));
     expect(containerOf(tree)).toBeDefined();
 
     withPluginRoutes(tree, [], { pageHead });
@@ -162,7 +150,7 @@ describe("withPluginRoutes", () => {
 
     const tree = withPluginRoutes(
       root.addChildren([shell]),
-      pluginRouteSpecs([route()], registryOf("plugin:page")),
+      specsOf(pageAt("/page")),
       { mountUnder: { main: shell }, pageHead },
     );
 
@@ -173,24 +161,13 @@ describe("withPluginRoutes", () => {
   });
 
   /**
-   * The manifest layer rejects two plugins claiming one URL and cannot see this
+   * The routing layer rejects two plugins claiming one URL and cannot see this
    * case - it does not know which application it is being built for.
    */
   it("refuses a plugin route that would shadow one of the app’s own pages", () => {
-    expect(() =>
-      mount(
-        appTree(),
-        pluginRouteSpecs(
-          [
-            route({
-              path: "/discover",
-              segments: [{ kind: "static", value: "discover" }],
-            }),
-          ],
-          registryOf("plugin:page"),
-        ),
-      ),
-    ).toThrow(/discover/);
+    expect(() => mount(appTree(), specsOf(pageAt("/discover")))).toThrow(
+      /discover/,
+    );
   });
 });
 
@@ -203,18 +180,8 @@ describe("withPluginRoutes", () => {
  * its manifest spells out in full, and both shells are pathless.
  */
 describe("plugin route areas", () => {
-  const adminRoute = (overrides: Partial<PluginRoute> = {}): PluginRoute =>
-    route({
-      area: "admin",
-      id: "plugin:reports",
-      path: "/admin/reports",
-      routeId: "reports",
-      segments: [
-        { kind: "static", value: "admin" },
-        { kind: "static", value: "reports" },
-      ],
-      ...overrides,
-    });
+  const adminRoute = (path = "/admin/reports") =>
+    page(path, { area: "admin", component: lazyModule() });
 
   /** A root with both shells, each already holding a page of the app's own. */
   const shells = () => {
@@ -246,16 +213,12 @@ describe("plugin route areas", () => {
   it("mounts each route under the shell its area names", () => {
     const { admin, main, tree } = shells();
 
-    withPluginRoutes(
-      tree,
-      pluginRouteSpecs(
-        [route({ path: "/example" }), adminRoute()],
-        registryOf("plugin:page", "plugin:reports"),
-      ),
-      { mountUnder: { admin, main }, pageHead },
-    );
+    withPluginRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
+      mountUnder: { admin, main },
+      pageHead,
+    });
 
-    expect(mountedPaths(main)).toEqual(["/page"]);
+    expect(mountedPaths(main)).toEqual(["/example"]);
     expect(mountedPaths(admin)).toEqual(["/admin/reports"]);
     // Neither shell lost the page it already had.
     expect(main.children).toHaveLength(2);
@@ -274,23 +237,18 @@ describe("plugin route areas", () => {
     const { main, tree } = shells();
 
     expect(() =>
-      withPluginRoutes(
-        tree,
-        pluginRouteSpecs([adminRoute()], registryOf("plugin:reports")),
-        { mountUnder: { main }, pageHead },
-      ),
-    ).toThrow(/plugin:reports.*"admin" area.*no mount point/s);
+      withPluginRoutes(tree, specsOf(adminRoute()), {
+        mountUnder: { main },
+        pageHead,
+      }),
+    ).toThrow(/plugin:page#\/admin\/reports.*"admin" area.*no mount point/s);
   });
 
   it("still refuses it when the host named no shells at all", () => {
     const { tree } = shells();
 
     expect(() =>
-      withPluginRoutes(
-        tree,
-        pluginRouteSpecs([adminRoute()], registryOf("plugin:reports")),
-        { pageHead },
-      ),
+      withPluginRoutes(tree, specsOf(adminRoute()), { pageHead }),
     ).toThrow(/"admin" area/);
   });
 
@@ -305,18 +263,30 @@ describe("plugin route areas", () => {
    * is where that is refused, so the two areas cannot be separated *here* by
    * mounting them somewhere clever.
    */
-  it("refuses two areas that claim one pathname", () => {
-    const reports = { kind: "static", value: "reports" } as const;
-
+  it("refuses two plugins whose areas claim one pathname", () => {
     expect(() =>
-      pluginRouteSpecs(
-        [
-          route({ path: "/reports", segments: [reports] }),
-          adminRoute({ path: "/reports", segments: [reports] }),
-        ],
-        registryOf("plugin:page", "plugin:reports"),
-      ),
+      pluginRouteSpecs([
+        {
+          pluginId: "plugin",
+          routes: definePluginRoutes([pageAt("/reports")]),
+        },
+        {
+          pluginId: "other",
+          routes: definePluginRoutes([adminRoute("/reports")]),
+        },
+      ]),
     ).toThrow(/collision on "\/reports"/);
+  });
+
+  /**
+   * And one plugin claiming it twice is refused where it is written: a route id
+   * is derived from the kind and the path, so two pages at one path are two
+   * routes with one identity rather than two shells to choose between.
+   */
+  it("refuses one plugin claiming a pathname in both areas", () => {
+    expect(() => specsOf(pageAt("/reports"), adminRoute("/reports"))).toThrow(
+      /Duplicate plugin route "plugin:page#\/reports"/,
+    );
   });
 
   /**
@@ -325,20 +295,10 @@ describe("plugin route areas", () => {
   it("mounts two areas whose paths genuinely differ", () => {
     const { admin, main, tree } = shells();
 
-    withPluginRoutes(
-      tree,
-      pluginRouteSpecs(
-        [
-          route({
-            path: "/reports",
-            segments: [{ kind: "static", value: "reports" }],
-          }),
-          adminRoute(),
-        ],
-        registryOf("plugin:page", "plugin:reports"),
-      ),
-      { mountUnder: { admin, main }, pageHead },
-    );
+    withPluginRoutes(tree, specsOf(pageAt("/reports"), adminRoute()), {
+      mountUnder: { admin, main },
+      pageHead,
+    });
 
     expect(mountedPaths(main)).toEqual(["/reports"]);
     expect(mountedPaths(admin)).toEqual(["/admin/reports"]);
@@ -353,28 +313,21 @@ describe("plugin route areas", () => {
    */
   it("clears one shell's subtree without touching the other's", () => {
     const { admin, main, tree } = shells();
-    const specs = (...ids: string[]) =>
-      pluginRouteSpecs(
-        [route({ path: "/example" }), adminRoute()].filter(candidate =>
-          ids.includes(candidate.id),
-        ),
-        registryOf(...ids),
-      );
 
-    withPluginRoutes(tree, specs("plugin:page", "plugin:reports"), {
+    withPluginRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
       mountUnder: { admin, main },
       pageHead,
     });
     expect(containerOf(admin)).toBeDefined();
 
-    withPluginRoutes(tree, specs("plugin:page"), {
+    withPluginRoutes(tree, specsOf(pageAt("/example")), {
       mountUnder: { admin, main },
       pageHead,
     });
 
     expect(containerOf(admin)).toBeUndefined();
     expect(admin.children).toHaveLength(1);
-    expect(mountedPaths(main)).toEqual(["/page"]);
+    expect(mountedPaths(main)).toEqual(["/example"]);
   });
 
   /**
@@ -385,17 +338,13 @@ describe("plugin route areas", () => {
   it("shares one container when two areas name the same route", () => {
     const { main, tree } = shells();
 
-    withPluginRoutes(
-      tree,
-      pluginRouteSpecs(
-        [route({ path: "/example" }), adminRoute()],
-        registryOf("plugin:page", "plugin:reports"),
-      ),
-      { mountUnder: { admin: main, main }, pageHead },
-    );
+    withPluginRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
+      mountUnder: { admin: main, main },
+      pageHead,
+    });
 
     expect(containersOf(main)).toHaveLength(1);
-    expect(mountedPaths(main)).toEqual(["/admin/reports", "/page"]);
+    expect(mountedPaths(main)).toEqual(["/admin/reports", "/example"]);
   });
 
   /**
@@ -407,22 +356,10 @@ describe("plugin route areas", () => {
     const { admin, main, tree } = shells();
 
     expect(() =>
-      withPluginRoutes(
-        tree,
-        pluginRouteSpecs(
-          [
-            adminRoute({
-              path: "/admin/core",
-              segments: [
-                { kind: "static", value: "admin" },
-                { kind: "static", value: "core" },
-              ],
-            }),
-          ],
-          registryOf("plugin:reports"),
-        ),
-        { mountUnder: { admin, main }, pageHead },
-      ),
+      withPluginRoutes(tree, specsOf(adminRoute("/admin/core")), {
+        mountUnder: { admin, main },
+        pageHead,
+      }),
     ).toThrow(/\/admin\/core/);
   });
 });
@@ -435,39 +372,14 @@ describe("plugin route areas", () => {
  * that happen to share a prefix and each redraw the frame.
  */
 describe("a nested plugin subtree", () => {
-  const GUIDE: PluginRoute[] = [
-    route({
-      id: "plugin:guide",
-      kind: "layout",
-      path: "/example/guide",
-      routeId: "guide",
-      segments: [
-        { kind: "static", value: "example" },
-        { kind: "static", value: "guide" },
+  const guide = () =>
+    layout("/example/guide", {
+      component: lazyModule(),
+      children: [
+        index({ component: lazyModule() }),
+        page(":topic", { component: lazyModule() }),
       ],
-    }),
-    route({
-      id: "plugin:guide-index",
-      parentId: "plugin:guide",
-      path: "/example/guide",
-      routeId: "guide-index",
-      segments: [
-        { kind: "static", value: "example" },
-        { kind: "static", value: "guide" },
-      ],
-    }),
-    route({
-      id: "plugin:guide-topic",
-      parentId: "plugin:guide",
-      path: "/example/guide/:topic",
-      routeId: "guide-topic",
-      segments: [
-        { kind: "static", value: "example" },
-        { kind: "static", value: "guide" },
-        { kind: "param", name: "topic" },
-      ],
-    }),
-  ];
+    });
 
   const mounted = () => {
     const root = createRootRoute();
@@ -475,10 +387,7 @@ describe("a nested plugin subtree", () => {
       root.addChildren([
         createRoute({ getParentRoute: () => root, path: "/" }),
       ]),
-      pluginRouteSpecs(
-        GUIDE,
-        registryOf("plugin:guide", "plugin:guide-index", "plugin:guide-topic"),
-      ),
+      specsOf(guide()),
       { pageHead },
     );
 
@@ -532,18 +441,7 @@ describe("a nested plugin subtree", () => {
     ]);
 
     expect(() =>
-      withPluginRoutes(
-        tree,
-        pluginRouteSpecs(
-          GUIDE,
-          registryOf(
-            "plugin:guide",
-            "plugin:guide-index",
-            "plugin:guide-topic",
-          ),
-        ),
-        { pageHead },
-      ),
+      withPluginRoutes(tree, specsOf(guide()), { pageHead }),
     ).toThrow(/conflicts with application route/);
   });
 });
@@ -565,66 +463,37 @@ describe("plugin ↔ application collisions", () => {
     );
   };
 
-  const mountOne = (
-    tree: AnyRoute,
-    path: string,
-    segments: PluginRoute["segments"],
-  ) =>
-    mount(
-      tree,
-      pluginRouteSpecs([route({ path, segments })], registryOf("plugin:page")),
+  const mountOne = (tree: AnyRoute, path: string) =>
+    mount(tree, specsOf(pageAt(path)));
+
+  it.each([
+    ["/users/$id", "/users/:userId"],
+    ["/blog/$slug/comments", "/blog/:postId/comments"],
+    ["/discover", "/discover"],
+  ] as const)("refuses app %s against plugin %s", (appPath, pluginPath) => {
+    expect(() => mountOne(treeWith(appPath), pluginPath)).toThrow(
+      /conflicts with application route/,
     );
-
-  const param = (name: string) => ({ kind: "param" as const, name });
-  const staticSegment = (value: string) => ({ kind: "static" as const, value });
+  });
 
   it.each([
-    ["/users/$id", "/users/:userId", [staticSegment("users"), param("userId")]],
-    [
-      "/blog/$slug/comments",
-      "/blog/:postId/comments",
-      [staticSegment("blog"), param("postId"), staticSegment("comments")],
-    ],
-    ["/discover", "/discover", [staticSegment("discover")]],
-  ] as const)(
-    "refuses app %s against plugin %s",
-    (appPath, pluginPath, segments) => {
-      expect(() =>
-        mountOne(treeWith(appPath), pluginPath, [...segments]),
-      ).toThrow(/conflicts with application route/);
-    },
-  );
-
-  it.each([
-    ["/users/new", "/users/:id", [staticSegment("users"), param("id")]],
-    [
-      "/users/$id",
-      "/users/new",
-      [staticSegment("users"), staticSegment("new")],
-    ],
-    ["/discover", "/example", [staticSegment("example")]],
-  ] as const)(
-    "allows app %s beside plugin %s",
-    (appPath, pluginPath, segments) => {
-      expect(() =>
-        mountOne(treeWith(appPath), pluginPath, [...segments]),
-      ).not.toThrow();
-    },
-  );
+    ["/users/new", "/users/:id"],
+    ["/users/$id", "/users/new"],
+    ["/discover", "/example"],
+  ] as const)("allows app %s beside plugin %s", (appPath, pluginPath) => {
+    expect(() => mountOne(treeWith(appPath), pluginPath)).not.toThrow();
+  });
 
   it("names the plugin route, its canonical path and the app route it hit", () => {
     let message = "";
 
     try {
-      mountOne(treeWith("/users/$id"), "/users/:userId", [
-        staticSegment("users"),
-        param("userId"),
-      ]);
+      mountOne(treeWith("/users/$id"), "/users/:userId");
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     }
 
-    expect(message).toContain("plugin:page");
+    expect(message).toContain(idOf("/users/:userId"));
     expect(message).toContain("/users/:userId");
     expect(message).toContain("/users/$id");
   });
@@ -673,7 +542,7 @@ describe("fileRoutePaths", () => {
           createRoute({ getParentRoute: () => root, path: "/discover" }),
         ]);
       })(),
-      pluginRouteSpecs([route()], registryOf("plugin:page")),
+      specsOf(pageAt("/page")),
     );
 
     expect(fileRoutePaths(tree)).toEqual(["/discover"]);
@@ -692,18 +561,7 @@ describe("fileRoutePaths", () => {
     ]);
 
     expect(() =>
-      mount(
-        root.addChildren([blog]),
-        pluginRouteSpecs(
-          [
-            route({
-              path: "/blog",
-              segments: [{ kind: "static", value: "blog" }],
-            }),
-          ],
-          registryOf("plugin:page"),
-        ),
-      ),
+      mount(root.addChildren([blog]), specsOf(pageAt("/blog"))),
     ).toThrow(/conflicts with application route/);
   });
 });
@@ -728,9 +586,7 @@ describe("a plugin route's loader", () => {
       root.addChildren([
         createRoute({ getParentRoute: () => root, path: "/" }),
       ]),
-      pluginRouteSpecs([route()], {
-        "plugin:page": async () => Promise.resolve(module),
-      }),
+      specsOf(page("/page", { component: lazyModule(module) })),
     );
 
     const container = (tree.children ?? []).find(
@@ -808,9 +664,9 @@ describe("a plugin route's loader", () => {
  * its state: a paginated table needs `?page=999` clamped and redirected, and a
  * filter needs links the router can build and check.
  *
- * A route earns a real one by declaring a `searchEntry`, which the build turns
- * into a *static* import in the generated registry - so the function is in hand
- * before the router matches, while the page stays in its own chunk.
+ * A route earns a real one by declaring `search` in its plugin's `routes.ts`,
+ * which the app imports statically - so the function is in hand before the
+ * router matches, while the page stays in its own chunk.
  *
  * Asserted on the constructed route's own options, because that is the only
  * place the difference is observable: the same manifest with and without a
@@ -841,10 +697,8 @@ describe("a route's eager search schema", () => {
 
   it("reaches the constructed route as `validateSearch`", () => {
     const options = mountedOptions(
-      pluginRouteSpecs(
-        [route({ searchEntry: "routes/page.search" })],
-        registryOf("plugin:page"),
-        { "plugin:page": validateSearch },
+      specsOf(
+        page("/page", { component: lazyModule(), search: validateSearch }),
       ),
     );
 
@@ -857,31 +711,56 @@ describe("a route's eager search schema", () => {
    * `undefined` is not the same as an absent one.
    */
   it("is absent for a route that declares none", () => {
-    const options = mountedOptions(
-      pluginRouteSpecs([route()], registryOf("plugin:page")),
-    );
+    const options = mountedOptions(specsOf(pageAt("/page")));
 
     expect("validateSearch" in options).toBe(false);
   });
 
   /**
-   * The two generated files have to agree about it, in both directions - the
-   * same parity the module registry gets, and for a sharper reason: a route that
-   * lost its schema would still match, still load and still render, reading a
-   * query string nobody validated.
+   * There is nothing left for the schema to get out of step *with*, which is the
+   * point of it living in the tree: the route that declares it and the function
+   * itself are one declaration, so a route cannot lose its `validateSearch`
+   * while still matching, loading and rendering a query string nobody validated.
    */
-  it("fails when the manifest and the registry disagree", () => {
-    expect(() =>
-      pluginRouteSpecs(
-        [route({ searchEntry: "routes/page.search" })],
-        registryOf("plugin:page"),
-      ),
-    ).toThrow(/declares the search entry .* but has no schema/);
+  it("belongs to the route that declared it, and to no other", () => {
+    const specs = specsOf(
+      page("/browse", { component: lazyModule(), search: validateSearch }),
+      pageAt("/read"),
+    );
 
-    expect(() =>
-      pluginRouteSpecs([route()], registryOf("plugin:page"), {
-        "plugin:page": validateSearch,
+    expect(specs.map(spec => spec.validateSearch)).toEqual([
+      validateSearch,
+      null,
+    ]);
+  });
+
+  /**
+   * And the loader hands that validated value through rather than re-normalising
+   * it: `deps` for a route with a schema is already the router's own output, so
+   * a second pass would let the module quietly disagree with the URL the router
+   * built its links from.
+   */
+  it("passes the router's validated search through the loader", async () => {
+    const [spec] = specsOf(
+      page("/browse", { component: lazyModule(), search: validateSearch }),
+    );
+    const root = createRootRoute();
+    const tree: AnyRoute = withPluginRoutes(root.addChildren([]), [spec], {
+      pageHead,
+    });
+    const container = (tree.children ?? []).find(
+      (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
+    );
+    const loader = (container?.children?.[0] as AnyRoute).options.loader as (
+      args: unknown,
+    ) => Promise<{ search: unknown }>;
+
+    await expect(
+      loader({
+        context: { locale: "en", queryClient: undefined },
+        deps: { page: 3 },
+        params: {},
       }),
-    ).toThrow(/has a search schema for .* which declares no/);
+    ).resolves.toEqual({ data: undefined, search: { page: 3 } });
   });
 });
