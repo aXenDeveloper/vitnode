@@ -4,7 +4,7 @@ import type { usersModule } from "@/api/modules/users/users.module";
 
 import { clientModule } from "@/lib/fetcher-client";
 
-import { fetcher } from "./index";
+import { createApiClient, fetcher } from "./index";
 
 const users = clientModule<typeof usersModule>("@vitnode/core");
 
@@ -107,6 +107,31 @@ describe("the universal fetcher offers only what both runtimes can honour", () =
       module: "users",
       options: { signal: controller.signal },
       path: "/session",
+    });
+  });
+});
+
+
+describe("a plugin API client", () => {
+  const usersApi = createApiClient<typeof usersModule>("@vitnode/core");
+
+  it("keeps route and response inference without a module reference at the call site", async () => {
+    const response = await usersApi.fetch({
+      method: "get",
+      module: "users",
+      path: "/session",
+    });
+
+    expectTypeOf(response.status).toEqualTypeOf<200>();
+    expectTypeOf((await response.json()).user).not.toBeAny();
+  });
+
+  it("rejects an invalid route", async () => {
+    await usersApi.fetch({
+      method: "get",
+      module: "users",
+      // @ts-expect-error -- not a route on users
+      path: "/not-a-route",
     });
   });
 });
