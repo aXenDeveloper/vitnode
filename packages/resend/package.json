@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/resend",
-  "version": "2.0.0-canary.2",
+  "version": "2.0.0-canary.3",
   "description": "Resend adapter for VitNode, enabling email sending capabilities through the Resend service.",
   "author": "VitNode Team",
   "license": "MIT",
