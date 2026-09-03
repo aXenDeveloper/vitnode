@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/s3",
-  "version": "2.0.0-canary.3",
+  "version": "2.0.0-canary.4",
   "description": "AWS S3 and Cloudflare R2 storage adapter for VitNode file uploads.",
   "author": "VitNode Team",
   "license": "MIT",

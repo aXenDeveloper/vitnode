@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/elasticsearch",
-  "version": "2.0.0-canary.3",
+  "version": "2.0.0-canary.4",
   "description": "Elasticsearch search engine adapter for VitNode content discovery.",
   "author": "VitNode Team",
   "license": "MIT",
