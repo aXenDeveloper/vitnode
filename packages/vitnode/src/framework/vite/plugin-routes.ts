@@ -234,6 +234,9 @@ const readConfiguredPluginIds = async (
   );
 };
 
+export const configuredPluginIds = async (appRoot: string): Promise<string[]> =>
+  await readConfiguredPluginIds(appRoot, pathsFor(appRoot).config);
+
 /**
  * One plugin's route tree, loaded from its compiled `routes` module.
  *

@@ -5,7 +5,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 
-import type { CoreRootRouteFactory } from "./types";
+import type { CoreAuthRouteFactory } from "../types";
 
 import { loadLoginRoute } from "../../auth/login-route";
 import { middlewareConfigQueryOptions } from "../../auth/middleware-config";
@@ -55,7 +55,7 @@ import { routeContext, routeSearch } from "../types";
  * rejection propagates: only a session the API actually answered can send
  * anybody anywhere.
  */
-const loginRoute: CoreRootRouteFactory = ({
+const loginRoute: CoreAuthRouteFactory = ({
   localeRouting,
   pageHead,
   parentRoute,
@@ -139,7 +139,7 @@ const loginRoute: CoreRootRouteFactory = ({
  * `buildLocation` and the locale rewrite writes the prefix back - a Polish
  * visitor is sent to `/pl`, not to `/`.
  */
-const registerRoute: CoreRootRouteFactory = ({
+const registerRoute: CoreAuthRouteFactory = ({
   localeRouting,
   pageHead,
   parentRoute,
@@ -219,7 +219,7 @@ const registerRoute: CoreRootRouteFactory = ({
  * code-based route needs no such escape: it is a sibling because it is declared
  * as one, and the path says the rest.
  */
-const passwordResetRoute: CoreRootRouteFactory = ({
+const passwordResetRoute: CoreAuthRouteFactory = ({
   pageHead,
   parentRoute,
 }) => {
@@ -304,7 +304,7 @@ const passwordResetRoute: CoreRootRouteFactory = ({
 };
 
 /** The three public auth screens. */
-export const coreAuthRoutes: CoreRootRouteFactory[] = [
+export const coreAuthRoutes: CoreAuthRouteFactory[] = [
   loginRoute,
   registerRoute,
   passwordResetRoute,

@@ -3,7 +3,7 @@
  *
  * A `vite.config.ts` is the one file a framework cannot write for an
  * application: it names the app's own port, its Nitro options, its Tailwind
- * entry. But almost nothing in *these three* is the app's. They read the
+ * entry. But almost nothing in *these four* is the app's. They read the
  * environment the way VitNode's config expects it to be read, they discover
  * the routes VitNode's plugins declare, and they name this package's own
  * browser dependencies for the dev server's pre-bundler - the same work, in the
@@ -17,7 +17,7 @@
  *       ...
  *     ]
  *
- * The three are still exported individually, for an app that wants to drop or
+ * The four are still exported individually, for an app that wants to drop or
  * reorder one - {@link vitnode} is their composition, not a wrapper around them.
  *
  * ## Why this is `framework/` and not `tanstack/`
@@ -38,5 +38,7 @@ export { vitNodeEnv } from "./env";
 export { vitNodeOptimizeDeps } from "./optimize-deps";
 export type { VitNodePluginRoutesOptions } from "./plugin-routes";
 export { vitNodePluginRoutes } from "./plugin-routes";
+export type { VitNodeSsrExternalsOptions } from "./ssr-externals";
+export { vitNodeSsrExternals } from "./ssr-externals";
 export type { VitNodeViteOptions } from "./vitnode";
 export { vitnode } from "./vitnode";

@@ -65,19 +65,10 @@ export const HeaderLayoutContent = ({
   user,
   ...props
 }: HeaderLayoutContentProps) => (
-  <header
-    className={cn("sticky top-0 z-20 w-full sm:top-2 sm:mb-2", className)}
-    {...props}
-  >
+  <header className={cn("sticky top-0 z-20 w-full", className)} {...props}>
     <div className="dark:bg-background/75 bg-card/75 container mx-auto flex h-14 items-center border-b px-4 py-2 backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
       <LinkComponent href={HEADER_HREF.home}>{logo}</LinkComponent>
 
-      {/*
-        Hidden below `sm`, as it has always been: at that width the bar holds the
-        logo and the action area and nothing else fits. Restoring the links to
-        small screens needs a mobile menu, which is a design question rather than
-        a migration one.
-      */}
       <nav className="ms-4 hidden items-center gap-1 sm:flex">
         {navigation.map(item => (
           <LinkComponent

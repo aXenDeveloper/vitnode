@@ -75,25 +75,23 @@ export const RegisterRouteContent = ({
 
   return (
     <RouteMessages namespaces={REGISTER_NAMESPACES}>
-      <main>
-        <SignUpContent
-          form={
-            <SignUpFormContent
-              captcha={config.captcha}
-              isEmail={config.isEmail}
-              LinkComponent={LinkComponent}
-              onSignUp={signUp}
-            />
-          }
-          LinkComponent={LinkComponent}
-          sso={
-            <SSOButtonsContent
-              onSelectProvider={startSsoAction}
-              providers={ssoProvidersOf(config)}
-            />
-          }
-        />
-      </main>
+      <SignUpContent
+        form={
+          <SignUpFormContent
+            captcha={config.captcha}
+            isEmail={config.isEmail}
+            LinkComponent={LinkComponent}
+            onSignUp={signUp}
+          />
+        }
+        LinkComponent={LinkComponent}
+        sso={
+          <SSOButtonsContent
+            onSelectProvider={startSsoAction}
+            providers={ssoProvidersOf(config)}
+          />
+        }
+      />
     </RouteMessages>
   );
 };

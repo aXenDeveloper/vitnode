@@ -33,7 +33,7 @@ const routeTree = withCoreRootRoutes(
         mountUnder: { admin: adminShellRoute, main: mainShellRoute },
         pageHead,
       }),
-      { mountUnder: mainShellRoute, pageHead },
+      { localeRouting, mountUnder: mainShellRoute, pageHead },
     ),
     { loadContentRegistry, mountUnder: adminShellRoute, pageHead },
   ),

@@ -3,20 +3,21 @@ import { describe, expect, it } from "vitest";
 import { vitnode } from "./vitnode";
 
 /**
- * One VitNode plugin in a `vite.config.ts`, instead of three in a fixed order.
+ * One VitNode plugin in a `vite.config.ts`, instead of four in a fixed order.
  *
  * A Vite plugin may be an array, so this is composition rather than a wrapper -
  * and what that buys is the thing worth pinning: an app cannot install two of
- * the three, or install them in an order that puts the route generator ahead of
+ * the four, or install them in an order that puts the route generator ahead of
  * the environment it reads.
  */
 const names = (plugins: { name: string }[]) => plugins.map(({ name }) => name);
 
 describe("the composed plugin", () => {
-  it("returns all three, in the order they have to run", () => {
+  it("returns all four, in the order they have to run", () => {
     expect(names(vitnode({ appRoot: "/app" }))).toEqual([
       "vitnode:env",
       "vitnode:optimize-deps",
+      "vitnode:ssr-externals",
       "vitnode:plugin-routes",
     ]);
   });

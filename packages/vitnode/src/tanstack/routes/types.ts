@@ -1,6 +1,7 @@
 import type { AnyRoute } from "@tanstack/react-router";
 
 import type { ContentFrontendRegistry } from "../../content/admin/registry";
+import type { LocaleRouting } from "../../lib/i18n/locale-routing";
 import type { RouteHeadOptions, RouteHeadResult } from "../metadata";
 
 /**
@@ -86,3 +87,23 @@ export const routeSearch = <TSearch>(search: unknown): TSearch =>
 /** See {@link routeSearch}. */
 export const routeContext = <TContext>(context: unknown): TContext =>
   context as TContext;
+
+/**
+ * What a screen that performs a navigation nobody clicked is built with.
+ *
+ * One field more than the usual two, and it is the reason the auth screens were
+ * the last to move: a sign-in navigates to a path a *visitor* supplied through
+ * `?returnTo=`. Deciding what the router should be handed means stripping the
+ * locale prefix the route tree does not carry - and which languages exist is the
+ * installation's answer, not this package's.
+ *
+ * So the app's own locale rule is injected, exactly as `pageHead` and
+ * `contentRegistry` are, and `createAuthNavigation` builds both halves of the
+ * navigation from it. See `@vitnode/core/tanstack/auth`.
+ */
+export interface CoreAuthRouteContext extends CoreRouteContext {
+  localeRouting: Pick<LocaleRouting, "deLocalizeUrl">;
+}
+
+/** One screen that navigates on the visitor's behalf. */
+export type CoreAuthRouteFactory = CoreRouteFactory<CoreAuthRouteContext>;

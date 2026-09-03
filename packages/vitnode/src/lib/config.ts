@@ -17,7 +17,9 @@ export const INSECURE_DEFAULT_CRON_SECRET =
  * would otherwise fall back to names the visitor's own machine.
  *
  * The server half of the same answer is read off the request being handled; see
- * `resolveApiOrigin` in the TanStack Start app.
+ * `resolveApiOrigin` in the TanStack Start app - which, like the browser, gives
+ * an explicitly set `NEXT_PUBLIC_API_URL` precedence, because a split
+ * deployment's web app has no `/api/*` of its own to answer.
  *
  * `undefined` wherever there is no document - Node, the API server, a build - so
  * those keep falling through to the configured value.

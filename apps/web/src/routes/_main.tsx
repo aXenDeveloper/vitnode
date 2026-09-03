@@ -18,30 +18,37 @@ import { MainHeader } from '#/components/main-header'
  * on the public site, so it wants the shell *and* the guard rather than a second
  * copy of the shell.
  *
- * ## What is deliberately outside it
+ * ## What is inside it, and what is deliberately outside
  *
- * The four auth screens: `/login`, `/login/sso/$providerId`, `/register` and
- * `/login/reset-password`. An auth screen is a full-height card on an otherwise
- * empty document, and the header it would render is a header whose only
- * interesting control is "sign in". Keeping them out is what makes this a shell
- * that routes opt into rather than one every route is subject to.
- * `routes/api/$` is outside for a different reason: it is a server route and
- * renders no document at all. Note this is a visual difference from the Next.js
- * app, where all four sit inside `(main)` and do render the header.
+ * Everything a visitor can reach without the AdminCP, the four public auth
+ * screens included: `/login`, `/register`, `/login/reset-password` and
+ * `/login/sso/$providerId` are children of this shell, mounted by
+ * `withCoreMainRoutes`. An auth card is a page on the public site - its own
+ * layout already reserves the space the header takes, and the header is the way
+ * back to the front page from a form the visitor changed their mind about.
  *
- * `src/tests/main-shell.test.ts` asserts both halves - the settings paths
- * inside, the four auth screens outside.
+ * So is the 404. A URL no route matched is answered by core's `/$` inside this
+ * container rather than by `__root`'s `notFoundComponent`, because router core
+ * hands back the root route alone when nothing matches - a pathless layout the
+ * URL never reached is not a candidate for the boundary, whatever `notFoundMode`
+ * says, so a screen mounted here could never have seen one.
+ *
+ * `/admin` - the AdminCP's own sign-in - is outside, and must be: it reads a
+ * different session under a different cookie, so offering the site header's
+ * "sign in" beside it would be one page asking for two unrelated logins.
+ * `routes/api/$` is outside for a different reason again: it is a server route
+ * and renders no document at all.
  *
  * ## The slots
  *
  * `ThemeLayoutContent`'s, and two of the same three the Next.js `ThemeLayout`
  * fills: `header` and `breadcrumb`.
  *
- * `listeners` is deliberately left empty here. The Next.js app puts the
- * notification toasts and the WebSocket's sign-in resync in it because its
- * `/login` is inside the main shell; this app's is not, so a sync mounted here
- * would not exist during the sign-in it has to notice. They are mounted by
- * `__root` instead, next to the connection whose lifetime they share.
+ * `listeners` is deliberately left empty here. The notification toasts and the
+ * WebSocket's sign-in resync are mounted by `__root` instead, next to the
+ * connection whose lifetime they share - so a sign-out that lands the visitor
+ * outside this shell is still noticed, which a listener scoped to the shell
+ * could not manage.
  *
  * ## What it is not
  *

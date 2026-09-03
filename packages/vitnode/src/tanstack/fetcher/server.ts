@@ -48,12 +48,20 @@ config({ quiet: true });
 /**
  * The origin to call `/api/*` on.
  *
- * A TanStack Start app *serves* the API, so the answer is not configuration - it
- * is whichever origin the request being rendered arrived on. Taking it from the
- * request is what makes a preview deployment work: its hostname is generated per
- * branch, so no `NEXT_PUBLIC_API_URL` could name it, and a hard-coded default
- * names a completely different app in development or nothing at all in
- * production.
+ * Two topologies, and the answer differs:
+ *
+ * - **The app serves its own API.** Nothing is configured, and the origin is
+ *   whichever one the request being rendered arrived on. Taking it from the
+ *   request is what makes a preview deployment work: its hostname is generated
+ *   per branch, so no `NEXT_PUBLIC_API_URL` could name it, and a hard-coded
+ *   default names a completely different app in development or nothing at all
+ *   in production.
+ * - **A separate API server.** `NEXT_PUBLIC_API_URL` names it, and it wins -
+ *   the request origin is this app's own, where there is no `/api/*` to answer,
+ *   so preferring it makes every server-side call a `404`. That is the shape
+ *   `create-vitnode` scaffolds (`apps/web` on `:3000`, `apps/api` on `:8000`),
+ *   and the browser already reads the same variable through `CONFIG.api`, so
+ *   this is also what keeps the two halves of a render calling the same host.
  *
  * `getRequestUrl()` reads the `Host` header the request arrived with and honours
  * `x-forwarded-proto`, so a TLS-terminating proxy in front of a plain-HTTP
@@ -63,7 +71,7 @@ config({ quiet: true });
  * calls at a host of the caller's choosing.
  *
  * Outside a request - boot, a script, a cron job - there is nothing to read and
- * `getRequestUrl()` throws, so `NEXT_PUBLIC_API_URL` remains the fallback.
+ * `getRequestUrl()` throws, so `CONFIG.api` is the fallback there too.
  *
  * The browser reaches the same conclusion on its own: with nothing configured,
  * `CONFIG.api` reads the origin the document was served from, so a client-side
@@ -71,6 +79,10 @@ config({ quiet: true });
  * than load-bearing - set it only to point at a separate API server.
  */
 export const resolveApiOrigin = (): string => {
+  // Through `CONFIG` rather than the variable directly, so the empty-value
+  // throw stays in one place - see the `??` note there.
+  if (process.env.NEXT_PUBLIC_API_URL !== undefined) return CONFIG.api.origin;
+
   try {
     return getRequestUrl().origin;
   } catch {
@@ -238,8 +250,9 @@ export async function fetcher<
       ...getForwardedApiHeaders({ captchaToken }),
       ...additionalHeaders,
     },
-    // Same-origin by construction, and ahead of `NEXT_PUBLIC_API_URL` - which
-    // an explicit `origin` on the call can still override.
+    // `NEXT_PUBLIC_API_URL` when a separate API server is configured, this
+    // request's own origin otherwise - and an explicit `origin` on the call
+    // overrides both.
     origin: origin ?? resolveApiOrigin(),
   } as FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
     FetcherRequestOptions);

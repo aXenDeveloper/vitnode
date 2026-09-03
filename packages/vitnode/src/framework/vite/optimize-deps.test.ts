@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  tanStackRouterDepsInclude,
   VITNODE_CLIENT_DEPENDENCIES,
   vitNodeClientDepsInclude,
   vitNodeOptimizeDeps,
@@ -131,6 +132,26 @@ describe("vitNodeClientDepsInclude", () => {
   });
 });
 
+describe("tanStackRouterDepsInclude", () => {
+  it("routes a router sub-dependency through the router package", () => {
+    const root = mkdtempSync(join(tmpdir(), "vitnode-router-deps-"));
+
+    expect(tanStackRouterDepsInclude(root)).toStrictEqual([
+      "@tanstack/react-router > @tanstack/router-core",
+      "@tanstack/react-router > @tanstack/router-core/isServer",
+      "@tanstack/react-router > @tanstack/router-core/ssr/client",
+      "@tanstack/react-router > @tanstack/router-core > seroval",
+    ]);
+  });
+
+  it("leaves a sub-dependency the app can resolve itself bare", () => {
+    const root = mkdtempSync(join(tmpdir(), "vitnode-router-deps-"));
+    mkdirSync(join(root, "node_modules", "seroval"), { recursive: true });
+
+    expect(tanStackRouterDepsInclude(root)).toContain("seroval");
+  });
+});
+
 describe("vitNodeOptimizeDeps", () => {
   it("pre-bundles the dependencies for the dev server only", () => {
     const plugin = vitNodeOptimizeDeps();
@@ -152,7 +173,12 @@ describe("vitNodeOptimizeDeps", () => {
     );
 
     expect(result).toStrictEqual({
-      optimizeDeps: { include: vitNodeClientDepsInclude(sourceRoot) },
+      optimizeDeps: {
+        include: [
+          ...vitNodeClientDepsInclude(sourceRoot),
+          ...tanStackRouterDepsInclude(sourceRoot),
+        ],
+      },
     });
   });
 });

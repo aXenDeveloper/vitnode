@@ -2,18 +2,28 @@ import type { AnyRoute } from "@tanstack/react-router";
 
 import { createRoute, redirect } from "@tanstack/react-router";
 
-import type { CorePageHead, CoreRouteFactory } from "../types";
+import type {
+  CoreAuthRouteContext,
+  CoreAuthRouteFactory,
+  CorePageHead,
+  CoreRouteFactory,
+} from "../types";
 
 import { LOGIN_PATH, returnToFor } from "../../auth/redirects";
 import { ensureAuthState } from "../../auth/session-query";
 import { canAccessAuthenticatedRoute } from "../../auth/state";
 import { GuardedOutlet } from "../../pending/guard-pending";
 import { routeContext } from "../types";
+import { coreAuthRoutes } from "./auth";
 import { coreDiscoveryRoutes } from "./discovery";
 import { myFilesRoute } from "./files";
+import { notFoundRoute } from "./not-found";
 import { settingsRoute } from "./settings";
+import { ssoCallbackRoute } from "./sso";
 
 export type {
+  CoreAuthRouteContext,
+  CoreAuthRouteFactory,
   CorePageHead,
   CoreRouteContext,
   CoreRouteFactory,
@@ -41,8 +51,30 @@ export const CORE_MAIN_ROUTES_ROUTE_ID = "_core-main";
  */
 export const CORE_AUTHENTICATED_ROUTES_ROUTE_ID = "_core-authenticated";
 
-/** Core's public screens. */
-const CORE_PUBLIC_ROUTES: CoreRouteFactory[] = [...coreDiscoveryRoutes];
+/**
+ * Core's public screens - everything a signed-out visitor may open.
+ *
+ * The four auth screens are in this list rather than in `withCoreRootRoutes`,
+ * and that is the one placement worth reading twice. An auth card is a page on
+ * the public site: it wants the site header above it (its own layout already
+ * reserves the `4rem` that header occupies), the same `<main>` landmark, and the
+ * way back to the front page that the header is. Only the AdminCP's own sign-in
+ * is genuinely shell-less, because it has to sit outside the AdminCP shell or
+ * that shell's guard would send a denied visitor into a route that sends them
+ * back.
+ *
+ * `notFoundRoute` is last for the reader rather than for the router - a splat
+ * ranks below every other segment kind wherever it is declared - and it is here
+ * for the same reason the auth screens are: a 404 should look like the site it
+ * could not find a page on. See {@link notFoundRoute} for why an unmatched URL
+ * needs a *route* rather than a `notFoundComponent` on the shell.
+ */
+const CORE_PUBLIC_ROUTES: CoreAuthRouteFactory[] = [
+  ...coreDiscoveryRoutes,
+  ...coreAuthRoutes,
+  ssoCallbackRoute,
+  notFoundRoute,
+];
 
 /** Core's screens that require a signed-in visitor. */
 const CORE_AUTHENTICATED_ROUTES: CoreRouteFactory[] = [
@@ -149,9 +181,20 @@ const authenticatedContainer = (parentRoute: AnyRoute): AnyRoute =>
  * application mounts them the way it already mounts a plugin's:
  *
  *     const routeTree = withCoreMainRoutes(routeTree, {
+ *       localeRouting,
  *       mountUnder: mainShellRoute,
  *       pageHead,
  *     })
+ *
+ * ## Why `localeRouting` is injected and `pageHead` is not enough
+ *
+ * The auth screens. A sign-in performs a navigation nobody clicked, to a path a
+ * *visitor* supplied through `?returnTo=`. The route tree carries no locale, so
+ * what the router is handed must not either - and stripping the prefix means
+ * knowing which prefixes exist, which is the installation's answer and not this
+ * package's. See `createAuthNavigation` in `@vitnode/core/tanstack/auth`; the
+ * app's own `localeRouting` is the same object its router's `rewrite` uses, so
+ * the strip and the write-back are one rule running in two directions.
  *
  * ## Why not declared as plugin routes
  *
@@ -171,6 +214,12 @@ const authenticatedContainer = (parentRoute: AnyRoute): AnyRoute =>
  * `_main.tsx` needs in order to exist: a pathless layout with no file children is
  * dropped from the generated route tree and collapses to `/`.
  *
+ * What it no longer owns is the 404. `__root`'s `notFoundComponent` is still
+ * declared and still correct as a last resort, but the URL a visitor actually
+ * mistypes is answered by {@link notFoundRoute} in this container, inside the
+ * shell - so the screen that says a page is missing is not itself missing the
+ * site.
+ *
  * ## Idempotent, and a good neighbour
  *
  * `addChildren` replaces a route's children and mutates in place, so the subtree
@@ -181,7 +230,15 @@ const authenticatedContainer = (parentRoute: AnyRoute): AnyRoute =>
  */
 export const withCoreMainRoutes = <TRouteTree extends AnyRoute>(
   routeTree: TRouteTree,
-  { mountUnder, pageHead }: { mountUnder: AnyRoute; pageHead: CorePageHead },
+  {
+    localeRouting,
+    mountUnder,
+    pageHead,
+  }: {
+    localeRouting: CoreAuthRouteContext["localeRouting"];
+    mountUnder: AnyRoute;
+    pageHead: CorePageHead;
+  },
 ): TRouteTree => {
   const mounted: AnyRoute[] = mountUnder.children ?? [];
   const siblings = mounted.filter(
@@ -202,7 +259,7 @@ export const withCoreMainRoutes = <TRouteTree extends AnyRoute>(
   );
   container.addChildren([
     ...CORE_PUBLIC_ROUTES.map(build =>
-      build({ pageHead, parentRoute: container }),
+      build({ localeRouting, pageHead, parentRoute: container }),
     ),
     authenticated,
   ]);

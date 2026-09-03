@@ -1,6 +1,6 @@
 import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 
-import type { CoreRootRouteFactory } from "./types";
+import type { CoreAuthRouteFactory } from "../types";
 
 import { normalizeSsoCallbackSearch } from "../../auth/route-search";
 import { loadSsoCallbackRoute } from "../../auth/sso-route";
@@ -15,7 +15,7 @@ import { routeContext } from "../types";
  * that origin serves has to answer it. `/login/sso/google` and
  * `/pl/login/sso/google` are one route - the locale is stripped before matching.
  */
-export const ssoCallbackRoute: CoreRootRouteFactory = ({ parentRoute }) => {
+export const ssoCallbackRoute: CoreAuthRouteFactory = ({ parentRoute }) => {
   const route = createRoute({
     getParentRoute: () => parentRoute,
     /**

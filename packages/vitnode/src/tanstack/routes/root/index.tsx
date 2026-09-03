@@ -6,8 +6,6 @@ import type { CorePageHead } from "../types";
 import type { CoreRootRouteContext, CoreRootRouteFactory } from "./types";
 
 import { adminSignInRoute } from "./admin-sign-in";
-import { coreAuthRoutes } from "./auth";
-import { ssoCallbackRoute } from "./sso";
 
 export type { CoreRootRouteContext, CoreRootRouteFactory } from "./types";
 
@@ -15,7 +13,7 @@ export type { CoreRootRouteContext, CoreRootRouteFactory } from "./types";
  * The pathless route core's shell-less screens are mounted under.
  *
  * The same device the other two containers are, for the same two reasons: it
- * contributes no URL segment, so `/login` is served at `/login`; and it makes
+ * contributes no URL segment, so `/admin` is served at `/admin`; and it makes
  * the composition **idempotent** - the subtree is one identifiable child of the
  * root, so re-running it replaces itself instead of appending a second copy of
  * every screen.
@@ -23,18 +21,22 @@ export type { CoreRootRouteContext, CoreRootRouteFactory } from "./types";
 export const CORE_ROOT_ROUTES_ROUTE_ID = "_core-root";
 
 /**
- * Every screen `@vitnode/core` owns that renders **outside** a shell.
+ * Every screen `@vitnode/core` owns that renders **outside** every shell.
  *
- * Which is what makes them a group. `/login`, `/register`,
- * `/login/reset-password` and `/login/sso/:providerId` deliberately have no site
- * header - an auth card is the whole page - and `/admin` is the AdminCP's own
- * sign-in, which must sit *outside* the AdminCP shell or its guard would loop.
+ * One of them, and the exception is the point: `/admin` is the AdminCP's own
+ * sign-in, and it must sit *outside* the AdminCP shell or that shell's guard
+ * would send a denied visitor into a route that sends them straight back. It is
+ * outside the *main* shell for a second, independent reason - the site header's
+ * "sign in" leads to `/login`, which is a different session under a different
+ * cookie, so offering it beside the AdminCP's own form would be one page asking
+ * for two unrelated logins.
+ *
+ * The four public auth screens used to be here too. They are children of the
+ * main shell now - see `CORE_PUBLIC_ROUTES` in `../main` - because an auth card
+ * is a page on the public site: the header above it is the way back to the front
+ * page, and the card's own layout already reserves the space that header takes.
  */
-const CORE_ROOT_ROUTES: CoreRootRouteFactory[] = [
-  ...coreAuthRoutes,
-  ssoCallbackRoute,
-  adminSignInRoute,
-];
+const CORE_ROOT_ROUTES: CoreRootRouteFactory[] = [adminSignInRoute];
 
 /**
  * Mounts core's shell-less screens on a route tree, and hands the tree back.

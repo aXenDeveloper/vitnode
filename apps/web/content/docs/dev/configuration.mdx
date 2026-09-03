@@ -237,8 +237,8 @@ the redirect and once for the page.
 ## `vite.config.ts`
 
 One VitNode plugin, which is the environment handling, the dev server's
-dependency pre-bundling and the plugin route generator in the order they have to
-run:
+dependency pre-bundling, the SSR externals and the plugin route generator in the
+order they have to run:
 
 ```ts title="apps/web/vite.config.ts"
 import { vitnode } from '@vitnode/core/framework/vite'
@@ -265,9 +265,30 @@ vitnode({ appRoot: import.meta.dirname, clientEnv: ['NEXT_PUBLIC_MAP_KEY'] })
 ```
 
 Everything named there is compiled into JavaScript anyone can read, so add a key
-only when something in the browser genuinely reads it. The three plugins are
+only when something in the browser genuinely reads it. The four plugins are
 still exported individually - `vitNodeEnv`, `vitNodeOptimizeDeps`,
-`vitNodePluginRoutes` - if you ever need to drop or reorder one.
+`vitNodeSsrExternals`, `vitNodePluginRoutes` - if you ever need to drop or
+reorder one.
+
+### What gets externalised from the server render
+
+You do not write an `ssr.external` list, because the right answer changes
+between the two commands:
+
+| Command      | `@vitnode/core` and your plugins | Why                                                                               |
+| ------------ | -------------------------------- | --------------------------------------------------------------------------------- |
+| `vite dev`   | inlined                          | Vite owns the modules, so a rebuilt package reaches the server render immediately |
+| `vite build` | external                         | the built package goes into the output as it is, rather than being bundled again  |
+
+Externalising in dev is the tempting mistake, and it fails quietly: an external
+module is imported by Node, whose module cache lives as long as the process. The
+browser hot-reloads your edit, the server render keeps the copy it loaded at
+startup, and React reports a hydration mismatch on markup you already fixed. Only
+a restart clears it - which is exactly the loop this plugin removes.
+
+The build list is `@vitnode/core`, every plugin in your `vitnode.config.ts` and
+`tslib`. It comes from the same configured plugin list the route generator reads,
+so removing a plugin from your config is one edit, not two.
 
 ## Learn More
 

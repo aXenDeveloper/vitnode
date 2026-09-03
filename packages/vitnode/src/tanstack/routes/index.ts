@@ -12,14 +12,21 @@
  *
  * ## Three folders, one per mount point
  *
- *     main/    under the application's main shell   /discover, /search, /files, /settings
+ *     main/    under the application's main shell   /discover, /login, /register, /settings
  *     admin/   under the AdminCP shell              /admin/core/…, /admin/content/*
- *     root/    under no shell at all                /login, /register, /admin
+ *     root/    under no shell at all                /admin
  *
  * `main` and `admin` are named after the shell they hang from, so `root` is
- * named after its mount point too: these screens are children of the root route,
- * with nothing between. An auth card is the whole page, and the AdminCP's own
- * sign-in has to sit *outside* the AdminCP shell or its guard would loop.
+ * named after its mount point too: its screens are children of the root route,
+ * with nothing between.
+ *
+ * Exactly one screen is in `root/`, and the exception is what the folder is for:
+ * the AdminCP's own sign-in has to sit *outside* the AdminCP shell or that
+ * shell's guard would loop. The public auth screens are not exceptions - an auth
+ * card is a page on the public site, so `/login`, `/register`,
+ * `/login/reset-password` and `/login/sso/:providerId` render inside the main
+ * shell with the site's header above them, and so does the 404 that `main/`
+ * declares for every URL no route claims.
  *
  * ## What replaced what
  *
@@ -63,6 +70,8 @@ export { CORE_ROOT_ROUTES_ROUTE_ID, withCoreRootRoutes } from "./root";
 export type { CoreRootRouteContext, CoreRootRouteFactory } from "./root/types";
 export type {
   CoreAdminRouteContext,
+  CoreAuthRouteContext,
+  CoreAuthRouteFactory,
   CorePageHead,
   CoreRouteContext,
   CoreRouteFactory,

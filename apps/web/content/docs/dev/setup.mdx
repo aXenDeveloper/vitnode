@@ -65,29 +65,7 @@ npm run docker:dev
 </Tabs>
 
   </Step>
-  <Step>
-
-### Migrate and create your administrator
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Prepare the database">
-
-```bash tab="bun"
-bun run db:migrate
-```
-
-```bash tab="pnpm"
-pnpm db:migrate
-```
-
-```bash tab="npm"
-npm run db:migrate
-```
-
-</Tabs>
-
-The migration creates core tables and asks for the first admin account.
-
-  </Step>
+ 
   <Step>
 
 ### Start VitNode
@@ -109,17 +87,6 @@ npm run dev
 </Tabs>
 
 Open `http://localhost:3000`.
-
-  </Step>
-  <Step>
-
-### Check AdminCP, then build a plugin
-
-Sign in at `http://localhost:3000/admin`. When the shell works, resist the
-temptation to drop feature files into the host: [create a plugin](/docs/dev/plugins/create)
-and let it own the feature.
-
-{/* Image prompt: A polished VitNode AdminCP sign-in screen and dashboard overview, dark theme, with a clearly visible sidebar and a subtle callout pointing to the plugin-oriented AdminCP area. 1440x900. */}
 
   </Step>
 </Steps>

@@ -54,24 +54,22 @@ export const LoginRouteContent = ({
 
   return (
     <RouteMessages namespaces={LOGIN_NAMESPACES}>
-      <main>
-        <SignInContent
-          form={
-            <SignInFormContent
-              LinkComponent={LinkComponent}
-              onSignIn={signIn}
-              showResetPassword={config.isEmail}
-            />
-          }
-          LinkComponent={LinkComponent}
-          sso={
-            <SSOButtonsContent
-              onSelectProvider={startSsoAction}
-              providers={ssoProvidersOf(config)}
-            />
-          }
-        />
-      </main>
+      <SignInContent
+        form={
+          <SignInFormContent
+            LinkComponent={LinkComponent}
+            onSignIn={signIn}
+            showResetPassword={config.isEmail}
+          />
+        }
+        LinkComponent={LinkComponent}
+        sso={
+          <SSOButtonsContent
+            onSelectProvider={startSsoAction}
+            providers={ssoProvidersOf(config)}
+          />
+        }
+      />
     </RouteMessages>
   );
 };

@@ -48,14 +48,12 @@ export const PasswordRecoveryNotFound = ({
   const t = useTranslations("core.global");
 
   return (
-    <main>
-      <ErrorContent
-        actions={actions}
-        code={404}
-        description={t("errors.404.desc")}
-        title={t("errors.404.title")}
-      />
-    </main>
+    <ErrorContent
+      actions={actions}
+      code={404}
+      description={t("errors.404.desc")}
+      title={t("errors.404.title")}
+    />
   );
 };
 
@@ -87,32 +85,30 @@ export const PasswordResetRouteContent = ({
 
   return (
     <RouteMessages namespaces={namespaces}>
-      <main>
-        <PasswordResetContent>
-          {mode.mode === "change" ? (
-            <ChangePasswordFormContent
-              link={mode.link}
-              onChanged={() => {
-                void router.navigate(CHANGED_PASSWORD_DESTINATION);
-              }}
-              onChangePassword={changePasswordFromResetAction}
-            />
-          ) : (
-            /*
-              No `onSuccess` and no navigation: an accepted request swaps the
-              card for "check your email" and leaves the visitor there. It says
-              the same thing for an address with an account and one without,
-              because the API answers the same 201 for both - the
-              anti-enumeration behaviour is preserved by there being nothing
-              here that could distinguish them.
-            */
-            <PasswordResetFormContent
-              captcha={config.captcha}
-              onRequestReset={requestPasswordResetAction}
-            />
-          )}
-        </PasswordResetContent>
-      </main>
+      <PasswordResetContent>
+        {mode.mode === "change" ? (
+          <ChangePasswordFormContent
+            link={mode.link}
+            onChanged={() => {
+              void router.navigate(CHANGED_PASSWORD_DESTINATION);
+            }}
+            onChangePassword={changePasswordFromResetAction}
+          />
+        ) : (
+          /*
+            No `onSuccess` and no navigation: an accepted request swaps the
+            card for "check your email" and leaves the visitor there. It says
+            the same thing for an address with an account and one without,
+            because the API answers the same 201 for both - the
+            anti-enumeration behaviour is preserved by there being nothing
+            here that could distinguish them.
+          */
+          <PasswordResetFormContent
+            captcha={config.captcha}
+            onRequestReset={requestPasswordResetAction}
+          />
+        )}
+      </PasswordResetContent>
     </RouteMessages>
   );
 };

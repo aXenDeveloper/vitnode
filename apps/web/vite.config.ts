@@ -13,9 +13,6 @@ const config = defineConfig({
     tsconfigPaths: true,
   },
   server: { strictPort: true },
-  ssr: {
-    external: ['@vitnode/core', '@vitnode/blog', '@vitnode/example', 'tslib'],
-  },
   plugins: [
     vitnode({ appRoot: import.meta.dirname }),
     fumadocsMdx(),

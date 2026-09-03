@@ -4,13 +4,36 @@ description: Configure root and per-route 404 error boundaries and throw notFoun
 icon: SearchX
 ---
 
-In TanStack Start, 404 handling is configured as a route option via `notFoundComponent` rather than a static file. VitNode provides localized 404 layouts with history-aware navigation buttons out of the box.
+In TanStack Start, 404 handling is configured as a route option via `notFoundComponent` rather than a static file. VitNode provides localized 404 layouts with history-aware navigation buttons out of the box — and mounts the one your visitors actually hit for you.
 
-{/* Image prompt: VitNode 404 error page showing large 404 typography, localized "Page Not Found" title, descriptive message, and "Go back" / "Back to home" action buttons. Dark theme, 1440x900. */}
+{/* Image prompt: VitNode 404 error page showing the site header above large 404 typography, localized "Page Not Found" title, descriptive message, and "Go back" / "Back to home" action buttons. Dark theme, 1440x900. */}
+
+## Mistyped URLs get the full site
+
+A URL no route claims is answered by a catch-all that `withCoreMainRoutes` mounts **inside your main shell**. So a visitor who mistypes a link gets the site header, the same `<main>` landmark every page renders in, and a way back — plus a real `404` status for the crawlers, because the route answers `notFound()` from `beforeLoad` rather than quietly rendering a `200`.
+
+You do not wire this up. It arrives with the mount your `router.tsx` already has:
+
+```tsx title="apps/web/src/router.tsx"
+const routeTree = withCoreMainRoutes(fileRouteTree, {
+  localeRouting,
+  mountUnder: mainShellRoute,
+  pageHead,
+})
+```
+
+<Callout type="info">
+  Why a route and not a `notFoundComponent` on `_main`? Because a pathless shell
+  is only in the match branch when something below it matched. When *nothing*
+  matches, the router hands back the root route on its own — so a boundary on
+  the shell would never run, and the 404 would be the one screen on your site
+  without a header.
+</Callout>
 
 ## Root 404 Handler
 
-Your `apps/web/src/routes/__root.tsx` defines the fallback boundary for all unmatched URLs:
+Your `apps/web/src/routes/__root.tsx` still defines a boundary, and it is the
+last resort: a `notFound()` thrown where no closer route declared one.
 
 ```tsx title="apps/web/src/routes/__root.tsx"
 import { createRootRouteWithContext } from '@tanstack/react-router'

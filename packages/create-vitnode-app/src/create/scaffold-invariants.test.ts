@@ -239,15 +239,42 @@ describe("what a generated single app starts from", () => {
   );
 
   /**
-   * The environment a single app is configured with. Both URLs name this app's
-   * own origin, because it serves its own `/api/*` - which is exactly what the
-   * overlay's copy dropped.
+   * The environment a single app is configured with. `NEXT_PUBLIC_WEB_URL`
+   * names this app's own origin - which is exactly what the overlay's copy
+   * dropped.
    */
   it("ships the single-app environment", () => {
     expect(env).toContain("POSTGRES_URL=");
     expect(env).toContain("NEXT_PUBLIC_WEB_URL=http://localhost:3000");
-    expect(env).toContain("NEXT_PUBLIC_API_URL=http://localhost:3000");
     expect(env).toContain("CRON_SECRET=");
+  });
+
+  /**
+   * And it names no API server, because it *is* the API server.
+   *
+   * A set `NEXT_PUBLIC_API_URL` wins over the origin the request arrived on -
+   * that is what makes the split scaffold work at all. So a single app that
+   * shipped `NEXT_PUBLIC_API_URL=http://localhost:3000` in its `.env.example`
+   * hands every deployment copied from it a server that calls the visitor's own
+   * machine. Unset, the request origin answers, and a preview deployment on a
+   * generated hostname needs no configuration.
+   */
+  it("names no API server for an app that serves its own", () => {
+    expect(env).not.toMatch(/^NEXT_PUBLIC_API_URL=/m);
+  });
+
+  /**
+   * The split shape is the mirror image: two processes, so the web app cannot
+   * find `/api/*` on its own origin and the variable is mandatory rather than
+   * optional. `apps/api` listens on 8000 (`apps/api/src/index.ts`), so that is
+   * the port the web app has to be told about - getting this wrong answers the
+   * first server-side session read with a 404 of this app's own HTML.
+   */
+  it("points a split web app at the API's own port", () => {
+    expect(read(appTemplate, "monorepo/apps/web/.env.example")).toContain(
+      "NEXT_PUBLIC_API_URL=http://localhost:8000",
+    );
+    expect(read(appTemplate, "api-bun/src/index.ts")).toContain("port: 8000");
   });
 
   /**
@@ -365,8 +392,8 @@ describe("what a generated application does to every request", () => {
   });
 
   /**
-   * One VitNode plugin in the Vite config, for the same reason: three calls in
-   * a fixed order is three things to copy wrong.
+   * One VitNode plugin in the Vite config, for the same reason: four calls in
+   * a fixed order is four things to copy wrong.
    */
   it("configures Vite through one VitNode plugin", () => {
     const vite = withoutComments(read(appTemplate, "root/vite.config.ts"));
@@ -382,6 +409,13 @@ describe("what a generated application does to every request", () => {
     ]) {
       expect(vite).not.toContain(removed);
     }
+  });
+
+  it("leaves the SSR externals to that plugin", () => {
+    const vite = withoutComments(read(appTemplate, "root/vite.config.ts"));
+
+    expect(vite).not.toMatch(/ssr\s*:/);
+    expect(vite).not.toContain('external: ["@vitnode/core"');
   });
 });
 

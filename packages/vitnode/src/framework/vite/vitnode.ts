@@ -6,6 +6,7 @@ import type { VitNodePluginRoutesOptions } from "./plugin-routes";
 import { vitNodeEnv } from "./env";
 import { vitNodeOptimizeDeps } from "./optimize-deps";
 import { vitNodePluginRoutes } from "./plugin-routes";
+import { vitNodeSsrExternals } from "./ssr-externals";
 
 export interface VitNodeViteOptions
   extends VitNodeEnvOptions, VitNodePluginRoutesOptions {}
@@ -22,7 +23,7 @@ export interface VitNodeViteOptions
  *     ]
  *
  * A Vite plugin may be an array, so this is the composition and not a wrapper:
- * the three plugins underneath are returned in the order they have to run, and
+ * the four plugins underneath are returned in the order they have to run, and
  * each is still exported on its own for an app that genuinely wants to drop or
  * reorder one.
  *
@@ -38,5 +39,6 @@ export const vitnode = ({
 }: VitNodeViteOptions): Plugin[] => [
   vitNodeEnv({ clientEnv }),
   vitNodeOptimizeDeps(),
+  vitNodeSsrExternals({ appRoot }),
   vitNodePluginRoutes({ appRoot, hostRoutesDir }),
 ];

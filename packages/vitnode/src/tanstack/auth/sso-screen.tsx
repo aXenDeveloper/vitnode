@@ -81,15 +81,13 @@ export const SsoCallbackRouteContent = ({
 
   return (
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
-      <main>
-        <SSOCallbackContent
-          errorActions={errorActions}
-          LinkComponent={LinkComponent}
-          providerId={providerId}
-          providers={ssoProvidersOf(config)}
-          state={state}
-        />
-      </main>
+      <SSOCallbackContent
+        errorActions={errorActions}
+        LinkComponent={LinkComponent}
+        providerId={providerId}
+        providers={ssoProvidersOf(config)}
+        state={state}
+      />
     </RouteMessages>
   );
 };

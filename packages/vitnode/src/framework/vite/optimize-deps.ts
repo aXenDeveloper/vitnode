@@ -65,6 +65,15 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "zod",
 ] as const;
 
+const ROUTER_PACKAGE_NAME = "@tanstack/react-router";
+
+const TANSTACK_ROUTER_DEPENDENCIES = [
+  [ROUTER_PACKAGE_NAME, "@tanstack/router-core"],
+  [ROUTER_PACKAGE_NAME, "@tanstack/router-core/isServer"],
+  [ROUTER_PACKAGE_NAME, "@tanstack/router-core/ssr/client"],
+  [`${ROUTER_PACKAGE_NAME} > @tanstack/router-core`, "seroval"],
+] as const satisfies readonly (readonly [string, string])[];
+
 const packageNameOf = (specifier: string): string => {
   const segments = specifier.split("/");
 
@@ -80,19 +89,38 @@ const isReachableFrom = (root: string, packageName: string): boolean => {
   }
 };
 
+const includeThrough = (
+  root: string,
+  owner: string,
+  specifier: string,
+): string =>
+  isReachableFrom(root, packageNameOf(specifier))
+    ? specifier
+    : `${owner} > ${specifier}`;
+
 export const vitNodeClientDepsInclude = (root: string): string[] =>
   VITNODE_CLIENT_DEPENDENCIES.map(specifier =>
-    isReachableFrom(root, packageNameOf(specifier))
-      ? specifier
-      : `${PACKAGE_NAME} > ${specifier}`,
+    includeThrough(root, PACKAGE_NAME, specifier),
+  );
+
+export const tanStackRouterDepsInclude = (root: string): string[] =>
+  TANSTACK_ROUTER_DEPENDENCIES.map(([owner, specifier]) =>
+    includeThrough(root, owner, specifier),
   );
 
 export const vitNodeOptimizeDeps = (): Plugin => ({
   apply: "serve",
-  config: userConfig => ({
-    optimizeDeps: {
-      include: vitNodeClientDepsInclude(userConfig.root ?? process.cwd()),
-    },
-  }),
+  config: userConfig => {
+    const root = userConfig.root ?? process.cwd();
+
+    return {
+      optimizeDeps: {
+        include: [
+          ...vitNodeClientDepsInclude(root),
+          ...tanStackRouterDepsInclude(root),
+        ],
+      },
+    };
+  },
   name: "vitnode:optimize-deps",
 });
