@@ -8,18 +8,6 @@ vi.mock("@tanstack/react-start/server-only", () => ({}));
 const { buildConfig, buildServerConfig } = await import("@/vitnode.config");
 const { createIntlMessagesLoader } = await import("./messages");
 
-/**
- * How the two halves of an app's config meet.
- *
- * The languages live in the browser-safe `vitnode.config.ts`; the loaders that
- * read a package's JSON live in the server-only `vitnode.server.config.ts`. The
- * loader is where they are resolved against each other, so what these tests pin
- * is that handing it the server config is the same thing as spelling the four
- * options out - including `defaultLocale`, which comes from the *shared* half
- * and is what makes a half-translated language degrade key by key rather than
- * rendering raw keys.
- */
-
 const messages = (tree: Record<string, unknown>) => async () =>
   await Promise.resolve({ default: tree });
 

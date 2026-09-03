@@ -9,14 +9,6 @@ import type { ContentTranslationEditorialOutcome } from "./translation-editorial
 
 import { contentTranslationEffects } from "./translation-effects";
 
-/**
- * The event transport, recording rather than delivering.
- *
- * Typed loosely on purpose: what these tests assert is the *name* and the
- * *payload* the effects choose, and pinning the emitter's signature to the global
- * event map would make the assertions depend on whether a plugin's `declare
- * module` block happens to be in the program.
- */
 const emit = vi.fn<
   (
     name: string,

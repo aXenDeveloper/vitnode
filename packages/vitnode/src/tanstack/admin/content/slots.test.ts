@@ -8,34 +8,6 @@ import {
   setContentAdminSlots,
 } from "./slots";
 
-/**
- * The one registry in this package that **merges** rather than replaces, and
- * what that costs and buys across a module's lifetime.
- *
- * Every other runtime bridge here - `setAuthTransport`, `setAdminTransport`,
- * `setContentFrontendRegistry`, `configureIntl` - holds one value from one
- * registrar, so last-write-wins is the whole rule. This one is filled by two
- * independent modules: the form module registers `FormDialog`, the editorial
- * module registers `rowPanels`, and neither knows whether the other loaded.
- * Replacing wholesale would mean whichever imported second silently erased the
- * first, and which one that is depends on chunk order.
- *
- * So the merge is the feature, and the transitions below say exactly how far it
- * goes: **per slot**, last write wins; **across slots**, nothing is lost. A hot
- * reload of the editorial module therefore replaces its own panels with the new
- * components - no stale closure over the previous module - while leaving the
- * form module's dialog alone, which is the behaviour a dev server needs from it.
- *
- * ## The one thing it deliberately cannot do
- *
- * Un-register. A module that *stops* registering a panel leaves the previous one
- * in place until the page reloads, because a merge has no way to express
- * absence. That is stated here rather than fixed: adding a clear would let the
- * two registrars erase each other again, and the case it would serve - deleting
- * a panel and expecting it to vanish without a reload - is one a full reload
- * already handles. Agent G's smoke list carries it.
- */
-
 const panel = (name: string) => {
   const component = () => null;
 
@@ -57,13 +29,6 @@ describe("before anything registers", () => {
     expect(contentAdminSlots()).toEqual({});
   });
 
-  /**
-   * A list screen is still a working screen with nothing registered:
-   * page-mode content types keep their create and edit pages, and every content
-   * type keeps publish and delete. What is *not* offered is an editorial action
-   * whose panel nobody registered - a menu entry that opens nothing is worse
-   * than an absent one.
-   */
   it("offers no editorial action nobody can open", () => {
     expect(registeredContentRowPanels({})).toEqual([]);
   });
@@ -120,11 +85,6 @@ describe("two independent modules, in either order", () => {
 });
 
 describe("the same module registering again after a hot reload", () => {
-  /**
-   * The stale-closure case. A re-evaluated module hands over new component
-   * objects, and the registry must be showing those rather than the ones the
-   * previous instance closed over.
-   */
   it("replaces its own dialog with the newer component", () => {
     const before = dialog("before");
     const after = dialog("after");
@@ -146,11 +106,6 @@ describe("the same module registering again after a hot reload", () => {
     expect(contentAdminSlots().rowPanels?.history).toBe(after);
   });
 
-  /**
-   * A module that registers two panels and re-registers one of them keeps the
-   * other. Which is the same rule as across modules, one level down - the merge
-   * is per key, not per call.
-   */
   it("replaces one panel without dropping its siblings", () => {
     const delivery = panel("delivery");
     const history = panel("history-v2");

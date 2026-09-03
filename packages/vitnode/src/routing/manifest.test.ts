@@ -14,15 +14,6 @@ import { comparePluginRoutes } from "./order";
 import { definePluginRoutes, index, layout, lazy, page } from "./tree";
 import { PLUGIN_ROUTE_AREAS } from "./types";
 
-/**
- * Every plugin's routes in one application: flattened, validated, ordered, and
- * paired with the two things that cannot be serialised - each route's lazy
- * component and each route's eager search schema.
- *
- * What is tested here is the part that needs more than one plugin, or more than
- * one route: ids, ordering, and the collisions VitNode refuses rather than
- * resolves. Whether a single tree is legal on its own is `./tree.test.ts`.
- */
 const lazyPage = () =>
   lazy(async () => await Promise.resolve({ default: () => null }));
 

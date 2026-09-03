@@ -9,11 +9,6 @@ import {
   resetContentPreviewSecret,
 } from "./preview-secret";
 
-/**
- * A `core_secrets` table that behaves like the real one for the two operations
- * the resolver performs, including the part that matters: `onConflictDoNothing`
- * returns nothing when a row is already there.
- */
 const fakeDb = ({ rows = new Map<string, string>() } = {}) => {
   const selects = vi.fn();
   const inserts = vi.fn();

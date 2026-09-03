@@ -6,15 +6,6 @@ import { definePluginRoutes, index, layout, lazy, page } from "@/routing";
 
 import { pluginRouteSearchDeps, pluginRouteSpecs } from "./specs";
 
-/**
- * Every configured plugin's route tree, as the route specs a router is built
- * from.
- *
- * Everything here is data: what the plugins declared, and what the composition
- * makes of them. Nothing renders and no route is created - whether a spec
- * becomes the right TanStack route is `./plugin-routes.test.ts`, and whether a
- * plugin's page produces the right HTML is the plugin's own business.
- */
 const lazyPage = () =>
   lazy(async () => await Promise.resolve({ default: () => null }));
 
@@ -23,11 +14,6 @@ const specsOf = (...routes: PluginRouteDeclaration[]) =>
     { pluginId: "plugin", routes: definePluginRoutes(routes) },
   ]);
 
-/**
- * The nested shape the example plugin ships, and the smallest tree that
- * exercises every part of the hierarchy: a layout, its index page at the same
- * path, and a dynamic child one segment deeper.
- */
 const guideSpecs = () =>
   specsOf(
     layout("/example/guide", {

@@ -15,15 +15,6 @@ import {
 import { compilePluginRoutes } from "./compile.js";
 import { hostRoutePathsFromFiles } from "./host-routes.js";
 
-/**
- * The whole build-time compilation, from what plugins declare to the one file an
- * app holds.
- *
- * Nothing here touches a filesystem: what is asserted is the part that has to be
- * *exactly* reproducible, and the diagnostics a plugin author actually reads.
- * Whether a page's module exists on disk is the Vite layer's question, and
- * `lazyImportSpecifier` is what lets it ask.
- */
 const lazyPage = () =>
   lazy(async () => await Promise.resolve({ default: () => null }));
 

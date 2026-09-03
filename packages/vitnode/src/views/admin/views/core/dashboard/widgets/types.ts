@@ -20,12 +20,6 @@ export interface DashboardLayoutItem extends AdminDashboardWidgetLayoutItem {
   span: AdminDashboardWidgetSpan;
 }
 
-/**
- * The dashboard's own heading, resolved above the board's `<Suspense>`
- * boundary so the fallback and the board render the same one. The board cannot
- * own it: `DashboardEditActions` sits in its action slot and reads the board's
- * context, so a fallback rendering the header alone would throw.
- */
 export interface DashboardHeaderContent {
   desc: React.ReactNode;
   h1: React.ReactNode;
@@ -70,37 +64,16 @@ export interface DashboardWidgetOption {
   title: string;
 }
 
-/**
- * What the client grid receives. The widget's `component` runs on the server
- * and only its output (`content`) crosses the boundary - a component function
- * could never be serialized.
- */
 export interface DashboardWidgetCatalogEntry extends DashboardWidgetOption {
   content: React.ReactNode;
-  /**
-   * Whether the widget registered a `settingsComponent` - what the card keys
-   * "does this widget have a gear?" on. The form itself does not ride along:
-   * it is rendered on the server only once a dialog asks for it, so an ordinary
-   * dashboard load pays for no settings form at all.
-   */
+
   hasSettings?: boolean;
 }
 
 /** One card on the board: a catalog entry sized by the admin's layout. */
 export interface DashboardWidgetView extends DashboardWidgetCatalogEntry {
-  /**
-   * Changes whenever this copy is rendered against different settings - by the
-   * server on load, or by the board after its settings dialog saved. The card's
-   * body is keyed on it, so the widget's own client state starts again from
-   * what was actually saved instead of holding on to what it first rendered
-   * with.
-   */
   contentKey: string;
-  /**
-   * Identifies this *copy*. Equal to `id` for the first copy of a widget, and
-   * what the board keys drag, resize and remove on - `id` alone would collide
-   * once a widget is placed twice.
-   */
+
   instanceId: string;
   rows: AdminDashboardWidgetRows;
   span: AdminDashboardWidgetSpan;

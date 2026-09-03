@@ -6,14 +6,6 @@ import {
   signUpResultFromStatus,
 } from "./contract";
 
-/**
- * The registration transport's decisions, without the transport.
- *
- * Every status the sign-up route can answer, and every shape its `201` body can
- * arrive in, mapped to the finite result a component is allowed to see. No Hono,
- * no fetch, no server function - those are covered by typecheck and the build.
- */
-
 const success = { email: "test@test.com", emailVerified: true };
 
 describe("sign-up results", () => {

@@ -18,16 +18,6 @@ import {
   contentTableSearchEnabled,
 } from "./columns";
 
-/**
- * The column model both AdminCPs build their table from.
- *
- * Everything here is a *transformation*: a definition and a registration go in,
- * a description of the table comes out. Nothing renders, which is the point -
- * "which columns exist, which of them a plugin took over, what a row is called"
- * are the questions that have to answer identically in two frameworks, and none
- * of them needs a DOM to ask.
- */
-
 const articles = defineContentType({
   id: "blog.post",
   tableName: "blog_post",

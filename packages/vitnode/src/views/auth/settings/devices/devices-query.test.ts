@@ -16,16 +16,6 @@ import {
   shouldRefreshAfterRevoke,
 } from "./devices-revoke";
 
-/**
- * The pure half of the devices contract.
- *
- * Everything below is a function over plain values: a request is built, a
- * response status becomes either a list or an error, a revoke's status becomes a
- * result, and a result becomes a yes-or-no about refreshing. Nothing here opens a
- * socket or renders a component - the API has its own suite, and how the cards
- * look is Playwright's.
- */
-
 describe("one list per visitor, one cache entry each", () => {
   it("is keyed by the owner, under the devices domain", () => {
     expect(devicesQueryKey(10)).toEqual(["devices", "user", 10]);
@@ -45,15 +35,6 @@ describe("one list per visitor, one cache entry each", () => {
     );
   });
 
-  /**
-   * The privacy invariant, as the key contract rather than as a browser test.
-   *
-   * The browser's `QueryClient` outlives a sign-out, so one document can hold
-   * two visitors. Under the `["devices", "me"]` this replaces, B's loader asked
-   * for the entry A had already filled - and with `refetchOnMount` off, nothing
-   * refetched it, so no request was made and Hono never saw the read it would
-   * have refused.
-   */
   it("gives two visitors two entries, so one can never read the other's", () => {
     expect(devicesQueryKey(10)).not.toEqual(devicesQueryKey(20));
     expect(hashKey(devicesQueryKey(10))).not.toBe(hashKey(devicesQueryKey(20)));
@@ -77,18 +58,6 @@ describe("one list per visitor, one cache entry each", () => {
     expect(devicesQueryOptions({ userId: 10 }).retry).toBe(false);
   });
 });
-
-/**
- * The other half of the same rule: the id is a cache address, not a claim.
- *
- * It is not asserted here any more, because it is no longer assertable - it is
- * enforced. Both calls are written inline at their fetchers, so `FetcherParams`
- * decides what may travel: `GET /devices` declares no body, params or query, so
- * an `args` on it does not compile, and the revoke declares `publicId` and
- * nothing else, so a second key is an excess-property error. A type that
- * forbids the value is a stronger statement than a test that looks for its
- * absence.
- */
 
 describe("a refused read is not an empty list", () => {
   it.each([401, 403, 429, 500])(

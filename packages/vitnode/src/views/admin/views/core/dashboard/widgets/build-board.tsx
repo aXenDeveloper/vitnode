@@ -9,20 +9,6 @@ import type {
 import { widgetIdOf } from "./instance-id";
 import { normalizeLayout } from "./normalize-layout";
 
-/**
- * The four things `DashboardBoardProvider` is given, built from the two things
- * that were fetched.
- *
- * Lifted out of the Next.js `DashboardBoard` unchanged, because every line of it
- * is arithmetic over a widget list and a stored layout - which is identical in
- * both applications. What differs is only where the two inputs came from: a
- * Server Component's `fetcher()` in one, a route loader's query in the other.
- *
- * Rendering a widget is a plain `<Widget settings widgetId />` here as it was
- * there. In Next.js that call happens on the server, so a widget may be a Server
- * Component and only its output crosses the boundary; in a browser it is an
- * ordinary render. The board never learns which, because it is handed nodes.
- */
 export interface DashboardBoard {
   catalog: DashboardWidgetCatalogEntry[];
   content: Record<string, React.ReactNode>;
@@ -42,11 +28,6 @@ export const buildDashboardBoard = ({
 
   const widgetIds = new Set(widgets.map(({ id }) => id));
 
-  /**
-   * Every stored id this board is speaking for - what it placed, plus what it
-   * found stored and recognised. The API needs it to tell a widget the admin
-   * removed from one this board never knew about; see `zodDashboardLayout`.
-   */
   const managedIds = [
     ...new Set([
       ...saved

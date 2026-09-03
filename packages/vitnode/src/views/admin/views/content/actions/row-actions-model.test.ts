@@ -11,16 +11,6 @@ import {
   isDestructiveContentRowAction,
 } from "./row-actions-model";
 
-/**
- * Which actions one content row offers.
- *
- * Two things go wrong here and they fail in opposite directions, which is why
- * this is tested rather than read: offer an action the API refuses and the
- * control looks broken; hide one the administrator holds and a feature silently
- * does not exist. Both AdminCPs read this function, so a difference between them
- * would be a difference nobody could see from either screen.
- */
-
 /** Everything on, everything permitted - the widest row there is. */
 const everything: ContentRowActionInput = {
   canDelete: true,

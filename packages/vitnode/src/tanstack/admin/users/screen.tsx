@@ -35,18 +35,6 @@ export interface AdminUsersRouteProps extends AdminUsersRouteData {
   search: UncheckedUsersSearch;
 }
 
-/**
- * `/admin/core/users`, as everything below a route file's `component`.
- *
- * `navigate`, `search` and `LinkComponent` come from the host: TanStack infers
- * the first two from the `createFileRoute` path, and the third is how *this*
- * application renders an internal link while half of `/admin/*` is still served
- * by Next.js.
- *
- * The heading is outside the table, exactly as in the Next.js page, and rendered
- * from the loader's own strings - so the `<h1>` and the `<title>` are the same
- * string by construction.
- */
 export const AdminUsersRouteContent = ({
   adminUserId,
   description,

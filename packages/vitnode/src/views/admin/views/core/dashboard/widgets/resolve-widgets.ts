@@ -7,21 +7,6 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import type { ResolvedDashboardWidget } from "./types";
 
-/**
- * Every dashboard widget this administrator may see, translated and filtered.
- *
- * Pure: it takes the sources, the permission set and a translator, and returns
- * the list. There is no config read, no session read and no framework in it,
- * which is what lets the same rules run in a Next.js Server Component
- * (`get-dashboard-widgets.tsx`, which reads both from the request scope) and in
- * a browser, where the admin session is already in a query and the widget list
- * comes from a host-supplied registry.
- *
- * Splitting it out changed no rule. What was a single async function that fetched
- * two things and then applied five rules is now the five rules, with the two
- * fetches at the call site.
- */
-
 /** One plugin's contribution, already keyed to its own message namespace. */
 export interface DashboardWidgetSource {
   /** Where this plugin's widget strings live, e.g. `blog.admin.dashboard.widgets`. */
@@ -32,14 +17,6 @@ export interface DashboardWidgetSource {
   widgets: AdminDashboardWidget[];
 }
 
-/**
- * The narrowest slice of a translator these rules need.
- *
- * `has` as well as the call, because every label below is optional: a widget
- * that has not been translated falls back rather than rendering a raw key, and
- * `t.has` is the only way to ask without throwing. Both `next-intl`'s
- * `getTranslations()` and `use-intl`'s `createTranslator()` satisfy it.
- */
 export interface DashboardWidgetTranslator {
   (key: string): string;
   has: (key: string) => boolean;

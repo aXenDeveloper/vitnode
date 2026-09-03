@@ -41,94 +41,33 @@ import {
 } from "./translation-table";
 
 export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
-  /**
-   * The read and write layer for this content type's advanced collections.
-   *
-   * On the model rather than built per request, because it holds only the
-   * resolved tables and the memoised foreign-key targets - every method takes
-   * the database handle it should run on. A disabled stub for a content type
-   * that declares no collection, so a caller can use it unconditionally.
-   *
-   * Public so the rebuild indexers can batch-load a page's collections: they are
-   * built from the model and have no service of their own.
-   */
   advanced: ContentAdvancedStore;
-  /**
-   * The generated collection tables, by field name.
-   *
-   * Export them from the plugin's database module alongside `table`, so Drizzle
-   * Kit finds them and the migration is generated:
-   *
-   * ```ts
-   * export const example_articles_categories =
-   *   articleContent.advancedTables.junctions.categories;
-   * ```
-   *
-   * Empty for a content type that declares no advanced collection.
-   */
+
   advancedTables: ContentAdvancedTables;
   /** Column name -> Drizzle column, for filters, ordering and custom queries. */
   columns: Record<ContentColumnName<TDefinition>, PgColumn>;
   definition: TDefinition;
-  /**
-   * The read-only delivery layer, or `undefined` without a `delivery` block.
-   *
-   * `undefined` rather than a throwing stub, matching `publicService` and
-   * `editorialService`: the check reads naturally in code that does not know which
-   * content type it was handed, and TypeScript refuses the call until it has been
-   * made.
-   *
-   * `options.pluginId` is required because slug history is stamped with its owner -
-   * the same reason `editorialService` takes one, and `createContentModel` is
-   * called from `src/database/*.ts`, which has no reason to know it.
-   */
+
   deliveryService:
     | ((c: Context, options: { pluginId: string }) => ContentDeliveryService)
     | undefined;
-  /**
-   * The transactional editorial repository, or `undefined` when the content
-   * type has no `editorial` block.
-   *
-   * `undefined` rather than a throwing stub, for the same reason
-   * `publicService` is: the check reads naturally in a route builder that has
-   * no idea which content type it was handed.
-   */
+
   editorialService:
     | ((
         c: Context,
         options: { pluginId: string },
       ) => ContentEditorialService<TDefinition>)
     | undefined;
-  /**
-   * The resolved localization config, mirrored off the definition.
-   *
-   * Present on every model, so `model.localization.enabled` is the one flag route
-   * builders and background work branch on - without reaching through
-   * `definition` for it.
-   */
+
   localization: ResolvedContentLocalizationConfig;
-  /**
-   * Creates a base row and its default translation in one transaction, or
-   * `undefined` when the content type is not localized.
-   *
-   * `options.pluginId` is optional and additive: supply it on an editorial content
-   * type and the default translation gets its own `create` revision, stamped with
-   * the right owner. Omit it - as every Stage 5A caller does - and the translation
-   * is written through the plain repository exactly as before.
-   */
+
   localizedService:
     | ((
         c: Context,
         options?: { pluginId?: string },
       ) => ContentLocalizedService<TDefinition>)
     | undefined;
-  /**
-   * The read-only public repository, or `undefined` when the content type has
-   * no `publicApi`.
-   *
-   * `undefined` rather than a throwing stub so the check reads naturally in a
-   * route builder that has no idea which content type it was handed.
-   */
+
   publicService:
     ((c: Context) => ContentPublicService<TDefinition>) | undefined;
   /** The definition's schemas, re-typed for this concrete content type. */
@@ -145,14 +84,7 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     ContentTranslationColumnName<TDefinition>,
     PgColumn
   >;
-  /**
-   * The transactional translation editorial layer, or `undefined` unless the
-   * content type is **both** localized and editorial.
-   *
-   * `undefined` rather than a throwing stub, matching every other optional member
-   * here: the check reads naturally in code that does not know which content type
-   * it was handed, and TypeScript refuses the call until it has been made.
-   */
+
   translationEditorialService:
     | ((
         c: Context,
@@ -161,33 +93,13 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     | undefined;
   /** The per-language schemas, or `null`. Mirrored off `schemas.translation`. */
   translationSchemas: ContentTranslationSchemas<TDefinition> | null;
-  /**
-   * The translation repository, or `undefined` when the content type is not
-   * localized. Emits nothing and invalidates nothing - see
-   * {@link ContentTranslationModel}.
-   */
+
   translationService:
     ((c: Context) => ContentTranslationModel<TDefinition>) | undefined;
-  /**
-   * The generated translation `pgTable`, or `null`. Export it alongside `table`
-   * so Drizzle Kit finds it and the migration is generated:
-   *
-   * ```ts
-   * export const example_articles = articleContent.table;
-   * export const example_articles_translations = articleContent.translationTable;
-   * ```
-   */
+
   translationTable: ContentTranslationTableFor<TDefinition> | null;
 }
 
-/**
- * Any content model, for code that holds a collection of them.
- *
- * The same shape `AnyContentTypeDefinition` provides for definitions, and it
- * exists for the same reason: background work - the scheduled-publication task,
- * the cleanup cron - looks a model up by content type id and cannot know which
- * concrete one it will get.
- */
 export type AnyContentModel = ContentModel<
   // Deliberately `any` rather than `AnyContentTypeDefinition`, and
   // load-bearing. `ContentModel` mentions its definition in both directions -
@@ -211,31 +123,10 @@ export type AnyContentModel = ContentModel<
   any
 >;
 
-/**
- * One erased model's definition, read back with its real type.
- *
- * `AnyContentModel` erases the whole parameter, so `model.definition` comes out
- * as `any`. Everything that reads it - the id, the fields, the localization
- * block - wants the ordinary type, and passing `any` straight into those calls
- * would spread untyped values well past this boundary. Narrowing it here keeps
- * the erasure confined to the members that need it.
- *
- * A plain annotation rather than an override on `AnyContentModel`: adding any
- * member to that alias turns it into a distinct type, and TypeScript then
- * structurally compares a concrete `ContentModel<T>` against it - which is the
- * comparison the erasure exists to avoid.
- */
 export const contentDefinitionOf = (
   model: AnyContentModel,
 ): AnyContentTypeDefinition => model.definition as AnyContentTypeDefinition;
 
-/**
- * A model plus the plugin that registered it.
- *
- * The owner is not on the model itself because `createContentModel` is called
- * from `src/database/<entity>.ts`, which has no reason to know it. It is
- * attached here, at collection time, where `buildApiPlugin` already knows.
- */
 export interface RegisteredContentModel {
   model: AnyContentModel;
   pluginId: string;
@@ -248,24 +139,6 @@ export const findContentModel = (
 ): RegisteredContentModel | undefined =>
   models.find(entry => entry.model.definition.id === contentTypeId);
 
-/**
- * Turns a content type definition into its database model.
- *
- * Belongs in the plugin's `src/database/<entity>.ts`, next to the table export
- * Drizzle Kit globs:
- *
- * ```ts
- * export const articleContent = createContentModel(articleContentType, {
- *   references: { category: () => example_categories.id },
- * });
- *
- * export const example_articles = articleContent.table;
- * ```
- *
- * Server-only. Never import it from a client component - and never add
- * `server-only` to this module either, since `apps/api` and `drizzle-kit` both
- * load it in plain Node, where that package throws.
- */
 export const createContentModel = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -302,13 +175,6 @@ export const createContentModel = <
     : null;
   const translationSchemas = schemas.translation;
 
-  /**
-   * One translation model per call, bound to the request's handle.
-   *
-   * Built here rather than inside each service so `localizedService` and
-   * `translationService` share the same instance for one request - and so the
-   * "localization is enabled" narrowing happens exactly once.
-   */
   const buildTranslations = (
     c: Context,
   ): ContentTranslationModel<TDefinition> => {

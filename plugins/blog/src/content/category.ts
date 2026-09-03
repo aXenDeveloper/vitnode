@@ -1,24 +1,5 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
-/**
- * Blog categories, as a Content Engine content type.
- *
- * The **simple** reference implementation: two fields, generated CRUD, and
- * dialog create/edit. It exists to show that a small record needs no page-mode
- * editor - and, between them, that `admin.create.mode` really is per content
- * type rather than per install.
- *
- * `tableName` is deliberately the table the plugin has always used. The
- * Content Engine's generated schema for this shape *is* `blog_categories` plus a
- * translation table, so the migration adds rather than replaces: no ids move, no
- * rows are copied between tables, and an install with categories keeps them.
- *
- * `name` is localized because it always was - the blog stored category titles in
- * `core_languages_words`, one row per language - and it moves into
- * `blog_categories_translations`, which is where the engine keeps the same idea.
- * `color` is shared, because a colour is a property of the category and not of
- * the language somebody is reading it in.
- */
 export const blogCategoryContentType = defineContentType({
   id: "blog.category",
   tableName: "blog_categories",

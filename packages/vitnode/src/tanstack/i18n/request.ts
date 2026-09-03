@@ -8,13 +8,6 @@ import {
   serializeLocaleCookie,
 } from "@/lib/i18n/locale-cookie";
 
-/**
- * What the locale layer wants done to one request, before anything renders.
- *
- * Returned as data rather than performed, so the rule is testable without a
- * server: {@link handleLocaleRequest} is a pure function of the request, and the
- * host's middleware is the three lines that carry out its answer.
- */
 export interface LocaleRequestPlan {
   /** A finished response to send instead of rendering. */
   redirect?: Response;
@@ -22,16 +15,6 @@ export interface LocaleRequestPlan {
   setCookie?: string;
 }
 
-/**
- * The prefix a VitNode Hono application is mounted on.
- *
- * It is in `DEFAULT_IGNORED_LOCALE_PATHS` like `/admin` is, but the two are
- * ignored for opposite reasons and only one of them is a web page. `/admin` has
- * no locale in its URL because the operator's stored preference decides it;
- * `/api` has none because the API is not part of the web locale model at all -
- * it negotiates per request, and clients hold its URLs verbatim. So a locale
- * prefix in front of it is stripped and *nothing else happens*.
- */
 const API_PATH = "/api";
 
 const isApiPath = (pathname: string): boolean =>

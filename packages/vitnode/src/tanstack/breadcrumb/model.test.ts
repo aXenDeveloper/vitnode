@@ -5,24 +5,6 @@ import type { BreadcrumbMatch, RouteBreadcrumbProps } from "./model";
 
 import { breadcrumbGroup, breadcrumbTrail } from "./model";
 
-/**
- * The rule that replaces Next.js' `@breadcrumb` parallel route: every matched
- * route that declares a crumb contributes one, parent to child.
- *
- * Tested over plain objects rather than through a router, because that is what
- * the rule is - a fold over the match list. What each shape *means* is the whole
- * of the behaviour: a component is instantiated with its own match's data, an
- * element is taken as it is, and `false`, `null` and a missing declaration all
- * contribute nothing while leaving their parents' crumbs alone.
- */
-/**
- * A trail's labels.
- *
- * Cast rather than read straight off `content`, because React 19 types
- * `ReactNode` as including a promise - so an arrow returning one reads as an
- * async function to every lint rule that looks for one, and one of those rules
- * helpfully adds the `async` keyword.
- */
 const labelsOf = (matches: readonly BreadcrumbMatch[]): string[] =>
   breadcrumbTrail(matches).map(entry => entry.content as string);
 

@@ -11,29 +11,8 @@ import {
   parseCliArguments,
 } from "./cli-arguments.js";
 
-/**
- * The CLI's argument contract, stated as assertions rather than as a spawned
- * process.
- *
- * `parseCliArguments` is pure - it returns a refusal instead of printing and
- * exiting - so every case here is a function call. Nothing in this file starts a
- * compiler, opens a database or reads an environment variable, which is what
- * makes it reasonable to enumerate the invalid invocations as thoroughly as the
- * valid ones. The two static assertions at the bottom are the only part that
- * looks at `scripts.ts`, and they exist to prove the parser is actually in front
- * of the dispatch rather than beside it.
- */
-
 const scriptsRoot = import.meta.dirname;
 
-/**
- * A script's code, with comments removed.
- *
- * Load bearing rather than tidy: `scripts.ts` explains the old entry point in
- * prose, and that prose quotes `case "init":` - a command deleted before this
- * branch. Matched as source, a comment describing what the CLI no longer does
- * reads as a tenth command.
- */
 const codeOf = (file: string): string =>
   readFileSync(join(scriptsRoot, file), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -56,13 +35,6 @@ const accepted = (
 };
 
 describe("the contract covers every command the CLI dispatches", () => {
-  /**
-   * The table and the `switch` have to describe the same CLI. Read off the
-   * source as text, because a `switch` is not something a running test can be
-   * asked what it handles - and a command in one and not the other is the
-   * failure this pairing exists to catch: a table entry with no `case` validates
-   * an invocation that then does nothing at all.
-   */
   const entryPoint = codeOf("scripts.ts");
   const dispatched = [...entryPoint.matchAll(/case "([^"]+)":/g)]
     .map(match => match[1])

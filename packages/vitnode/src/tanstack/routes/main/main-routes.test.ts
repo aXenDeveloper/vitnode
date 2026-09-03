@@ -2,22 +2,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-/**
- * The screens `@vitnode/core` mounts under an application's main shell.
- *
- * Static and pure: this directory is read as the text it is. Whether `/login`
- * resolves is a question for a real route tree, and this suite deliberately does
- * not build one - what it pins is the shape of what an application composes.
- *
- * ## The two things that moved here
- *
- * The four public auth screens, and the 404. Both used to render with no shell
- * at all - the auth screens from `root/`, the 404 from `__root`'s
- * `notFoundComponent` - and both are pages on the public site: they want the
- * header above them, the same `<main>` landmark, and the way back to the front
- * page that the header is.
- */
-
 const here = import.meta.dirname;
 
 /** Source with its comments removed - prose may name what code may not do. */
@@ -48,27 +32,10 @@ describe("what this directory declares", () => {
     }
   });
 
-  /**
-   * `/admin` is the AdminCP's own sign-in and stays in `root/`. It reads a
-   * different session under a different cookie, so a site header offering the
-   * public "sign in" beside it would be one page asking for two unrelated
-   * logins - and it has to sit outside the AdminCP shell or that shell's guard
-   * would loop.
-   */
   it("does not declare the AdminCP's own sign-in", () => {
     expect(everyRoutePath).not.toContain("/admin");
   });
 
-  /**
-   * `/login/reset-password` is a **sibling** of `/login`, not a child.
-   *
-   * The file-based spelling needed `login_.reset-password.tsx` to say so - the
-   * trailing underscore meaning "do not nest under `/login`". A code-based route
-   * needs no such escape: it is a sibling because it is declared as one, and the
-   * path says the rest. What matters either way is that `/login` consumes
-   * exactly `/login`, so a URL below it that no route declares does not render
-   * the sign-in card.
-   */
   it("declares no route nested under another", () => {
     for (const path of everyRoutePath) {
       const parents = everyRoutePath.filter(

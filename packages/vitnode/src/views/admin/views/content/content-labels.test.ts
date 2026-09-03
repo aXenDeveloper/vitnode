@@ -8,22 +8,6 @@ import { field } from "@/content/fields";
 
 import { contentLabelsFrom } from "./content-labels";
 
-/**
- * A real translator over a real message catalogue.
- *
- * Deliberately not a stub returning strings: the whole point of the `label` key
- * is that ICU picks the form, and a mock that hands back `"…label"` would prove
- * only that a key was read. Polish is here because it is the case a
- * `singular`/`plural` pair cannot express - three forms for one noun.
- *
- * This drives `contentLabelsFrom` directly, which is the one label resolver.
- * It used to go through the Next.js screen's `getContentLabels`, which meant
- * mocking `next-intl/server`, `next/navigation`, the navigation helpers, the
- * session read and the request-scoped fetch to reach four lines of string
- * lookup. `createTranslator` from `use-intl` is the same ICU formatter
- * `getTranslations` was built on, so the assertions below are unchanged - there
- * is simply nothing left to mock.
- */
 const messages: Record<string, Record<string, unknown>> = {
   en: {
     "@vitnode/example": {

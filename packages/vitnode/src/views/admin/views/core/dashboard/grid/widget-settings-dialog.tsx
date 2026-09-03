@@ -51,16 +51,6 @@ const WidgetSettingsForm = ({
   form: Promise<React.ReactNode>;
 }): React.ReactNode => React.use(form);
 
-/**
- * One widget's settings, in a dialog.
- *
- * The form itself is not shipped with the board: it is loaded on first open, so
- * an ordinary dashboard load pays for no settings form at all. Both the load and
- * the save come from the board's `actions` - in Next.js they are server actions
- * that render the widget's `settingsComponent` on the server and end in
- * `revalidatePath`; in TanStack Start they are a browser render and a call to
- * the same Hono route. See `../widgets/dashboard-actions.ts`.
- */
 export const WidgetSettingsDialog = ({
   onSaved,
   widget,

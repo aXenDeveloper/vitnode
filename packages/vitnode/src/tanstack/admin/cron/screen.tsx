@@ -23,17 +23,6 @@ export interface AdminCronRouteProps extends AdminCronRouteData {
   search: UncheckedCronSearch;
 }
 
-/**
- * `/admin/core/advanced/cron`, as everything below a route file's `component`.
- *
- * `navigate` and `search` come from the host because they are route-typed:
- * TanStack infers both from the `createFileRoute` path, which is an application
- * concern and stays in the application.
- *
- * The heading is outside the table on purpose, exactly as in the Next.js page:
- * it is rendered from the loader's own strings, so the `<h1>` and the `<title>`
- * are the same string by construction.
- */
 export const AdminCronRouteContent = ({
   description,
   navigate,

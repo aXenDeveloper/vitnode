@@ -13,16 +13,6 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import { advancedArticleContent } from "./advanced-articles";
 
-/**
- * The generated routes for a content type with every advanced shape on it.
- *
- * Registration is the assertion: `OpenAPIHono` walks each route's request and
- * response schemas and converts them to JSON Schema when it mounts them, so a
- * nested group or a repeatable array that Zod could not describe would throw
- * here rather than at the first request. The form schema is checked the same
- * way, because `AutoForm` runs `z.toJSONSchema` on it in the browser - and Zod
- * v4 throws on a `z.date()` anywhere inside.
- */
 describe("advanced article: generated routes", () => {
   const mount = (
     routes: readonly {

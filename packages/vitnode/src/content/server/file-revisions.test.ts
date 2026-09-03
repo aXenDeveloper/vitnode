@@ -23,14 +23,6 @@ import { createContentRevisionsModel } from "./revisions-model";
 
 const PLUGIN_ID = "@vitnode/example";
 
-/**
- * A transaction stand-in that records what was inserted into which table and
- * what was deleted.
- *
- * The pin insert and the retention prune happen inside `capture`, in one
- * transaction, so a stub at this level is what proves the ordering: the pins
- * exist before anything is pruned, and there is no unpinning step at all.
- */
 const makeTx = () => {
   const inserts: { table: string; values: unknown }[] = [];
   const deletes: string[] = [];
@@ -97,11 +89,6 @@ describe("core_content_file_refs", () => {
     };
   });
 
-  /**
-   * The pin's whole job. `RESTRICT` towards the file is what refuses the
-   * deletion; `CASCADE` from the revision is what releases it again when
-   * retention prunes the revision - with no code in between.
-   */
   it("refuses a file deletion and releases it when the revision goes", () => {
     expect(foreignKeys).toEqual(
       expect.arrayContaining([
@@ -172,11 +159,6 @@ describe("revision capture", () => {
     expect(pins(await capture(undefined))).toHaveLength(0);
   });
 
-  /**
-   * Ordering, stated as a test: the pins go in before the retention prune, so
-   * there is no window in which the new revision exists unpinned - and the prune
-   * is what releases the *old* pins, through the cascade.
-   */
   it("pins before it prunes", async () => {
     const harness = await capture(
       [1],
@@ -197,16 +179,6 @@ describe("revision capture", () => {
 });
 
 describe("the pinning lifecycle", () => {
-  /**
-   * The scenario the mechanism exists for, spelled out against the two facts
-   * that implement it:
-   *
-   *   article -> file A, revision v1 pins A
-   *   article -> file B, revision v2 pins B; the column no longer guards A
-   *   deleting A is refused          <- the v1 pin, ON DELETE RESTRICT
-   *   v1 is pruned by retention      <- the pin cascades away
-   *   deleting A now succeeds        <- nothing references it
-   */
   it("keeps the previous file pinned after the field moves on", async () => {
     const first = await capture([1], 1);
     const second = await capture([2], 2);
@@ -221,11 +193,6 @@ describe("the pinning lifecycle", () => {
 });
 
 describe("the ids a snapshot yields", () => {
-  /**
-   * The composition the editorial service relies on: it builds the snapshot,
-   * reads the file ids straight back out of it, and hands both to `capture`. So
-   * the pins can only ever name files the snapshot actually recorded.
-   */
   it("comes from the snapshot itself, not from the request payload", () => {
     const row = {
       animation: 2,

@@ -19,20 +19,6 @@ import {
   normalizeContentListSearch,
 } from "./route-search";
 
-/**
- * The Content Engine list's URL contract.
- *
- * Three shapes, and the whole of this suite is about keeping them apart:
- *
- *     the URL       ?orderBy=title&categoryId=3     what an admin sees and shares
- *     the search    { orderBy: 'title', … }         the route's validated state
- *     the request   { first: '25', categoryId: '3' } what the API is asked for
- *
- * The shared admin-table half is tested in `../table-search.test.ts`; what is
- * here is the half a content type contributes - its sortable columns, whether it
- * has a search box, and its filters.
- */
-
 const articles = defineContentType({
   id: "blog.post",
   tableName: "blog_post",
@@ -120,12 +106,6 @@ describe("contentListFilters", () => {
     );
   });
 
-  /**
-   * The router's default parser JSON-parses every value, so a number arrives as
-   * a number and a repeated key as an array. Only the first entry can reach the
-   * API, and a non-scalar is absent rather than coerced - `String({})` is
-   * `"[object Object]"`, which no rule would recognise.
-   */
   it("normalises what the router's parser produced", () => {
     expect(contentListFilters({ views: 12 }, articles)).toEqual({
       views: "12",
@@ -179,12 +159,6 @@ describe("contentListRouteParams", () => {
 });
 
 describe("normalizeContentListSearch", () => {
-  /**
-   * Total and idempotent, both of which are requirements of where it runs:
-   * `contentListSearchFrom` is this function, so it runs on every table
-   * navigation and the router then validates the location it produced. One that
-   * threw would turn a hand-edited query string into an error screen.
-   */
   it("never throws, whatever is in the query string", () => {
     expect(() =>
       normalizeContentListSearch(
@@ -203,11 +177,6 @@ describe("normalizeContentListSearch", () => {
     expect(normalizeContentListSearch(once, articles)).toEqual(once);
   });
 
-  /**
-   * The default page size is the URL saying nothing. Answering `first: 25` would
-   * write `?first=25` into every link the router builds to this route -
-   * including the sidebar's.
-   */
   it("omits a page size equal to the content default", () => {
     expect(normalizeContentListSearch({}, articles)).toEqual({});
     expect(
@@ -216,12 +185,6 @@ describe("normalizeContentListSearch", () => {
     ).toBeUndefined();
   });
 
-  /**
-   * The generated list route answers 25 when asked for no size, and the Next.js
-   * list asks for none - so the request this contract sends has to be 25 too.
-   * The data table's own default is 10, and taking that would quietly shrink
-   * every content list.
-   */
   it("asks the API for the Content Engine's page size, not the table's", () => {
     expect(contentListRouteParams({}, articles).first).toBe(
       String(CONTENT_DEFAULT_PAGE_SIZE),
@@ -229,28 +192,12 @@ describe("normalizeContentListSearch", () => {
     expect(CONTENT_DEFAULT_PAGE_SIZE).not.toBe(DEFAULT_TABLE_PAGE_SIZE);
   });
 
-  /**
-   * Page sizes are numbers, not numeric strings. The router's default serializer
-   * JSON-encodes a string that would parse as JSON, so `'20'` is written to the
-   * address bar as `first=%2220%22`.
-   */
   it("keeps page sizes as numbers", () => {
     expect(normalizeContentListSearch({ first: 20 }, articles).first).toBe(20);
   });
 });
 
 describe("the round trip through the table's controls", () => {
-  /**
-   * A control is handed a `URLSearchParams` and produces a new query string from
-   * it; this is both ends of that. The return leg re-validates, so a control
-   * cannot write a sort column the content type does not have.
-   *
-   * Asserted against the literal shape rather than against
-   * `normalizeContentListSearch`: the return leg *is* that function now, so
-   * comparing the two would be an identity that holds however wrong both are.
-   * What has to be pinned is that a page size survives as a number, that a
-   * filter survives at all, and that neither picks up a stray key on the way.
-   */
   it("survives search params out and back", () => {
     const search = { first: 20, orderBy: "title", status: "draft" };
     const params = contentListSearchParams(search, articles);
@@ -265,11 +212,6 @@ describe("the round trip through the table's controls", () => {
     });
   });
 
-  /**
-   * And the default page size is still the URL saying nothing after the trip -
-   * the property the whole contract rests on, checked at the far end rather
-   * than only on the way in.
-   */
   it("drops a default page size on the way back", () => {
     const params = contentListSearchParams({ orderBy: "title" }, articles);
 

@@ -10,12 +10,6 @@ import type {
 } from "./search-feed-content";
 import type { SearchFeedPage, SearchResultItem } from "./types";
 
-/**
- * The one boundary a render test cannot cross: the feed talks to the search API.
- *
- * `clientModule` is mocked alongside it because the real one is imported at
- * module scope, before any test has run.
- */
 const fetcherClient = vi.fn();
 
 vi.mock("@/lib/fetcher-client", () => ({
@@ -50,13 +44,6 @@ const plMessages = {
   },
 };
 
-/**
- * The link the shared feed is handed, standing in for a framework's own.
- *
- * It records what it was asked to render, which is how the tests below tell an
- * internal href (delegated here, and so client-side navigable) from an external
- * one (a bare `<a>`).
- */
 const routedHrefs: string[] = [];
 
 const TestLink = ({ children, className, href }: SearchFeedLinkProps) => {
@@ -429,13 +416,6 @@ describe("the loading state", () => {
   });
 });
 
-/**
- * The handle a prefetching framework needs.
- *
- * A TanStack Start route loader warms the cache before this component exists, so
- * the key it writes and the key the component reads have to be the same one -
- * otherwise the feed mounts, misses, and fetches page one all over again.
- */
 describe("the exported query key", () => {
   it("is the entry the feed actually stores its pages under", () => {
     const params: SearchFeedParams = { sort: "newest" };
@@ -463,14 +443,6 @@ describe("the exported query key", () => {
   });
 });
 
-/**
- * What a search result is allowed to link to.
- *
- * A document's `url` is written by whichever plugin indexed it, so it is data
- * arriving from a database rather than a literal in this repository. The rule
- * this replaced treated *any* scheme as "external, render it in an `<a href>`",
- * which passed `javascript:` and `data:` through untouched.
- */
 describe("the URL scheme allowlist", () => {
   const ALLOWED = [
     "http://example.com/post",

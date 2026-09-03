@@ -23,19 +23,6 @@ import {
   invalidateContentList,
 } from "./query";
 
-/**
- * What a content list asks for, and what a write to one owes the rest of the
- * AdminCP.
- *
- * The request half is where the viewing locale joins the URL contract, which is
- * the one input that is not in the URL and still changes every localized cell -
- * so it has to be in the key, and it has to be *absent* from the key of a list
- * that has no translations.
- *
- * The invalidation half is about prefixes. Every rule below is one somebody
- * would otherwise have to remember when they add a mutation.
- */
-
 const articles = defineContentType({
   id: "blog.post",
   tableName: "blog_post",

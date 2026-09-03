@@ -26,27 +26,6 @@ import { fileFormatLabels } from "@/lib/file-constraints";
 import { formatBytes } from "@/lib/format-bytes";
 import { cn } from "@/lib/utils";
 
-/**
- * The pieces `AutoFormFile` and `AutoFormFiles` both need.
- *
- * Its own module rather than one component with a `multiple` branch, because the
- * two differ in almost everything that matters - one value or a list, replace or
- * append, one failure or one per file - and almost nothing that is visible.
- * Sharing the *visible* half is what keeps a gallery entry and a cover image
- * looking like the same product, and keeps the constraint line, the `accept`
- * filter and the pre-flight check reading one descriptor rather than two copies
- * of one.
- */
-
-/**
- * A stored file, as these inputs need to describe one.
- *
- * Declared here rather than imported from the Content Engine on purpose: this is
- * generic AutoForm infrastructure, and a form field that reached into
- * `@/content` for a type would make every hand-written form depend on the
- * Content Engine to upload a file. The Content Engine's own
- * `ContentFileDescriptor` is structurally this, so it passes straight in.
- */
 export interface AutoFormFileValue {
   height?: number;
   id: number;
@@ -57,13 +36,6 @@ export interface AutoFormFileValue {
   width?: number;
 }
 
-/**
- * An upload failure that knows which rule refused it.
- *
- * A structural check rather than an `instanceof`: whoever owns `onUpload` builds
- * the error, and these components must not have to know about their error class
- * to read the one field they can act on.
- */
 export const fileRejectionReasonOf = (
   error: unknown,
 ): FileRejectionReason | undefined => {
@@ -74,17 +46,6 @@ export const fileRejectionReasonOf = (
     : undefined;
 };
 
-/**
- * Whether a file should be *rendered* as an image, which needs a `src` as well
- * as an image MIME type.
- *
- * The url check is not defensive padding. A `core_files` row stores a `key`, not
- * a url - the url is built at read time by the configured storage adapter - and
- * an installation with no `storage.adapter` serialises `url: ""` for every file
- * it describes. Rendering `<img src="">` then makes the browser re-request the
- * current document, which is what React warns about, so a file with no
- * resolvable url is an icon rather than a broken image.
- */
 export const isImageFile = (file: AutoFormFileValue): boolean =>
   file.url !== "" && (file.mimeType ?? "").startsWith("image/");
 
@@ -100,13 +61,6 @@ const asFileId = (value: unknown): null | number =>
     ? value
     : null;
 
-/**
- * The identifiers a form value names, whatever its arity.
- *
- * `null`, `undefined`, `""` and a list with rubbish in it all reduce to the ids
- * that are actually there - a file control's value is only ever an identifier or
- * a list of them, and everything else is a form that has not been filled in.
- */
 export const fileIdsOfFormValue = (value: unknown): number[] => {
   if (Array.isArray(value)) {
     return value.map(asFileId).filter((id): id is number => id !== null);
@@ -117,30 +71,6 @@ export const fileIdsOfFormValue = (value: unknown): number[] => {
   return id === null ? [] : [id];
 };
 
-/**
- * What a file control should show, derived **entirely** from the form value.
- *
- * This is the rule that keeps a file control honest, and it used to be broken:
- * the previous version held the chosen file in local state, so pressing Remove
- * and then abandoning the form - closing the dialog, navigating away, letting a
- * refresh replace the row - left the control showing an empty drop zone for a
- * record whose column still held the file. The value said one thing and the
- * screen said another, and the screen is what somebody acts on.
- *
- * So the value decides, and the descriptors are only a **lookup**: they come
- * from the row the form opened on plus whatever this session uploaded, and they
- * are never removed. Restoring the value therefore restores the preview, without
- * anything having to re-fetch or re-sync.
- *
- * `file` is `null` when the value names an identifier nothing has a descriptor
- * for. The caller still renders a card for it, because "there is a file here and
- * I cannot describe it" and "there is no file here" must not look the same - the
- * second one invites an editor to replace something they cannot see.
- *
- * Order follows the **value**, not the lookup: for a gallery the value is the
- * stored order, and sorting by anything else would show a different gallery from
- * the one that would be saved.
- */
 export const resolveFormFiles = (
   value: unknown,
   known: readonly (AutoFormFileValue | null | undefined)[],
@@ -157,21 +87,6 @@ export const resolveFormFiles = (
   }));
 };
 
-/**
- * What went wrong with one upload, in the most specific words available.
- *
- * A hook rather than a plain function only so the translator lives here: both
- * callers need the same three sentences, and `useTranslations` is what types the
- * keys.
- *
- * The server's own message is the **last** resort and also the most important
- * one. "Storage provider not found" and "Invalid or corrupt image file" are
- * exactly what somebody needs to read, and replacing either with "the upload
- * failed, please try again" is how an editor ends up retrying a misconfiguration
- * for ten minutes. The two rules above it are restated locally only because the
- * browser can say them in the reader's own language, using the field's own
- * limits and the file they actually picked.
- */
 export const useUploadFailureMessage = (): ((args: {
   attempted: File | undefined;
   error: unknown;

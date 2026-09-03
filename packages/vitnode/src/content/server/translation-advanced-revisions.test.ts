@@ -13,16 +13,6 @@ import {
 } from "./revision-snapshot";
 import { createContentTranslationEditorialService } from "./translation-editorial-service";
 
-/**
- * Localized groups in translation revisions.
- *
- * Stage 6 taught the *base* snapshot about groups and left the translation one
- * running every localized field through the scalar coercion - which returns
- * `null` for an object. So a translation revision recorded `seo: null` for every
- * record that had SEO, and restoring one blanked it. Every test here fails on
- * that implementation.
- */
-
 const PLUGIN_ID = "@vitnode/example";
 const ACTOR = { type: "staff" as const, userId: 1 };
 const definition = testAdvancedLocalizedContentType;

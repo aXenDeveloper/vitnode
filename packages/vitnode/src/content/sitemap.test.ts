@@ -9,15 +9,6 @@ import {
   escapeXml,
 } from "./sitemap";
 
-/**
- * Sitemap serialization, without a database.
- *
- * A sitemap is a document other people's parsers read, so the assertions here are
- * mostly about bytes: valid XML, correct escaping, the elements the protocol
- * defines and deterministic output. A malformed `<loc>` is not a cosmetic problem -
- * a crawler may reject the whole file.
- */
-
 const entry = (
   overrides: Partial<ContentSitemapEntry> = {},
 ): ContentSitemapEntry => ({

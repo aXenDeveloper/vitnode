@@ -42,18 +42,6 @@ const matchingBracket = (source: string, openIndex: number): number => {
   return -1;
 };
 
-/**
- * Removes the `{ ... code: "<code>" ... }` entry from the `locales` array,
- * along with its indentation and trailing comma. A locale object is flat, so a
- * `[^{}]` run matches its whole body. Returns the source unchanged when no such
- * entry is present.
- *
- * The match is scoped to the `locales` array's bounds first: an inline config
- * can carry unrelated flat objects that share the code (e.g. a plugin option
- * `{ code: "de" }`) earlier in the file, and an unscoped replace would strip
- * the first of those instead - silently corrupting the config while reporting
- * success.
- */
 export const removeLocaleFromConfig = (
   source: string,
   code: string,
@@ -76,11 +64,6 @@ export const removeLocaleFromConfig = (
   return source.slice(0, open) + cleaned + source.slice(close + 1);
 };
 
-/**
- * Removes the `<code>: { ... }` block from `messages`. The block's loaders use
- * `()` not `{}`, so a `[^{}]` run matches its whole body. Returns the source
- * unchanged when the locale has no messages block.
- */
 export const removeMessagesFromConfig = (
   source: string,
   code: string,

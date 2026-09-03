@@ -10,17 +10,6 @@ import { Loader } from "@/components/ui/loader";
 import { contentDeliveryQueryOptions } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
 
-/**
- * One record's canonical address and the ones it used to answer to.
- *
- * Read-only, and deliberately so: this screen manages nothing. There is no
- * `can_manage_redirects` because there is nothing here to manage - the URL
- * history is written by the mutation that moved a slug, inside the same
- * transaction, and the panel only reports it.
- *
- * `locale` names the **translation** whose address is being asked about, not the
- * language the AdminCP is being read in. See `contentDeliveryRequestLocale`.
- */
 export const DeliveryPanel = ({
   contentTypeId,
   id,

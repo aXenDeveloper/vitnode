@@ -6,21 +6,6 @@ import type { RouteBreadcrumbProps } from "../breadcrumb/model";
 import { pluginRouteBreadcrumb } from "./components";
 import { pluginRouteModuleRef } from "./module-ref";
 
-/**
- * What a plugin route contributes to the shell's trail, once its module has
- * arrived - and what it contributes before that, which is nothing.
- *
- * The crumb is rendered by the shell, *above* the route's own component, so it
- * cannot suspend on the module it reads: a suspend there blanks the header
- * rather than the page. What it does instead is render nothing until the module
- * resolves and then re-render, which is what `useSyncExternalStore` over the
- * memoised import buys.
- *
- * No namespaces are declared here on purpose: a route that declares none mounts
- * no message provider at all, so this needs no intl record and asserts only the
- * part that belongs to this file. Which namespaces a route's provider gets is
- * `./specs.test.ts`.
- */
 const moduleWith = (route: Record<string, unknown>) => {
   let resolve = (): void => undefined;
   const arrived = new Promise<void>(settle => {

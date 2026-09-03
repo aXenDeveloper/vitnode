@@ -161,24 +161,6 @@ export const singleAppScripts = (
   "drizzle-kit": "drizzle-kit",
 });
 
-/**
- * The web app of a split deployment, which owns **no** database.
- *
- * Deliberately no `db:prepare`, no `db:migrate` and no `drizzle-kit`: this app
- * talks to a separate API over HTTP and has no schema, no migrations directory
- * and no database credentials. Its `dev` is the Vite server and nothing else.
- *
- * Its predecessor was `vitnode init --web && next dev`, and `--web` printed
- * "nothing to initialise" - a flag whose only meaning was to do nothing. The
- * honest replacement is for the script not to call the bootstrap at all, which
- * is also what keeps schema lifecycle out of the frontend: a root `turbo
- * db:prepare` resolves to the API package, never to this one.
- *
- * Its own generated artefacts - the plugin route registry,
- * the AdminCP navigation and content projections - are written by the Vite
- * plugin on every `vite dev` and `vite build`, so there is nothing to prepare
- * here either.
- */
 export const webScripts = (eslint: boolean) => ({
   dev: "vite dev --port 3000",
   build: "vite build",
@@ -241,19 +223,6 @@ const apiDevDeps = (pm: string, eslint: boolean) => ({
   typescript: versionsPackageJson.typescript,
 });
 
-/**
- * The TanStack Start stack every generated web app needs at runtime.
- *
- * Split out because both web shapes want it: the single app, which serves the
- * site and mounts the API in one process, and the `web` app of an
- * `apiMonorepo`, which talks to a separate API.
- *
- * Every entry is either a peer `@vitnode/core` declares - so npm would warn
- * about it, and the app could not render a VitNode view without it - or
- * something the generated `vite.config.ts` names by hand. `tslib` is the second
- * kind and looks the most out of place: it is externalised rather than bundled,
- * which only works if the app really depends on it.
- */
 const tanstackWebDeps = {
   "@tailwindcss/vite": versionsPackageJson.tailwindVite,
   "@tanstack/react-query": versionsPackageJson.tanstackReactQuery,
@@ -286,17 +255,6 @@ const singleAppDeps = {
   shadcn: versionsPackageJson.shadcn,
 };
 
-/**
- * The build-time half, shared by both web shapes.
- *
- * `vite` and `@vitejs/plugin-react` are the build; the three devtools packages
- * are what `devtools()` in the generated `vite.config.ts` mounts, and are dev
- * dependencies because none of them ships in the production bundle.
- *
- * No route generator CLI. `tanstackStart()` runs the generator itself, and a
- * second one writing the same `routeTree.gen.ts` is an infinite reload loop
- * rather than a faster build.
- */
 const tanstackWebDevDeps = {
   "@tanstack/devtools-vite": versionsPackageJson.tanstackDevtoolsVite,
   "@tanstack/react-devtools": versionsPackageJson.tanstackReactDevtools,

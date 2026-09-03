@@ -17,15 +17,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The debug panel's URL contract - the shared admin-table one, applied to the
- * system log.
- *
- * The log table is the only thing on this screen with URL state: the queue
- * snapshot has no pager and no sort, and the clear-cache button writes nothing.
- * So the screen's search *is* the log table's.
- */
-
 export type DebugRouteSearch = AdminTableRouteSearch<DebugLogsOrderBy>;
 export type UncheckedDebugSearch = UncheckedAdminTableSearch<DebugLogsOrderBy>;
 

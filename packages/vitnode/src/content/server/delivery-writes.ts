@@ -8,18 +8,6 @@ import type { ContentSlugHistoryModel } from "./slug-history-model";
 import { contentDeliveryPath } from "../delivery";
 import { createContentSlugHistoryModel } from "./slug-history-model";
 
-/**
- * What one mutation did to a record's public URLs.
- *
- * Carried on the editorial outcome so the post-commit effects can emit the delivery
- * events and pick the cache tags without re-reading anything: once the transaction
- * returns, the *old* URL is gone from the row, and it is the one fact that cannot be
- * recovered afterwards - the same reason `previousSlug` is already on the outcome.
- *
- * Optional on both outcome types rather than required, which is what keeps every
- * Stage 1-7 construction site compiling untouched and every content type without
- * delivery producing exactly the outcome it always produced.
- */
 export interface ContentDeliveryOutcome {
   /** The path the record answers to after this mutation. */
   canonicalPath: null | string;
@@ -29,22 +17,9 @@ export interface ContentDeliveryOutcome {
   /** The path it answered to before, when the mutation moved it. */
   previousPath: null | string;
   previousSlug: null | string;
-  /**
-   * Whether a historical URL became a redirect.
-   *
-   * `true` only when the old slug had genuinely been publicly addressable, which is
-   * the difference between "somebody fixed a typo in a draft" and "a live URL
-   * moved". It is what the `delivery_redirect_created` event is gated on.
-   */
+
   redirectCreated: boolean;
-  /**
-   * What this mutation did to the sitemap.
-   *
-   * Two booleans rather than one, because a sitemap entry carries a `<lastmod>`
-   * derived from `updatedAt`: a plain title edit on a published record changes the
-   * file's bytes without changing which URLs it lists. See
-   * {@link ContentSitemapChange}.
-   */
+
   sitemap: ContentSitemapChange;
   /** The slug the record answers to now, or `null` once it is deleted. */
   slug: null | string;
@@ -52,13 +27,6 @@ export interface ContentDeliveryOutcome {
   slugChanged: boolean;
 }
 
-/**
- * One record's addressability, before and after a mutation.
- *
- * Supplied by the caller rather than derived here, because only the caller knows:
- * it holds the row on both sides of its own guarded write, and re-reading would
- * both cost a query and race with a concurrent writer.
- */
 export interface ContentDeliveryTransition {
   /** Whether the record is publicly reachable *after* the mutation. */
   isPublic: boolean;
@@ -73,27 +41,6 @@ export interface ContentDeliveryTransition {
   wasPublic: boolean;
 }
 
-/**
- * The delivery half of one slug-bearing mutation, inside its transaction.
- *
- * The order below is the whole correctness argument, and it is why this is one
- * function rather than three calls sprinkled through the editorial services:
- *
- * 1. **Retire the old address first.** It has to stop being the record's current
- *    slug before the new one can be reserved, or a move from `a` to `b` and back to
- *    `a` would hit its own live reservation.
- * 2. **Reserve the new one second**, and only when the record is publicly
- *    reachable. A draft has no public URL, so reserving its slug would hand out a
- *    permanent claim on a URL that was never live - and then refuse it to somebody
- *    who wants it.
- * 3. **Report, never act.** Nothing here emits an event, writes a cache tag or
- *    calls the search index. The caller is inside a transaction that may still roll
- *    back, and a rollback cannot un-send any of those.
- *
- * `retire` returning `{ retired: false }` is not a failure: it is the answer to
- * "was that slug ever a live URL", and a `false` is what keeps a corrected draft
- * from creating a redirect nobody asked for.
- */
 export const applyContentDeliveryWrite = async ({
   definition,
   slugHistory,
@@ -128,13 +75,6 @@ export const applyContentDeliveryWrite = async ({
   let redirectCreated = false;
 
   if (slugHistory !== null) {
-    /**
-     * Whether this mutation takes the previous public address out of service.
-     *
-     * Three ways it can: the slug moved, the record was deleted (`slug === null`),
-     * or it stopped being publicly reachable. All three end with a URL that used to
-     * answer and now does not, which is precisely when history has to hold it.
-     */
     const leavingService = slugChanged || slug === null || !isPublic;
 
     // The lazy bootstrap, and the reason Stage 8 ships no backfill migration.

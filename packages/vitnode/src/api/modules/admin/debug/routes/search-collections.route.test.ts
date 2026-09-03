@@ -18,11 +18,6 @@ interface Dispatched {
   payload?: Record<string, unknown>;
 }
 
-/**
- * Both handlers are called directly, the way the queue-task tests call theirs:
- * `Route.handler` is deliberately erased, and neither route needs Hono for
- * anything but reading a body these tests can hand it outright.
- */
 const harness = ({
   body,
   clearFails = false,

@@ -30,14 +30,6 @@ const {
   uniqueViolation: UNIQUE_VIOLATION,
 } = PG_ERROR_CODES;
 
-/**
- * A JSON error body, carried on the exception itself.
- *
- * `HTTPException` normally renders its `message` as text, but it also accepts a
- * ready-made `Response` - and `app.onError` returns `error.getResponse()`
- * verbatim, so the body survives untouched. That is what lets an editorial
- * route answer a machine-readable 409 without a second error channel.
- */
 const jsonError = (status: 400 | 409 | 422, body: unknown): HTTPException =>
   new HTTPException(status, {
     res: Response.json(body, { status }),
@@ -47,15 +39,6 @@ const jsonError = (status: 400 | 409 | 422, body: unknown): HTTPException =>
 export const contentConflict = (body: ContentConflict): HTTPException =>
   jsonError(409, body);
 
-/**
- * A structured 409, for a slug another record's URL history owns.
- *
- * 409 rather than 400: nothing about the request is malformed, the address is
- * simply taken - by a URL that still redirects somewhere, which is a state of the
- * system rather than a mistake in the payload. Its own body shape rather than a
- * third arm of `zodContentConflict`, so a client generated before Stage 8 still
- * parses the arms it knows.
- */
 export const contentDeliveryConflict = (
   body: ContentDeliveryConflict,
 ): HTTPException => jsonError(409, body);
@@ -65,44 +48,17 @@ export const contentUnprocessable = (
   body: ContentUnprocessable,
 ): HTTPException => jsonError(422, body);
 
-/**
- * A structured 400, for a file identifier a field may not hold.
- *
- * The only 400 in this module that carries a body, and it does so because the
- * two parts beside the sentence are the actionable ones: `code` says which rule
- * refused the file, and `field` says which input to put the message under. A
- * save carries every field at once, so a client with only prose to go on can
- * report a refusal but not where.
- */
 export const contentFileRejected = (body: {
   code: string;
   field: string;
   message: string;
 }): HTTPException => jsonError(400, body);
 
-/**
- * A structured 400, for a schedule the rules refuse.
- *
- * 400 rather than 409: nothing is in conflict, the request simply asked for a
- * time that cannot work. The `code` is what lets the dialog point at the date
- * field instead of raising a general error.
- */
 export const contentScheduleRejected = (body: {
   code: ContentScheduleCode;
   contentTypeId: string;
 }): HTTPException => jsonError(400, body);
 
-/**
- * Turns a Postgres constraint failure into an HTTP response.
- *
- * The driver's message can name columns, constraints and even values, so it
- * never reaches the client - only a generic sentence does. Anything unrecognised
- * is rethrown for `app.onError`, which logs the detail and returns a bare 500.
- *
- * `structured` opts an editorial content type into JSON bodies for the two
- * statuses a client has to branch on. It is off by default, so every Stage 1-3
- * route answers exactly as it did before.
- */
 export const rethrowAsHttpError = (
   error: unknown,
   {

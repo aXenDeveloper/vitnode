@@ -12,15 +12,6 @@ import type {
   ContentUpdateInput,
 } from "./types";
 
-/**
- * The type-level half of `field.file({ multiple: true })`.
- *
- * These are the assertions that would break silently: a gallery resolving to
- * `number` instead of `number[]` still compiles at every call site that happens
- * to pass one, and a public gallery typed as identifiers is a client rendering
- * `<img src={42}>` at runtime rather than a compile error.
- */
-
 type Gallery = typeof testFileGalleryContentType;
 
 describe("field.file({ multiple: true }) types", () => {

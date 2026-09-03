@@ -8,13 +8,6 @@ import { useDialog } from "@/components/ui/dialog";
 
 import type { SendTestEmail } from "./send-test-email-mutation";
 
-/**
- * The test-email form: its schema, and what submitting it does.
- *
- * `onSend` is the framework seam - the Next.js server action or the browser
- * mutation - and everything else here is shared: the same three fields, the same
- * validation messages, the same success toast and the same dialog closing.
- */
 export const useFormSendTestEmail = (onSend: SendTestEmail) => {
   const t = useTranslations("admin.system.integrations.email.test");
   const tError = useTranslations("core.global.errors");

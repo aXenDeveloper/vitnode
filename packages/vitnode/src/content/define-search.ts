@@ -33,13 +33,6 @@ const disabledSearch: ResolvedContentSearchConfig = {
   titleField: "",
 };
 
-/**
- * Checks one indexed field name.
- *
- * The public-exposure rule is the important one, and it is checked here as well
- * as in the types because a JavaScript caller or a widened value can reach this
- * function with anything at all.
- */
 const assertSearchField = ({
   allowRepeatable = false,
   exposed,
@@ -169,12 +162,6 @@ const assertSearchPathTemplate = (
   }
 };
 
-/**
- * Checks and fills in `search`.
- *
- * Runs after `resolvePublicApi`, because every rule here is stated in terms of
- * the resolved public allowlist and its single exposed slug field.
- */
 export const resolveSearch = (
   id: string,
   fields: ContentFieldMap,

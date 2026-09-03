@@ -26,14 +26,6 @@ export interface SsoCallbackRouteProps {
   search: { code?: string; error?: string; state?: string };
 }
 
-/**
- * The SSO callback, as everything below a route file's `component`.
- *
- * The exchange itself is unchanged and stays on the server: the API verifies
- * `state` against the cookie it minted, deletes it, trades the `code` with the
- * provider and mints the session. Nothing here re-implements or re-checks any of
- * that.
- */
 export const SsoCallbackRouteContent = ({
   errorActions,
   LinkComponent,
@@ -43,26 +35,9 @@ export const SsoCallbackRouteContent = ({
   const router = useRouter();
   const { data: config } = useSuspenseQuery(middlewareConfigQueryOptions());
 
-  /**
-   * The callback URL, judged before any of it is sent on: the provider id has to
-   * be a slug, `code` and `state` have to be present and bounded, and an `error`
-   * is classified rather than carried. A malformed callback never reaches the
-   * API.
-   */
   const parsed = parseSsoCallback({ providerId, query: search });
   const completeSso = useCompleteSsoAction(parsed.ok ? parsed.params : null);
 
-  /**
-   * The exchange, run once, by the shared hook both frameworks use.
-   *
-   * `oauthError` is the raw `error` parameter, which is what the hook's own rule
-   * is written against: `access_denied` disables the query outright - there is
-   * nothing to exchange when the visitor said no - and anything else lets it run
-   * and fail, which is the screen a provider error should produce anyway. The
-   * exchange itself refuses to call the API unless `parseSsoCallback` produced
-   * parameters, so neither a malformed callback nor a provider error costs a
-   * request.
-   */
   const state = useSSOCallback({
     code: parsed.ok ? parsed.params.code : "",
     oauthError: search.error,

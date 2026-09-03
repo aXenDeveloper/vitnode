@@ -5,14 +5,6 @@ import { CONFIG_PLUGIN } from "@/config";
 import { buildRoute } from "../../../lib/route";
 import { zodPaginationQuery } from "../../../lib/with-pagination";
 
-/**
- * The search index's own page info.
- *
- * Deliberately not `zodPaginationPageInfo`: that one describes a keyset walk
- * over a table and hands out an opaque cursor for the ordered tuple. A search
- * page is not that - a relevance-sorted one walks by offset and an ordinary one
- * by row id - so it keeps the numeric cursors it has always had.
- */
 const zodSearchPageInfo = z.object({
   totalCount: z.number(),
   count: z.number(),

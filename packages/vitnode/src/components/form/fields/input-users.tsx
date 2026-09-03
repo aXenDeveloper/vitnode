@@ -15,17 +15,6 @@ import { AsyncPicker } from "../common/async-picker";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
-/**
- * The columns a user picker needs: enough to identify a person on sight.
- *
- * Declared here rather than beside the search that produces it, and that is the
- * whole reason this file has no import of `search-users.action.server` left.
- * The action is a `"use server"` module: it reaches `next/headers` through the
- * typed fetcher, so a component naming it - even only for a type, even only as
- * a default argument nobody uses - put `server-only` into the graph of every
- * screen that renders a person picker. The Content Engine's `user` field is one
- * of those, so that single line made the whole AdminCP content form Next-only.
- */
 export interface UserOption {
   avatarColor: string;
   id: number;
@@ -33,13 +22,6 @@ export interface UserOption {
   nameCode: string;
 }
 
-/**
- * A person the field can label but has not necessarily fetched.
- *
- * `avatarColor` is optional because the caller often knows only a name and an
- * id - the Content Engine resolves a `user` field's label alongside the record
- * and never carries a colour with it.
- */
 export type PartialUserOption = Omit<UserOption, "avatarColor" | "nameCode"> &
   Partial<Pick<UserOption, "avatarColor" | "nameCode">>;
 
@@ -109,17 +91,7 @@ export const AutoFormUser = ({
   clearable?: boolean;
   disabled?: boolean;
   placeholder?: string;
-  /**
-   * How the picker finds people.
-   *
-   * Required, and deliberately without the default it used to carry. The
-   * default was `searchUsers`, the AdminCP users list read through a server
-   * action - correct for a Next.js screen and unreachable from any other host,
-   * and imported whether a caller used it or not. A caller that wants it passes
-   * `search={searchUsers}`; the Content Engine passes its own, because a `user`
-   * field's people come from the content type's own options route rather than
-   * from the member list.
-   */
+
   search: (value: string) => Promise<UserOption[]>;
   searchPlaceholder?: string;
   selected?: null | PartialUserOption;

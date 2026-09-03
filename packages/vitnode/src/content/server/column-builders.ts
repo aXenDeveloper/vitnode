@@ -23,11 +23,6 @@ import { ContentEngineError } from "../errors";
 
 export type ColumnReferenceThunk = () => AnyPgColumn;
 
-/**
- * The three columns every content table gets, matching the conventions used by
- * all 22 core tables: a `serial` primary key, `defaultNow()` on `createdAt`,
- * and `defaultNow().$onUpdate(...)` on `updatedAt`.
- */
 export const buildSystemColumns = (): Record<string, AnyPgColumnBuilder> => ({
   id: serial().primaryKey(),
   createdAt: timestamp().notNull().defaultNow(),
@@ -37,17 +32,6 @@ export const buildSystemColumns = (): Record<string, AnyPgColumnBuilder> => ({
     .$onUpdate(() => new Date()),
 });
 
-/**
- * The two columns `publication: { enabled: true }` adds.
- *
- * `status` is `varchar` rather than a Postgres enum, matching how `field.enum`
- * is already materialised, so adding a status later is not a type migration. It
- * carries `DEFAULT 'draft' NOT NULL` so drizzle-kit backfills an existing table
- * in a single statement - every pre-existing row becomes a draft.
- *
- * `published_at` is nullable with no default: it means "first published at",
- * and `unpublish` deliberately leaves it alone.
- */
 export const buildPublicationColumns = (): Record<
   string,
   AnyPgColumnBuilder
@@ -61,17 +45,6 @@ export const buildPublicationColumns = (): Record<
     .default("draft"),
 });
 
-/**
- * The one column `editorial: { enabled: true }` adds.
- *
- * `DEFAULT 1 NOT NULL`, so drizzle-kit backfills an existing table in a single
- * statement and every pre-existing row starts at version 1 - the same property
- * that makes adding `status DEFAULT 'draft'` safe.
- *
- * Never written by `create` or `update`: the editorial service increments it in
- * the same conditional `UPDATE` that guards on it, which is what makes the
- * check-and-set atomic.
- */
 export const buildEditorialColumns = (): Record<
   string,
   AnyPgColumnBuilder
@@ -79,19 +52,6 @@ export const buildEditorialColumns = (): Record<
   version: integer().notNull().default(1),
 });
 
-/**
- * The columns every generated translation table carries.
- *
- * `itemId` and `languageId` are the composite primary key, added by
- * `createContentTranslationTable` - both are `NOT NULL` here because a key
- * column has to be, and both are written by the service rather than by a
- * request.
- *
- * `version` mirrors the editorial column deliberately: a translation has *its
- * own* optimistic lock, so an edit in Polish and an edit in English cannot
- * conflict with each other. It defaults to 1 and is only ever moved by the
- * conditional `UPDATE` that guards on it.
- */
 export const buildTranslationSystemColumns = ({
   itemReference,
   languageReference,
@@ -125,28 +85,11 @@ export const buildTranslationSystemColumns = ({
     .$onUpdate(() => new Date()),
 });
 
-/**
- * The two columns a translation row gains with `publication: { enabled: true }`.
- *
- * Literally {@link buildPublicationColumns}, aliased so the translation table
- * reads as what it is rather than borrowing a name that says "base table". The
- * `DEFAULT 'draft'` is what makes this migration safe on an install that already
- * has Stage 5A translations: every existing row becomes a draft in one statement,
- * which is the only correct backfill - silently publishing translations somebody
- * wrote while the feature did not exist would put them on the internet.
- */
 export const buildTranslationPublicationColumns = (): Record<
   string,
   AnyPgColumnBuilder
 > => buildPublicationColumns();
 
-/**
- * Applies `NOT NULL` and the column default.
- *
- * Written as a generic over the concrete builder so each `default(...)` call
- * sees the narrowed value type - a single shared `default()` at the end would
- * have to accept the union of every field kind's value.
- */
 const withModifiers = <
   TBuilder extends {
     default: (value: TValue) => TBuilder;
@@ -162,12 +105,6 @@ const withModifiers = <
   return defaultValue === undefined ? withNull : withNull.default(defaultValue);
 };
 
-/**
- * Compiles one field descriptor into a Drizzle column builder.
- *
- * `nullable` drives `NOT NULL`, and a declared `defaultValue` becomes the
- * column default so Postgres and the generated Zod schema agree.
- */
 export const buildContentColumn = ({
   contentTypeId,
   fieldValue,

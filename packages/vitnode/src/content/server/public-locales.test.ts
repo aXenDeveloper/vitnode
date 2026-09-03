@@ -38,12 +38,6 @@ const PAST = new Date("2020-01-01T00:00:00.000Z");
 const published = { publishedAt: PAST, status: "published" };
 const draft = { publishedAt: null, status: "draft" };
 
-/**
- * A Drizzle stand-in that hands out one result set per `select`, in order.
- *
- * In order rather than by table, because the number of reads is part of what is
- * being asserted: passing a base row skips the first query entirely.
- */
 const context = (...resultSets: Record<string, unknown>[][]): Context => {
   let call = 0;
 

@@ -55,13 +55,6 @@ export {
 } from "@/views/admin/views/core/shared/admin-permissions";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
-/**
- * One page of a staff list.
- *
- * Two literal paths rather than one interpolated string, because the fetcher's
- * types are keyed on the path literal - `/admins` and `/moderators` are two
- * routes, and a template literal would infer as neither.
- */
 /** A role reference as a staff row renders it. */
 export interface AdminStaffRole {
   color: null | string;
@@ -76,12 +69,7 @@ export interface AdminStaffRow {
   /** Managed by the installation - it cannot be edited or removed. */
   protected: boolean;
   role: AdminStaffRole | null;
-  /**
-   * This entry governs the *reading* administrator's own access - their user
-   * entry, or an entry for a role they hold. Computed by the API against the
-   * caller, which is why a staff list is one of the reads that must never be
-   * shared between two administrators' cache partitions.
-   */
+
   self: boolean;
   unrestricted: boolean;
   updatedAt: Date | string;
@@ -96,25 +84,12 @@ export interface AdminStaffRow {
 
 export type AdminStaffPage = AdminTablePage<AdminStaffRow>;
 
-/**
- * How a page is actually fetched.
- *
- * The third argument is the read's cancellation, and it is optional so the SSR
- * branch - handed no signal, deliberately - satisfies this with two parameters.
- * See {@link adminStaffQueryOptions}.
- */
 export type AdminStaffPageFetcher = (
   type: PermissionStaffType,
   params: AdminStaffParams,
   options?: { signal?: AbortSignal },
 ) => Promise<AdminStaffPage>;
 
-/**
- * One page, fetched from the browser.
- *
- * A refusal throws, and so does an abort: `fetch` rejects before there is a
- * response, so a cancelled sort cannot arrive as an empty staff list.
- */
 export const fetchAdminStaffPageInBrowser: AdminStaffPageFetcher = async (
   type,
   params,

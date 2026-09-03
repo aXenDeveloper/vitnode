@@ -20,49 +20,19 @@ import {
 import { contentFieldPath, contentInnerFields } from "../paths";
 import { humanizeFieldName } from "./labels";
 
-/**
- * A single form field, reduced to plain JSON.
- *
- * The AdminCP page is a server component but the form is a client one, and a
- * content type definition cannot cross that boundary - `field.relation` holds a
- * `target` thunk, and Zod schemas are not serialisable either. So the server
- * projects the definition into this spec, and the client rebuilds the form
- * schema from it with {@link buildFormSchemaFromSpec}.
- */
 export interface ContentFormFieldSpec {
-  /**
-   * `file` fields only: the extensions the field accepts, normalised.
-   *
-   * Carried on the spec rather than re-derived in the browser, so the constraint
-   * line the uploader always shows, the `accept` attribute it sets and the check
-   * the upload route runs are three readings of **one** descriptor. There is no
-   * second place for them to disagree.
-   */
   allowedExtensions?: string[];
   /** `file` fields only: the media types the field accepts, lowercased. */
   allowedMimeTypes?: string[];
   defaultValue?: boolean | null | number | string;
   description?: string;
   display?: "radio" | "select";
-  /**
-   * The leaves of a `group` or a `repeatable`, in declaration order.
-   *
-   * Recursive in the type and one level deep in practice: a leaf is always a
-   * scalar, which is what lets a group render as a section of ordinary inputs
-   * and a repeatable row render as the same section repeated.
-   */
+
   fields?: ContentFormFieldSpec[];
   integer?: boolean;
   kind: ContentFieldKind;
   label: string;
-  /**
-   * Whether this field's value lives on the translation table.
-   *
-   * Presentation reads it as "render a language switcher inside this input"; the
-   * submit path reads it as "this value goes to the translation rows rather than
-   * the base row". Both from one flag, so a plugin never has to declare a field
-   * override just because a field is translated.
-   */
+
   localized?: boolean;
   max?: number;
   /** `file` fields only: the largest upload the field accepts, in bytes. */
@@ -74,13 +44,7 @@ export interface ContentFormFieldSpec {
   /** Lower bound on a repeatable's rows. */
   minItems?: number;
   minLength?: number;
-  /**
-   * Whether the field holds many values: a to-many reference, or a `file` field
-   * with `multiple: true`.
-   *
-   * One key for both, because the form makes the same decision from it - one
-   * control or a list of them.
-   */
+
   multiple?: boolean;
   name: string;
   nullable: boolean;
@@ -92,25 +56,10 @@ export interface ContentFormFieldSpec {
    */
   ordered?: boolean;
   required: boolean;
-  /**
-   * The content type a `relation` points at.
-   *
-   * What lets the browser know that the category picker on an article and the
-   * category screen are looking at the same rows - so creating, renaming or
-   * deleting one expires the other's cached options instead of leaving an
-   * article form offering a category that is gone. Absent on a `user` field,
-   * whose targets are people rather than a content type.
-   */
+
   targetContentTypeId?: string;
 }
 
-/**
- * One titled group of fields, with its heading already translated.
- *
- * Translated here for the same reason an enum's `options` are: the spec crosses
- * into a client component, and the server is where the request's locale and the
- * plugin's messages both are.
- */
 export interface ContentFormSectionSpec {
   desc?: string;
   /** Field names, in order. Each one appears in exactly one section. */
@@ -121,32 +70,13 @@ export interface ContentFormSectionSpec {
 
 export interface ContentFormSpec {
   contentTypeId: string;
-  /**
-   * The locale every record must exist in, or `null` when the content type is
-   * not localized.
-   *
-   * Not a display choice - the editor sees their own language first. This is the
-   * translation the engine refuses to create a record without, so the form can
-   * say which language a required field is still missing in.
-   */
+
   defaultLocale: null | string;
   fields: ContentFormFieldSpec[];
-  /**
-   * The content type's AdminCP module segment, e.g. `posts`.
-   *
-   * The form needs it to address the generated upload route from the browser -
-   * `/api/{pluginId}/admin/content/{permissionModule}/uploads/{field}` - and it is
-   * already the path segment every admin content request goes through, so this
-   * publishes nothing new.
-   */
+
   permissionModule: string;
   pluginId: string;
-  /**
-   * How to group the fields, or empty for one flat form.
-   *
-   * Empty is the default and the shape every content type written before
-   * sections existed keeps: `fields` alone is a complete form.
-   */
+
   sections: ContentFormSectionSpec[];
   /** Field the toast describes a newly created row by, if there is one. */
   titleField: null | string;
@@ -155,12 +85,7 @@ export interface ContentFormSpec {
 export interface ContentColumnSpec {
   kind: "publication" | "system" | ContentFieldKind;
   label: string;
-  /**
-   * Whether the cell reads from the row's translation rather than the row.
-   *
-   * The list resolves one translation per record - the reader's own language -
-   * so a localized cell is an ordinary cell with one more lookup in front of it.
-   */
+
   localized?: boolean;
   name: string;
   /** Enum value -> translated label, for badge cells. */
@@ -179,12 +104,6 @@ export type ContentSectionLabeller = (name: string) => {
   title: string;
 };
 
-/**
- * Generated columns have no field descriptor to read a kind from, so they are
- * mapped by name. `status` gets its own kind rather than falling into "system",
- * which the cell renderer treats as a date - and `version` is mapped to
- * "number" for the same reason, since it is one.
- */
 const systemKinds: Record<string, "number" | "publication" | "system"> = {
   createdAt: "system",
   id: "system",
@@ -415,27 +334,9 @@ export type ContentReferenceOption = z.infer<typeof referenceOptionSchema>;
 export const isReferenceKind = (kind: ContentFieldKind): boolean =>
   kind === "relation" || kind === "user";
 
-/**
- * Whether a field's value lives on a table of its own rather than on the row.
- *
- * A repeatable, a to-many `relation`, a to-many `user`, and a `multiple: true`
- * `file` - four kinds, one question, and the question is not "which kind is
- * this?" but "will this value be absent from a list row?". Keyed off `multiple`
- * rather than off a list of kinds for exactly that reason: the next collection
- * kind is covered the day it exists, and the version of this rule that forgot
- * one is a form that opens on the empty set and then saves it.
- */
 export const isCollectionFieldSpec = (field: ContentFormFieldSpec): boolean =>
   field.kind === "repeatable" || field.multiple === true;
 
-/**
- * One group's or repeatable row's leaves, as a nested object schema.
- *
- * Nested rather than flattened into `seo.title` keys: react-hook-form would
- * happily accept the dotted names, but then the value the form holds and the
- * value the API takes would be two different shapes, and the conversion would
- * have to live somewhere. One shape, all the way through.
- */
 const leafObjectSchema = (
   spec: ContentFormFieldSpec,
   values?: Record<string, unknown>,
@@ -459,13 +360,6 @@ const leafObjectSchema = (
     ),
   );
 
-/**
- * A to-many reference in the form: the identifiers, and the field's own floor.
- *
- * `minItems` is what makes "at least one category" fail in the *form* rather
- * than only at the API - the submit button stays disabled and the message names
- * the field, instead of a save that comes back 400 with everything still typed.
- */
 const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   const schema = z.array(z.number());
 
@@ -548,14 +442,6 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   }
 };
 
-/**
- * Field kinds whose input renders an empty string when it holds no value. Left
- * as-is, `""` fails ISO-date and identifier validation and the form can never
- * become valid.
- *
- * A slug is here for a second reason: an empty box means "derive it from the
- * source field", and sending `""` would ask the server to store nothing.
- */
 const EMPTY_MEANS_UNSET: ReadonlySet<ContentFieldKind> = new Set([
   "dateTime",
   "slug",
@@ -582,13 +468,6 @@ const toInitialValue = (
   return { label: labels[fieldSpec.name] ?? id, value: id };
 };
 
-/**
- * The row's own title, for a toast that says what was just written. Falls back
- * to nothing when the content type declares no title field.
- *
- * A localized title is read in `locale` - the language the editor is working in -
- * because that is the copy they just typed and the one they would recognise.
- */
 export const contentTitleFromValues = (
   spec: ContentFormSpec,
   values: Record<string, unknown>,
@@ -604,14 +483,6 @@ export const contentTitleFromValues = (
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 };
 
-/**
- * Turns validated form values into the payload the generated API accepts.
- *
- * Shared fields only. A localized field's value is a per-language array, and it
- * travels to the translation rows through
- * {@link contentFormValuesToTranslations} instead - the split lives here rather
- * than in the form, which is exactly why a layout never has to know about it.
- */
 export const contentFormValuesToPayload = (
   spec: ContentFormSpec,
   values: Record<string, unknown>,
@@ -643,13 +514,6 @@ export const contentFormValuesToPayload = (
 const isLocalizedFieldName = (spec: ContentFormSpec, name: string): boolean =>
   spec.fields.some(field => field.name === name && field.localized === true);
 
-/**
- * What one localized field holds for one language, ready for the API.
- *
- * `undefined` means "say nothing about this field in this language", which is a
- * different thing from `null`: a slug left blank is derived from the title, and a
- * language nobody has typed into gets no translation row invented for it.
- */
 const localizedValueForApi = (
   fieldSpec: ContentFormFieldSpec,
   raw: string,
@@ -662,14 +526,6 @@ const localizedValueForApi = (
   return undefined;
 };
 
-/**
- * The per-language halves of a submitted form, keyed by locale.
- *
- * A locale appears only when the editor actually typed something into it, which
- * is what keeps "I opened the Polish selector to look" from creating an empty
- * Polish translation. Locales already present on the record are handled by the
- * caller, which knows which rows exist.
- */
 export const contentFormValuesToTranslations = (
   spec: ContentFormSpec,
   values: Record<string, unknown>,
@@ -696,14 +552,6 @@ export const contentFormValuesToTranslations = (
   return byLocale;
 };
 
-/**
- * Folds a record's translations back into per-field, per-language form values.
- *
- * The one adapter between how localization is *stored* - one row per language,
- * with its own version - and how it is *edited*: a field holding every language
- * it has, so its input can switch between them without the form having a locale
- * of its own.
- */
 export const contentFormInitialValues = (
   spec: ContentFormSpec,
   data?: Record<string, unknown>,
@@ -735,23 +583,6 @@ export const contentFormInitialValues = (
   return initial;
 };
 
-/**
- * One localized field's rules, stated per language.
- *
- * Two rules, and the difference between them is the whole of the localized
- * editing model:
- *
- * - a language somebody **typed into** has to satisfy the field's own length
- *   rules, because it is going to become a translation row;
- * - a language nobody typed into is simply absent. It is not "too short" and it
- *   is not an error - it is a translation that does not exist yet, and the
- *   language selector inside the input is for reading as much as for writing.
- *
- * The exception is the default locale of a required field. The engine will not
- * store a record without its default translation, so the form says which
- * language a value is missing in rather than letting the server refuse a save
- * the editor thought was complete.
- */
 const localizedFieldSchema = (
   fieldSpec: ContentFormFieldSpec,
   defaultLocale: null | string,

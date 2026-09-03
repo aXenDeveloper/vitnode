@@ -13,15 +13,7 @@ export const vitNodeApiConfig = buildApiConfig({
     shortTitle: "VitNode",
   },
   plugins: [],
-  /**
-   * The site's own locale declaration, because this app is both: `vitnode.config.ts`
-   * is the one statement of which languages exist, and both configs read it.
-   *
-   * It is also what `vitnode db:prepare` seeds `core_languages` from - this app
-   * owns the schema - so adding a language there and re-running `dev` inserts
-   * its row. Leave it out and the seed falls back to `en` alone, whatever the
-   * site serves.
-   */
+  
   i18n: vitNodeConfig.i18n,
   dbProvider: drizzle({
     connection: POSTGRES_URL,

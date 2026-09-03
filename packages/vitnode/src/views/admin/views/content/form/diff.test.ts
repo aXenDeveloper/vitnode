@@ -18,15 +18,6 @@ import {
   missingContentCollections,
 } from "./diff";
 
-/**
- * The three decisions a content form makes about what *not* to send.
- *
- * Each of them fails silently when it is wrong - a save that looks like it
- * worked and quietly emptied a field, bumped a version nobody touched, or wrote
- * over a colleague's translation - so each of them is pinned here rather than
- * left to a render test that would only notice if the screen crashed.
- */
-
 const labelField = (name: string) => humanizeFieldName(name);
 const labelEnum = (_field: string, value: string) => value.toUpperCase();
 

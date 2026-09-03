@@ -4,11 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fetches: { formData?: FormData; method: string; path?: string }[] = [];
 let next: (() => Promise<Response>) | null = null;
 
-/**
- * The real `rawApiFetch`, minus the network - including the one behaviour that
- * shaped this suite: it **throws** on a 500 rather than returning, and its
- * message carries the response body after a newline.
- */
 vi.mock("../../lib/fetcher/raw", () => ({
   rawApiFetch: async ({
     formData,

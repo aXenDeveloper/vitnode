@@ -14,28 +14,6 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * The role field, and the two couplings it took two attempts to remove.
- *
- * Neither looked like one, which is why this is a scan rather than a review:
- *
- * - `useLocale`/`useTranslations` came from `next-intl`, whose root entry
- *   re-exports `use-intl`. It *worked*, which is why it survived so long - what
- *   it cost was the boundary, not a render.
- * - `search` defaulted to `searchRoles`, a `"use server"` action carrying
- *   `server-only`. A static import put that marker in the graph of every
- *   application rendering the field, and deferring it behind `await import()`
- *   only moved the throw from load time to the first keystroke.
- *
- * The fix was to move the type into a module with no imports and make the search
- * a required, injected prop. Stage 17 then deleted the Next.js adapter that
- * supplied the default, so what this file used to prove about that adapter -
- * that it was the one place allowed to name the action - is now proved by the
- * adapter's absence.
- *
- * The scanner and its positive controls live in `@/tests/import-graph` and
- * `src/next-boundary.test.ts`.
- */
 const SHARED = {
   /** The framework-neutral field. */
   field: join(here, "input-roles.tsx"),
@@ -43,13 +21,6 @@ const SHARED = {
   types: join(here, "roles.ts"),
 };
 
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Kept as named constants rather than deleted with the assertion: the risk this
- * guards is somebody reintroducing the convenience, and a test that no longer
- * names the file cannot notice that happening.
- */
 const DELETED_NEXT_HALF = {
   action: join(here, "search-roles.action.server.ts"),
   adapter: join(here, "input-roles-next.tsx"),
@@ -85,14 +56,6 @@ describe("the shared role field is framework-neutral", () => {
   });
 });
 
-/**
- * The contract itself, read off the source.
- *
- * A type test would be the stronger form and cannot be written here: `search`
- * being required is a property of a `.tsx` component's props, and this suite is
- * a static scan. What is asserted instead is the two things that made it
- * optional - a default parameter and a fallback - staying absent.
- */
 describe("the search dependency is injected, and stays injected", () => {
   it("is required on the props type", () => {
     expect(read(SHARED.field)).toMatch(/\n {2}search: RoleSearch;/);

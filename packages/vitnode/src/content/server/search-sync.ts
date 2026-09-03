@@ -26,20 +26,8 @@ export type ContentSearchOperation =
   "create" | "delete" | "publish" | "restore" | "unpublish" | "update";
 
 export interface ContentSearchSyncInput {
-  /**
-   * The record's advanced collections, when the content type indexes one.
-   *
-   * Passed in rather than loaded here, because this function is deliberately
-   * model-free: it takes a definition and a row. The effects layer already holds
-   * the model and reads them once, after commit, only when
-   * `contentSearchIndexesCollections` says a document is made of them.
-   */
   advanced?: Record<string, unknown>;
-  /**
-   * `publish` / `unpublish` only: `false` when the record was already in the
-   * requested state, which means the index already agrees and there is nothing
-   * to do.
-   */
+
   changed?: boolean;
   /**
    * `update` and `restore` only. A write that touched no indexed field changes
@@ -47,11 +35,7 @@ export interface ContentSearchSyncInput {
    */
   changedFields?: readonly string[];
   operation: ContentSearchOperation;
-  /**
-   * The plugin that owns the content type. Stamped on the document so a rebuild
-   * reproduces the same ownership; omit it and the request's plugin is used,
-   * which is only correct while the request belongs to the owner.
-   */
+
   pluginId?: string;
   /** The full row the mutation returned, including `status` and `publishedAt`. */
   row: object;
@@ -107,36 +91,6 @@ const decide = (
     : "skip";
 };
 
-/**
- * Brings the search index in line with one content mutation.
- *
- * **Call it only once the database write has returned - never inside a
- * transaction callback.** A rolled-back transaction would leave a document
- * pointing at a record that does not exist, and the search index is not part of
- * the transaction that could undo it. This is the same rule the Next cache
- * invalidation follows, for the same reason.
- *
- * The generated admin routes call it for you. A direct `service.publish(id)`
- * call does not, deliberately: it may be running inside a caller-provided
- * transaction. Application code opts in explicitly, after commit:
- *
- * ```ts
- * const result = await model.service(c).publish(id);
- * if (result) {
- *   await syncContentSearch(c, articleContentType, {
- *     operation: "publish",
- *     changed: result.changed,
- *     row: result.row,
- *   });
- * }
- * ```
- *
- * A failing search engine never turns a successful write into a failed one. The
- * error is logged with enough context to find the record, the outcome carries it
- * for a caller that wants it, and a manual rebuild repairs the drift. That makes
- * the index eventually consistent, with "eventually" bounded by the next publish
- * or the next rebuild.
- */
 export const syncContentSearch = async (
   c: Context,
   definition: AnyContentTypeDefinition,

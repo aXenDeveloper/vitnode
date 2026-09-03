@@ -1,13 +1,3 @@
-/**
- * Generates the relational storage Stage 6 needs.
- *
- * Two shapes, both ordinary Drizzle tables so `drizzle-kit` discovers them the
- * same way it discovers every other one - by runtime identity, when it globs the
- * plugin's built `dist/src/database/*.js`. There is no JSONB column, no
- * comma-separated identifier list and no property/value table anywhere in here:
- * a to-many relation is a junction table with two foreign keys, and a repeatable
- * is a child table with real columns, real constraints and real indexes.
- */
 import type {
   AnyPgColumnBuilder,
   PgColumn,
@@ -47,36 +37,6 @@ import {
 } from "../paths";
 import { buildContentColumn } from "./column-builders";
 
-/**
- * The junction table for one to-many relation field.
- *
- * ```text
- * example_articles_categories
- *   itemId        -> example_articles.id     ON DELETE CASCADE
- *   relatedItemId -> example_categories.id   ON DELETE <configured>
- *   position      integer NOT NULL
- *   createdAt     timestamp NOT NULL DEFAULT now()
- *
- *   PRIMARY KEY (itemId, relatedItemId)
- *   UNIQUE      (itemId, position)
- *   INDEX       (relatedItemId)
- * ```
- *
- * `itemId` always cascades: the references *belong to* the source record, so
- * deleting it takes them in one statement rather than leaving rows pointing at
- * nothing. The other side takes the field's own `onDelete`, which is what makes
- * `restrict` mean "you cannot delete a category that is still in use" and have
- * Postgres be the thing that enforces it - not a check in service code that a
- * direct SQL delete would walk straight past. A **file** collection is always
- * `restrict`: the engine, not the author, decides that deleting a file a gallery
- * still shows has to be refused.
- *
- * `position` is always stored, ordered relation or not, and is always contiguous
- * from zero. That is what lets one `UNIQUE (item_id, position)` serve both: an
- * ordered relation gets deterministic slots, and an unordered one gets a
- * deterministic *read* order (ascending target id, assigned at write time)
- * instead of whatever the planner felt like returning.
- */
 export const createContentJunctionTable = ({
   contentTypeId,
   field,
@@ -139,33 +99,6 @@ export const createContentJunctionTable = ({
   ) as unknown as ContentJunctionTable;
 };
 
-/**
- * The child table for one repeatable field.
- *
- * ```text
- * example_articles_faq
- *   id        serial PRIMARY KEY
- *   itemId    -> example_articles.id  ON DELETE CASCADE
- *   position  integer NOT NULL
- *   createdAt timestamp NOT NULL DEFAULT now()
- *   updatedAt timestamp NOT NULL DEFAULT now()
- *   question  varchar(200) NOT NULL
- *   answer    text NOT NULL
- *
- *   UNIQUE (itemId, position)
- * ```
- *
- * `id` is a `serial` of its own and **not** `(itemId, position)`. Position is
- * where a child currently sits; identity is what a later edit addresses and what
- * a revision restore matches an historical row against. Conflating the two would
- * make "update the third FAQ entry" mean a different row after every reorder,
- * and would make a restore recreate rows instead of putting values back.
- *
- * The unique index on `(itemId, position)` is what makes duplicate slots
- * impossible rather than merely unlikely; the writer avoids transient collisions
- * by replacing the whole list in one delete-then-insert inside the transaction
- * that already holds the source row's lock.
- */
 export const createContentRepeatableTable = ({
   contentTypeId,
   fields,
@@ -209,13 +142,6 @@ export const createContentRepeatableTable = ({
   ) as unknown as ContentRepeatableChildTable<unknown>;
 };
 
-/**
- * Every generated collection table of one content type.
- *
- * Driven by `definition.advanced`, which `defineContentType` has already
- * validated and named - so the table this creates and the table a migration
- * creates are the same table by construction rather than by coincidence.
- */
 export const createContentAdvancedTables = <
   TDefinition extends AnyContentTypeDefinition,
 >(

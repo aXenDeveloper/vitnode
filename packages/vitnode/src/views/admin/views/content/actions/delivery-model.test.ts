@@ -15,16 +15,6 @@ import {
   hasContentDelivery,
 } from "./delivery-model";
 
-/**
- * Whether the delivery panel is offered, and what it asks the API for.
- *
- * The second half is the interesting one and it is the reason this file exists:
- * the AdminCP's interface language and a content translation's locale are two
- * different concepts that happen to hold the same string, and every place that
- * conflates them looks correct until a content type without translations is
- * asked about a language it does not have.
- */
-
 const as = (definition: unknown): AnyContentTypeDefinition =>
   definition as AnyContentTypeDefinition;
 

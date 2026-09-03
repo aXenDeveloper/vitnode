@@ -69,35 +69,14 @@ import { createContentRevisionsModel } from "./revisions-model";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
 
-/**
- * Everything the post-commit effects need, and nothing they have to re-read.
- *
- * `previousSlug` is the one field that cannot be recovered after the fact: once
- * the write returns, the old URL is gone, and invalidating the wrong cache tag
- * leaves a moved page resolving at its old address.
- */
 export interface ContentEditorialOutcome<TDefinition> {
   /** `false` when nothing moved: no write, no revision, no event, no tags. */
   changed: boolean;
   /** Canonical paths - see {@link ContentUpdateResult.changedFields}. */
   changedFields: ContentChangedPath<TDefinition>[];
-  /**
-   * What this mutation did to the record's public URLs, or absent.
-   *
-   * Absent for every content type without `delivery` - which is every Stage 1-7
-   * one - so the outcome those produce is byte-identical to what it always was.
-   */
+
   delivery?: ContentDeliveryOutcome;
-  /**
-   * How many of this record's languages this transition moved, or absent.
-   *
-   * Only a localized `publish`/`unpublish` sets it, and it is deliberately
-   * separate from `changed`, which describes the base row. The two disagree in
-   * the case worth naming: a record whose base row was already published but
-   * whose languages were not moves no base column and still puts pages on the
-   * internet, so an effects layer that read `changed` alone would skip the
-   * search and sitemap work that publish just created.
-   */
+
   movedTranslations?: number;
   operation: ContentRevisionOperation;
   /** The slug the record answered to *before* this mutation, if it has one. */
@@ -132,14 +111,7 @@ export interface ContentEditorialService<TDefinition> {
     values: ContentCreateInput<TDefinition>,
     options: ContentEditorialOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition>>;
-  /**
-   * Removes a record, and refuses if it moved since the caller read it.
-   *
-   * `expectedVersion` is required for the same reason `update` requires it: a
-   * delete is the widest possible overwrite. Somebody looking at v4 in a stale
-   * table must not be able to remove the v5 a colleague just wrote, and "are
-   * you sure?" cannot ask about a change the person has not seen.
-   */
+
   delete: (
     id: number,
     options: ContentEditorialWriteOptions,
@@ -148,18 +120,7 @@ export interface ContentEditorialService<TDefinition> {
     id: number,
     options: ContentEditorialPublicationOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
-  /**
-   * Typed to-many relation operations, keyed by the content type's actual
-   * relation collection names.
-   *
-   * The **editorial** ones: each takes an `actor` and an `expectedVersion`,
-   * bumps the version exactly once per real mutation, writes exactly one
-   * revision, and answers a stale expectation with a structured
-   * `ContentVersionConflict`. The plain `service.relations` does none of that -
-   * it has no version column to guard and no history to write - so the two are
-   * deliberately separate objects rather than one with different behaviour
-   * depending on where it came from.
-   */
+
   relations: Record<
     ContentRelationCollectionName<TDefinition>,
     ContentEditorialRelationMethods<TDefinition>
@@ -177,13 +138,7 @@ export interface ContentEditorialService<TDefinition> {
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   /** Revision reads. Writes go through the mutations above. */
   revisions: ContentRevisionsModel;
-  /**
-   * Scheduled transitions, or `undefined` without `editorial.scheduling`.
-   *
-   * `undefined` rather than a throwing stub, matching `publicService` and
-   * `editorialService` themselves - the check reads naturally in code that does
-   * not know which content type it was handed.
-   */
+
   schedules: ContentSchedulesModel | undefined;
   unpublish: (
     id: number,
@@ -196,14 +151,6 @@ export interface ContentEditorialService<TDefinition> {
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
 
-/**
- * The editorial to-many relation operations.
- *
- * Every mutating one requires the same `actor` and `expectedVersion` an editorial
- * `update` does, for the same reason: a collection mutation is an edit of the
- * source record, and an edit that could not lose a race would be the only one in
- * the engine that cannot.
- */
 export interface ContentEditorialRelationMethods<TDefinition> {
   add: (
     itemId: number,
@@ -267,19 +214,6 @@ export interface ContentEditorialRepeatableMethods<TDefinition, TName> {
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
 
-/**
- * The transactional half of the Content Engine.
- *
- * Everything here holds one rule: **the content write, the version increment
- * and the revision insert are one transaction, and nothing else is in it.** No
- * event, no search call, no cache API, no HTTP - those all run after the commit,
- * because a rolled-back transaction cannot un-send them.
- *
- * A caller that already owns a transaction passes `tx` and this joins it. A
- * caller that does not gets one opened here, which is what makes
- * `service.update(...)` atomic by default rather than only when someone
- * remembered.
- */
 export const createContentEditorialService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -295,23 +229,7 @@ export const createContentEditorialService = <
   /** The collection store, or nothing for a content type that declares none. */
   advanced?: ContentAdvancedStore;
   c: Context;
-  /**
-   * Moves every language of one record with the record, for a localized content
-   * type. Supplied by the model, which is the one place that can build the
-   * translation editorial layer without a circular construction.
-   *
-   * A callback rather than the translation table itself, because a language going
-   * live is not just two columns: it takes a revision and a delivery reservation,
-   * and the translation editorial service is what owns both. It is handed this
-   * transaction, so the record and its languages move together or not at all.
-   *
-   * Returns how many languages it actually moved, which the outcome reports as
-   * `movedTranslations`: an idempotent base transition can still move languages,
-   * and the effects layer has to know that.
-   *
-   * Absent for a content type without localization, which has no languages to
-   * move.
-   */
+
   cascadeTranslations?:
     | ((options: {
         actor: ContentActor;
@@ -784,19 +702,6 @@ export const createContentEditorialService = <
     );
   };
 
-  /**
-   * Locks the source record, reads one collection and applies what `compute`
-   * makes of it - all inside the transaction that will write it.
-   *
-   * Two guarantees at once, and the order is what produces both:
-   *
-   * 1. `SELECT ... FOR UPDATE` before the read, so the next state is computed
-   *    from the committed collection rather than from one a concurrent writer has
-   *    since replaced;
-   * 2. the ordinary `update` afterwards, so the caller's `expectedVersion` still
-   *    decides the winner. A loser waits for the lock, then finds the version has
-   *    moved, and is told so - it never merges silently and never overwrites.
-   */
   const runCollection = async (
     itemId: number,
     field: string,

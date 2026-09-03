@@ -18,15 +18,6 @@ export interface ContentScheduleOutcome {
   status: "executed" | "skipped" | "unregistered";
 }
 
-/**
- * Thrown when a claimed schedule is no longer `pending` at settlement time.
- *
- * Structurally impossible: the row is locked `FOR UPDATE` from the claim to the
- * commit, so nothing else can have moved it. If it ever happens the lock was
- * not held, and rolling the whole transition back is the only safe answer -
- * publishing a record whose schedule somebody cancelled is worse than not
- * publishing it.
- */
 class ContentScheduleSettlementError extends Error {
   constructor(scheduleId: number) {
     super(

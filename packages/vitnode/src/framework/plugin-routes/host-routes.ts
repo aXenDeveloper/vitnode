@@ -6,14 +6,6 @@ import {
 } from "../../routing/path.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX } from "./diagnostics.js";
 
-/**
- * One URL the host application's own route files already claim.
- *
- * `file` is carried alongside the path for one reason, and it is the whole
- * reason this is a record rather than a string: a collision is fixed by editing
- * a file, and "conflicts with `/settings`" makes an author grep for it while
- * "conflicts with `src/routes/_main/settings.tsx`" does not.
- */
 export interface HostRoutePath {
   /** Relative to the application root, for the diagnostic. */
   file: string;
@@ -36,21 +28,8 @@ const PARAM_NAME = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 /** A route group folder - `(app)` - which contributes no URL segment. */
 const GROUP_TOKEN = /^\(.*\)$/;
 
-/**
- * Tokens that mean "this file is the route at the path built so far".
- *
- * `index` is the index route of the directory it sits in; `route` is that
- * directory's own route, the file-based spelling of a layout that also has a
- * path. Both claim the prefix rather than adding to it.
- */
 const SELF_TOKENS: ReadonlySet<string> = new Set(["index", "route"]);
 
-/**
- * Suffixes that say *how* a route file is loaded, not *where* it is.
- *
- * `posts.lazy.tsx` is the lazily-loaded half of `posts`, so the token is dropped
- * before the path is read off what is left.
- */
 const MODIFIER_TOKENS: ReadonlySet<string> = new Set(["lazy"]);
 
 type Token =
@@ -59,15 +38,6 @@ type Token =
   | { kind: "splat" }
   | { kind: "static"; value: string };
 
-/**
- * One filename token, as the thing it contributes to a URL - or `null`.
- *
- * `null` is "this layer does not know what this is", and it is a decision rather
- * than a gap: the whole file is then skipped and claims nothing. A convention
- * this reader has not been taught can only ever cost a *missed* collision, which
- * the runtime check still catches, and never an *invented* one, which would fail
- * a build over a route file that is perfectly fine.
- */
 const readToken = (token: string): null | Token => {
   if (token.length === 0) return null;
   if (GROUP_TOKEN.test(token)) return { kind: "pathless" };

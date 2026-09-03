@@ -4,24 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import messages from "@/locales/en.json";
 
-/**
- * Every message the conflict dialog formats, with exactly the arguments it
- * passes.
- *
- * This exists because of a bug that reached a user. `desc` was written as
- * `{name, select, other {record}}` - a `select` with only an `other` branch, so
- * it *required* a `name` argument and then ignored it, always rendering the word
- * "record". The dialog passed only `{ version }`.
- *
- * A missing ICU argument is not a blank in use-intl. It is a `FORMATTING_ERROR`,
- * and the fallback it renders is the **key path** - so an editor whose save was
- * refused read the literal string `core.content.conflict.desc` where the
- * explanation should have been. Nothing crashed, nothing was logged where anybody
- * would see it, and the one screen that has to explain itself said nothing.
- *
- * So the assertion is not "the key exists" - it did exist. It is "the message
- * formats with the arguments the caller actually has".
- */
 const format = (
   key: string,
   values: Record<string, number | string>,

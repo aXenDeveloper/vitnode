@@ -8,25 +8,6 @@ export const zodClearSearchSchema = z.object({
   itemType: z.string().min(1),
 });
 
-/**
- * Deletes the documents of one collection that has no registered rebuild
- * indexer.
- *
- * Deliberately not part of `/search/rebuild`: this removes documents and puts
- * nothing back, so it must not hide behind an action called "reindex". It is
- * refused for a collection that *does* have an indexer - that one has a rebuild,
- * which is the non-destructive way to get the same freshness.
- *
- * What it does **not** mean is that the collection is abandoned. Registering an
- * indexer is optional, and a plugin that writes through `search.index()` keeps
- * its collection current without one - so a cleared collection can reappear on
- * that plugin's next write. This clears the current indexed state; it does not
- * stop anything from writing again.
- *
- * `itemType` is required and non-empty, so there is no payload that clears the
- * whole index by omission. A full rebuild is the only thing that does that, and
- * it refills what it can.
- */
 export const clearSearchDebugAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_view" },

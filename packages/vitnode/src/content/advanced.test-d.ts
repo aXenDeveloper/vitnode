@@ -18,16 +18,6 @@ import type {
 import { defineContentType } from "./define";
 import { field } from "./fields";
 
-/**
- * The type-level contract of Stage 6.
- *
- * The interesting assertions are the negative ones. A group that leaked its
- * flattened column names into the public type, a collection that crept into a
- * list row, a private leaf that showed up in a public response, an index that
- * accepted a repeatable path - each is a bug the compiler is the only thing
- * that catches early, and each is asserted here rather than hoped for.
- */
-
 const categoryContentType = defineContentType({
   fields: { name: field.text({ required: true }) },
   id: "test.d-category",
@@ -372,22 +362,6 @@ describe("the typed collection API", () => {
 });
 
 describe("variance", () => {
-  /**
-   * A concrete model stays assignable to the erased one.
-   *
-   * Load-bearing, and easy to break by accident: every route builder, every
-   * registry and every piece of background work is written against
-   * {@link AnyContentModel}.
-   *
-   * Asserted against that alias rather than against
-   * `ContentModel<AnyContentTypeDefinition>`, because `ContentModel` is
-   * genuinely invariant in its definition - `create` takes it, `findMany`
-   * returns it. Spelling the erased side `ContentModel<AnyContentTypeDefinition>`
-   * only ever passed because TypeScript measured the parameter's variance and
-   * skipped the structural check; `AnyContentModel` erases outright, so this
-   * asserts the property the codebase actually depends on instead of a compiler
-   * heuristic that can stop applying.
-   */
   it("keeps a concrete model assignable to the erased one", () => {
     expectTypeOf<ContentModel<Article>>().toExtend<AnyContentModel>();
   });

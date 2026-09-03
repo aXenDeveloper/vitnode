@@ -12,12 +12,6 @@ const QUEUE_LOCK_KEY = "queue:process";
 const QUEUE_LOCK_TTL_SECONDS = 55;
 const QUEUE_RETENTION_DAYS = 7;
 
-/**
- * Drain due queue tasks. Correctness comes from Postgres
- * `FOR UPDATE SKIP LOCKED`, which lets many instances claim disjoint batches
- * safely; the optional Redis lock (`c.get("cache").acquireLock`) is only an
- * optimization so a single instance drains per tick when Redis is configured.
- */
 export const processQueueTasks = async (
   c: Context<EnvVitNode>,
 ): Promise<void> => {

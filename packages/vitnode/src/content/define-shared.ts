@@ -14,11 +14,6 @@ export const SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
   "textarea",
 ]);
 
-/**
- * Kinds an explicit `searchableFields` may name. A slug is searchable when you
- * ask for it, but never by default - matching a URL segment against what
- * someone typed into a search box is a deliberate choice, not a freebie.
- */
 export const EXPLICIT_SEARCHABLE_KINDS = new Set<
   ContentFieldDescriptor["kind"]
 >([...SEARCHABLE_KINDS, "slug"]);

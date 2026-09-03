@@ -1,16 +1,3 @@
-/**
- * `/admin/core/debug` - the debug panel, for a TanStack Start host.
- *
- *     ./query         two query definitions, and `clearAdminCache` - the one
- *                     action on this screen with no endpoint behind it
- *     ./route-search  the URL contract, which is the system log's
- *     ./route         the screen: namespaces, permission, loader, component
- *     ./server        the SSR transport, reached only through `./query`
- *
- * `SystemLogsContent`, `QueueViewContent` and `ClearCacheAction` are
- * framework-free and imported from `@/views/admin/views/core/debug` by both
- * applications.
- */
 export {
   clearAdminCache,
   debugLogsQuery,

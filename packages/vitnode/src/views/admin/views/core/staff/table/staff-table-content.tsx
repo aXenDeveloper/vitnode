@@ -29,19 +29,6 @@ import { ADMIN_STAFF_DEFAULT_ORDER } from "@/views/admin/views/core/staff/staff-
 
 import { StaffUserFormatContent } from "./staff-user-format-content";
 
-/**
- * The administrators and moderators tables, with no framework in them.
- *
- * One component for both groups: they are the same five columns over two
- * tables, and which permission module governs them is the only difference -
- * `staff_admins` or `staff_moderators`, resolved by
- * {@link adminStaffPermissions} so a button is hidden for exactly the reason the
- * API would refuse it.
- *
- * The delete arrives as a prop, and what to do after it (revalidate a path,
- * invalidate a query key) is the caller's.
- */
-
 export interface StaffTableProps {
   data: AdminStaffPage;
   LinkComponent: AuthLinkComponent;
@@ -53,18 +40,6 @@ export interface StaffTableProps {
   type: PermissionStaffType;
 }
 
-/**
- * A row's two buttons, or the padlock that replaces both.
- *
- * `protected` is an entry the installation manages, and `self` is the entry that
- * governs *the reading administrator's own* access - their user entry, or an
- * entry for a role they hold. The API refuses to edit or delete either
- * (`update-permissions.route.ts` and `delete.route.ts` both re-derive the
- * caller's roles), so an administrator can neither escalate themselves nor lock
- * themselves out. Showing a padlock with the reason is the honest rendering of a
- * rule that is enforced elsewhere; hiding the row would make the entry look
- * missing.
- */
 const StaffRowActions = ({
   LinkComponent,
   onDelete,

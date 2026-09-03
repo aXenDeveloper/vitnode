@@ -16,15 +16,6 @@ import type {
 import { defineContentType } from "./define";
 import { field } from "./fields";
 
-/**
- * Stage 8 at the type level.
- *
- * The rules worth a compile error rather than a boot-time one are the ones an author
- * gets wrong while typing: naming a private field as an SEO title, putting prose in a
- * title slot, or reaching for a delivery service a content type does not have. Every
- * `@ts-expect-error` below is a mistake the editor catches before the file is saved.
- */
-
 const fields = {
   excerpt: field.textarea({ maxLength: 500, nullable: true }),
   /** Declared but never exposed - the private half of every check below. */

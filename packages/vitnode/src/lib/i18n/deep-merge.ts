@@ -3,15 +3,6 @@ type PlainObject = Record<string, unknown>;
 const isPlainObject = (value: unknown): value is PlainObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/**
- * Recursively merges `source` over `target` into a new object. Two plain
- * objects are merged key by key; anything else - strings, arrays, `null` -
- * replaces what was there.
- *
- * Message trees are merged instead of spread so a half-translated locale only
- * overrides the keys it actually defines, and the rest fall through to the
- * default locale rather than rendering as raw keys.
- */
 export const deepMerge = <T extends PlainObject>(
   target: T,
   source: PlainObject,

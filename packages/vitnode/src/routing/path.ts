@@ -1,18 +1,5 @@
 import type { PluginRouteSegment } from "./types";
 
-/**
- * A static segment: a literal piece of URL, and lowercase.
- *
- * Percent-encoding, spaces and uppercase are all left out. A plugin author who
- * needs one of the first two in a public URL has a naming problem, not a routing
- * problem, and a route table full of `%20` is nobody's idea of a good time.
- *
- * Uppercase is excluded for a sharper reason: the routers that consume this
- * manifest match paths **case-insensitively**, so `/Example` and `/example`
- * answer the same URL. Accepting both would mean two manifest paths that
- * `routeMatchKey` calls different and a browser calls identical - a collision the
- * validation could not see. One canonical spelling removes the question.
- */
 const STATIC_SEGMENT = /^[a-z0-9][a-z0-9._-]*$/;
 
 /** A parameter name, i.e. a JavaScript-ish identifier - it becomes one. */
@@ -100,17 +87,6 @@ const parseSegment = (
   return { segment: { kind: "static", value: raw } };
 };
 
-/**
- * Reads a canonical VitNode route path.
- *
- * The one fallible function in this module, and the only place a path string is
- * ever interpreted. Everything else takes segments, which cannot be malformed,
- * so no caller has to remember to handle an error twice.
- *
- * Returns a result rather than throwing: the manifest builder wants to attach
- * the plugin and the route id to the failure, and an exception thrown from here
- * would not know either.
- */
 export const parseRoutePath = (path: string): ParseRoutePathResult => {
   if (typeof path !== "string" || path.length === 0) {
     return { ok: false, reason: "a route path must be a non-empty string" };
@@ -174,13 +150,6 @@ export function formatRoutePath(segments: PluginRouteSegment[]): string {
     .join("/")}`;
 }
 
-/**
- * Segments to Next.js filesystem syntax, `/blog/[slug]`.
- *
- * Here rather than in the Next.js layer because it is the same three lines as
- * its TanStack twin, and keeping the pair together is what stops the two
- * conversions from drifting into two different ideas of what a path is.
- */
 export const toNextRoutePath = (segments: PluginRouteSegment[]): string => {
   if (segments.length === 0) return "/";
 
@@ -202,15 +171,6 @@ export const toTanStackRoutePath = (segments: PluginRouteSegment[]): string => {
     .join("/")}`;
 };
 
-/**
- * The set of URLs a path matches, as a comparable string.
- *
- * `/blog/:slug` and `/blog/:postId` are two spellings of one route: they match
- * exactly the same URLs, and an application that accepted both would answer
- * `/blog/hello` differently depending on which plugin loaded first. Collapsing
- * every parameter to `:` is what turns that into a collision the manifest can
- * refuse rather than a race it silently resolves.
- */
 export const routeMatchKey = (segments: PluginRouteSegment[]): string => {
   if (segments.length === 0) return "/";
 

@@ -7,29 +7,6 @@ import {
 } from 'fumadocs-ui/components/ui/popover'
 import { ChevronDown, ExternalLinkIcon, MessageCircleIcon } from 'lucide-react'
 
-/**
- * The "Open in" menu above every document: read the source, or hand the page to
- * an assistant.
- *
- * Carried over from the Next.js application essentially unchanged - it is
- * adapted from Fumadocs' own docs site, and the four destinations are the ones
- * VitNode's readers already have. Two things did change, and both matter:
- *
- * **The GitHub link points at `apps/web/content/docs`.** That is
- * `src/docs/github.ts`, and it is the reason this component takes a finished
- * `githubUrl` rather than building one: after Stage 17 there is no
- * `apps/docs/content/docs` to edit, and a contributor following a stale link
- * would be editing a deleted file.
- *
- * **It is not a client component, because there is no such thing here.** The
- * `"use client"` directive at the top of the Next.js original was load-bearing
- * there and is meaningless in a TanStack Start app, where every component runs
- * in both places.
- *
- * The assistant links carry the *public* markdown URL of the page, resolved
- * against the canonical origin, because an assistant fetching it has no session
- * and no idea what `/docs/dev` means on its own.
- */
 const optionClassName =
   'text-sm p-2 rounded-lg inline-flex items-center gap-2 hover:text-fd-accent-foreground hover:bg-fd-accent [&_svg]:size-4'
 

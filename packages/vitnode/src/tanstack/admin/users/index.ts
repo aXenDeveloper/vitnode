@@ -1,22 +1,6 @@
 export type { AdminTableNavigate } from "../table-search";
 export { AdminUserBreadcrumbContent } from "./detail-breadcrumb";
-/**
- * `/admin/core/users` and `/admin/core/users/$id` - the AdminCP users screens,
- * for a TanStack Start host.
- *
- *     ./query         the cache contract - two query definitions, one
- *                     invalidation family, and the three writes that use it
- *     ./route         the list: namespaces, permission, loader, component
- *     ./detail-route  one user: the same, plus the breadcrumb that names them
- *     ./route-search  the URL contract, including the role filter
- *     ./server        the SSR transport, reached only through `./query`'s
- *                     isomorphic functions and never imported from a browser
- *                     bundle
- *
- * The rendering is not here and does not belong here: `UsersAdminTableContent`
- * and `UserDetailContent` are framework-free and are imported from
- * `@/views/admin/views/core/users` by both applications.
- */
+
 export type { AdminUserRouteData } from "./detail-route";
 export { ADMIN_USER_NAMESPACES, loadAdminUserRoute } from "./detail-route";
 export type { AdminUserRouteProps } from "./detail-screen";

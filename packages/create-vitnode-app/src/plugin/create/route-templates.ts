@@ -1,51 +1,8 @@
-/**
- * The source a scaffolded plugin starts with, as pure functions of its name.
- *
- * Templates as strings rather than as files under `copy-of-vitnode-plugin/`,
- * and the reason is that every one of them has to say the plugin's own name: the
- * route tree names the URL it claims, a page names the message namespace it
- * renders, and `config.tsx` names the plugin id all three are keyed by. A static
- * file cannot, so the scaffold used to copy no `src/` at all - which left a new
- * plugin with a `global.d.ts` importing `./src/locales/en.json` that did not
- * exist, and nothing to point `vitnode dev` at.
- *
- * Pure, and separated from the writing, so what a plugin author is handed can be
- * asserted byte for byte without a filesystem. `route-templates.test.ts` is that
- * assertion; `create-plugin-vitnode.ts` is the half that has a disk.
- *
- * Everything here is the routing path and only the routing path. A scaffolded
- * plugin gets one public page, the strings it renders and the config that
- * registers both - not an API module, not a database table, not a content type.
- * Those have their own guides, and a generator that produced all of them would
- * produce mostly files to delete.
- */
-
-/**
- * The plugin's public URL, and the id it is addressed by.
- *
- * A package name may be scoped and a route path may not be - `/` is a separator
- * in one and a segment break in the other, and `@` is illegal in a VitNode route
- * path outright. The scope is dropped rather than escaped: `@acme/blog` is
- * `blog` on the web, which is what its author would have written anyway.
- *
- * Everything npm allows after the scope is already legal in a static VitNode
- * segment - lowercase letters, digits, `.`, `_`, `-` - so nothing else has to be
- * rewritten, and the name is not silently lowercased: npm rejects an uppercase
- * package name before this is ever reached.
- */
 export const routeSlugFor = (pluginName: string): string =>
   pluginName.includes("/")
     ? pluginName.slice(pluginName.indexOf("/") + 1)
     : pluginName;
 
-/**
- * `src/routes.ts` - the file an app reads to find out this plugin has a page.
- *
- * One `page()`, with the two fields that have no default. Everything else on a
- * route - the area, the messages, the requirement, the search schema - is left
- * out rather than written with its default value, so what a new plugin's tree
- * shows is the minimum rather than a form to fill in.
- */
 export const pluginRoutesTemplate = (pluginName: string): string => {
   const slug = routeSlugFor(pluginName);
 
@@ -87,30 +44,7 @@ export const routes = definePluginRoutes([
 export const pluginRouteModuleTemplate = (pluginName: string): string =>
   `import { useTranslations } from "use-intl";
 
-/**
- * The page \`routes.ts\` declares.
- *
- * Keep it framework-neutral. This module is compiled into the package's own
- * \`dist\` and imported by whichever app installed the plugin, so anything from
- * a router or a host-bound i18n package pins the plugin to one kind of host.
- * \`use-intl\` - which is what VitNode itself renders through - and plain JSX are
- * pinned to neither.
- *
- * No \`<main>\`: the application shell owns the document's one \`main\` landmark,
- * and a page that renders a second gives a screen reader two to choose between.
- * A page owns its container - width, padding, vertical rhythm - and nothing
- * above it.
- *
- * To give this route a loader, page metadata or a breadcrumb, add a \`route\`
- * export beside the default one:
- *
- *     import { definePluginRoute } from "@vitnode/core/routing";
- *
- *     export const route = definePluginRoute({
- *       load: ({ context, params }) => fetchThing(context.locale, params.id),
- *       head: ({ loaderData }) => ({ title: loaderData?.title }),
- *     });
- */
+
 const HomePage = () => {
   const t = useTranslations("${pluginName}");
 
@@ -160,11 +94,7 @@ export const pluginMessagesTemplate = (pluginName: string): string =>
 export const pluginMessagesBarrelTemplate = (): string =>
   `import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
 
-/**
- * Every language this plugin ships. Add a file next to this one and a line here
- * to add another; apps pick it up with no copy step, because they read this
- * package's own \`dist\` rather than a copy of it.
- */
+
 const messages: LocaleMessagesMap = {
   en: async () => await import("./en.json", { with: { type: "json" } }),
 };
@@ -214,17 +144,7 @@ export const pluginConfigTemplate = (pluginName: string): string =>
 import messages from "./locales";
 import { routes } from "./routes";
 
-/**
- * This plugin, as an application registers it.
- *
- * \`pluginId\` is the package name, and that is not a convention - it is how this
- * plugin's route tree is imported (\`${pluginName}/routes\`) and how its messages
- * are namespaced. The two cannot drift because they are one string.
- *
- * Add this to an app's \`src/vitnode.config.ts\` \`plugins\` array. A plugin that
- * is installed but not listed there contributes nothing - no directory is ever
- * scanned - so this is the only switch.
- */
+
 export const ${pluginVariableName(pluginName)} = () =>
   buildPlugin({
     pluginId: "${pluginName}",

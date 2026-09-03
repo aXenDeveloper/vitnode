@@ -17,12 +17,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The uploaded-file list's URL contract - the shared admin-table one with this
- * screen's declaration applied. It is the one admin table with a search box, so
- * `?search=` is part of its contract and part of its cache key.
- */
-
 export type AdminFilesRouteSearch = AdminTableRouteSearch<AdminFilesOrderBy>;
 export type UncheckedAdminFilesSearch =
   UncheckedAdminTableSearch<AdminFilesOrderBy>;

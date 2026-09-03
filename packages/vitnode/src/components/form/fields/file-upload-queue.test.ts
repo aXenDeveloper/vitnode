@@ -9,20 +9,6 @@ import {
   FILE_UPLOAD_CONCURRENCY,
 } from "./file-upload-queue";
 
-/**
- * The concurrency bug this queue exists for, and the four shapes it takes.
- *
- * Ten files picked at once are ten requests, and they answer in whatever order
- * the network decides. Appending each one as it lands therefore stored the
- * *network's* order - which nobody chose, nobody can reproduce, and which
- * differs between two editors uploading the same ten photographs over different
- * connections.
- *
- * Nothing here waits on a clock. Every upload is a promise the test resolves by
- * hand, in the order the test wants, which is the only way "B answered before A"
- * is a fact rather than a race.
- */
-
 interface Deferred {
   reject: (error: unknown) => void;
   resolve: (value: AutoFormFileValue) => void;

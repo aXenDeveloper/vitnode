@@ -47,22 +47,6 @@ export interface ContentTranslationOptions {
   tx?: ContentDatabase;
 }
 
-/**
- * The version a freshly inserted translation starts at.
- *
- * A symbol rather than a name, because there is exactly one caller that may set
- * it and no way to reach it by accident: writing this key requires importing the
- * symbol, which is a deliberate act rather than a plausible typo in an options
- * object. Ordinary callers get version 1 and cannot ask for anything else.
- *
- * It exists because a translation row is deleted physically while its history is
- * not. Recreating `(itemId, languageId)` at version 1 would collide with the
- * `create` revision the *first* life of that translation wrote, and the locale's
- * history would stop being a sequence. The editorial layer reads the last version
- * this locale ever reached and starts the new row after it.
- *
- * @internal
- */
 export const CONTENT_TRANSLATION_INITIAL_VERSION: unique symbol = Symbol(
   "vitnode.content.translation.initialVersion",
 );
@@ -84,14 +68,6 @@ export interface ContentTranslationUpdateResult<TDefinition> {
   version: number;
 }
 
-/**
- * Publish and unpublish guard on the *state*, so `expectedVersion` is optional.
- *
- * Same rule the base row's transitions follow: publishing overwrites no field
- * values, so requiring a version would fail the button whenever a colleague had
- * fixed a typo, for no protection against a lost update. When one is supplied it
- * is `AND`ed on top of the state guard rather than replacing it.
- */
 export interface ContentTranslationTransitionOptions extends ContentTranslationOptions {
   expectedVersion?: number;
 }
@@ -103,38 +79,14 @@ export interface ContentTranslationTransitionResult<TDefinition> {
   version: number;
 }
 
-/**
- * One localized content type's translation repository.
- *
- * Deliberately low level. It writes translation rows and enforces the rules that
- * belong to the data - per-locale versioning, the default-translation invariant,
- * slug normalisation - and does **nothing else**: no event, no cache tag, no
- * search document, no revision. Stage 5B orchestrates those on top, the same way
- * `contentEditorialEffects` does for the base row today. A repository that
- * emitted events could not be called inside somebody else's transaction, which is
- * exactly what atomic create needs it to be.
- */
 export interface ContentTranslationModel<TDefinition> {
-  /**
-   * Inserts one translation at version 1. Throws if the locale already has one.
-   *
-   * The editorial layer may start it later than 1 - see
-   * {@link CONTENT_TRANSLATION_INITIAL_VERSION} - so a locale that has been
-   * deleted and recreated keeps one increasing history.
-   */
   create: (
     itemId: number,
     locale: string,
     values: ContentLocalizedValues<TDefinition>,
     options?: ContentTranslationCreateOptions,
   ) => Promise<ContentTranslationRow<TDefinition>>;
-  /**
-   * Removes one translation, guarded by its version.
-   *
-   * `null` when there is no such translation - the caller wanted it gone, and it
-   * is. Refuses the default locale outright: that translation is created with the
-   * record and is what makes "a record always resolves in some language" true.
-   */
+
   delete: (
     itemId: number,
     locale: string,
@@ -145,19 +97,7 @@ export interface ContentTranslationModel<TDefinition> {
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<boolean>;
-  /**
-   * The **base** row's publication state, or `null` when the record is gone.
-   *
-   * Exposed because a translation's public reachability is subordinate to the
-   * record's: a published Polish translation of a draft article is not a public
-   * URL, so the delivery layer cannot decide whether to reserve an address without
-   * both halves. It lives here rather than in the editorial layer for the same
-   * reason `resolveLanguage` does - the base table is this repository's, and a
-   * second reader would be a second place the two could disagree.
-   *
-   * `{ publishedAt: null, status: undefined }` for a content type without
-   * publication, where a translation is visible as soon as the record is.
-   */
+
   findBasePublication: (
     itemId: number,
     options?: ContentTranslationOptions,
@@ -172,14 +112,7 @@ export interface ContentTranslationModel<TDefinition> {
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
-  /**
-   * One language's translation of **many** records, in a single query.
-   *
-   * What an admin list needs: a page of rows and the language it is being
-   * viewed in, resolved in one round trip rather than one per row. Records with
-   * no translation in that language are simply absent from the result - the
-   * caller pairs them back up by `itemId` and decides what a missing one means.
-   */
+
   findManyByLanguageId: (
     itemIds: readonly number[],
     languageId: number,
@@ -190,31 +123,12 @@ export interface ContentTranslationModel<TDefinition> {
     itemId: number,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationMeta<TDefinition>[]>;
-  /**
-   * Every translation of one record, values included, in **one** query.
-   *
-   * What the AdminCP edit form opens on. A form whose localized inputs each carry
-   * their own language switcher needs every language at once, and reading them
-   * one locale at a time would mean nine round trips to open one article. The
-   * language registry is read once for the whole set, exactly as
-   * {@link ContentTranslationModel.findManyForItem} does.
-   */
+
   findManyRowsForItem: (
     itemId: number,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
-  /**
-   * Marks one translation published, idempotently.
-   *
-   * `null` when there is no such translation. `changed: false` when it was
-   * already published - no version bump, and therefore no revision, no event and
-   * no cache work either. `publishedAt` is stamped on the first transition and
-   * never rewritten, so a republish keeps the original date.
-   *
-   * Throws without `publication: { enabled: true }`: there is no column to move.
-   * Refuses a locale the install has switched off, exactly as `create` and
-   * `update` do - publishing into a language nothing renders is not useful.
-   */
+
   publish: (
     itemId: number,
     locale: string,
@@ -224,22 +138,12 @@ export interface ContentTranslationModel<TDefinition> {
   resolveDefaultLanguage: (
     options?: ContentTranslationOptions,
   ) => Promise<ContentLanguage>;
-  /**
-   * One locale, resolved through the request's language registry, or a throw.
-   *
-   * Exposed so the editorial layer resolves a locale exactly the way the
-   * repository does - same cache, same case-insensitive match, same canonical code
-   * - rather than reaching into the resolver with its own arguments.
-   */
+
   resolveLanguage: (
     locale: string,
     options?: { requireEnabled?: boolean; tx?: ContentDatabase },
   ) => Promise<ContentLanguage>;
-  /**
-   * The mirror of {@link publish}. `publishedAt` is deliberately left alone, and
-   * a disabled locale is accepted: taking content down has to keep working after
-   * a language is switched off.
-   */
+
   unpublish: (
     itemId: number,
     locale: string,
@@ -257,13 +161,6 @@ export interface ContentTranslationModel<TDefinition> {
 const translationSystemFields: readonly string[] =
   CONTENT_TRANSLATION_SYSTEM_FIELDS;
 
-/**
- * A timestamp column as a `Date`, or `null`.
- *
- * The `postgres` driver hands timestamps back as strings on some paths (a raw
- * `RETURNING` among them), and `publishedAt` is compared and formatted rather
- * than only echoed - so it is normalised once here instead of at every reader.
- */
 const toNullableDate = (value: unknown): Date | null => {
   if (value instanceof Date) return value;
   if (typeof value !== "string") return null;
@@ -348,14 +245,6 @@ export const createContentTranslationModel = <
   const db = (options?: ContentTranslationOptions): ContentDatabase =>
     contentDatabase(c, options?.tx);
 
-  /**
-   * Resolves a locale, reading the language registry through whatever handle the
-   * caller is using.
-   *
-   * The `tx` is load-bearing: inside `localizedService.create` the transaction
-   * holds the connection, so a registry query issued on the client would wait for
-   * a connection that transaction will not release until it has an answer.
-   */
   const language = async (
     locale: string,
     { requireEnabled, tx }: { requireEnabled: boolean; tx?: ContentDatabase },
@@ -367,13 +256,6 @@ export const createContentTranslationModel = <
       tx,
     });
 
-  /**
-   * The publication half of a row, or nothing.
-   *
-   * Read off the row rather than defaulted, so a content type without publication
-   * has no `status` key at all - a `"draft"` invented here would make
-   * `isContentRowPublic` answer a question this content type never asked.
-   */
   const publicationOf = (row: Record<string, unknown>): object =>
     publication
       ? {
@@ -396,14 +278,6 @@ export const createContentTranslationModel = <
       version: row.version as number,
     }) as ContentTranslationMeta<TDefinition>;
 
-  /**
-   * Splits a raw row into metadata and `values`.
-   *
-   * The nesting is not decoration: it keeps a localized field called `version` or
-   * `locale` from being confused with the metadata of the row that holds it, and
-   * it means the update request body (`{ expectedVersion, values }`) and the
-   * response have the same shape.
-   */
   const toRow = (
     row: Record<string, unknown>,
     locale: string,
@@ -436,13 +310,6 @@ export const createContentTranslationModel = <
     return row ?? null;
   };
 
-  /**
-   * The `status` column, or a refusal.
-   *
-   * A content type without publication has no such column, so a publish call is a
-   * programming mistake rather than a runtime state - and `eq(undefined, ...)`
-   * would fail far from the cause with a Drizzle internal error.
-   */
   const statusColumn = (): PgColumn => {
     if (!publication) {
       throw new ContentEngineError(
@@ -454,15 +321,6 @@ export const createContentTranslationModel = <
     return columns.status;
   };
 
-  /**
-   * Publish and unpublish, which guard on the *state* rather than the version.
-   *
-   * The state guard is what makes them idempotent, and idempotency is what keeps
-   * a double-clicked button and a retried task from each producing a second
-   * version, a second revision and a second event. Deliberately the same shape
-   * `transition` in the base editorial service uses - two locales' transitions
-   * touch two rows, so they never contend with each other.
-   */
   const transition = async (
     itemId: number,
     locale: string,

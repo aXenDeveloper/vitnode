@@ -23,28 +23,12 @@ import {
   publishedCondition,
 } from "./publication";
 
-/**
- * One page of a content type's sitemap.
- *
- * `nextCursor` rather than a page number, and `null` rather than `hasNextPage` on
- * its own: a sitemap is regenerated from scratch every time a crawler asks, and an
- * `OFFSET` deep into a large table both slows down linearly and skips rows when
- * something is published between two pages. A keyset over the primary key does
- * neither.
- */
 export interface ContentDeliverySitemapPage {
   entries: ContentSitemapEntry[];
   /** Pass back as `cursor`. `null` when this was the last page. */
   nextCursor: null | number;
 }
 
-/**
- * Where a `noIndex` field is stored, resolved to the column it addresses.
- *
- * A leaf path (`seo.noIndex`) compiles to a generated column, and the delivery
- * resolver has already refused a localized one - so this is always a column on the
- * base table and the sitemap predicate is one clause rather than a join.
- */
 const noIndexColumn = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
@@ -62,28 +46,6 @@ const noIndexColumn = (
   return leaf === undefined ? null : (columns[leaf.columnName] ?? null);
 };
 
-/**
- * One page of sitemap entries for one content type, in one language.
- *
- * Everything about this function follows from "a sitemap lists what is public
- * right now, and nothing else":
- *
- * - **The publication predicate is not a parameter.** A nonlocalized entry needs
- *   the base row published; a localized one needs the base row *and* the
- *   translation published, which is the same subordination the public read
- *   applies. A draft, an unpublished record and a future `publishedAt` are all
- *   simply absent.
- * - **No fallback, ever.** Each locale is queried against its own translation, so
- *   a language served English through `fallback: "default"` contributes no URL -
- *   it has none of its own, and listing one would put the same content in the
- *   sitemap twice under two addresses.
- * - **`lastModified` is `max(base.updatedAt, translation.updatedAt)`** for a
- *   localized entry. A shared field moving changes what every language's page
- *   renders even though no translation row was touched, so taking the
- *   translation's timestamp alone would tell a crawler nothing had changed.
- * - **`noIndex` is one clause**, not a post-filter, so a page of 1,000 entries is
- *   1,000 listed URLs rather than however many survived.
- */
 export const readContentDeliverySitemapPage = async <
   TDefinition extends AnyContentTypeDefinition,
 >({

@@ -15,37 +15,14 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 
 const SHARED_ENTRY = join(here, "search-feed-content.tsx");
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
+
 const DELETED_NEXT_HALF = {
   controls: join(here, "search-controls.tsx"),
   feed: join(here, "search-feed.tsx"),
 };
 
-/**
- * The search page's controls, and the Next wrapper they were split out of.
- *
- * The same boundary as the feed's, one level up and with more at stake: the
- * controls render an input group, a native select and a row of buttons, so this
- * is where a stray Next.js import inside the *design system* would show up. That
- * is not hypothetical - `HeaderContent` was Next-only for one back button, and
- * `use-captcha` made every `AutoForm` Next-only for one navigation import.
- */
 const SHARED_CONTROLS = join(here, "search-controls-content.tsx");
 
-/**
- * The other half of what a migrated feed page renders.
- *
- * Scanned here rather than in a file of its own because it is the same boundary
- * for the same reason: `/discover` is a heading and a feed, and either one
- * reaching `next-intl/navigation` makes the whole page Next-only. This one did,
- * until the back link became a prop.
- */
 const HEADER_CONTENT = join(here, "../../components/ui/header-content.tsx");
 
 describe("the shared search feed is framework-neutral", () => {

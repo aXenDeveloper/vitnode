@@ -19,18 +19,6 @@ import { loadAdminIntegrationsRoute } from "../../admin/integrations/route";
 import { CardsPendingSkeleton, TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
-/**
- * `/admin/core/system/files` - every file uploaded to the installation.
- *
- * The query, the three permissions (`files.can_view` to open it,
- * `files.can_download` and `files.can_delete` for the row controls), the
- * namespaces, the title, the search box and both deletes are `../files`.
- *
- * Not to be confused with `/files` under `_main/_authenticated`, which is the
- * *visitor's own* files: a different endpoint, a different permission and a
- * different cache family. That one is genuinely the application's page and stays
- * a route file in it.
- */
 const filesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   const route = createRoute({
     getParentRoute: () => parentRoute,
@@ -88,15 +76,6 @@ const filesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   return route;
 };
 
-/**
- * `/admin/core/system/integrations` - the integrations board.
- *
- * The least of it: this screen has no search parameters, so there is no
- * `validateSearch` and no `loaderDeps` - the loader runs once per navigation.
- * The query, the permission (`system.can_view`, plus `system.can_test_ai` /
- * `can_test_storage` / `can_send_test_email` for the three test buttons), the
- * namespaces, the title and the nine cards are `../integrations`.
- */
 const integrationsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   const route = createRoute({
     getParentRoute: () => parentRoute,
@@ -135,32 +114,10 @@ const integrationsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   return route;
 };
 
-/**
- * `/admin/core/debug` - the debug panel: the queue snapshot, the system log, and
- * "clear the cache".
- *
- * The queries, the permission (`debug.can_view` to open it,
- * `debug.can_clear_cache` for the button), the namespaces, the titles and all
- * three sections are `../debug`.
- *
- * No `LinkComponent`: the log's detail dialog links a line to the user who
- * caused it, at `/admin/core/users/{id}`, and the screen's default -
- * `RouterLink` - is exactly right for a route in this tree.
- *
- * ## No breadcrumb, deliberately
- *
- * `staticData.breadcrumb: null` rather than nothing at all, because `undefined`
- * would *inherit* a parent's crumb rather than mean "this page has none".
- * Giving the panel a trail is a product decision.
- */
 const debugRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   const route = createRoute({
     getParentRoute: () => parentRoute,
-    /**
-     * The system log's parameters. It is the only thing on the screen with URL
-     * state - the queue snapshot has no pager and the clear-cache button writes
-     * nothing - so the screen's search is the log table's.
-     */
+
     loaderDeps: ({ search }) => ({
       params: debugLogsRouteParams(routeSearch(search)),
     }),

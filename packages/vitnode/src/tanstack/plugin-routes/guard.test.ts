@@ -7,16 +7,6 @@ import type { SessionApi } from "../auth/session-api";
 
 import { pluginRouteGuard } from "./guard";
 
-/**
- * Who a plugin route is offered to, as the decision alone.
- *
- * The session arrives through a stub `fetchQuery`, so what is exercised here is
- * the rule and the destination it produces - no network, no router, no React.
- * That the rule itself is right is Stage 6's own coverage (`auth/state.test.ts`,
- * `auth/redirects.test.ts`): this asserts that a plugin route reuses it rather
- * than growing a second copy.
- */
-
 const sessionOf = (user: null | { id: number }): SessionApi =>
   ({ user }) as unknown as SessionApi;
 
@@ -44,11 +34,6 @@ const redirectFrom = async (
 };
 
 describe("pluginRouteGuard", () => {
-  /**
-   * A guard is built per route rather than once on the plugin container, which
-   * is the parent of *every* plugin route - one there would apply to all of
-   * them. A route offered to everybody therefore has no `beforeLoad` at all.
-   */
   it("gives a route with no requirement no guard at all", () => {
     expect(pluginRouteGuard(null)).toBeUndefined();
   });
@@ -74,11 +59,6 @@ describe("a plugin route that requires a signed-in visitor", () => {
     expect(result).toMatchObject({ auth: { isAuthenticated: true } });
   });
 
-  /**
-   * `to`/`search` rather than `href`: a redirect carrying `href` is used
-   * verbatim and never reaches the locale rewrite, so a Polish visitor would
-   * land on the English login page.
-   */
   it("sends an anonymous visitor to the login page, carrying where they were", async () => {
     const options = await redirectFrom(
       async () =>
@@ -115,11 +95,6 @@ describe("a plugin route that only makes sense signed out", () => {
     expect(options).toMatchObject({ to: "/example/guide" });
   });
 
-  /**
-   * The `returnTo` is a stranger's string. Everything that is not an
-   * application-relative path collapses to `/`, and the login page itself is
-   * refused - it is the loop this rule exists to prevent.
-   */
   it.each([
     ["an absolute URL", "https://evil.invalid/x"],
     ["the login page", "/login"],

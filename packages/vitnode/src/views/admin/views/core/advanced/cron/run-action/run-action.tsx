@@ -12,20 +12,6 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import type { RunCron } from "./run-cron";
 
-/**
- * The "run now" button on a cron row.
- *
- * `onRun` is the one thing it cannot decide for itself: in Next.js the run ends
- * in `revalidatePath` and so has to be a server action, and in TanStack Start it
- * is a browser call followed by a query invalidation. Both are
- * `(id) => Promise<RunCronResult>`, so the button takes one and stops caring -
- * see `run-cron.ts`.
- *
- * The permission check is unchanged and stays here rather than moving to the
- * caller: the table renders one of these per row, and hiding the control is the
- * AdminCP's established way of saying "not yours". It is a rendering decision -
- * the API re-checks `cron.can_run` on the request itself.
- */
 export const RunActionCronTable = ({
   id,
   onRun,

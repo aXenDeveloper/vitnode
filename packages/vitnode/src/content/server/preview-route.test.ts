@@ -37,13 +37,6 @@ const snapshot = (
   ...overrides,
 });
 
-/**
- * Mounts the generated public routes with the editorial service and the
- * database stubbed.
- *
- * No session middleware and no admin context: the request arrives exactly as an
- * anonymous reviewer's would, which is the only way this route is ever used.
- */
 const harness = ({ secret = SECRET }: { secret?: string } = {}) => {
   const findById = vi.fn();
   const selections: Record<string, unknown>[] = [];

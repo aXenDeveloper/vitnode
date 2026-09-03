@@ -11,15 +11,6 @@ import {
   contentDeliveryInvalidation,
 } from "./delivery-effects";
 
-/**
- * Which delivery events one mutation emits, and which it deliberately does not.
- *
- * Both events are gated on a *fact* rather than on an operation: the URL moved, and
- * the old address had been live. A listener that warms a CDN or writes an edge
- * redirect table acts on the second one, so emitting it for a corrected draft would
- * make it act on a URL nobody ever visited.
- */
-
 const articleType = defineContentType({
   id: "effects.article",
   editorial: { enabled: true },

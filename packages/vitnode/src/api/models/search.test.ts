@@ -276,16 +276,6 @@ describe("normalizeSearchIndexerPage", () => {
   });
 });
 
-/**
- * The one provider capability that is not a nicety.
- *
- * `delete(c, itemType, itemId, languageCode)` is a JavaScript call: a provider
- * written before per-locale content accepts the fourth argument and drops it, so
- * taking one translation down removes every language from that provider's store
- * while the canonical `core_search_index` removes one. Nothing throws, nothing is
- * logged, and the two disagree from then on - which is why the pairing is refused
- * at boot instead of being discovered by whoever deletes a translation.
- */
 describe("assertSearchProviderCapabilities", () => {
   const legacy = (): SearchProviderApiPlugin => ({
     ...createProvider(),
@@ -378,13 +368,6 @@ describe("assertSearchProviderCapabilities", () => {
   });
 });
 
-/**
- * The provider half of a search diagnostic.
- *
- * `SearchModel.index` writes the canonical row and *then* hands the document to
- * the provider, so the two can disagree - and a diagnostic that cannot ask the
- * provider would report the canonical table's health as the whole story.
- */
 describe("provider diagnostics", () => {
   const modelFor = (provider: SearchProviderApiPlugin) =>
     new SearchModel({

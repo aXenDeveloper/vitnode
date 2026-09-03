@@ -16,12 +16,6 @@ import { PLUGIN_ROUTE_ID_SEPARATOR } from "./types";
 
 export { comparePluginRoutes };
 
-/**
- * A route's globally unique id.
- *
- * Namespaced by the plugin, which is what lets two plugins both have a layout at
- * their own `/catalog` without either having to know the other exists.
- */
 export const pluginRouteId = (pluginId: string, routeId: string): string =>
   `${pluginId}${PLUGIN_ROUTE_ID_SEPARATOR}${routeId}`;
 

@@ -9,15 +9,6 @@ import { testStrictLocalizedPageContentType } from "@/tests/content-fixtures";
 import { createContentModel } from "./model";
 import { buildContentTranslationRoutes } from "./translation-routes";
 
-/**
- * A localized content type with `publication` and **without** `editorial`.
- *
- * A legal combination since Stage 5B, and the one that used to have nowhere to
- * go: the translation table grew `status` and `publishedAt`, and the routes that
- * move them were gated on `editorial` - so the columns existed and nothing
- * generated could change them. Publication is independent of revision history,
- * and these tests are what says so.
- */
 const page = createContentModel(testStrictLocalizedPageContentType);
 const PLUGIN_ID = "@vitnode/example";
 

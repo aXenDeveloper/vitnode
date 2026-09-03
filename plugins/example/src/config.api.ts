@@ -9,21 +9,6 @@ import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
 import "@/api/lib/events";
 
-/**
- * No `contentTypes` here: `buildApiPlugin` walks the module tree, so the
- * content types declared in `admin.module.ts` also drive the registry and the
- * derived `can_view` / `can_create` / `can_edit` / `can_delete` permissions.
- *
- * `buildContentPublicModule` is top-level on purpose - its paths must stay out
- * of `/admin/`, which the global admin gate matches as a substring. It skips
- * any content type without `publicApi`, so `categoryContent` contributes
- * nothing, and it registers no content types of its own (that would be a
- * duplicate registration).
- *
- * Public routes land at `/api/@vitnode/example/content/articles/` and, for the
- * localized fixture, `/api/@vitnode/example/content/localized-articles/` - the
- * same two shapes, with `?locale=` deciding which language they answer in.
- */
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,

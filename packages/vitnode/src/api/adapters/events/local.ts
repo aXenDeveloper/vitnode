@@ -7,13 +7,6 @@ import type {
   EventsApiPlugin,
 } from "@/api/models/events";
 
-/**
- * In-process event delivery (default). Runs matching listeners sequentially,
- * in registration order (core plugin first, then the app's `plugins` order),
- * inside the emitting request. Single-process by design: listeners only run
- * on the instance that emitted the event - swap the adapter for a broker to
- * fan out across instances.
- */
 export const LocalEventsAdapter = (): EventsApiPlugin => ({
   name: "local",
 

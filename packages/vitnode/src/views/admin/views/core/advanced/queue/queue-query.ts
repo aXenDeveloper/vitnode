@@ -87,21 +87,9 @@ export const fetchQueuePageInBrowser: QueuePageFetcher = async params => {
 /** The root every cached page of the queue list hangs off. */
 export const queueQueryRoot = adminQueryRoot("queue");
 
-/**
- * The cache entry one page of the list reads and writes.
- *
- * The normalised parameters, which for this table includes the status filter -
- * two filters are two different sets of rows, so they have to be two entries.
- */
 export const queueQueryKey = (params: QueueParams) =>
   [...queueQueryRoot, params] as const;
 
-/**
- * The queue list, as the one query definition every caller shares.
- *
- * `retry: false` for the same reason the cron list refuses to retry: every
- * failure this read can produce is made worse by repeating it.
- */
 export const queueQueryOptions = ({
   fetchPage = fetchQueuePageInBrowser,
   params,

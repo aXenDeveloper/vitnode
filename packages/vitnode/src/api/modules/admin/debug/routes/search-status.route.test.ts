@@ -33,14 +33,6 @@ const indexer = (
   pluginId,
 });
 
-/**
- * The handler is called directly, the way the queue-task tests call theirs: it
- * takes no request input, so routing it through Hono would only add a cast -
- * `Route.handler` is deliberately erased to `(...args: unknown[])`.
- *
- * The stub answers the coverage query with the given rows and every later query
- * (the sync-error panel) with nothing.
- */
 const harness = ({
   indexers = [],
   rows = [],

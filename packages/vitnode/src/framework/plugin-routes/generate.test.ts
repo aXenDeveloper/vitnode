@@ -5,15 +5,6 @@ import type { ResolvedPluginRoutesModule } from "./types.js";
 
 import { generatePluginRoutesSource } from "./generate.js";
 
-/**
- * The one file an application holds, asserted byte for byte.
- *
- * Byte for byte rather than "contains", for the two properties the file has to
- * have: the same plugin configuration produces the same bytes on any machine -
- * because the file lives in `src/` and a rewrite of identical bytes would trip
- * the dev server's watcher - and every specifier in it is a *literal*, because a
- * bundler cannot follow anything else.
- */
 const modules = (...pluginIds: string[]): ResolvedPluginRoutesModule[] =>
   pluginIds.map(pluginId => ({ pluginId, specifier: `${pluginId}/routes` }));
 
@@ -38,18 +29,7 @@ import type { PluginRouteDeclarationSource } from '@vitnode/core/routing'
 
 `;
 
-const body = (literal: string) => `/**
- * Every configured plugin's route tree.
- *
- * Handed to \`pluginRouteSpecs\` in the app's router, which flattens and validates
- * it with the same functions the build used - so the tree the router mounts is
- * provably the tree the build checked, and a plugin removed from the config
- * takes its routes with it in one step.
- *
- * \`satisfies\` rather than a type annotation, deliberately: it checks each
- * plugin's \`routes\` export really is a \`definePluginRoutes\` tree, naming the
- * plugin here rather than failing in a browser.
- */
+const body = (literal: string) => `
 export const pluginRouteSources = ${literal} as const satisfies readonly PluginRouteDeclarationSource[]
 `;
 

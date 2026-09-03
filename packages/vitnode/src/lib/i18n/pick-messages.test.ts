@@ -3,15 +3,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { isUnsafeMessagePath, pickMessages } from "./pick-messages";
 
-/**
- * Which namespaces reach the client bundle.
- *
- * `I18nProvider` ships only what it is handed, and a plugin's AdminCP overrides
- * - a `forms.layout`, a field component, a column cell - are client components
- * that translate themselves out of the plugin's own namespace. Leaving that
- * namespace out is not a missing string but a thrown `MISSING_MESSAGE` on every
- * one of them, so the rule is pinned here.
- */
 const messages = {
   "@vitnode/blog": {
     admin: {
@@ -79,12 +70,6 @@ describe("pickMessages", () => {
   });
 });
 
-/**
- * `pickMessages` is reached from a public server function, so it is treated as
- * a boundary in its own right rather than trusting whatever validated the input
- * upstream. Every assertion here is about a path that should never arrive - and
- * about what happens when one does anyway.
- */
 describe("prototype safety", () => {
   const tree = {
     core: { global: { close: "Close" } },

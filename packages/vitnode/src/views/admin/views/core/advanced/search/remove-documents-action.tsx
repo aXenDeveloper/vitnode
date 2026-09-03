@@ -9,13 +9,6 @@ import { Button } from "@/components/ui/button";
 
 import type { ClearSearchCollection } from "./search-index-mutations";
 
-/**
- * "Remove documents", on the row of a collection with no rebuild indexer.
- *
- * Destructive and offered only where a reindex is not: without an indexer there
- * is nothing to rebuild the documents from, so the confirmation says as much.
- * `onClear` carries its own refresh - see `search-index-mutations.ts`.
- */
 export const RemoveCollectionDocumentsAction = ({
   itemType,
   label,

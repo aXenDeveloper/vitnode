@@ -9,15 +9,6 @@ import {
   toSingleQuotedLiteral,
 } from "./resolve.js";
 
-/**
- * The part of the build that turns configuration into strings a generated file
- * can contain.
- *
- * Everything here is pure, and everything here is a *string* going into a source
- * file - which is why the validation is as strict as it is: a plugin id is
- * concatenated into an import specifier, and an id nobody checked is an app
- * whose generated source says whatever a `package.json` did.
- */
 describe("sortAndAssertUniquePlugins", () => {
   it("orders by plugin id, not by configuration order", () => {
     expect(
@@ -192,13 +183,6 @@ describe("routeDeclarationsFromRoutesModule", () => {
     ).toThrow(/`routes` in @acme\/blog\/routes is not an array/);
   });
 
-  /**
-   * The one migration this build can recognise, and the reason it is worth
-   * recognising: the flat manifest's `entry` was a string the *app* imported,
-   * and a page is now named by the plugin's own `lazy(() => import(...))`. There
-   * is no adapter that could turn one into the other, so the shape is named
-   * rather than half-supported.
-   */
   it("names the old flat manifest rather than failing later", () => {
     expect(() =>
       routeDeclarationsFromRoutesModule(

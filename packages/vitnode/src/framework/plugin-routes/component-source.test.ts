@@ -3,20 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { lazyImportSpecifier } from "./component-source.js";
 
-/**
- * Reading a page's specifier off a `lazy()` callback, which is the only way a
- * build can check that the module a route names exists.
- *
- * `lazy()` deliberately never calls the callback, so there is nothing to observe
- * by running it - and the answer is allowed to be "cannot tell". Every case
- * below that returns `null` is a case where failing a build would be guessing.
- *
- * The callbacks are compiled from source rather than written as real dynamic
- * imports, because this test file is itself transformed: Vite rewrites an
- * `import()` in a test into a call to its own loader, which is precisely the
- * "already rewritten" case the last test pins. What the build actually reads is
- * a plugin's compiled `dist`, where the import is still an `import`.
- */
 const callback = (source: string): unknown =>
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   new Function(`return ${source}`)() as unknown;

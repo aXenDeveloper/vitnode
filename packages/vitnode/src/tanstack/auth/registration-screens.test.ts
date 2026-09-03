@@ -6,12 +6,6 @@ import {
   signUpFormResult,
 } from "./screens";
 
-/**
- * The registration and recovery contracts translated into the vocabulary
- * `@vitnode/core`'s shared forms speak. Total functions over finite unions, so
- * every outcome the API can produce is checked here rather than in a browser.
- */
-
 describe("signUpFormResult", () => {
   it("says nothing for a verified account, which is how the form knows the caller is leaving", () => {
     expect(

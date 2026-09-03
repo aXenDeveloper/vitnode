@@ -11,16 +11,6 @@ import {
   routeSlugFor,
 } from "./route-templates.js";
 
-/**
- * The scaffold's pure half.
- *
- * Nothing here spawns the CLI or writes a file: what is worth pinning is that
- * the bytes a new plugin starts with are the ones VitNode's build can read, and
- * that is a string comparison. The cross-file assertions matter more than the
- * snapshots - a template that is merely *different* is a diff to approve, while
- * a route tree whose `lazy()` names a file the scaffold does not write is a
- * plugin whose first page 404s at the first navigation.
- */
 describe("routeSlugFor", () => {
   it("drops a scope, which a route path may not contain", () => {
     expect(routeSlugFor("@acme/blog")).toBe("blog");
@@ -70,12 +60,6 @@ describe("the generated route tree", () => {
     );
   });
 
-  /**
-   * The page is named by a *lazy* import, and that is the whole of what keeps it
-   * out of the initial bundle. A scaffold that imported the component at the top
-   * of this file would work, ship the page to every visitor of every other page,
-   * and teach the pattern to everybody who read it.
-   */
   it("never imports the page it names", () => {
     const routes = pluginRoutesTemplate("blog");
     const imports = [...routes.matchAll(/^import .*? from "([^"]+)";$/gm)].map(

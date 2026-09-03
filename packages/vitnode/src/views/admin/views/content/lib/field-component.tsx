@@ -26,13 +26,6 @@ import { ContentRepeatableField } from "./repeatable-field";
 import { ContentUserField } from "./user-field";
 import { ContentUserSetField } from "./user-set-field";
 
-/**
- * One option a picker can offer.
- *
- * Declared here rather than beside the server action that produces it: this is
- * the *client* contract, and a component reaching into a `"use server"` module
- * for a type drags `server-only` into the browser graph.
- */
 export interface ContentOption {
   avatarColor?: string;
   color?: string;

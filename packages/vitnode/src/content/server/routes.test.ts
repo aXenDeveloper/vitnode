@@ -48,13 +48,6 @@ const editorialPosts = createContentModel(testEditorialPostContentType);
 const PLUGIN_ID = "@vitnode/example";
 const PREVIEW_SECRET = "unit-test-content-preview-secret-0123456789";
 
-/**
- * Previewable, with no `pathTemplate`.
- *
- * The other branch of the preview URL: with no page in the web app to point
- * at, the link has to resolve against the **API** origin instead, and the two
- * origins are not the same host in a split deployment.
- */
 const noTemplateContentType = defineContentType({
   id: "test.notemplate",
   tableName: "test_no_template",
@@ -72,13 +65,6 @@ const noTemplateContentType = defineContentType({
 });
 const noTemplatePosts = createContentModel(noTemplateContentType);
 
-/**
- * A content type whose fields are not all on its row.
- *
- * A to-many reference lives on a junction table and a repeatable on a child
- * table, so neither is in the selection `findRowById` builds - and the AdminCP
- * form that edits them opens on this route.
- */
 const collectionContentType = defineContentType({
   id: "test.collections",
   tableName: "test_collections",
@@ -119,20 +105,8 @@ interface Harness {
   service: Record<string, ReturnType<typeof vi.fn>>;
 }
 
-/**
- * The two typed collection maps every service carries, empty.
- *
- * None of these fixtures declares an advanced field, and the generated routes
- * reach for collections only through the ordinary create/update payload - so
- * the maps have to exist and have nothing in them.
- */
 const noCollections = { relations: {}, repeatable: {} };
 
-/**
- * Mounts the generated routes with the service and permission check stubbed,
- * so each test drives the real Hono pipeline (validation, status codes, error
- * mapping) without a database.
- */
 const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   const emitted: Harness["emitted"] = [];
   const service = {

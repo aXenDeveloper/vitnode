@@ -7,11 +7,6 @@ import type { VitNodeWSMessage } from "@/ws/types";
 import { markWebSocketEnabled, wsRegistry } from "@/ws/registry";
 import { getWebSocketId } from "@/ws/types";
 
-/**
- * Parse an incoming raw WebSocket message into a {@link VitNodeWSMessage}
- * envelope. Returns `undefined` for anything that is not a JSON object
- * carrying a string `id` (e.g. plain text or binary frames).
- */
 const parseMessage = (raw: unknown): undefined | VitNodeWSMessage => {
   if (typeof raw !== "string") return undefined;
 
@@ -33,28 +28,6 @@ const parseMessage = (raw: unknown): undefined | VitNodeWSMessage => {
   return undefined;
 };
 
-/**
- * Handle VitNode WebSockets for any Hono runtime that exposes
- * `upgradeWebSocket` (node.js `@hono/node-server`, Bun, ...).
- *
- * A single `/ws` connection is multiplexed across every registered socket.
- * Each message is an envelope `{ id, data }` where `id` is
- * `{pluginId}_{module}_{id}`. On every message this handler looks up the
- * registered WebSocket whose composed id matches and calls its `onMessage`
- * handler with the parsed `data` (and a `send` helper that wraps the reply in
- * the same envelope). The registered handlers receive the request
- * `Context<EnvVitNode>`, so they can reach the database, the authenticated
- * user, the logger, etc.
- *
- * The optional `createEvents` callback lets you add connection-level behavior
- * (`onOpen`, `onClose`, `onError`, or a fallback `onMessage` for messages that
- * do not match any registered socket) with access to the typed context.
- *
- * @example
- * ```ts
- * app.get("/ws", upgradeWebSocket(handleVitNodeWebSocket()));
- * ```
- */
 export function handleVitNodeWebSocket(
   createEvents?: (c: Context<EnvVitNode>) => Promise<WSEvents> | WSEvents,
 ) {

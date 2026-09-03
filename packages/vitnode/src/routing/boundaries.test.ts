@@ -23,14 +23,6 @@ const filesUnder = (directory: string): string[] => {
   return entries;
 };
 
-/**
- * A file with its comments removed.
- *
- * These modules document themselves at length, and `./module` shows a plugin
- * author the import they are meant to write - which the scan below would
- * otherwise read as an import *this* layer makes. Stripping comments first is
- * what keeps the rule about code.
- */
 const codeOf = (path: string): string =>
   readFileSync(path, "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -41,18 +33,6 @@ const importsFrom = (path: string): string[] =>
     .map(match => match[1] ?? match[2])
     .filter((specifier): specifier is string => Boolean(specifier));
 
-/**
- * The rule this layer exists to keep.
- *
- * A plugin route manifest is VitNode configuration data. It is read while a
- * Next.js app builds, while a TanStack Start app builds, and by a plain
- * `vitest` process with no framework loaded at all - so a single import of
- * `next/*` or `@tanstack/*` here does not fail in review, it fails for whoever
- * is not using that framework.
- *
- * Stated as "imports nothing but its own files" rather than as a list of banned
- * packages, because a list is something somebody has to remember to extend.
- */
 describe("the routing layer is framework-neutral", () => {
   // `.test-d.ts` as well as `.test.ts`: a type test asserts against `vitest`'s
   // `expectTypeOf` and is erased before anything runs, so its import is not one

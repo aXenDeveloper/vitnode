@@ -7,28 +7,10 @@ import { loadSsoCallbackRoute } from "../../auth/sso-route";
 import { AuthPendingSkeleton } from "../../pending";
 import { routeContext } from "../types";
 
-/**
- * `/login/sso/:providerId` - where an SSO provider sends the visitor back to.
- *
- * The URL shape is not an application's to choose: the API registers it with
- * every provider as `${NEXT_PUBLIC_WEB_URL}login/sso/<id>`, so whichever app
- * that origin serves has to answer it. `/login/sso/google` and
- * `/pl/login/sso/google` are one route - the locale is stripped before matching.
- */
 export const ssoCallbackRoute: CoreAuthRouteFactory = ({ parentRoute }) => {
   const route = createRoute({
     getParentRoute: () => parentRoute,
-    /**
-     * What a provider may put in the callback URL - the package's contract, not
-     * an application's.
-     *
-     * Which half arrives is the provider's decision, so nothing is required, and
-     * nothing is coerced: an all-digit `state` reaches `validateSearch` as a
-     * number, and a `z.string()` would throw on it, rendering an error boundary
-     * in the middle of a sign-in the visitor had already approved. The values are
-     * judged by `parseSsoCallback`, which bounds their length, classifies the
-     * error rather than carrying it through, and is where the whole rule lives.
-     */
+
     validateSearch: normalizeSsoCallbackSearch,
     loader: async ({ context }) =>
       await loadSsoCallbackRoute(routeContext(context)),

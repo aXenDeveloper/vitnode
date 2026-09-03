@@ -12,17 +12,6 @@ import { ContentDeliverySlugReserved } from "../errors";
 import { field } from "../fields";
 import { applyContentDeliveryWrite } from "./delivery-writes";
 
-/**
- * When slug history is written, and when it deliberately is not.
- *
- * The rule this file exists to pin down is the one in §10 of the Stage 8 brief: a
- * slug becomes redirectable only if it was **previously used by an addressable
- * public version**. That is what separates "a live URL moved and needs a redirect"
- * from "somebody fixed a typo in a draft three times before publishing" - and
- * getting it wrong means either a pile of redirects nobody asked for, or a moved
- * page that 404s.
- */
-
 const articleType = defineContentType({
   id: "writes.article",
   editorial: { enabled: true },
@@ -63,19 +52,6 @@ interface Call {
   kind: "assertAvailable" | "ensureCurrent" | "reserve" | "retire";
 }
 
-/**
- * A history model that records what it was asked to do.
- *
- * Two knobs, and they answer different questions:
- *
- * - **`retired`** is the oracle for "was that URL ever live" when the rows on file
- *   are not being modelled. The whole redirect decision hangs off it.
- * - **`existing`** models them instead: the set of slugs already in the table.
- *   Pass it and `retire` answers from the recorder's own rows rather than from
- *   the knob, which is what lets a test watch the bootstrap turn an address that
- *   *could not* be retired into one that can. `[]` is the state a record
- *   published before Stage 8 existed is actually in.
- */
 const recorder = ({
   existing = null,
   reserved = null,
@@ -439,19 +415,6 @@ describe("a localized slug", () => {
   });
 });
 
-/**
- * A record that was published before this table existed.
- *
- * Stage 8 ships no backfill migration, on purpose: the database keeps one slug per
- * row and no record of which historical values were ever public, so a global scan
- * would have to choose between missing live URLs and inventing redirects for slugs
- * that only ever existed on a draft. The mutation does not have to choose - it is
- * holding the row on both sides of its own write - so the address is established
- * lazily, at the moment it leaves service, on the evidence the mutation already has.
- *
- * `existing: []` is that record: publicly reachable, and with nothing on file.
- * Every test here failed before the bootstrap existed.
- */
 describe("a record that predates slug history", () => {
   it("redirects its first slug change instead of losing the URL", async () => {
     const { calls, outcome } = await apply(

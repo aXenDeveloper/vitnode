@@ -86,81 +86,29 @@ export interface SearchResult {
 
 export interface SearchProviderCapabilities {
   authorBoost: boolean;
-  /**
-   * Whether the provider's store **is** `core_search_index`.
-   *
-   * True only for the bundled Postgres provider, which queries the canonical
-   * table directly rather than mirroring it. Diagnostics use this to skip a
-   * second count of the same rows: canonical and provider are one storage, so
-   * asking twice would cost a query to learn something already known.
-   *
-   * A mirroring provider - anything with its own store - must leave it unset.
-   */
+
   canonicalStorage?: boolean;
   facets: boolean;
-  /**
-   * Whether {@link SearchProviderApiPlugin.delete} honours its `languageCode`.
-   *
-   * Declared rather than inferred, because JavaScript cannot tell the difference:
-   * a provider written as `delete(c, itemType, itemId)` accepts the fourth
-   * argument at runtime and silently ignores it, so taking down one translation
-   * would remove every language from that provider's store while the canonical
-   * `core_search_index` removed one. The two would then disagree forever, and
-   * nothing would say so.
-   *
-   * Optional, so a provider written before localized content still compiles and
-   * still serves single-language content. Absent means "no", and
-   * {@link assertSearchProviderCapabilities} refuses to boot an install that
-   * pairs such a provider with a localized searchable content type.
-   */
+
   languageScopedDelete?: boolean;
   timeDecay: boolean;
 }
 
-/**
- * One page of a rebuild.
- *
- * The two counts are separate on purpose. An indexer may emit several documents
- * per item (one per language, say) or none at all (a row whose data cannot be
- * projected), so a document count can never stand in for a source count - using
- * it would either skip items or end the rebuild while rows remain.
- */
 export interface SearchIndexerPage {
   documents: SearchDocument[];
   /** Source rows this page read. `0` means the source is exhausted. */
   itemsRead: number;
 }
 
-/**
- * The pre-{@link SearchIndexerPage} result: documents with no source count.
- *
- * @deprecated Return a {@link SearchIndexerPage}. An array cannot say how many
- * source rows produced it, so the rebuild has to assume a full page was read and
- * wait for an empty one to stop - which means a page that reads rows and projects
- * none of them (every row on it malformed, say) ends the rebuild early and the
- * rows behind it are never indexed. Supported for now; removed in a future major
- * release.
- */
 export type LegacySearchIndexerPage = SearchDocument[];
 
 export type SearchIndexerLoadResult =
   // The one intentional use of the deprecated shape: this union is what keeps
   // pre-Stage-3 indexers compiling, so the lint rule has nothing to warn about
   // here. Every *other* reference should be flagged.
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
+
   LegacySearchIndexerPage | SearchIndexerPage;
 
-/**
- * Streams every existing item of one content type so the whole index can be
- * rebuilt (e.g. after switching engines).
- *
- * `load` is called with `offset` advanced by the previous page's `itemsRead`.
- * Report `itemsRead: 0` to end the rebuild; an empty `documents` array does not,
- * because a page can legitimately read rows and project none of them.
- *
- * Returning a bare `SearchDocument[]` still works - see
- * {@link LegacySearchIndexerPage} for what it gives up.
- */
 export interface SearchIndexer {
   // Total number of source items available to index for this type. Powers the
   // admin coverage report (indexed vs. total). Omit when the source count is
@@ -174,13 +122,6 @@ export interface SearchIndexer {
   ) => Promise<SearchIndexerLoadResult>;
 }
 
-/**
- * A declared document owner, or `undefined` when there is not really one.
- *
- * `pluginId` is public input, so an empty or whitespace-only string is a missing
- * owner rather than a collection named `""`. Every place that resolves ownership
- * goes through this, so the fallback chains cannot drift apart.
- */
 export const searchDocumentOwner = (
   pluginId: null | string | undefined,
 ): string | undefined => {
@@ -189,16 +130,6 @@ export const searchDocumentOwner = (
   return trimmed === "" ? undefined : trimmed;
 };
 
-/**
- * Turns either `load` result into a page, so the rebuild has one shape to reason
- * about and the compatibility rule lives in exactly one place.
- *
- * A non-empty legacy array reports `requestedLimit` rather than
- * `documents.length`, because that is what the old rebuild advanced by: an
- * indexer may emit several documents per source row (one per language), so a
- * document count would skip rows on every page. An empty array is the only end
- * signal it has.
- */
 export const normalizeSearchIndexerPage = (
   result: SearchIndexerLoadResult,
   requestedLimit: number,
@@ -215,18 +146,6 @@ export interface SearchIndexerConfig extends SearchIndexer {
   pluginId: string;
 }
 
-/**
- * Rejects two indexers claiming the same `itemType`.
- *
- * `itemType` is the index's only namespace, so a collision is not a cosmetic
- * problem: both indexers would `load` on every rebuild, writing over each
- * other's documents whenever their item ids overlap, and the admin coverage
- * report would silently describe only the first one. Failing at boot is the only
- * place this is cheap to notice.
- *
- * Called once per plugin by `buildApiPlugin` and again across every plugin by
- * the global middleware, which is the only place that sees them all.
- */
 export const validateSearchIndexers = (
   indexers: readonly SearchIndexerConfig[],
 ): SearchIndexerConfig[] => {
@@ -246,24 +165,6 @@ export const validateSearchIndexers = (
   return [...indexers];
 };
 
-/**
- * Refuses to boot a provider that cannot express what the installed content
- * types need.
- *
- * Only one requirement so far, and it is narrow on purpose: a content type that
- * is both localized and searchable is indexed once per published translation, so
- * unpublishing or deleting one of them has to remove exactly one document. A
- * provider that ignores `languageCode` would take every language out instead, and
- * because the extra argument is simply dropped there is no error, no log line and
- * no way to notice until somebody searches for content that should still be
- * there.
- *
- * Fails at boot rather than at the delete for the obvious reason: the delete is
- * the moment the damage happens, and by then the install has been running.
- *
- * Content types are passed as plain ids so this stays where the rest of the
- * search contract lives, with no dependency on the Content Engine.
- */
 export const assertSearchProviderCapabilities = (
   provider: SearchProviderApiPlugin,
   {

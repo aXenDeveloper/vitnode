@@ -9,55 +9,11 @@ import { formatPageTitle } from "@/lib/metadata";
 
 import { intlQueryOptions } from "../i18n/query";
 
-/**
- * What every settings route needs, in one place: the strings, the tab title.
- *
- * Its own module rather than a route's, because three routes and a breadcrumb
- * all read the namespace list and a route file importing another route file for
- * it would be a cycle. What is here is the part that is identical for every
- * panel; what a panel actually renders is the panel's own route.
- *
- * The navigation model itself is not here - `SETTINGS_NAV_ITEMS`,
- * `activeSettingsNavKey` and `isSettingsRootPath` live in
- * `@vitnode/core/views/auth/settings/settings-nav`, framework-free, because
- * Next.js reads them too. This namespace is only the part that needs a router
- * with a query cache in front of it.
- */
-
-/**
- * What the settings screens render strings from.
- *
- * `core.auth.settings` is the heading, the description, the navigation and every
- * panel's own title - the same namespace the Next.js layout mounts, kept
- * deliberately: the panels are shared components and they look their strings up
- * by the same keys in both frameworks.
- *
- * `core.global` is listed even though a root provider already provides it,
- * because a per-route provider mounts its own over the root's rather than adding
- * to it - so a set that omitted it would take the global strings away from
- * everything below.
- *
- * One list, read by the loader that fetches it, by the provider that mounts it
- * and by the breadcrumb, because they have to be the same set or a reader
- * suspends on a key nobody warmed.
- */
 export const SETTINGS_NAMESPACES = [
   "core.auth.settings",
   "core.global",
 ] as const;
 
-/**
- * The branch of the message tree these routes read, named for
- * `createTranslator`.
- *
- * The cast this type serves: the translator's key type is derived from the
- * *inferred* type of `messages`, and `AbstractIntlMessages` is a bare index
- * signature - so `MessageKeys` cannot tell a leaf from a branch and collapses to
- * `never`, making every key a type error. Naming the keys these routes read is
- * both the smallest fix and a true statement: rename one in `locales/en.json`
- * and this stops compiling rather than rendering a raw message key into a
- * `<title>`.
- */
 interface SettingsMessages {
   core: {
     auth: {
@@ -76,16 +32,6 @@ export interface SettingsLoaderContext {
   queryClient: QueryClient;
 }
 
-/**
- * The settings messages, as the one query definition every settings route
- * shares.
- *
- * The layout warms it, and so does each panel. The second call is a cache read
- * rather than a second request - same locale, same namespaces, therefore the
- * same key - and each panel asks anyway so that a panel's loader is complete on
- * its own terms rather than relying on the order its parent's happened to run
- * in.
- */
 export const settingsMessagesQueryOptions = (locale: string) =>
   intlQueryOptions({ locale, namespaces: SETTINGS_NAMESPACES });
 
@@ -94,15 +40,6 @@ export interface SettingsPanelData {
   title: string;
 }
 
-/**
- * One panel's tab title, as `"<Panel> - <Settings>"`.
- *
- * The same two lookups the Next.js pages do - `nav.<key>` and `title` - so both
- * frameworks produce the same string, and `formatPageTitle` then appends the
- * site name exactly as Next.js does through `title.template`. Translated in the
- * loader rather than in `head`, which receives no router context and so cannot
- * resolve a locale at all.
- */
 export const settingsPanelTitle = ({
   locale,
   messages,

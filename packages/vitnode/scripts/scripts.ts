@@ -22,16 +22,6 @@ config({
 
 const initMessage = "\x1b[34m[VitNode]\x1b[0m";
 
-/**
- * The invocation, checked before anything can act on it.
- *
- * Above the `switch` and not inside it, because the guarantee is that an invalid
- * `argv` performs *no* command side effect: nothing is generated, nothing is
- * migrated, nothing is seeded and no compiler is started. `vitnode migrate
- * --generat` used to reach `databaseBootstrap` - the mistyped flag simply failed
- * an `=== "--generate"` test and fell through to the full run. It now exits 1
- * here. See `./cli-arguments.ts`.
- */
 const parsed = parseCliArguments(process.argv.slice(2));
 
 if (!parsed.ok) {

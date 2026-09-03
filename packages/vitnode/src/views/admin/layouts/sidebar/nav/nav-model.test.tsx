@@ -15,29 +15,8 @@ import {
   resolveAdminNav,
 } from "./nav-model";
 
-/**
- * The AdminCP sidebar, as rules rather than as rendered markup.
- *
- * Everything asserted here is a decision `buildAdminNav` makes from data: which
- * items a permission set admits, when a parent disappears because its children
- * did, which plugin contributions become items, and where their hrefs point.
- * No React is rendered and no router is involved - the icons are elements, but
- * only their presence is ever read.
- *
- * The point of pinning it at this level is that Stage 12 gives the same model
- * two callers: `getAdminNav` on Next.js and the TanStack AdminCP shell. A rule
- * that lived in either would be a rule the other could drift from.
- */
-
 const CORE = "@vitnode/core";
 
-/**
- * `t` as identity, so an assertion names the message key it expects.
- *
- * `has` answers `false` for everything, which is the untranslated case: a
- * content type falls back to the name derived from its id. That fallback is
- * exactly why the model's translator type requires `has` at all.
- */
 const t: AdminNavTranslator = Object.assign((key: string): string => key, {
   has: () => false,
 });
@@ -96,12 +75,6 @@ describe("the core group", () => {
     ]);
   });
 
-  /**
-   * The dashboard declares no permission, so it is what an admin with none at
-   * all still sees. Every other core item is behind one, and a parent whose
-   * children are all hidden goes with them rather than becoming a link to a page
-   * the API refuses.
-   */
   it("leaves an admin with no permissions only the dashboard", () => {
     const nav = buildAdminNav({
       permissions: EMPTY_STAFF_PERMISSION_SET,
@@ -239,11 +212,6 @@ describe("plugin groups", () => {
     ).toEqual(["core", "@vitnode/example"]);
   });
 
-  /**
-   * A declared entry is navigation and nothing else: it may point anywhere, and
-   * `isOpenInNewTab` survives the filter so an external destination still opens
-   * where its author said it should.
-   */
   it("carries a declared entry's href, target and permission", () => {
     const nav = buildAdminNav({
       permissions: only({
@@ -314,18 +282,6 @@ describe("plugin groups", () => {
   });
 });
 
-/**
- * The model's two stages, and the seam between them.
- *
- * `buildAdminNav` is both stages in one call, which is what the Next.js AdminCP
- * wants because its config, its session and its translator are all in the same
- * render pass. A TanStack Start host is not so lucky: it keeps the plugin
- * registry out of the browser bundle on purpose, so it needs to run the
- * config-only half where the config actually is and the rest in the browser.
- *
- * These assertions pin the property that makes that legal - stage one asks
- * nothing about who is looking or what language they read.
- */
 describe("the two stages", () => {
   it("declares the whole tree without a permission set or a translator", () => {
     const declarations = adminNavDeclarations(config());
@@ -365,11 +321,6 @@ describe("the two stages", () => {
     ).toEqual(buildAdminNav({ permissions, t, vitNodeConfig }));
   });
 
-  /**
-   * A content type's noun is not a message key but a rule over two of them with
-   * a derived fallback, so the declaration carries what the rule needs rather
-   * than a resolved string.
-   */
   it("defers a content type's noun to the second stage", () => {
     const [, example] = adminNavDeclarations(
       config([
@@ -398,11 +349,6 @@ describe("the two stages", () => {
     });
   });
 
-  /**
-   * The untranslated fallback, which is what an installation sees before anybody
-   * has written `{pluginId}.content.article.label`. `t.has` answers false for
-   * everything here, so this is that path.
-   */
   it("resolves a content noun from its id when nothing is translated", () => {
     const vitNodeConfig = config([
       {
@@ -428,19 +374,6 @@ describe("the two stages", () => {
   });
 });
 
-/**
- * Which strings the navigation needs, as data the declarations already carry.
- *
- * The AdminCP shell mounts one message provider above the whole panel. Before
- * Stage 12 connected plugin navigation to it, that provider named the shell's
- * own two namespaces and nothing else - which is right for a sidebar with only
- * core in it, and renders a plugin group's headings as dotted identifiers the
- * moment one appears.
- *
- * What is pinned here is the middle of that: the declarations know enough to
- * say what they need, so a host never has to inspect a message tree to find out
- * and never has to ship one to be safe.
- */
 describe("the namespaces a navigation needs", () => {
   const contentType = (id = "example.article", path = "example/articles") => ({
     definition: {
@@ -461,11 +394,6 @@ describe("the namespaces a navigation needs", () => {
     ]);
   });
 
-  /**
-   * A plugin group costs three namespaces at most: its heading, one branch per
-   * content type it puts in the sidebar, and one for every entry it declared by
-   * hand. Never the plugin's whole tree.
-   */
   it("asks for a leaf for the group heading, not the plugin's tree", () => {
     const namespaces = adminNavNamespaces(
       adminNavDeclarations(
@@ -516,11 +444,6 @@ describe("the namespaces a navigation needs", () => {
     ).toEqual(["@vitnode/example.admin.nav"]);
   });
 
-  /**
-   * De-duplicated and sorted, so two hosts with the same navigation ask for one
-   * cache entry rather than two holding identical bytes - and so a generated
-   * projection produces the same bytes on every machine.
-   */
   it("is deduplicated and deterministically ordered", () => {
     const declarations = adminNavDeclarations(
       config([

@@ -14,17 +14,6 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * `/files`, split down the middle.
- *
- * The same boundary `auth-boundaries.test.ts` and `feed-boundaries.test.ts`
- * draw, with the same machinery and for the same reason: a shared module that
- * reaches `next/headers`, a server action or `@/lib/navigation` cannot be loaded
- * by a TanStack Start route, and nothing about that failure is visible until
- * somebody tries. A scan is the only way to state it, because the offending
- * import is usually three files away from the one being written - this feature's
- * was `next/dynamic`, inside the confirm dialog, behind the delete button.
- */
 const SHARED = {
   bulkActions: join(here, "actions/files-bulk-actions.tsx"),
   deletes: join(here, "my-files-delete.ts"),
@@ -34,13 +23,7 @@ const SHARED = {
 };
 
 /** The Next.js half: `next/headers`, `notFound`, and the server actions. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
+
 const DELETED_NEXT_HALF = join(here, "my-files-table-view.tsx");
 
 const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({

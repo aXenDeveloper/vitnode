@@ -208,15 +208,6 @@ describe("addMessagesToConfig", () => {
 });
 
 describe("addLocaleToAppMessages", () => {
-  /**
-   * The loaders go in `src/locales/app.ts`, not in the config.
-   *
-   * `vitnode.config.ts` is browser-safe and is executed by Vite at build time,
-   * so a `() => import(...)` written into its `i18n` block is both in the
-   * browser bundle and in the build. `appMessages` is the map
-   * `vitnode.server.config.ts` registers, and its loaders are relative to
-   * `src/locales/` rather than to `src/`.
-   */
   it("adds a locale block to an empty map", () => {
     expect(
       addLocaleToAppMessages(

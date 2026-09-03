@@ -5,29 +5,6 @@ import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
 import { rawApiFetch } from "@/lib/fetcher/raw";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
-/**
- * How the AdminCP addresses a generated Content Engine route, and what it does
- * with the answer.
- *
- * The framework-neutral half of the Content Engine's transport: it builds the
- * request and reads the response, and says nothing about *where* the call runs.
- * A TanStack host wraps it in `createIsomorphicFn`; the Next.js AdminCP has its
- * own `content/admin/fetch.server.ts`, which does the same URL arithmetic
- * against `next/headers`.
- *
- * ## Why the typed fetcher cannot be used here
- *
- * Every other AdminCP screen calls `fetcherClient(adminModuleRef<typeof
- * someModule>(), …)`, and the route literals, methods and response schemas all
- * infer from that module's *type*. A content module has no type to name: it is
- * generated at runtime from a definition, one per installed content type, so
- * there is nothing for `typeof` to point at.
- *
- * The response is not untyped as a result - it is typed by the content type's
- * own Zod schema instead, which is stricter than a route literal and is the same
- * arrangement `contentApiFetch` already uses on the Next.js side.
- */
-
 /** Which generated module a request is for. */
 export interface ContentApiTarget {
   /** `definition.permissionModule` - the module name under `content/`. */
@@ -45,18 +22,6 @@ export interface ContentApiRequest {
   target: ContentApiTarget;
 }
 
-/**
- * The request, as the shared fetcher's arguments.
- *
- * `/api/{pluginId}/admin/content/{permissionModule}{path}` - exactly what
- * `buildContentAdminModule` mounts, spelled in one place so a change to the
- * mount point is a change to one function.
- *
- * `withPagination` is deliberately never set. It writes `first=10` and
- * `search=""` *inside* the URL builder, invisibly to anything upstream including
- * a cache key - so two requests that differ only in that hidden default would
- * share one entry. Every page size these routes send is explicit.
- */
 export const contentApiFetchArgs = ({
   body,
   method,

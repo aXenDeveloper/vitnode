@@ -9,24 +9,11 @@ import { findPackagePath } from "./shared/file-utils.js";
 
 export const CORE_PLUGIN_ID = "@vitnode/core";
 
-/**
- * Which of a package's two locale trees an app actually uses. A package ships a
- * frontend tree (`src/locales/<locale>.json`) and, if it renders server-side, a
- * server tree (`src/locales/api/<locale>.json`). An app that only runs the API
- * has no use for the frontend's UI copy, so `create` and `check` scope to the
- * trees the app's configs prove it needs.
- */
 export interface AppScope {
   api: boolean;
   web: boolean;
 }
 
-/**
- * The scope implied by which config files an app has: a `vitnode.config.ts`
- * means it serves the frontend, a `vitnode.api.config.ts` means it runs the
- * API, and a single app has both. An app with neither is treated as both, so
- * the tools stay useful rather than silently seeding nothing.
- */
 export const appScope = ({
   api,
   web,

@@ -14,34 +14,6 @@ import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import { adminStaffQuery } from "./query";
 
-/**
- * `/admin/core/staff/admins` and `/admin/core/staff/moderators` - one screen,
- * two routes.
- *
- * The two lists differ in exactly one value: the staff type, which decides the
- * API endpoint, the permission module and the strings. Everything else - the
- * columns, the padlock, the delete, the pager - is identical, which is why
- * `type` is a parameter rather than a second copy of this file.
- *
- * ## The permission model is the Next.js page's, unchanged
- *
- *     staff_admins.can_view      the administrators list, and its API route
- *     staff_admins.can_create    the "add" button
- *     staff_admins.can_edit      the row's pencil, and the edit screen
- *     staff_admins.can_delete    the row's bin
- *
- * ...and `staff_moderators.*` for the other list. `staffPermissionModuleFor` is
- * the mapping, and it is the frontend's copy of `staffPermissionModuleByType`.
- */
-
-/**
- * What these screens render strings from.
- *
- * `admin.staff` is the heading, the tabs, the columns and the delete dialog;
- * `core.global` is the table's furniture, the confirm dialog's buttons and the
- * error toasts. The same set `<I18nProvider namespaces="admin.staff">` provides
- * in the Next.js pages.
- */
 export const ADMIN_STAFF_NAMESPACES = ["admin.staff", "core.global"] as const;
 
 export interface AdminStaffRouteData {
@@ -53,14 +25,6 @@ export interface AdminStaffRouteData {
   type: PermissionStaffType;
 }
 
-/**
- * Both reads, in parallel, after the permission is checked.
- *
- * The permission is `staff_admins.can_view` or `staff_moderators.can_view`
- * depending on the list, which is what `<AdminPermissionRequired>` states in the
- * Next.js page and what `listAdminsStaffAdminRoute` /
- * `listModeratorsStaffAdminRoute` declare as their `adminStaffPermission`.
- */
 export const loadAdminStaffRoute = async ({
   adminAccess,
   locale,

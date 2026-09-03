@@ -21,14 +21,6 @@ import { findRepoRoot } from "./shared/file-utils.js";
 
 const LOCALE_CODE_PATTERN = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 
-/**
- * One message loader, indented, with the path spelled relative to the file it
- * is being written into.
- *
- * `src/locales/app.ts` sits inside `src/locales`, so its loaders are
- * `./<pluginId>/<code>.json`. A config at `src/` reaches the same file through
- * `./locales/<pluginId>/<code>.json`.
- */
 const messageEntry = (
   indent: string,
   pluginId: string,
@@ -286,11 +278,7 @@ export const buildI18nFile = ({
 
   return `import type { VitNodeI18nConfig } from "@vitnode/core/lib/i18n/types";
 
-/**
- * Shared by \`vitnode.config.ts\` (web) and \`vitnode.api.config.ts\` (API) so the
- * site and its emails agree on which languages exist. Packages ship their own
- * languages - only what this app adds or reworks needs a file here.
- */
+
 export const i18n = {
   defaultLocale: "${defaultLocale}",
   locales: [

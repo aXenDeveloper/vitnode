@@ -46,15 +46,7 @@ export const vitNodeApiConfig = buildApiConfig({
       },
     ],
   },
-  /**
-   * The installation's languages, from the one module that declares them.
-   *
-   * Not optional here, whatever the type says: this app owns the schema, so
-   * `vitnode db:prepare` seeds `core_languages` from this list. Left unset, the
-   * API derives its locales from whatever the installed packages ship - which
-   * answers "what can be translated", not "what does this site serve" - and the
-   * seed falls back to `en` alone.
-   */
+
   i18n,
   dbProvider: drizzle({
     connection: POSTGRES_URL,
@@ -100,21 +92,7 @@ export const vitNodeApiConfig = buildApiConfig({
       bucket: process.env.SUPABASE_STORAGE_BUCKET,
     }),
   },
-  /**
-   * Sign-in with Discord, Google and Facebook.
-   *
-   * Carried over from `apps/docs` when Stage 17 deleted it: that application's
-   * config was the only place in the repo registering these three adapters, and
-   * `@vitnode/core/api/adapters/sso/*` would otherwise have had no consumer at
-   * all - implementations behind a live route (`/login/sso/:providerId`) with
-   * nothing showing how to switch them on.
-   *
-   * Registering one with its environment variables unset is safe and is the
-   * normal state here: each adapter defaults `clientId`/`clientSecret` to `""`
-   * and only fails when somebody actually tries that provider, with "Missing
-   * Discord client ID or secret" rather than a broken login page. So the list is
-   * what this API *supports*; the environment decides what works.
-   */
+
   authorization: {
     ssoAdapters: [
       DiscordSSOApiPlugin({

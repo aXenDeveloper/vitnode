@@ -28,13 +28,6 @@ const disabledEditorial: ResolvedContentEditorialConfig = {
   scheduling: { enabled: false },
 };
 
-/**
- * The same rules as `search.pathTemplate`, with `{token}` in place of `{slug}`.
- *
- * Deliberately not shared with it: the two differ in their placeholder and in
- * the config key their messages name, and a parameterised version would say
- * less about what the author got wrong.
- */
 const assertPreviewPathTemplate = (id: string, template: string): void => {
   if (!template.startsWith("/")) {
     throw new ContentEngineError(

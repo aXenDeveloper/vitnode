@@ -4,23 +4,7 @@ export {
   AdminStaffCreateBreadcrumbContent,
   AdminStaffEditBreadcrumbContent,
 } from "./breadcrumbs";
-/**
- * `/admin/core/staff/*` - the AdminCP staff screens, for a TanStack Start host.
- *
- *     ./query         three query definitions and three writes - each of which
- *                     also invalidates the admin session, because a staff entry
- *                     *is* a permission grant
- *     ./route         both lists: one screen, parameterised by staff type
- *     ./create-route  adding a role or a user to a group
- *     ./edit-route    choosing what an entry may do, and the chunked label load
- *                     the flat permission-message keys require
- *     ./route-search  the URL contract both lists share
- *     ./server        the SSR transports, reached only through `./query`
- *
- * The rendering is framework-free and lives in
- * `@/views/admin/views/core/staff`; the rules the forms apply are
- * `staff-model.ts`, which is pure and has its own tests.
- */
+
 export type { AdminStaffCreateRouteData } from "./create-route";
 export {
   ADMIN_STAFF_CREATE_NAMESPACES,

@@ -57,15 +57,6 @@ const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
   slugField: "",
 };
 
-/**
- * The schemas one translation row is written and read through.
- *
- * Content values live under `values`, and everything else - the locale, the
- * expected version - is transport that sits *beside* them. That split is what
- * lets `values` stay a strict object of the content type's own localized fields:
- * an `expectedVersion` key inside it would be indistinguishable from a field
- * somebody is trying to mass-assign.
- */
 export interface ContentTranslationSchemas<
   TDefinition = AnyContentTypeDefinition,
 > {
@@ -98,33 +89,15 @@ export interface ContentTranslationSchemas<
 }
 
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
-  /**
-   * The advanced collections of one record: a `number[]` per to-many relation
-   * and an array of identified children per repeatable.
-   *
-   * An empty object for a content type that declares neither, which is what
-   * lets a generated route compose it unconditionally and still produce exactly
-   * the response schema it produced in Stage 5.
-   */
   advancedSelect: z.ZodObject<z.ZodRawShape>;
-  /**
-   * Request body for create. Rejects unknown keys and system columns.
-   *
-   * Shared fields only. A localized content type's localized values arrive
-   * through `translation.create` instead, in the same transaction - see
-   * `localizedService.create`.
-   */
+
   create: z.ZodType<ContentCreateInput<TDefinition>>;
   /**
    * Query-string filters, restricted to filterable fields. Non-strict: it is
    * parsed against the whole query string, so unrecognised keys are ignored.
    */
   filters: z.ZodObject<z.ZodRawShape>;
-  /**
-   * The create/update shape as `AutoForm` needs it: a plain `ZodObject` with
-   * no `z.date()` anywhere, because `AutoForm` runs `z.toJSONSchema` on it and
-   * Zod v4 throws on dates.
-   */
+
   form: z.ZodObject<z.ZodRawShape>;
   /** `orderBy` allowlist plus direction. */
   order: z.ZodObject<z.ZodRawShape>;
@@ -150,25 +123,11 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
    * routes can `.extend(...)` it with the joined relation labels.
    */
   selectObject: z.ZodObject<z.ZodRawShape>;
-  /**
-   * The per-language schemas, or `null` when the content type is not localized.
-   *
-   * `null` rather than empty schemas, matching how `model.publicService` is
-   * `undefined` without a public API: a nullable value reads naturally in code
-   * that does not know which content type it was handed, and it cannot be used
-   * by accident.
-   */
+
   translation: ContentTranslationSchemas<TDefinition> | null;
   /** Request body for update. Every field optional, but never empty. */
   update: z.ZodType<ContentUpdateInput<TDefinition>>;
-  /**
-   * Request body for an editorial update: the field values, plus the version
-   * the editor started from.
-   *
-   * An envelope rather than a key inside `values`, because `update` is a strict
-   * object of *content fields* and `expectedVersion` is transport. Empty for a
-   * content type without `editorial`, whose update body stays exactly as it was.
-   */
+
   updateEnvelope: z.ZodType<{
     expectedVersion: number;
     values: ContentUpdateInput<TDefinition>;
@@ -284,11 +243,6 @@ const applyNullable = (
   fieldValue: ContentFieldDescriptor,
 ): z.ZodType => (fieldValue.nullable ? schema.nullable() : schema);
 
-/**
- * `required` -> present. Otherwise a declared default becomes a Zod default so
- * the value the API writes always matches the column default, and everything
- * else is simply optional.
- */
 const applyPresence = (
   schema: z.ZodType,
   fieldValue: ContentFieldDescriptor,
@@ -313,22 +267,6 @@ const applyPresence = (
   return schema.optional();
 };
 
-/**
- * A set of references, with the field's own bounds on it.
- *
- * Positive integers, distinct, and bounded. Distinctness is enforced here rather
- * than deduplicated silently: `[2, 2, 5]` is a caller that thinks it is setting
- * three categories, and quietly storing two would be the kind of "helpful"
- * behaviour that hides a bug in the caller's own list handling.
- *
- * `min` is how a content type says "at least one" about something the *storage*
- * cannot say it about: a to-many reference is never `required`, because the
- * empty set is a legitimate value for a column that does not exist. A blog
- * article that must be filed under a category is a rule about the article rather
- * than about the junction table, so it is enforced here - in the generated
- * schema, which the API and the AdminCP form both go through - rather than by a
- * check somewhere one of the two would eventually skip.
- */
 const relationSetSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   const min = (fieldValue as { min?: number }).min;
   // A file collection carries its own ceiling and defaults to a much lower one:
@@ -349,14 +287,6 @@ const relationSetSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   });
 };
 
-/**
- * One repeatable child, as it is written.
- *
- * `id` is optional and is the whole protocol: present means "this is the
- * existing child with that identifier", absent means "create a new one". There
- * is no `position` - the array order is the order, so a payload cannot describe
- * two rows in the same slot.
- */
 const repeatableRowSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   const inner = contentInnerFields(fieldValue);
   const names = Object.keys(inner);
@@ -392,15 +322,6 @@ const leafInputShape = (
     }),
   );
 
-/**
- * A group, as it is written on create: a nested object of its leaves.
- *
- * Strict, like every other content object in this file: an unknown key inside
- * `seo` is a typo the author wants to hear about, not something to drop. The
- * four presence states a group can be in - absent, `null`, present-and-complete,
- * present-with-a-required-leaf-missing - fall straight out of `.nullable()`,
- * `.optional()` and the leaves' own requiredness, with no fifth code path.
- */
 const groupInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   const inner = contentInnerFields(fieldValue);
   const object = z.strictObject(leafInputShape(inner, Object.keys(inner)));
@@ -408,14 +329,6 @@ const groupInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   return applyPresence(applyNullable(object, fieldValue), fieldValue);
 };
 
-/**
- * A group, as it is written on update: every leaf optional.
- *
- * This is what makes `{ seo: { description } }` a one-leaf change rather than a
- * request to blank `seo.title`. `.refine` keeps the object from being empty, so
- * `{ seo: {} }` is a mistake rather than a silent no-op that still counts as a
- * write.
- */
 const groupPatchSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   const inner = contentInnerFields(fieldValue);
   const names = Object.keys(inner);
@@ -465,11 +378,6 @@ const inputShape = (
     }),
   );
 
-/**
- * Update never applies create defaults: `PUT { title }` must leave `status`,
- * `views` and every other defaulted column alone, not silently reset them to
- * the column default. Every field is simply optional here.
- */
 const updateShape = (
   fields: ContentFieldMap,
   names: readonly string[],
@@ -495,21 +403,6 @@ const updateShape = (
     }),
   );
 
-/**
- * The equality filters a generated list route accepts, keyed by field name.
- *
- * Filters arrive as query-string values, so every entry parses and coerces from
- * a string. Only kinds in `CONTENT_FILTERABLE_FIELD_KINDS` get one - the same
- * list the query builder and `FilterableContentFieldKind` use.
- *
- * A plain (non-strict) object on purpose: the list route hands it the *whole*
- * query string, which also carries `cursor`, `first`, `last`, `order`, `orderBy`
- * and `search`. Those are parsed separately, so this schema ignores every key it
- * does not recognise rather than rejecting it. The upshot is that a query string
- * cannot smuggle an unsupported field into `buildFilterCondition` - it simply
- * never appears in the parsed result. A direct service call can still pass one,
- * which is why the query builder re-checks kind and nullability itself.
- */
 const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
   Object.fromEntries(
     Object.entries(fields)
@@ -547,24 +440,9 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
       }),
   );
 
-/**
- * An exposed relation comes back as an identifier, and nothing else.
- *
- * No label: the only one available is the target's `admin.titleField`, which is
- * administrative metadata and may name a field the target never publishes. See
- * `ContentPublicRelation` for the reasoning.
- */
 const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
   z.object({ id: z.number() });
 
-/**
- * Groups an allowlist's leaf paths by the container they belong to.
- *
- * `["title", "seo.title", "seo.description"]` becomes `{ seo: ["title",
- * "description"] }` and leaves `"title"` to the flat pass. Order within a
- * container follows the allowlist, so the generated response shape is as
- * deterministic as everything else the engine emits.
- */
 export const groupPublicLeafPaths = (
   names: readonly string[],
 ): Map<string, string[]> => {
@@ -586,14 +464,6 @@ export const groupPublicLeafPaths = (
   return owners;
 };
 
-/**
- * One exposed container - a group or a repeatable - carrying **only** the leaves
- * the allowlist named.
- *
- * This is where leaf-level privacy is actually implemented: `seo.indexable` is
- * absent from the shape, and therefore absent from the `SELECT` the shape drives,
- * however many other `seo.*` paths are public.
- */
 const publicContainerSchema = (
   fieldValue: ContentFieldDescriptor,
   leaves: readonly string[],
@@ -613,17 +483,6 @@ const publicContainerSchema = (
   return applyNullable(z.object(shape), fieldValue);
 };
 
-/**
- * The public response shape, built from the allowlist and nothing else.
- *
- * This is also what the public service's `SELECT` map is derived from, so a
- * field missing here is a field that never leaves Postgres - not one that is
- * fetched and then deleted.
- *
- * Takes **every** declared field, shared and localized alike: a public localized
- * response is one base row joined to one translation, so where a value is stored
- * is a fact about the query rather than about the response.
- */
 const publicSelectShape = (
   fields: ContentFieldMap,
   publicApi: ResolvedContentPublicApiConfig,
@@ -685,18 +544,6 @@ const publicSelectShape = (
   ),
 });
 
-/**
- * The translation schemas for one content type, or `null` when it has none.
- *
- * Takes only the pieces it needs rather than a whole definition, so
- * `defineContentType` can call it before the definition object exists and
- * without re-widening its field map.
- *
- * Localized fields only, and never a metadata key: `itemId` and `languageId`
- * identify the row rather than describing it, and `version` is assigned by the
- * conditional `UPDATE` that guards on it. All three are absent from the strict
- * `values` object, which is what stops any of them being mass-assigned.
- */
 const buildTranslationSchemas = <TDefinition>({
   admin,
   localizedFields,

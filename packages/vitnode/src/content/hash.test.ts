@@ -5,30 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { clampWithFingerprint, fingerprint } from "./index";
 
-/**
- * The hashing module's public surface, and the export map that keeps its old
- * name working.
- *
- * Static and pure: the manifest is read as JSON and the two functions are
- * imported from the barrel. Nothing here renders, fetches or resolves through a
- * bundler - what is being pinned is a file's contents and a module's exports.
- *
- * ## Why there is a test about a filename at all
- *
- * `content/hash.ts` was `content/fingerprint.ts` until Stage 13. Ad-blocking
- * filter lists match any request path against `fingerprint*.js` - the rule is
- * aimed at browser-fingerprinting scripts - and Vite serves every module by its
- * real filename in dev, so `/@fs/.../content/fingerprint.js` came back as
- * `net::ERR_BLOCKED_BY_CLIENT`. The failure surfaces as a
- * `Failed to fetch dynamically imported module` against the *entry*, naming a
- * file in `@tanstack/react-start` that is perfectly healthy, so it is expensive
- * to trace and trivial to reintroduce.
- *
- * The rename is therefore load-bearing, and so is the absence of the old file.
- * Both are asserted below, because "add a forwarding `fingerprint.ts`" is the
- * obvious-looking fix for the compatibility half and would put the blocked
- * filename straight back into the dev server's graph.
- */
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = join(here, "../..");
 
@@ -112,11 +88,6 @@ describe("the content/fingerprint compatibility subpath", () => {
     });
   });
 
-  /**
-   * Stated as its own assertion rather than left implicit in the one above,
-   * because this is the regression: a target reintroducing the blocked
-   * filename is exactly what the export exists to avoid.
-   */
   it("never names a file called fingerprint", () => {
     for (const target of Object.values(entry as Record<string, string>)) {
       expect(target).not.toMatch(/fingerprint/);
@@ -143,11 +114,6 @@ describe("the renamed source file", () => {
     expect(existsSync(join(here, "hash.ts"))).toBe(true);
   });
 
-  /**
-   * The assertion that keeps the ad-blocker fix from being undone by a
-   * well-meaning "restore the old path" commit. Compatibility is the export
-   * map's job; no file in this package may be named `fingerprint`.
-   */
   it("has no fingerprint.ts beside it", () => {
     expect(existsSync(join(here, "fingerprint.ts"))).toBe(false);
   });

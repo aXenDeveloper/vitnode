@@ -8,14 +8,6 @@ const Row = ({ center }: { center?: boolean }) => (
   </div>
 )
 
-/**
- * What the hero shows while the beam's chunk is on the wire.
- *
- * The same three rows at the same sizes, so the hero does not resize when the
- * real thing arrives. It is the Suspense fallback for a `React.lazy` boundary
- * now rather than for an eagerly imported component, which is what makes it a
- * boundary that actually defers something - see `home-content.tsx`.
- */
 export const AnimatedBeamHomeSkeleton = () => (
   <div
     aria-busy="true"

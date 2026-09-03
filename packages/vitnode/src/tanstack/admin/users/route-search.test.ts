@@ -7,12 +7,6 @@ import {
   usersSearchParams,
 } from "./route-search";
 
-/**
- * The users list's URL contract, which is the shared admin-table one plus a role
- * filter - so what is tested here is the filter, and the fact that adding it
- * left everything else alone.
- */
-
 describe("the request a users URL is asking for", () => {
   it("always names a page size, so the key describes the request", () => {
     expect(usersRouteParams({})).toEqual({ first: "10" });

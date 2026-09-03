@@ -45,14 +45,6 @@ const plain = createContentModel(testPostContentType, {
 
 const PLUGIN_ID = "@vitnode/example";
 
-/**
- * The generated routes with the storage model stubbed.
- *
- * `upload` echoes what a real one would return - including the *stored* name,
- * which is the interesting knob: `storedAs` lets a case pretend the image
- * pipeline re-encoded a PNG to WebP, which is exactly the mismatch the route has
- * to catch before the identifier ever reaches a content row.
- */
 const harness = ({
   storageThrows,
   storedAs,

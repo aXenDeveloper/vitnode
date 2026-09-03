@@ -1,13 +1,5 @@
 import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_LOCALE_PATTERN } from "./const";
 
-/**
- * A locale reduced to the form two codes are compared in.
- *
- * Trimmed and lower-cased, because a locale travels in a URL and in an
- * `Accept-Language` header, and `PL`, `pl` and ` pl ` all name the same language.
- * The **canonical** spelling always comes back off `core_languages.code` - this is
- * only ever the comparison key, never a value that gets stored or returned.
- */
 export const normalizeContentLocale = (value: string): string =>
   value.trim().toLowerCase();
 
@@ -15,13 +7,6 @@ export const normalizeContentLocale = (value: string): string =>
 export const contentLocalesMatch = (a: string, b: string): boolean =>
   normalizeContentLocale(a) === normalizeContentLocale(b);
 
-/**
- * Whether a string could be a locale at all.
- *
- * Cheap and deliberately in front of every lookup: an explicit `?locale=` is
- * attacker-controlled, and a 200-character value has no business reaching the
- * language registry, the cache-tag builder or a log line.
- */
 export const isContentLocaleShaped = (value: string): boolean => {
   const trimmed = value.trim();
 
@@ -32,14 +17,6 @@ export const isContentLocaleShaped = (value: string): boolean => {
   );
 };
 
-/**
- * Where the locale of a public read came from.
- *
- * Reported rather than inferred, because the three sources have different cache
- * consequences: an `explicit` locale is part of the URL and needs no `Vary`, a
- * `negotiated` one depends on a request header and does, and `default` depends on
- * nothing at all.
- */
 export type ContentLocaleSource = "default" | "explicit" | "negotiated";
 
 export interface ContentLocaleResolution {
@@ -48,18 +25,6 @@ export interface ContentLocaleResolution {
   source: ContentLocaleSource;
 }
 
-/**
- * One `Accept-Language` header, best language first.
- *
- * Quality values are honoured because that is what they are for; `q=0` is a
- * refusal and is dropped rather than ranked last. `*` is dropped too - it means
- * "anything", which is what the default locale already is, so keeping it would
- * turn every request into a negotiated one and make `Vary: Accept-Language`
- * unavoidable for no benefit.
- *
- * Malformed input is skipped, never thrown on: this parses a header that anybody
- * can send.
- */
 export const parseAcceptLanguage = (header: string): string[] =>
   header
     .split(",")
@@ -83,13 +48,6 @@ export const parseAcceptLanguage = (header: string): string[] =>
     .sort((a, b) => b.q - a.q)
     .map(entry => entry.tag);
 
-/**
- * The best available language for one `Accept-Language` header, or `null`.
- *
- * Two passes, and the order matters: an exact match wins outright, and only then
- * is `pt-BR` allowed to satisfy a request for `pt`. Doing it in one pass would let
- * a header of `pt, pt-BR` resolve to `pt-BR` when `pt` is right there.
- */
 export const negotiateContentLocale = (
   header: string,
   available: readonly string[],
@@ -117,29 +75,6 @@ export const negotiateContentLocale = (
   return null;
 };
 
-/**
- * The one place that decides which language a public read is for.
- *
- * **Explicit, then negotiated, then default**, and the precedence is the whole
- * point:
- *
- * - An **explicit** locale is a deliberate request for one language. It is never
- *   quietly replaced - an explicit locale that names no available language comes
- *   back as `null`, and the caller answers the same 404 it answers for a slug that
- *   does not exist. Substituting the default here would serve English to a URL
- *   that said `pl`, which is the exact accident locale-aware caching then makes
- *   permanent.
- * - A **negotiated** locale is a preference, so an unmatched one falls through to
- *   the default rather than failing. A visitor whose browser asks for Icelandic
- *   should get the site, not a 404.
- * - The **default** is the content type's own `localization.defaultLocale`, which
- *   is the one language every record is guaranteed to exist in.
- *
- * `available` is the set of locales this install actually serves. Passing the
- * disabled ones in would let a public URL address a language the app has switched
- * off, which is the read-side half of the rule that already stops content being
- * *written* into one.
- */
 export const resolveContentPublicLocale = ({
   acceptLanguage,
   available,

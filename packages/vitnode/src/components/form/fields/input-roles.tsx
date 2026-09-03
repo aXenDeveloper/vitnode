@@ -25,49 +25,12 @@ export type AutoFormRolesProps = ItemAutoFormComponentProps & {
   excludeIds?: number[];
   multiple?: boolean;
   placeholder?: string;
-  /**
-   * Required, and there is no default. See the note on the component below:
-   * reading roles is the host's business, and a component that guessed would be
-   * a component whose behaviour depended on how it was bundled.
-   */
+
   search: RoleSearch;
   searchPlaceholder?: string;
   selected?: RoleOption[];
 };
 
-/**
- * The role field, and it belongs to no framework.
- *
- * Two things used to pin it to Next.js, and both were invisible until something
- * other than Next.js rendered it - which is exactly what `/docs/ui/roles`
- * started doing when the documentation moved to TanStack Start.
- *
- * **`next-intl`.** Its root entry re-exports `use-intl`, so this worked, and
- * that is the trap: a shared component reading it is one a framework-neutral
- * package cannot claim to be framework-neutral about. Every migrated component
- * in this package reads `use-intl` directly, and now so does this one.
- *
- * **The default search.** `search` defaulted to `searchRoles`, a `"use server"`
- * action carrying `server-only` and Next's request scope. Deferring it behind an
- * `await import()` moved the failure from load time to the first keystroke,
- * which is worse rather than better: a host that cannot run the action still
- * cannot run it, and now finds out inside a dropdown.
- *
- * So the dependency is injected and **required**. Reading roles is the host's
- * business: the AdminCP hands over `searchAdminRolesInBrowser`, a browser fetch
- * to Hono, and a host with its own source of roles hands over that instead.
- * There is deliberately no fallback and no environment sniffing - a component
- * that guessed its host would be a component whose behaviour depends on how it
- * was bundled.
- *
- * There was briefly a third option: an adapter beside this file that injected
- * the Server Action as a default. It is gone with the rest of that surface, and
- * it must not come back in the shape of a default parameter here - which is the
- * one thing the boundary test below asserts about a file that no longer exists.
- *
- * `packages/vitnode/src/components/form/fields/roles-boundaries.test.ts` holds
- * all of it.
- */
 export const AutoFormRoles = ({
   description,
   disabled,

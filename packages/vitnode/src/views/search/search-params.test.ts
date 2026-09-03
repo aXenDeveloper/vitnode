@@ -19,16 +19,6 @@ import {
   TERM_SEARCH_SORT,
 } from "./search-params";
 
-/**
- * What a search request means, asserted where it is decided.
- *
- * Every one of these is a pure function over data, which is the whole reason
- * they were pulled out of the two components and the two route files that used
- * to answer these questions inline. Nothing here mounts React, reaches a
- * database or builds a URL: the feed's request is `searchFeedRequest`'s job and
- * the API's own behaviour is the API's.
- */
-
 describe("a term from a URL", () => {
   it("keeps a term somebody actually typed", () => {
     expect(normalizeSearchTerm("hono")).toBe("hono");

@@ -5,34 +5,15 @@ import { normalizeNamespaceList } from "./namespaces";
 import { comparePluginRoutes } from "./order";
 import { formatRoutePath, relativeRouteSegments, routeMatchKey } from "./path";
 
-/**
- * One route in a manifest, placed.
- *
- * The manifest is a flat list because that is the honest serialisation of it -
- * every route names its own full path and, at most, its own parent. This is the
- * same list read as the tree it describes, and it is derived rather than stored
- * so there is no second representation to keep in step.
- */
 export interface PluginRouteNode {
   /** In manifest order: static before dynamic, shallow before deep. */
   children: PluginRouteNode[];
   /** How many parents are above this route. A root is `0`. */
   depth: number;
-  /**
-   * This route claims exactly its parent's URL - it is that layout's index.
-   *
-   * `/settings` under the `/settings` layout: `page.tsx` beside `layout.tsx` in
-   * the tree a plugin used to ship, and `index.tsx` beside `settings.tsx` in the
-   * one a TanStack host writes.
-   */
+
   isIndex: boolean;
   parent: null | PluginRouteNode;
-  /**
-   * What this route adds to its parent's path, as a path: `/security` for
-   * `/settings/security` under `/settings`, and `/` for an index route.
-   *
-   * The form a router composes with. A root route's is its full path.
-   */
+
   relativePath: string;
   /** {@link PluginRouteNode.relativePath}, parsed. Empty for an index route. */
   relativeSegments: PluginRouteSegment[];
@@ -42,12 +23,7 @@ export interface PluginRouteNode {
 /** A manifest, as the tree it describes. */
 export interface PluginRouteGraph {
   byId: ReadonlyMap<string, PluginRouteNode>;
-  /**
-   * Every node, **parents before children**, deterministically ordered.
-   *
-   * The order a route tree can be built in with one pass and no lookahead: by
-   * the time a node is reached, the route it hangs from exists.
-   */
+
   nodes: PluginRouteNode[];
   /** The routes with no parent, in manifest order. */
   roots: PluginRouteNode[];
@@ -71,55 +47,6 @@ const fail = (
   });
 };
 
-/**
- * A manifest, read as a tree - and every way that could be wrong, refused.
- *
- * Called twice on the same declarations by design: once while an application is
- * built, where it is what turns a tree that cannot hold together into a failed
- * build, and once by the runtime over the same plugins' own modules, where it is
- * what decides the order routes are mounted in. One function, so the tree an
- * application mounts is provably the tree its build validated - a second
- * implementation for the runtime is exactly how a check ends up passing at build
- * time and being wrong in production.
- *
- * It is pure and it is cheap: a map, four passes over a list that has as many
- * entries as the app has plugin pages.
- *
- * ## What it refuses
- *
- * - **A duplicate id.** Two routes cannot share the key their module is
- *   registered under.
- * - **A parent that does not exist**, in a manifest that ought to contain it.
- * - **A parent in another plugin.** Unrepresentable in a declaration - a parent
- *   is the layout a route was nested inside, in its own plugin's tree - and
- *   still checked here, because ids are global by the time this runs. One
- *   plugin's page inside another plugin's frame would make a route tree depend
- *   on which plugins happen to be installed beside it.
- * - **A parent that is not a layout.** A page has no children; a route under one
- *   would never render.
- * - **A parent in another area.** Nesting is how a shell is chosen, so a route
- *   whose `area` disagrees with its layout's is a declaration that does not
- *   describe where the page actually renders.
- * - **A cycle**, including a route that is its own parent.
- * - **A child whose path is not the parent's path or an extension of it** - a
- *   manifest that lies about where its pages are.
- * - **A nested layout that adds no segment.** A pathless group is a shape this
- *   contract does not have; said plainly rather than half-supported.
- * - **A layout with no children**, which is a route nothing can ever match.
- * - **An unsatisfiable requirement** - a guest-only page inside a subtree that
- *   requires a signed-in visitor, which no visitor could ever reach. Checked
- *   against the whole ancestor chain, not the immediate parent: a neutral layout
- *   in between forwards the requirement above it rather than clearing it.
- * - **Two routes answering one URL**, in the one shape the flat list cannot
- *   judge: a layout shares its path with its own index child and with nothing
- *   else, so a page and somebody else's layout at that path are two routes
- *   competing for it.
- *
- * Ordering depends on the routes and on nothing else: children are sorted with
- * the manifest's own comparator, so the tree is the same whichever order the
- * plugins were configured in, whichever order their manifests happened to load,
- * and on whichever machine.
- */
 export const buildPluginRouteGraph = (
   manifest: readonly PluginRoute[],
 ): PluginRouteGraph => {
@@ -231,19 +158,6 @@ export const buildPluginRouteGraph = (
   // only from roots, it cannot enter the cycle to loop in it.
   const reached = new Set<PluginRouteNode>();
 
-  /**
-   * The requirement in force, and which ancestor declared it.
-   *
-   * The whole ancestor chain rather than the immediate parent, because a guard
-   * is a guard wherever it sits: every matched route's `beforeLoad` runs, so a
-   * `guest` page under a *neutral* layout under an `authenticated` one is still
-   * a page no visitor can reach - the outer guard turns a guest away and the
-   * inner one turns everybody else away. Compared only against the nearest
-   * ancestor, that tree passed validation and 404'd for every human being.
-   *
-   * A node is carried rather than a bare requirement so a diagnostic can name
-   * the route that actually imposed it, which is not necessarily the parent.
-   */
   const walk = (
     node: PluginRouteNode,
     depth: number,
@@ -412,19 +326,6 @@ export const buildPluginRouteGraph = (
   return { byId, nodes, roots };
 };
 
-/**
- * Every namespace a route's *strings* need - its own, plus its layouts'.
- *
- * A page mounts one message provider, and that provider replaces the shell's
- * rather than adding to it, so it has to name every namespace anything below it
- * renders from - including the frame its layout drew. A layout declaring
- * `["@vitnode/blog"]` and a page declaring `["@vitnode/blog.post"]` is a page
- * that needs both, and asking each route to restate its ancestors' is how the
- * two drift.
- *
- * De-duplicated and sorted, so two routes with the same set warm and read one
- * cache entry rather than two holding identical bytes.
- */
 export const pluginRouteNamespaces = (node: PluginRouteNode): string[] => {
   const namespaces: string[] = [];
 

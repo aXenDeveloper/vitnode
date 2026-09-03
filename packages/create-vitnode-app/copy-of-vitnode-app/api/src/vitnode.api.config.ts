@@ -12,25 +12,7 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
-  /**
-   * The languages this installation serves.
-   *
-   * The API half of a split deployment. `apps/web/src/vitnode.config.ts`
-   * declares the same list, and the two are one declaration in two places by
-   * necessity rather than by design: they are separate packages, so neither can
-   * import the other's. Nothing walks the filesystem looking for the web app's
-   * config either - a bootstrap that guessed at a sibling application is exactly
-   * what that replaced, and it guessed wrong the moment the two were not laid
-   * out the way it expected.
-   *
-   * They have to agree, and this is the copy that matters most: this app owns
-   * the schema, so `vitnode db:prepare` seeds `core_languages` from *this* list.
-   * A language that is here and not in the web app's renders nowhere; one that
-   * is in the web app's and not here has no row in the database.
-   *
-   * Packages ship their own translations, so a new locale needs no `messages`
-   * entry - anything untranslated falls back to `defaultLocale` key by key.
-   */
+  
   i18n: {
     defaultLocale: "en",
     locales: [{ code: "en", name: "English" }],

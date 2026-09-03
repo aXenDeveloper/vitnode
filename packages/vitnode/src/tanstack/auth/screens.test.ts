@@ -9,12 +9,6 @@ import {
   ssoStartFeedback,
 } from "./screens";
 
-/**
- * The auth contract translated into the vocabulary `@vitnode/core`'s shared auth
- * screens speak. Total functions over finite unions, so every outcome the API
- * can produce is checked here rather than in a browser.
- */
-
 describe("signInFormResult", () => {
   it("says nothing on success, which is how the shared form knows to stand down", () => {
     expect(signInFormResult({ ok: true })).toBeUndefined();
@@ -84,11 +78,6 @@ describe("anonymousSession", () => {
     expect(anonymousSession(session).user).toBeNull();
   });
 
-  /**
-   * Everything about the *installation* survives a sign-out. Building
-   * `{ ai: { models: [] }, user: null }` here instead would be a second,
-   * quietly diverging definition of the anonymous session.
-   */
   it("keeps everything that describes the installation rather than the visitor", () => {
     expect(anonymousSession(session).ai).toEqual(session.ai);
   });

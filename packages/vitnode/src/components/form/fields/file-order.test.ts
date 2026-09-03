@@ -9,17 +9,6 @@ import {
   removeFileId,
 } from "./file-order";
 
-/**
- * The rule these three functions exist for: **a file's place is the place it was
- * picked in.**
- *
- * The version before them appended each upload as it settled, so a gallery of
- * ten stored the order the network happened to answer in - which nobody chose,
- * nobody can predict, and which changes between two editors uploading the same
- * ten files. Every case below is one half of that bug, or one of the two ways a
- * person is allowed to override it afterwards.
- */
-
 const queued = (order: number, name = `photo-${order}`): QueuedFileUpload => ({
   name,
   order,

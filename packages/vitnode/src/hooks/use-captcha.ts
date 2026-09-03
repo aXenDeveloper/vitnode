@@ -36,28 +36,6 @@ declare global {
   }
 }
 
-/**
- * Loading a captcha widget, without knowing which framework is rendering it.
- *
- * This hook is reached by every `AutoForm`, so what it imports decides what an
- * `AutoForm` can be rendered by - and it used to import `@/lib/navigation`,
- * which is built on `next-intl/navigation` and `next-intl/server`. That single
- * line made the whole form stack Next-only: the shared sign-in form could not be
- * mounted from a TanStack Start route, because resolving it reached
- * `next/headers`.
- *
- * The pathname it read was an effect dependency and nothing else - "tear the
- * widget down and inject it again when the URL changes". Mounting already does
- * that: each of the three forms that ask for a captcha lives on its own route,
- * so a navigation unmounts one and mounts the next, and the effect's cleanup and
- * setup run either way. What it did *not* cover is a language switch, which is
- * still a dependency below because the widget is rendered in the visitor's
- * language.
- *
- * `use-intl` rather than `next-intl` for the same reason - the same module
- * record either way, and one that a TanStack Start app can resolve.
- */
-
 export const useCaptcha = (
   captcha: z.infer<typeof routeMiddlewareSchema>["captcha"],
 ) => {

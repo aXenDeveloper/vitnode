@@ -16,21 +16,6 @@ import {
 } from "./query";
 import { configureIntl, resetIntlRuntime } from "./runtime";
 
-/**
- * The message query, on its own, against a configured runtime rather than an
- * app.
- *
- * Two things are pinned here and nowhere else. The **query key** is the whole
- * contract between "which language is this page in" and "which messages are in
- * the cache" - an earlier key carried no locale at all, so switching language
- * quietly served the previous one. And **input validation** is a security
- * boundary rather than a typo check: `intlQueryOptions` is fetched through a
- * server function, which once built is a public endpoint that anyone can `POST`
- * an arbitrary namespace list to.
- *
- * Only the fetcher is a stand-in. Everything else is the real implementation an
- * app gets, configured the way an app configures it.
- */
 const fetched: { locale: string; namespaces: readonly string[] }[] = [];
 
 beforeEach(() => {
@@ -61,20 +46,6 @@ afterEach(() => {
   resetIntlRuntime();
 });
 
-/**
- * The query as an application actually runs it.
- *
- * Not `options.queryFn()`. That property is typed optional and takes a
- * `QueryFunctionContext`, so calling it bare is both a type error and a fiction
- * - nothing in a VitNode app invokes it. A route loader calls
- * `ensureQueryData` and `RouteMessages` calls `useSuspenseQuery`; both reach the
- * host's fetcher through a `QueryClient`, exactly as this does, so what these
- * two tests assert is the contract rather than an internal.
- *
- * `retry: false` because one of them asserts a *rejection*: under the default
- * three retries and their backoff, a test pinning the error message would sit
- * through the same failure four times before seeing it.
- */
 const fetchThrough = async (
   options: ReturnType<typeof intlQueryOptions>,
 ): Promise<IntlMessages> =>
@@ -116,26 +87,6 @@ describe("the query key names the language", () => {
     ).toEqual(["vitnode", "intl", "en", "core.global", "core.search"]);
   });
 
-  /**
-   * The key is built twice per page load in two different runtimes - once on the
-   * server, which dehydrates the entry into the stream, and once in the browser,
-   * which looks it up on hydration. So the comparator that orders the namespaces
-   * may not be one that asks the environment anything.
-   *
-   * `localeCompare` is exactly that comparator: it uses the runtime's default
-   * collator, which on the server comes from the server's environment and in a
-   * Node built without full ICU degrades to a code-point comparison outright,
-   * while the browser always has a real one set to the visitor's locale. The two
-   * disagree about case and about punctuation, so one list becomes two keys, the
-   * dehydrated entry is never found, and every page silently refetches its own
-   * messages after hydration.
-   *
-   * Both halves of VitNode now normalise a namespace list with the same
-   * function - `normalizeNamespaceList`, which sorts by code unit and is the
-   * one a plugin's route tree is validated with. This pins that they agree: a
-   * manifest declaring namespaces at build time and a browser asking for them at
-   * runtime cannot spell one list two ways.
-   */
   it("orders the namespaces the way a plugin route tree does", () => {
     const declared = [
       "core.search",

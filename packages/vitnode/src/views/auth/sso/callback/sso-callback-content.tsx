@@ -12,19 +12,6 @@ import type { SSOCallbackState } from "./use-sso-callback";
 
 import { AUTH_HREF } from "../../auth-link";
 
-/**
- * The callback screen, as a function of which of four things happened.
- *
- * No request and no navigation: {@link useSSOCallback} runs the exchange and
- * answers with a state, and this renders it. That split is the whole point -
- * the states and their copy are identical in both frameworks, while starting a
- * mutation and moving the browser are not.
- *
- * `errorActions` is the "go back / go home" pair, which is navigation and
- * therefore the wrapper's to supply. `LinkComponent` is the one link with copy
- * of its own: after an email conflict the visitor is sent to the login page to
- * sign in the way they did the first time.
- */
 export const SSOCallbackContent = ({
   LinkComponent,
   errorActions,

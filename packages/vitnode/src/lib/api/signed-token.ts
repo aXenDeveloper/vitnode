@@ -2,21 +2,6 @@ import type { z } from "zod";
 
 import crypto from "node:crypto";
 
-/**
- * A payload and its HMAC, in one URL-safe string.
- *
- * ```text
- * base64url(JSON.stringify(payload)) "." base64url(hmacSha256(secret, part1))
- * ```
- *
- * Stateless on purpose: the alternative is an opaque id backed by a table,
- * which buys revocation at the cost of a row per link and a write on every
- * click. Where that trade is wrong, rotate the secret - it invalidates every
- * outstanding token at once.
- *
- * This is **not** encryption. The payload is readable by anyone holding the
- * token; the signature only proves nobody edited it. Never put a secret in one.
- */
 const encodePayload = (payload: unknown): string =>
   Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 

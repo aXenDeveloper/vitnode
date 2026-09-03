@@ -14,13 +14,6 @@ type Authorization = EnvVariablesVitNode["core"]["authorization"];
 
 const COOKIE = "vitnode_auth";
 
-/**
- * The `core` context these helpers read, with only the two fields they touch.
- *
- * Cast once, here: `ContextVariableMap` is augmented globally so `c.set("core")`
- * wants the whole registry - plugins, content models, the cron metadata - none
- * of which a cookie attribute depends on.
- */
 const coreWith = (
   authorization: Partial<Authorization>,
 ): EnvVariablesVitNode["core"] =>
@@ -28,11 +21,6 @@ const coreWith = (
     authorization: { cookieSecure: true, ...authorization },
   }) as EnvVariablesVitNode["core"];
 
-/**
- * The `Set-Cookie` headers a request to `url` comes back with, once `write` has
- * run against a real Hono response. Asserting the header rather than the options
- * object is the point: it is what a browser would actually be handed.
- */
 const setCookiesFrom = ({
   authorization = {},
   url = "https://vitnode.com/api/@vitnode/core/users/sign_in",

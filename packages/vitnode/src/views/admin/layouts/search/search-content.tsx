@@ -23,21 +23,6 @@ const SearchAdminDialogContent = React.lazy(async () =>
   })),
 );
 
-/**
- * The AdminCP search control: a button on a phone, a fake input on a desktop,
- * and `⌘K` everywhere.
- *
- * The palette itself is `React.lazy` and only imported once the visitor shows
- * intent - a hover, a focus, a click, or the shortcut. That keeps the command
- * component, the query it runs and (in the Next.js app) a Server Action
- * reference out of the initial AdminCP bundle, which every admin page pays for.
- *
- * ## `isApple` starts undefined on purpose
- *
- * The key hint renders nothing until the effect has run. The server cannot know
- * which modifier to name, and guessing produces a hydration mismatch on half of
- * all machines - so the badge appears a frame late rather than wrong.
- */
 export const SearchAdminContent = ({
   items,
   LinkComponent,

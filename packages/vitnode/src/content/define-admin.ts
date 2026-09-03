@@ -26,12 +26,6 @@ import { ContentEngineError } from "./errors";
 import { isContentReferenceCollection } from "./paths";
 import { contentTypeToPath } from "./registry";
 
-/**
- * Every admin surface addresses a column on the base table, so it is stated in
- * terms of the *shared* fields only. A localized field named here would be a
- * DataTable column, a sort or a search over something the base table does not
- * have - see `ContentAddressableColumn`, which rejects it at compile time too.
- */
 const assertNotLocalized = (
   id: string,
   label: string,
@@ -47,15 +41,6 @@ const assertNotLocalized = (
   }
 };
 
-/**
- * Kinds that are not one column on the base table, so they cannot be a list
- * cell, an `orderBy` or a `titleField`.
- *
- * A group is several columns under generated names; a repeatable and a to-many
- * relation are on other tables entirely. All three still belong on the *form* -
- * that is what `admin.form.fields` is for, and it is checked against the wider
- * set.
- */
 const NON_COLUMN_KINDS = new Set<ContentFieldDescriptor["kind"]>([
   "group",
   "repeatable",
@@ -67,14 +52,6 @@ const isAdminColumnField = (fieldValue: ContentFieldDescriptor): boolean =>
 
 const adminFormModes: readonly string[] = CONTENT_ADMIN_FORM_MODES;
 
-/**
- * `admin.create.mode` / `admin.edit.mode`, defaulted and checked.
- *
- * Defaults to `dialog`, which is what keeps every content type written before
- * page mode existed behaving exactly as it did. The runtime check is here for a
- * JavaScript caller and for a value that widened somewhere upstream - the type
- * already refuses anything outside the union.
- */
 const resolveFormMode = (
   id: string,
   label: string,
@@ -95,16 +72,6 @@ const resolveFormMode = (
 /** A section name has to survive being a message key segment. */
 const SECTION_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
-/**
- * `admin.form.sections`, checked for the mistakes that would cost a field.
- *
- * Field *existence* is not checked here - the concatenated list goes through the
- * same `assertKnownColumns` as `admin.form.fields`, so an unknown name reads the
- * same either way. What is checked is what only sections can get wrong: a name
- * that cannot be a translation key, a duplicated name (two headings reading one
- * message), a section with nothing in it, and the same field in two sections -
- * which would render one input twice into one payload.
- */
 const resolveFormSections = <TFields>(
   id: string,
   sections: ContentAdminFormSection<TFields>[] | undefined,

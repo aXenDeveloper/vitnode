@@ -13,28 +13,6 @@ export interface DocsArticleMeta {
   url: string
 }
 
-/**
- * What a documentation page looks like: the heading, the "Open in" menu, the
- * table of contents, and the body.
- *
- * Presentation only, and that is what makes the split worth having. The body
- * arrives as `children` and the table of contents as a prop, so this module
- * knows nothing about how either was loaded - `./client-loader` is the half that
- * does, and it renders this.
- *
- * ## Why the table of contents is a prop rather than loader data
- *
- * Because it cannot cross a server function. A `TOCItemType`'s `title` is a
- * `ReactNode`, so a heading containing inline code or a link is a React element,
- * and TanStack Start's serializer rejects those by design - correctly, and at
- * compile time. It does not need to cross: the compiled MDX module exports its
- * own `toc` beside its component, so the table of contents arrives in the same
- * chunk as the body it describes.
- *
- * `tableOfContent` keeps the Next.js application's settings verbatim - the
- * "clerk" style, with `single: false` so a heading's children stay visible while
- * you read it.
- */
 export const DocsArticle = ({
   children,
   description,

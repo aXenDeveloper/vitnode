@@ -20,21 +20,6 @@ import { ContentEngineError } from "./errors";
 import { normalizeContentLocale } from "./locale";
 import { readContentPath, splitContentFieldPath } from "./paths";
 
-/**
- * The Content Delivery layer: what a public URL *is*, rather than what a record
- * contains.
- *
- * Everything in this module is pure and client-safe. It answers four questions
- * and nothing else - what is the canonical path of this record in this language,
- * which languages does it also exist in, what should the page put in `<head>`,
- * and is a given path the current one - so a frontend can render a page, an
- * `hreflang` set and a sitemap entry from data the engine already has.
- *
- * It deliberately does **not** render anything. There is no layout here, no
- * React, no Next.js and no `Metadata`: those belong to the application, and the
- * `content/next` adapter is the thin translation layer between the two.
- */
-
 /** Kinds the three SEO slots accept, as runtime sets. */
 const titleKinds: ReadonlySet<string> = new Set(CONTENT_DELIVERY_TITLE_KINDS);
 const descriptionKinds: ReadonlySet<string> = new Set(
@@ -61,14 +46,6 @@ export const contentDeliveryDisabled: ResolvedContentDeliveryConfig<false> = {
   slugScope: "none",
 };
 
-/**
- * Resolves one SEO field name to the descriptor it addresses, or `null`.
- *
- * A leaf path resolves through its **group**, and a repeatable is deliberately
- * not resolvable here: `assertSeoField` needs to tell "this leaf is a column on
- * the row" from "this leaf is a column on a child row", and only the first can
- * be one page's title.
- */
 const resolveSeoTarget = (
   fields: ContentFieldMap,
   name: string,
@@ -96,14 +73,6 @@ const resolveSeoTarget = (
     : null;
 };
 
-/**
- * Checks one configured SEO field name.
- *
- * The public-exposure rule is the important one, and it is what makes "SEO
- * metadata cannot leak a private value" a property of the definition rather than
- * of every consumer: a `<title>` is rendered into a public page, so it has to be
- * something the public API would already have said out loud.
- */
 const assertSeoField = ({
   exposed,
   fields,
@@ -165,18 +134,6 @@ const assertSeoField = ({
   }
 };
 
-/**
- * Checks and fills in `delivery`.
- *
- * Runs after `resolvePublicApi` and after the field partition, because every rule
- * here is stated in terms of both: the public allowlist decides which fields may
- * be projected, and the partition decides which language a historical URL belongs
- * to.
- *
- * Nothing is silently ignored. An invalid delivery block fails at definition
- * time - a canonical URL that quietly stopped being generated is a page that
- * quietly stopped being indexable, and that is not a symptom anybody notices.
- */
 export const resolveContentDelivery = ({
   delivery,
   editorial,
@@ -505,19 +462,6 @@ export interface ContentDeliveryAlternate {
   path: string;
 }
 
-/**
- * The `hreflang` set of one record, as a framework-neutral map.
- *
- * `{ languages, xDefault? }` rather than a Next.js `Metadata` object, because the
- * core engine has no business knowing which framework renders it - `content/next`
- * turns this into `alternates.languages` in one line, and an Astro or Remix
- * adapter would do the same.
- *
- * Built from {@link ContentDeliveryAlternate}s, which are **real published
- * translations** and nothing else. A fallback translation is not an alternate: it
- * has no URL in the language that fell back to it, so listing one would announce
- * a page that answers 404.
- */
 export interface ContentDeliveryHreflang {
   languages: Record<string, string>;
   /** Present only with `delivery.hreflang.xDefault` and a resolvable default. */
@@ -571,18 +515,6 @@ export interface ContentDeliveryRobots {
   index: boolean;
 }
 
-/**
- * Reads one configured SEO slot out of a **public** row.
- *
- * The row is the public projection - the same object the public API returns - so
- * a field the allowlist omits is not merely skipped here, it is absent from the
- * object entirely. That is what makes "SEO cannot leak a private field" true at
- * runtime as well as at definition time.
- *
- * A whitespace-only value counts as empty, because a `<title>` of three spaces is
- * a missing title with extra steps - and that is exactly when the fallback should
- * take over.
- */
 const readSeoText = (
   row: Record<string, unknown>,
   primary: null | string,
@@ -601,13 +533,6 @@ const readSeoText = (
   return null;
 };
 
-/**
- * The `<title>` and `<meta name="description">` of one record.
- *
- * `{ description: null, title: null }` for a content type whose `delivery.seo`
- * names nothing - the shape is stable so a frontend never branches on whether
- * the block was configured, only on whether a value came back.
- */
 export const contentDeliverySeo = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -624,17 +549,6 @@ export const contentDeliverySeo = (
   };
 };
 
-/**
- * The Open Graph pair, or `null` when the content type configured none.
- *
- * `null` rather than an object of nulls, because "this content type does not
- * publish Open Graph metadata" and "it does, and this page has no title" are
- * different facts and a renderer treats them differently: the first emits no
- * tags at all.
- *
- * Each slot falls back to the ordinary SEO one, which is what makes the common
- * case - the same title in both places - a two-line config rather than four.
- */
 export const contentDeliveryOpenGraph = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -652,19 +566,6 @@ export const contentDeliveryOpenGraph = (
   };
 };
 
-/**
- * The `robots` directive of one record, or `null` without a `noIndexField`.
- *
- * `follow` is always `true`: "do not list this page" and "do not follow the links
- * on it" are different instructions, and a content type that asked for the first
- * has not asked for the second. A `noindex, nofollow` page is a dead end for a
- * crawler walking the site, which is a decision for site-wide robots
- * configuration rather than for one record.
- *
- * The same field drives the sitemap exclusion, which is what keeps the two from
- * disagreeing: a record cannot be absent from the sitemap and `index: true` at
- * the same time, because there is one boolean behind both.
- */
 export const contentDeliveryRobots = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -686,18 +587,6 @@ export interface ContentDeliveryPathParts {
   slug: string;
 }
 
-/**
- * Splits a public path back into its locale and its slug.
- *
- * The inverse of {@link contentDeliveryPath}, and deliberately strict: it accepts
- * exactly the shape that function produces and refuses everything else. A path
- * with an extra segment, a different public prefix or a traversal in it is `null`
- * rather than a best guess - a resolver that guessed would answer one content
- * type's URL with another's record.
- *
- * A query string and a fragment are stripped first, because a browser sends them
- * and they are not part of the identity of a page.
- */
 export const parseContentDeliveryPath = (
   definition: AnyContentTypeDefinition,
   path: string,
@@ -740,17 +629,6 @@ export const parseContentDeliveryPath = (
 // Registry
 // ---------------------------------------------------------------------------
 
-/**
- * Every delivery-enabled content type of an installation, in a stable order.
- *
- * What a site-level sitemap index is built from: it enumerates the content types
- * that have public URLs at all, so an application never hardcodes plugin names -
- * installing a plugin adds its content types to the sitemap and removing it takes
- * them out again.
- *
- * Ordered by content type id, so two processes building the same sitemap index
- * produce the same document.
- */
 export const listDeliveryContentTypes = <
   TEntry extends { definition: AnyContentTypeDefinition; pluginId: string },
 >(

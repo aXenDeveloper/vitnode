@@ -14,29 +14,12 @@ import {
   page,
 } from "./tree";
 
-/**
- * A plugin's route tree, flattened - which is the whole of what an author's
- * `routes.ts` has to survive before anything else in VitNode sees it.
- *
- * Every test here goes through the real helpers rather than building a
- * declaration by hand, because the helpers are the API: what `page()`,
- * `layout()` and `index()` put on a node is exactly what the flattener is
- * allowed to read, and a test that wrote the node itself would pass while the
- * helpers were broken.
- */
 const lazyPage = () =>
   lazy(async () => await Promise.resolve({ default: () => null }));
 
 const flatten = (...routes: PluginRouteDeclaration[]) =>
   flattenPluginRoutes("@acme/catalog", definePluginRoutes(routes));
 
-/**
- * A declaration with a field the types do not allow.
- *
- * Which is the only way to test the diagnostics that exist for a plugin written
- * in JavaScript: `search` on a layout and `area` on a nested route are both
- * compile errors, and both still have to fail loudly rather than be dropped.
- */
 const withExtra = <TOptions>(
   options: TOptions,
   extra: Record<string, unknown>,

@@ -7,15 +7,6 @@ import {
   navItemActivity,
 } from "./nav-active";
 
-/**
- * Which sidebar entry lights up, as arithmetic rather than as rendered markup.
- *
- * Worth pinning at this level because the same rule now runs under two routers
- * and the inputs it gets are the awkward ones: hrefs that end in a slash
- * (`/admin/core/`), sub-items that nest inside each other, and screens whose
- * paths are string prefixes of unrelated screens.
- */
-
 describe("isPathnameUnderHref", () => {
   it("matches the page itself", () => {
     expect(isPathnameUnderHref("/admin/core/users", "/admin/core/users")).toBe(
@@ -29,11 +20,6 @@ describe("isPathnameUnderHref", () => {
     ).toBe(true);
   });
 
-  /**
-   * The reason the prefix test appends a slash. `/admin/core/users` must not
-   * claim a sibling whose name merely starts with it, or two unrelated screens
-   * highlight together.
-   */
   it("does not match a sibling that merely starts with the same characters", () => {
     expect(
       isPathnameUnderHref("/admin/core/users-import", "/admin/core/users"),
@@ -74,11 +60,6 @@ describe("activeChildHref", () => {
     { href: "/admin/core/users/roles", title: "Roles" },
   ];
 
-  /**
-   * The case a `find` gets wrong. Both sub-items are "under"
-   * `/admin/core/users/roles`, and the list is declared first - so a first-match
-   * rule highlights "List" on the roles screen.
-   */
   it("picks the longest match, not the first", () => {
     expect(activeChildHref("/admin/core/users/roles", items)).toBe(
       "/admin/core/users/roles",

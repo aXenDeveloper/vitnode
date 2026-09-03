@@ -196,15 +196,6 @@ const ContentFormFields = ({
     [spec, values],
   );
 
-  /**
-   * How every picker in this form fetches its options.
-   *
-   * One callback for the whole form rather than one per field, and memoised on
-   * purpose: `useReferenceOptions` and `ContentUserField` both list it in an
-   * effect's dependencies, so a fresh function each render would re-enter those
-   * effects on every keystroke. The content type is closed over, which is what
-   * stops one form ever asking another content type for its rows.
-   */
   const loadOptions = React.useCallback<ContentOptionsLoader>(
     async ({ field, ids, search }) =>
       await transport.loadOptions(spec.contentTypeId, field, search, ids),

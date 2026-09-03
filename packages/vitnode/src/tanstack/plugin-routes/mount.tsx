@@ -31,127 +31,22 @@ import { pluginRouteGuard } from "./guard";
 import { normalizePluginRouteHead } from "./head";
 import { pluginRouteSearchDeps } from "./specs";
 
-/**
- * Plugin pages, in a TanStack Start application's route tree.
- *
- * Two inputs, and the whole point of the design is that each one answers exactly
- * one question:
- *
- *     plugin-routes.gen.ts   which plugins are configured, and their route trees
- *     this module            how that becomes a TanStack route
- *
- * The first is generated *per application*, because only an installation knows
- * which plugins it has. This one is the composition, which is identical
- * everywhere, so it lives here rather than once per host.
- *
- * The generated file does not mention a router, and no plugin page is copied
- * into the host's `src/routes` - a page stays compiled in the plugin's own
- * `dist` and is reached only through the literal `import()` its own route
- * declared, which the bundler resolved at build time.
- *
- * What is deliberately *not* here: a locale. `/example` and `/pl/example` are the
- * same route, because the router's rewrite strips the prefix before matching and
- * writes it back into every link (`@vitnode/core/tanstack/i18n`'s
- * `createLocaleRewrite`). A plugin declares the logical path and the locale layer
- * owns the public one, so there is nothing to prefix and no route to duplicate
- * per language.
- */
-
-/**
- * What this runtime has on hand when a plugin route loads - the *host's*
- * context, not the plugin's.
- *
- * Named apart from `@vitnode/core/routing`'s `PluginRouteContext` on purpose:
- * that one is the public promise, this one is whatever the TanStack host
- * happens to hold. The two must not converge. A plugin's `load` is handed a
- * projection of this - see `pluginRouteLoader` - so a `QueryClient` living here
- * never becomes something a plugin may compile against.
- */
 export interface PluginRouteRuntimeContext {
   locale: string;
   queryClient: QueryClient;
 }
 
-/**
- * The host's `head` rule, bound to its own name - `createRouteHead(metadata)`.
- *
- * Required rather than optional, and that is the point: a plugin's `<title>`
- * goes through the same `"<page> - <site>"` rule every VitNode page's does. A
- * package cannot know the site's name, and a plugin route that built its own
- * title would produce one that disagreed with every other page of the same site.
- */
 export type PluginRoutePageHead = (
   options: RouteHeadOptions,
 ) => RouteHeadResult;
 
-/**
- * Which route each area's plugin subtree hangs from.
- *
- * A finite record rather than an open registry, and that is a contract rather
- * than a limitation: the areas are `@vitnode/core/routing`'s
- * {@link PluginRouteArea}, a host may name a parent for each one, and a route
- * declaring an area this host has not named is a hard failure instead of a page
- * quietly rendered in the wrong shell.
- *
- * Partial because an application need not have every shell - a headless app has
- * no AdminCP - and because "not configured" and "configured wrongly" have to be
- * different states. The first is only an error once a plugin actually declares
- * that area; the second cannot happen, because there is nowhere to put a name
- * that is not an area.
- */
 export type PluginRouteAreaRoutes = Partial<Record<PluginRouteArea, AnyRoute>>;
 
 export interface PluginRoutesMountOptions {
-  /**
-   * Which route each area's plugin subtree hangs from.
-   *
-   * The whole of what an `area` declaration amounts to at runtime. A plugin says
-   * `area: "main"` or `area: "admin"` (see `@vitnode/core/routing`), which is a
-   * statement about *layout*: this page belongs on the public site with the site
-   * header, or inside the AdminCP with the sidebar and the admin session guard.
-   * In a router a layout is a parent, so honouring that declaration is choosing
-   * a parent - and this is where a host names them:
-   *
-   *     { mountUnder: { admin: adminShellRoute, main: mainShellRoute }, pageHead }
-   *
-   * Nothing about a path changes. Both shells are pathless routes, so `/example`
-   * stays `/example` and `/admin/reports` stays `/admin/reports` - the area
-   * chose the frame, and the manifest still says the URL in full.
-   *
-   * **An area with no entry here is refused**, naming the route that declared
-   * it. That is the one behaviour this field exists for: silently falling back
-   * to another shell would mount an AdminCP page on the public site, outside the
-   * admin session guard, and it would look like it worked.
-   *
-   * Omitted entirely, the plugin subtree hangs from the tree's root as `main` -
-   * which is what an app with no shell wants, and what Stage 11 did. Pass the
-   * record and it is the whole answer: an area missing from it is missing.
-   *
-   * The collision check still walks the whole tree from its root, because what a
-   * plugin route may not shadow is *any* URL the app answers, in any shell.
-   */
   mountUnder?: PluginRouteAreaRoutes;
   pageHead: PluginRoutePageHead;
 }
 
-/**
- * A plugin route's `head`.
- *
- * Async, which the router supports - it awaits `head` while projecting a
- * match - and which is what lets the metadata come out of the lazily imported
- * module without the module being in the initial bundle. By the time this runs
- * the chunk is in hand anyway: the router awaited it to render the match.
- *
- * `loaderData` is optional on a route's first pass, before the loader has
- * resolved, so both halves of the envelope are read defensively and the plugin's
- * own `head` gets `undefined` for its data - which is exactly the contract it is
- * written against.
- *
- * The result goes through `normalizePluginRouteHead` and then the host's own
- * `pageHead`, so a plugin cannot put an arbitrary element in the host's
- * document: three fields survive, and the title is formatted by the same rule
- * every VitNode page's is.
- */
 const pluginRouteHead =
   (module: PluginRouteModuleRef, pageHead: PluginRoutePageHead) =>
   async ({
@@ -178,36 +73,6 @@ const pluginRouteHead =
     );
   };
 
-/**
- * A plugin route's loader: its strings, its module, its search and its data.
- *
- * The messages and the chunk are fetched **in parallel**, which is the reason
- * namespaces are declared in the manifest rather than in the module: a list that
- * lived inside the code could only be read after downloading the page it
- * describes, making two requests into a waterfall.
- *
- * ## Why `parseSearch` is applied here
- *
- * A route's `validateSearch` runs during path matching, which is *before* any
- * chunk is fetched - that is why TanStack's own lazy route files may not contain
- * one, and it is why a plugin route registers none. A plugin's module is lazy,
- * so there is nothing to ask at matching time. Applying `parseSearch` in the
- * loader is what keeps both promises: the page's code is still split, and
- * nothing downstream of the module ever sees a raw query parameter. `load` is
- * handed the parsed value, and so - through the envelope this returns - is
- * `head`.
- *
- * The consequence, and the reason the option is not called `validateSearch`: a
- * plugin route's `search` is a *loader* contract, not a URL one. The router's own
- * search type for the route is untouched, links it builds to a plugin route
- * carry whatever they were given, and no URL is ever rejected.
- *
- * The query string reaches a loader as `deps`, never as `search` - a router
- * loader is not handed the search directly, which is what `loaderDeps` is for.
- * That works in this runtime's favour: `deps` is the normalised query string,
- * so the value `parseSearch` is applied to is by construction the same value the
- * loader re-runs for.
- */
 const pluginRouteLoader =
   (spec: PluginRouteSpec) =>
   async ({
@@ -231,16 +96,6 @@ const pluginRouteLoader =
           ),
     ]);
 
-    /**
-     * The eager schema wins, and the module's `parseSearch` is not consulted
-     * when there is one.
-     *
-     * `deps` for a route with a `search` schema is already the router's validated
-     * search - `validateSearch` ran during path matching and `loaderDeps` reads
-     * its output - so running `parseSearch` over it would normalise a normalised
-     * value, with the module's answer silently overriding the one the router
-     * built its links and its match id from. One route, one search contract.
-     */
     const search = spec.validateSearch
       ? deps
       : route.parseSearch
@@ -264,22 +119,6 @@ const pluginRouteLoader =
     };
   };
 
-/**
- * One plugin route's TanStack options.
- *
- * Everything a plugin can contribute passes through here, and every one of them
- * is reached through the same memoised module ref - so a route's component, its
- * loader, its metadata and its breadcrumb are four readers of one import rather
- * than four imports, and a crumb is never a chunk of its own.
- *
- * `lazyRouteComponent` over that ref is the supported way to code-split a
- * code-based route: the plugin's page gets its own Rollup chunk, stays out of
- * the initial bundle, and the router awaits `component.preload()` before it
- * renders the match - so SSR and hydration both have the module in hand rather
- * than suspending on it. A module that does not satisfy the contract fails
- * inside `readPluginRouteModule`, with the plugin route's id in the message,
- * rather than as React's "type is invalid" three frames away.
- */
 const pluginRouteOptions = (
   spec: PluginRouteSpec,
   pageHead: PluginRoutePageHead,
@@ -288,21 +127,7 @@ const pluginRouteOptions = (
 
   return {
     ...(beforeLoad ? { beforeLoad } : {}),
-    /**
-     * The route's own `validateSearch`, when its declaration had a `search`.
-     *
-     * This is the seam a lazy module cannot reach: it runs during path matching,
-     * so the function has to be in hand before any chunk is fetched, which is
-     * exactly what declaring it in `routes.ts` buys - that module is imported
-     * statically by the host, the page it belongs to is not. A route that
-     * declares one gets everything a host's own route file gets from the same
-     * option: a typed search, links the router can build and check, and a clamped
-     * value that redirects instead of rendering a page that does not exist.
-     *
-     * Spread rather than set to `undefined`, because TanStack reads the presence
-     * of the key: a route without one keeps the raw query string, which is the
-     * right default for a page that reads no state out of its URL.
-     */
+
     ...(spec.validateSearch ? { validateSearch: spec.validateSearch } : {}),
     component: lazyRouteComponent(async () => ({
       default: (spec.route.kind === "layout"
@@ -311,64 +136,17 @@ const pluginRouteOptions = (
     })),
     head: pluginRouteHead(spec.module, pageHead),
     loader: pluginRouteLoader(spec),
-    /**
-     * What the loader re-runs for.
-     *
-     * The query string, normalised - and what "the query string" is depends on
-     * which of the two search contracts the route chose.
-     *
-     * With a `search` schema, `search` here is already the router's validated
-     * output, so this passes the route's own schema through and the loader
-     * re-runs exactly when a parameter the schema keeps changes. Without one,
-     * the runtime cannot know before the chunk loads whether this route reads
-     * the query string at all, so it assumes it does: a route whose module
-     * declares `parseSearch` re-runs `load` whenever the query string changes,
-     * which is the contract, and a route that declares neither pays for it with
-     * a re-run on a parameter it does not read.
-     *
-     * Sorted either way, so `?b=2&a=1` and `?a=1&b=2` are one match rather than
-     * two.
-     */
+
     loaderDeps: ({ search }: { search: unknown }) =>
       pluginRouteSearchDeps(search),
     path: spec.path,
-    /**
-     * This route's own crumb - a component, so the shell can hand it this
-     * match's loader data, params and search.
-     *
-     * Declared for every plugin route rather than only for the ones that have a
-     * crumb, because whether a module declares one is *in* the module, which has
-     * not been fetched when `staticData` is written. The component renders
-     * nothing when its module turns out to declare none, so a page that wants no
-     * crumb - or declares `breadcrumb: false` - contributes nothing to the trail
-     * while its layouts' crumbs stay exactly where they were.
-     */
+
     staticData: {
       breadcrumb: pluginRouteBreadcrumb(spec.module, spec.namespaces),
     },
   };
 };
 
-/**
- * Every mount point this composition touches, with the specs that belong to it.
- *
- * Two jobs, and the second is the reason it is one function. It **groups** the
- * specs by the route their area names - and it **refuses** a route whose area
- * this host has not named, which is the failure `PluginRoutesMountOptions`
- * exists to produce. A fallback would mount an AdminCP page under the public
- * shell: outside the admin session guard, wearing the site header, and looking
- * for all the world like it worked.
- *
- * Every configured mount point is in the result even when nothing mounts under
- * it, because that is what takes a stale plugin subtree off a shell whose last
- * plugin route was removed. See the idempotence note on {@link withPluginRoutes}.
- *
- * Keyed by the route *object*, so two areas a host points at one route share one
- * container rather than adding two children with the same id. Iterated in
- * `PLUGIN_ROUTE_AREAS` order, so the tree is the same whichever order the record
- * happened to be written in; within a mount point the specs keep the graph's own
- * order, which is parents before children.
- */
 const specsByMountPoint = (
   areaRoutes: PluginRouteAreaRoutes,
   specs: readonly PluginRouteSpec[],
@@ -405,20 +183,6 @@ const specsByMountPoint = (
   return byMountPoint;
 };
 
-/**
- * One mount point's plugin subtree, built and hung from it.
- *
- * One pass, parents before children, which is what `buildPluginRouteGraph`'s
- * node order buys: by the time a nested route is reached, the layout it hangs
- * from exists. Nothing here re-derives a parent - the compiled graph is the only
- * answer, and it is the same function that validated the hierarchy when the app
- * was built, so the runtime cannot disagree with the build about what the tree
- * is.
- *
- * A parent is always in this same group: `buildPluginRouteGraph` refuses a route
- * whose area differs from its layout's, so a subtree cannot span two shells and
- * `routes` never has to look outside the specs it was handed.
- */
 const mountPluginSubtree = (
   mountPoint: AnyRoute,
   specs: readonly PluginRouteSpec[],
@@ -482,32 +246,6 @@ const mountPluginSubtree = (
   mountPoint.addChildren([...siblings, container]);
 };
 
-/**
- * Mounts the plugin routes on a route tree, and hands the same tree back.
- *
- * One subtree per shell: the specs are grouped by the area they declare, each
- * group is hung from the route its host named for that area, and a route whose
- * area was not named fails the composition rather than being mounted somewhere
- * plausible. See {@link PluginRoutesMountOptions.mountUnder}.
- *
- * ## Idempotent
- *
- * `addChildren` **replaces** a route's children and mutates the route in place,
- * so each plugin subtree is rebuilt from its mount point's current children with
- * any previous copy of itself removed. Calling this twice on one tree is
- * therefore the same as calling it once, which is what makes it safe in a dev
- * server that re-evaluates this module while `routeTree.gen.ts` stays cached.
- *
- * Removing the *last* plugin is the same property read the other way, and it is
- * the one case an early `return` used to skip: the tree handed back is the one a
- * previous pass already mutated, so a subtree nobody declares any more has to be
- * taken off it rather than merely not re-added. That now holds per shell - the
- * last admin plugin route going away has to clear the AdminCP's container while
- * the public one keeps its own - which is why every configured mount point is
- * visited even when nothing mounts under it. A tree that never had a container
- * is still left exactly as it arrived: `addChildren` is not called at all, so a
- * route with no children does not acquire an empty array.
- */
 export const withPluginRoutes = <TRouteTree extends AnyRoute>(
   routeTree: TRouteTree,
   specs: PluginRouteSpec[],

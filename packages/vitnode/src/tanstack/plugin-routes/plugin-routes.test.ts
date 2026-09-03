@@ -14,22 +14,6 @@ import { PLUGIN_ROUTES_ROUTE_ID } from "./container";
 import { withPluginRoutes } from "./mount";
 import { pluginRouteSpecs } from "./specs";
 
-/**
- * Plugin routes, from a plugin's declared tree to a mounted TanStack route
- * *tree*.
- *
- * Route structure only: which routes exist, what they claim, who their parent
- * is, and what the composition refuses. Nothing renders - whether a plugin's
- * page produces the right HTML is the plugin's own business, and a component
- * test would only assert that `lazyRouteComponent` works. What a spec *is* is
- * `./specs.test.ts`; the modules are `./module-ref.test.ts`.
- *
- * The other half of this coverage is the host's: an application asserts that its
- * *own* generated files reach its *own* router, which is a question about that
- * application and not about this composition. See
- * `apps/web/src/tests/plugin-routes.test.ts`.
- */
-
 /** A page module, as a `lazy()` that resolves without a bundler. */
 const lazyModule = (
   module: Record<string, unknown> = { default: () => null },

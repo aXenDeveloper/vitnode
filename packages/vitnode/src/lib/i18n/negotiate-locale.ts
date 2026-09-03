@@ -1,11 +1,3 @@
-/**
- * Picks the best match for an `Accept-Language` header out of `locales`.
- *
- * Ranks the header by its `q` weights, then for each entry tries an exact match
- * before falling back to the primary subtag, so `pl-PL` still resolves to `pl`.
- * Returns `undefined` when nothing matches - callers decide what to fall back
- * to.
- */
 export const negotiateLocale = (
   header: null | string | undefined,
   locales: string[],

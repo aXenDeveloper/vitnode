@@ -52,23 +52,6 @@ import {
   projectTranslationRevisionSnapshot,
 } from "./revision-snapshot";
 
-/**
- * The read-only routes one public content type gets.
- *
- * ```http
- * GET /api/{pluginId}/content/{publicApi.path}/
- * GET /api/{pluginId}/content/{publicApi.path}/{slug}
- * GET /api/{pluginId}/content/{publicApi.path}/preview/{token}   (editorial.preview)
- * ```
- *
- * No `adminStaffPermission` and no `/admin/` anywhere in the path, which is
- * exactly how every other public route in VitNode is public: by omission. The
- * global middleware still runs, so `c.get("user")` is populated (possibly
- * `null`) and the IP rate limiter still applies.
- *
- * Only `get` is ever built here. There is no public create, update, delete,
- * publish or unpublish, and no flag that would add one.
- */
 export const buildContentPublicRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

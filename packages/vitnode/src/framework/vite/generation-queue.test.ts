@@ -2,24 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createGenerationQueue } from "./generation-queue";
 
-/**
- * What the dev server's regeneration queue must guarantee, stated as the
- * interleavings it exists to prevent.
- *
- * The failure this is all for is not a crash. It is four generated files that
- * describe a plugin configuration nobody has any more, sitting on disk until an
- * unrelated edit happens to touch a watched file - so the browser serves a route
- * that was deleted, or 404s one that was added, with nothing in the log.
- *
- * ## Why the passes are functions that resolve when told
- *
- * A test that ran real passes could only ever assert on how long they happened
- * to take, which is the one thing this has to be independent of. So each pass
- * here hands back its own `resolve`, and the test settles them in whatever order
- * it wants to state: "the older pass finishes last" is a line of code rather
- * than a sleep and a hope.
- */
-
 /** A run function whose passes are resolved by the test, in any order. */
 const controllablePass = () => {
   const started: string[] = [];

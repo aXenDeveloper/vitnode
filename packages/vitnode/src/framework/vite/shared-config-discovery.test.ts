@@ -5,21 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { pluginIdsFromLoadedConfig } from "../plugin-routes";
 
-/**
- * How the build finds out which plugins an app configured.
- *
- * The generator loads `src/vitnode.config.ts` with `jiti` while Vite is still
- * resolving its own config, reads `plugins[].pluginId`, and generates one
- * literal import per plugin into three committed files. That is the entire
- * contract, and the property worth pinning is what it must *not* need: the
- * app's message loaders, its React content registries, or anything else that
- * only makes sense on a server.
- *
- * `test-fixtures/config-split/` is a config pair exactly as an app writes one,
- * except that its server half throws at module scope. So a discovery pass that
- * reached the wrong file fails here rather than becoming a slow build somebody
- * eventually profiles.
- */
 const fixtureRoot = resolve(
   import.meta.dirname,
   "../../../test-fixtures/config-split",

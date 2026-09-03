@@ -17,20 +17,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The cron list's URL contract - the shared admin-table one, with this screen's
- * declaration already applied.
- *
- * Bound here rather than at the route so a host writes `validateSearch:
- * normalizeCronRouteSearch` instead of restating which columns this table sorts
- * by. Two applications naming the same contract twice is exactly how they end up
- * naming it differently.
- *
- * Every rule these four functions apply - the defaults, the clamping, what an
- * unusable value falls back to, and why they are total and idempotent - is
- * `tanstack/admin/table-search.ts`'.
- */
-
 export type CronRouteSearch = AdminTableRouteSearch<CronOrderBy>;
 export type UncheckedCronSearch = UncheckedAdminTableSearch<CronOrderBy>;
 

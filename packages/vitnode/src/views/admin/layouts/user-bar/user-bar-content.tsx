@@ -19,14 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CONFIG_PLUGIN } from "@/config";
 
-/**
- * The admin the user bar renders - four fields and no more.
- *
- * A *requirement* rather than a copy of the admin session response: both
- * applications' session shapes satisfy it structurally, so neither has to
- * reshape anything, and a field renamed in the API fails at the two call sites
- * rather than being silently rendered as `undefined`.
- */
 export interface AdminUserBarUser {
   avatarColor: string;
   email: string;
@@ -34,30 +26,6 @@ export interface AdminUserBarUser {
   nameCode: string;
 }
 
-/**
- * The AdminCP user menu, with the two things it cannot decide for itself handed
- * in.
- *
- *     a link      ->  LinkComponent   the framework's, or the host's migration one
- *     sign-out    ->  onSignOut       the shared auth action, bound by the caller
- *
- * Sign-out is a *prop* rather than an import, and that is the whole reason this
- * file exists. The Next.js menu called a `"use server"` action directly; a
- * TanStack Start host signs out through `useSignOutAction()`, which also brings
- * the canonical session cache back in step before anything navigates. Importing
- * either here would pick one framework, so the component asks its caller and
- * stays out of it.
- *
- * ## The debug entry is gated, and the gate is not a security boundary
- *
- * `useAdminStaffPermission` hides the link when this admin cannot view the debug
- * screen - the same permission tuple the API checks. Hiding it is a courtesy to
- * the reader; the page itself is still refused by Hono, which re-checks the
- * staff permission tables on every request. See `api/lib/check-staff-permission`.
- *
- * Reading permissions here needs no Suspense boundary: by the time this renders,
- * the shell has mounted a provider holding an already-resolved permission set.
- */
 export const UserBarAdminContent = ({
   LinkComponent,
   onSignOut,

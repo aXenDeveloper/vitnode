@@ -10,17 +10,6 @@ const { createVitNodeStart } = await import("./create-start");
 const { runLocaleRequest } = await import("./locale-middleware");
 const { localeRoutingFromConfig } = await import("@/lib/i18n/locale-routing");
 
-/**
- * The request pipeline an app gets for free, and cannot get wrong.
- *
- * Start installs its own CSRF middleware *only* while an app declares no
- * `requestMiddleware` at all - so the moment an app writes a pipeline, the
- * default is replaced by whatever that list holds. Every app used to write that
- * list. This is the factory that writes it instead, and what these tests pin is
- * the part an app can no longer influence: CSRF exists, it is first, and nothing
- * an app passes can get in front of it or in front of locale handling.
- */
-
 /** Start marks its CSRF middleware with this outside production builds. */
 const csrfSymbol = Symbol.for("tanstack-start:csrf-middleware");
 
@@ -46,15 +35,6 @@ const requestMiddlewareOf = async (
   return [...(options.requestMiddleware ?? [])];
 };
 
-/**
- * Whether the CSRF middleware would validate this request.
- *
- * Asserted through behaviour rather than by reading `opts.filter`, which the
- * middleware closes over and does not expose. The request carries
- * `Sec-Fetch-Site: cross-site`, which Start's own check refuses - so the
- * middleware answers with a `Response` when its filter let the request through,
- * and passes `next()` straight back when the filter skipped it.
- */
 const isValidatedByCsrf = async (
   csrf: unknown,
   { handlerType, url }: { handlerType: string; url: string },
@@ -149,7 +129,7 @@ describe("the locale rule only ever touches a page request", () => {
         handlerType: "serverFn",
         next: advance,
         request: new Request("https://a.test/en/discover"),
-      } as never,
+      },
       localeRouting,
     );
 
@@ -164,7 +144,7 @@ describe("the locale rule only ever touches a page request", () => {
         handlerType: "router",
         next: advance,
         request: new Request("https://a.test/en/discover?page=2#top"),
-      } as never,
+      },
       localeRouting,
     );
 
@@ -185,7 +165,7 @@ describe("the locale rule only ever touches a page request", () => {
         handlerType: "router",
         next: next(),
         request: new Request("https://a.test/pl/admin"),
-      } as never,
+      },
       localeRouting,
     )) as Response;
 
@@ -216,7 +196,7 @@ describe("/api/* passes through the pipeline untouched", () => {
           handlerType: "router",
           next: advance,
           request: new Request(url),
-        } as never,
+        },
         localeRouting,
       );
 
@@ -233,7 +213,7 @@ describe("/api/* passes through the pipeline untouched", () => {
         handlerType: "router",
         next: vi.fn(),
         request: new Request("https://a.test/pl/api/foo"),
-      } as never,
+      },
       localeRouting,
     )) as Response;
 
@@ -248,7 +228,7 @@ describe("/api/* passes through the pipeline untouched", () => {
         handlerType: "router",
         next: vi.fn(async () => await Promise.resolve({ response })),
         request: new Request("https://a.test/api/vitnode/core/session"),
-      } as never,
+      },
       localeRouting,
     );
 
@@ -272,7 +252,7 @@ describe("what the pipeline does to the response it gets back", () => {
         handlerType: "router",
         next: async () => await Promise.resolve({ response }),
         request: new Request(url),
-      } as never,
+      },
       localeRouting,
     );
 

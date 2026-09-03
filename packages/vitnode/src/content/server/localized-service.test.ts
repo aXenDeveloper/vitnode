@@ -13,13 +13,6 @@ import { createContentModel } from "./model";
 
 const localized = createContentModel(testLocalizedArticleContentType);
 
-/**
- * The localized service, narrowed once.
- *
- * `localizedService` is `undefined` for a content type without localization, so
- * TypeScript refuses the call until the check has been made - which is the point,
- * and is why every test goes through this instead of asserting past it.
- */
 const localizedService = (c: Context) => {
   const build = localized.localizedService;
   if (!build) throw new Error("Expected a localized service.");
@@ -37,15 +30,6 @@ interface RecordedCall {
   op: string;
 }
 
-/**
- * A Drizzle stand-in whose `transaction` behaves like the real one in the only
- * respect a unit test can observe: the callback's rejection propagates, and
- * `rolledBack` records that it did.
- *
- * Whether Postgres actually discards the base row is a property of Postgres, and
- * `plugins/example/src/database/postgres.test.ts` asserts it against a real
- * database rather than against a mock that could only ever agree with itself.
- */
 const createDbMock = (
   results: unknown[][],
   {

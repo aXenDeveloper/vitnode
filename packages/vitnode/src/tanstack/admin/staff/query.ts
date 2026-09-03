@@ -89,33 +89,6 @@ export const adminStaffEntryQuery = ({
   type: PermissionStaffType;
 }) => adminStaffEntryQueryOptions({ adminUserId, fetchEntry, id, type });
 
-/**
- * What a staff write invalidates, and why the admin session is on the list.
- *
- * A staff entry *is* a permission grant. Creating one, editing one or deleting
- * one changes what somebody may do in the panel - and "somebody" can be the
- * administrator pressing the button, in more ways than the obvious one:
- *
- * - The API refuses an edit or a delete of an entry that governs the caller's
- *   own access, so a *direct* self-demotion cannot happen.
- * - It does not, and cannot, refuse everything else. Two administrators can be
- *   in the panel at once, and one of them editing the other's entry changes what
- *   the other may do while their tab is open.
- * - Nothing stops an administrator granting a *role* they do not hold a
- *   permission they then acquire by other means.
- *
- * The sidebar, every permission gate and every screen guard in the AdminCP are
- * rendered from one cached entry, `["vitnode","admin-session"]`. Leaving it
- * alone after a staff write means the panel goes on offering links the API has
- * started refusing until somebody reloads the page - which is exactly what
- * `revalidatePath("/[locale]/admin", "layout")` prevents in the Next.js
- * AdminCP, and the reason this list has three entries rather than one.
- *
- * `invalidateAdminSession` rather than `removeAdminSession`: the *identity* has
- * not changed, so the current sidebar stays on screen while the fresh answer is
- * fetched. Removal is for a sign-in or a sign-out, where keeping the previous
- * answer for even one frame is the thing to avoid.
- */
 export const invalidateAfterStaffChange = async (
   queryClient: QueryClient,
   adminUserId: AdminIdentity,

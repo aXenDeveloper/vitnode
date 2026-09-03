@@ -10,16 +10,6 @@ import {
   searchRouteFeedParams,
 } from "./route-search";
 
-/**
- * `/search`' contract with its own URL, and with the cache underneath it.
- *
- * Pure functions only. `normalizeSearchRouteSearch` is what a route hands to
- * `validateSearch`, so calling it directly is calling the route's schema - no
- * router, no request, no rendering. The feed's *behaviour* lives in
- * `views/search` and is asserted there; what is asserted here is that this
- * namespace asks for the right feed.
- */
-
 const paramsFor = (input: Record<string, unknown>) =>
   searchRouteFeedParams(normalizeSearchRouteSearch(input));
 

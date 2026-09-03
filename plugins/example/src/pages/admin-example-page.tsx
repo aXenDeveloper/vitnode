@@ -1,37 +1,6 @@
 import { definePluginRoute } from "@vitnode/core/routing";
 import { useTranslations } from "use-intl";
 
-/**
- * A plugin page inside the AdminCP - `area: "admin"`, and the smallest real one
- * that can be written.
- *
- * It exists to prove the runtime rather than to do a job: one `page()` in
- * `routes.ts` becomes a route mounted under the host's `_admin` shell and a URL
- * at `/admin/example` with the sidebar, the breadcrumb and the admin session
- * guard around it, with this module in a chunk of its own. Nothing about the page itself is special, which is the point - the
- * contract is the same one a public page has.
- *
- * ## What is *not* here
- *
- * **A framework.** The same two imports a public plugin page has: the routing
- * package, which is data and types with no framework in it, and `use-intl`,
- * which VitNode itself renders through. No router, no framework package, no host-specific
- * module - so this file is renderable by whichever application installs the
- * plugin.
- *
- * **A `<main>`.** `area: "admin"` puts this inside the AdminCP shell, and the
- * shell's `SidebarInset` *is* the document's one `<main>`. A page that rendered
- * its own would produce two landmarks for a screen reader to choose between.
- *
- * **A permission gate.** This page shows nothing an administrator may not see,
- * and the example plugin has no staff permission that would honestly describe
- * "may open the overview" - its only permission modules are its two content
- * types. Inventing one would be a security relationship that does not exist. A
- * plugin page that *does* hold privileged data gates its own content with
- * `AdminStaffPermissionGate` and, more importantly, is refused by the API:
- * `requires` is not the tool, because it is about the public session and the
- * AdminCP runs on its own.
- */
 const AdminExamplePage = () => {
   const t = useTranslations("@vitnode/example.admin.overview");
 
@@ -56,13 +25,6 @@ const AdminExamplePage = () => {
   );
 };
 
-/**
- * The crumb the AdminCP header renders for this page.
- *
- * Owned by the plugin, exactly as a public plugin route's is: this route
- * contributes one item to the trail and the shell renders it. A label rather
- * than a link - the shell owns the href, the separators and the `aria-current`.
- */
 const AdminExampleBreadcrumb = () => {
   const t = useTranslations("@vitnode/example.admin.overview");
 

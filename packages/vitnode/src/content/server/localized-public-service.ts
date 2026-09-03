@@ -47,12 +47,6 @@ import {
   buildSearchCondition,
 } from "./query";
 
-/**
- * The key the resolved language id travels back on.
- *
- * A leading underscore, which `CONTENT_FIELD_NAME_PATTERN` forbids, so it can
- * never collide with a declared field however the content type is written.
- */
 const LANGUAGE_KEY = "_languageId";
 
 const conditions = (...parts: (SQL | undefined)[]): SQL | undefined => {
@@ -85,33 +79,6 @@ const EMPTY_PAGE = {
   totalCount: 0,
 };
 
-/**
- * The read-only public repository of a **localized** content type.
- *
- * Everything here follows from one sentence: *a public localized response is one
- * base row joined to one translation, and both halves have to be published.*
- *
- * - **Subordination is not a parameter.** Every read `and`s
- *   `publishedCondition` on the base row and the same predicate on the
- *   translation it serves, so there is no argument a caller could forget and no
- *   path that reaches an unpublished translation.
- * - **Fallback picks *which* translation the predicate runs against.** It never
- *   relaxes the predicate. `fallback: "default"` can serve the default language
- *   to a locale that has no translation of its own; it can never serve a *draft*
- *   translation, in any language.
- * - **A slug never falls back.** `findBySlug` is strict-locale, because a URL
- *   belongs to a language: answering `/pl/witaj` from the English row would be
- *   the wrong article, in the wrong language, cached under the Polish tag.
- * - **Only allowlisted columns are read.** Shared ones off the base table,
- *   localized ones off the translation - the `SELECT` is built from
- *   `publicApi.fields` either way, so a private column is never fetched.
- *
- * The visibility test appears twice in the same statement on purpose: once as an
- * `EXISTS` in the `WHERE` (which is what lets the paginator count matching rows
- * without a join of its own), and once as the `ON` of the join that fetches the
- * values. Both are generated from {@link publishedCondition} and the same language
- * ids, so they cannot disagree about which translation is being served.
- */
 export const createContentLocalizedPublicService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -158,14 +125,6 @@ export const createContentLocalizedPublicService = <
   const orderable = publicOrderableColumns(definition);
   const project = createContentPublicProjector(definition);
 
-  /**
-   * Which half of the join each exposed name is read from.
-   *
-   * A canonical path is answered by its **container**: `seo.title` is on the
-   * translation table when `seo` is a localized group and on the base row
-   * otherwise, because a group moves whole. A collection is neither - it has no
-   * column on either table, and is batch-loaded after the page is fetched.
-   */
   const ownerOf = (name: string): string => {
     const path = splitContentFieldPath(name);
 
@@ -193,13 +152,6 @@ export const createContentLocalizedPublicService = <
       .map(leaf => [leaf.path, leaf.columnName]),
   );
 
-  /**
-   * Attaches the exposed collections to a page of rows.
-   *
-   * One batch per collection field for the whole page. A collection is shared,
-   * so it is the same in every language - there is nothing locale-aware to do
-   * here, and doing it once per page rather than once per locale is the point.
-   */
   const withCollections = async (
     rows: readonly Record<string, unknown>[],
   ): Promise<Record<string, unknown>[]> => {
@@ -253,17 +205,6 @@ export const createContentLocalizedPublicService = <
   const requestedRows = requestedTable as unknown as Record<string, PgColumn>;
   const fallbackRows = fallbackTable as unknown as Record<string, PgColumn>;
 
-  /**
-   * `EXISTS (a published translation of this row, in this language)`.
-   *
-   * Correlated to the base table by `itemId`, so it can sit in a `WHERE` that the
-   * paginator also uses for its `COUNT` - which is the whole reason the visibility
-   * test is written as a subquery rather than only as a join condition.
-   *
-   * `extra` narrows it with a predicate over the *translation's* columns: that is
-   * how a filter or a search on a localized field stays bound to the language
-   * actually being served, instead of matching any translation at all.
-   */
   const publishedTranslation = (languageId: number, extra?: SQL): SQL =>
     exists(
       c
@@ -280,15 +221,6 @@ export const createContentLocalizedPublicService = <
         ),
     );
 
-  /**
-   * The row is readable in this locale - and, with `extra`, the translation being
-   * read also matches it.
-   *
-   * The fallback arm is deliberately mutually exclusive with the first: a locale
-   * that *has* a published translation is never also matched through the default
-   * one, so a filter or a search can never match a language the reader will not
-   * be shown.
-   */
   const visibleIn = (
     { fallbackTo, requested }: ResolvedLocale,
     extra?: SQL,
@@ -318,27 +250,9 @@ export const createContentLocalizedPublicService = <
       }),
     );
 
-  /**
-   * A canonical path, resolved to the column on the **aliased** translation.
-   *
-   * The two aliases are fresh Drizzle tables, so they carry the generated
-   * column keys and not the path aliases `contentTranslationTableColumns`
-   * registers. Mapping here rather than there is what keeps the alias trick a
-   * convenience on the model's column map instead of something every join has
-   * to reproduce.
-   */
   const translationColumnName = (name: string): string =>
     localizedColumnByPath.get(name) ?? name;
 
-  /**
-   * One localized column, read off whichever translation this row resolved to.
-   *
-   * The `CASE` is gated on the *join* having matched rather than on the column
-   * being null, which is what stops a nullable localized field being taken from
-   * one language while its neighbours come from another. Either the requested
-   * translation matched and every localized value comes from it, or none did and
-   * every value comes from the fallback.
-   */
   const localizedValue = (
     name: string,
     withFallback: boolean,

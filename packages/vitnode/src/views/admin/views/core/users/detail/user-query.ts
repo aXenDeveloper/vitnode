@@ -1,12 +1,3 @@
-/**
- * One user, as the AdminCP detail screen reads them.
- *
- * `/admin/core/users/123` in the address bar, `$id` in the route tree, and a
- * `{id}` path parameter on a Hono route that answers `404` for anything that is
- * not a row. Between those three there is exactly one interesting decision, and
- * it is {@link normalizeAdminUserId}.
- */
-
 import { queryOptions } from "@tanstack/react-query";
 
 import type { StaffPermissionSet } from "@/api/lib/permission-staff";
@@ -24,33 +15,8 @@ import {
 } from "@/views/admin/views/core/shared/admin-scope";
 import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
-/**
- * Postgres `integer`. A `bigint`-looking id is not a row, it is a probe.
- *
- * Checked here rather than left to the API because the value also becomes a
- * cache key and a `<title>`, and `Number("9999999999999")` is a perfectly finite
- * number that the database would reject with a driver error rather than a 404.
- */
 const MAX_USER_ID = 2_147_483_647;
 
-/**
- * The id in the URL, or `null` if it cannot be one.
- *
- * `$id` matches *any* segment, so this receives whatever was typed:
- * `/admin/core/users/abc`, `/admin/core/users/1e3`, `/admin/core/users/-1`,
- * `/admin/core/users/007`. `Number()` accepts all four - as `NaN`, `1000`, `-1`
- * and `7` - and the first would reach Hono as `?id=NaN`, which is a request
- * nobody meant to make.
- *
- * A strict decimal test instead, with no sign, no exponent and no leading zero,
- * so exactly one string maps to each id. That last rule is what keeps the cache
- * honest: `007` and `7` are the same user, and accepting both would be two cache
- * entries and two fetches for one row.
- *
- * Returns the *string*, because that is what the path parameter takes and what a
- * route's params hold - converting to a number here would only mean converting
- * back at every call site.
- */
 export const normalizeAdminUserId = (
   raw: null | string | string[] | undefined,
 ): null | string => {
@@ -82,13 +48,6 @@ export interface AdminUserDetail {
 
 export type AdminUserFetcher = (id: string) => Promise<AdminUserDetail>;
 
-/**
- * One user, fetched from the browser.
- *
- * A refusal throws, carrying its status: `404` is a link to somebody who has
- * been deleted and belongs on a not-found screen, `403` is an administrator who
- * may no longer look, and the two must not render the same way.
- */
 export const fetchAdminUserInBrowser: AdminUserFetcher = async id => {
   const response = await fetcherClient(adminModuleRef, {
     args: { params: { id } },

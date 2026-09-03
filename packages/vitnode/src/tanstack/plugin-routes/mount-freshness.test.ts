@@ -17,29 +17,6 @@ import { PLUGIN_ROUTES_ROUTE_ID } from "./container";
 import { withPluginRoutes } from "./mount";
 import { pluginRouteSpecs } from "./specs";
 
-/**
- * What happens to a route tree when a plugin is enabled, disabled and enabled
- * again while the process keeps running.
- *
- * This is the dev-server question, and it is not the same one `./mount` answers
- * for a cold start. A generated file changing invalidates the module that reads
- * it, so the composition runs again - but the route tree it runs against is the
- * one a *previous* pass already mutated, because `routeTree.gen.ts` is a module
- * singleton and `addChildren` writes into it in place. So "mount the new routes"
- * is only half the job: the old ones have to stop existing, and they have to
- * stop existing on the tree that is already there rather than on a fresh one.
- *
- * The symptom when they do not is a *stale match*, not a broken page. The live
- * route tree is what every link, redirect and guard resolves against, and a
- * subtree nobody declares any more still matches - so a URL whose plugin was
- * uninstalled keeps resolving to a route that no longer has a component behind
- * it, and the dev server serves a blank or a crash rather than a not-found.
- *
- * `matchRoutes` is used directly here because the route tree is the only table,
- * and a test that consulted a list of
- * expected paths would be asserting against its own copy of the answer.
- */
-
 const pageHead: PluginRoutePageHead = ({ title }) => ({
   meta: title ? [{ title }] : [],
 });
@@ -65,21 +42,9 @@ const EXAMPLE = plugin("example", "/example");
 /** A second plugin's page, at `/reports`, so removal can be told from a reset. */
 const REPORTS = plugin("reports", "/reports");
 
-/**
- * The generated file for a given configuration, as one call.
- *
- * A plugin's routes and the modules behind them are one declaration, so a
- * disabled plugin loses both together - there is no second list that could stay
- * behind.
- */
 const specsFor = (...sources: PluginRouteDeclarationSource[]) =>
   pluginRouteSpecs(sources);
 
-/**
- * The app's own tree, built once - which is the point. Every mount below
- * mutates *this* object, exactly as a dev server's repeated composition mutates
- * the one `routeTree.gen.ts` exports.
- */
 const appTree = (): { admin: AnyRoute; main: AnyRoute; root: AnyRoute } => {
   const root = createRootRoute();
   const main = createRoute({ getParentRoute: () => root, id: "_main" });
@@ -98,14 +63,6 @@ const appTree = (): { admin: AnyRoute; main: AnyRoute; root: AnyRoute } => {
   return { admin, main, root };
 };
 
-/**
- * Does the deepest match consume the whole path?
- *
- * The locale and origin handling a host wraps around this is the host's and is
- * tested there; this is the route-tree half alone. "Something matched" is not
- * enough: `matchRoutes` answers with the deepest *ancestor* it can resolve, so a
- * removed `/example` still comes back as a match on the root.
- */
 const owns = (tree: AnyRoute, pathname: string): boolean => {
   // A router per question, built from the tree as it stands right now - which is
   // the state the dev server is in after a composition: a new router graph over
@@ -154,11 +111,6 @@ describe("enabling, disabling and re-enabling a plugin on a live route tree", ()
     expect(owns(root, "/example")).toBe(true);
   });
 
-  /**
-   * The one this whole module is for. The second composition runs against the
-   * tree the first one mutated, and the route it no longer declares has to be
-   * gone from that tree - not merely absent from the specs.
-   */
   it("stops claiming a path once the plugin declaring it is disabled", () => {
     const { admin, main, root } = appTree();
     const mountUnder = { admin, main };
@@ -247,12 +199,6 @@ describe("no orphan routes are left on the tree", () => {
     expect(owns(root, "/")).toBe(true);
   });
 
-  /**
-   * Per shell, not globally. The last admin plugin route going away has to clear
-   * the AdminCP's container while the public one keeps its own - a single shared
-   * "did anything mount" flag gets this wrong in the direction that leaves an
-   * admin URL claimed by a plugin that is gone.
-   */
   it("clears one shell's plugin subtree without touching the other's", () => {
     const { admin, main, root } = appTree();
     const mountUnder = { admin, main };

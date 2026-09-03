@@ -23,13 +23,6 @@ vi.mock("../../api/lib/check-staff-permission", () => ({
   checkStaffPermission: async () => await Promise.resolve(true),
 }));
 
-/**
- * The composite half of the contract needs a content type that is **both**
- * localized and holds a file, which no shared fixture is - a file field is
- * always shared, so this is the one combination that exercises a save writing
- * the base row and its translations in one transaction while carrying a file
- * identifier.
- */
 const localizedFileContentType = defineContentType({
   id: "test.localized-file",
   tableName: "test_localized_files",
@@ -68,13 +61,6 @@ const adminUser = {
   roleId: 1,
 };
 
-/**
- * The rejection the reference check raises, as the service raises it.
- *
- * Constructed rather than provoked through a stubbed `core_files` read: what is
- * under test is the boundary between the error and the response, and the four
- * codes are already validated against real descriptors in `files.test.ts`.
- */
 const rejection = (
   code: (typeof CONTENT_FILE_CODES)[keyof typeof CONTENT_FILE_CODES],
   field_: string,
@@ -87,14 +73,6 @@ const rejection = (
     message,
   });
 
-/**
- * The real `app.onError`, copied from `VitNodeAPI`.
- *
- * The point of a structured 400 is that `HTTPException.getResponse()` survives
- * the trip out, so the handler that has to return it verbatim is part of what is
- * being tested - asserting on `getResponse()` alone would pass even if the app
- * flattened the body on the way out.
- */
 const withErrorHandler = (app: OpenAPIHono): OpenAPIHono => {
   app.onError((error, c) => {
     if (error instanceof HTTPException) return error.getResponse();
@@ -230,15 +208,6 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * A refused file identifier has to reach the client as `{ code, field, message }`.
- *
- * `ContentFileReferenceError` extends `ContentInputError`, and the generic branch
- * of the mapper answers a `ContentInputError` with `message` alone - so before
- * this, every one of the four reasons arrived as prose with no code and, worse,
- * no field. A save carries every field at once: without `field` a form knows a
- * file was refused and cannot say which input to put the message under.
- */
 describe("a refused file identifier on a content write", () => {
   const cases = [
     [
@@ -328,11 +297,6 @@ describe("a refused file identifier on a content write", () => {
     });
   });
 
-  /**
-   * `Error.message` carries `[Content Engine] <contentTypeId>: ` for the log's
-   * benefit, and an editor must never be shown it. The body reads `detail`, so
-   * this is the assertion that keeps it reading `detail`.
-   */
   it("keeps the internal prefix and the content type id out of the body", async () => {
     const { app, service } = harness();
     service.create.mockRejectedValue(
@@ -349,11 +313,6 @@ describe("a refused file identifier on a content write", () => {
     expect(response.body).toMatchObject({ message: "This file is too big." });
   });
 
-  /**
-   * The guard on the branch above it: only a file rejection gains a body. Every
-   * other `ContentInputError` keeps the plain-text 400 it has always answered,
-   * so no existing client starts reading JSON where there is none.
-   */
   it("leaves every other input error as plain text", async () => {
     const { app, service } = harness();
     service.create.mockRejectedValue(
@@ -371,14 +330,6 @@ describe("a refused file identifier on a content write", () => {
 });
 
 describe("the OpenAPI contract for that 400", () => {
-  /**
-   * The declared 400 body of one generated route.
-   *
-   * The model is taken as `never` because `buildContentRoutes` is invariant in
-   * its definition: a concrete `ContentModel` is not assignable to the
-   * `AnyContentTypeDefinition` its parameter names, and every call site here has
-   * a concrete one.
-   */
   const body400 = (model: never, method: string, path: string) => {
     const entry = buildContentRoutes(model, { pluginId: PLUGIN_ID }).find(
       item => item.route.method === method && item.route.path === path,
@@ -404,11 +355,6 @@ describe("the OpenAPI contract for that 400", () => {
     ).toBeDefined();
   });
 
-  /**
-   * A content type with no file field cannot produce this body, so it must not
-   * advertise one - the same rule `uniqueConflict` follows for a non-editorial
-   * content type.
-   */
   it("says nothing about it for a content type with no file field", async () => {
     const { testPostContentType } = await import("@/tests/content-fixtures");
     const plain = createContentModel(testPostContentType, {

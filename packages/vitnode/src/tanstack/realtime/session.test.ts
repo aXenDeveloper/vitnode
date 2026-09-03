@@ -2,21 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { socketUserIdFromSession } from "./session";
 
-/**
- * The realtime contract, on the client's side of it:
- *
- *     session (the canonical query)  ->  socketUserIdFromSession  ->  WebSocketAuthSync
- *
- * Only this derivation is tested, and it is the only part worth testing here.
- * What follows it is `shouldReconnectForUser` in `@/ws/auth-sync`, which has its
- * own tests, and below that a WebSocket - and a fake socket proves nothing about
- * a real handshake, which is where the identity is actually decided.
- *
- * What can go wrong on this side is the distinction between "signed out" and
- * "not known yet". Both are falsy, both would read as a guest, and collapsing
- * them re-opens the shared connection on every page load for every signed-in
- * visitor - with no error anywhere to say so.
- */
 describe("socketUserIdFromSession", () => {
   it("reports the signed-in visitor", () => {
     expect(socketUserIdFromSession({ user: { id: 42 } })).toBe(42);

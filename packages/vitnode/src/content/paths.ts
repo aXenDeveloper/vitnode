@@ -9,17 +9,6 @@ import type {
 
 import { CONTENT_ADVANCED_LEAF_KINDS, CONTENT_PATH_SEPARATOR } from "./const";
 
-/**
- * The one place a canonical field path is built, split or turned into a column.
- *
- * Stage 6 gives one logical value two representations: `seo.title`, which every
- * subsystem speaks, and `seoTitle`, which only Postgres speaks. Every subsystem
- * that needs the second one asks *this* module for it - the table generator, the
- * schemas, the services, the revision snapshotter, the public projector, the
- * search mapper and the AdminCP alike - so the mapping cannot be reinvented
- * three times and disagree on the fourth.
- */
-
 /** `("seo", "title")` -> `"seo.title"`. */
 export const contentFieldPath = (owner: string, leaf: string): string =>
   `${owner}${CONTENT_PATH_SEPARATOR}${leaf}`;

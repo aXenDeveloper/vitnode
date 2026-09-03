@@ -4,14 +4,6 @@ import { describe, expect, it } from "vitest";
 import { blogCategoryContentType } from "./category";
 import { blogPostContentType } from "./post";
 
-/**
- * What the blog's two content types promise, stated as facts rather than as a
- * snapshot of the descriptor.
- *
- * Every assertion here is something an install would notice if it changed: a
- * table name, a permission module, a public URL, a presentation mode. They are
- * the compatibility contract of the migration.
- */
 describe("blog content types", () => {
   describe("compatibility with the pre-migration plugin", () => {
     it("keeps the table names, so no data has to move", () => {
@@ -166,11 +158,6 @@ describe("blog content types", () => {
       ]);
     });
 
-    /**
-     * The cover image, as a pair: one **shared** file and one **localized**
-     * description of it. That split is the whole point - the image is the same
-     * image in every language, and the alt text is not.
-     */
     describe("the cover image", () => {
       const cover = blogPostContentType.fields.coverImage;
 

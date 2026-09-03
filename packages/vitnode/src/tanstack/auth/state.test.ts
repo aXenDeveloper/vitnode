@@ -11,34 +11,6 @@ import {
   SESSION_QUERY_KEY,
 } from "./state";
 
-/**
- * The Stage 6 auth contract:
- *
- *     session (API)  ->  authStateFromSession  ->  route context  ->  guards
- *
- * Only the pure half is exercised here, which is also the only half worth
- * testing: the transport is one `createServerFn` around a `GET`, and the
- * authorization that actually matters lives in Hono, on the server, behind the
- * session cookie. What can silently go wrong on this side is the *derivation* -
- * a guest read as signed in, an unimplemented role read as a permission, a query
- * key that quietly varies per language - and all three are decided by the
- * functions below.
- *
- * `SessionApi` is imported as a type only, so nothing here loads the server
- * function or the fetcher it reaches for.
- */
-
-/**
- * A visitor who is genuinely nobody: the API answered `200`, and there is no
- * user in the answer.
- *
- * That is now the *only* thing `user: null` can mean. `getSession` used to
- * synthesize this exact object for any non-200 - a 429, a 500, an unreachable
- * API - which made an outage indistinguishable from a sign-out and bounced
- * signed-in visitors to the login page. It rejects instead, so a failed read
- * cannot reach `authStateFromSession` at all; `isUsableSessionStatus` in
- * `auth-contract.test.ts` pins the rule that decides it.
- */
 const anonymousSession: SessionApi = { ai: { models: [] }, user: null };
 
 /** A signed-in visitor, exactly as `users/session.route.ts` describes one. */
@@ -103,12 +75,6 @@ describe("a session becomes an auth state", () => {
     expect(auth.isAdmin).toBe(true);
   });
 
-  /**
-   * The API answers `isModerator: false` unconditionally - it is a `TODO`, not a
-   * role. So the auth state must not carry a moderator flag at all: one would
-   * read as authorization while being a constant, and would start granting
-   * access on its own the day the API begins computing it.
-   */
   it("does not promote a moderator to anything", () => {
     const auth = authStateFromSession(
       sessionFor(userFixture({ isModerator: true })),
@@ -118,11 +84,6 @@ describe("a session becomes an auth state", () => {
     expect("isModerator" in auth).toBe(false);
   });
 
-  /**
-   * `beforeLoad` also runs on preload, on hover, and again on the navigation
-   * itself. The derivation therefore has to be a function of its argument and
-   * nothing else - no clock, no counter, no cache of its own.
-   */
   it("answers the same session identically every time", () => {
     const session = sessionFor(userFixture({ isAdmin: true }));
 
@@ -174,18 +135,6 @@ describe("the session cache key", () => {
     expect(SESSION_QUERY_KEY).toEqual(["vitnode", "session"]);
   });
 
-  /**
-   * The session is *who* the visitor is, which does not change because they read
-   * the page in Polish. A locale in the key would give one visitor two sessions
-   * invalidated separately, so signing out on `/pl` would leave `/` still
-   * rendering a signed-in header.
-   *
-   * Asserted as "two segments and no third" rather than as "none of these
-   * segments is a language", which is the same rule stated in a form that does
-   * not need a list of the installation's locales - and that also catches a
-   * third segment carrying a user id or a route, which would be just as wrong
-   * for the same reason: the next caller could not reconstruct the key.
-   */
   it("carries no locale, and nothing else either", () => {
     const key: readonly string[] = SESSION_QUERY_KEY;
 

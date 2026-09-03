@@ -1,36 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/**
- * The mark, at either of its two sizes.
- *
- * ## `idPrefix`, and the bug it exists for
- *
- * Both variants paint themselves with an SVG `<linearGradient>`, which a `fill`
- * can only reach **by id, in document scope**. Two of these on one page
- * therefore define the same id twice, and every reference resolves to whichever
- * came first in the document.
- *
- * Usually that is invisible, because the two definitions are identical. It stops
- * being invisible the moment the *first* one is inside a `display: none` SVG:
- * Blink will not resolve a paint server out of a subtree that is not rendered,
- * so the reference resolves to nothing and the hexagon paints with no fill at
- * all - a white shape on a white card.
- *
- * That is not hypothetical. `LogoVitNodeBrand` renders both variants and hides
- * one per breakpoint, and the front page renders a third mark in the centre of
- * its animated beam. On a desktop viewport the header's hidden compact mark came
- * first, and the beam's centre - the same id, the same gradient - went blank.
- *
- * So the ids are a prefix a caller may replace. The default keeps the ids the
- * design tool exported, which is what every existing caller renders today; the
- * only code that passes one is {@link LogoVitNodeBrand}, which has to, because
- * it is the component that puts two of these in one document.
- *
- * A `useId()` would be the reflex here and it is not available: this component
- * is rendered by React Server Components in the Next.js app - the AdminCP
- * sidebar and the admin sign-in view are both server-rendered - and a hook there
- * throws. A prop works in both worlds and needs no client boundary.
- */
 export const LogoVitNode = ({
   className,
   idPrefix = "vitnode-logo",

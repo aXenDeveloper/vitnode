@@ -21,13 +21,6 @@ export interface ContentRowData extends Record<string, unknown> {
   translation?: null | { values?: Record<string, unknown> };
 }
 
-/**
- * What a cell reads: the row itself, or its translation for a localized field.
- *
- * `undefined` when the record has no translation in this language, which the
- * cell renders as the missing state rather than as a blank - a record nobody has
- * translated yet is exactly the row worth spotting in a list.
- */
 export const contentCellValue = (
   row: ContentRowData,
   spec: ContentColumnSpec,

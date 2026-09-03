@@ -19,18 +19,7 @@ import type { PluginRouteDeclarationSource } from '@vitnode/core/routing'
 
 import { routes as pluginRoutes0 } from '@vitnode/example/routes'
 
-/**
- * Every configured plugin's route tree.
- *
- * Handed to `pluginRouteSpecs` in the app's router, which flattens and validates
- * it with the same functions the build used - so the tree the router mounts is
- * provably the tree the build checked, and a plugin removed from the config
- * takes its routes with it in one step.
- *
- * `satisfies` rather than a type annotation, deliberately: it checks each
- * plugin's `routes` export really is a `definePluginRoutes` tree, naming the
- * plugin here rather than failing in a browser.
- */
+
 export const pluginRouteSources = [
   {
     pluginId: '@vitnode/example',

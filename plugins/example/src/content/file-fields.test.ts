@@ -11,18 +11,6 @@ import { describe, expect, it } from "vitest";
 
 import { articleContentType } from "./article";
 
-/**
- * The extension-only reference field, exercised as a matrix.
- *
- * `example.article.animation` states exactly one extension and exactly one media
- * type, which makes it the field where "both rules have to match" is visible: a
- * PNG renamed to `.gif` passes the filename check and fails the type check, and
- * that is the only reason it is refused.
- *
- * A GIF is also the format that proves the storage pipeline is not quietly
- * changing the rules - `sharp` never re-encodes GIF, so the stored file keeps
- * its extension.
- */
 const animation = articleContentType.fields.animation;
 const constraints = contentFileConstraints(animation);
 

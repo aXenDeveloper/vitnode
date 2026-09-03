@@ -24,13 +24,6 @@ const TOKEN_KINDS = new Set([
   "user",
 ]);
 
-/**
- * Whether a value is "nothing".
- *
- * One predicate, used both by the renderer and by the layout around it: an
- * em-dash stands on its own, a real value is set in a box, and the two have to
- * agree or a row shows an empty container.
- */
 const isBlank = (value: ContentSnapshotValue | undefined): boolean => {
   if (value === null || value === undefined || value === "") return true;
   if (Array.isArray(value)) return value.length === 0;

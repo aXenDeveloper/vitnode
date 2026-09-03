@@ -20,31 +20,11 @@ import { clampWithFingerprint } from "./hash";
 import { resolveContentTranslationIndexes } from "./indexes";
 import { contentStorageColumns, isContentCollectionField } from "./paths";
 
-/**
- * The one place that decides whether a field is localized.
- *
- * Every subsystem - table generation, schemas, services, routes, migrations -
- * goes through {@link partitionContentFields} rather than testing
- * `field.localized === true` for itself. Two copies of this rule is exactly the
- * pair that drifts, and the consequence of drift is a column generated on one
- * table and read from the other.
- */
 export const isLocalizedContentField = (
   fieldValue: ContentFieldDescriptor,
 ): boolean => fieldValue.localized === true;
 
 export interface ContentFieldPartition {
-  /**
-   * Fields whose value lives outside the row: a to-many relation (junction
-   * table) and a repeatable (child table).
-   *
-   * Present on the partition rather than left for each caller to filter,
-   * because "which fields are columns" is the same question the shared/localized
-   * split answers and it has to be answered in the same place. Every existing
-   * caller reads `sharedFields` and `localizedFields`, both of which now exclude
-   * these - so a Stage 1-5 content type, which declares none, sees exactly the
-   * partition it always did.
-   */
   collectionFields: ContentFieldMap;
   /** Fields stored in the translation table, one row per language. */
   localizedFields: ContentFieldMap;
@@ -52,16 +32,6 @@ export interface ContentFieldPartition {
   sharedFields: ContentFieldMap;
 }
 
-/**
- * Splits a field map into its base-table and translation-table halves.
- *
- * Declaration order is preserved in all three, so the generated column order,
- * the generated schema key order and the migration all stay deterministic.
- *
- * A `group` lands in whichever half its own `localized` flag names, whole: its
- * leaves are flattened into columns of that one table by
- * {@link contentStorageColumns}, never split across both.
- */
 export const partitionContentFields = (
   fields: ContentFieldMap,
 ): ContentFieldPartition => {
@@ -141,15 +111,6 @@ const assertDefaultLocale = (id: string, locale: unknown): string => {
   return locale;
 };
 
-/**
- * Every rule a localized field has to satisfy, in one pass.
- *
- * Two of them are about the *slug*, and they are the ones worth the words: a
- * localized slug derived from a shared title would give every language the same
- * URL, and a shared slug derived from a localized title has no single source to
- * derive from. Both are silent data bugs rather than crashes, so they are
- * rejected at definition time.
- */
 const assertLocalizedFields = (
   id: string,
   fields: ContentFieldMap,
@@ -227,14 +188,6 @@ const assertLocalizedFields = (
   }
 };
 
-/**
- * Checks and fills in `localization`.
- *
- * Runs after every other resolver, because the Stage 5A boundaries are stated in
- * terms of capabilities they have already settled. Like every other resolver
- * here it repeats what the types say: a JavaScript caller, or a value that
- * widened somewhere upstream, can reach this with anything at all.
- */
 export const resolveContentLocalization = ({
   fields,
   id,

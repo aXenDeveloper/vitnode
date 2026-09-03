@@ -35,11 +35,6 @@ const columns = contentTableColumns(testArticleContentType, table);
 const fields = testArticleContentType.fields;
 const contentTypeId = testArticleContentType.id;
 
-/**
- * A focused fixture for the null-filter rules: the shared article type has a
- * nullable `user` field but no nullable *relation*, and both sides of that rule
- * need proving.
- */
 const referenceType = defineContentType({
   id: "test.reference",
   tableName: "test_references",
@@ -235,13 +230,6 @@ describe("buildFilterCondition", () => {
     });
   });
 
-  /**
-   * `status` on a publication content type is a *generated* column: there is no
-   * field descriptor behind it, so none of the checks above apply and it needs
-   * its own guard. The generated Zod schema narrows the value on the HTTP path;
-   * these cover the direct-service path, where a cast or a runtime-built object
-   * can carry anything.
-   */
   describe("publication status", () => {
     const publicationFilter = (filters: Record<string, unknown>) =>
       buildFilterCondition({

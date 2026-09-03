@@ -14,27 +14,8 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * The main shell, split down the middle.
- *
- * The same boundary `auth-boundaries.test.ts` draws around the login screens,
- * for the same reason and with the same machinery: `ThemeLayoutContent` is
- * rendered by a TanStack Start route as well as by Next.js, and a single import
- * that only resolves inside a Next.js app turns that route into a build error
- * nobody sees until they try it.
- *
- * The shared half is the *structure* - the slot order and the `<main>` landmark.
- * Everything that fills a slot is the framework's, and `layout.tsx` is the proof
- * that the Next.js half really does reach the things the shared half must not.
- */
 const SHARED_ENTRY = join(here, "layout-content.tsx");
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
+
 const DELETED_NEXT_HALF = join(here, "layout.tsx");
 
 describe("the shared main shell is framework-neutral", () => {

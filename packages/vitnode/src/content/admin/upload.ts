@@ -5,14 +5,6 @@ import type { ContentFormSpec } from "./spec";
 import { rawApiFetch } from "../../lib/fetcher/raw";
 import { contentFileRejectionReason, zodContentFileDescriptor } from "../files";
 
-/**
- * The address of a content type's generated upload route.
- *
- * Built from the spec the form already has rather than from a route literal,
- * because the AdminCP content screen does not know at compile time which plugin
- * module it is talking to - the same reason `contentApiFetch` exists on the
- * server side.
- */
 export const contentUploadPath = (
   spec: Pick<ContentFormSpec, "permissionModule">,
   field: string,

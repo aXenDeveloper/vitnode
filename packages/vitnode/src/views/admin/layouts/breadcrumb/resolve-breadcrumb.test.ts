@@ -4,15 +4,6 @@ import type { NavAdminParent } from "../sidebar/nav/nav-model";
 
 import { resolveBreadcrumb } from "./resolve-breadcrumb";
 
-/**
- * The AdminCP trail, as a function of the *visible* navigation and a path.
- *
- * The rule matters more than it looks: labels come from the navigation the admin
- * can actually see, so a screen they may not open cannot be named by a crumb
- * either. Everything else falls back to a humanized segment, which is what keeps
- * a dynamic id (`/admin/core/users/42`) from rendering as a blank.
- */
-
 const nav: NavAdminParent[] = [
   {
     id: "core",
@@ -54,11 +45,6 @@ describe("resolveBreadcrumb", () => {
     ]);
   });
 
-  /**
-   * The first label wins, which is why the parent "Users" is used rather than
-   * the sub-item "List" - both are declared at `/admin/core/users`, and the
-   * parent is the one a reader recognises from the sidebar heading.
-   */
   it("prefers the first declaration when two entries share an href", () => {
     const [, users] = resolveBreadcrumb(nav, ["core", "users"]);
 
@@ -86,11 +72,6 @@ describe("resolveBreadcrumb", () => {
     expect(crumbs[1]).toMatchObject({ isKnown: false, isLink: false });
   });
 
-  /**
-   * The permission filter has already run by the time nav arrives here, so an
-   * entry the admin cannot see is simply absent - and the crumb degrades to the
-   * humanized fallback rather than leaking the screen's translated name.
-   */
   it("falls back for a screen missing from the visible navigation", () => {
     const withoutUsers: NavAdminParent[] = [
       {

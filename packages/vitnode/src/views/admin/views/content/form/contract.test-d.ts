@@ -9,16 +9,6 @@ import type {
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentFormTransport } from "./transport";
 
-/**
- * The three contracts a Content Engine form is built on, asserted as types.
- *
- * None of them can be checked at runtime without rendering a form, and all three
- * are the kind that fails silently: a field override that returns a promise
- * suspends forever, a transport whose member drifts from the Server Action makes
- * one AdminCP behave differently from the other, and a layout that could reach
- * the mutation would be a plugin overriding security.
- */
-
 describe("a plugin's field override", () => {
   type Override = NonNullable<
     ContentTypeFrontendRegistration["fields"]
@@ -31,17 +21,6 @@ describe("a plugin's field override", () => {
   });
 
   it("is synchronous, so React never suspends on it", () => {
-    /**
-     * The rule `content-form.tsx` states in a comment and this pins: `AutoForm`
-     * calls the component function to get an element, on every render. An async
-     * one would hand it a fresh promise each time, and React 19 suspends on a
-     * promise child - so the dialog would spin forever with no error anywhere.
-     *
-     * `toExtend` rather than an equality assertion because a `ReactNode` is a
-     * union that already includes `Promise<AwaitedReactNode>` in React 19's own
-     * types; what is being asserted is that the *return type of the override* is
-     * a node, not that a caller may await it.
-     */
     expectTypeOf<ReturnType<Override["component"]>>().not.toEqualTypeOf<
       Promise<unknown>
     >();
@@ -67,17 +46,6 @@ describe("a plugin's form layout", () => {
 });
 
 describe("the transport contract", () => {
-  /**
-   * There is one implementation now - `tanstack/admin/content/form/transport.ts`
-   * - and it is annotated `: ContentFormTransport` at its definition, so tsc
-   * already refuses a signature that drifts. What used to be here was the same
-   * check for the Next.js AdminCP, whose transport *was* its Server Actions
-   * handed over as an object; that surface is gone, and asserting conformance
-   * twice for the one that remains would only restate the annotation.
-   *
-   * The assertions below are the ones the interface owes any implementation, so
-   * they stay: they pin what the *shape* means rather than who satisfies it.
-   */
   it("every write answers with the one result shape", () => {
     expectTypeOf<
       Awaited<ReturnType<ContentFormTransport["edit"]>>

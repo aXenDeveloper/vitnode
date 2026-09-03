@@ -7,14 +7,6 @@ import type { ContentDatabase } from "./service";
 import { core_languages } from "../../database/languages";
 import { ContentEngineError, ContentLanguageError } from "../errors";
 
-/**
- * One usable language, as the Content Engine sees it.
- *
- * `locale` is the **canonical** `core_languages.code` - what the row stores, not
- * what the caller typed. Everything downstream (the translation row, the route
- * response, a future cache tag) uses this value, so `PL` in a URL and `pl` in a
- * URL end up writing to the same place.
- */
 export interface ContentLanguage {
   /** `core_languages.id`. The foreign key a translation row actually holds. */
   id: number;
@@ -25,28 +17,8 @@ export interface ContentLanguage {
   locale: string;
 }
 
-/**
- * Every language in `core_languages`, cached for the life of one request.
- *
- * Keyed by the Hono context in a `WeakMap` rather than stored on the context
- * itself: `c.set` is typed against `ContextVariableMap`, and adding a Content
- * Engine key to the global variable map for a per-request memo would make every
- * app carry it. The entry is collected with the request.
- *
- * The languages table is a handful of rows and every locale in a batch has to be
- * resolved anyway, so one query per request beats one query per locale - which is
- * what a naive `WHERE code = $1` resolver turns into on a list of translations.
- */
 const perRequest = new WeakMap<Context, Promise<ContentLanguage[]>>();
 
-/**
- * Locales the app config has explicitly switched off.
- *
- * Optional the whole way down: a direct `app.request()` in a test, and a queue
- * handler built by hand, both reach here without the global middleware that
- * populates `core` - and "no config" has to mean "nothing disabled" rather than a
- * `TypeError`.
- */
 const disabledLocales = (c: Context): ReadonlySet<string> => {
   const locales = c.get("core")?.i18n?.locales ?? [];
 
@@ -84,19 +56,6 @@ const load = async (
   }));
 };
 
-/**
- * Every language, resolved once per request.
- *
- * Never called for a content type without localization, which is what keeps the
- * languages table out of the query plan of an install that has none.
- *
- * `tx` is not an optimisation - it is required for correctness. A pool with one
- * connection (which is what `max: 1` and a busy pool both amount to) would have
- * that connection held by the caller's open transaction, so a language query
- * issued on the *client* would wait for a connection the transaction is never
- * going to release until it gets an answer. Reading inside the transaction also
- * means the language it resolves is the one the insert will actually see.
- */
 export const listContentLanguages = async (
   c: Context,
   tx?: ContentDatabase,
@@ -117,14 +76,6 @@ export const listContentLanguages = async (
   }
 };
 
-/**
- * Finds a language by locale, case-insensitively. `null` when there is none.
- *
- * Case-insensitive because a locale travels in a URL, and `/pl/` and `/PL/`
- * naming the same language is what people expect. The comparison happens in
- * JavaScript over the already-loaded rows rather than as `lower(code) = $1`,
- * which would not use `core_languages_code_idx` anyway.
- */
 export const findContentLanguage = async (
   c: Context,
   locale: string,
@@ -140,14 +91,6 @@ export const findContentLanguage = async (
   );
 };
 
-/**
- * Resolves a locale to a language, or throws.
- *
- * `requireEnabled` is the write path: reading a translation in a locale the app
- * has switched off is fine - it is already in the database, and hiding it would
- * make the content unrecoverable - but writing one is not, because it would grow
- * content in a language nothing renders.
- */
 export const resolveContentLanguage = async (
   c: Context,
   {
@@ -184,13 +127,6 @@ export const resolveContentLanguage = async (
   return language;
 };
 
-/**
- * The language a localized content type creates its records in.
- *
- * Resolved from the database every time rather than trusted from the definition:
- * `defaultLocale` is a string in source control, and whether it names a row in
- * `core_languages` is a fact about the installation.
- */
 export const resolveDefaultContentLanguage = async (
   c: Context,
   definition: AnyContentTypeDefinition,
@@ -218,20 +154,6 @@ export interface ContentLocalizationProblem {
   reason: "disabled" | "missing";
 }
 
-/**
- * Checks every localized content type's `defaultLocale` against the database.
- *
- * A content type definition is plain data built at import time, long before there
- * is a connection - so "does `core_languages` have a row for `en`" cannot be a
- * definition-time check. This is the explicit runtime phase that replaces it, and
- * the whole reason it exists is that the alternative is discovering a typo in
- * `defaultLocale` on the first create request, in production, as a foreign-key
- * violation.
- *
- * Returns the problems rather than throwing, so the caller decides: the boot
- * guard turns them into one error naming every offender at once, which is more
- * useful than failing on the first.
- */
 export const findContentLocalizationProblems = async (
   c: Context,
   contentTypes: readonly RegisteredContentType[],

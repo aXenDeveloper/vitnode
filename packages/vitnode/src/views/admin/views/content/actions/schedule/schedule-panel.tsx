@@ -28,28 +28,11 @@ import { contentErrorKey } from "../../lib/mutation-feedback";
 import { contentSchedulesQueryOptions } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
 
-/**
- * One record's booked publications, and the form that books another.
- *
- * A schedule performs one of the two publication transitions later; it is not a
- * third lifecycle state. `contentScheduleTimingError` is the *same* rule the API
- * enforces, applied here first so an obviously-wrong time is refused without a
- * round trip - and the API still refuses it if this is bypassed.
- */
 const formSchema = z.object({
   action: z.enum(["publish", "unpublish"]),
   scheduledFor: z.iso.datetime(),
 });
 
-/**
- * One booked transition.
- *
- * `now` is the moment the schedule list was last read, not the moment this
- * renders: the panel carries a form, and a clock read during render would move
- * on every keystroke - a row silently becoming overdue while somebody is typing.
- * React Query already holds that timestamp, so it is read from there rather than
- * from a second copy this component would have to keep in step.
- */
 const ScheduleRow = ({
   now,
   onCancel,

@@ -16,36 +16,6 @@ import type { AdminFileRow, AdminFilesPage } from "./files-query";
 import { FileRowActions } from "./actions/file-row-actions";
 import { FilesBulkActions } from "./actions/files-bulk-actions";
 
-/**
- * Every file uploaded to the installation, as a table both frameworks render.
- *
- * The nine columns, the preview, the metadata popover, the uploader, the empty
- * state and which columns sort - all shared. Fetching, translation and the two
- * deletes are lifted out to whoever is rendering it.
- *
- *     Next.js         files-table-view.tsx        fetch + notFound + server actions
- *     TanStack Start  routes/_admin/…/system/files  loader + useSuspenseQuery + browser deletes
- *                                       \       /
- *                                 FilesTableContent
- *
- * ## What it does not own
- *
- * **Permissions.** `canDelete` and `canDownload` arrive as props rather than
- * being read from the permission context here, and that is deliberate: the
- * Next.js page resolves them on the server with `checkAdminPermissionApi`, and
- * reading them from a React context instead would suspend this component on a
- * promise the AdminCP layout is still holding. The TanStack route reads them
- * from the same admin session the guard already resolved. Either way they hide a
- * control - the API re-checks both tuples on the request itself.
- *
- * **Deleting.** Two callbacks, because the two frameworks genuinely differ: one
- * ends in `revalidatePath`, the other in a query invalidation. What they share -
- * the `409` handling, the force pass, the bulk accounting - is `files-delete.ts`
- * and `lib/files/`, so the difference really is only the last line.
- *
- * **Navigating.** Sorting, paging and searching rewrite the URL, and this
- * component never learns how; the caller mounts the navigation seam.
- */
 export const FilesTableContent = ({
   canDelete,
   canDownload,

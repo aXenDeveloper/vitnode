@@ -1,17 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * The card both recovery screens live in - shared.
- *
- * Thin on purpose: the two forms render their own `CardHeader` and
- * `CardContent`, so all this owns is the page's measure and the card around it.
- * It exists so that "the reset-password page" is one layout rather than two that
- * have to be kept looking alike, in the same way `SignInContent` is.
- *
- * Not a client component. It has no hooks and no strings, which lets the Next.js
- * page keep rendering it on the server with its `<Suspense>` boundary inside.
- */
 export const PasswordResetContent = ({
   children,
 }: {

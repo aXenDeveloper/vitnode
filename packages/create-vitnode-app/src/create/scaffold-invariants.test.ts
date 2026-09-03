@@ -2,22 +2,6 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-/**
- * What a generated project may not contain.
- *
- * Static and pure: the committed template tree is read off disk and the
- * package.json builders are called as the functions they are. Nothing here
- * spawns the CLI, installs anything or runs a build - the claim being pinned is
- * that the *bytes a new project starts from* describe VitNode's permanent
- * architecture, and that is a file listing and a string comparison.
- *
- * It exists because the scaffold is the one place a deleted architecture can
- * come back to life. Nothing in this repository imports the template tree, so no
- * type error and no failing build says a word about it: a `next.config.ts` or an
- * `@breadcrumb` directory sitting in `copy-of-vitnode-app/` is invisible until
- * somebody runs `create-vitnode-app` and is handed an application that cannot
- * start.
- */
 const packageRoot = resolve(import.meta.dirname, "../..");
 const appTemplate = join(packageRoot, "copy-of-vitnode-app");
 const pluginTemplate = join(packageRoot, "copy-of-vitnode-plugin");
@@ -49,26 +33,10 @@ const allFiles = [...appFiles, ...pluginFiles];
 const read = (root: string, file: string): string =>
   readFileSync(join(root, file), "utf8");
 
-/**
- * Source with its comments removed.
- *
- * Prose is allowed to name what was deleted - a comment saying why
- * `prepare-plugins` no longer exists is the most useful thing a reader of this
- * package can find. What must not survive is a *call*, so the check is made
- * against code alone.
- */
 const withoutComments = (source: string): string =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 describe("the generated application", () => {
-  /**
-   * The four directory names the route copier claimed, and the parallel-route
-   * slot it wrote into.
-   *
-   * Asserted against the whole template tree rather than against one expected
-   * location, because the failure this guards against is a *reappearance* and a
-   * reappearance picks its own path.
-   */
   it("ships no Next.js App Router topology", () => {
     expect(allFiles.filter(file => file.includes("[locale]"))).toEqual([]);
     expect(allFiles.filter(file => file.includes("@breadcrumb"))).toEqual([]);
@@ -87,15 +55,6 @@ describe("the generated application", () => {
     expect(allFiles.filter(file => file.endsWith("next-env.d.ts"))).toEqual([]);
   });
 
-  /**
-   * Not a grep for the word "next" - prose may mention the framework this
-   * architecture replaced. What must not exist is an *import* or a module
-   * augmentation, which is what actually makes a generated project depend on it.
-   *
-   * `next-intl` is the one that hides: `declare module "next-intl"` in a
-   * `global.d.ts` is a type-level dependency that survives any search for
-   * `import ... from`.
-   */
   it("imports nothing from next or next-intl", () => {
     const offenders = [
       ...appFiles.map(file => [appTemplate, file] as const),
@@ -120,14 +79,6 @@ describe("the generated application", () => {
     expect(appFiles).toContain("root/src/routes/__root.tsx");
   });
 
-  /**
-   * The single-app shape mounts the Hono API as a TanStack server route.
-   *
-   * It was a Next Route Handler at `src/app/api/[...route]/route.ts`, which the
-   * first assertion in this file would already have caught - this one says what
-   * has to be there *instead*, so a deletion that removed the mount entirely
-   * fails too.
-   */
   it("mounts the API through a server route, not a Route Handler", () => {
     expect(appFiles).toContain("api-single-app/src/routes/api/$.ts");
     expect(read(appTemplate, "api-single-app/src/routes/api/$.ts")).toContain(
@@ -137,28 +88,6 @@ describe("the generated application", () => {
 });
 
 describe("the single-app template's two trees", () => {
-  /**
-   * `root` owns every generic host file; `api-single-app` is an overlay of
-   * API-specific additions and nothing else.
-   *
-   * ## The regression
-   *
-   * Both trees are copied into the *same* directory, and they were copied with
-   * one `Promise.all` - so any path they shared was a race, decided by whichever
-   * `cp` happened to finish last. They shared two, and both of the overlay's
-   * copies were the pre-TanStack ones:
-   *
-   *     .gitignore_template   ignored `/.next/` and `next-env.d.ts`; had no
-   *                           `.output`, `.nitro`, `.vite` or `src/*.gen.ts`
-   *     .env.example          no `NEXT_PUBLIC_API_URL`, no `CRON_SECRET`
-   *
-   * So a new project got a `.gitignore` for a framework it does not use, missing
-   * every output directory it actually writes - about half the time. Nothing
-   * fails; the first symptom is `.output/` showing up in `git status`.
-   *
-   * Both duplicates are deleted rather than corrected, because a corrected
-   * duplicate is still two files that have to agree.
-   */
   const overlayFiles = filesUnder(join(appTemplate, "api-single-app"));
   const rootFiles = filesUnder(join(appTemplate, "root"));
 
@@ -166,11 +95,6 @@ describe("the single-app template's two trees", () => {
     expect(overlayFiles.filter(file => rootFiles.includes(file))).toEqual([]);
   });
 
-  /**
-   * And the overlay is only the API. Listed as a property rather than as an
-   * expected file list, so adding a genuinely API-specific file needs no edit
-   * here - `drizzle.config.ts` and anything under `src/` that names the API.
-   */
   it("keeps only API-specific files in the overlay", () => {
     expect(overlayFiles.length).toBeGreaterThan(0);
     for (const file of overlayFiles) {
@@ -189,11 +113,6 @@ describe("the single-app template's two trees", () => {
     },
   );
 
-  /**
-   * Copied in a fixed order regardless, because "the overlay goes over the base"
-   * is the contract an author adding a file to either tree relies on - and
-   * `Promise.all` into one destination cannot express an order at all.
-   */
   it("is copied base-then-overlay, sequentially", () => {
     const code = withoutComments(
       read(join(packageRoot, "src"), "create/create-vitnode.ts"),
@@ -238,38 +157,16 @@ describe("what a generated single app starts from", () => {
     },
   );
 
-  /**
-   * The environment a single app is configured with. `NEXT_PUBLIC_WEB_URL`
-   * names this app's own origin - which is exactly what the overlay's copy
-   * dropped.
-   */
   it("ships the single-app environment", () => {
     expect(env).toContain("POSTGRES_URL=");
     expect(env).toContain("NEXT_PUBLIC_WEB_URL=http://localhost:3000");
     expect(env).toContain("CRON_SECRET=");
   });
 
-  /**
-   * And it names no API server, because it *is* the API server.
-   *
-   * A set `NEXT_PUBLIC_API_URL` wins over the origin the request arrived on -
-   * that is what makes the split scaffold work at all. So a single app that
-   * shipped `NEXT_PUBLIC_API_URL=http://localhost:3000` in its `.env.example`
-   * hands every deployment copied from it a server that calls the visitor's own
-   * machine. Unset, the request origin answers, and a preview deployment on a
-   * generated hostname needs no configuration.
-   */
   it("names no API server for an app that serves its own", () => {
     expect(env).not.toMatch(/^NEXT_PUBLIC_API_URL=/m);
   });
 
-  /**
-   * The split shape is the mirror image: two processes, so the web app cannot
-   * find `/api/*` on its own origin and the variable is mandatory rather than
-   * optional. `apps/api` listens on 8000 (`apps/api/src/index.ts`), so that is
-   * the port the web app has to be told about - getting this wrong answers the
-   * first server-side session read with a 404 of this app's own HTML.
-   */
   it("points a split web app at the API's own port", () => {
     expect(read(appTemplate, "monorepo/apps/web/.env.example")).toContain(
       "NEXT_PUBLIC_API_URL=http://localhost:8000",
@@ -277,18 +174,6 @@ describe("what a generated single app starts from", () => {
     expect(read(appTemplate, "api-bun/src/index.ts")).toContain("port: 8000");
   });
 
-  /**
-   * One locale declaration, in the shared config, read by both configs.
-   *
-   * `vitnode db:prepare` seeds `core_languages` from the *API* config, and a
-   * single app owns its schema - so a language added to `src/vitnode.config.ts`
-   * has to reach the seed without a second edit. It does, because there is only
-   * one list.
-   *
-   * The standalone `src/i18n.ts` this replaced must not come back: two files
-   * that agree until they don't is exactly the failure the single declaration
-   * exists to prevent.
-   */
   it("declares its languages once and reads them from both configs", () => {
     expect(allFiles.filter(file => /(^|\/)src\/i18n\.ts$/.test(file))).toEqual(
       [],
@@ -321,18 +206,6 @@ describe("what a generated single app starts from", () => {
     expect(api).toMatch(/locales:\s*\[/);
   });
 
-  /**
-   * The app's *own* message loaders are registered through the server config.
-   *
-   * `src/locales/app.ts` and `src/locales/packages.ts` are the two modules an app
-   * edits to add a translation, and both are `() => import(...)` of JSON. They
-   * reach the message loader through `vitnode.server.config.ts`, which carries
-   * the `server-only` marker, rather than through the shared config that the
-   * document shell holds and that Vite executes with `jiti`.
-   *
-   * A plugin's own registration factory is a separate question and is not what
-   * this pins - see `root/src/vitnode.config.ts`.
-   */
   it("registers the app's message loaders through the server config", () => {
     const shared = withoutComments(
       read(appTemplate, "root/src/vitnode.config.ts"),
@@ -356,15 +229,6 @@ describe("what a generated single app starts from", () => {
 describe("what a generated application does to every request", () => {
   const start = withoutComments(read(appTemplate, "root/src/start.ts"));
 
-  /**
-   * `src/start.ts` is a composition root, not a pipeline.
-   *
-   * Start replaces its own default CSRF middleware the moment an app declares
-   * `requestMiddleware` of its own, so a scaffold that shipped a hand-written
-   * list was one deletion away from exposing every server function as an
-   * unauthenticated cross-site endpoint. `createVitNodeStart` owns the list and
-   * an app cannot omit or reorder what is in it.
-   */
   it("builds its Start instance through the Core factory", () => {
     expect(start).toContain(
       'import { createVitNodeStart } from "@vitnode/core/tanstack/start"',

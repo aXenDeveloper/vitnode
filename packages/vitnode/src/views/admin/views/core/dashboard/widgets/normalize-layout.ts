@@ -14,17 +14,6 @@ const clamp = (value: unknown, min: number, fallback: number): number => {
   return Math.min(3, Math.max(min, Math.round(value)));
 };
 
-/**
- * Reconciles what an admin saved with what is actually installed right now.
- *
- * Widgets disappear when a plugin is uninstalled or a permission is revoked,
- * and new ones show up when a plugin is added - so the stored layout is treated
- * as a preference, never as the source of truth.
- *
- * An entry may also arrive unsized, when a widget's own settings write had to
- * create it before the admin ever arranged the board. Sizing falls back to the
- * widget's defaults, the same way an out-of-range value does.
- */
 export const normalizeLayout = ({
   saved,
   widgets,

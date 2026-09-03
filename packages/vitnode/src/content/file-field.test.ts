@@ -10,13 +10,6 @@ import { defineContentType } from "./define";
 import { field } from "./fields";
 import { createContentTable } from "./server/table";
 
-/**
- * A definition builder for the *rejection* cases only.
- *
- * The arguments are deliberately loose - every case below asserts on the error
- * `defineContentType` throws, so nothing reads the result and precise inference
- * would only be in the way. `articleType` is declared directly for that reason.
- */
 const articleWith = (
   fields: Parameters<typeof defineContentType>[0]["fields"],
   extra: Partial<Parameters<typeof defineContentType>[0]> = {},
@@ -216,11 +209,6 @@ describe("the form spec", () => {
   });
   const fileSpec = spec.fields.find(item => item.name === "coverImage");
 
-  /**
-   * The constraint line in the AdminCP, the `accept` attribute and the server's
-   * own check all read these three values. They come off one descriptor, so
-   * there is no second place for them to disagree.
-   */
   it("carries the descriptor's own limits, normalised", () => {
     expect(fileSpec).toMatchObject({
       allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],

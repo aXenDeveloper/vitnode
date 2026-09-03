@@ -18,15 +18,6 @@ import { field } from "./fields";
 import { createContentAdvancedTables } from "./server/advanced-tables";
 import { createContentTable } from "./server/table";
 
-/**
- * `field.file({ multiple: true })`, from the definition down to the migration.
- *
- * The single-file rules already have their own suite; this one is about the
- * *arity*, and every case here is a question whose answer differs from the
- * single-file one: where the value is stored, what the schemas take, what the
- * form spec says, and what the engine refuses.
- */
-
 const gallery = field.file({
   multiple: true,
   max: 4,

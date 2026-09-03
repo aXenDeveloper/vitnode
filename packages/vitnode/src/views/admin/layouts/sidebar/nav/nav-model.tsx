@@ -24,33 +24,6 @@ import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref } from "@/content/registry";
 import { normalizeNamespaceList } from "@/routing";
 
-/**
- * The AdminCP sidebar, as a pure function of configuration, permissions and
- * strings.
- *
- * Split out of `getAdminNav` in Stage 12, and the split is the whole point:
- * everything here is data in, data out - no `next-intl/server`, no session
- * fetch, no `headers()`, nothing that only resolves inside one framework. The
- * navigation an AdminCP renders is the same navigation in both, so it is decided
- * once, here, and each runtime supplies the two things it alone can answer:
- * which translator to use and whose permissions to filter by.
- *
- *     Next.js  getAdminNav()        next-intl/server + getSessionAdminApi
- *     TanStack (Stage 12)  use-intl translator + the admin session query
- *
- * That is also what makes it testable without a server: `buildAdminNav` takes a
- * translator that can be `key => key`, a permission set that can be a literal,
- * and a config that can be three lines - so the rules below (a nav item is
- * hidden when its permission is missing, a group with nothing visible in it
- * disappears entirely, a content type opts out with `navigation.enabled: false`)
- * are pinned by ordinary unit tests rather than by opening a browser.
- *
- * Nothing here is a security boundary. A hidden nav item is a hidden *link*; the
- * page it points at is still reachable by URL and is refused by Hono, which
- * re-checks the staff permission tables on every request. See
- * `api/lib/check-staff-permission.ts`.
- */
-
 /** A resolved sub-item, as the sidebar and the search index read it. */
 export interface AdminNavSubItem {
   href: string;
@@ -70,57 +43,14 @@ export interface NavAdminParent {
   title: string;
 }
 
-/**
- * How a nav title is translated.
- *
- * Structurally `ContentLabelTranslator` rather than a bare
- * `(key: string) => string`, and the difference is load-bearing: a content
- * type's noun is looked up through `t.has(key)` first and falls back to a name
- * derived from its id, so a translator without `has` throws the moment an
- * installation has a content type. Both runtimes supply one - next-intl's
- * `getTranslations` and use-intl's `createTranslator` - so requiring it costs
- * nothing and makes the dependency visible.
- *
- * The key type is widened to `string` on purpose. Both runtimes type their keys
- * as a union of every message in the catalogue, which a key assembled at
- * runtime cannot satisfy, and a plugin's nav keys are not known to this package
- * at all. Widening once at this boundary is what lets one model serve both.
- */
 export type AdminNavTranslator = ContentLabelTranslator;
 
-/**
- * A title before anybody has translated it.
- *
- * Two shapes rather than one string, because a content type's noun is not a
- * message key: it is a *rule* over two keys and a derived fallback
- * (`contentNouns`), and collapsing it to a key here would either lose the
- * fallback or duplicate the rule.
- *
- * Keeping titles un-translated through the first stage is what lets the two
- * stages run in different places - see {@link adminNavDeclarations}.
- */
 export type AdminNavTitle =
   | { contentTypeId: string; kind: "content"; pluginId: string }
   | {
       key: string;
       kind: "key";
-      /**
-       * The message namespace this key's string lives in.
-       *
-       * Carried on the declaration rather than derived from the key, and that is
-       * the point: a namespace is a *path into the merged message tree*, and
-       * which prefix of a key is one cannot be worked out by looking at the key.
-       * `admin.global` is the namespace of `admin.global.nav.core`;
-       * `@vitnode/blog.admin.nav` is the namespace of
-       * `@vitnode/blog.admin.nav.reports`; and `@vitnode/blog.title` is a
-       * namespace that *is* a leaf, because loading a whole plugin tree to
-       * render one group heading would ship every AdminCP string it has.
-       *
-       * A rule that sniffed at key shapes would get one of those three wrong,
-       * silently, and the symptom would be a sidebar rendering dotted
-       * identifiers. So the stage that knows - the one that builds the
-       * declaration - writes it down. See {@link adminNavNamespaces}.
-       */
+
       namespace: string;
     };
 
@@ -138,14 +68,6 @@ export interface AdminNavItemDeclaration extends AdminNavSubItemDeclaration {
   items?: AdminNavSubItemDeclaration[];
 }
 
-/**
- * The only part of `VitNodeConfig` the navigation reads.
- *
- * Narrowed on purpose: a full config satisfies it structurally, so every
- * existing caller is unchanged, and a TanStack host that keeps its plugin
- * registry out of the browser bundle can pass `{ plugins: [] }` without
- * fabricating the rest of a config to do it.
- */
 export type AdminNavConfig = Pick<VitNodeConfig, "plugins">;
 
 /** One sidebar heading and everything declared under it. */
@@ -169,18 +91,6 @@ const isAllowed = (
   set: StaffPermissionSet,
 ): boolean => !permission || hasStaffPermission(set, permission);
 
-/**
- * One group's declarations, translated, with everything this admin may not see
- * removed.
- *
- * An item with sub-items is kept only while at least one of them survives: a
- * parent whose children are all hidden is a disclosure triangle that opens onto
- * nothing, and it would still be a link to a page the API refuses.
- *
- * Filtering happens *before* translating, so a hidden entry costs no message
- * lookups - which matters because the AdminCP search index resolves the whole
- * tree once per enabled locale.
- */
 export const filterNavItems = (
   items: AdminNavItemDeclaration[],
   set: StaffPermissionSet,
@@ -221,13 +131,6 @@ export const filterNavItems = (
   return result;
 };
 
-/**
- * A message key, in the shape a declaration carries titles.
- *
- * `namespace` defaults to the AdminCP shell's own, which is where every core
- * entry's strings are and which the shell loads regardless - so core's group
- * below says nothing about namespaces and a plugin's entries always do.
- */
 const key = (value: string, namespace = "admin.global"): AdminNavTitle => ({
   key: value,
   kind: "key",
@@ -330,18 +233,6 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
   ],
 });
 
-/**
- * A plugin's content types, as nav declarations.
- *
- * Content types get one for free. `admin.navigation.enabled: false` opts out,
- * and the usual permission filter hides anything the admin cannot view.
- *
- * Every href here points into `/admin/content/*`, the namespace the Content
- * Engine owns, and it has spelled exactly that in both AdminCPs throughout the
- * migration. Which application actually serves one is a decision for whatever
- * renders the sidebar, not for this model: it produces hrefs, and the link
- * component decides how to get there.
- */
 const contentNavItems = (
   plugin: VitNodeConfig["plugins"][number],
 ): AdminNavItemDeclaration[] =>
@@ -362,14 +253,6 @@ const contentNavItems = (
       },
     }));
 
-/**
- * A plugin's hand-declared `admin.nav` entries.
- *
- * Deliberately independent of `routes`: an entry here may point at a plugin
- * admin route, at a content screen, at an external URL or at a page in another
- * application, and a plugin admin route may intentionally not appear in the
- * sidebar at all. The two lists describe different things and are kept apart.
- */
 const declaredNavItems = (
   plugin: VitNodeConfig["plugins"][number],
 ): AdminNavItemDeclaration[] =>

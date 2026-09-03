@@ -17,22 +17,6 @@ import {
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
 
-/**
- * The two reads behind `/admin/core/debug`: the system log, and a snapshot of
- * the queue.
- *
- * They live in one module because they are one screen and share one permission -
- * both routes declare
- * `adminStaffPermission: { module: "debug", permission: "can_view" }` - but they
- * are two cache entries, because the log pages and the snapshot does not.
- *
- * The queue snapshot here is *not* the queue list at
- * `/admin/core/advanced/queue`: that one is paginated, filterable and gated on
- * `queue.can_view`; this one is four counters and whatever is currently pending
- * or processing, gated on `debug.can_view`. Two endpoints, two permissions, two
- * cache entries.
- */
-
 export const debugAdminModuleRef = adminModuleRef<typeof debugAdminModule>();
 
 /** The debug module is mounted under `/admin`, not at the plugin root. */
@@ -100,11 +84,6 @@ export const debugLogsQueryRoot = adminQueryRoot("debug-logs");
 export const debugLogsQueryKey = (params: DebugLogsParams) =>
   [...debugLogsQueryRoot, params] as const;
 
-/**
- * The system log, as the one query definition every caller shares.
- *
- * `retry: false`, for the reason every AdminCP read refuses to retry.
- */
 export const debugLogsQueryOptions = ({
   fetchPage = fetchDebugLogsPageInBrowser,
   params,

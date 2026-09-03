@@ -107,12 +107,6 @@ describe("readPluginRouteModule", () => {
     );
   });
 
-  /**
-   * A breadcrumb is a *component*, not an element - the label is translated and
-   * on a dynamic route comes from the loader, so it has to be able to use hooks.
-   * A plugin that exported `<Crumb />` by mistake is caught here rather than by
-   * React.
-   */
   it("refuses a breadcrumb element", () => {
     expect(() =>
       readPluginRouteModule(

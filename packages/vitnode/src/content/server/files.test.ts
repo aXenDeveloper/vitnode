@@ -148,13 +148,6 @@ describe("resolveContentFileDescriptors", () => {
   });
 });
 
-/**
- * One field's descriptor, refusing a list.
- *
- * `files` carries every file field of the row, so its value type is the union of
- * both arities. A single field can never hold a list, and reading one as if it
- * might would hide exactly the bug this narrowing catches.
- */
 const one = (
   value: ContentFileFieldValue | undefined,
 ): ContentFileDescriptor | null =>
@@ -214,11 +207,6 @@ describe("resolveContentPublicRowFiles", () => {
     expect(row.cover).toMatchObject({ id: 1, name: "cover-1.webp" });
   });
 
-  /**
-   * `animation` and `document` are declared but not in `publicApi.fields`, so
-   * they are never selected in the first place - and must not be resolved here
-   * either, which would make the allowlist advisory.
-   */
   it("resolves only the fields the allowlist exposes", async () => {
     const { ctx, select } = makeCtx([fileRow(1)]);
 
@@ -315,12 +303,6 @@ describe("assertContentFileReferences", () => {
     expect(error?.field).toBe("cover");
   });
 
-  /**
-   * The attack this exists for: uploading a PDF through the `document` field's
-   * route - where it is perfectly valid - and then assigning its id to
-   * `animation`, which accepts GIF only. A successful upload is not a valid
-   * assignment.
-   */
   it("refuses an existing PDF assigned to a GIF-only field", async () => {
     const error = await rejection({ animation: 5 }, [
       fileRow(5, { mimeType: "application/pdf", name: "spec.pdf" }),

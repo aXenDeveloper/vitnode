@@ -10,16 +10,6 @@ import {
   contentPublicSlugTag,
 } from "./cache";
 
-/**
- * The delivery cache tags, and the promise that a content type without `delivery`
- * produces exactly the tags it always produced.
- *
- * That second half is the important one and is why the assertions are exact strings
- * rather than "some revalidation happened": the whole of Stage 8's opt-in claim at
- * this layer is that an existing content type's tag list does not move, and only a
- * byte comparison can show it.
- */
-
 const ID = "example.article";
 
 describe("delivery tag builders", () => {

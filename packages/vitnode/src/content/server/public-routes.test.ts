@@ -41,12 +41,6 @@ const emptyPage = {
   },
 };
 
-/**
- * Mounts the generated public routes with the public service stubbed.
- *
- * No session middleware and no admin context: the request arrives exactly as an
- * anonymous one would.
- */
 const harness = () => {
   const service = {
     findById: vi.fn(),

@@ -76,13 +76,7 @@ export type ContentListRow<TDefinition> = ContentSelect<TDefinition> & {
 
 export interface ContentPageInfo {
   count: number;
-  /**
-   * An opaque cursor for the last row on this page.
-   *
-   * It encodes the ordered tuple - the sort column's value *and* the row's
-   * identifier - so it is meaningless outside the ordering that produced it.
-   * Hand it back as `cursor`; never parse it.
-   */
+
   endCursor: null | string;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
@@ -102,14 +96,6 @@ export interface ContentFindManyArgs<TDefinition> {
   where?: SQL;
 }
 
-/**
- * The Drizzle client, or a transaction handle standing in for it.
- *
- * `$client` is omitted deliberately: a `PgTransaction` carries every query
- * method the client does but not the raw driver handle, so naming the client
- * type directly would make `db.transaction(async tx => service.update(id, v,
- * { tx }))` - the whole point of the option - a type error.
- */
 export type ContentDatabase = Omit<Context["var"]["db"], "$client">;
 
 export interface ContentServiceOptions {
@@ -118,31 +104,10 @@ export interface ContentServiceOptions {
 }
 
 export interface ContentUpdateResult<TDefinition> {
-  /**
-   * Canonical paths, not field names: a group reports the **leaves** that moved
-   * (`seo.description`), a scalar reports itself, and a collection reports
-   * itself whole. One vocabulary, so an event payload, a cache decision and a
-   * search decision are all made from the same strings.
-   */
   changedFields: ContentChangedPath<TDefinition>[];
   row: ContentSelect<TDefinition>;
 }
 
-/**
- * The typed collection API of one content type, on the **plain** service.
- *
- * Every mutating method is a read-modify-write that runs inside one transaction
- * with the source row locked first, so two concurrent `add` calls merge instead
- * of one overwriting the other. It goes through the same `update` an ordinary
- * field edit does, which is what gives it the no-op rule and the `updatedAt`
- * bump for free.
- *
- * What it does **not** do is write a revision or emit an event - the plain
- * service never has, for a field edit either. Those belong to
- * `model.editorialService(c)?.relations` and
- * `model.editorialService(c)?.repeatable`, which additionally require an
- * `expectedVersion` and answer a stale one with a structured conflict.
- */
 export interface ContentRelationMethods<TDefinition> {
   /** Adds one target. A target already present is a no-op. */
   add: (
@@ -158,13 +123,7 @@ export interface ContentRelationMethods<TDefinition> {
     relatedItemId: number,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
-  /**
-   * Rearranges the existing targets.
-   *
-   * Refuses a list that is not a permutation of what is stored - a reorder that
-   * silently added or dropped a target would be a `set` wearing a different
-   * name, and the caller would never find out which it got.
-   */
+
   reorder: (
     itemId: number,
     relatedItemIds: readonly number[],
@@ -179,13 +138,6 @@ export interface ContentRelationMethods<TDefinition> {
 }
 
 export interface ContentRepeatableMethods<TDefinition, TName> {
-  /**
-   * Appends one child.
-   *
-   * Typed from the repeatable's own leaves, so `{ question, answer }` compiles
-   * and `{ unknownField }` does not - the definition already carries the child
-   * shape, and a `Record<string, unknown>` here would throw it away.
-   */
   create: (
     itemId: number,
     values: ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>,
@@ -210,13 +162,7 @@ export interface ContentRepeatableMethods<TDefinition, TName> {
     childIds: readonly number[],
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
-  /**
-   * Replaces the whole list in one write - the operation an AdminCP form save
-   * actually needs, so saving a five-row FAQ is one request rather than five.
-   *
-   * A child with an `id` is updated in place and keeps it; one without is
-   * created. Anything absent is removed.
-   */
+
   set: (
     itemId: number,
     rows: readonly ContentRepeatableInputRow<
@@ -224,13 +170,7 @@ export interface ContentRepeatableMethods<TDefinition, TName> {
     >[],
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
-  /**
-   * Updates one child by its stable identifier.
-   *
-   * Partial, and over the repeatable's own leaves: naming a leaf the repeatable
-   * does not declare is a compile error rather than a value silently dropped by
-   * the strict schema at runtime.
-   */
+
   update: (
     itemId: number,
     childId: number,
@@ -239,20 +179,6 @@ export interface ContentRepeatableMethods<TDefinition, TName> {
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
 
-/**
- * Options for a collection mutation on the **plain** service.
- *
- * Deliberately identical to `ContentServiceOptions`: there is no
- * `expectedVersion` here, because this service has no version column to guard on
- * and would have had to ignore one. Concurrent writers are serialised by the
- * source row's `SELECT ... FOR UPDATE` instead, so two `add` calls merge rather
- * than one of them being rejected.
- *
- * Optimistic locking, revisions and events are the editorial service's -
- * `model.editorialService(c)?.relations`, which takes a required
- * `expectedVersion` and an `actor`. The two are separate objects rather than one
- * that behaves differently depending on where it came from.
- */
 export type ContentWriteOptions = ContentServiceOptions;
 
 export interface ContentPublicationResult<TDefinition> {
@@ -261,11 +187,7 @@ export interface ContentPublicationResult<TDefinition> {
    * was emitted, and nothing needs invalidating.
    */
   changed: boolean;
-  /**
-   * When the row was first published, or `null` if it never has been. Lifted
-   * out of `row` because the generated columns are conditional on a type
-   * parameter that is still open in generic route code.
-   */
+
   publishedAt: Date | null;
   row: ContentSelect<TDefinition>;
 }
@@ -286,13 +208,6 @@ export interface ContentPublicationMethods<TDefinition> {
   ) => Promise<ContentPublicationResult<TDefinition> | null>;
 }
 
-/**
- * `publish`/`unpublish` exist only on a content type with publication enabled.
- *
- * The `never` branch is the same trick `ContentFieldsConstraint` uses for
- * reserved system columns: calling `service.publish(...)` on a content type
- * without publication is a compile error rather than a runtime surprise.
- */
 export type ContentService<TDefinition> = ContentServiceBase<TDefinition> &
   (TDefinition extends { publication: { enabled: true } }
     ? ContentPublicationMethods<TDefinition>
@@ -304,15 +219,7 @@ export interface ContentServiceBase<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentAdvancedValues<TDefinition>>;
-  /**
-   * A named subset of the advanced collections, for a caller with an allowlist.
-   *
-   * The search synchronizer and the public projection each need only the
-   * collections their configuration actually mentions, and querying a private
-   * junction table to discard the rows afterwards is work with no answer
-   * attached. Untyped in its keys on purpose: the allowlist is derived from
-   * configuration at runtime, and `advanced` is the typed whole-record read.
-   */
+
   advancedFields: (
     id: number,
     fields: readonly string[],
@@ -331,12 +238,7 @@ export interface ContentServiceBase<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
-  /**
-   * One record with its advanced collections attached.
-   *
-   * The read an edit form makes, and the only one that loads collections: a
-   * list must not, or it would issue a query per row.
-   */
+
   findDetail: (
     id: number,
     options?: ContentServiceOptions,
@@ -345,45 +247,18 @@ export interface ContentServiceBase<TDefinition> {
     edges: ContentListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
   }>;
-  /**
-   * One record **with its reference labels**, exactly as the list returns them.
-   *
-   * The read a form makes: a `relation` or `user` value is an identifier, and an
-   * editor has to be shown the name behind it. `findById` deliberately stays a
-   * plain row - the labels cost one LEFT JOIN per reference field, and the
-   * callers that only want the record should not pay for them.
-   *
-   * Administrative, like every label: it is read from the target's
-   * `admin.titleField`, which may name something the target never publishes. The
-   * public projection does not use it.
-   */
+
   findRowById: (
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentListRow<TDefinition> | null>;
-  /**
-   * Options for a `user` or `relation` picker, to-one and to-many alike.
-   *
-   * `search` filters by whatever the label is actually read from. `ids` asks for
-   * exactly those rows instead, which is how a form that opens holding
-   * identifiers turns them into names: without it a to-many picker could only
-   * label what somebody had just searched for, and everything already stored
-   * would read as a number.
-   */
+
   options: (
     field: ContentReferenceFieldName<TDefinition>,
     search?: string,
     ids?: readonly number[],
   ) => Promise<{ color?: string; label: string; value: number }[]>;
-  /**
-   * Typed to-many relation operations, keyed by the content type's **actual**
-   * relation collection names.
-   *
-   * A mapped type rather than a `Record<string, …>`: with the latter,
-   * `service.relations.thisFieldDoesNotExist` compiled and failed at runtime.
-   * Empty for a content type that declares none, so `service.relations` always
-   * exists and every key on it is one the definition has.
-   */
+
   relations: Record<
     ContentRelationCollectionName<TDefinition>,
     ContentRelationMethods<TDefinition>
@@ -406,14 +281,6 @@ export interface ContentServiceBase<TDefinition> {
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
 
-/**
- * A typed repository bound to one request's database handle.
- *
- * Deliberately thin: it owns validation, column allowlisting, pagination and
- * label joins, and leaves everything else to Drizzle. `model.table` stays
- * public so advanced plugin code can drop down to the query builder at any
- * point.
- */
 export const createContentService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -424,13 +291,6 @@ export const createContentService = <
   schemas,
   table,
 }: {
-  /**
-   * The collection store, or nothing for a content type that declares none.
-   *
-   * Optional so every existing caller - and every test that builds a service by
-   * hand - keeps working unchanged; a service without one simply has no
-   * collections to read or write.
-   */
   advanced?: ContentAdvancedStore;
   c: Context;
   columns: Record<string, PgColumn>;
@@ -493,14 +353,6 @@ export const createContentService = <
     fields,
   );
 
-  /**
-   * The keyed collection maps, assembled after the service object exists.
-   *
-   * Built as loose records and re-typed once at the boundary: the public type is
-   * keyed by the content type's actual collection names, which is what makes
-   * `service.relations.typo` a compile error - but a loop cannot prove to
-   * TypeScript that it filled exactly those keys.
-   */
   const mutableRelations: Record<
     string,
     ContentRelationMethods<TDefinition>
@@ -516,15 +368,6 @@ export const createContentService = <
   const ownSelection = (): Record<string, PgColumn> =>
     Object.fromEntries(ownColumnNames.map(name => [name, columns[name]]));
 
-  /**
-   * A database row, in the logical shape callers see.
-   *
-   * The generated columns pass straight through; the declared fields go through
-   * `contentColumnsToValues`, which folds `seoTitle` and `seoDescription` back
-   * into `seo: { title, description }` - or into `seo: null` when the group is
-   * nullable and every leaf is empty. For a content type with no group this is
-   * a copy, which is why a Stage 1-5 row comes back byte-identical.
-   */
   const projectRow = (
     row: Record<string, unknown>,
   ): Record<string, unknown> => {
@@ -557,27 +400,12 @@ export const createContentService = <
     return { ...projectRow(values), labels } as ContentListRow<TDefinition>;
   };
 
-  /**
-   * The locale the AdminCP is being *read* in, or nothing.
-   *
-   * `undefined` outside a request that carries the i18n model - a queue handler,
-   * a test harness - and the fallback then does the whole job, which is the
-   * honest answer when nobody has said what language they are in.
-   */
   const viewerLocale = (): string | undefined => {
     const i18n: undefined | { resolveLocale: () => string } = c.get("i18n");
 
     return i18n?.resolveLocale();
   };
 
-  /**
-   * `core_languages.id` for the reader's locale, and for each localized
-   * target's own default.
-   *
-   * One registry read for the whole request - `findContentLanguage` memoises it
-   * per context - and none at all for a content type with no localized relation
-   * target, which is every content type that existed before this.
-   */
   const labelLanguages = async (): Promise<{
     byDefaultLocale: Map<string, null | number>;
     viewer: null | number;
@@ -618,17 +446,6 @@ export const createContentService = <
     searchColumns: PgColumn[];
   }
 
-  /**
-   * What a reference field's label is selected as, and the joins that make it
-   * so.
-   *
-   * A shared title is the column it always was. A **localized** one is
-   * `coalesce(reader's language, target's default language)` over two joins onto
-   * the target's translation table - each on `(itemId, languageId)`, which is
-   * that table's primary key, so neither can multiply the rows of the query it
-   * is added to. With neither language present in `core_languages` the id comes
-   * back, exactly as it did before.
-   */
   const labelSelection = (
     target: ContentPickerTarget,
     languages: {

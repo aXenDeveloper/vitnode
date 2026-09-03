@@ -32,27 +32,6 @@ export const contentTranslationConflict = (
 ): HTTPException =>
   new HTTPException(409, { res: Response.json(body, { status: 409 }) });
 
-/**
- * Maps a translation write's failures onto HTTP.
- *
- * The five outcomes it separates are the whole point - a client that cannot tell
- * them apart can only show "something went wrong":
- *
- * | Failure                        | Status | Code                                   |
- * | ------------------------------ | ------ | -------------------------------------- |
- * | base record missing            | 404    | -                                      |
- * | locale unknown                 | 404    | -                                      |
- * | locale disabled                | 409    | `CONTENT_LANGUAGE_DISABLED`            |
- * | translation already exists     | 409    | `CONTENT_TRANSLATION_EXISTS`           |
- * | version moved                  | 409    | `CONTENT_TRANSLATION_VERSION_CONFLICT` |
- * | default translation delete     | 409    | `CONTENT_DEFAULT_TRANSLATION_REQUIRED` |
- * | localized slug taken           | 409    | `CONTENT_TRANSLATION_UNIQUE_CONFLICT`  |
- * | localized slug reserved        | 409    | `CONTENT_DELIVERY_SLUG_RESERVED`       |
- *
- * Anything it does not recognise falls through to {@link rethrowAsHttpError},
- * which owns the Postgres constraint codes - so the driver's message, which can
- * name columns, constraints and values, never reaches a client from here either.
- */
 export const withTranslationHttpErrors = async <TResult>(
   action: "create" | "delete" | "read" | "update",
   run: () => Promise<TResult>,

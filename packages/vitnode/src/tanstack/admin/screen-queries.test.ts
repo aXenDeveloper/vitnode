@@ -24,36 +24,12 @@ import { integrationsQueryKey } from "@/views/admin/views/core/system/integratio
 
 import { ADMIN_SESSION_QUERY_KEY } from "./state";
 
-/**
- * Where the AdminCP's screens keep their cache entries, and what that buys.
- *
- * Three properties, and every one of them is invisible until it is wrong:
- *
- * - **One prefix for the whole panel**, so a sign-out drops all of it in a
- *   single `removeQueries` rather than needing a list somebody has to extend.
- * - **A root per screen**, so a mutation invalidates its own family and not the
- *   panel. Running a cron job must not refetch the file table.
- * - **The session is not under it.** `removeAdminSession` owns that entry, and a
- *   screen's invalidation must never collect the permission set the shell is
- *   rendering from.
- *
- * Query matches keys element by element, so `["vitnode","admin"]` is a prefix of
- * `["vitnode","admin","cron", …]` and is *not* a prefix of
- * `["vitnode","admin-session"]`. That distinction is the whole test.
- */
-
 /** Query's own rule: is `key` inside the family `prefix` names? */
 const isUnder = (
   key: readonly unknown[],
   prefix: readonly unknown[],
 ): boolean => prefix.every((segment, index) => key[index] === segment);
 
-/**
- * A sample administrator, for the screens whose keys are partitioned by identity.
- *
- * The assertions below are about *where* a screen's entries hang, and that is
- * the same answer for every identity - so one stands in for all of them.
- */
 const ADMIN_ID = 7;
 
 const ROOTS = {

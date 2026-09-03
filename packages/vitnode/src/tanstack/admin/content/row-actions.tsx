@@ -60,30 +60,6 @@ import {
 import { ContentFormDialogSlot, ContentRowPanelSlot } from "./slot-render";
 import { contentAdminSlots, registeredContentRowPanels } from "./slots";
 
-/**
- * One content list row's actions, for a TanStack Start host.
- *
- * The same cluster the Next.js list renders, in the same order, gated on the
- * same permissions: publish or unpublish, edit, then everything else behind a
- * `⋯`. What differs is only where the writes land - a browser request and a
- * query invalidation, rather than a Server Action and `revalidatePath` - and
- * that difference is entirely inside `./query`.
- *
- * Which actions exist is `row-actions-model.ts`, shared with the Next.js AdminCP.
- * The editorial panels behind four of them are not implemented here at all; they
- * arrive through `./slots`, and an action whose panel nobody registered is not
- * offered rather than offered and inert.
- *
- * ## None of this is authorization
- *
- * Every gate below reads the permission set the admin session already resolved,
- * so it decides which control renders. `api/config.ts` puts
- * `globalAdminMiddleware()` in front of every admin path and each generated
- * content route declares its own `adminStaffPermission`, re-checked against the
- * staff tables on the request itself - so an administrator who reveals a button
- * in devtools reaches a request the API still refuses.
- */
-
 export interface ContentRowActionsProps {
   entry: RegisteredFrontendContentType;
   /** How a path becomes a navigation. See {@link RouterLink} for the default. */
@@ -99,14 +75,6 @@ export interface ContentRowActionsProps {
 const versionOf = (row: ContentRowData): number =>
   typeof row.version === "number" ? row.version : 1;
 
-/**
- * A failed write, as a toast the administrator can act on.
- *
- * The same mapping the Next.js dialogs apply, through the same
- * {@link contentErrorKey}: a status becomes a sentence about what to do, and
- * anything unrecognised falls back to the global server error rather than
- * echoing a body nobody wrote for a person to read.
- */
 const useMutationToast = () => {
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
@@ -152,13 +120,6 @@ const PublishRowAction = ({
 
   if (!definition.publication.enabled || !canPublish) return null;
 
-  /**
-   * Which of the two transitions this row is offered, read by the engine's own
-   * helper rather than by comparing `row.status` to a string here. The status
-   * arrives off a JSON response typed `unknown`, and a hand-written comparison
-   * in a host is exactly the kind of duplicate rule that survives a rename of
-   * the constant it was copied from.
-   */
   const { action, destructive: published } = contentPublicationTransition(
     row.status,
   );
@@ -213,15 +174,6 @@ const PublishRowAction = ({
   );
 };
 
-/**
- * The edit entry point - a link, a dialog, or nothing.
- *
- * `definition.admin.edit.mode` decides which, exactly as it does in the Next.js
- * list: `page` navigates to the canonical edit URL that the same splat route
- * already serves, and `dialog` opens the form in place. No query-string modal
- * routing was invented for the second - a dialog is component state, and putting
- * it in the URL would make a shared link open somebody else's half-typed form.
- */
 const EditRowAction = ({
   entry,
   LinkComponent = RouterLink,
@@ -312,15 +264,6 @@ const ACTION_ICONS: Record<ContentRowActionId, React.ReactNode> = {
   schedule: <CalendarClockIcon />,
 };
 
-/**
- * Everything else the row can do, as buttons or behind a `⋯`.
- *
- * The open panel lives here rather than in the panel itself: a menu item
- * unmounts with the menu the moment it is clicked, so a dialog rendered inside
- * one would go with it. Each panel is mounted *beside* the menu and told when to
- * open - the arrangement `ContentPanelProps` already describes for the Next.js
- * list, kept identical so a panel written for one host works in the other.
- */
 const ContentRowActionsMenu = ({
   entry,
   locale,

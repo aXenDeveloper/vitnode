@@ -16,15 +16,6 @@ import {
   splitContentFieldPath,
 } from "./paths";
 
-/**
- * The one leaf-path <-> column mapping, tested on its own.
- *
- * Everything downstream - the table generator, the schemas, the services, the
- * revision snapshotter, the public projector, the search mapper and the AdminCP
- * - reads this module rather than re-deriving the rule, so a bug here would be
- * a bug in all of them at once.
- */
-
 const target = { id: "test.target", tableName: "test_targets" };
 
 const fields = {

@@ -13,23 +13,6 @@ import { buildAdminNav } from "../sidebar/nav/nav-model";
 import { flattenAdminNav, matchesAdminNavItem } from "./flatten-nav";
 import { adminSearchOnlyItems } from "./search-only-pages";
 
-/**
- * What the AdminCP command palette is allowed to know about.
- *
- * The property under test is a security-adjacent one, and it is a property of
- * the *pipeline* rather than of any one function: the palette's index is the
- * navigation flattened, and the navigation has already been filtered by
- * permissions - so a screen an admin cannot open cannot be named by a search
- * result either. A palette that built its own tree from the config would pass
- * every test written against `flattenAdminNav` alone while leaking the entire
- * panel, which is why these assertions start from a config and a permission set.
- *
- * Hiding a result is not itself a security boundary. The page behind it is still
- * refused by Hono, which re-checks the staff permission tables on every request.
- * What this prevents is *disclosure*: a search box that lists the screens an
- * installation has, and the names of the plugins that added them.
- */
-
 const CORE = "@vitnode/core";
 
 const t: AdminNavTranslator = Object.assign((key: string): string => key, {
@@ -151,12 +134,6 @@ describe("the palette indexes only what the sidebar shows", () => {
 });
 
 describe("flattening", () => {
-  /**
-   * A parent with sub-items contributes its children and not itself: the parent
-   * is a disclosure triangle, and `/admin/core/users` is already among the
-   * children. Indexing it twice would spend two of the palette's ten result
-   * slots on one screen.
-   */
   it("indexes sub-items rather than their parent, and never an href twice", () => {
     const index = flattenAdminNav(
       buildAdminNav({ permissions: root, t, vitNodeConfig: config() as never }),
@@ -179,11 +156,6 @@ describe("flattening", () => {
     });
   });
 
-  /**
-   * External destinations keep their target through the flatten, so the palette
-   * renders them as a real anchor that opens elsewhere rather than moving the
-   * AdminCP's own router to an off-site URL.
-   */
   it("preserves an external entry's new-tab classification", () => {
     const plugins = [
       {

@@ -42,11 +42,6 @@ const validSearch = {
   titleField: "title",
 } as const;
 
-/**
- * Runtime validation has to hold for a JavaScript caller and for a widened
- * TypeScript value, so every case goes in as an untyped `search` object - the
- * types are asserted separately in `search.test-d.ts`.
- */
 const define = ({
   publication = true,
   search,

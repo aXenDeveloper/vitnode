@@ -22,17 +22,6 @@ export interface AdminUserRouteProps extends AdminUserRouteData {
   LinkComponent: AuthLinkComponent;
 }
 
-/**
- * The activity feed on the timeline tab.
- *
- * The same `SearchFeed` the Next.js page renders, minus the Next.js binding: the
- * shared content component takes the query options and a link, and the locale
- * comes from the loader rather than from `next-intl`'s request scope.
- *
- * `authorId` is the *listed* user, which is what makes this a profile timeline
- * rather than the site feed. It is a filter on a public search index, so nothing
- * here is a permission decision.
- */
 const UserTimeline = ({
   LinkComponent,
   locale,

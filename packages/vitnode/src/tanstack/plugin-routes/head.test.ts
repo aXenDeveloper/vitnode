@@ -2,15 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { normalizePluginRouteHead } from "./head";
 
-/**
- * A plugin's declared metadata, on its way into the host's own `head` rule.
- *
- * The point of this function is that a plugin's `head` is a function from a
- * compiled package run inside the host's document, so what comes back is read
- * field by field rather than spread - and that it is total, because `head` runs
- * inside the router's own try/catch and throwing there loses the tab title and
- * prints a stack instead.
- */
 describe("normalizePluginRouteHead", () => {
   it("keeps the three fields a plugin page may set", () => {
     expect(
@@ -52,11 +43,6 @@ describe("normalizePluginRouteHead", () => {
     );
   });
 
-  /**
-   * A plugin may not put arbitrary elements in its host's document - which is
-   * the difference between this contract and re-exporting the router's own head
-   * options.
-   */
   it("drops anything the contract does not name", () => {
     expect(
       normalizePluginRouteHead({

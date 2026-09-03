@@ -17,26 +17,6 @@ import {
   contentBreadcrumbModel,
 } from "./breadcrumb-model";
 
-/**
- * The trail above a content screen, including the one above a screen that does
- * not exist.
- *
- * A pure test, in a node environment, with no React and no DOM. What is being
- * checked is a decision - which segments, which labelled href, or nothing at
- * all - and that decision is a function now, so rendering it to assert on empty
- * markup would only add a jsdom to the question.
- *
- * ## The regression this exists for
- *
- * The shell renders a route's `staticData.breadcrumb` for every **matched**
- * route, and a match whose loader answered `notFound()` is still a match. The
- * host spreads `Route.useLoaderData()` into the breadcrumb, so on that path it
- * is handed nothing at all - and reading a label off nothing threw during the
- * server render, replacing the AdminCP's 404 with a blank page for exactly the
- * URLs a 404 is for: an unresolvable content path, a record that was deleted, a
- * content type this administrator may not open.
- */
-
 const labels: ContentRouteLabels = {
   desc: "Everything published",
   plural: "Articles",
@@ -44,13 +24,6 @@ const labels: ContentRouteLabels = {
   title: "Articles",
 };
 
-/**
- * The trail's segments, with the empty model spelled as the empty list.
- *
- * A narrowing helper rather than a cast: `kind: "none"` genuinely has no
- * segments, and reading them off the union without saying what happens then is
- * the same omission the component used to make.
- */
 const segmentsOf = (model: ContentBreadcrumbModel): string[] =>
   model.kind === "none" ? [] : model.segments;
 
@@ -71,12 +44,6 @@ describe("a loader that did not resolve", () => {
     expect(contentBreadcrumbModel({})).toEqual(CONTENT_BREADCRUMB_NONE);
   });
 
-  /**
-   * The specific shape the crash came in. With `action` absent the component's
-   * ternary fell through to the *form* branch, which is the branch that reads a
-   * label - so an absent action has to be "not resolved" rather than "not a
-   * list".
-   */
   it("has no trail when the action is missing", () => {
     expect(contentBreadcrumbModel(route({ action: undefined }))).toEqual(
       CONTENT_BREADCRUMB_NONE,
@@ -143,11 +110,6 @@ describe("a create URL", () => {
     });
   });
 
-  /**
-   * The trail passes *through* the list, which the navigation can label - but
-   * only if it is told which href that is, because the last segment is a page
-   * the navigation does not know about.
-   */
   it("names the list href it has to label", () => {
     expect(model).toMatchObject({
       listHref: contentBreadcrumbListHref("blog/articles"),
@@ -168,11 +130,6 @@ describe("an edit URL", () => {
     });
   });
 
-  /**
-   * The record id is deliberately not a crumb. `/admin/content/blog/articles/7/edit`
-   * trails as `Content / Articles / Edit article` - a number in the middle names
-   * nothing a reader could click or recognise.
-   */
   it("does not put the record id in the trail", () => {
     expect(
       segmentsOf(contentBreadcrumbModel(route({ action: "edit", itemId: 42 }))),

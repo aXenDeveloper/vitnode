@@ -17,32 +17,12 @@ import { type SignInSubmit, useSignInForm } from "./use-sign-in-form";
 
 export type { SignInSubmit };
 
-/**
- * The two fields, their validation and their failure states - shared.
- *
- * Everything that used to be Next-only here has become one prop. The form no
- * longer imports a server action, `next/navigation` or `next-intl/navigation`:
- * it is handed {@link SignInSubmit} and a way to render a link, and those are
- * the only two things it cannot answer for itself.
- *
- * What it keeps is the whole of the experience: `AutoForm`'s per-field shake and
- * submit-button state, the `access_denied` alert with its own shake, and the
- * internal-error toast (in {@link useSignInForm}). The admin sign-in screen is
- * the same component with no reset link, exactly as before - the "is this the
- * AdminCP" flag now lives with the mutation, which is the only thing that ever
- * cared.
- */
 export const SignInFormContent = ({
   LinkComponent,
   onSignIn,
   resetPasswordHref = AUTH_HREF.resetPassword,
   showResetPassword = false,
 }: {
-  /**
-   * Required only alongside {@link showResetPassword}: written as an optional
-   * pair rather than a union because the flag is deployment configuration
-   * (`isEmail`) read at runtime, not something a call site knows statically.
-   */
   LinkComponent?: AuthLinkComponent;
   onSignIn: SignInSubmit;
   resetPasswordHref?: string;

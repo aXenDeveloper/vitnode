@@ -73,52 +73,18 @@ const payloadFor = (
 };
 
 export interface ContentEditorialEffectsOptions {
-  /**
-   * The model, for a **localized** content type with `search`.
-   *
-   * Needed because such a record is indexed once per published translation, and
-   * enumerating them takes a table this function is not otherwise given. Optional
-   * so every existing caller compiles unchanged; a localized searchable content
-   * type whose caller omits it has its index write skipped and says so in the log,
-   * rather than silently indexing one language.
-   */
   model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
   pluginId: string;
-  /**
-   * The person who created the schedule that caused this, when one did.
-   *
-   * `undefined` for an interactive mutation, so the payload is unchanged
-   * there - the key is absent rather than null, and nothing existing sees a
-   * new field.
-   */
+
   scheduledBy?: null | number;
-  /**
-   * The booking that caused this, when one did. Also `undefined` interactively.
-   *
-   * This is the identifier a listener uses to make itself idempotent: delivery
-   * is at-least-once, so the same `published` can arrive twice, but never with
-   * two different `scheduleId`s for the same booking.
-   */
+
   scheduleId?: number;
 }
 
 export interface ContentEditorialEffectsResult {
-  /**
-   * The delivery events this mutation emitted, or `undefined` for a content type
-   * without `delivery` - which is what keeps every existing caller's result shape
-   * unchanged.
-   */
   delivery?: ContentDeliveryEffectsResult;
-  /**
-   * What the event transport reported. `null` for a no-op outcome, which emits
-   * nothing at all.
-   *
-   * Present rather than discarded because `EventsModel.emit` does not throw:
-   * `failures` is the only place a dead listener or a broker outage is visible,
-   * and a caller that ignores it has decided - explicitly or not - that the
-   * event is allowed to go missing.
-   */
+
   event: EventEmitResult | null;
   search: ContentSearchSyncOutcome | null;
   /**
@@ -128,27 +94,6 @@ export interface ContentEditorialEffectsResult {
   searchByLocale?: ContentSearchSyncOutcome[];
 }
 
-/**
- * Everything one editorial mutation owes the rest of the system, once its
- * transaction has committed.
- *
- * One function rather than the same four-line block in every route and in the
- * queue handler: "which event, and which search operation" is a rule, and a
- * rule copied into three places is a rule that will disagree with itself. The
- * generated routes call it, and so does the scheduled-publication task.
- *
- * **Call it only after the write has returned - never inside the transaction.**
- * Same rule `syncContentSearch` states for itself, and for the same reason: a
- * rollback cannot un-emit an event or un-index a document.
- *
- * A no-op outcome does nothing at all. That is what keeps a double-clicked
- * publish button, a retried queue task and an empty edit from each producing a
- * second event and a second index write.
- *
- * Cache invalidation is deliberately **not** here. It needs the Next runtime,
- * which neither the API process nor the queue worker has; the Server Action
- * owns it, and the scheduled path goes through the revalidation bridge.
- */
 export const contentEditorialEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,
@@ -248,15 +193,6 @@ const idOf = (row: object): number => {
   return typeof id === "number" ? id : 0;
 };
 
-/**
- * Says why nothing was indexed, rather than indexing the wrong thing.
- *
- * Reachable only from a hand-written caller: every generated path passes the
- * model. Logging beats throwing here because the write has already committed -
- * failing now would report a successful mutation as a failure - and it beats
- * silence because the symptom otherwise is a search index that is quietly missing
- * one content type.
- */
 const warnMissingModel = async (
   c: Context,
   definition: AnyContentTypeDefinition,

@@ -26,30 +26,11 @@ import { DEBUG_MODULE } from "./route";
 import { debugSearchFrom, debugSearchParams } from "./route-search";
 
 export interface AdminDebugRouteProps extends AdminDebugRouteData {
-  /**
-   * How the log's detail dialog links to the user who caused a line.
-   *
-   * Defaults to the router's own `Link`, which is the right answer whenever
-   * `/admin/core/users/{id}` is a route in the host's tree - and it is.
-   */
   LinkComponent?: AuthLinkComponent;
   navigate: AdminTableNavigate<DebugRouteSearch>;
   search: UncheckedDebugSearch;
 }
 
-/**
- * `/admin/core/debug`, as everything below a route file's `component`.
- *
- * The same three sections the Next.js page has, in the same order, with one
- * structural difference: there is no `<Suspense>` around the queue snapshot or
- * the log, because the loader has already fetched both. The Next.js page streams
- * them in behind skeletons; here they are in the cache before the component
- * mounts, so a boundary would be an admission the data is not there yet.
- *
- * The clear-cache button keeps its gate. `AdminPermissionGate` is the same
- * component the Next.js page mounts, reading the same permission set - and, as
- * always, hiding a control rather than authorizing one.
- */
 export const AdminDebugRouteContent = ({
   description,
   LinkComponent = RouterLink,

@@ -115,16 +115,6 @@ export const assertFieldKind = (
   }
 };
 
-/**
- * Everything a `field.file()` descriptor has to satisfy, re-checked here.
- *
- * `field.file` already normalises and validates - this is the same rules applied
- * to a descriptor that skipped the builder, and the only place the error carries
- * the content type id. The normalisers are idempotent, so running them twice
- * costs nothing and proves the stored arrays really are normalised: a hand-built
- * `{ kind: "file", allowedExtensions: ["GIF"] }` would otherwise be compared
- * against `.gif` and match nothing.
- */
 const assertFileField = (
   id: string,
   name: string,
@@ -308,12 +298,6 @@ export const assertField = (
   }
 };
 
-/**
- * Checks every `field.slug({ source })` against the field map.
- *
- * Runs after the per-field pass, because a source is a reference to a *sibling*
- * field and nothing can see the whole map until then.
- */
 export const assertSlugSources = (
   id: string,
   fields: ContentFieldMap,
@@ -338,16 +322,6 @@ export const assertSlugSources = (
   }
 };
 
-/**
- * Rebinds every `self: true` relation to the definition being built.
- *
- * On a **copy** of the field map, never in place: a descriptor object can be a
- * shared `const` reused by several content types, and mutating it would point
- * one content type's relation at another's table. The copy is what the
- * definition carries, so `field.target()` resolves correctly everywhere
- * downstream - and the thunk is read lazily, so `definition` is fully assigned
- * by the time anybody calls it.
- */
 export const bindSelfRelations = (
   fields: ContentFieldMap,
   self: () => AnyContentTypeDefinition,

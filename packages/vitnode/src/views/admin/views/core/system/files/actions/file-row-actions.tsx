@@ -16,20 +16,6 @@ import type { DeleteAdminFile } from "../files-delete";
 
 import { filesAdminModuleRef } from "../files-query";
 
-/**
- * Download and delete, on one row of the AdminCP file table.
- *
- * `onDelete` is the one thing it cannot decide for itself: in Next.js the delete
- * ends in `revalidatePath` and so has to be a server action, and in TanStack
- * Start it is a browser call followed by a query invalidation. Both are
- * `DeleteAdminFile`, so the row takes one and stops caring - see
- * `../files-delete.ts`.
- *
- * The *download* is not a seam. It is already a browser fetch that turns the
- * response into an object URL and clicks an anchor at it, which is the only way
- * to do it in either framework: a server action cannot hand a browser a file to
- * save.
- */
 export const FileRowActions = ({
   canDelete,
   canDownload,

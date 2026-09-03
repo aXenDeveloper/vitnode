@@ -15,60 +15,9 @@ import {
 import { compilePluginRoutes } from "../plugin-routes/compile.js";
 import { lazyImportSpecifier } from "../plugin-routes/component-source.js";
 
-/**
- * The generation pass writes **registries**, never pages.
- *
- * Two claims, one per layer, and they are the two halves of the same invariant:
- *
- * - `compilePluginRoutes` decides *what* is written, and what it produces is
- *   data - a validated manifest and one static import per configured plugin.
- *   Nothing it returns is a framework route module, and nothing it writes names
- *   a page.
- * - `vitNodePluginRoutes` decides *where*, and every destination it can name is
- *   a `*.gen.ts` at the top of the app's `src/`. It reads the app's routes
- *   directory and never writes into it.
- *
- * Pure and static: the compiler is called as the function it is, and the writer
- * is read as the text it is. No Vite, no dev server, no app on disk, no
- * `node_modules` to resolve.
- *
- * ## What this is a regression test for
- *
- * VitNode shipped a plugin route *copier* for years, and the correct fix has now
- * been mis-implemented twice in a row in two frameworks - so the invariant is
- * worth stating from the generator's own side rather than only from an app's.
- *
- *     WRONG, Next.js era      plugin src/routes/main/page.tsx
- *                               → copied into an app's src/app/[locale]/(main)/
- *
- *     WRONG, the same mistake plugin manifest route "/example/guide/:topic"
- *     spelled in TanStack       → generated as src/routes/_main/example/guide/$topic.tsx
- *
- *     RIGHT                   plugin manifest route "/example/guide/:topic"
- *                               → one literal import in plugin-routes.gen.ts
- *                               → mounted by withPluginRoutes at runtime
- *
- * Both wrong shapes fail silently rather than loudly: the app ends up holding a
- * second copy of a page nobody wrote, and which of the two runs is decided by a
- * router's ranking. `scripts/no-route-copier.test.ts` keeps the first engine
- * deleted; this keeps the second from being built.
- *
- * The routes below are the ones the brief names, including the dynamic child,
- * because a dynamic segment is the case a materialising generator has to invent
- * a filename for (`$topic.tsx`) and therefore the one where it would show.
- */
-
 const source = (...parts: string[]): string =>
   readFileSync(join(import.meta.dirname, ...parts), "utf8");
 
-/**
- * A page's `lazy()`, as a plugin's own compiled `dist` would carry it.
- *
- * Written through `new Function` so the `import()` survives this test file's own
- * transform: Vite rewrites a real dynamic import in a test into a call to its
- * loader, and what the build reads is a plugin's `dist`, where it is still an
- * `import`.
- */
 const lazyPage = (specifier: string) =>
   lazy(
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
@@ -115,16 +64,6 @@ describe("what a compilation produces", () => {
     );
   });
 
-  /**
-   * The result's shape *is* the contract. One resolved snapshot, the one source
-   * string written from it, the plugins it imports, and each route's lazy
-   * component.
-   *
-   * Another field - `files`, `routeFiles`, `pages`, anything keyed by a path -
-   * would be the compiler gaining somewhere else to write, which is the first
-   * thing a materialising generator needs. Pinned as an exact list so it cannot
-   * grow quietly.
-   */
   it("returns one source and a snapshot, and nothing keyed by a file path", () => {
     expect(Object.keys(compiled).sort()).toEqual([
       "components",
@@ -134,14 +73,6 @@ describe("what a compilation produces", () => {
     ]);
   });
 
-  /**
-   * Neither generated file is a route module.
-   *
-   * These are the tokens a TanStack route file cannot be written without, plus
-   * JSX and the extension itself. A generated page would contain at least one of
-   * them however it were spelled, and none of them has any business in a file
-   * whose entire content is data and `import()` calls.
-   */
   it.each([
     ["a file route factory", /createFileRoute|createRootRoute/],
     ["a route constructor", /\bcreateRoute\s*\(/],
@@ -154,15 +85,6 @@ describe("what a compilation produces", () => {
     for (const file of generated) expect(file).not.toMatch(forbidden);
   });
 
-  /**
-   * The app imports each plugin's *declaration* module, statically, and nothing
-   * else - which is the positive claim that makes the deletions above a design
-   * rather than a gap.
-   *
-   * The specifier is a package export subpath, so a relative or app-internal one
-   * (`./routes/…`, `#/routes/…`, `src/routes/…`) would mean the tree had been
-   * moved into the application: the copy, arrived by a different road.
-   */
   it("imports each plugin's route tree from its package, statically", () => {
     for (const module of compiled.modules) {
       expect(module.specifier).toBe(`${module.pluginId}/routes`);

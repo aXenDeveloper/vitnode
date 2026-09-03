@@ -22,27 +22,6 @@ import { CollectionsTableContent } from "./collections-table-content";
 import { CronWarning } from "./cron-warning";
 import { SyncErrorsCardContent } from "./sync-errors-card-content";
 
-/**
- * The search index screen's body, as both frameworks render it.
- *
- * Four stat cards, the cron warning, the sync-error list and the collections
- * table. Fetching and translation are lifted out; the two mutations arrive as
- * `actions`, each carrying its own refresh.
- *
- *     Next.js         search-view.tsx                    fetch + router.refresh()
- *     TanStack Start  routes/_admin/…/advanced/search     loader + query invalidation
- *                                        \       /
- *                                 SearchIndexContent
- *
- * `labels` names the collections a Content Engine content type contributes.
- * Resolved from the *frontend* content-type registry, which is server-side
- * config: the Next.js page reads it directly, and a TanStack Start host passes
- * it only if it has a browser-side registry - which in Stage 12 it does not, so
- * those collections fall back to the search renderer's own label. Optional for
- * exactly that reason, and never silently wrong: an unnamed collection still
- * shows its `itemType`.
- */
-
 const StatCard = ({
   accent,
   icon,
@@ -166,13 +145,6 @@ export const SearchIndexContent = ({
   );
 };
 
-/**
- * The screen's shape before its data arrives.
- *
- * Framework-free and beside the screen rather than inside it, because a Suspense
- * fallback is rendered *outside* the component it stands in for - the Next.js
- * page mounts it above `<SearchAdminView>`.
- */
 export const SearchAdminViewSkeleton = () => (
   <div className="flex flex-col gap-6">
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

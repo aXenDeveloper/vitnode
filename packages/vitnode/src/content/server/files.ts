@@ -19,20 +19,6 @@ import { ContentInputError } from "../errors";
 import { contentFileConstraints, validateContentFile } from "../files";
 import { partitionContentFields } from "../localization";
 
-/**
- * The file fields of a content type, by name - single and `multiple: true` alike.
- *
- * Both halves of the partition, and that is the point: a single file is a column
- * on the base row and so lands in `sharedFields`, while a gallery is a junction
- * table and so lands in `collectionFields`. Every caller below asks "which fields
- * of this content type hold files?", which is a question about the *field*, not
- * about where its rows live. The localized half is never read: `localized: true`
- * is refused on a file field at definition time.
- *
- * An empty object for every content type that declares none, which is what lets
- * every caller below be a cheap early return rather than a conditional at the
- * call site.
- */
 export const contentFileFields = (
   definition: AnyContentTypeDefinition,
 ): Record<string, ContentFileField> => {
@@ -51,14 +37,6 @@ export const contentFileFields = (
   return files;
 };
 
-/**
- * The `multiple: true` file fields, by name.
- *
- * Its own view because the two arities are read differently everywhere: a single
- * field's value is a number on the row, and a collection's is an array the
- * advanced store loads from a junction table - which an admin list deliberately
- * does not load at all.
- */
 export const contentFileCollectionFields = (
   definition: AnyContentTypeDefinition,
 ): Record<string, ContentFileField> =>
@@ -87,19 +65,6 @@ interface ContentFileRow {
   size: number;
 }
 
-/**
- * One `core_files` row, reduced to the shape every surface may see.
- *
- * The allowlist is the function: `key` is read to build the URL and then
- * dropped, `metadata` is read for the pixel dimensions and then dropped, and
- * `userId` and `pluginId` are never selected at all. So "forward the file row"
- * is not something a caller can do by accident.
- *
- * `url` is `""` when the install has no storage adapter configured. Every row in
- * `core_files` was uploaded through one, so this only happens after an adapter is
- * removed - and an empty string is the honest answer, where `getUrl` would throw
- * a 500 into the middle of an otherwise fine list response.
- */
 const toDescriptor = (
   row: ContentFileRow,
   url: (key: string) => string,
@@ -118,14 +83,6 @@ const toDescriptor = (
   };
 };
 
-/**
- * Reads the descriptors for a set of `core_files` ids, in one statement.
- *
- * One query for a whole page, never one per row: a list of twenty articles with a
- * cover image each is one `WHERE id IN (...)`. An id with no row is simply absent
- * from the map, which every caller reads as "no file" - a deleted file cannot
- * happen while a content row points at it, but a *snapshot* may name one.
- */
 export const resolveContentFileDescriptors = async (
   c: Context,
   ids: readonly number[],
@@ -154,15 +111,6 @@ const asFileId = (value: unknown): null | number =>
     ? value
     : null;
 
-/**
- * The file ids one field's value names, whatever its arity.
- *
- * A single field is one id or none; a collection is however many its array
- * holds, in order, with anything that is not an identifier dropped. `undefined`
- * - the collection was not loaded - and `null` both come back empty, which is
- * what lets the callers below treat "no files" and "not asked for" the same way
- * when all they need is a list of ids to resolve.
- */
 const fileIdsOfValue = (value: unknown): number[] => {
   if (Array.isArray(value)) {
     return value.map(asFileId).filter((id): id is number => id !== null);
@@ -179,14 +127,6 @@ const fileIdsOf = (
   values: Record<string, unknown>,
 ): number[] => names.flatMap(name => fileIdsOfValue(values[name]));
 
-/**
- * One collection value's descriptors, in stored order, skipping what is gone.
- *
- * A hole is dropped rather than emitted as `null`, because a gallery with gaps in
- * it is not something any surface can render - and a file a record still points
- * at cannot be deleted, so the only way to get one is a snapshot naming a file
- * that outlived its last pin.
- */
 const descriptorsOf = (
   byId: Map<number, ContentFileDescriptor>,
   value: unknown,
@@ -195,24 +135,6 @@ const descriptorsOf = (
     .map(id => byId.get(id))
     .filter((file): file is ContentFileDescriptor => file !== undefined);
 
-/**
- * Attaches each row's resolved file descriptors under `files`.
- *
- * A **sibling** of the row rather than a replacement of the column, which is the
- * opposite of what the public projection does - and deliberately: an admin row is
- * what the edit form opens on, and the form submits `coverImage: 42` back. Keeping
- * the identifier as the value and the descriptor beside it means the form has both
- * without converting either way.
- *
- * A `multiple: true` field is a **list** under the same key, in stored order, and
- * it is present only when the row carries its ids: a detail response merges the
- * advanced collections in first, while an admin list deliberately loads no
- * junction table at all. Omitting the key there is the honest answer - an empty
- * array would say "this gallery has no files", which is a different claim.
- *
- * `files` is `{}` for a content type with no file fields, so every generated list
- * and detail response that had no files before is byte-identical.
- */
 export const withContentRowFiles = async <TRow extends object>(
   c: Context,
   definition: AnyContentTypeDefinition,
@@ -253,24 +175,6 @@ export const withContentRowFiles = async <TRow extends object>(
   });
 };
 
-/**
- * Replaces every exposed file id on a **public** row with its descriptor.
- *
- * In place of the column rather than beside it, because a public reader has no
- * route that turns a `core_files.id` into anything: there is no public files API
- * and there should not be one. The descriptor is already the allowlisted shape,
- * so the projector needs no file-specific branch - it forwards whatever the
- * column holds, exactly as it does for a string.
- *
- * Only the fields `publicApi.fields` names. A file field the allowlist leaves out
- * is not selected in the first place, so there is nothing here to resolve.
- *
- * A `multiple: true` field becomes a list of descriptors in stored order, so it
- * has to run **after** the collections are loaded onto the row - which is why the
- * public services call it last rather than first. An id whose row has vanished is
- * dropped from the list rather than emitted as `null`: a public reader gets a
- * gallery of the files that exist, not one with holes in it.
- */
 export const resolveContentPublicRowFiles = async (
   c: Context,
   definition: AnyContentTypeDefinition,
@@ -305,29 +209,6 @@ export const resolveContentPublicRowFiles = async (
   }));
 };
 
-/**
- * Re-checks every file a write names against the field that will hold it.
- *
- * A successful upload is **not** validation of an assignment. The upload route
- * checked the file it received against the field it was uploaded for; this checks
- * the `core_files` row an identifier names against the field it is being written
- * to - which is a different question, and the one that stops
- * `{ animation: <the id of a PDF somebody uploaded elsewhere> }` from being
- * stored by a hand-written request.
- *
- * Four questions, the same four the upload asked: does the row exist, is it
- * within `maxBytes`, is its media type allowed, and is its extension allowed.
- * `validateContentFile` is the one implementation of the last three, so the
- * answers cannot differ between the two moments.
- *
- * A **gallery** is the same four questions once per entry, and deliberately so:
- * ten files are ten uploads, and `maxBytes` is a per-file ceiling rather than a
- * budget for the list. The first entry that fails names itself, so an editor is
- * told which image is the problem rather than that "the gallery" is.
- *
- * A no-op - not one statement - for a content type with no file fields, and for a
- * payload that mentions none of them.
- */
 export const assertContentFileReferences = async (
   c: Context,
   definition: AnyContentTypeDefinition,

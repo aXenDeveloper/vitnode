@@ -7,14 +7,6 @@ import {
   normalizeSsoCallbackSearch,
 } from "./route-search";
 
-/**
- * The two auth search contracts, as the router actually hands them over.
- *
- * TanStack parses each query value with `JSON.parse` before `validateSearch`
- * sees it, so the inputs below are the *parsed* shapes - `?state=48291` arrives
- * as the number `48291`, not the string. That single fact is what these
- * normalisers exist for, and what the schemas they replaced got wrong.
- */
 describe("normalizeLoginSearch", () => {
   it("keeps a target as it arrived, byte for byte", () => {
     // Not re-encoded and not resolved: the value has to survive a round trip

@@ -13,26 +13,10 @@ import { contentDeliveryPath } from "../delivery";
 import { contentPreviewConfigProblems } from "./preview-config";
 import { ensureContentPreviewSecret } from "./preview-secret";
 
-/**
- * The key this install signs preview links with.
- *
- * Read from the boot config when the global middleware has resolved it, and
- * resolved on the spot otherwise - which is what a direct `app.request()` in a
- * test does, since it never runs the middleware that populates `core`. Both
- * paths land on the same memoised value.
- */
 export const contentPreviewSecret = async (c: Context): Promise<string> =>
   c.get("core")?.contentPreviewSecret ??
   (await ensureContentPreviewSecret(c.get("db")));
 
-/**
- * Refuses to mint a link that would not be a link.
- *
- * 503 rather than 500: the request was fine and the code is fine, the deployment
- * has an origin it cannot parse - and a service that is temporarily not offering
- * a feature is what 503 means. The message names the environment variable,
- * because the person clicking the button is usually the person who can set it.
- */
 export const assertContentPreviewIsServable = (): void => {
   const problems = contentPreviewConfigProblems();
   if (problems.length === 0) return;

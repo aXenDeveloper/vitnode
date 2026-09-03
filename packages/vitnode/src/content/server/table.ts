@@ -37,17 +37,6 @@ import {
   buildSystemColumns,
 } from "./column-builders";
 
-/**
- * Wraps a foreign-key thunk so the table it actually points at is checked
- * against the one the descriptor promised.
- *
- * A `relation` carries its target twice - `field.relation({ target })` in the
- * client-safe descriptor, and `references: { field: () => table.id }` in the
- * database module - and nothing else stops the two from drifting apart. The
- * check reads Drizzle's own table metadata rather than parsing SQL, and it
- * stays *inside* the thunk on purpose: evaluating either side eagerly would
- * break the circular imports the thunks exist to solve.
- */
 const checkedReference = (
   contentTypeId: string,
   name: string,
@@ -124,18 +113,6 @@ const resolveReference = (
   );
 };
 
-/**
- * Builds the `pgTable` for a content type.
- *
- * The result is an ordinary Drizzle table: `drizzle-kit` discovers it by
- * runtime identity (`is(value, PgTable)`) when it globs the plugin's built
- * `dist/src/database/*.js`, so migrations stay generated and source-controlled
- * exactly as they are for hand-written tables.
- *
- * Do not import this module from a client component - and do not add
- * `server-only` to it either: its `default` export throws under plain Node,
- * which both `apps/api` and `drizzle-kit` are.
- */
 export const createContentTable = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -219,31 +196,12 @@ export const createContentTable = <
   ) as unknown as ContentTableFor<TDefinition>;
 };
 
-/**
- * Forces every foreign key on the table to resolve.
- *
- * Drizzle keeps a foreign key as an unevaluated thunk until it serializes the
- * table, which is what lets two content types reference each other. Calling
- * this once from `buildContentAdminModule` - after every `src/database/*.ts`
- * has finished loading - turns a target mismatch into a boot-time failure
- * rather than a surprise on the first request.
- */
 export const assertContentReferences = (table: PgTable): void => {
   for (const foreignKey of getTableConfig(table).foreignKeys) {
     foreignKey.reference();
   }
 };
 
-/**
- * Column name -> Drizzle column, for allowlisted filters and ordering.
- *
- * A group's leaves appear twice, under the generated column name *and* under the
- * canonical path: `columns["seoTitle"]` and `columns["seo.title"]` are the same
- * `PgColumn`. That alias is what lets a filter, an `orderBy`, a search
- * projection and an index all be configured in one vocabulary - paths - without
- * every one of them learning the column-naming rule. There is still exactly one
- * mapping, and it is the one `contentLeafColumnName` defines.
- */
 export const contentTableColumns = <
   TDefinition extends AnyContentTypeDefinition,
 >(

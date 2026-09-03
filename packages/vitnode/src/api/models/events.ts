@@ -4,21 +4,6 @@ import { randomUUID } from "node:crypto";
 
 import type { EventListenerConfig } from "../lib/events";
 
-/**
- * Global map of domain events emittable via `c.get("events").emit(...)`. Core
- * events are declared here; plugins extend the map with module augmentation:
- *
- * ```ts
- * declare module "@vitnode/core/api/models/events" {
- *   interface VitNodeEvents {
- *     "blog.post.created": { categoryId: number; postId: number };
- *   }
- * }
- * ```
- *
- * Payloads must stay JSON-serializable - a broker adapter (Redis Streams,
- * NATS, ...) serializes the envelope to move it between processes.
- */
 export interface VitNodeEvents {
   "role.created": {
     roleId: number;
@@ -81,42 +66,16 @@ export interface EventEmitResult {
   delivered: number;
   eventId: string;
   failures: EventEmitFailure[];
-  /**
-   * `delivered` - listeners ran in-process before `emit()` resolved (the
-   * bundled Local adapter). `queued` - the envelope was handed to a broker and
-   * delivery happens out-of-band; `delivered`/`failures` say nothing about the
-   * eventual listener runs.
-   */
+
   status: "delivered" | "queued";
 }
 
-/**
- * A pluggable event transport. The bundled Local adapter dispatches directly
- * to the listeners registered in `c.get("core").events.listeners`; a broker
- * adapter publishes the envelope and returns `status: "queued"`.
- */
 export interface EventsApiPlugin {
   name: string;
   publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>;
 }
 
 export interface EventEmitOptions {
-  /**
-   * Who owns the *domain event*, when that is not the plugin handling the
-   * request.
-   *
-   * Ownership normally comes from `c.get("plugin")`, which is right for a route:
-   * whoever handled the request emitted the event. It is wrong for anything that
-   * runs on someone else's behalf. A queue handler is the clear case - core owns
-   * the handler, so the context says `@vitnode/core`, but a scheduled
-   * `content.example.article.published` is the example plugin's event and always
-   * was.
-   *
-   * Pass it explicitly rather than swapping `c.get("plugin")` for the duration.
-   * The context is shared with the logger, the permission checks and every other
-   * model on the request; impersonating a plugin inside it would change all of
-   * them to fix one field.
-   */
   pluginId?: string;
 }
 
@@ -131,19 +90,6 @@ export class EventsModel {
     return this.c.get("core").events.adapter;
   }
 
-  /**
-   * Emit a typed domain event. Never throws: listener failures are caught,
-   * logged to `core_logs`, and reported in the returned result. Emit only
-   * AFTER the writes the event describes have committed - after your awaited
-   * inserts/updates, and after any enclosing `db.transaction` callback has
-   * returned.
-   *
-   * **Not throwing is the contract, not an oversight.** An interactive mutation
-   * has already committed by the time this runs, and a listener that fell over
-   * is not a reason to tell the person their save failed. A caller that *does*
-   * need delivery to be retried - the scheduled-effects task is the one in
-   * core - reads `failures` and decides for itself.
-   */
   async emit<K extends VitNodeEventName>(
     name: K,
     payload: VitNodeEvents[K],

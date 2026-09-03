@@ -1,21 +1,3 @@
-/**
- * A JSON Schema check over the subset OpenAPI 3.0 documents actually contain.
- *
- * It exists because "the runtime response matches the OpenAPI schema" cannot be
- * asserted with the Zod object the route was built from. `z.date()` renders in
- * the document as `{ type: "string", format: "date-time" }` - which is exactly
- * what `c.json(row)` puts on the wire - but the Zod object itself rejects that
- * string, so parsing with it would report a contract break where the contract is
- * kept. The document is what a generated client is built from, so the document
- * is what a response has to satisfy.
- *
- * Deliberately small: `type`, `properties`, `required`, `nullable`, `enum`,
- * `format: date-time`, `items`, `additionalProperties`, `oneOf`/`anyOf`/`allOf`
- * and `$ref`. That is everything `@hono/zod-openapi` emits for the generated
- * Content Engine routes, and anything it does not understand is reported rather
- * than quietly passed.
- */
-
 export type JsonSchemaLike = Record<string, unknown>;
 
 const ISO_DATE_TIME =
@@ -44,13 +26,6 @@ const resolveRef = (
   return (current as JsonSchemaLike | undefined) ?? {};
 };
 
-/**
- * Every way `value` fails `schema`, as dotted paths with a reason.
- *
- * An empty array means the response is valid. Returning the whole list rather
- * than the first problem is deliberate - a response that is wrong in four places
- * should say so once, not four runs in a row.
- */
 export const validateAgainstJsonSchema = (
   value: unknown,
   rawSchema: JsonSchemaLike,

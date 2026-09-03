@@ -23,35 +23,6 @@ import { SendTestEmailAction } from "./send-test-email/send-test-email";
 import { TestAIAction } from "./test-ai/test-ai";
 import { TestStorageAction } from "./test-storage/test-storage";
 
-/**
- * The integrations board, as a grid both frameworks render.
- *
- * Nine cards, three of which carry a test action, and the small amount of logic
- * that turns each subsystem's report into one of three statuses - `active`,
- * `warning`, `inactive`. Fetching and translation are lifted out to whoever is
- * rendering it.
- *
- *     Next.js         integrations-view.tsx            fetch + permission reads
- *     TanStack Start  routes/_admin/…/system/integrations  loader + useSuspenseQuery
- *                                        \       /
- *                                 IntegrationsContent
- *
- * The three `can*` flags arrive as props rather than being read from the
- * permission context here, for the same reason the file table's do: the Next.js
- * page resolves them on the server with `checkAdminPermissionApi`, and reading
- * them from a React context instead would suspend this component on a promise
- * the AdminCP layout is still holding. Either way they hide a control - the API
- * re-checks `system.can_send_test_email`, `system.can_test_storage` and
- * `system.can_test_ai` on the requests themselves.
- */
-
-/**
- * Where each card's "read more" goes.
- *
- * Absolute `vitnode.com` links rather than in-app routes: these are the
- * framework's own documentation, they are the same for every installation, and
- * they open in a new tab.
- */
 const DOCS_URLS = {
   ai: "https://vitnode.com/docs/dev/ai",
   captcha: "https://vitnode.com/docs/dev/captcha",

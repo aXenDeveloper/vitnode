@@ -12,26 +12,6 @@ import {
   invalidateAfterAdminUserRolesChange,
 } from "./query";
 
-/**
- * What a user write invalidates, asserted as **targets** rather than as
- * behaviour.
- *
- * A recorder rather than a real `QueryClient`, and that is the point of the
- * shape: what is being pinned is which prefixes a write names, and a real client
- * would answer that question by not throwing - which is not an answer. Nothing
- * here mounts a component, opens a socket or reaches an API.
- *
- * ## The finding this file exists for
- *
- * `onUpdateRoles` invalidated the users family and stopped there. A role is a
- * permission carrier, which is exactly why `invalidateAfterAdminRoleChange` and
- * `invalidateAfterStaffChange` both also name `["vitnode","admin-session"]`: the
- * sidebar, every permission gate and every screen guard in the panel render from
- * that one cached entry. The API already did its half - the role branch of the
- * user update route bumps the permission epoch - so the browser was the only
- * thing left offering links the API had started refusing, until a page reload.
- */
-
 /** Every `queryKey` a call named, in the order it named them. */
 const recorder = () => {
   const invalidated: unknown[][] = [];
@@ -78,11 +58,6 @@ describe("changing a user's roles", () => {
     );
   });
 
-  /**
-   * Invalidated, not removed. The administrator has not changed - this is not an
-   * identity boundary - so the current sidebar stays on screen while the fresh
-   * answer arrives. Removing it would blank the shell under the toast.
-   */
   it("does not remove the session", async () => {
     const { queryClient, removed } = recorder();
 
@@ -91,11 +66,6 @@ describe("changing a user's roles", () => {
     expect(removed).toHaveLength(0);
   });
 
-  /**
-   * And it stays narrow. `invalidateQueries()` with no key, or with
-   * `["vitnode"]`, would also expire the messages, the middleware config and
-   * every other screen the panel is holding - none of which a role change moved.
-   */
   it("names two prefixes and no more", async () => {
     const { invalidated, queryClient } = recorder();
 
@@ -108,11 +78,6 @@ describe("changing a user's roles", () => {
     });
   });
 
-  /**
-   * The two targets are siblings rather than one inside the other, which is what
-   * makes both calls necessary: `["vitnode","admin"]` is not a prefix of
-   * `["vitnode","admin-session"]`, because Query matches whole segments.
-   */
   it("cannot reach the session through the panel root", () => {
     const isPrefixOf = (
       prefix: readonly unknown[],
@@ -126,11 +91,6 @@ describe("changing a user's roles", () => {
   });
 });
 
-/**
- * The narrow helper it composes is unchanged, and the other two user writes -
- * a profile edit and an email verification - still use it alone. Neither moves a
- * permission, so neither owes the session anything.
- */
 describe("the other user writes stay on the users family", () => {
   it("invalidates exactly one prefix", async () => {
     const { invalidated, queryClient } = recorder();

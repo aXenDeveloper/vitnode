@@ -40,26 +40,6 @@ interface TranslationEntry {
   values: Record<string, unknown>;
 }
 
-/**
- * The two **composite** admin routes of a localized content type.
- *
- * One AdminCP form now edits a record and every language it exists in, because
- * that is how the screen is laid out: each localized input carries its own small
- * language switcher, and there is exactly one Save button. Saving touches the
- * base row and any number of translation rows, and the only honest way to do
- * that is inside one transaction - otherwise a Polish version conflict would
- * leave the shared fields and the English copy already written while the button
- * reported a failure.
- *
- * Nothing about the localization *model* changes here. These routes are a caller
- * of the same transaction-aware services the per-locale routes use: the base row
- * keeps its own version, every translation keeps its own, every mutation writes
- * its own revision, and every event still comes out of the same effects. What is
- * new is the boundary drawn around them.
- *
- * The per-locale routes stay exactly where they were, gated on `can_edit`, and
- * the AdminCP still uses them for per-language publication and history.
- */
 export const buildContentLocalizedAdminRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

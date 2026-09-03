@@ -75,11 +75,6 @@ const zodLabels = z.record(z.string(), z.string().nullable());
 const zodOptions = z.object({
   items: z.array(
     z.object({
-      /**
-       * Present only for a `user` field, where an option is a person rather than
-       * a row with a name. Optional rather than a second response shape, so a
-       * client written before this still parses every option it gets.
-       */
       avatarColor: z.string().optional(),
       /**
        * Present when the target declares `admin.colorField` - a blog category

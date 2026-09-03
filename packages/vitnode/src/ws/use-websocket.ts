@@ -16,20 +16,6 @@ export interface UseVitNodeWebSocketReturn<Send> {
   send: (data: Send) => void;
 }
 
-/**
- * Subscribe to a VitNode WebSocket over the shared `/ws` connection.
- *
- * Pass a {@link VitNodeWSChannel} (recommended - it carries the id and the
- * message types) or a raw id string. Messages are routed by id, so only the
- * payloads addressed to this channel reach `options.onMessage`.
- *
- * @example
- * ```tsx
- * const { send, readyState } = useVitNodeWebSocket(echoChannel, {
- *   onMessage: data => setMessages(prev => [...prev, data]),
- * });
- * ```
- */
 export function useVitNodeWebSocket<Send = unknown, Receive = unknown>(
   channel: string | VitNodeWSChannel<Send, Receive>,
   options?: {

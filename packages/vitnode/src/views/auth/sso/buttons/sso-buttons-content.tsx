@@ -8,31 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import type { SSOProvider } from "../providers";
 
-/**
- * What starting an SSO flow answers with.
- *
- * A message means it failed; the shared row turns that into the internal-error
- * toast. On the happy path the browser has already been sent to the provider,
- * so there is nothing to return - the promise simply never resolves to anything
- * the row can render.
- */
 export type SSOStartResult = undefined | { message?: string };
 
 export type SSOSelectProvider = (providerId: string) => Promise<SSOStartResult>;
 
-/**
- * The provider buttons, separated from what pressing one does.
- *
- * The whole of the framework boundary is `onSelectProvider`: it takes a
- * provider id and answers whether the flow could be started. Next.js calls a
- * server action that redirects; TanStack Start calls the API and moves the
- * browser itself. Neither is imported here.
- *
- * The failure toast stays on this side deliberately. It is the same message for
- * the same reason in both frameworks - "we could not reach the provider" - and
- * a callback that only reports the failure keeps every wrapper from having to
- * re-implement it.
- */
 export const SSOButtonsContent = ({
   onSelectProvider,
   providers,

@@ -2,11 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CONFIG } from "./config";
 
-/**
- * Runs `read` with the page served from `origin`, the way a browser would have
- * it. `location` is a real object under jsdom, so it is replaced wholesale
- * rather than assigned to.
- */
 const inBrowserAt = <T>(origin: string | undefined, read: () => T): T => {
   vi.stubGlobal("location", origin === undefined ? undefined : { origin });
 

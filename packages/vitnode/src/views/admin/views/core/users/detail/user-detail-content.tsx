@@ -23,25 +23,6 @@ import {
 } from "./user-fields-content";
 import { UserRolesCardContent } from "./user-roles-content";
 
-/**
- * The AdminCP user page, with no framework in it.
- *
- * The profile card, the in-place field editors, the roles card and the two tabs
- * - lifted out of the Next.js Server Component so a TanStack route renders the
- * same screen. Four things arrive as props, because four things differ:
- *
- *     canEdit        decided from the reader's permissions and the target's
- *                    `isAdmin`, by `canEditAdminUser` - the same rule in both
- *     LinkComponent  how this application renders an internal link
- *     onUpdate*      the two writes, and what the app does about the cache
- *     timeline       the activity feed, mounted by the caller because its query
- *                    needs a locale and a transport this component has neither
- *                    of
- *
- * `canEdit` is a *display* decision. `assertCanEditAdminTarget` on the API is
- * the rule, re-checked on every write, so an administrator who edits this value
- * in devtools gets visible buttons and a `403`.
- */
 export interface UserDetailProps {
   canEdit: boolean;
   LinkComponent: AuthLinkComponent;

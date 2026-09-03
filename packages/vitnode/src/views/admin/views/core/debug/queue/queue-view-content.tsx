@@ -23,14 +23,6 @@ const COUNT_STATUSES = [
   "failed",
 ] as const;
 
-/**
- * A snapshot of the queue - four counters and whatever is currently in flight -
- * as both frameworks render it.
- *
- * Not a `DataTable`: there is no paging, no sorting and no URL state, because
- * the list is "what is happening right now" rather than a browsable history.
- * `/admin/core/advanced/queue` is the browsable one.
- */
 export const QueueViewContent = ({ data }: { data: DebugQueueSnapshot }) => {
   const t = useTranslations("admin.debug.queue");
 

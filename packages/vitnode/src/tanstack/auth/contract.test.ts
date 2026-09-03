@@ -14,14 +14,6 @@ import {
   ssoStartResultFromStatus,
 } from "./contract";
 
-/**
- * The auth transport's decisions, without the transport.
- *
- * Every status the API can answer these four calls with, and every shape a
- * provider can send a visitor back with, mapped to the finite result a component
- * is allowed to see. No Hono, no fetch, no server function - those are covered
- * by typecheck and the build.
- */
 describe("sign-in results", () => {
   it("reads 201 as signed in", () => {
     expect(signInResultFromStatus(201)).toEqual({ ok: true });
@@ -297,14 +289,6 @@ describe("SSO callback input normalisation", () => {
   });
 });
 
-/**
- * The distinction the auth stack got wrong for a whole stage.
- *
- * `200 + { user: null }` is a visitor who is genuinely nobody. Every other
- * answer means the session could not be *evaluated*, and reading that as
- * "anonymous" is what signed people out during a rate-limit spike. There is no
- * third status the session route declares, so `200` is the whole rule.
- */
 describe("reading a session response status", () => {
   it("treats 200 as a session that can be read", () => {
     expect(isUsableSessionStatus(200)).toBe(true);

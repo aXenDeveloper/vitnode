@@ -17,43 +17,6 @@ import {
   readContentApiJson,
 } from "../content-request";
 
-/**
- * What a **page-mode** content form opens on: one record, and every language of
- * it.
- *
- * The two reads `ContentEditPageView` performs before it renders anything, as
- * query definitions rather than as an awaited pair - so a TanStack Start loader
- * can warm exactly the entries the screen reads back, and the edit form is
- * populated in the first paint rather than after a round trip.
- *
- * ## Two entries rather than one
- *
- * They are separate facts about the record and they go stale separately: a save
- * that touched only the Polish copy leaves the base row exactly as it was. They
- * both hang off `contentItemQueryRoot`, so a write that moves the record
- * invalidates both by prefix - which is what `invalidateContentAfterWrite`
- * already does, with no list of keys to keep in step.
- *
- * ## A failed read rejects
- *
- * The opposite of the writes in `./mutations-api.ts`, and deliberately: an edit
- * form that renders empty because the record could not be read looks exactly
- * like an edit form for a record with nothing in it - and the first save would
- * then write those blanks over the real values. `readContentApiJson` throws, the
- * route's error boundary owns the screen, and nothing is editable.
- *
- * The Next.js AdminCP answers the same condition with `notFound()`, from the
- * server component that does the read. Both refuse to render a form; only the
- * screen the person lands on differs.
- */
-
-/**
- * The row shape a form opens on: the record, plus its reference labels.
- *
- * `.loose()` carries the content type's own fields, which no generic schema can
- * enumerate - including `files`, which is where every `file` field's descriptor
- * lives. Dropping the unknown half would empty every field on the form.
- */
 export const zodContentItem = z
   .object({
     id: z.number(),
@@ -63,13 +26,6 @@ export const zodContentItem = z
 
 export type ContentItem = Record<string, unknown> & { id: number };
 
-/**
- * Every language of one record.
- *
- * `.loose()` on each edge for the same reason the row schema has it: a
- * translation's `values` are the content type's own localized fields, which no
- * generic schema can enumerate and which the form needs in full.
- */
 export const zodContentTranslationList = z.object({
   edges: z.array(z.object({ locale: z.string() }).loose()),
 });

@@ -129,14 +129,6 @@ export const AutoFormSubmitButton = ({
   );
 };
 
-/**
- * The `intent` of the submit button that fired this submission, if any.
- *
- * Read from the native `SubmitEvent.submitter`, which is the browser's own
- * answer to "which button was it" - it is right for a click, for Enter in a
- * field (the form's first submit button) and for a button that received focus
- * and Space.
- */
 const submitIntentOf = (
   event: React.BaseSyntheticEvent | undefined,
 ): string | undefined => {

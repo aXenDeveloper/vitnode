@@ -7,16 +7,6 @@ import {
   DOCUMENT_CACHE_CONTROL,
 } from "./document-headers";
 
-/**
- * The one directive VitNode forces onto a response, and the two questions that
- * decide when.
- *
- * Both are content-type questions rather than path questions, which is the
- * property worth pinning: `/api/*` is served by the Hono bridge through the same
- * middleware, so a rule that keyed on anything else would quietly forbid clients
- * from caching the API.
- */
-
 const html = (headers: Record<string, string> = {}) =>
   new Response("<!doctype html>", {
     headers: { "content-type": "text/html; charset=utf-8", ...headers },

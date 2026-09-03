@@ -41,33 +41,6 @@ import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
 import { contentTranslationEffects } from "./translation-effects";
 import { withTranslationHttpErrors } from "./translation-http-errors";
 
-/**
- * The generated translation routes for one localized content type.
- *
- * Identity is `(content type, item, locale)` and never the translation row's own
- * key: `(itemId, languageId)` is the primary key, there is no surrogate id to
- * leak, and a locale in the URL cannot be used to reach another content type's
- * translation because the module the route is mounted in already fixes which
- * table is being read. Locales are canonical strings on the outside and numeric
- * `core_languages.id` values on the inside - a client never sends an id, so it can
- * never point one at a language it was not shown.
- *
- * Permissions:
- *
- * | Route | Permission |
- * | --- | --- |
- * | read, history | `can_view` |
- * | create, update | `can_edit` |
- * | publish, unpublish | `can_publish` |
- * | restore | `can_restore` |
- * | delete | `can_delete` |
- *
- * `can_edit`, and no permission of its own: writing a locale is editing the
- * record in that language, and a role that may edit an article may edit every
- * language of it. Publishing, restoring and deleting keep their own gates, so a
- * translation still cannot reach the internet or disappear on an edit
- * permission alone.
- */
 export const buildContentTranslationRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

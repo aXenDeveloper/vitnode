@@ -23,30 +23,11 @@ import { ADMIN_SEARCH_INDEX_NAMESPACES } from "./route";
 import { searchIndexSearchFrom, searchIndexSearchParams } from "./route-search";
 
 export interface AdminSearchIndexRouteProps extends AdminSearchIndexRouteData {
-  /**
-   * Names for the collections a Content Engine content type contributes.
-   *
-   * Optional, and absent in Stage 12. They come from the *frontend* content-type
-   * registry, which is server-side config: the Next.js page reads it directly,
-   * and a TanStack Start host can only pass them once it has a browser-side
-   * registry - the same seam `AdminShellContent`'s `declarations` prop is
-   * waiting on. Without them a content collection falls back to the search
-   * renderer's own label, and its `itemType` is still shown, so nothing is
-   * hidden - it is named less well.
-   */
   collectionLabels?: Map<string, string>;
   navigate: AdminTableNavigate<SearchIndexRouteSearch>;
   search: UncheckedSearchIndexSearch;
 }
 
-/**
- * `/admin/core/advanced/search`, as everything below a route file's `component`.
- *
- * The header's "rebuild everything" button and the two row actions share one
- * `actions` object, so all three refresh the same way: a query invalidation on
- * success. `useSearchIndexActions` is the TanStack half of the pair whose other
- * half is `useSearchIndexActionsNext`.
- */
 export const AdminSearchIndexRouteContent = ({
   collectionLabels,
   description,

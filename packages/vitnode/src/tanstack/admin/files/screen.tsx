@@ -29,16 +29,6 @@ export interface AdminFilesRouteProps extends AdminFilesRouteData {
   search: UncheckedAdminFilesSearch;
 }
 
-/**
- * `/admin/core/system/files`, as everything below a route file's `component`.
- *
- * The two extra permissions are read here rather than in the table, from the
- * same admin session the `_admin` guard already resolved - so this is a context
- * read rather than two more requests, which is what the Next.js page spends on
- * `checkAdminPermissionApi`. They decide which controls render; the API
- * re-checks `files.can_download` and `files.can_delete` on the requests
- * themselves.
- */
 export const AdminFilesRouteContent = ({
   description,
   navigate,

@@ -10,12 +10,6 @@ import { cn } from "@/lib/utils";
 
 import type { RebuildSearchIndex } from "./search-index-mutations";
 
-/**
- * "Reindex", on the row of a collection that has an indexer.
- *
- * The same mutation the header's button calls, narrowed to one item type - and
- * the same seam, carrying its own refresh.
- */
 export const ReindexCollectionAction = ({
   itemType,
   label,

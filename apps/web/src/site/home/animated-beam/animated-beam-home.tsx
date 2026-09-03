@@ -59,28 +59,6 @@ const Circle = ({
   )
 }
 
-/**
- * What VitNode gives you, drawn as beams converging on the mark.
- *
- * Migrated from the Next.js homepage with the same nine circles, the same eight
- * beams and the same directions. Three things changed, all of them framework
- * coupling rather than design:
- *
- * - **The links.** They were `@vitnode/core/lib/navigation`'s `Link`, which is
- *   next-intl's navigation and does not exist outside Next.js. They are the
- *   injected {@link SiteLinkComponent} now, which matters for more than
- *   compiling: two of these circles point into `/docs`, and that is still the
- *   Next.js application's.
- * - **The mark.** `LogoVitNode` from `@vitnode/core`, rather than the byte-identical
- *   copy that sat in `apps/docs/src/components`. There is one VitNode logo.
- * - **The tooltip provider.** It was mounted per circle; `VitNodeRootProviders`
- *   mounts one above every route in this application, and a second provider
- *   inside it is eight extra React trees for no behaviour.
- *
- * `containerRef` is what every beam measures against, which is why the beams are
- * siblings of the grid rather than children of it: they are absolutely
- * positioned over the whole container and sized from its rect.
- */
 export const AnimatedBeamHome = ({
   LinkComponent,
 }: {

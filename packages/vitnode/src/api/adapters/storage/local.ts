@@ -9,18 +9,6 @@ import type {
 
 import { CONFIG } from "@/lib/config";
 
-/**
- * Zero-config storage backend that writes uploads to the local disk under
- * `public/uploads`.
- *
- * - On the standalone Node API (`@hono/node-server`) files are served by Hono's
- *   `serveStatic`, wired from the `static` descriptor below. The API is mounted
- *   under `/api`, so `publicPath` defaults to `/api/uploads`.
- * - Inside a Next.js app the `public/` directory is served at the site root, so
- *   pass `publicPath: "/uploads"` there (the `static` descriptor is unused).
- *
- * Local disk is not durable on serverless platforms - use a cloud adapter there.
- */
 export const LocalStorageAdapter = ({
   baseUrl,
   publicPath = "/api/uploads",

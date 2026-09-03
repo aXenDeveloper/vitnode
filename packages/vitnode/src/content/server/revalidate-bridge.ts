@@ -27,55 +27,9 @@ export interface ContentRevalidationRequest extends ContentInvalidationInput {
 const sleep = async (ms: number): Promise<void> =>
   await new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Which web origins to notify. Configured, or none.
- *
- * There is deliberately no fallback to the session-cookie origin. Only a front
- * end that caches its own renders has anything to expire, and posting at one
- * that does not is worse than not posting: the request lands on whatever that
- * origin serves at this path - a 404, in an application whose `/api/*` is a
- * Hono mount - which reads as a failed delivery, and
- * `content-schedule-effects` fails the queue task on a partial delivery. Every
- * scheduled publish would then retry its effects forever over a cache that was
- * never there.
- *
- * So the list is opt-in: an install that mounts the handler names its origins,
- * and an install that does not gets `attempted: 0` - "nothing to tell", which
- * is a decision rather than an outage.
- */
 const originsFor = (c: Context): string[] =>
   c.get("core")?.contentRevalidateOrigins ?? [];
 
-/**
- * Tells a front end to expire the tags a background mutation just invalidated.
- *
- * This exists because of one hard constraint: **the queue handler does not run
- * in the front end.** It is a plain `@hono/node-server` process, with no access
- * to whatever cache the thing serving the pages keeps. So a scheduled publish
- * cannot expire a render cache by calling a function - it has to ask the
- * process that can, over HTTP, which is why this is a `fetch` and not an import.
- *
- * The alternative was to let each entry expire on its own lifetime, which would
- * leave an unpublished record readable for as long as that lasts. That is not a
- * cache miss; it is the feature not working.
- *
- * Framework-neutral on both sides: the request is a signed POST carrying tag
- * inputs, and what the receiver does with them is its own business. A front end
- * that caches nothing simply does not appear in `content.revalidateOrigins` and
- * is never posted at.
- *
- * **It reports rather than throws.** Every origin is tried, a failure is logged,
- * and the counts come back for the caller to judge. That split matters: one
- * origin being unreachable must not stop the others, but it must also not be
- * hidden - so the decision about whether the delivery was good enough belongs
- * to whoever can retry it, not here.
- *
- * `content-schedule-effects` is that caller, and it requires
- * `delivered === attempted`: with several web apps behind one API, a scheduled
- * unpublish that expired one cache and not the other has left a withdrawn page
- * readable. `attempted: 0` means there was nothing to tell - no tag needed
- * expiring, or no origin is configured - which is not a failure.
- */
 export const dispatchContentRevalidation = async (
   c: Context,
   input: ContentRevalidationRequest,

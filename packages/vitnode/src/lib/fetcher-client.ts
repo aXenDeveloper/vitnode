@@ -17,16 +17,6 @@ import { coreFetcher } from "./fetcher/core";
 import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
 import { CAPTCHA_TOKEN_HEADER } from "./fetcher/request-context";
 
-/**
- * Typed reference to a server module for use with {@link fetcherClient} inside
- * client components. Import the module as a **type only** (so no server code is
- * bundled) and pass its `pluginId`; the returned stub carries just the field the
- * fetcher reads at runtime while keeping paths, methods and responses fully typed.
- *
- * @example
- * import type { myPluginModule } from "@/api/my-plugin.module";
- * const ref = clientModule<typeof myPluginModule>("@my-plugin/core");
- */
 export const clientModule = <T extends BaseBuildModuleReturn>(
   pluginId: T["pluginId"],
 ): T => ({ pluginId }) as unknown as T;

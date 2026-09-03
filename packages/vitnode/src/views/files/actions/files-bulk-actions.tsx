@@ -13,20 +13,6 @@ import { Button } from "@/components/ui/button";
 
 import type { DeleteMyFiles } from "../my-files-delete";
 
-/**
- * Delete, for every ticked row of the visitor's files.
- *
- * The two-pass shape is the point and it is unchanged: the first pass deletes
- * what it can and comes back with the ids that only *history* is holding, and
- * the dialog stays open offering to force past exactly those - never the whole
- * selection again. Files a live page still points at are refused in both passes,
- * because there is no version of "delete anyway" that leaves a published page
- * unbroken.
- *
- * The run itself is a prop, for the reason set out in `my-files-delete.ts`: the
- * accounting is shared and only the last step - revalidate or invalidate -
- * belongs to a framework.
- */
 export const MyFilesBulkActions = ({
   onDeleteFiles,
 }: {

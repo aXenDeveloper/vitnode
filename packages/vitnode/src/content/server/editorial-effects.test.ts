@@ -227,11 +227,6 @@ describe("contentEditorialEffects", () => {
     });
   });
 
-  /**
-   * A dead listener on an *interactive* mutation has nowhere else to be
-   * recorded: the scheduled path writes it onto the schedule row and retries,
-   * and a clicked publish does neither. Without a log line it is invisible.
-   */
   describe("reporting a delivery failure", () => {
     it("logs the failed listener with the record it belongs to", async () => {
       const { c, log } = harness({ emit: withFailure() });

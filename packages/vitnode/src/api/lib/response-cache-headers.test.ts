@@ -4,29 +4,6 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-/**
- * What VitNode's HTTP responses tell a browser or a CDN about caching.
- *
- * The API is a Hono app that answers with a visitor's session, an
- * administrator's screens, a plugin's domain data and a public content feed from
- * the same origin, over the same paths. There is exactly one safe default for
- * that shape: **say nothing, and let no shared cache think it may keep a copy.**
- *
- * So the rule this file pins is not "cache the public reads well". It is the
- * narrower and more important one:
- *
- * - No response may carry a directive that lets a *shared* cache store it -
- *   `public`, `s-maxage`, a positive `max-age` - unless somebody adds it here
- *   deliberately, with the response's privacy in front of them.
- * - No middleware may set a cache directive at all. A blanket policy over
- *   `/api` is how an authenticated response ends up in a CDN: it is applied by
- *   path, and privacy is not a property of a path.
- *
- * A response with no `Cache-Control` is still heuristically cacheable by an
- * intermediary in principle, which is why the one route that *can* return an
- * unpublished record says `private, no-store` out loud rather than relying on
- * the absence of a header.
- */
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = resolve(here, "../..");
 
@@ -117,14 +94,6 @@ const cacheControlValues = (path: string): string[] => {
 const mentionsCacheControl = (path: string): boolean =>
   /[Cc]ache-[Cc]ontrol/.test(codeOf(path));
 
-/**
- * Whether a directive lets a cache that serves more than one person keep a copy.
- *
- * The predicate the whole file turns on, written out rather than eyeballed.
- * `private` and `no-store` are the two that settle it in the safe direction;
- * anything with a positive freshness lifetime and no `private` is storable by a
- * proxy, and `public` says so outright.
- */
 const isSharedCacheable = (value: string): boolean => {
   const directives = value
     .toLowerCase()
@@ -142,19 +111,6 @@ const isSharedCacheable = (value: string): boolean => {
   });
 };
 
-/**
- * Every response header this package sets deliberately, and why.
- *
- * Two entries, and both say the same thing for the same reason:
- *
- * - `content/server/public-routes.ts` - the one public read that can return an
- *   unpublished record to whoever is allowed to preview it.
- * - `tanstack/start/document-headers.ts` - every rendered document, which
- *   carries a dehydrated Query cache holding the visitor's session.
- *
- * Adding a third is a decision about who may store a response, so it belongs in
- * a diff somebody reads rather than in a route nobody re-reads.
- */
 const DECLARED = {
   "content/server/public-routes.ts": ["private, no-store"],
   "tanstack/start/document-headers.ts": ["private, no-store"],
@@ -233,15 +189,6 @@ describe("no response is offered to a shared cache", () => {
 });
 
 describe("no middleware applies a cache policy by path", () => {
-  /**
-   * The directories a blanket policy would be written in.
-   *
-   * `api/middlewares` is where a Hono middleware goes, `api/lib/route.ts` is the
-   * builder every route is registered through, and `api/config.ts` is where the
-   * app is assembled. A `Cache-Control` in any of the three would apply to
-   * responses whose privacy nobody looked at - including the session read, the
-   * AdminCP screens and a plugin's private data.
-   */
   const surfaces = () =>
     runtimeSources().filter(path => {
       const entry = asEntry(path);

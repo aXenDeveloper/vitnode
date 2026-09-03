@@ -16,13 +16,6 @@ import type { SearchSyncError } from "./sync-errors";
 
 import { parseSearchSyncError } from "./sync-errors";
 
-/**
- * The ten most recent search sync failures, or nothing at all.
- *
- * Was a Server Component; only the translator moved. It renders `null` for an
- * empty list rather than an empty card, which is what keeps a healthy screen
- * from carrying a heading about problems it does not have.
- */
 export const SyncErrorsCardContent = ({
   errors,
   labels,

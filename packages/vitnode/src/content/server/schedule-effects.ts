@@ -19,16 +19,6 @@ import { dispatchContentRevalidation } from "./revalidate-bridge";
 import { recordContentScheduleEffectsError } from "./schedules-model";
 import { isContentRowPublic } from "./search-document";
 
-/**
- * The per-locale cache work one scheduled transition owes.
- *
- * Taken as a before-and-after pair rather than reasoned about, because the two
- * differ only in the *base* row's publication state and every locale's answer
- * follows from that plus its own translation - which is exactly what
- * `contentPublicLocaleStates` already computes. Synthesising the previous base
- * state is safe here in a way it would not be generally: a publish or unpublish
- * writes no field values, so nothing else about the row moved.
- */
 const scheduledLocales = async (
   c: Context,
   model: AnyContentModel,
@@ -56,14 +46,6 @@ const scheduledLocales = async (
   });
 };
 
-/**
- * Everything the announcements need, and nothing they have to re-read.
- *
- * Written when the transition commits and never consulted against the live
- * record afterwards. That is the point: by the time this runs the record may
- * have been edited again, and an event describing *that* state would be a
- * second, wrong announcement of a publication that already happened.
- */
 export const contentScheduleEffectsPayloadSchema = z.object({
   changedFields: z.array(z.string()),
   contentTypeId: z.string().min(1),
@@ -85,13 +67,6 @@ export type ContentScheduleEffectsPayload = z.infer<
   typeof contentScheduleEffectsPayloadSchema
 >;
 
-/**
- * Turns the ISO strings a JSON payload carries back into `Date`s.
- *
- * The search document already accepts either, but the `published` event payload
- * is typed `publishedAt: Date` - and a listener that reads it should not be able
- * to tell whether the publish was clicked or scheduled.
- */
 const reviveDates = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -123,31 +98,6 @@ export interface ContentScheduleEffectsOutcome {
   status: "delivered" | "unregistered";
 }
 
-/**
- * Delivers the announcements a committed scheduled transition owes everyone
- * else: its event, its search document, and its cache invalidation.
- *
- * **Split from the transition on purpose.** Publishing is a database write that
- * either committed or did not. Telling the world is three calls to systems a
- * transaction cannot reach, any of which can be down for a minute. Retrying
- * them together would re-run the publish - which is idempotent, so the second
- * run would find nothing changed and skip the announcements entirely. That is
- * exactly how a scheduled unpublish ends up permanently serving a cached page it
- * should have expired, and it is the failure this task exists to remove.
- *
- * **All three have to land.** A failed event, a refused search write and a web
- * origin that did not accept its invalidation are each enough to fail the run,
- * and the reasons are combined into one `effectsError` so the AdminCP shows
- * everything outstanding rather than whichever failed first.
- *
- * **Delivery is at-least-once.** A retry after a partial failure re-emits the
- * event and re-writes the search document. Both of the latter are idempotent by
- * construction - a search upsert and a cache expiry are the same operation
- * however many times they run - but an event listener may see the same
- * `published` twice, so a listener that must act once keys off the
- * `scheduleId` the payload carries. There is no outbox and no exactly-once
- * claim.
- */
 export const runContentScheduleEffects = async (
   c: Context,
   payload: ContentScheduleEffectsPayload,

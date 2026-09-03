@@ -7,46 +7,15 @@ import type {
   StaffPermissionSet,
 } from "./permission-staff";
 
-/**
- * How long one resolved permission set is trusted.
- *
- * The same 60 seconds the [session cache](../models/session-cache.ts) uses, and
- * for the same reason: it is a ceiling on how stale a permission check can be if
- * something changed the answer without going through one of the invalidation
- * points below. Every route that *does* change the answer expires the cache
- * itself, so the TTL is a backstop rather than the mechanism.
- */
 export const STAFF_PERMISSIONS_CACHE_TTL_SECONDS = 60;
 
-/**
- * The generation stamp every permission key is built from.
- *
- * Lives in the framework system namespace and is written with **no TTL** - it is
- * the thing that has to outlive the entries it names.
- */
 const EPOCH_KEY = "staff-permissions:epoch";
 
 const STAFF_TYPES = ["admin", "moderator"] as const;
 
-/**
- * Reads the current generation, or the one every deployment starts on.
- *
- * A miss is not an error: it means nothing has invalidated the cache yet - or
- * Redis is not configured, in which case nothing is cached either and the key
- * this builds is never read from anything.
- */
 const readEpoch = async (c: Context): Promise<string> =>
   (await c.get("cache").getSystem<string>(EPOCH_KEY)) ?? "0";
 
-/**
- * Where one user's resolved permission set of one kind lives.
- *
- * In the **system** namespace rather than the per-plugin one, because the read
- * and the write can happen under different plugins: a moderator permission check
- * runs inside whichever plugin's route asked for it, while the AdminCP routes
- * that invalidate it are core's. A plugin-namespaced key would let a plugin's
- * cached copy survive the change that was supposed to expire it.
- */
 const permissionsKey = (
   epoch: string,
   { type, userId }: { type: PermissionStaffType; userId: number },

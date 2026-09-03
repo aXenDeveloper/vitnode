@@ -19,39 +19,10 @@ import {
 
 export type { ChangePasswordSubmitValues };
 
-/**
- * How the form sets a new password.
- *
- * The whole of the framework boundary for password recovery's second half. It
- * takes the new password together with the already-parsed link it is acting on,
- * and answers what happened. Next.js calls a server action; TanStack Start calls
- * a server function.
- */
 export type ChangePasswordSubmit = (
   values: ChangePasswordSubmitValues,
 ) => Promise<ChangePasswordMutationResult>;
 
-/**
- * The change-password form's behaviour, with no idea which framework is
- * rendering it.
- *
- * Two props, and both are things this side cannot answer:
- *
- * - `onChangePassword` - the mutation.
- * - `onChanged` - where to go afterwards. The API mints **no session** on a
- *   successful change, so the visitor is still signed out and the only sensible
- *   destination is the login page - but *how* to get there is `useRouter().replace`
- *   in Next.js and a router navigation in TanStack Start, so the caller does it.
- *
- * `link` is a {@link RecoveryLink}, which means it has already been through
- * `parseRecoveryLink`: this hook never sees a raw search parameter and never
- * coerces one.
- *
- * The toasts stay on this side deliberately - they are the same two messages for
- * the same two reasons in both frameworks. An expired or already-used link gets
- * the `400` copy rather than the generic internal-error copy, because it is the
- * one failure a visitor can act on: ask for a fresh link.
- */
 export const useChangePasswordForm = ({
   link,
   onChanged,

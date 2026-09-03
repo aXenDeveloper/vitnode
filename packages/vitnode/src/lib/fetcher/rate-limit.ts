@@ -1,11 +1,6 @@
 /** HTTP status the API replies with when a client exceeds the rate limit. */
 export const RATE_LIMIT_STATUS = 429;
 
-/**
- * DOM event dispatched on `window` when a client-side request is rate-limited,
- * so a globally-mounted listener can inform the user without the fetcher having
- * to know about React, i18n or the toaster.
- */
 export const RATE_LIMIT_EVENT = "vitnode:rate-limit";
 
 export interface RateLimitEventDetail {

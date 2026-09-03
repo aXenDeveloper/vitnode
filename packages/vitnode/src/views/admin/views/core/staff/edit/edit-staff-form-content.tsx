@@ -39,40 +39,7 @@ import {
 
 import { SelectableCard } from "../selectable-card";
 
-/**
- * Choosing what a staff entry may do.
- *
- * Every rule this form applies - which permissions exist, what depends on what,
- * what a toggle cascades to, and what is finally sent - lives in
- * `staff-model.ts` and is tested there without React. What is left here is the
- * screen: two modes, a plugin sidebar, collapsible modules, and a save.
- *
- * ## Unrestricted is a mode, not a checkbox
- *
- * "Unrestricted" means *everything, including permissions that do not exist
- * yet* - a plugin installed tomorrow is covered without anybody revisiting this
- * entry. That is why it replaces the tree rather than sitting above it, and why
- * a save in that mode sends no permission list at all.
- *
- * ## What the API does to the same set
- *
- * `update-permissions.route.ts` drops anything not in the catalog and anything
- * whose dependencies are missing, repeatedly, until the set is stable.
- * `staffPermissionsForSubmit` applies exactly those two rules before sending, so
- * an administrator is never shown one thing and given another.
- */
-
 export interface EditStaffFormProps {
-  /**
-   * The keys this entry already holds, as `plugin:module:permission`.
-   *
-   * Handed in rather than folded into `plugins`, because the two answer
-   * different questions: `plugins` is what the *installation* declares, and this
-   * is what the *entry* was granted. A permission the entry holds that the
-   * catalog no longer declares is therefore simply absent from the tree - it
-   * cannot be re-granted by rendering, and the save drops it, which is exactly
-   * what the API would do with it anyway.
-   */
   grantedKeys: readonly string[];
   id: string;
   /** Performs the write. */
@@ -278,13 +245,6 @@ export const EditStaffFormContent = ({
     [plugins],
   );
 
-  /**
-   * What is granted right now.
-   *
-   * Seeded once, from the entry. Re-deriving it from `grantedKeys` on every
-   * render would throw away every toggle the administrator has made since the
-   * page loaded.
-   */
   const [checked, setChecked] = React.useState<Set<string>>(
     () => new Set(grantedKeys),
   );

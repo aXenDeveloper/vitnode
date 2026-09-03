@@ -11,14 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 
-/**
- * What the row's overflow menu hands every panel behind it.
- *
- * The open state lives in the menu rather than in the panel: a menu item
- * unmounts with the menu the moment it is clicked, and a dialog rendered inside
- * one would go with it. The panel is mounted *beside* the menu instead and told
- * when to open.
- */
 export interface ContentPanelProps {
   finalFocus?: React.RefObject<HTMLElement | null>;
   onOpenChange: (open: boolean) => void;

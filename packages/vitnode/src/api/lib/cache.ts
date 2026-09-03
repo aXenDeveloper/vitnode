@@ -7,23 +7,9 @@ export type CacheConfig = RedisClientOptions;
 /** The connected `node-redis` client shared by the cache, rate limiter and ws. */
 export type CacheClient = RedisClientType;
 
-/**
- * Root prefix applied to every key VitNode writes, so the cache can be flushed
- * without touching unrelated data that may live in the same Redis instance.
- * Keys are further namespaced per plugin - see {@link CacheModel.prefix}.
- */
 const CACHE_PREFIX = "vitnode:cache:";
 const SYSTEM_NAMESPACE = "__system__";
 
-/**
- * A small, safe cache facade exposed on the request context as
- * `c.get("cache")`. Values are JSON-serialized and namespaced per plugin (see
- * {@link CacheModel.prefix}), so the `hello` key a plugin writes actually lives
- * at `vitnode:cache:{plugin_code}:hello`. When Redis is not configured (client
- * is `null`) or a command fails, reads return `null`/`false`, writes are
- * no-ops, and {@link CacheModel.remember} simply runs its loader - caching must
- * never break a request.
- */
 export class CacheModel {
   constructor(client: CacheClient | null, c: Context) {
     this.c = c;

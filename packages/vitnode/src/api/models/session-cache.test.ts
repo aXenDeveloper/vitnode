@@ -14,26 +14,6 @@ import {
   sessionCacheTtl,
 } from "./session-cache";
 
-/**
- * The rules that make it safe to put a signed-in user in a **shared** cache.
- *
- * A session is the most private thing VitNode caches, and it is cached in Redis,
- * which every instance of an install can read. Three properties are what keep
- * that from being a leak, and none of them is visible from a call site:
- *
- * 1. **The key names one identity.** It is built from the hashed session token
- *    *and* the device the session belongs to, so no two sessions - and therefore
- *    no two people - can ever address the same entry.
- * 2. **The two session kinds never meet.** A public session and an AdminCP
- *    session are different authorizations with different cookies and different
- *    lifetimes. A collision between them would hand one the other's answer.
- * 3. **A cached user cannot outlive their session.** The TTL is capped by the
- *    session's own expiry, so a revocation that nobody remembered to invalidate
- *    still stops working on time.
- *
- * All three are pure arithmetic on strings and dates, which is why they are
- * tested here rather than against Redis.
- */
 const here = dirname(fileURLToPath(import.meta.url));
 
 const TOKEN_A = "a".repeat(64);
@@ -129,16 +109,6 @@ describe("a cached user never outlives the session", () => {
 });
 
 describe("both session models refuse to write a non-positive TTL", () => {
-  /**
-   * Asserted by reading the source, because the alternative is a database.
-   *
-   * This is the guard that turns the arithmetic above into a property of the
-   * cache. `CacheModel.setSystem` treats a falsy or negative TTL as "no
-   * expiration" and writes a **permanent** key - so an expired session written
-   * without this check would pin that user's record in Redis until something
-   * else deleted it. The check is one line at each call site and there is no
-   * type that can enforce it, so it is pinned here instead.
-   */
   it.each(["session.ts", "session-admin.ts"])("%s guards the write", file => {
     const source = readFileSync(join(here, file), "utf8");
 

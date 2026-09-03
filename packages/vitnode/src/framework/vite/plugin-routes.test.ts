@@ -7,32 +7,6 @@ import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
 import { readOptionalPluginModules } from "./plugin-routes";
 
-/**
- * How an app's two browser-safe projections are discovered, and why they are
- * allowed to disagree.
- *
- * `admin/nav` and `admin/content` are **independent optional package exports**.
- * A plugin opts into each by exporting it, and the discovery pass asks one
- * question per subpath:
- *
- *     admin/nav      does this plugin resolve it?  →  it is in the sidebar data
- *     admin/content  does this plugin resolve it?  →  it is in the content registry
- *
- * Nothing compares the two answers, and nothing may: a plugin with an AdminCP
- * settings screen and no content types exports the first and not the second, and
- * a plugin whose whole AdminCP presence is its generated content screens has no
- * reason to declare navigation beyond what those content types already imply.
- * Requiring both would make one of those a build error for no reason.
- *
- * ## Why a synthetic resolver
- *
- * `resolvePackageFile` is injected, so "which plugins export what" is an
- * argument rather than a fact about `node_modules`. That is what lets this state
- * the asymmetric cases at all - this repository's two plugins both export both,
- * so a test written against the real workspace could never tell the contract
- * from a coincidence.
- */
-
 /** A resolver over a fixed map of specifier → file, as the build sees one. */
 const resolverFor =
   (
@@ -41,12 +15,6 @@ const resolverFor =
   specifier =>
     exportsBySpecifier[specifier] ?? null;
 
-/**
- * Four plugins, one per shape the contract allows.
- *
- * Written as the files each would resolve to, because that is exactly what the
- * discovery pass gets back and the only thing it acts on.
- */
 const WORKSPACE = resolverFor({
   // Both: the shape this repository's own plugins happen to have.
   "@acme/blog/admin/content": "/pkg/blog/dist/admin/content.js",
@@ -123,11 +91,6 @@ describe("what discovery returns", () => {
     ]);
   });
 
-  /**
-   * The resolved files, for the dev server to watch - so a plugin *gaining* a
-   * subpath while the server runs regenerates instead of needing a restart. Only
-   * the plugins that resolved contribute one.
-   */
   it("returns one watch file per resolved module and no more", () => {
     expect(contentOf().watch).toEqual([
       "/pkg/blog/dist/admin/content.js",

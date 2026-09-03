@@ -24,31 +24,6 @@ import {
   normalizeMyFilesRouteSearch,
 } from "./route-search";
 
-/**
- * `/files`' contract with its own URL, and with the cache underneath it.
- *
- * Pure functions only. `normalizeMyFilesRouteSearch` is what a route hands to
- * `validateSearch`, so calling it directly is calling the route's schema - no
- * router, no request, no rendering. The *meaning* of a files request lives in
- * `views/files/my-files-query` and is asserted in `my-files-query.test.ts`; what
- * is asserted here is that this namespace asks for the right one, that a table
- * control's URL survives the round trip through it, and that a delete
- * invalidates the right family and nothing else.
- *
- * Which route file mounts this - and whether that route exists at all - is the
- * host's question, and stays in `apps/web/src/tests/my-files-route.test.ts`.
- */
-
-/**
- * The route's schema, over a query string as a visitor would type it.
- *
- * Through the router's *own* parser rather than `URLSearchParams`, because what
- * reaches `validateSearch` is not a query string and not even strings: the
- * default parser turns `?first=20` into the number `20`, `?x=true` into a
- * boolean, and a repeated key into an array. Half the rules below exist for
- * exactly that, so a test that flattened it first would be testing something
- * else.
- */
 const searchFor = (query: string) =>
   normalizeMyFilesRouteSearch(defaultParseSearch(query));
 

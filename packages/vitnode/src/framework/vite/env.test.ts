@@ -14,12 +14,6 @@ const ENV_FILE = [
   "REDIS_PASSWORD=another-secret",
 ].join("\n");
 
-/**
- * Every key any assertion here depends on, cleared around each test.
- *
- * The plugin's whole job is reading the ambient environment, so a developer's
- * own `.env` or a CI variable would otherwise decide what the define map says.
- */
 const TOUCHED = [
   "CRON_SECRET",
   "NEXT_PUBLIC_API_URL",

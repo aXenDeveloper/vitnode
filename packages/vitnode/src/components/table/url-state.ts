@@ -1,27 +1,3 @@
-/**
- * Every URL a `DataTable` control can ask for, as plain functions.
- *
- * A sort header, a page button, the search box and a filter dropdown all do the
- * same thing: take the query string the page is on, change one thing about it,
- * and hand the result to whatever knows how to navigate. Only that last step
- * differs between Next.js and TanStack Start - the rest is string arithmetic,
- * so it lives here, framework-free and testable without a router.
- *
- * Two rules hold everywhere below, because the table's URLs are also its API
- * arguments and a control that forgot one would silently drop the visitor's
- * work:
- *
- * - **Unrelated parameters survive.** Every helper copies the search it was
- *   given and edits the copy, so a plugin's own `?tab=` outlives a sort click.
- * - **A parameter is removed rather than emptied.** `?search=` and `?cursor=`
- *   with no value are not the same request as their absence, and the API reads
- *   the presence of a cursor to decide which page it is on.
- *
- * Which parameters *reset* is deliberately uneven, and matches what the table
- * has always done: paging and filtering rewrite the cursor, sorting and
- * searching leave it alone.
- */
-
 /** The parameter a page size is written to when paging forwards. */
 const FIRST = "first";
 /** The parameter a page size is written to when paging backwards. */
@@ -29,21 +5,8 @@ const LAST = "last";
 /** The row the next page starts from. Meaningless without `first` or `last`. */
 const CURSOR = "cursor";
 
-/**
- * The page size a table shows when the URL does not ask for one.
- *
- * Also the fallback for a `first`/`last` that is not a positive number: the
- * value goes straight back into the URL when the visitor pages, and `?first=NaN`
- * is not a request the API can answer.
- */
 export const DEFAULT_TABLE_PAGE_SIZE = 10;
 
-/**
- * How much has to be typed before a search reaches the URL.
- *
- * Below it the parameter is removed instead, so backspacing to nothing restores
- * the unfiltered table rather than searching for an empty string.
- */
 export const MIN_TABLE_SEARCH_LENGTH = 3;
 
 export type TableOrderDirection = "asc" | "desc";
@@ -56,13 +19,6 @@ export interface TableOrder {
   order: TableOrderDirection;
 }
 
-/**
- * A copy of the given search, safe to edit.
- *
- * Copying is the point: callers hand in the params object the router owns -
- * Next's is frozen and throws on `set` - and every helper here returns a new
- * string rather than mutating what it was passed.
- */
 const copy = (search: TableSearch): URLSearchParams =>
   new URLSearchParams(search.toString());
 
@@ -99,13 +55,6 @@ export const withTableOrder = (
   return params.toString();
 };
 
-/**
- * What clicking a sort header does.
- *
- * A column that is already sorted ascending flips to descending; anything else
- * - a different column, or the same one descending - starts again at ascending,
- * which is what makes a third click on the same header undo the second.
- */
 export const toggleTableOrder = (
   search: TableSearch,
   { column, defaultOrder }: { column: string; defaultOrder: TableOrder },
@@ -127,13 +76,6 @@ export const readTablePageSize = (search: TableSearch): number => {
   return Number.isInteger(size) && size > 0 ? size : DEFAULT_TABLE_PAGE_SIZE;
 };
 
-/**
- * Shows `pageSize` rows, from the beginning.
- *
- * The cursor goes with the old page size: a cursor is a position in a result
- * set the visitor is no longer looking at, and keeping it would land them
- * somewhere they never asked to be.
- */
 export const withTablePageSize = (
   search: TableSearch,
   pageSize: number | string,

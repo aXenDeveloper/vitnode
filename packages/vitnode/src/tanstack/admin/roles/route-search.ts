@@ -17,15 +17,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The roles list's URL contract - the shared admin-table one, with this screen's
- * declaration already applied.
- *
- * Bound here rather than at the route so a host writes `validateSearch:
- * normalizeRolesRouteSearch` instead of restating which columns this table
- * sorts by. Every rule these four apply is `tanstack/admin/table-search.ts`'.
- */
-
 export type RolesRouteSearch = AdminTableRouteSearch<AdminRolesOrderBy>;
 export type UncheckedRolesSearch = UncheckedAdminTableSearch<AdminRolesOrderBy>;
 

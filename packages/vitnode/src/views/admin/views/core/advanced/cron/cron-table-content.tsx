@@ -10,30 +10,6 @@ import type { RunCron } from "./run-action/run-cron";
 
 import { RunActionCronTable } from "./run-action/run-action";
 
-/**
- * The cron list, as a table both frameworks render.
- *
- * Everything that used to make this a Next.js Server Component has been taken
- * out and turned into a parameter: it no longer fetches and no longer calls
- * `getTranslations`. What is left is the part that was always worth sharing -
- * the seven columns, the relative dates, the "never" states and which columns
- * are sortable.
- *
- *     Next.js         cron-table-view.tsx           fetch + server action
- *     TanStack Start  routes/_admin/…/advanced/cron  loader + useSuspenseQuery + browser run
- *                                     \       /
- *                                CronTableContent
- *
- * `ContentDataTable` rather than `DataTable`: `DataTable` *is* the Next.js
- * wiring, and the caller mounts the navigation seam it needs
- * (`NextDataTableNavigation` there, `DataTableNavigationProvider` here).
- *
- * The one thing this costs Next.js is `"use client"`, so the `cell` functions
- * run in the browser rather than on the server. It is close to free on this
- * table: `DateFormat` and the run button were already client components, so the
- * only thing that newly reaches the browser is the column list. The rendered
- * HTML is unchanged - Next.js server-renders client components too.
- */
 export const CronTableContent = ({
   data,
   onRun,
