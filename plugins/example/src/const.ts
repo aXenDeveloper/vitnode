@@ -1,19 +1,5 @@
 export const CONFIG_PLUGIN = { pluginId: "@vitnode/example" as const };
 
-/**
- * Every committed migration in the docs app that touches `example_*`, in the
- * order the migrator applies them.
- *
- * Named by **tag**, not by file. Drizzle Kit v3 stores each migration in its own
- * `<timestamp>_<tag>/` directory rather than as one numbered `.sql`, and the
- * timestamp is assigned at generation time - so the tag is the half that is
- * stable enough to write down.
- *
- * The two database test suites both replay this list - one asserts the DDL as
- * text, the other runs it against a real Postgres - so a new migration only has
- * to be added here. It lives outside `src/database/` on purpose: Drizzle Kit
- * globs that folder and executes everything it finds.
- */
 export const EXAMPLE_MIGRATIONS = [
   "add_example_content",
   "add_publication_to_example_articles",

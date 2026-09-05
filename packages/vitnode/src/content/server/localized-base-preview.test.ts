@@ -19,12 +19,6 @@ const SECRET = "unit-test-content-preview-secret-0123456789";
 
 const posts = createContentModel(testDeliveredPreviewableContentType);
 
-/**
- * The AdminCP's generic preview button, on a localized content type.
- *
- * `POST /{id}/preview` is what the row action calls - there is no per-language
- * preview button - so this is the path every localized preview actually takes.
- */
 const mintHarness = () => {
   const service = { findById: vi.fn() };
   const revisions = {

@@ -5,19 +5,6 @@ import { cn } from '@vitnode/core/lib/utils'
 import { motion } from 'motion/react'
 import { useEffect, useId, useState } from 'react'
 
-/**
- * A gradient that travels along a curve drawn between two elements.
- *
- * Ported from the Next.js homepage unchanged apart from its import list - it
- * named nothing from `next/*` to begin with, only `motion/react`, `cn` and three
- * React hooks, which is why it survived the migration intact.
- *
- * It measures rather than lays out: the path is computed from three
- * `getBoundingClientRect()` calls and recomputed by a `ResizeObserver` on the
- * container. On the server there is nothing to measure, so `pathD` is empty and
- * the `<svg>` renders at 0x0 - the circles are the SSR'd content, and the beams
- * appear on the first client effect. That was true in Next.js too.
- */
 export const AnimatedBeam = ({
   className,
   containerRef,

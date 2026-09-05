@@ -3,11 +3,29 @@ import { createJiti } from "jiti";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import type { VitNodeApiConfig, VitNodeConfig } from "../src/vitnode.config.js";
+import type {
+  VitNodeApiConfig,
+  VitNodeConfig,
+  VitNodeServerConfig,
+} from "../src/vitnode.config.js";
 
-type ConfigType<T extends "api.config" | "config"> = T extends "config"
+type ConfigName = "api.config" | "config" | "server.config";
+
+type ConfigType<T extends ConfigName> = T extends "config"
   ? VitNodeConfig
-  : VitNodeApiConfig;
+  : T extends "server.config"
+    ? VitNodeServerConfig
+    : VitNodeApiConfig;
+
+/**
+ * The export each config file is read through - `vitnode.<type>.config.ts` is
+ * only half the convention, the named export is the other half.
+ */
+const CONFIG_EXPORTS: Record<ConfigName, string> = {
+  "api.config": "vitNodeApiConfig",
+  config: "vitNodeConfig",
+  "server.config": "vitNodeServerConfig",
+};
 
 export const findConfigFile = (
   baseDir: string,
@@ -56,21 +74,17 @@ export const findConfigFile = (
   return searchRecursively(baseDir, 0);
 };
 
-export async function getConfig<
-  T extends "api.config" | "config" = "config",
->(args: {
+export async function getConfig<T extends ConfigName = "config">(args: {
   baseDir?: string;
   optional: true;
   type?: T;
 }): Promise<ConfigType<T> | null>;
-export async function getConfig<
-  T extends "api.config" | "config" = "config",
->(args?: {
+export async function getConfig<T extends ConfigName = "config">(args?: {
   baseDir?: string;
   optional?: false;
   type?: T;
 }): Promise<ConfigType<T>>;
-export async function getConfig<T extends "api.config" | "config" = "config">({
+export async function getConfig<T extends ConfigName = "config">({
   baseDir,
   type = "config" as T,
   optional = false,
@@ -95,8 +109,7 @@ export async function getConfig<T extends "api.config" | "config" = "config">({
   }
 
   try {
-    const configVarName =
-      type === "config" ? "vitNodeConfig" : "vitNodeApiConfig";
+    const configVarName = CONFIG_EXPORTS[type];
 
     const jiti = createJiti(import.meta.url, {
       interopDefault: true,

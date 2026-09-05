@@ -10,19 +10,6 @@ import {
 import { createContentModel } from "./model";
 import { buildContentPublicRoutes } from "./public-routes";
 
-/**
- * The generated public delivery routes.
- *
- * Two things are being asserted, and only one of them is about delivery:
- *
- * 1. The routes answer without any session at all, and their bodies match the
- *    schemas the OpenAPI document publishes - including the discriminated union,
- *    whose whole purpose is that a client can branch on `type` rather than guess.
- * 2. A content type **without** `delivery` gains no routes whatsoever. That is the
- *    Stage 1-7 regression assertion at the routing layer: the path list of an
- *    existing public content type does not move.
- */
-
 const delivered = createContentModel(testDeliveredPostContentType);
 
 const PLUGIN_ID = "@vitnode/example";

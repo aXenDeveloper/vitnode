@@ -54,14 +54,6 @@ beforeEach(() => {
   logged.length = 0;
 });
 
-/**
- * The two deletes a localized content type has, and they are not the same call.
- *
- * `locale` present means one translation went away; absent means the record did.
- * Reading the locale off the input is the whole distinction, and getting it wrong
- * is not slower but wrong: deleting the Polish copy would empty the record out of
- * the index in every language, and only the next rebuild would put it back.
- */
 describe("deleting a translation", () => {
   it("removes that language's document and no other", async () => {
     const outcomes = await syncContentLocalizedSearch(context(), model, {

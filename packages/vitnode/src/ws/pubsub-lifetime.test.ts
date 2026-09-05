@@ -4,41 +4,6 @@ import type { CacheClient } from "@/api/lib/cache";
 
 import { initRealtimePubSub, isRealtimePubSubEnabled } from "./registry";
 
-/**
- * The realtime bridge's *lifetime*, which is the half a dev server exercises and
- * production does not.
- *
- * In a deployment `initRealtimePubSub` is called once, at boot, and the question
- * never arises. Under `vite dev` the module that boots the API is re-evaluated
- * whenever anything it imports changes - so the call happens again, and again,
- * for the life of the session. Each one that got through would `duplicate()` the
- * cache client, open a second connection and `subscribe` a second handler to the
- * same channel, and neither the first subscriber nor the first connection has
- * anywhere to be cleaned up from: nothing holds a reference to them.
- *
- * The symptom is not a crash. It is every realtime message arriving twice, then
- * three times, then four - one notification toast per reload since the server
- * started - plus a Redis connection leaked per reload. And it is invisible until
- * a developer happens to be signed in with a socket open, which is why it is
- * pinned here rather than left to be noticed.
- *
- * The guard is one line in `initRealtimePubSub` (`if (!client || publisher)
- * return`), and this is what it means. Nothing is redesigned to test it: the
- * fake client below counts `duplicate()` calls, which is the only observable
- * this needs, and no Redis is involved.
- *
- * ## The browser half needs no equivalent
- *
- * `VitNodeWebSocketProvider` creates its manager inside an effect and
- * `destroy()`s it from that effect's cleanup, and `useVitNodeWebSocket`
- * subscribes and unsubscribes the same way - so React tears both down on a fast
- * refresh before the replacement mounts. The message handler is kept in a ref
- * that is rewritten on every render, so a hot-reloaded listener cannot close
- * over the previous module either. That is a React lifecycle, not a pure one;
- * see `apps/web/src/tests/realtime-listeners.test.ts` for what is assertable
- * about it without rendering.
- */
-
 /** Just enough of a cache client to count what the bridge does with one. */
 const fakeClient = () => {
   const duplicates: { channels: string[] }[] = [];
@@ -131,11 +96,6 @@ describe("initializing again, as a hot reload does", () => {
     expect(isRealtimePubSubEnabled()).toBe(true);
   });
 
-  /**
-   * Including the case a reload passes `null` - a config edit that removed the
-   * Redis URL, say. The bridge already established is kept rather than half
-   * torn down, which is the same "no-op without Redis" rule read the other way.
-   */
   it("keeps the established bridge when a later boot has no client", () => {
     initRealtimePubSub(null);
 

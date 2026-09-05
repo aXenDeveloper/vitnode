@@ -23,14 +23,6 @@ export interface AdminQueueRouteProps extends AdminQueueRouteData {
   search: UncheckedQueueSearch;
 }
 
-/**
- * `/admin/core/advanced/queue`, as everything below a route file's `component`.
- *
- * `navigate` and `search` come from the host because TanStack infers both from
- * the `createFileRoute` path. The status filter travels the same seam as the
- * sort headers and the pager: it rewrites a query string, and the route turns
- * that back into validated search.
- */
 export const AdminQueueRouteContent = ({
   description,
   navigate,

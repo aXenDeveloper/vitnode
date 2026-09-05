@@ -28,14 +28,6 @@ let nextRevisionId = 100;
 let storedRevision: ContentTranslationRevisionSnapshot | null = null;
 let revisionLanguageId = 1;
 
-/**
- * The newest version each locale's history has ever reached.
- *
- * Keyed by language id, because that is how the history is scoped - and this is
- * exactly what `create` has to consult: a translation row is deleted physically
- * while its revisions are kept, so a recreated locale that started at 1 again
- * would collide with the `create` revision its first life wrote.
- */
 const latestVersionByLanguage = new Map<number, number>();
 
 // The revisions model is a real, tested unit of its own; what matters here is

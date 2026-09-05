@@ -1,17 +1,5 @@
 import type { BaseBuildModuleReturn } from "./module";
 
-/**
- * Swagger has exactly one grouping mechanism - the tag - so the tag has to
- * carry both halves of "where does this endpoint live": the plugin that owns
- * it and the module that serves it. `(Core) - Users` instead of the raw
- * `@vitnode/core` bucket every route used to land in.
- *
- * The *whole* module chain goes into the tag, not just the leaf, because module
- * names repeat across the tree: core has a top-level `users` module and an
- * `admin/users` one, plus `cron`, `queue` and `files` twice over. A leaf-only
- * tag would merge the public and admin halves of each into a single group.
- */
-
 const titleCase = (value: string) =>
   value
     .split(/[-_\s]+/)

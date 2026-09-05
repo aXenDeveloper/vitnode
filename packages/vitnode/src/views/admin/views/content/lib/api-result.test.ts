@@ -4,22 +4,6 @@ import { describe, expect, it } from "vitest";
 import { contentFailureResult, contentVersionOf } from "./api-result";
 import { contentErrorKey } from "./mutation-feedback";
 
-/**
- * One refusal, read one way, wherever it was raised.
- *
- * The mapping this file guards used to exist three times - once in the Next.js
- * Server Actions, once in the browser form transport, and it would have been a
- * third time in the editorial panels. Every copy is a chance for one screen to
- * lose a branch the others kept, and the branch that matters most shares its
- * status with another: a `409` is either "somebody saved before you", which
- * opens a reload dialog, or "that value is taken", which is a sentence. Only the
- * `code` in the body tells them apart.
- *
- * So the assertions below run the *whole* chain a screen runs - body → structured
- * result → message key - because that is the thing that has to be identical
- * across a form, a row's delete and a revision restore.
- */
-
 const body = (payload: unknown): string => JSON.stringify(payload);
 
 const refusal = (status: number, payload: unknown) =>

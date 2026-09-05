@@ -1,11 +1,3 @@
-/**
- * Universal Content Engine - server surface.
- *
- * Imports Drizzle, so this must never be reachable from a client component.
- * It must also never import `server-only`: that package's `default` export
- * throws under plain Node, and both `apps/api` and `drizzle-kit` load these
- * modules in plain Node.
- */
 export { CONTENT_SYSTEM_ACTOR, resolveContentActor } from "./actor";
 export {
   buildContentColumn,

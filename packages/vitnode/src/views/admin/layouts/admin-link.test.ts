@@ -2,20 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { isExternalHref } from "./normalize-url";
 
-/**
- * Which AdminCP destinations are a router's business and which are not.
- *
- * A plugin's `admin.nav` entry may point anywhere, and an absolute URL is not a
- * path - which matters because every link component in VitNode takes a path.
- * Hand `RouterLink` an external URL and it becomes `<Link to="https://...">`,
- * which the router matches by pathname alone: `https://example.com` arrives as
- * `/` and client-navigates to the front page. The sidebar entry then goes to the
- * wrong place, silently.
- *
- * This classification is what stops that, so it is worth pinning precisely -
- * especially the two cases in the middle, which are the ones a looser rule gets
- * wrong in opposite directions.
- */
 describe("isExternalHref", () => {
   it.each([
     "https://status.example.com",
@@ -40,12 +26,6 @@ describe("isExternalHref", () => {
     expect(isExternalHref(href)).toBe(false);
   });
 
-  /**
-   * The reason the pattern is anchored rather than a bare `includes(":")`. A
-   * colon is legal deeper in a path, and a rule that saw one anywhere would
-   * route a perfectly ordinary admin screen through a plain anchor - losing the
-   * client-side navigation and, in the Next.js app, the locale prefix with it.
-   */
   it("does not mistake a colon inside a path for a scheme", () => {
     expect(isExternalHref("/admin/core/users/a:b")).toBe(false);
     expect(isExternalHref("/admin/core/search?q=a:b")).toBe(false);

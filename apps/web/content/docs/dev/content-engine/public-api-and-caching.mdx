@@ -1,128 +1,109 @@
 ---
-title: Public API, Search & Caching
-description: Step-by-step guide to exposing public read-only endpoints, field allowlists, full-text search indexing, and SWR tag-based caching.
+title: Public API and Caching
+description: Expose safe Content Engine fields from a plugin API and configure cache invalidation without framework-specific server actions.
 icon: Globe
 ---
 
-Content Engine allows exposing read-only endpoints to your web frontend while keeping administrative data private.
+import { NetworkIcon, SearchIcon } from 'lucide-react'
 
-## Prerequisites & Context
-
-Public read access requires a content type definition (e.g. `articleContentType` in `src/content/article.ts`) compiled into a server model `articleContent` in `src/database/articles.ts`:
-
-```ts title="src/database/articles.ts"
-import { createContentModel } from '@vitnode/core/content/server'
-import { articleContentType } from '@/content/article'
-
-export const articleContent = createContentModel(articleContentType)
-```
-
-- **Field Allowlisting**: By default, no fields are exposed publicly. You must explicitly declare `publicApi.fields`.
-- **`buildContentPublicModule`**: An API plugin module from `@vitnode/core/content/server` that mounts public endpoints at `/api/{plugin}/{entity}`.
-
----
-
-## Step-by-Step Implementation
+Public content is an API concern owned by the plugin. Start with an explicit
+allowlist; no field is public just because it looked innocent in a database
+column at 2 a.m.
 
 <Steps>
+  <Step>
 
-<Step>
-### Step 1: Configure Public API Field Allowlist
+### Define the public response
 
-In `src/content/article.ts`, add `publicApi` and list fields allowed for public reads:
-
-```ts title="src/content/article.ts"
+```ts title="plugins/site-notes/src/content/article.ts"
 export const articleContentType = defineContentType({
-  id: 'example.article',
-  tableName: 'example_articles',
-  publication: true,
-  publicApi: {
-    // [!code ++]
-    fields: ['title', 'code', 'excerpt', 'publishedAt', 'author'], // [!code ++]
-  }, // [!code ++]
+  id: '@acme/site-notes.article',
+  tableName: 'site_notes_articles',
   fields: {
-    title: field.text({ required: true }),
-    code: field.text({ required: true }),
+    adminNotes: field.textarea({ nullable: true }),
     excerpt: field.textarea({ nullable: true }),
-    adminNotes: field.textarea({ nullable: true }), // Excluded from public API
+    slug: field.slug({ source: 'title' }),
+    title: field.text({ required: true }),
+  },
+  // [!code ++:5]
+  publicApi: {
+    enabled: true,
+    fields: ['id', 'title', 'slug', 'excerpt', 'publishedAt'],
+    path: 'articles',
   },
 })
 ```
 
-</Step>
+`adminNotes` remains private because it is not in `fields`.
 
-<Step>
-### Step 2: Register Public API Module
+  </Step>
+  <Step>
 
-Attach `buildContentPublicModule` at the root level of your API plugin configuration:
+### Build the public module in the plugin API
 
-```ts title="src/config.api.ts"
-import { buildContentPublicModule } from '@vitnode/core/content/server' // [!code ++]
-import { articleContent } from '@/database/articles'
+```ts title="plugins/site-notes/src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+import { buildContentPublicModule } from '@vitnode/core/content/server'
 
-export const exampleApiPlugin = () =>
+import { CONFIG_PLUGIN } from './const'
+import { articleContent } from './database/articles'
+
+export const siteNotesApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
     modules: [
-      adminModule,
+      // [!code ++:4]
       buildContentPublicModule({
-        // [!code ++]
-        pluginId: CONFIG_PLUGIN.pluginId, // [!code ++]
-        contentTypes: [articleContent], // [!code ++]
-      }), // [!code ++]
+        contentTypes: [articleContent],
+        pluginId: CONFIG_PLUGIN.pluginId,
+      }),
     ],
   })
 ```
 
-This creates:
+The module serves published records under the plugin’s public content path, for
+example `/api/@acme/site-notes/articles`.
 
-- `GET /api/example/articles`: Paginated list of published articles.
-- `GET /api/example/articles/[id]`: Single published article details.
+  </Step>
+  <Step>
 
-</Step>
+### Only configure revalidation when a front end caches renders
 
-<Step>
-### Step 3: Enable Global Search Indexing
+Content mutations already invalidate VitNode’s content tags. If a separate front
+end caches its rendered pages, add its origin so the API can notify it through
+the framework-neutral revalidation endpoint:
 
-Add `search` options to automatically sync items with the global search index:
-
-```ts title="src/content/article.ts"
-export const articleContentType = defineContentType({
-  id: 'example.article',
-  tableName: 'example_articles',
-  search: {
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  content: {
     // [!code ++]
-    titleField: 'title', // [!code ++]
-    textField: 'excerpt', // [!code ++]
-  }, // [!code ++]
-  fields: {
-    title: field.text({ required: true }),
-    excerpt: field.textarea({ nullable: true }),
+    revalidateOrigins: ['https://www.example.com'],
   },
 })
 ```
 
-</Step>
+Leave this unset when the front end reads directly from the public content API.
+There is no server action to wire up in a plugin.
 
-<Step>
-### Step 4: Manage SWR Cache Tags in Server Actions
-
-Use VitNode's cache helpers to invalidate or revalidate tags inside Server Actions:
-
-```ts title="src/actions/update-article.ts"
-'use server'
-
-import { revalidateTag, updateTag } from '@vitnode/core/cache'
-
-export async function updateArticleAction(id: number, data: unknown) {
-  // Perform update...
-
-  // Revalidate SWR list and item tags
-  revalidateTag(`content-public-item-example-article-${id}`, 'max')
-  updateTag(`user-${userId}`)
-}
-```
-
-</Step>
-
+  </Step>
 </Steps>
+
+## Keep the public surface intentional
+
+Use a plugin route for the page that consumes the endpoint, and add search
+indexing only when users need to discover the content outside its own section.
+
+<Cards>
+  <Card
+    icon={<NetworkIcon />}
+    title="Plugin API modules"
+    description="Add typed Hono modules and routes alongside the feature they serve."
+    href="/docs/dev/plugins/api/modules"
+  />
+  <Card
+    icon={<SearchIcon />}
+    title="Search"
+    description="Choose Postgres or Elasticsearch search for plugin-owned records."
+    href="/docs/dev/search"
+  />
+</Cards>

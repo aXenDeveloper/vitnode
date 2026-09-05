@@ -2,16 +2,6 @@ import { CpuIcon, LockIcon, PlugIcon, SparklesIcon } from 'lucide-react'
 
 import adminControlPanel from '#/site/home/assets/admin-control-panel.png'
 
-/**
- * The four claims under the screenshot.
- *
- * The Next.js page shipped four cards that all read "Powerful" over the same
- * sentence, three of them under a different icon - placeholder copy that was
- * never filled in. Migrating it verbatim would ship it, so each card now says
- * what its icon has always said. That is the smallest edit that leaves a
- * publishable section, and every line of it is a statement VitNode's AdminCP
- * already makes elsewhere in this repository; it is not new positioning.
- */
 const FEATURES = [
   {
     description:
@@ -39,51 +29,6 @@ const FEATURES = [
   },
 ]
 
-/**
- * The Admin Control Panel section: one screenshot, four claims.
- *
- * ## The screenshot belongs to this application, and is imported
- *
- * `src/site/home/assets/admin-control-panel.png` is the ownership decision this
- * section exists to record. It is a photograph of vitnode.com's own AdminCP - a
- * marketing asset for one website - and `@vitnode/core` is a framework that
- * thousands of installs render. A screenshot of *our* panel does not belong in
- * a package every one of them ships.
- *
- * It is an *import* rather than a path into `public/` so that the URL Vite emits
- * carries a content hash: the file may then be served immutable and for a year,
- * which an unversioned `/admin-control-panel.png` can never be - a proxy has no
- * way to tell a new screenshot from the old one, so the only safe answer for
- * that URL is a short expiry and a revalidation on every visit.
- *
- * ## It is below the fold, and says so
- *
- * `loading="lazy"` is the load-bearing one: React 19 emits a
- * `<link rel="preload" as="image">` into the document head for an eager image
- * it renders during SSR, so this 264 KB screenshot was being fetched at the
- * highest priority the browser has, in competition with the stylesheet and the
- * hero - for a picture two screens down. Declaring it lazy withdraws the
- * preload and defers the request until the visitor scrolls near it.
- *
- * `fetchPriority="low"` covers the case where a very tall viewport puts it in
- * range immediately, and `decoding="async"` keeps the decode of a 2880px image
- * off the main thread whenever it does arrive.
- *
- * None of this can shift the layout: the frame below reserves the space through
- * `aspect-88/36`, and the intrinsic `width`/`height` reserve it again on the
- * image itself.
- *
- * The Next.js page rendered the same file twice - once `dark:hidden`, once
- * `hidden dark:block` - from the same import, with the same pixels, under two
- * different alt texts. That is a second decode and a second entry in the
- * accessibility tree for no visual difference at all, so it is one `<img>` here.
- * The gradient above it is what blends it into either theme, and always was.
- *
- * `width` and `height` are the file's real intrinsic size. The Next.js page
- * declared 2797x1137 against a 2880x1392 file, which is a wrong aspect ratio
- * for the browser to reserve space with; `aspect-88/36` on the frame was doing
- * the work regardless.
- */
 export const AdminSection = () => (
   <section className="py-16 md:py-32">
     <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6">

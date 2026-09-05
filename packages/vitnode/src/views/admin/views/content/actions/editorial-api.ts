@@ -19,34 +19,6 @@ import {
   sendContentApiRequest,
 } from "../lib/api-result";
 
-/**
- * The editorial panels' reads and writes, from the browser.
- *
- * Revision history, revision detail, restore, preview links, schedules and
- * delivery - the four `⋯` actions, request for request the same routes
- * `../actions/mutation-api.server.ts` and `../actions/delivery-api.server.ts`
- * call from a Server Action. Same paths, same bodies, same statuses, same
- * schemas, and the refusal read by the same shared mapper in
- * `../lib/api-result.ts`.
- *
- * What it deliberately does not do is the half no browser can: `revalidatePath`
- * and the public-locale cache diffing that a restore performs on the Next.js
- * side. A TanStack Start application renders its public pages per request, so
- * the equivalent work is the request plus a query invalidation - which is the
- * host's, not this module's.
- *
- * Nothing here resolves a content type id. Every call takes a
- * {@link ContentApiTarget}, exactly as the form's transport does; the registry
- * lookup happens one layer up in the host.
- */
-
-/**
- * A revision as the list renders it - metadata only, no snapshot.
- *
- * `.loose()` because a revision's `changedFields` and its actor columns are
- * generic but the shape is the API's to grow. Only `id` is asserted, which is
- * what the page's cursor arithmetic needs.
- */
 const zodRevisionList = z.object({
   edges: z.array(z.object({ id: z.number() }).loose()),
   pageInfo: z.object({
@@ -74,15 +46,6 @@ const zodScheduleList = z.object({
   hasCronAdapter: z.boolean(),
 });
 
-/**
- * One address a record has answered to.
- *
- * Exactly what the admin route publishes and not one field more - the storage
- * columns behind it are details of `core_content_slug_history`, and a panel that
- * displayed them would make them part of a contract nobody meant to sign. The
- * same schema `delivery-api.server.ts` declares, so both hosts refuse the same
- * bodies.
- */
 const zodDeliveryEntry = z.object({
   createdAt: z.coerce.date(),
   path: z.string(),
@@ -132,12 +95,6 @@ export interface ContentScheduleListResult {
 
 const EMPTY_PAGE_INFO = { endCursor: null, hasNextPage: false } as const;
 
-/**
- * One page of history. Metadata only - snapshots load one at a time.
- *
- * The cursor is the last **version** on the previous page and the route is
- * exclusive on it, so pages append cleanly and never repeat their boundary row.
- */
 export const listContentRevisionsInBrowser = async (
   target: ContentApiTarget,
   id: number,

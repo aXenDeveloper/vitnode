@@ -2,23 +2,67 @@
 import { describe, expect, it } from "vitest";
 
 import type { PluginRouteGraph, PluginRouteNode } from "./graph";
-import type { PluginRoute, PluginRouteDefinition } from "./types";
+import type {
+  PluginRoute,
+  PluginRouteArea,
+  PluginRouteKind,
+  PluginRouteRequirement,
+} from "./types";
 
 import { PluginRouteError } from "./errors";
 import { buildPluginRouteGraph, pluginRouteNamespaces } from "./graph";
-import { buildPluginRouteManifest } from "./manifest";
+import { pluginRouteId } from "./manifest";
+import { comparePluginRoutes } from "./order";
+import { parseRoutePath } from "./path";
 
-/** The manifest a plugin's declarations build into, which is what a graph reads. */
+interface RouteFixture {
+  area?: PluginRouteArea;
+  id: string;
+  kind?: PluginRouteKind;
+  messages?: string[];
+  parentId?: string;
+  path: string;
+  requires?: PluginRouteRequirement;
+}
+
+const routeOf = (pluginId: string, fixture: RouteFixture): PluginRoute => {
+  const parsed = parseRoutePath(fixture.path);
+
+  if (!parsed.ok) throw new Error(`bad fixture path "${fixture.path}"`);
+
+  return {
+    area: fixture.area ?? "main",
+    id: pluginRouteId(pluginId, fixture.id),
+    kind: fixture.kind ?? "page",
+    messages: fixture.messages ?? [],
+    parentId:
+      fixture.parentId === undefined
+        ? null
+        : pluginRouteId(pluginId, fixture.parentId),
+    path: parsed.path,
+    pluginId,
+    requires: fixture.requires ?? null,
+    routeId: fixture.id,
+    segments: parsed.segments,
+  };
+};
+
+/** Every plugin's routes, in the order a built manifest has them. */
 const manifestOf = (
-  ...sources: { pluginId: string; routes: PluginRouteDefinition[] }[]
-): PluginRoute[] => buildPluginRouteManifest(sources);
+  ...sources: { pluginId: string; routes: RouteFixture[] }[]
+): PluginRoute[] =>
+  sources
+    .flatMap(source =>
+      source.routes.map(fixture => routeOf(source.pluginId, fixture)),
+    )
+    .sort(comparePluginRoutes);
 
-const example = (...routes: PluginRouteDefinition[]) => ({
+const example = (...routes: RouteFixture[]) => ({
   pluginId: "@vitnode/example",
   routes,
 });
 
-const blog = (...routes: PluginRouteDefinition[]) => ({
+const blog = (...routes: RouteFixture[]) => ({
   pluginId: "@vitnode/blog",
   routes,
 });
@@ -26,14 +70,14 @@ const blog = (...routes: PluginRouteDefinition[]) => ({
 const page = (
   id: string,
   path: string,
-  rest: Partial<PluginRouteDefinition> = {},
-): PluginRouteDefinition => ({ entry: `routes/${id}`, id, path, ...rest });
+  rest: Partial<RouteFixture> = {},
+): RouteFixture => ({ id, path, ...rest });
 
 const layout = (
   id: string,
   path: string,
-  rest: Partial<PluginRouteDefinition> = {},
-): PluginRouteDefinition => page(id, path, { kind: "layout", ...rest });
+  rest: Partial<RouteFixture> = {},
+): RouteFixture => page(id, path, { kind: "layout", ...rest });
 
 /** One node of a graph, or a failure that names the id rather than `undefined`. */
 const nodeOf = (graph: PluginRouteGraph, id: string): PluginRouteNode => {
@@ -56,11 +100,6 @@ const thrownBy = (build: () => unknown): PluginRouteError => {
   throw new Error("expected a PluginRouteError");
 };
 
-/**
- * The shape core's own settings screens have had since long before this
- * contract existed - a frame, its index, and three siblings - which is the one
- * real nested route tree VitNode ships through the plugin pipeline.
- */
 const settings = () =>
   example(
     layout("settings", "/settings"),
@@ -117,11 +156,6 @@ describe("nesting", () => {
     expect(parent?.children.every(node => node.depth === 1)).toBe(true);
   });
 
-  /**
-   * The whole cost of "a nested route declares its full path": the manifest
-   * stays readable and collides visibly, and exactly one function turns
-   * `/settings/security` back into the `/security` a router composes.
-   */
   it("relativises a child against its parent", () => {
     const graph = buildPluginRouteGraph(manifestOf(settings()));
 
@@ -197,13 +231,8 @@ describe("nesting", () => {
     expect(ids.indexOf("a")).toBeLessThan(ids.indexOf("a-deep"));
   });
 
-  /**
-   * Nothing about the tree may depend on which order the plugins were
-   * configured in, which order their manifests happened to load, or which
-   * machine the build ran on.
-   */
   it("does not depend on declaration order", () => {
-    const shape = (routes: PluginRouteDefinition[]) =>
+    const shape = (routes: RouteFixture[]) =>
       buildPluginRouteGraph(manifestOf(example(...routes))).nodes.map(node => [
         node.route.id,
         node.relativePath,
@@ -242,13 +271,6 @@ describe("a hierarchy that does not hold together", () => {
     expect(error.code).toBe("parent-cycle");
   });
 
-  /**
-   * Unrepresentable in a declaration - a `parentId` is namespaced with the
-   * declaring plugin's own id - and still checked, because this also runs over a
-   * generated manifest whose ids are already global. One plugin's page inside
-   * another plugin's frame would make a route tree depend on which plugins
-   * happen to be installed beside it.
-   */
   it("refuses a parent in another plugin", () => {
     const theirs = manifestOf(
       blog(
@@ -264,18 +286,6 @@ describe("a hierarchy that does not hold together", () => {
     expect(error.code).toBe("cross-plugin-parent");
   });
 
-  /**
-   * Nesting *is* how a shell is chosen: a nested route mounts under its layout,
-   * and the layout mounts under its area's shell - so a child's own `area` is
-   * never consulted again once it has a parent.
-   *
-   * Which makes a mismatch a declaration that does not describe where the page
-   * renders, and silently in the worst direction: a route marked `admin` under a
-   * `main` layout would come out on the public site, outside the AdminCP session
-   * guard. Refused rather than inherited from the parent, because filling the
-   * field in would make the manifest that reads wrong behave like the one that
-   * reads right, and the wrong one is what a reviewer sees.
-   */
   it.each([
     ["an admin page under a main layout", "main", "admin"],
     ["a main page under an admin layout", "admin", "main"],
@@ -325,13 +335,6 @@ describe("a hierarchy that does not hold together", () => {
     expect(error.code).toBe("invalid-parent-kind");
   });
 
-  /**
-   * Two layouts that are each other's parent, so neither is reachable from a
-   * root. Hand-built, because a declaration cannot express it: a `parentId` is
-   * plugin-local, a child's path has to extend its parent's, and no two paths
-   * can each extend the other. This runs over generated manifests too, and the
-   * walk that assigns depth has to be able to state that it terminates.
-   */
   it("refuses a cycle between two routes", () => {
     const [a, b] = manifestOf(
       example(
@@ -364,11 +367,6 @@ describe("a hierarchy that does not hold together", () => {
     expect(error.code).toBe("invalid-parent-path");
   });
 
-  /**
-   * The parent named that segment, so a child that renames it would read a
-   * parameter that never exists. A build error beats `params.postId` being
-   * silently `undefined`.
-   */
   it("refuses a child that renames its parent's parameter", () => {
     const error = thrownBy(() =>
       buildPluginRouteGraph(
@@ -384,11 +382,6 @@ describe("a hierarchy that does not hold together", () => {
     expect(error.code).toBe("invalid-parent-path");
   });
 
-  /**
-   * Next's `(group)` folders, which this contract does not have. Hand-built,
-   * because two layouts at one path never reach the graph from a declaration -
-   * the manifest refuses them as a collision first.
-   */
   it("refuses a nested layout that adds no segment", () => {
     const [outer, leaf] = manifestOf(
       example(
@@ -398,7 +391,6 @@ describe("a hierarchy that does not hold together", () => {
     );
     const inner: PluginRoute = {
       ...outer,
-      entry: "routes/inner",
       id: "@vitnode/example:inner",
       parentId: outer.id,
       routeId: "inner",
@@ -429,18 +421,6 @@ describe("a hierarchy that does not hold together", () => {
   });
 });
 
-/**
- * The one URL clash the flat manifest cannot judge for itself.
- *
- * `buildPluginRouteManifest` refuses two routes of the same kind at one path,
- * which is where the ordinary collision is caught. A layout and a page at one
- * path are a different question, because exactly one spelling of it is legal -
- * a layout beside its own index child - and telling that apart needs the tree.
- *
- * Left unrefused, these reached the router, which rejects them too but as
- * `Invariant failed: Duplicate routes found with id: /_plugins/foo` - naming
- * neither plugin, and pointing at a container no plugin author wrote.
- */
 describe("two routes answering one URL", () => {
   it("lets a layout share its path with its own index child", () => {
     const graph = buildPluginRouteGraph(
@@ -474,17 +454,6 @@ describe("two routes answering one URL", () => {
     expect(error.message).toContain("@vitnode/blog");
   });
 
-  /**
-   * The cross-kind clash does **not** stop at an area boundary, and an earlier
-   * draft of Stage 12 believed it did.
-   *
-   * A layout in the AdminCP and a page on the public site that spell one
-   * pathname are framed by different shells - and both of those shells are
-   * *pathless*, so neither of them moves a URL. `/foo` is one URL claimed by two
-   * routes, and only the router's own ranking would decide which of them a
-   * browser reaches. The legal pairing is still exactly one: a layout and the
-   * index page inside it.
-   */
   it("refuses a layout and a page sharing a pathname across two areas", () => {
     const error = thrownBy(() =>
       buildPluginRouteGraph(
@@ -507,12 +476,6 @@ describe("two routes answering one URL", () => {
     expect(error.message).toContain("@vitnode/example");
   });
 
-  /**
-   * The same tree, moved to the URL an admin page would actually claim.
-   *
-   * Nothing about the areas changed; the paths did, which is the only thing that
-   * ever decided this.
-   */
   it("accepts the same tree once the admin routes claim /admin paths", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
@@ -553,11 +516,6 @@ describe("two routes answering one URL", () => {
     expect(error.code).toBe("duplicate-path");
   });
 
-  /**
-   * Matched on the URLs a route answers rather than on its text, the same way
-   * the manifest's own collision check is - so a parameter renamed does not
-   * make it a different route.
-   */
   it("refuses a dynamic path that differs only in its parameter name", () => {
     const error = thrownBy(() =>
       buildPluginRouteGraph(
@@ -629,17 +587,6 @@ describe("requirements", () => {
     expect(error.message).toContain("No visitor could ever reach it");
   });
 
-  /**
-   * The rule read down the *whole* chain rather than one link of it.
-   *
-   * A neutral layout between the two is the case that matters, because it is
-   * the one that used to pass: compared only against its immediate parent, the
-   * page below declared `guest` inside something declaring nothing, and nothing
-   * conflicts with nothing. At runtime every matched route's guard runs, so the
-   * `authenticated` layout further up turned guests away and the `guest` page
-   * turned everybody else away - a route that 404'd for every human being and
-   * validated cleanly.
-   */
   it.each([
     ["authenticated", "guest"],
     ["guest", "authenticated"],
@@ -733,12 +680,6 @@ describe("requirements", () => {
     ).not.toThrow();
   });
 
-  /**
-   * The manifest keeps saying what the plugin wrote. Inheritance is this
-   * graph's reading of the tree, never written back onto a route - a generated
-   * manifest that had absorbed it would no longer round-trip to the plugin's
-   * own declaration.
-   */
   it("leaves an inheriting route's own `requires` null", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
@@ -763,9 +704,9 @@ describe("pluginRouteNamespaces", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
         example(
-          layout("settings", "/settings", { namespaces: ["core.global"] }),
+          layout("settings", "/settings", { messages: ["core.global"] }),
           page("security", "/settings/security", {
-            namespaces: ["@vitnode/example.security"],
+            messages: ["@vitnode/example.security"],
             parentId: "settings",
           }),
         ),
@@ -786,8 +727,8 @@ describe("pluginRouteNamespaces", () => {
     const graph = buildPluginRouteGraph(
       manifestOf(
         example(
-          layout("a", "/a", { namespaces: ["core.global"] }),
-          page("b", "/a/b", { namespaces: ["core.global"], parentId: "a" }),
+          layout("a", "/a", { messages: ["core.global"] }),
+          page("b", "/a/b", { messages: ["core.global"], parentId: "a" }),
         ),
       ),
     );

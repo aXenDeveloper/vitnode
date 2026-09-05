@@ -26,13 +26,6 @@ import {
 
 export type { PasswordResetSubmit };
 
-/**
- * "We have sent you a link", and the address it went to.
- *
- * Shown for every accepted request, including one for an address with no
- * account: the API answers `201` either way, so this screen is the only thing a
- * visitor - or somebody probing for registered addresses - ever sees.
- */
 const ConfirmationView = ({ email }: { email: string }) => {
   const t = useTranslations("core.auth.reset_password");
   const tSignUp = useTranslations("core.auth.sign_up");
@@ -63,14 +56,6 @@ const ConfirmationView = ({ email }: { email: string }) => {
   );
 };
 
-/**
- * The first half of password recovery - shared.
- *
- * One field, one captcha and one callback: {@link PasswordResetSubmit} is the
- * only framework-specific part, and it is a prop. The form no longer imports a
- * server action, so a TanStack Start route renders exactly the card the Next.js
- * page renders.
- */
 export const PasswordResetFormContent = ({
   captcha,
   onRequestReset,

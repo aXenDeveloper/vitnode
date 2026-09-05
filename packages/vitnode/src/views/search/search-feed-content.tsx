@@ -21,44 +21,18 @@ const SNIPPET_LENGTH = 240;
 
 export type SearchFeedVariant = "list" | "timeline";
 
-/**
- * Re-exported so `search-feed.tsx` and `search-controls.tsx` keep importing
- * their parameter type from where they always have. The definition now lives
- * with the query it parameterises.
- */
 export type {
   SearchFeedParams,
   SearchFeedQueryOptions,
 } from "./search-feed-query";
 export { searchFeedQueryKey } from "./search-feed-query";
 
-/**
- * Everything the feed ever asks a link to be.
- *
- * Deliberately three props and no more. A search hit is a title and a
- * destination - it never needs prefetch hints, scroll behaviour or an active
- * state - so widening this later is a decision somebody has to make on purpose
- * rather than one that leaks in.
- */
 export interface SearchFeedLinkProps {
   children: React.ReactNode;
   className?: string;
   href: string;
 }
 
-/**
- * The one thing this feed cannot decide for itself.
- *
- * A search result carries an app-internal path, and turning a path into a
- * client-side navigation is the single question whose answer differs between
- * the two frameworks: Next.js wants `next-intl`'s locale-aware `Link`, TanStack
- * Start wants the router's own. Both are a component taking
- * {@link SearchFeedLinkProps}, so the feed takes one and stops caring.
- *
- * It is a required prop rather than one defaulting to `<a>`: a missing wrapper
- * would otherwise degrade silently into a full document reload, which is the
- * kind of regression nobody notices until someone measures it.
- */
 export type SearchFeedLinkComponent = (
   props: SearchFeedLinkProps,
 ) => React.ReactNode;
@@ -128,13 +102,6 @@ export const classifySearchFeedHref = (href: string): SearchFeedHrefKind => {
   return SAFE_EXTERNAL_SCHEMES.has(scheme) ? "external" : "unsafe";
 };
 
-/**
- * A result's destination, rendered by whatever is allowed to render it.
- *
- * An `unsafe` href falls back to the children with no anchor at all, so a
- * hostile document degrades to plain text instead of to a link nobody should
- * click - and, just as importantly, is never handed to a router either.
- */
 const ResultLink = ({
   LinkComponent,
   children,
@@ -294,28 +261,6 @@ const SearchResultCard = ({
   );
 };
 
-/**
- * The search feed, with nothing framework-shaped left in it.
- *
- * This is the whole of the rendering and paging behaviour - infinite scroll, the
- * load-more fallback, both variants, the empty and loading states - and it runs
- * unchanged under Next.js and under TanStack Start. Exactly two things are
- * pulled out, and they are the only two that ever needed to be:
- *
- * - **`queryOptions`**, built by `searchFeedQueryOptions`. There is one
- *   `useInfiniteQuery` in this file and it is handed its definition, so the page
- *   a route loader prefetched and the page `fetchNextPage()` asks for come from
- *   the same request, the same cursor rule and the same status checking. This
- *   component used to build its own, which agreed with a loader on the cache key
- *   and on nothing else - a 400 on page two was parsed as a page and the feed
- *   quietly emptied itself. The locale and the search parameters left with it,
- *   because both are things the *query* needs rather than the markup.
- * - **`LinkComponent`**. See {@link SearchFeedLinkComponent}.
- *
- * Translations come from `use-intl` directly - the framework-free half of
- * `next-intl`, and the same instance `NextIntlClientProvider` provides into, so
- * the Next.js app needs no extra provider for this to work.
- */
 export const SearchFeedContent = ({
   LinkComponent,
   queryOptions,

@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { DialogClose, DialogFooter, useDialog } from "@/components/ui/dialog";
 
 import { useContentForm } from "./context";
+import { ContentFormSection } from "./layout-primitives";
 import {
   ContentFormField,
   ContentFormRemainingFields,
-  ContentFormSection,
   ContentFormSubmit,
 } from "./primitives";
 

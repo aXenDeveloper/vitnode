@@ -14,21 +14,6 @@ import { ADMIN_ENTRY_PATH, ADMIN_HOME_PATH } from "./state";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * The AdminCP's URLs carry no language, in any language - and nothing in this
- * feature can start writing one.
- *
- * There is deliberately no admin locale implementation to test. `/admin` is in
- * `DEFAULT_IGNORED_LOCALE_PATHS`, so the existing Stage 3 routing answers every
- * question: the rewrite neither strips nor writes a prefix here,
- * `handleLocaleRequest` 308s `/pl/admin/...` to `/admin/...` while attaching the
- * locale cookie to the redirect, and `resolveLocale` on an ignored path falls
- * through to that cookie. What is pinned below is that the arrangement still
- * holds and that this feature's own constants stay outside the localized URL
- * space - because the way this breaks is somebody adding a prefix by hand, not
- * the routing changing its mind.
- */
-
 const routing = createLocaleRouting({
   defaultLocale: "en",
   locales: ["en", "pl"],
@@ -79,11 +64,6 @@ describe("no helper in this feature can produce a /pl/admin URL", () => {
     ).toBe(path);
   });
 
-  /**
-   * The other direction, and the one a stale bookmark exercises: a prefixed
-   * admin URL is not a page, it is a redirect. `handleLocaleRequest` performs
-   * it; what matters here is that the prefix is not part of the route.
-   */
   it("strips a prefix somebody typed rather than serving it", () => {
     expect(
       routing.deLocalizeUrl(new URL("/pl/admin/core", "https://x.invalid"))
@@ -116,11 +96,6 @@ describe("no helper in this feature can produce a /pl/admin URL", () => {
 });
 
 describe("what the AdminCP loads strings for", () => {
-  /**
-   * The shell warms two namespaces, not the AdminCP's whole message tree. The
-   * merged record carries every plugin's admin copy, and a sidebar does not need
-   * the users table's vocabulary to render.
-   */
   it("warms only the shell's own namespaces", () => {
     expect(ADMIN_SHELL_NAMESPACES).toEqual(["core.global", "admin.global"]);
   });
@@ -131,11 +106,6 @@ describe("what the AdminCP loads strings for", () => {
     }
   });
 
-  /**
-   * The sign-in screen renders no shell - no sidebar, no search, no user bar -
-   * so warming `admin.global` there would ship an administrator's whole
-   * navigation vocabulary to a page that has none.
-   */
   it("does not warm the shell's namespace on the sign-in screen", () => {
     expect(ADMIN_SIGN_IN_NAMESPACES).toEqual([
       "core.global",
@@ -154,26 +124,6 @@ describe("what the AdminCP loads strings for", () => {
   });
 });
 
-/**
- * Warming the strings is only half of it - somebody has to *provide* them.
- *
- * This is the half that was missing, and the way it failed is why it is pinned
- * here rather than left to a rendering test. `_admin`'s loader called
- * `loadAdminMessages`, so `admin.global` sat in the query cache exactly as
- * intended; nothing mounted a provider for it, and `useTranslations` in
- * `AdminNavProvider` answered every lookup with the key. The AdminCP rendered,
- * navigated and passed every existing test with a sidebar reading
- * "admin.global.nav.core" over "admin.global.nav.dashboard" in every language.
- *
- * A page's own `RouteMessages` cannot stand in for it: the pages mount below
- * `{children}` and the chrome is above them, which is exactly why this belongs
- * to the shell.
- *
- * Read off the source rather than rendered, because what is being asserted is
- * that a provider exists at all - a question about the component tree, not about
- * markup - and `AdminShellContent` needs a router, a sidebar and a filled
- * QueryClient before it will render a single string.
- */
 describe("the shell provides the strings its chrome renders", () => {
   const shell = readFileSync(join(here, "shell.tsx"), "utf8");
 

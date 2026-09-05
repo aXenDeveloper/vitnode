@@ -8,13 +8,6 @@ import { blogPostContentType } from "@/content/post";
 
 import { adminContent } from "./admin/content";
 
-/**
- * What the frontend registration will and will not accept.
- *
- * The registration is checked against the definition's own field names, so a
- * renamed field is a compile error at the override rather than an input that
- * silently stops being overridden.
- */
 describe("blog content admin registration", () => {
   it("accepts overrides for fields the content type has", () => {
     contentTypeAdmin({
@@ -44,14 +37,6 @@ describe("blog content admin registration", () => {
     });
   });
 
-  /**
-   * The browser-safe module an application's generated registry imports.
-   *
-   * `satisfies` in the module itself is what checks it; this states the
-   * contract from the consumer's side, which is the side that breaks silently -
-   * a plugin that renamed the export or widened its `pluginId` would still build
-   * and would simply contribute nothing.
-   */
   it("exports a content source the generated registry can consume", () => {
     expectTypeOf(adminContent).toExtend<ContentFrontendPluginSource>();
     expectTypeOf(adminContent.pluginId).toEqualTypeOf<"@vitnode/blog">();

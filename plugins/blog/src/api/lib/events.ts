@@ -10,19 +10,6 @@ import type { blogCategoryContentType } from "@/content/category";
 import { blogPostContentType } from "@/content/post";
 import { postContent } from "@/database/posts";
 
-/**
- * The blog's own event names, kept as **adapters** over the Content Engine's.
- *
- * There is one mutation pipeline now - the engine's - and these listeners
- * translate its events into the names the blog has always published, so a plugin
- * listening for `blog.post.created` keeps working without the blog keeping a
- * second way to write a row.
- *
- * They are a compatibility layer with a shelf life. New listeners should use
- * `content.blog.post.*` and `content.blog.category.*`, which carry more: changed
- * fields, revision ids, publication transitions, per-locale translation events
- * and slug history - none of which the blog's own names ever had.
- */
 declare module "@vitnode/core/api/models/events" {
   interface VitNodeEvents
     extends
@@ -33,40 +20,17 @@ declare module "@vitnode/core/api/models/events" {
     };
     "blog.category.deleted": {
       categoryId: number;
-      /**
-       * Always empty.
-       *
-       * It always effectively was: the foreign key from `blog_posts` refuses a
-       * category that still has articles, so a category deletion that succeeds
-       * is one that had none. The field stays so existing listeners still
-       * compile.
-       */
+
       postIds: number[];
     };
     "blog.category.updated": {
       categoryId: number;
     };
     "blog.post.created": {
-      /**
-       * The article's **first** category.
-       *
-       * An article is in many categories now, and this payload has room for one.
-       * The first is the honest answer to "which category is this in?" for a
-       * listener written when there could only be one - and a listener that
-       * needs all of them should watch `content.blog.post.created`, which
-       * carries the whole set.
-       */
       categoryId: number;
       postId: number;
     };
-    /**
-     * No `categoryId`, unlike the other two.
-     *
-     * The row is gone by the time this is emitted, so there is nothing left to
-     * read it from - and inventing one would put a wrong category id into an
-     * audit trail. A listener that needs it should watch
-     * `content.blog.post.deleted` and keep its own index.
-     */
+
     "blog.post.deleted": {
       postId: number;
     };
@@ -80,13 +44,6 @@ declare module "@vitnode/core/api/models/events" {
 const POST = blogPostContentType.id;
 const CATEGORY = "blog.category";
 
-/**
- * The first category an article is in, read back for the legacy payload.
- *
- * A junction read rather than a column read: an article's categories are a set
- * now, and `null` covers both "no such article" and "no categories yet" - the
- * two cases where the legacy event has nothing true to say and is not emitted.
- */
 const categoryOf = async (
   c: Context<EnvVitNode>,
   postId: number,

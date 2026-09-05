@@ -9,12 +9,6 @@ import { buildForwardedHeaders } from "./request-context";
 const PLUGIN_ID = "@vitnode/core";
 const ORIGIN = "http://localhost:3000";
 
-/**
- * The API mounted the way every VitNode runtime mounts it: `basePath("/api")`
- * with the plugin's router underneath. `apps/api` does it in its entry file,
- * and the TanStack Start app does it behind its `/api/*` server route - so the
- * paths the fetcher builds have to resolve here either way.
- */
 const mountedApi = () => {
   const seen: Request[] = [];
   const plugin = new Hono();

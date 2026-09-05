@@ -9,39 +9,17 @@ import type { ContentLabelTranslator } from "@/content/admin/labels";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentLabels } from "@/views/admin/views/content/content-labels";
+import type { ContentFormSkeletonOverrides } from "@/views/admin/views/content/form/skeleton";
 
 import { buildContentFormSpec } from "@/content/admin/spec";
 import {
   contentLabelsFrom,
   contentRouteNamespaces,
 } from "@/views/admin/views/content/content-labels";
+import { contentFieldSkeletonOverrides } from "@/views/admin/views/content/form/skeleton";
 
 import { useLocale } from "../../../i18n/locale";
 import { intlQueryOptions } from "../../../i18n/query";
-
-/**
- * One content type's form, as the browser has to build it.
- *
- * The Next.js AdminCP builds the spec in a Server Component and hands it to the
- * form as a prop, already translated. There is no server component here, so it
- * is built where the strings are - and the whole of the difficulty is making it
- * *stable*, because a spec with a fresh identity on every render would rebuild
- * the Zod schema on every render, and `AutoForm` would be handed a new schema
- * while somebody is typing into it.
- *
- * So the messages come from the query entry the route's loader already warmed
- * rather than from `useTranslations()`. A query result is one object for the
- * life of the entry, which makes `[entry, locale, messages]` a dependency list
- * that only changes when the answer really does - a different content type, or
- * the administrator switching language.
- *
- * ## The namespaces must match the loader's
- *
- * `contentRouteNamespaces(pluginId)` is the same call `loadContentAdminRoute`
- * makes, so `useSuspenseQuery` reads the entry that is already there and nothing
- * suspends on the first paint. Warming a different pair would cost a round trip
- * *and* render the form with a second copy of the strings.
- */
 
 /** A content type's form spec, its labels, and its plugin's overrides. */
 export interface ContentTypeForm {
@@ -49,6 +27,7 @@ export interface ContentTypeForm {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  fieldSkeletons: ContentFormSkeletonOverrides;
   labels: ContentLabels;
   spec: ContentFormSpec;
 }
@@ -75,12 +54,6 @@ export const useContentTypeForm = (
   const messages = data.messages;
 
   return React.useMemo(() => {
-    /**
-     * A translator over the whole warmed record rather than a namespaced one,
-     * for the reason `loadContentAdminRoute` gives at length: every label key is
-     * assembled at runtime from the content type id and spans both namespaces,
-     * which a namespaced translator could not reach.
-     */
     const t = createTranslator({
       locale,
       messages,
@@ -95,6 +68,7 @@ export const useContentTypeForm = (
 
     return {
       fieldOverrides: fieldOverridesOf(entry),
+      fieldSkeletons: contentFieldSkeletonOverrides(entry.registration.fields),
       labels,
       spec: buildContentFormSpec({
         definition: entry.definition,

@@ -25,19 +25,7 @@ export interface ContentRevisionCaptureInput<
 > {
   actor: ContentActor;
   changedFields: readonly string[];
-  /**
-   * `core_files` ids this snapshot names, pinned alongside the revision.
-   *
-   * The snapshot is JSONB, so the ids inside it are numbers Postgres knows
-   * nothing about: without a pin, pointing the field at a different file would
-   * make the old one deletable and every retained revision naming it a broken
-   * restore. The pin's own foreign key refuses the deletion instead, and
-   * cascades away when retention prunes the revision - see
-   * `core_content_file_refs`.
-   *
-   * Empty or absent for every content type with no file fields, which is what
-   * keeps this one statement rather than one per capture.
-   */
+
   fileIds?: readonly number[];
   itemId: number;
   operation: ContentRevisionOperation;
@@ -48,13 +36,6 @@ export interface ContentRevisionCaptureInput<
 }
 
 export interface ContentRevisionsModel<TSnapshot = ContentRevisionSnapshot> {
-  /**
-   * Writes one revision and prunes past the retention window.
-   *
-   * Takes the transaction explicitly rather than defaulting to the request
-   * handle: a revision that is not in the same transaction as the write it
-   * describes is a lie waiting to happen.
-   */
   capture: (
     tx: ContentDatabase,
     input: ContentRevisionCaptureInput<TSnapshot>,
@@ -64,14 +45,7 @@ export interface ContentRevisionsModel<TSnapshot = ContentRevisionSnapshot> {
     revisionId: number,
     tx?: ContentDatabase,
   ) => Promise<ContentRevisionDetail<TSnapshot> | null>;
-  /**
-   * The newest revision in this scope, or `null` when there is no history.
-   *
-   * Takes an optional transaction for the same reason `findById` does: a caller
-   * deciding what version a write should start at has to read the history from
-   * inside the transaction that write is in, or it reads a number another writer
-   * is about to take.
-   */
+
   latest: (
     itemId: number,
     tx?: ContentDatabase,
@@ -83,14 +57,6 @@ export interface ContentRevisionsModel<TSnapshot = ContentRevisionSnapshot> {
   ) => Promise<ContentRevisionPage>;
 }
 
-/**
- * One page of history.
- *
- * `endCursor` is the **version** of the last row returned, not its id: version
- * is what the query orders and filters by, it is unique per record, and it is
- * strictly decreasing down the page. A revision id would be neither ordered nor
- * dense once retention has pruned.
- */
 export interface ContentRevisionPage {
   edges: ContentRevisionMeta[];
   pageInfo: {
@@ -102,21 +68,6 @@ export interface ContentRevisionPage {
 export const CONTENT_REVISIONS_DEFAULT_PAGE_SIZE = 25;
 export const CONTENT_REVISIONS_MAX_PAGE_SIZE = 100;
 
-/**
- * Revision reads and writes for one content type, in one language scope.
- *
- * **Every** statement in here filters on `pluginId`, `contentTypeId`, `itemId`
- * *and* `languageId`. A revision id on its own is never enough: the table is
- * shared by every editorial content type in the install, so trusting an id would
- * let a request for article 7 return - or restore - a revision belonging to some
- * other plugin's record entirely. `languageId` joins that list for exactly the
- * same reason one step down: without it, the Polish history could restore the
- * English snapshot.
- *
- * `languageId` defaults to `null`, which is the shared scope - so every Stage 1-4
- * call site keeps the behaviour it had, reading and writing rows the two partial
- * unique indexes treat as the non-localized history.
- */
 export const createContentRevisionsModel = <
   TSnapshot = ContentRevisionSnapshot,
 >({
@@ -302,14 +253,6 @@ export const createContentRevisionsModel = <
   };
 };
 
-/**
- * Removes revisions whose content type is no longer registered.
- *
- * Retention pruning happens inline, in the write's own transaction, so this
- * handles only the case that one structurally cannot: a content type that
- * dropped `editorial`, or a plugin that went away. Nothing will ever write to
- * those rows again, so nothing would ever prune them.
- */
 export const pruneContentRevisions = async ({
   db,
   knownContentTypeIds,

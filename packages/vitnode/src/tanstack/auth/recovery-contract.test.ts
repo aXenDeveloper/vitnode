@@ -7,15 +7,6 @@ import {
   passwordResetRequestResultFromStatus,
 } from "./contract";
 
-/**
- * The two password-recovery mutations' decisions, without the transport.
- *
- * The interesting property here is not a mapping but an *absence*: there is no
- * result the reset-request path can produce that says whether an address belongs
- * to an account, because the API answers the same 201 either way. Several of the
- * tests below exist to keep that true.
- */
-
 /** What the API actually puts in the email: 32 random bytes as base64url. */
 const TOKEN = "PSyRy0nQ0hRnfx3iCYldQ40mBLU9lqfDWtvNhrTsJI4";
 

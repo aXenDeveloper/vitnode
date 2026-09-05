@@ -19,22 +19,6 @@ import {
 import { useContentEditorialTransport } from "../editorial-transport";
 import { RevisionRow } from "./revision-row";
 
-/**
- * One record's revision timeline, paged.
- *
- * Read through React Query rather than through the effect-and-useState pair this
- * used to be, and the reason is not tidiness. The panel is opened, closed and
- * reopened from a row in a table that is itself being refetched; the old
- * arrangement started a request on every mount and threw away whatever the
- * previous one had loaded, including every page the administrator had asked for.
- * One entry, keyed under the record, keeps the timeline where they left it.
- *
- * ## It is not preloaded, by construction
- *
- * There is no loader that warms this and there must not be: a list is 25 rows,
- * each of which can open this dialog. The query runs when this component mounts,
- * which is when somebody opened the panel.
- */
 interface RevisionHistoryProps {
   contentTypeId: string;
   currentVersion: number;
@@ -89,21 +73,7 @@ export const RevisionHistory = ({
 
   const pages = history.data?.pages ?? [];
   const edges = flattenContentRevisionPages(pages);
-  /**
-   * The precondition the next restore sends.
-   *
-   * Derived rather than held, and read from the timeline rather than from the
-   * row: the dialog stays open after a restore and the row behind it has not
-   * re-rendered yet, so `currentVersion` is one behind for as long as it takes
-   * the list to refetch. The timeline is not - `settled` invalidated it, and the
-   * revision that lands on top is the restore itself, carrying the version the
-   * record now holds.
-   *
-   * `Math.max` rather than the newest revision alone because the two arrive
-   * independently: whichever of the row and the timeline has caught up is the
-   * one to guard on, and sending a version behind the record is what produces a
-   * conflict banner naming an editor who does not exist.
-   */
+
   const version = Math.max(currentVersion, edges[0]?.version ?? 0);
   // A read that failed answers with an empty page and a sentence rather than by
   // rejecting, so an unreachable API reads as "we could not load this" instead

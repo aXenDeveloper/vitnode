@@ -37,26 +37,6 @@ import { matchesAdminNavItem } from "./flatten-nav";
 import { adminSearchUsersQueryKey } from "./search-users";
 import { splitResultBudget } from "./split-results";
 
-/**
- * The AdminCP command palette, with the three things it cannot decide handed in.
- *
- *     a link          ->  LinkComponent   for the entries that open in a new tab
- *     a navigation    ->  onNavigate      for the entries that do not
- *     a user lookup   ->  searchUsers     a Server Action, or a server function
- *
- * ## Why permission filtering is not repeated here
- *
- * `items` arrives already filtered - it is `flattenAdminNav` over the navigation
- * `buildAdminNav` produced, and that is the *only* nav tree in the AdminCP. A
- * palette that built its own would be a second tree with a second chance to
- * forget a permission check, and the failure mode is a search box that reveals
- * the existence of every screen an admin cannot open. There is one tree, filtered
- * once, and the palette reads it.
- *
- * The two things not derived from nav are gated on their own terms: the user
- * lookup behind `users:can_view`, checked here *and* by the API behind it, and
- * the search-only pages by whoever assembled `items`.
- */
 const NavCommandItem = ({
   item,
   LinkComponent,
@@ -77,17 +57,6 @@ const NavCommandItem = ({
     </>
   );
 
-  /**
-   * A new-tab or external entry renders a real anchor and the command item
-   * clicks it.
-   *
-   * `onNavigate` closes the dialog and moves the router, which is exactly wrong
-   * for a destination that is supposed to open elsewhere and leave the AdminCP
-   * where it was. The two conditions are separate: `isOpenInNewTab` is what the
-   * plugin author asked for, and `isExternalHref` is what the router cannot do
-   * regardless of what they asked - an absolute URL handed to any of VitNode's
-   * link components resolves to the wrong place. See `adminLinkFor`.
-   */
   if (item.isOpenInNewTab || isExternalHref(item.href)) {
     return (
       <CommandItem onSelect={() => linkRef.current?.click()} value={item.href}>
@@ -128,14 +97,7 @@ export interface SearchAdminDialogContentProps {
   onNavigate: (href: string) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-  /**
-   * How to look a user up, or nothing when the host has not wired one.
-   *
-   * Absent is a real state rather than a stub that resolves to `[]`: the users
-   * group is skipped entirely, no request is made, and - crucially - the "keep
-   * typing" hint is not shown, which would otherwise promise results that can
-   * never arrive.
-   */
+
   searchUsers?: AdminUserSearch;
 }
 
@@ -217,14 +179,6 @@ export const SearchAdminDialogContent = ({
     debounceUsersQuery(value);
   };
 
-  /**
-   * Navigate *after* the dialog has finished closing.
-   *
-   * Base UI runs an exit animation, and moving the router while it plays leaves
-   * the overlay stranded over the page it navigated to - a transparent element
-   * that swallows every click. The href is parked here and spent in
-   * `onOpenChangeComplete`.
-   */
   const navigateOnClose = (href: string) => {
     debounceUsersQuery.cancel();
     pendingHrefRef.current = href;

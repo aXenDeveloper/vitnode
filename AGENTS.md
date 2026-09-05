@@ -32,12 +32,15 @@ import { Activity } from "react";
 
 ### Fetching APIs
 
-- `fetcher(module, {...})` on the server (takes the real API module), `fetcherClient(clientModule<typeof x>(pluginId), {...})` in the browser.
+- `fetcher` from `@vitnode/core/tanstack/fetcher` is universal - one call, SSR and browser. Never hand-write `createIsomorphicFn().server(...).client(...)` for a fetch.
+- It takes a lightweight `clientModule<typeof x>(pluginId)` reference, which is safe in both runtimes; only the explicit server fetcher takes the real API module.
+- `@vitnode/core/tanstack/fetcher/server` is for work that is genuinely server-only: server functions, `allowSaveCookies` cookie relay, cron/jobs, upstream secrets or a different `origin`.
+- `@vitnode/core/lib/fetcher-client` stays the framework-neutral browser default. A shared `views/*` module takes its transport as a `UniversalFetcher` argument and defaults it to `fetcherClient`; the `tanstack/*` adapter binds the universal one.
 - Write the route inline at the call site - never build a request object elsewhere and pass it in.
-- Never annotate the result; the fetcher infers it. Put the shared contract on the `createIsomorphicFn` result instead.
+- Never annotate the result; the fetcher infers it. Put the shared contract on the feature's own `*Fetcher` type instead.
 - `args` is required exactly when the route declares a body, params or a query.
-- `allowSaveCookies: true` when a route mints a session; `captchaToken` for captcha-gated routes.
-- `rawFetcher` only for generated Content Engine modules, which have no type to infer from.
+- `captchaToken` for captcha-gated routes.
+- `rawFetcher` only for generated Content Engine modules, which have no type to infer from. It is universal too, with the same server-only twin.
 
 ### Caching APIs
 

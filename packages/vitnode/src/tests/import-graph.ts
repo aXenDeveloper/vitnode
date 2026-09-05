@@ -1,26 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
-/**
- * The one import scanner every boundary test in this package shares.
- *
- * Fourteen `*-boundaries.test.ts` files each carried their own copy of this -
- * `resolveSpecifier`, `runtimeImports`, `externalGraph`, `offenders` and two
- * forbidden-specifier lists, around 110 identical lines apiece. They were copies
- * rather than one module because each was written when its own subtree was
- * split, and they drifted: some walked dynamic imports, some did not, and only
- * some stripped `import type`.
- *
- * That mattered more than tidiness. These are negative assertions - "this graph
- * reaches nothing from `next/*`" - and a scanner with a weaker regex passes them
- * by finding less. One implementation means one regex, one set of forbidden
- * lists, and one place where the controls in `next-boundary.test.ts` prove the
- * whole thing still detects what it claims to.
- *
- * Deliberately in `src/tests/`, which `tsconfig.build.json` excludes: this is
- * test machinery and must never be published from `dist`.
- */
-
 /** `packages/vitnode/src`, which `@/` resolves against. */
 export const SRC_ROOT = resolve(
   dirname(new URL(import.meta.url).pathname),
@@ -29,13 +9,6 @@ export const SRC_ROOT = resolve(
 
 const CANDIDATE_SUFFIXES = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"];
 
-/**
- * A specifier to a file on disk, or `null` if it leaves the package.
- *
- * `null` is the interesting answer: it means the specifier is external, which is
- * exactly what the forbidden lists are written against. Only `@/` and relative
- * specifiers resolve, because those are the only two forms core uses internally.
- */
 export const resolveSpecifier = (
   specifier: string,
   from: string,
@@ -55,39 +28,10 @@ export const resolveSpecifier = (
   return null;
 };
 
-/**
- * Source with comments removed, string literals intact.
- *
- * Necessary rather than tidy, and the older per-file copies of this scanner all
- * lacked it. This package documents its own boundaries in prose, so doc comments
- * are full of sentences like `` `@/lib/fetcher` carries `import "server-only"` ``
- * - and a regex looking for `import "…"` finds those, then reports a module as
- * importing the very thing its comment explains it must not. Two of these suites
- * failed on their own documentation the first time they were pointed at the
- * whole package.
- *
- * A small lexer rather than a regex pair, because `.replace(/\/\/.*$/gm, "")`
- * eats the second half of every URL in the file - including the ones in the
- * `next-intl` docs links these comments cite.
- *
- * Regex literals are lexed too, and that is not theoretical tidiness either:
- * `provider-records.test.ts` asserts its subject reads nothing from next-intl
- * with `not.toMatch(/from "next-intl/)`. A lexer that did not know `/…/` was a
- * regex saw the `"` inside it, opened a string that ran to the next quote three
- * lines away, and reported the file as importing `next-intl` - failing the
- * package-wide scan on a test whose entire purpose is asserting the opposite.
- */
 export const stripComments = (source: string): string => {
   let out = "";
   let at = 0;
 
-  /**
-   * Whether a `/` here opens a regex literal rather than dividing.
-   *
-   * The standard heuristic: a regex cannot follow a value. So if the previous
-   * significant character could end one - an identifier, a number, `)`, `]` or
-   * a closing quote - the slash is division.
-   */
   const opensRegex = (): boolean => {
     for (let back = out.length - 1; back >= 0; back -= 1) {
       const previous = out[back];
@@ -169,23 +113,6 @@ export const stripComments = (source: string): string => {
   return out;
 };
 
-/**
- * Every specifier a file imports **at runtime**.
- *
- * `import type` is stripped first, and that is not a shortcut: a query module
- * imports its API module's *type* to keep the fetcher's route literals
- * inferring, and that module is a Hono server module. TypeScript erases it, so
- * it never reaches a bundle - counting it would fail these suites on something
- * that cannot break.
- *
- * Four shapes are matched, and the third and fourth are the ones the older
- * copies disagreed about:
- *
- *     from "x"          static imports and `export … from`
- *     import("x")       dynamic imports - how `next/dynamic` hid inside a dialog
- *     import "x"        bare side-effect imports - how `server-only` gets in
- *     require("x")      CommonJS, for the few scripts that still use it
- */
 export const runtimeImports = (path: string): string[] => {
   const source = stripComments(readFileSync(path, "utf8")).replace(
     /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
@@ -201,15 +128,6 @@ export const runtimeImports = (path: string): string[] => {
     .filter((specifier): specifier is string => Boolean(specifier));
 };
 
-/**
- * Every external specifier reachable from an entry, with the chain that got
- * there.
- *
- * The chain is the whole value of this over a per-file grep: a boundary is
- * almost never broken by the file somebody is editing. It is broken three hops
- * away, and a failure that names only the specifier sends the reader looking in
- * the wrong file.
- */
 export const externalGraph = (
   entry: string,
   srcRoot: string = SRC_ROOT,

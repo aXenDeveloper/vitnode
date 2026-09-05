@@ -1,15 +1,3 @@
-/**
- * `/admin/core/advanced/queue` - the AdminCP queue list, for a TanStack Start
- * host.
- *
- *     ./query         the cache contract - one query definition, no mutation
- *     ./route-search  the URL contract, with this screen's declaration applied
- *     ./route         the screen: namespaces, permission, loader, component
- *     ./server        the SSR transport, reached only through `./query`
- *
- * `QueueTableContent` is framework-free and imported from
- * `@/views/admin/views/core/advanced/queue` by both applications.
- */
 export { queueQuery } from "./query";
 export type { AdminQueueRouteData } from "./route";
 export { ADMIN_QUEUE_NAMESPACES, loadAdminQueueRoute } from "./route";

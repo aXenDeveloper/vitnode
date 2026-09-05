@@ -11,19 +11,6 @@ import { defineContentType } from "../define";
 import { field } from "../fields";
 import { createContentDeliveryService } from "./delivery-service";
 
-/**
- * The delivery resolver, against the real service, without a database.
- *
- * The two reads it performs - the public projection and the slug-history lookup -
- * are stubbed, and nothing else is: `createContentDeliveryService` is the code under
- * test, so the decision it makes (canonical, redirect, or nothing) is the thing
- * being asserted rather than a copy of it. That decision is where a mistake becomes
- * a permanent 308 to the wrong page, which is exactly why it is worth testing
- * without the ceremony of a database.
- *
- * The queries themselves are covered by the Postgres suite in `plugins/example`.
- */
-
 const PLUGIN = "@vitnode/test";
 
 const articleType = defineContentType({
@@ -111,14 +98,6 @@ interface PublicRow {
 
 type QueryRows = Record<string, unknown>[];
 
-/**
- * A Drizzle query builder that resolves to whatever the table asks for.
- *
- * A thenable rather than a promise-returning `limit()`, because the two reads this
- * file needs end differently: the language registry awaits straight off `.from()`
- * and the history lookup chains `.where().limit(1)` (and sometimes `.for("update")`).
- * One thenable satisfies both without the stub having to know which.
- */
 const buildDatabase = (rowsFor: (table: unknown) => QueryRows): unknown => {
   const select = () => {
     let table: unknown;
@@ -145,15 +124,6 @@ const buildDatabase = (rowsFor: (table: unknown) => QueryRows): unknown => {
   return { select };
 };
 
-/**
- * A model whose public service is a map and whose history table is an array.
- *
- * `findById` mimics the Stage 5 fallback rule rather than re-deriving it: a locale
- * with no row of its own is served the default one, and the row says which language
- * it is actually in. That is the contract `createContentLocalizedPublicService`
- * holds, and reading through it is the whole reason delivery inherits the
- * publication predicate and the field allowlist for free.
- */
 const buildService = ({
   byId = {},
   bySlug = {},

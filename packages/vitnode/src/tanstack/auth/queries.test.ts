@@ -17,20 +17,6 @@ import {
 import { removeUserIdentityQueries } from "./queries";
 import { SESSION_QUERY_KEY } from "./state";
 
-/**
- * What a public identity boundary throws away, and - just as load-bearing - what
- * it leaves alone.
- *
- * The public counterpart of `tanstack/admin/queries.test.ts`, and deliberately
- * the same shape: a `QueryClient` with data written into it and nothing else, no
- * router, no React, no server. Every assertion is a statement about the *cache*,
- * which is the only thing the function under test touches.
- *
- * The failure it guards against is silent by construction. A cache entry that
- * outlives the visitor it belonged to renders perfectly - it is somebody else's
- * data, drawn correctly - and produces no error, no warning and no log line.
- */
-
 /** Two visitors, so "drops the previous owner's partition" can mean something. */
 const ALICE = 7;
 const BOB = 9;
@@ -48,14 +34,6 @@ const BOB_FILES = [
 const ALICE_DEVICES = [...devicesQueryKey(ALICE)];
 const BOB_DEVICES = [...devicesQueryKey(BOB)];
 
-/**
- * Entries that belong to other layers, and must survive.
- *
- * The session is the pointed one. It is *not* on the removal list: a sign-out
- * writes the anonymous session over it so that every guard and the header read a
- * signed-out visitor, and dropping the entry instead would leave them reading
- * nothing at all. `./session-query` owns that lifecycle.
- */
 const SESSION = [...SESSION_QUERY_KEY];
 const INTL = ["vitnode", "intl", "en", ["core.global"]];
 const MIDDLEWARE = ["vitnode", "middleware"];

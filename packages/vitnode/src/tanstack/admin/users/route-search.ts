@@ -20,21 +20,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The users list's URL contract - the shared admin-table one, plus `roleId`.
- *
- * Every other AdminCP table is exactly `AdminTableRouteSearch`. This one has a
- * filter nothing else has, so the four functions below wrap the shared ones
- * rather than replacing them: the page, the sort and the search term keep
- * behaving identically to every other admin list, and the one extra parameter is
- * added in one place.
- *
- * `roleId` goes through {@link normalizeAdminRoleFilter} on the way in and back
- * out, so `?roleId=5,2`, `?roleId=2,5,5` and `?roleId=2,abc,5` are all one
- * request and therefore one cache entry - and `?roleId=abc` filters by nothing
- * rather than by `NaN`.
- */
-
 export interface UsersRouteSearch extends AdminTableRouteSearch<AdminUsersOrderBy> {
   roleId?: string;
 }

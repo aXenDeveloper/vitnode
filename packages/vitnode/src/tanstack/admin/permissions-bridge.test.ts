@@ -3,20 +3,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-/**
- * There is one permission state, and one place it comes from.
- *
- * A source scan rather than a render, which is the only way to assert this at
- * all: the failure being prevented is a *second* context or a *second* cache
- * being introduced, and a rendering test proves nothing about a store nobody
- * mounted in it. What this pins is the shape of the bridge -
- *
- *     Hono /admin/session -> ["vitnode","admin-session"] -> the existing context
- *
- * - and specifically that the middle arrow is the only way to reach the right
- * hand side.
- */
-
 const here = dirname(fileURLToPath(import.meta.url));
 
 const withoutComments = (code: string): string =>
@@ -33,13 +19,6 @@ const sourcesUnder = (directory: string): { code: string; name: string }[] =>
 
 const adminSources = () => sourcesUnder(here);
 
-/**
- * One module by name, or a failure that says which one is missing.
- *
- * A lookup rather than a non-null assertion, so renaming a module fails these
- * tests with its name in the message instead of with a property read on
- * `undefined` several lines later.
- */
 const sourceNamed = (name: string): string => {
   const source = adminSources().find(entry => entry.name === name);
 

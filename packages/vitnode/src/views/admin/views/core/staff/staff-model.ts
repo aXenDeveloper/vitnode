@@ -1,34 +1,3 @@
-/**
- * The staff permission model, with nothing in it that needs a browser.
- *
- * Two staff groups - administrators and moderators - each a table of entries
- * that grant a *role* or a *user* a set of permissions. What the AdminCP's
- * create and edit screens do to that model is entirely arithmetic:
- *
- *     catalog + granted  ->  the checkbox tree the form renders
- *     a toggle           ->  the next checked set, dependencies honoured
- *     the checked set    ->  the permission list the API is sent
- *
- * All three are here, pure, because all three have to behave identically in the
- * Next.js AdminCP and the TanStack one, and because getting any of them wrong
- * grants or revokes access silently. `staff-model.test.ts` is the specification.
- *
- * ## The dependency rule, stated once
- *
- * A catalog entry may declare `dependsOn: ["can_view"]` - "this permission is
- * meaningless without that one". The API enforces it on write
- * (`update-permissions.route.ts` drops any grant whose dependencies are missing,
- * repeatedly, until the set is stable) and the form has to agree, or an
- * administrator ticks a box, saves, and finds it un-ticked with no explanation.
- *
- * Two halves, and both are needed:
- *
- * - **Turning one off turns off everything that depended on it**, transitively.
- *   Otherwise the form would submit a set the API is about to prune.
- * - **A permission whose dependencies are not all granted is locked**, not
- *   merely unchecked, so the reason is visible before the save rather than after.
- */
-
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
@@ -40,14 +9,6 @@ import { staffPermissionKey } from "@/api/lib/staff-permission";
 /*                              Where things live                             */
 /* -------------------------------------------------------------------------- */
 
-/**
- * The URL segment each staff type lives under.
- *
- * `admin`/`moderator` is the API's vocabulary (the `{type}` path parameter and
- * the permission-catalog key); `admins`/`moderators` is the URL's. They differ
- * by a letter, which is exactly why the mapping is written down instead of
- * spelled out at each of the eight places that needed it.
- */
 export const STAFF_TYPE_SEGMENT = {
   admin: "admins",
   moderator: "moderators",

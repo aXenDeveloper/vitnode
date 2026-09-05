@@ -2,16 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { generateContentRegistrySource } from "./generate";
 
-/**
- * The Content Engine registry projection, as bytes.
- *
- * Asserted literally rather than by parsing, for the same reason the plugin
- * route registry and the navigation projection are: this file is committed, so
- * it appears in diffs, and a generator that reordered itself or reflowed an
- * entry would produce a diff on somebody else's machine and none on the
- * author's. "Same configuration, same bytes" is the property, and the only
- * honest way to state it is to write the bytes down.
- */
 describe("generateContentRegistrySource", () => {
   it("writes an empty registry when no plugin registers content types", () => {
     const source = generateContentRegistrySource([]);
@@ -38,11 +28,6 @@ describe("generateContentRegistrySource", () => {
     expect(source).toContain("satisfies ContentFrontendPluginSource[]");
   });
 
-  /**
-   * The whole point of generating this file rather than serialising a registry:
-   * a component cannot cross a JSON boundary, and a specifier assembled from a
-   * plugin id is a module a bundler cannot follow.
-   */
   it("never builds a specifier from a variable", () => {
     const source = generateContentRegistrySource([
       { pluginId: "@vitnode/blog", specifier: "@vitnode/blog/admin/content" },

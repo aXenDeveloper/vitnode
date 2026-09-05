@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormNullableNumber } from '@vitnode/core/components/form/fields/nullable-number'
 import { z } from 'zod'

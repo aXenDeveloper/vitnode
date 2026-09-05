@@ -2,32 +2,6 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 
 import { HTTPException } from "hono/http-exception";
 
-/**
- * The opaque cursor a paginated list hands out, and takes back.
- *
- * Two properties, and both of them are load-bearing.
- *
- * **It is the ordered tuple.** A cursor has to describe a position in an
- * ordering, and an ordering is `(orderColumn, id)` - so the cursor is that pair.
- * An identifier on its own is only a position when the list is ordered by the
- * identifier; for any other column it names a row whose place in the sequence
- * nobody knows.
- *
- * **It is self-contained.** The value it carries *is* the boundary, and nothing
- * re-reads the row it came from. That is the difference between a cursor and a
- * pointer: a cursor is the position as it stood when the page was generated, and
- * editing or deleting the row that happened to sit on the boundary must not move
- * it. Re-reading would mean an edit to one row silently skips every row the
- * ordering used to have between the old position and the new one.
- *
- * The wire form is `base64url(JSON)`: opaque, so no client starts depending on
- * the shape, and self-describing, so a cursor minted for one order column is
- * refused by a request that has since changed to another.
- *
- * It is **not signed**, so every field is treated as hostile input and validated
- * against the column it claims to describe - see {@link cursorValueForColumn}.
- */
-
 /** What an order column's value can be, once it has been through JSON. */
 export type PaginationCursorValue = boolean | null | number | string;
 
@@ -40,14 +14,6 @@ export interface PaginationCursor {
   value: PaginationCursorValue;
 }
 
-/**
- * How one column's values travel in a cursor.
- *
- * Named per kind rather than inferred, because "how do I serialise this" and
- * "what am I willing to accept back" are the same question asked twice, and
- * answering it in one place is what stops the second answer being looser than
- * the first.
- */
 type CursorKind = "bigint" | "boolean" | "number" | "string" | "temporal";
 
 const KIND_BY_DATA_TYPE: Record<string, CursorKind> = {
@@ -58,27 +24,9 @@ const KIND_BY_DATA_TYPE: Record<string, CursorKind> = {
   string: "string",
 };
 
-/**
- * The column's data type with Drizzle's refinement dropped.
- *
- * Drizzle v1 reports a `ColumnType` as `"<base> <constraint>"` - a `serial` is
- * `number int32`, a `bigint` is `bigint int64`, an enum `varchar` is
- * `string enum`. The cursor only cares which of the five kinds above it is
- * dealing with, and the constraint is exactly the part that does not change
- * that, so it is cut off rather than enumerated.
- */
 const baseDataTypeOf = (column: PgColumn): string =>
   column.dataType.split(" ")[0];
 
-/**
- * Whether the column holds an array.
- *
- * Checked explicitly because v1 reports an array by its **element** type plus a
- * dimension count - a `text[]` column is `string` with `dimensions: 1`, not the
- * `array` v0 reported. Without this the element type would look perfectly
- * sortable, and a cursor would be minted from a value Postgres cannot compare
- * with `>`.
- */
 const isArrayColumn = (column: PgColumn): boolean => column.dimensions > 0;
 
 const badRequest = (message: string): HTTPException =>
@@ -87,15 +35,6 @@ const badRequest = (message: string): HTTPException =>
 /** The one message a tampered or stale cursor ever produces. */
 const INVALID_CURSOR = "Invalid pagination cursor.";
 
-/**
- * The three shapes a temporal value comes in, keyed by what Postgres will parse.
- *
- * Classified from the **SQL** type rather than the JavaScript one, because the
- * two disagree in exactly the case that matters: `date()` and `time()` hand back
- * plain strings, so `dataType` calls them `"string"` - and a string cursor bound
- * straight into `column > $1` would reach Postgres as `'nonsense'::date` and
- * come back as a 500 rather than a 400.
- */
 type TemporalType = "date" | "time" | "timestamp";
 
 const temporalTypeOf = (column: PgColumn): null | TemporalType => {
@@ -112,13 +51,6 @@ const temporalTypeOf = (column: PgColumn): null | TemporalType => {
 const hasTimeZone = (column: PgColumn): boolean =>
   column.getSQLType().toLowerCase().includes("with time zone");
 
-/**
- * Whether a column can be paged through at all.
- *
- * A `json`, `array` or custom column has no total order Postgres and JavaScript
- * agree on, so a cursor over one would be a value the next page cannot compare
- * against. Refused rather than approximated.
- */
 export const isCursorSortableColumn = (column: PgColumn): boolean =>
   !isArrayColumn(column) &&
   (temporalTypeOf(column) !== null ||
@@ -139,29 +71,6 @@ const kindOf = (column: PgColumn): CursorKind => {
   return kind;
 };
 
-/**
- * The grammar of a Postgres temporal value, as `::text` renders it.
- *
- * One pattern per SQL type, because a `date` column and a `timestamp` column do
- * not accept the same strings and pretending they do is how a cursor for one
- * ends up being parsed as the other:
- *
- * | SQL type                    | accepted                                    |
- * | --------------------------- | ------------------------------------------- |
- * | `date`                      | `2026-08-09`                                |
- * | `time`                      | `10:00:00`, `10:00:00.123456`               |
- * | `time with time zone`       | the above, optionally `+02` / `Z`           |
- * | `timestamp`                 | a date, optionally a time, optionally a zone |
- * | `timestamp with time zone`  | the same, and that is what `::text` writes   |
- *
- * A `T` separator and a `Z` designator are accepted alongside the space-and-
- * offset form Postgres writes, because a JavaScript `Date` is the one input this
- * module takes that has no database text behind it.
- *
- * Matching the shape is only half of it. These patterns cannot tell `2026-02-30`
- * from `2026-02-28`, so every capture is range-checked afterwards - see
- * {@link isRealTemporal}.
- */
 const TEMPORAL_GRAMMAR: Record<TemporalType, RegExp> = {
   date: /^(?<year>\d{4,6})-(?<month>\d{2})-(?<day>\d{2})$/,
   time: /^(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?:\.\d{1,6})?(?<zone>.*)$/,
@@ -169,12 +78,6 @@ const TEMPORAL_GRAMMAR: Record<TemporalType, RegExp> = {
     /^(?<year>\d{4,6})-(?<month>\d{2})-(?<day>\d{2})(?:[ T](?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?:\.\d{1,6})?(?<zone>.*))?$/,
 };
 
-/**
- * Whatever the trailing group swallowed, checked rather than trusted.
- *
- * `(?<zone>.*)` is deliberately greedy: it catches a seventh fractional digit,
- * an era suffix and `OR 1=1` alike, and hands all of them here to be refused.
- */
 type TemporalParts = Partial<
   Record<
     "day" | "hour" | "minute" | "month" | "second" | "year" | "zone",
@@ -204,18 +107,6 @@ const isRealZone = (raw: string, allowed: boolean): boolean => {
   return Number(hours) <= 15 && Number(minutes) <= 59 && Number(seconds) <= 59;
 };
 
-/**
- * Whether a shaped temporal string is a moment that exists.
- *
- * The reason a pattern is not enough: `2026-02-30`, `2025-02-29`, `2026-13-01`
- * and `2026-08-09 23:60:00` all match the shape and all make Postgres raise
- * `invalid input syntax`, which is a 500 arriving from a query string. Every one
- * of them is refused here instead, before anything is bound.
- *
- * Deliberately stricter than Postgres in one place: Postgres reads `24:00:00` as
- * the following midnight, but its own `::text` never writes it, so a cursor
- * carrying one did not come from a row.
- */
 const isRealTemporal = (
   column: PgColumn,
   temporal: TemporalType,
@@ -255,15 +146,6 @@ const DECIMAL_INTEGER = /^-?\d+$/;
 const pad = (value: number, width = 2): string =>
   String(value).padStart(width, "0");
 
-/**
- * A `Date` written the way Postgres writes the column it belongs to.
- *
- * Only reachable when a caller mints a cursor from a value it already holds
- * rather than from a row - the paginated path selects `::text` and never sees a
- * `Date`. Even so it goes through the same grammar as everything else, so a
- * minted cursor and an accepted cursor can never disagree about what a value
- * looks like.
- */
 const canonicalFromDate = (column: PgColumn, value: Date): string => {
   const time = value.getTime();
   if (!Number.isFinite(time)) {

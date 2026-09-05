@@ -16,16 +16,6 @@ import {
 } from "./revision-snapshot";
 import { contentSearchDocument } from "./search-document";
 
-/**
- * The pure projections Stage 6 adds, tested without a database.
- *
- * Each of these is a rule that is easy to state and easy to get subtly wrong:
- * which paths a patch changed, which columns that becomes, what a snapshot
- * records, what a search document is made of, and which keys a public response
- * carries. All of them are functions of their arguments, so all of them are
- * table tests rather than fixtures.
- */
-
 const categoryContentType = defineContentType({
   fields: { name: field.text({ required: true }) },
   id: "test.proj-category",

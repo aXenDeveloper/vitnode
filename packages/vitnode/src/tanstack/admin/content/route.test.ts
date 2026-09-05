@@ -14,16 +14,6 @@ import {
   resolveContentAdminScreen,
 } from "./route";
 
-/**
- * The splat, the resolver and the permission tuple - the three pure decisions
- * the Content Engine route makes before it fetches anything.
- *
- * `resolveContentAdminRoute` has its own suite in `content/admin/route.test.ts`
- * and is not re-tested here. What *is* tested is that this route reaches it with
- * the right arguments: the segments a splat produces, and a lookup keyed by
- * `admin.path`. Those are the two things a second slug parser would get wrong.
- */
-
 const define = (
   id: string,
   admin: Partial<Parameters<typeof defineContentType>[0]["admin"]> = {},
@@ -91,12 +81,6 @@ describe("resolveContentAdminScreen", () => {
     ).toBeUndefined();
   });
 
-  /**
-   * The behaviour the whole `admin.path` design exists for, checked through this
-   * route rather than only through the resolver: the lookup has to be keyed by
-   * the path, and a route that reached for `byId` instead would break exactly
-   * the content types that renamed themselves.
-   */
   describe("admin.path", () => {
     const renamed = define("blog.post", {
       create: { mode: "page" },
@@ -185,12 +169,6 @@ describe("resolveContentAdminScreen", () => {
     });
   });
 
-  /**
-   * `blog/post/create` is a legal address for a content type of its own, and the
-   * exact match wins - so that content type keeps its list screen and the create
-   * page of `blog/post` becomes unreachable. A name clash its author can see,
-   * rather than a screen that silently disappeared.
-   */
   it("prefers an exact content type path over a create page", () => {
     const literal = define("blog.post.create");
     const registry = registryOf(pagePost, literal);
@@ -204,12 +182,6 @@ describe("resolveContentAdminScreen", () => {
     ).toBe("blog.post.create");
   });
 
-  /**
-   * The edit suffix cannot be shadowed the way `create` can, and the reason is
-   * one level down: `admin.path` segments must start with a lowercase letter, so
-   * no content type can live at `blog/post/7/edit`. The ambiguity only exists
-   * for a path whose last segment is a word.
-   */
   it("cannot have its edit page shadowed, because a path segment is never a number", () => {
     expect(() =>
       define("blog.post.archive", { path: "blog/post/7/edit" }),
@@ -224,15 +196,6 @@ describe("resolveContentAdminScreen", () => {
   });
 });
 
-/**
- * The tuple the loader checks, read off the definition rather than assembled
- * from the content type id.
- *
- * `admin.permissionModule` may differ from the entity name, and a guessed module
- * checks a permission that does not exist - which grants nothing and denies
- * nothing, so the screen would open for everybody or for nobody depending on
- * which way the check falls.
- */
 describe("contentPermissionFor", () => {
   it("names the plugin, the definition's module and the permission", () => {
     const registry = registryOf(dialogPost);

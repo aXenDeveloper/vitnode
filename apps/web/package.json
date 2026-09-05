@@ -1,5 +1,6 @@
 {
   "name": "web",
+  "version": "2.0.0-canary.4",
   "private": true,
   "type": "module",
   "imports": {
@@ -15,6 +16,7 @@
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
+    "docs:check": "node scripts/check-docs.mjs",
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {

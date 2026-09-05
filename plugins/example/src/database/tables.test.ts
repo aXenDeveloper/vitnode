@@ -74,13 +74,6 @@ const MIGRATIONS_DIR = resolve(
   "../../../../apps/api/migrations",
 );
 
-/**
- * Resolves one migration tag to its `migration.sql`.
- *
- * Drizzle Kit v3 puts every migration in its own `<timestamp>_<tag>/` directory,
- * and the timestamp is assigned when the migration is generated - so the tag is
- * matched as a suffix rather than the whole name being written down.
- */
 const migrationSql = (tag: string): string => {
   const dir = readdirSync(MIGRATIONS_DIR).find(name =>
     name.endsWith(`_${tag}`),

@@ -3,15 +3,6 @@ import { describe, expect, it } from "vitest";
 import { defineContentType } from "./define";
 import { field } from "./fields";
 
-/**
- * Definition-time validation for Stage 6.
- *
- * Every case here is a mistake whose *first* symptom would otherwise be a query
- * against a table that does not exist, a column two fields quietly share, or a
- * localized list nothing knows how to reorder. They fail at import time, which
- * is to say before the process serves anything.
- */
-
 const base = {
   id: "test.advanced",
   tableName: "test_advanced",

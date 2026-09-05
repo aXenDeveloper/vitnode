@@ -14,19 +14,6 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * The data table, split down the middle.
- *
- * The same boundary `feed-boundaries.test.ts` and `auth-boundaries.test.ts`
- * draw, with the same machinery and for the same reason: a shared component
- * that reaches `@/lib/navigation` - or anything else built on Next's request
- * scope - cannot be rendered by a TanStack Start route, and nothing about that
- * failure is visible until somebody tries.
- *
- * The table is the widest instance of it in the codebase. Four separate
- * controls used to import Next's router directly, so every AdminCP screen and
- * `/files` inherited the coupling from a header cell.
- */
 const SHARED = {
   content: join(here, "content.tsx"),
   filters: join(here, "filters.tsx"),
@@ -39,13 +26,7 @@ const SHARED = {
 };
 
 /** The Next.js half: locale-aware navigation, and the error screen built on it. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
+
 const DELETED_NEXT_HALF = {
   navigation: join(here, "navigation-next.tsx"),
   table: join(here, "data-table.tsx"),

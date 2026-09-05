@@ -2,17 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { shouldReconnectForUser } from "./auth-sync";
 
-/**
- * The transitions `WebSocketAuthSync` has to follow, and the ones it must leave
- * alone.
- *
- * Worth stating as tests because both mistakes here are silent. Missing a
- * transition means the server keeps delivering the previous visitor's
- * notifications to a browser that has signed out of them - a leak, and one no
- * error surfaces. Reconnecting when nothing changed means dropping the shared
- * connection, which the manager relays to every tab of the origin, on a signal
- * that arrives on every page load.
- */
 describe("shouldReconnectForUser", () => {
   it("reconnects when a guest signs in", () => {
     expect(shouldReconnectForUser(null, 7)).toBe(true);

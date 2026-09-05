@@ -71,15 +71,6 @@ const OperationBadge = ({
   );
 };
 
-/**
- * One snapshot, read when a row is expanded and not before.
- *
- * `enabled` is the whole of the laziness: a 25-revision timeline is 25 of these
- * mounted, and none of them requests anything until somebody opens it. Cached
- * under `../editorial-query`'s per-revision key, so collapsing and reopening the
- * same row is free - a revision's snapshot is immutable, and the only thing that
- * can invalidate it is a restore, which expires the whole `history` root.
- */
 const useRevisionSnapshot = ({
   contentTypeId,
   enabled,

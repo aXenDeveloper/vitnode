@@ -9,28 +9,6 @@ import {
 } from "./search-indexer";
 import { assertContentReferences } from "./table";
 
-/**
- * Builds the generated CRUD module for a plugin's content types.
- *
- * Nest it inside the plugin's own `admin` module - Hono only serves the last
- * sub-app mounted at a given prefix, so the engine must never add a second
- * `/admin` of its own:
- *
- * ```ts
- * export const adminModule = buildModule({
- *   pluginId: CONFIG_PLUGIN.pluginId,
- *   name: "admin",
- *   routes: [],
- *   modules: [buildContentAdminModule({ pluginId, contentTypes: [articleContent] })],
- * });
- * ```
- *
- * That yields `/api/{pluginId}/admin/content/{module}`. `buildApiPlugin` walks
- * the module tree, so the content types registered here also drive the
- * registry, the derived staff permissions and - for a content type with
- * `search: { enabled: true }` - the generated search indexer. They are declared
- * exactly once.
- */
 export const buildContentAdminModule = <P extends string>({
   contentTypes,
   pluginId,

@@ -1,38 +1,6 @@
 import { sanitizeReturnTo } from "../auth/return-to";
 import { ADMIN_ENTRY_PATH, ADMIN_HOME_PATH } from "./state";
 
-/**
- * Where an administrator goes after signing in, when the URL asked for
- * somewhere specific.
- *
- * A pure string transform - no router, no request, no `window` - because the
- * value it judges is the most attacker-reachable input in the AdminCP: anyone
- * can put `?returnTo=` on a link to `/admin`, and whatever comes out of here is
- * handed to a navigation.
- *
- * Two rules, applied in order, and they answer different questions:
- *
- *     safe   - may this app send a browser here at all?   sanitizeReturnTo
- *     admin  - is this inside the AdminCP?                isAdminTarget
- *
- * The first is `tanstack/auth`'s and is reused rather than reimplemented. It
- * rejects every origin (`https://evil.example.com`), every protocol-relative
- * host (`//evil.example.com`), every scheme (`javascript:`, `data:`) and the
- * whitespace and control-character spellings browsers strip before parsing - the
- * open redirect and the XSS sink, in one place, for both sessions. Writing a
- * second copy here is how the two would eventually disagree.
- *
- * The second is this module's own, and it is narrower than the public flow's for
- * a reason stated under {@link sanitizeAdminReturnTo}.
- */
-
-/**
- * Whether an already-safe target is a page inside the AdminCP.
- *
- * `/admin/core/users` yes; `/admin` itself no - see the loop guard below;
- * `/discover` no, and `/administrators` no, which is why the test is on the
- * `/admin/` prefix with its slash rather than on `startsWith("/admin")`.
- */
 const isAdminTarget = (target: string): boolean =>
   target.startsWith(`${ADMIN_ENTRY_PATH}/`);
 
@@ -86,32 +54,10 @@ export const sanitizeAdminReturnTo = (
   return isAdminTarget(fallbackTarget) ? fallbackTarget : ADMIN_HOME_PATH;
 };
 
-/**
- * Whether a target is somewhere {@link sanitizeAdminReturnTo} would keep as-is.
- *
- * For the guard that decides whether attaching a `?returnTo=` to the sign-in URL
- * is worth doing at all.
- */
 export const isSafeAdminReturnTo = (value: unknown): value is string =>
   typeof value === "string" &&
   sanitizeAdminReturnTo(value, { fallback: ADMIN_HOME_PATH }) === value;
 
-/**
- * The `returnTo` to attach when bouncing an administrator to `/admin`, or
- * nothing.
- *
- * Built from the *internal* location - the path the route tree matched - which
- * for the AdminCP is also the public one, because `/admin` and its descendants
- * carry no locale prefix in any language. That is not a coincidence to rely on
- * quietly: `DEFAULT_IGNORED_LOCALE_PATHS` lists `/admin`, the rewrite therefore
- * neither strips nor writes a prefix here, and `handleLocaleRequest` 308s
- * `/pl/admin/...` to `/admin/...` before a route ever sees it. So there is no
- * language to strip and none to write back, and nothing in this module needs to
- * know a language exists.
- *
- * `undefined` for the AdminCP home, because `?returnTo=/admin/core` is the
- * default spelled out: it makes the URL longer and changes nothing.
- */
 export const adminReturnToFor = ({
   hash = "",
   pathname,

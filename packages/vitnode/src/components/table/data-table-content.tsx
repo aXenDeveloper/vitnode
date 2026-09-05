@@ -49,14 +49,6 @@ interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
 export type ColumnDef<T extends DataTableTMin> =
   AccessorColumnDef<T> | DisplayColumnDef<T>;
 
-/**
- * Everything a data table is told, in one place both frameworks can import.
- *
- * Named rather than inferred from the component because the component the props
- * belong to is now the Next.js one - `content.tsx` and the sort header would
- * otherwise reach for `ComponentProps<typeof DataTable>` and, through it, for a
- * module a TanStack Start route cannot load.
- */
 export type DataTableProps<T extends DataTableTMin> = Omit<
   React.ComponentProps<typeof Table>,
   "columns"
@@ -87,14 +79,6 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
 const SKELETON_HEAD_WIDTHS = ["w-24", "w-16", "w-20", "w-14"];
 const SKELETON_CELL_WIDTHS = ["w-full", "w-3/4", "w-1/2", "w-5/6", "w-2/3"];
 
-/**
- * The table's shape before its rows arrive.
- *
- * It lives beside the types rather than with `DataTable` because a Suspense
- * fallback is the one part of the table a route renders *outside* the table -
- * and a TanStack Start route reaching into the Next.js module for it would drag
- * `next-intl`'s navigation in behind it.
- */
 export const DataTableSkeleton = ({
   columns,
   rows = 6,
@@ -117,9 +101,9 @@ export const DataTableSkeleton = ({
         </div>
       )}
 
-      <div className="[&>div]:rounded-md [&>div]:border">
+      <div className="[&>div]:bg-card [&>div]:rounded-md [&>div]:border">
         <Table className="min-w-full">
-          <TableHeader className="bg-card">
+          <TableHeader className="bg-muted/60">
             <TableRow>
               {headerIds.map((hid, i) => (
                 <TableHead key={hid}>

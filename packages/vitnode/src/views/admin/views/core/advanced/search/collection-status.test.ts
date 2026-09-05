@@ -13,11 +13,6 @@ const registered = (indexed: number, total: number) => ({
   total,
 });
 
-/**
- * A collection with no rebuild indexer, and so no source count. It may still be
- * kept current by live `search.index()` writes - that is why the status only
- * claims it is outside the rebuild system.
- */
 const unmanaged = (indexed: number) => ({
   hasIndexer: false,
   indexed,

@@ -5,23 +5,12 @@ import React from "react";
 import type { ContentFrontendRegistry } from "@/content/index";
 import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
-import { Loader } from "@/components/ui/loader";
-
 import type { ContentAdminRouteData } from "../route";
 import type { ContentFormScreenData } from "./route";
 
 import { ContentFormHost } from "./host";
+import { ContentFormPageSkeleton } from "./page-skeleton";
 
-/**
- * The form itself, fetched when a form URL is actually the URL.
- *
- * `./page-body` reaches `ContentFormPage`, `ContentForm` and the whole
- * `AutoForm` stack. This module is imported by the content screen's composition
- * point, which every content URL goes through - a list included - so importing
- * that graph here would put it in the route's chunk for screens that never
- * render a field. The guard in {@link ContentFormScreen} returns before this is
- * rendered on a list URL, and `React.lazy` fetches nothing until it is.
- */
 const ContentFormPageBody = React.lazy(async () =>
   import("./page-body").then(module => ({
     default: module.ContentFormPageBody,
@@ -36,13 +25,6 @@ export interface ContentFormScreenProps
   registry: ContentFrontendRegistry;
 }
 
-/**
- * The screen a content form URL renders, or nothing.
- *
- * `null` for a `list` URL and for an unresolvable content type, so a host can
- * pass this as `ContentAdminScreenContent`'s `children` unconditionally and let
- * the shell decide when a form is what the URL means.
- */
 export const ContentFormScreen = ({
   LinkComponent,
   registry,
@@ -57,14 +39,23 @@ export const ContentFormScreen = ({
       {/*
        * The boundary the lazy body suspends against.
        *
-       * A `Loader`, matching what `ContentFormDialog` shows while the dialog
-       * body arrives - the two are the same form reached two ways, and they
-       * should not wait differently. It is also the boundary the edit screen's
-       * two `useSuspenseQuery` reads would fall to, though in practice they do
-       * not suspend: the route's loader warmed both entries with the identical
-       * options before this rendered.
+       * The form's own placeholder, matching what `ContentFormDialog` shows
+       * while the dialog body arrives - the two are the same form reached two
+       * ways, and they should not wait differently. It is also the boundary the
+       * edit screen's two `useSuspenseQuery` reads would fall to, though in
+       * practice they do not suspend: the route's loader warmed both entries
+       * with the identical options before this rendered.
        */}
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense
+        fallback={
+          <ContentFormPageSkeleton
+            entry={entry}
+            formTitle={route.formTitle}
+            labels={route.labels}
+            mode={route.action}
+          />
+        }
+      >
         <ContentFormPageBody
           action={route.action}
           entry={entry}

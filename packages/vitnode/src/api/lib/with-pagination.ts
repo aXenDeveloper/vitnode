@@ -39,17 +39,6 @@ import {
 /** Nobody may ask for more than this in one page, whatever they send. */
 const MAX_PAGE_SIZE = 100;
 
-/**
- * The column a page query carries purely so its rows can be turned into cursors.
- *
- * Selected by the **same statement** that returns the rows, and removed again
- * before anything leaves this module. It exists because a cursor has to describe
- * the position the returned row actually occupied, and the only way to be
- * certain of that is to read the two out of one snapshot.
- *
- * Prefixed so it cannot collide with a column name, and stripped rather than
- * documented, because it is pagination's business and nobody else's.
- */
 export const PAGINATION_CURSOR_FIELD = "__cursorValue";
 
 /** What a page query must spread into its projection. */
@@ -58,15 +47,6 @@ export type PaginationCursorSelection = Record<
   PgColumn | SQL<string>
 >;
 
-/**
- * Reads `first`, `last` and `cursor`, or refuses the request with a 400.
- *
- * Refusing rather than repairing is the change worth noting. `first=0` used to
- * clamp its way into a one-row page that reported `hasNextPage: true`, and
- * `first=abc` became `NaN` and fell through to the default page size - both of
- * them a request nobody made, answered as if they had. Every one of these is now
- * a stable 400, and the route schema rejects most of them a step earlier.
- */
 function parsePaginationParams(params: {
   query: { cursor?: string; first?: string; last?: string };
 }): { cursor?: string; first?: number; last?: number } {
@@ -97,14 +77,6 @@ function parsePaginationParams(params: {
   return { cursor: cursor === "" ? undefined : cursor, first, last };
 }
 
-/**
- * Which way the rows really come back.
- *
- * Backward pagination runs the query in reverse and flips the page afterwards,
- * so the *effective* SQL direction is not the one the caller asked for - and
- * the cursor predicate has to describe the effective one, or it would be reading
- * a sequence the `ORDER BY` is not producing.
- */
 function effectiveDirection(
   isForward: boolean,
   order: "asc" | "desc",
@@ -114,43 +86,12 @@ function effectiveDirection(
   return order === "asc" ? "desc" : "asc";
 }
 
-/**
- * `and`/`or` given at least one defined condition always produce SQL.
- *
- * Stated as a check rather than a non-null assertion: the assertion would be a
- * claim about code somewhere else, and this is a claim about the two lines above
- * it - which is the kind that stays true.
- */
 function required(value: SQL | undefined): SQL {
   if (!value) throw new Error("Expected a pagination condition.");
 
   return value;
 }
 
-/**
- * "Strictly after this position, in this direction."
- *
- * The whole keyset, written out. `(column, id)` is the ordered tuple, so the
- * predicate is the tuple comparison - not a comparison of one half of it:
- *
- * ```sql
- * column > :value OR (column = :value AND id > :id)   -- ascending
- * column < :value OR (column = :value AND id < :id)   -- descending
- * ```
- *
- * `:value` comes from the **cursor** and nowhere else. That is the invariant a
- * cursor exists to provide: it is the position as it stood when the page was
- * generated, so editing the row that happened to sit on the boundary must not
- * move it. Reading the row's current value instead would mean one edit silently
- * skips every row the ordering used to have between the old position and the
- * new one - and deleting it would leave no position at all.
- *
- * The `NULL` branches are the part that is easy to get wrong. Postgres sorts
- * `NULLS LAST` for `ASC` and `NULLS FIRST` for `DESC`, and `column > NULL` is
- * `NULL` rather than true - so a nullable order column needs the null block
- * named explicitly, or a page boundary landing on it would end the walk early
- * and silently.
- */
 function buildCursorCondition({
   column,
   cursor,
@@ -201,22 +142,6 @@ function buildCursorCondition({
   );
 }
 
-/**
- * The cursor's own value, bound so Postgres compares it at full precision.
- *
- * Two shapes, because two kinds of value survive a round trip differently:
- *
- * - a **temporal** value travels as the database's own `::text` and is bound
- *   back with an explicit cast, so Postgres parses the microseconds it wrote.
- *   Binding a JavaScript `Date` here would silently truncate to milliseconds and
- *   exclude the whole millisecond the cursor came from.
- * - **everything else** - a number, a string, a boolean, a bigint - is exact in
- *   JavaScript already, so it goes through the column's own encoder.
- *
- * `getSQLType()` is derived from the schema rather than from the request, which
- * is what makes `sql.raw` safe here; the value itself is always a bound
- * parameter.
- */
 function boundaryValue(column: PgColumn, cursor: PaginationCursor): SQL {
   const value = cursorValueForColumn(column, cursor.value);
 
@@ -532,19 +457,6 @@ export const zodPaginationPageInfo = z.object({
   endCursor: z.string().nullable(),
 });
 
-/**
- * The pagination half of a list route's query, validated at the edge.
- *
- * Every rule that can be stated here is stated here rather than left to the
- * internals, so a bad page size is a 400 from the route's own contract - and
- * appears in the OpenAPI document - instead of something the handler discovers
- * later. `parsePaginationParams` re-checks all of it, because a service can be
- * called directly and a plugin can build a route without this schema.
- *
- * The cursor is only shape-checked here: it is opaque, so "looks like a cursor"
- * is all a request schema can honestly say. Whether it decodes, and whether it
- * belongs to *this* ordering, is decided where the ordering is known.
- */
 export const zodPaginationQuery = z
   .object({
     cursor: z

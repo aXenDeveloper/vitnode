@@ -4,7 +4,7 @@ description: Optimize bundle sizes, code splitting, and loading performance in V
 icon: Gauge
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 TanStack Start splits components into separate lazy chunks by default, keeping the initial entry bundle light. Follow these key practices to maintain instant page loads.
 
@@ -22,13 +22,13 @@ TanStack Start splits components into separate lazy chunks by default, keeping t
 
 TanStack Router automatically extracts route `component`, `errorComponent`, and `notFoundComponent` into lazy chunks:
 
-| Route Option | Read When | In Initial Bundle? | Optimization |
-| :--- | :--- | :--- | :--- |
-| `path`, `id` | Route tree generation | **Yes** | Keep route paths concise |
-| `head` | Page navigation | **Yes** | Isolate metadata strings in leaf files |
-| `loader` | Pre-render | **Yes (fn only)** | `await import()` large dependencies inside fn |
-| `pendingComponent` | Route loading | **Yes** | Use lightweight SVG/CSS skeleton primitives |
-| `component` | Render | **No (Lazy Chunk)** | Automatically code-split |
+| Route Option       | Read When             | In Initial Bundle?  | Optimization                                  |
+| :----------------- | :-------------------- | :------------------ | :-------------------------------------------- |
+| `path`, `id`       | Route tree generation | **Yes**             | Keep route paths concise                      |
+| `head`             | Page navigation       | **Yes**             | Isolate metadata strings in leaf files        |
+| `loader`           | Pre-render            | **Yes (fn only)**   | `await import()` large dependencies inside fn |
+| `pendingComponent` | Route loading         | **Yes**             | Use lightweight SVG/CSS skeleton primitives   |
+| `component`        | Render                | **No (Lazy Chunk)** | Automatically code-split                      |
 
 ---
 
@@ -38,22 +38,25 @@ TanStack Router automatically extracts route `component`, `errorComponent`, and 
 
 Because `head` is evaluated in the main route bundle, importing strings from component files accidentally pulls entire component trees into the initial download:
 
-```tsx title="apps/web/src/routes/_main/index.tsx"
+```tsx title="plugins/home/src/pages/home-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+
 // BAD: Pulls HomeRouteContent and all its heavy icons/charts into main entry
-import { HOME_TITLE, HomeRouteContent } from "#/site/home/home-content" // [!code --]
+import { HOME_TITLE, HomeRouteContent } from '../views/home-content' // [!code --]
 
 // GOOD: Metadata strings live in a lightweight leaf file
-import { HomeRouteContent } from "#/site/home/home-content" // [!code ++]
-import { HOME_DESCRIPTION, HOME_TITLE } from "#/site/home/metadata" // [!code ++]
+import { HomeRouteContent } from '../views/home-content' // [!code ++]
+import { HOME_DESCRIPTION, HOME_TITLE } from '../views/metadata' // [!code ++]
 
-export const Route = createFileRoute("/_main/")({
+export const route = definePluginRoute({
   head: () =>
     pageHead({
       title: HOME_TITLE,
       description: HOME_DESCRIPTION,
     }),
-  component: HomeRouteContent,
 })
+
+export default HomeRouteContent
 ```
 
 ### 2. Lazy Dialogs and Heavy Form Editors
@@ -61,14 +64,14 @@ export const Route = createFileRoute("/_main/")({
 Heavy editors (like Tiptap) or complex modals should be lazy-loaded with `React.lazy` and `Suspense`:
 
 ```tsx title="plugins/blog/src/views/admin/article-editor.tsx"
-import React, { Suspense } from "react"
-import { Loader } from "@vitnode/core/components/ui/loader"
+import React, { Suspense } from 'react'
+import { Loader } from '@vitnode/core/components/ui/loader'
 
 // [!code ++:6]
 const RichEditor = React.lazy(async () =>
-  import("@vitnode/core/components/form/fields/editor").then((mod) => ({
+  import('@vitnode/core/components/form/fields/editor').then((mod) => ({
     default: mod.AutoFormEditor,
-  }))
+  })),
 )
 
 export const ArticleEditor = (props) => (
@@ -82,11 +85,13 @@ export const ArticleEditor = (props) => (
 
 When a route loader requires a heavy calculation or parsing library, import it dynamically:
 
-```tsx title="apps/web/src/routes/_main/stats.tsx"
-export const Route = createFileRoute("/_main/stats")({
-  loader: async () => {
+```tsx title="plugins/stats/src/pages/stats-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+
+export const route = definePluginRoute({
+  load: async () => {
     // Only downloaded when visitor navigates to /stats
-    const { calculateStats } = await import("#/features/stats/calculator") // [!code ++]
+    const { calculateStats } = await import('../features/stats/calculator') // [!code ++]
     return calculateStats()
   },
 })

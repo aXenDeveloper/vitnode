@@ -23,15 +23,6 @@ export interface ContentLocalizedCreateInput<TDefinition> {
 }
 
 export interface ContentLocalizedCreateOptions {
-  /**
-   * Who is creating the record.
-   *
-   * Supply it on an editorial content type and the default translation gets its
-   * own `create` revision, in the same transaction as the row - which is what
-   * makes the earliest restorable English state the one the record was created
-   * with. Without it (or without `editorial`) the translation is written through
-   * the plain repository and leaves no history, exactly as in Stage 5A.
-   */
   actor?: ContentActor;
   /**
    * The locale the first translation is written in. Defaults to - and, today,
@@ -48,28 +39,12 @@ export interface ContentLocalizedCreateResult<TDefinition> {
 }
 
 export interface ContentLocalizedService<TDefinition> {
-  /**
-   * Creates a base row and its default-locale translation, atomically.
-   *
-   * Either both exist or neither does. That is the invariant everything above
-   * leans on: a record always resolves in at least one language, so the AdminCP
-   * always has something to show, a public read always has something to fall
-   * back to, and there is no such thing as an "empty" record whose title exists
-   * in no language at all.
-   */
   create: (
     input: ContentLocalizedCreateInput<TDefinition>,
     options?: ContentLocalizedCreateOptions,
   ) => Promise<ContentLocalizedCreateResult<TDefinition>>;
 }
 
-/**
- * The one write that spans both tables.
- *
- * Everything else about localization is either base-only (the plain service) or
- * translation-only (the translation model). Create is the exception, and it is
- * the reason this file exists rather than a third method on one of them.
- */
 export const createContentLocalizedService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -81,13 +56,7 @@ export const createContentLocalizedService = <
 }: {
   c: Context;
   definition: TDefinition;
-  /**
-   * The translation editorial layer, when the content type has one.
-   *
-   * Optional so a localized content type without `editorial` keeps exactly the
-   * Stage 5A behaviour: the default translation is written through the repository
-   * and leaves no history, because there is no history to leave.
-   */
+
   editorial?: ContentTranslationEditorialService<TDefinition>;
   service: ContentService<TDefinition>;
   translations: ContentTranslationModel<TDefinition>;

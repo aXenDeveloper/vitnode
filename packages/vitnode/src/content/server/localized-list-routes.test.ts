@@ -11,15 +11,6 @@ import type * as LanguageResolverModule from "./language-resolver";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
-/**
- * The admin list, viewed in one language.
- *
- * The list is a query over the *base* table - that is where its pagination, its
- * ordering and its filters are defined - and the translations are attached
- * afterwards. This suite pins the part that is easy to get wrong: "afterwards"
- * has to mean one statement for the whole page, not one per row.
- */
-
 const PLUGIN_ID = "@vitnode/example";
 
 const LANGUAGES = [

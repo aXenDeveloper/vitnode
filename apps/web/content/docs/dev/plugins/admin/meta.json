@@ -1,6 +1,6 @@
 {
-  "title": "Admin",
-  "description": "Give your plugin pages, navigation and dashboard widgets inside the VitNode Admin Control Panel",
+  "title": "Admin Control Panel",
+  "description": "Add plugin-owned AdminCP pages, navigation, permissions and dashboard widgets",
   "icon": "LayoutDashboard",
   "pages": ["index", "dashboard-widgets"]
 }

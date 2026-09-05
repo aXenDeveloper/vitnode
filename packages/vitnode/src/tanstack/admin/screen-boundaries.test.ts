@@ -9,54 +9,13 @@ const packageRoot = resolve(here, "../../..");
 const srcRoot = resolve(here, "../..");
 
 /**
- * The AdminCP screens, and the half of VitNode they may not touch.
- *
- * Each screen under `tanstack/admin/<name>` is imported by a TanStack Start
- * route and, through it, by a browser bundle. Its whole import graph therefore
- * has to be free of Next.js - and unlike a type error, that failure is invisible
- * until somebody runs the app: `@/lib/fetcher` carries `import "server-only"`,
- * which throws at *module evaluation* with a message about Client Components and
- * no indication of which import pulled it in.
- *
- * This test walks the graph and names the chain, which is the difference between
- * a five-minute fix and an afternoon. It is the same boundary
- * `table-boundaries.test.ts` and `auth-boundaries.test.ts` draw, applied to a
- * whole feature tree rather than a handful of files.
- *
- * It caught exactly one real bug on the way in: `dashboard/route.tsx` imported
- * `dashboardWidgetSources` from `get-dashboard-widgets.tsx`, which is the
- * *Next.js* half of widget resolution - two lines of shared arithmetic sitting
- * in a module that also reads `next-intl/server` and the request scope. The fix
- * was to move the shared part into the framework-free resolver beside it.
- */
-
-/**
  * Packages that only resolve inside a Next.js application - the package and
  * everything under it.
  */
 const NEXT_PACKAGES = ["next", "next-intl", "server-only"];
 
-/**
- * Two of core's own modules, matched **exactly** rather than by prefix.
- *
- * `@/lib/fetcher` is the Next.js fetcher - one file, carrying
- * `import "server-only"` - while `@/lib/fetcher/*` is a directory of shared
- * modules that the *browser* fetcher is built from (`rate-limit`, `raw`,
- * `core`). A prefix rule would forbid the second along with the first, which is
- * backwards: those are exactly what a screen is supposed to use.
- * `@/lib/navigation` is `next-intl`'s locale-aware router, and the same
- * distinction applies.
- */
 const NEXT_MODULES = ["@/lib/fetcher", "@/lib/navigation"];
 
-/**
- * `@tanstack/react-start/server-only` is *not* forbidden and must not be.
- *
- * It is a different package with a different job: a marker the Start compiler
- * reads to keep a module out of the client bundle, which is precisely how each
- * screen's `server.ts` is allowed to exist inside a graph a browser walks. The
- * forbidden `server-only` is the React one, which throws when evaluated.
- */
 const ALLOWED_PREFIX = "@tanstack/react-start/server-only";
 
 const isForbidden = (specifier: string): boolean => {

@@ -42,28 +42,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
-/**
- * The editable fields on the AdminCP user page, with no framework in them.
- *
- * A rename, an email change and a name-code change are three requests to the
- * same `PATCH`, and each is edited in place with its own pencil rather than in a
- * form-wide save - which is why the write arrives as one prop and each field
- * decides what to do with the answer.
- */
-
 /** How the page performs a user update. Supplied by whichever app mounts this. */
 export type UpdateAdminUser = (
   id: number,
   input: AdminUserUpdateInput,
 ) => Promise<AdminMutationResult<{ nameCode: string }>>;
 
-/**
- * A single-field editor: read, pencil, input, save.
- *
- * Saving an unchanged or empty value closes the editor without a request, which
- * is both an optimisation and the correct behaviour - `zodUpdateUserAdminSchema`
- * refuses a body with nothing in it.
- */
 export const EditUserFieldContent = ({
   as: Tag = "span",
   canEdit = true,
@@ -228,13 +212,6 @@ export const EditImageButtonContent = ({ label }: { label: string }) => {
   );
 };
 
-/**
- * Changing a name code, behind a confirmation.
- *
- * A name code is the user's public URL, so changing it breaks every link anybody
- * ever shared. The form makes that deliberate: the current code has to be typed
- * back before the new one is accepted, and the warning says why.
- */
 const NameCodeForm = ({
   id,
   nameCode,

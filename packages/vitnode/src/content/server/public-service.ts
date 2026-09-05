@@ -36,26 +36,7 @@ import {
   buildSearchCondition,
 } from "./query";
 
-/**
- * Which language a public read is for.
- *
- * Ignored by a content type that is not localized - there is one version of the
- * row and it is the answer to every locale. Present on the shared interface
- * rather than only on the localized one so a route handler, which is written
- * against `AnyContentTypeDefinition` and cannot know which it was handed, passes
- * the locale unconditionally and lets the service decide whether it means
- * anything.
- */
 export interface ContentPublicReadOptions {
-  /**
-   * The **canonical** locale this read is for, already resolved through
-   * `resolveContentPublicLocale`.
-   *
-   * A locale that names no language, or one the install has switched off, is a
-   * `null` result rather than a throw or a silent substitution: the caller answers
-   * the same 404 it answers for a slug that does not exist, and no reader is ever
-   * handed a language they did not ask for.
-   */
   locale?: string;
 }
 
@@ -72,27 +53,13 @@ export interface ContentPublicFindManyArgs<
   query?: { cursor?: string; first?: string; last?: string; search?: string };
 }
 
-/**
- * The read-only half of a content type, for anonymous callers.
- *
- * There is no `create`, `update`, `delete`, `publish` or `unpublish` to omit -
- * this is a different object from `model.service`, not a filtered view of it,
- * so a public write is not something you can reach by accident.
- */
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
   findById: (
     id: number,
     options?: ContentPublicReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
-  /**
-   * The public detail lookup. `null` for a draft, an unpublished row or a typo.
-   *
-   * **Never falls back.** A slug belongs to one language, so resolving a Polish
-   * URL against an English translation would answer a request for `/pl/witaj`
-   * with the English article - and then cache it under the Polish tag. See
-   * `createContentLocalizedPublicService`.
-   */
+
   findBySlug: (
     slug: string,
     options?: ContentPublicReadOptions,
@@ -103,20 +70,6 @@ export interface ContentPublicService<TDefinition> {
   }>;
 }
 
-/**
- * The public projection, as a standalone function.
- *
- * Extracted so the preview route can use **this** rather than a second
- * implementation that looks the same on the day it is written. The allowlist,
- * the relation-to-`{ id }` collapse and the "drop the cursor `id` unless it was
- * exposed" rule are one piece of code, so a field cannot become public on one
- * route and stay private on the other.
- *
- * It reads nothing but the definition: no database handle, no columns, no
- * joins. An exposed relation is projected from the foreign key the row already
- * carries, which is what makes it impossible for one content type's allowlist
- * to publish another's administrative metadata.
- */
 export const createContentPublicProjector = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -209,13 +162,6 @@ const pick = (
 ): Record<string, unknown> =>
   Object.fromEntries(keys.map(key => [key, values[key] ?? null]));
 
-/**
- * The columns a public read selects: the allowlist, plus `id` for the cursor.
- *
- * `id` is fetched whether or not it is exposed, because pagination needs it -
- * and then dropped again by the projector. A private column is never in this
- * map at all, so it cannot leak through a mistake further downstream.
- */
 export const contentPublicSelection = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
@@ -241,12 +187,6 @@ export const contentPublicSelection = (
   ),
 });
 
-/**
- * The collection fields a public response actually needs.
- *
- * Empty unless the allowlist named one, which is what keeps a public list from
- * joining every junction and child table a content type happens to have.
- */
 export const contentPublicCollectionFields = (
   definition: AnyContentTypeDefinition,
 ): string[] => {
@@ -269,14 +209,6 @@ export const contentPublicCollectionFields = (
   });
 };
 
-/**
- * Folds a row's flat leaf columns back into the nested shape.
- *
- * A public read selects `seo.title` as a column alias, so the raw row carries a
- * key with a dot in it. Nesting happens here rather than in the projector so the
- * projector stays the one place that decides *what* is public, and this stays
- * the one place that decides what it *looks like*.
- */
 export const nestContentPublicRow = (
   row: Record<string, unknown>,
 ): Record<string, unknown> => {
@@ -310,24 +242,6 @@ export const clampContentPublicPageSize = (
   return String(Math.min(parsed, CONTENT_PUBLIC_MAX_PAGE_SIZE));
 };
 
-/**
- * Builds the read-only service a public route serves from.
- *
- * Two things make this safe rather than "the admin service with fewer methods":
- *
- * 1. **The published predicate is not a parameter.** Every method `and`s it in
- *    itself, so there is no argument a caller could forget and no code path
- *    that reaches an unpublished row.
- * 2. **The `SELECT` is built from `publicApi.fields`.** A private column is
- *    never fetched, so it cannot be leaked by a mistake further downstream.
- *    The one exception is `id`, which the cursor needs; it is dropped from the
- *    projected row unless the allowlist names it, and that boundary is tested.
- *
- * It also joins nothing. An exposed relation is projected from the foreign key
- * the row already carries, so a target table is never read - which is what
- * makes it impossible for one content type's allowlist to publish another's
- * administrative metadata.
- */
 export const createContentPublicService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -371,12 +285,6 @@ export const createContentPublicService = <
   // no junction and no child table unless a public response is made of them.
   const publicCollections = contentPublicCollectionFields(definition);
 
-  /**
-   * Attaches the exposed collections to a page of rows.
-   *
-   * One batch per collection field for the whole page, keyed by the parent ids
-   * the page already fetched - never one query per row.
-   */
   const withCollections = async (
     rows: readonly Record<string, unknown>[],
   ): Promise<Record<string, unknown>[]> => {

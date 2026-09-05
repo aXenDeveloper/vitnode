@@ -1,32 +1,10 @@
 import type { z } from "zod";
 
+import type { UniversalRawFetcher } from "@/lib/fetcher-client";
 import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
 
-import { rawApiFetch } from "@/lib/fetcher/raw";
+import { rawFetcherClient } from "@/lib/fetcher-client";
 import { AdminRequestError } from "@/views/admin/admin-request";
-
-/**
- * How the AdminCP addresses a generated Content Engine route, and what it does
- * with the answer.
- *
- * The framework-neutral half of the Content Engine's transport: it builds the
- * request and reads the response, and says nothing about *where* the call runs.
- * A TanStack host wraps it in `createIsomorphicFn`; the Next.js AdminCP has its
- * own `content/admin/fetch.server.ts`, which does the same URL arithmetic
- * against `next/headers`.
- *
- * ## Why the typed fetcher cannot be used here
- *
- * Every other AdminCP screen calls `fetcherClient(adminModuleRef<typeof
- * someModule>(), …)`, and the route literals, methods and response schemas all
- * infer from that module's *type*. A content module has no type to name: it is
- * generated at runtime from a definition, one per installed content type, so
- * there is nothing for `typeof` to point at.
- *
- * The response is not untyped as a result - it is typed by the content type's
- * own Zod schema instead, which is stricter than a route literal and is the same
- * arrangement `contentApiFetch` already uses on the Next.js side.
- */
 
 /** Which generated module a request is for. */
 export interface ContentApiTarget {
@@ -45,18 +23,6 @@ export interface ContentApiRequest {
   target: ContentApiTarget;
 }
 
-/**
- * The request, as the shared fetcher's arguments.
- *
- * `/api/{pluginId}/admin/content/{permissionModule}{path}` - exactly what
- * `buildContentAdminModule` mounts, spelled in one place so a change to the
- * mount point is a change to one function.
- *
- * `withPagination` is deliberately never set. It writes `first=10` and
- * `search=""` *inside* the URL builder, invisibly to anything upstream including
- * a cache key - so two requests that differ only in that hidden default would
- * share one entry. Every page size these routes send is explicit.
- */
 export const contentApiFetchArgs = ({
   body,
   method,
@@ -74,38 +40,35 @@ export const contentApiFetchArgs = ({
 });
 
 /**
- * The browser half of the transport.
+ * One request to a generated content module, over whichever transport it is
+ * handed. See {@link ContentApiFetch}.
  *
- * No headers of its own - the admin cookie is the browser's to attach, and the
- * API derives who is asking from it. The server half lives in
- * `tanstack/admin/content/server.ts`, where the request scope it needs actually
- * exists.
- *
- * `credentials: "include"` because the API's origin is `NEXT_PUBLIC_API_URL`,
- * which an installation is free to point at a separate host - and a
- * cross-origin `fetch` sends no cookie at all without it. It is a no-op when the
- * two are the same origin, which is the default (`CONFIG.api` falls through to
- * `location.origin`), so this is right in both deployments rather than in one.
- * Every other AdminCP write in this package does the same, and the API's CORS is
- * configured `credentials: true` for exactly this.
+ * No headers of its own - the session cookie is the browser's to attach and the
+ * server transport's to forward, and the API derives who is asking from it.
  */
-export const contentApiFetchInBrowser = async (
+export const contentApiFetcher =
+  (transport: UniversalRawFetcher): ContentApiFetch =>
+  async (request, { signal } = {}) =>
+    await transport({ ...contentApiFetchArgs(request), options: { signal } });
+
+/**
+ * How one content request is carried.
+ *
+ * `signal` is the read's cancellation, when it has one. It reaches `fetch`
+ * untouched, and an abort therefore rejects at the transport rather than
+ * anywhere downstream: there is no response for `readContentApiJson` to inspect
+ * and no `catch` in the way, so a cancelled read cannot be mistaken for a
+ * refusal or for an empty list. Writes never pass one - a cancelled write leaves
+ * the server's state unknown and the cache un-invalidated.
+ */
+export type ContentApiFetch = (
   request: ContentApiRequest,
-  /**
-   * The read's cancellation, when it has one.
-   *
-   * Reaches `fetch` untouched, and an abort therefore rejects here rather than
-   * anywhere downstream: there is no response for `readContentApiJson` to
-   * inspect and no `catch` in the way, so a cancelled read cannot be mistaken
-   * for a refusal or for an empty list. Writes never pass one - a cancelled
-   * write leaves the server's state unknown and the cache un-invalidated.
-   */
-  { signal }: { signal?: AbortSignal } = {},
-): Promise<Response> =>
-  await rawApiFetch({
-    ...contentApiFetchArgs(request),
-    options: { credentials: "include", signal },
-  });
+  options?: { signal?: AbortSignal },
+) => Promise<Response>;
+
+/** The browser half of the transport. */
+export const contentApiFetchInBrowser: ContentApiFetch =
+  contentApiFetcher(rawFetcherClient);
 
 /** A request paired with what it was for, so a failure can say. */
 export interface ContentApiRead<TSchema extends z.ZodType> {

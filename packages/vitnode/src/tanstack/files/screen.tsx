@@ -22,13 +22,6 @@ export interface MyFilesRouteProps extends MyFilesRouteData {
   search: UncheckedMyFilesSearch;
 }
 
-/**
- * `/files`, as everything below a route file's `component`.
- *
- * `navigate` and `search` come from the host because they are route-typed:
- * TanStack infers both from the `createFileRoute` path, which is an application
- * concern and stays in the application.
- */
 export const MyFilesRouteContent = ({
   description,
   navigate,

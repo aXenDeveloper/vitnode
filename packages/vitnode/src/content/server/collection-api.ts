@@ -2,28 +2,6 @@ import type { AnyContentTypeDefinition } from "../types";
 
 import { ContentEngineError } from "../errors";
 
-/**
- * The convenience collection API, built once for both services.
- *
- * Every method here is a **read-modify-write**, and that is the whole reason it
- * is one module rather than two: the read has to happen after the source row is
- * locked, and a helper that read before the lock would lose one of two
- * concurrent additions with nothing to show it had. The service supplies the
- * locking - `run` below - and this file supplies only the arithmetic.
- *
- * `set` is the exception that proves the rule: it replaces the whole collection,
- * so it does not read at all and cannot lose anything.
- */
-
-/**
- * Locks the source record, reads one collection, and applies what `compute`
- * makes of it - all inside one transaction.
- *
- * `compute` runs **after** the row lock, so the state it derives the next
- * collection from is the committed one. It may throw: a reorder that is not a
- * permutation of what is stored is refused there, inside the lock, against the
- * list the write will actually replace.
- */
 export type ContentCollectionRunner<TResult, TOptions> = (
   itemId: number,
   field: string,
@@ -52,16 +30,6 @@ export interface ContentCollectionApi<TResult, TOptions> {
   write: ContentCollectionWriter<TResult, TOptions>;
 }
 
-/**
- * A reorder has to be a permutation of what is stored.
- *
- * Refused rather than treated as a `set`, because the two mean different things
- * and only one of them is reversible by looking at the request: a reorder that
- * silently dropped an entry would look like a successful drag. Checked inside
- * the lock, against the list the write is about to replace - checking it against
- * a list read earlier would refuse a valid reorder, or accept an invalid one,
- * whenever somebody else had written in between.
- */
 export const assertContentPermutation = ({
   contentTypeId,
   current,
@@ -98,16 +66,6 @@ const asRows = (current: readonly unknown[]): Record<string, unknown>[] =>
       typeof value === "object" && value !== null,
   );
 
-/**
- * The five to-many relation operations, for one field.
- *
- * `add` of a target already present, `remove` of one that is not there and
- * `reorder` to the stored order all compute a list equal to what is stored, so
- * the diff finds nothing and the write is a no-op - no `updatedAt`, no version
- * bump, no revision, no event. That falls out of computing the whole next state
- * rather than issuing a targeted `INSERT`, which is why it holds for every one of
- * them without a special case.
- */
 export const buildContentRelationOperations = <TResult, TOptions>({
   api,
   contentTypeId,

@@ -15,22 +15,6 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(here, "../../../..");
 
-/**
- * The main header, split down the middle.
- *
- * The same boundary `theme-boundaries.test.ts` draws around the shell one level
- * up, and it is the header that makes it worth drawing twice: the shell is four
- * slots and no imports, while the header is the design system - a link, a
- * button, two dropdowns and a theme toggle. One import that only resolves inside
- * a Next.js app anywhere in that graph turns the whole `apps/web` shell into a
- * build error nobody sees until they try it. That is not hypothetical:
- * `HeaderContent` was Next-only for one back button, and `use-captcha` made
- * every `AutoForm` Next-only for one navigation import.
- *
- * The shared half is the bar, the logo placement, the nav and the action area.
- * The Next half is `getTranslations`, `next-intl`'s locale-aware `Link` and the
- * async user slot - and it is the control that proves this scan can see them.
- */
 const SHARED = {
   header: join(here, "header-content.tsx"),
   languageSwitcher: join(
@@ -44,13 +28,6 @@ const SHARED = {
   ),
 };
 
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions: each of these was the
- * only place a Next.js API was allowed to appear, and a test that stops naming
- * them cannot notice one coming back.
- */
 const DELETED_NEXT_HALF = {
   header: join(here, "header.tsx"),
   headerLink: join(here, "header-next.tsx"),
@@ -161,19 +138,6 @@ describe("the shared language switcher takes the navigation as a callback", () =
   });
 
   it("reads no URL itself, so no host has to wrap it in Suspense", () => {
-    /**
-     * What replaced a Next-specific structural requirement.
-     *
-     * The wrapper had to render `<React.Suspense>` around its own URL reads:
-     * Next 16 refuses to prerender a client component that reads URL data
-     * outside one, so the AdminCP's prerendered routes failed `next build`
-     * without it. The requirement came from where the hooks were, not from the
-     * control - and with the hooks gone from this package entirely, the shared
-     * control has no URL to read and nothing to wrap.
-     *
-     * Asserted rather than assumed because the tempting way to "restore" the
-     * language switcher's convenience is to put a router hook back into it.
-     */
     expect(code).not.toContain("usePathname");
     expect(code).not.toContain("useRouter");
     expect(code).not.toContain("React.Suspense");

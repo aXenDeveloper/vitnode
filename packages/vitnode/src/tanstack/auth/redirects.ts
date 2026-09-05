@@ -6,35 +6,6 @@ import type { AuthNavigate } from "./actions";
 
 import { sanitizeReturnTo } from "./return-to";
 
-/**
- * Where the auth flow sends people, as pure data.
- *
- * Two directions and one rule each:
- *
- *     anonymous at /settings  ->  /login?returnTo=/settings   (returnToFor)
- *     signed in at /login     ->  /settings                   (postAuthDestination)
- *
- * Nothing here navigates, and nothing here imports the router. Every function is
- * a string transform, which is what lets the whole redirect policy - including
- * the two ways it can go wrong - be stated as a table rather than exercised
- * through a browser.
- *
- * `./return-to` is the security half: it decides whether a target is an
- * application-relative path at all, and rejects every origin, scheme and
- * control-character spelling. This module builds on that answer and adds the two
- * things that are about *this* flow rather than about safety in general - the
- * loop guard below, and the shape a TanStack redirect wants.
- */
-
-/**
- * The login page's internal path - what the route tree matches, with no locale
- * in it.
- *
- * `/login` and `/pl/login` are the same route: the application's locale rewrite
- * strips the prefix before matching and writes it back into every href the
- * router builds. So this constant is deliberately un-prefixed, and nothing in
- * the auth flow concatenates a language onto it.
- */
 export const LOGIN_PATH = "/login";
 
 /** The search parameter carrying where a blocked visitor was heading. */
@@ -53,21 +24,6 @@ export interface InternalDestination {
   to: string;
 }
 
-/**
- * A validated path, split into the fields a router navigation takes.
- *
- * **Not `href`.** A redirect carrying `href` is used verbatim
- * (`Router.resolveRedirect` short-circuits on it), so it never reaches
- * `buildLocation` and never runs the locale rewrite - a Polish visitor signing
- * in at `/pl/login` would land on the English `/discover`. Split into
- * `to`/`search`/`hash`, the same navigation goes through `buildLocation`, the
- * rewrite writes the prefix back, and no code here has to know a language
- * exists.
- *
- * Repeated search keys collapse to the last one. A `returnTo` is a link
- * somebody clicked, not a form post, and every VitNode page reads its
- * parameters singly.
- */
 export const parseInternalDestination = (
   target: string,
 ): InternalDestination => {
@@ -86,15 +42,6 @@ export const parseInternalDestination = (
 const pathnameOf = (target: string): string =>
   new URL(target, RELATIVE_BASE).pathname;
 
-/**
- * Whether a target points back at the login page - or anything under it.
- *
- * The loop guard, and the one failure mode this module exists to prevent:
- * `/login?returnTo=/login` sends a signed-in visitor to the login page, whose
- * guard sends them to `/login`, forever. `/login/sso/google` is caught by the
- * same rule, because finishing an OAuth round trip that has already completed is
- * the same loop wearing a provider's name.
- */
 const isLoginTarget = (target: string): boolean => {
   const pathname = pathnameOf(target);
 

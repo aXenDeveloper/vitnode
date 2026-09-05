@@ -52,14 +52,6 @@ const assertPublicPath = (id: string, path: string): void => {
   }
 };
 
-/**
- * Checks one exposed **leaf path**, e.g. `"seo.title"` or `"faq.question"`.
- *
- * The container has to be a group or a repeatable, and the leaf has to be one it
- * declares: a path that resolves to nothing would be a key the response promises
- * and never carries, which a generated OpenAPI schema turns into a lie rather
- * than an error.
- */
 const assertPublicLeafPath = (
   id: string,
   fields: ContentFieldMap,
@@ -98,14 +90,6 @@ const assertPublicLeafPath = (
   }
 };
 
-/**
- * Checks and fills in `publicApi`.
- *
- * Every rule here exists to make one guarantee cheap: if a field is not in
- * `fields`, nothing public can read it, order by it, search it or filter on it.
- * So the subset checks are not tidiness - they are what stops a filter or a
- * sort being used to probe a column the response leaves out.
- */
 export const resolvePublicApi = <TField extends string>(
   id: string,
   fields: ContentFieldMap,

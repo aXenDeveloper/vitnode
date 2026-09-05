@@ -17,19 +17,6 @@ import type { AutoFormFileValue } from "./file-shared";
 
 import { AutoFormFiles } from "./files";
 
-/**
- * The control end to end: a selection goes in, requests come back out of order,
- * and `field.value` is the order the person picked.
- *
- * The pieces below it are tested on their own - the queue against deferred
- * promises, the gallery against what it renders - and this is the wiring, which
- * is the part that used to be wrong: `onSuccess` appended to the value it could
- * see, so whichever upload settled last decided where it went.
- *
- * Nothing here waits on a clock. Every upload is a promise the test resolves by
- * hand, in the order the test wants.
- */
-
 beforeAll(() => {
   vi.stubGlobal(
     "ResizeObserver",
@@ -41,13 +28,6 @@ beforeAll(() => {
   );
 });
 
-/**
- * Runs one interaction and lets everything it started settle.
- *
- * The extra tick matters: an upload resolving is a promise chain - the queue
- * places the identifier, the form takes it, the list re-renders - and asserting
- * before it has run would be asserting on a half-finished render.
- */
 const settled = async (interaction: () => void) => {
   await act(async () => {
     interaction();

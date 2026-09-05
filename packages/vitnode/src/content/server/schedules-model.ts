@@ -26,21 +26,6 @@ export interface ClaimedContentSchedule {
   pluginId: string;
 }
 
-/**
- * Locks one schedule row and returns it only if it is still worth running.
- *
- * Four conditions, every one of them re-read from the database under
- * `FOR UPDATE` rather than trusted from the queue payload: the row exists, it
- * is still `pending`, its generation matches the one the task was dispatched
- * with, and its time has come. Anything else returns `null`, and the task does
- * nothing at all - which is exactly how a task left over from a cancelled or
- * rescheduled plan stays harmless.
- *
- * Keyed by id alone, unlike every other query in this file, and that is safe
- * for the one reason the others are not: it does not *trust* a scope, it
- * **returns** one. The caller learns which plugin and content type the row
- * belongs to from the row itself, under the lock.
- */
 export const claimContentSchedule = async (
   tx: ContentDatabase,
   {
@@ -85,20 +70,6 @@ export const claimContentSchedule = async (
   };
 };
 
-/**
- * Records how a claimed schedule ended.
- *
- * Id-keyed like {@link claimContentSchedule}, and guarded by `expectedStatus`
- * for a reason that is easy to miss: `cancelled` and `completed` are both
- * terminal, so an unguarded write would let a stale worker turn a schedule an
- * administrator cancelled into one that ran. The guard is `AND status = $x` in
- * the same statement rather than a read followed by a write, so there is no
- * window between checking and setting.
- *
- * Returns whether the row was in the expected state. `false` is a concurrency
- * signal, never something to shrug at - the caller decides whether that means
- * "somebody got there first, fine" or "this cannot happen, roll back".
- */
 export const settleContentSchedule = async (
   db: ContentDatabase,
   scheduleId: number,
@@ -129,14 +100,6 @@ export const settleContentSchedule = async (
   return rows.length > 0;
 };
 
-/**
- * Records why a schedule's post-commit effects have not been delivered yet.
- *
- * Deliberately **not** a status change. The publication itself succeeded and
- * must stay `completed`; what failed is the announcement, and moving the row
- * back to `pending` would republish something that is already live. Cleared on
- * the retry that finally gets through.
- */
 export const recordContentScheduleEffectsError = async (
   db: ContentDatabase,
   scheduleId: number,
@@ -149,13 +112,6 @@ export const recordContentScheduleEffectsError = async (
 };
 
 export interface ContentSchedulesModel {
-  /**
-   * Marks a pending schedule cancelled, and says which one it was.
-   *
-   * `null` when there was no pending schedule with that id on that record -
-   * which the route turns into a 404 rather than a silent success, because
-   * "cancelled" and "there was nothing to cancel" are different answers.
-   */
   cancel: (
     itemId: number,
     scheduleId: number,
@@ -184,15 +140,6 @@ export interface ContentSchedulesModel {
 /** How many past schedules the AdminCP panel shows alongside the pending ones. */
 const HISTORY_LIMIT = 10;
 
-/**
- * Schedule reads and writes for one content type.
- *
- * Like the revisions model, **every** statement filters on `pluginId`,
- * `contentTypeId` *and* `itemId`. The table is shared by every schedulable
- * content type in the install, so a schedule id on its own proves nothing - and
- * cancelling somebody else's publication would be a strange way to find that
- * out.
- */
 export const createContentSchedulesModel = ({
   c,
   definition,

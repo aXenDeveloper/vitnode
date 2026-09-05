@@ -3,15 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { pluginRoutePageProps } from "./loader-data";
 import { pluginRouteModuleRef } from "./module-ref";
 
-/**
- * One plugin route's module: imported once, checked, and readable by the four
- * things that need it at four different moments.
- *
- * No React and no router. What is asserted is the memo, the synchronous peek,
- * the notification and the diagnostic - all of which are decided before anything
- * renders, and none of which a component test would exercise any better.
- */
-
 const page = () => null;
 
 describe("pluginRouteModuleRef", () => {
@@ -45,11 +36,6 @@ describe("pluginRouteModuleRef", () => {
     await expect(ref()).rejects.toThrow(/route\.head/);
   });
 
-  /**
-   * A failed *import* is a network failure, not a broken plugin, so the memo is
-   * cleared and the next navigation tries again. A malformed module fails the
-   * same way and will keep failing, which is correct: the module is wrong.
-   */
   it("retries after a failed import instead of answering from the failure", async () => {
     const load = vi
       .fn<() => Promise<unknown>>()
@@ -62,11 +48,6 @@ describe("pluginRouteModuleRef", () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
-  /**
-   * The synchronous half, for the breadcrumb: it renders in the shell, above the
-   * route's own Suspense boundary, so it may read what has arrived but may never
-   * await it.
-   */
   it("reads nothing before the module arrives, and the module after", async () => {
     const ref = pluginRouteModuleRef(
       async () => Promise.resolve({ default: page }),
@@ -105,13 +86,6 @@ describe("pluginRouteModuleRef", () => {
   });
 });
 
-/**
- * A loader's envelope, as the props a plugin page is rendered with.
- *
- * The three names match `load`'s and `head`'s arguments, which is the reason it
- * is an envelope rather than the loader's data spread flat - and why a loader
- * that returned a string still produces a complete props object.
- */
 describe("pluginRoutePageProps", () => {
   const params = { topic: "routing" };
   /**

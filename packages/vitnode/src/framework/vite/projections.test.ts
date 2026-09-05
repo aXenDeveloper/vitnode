@@ -4,40 +4,11 @@ import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PluginRouteCompilerSource } from "../plugin-routes";
 
+import { definePluginRoutes, lazy, page } from "../../routing/tree";
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
 import { compilePluginRoutes } from "../plugin-routes";
 import { readOptionalPluginModules } from "./plugin-routes";
-
-/**
- * All four generated projections, from one configured plugin list, in one pass.
- *
- * Each generator has its own determinism test beside it, and each says the same
- * thing about itself: sorted input, sorted output, same bytes. What none of them
- * can say is the thing that actually matters to an installation - that the four
- * are projections of **one list**, so a plugin cannot be half-enabled.
- *
- * That is the property this file is for, and it is not hypothetical. The four
- * files are read by four different parts of the app, and they used to be written
- * by separate passes:
- *
- *     plugin-route-manifest.gen.ts   what routes exist
- *     plugin-routes.gen.ts           how each route's module is imported
- *     admin-nav.gen.ts               what the AdminCP sidebar shows
- *     content-registry.gen.ts        which content types have screens
- *
- * A plugin present in one and absent from another is not a build error anywhere
- * - each file is individually valid - and the symptoms are all somewhere else: a
- * sidebar entry whose page 404s, a content screen with no route, a route the
- * router still claims for a plugin nobody configured. So "removed from the
- * config" has to mean removed from all four, and that is asserted here rather
- * than left to four files each checking its own half.
- *
- * Pure throughout: a resolver over a fixed map stands in for `node_modules`, and
- * every generator takes data and returns a string. There is no dev server here -
- * `./generation-queue.test.ts` owns the concurrency, and Agent G owns the smoke
- * test.
- */
 
 /** A resolver over a fixed map of specifier → file, as the build sees one. */
 const resolverFor =
@@ -47,28 +18,33 @@ const resolverFor =
 
 /**
  * Two plugins that contribute to every projection, so "disappears from all
- * four" is a statement with four things in it rather than one.
+ * three" is a statement with three things in it rather than one.
  */
 const WORKSPACE = resolverFor({
   "@acme/blog/admin/content": "/pkg/blog/dist/admin/content.js",
   "@acme/blog/admin/nav": "/pkg/blog/dist/admin/nav.js",
-  "@acme/blog/routes/post": "/pkg/blog/dist/routes/post.js",
+  "@acme/blog/routes": "/pkg/blog/dist/routes.js",
   "@acme/shop/admin/content": "/pkg/shop/dist/admin/content.js",
   "@acme/shop/admin/nav": "/pkg/shop/dist/admin/nav.js",
-  "@acme/shop/routes/product": "/pkg/shop/dist/routes/product.js",
+  "@acme/shop/routes": "/pkg/shop/dist/routes.js",
 });
 
-/** What each plugin's route manifest declares, keyed by plugin id. */
+const lazyPage = () =>
+  lazy(async () => await Promise.resolve({ default: () => null }));
+
+/** What each plugin's routes module declares, keyed by plugin id. */
 const ROUTES: Record<string, PluginRouteCompilerSource> = {
   "@acme/blog": {
-    manifestSpecifier: "@acme/blog/routes/manifest",
     pluginId: "@acme/blog",
-    routes: [{ entry: "routes/post", id: "post", path: "/blog/:slug" }],
+    routes: definePluginRoutes([
+      page("/blog/:slug", { component: lazyPage() }),
+    ]),
+    routesSpecifier: "@acme/blog/routes",
   },
   "@acme/shop": {
-    manifestSpecifier: "@acme/shop/routes/manifest",
     pluginId: "@acme/shop",
-    routes: [{ entry: "routes/product", id: "product", path: "/shop/:id" }],
+    routes: definePluginRoutes([page("/shop/:id", { component: lazyPage() })]),
+    routesSpecifier: "@acme/shop/routes",
   },
 };
 
@@ -93,22 +69,15 @@ const projectionsFor = (pluginIds: readonly string[]) => {
         WORKSPACE,
       ).modules,
     ),
-    manifest: compiled.manifestSource,
-    registry: compiled.registrySource,
+    registry: compiled.source,
   };
 };
 
-const FILES = ["adminNav", "contentRegistry", "manifest", "registry"] as const;
+const FILES = ["adminNav", "contentRegistry", "registry"] as const;
 
 const BOTH = ["@acme/blog", "@acme/shop"];
 
 describe("determinism, across every projection at once", () => {
-  /**
-   * The property each generator claims for itself, asserted for all four
-   * together: the bytes are a function of *which plugins are configured* and of
-   * nothing else - not of the order they were listed in, not of which manifest
-   * happened to resolve first, not of the machine.
-   */
   it("is byte-identical whichever order the plugins were configured in", () => {
     const forwards = projectionsFor(["@acme/blog", "@acme/shop"]);
     const backwards = projectionsFor(["@acme/shop", "@acme/blog"]);
@@ -127,12 +96,6 @@ describe("determinism, across every projection at once", () => {
     });
   });
 
-  /**
-   * Sorting is the generators' own, not the caller's. Every one of them re-sorts
-   * what it is given, which is what makes "same configuration, same bytes" a
-   * property of the functions rather than a promise about how they are called -
-   * and it is why nothing above has to hand them a sorted list.
-   */
   it("sorts inside each generator, so no caller has to", () => {
     const shuffled = projectionsFor(["@acme/shop", "@acme/blog"]);
 
@@ -142,9 +105,6 @@ describe("determinism, across every projection at once", () => {
     expect(shuffled.contentRegistry.indexOf("@acme/blog")).toBeLessThan(
       shuffled.contentRegistry.indexOf("@acme/shop"),
     );
-    expect(shuffled.manifest.indexOf("/blog/")).toBeLessThan(
-      shuffled.manifest.indexOf("/shop/"),
-    );
     expect(shuffled.registry.indexOf("@acme/blog")).toBeLessThan(
       shuffled.registry.indexOf("@acme/shop"),
     );
@@ -152,7 +112,7 @@ describe("determinism, across every projection at once", () => {
 });
 
 describe("a plugin is enabled, or it is not - never half of each", () => {
-  it("puts an enabled plugin in all four projections", () => {
+  it("puts an enabled plugin in all three projections", () => {
     const enabled = projectionsFor(BOTH);
 
     FILES.forEach(file => {
@@ -160,13 +120,7 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
   });
 
-  /**
-   * The one that matters. Disabling a plugin has to take its routes, its module
-   * imports, its sidebar entries and its content screens away together - a
-   * sidebar entry that outlived its route is a 404 nobody can attribute to a
-   * config edit.
-   */
-  it("removes a disabled plugin from all four, in one step", () => {
+  it("removes a disabled plugin from all three, in one step", () => {
     const disabled = projectionsFor(["@acme/blog"]);
 
     FILES.forEach(file => {
@@ -185,12 +139,6 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
   });
 
-  /**
-   * No orphan imports: a disabled plugin leaves neither an `import` statement
-   * nor an `import()` call behind. The generated files are rewritten from the
-   * list its routes are no longer in, rather than filtered - so there is nothing
-   * left to go stale.
-   */
   it("leaves no import naming a plugin that is gone", () => {
     const disabled = projectionsFor(["@acme/blog"]);
     const specifiers = FILES.flatMap(file =>
@@ -211,11 +159,6 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
   });
 
-  /**
-   * Re-enabling is not a special case and must not be: the projections are a
-   * function of the current list, so the bytes an app had before a plugin was
-   * disabled are the bytes it gets back when the plugin returns.
-   */
   it("restores exactly the previous bytes when a plugin is re-enabled", () => {
     const before = projectionsFor(BOTH);
 
@@ -240,14 +183,6 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
 });
 
 describe("the generated bytes are canonical as written", () => {
-  /**
-   * Each file says so at the top, and that line is load-bearing rather than
-   * decorative: these are rewritten on every build, so anything a formatter
-   * changes is lost - and a formatter that reflowed one entry would make the
-   * output depend on how long a plugin's name happens to be. The apps exclude
-   * them from linting and formatting; this is the assertion that the files still
-   * say why.
-   */
   it("tells a reader not to edit or format them", () => {
     const generated = projectionsFor(BOTH);
 

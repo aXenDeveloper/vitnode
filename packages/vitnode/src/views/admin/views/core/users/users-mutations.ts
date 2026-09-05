@@ -1,11 +1,3 @@
-/**
- * Everything the AdminCP writes about a user, as browser requests.
- *
- * One function per write, each returning the status rather than throwing it -
- * the shape and the reasoning are `shared/admin-mutation.ts`, which every
- * AdminCP mutation module in this stage shares.
- */
-
 import { fetcherClient } from "@/lib/fetcher-client";
 import {
   type AdminMutationResult,
@@ -14,13 +6,6 @@ import {
 
 import { adminModuleRef } from "./list/users-query";
 
-/**
- * Every column `PATCH /admin/users/{id}` accepts, all optional.
- *
- * One body type rather than one per caller: `zodUpdateUserAdminSchema` is a
- * `.partial()` with an "at least one field" refinement, so what makes a request
- * valid is that *something* is set, not which screen set it.
- */
 export interface AdminUserUpdateInput {
   email?: string;
   name?: string;
@@ -36,14 +21,6 @@ export interface AdminUserUpdated {
   nameCode: string;
 }
 
-/**
- * Rename a user, change their email, or change their name code.
- *
- * One request per edit rather than a form-wide save, because that is what the
- * screen does: each field has its own pencil, its own optimistic close and its
- * own error. `zodUpdateUserAdminSchema` is `.partial()` with a "at least one
- * field" refinement, so sending one key is the intended shape.
- */
 export const updateAdminUser = async (
   id: number,
   body: AdminUserUpdateInput,
@@ -61,14 +38,6 @@ export const updateAdminUser = async (
       }),
   });
 
-/**
- * Replace a user's primary role and their whole secondary set.
- *
- * The same `PATCH` as the field edits - the API decides which columns a body
- * touches - and deliberately a *replacement* rather than a diff: the dialog
- * holds the complete intended set, and sending "add these, remove those" would
- * make two administrators editing at once produce a set neither of them chose.
- */
 export const updateAdminUserRoles = async (
   id: number,
   body: { roleId: number; secondaryRoleIds: number[] },
@@ -109,14 +78,6 @@ export interface AdminUserCreated {
   name: string;
 }
 
-/**
- * Create a user from the AdminCP.
- *
- * `201`, not `200`. The `409` the API answers for a taken email or name is
- * returned rather than thrown so the dialog can put the message on the right
- * field - which of the two it was comes back in the body, and is decoded by
- * {@link adminUserCreateConflictField}.
- */
 export const createAdminUser = async (
   body: AdminUserCreateInput,
 ): Promise<AdminMutationResult<AdminUserCreated>> =>
@@ -133,16 +94,6 @@ export const createAdminUser = async (
       }),
   });
 
-/**
- * Which field a create conflict was about.
- *
- * The API answers `409` with a plain-text message rather than a code, so the
- * mapping is a string comparison and has to live somewhere both frontends can
- * see it - the Next.js dialog matches the same two sentences today.
- *
- * Anything else is `null`, which the caller shows as a generic error rather than
- * attaching to a field that may not be the cause.
- */
 export const adminUserCreateConflictField = (
   message: string,
 ): "email" | "name" | null => {

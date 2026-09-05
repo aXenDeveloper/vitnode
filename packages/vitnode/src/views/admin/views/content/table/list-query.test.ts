@@ -8,18 +8,6 @@ import {
   zodContentListPage,
 } from "./list-query";
 
-/**
- * The Content Engine list's query contract.
- *
- * Two claims, and the whole suite is about them:
- *
- * - **The key is the request.** Everything that changes the rows is in it, and
- *   nothing that cannot is. Two spellings of one request are one entry; two
- *   different requests are never one.
- * - **The response is checked.** A body the content type does not describe is a
- *   rejected read, not a half-rendered row.
- */
-
 const target = { permissionModule: "posts", pluginId: "@vitnode/blog" };
 
 const request = (

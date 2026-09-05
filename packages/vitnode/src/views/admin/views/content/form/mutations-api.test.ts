@@ -6,13 +6,6 @@ import type { ContentApiRequest } from "../content-request";
 
 const fetchMock = vi.fn<(request: ContentApiRequest) => Promise<Response>>();
 
-/**
- * Only the browser fetch is replaced.
- *
- * `contentApiFetchArgs` stays real, so the URL every assertion below reads is
- * the one the AdminCP would actually build - a mock of the whole module would
- * let a wrong path pass.
- */
 vi.mock("../content-request", async () => {
   const actual =
     await vi.importActual<typeof contentRequest>("../content-request");
@@ -32,28 +25,8 @@ const {
   setContentPublishedInBrowser,
 } = await import("./mutations-api");
 
-/**
- * The browser half of the Content Engine's writes, at the seam every other test
- * stubs out.
- *
- * What matters here is not that a request is made - it is that the *answer* is
- * read exactly as `mutation-api.server.ts` reads it. A version conflict and a
- * unique clash share a `409` and need different dialogs; an editorial edit sends
- * its precondition in a wrapper and a non-editorial one must not; a save with
- * nothing in it must not reach the API at all. Each of those is a silent bug in
- * the AdminCP if this file disagrees with the Server Action.
- */
-
 const TARGET = { permissionModule: "posts", pluginId: "@vitnode/blog" };
 
-/**
- * A fresh `Response` per call, never one shared instance.
- *
- * A body can be read once, and a composite save makes two requests - the write,
- * then the read-back of every translation. `mockResolvedValue` would hand the
- * same object to both and the second would throw "Body has already been read",
- * which is a fact about the test rather than about the code.
- */
 const answers = (status: number, body: unknown) => {
   fetchMock.mockImplementation(
     async () =>

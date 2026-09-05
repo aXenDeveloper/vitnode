@@ -16,21 +16,6 @@ import type { SettingsNavKey } from "./settings-nav";
 
 import { isSettingsNavItemActive, SETTINGS_NAV_ITEMS } from "./settings-nav";
 
-/**
- * The settings navigation, with the two things it cannot resolve for itself
- * handed in.
- *
- * `pathname` rather than a hook, and `LinkComponent` rather than an import: both
- * are the same seam `HeaderContent` and `SearchFeedContent` already draw, and
- * both exist for the same reason. `usePathname` and a locale-aware `Link` come
- * from `next-intl` in the Next.js app and from the router in TanStack Start, and
- * importing either here would make this module Next-only - which is exactly what
- * `views/auth/auth-boundaries.test.ts` pins.
- *
- * The pathname is *internal* - no locale prefix. Each framework's wrapper hands
- * over the spelling its own router uses, and nothing here localizes an href
- * either: `LinkComponent` does that, once.
- */
 const ICONS: Record<SettingsNavKey, React.ComponentType> = {
   devices: MonitorSmartphoneIcon,
   overview: UserRoundIcon,

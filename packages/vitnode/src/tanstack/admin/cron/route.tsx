@@ -8,32 +8,6 @@ import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { cronQuery } from "./query";
 
-/**
- * `/admin/core/advanced/cron`, as everything a TanStack Start route needs and
- * nothing a route owns.
- *
- * The topology - the file's path, its search contract and its `navigate` - stays
- * in the host, because TanStack infers all three from `createFileRoute`.
- * Everything else is here: the namespaces, the permission, the query, the title
- * and the table.
- */
-
-/**
- * What this screen renders strings from.
- *
- * `admin.advanced.cron` is the heading, the columns and the run button;
- * `core.global` is the rest of the table - the pager's labels, the confirm
- * dialog's buttons and the error toasts - and it is listed even though the root
- * provides it, because `RouteMessages` mounts its own provider *over* the root's
- * rather than adding to it.
- *
- * The same set `<I18nProvider namespaces={["admin.advanced.cron"]}>` provides in
- * the Next.js page, which always adds `core.global` itself.
- *
- * One list, read by both the loader that fetches it and the provider that mounts
- * it, because they have to be the same set or the provider suspends on a key
- * nobody warmed.
- */
 export const ADMIN_CRON_NAMESPACES = [
   "admin.advanced.cron",
   "core.global",
@@ -46,43 +20,11 @@ export interface AdminCronRouteData {
   title: string;
 }
 
-/**
- * The permission this screen needs, on top of an admin session.
- *
- * `cron.can_view`, which is the tuple `<AdminPermissionRequired module="cron"
- * permission="can_view">` states in the Next.js page and the tuple
- * `getCronsRoute` declares as its `adminStaffPermission`. All three have to be
- * the same, and this is the frontend's copy of it.
- */
 const CRON_VIEW_PERMISSION = {
   module: "cron",
   permission: "can_view",
 } as const;
 
-/**
- * Both reads this screen needs, in parallel, before it renders.
- *
- * The permission is checked *first*, before either read is started: an
- * administrator who may not open this screen never sends a request the API is
- * going to refuse, and no admin markup is streamed for a page that is about to
- * be replaced by the AdminCP's 404.
- *
- * Neither call is repeated by the component: the messages are read back by
- * `RouteMessages` through the identical `intlQueryOptions`, and the page by
- * `useSuspenseQuery` through the identical `cronQuery`.
- *
- * A refusal from the cron API is deliberately left to propagate. `403` and `429`
- * reject as `AdminRequestError`, which fails this loader and shows the router's
- * error path - the honest answer. Catching it and rendering an empty table is
- * indistinguishable from an installation with no cron jobs, which is the one
- * thing this must never look like.
- *
- * The cast on `messages` is what makes `createTranslator` usable: its key type is
- * derived from the *inferred* type of `messages`, and a bare index signature
- * collapses `MessageKeys` to `never`. Naming the two keys read here is both the
- * smallest fix and a true statement - rename either in `locales/en.json` and
- * this stops compiling rather than rendering a raw key into a `<title>`.
- */
 export const loadAdminCronRoute = async ({
   adminAccess,
   locale,

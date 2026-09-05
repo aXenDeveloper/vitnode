@@ -3,27 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { createRouteHead, routeHead } from "./index";
 
-/**
- * What a VitNode route puts in the document head.
- *
- * Pure: `routeHead` takes an options object and returns an array, so every rule
- * in it is testable without a router, a DOM or a render. What is *not* tested
- * here is that TanStack emits the array - that is the framework's job, and
- * `apps/web/src/tests/shell-config.test.ts` runs a real route's `head` through
- * it.
- *
- * The Open Graph half arrived with Stage 16, because the documentation routes it
- * replaced emitted it and the first port dropped it. The measured legacy output
- * for `/docs/dev/plugins/api/routes` was:
- *
- *     <title>Routes - Plugins - VitNode</title>
- *     <meta property="og:title" content="Routes - Plugins">
- *     <meta property="og:description" content="…">
- *     <meta property="og:type" content="article">
- *
- * The asymmetry between the two titles is the interesting part, and it has its
- * own test below.
- */
 const METADATA = { shortTitle: "VitNode", title: "VitNode Community" };
 
 const head = (options?: Parameters<typeof routeHead>[1]) =>
@@ -110,13 +89,6 @@ describe("routeHead openGraph", () => {
     });
   });
 
-  /**
-   * The rule the whole extension exists for.
-   *
-   * `<title>` goes through the site template and `og:title` does not, which is
-   * what the Next.js routes emitted. A card reading "Routes - Plugins - VitNode"
-   * over a link to vitnode.com would say the site's name twice.
-   */
   it("leaves og:title un-templated while the document title is templated", () => {
     const meta = head(FULL);
 

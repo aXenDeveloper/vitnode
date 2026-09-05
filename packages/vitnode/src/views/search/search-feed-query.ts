@@ -1,6 +1,7 @@
 import { infiniteQueryOptions } from "@tanstack/react-query";
 
 import type { searchModule } from "@/api/modules/search/search.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
@@ -8,37 +9,9 @@ import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { SearchFeedPage } from "./types";
 
-/**
- * The search feed, as one query definition.
- *
- * Everything about *fetching* a feed lives here and nowhere else: the request,
- * the page size, the cursor rule, what counts as a failure, and the cache entry
- * it all lands in. `SearchFeedContent` renders whatever this produces and owns
- * none of it.
- *
- * That split exists because the alternative was tried and does not hold. When
- * the component built its own `useInfiniteQuery` and a TanStack Start loader
- * built another, the two agreed on the cache *key* and on nothing else - so the
- * server-rendered first page came from one contract and every `fetchNextPage()`
- * after hydration came from a second one with a different cursor rule and no
- * status checking. A 400 arrived as `{ message }`, was read as a page, and the
- * feed silently rendered as empty. Sharing a key is not sharing a contract.
- *
- * The one thing deliberately *not* fixed here is the transport: a loader running
- * on a server and a component running in a browser cannot reach the API the same
- * way. So {@link searchFeedQueryOptions} takes a `fetchPage` and defaults it to
- * the browser's, which is the only one a shared component can assume.
- */
-
 /** How many hits one page holds, wherever that page is fetched from. */
 export const SEARCH_FEED_PAGE_SIZE = 20;
 
-/**
- * Where a page starts. `null` is the first one, spelled as the *absence* of a
- * cursor rather than an empty one: the route's schema rejects `cursor=`
- * outright (`.min(1)`), so sending it empty would 400 the first page of every
- * visit.
- */
 export type SearchFeedCursor = null | string;
 
 /** The first page carries no cursor. Named, because a test has to say so too. */
@@ -53,34 +26,17 @@ export interface SearchFeedParams {
   types?: string;
 }
 
-/**
- * The search module, as a value the fetchers can carry without pulling the API
- * into either bundle. The module is imported as a *type* only, so route
- * literals, methods and response schemas all still infer; `clientModule`
- * supplies the one field the fetcher reads at runtime.
- */
 export const searchModuleRef = clientModule<typeof searchModule>(
   CONFIG_PLUGIN.pluginId,
 );
 
 export interface SearchFeedPageArgs {
   cursor: SearchFeedCursor;
-  /**
-   * The language the page is rendered in. Required rather than defaulted: a
-   * feed that quietly falls back to the default locale is a Polish page full of
-   * English posts, and nothing about the response says so.
-   */
+
   locale: string;
   params: SearchFeedParams;
 }
 
-/**
- * One page of a feed, as the query string the API reads it from.
- *
- * `first` is a string because the query schema reads it off a query string, and
- * every optional key is omitted rather than set to `undefined` so it never
- * reaches the URL at all.
- */
 export const searchFeedQuery = ({
   cursor,
   locale,
@@ -102,24 +58,6 @@ export const searchFeedQuery = ({
   return query;
 };
 
-/**
- * Refuses a response that is not a search page.
- *
- * The fetchers hand non-2xx responses back rather than throwing on them - a
- * rejected cursor is a 400, a rate-limited visitor a 429 - and `json()` would
- * happily parse either one's `{ message }` body. Read as a page it has no
- * `edges`, so the feed renders as empty: a failure that looks exactly like a
- * community with nothing in it. Query can only retry, report, or keep the last
- * good page if the promise actually rejects.
- *
- * A 500 never reaches here; `rawApiFetch` throws on those with the body
- * attached. A 429 does, *after* `fetcherClient` has already raised the
- * global rate-limit notice - so the visitor is told, and the query still fails
- * rather than appending an error object as a page.
- *
- * Takes a plain `Response` so the caller keeps its typed one: passing the typed
- * response in widens `ok` to a boolean and leaves `json()` alone.
- */
 export const assertSearchFeedResponse = (
   response: Response,
   { cursor, locale }: SearchFeedPageArgs,
@@ -185,28 +123,36 @@ export type SearchFeedPageFetcher = (
 ) => Promise<SearchFeedPage>;
 
 /**
+ * One page, over whichever transport the host hands in.
+ *
+ * The request, the cursor and the refusal check are all here, so SSR and the
+ * browser cannot drift: only the transport differs, and it is an argument.
+ */
+export const searchFeedPageFetcher =
+  (transport: UniversalFetcher): SearchFeedPageFetcher =>
+  async (args, { signal } = {}) => {
+    const response = await transport(searchModuleRef, {
+      args: { query: searchFeedQuery(args) },
+      method: "get",
+      module: "search",
+      options: { signal },
+      path: "/",
+    });
+
+    assertSearchFeedResponse(response, args);
+
+    return await response.json();
+  };
+
+/**
  * One page, fetched from the browser.
  *
  * `fetcherClient` builds the same `/api/@vitnode/core/search` URL every other
  * VitNode client call uses - same-origin, cookies attached by the browser
  * itself, and a 429 routed to the global rate-limit notice.
  */
-export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher = async (
-  args,
-  { signal } = {},
-) => {
-  const response = await fetcherClient(searchModuleRef, {
-    args: { query: searchFeedQuery(args) },
-    method: "get",
-    module: "search",
-    options: { signal },
-    path: "/",
-  });
-
-  assertSearchFeedResponse(response, args);
-
-  return await response.json();
-};
+export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher =
+  searchFeedPageFetcher(fetcherClient);
 
 /**
  * The feed, as the one query definition every caller shares.

@@ -5,17 +5,16 @@ export type PluginRouteErrorCode =
   | "cross-plugin-parent"
   | "duplicate-id"
   | "duplicate-path"
+  | "eager-component"
   | "invalid-area"
-  | "invalid-entry"
-  | "invalid-id"
-  | "invalid-kind"
   | "invalid-namespace"
-  | "invalid-parent"
   | "invalid-parent-kind"
   | "invalid-parent-path"
   | "invalid-path"
   | "invalid-plugin-id"
   | "invalid-requires"
+  | "invalid-search"
+  | "invalid-tree"
   | "malformed-route"
   | "parent-cycle"
   | "requires-in-admin-area"
@@ -30,15 +29,6 @@ export interface PluginRouteErrorDetails {
   routeId?: string;
 }
 
-/**
- * A plugin route that cannot be part of a manifest.
- *
- * Thrown rather than collected, and thrown on the first problem: a manifest with
- * two plugins claiming `/blog` has no correct interpretation, and picking one is
- * how an install silently serves the wrong page for a release. The structured
- * fields are here so a build tool can render the failure its own way without
- * parsing the message.
- */
 export class PluginRouteError extends Error {
   constructor(message: string, details: PluginRouteErrorDetails) {
     super(message);

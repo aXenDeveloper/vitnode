@@ -1,7 +1,7 @@
 {
   "title": "Plugins",
-  "description": "Build a VitNode plugin: pages, API modules, database tables, AdminCP screens and translations in one installable package",
+  "description": "Build installable VitNode plugins for pages, APIs, data, AdminCP screens, and translations",
   "icon": "Plug",
   "defaultOpen": true,
-  "pages": ["create", "route-manifest", "api", "admin", "breadcrumbs", "..."]
+  "pages": ["create", "routes", "api", "admin", "breadcrumbs", "..."]
 }

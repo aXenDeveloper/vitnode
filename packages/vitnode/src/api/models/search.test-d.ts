@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- Asserting that the
-   deprecated result shape still compiles is the point of this file. */
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { ContentSearchIndexer } from "@/content/server";

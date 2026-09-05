@@ -3,97 +3,101 @@
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_dark.svg">
       <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_light.svg">
-      <img alt="VitNode Logo" src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_light.svg" width="250">
+      <img alt="VitNode" src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/logo/vitnode_logo_light.svg" width="250">
     </picture>
   </a>
 </p>
 
-# 🚀 VitNode
+# VitNode
 
-**VitNode** is an extendable framework for building modern applications with TanStack Start and Hono.js. It provides a structured, plugin-based architecture that makes development faster and less complex.
-
-> [!NOTE]
-> 🚧 You're viewing the `canary` branch (VitNode 2.0), which is under active development and may contain unstable code. For the stable version, check the `v1` branch.
-
-## 🏁 Getting Started
-
-### Supported Package Managers
-
-- [bun](https://bun.com/) (min: v1.1, recommended: v1.3)
-- [pnpm](https://pnpm.io/) (min: v10, recommended: v11)
-- [node.js](https://nodejs.org/) (min: v22, recommended: v24)
-
-### Quick Setup
-
-1. **Install dependencies**
-
-   ```bash
-   pnpm create vitnode-app@canary
-   // or
-   bun create vitnode-app@canary
-   // or
-   npx create-vitnode-app@canary
-   ```
-
-2. **Start database container**
-
-   ```bash
-   pnpm docker:dev
-   // or
-   bun docker:dev
-   // or
-   npm run docker:dev
-   ```
-
-3. **Launch development server**
-   ```bash
-   pnpm dev
-   // or
-   bun dev
-   // or
-   npm run dev
-   ```
-
-## 📝 Available Scripts
-
-- `pnpm dev` - Start development server with auto-reload
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
-- `pnpm lint` - Check code quality
-- `pnpm lint:fix` - Fix code quality issues
-- `pnpm db:migrate` - Run database migrations by hand (`pnpm dev` already does this for you)
-- `pnpm dev:email` - Start email development server
-
-## ✨ What's New in VitNode 2.0
-
-- **Simplified Architecture**: Single-repo application structure (no monorepo)
-- **Modern Backend**: Hono.js replaces NestJS for better performance
-- **ESM-Only**: Full support for ECMAScript Modules
-- **AI Integration**: New AI Rules and Multi-Cloud Provider support
-- **Enhanced Plugin System**: Improved CLI tools for plugins
-- **Better Documentation**: Completely rewritten docs and website
-- **Streamlined Configuration**: Single config file for all settings
-- **Zod 4**: Upgraded to the latest version for schema validation
-
-## 🔍 Project Scope
-
-VitNode provides:
-
-- **Plugin Architecture**: Extend core functionality with custom plugins
-- **Admin Control Panel**: Built-in management interface
-- **Authentication System**: Support for credentials and SSO providers
-- **Role-Based Access Control**: Comprehensive permission management
-- **Internationalization**: Multi-language support out of the box
-- **Theme System**: Light/dark mode with customizable components
-- **API Documentation**: Auto-generated OpenAPI documentation
-
-## 📊 Project Status
-
-VitNode 2.0 is currently in **active development** (canary branch). While many features are functional, expect changes and improvements as we work toward a stable release.
+VitNode is a plugin-first framework for community applications. It combines a
+TanStack Start front end, Hono API, Postgres, and AdminCP so features can ship as
+installable plugins instead of becoming permanent residents of one giant app.
 
 > [!NOTE]
-> 📚 Documentation is still in progress. Our website is under construction!
+> This is the VitNode 2.0 `canary` branch. It is actively developed, so use the
+> docs and source together while it keeps getting sharper.
 
-## 📄 License
+## Start here
+
+You need Node.js 22+ and Postgres (or Docker). Create an app with the package
+manager you use every day:
+
+### Bun
+
+```bash
+bun create vitnode-app@canary
+```
+
+### pnpm
+
+```bash
+pnpm create vitnode-app@canary
+```
+
+### npm
+
+```bash
+npm create vitnode-app@canary
+```
+
+When prompted, choose **Turborepo** if you plan to build plugins. VitNode puts
+product pages, APIs, data, translations, and AdminCP extensions in plugins first.
+
+Start local services, migrate, and run the app:
+
+### Bun
+
+```bash
+bun run docker:dev
+bun run db:migrate
+bun dev
+```
+
+### pnpm
+
+```bash
+pnpm docker:dev
+pnpm db:migrate
+pnpm dev
+```
+
+### npm
+
+```bash
+npm run docker:dev
+npm run db:migrate
+npm run dev
+```
+
+Open `http://localhost:3000`, then sign in at `/admin`.
+
+## Build features as plugins
+
+1. [Create a plugin](https://vitnode.com/docs/dev/plugins/create).
+2. Give it a route, API module, data model, or AdminCP screen.
+3. Register the package in the host app’s configuration.
+4. Deploy from the [Start here](https://vitnode.com/docs/dev/deployments/self-hosted) documentation.
+
+The host app owns composition and global infrastructure. The plugin owns the
+feature. That boundary pays rent surprisingly quickly.
+
+## Documentation
+
+- [Getting started](https://vitnode.com/docs/dev/setup)
+- [Build your first plugin](https://vitnode.com/docs/guides/first-plugin)
+- [Plugin routes](https://vitnode.com/docs/dev/plugins/routes)
+- [Admin Control Panel](https://vitnode.com/docs/dev/plugins/admin)
+- [Content delivery and SEO](https://vitnode.com/docs/dev/content-engine/content-delivery-and-seo)
+- [Write documentation](https://vitnode.com/docs/dev/documentation)
+
+## Project scope
+
+- Plugin architecture with TanStack Start routes and typed Hono API modules
+- Postgres data models, migrations, search, uploads, and content delivery
+- Built-in authentication, roles, staff permissions, i18n, and AdminCP
+- Self-hosted and cloud deployment guidance
+
+## License
 
 MIT License

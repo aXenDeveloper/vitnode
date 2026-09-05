@@ -20,34 +20,6 @@ import {
   contentVersionOf as versionOf,
 } from "../lib/api-result";
 
-/**
- * Everything a Content Engine **form** writes, from the browser.
- *
- * The counterpart of `../actions/mutation-api.server.ts`, request for request:
- * the same routes, the same bodies, the same statuses, the same structured
- * errors read out of the same parsers. What it deliberately does *not* do is the
- * part no browser can - `revalidatePath` and `revalidateContent` expire Next's
- * data cache, which is what makes a published record appear on a statically
- * cached public page. A TanStack Start application renders its public pages per
- * request, so the equivalent work here is the API call plus a query
- * invalidation, and there is nothing skipped.
- *
- * ## The transport itself is `../lib/api-result.ts`
- *
- * The request, the schema check, the "did this write succeed" reading and the
- * five-parser conflict mapping all live there, shared with the editorial panels
- * and the list row's writes. They were declared here until Stage 13 and moved
- * unchanged: a second copy of the conflict mapping is a second chance for one
- * screen to lose the version-conflict branch while the others keep it.
- *
- * ## Nothing here knows which content type it is for
- *
- * Every function takes a {@link ContentApiTarget}, which is a plugin id and a
- * module name. Resolving a content type id to one is the registry's job and
- * happens one layer up, in `tanstack/admin/content/form/transport.ts` - the same
- * split as the list.
- */
-
 /** Anything the generated routes return: an identifier plus the row's fields. */
 const zodRow = z.object({ id: z.number() }).loose();
 
@@ -69,13 +41,6 @@ const zodOptions = z.object({
   ),
 });
 
-/**
- * Reads every translation back after a composite save.
- *
- * One request for the whole set, so a form that stays open - page mode - holds
- * the versions its next save has to send. Failing quietly is right here: the
- * write has committed, and a stale version only costs one conflict banner.
- */
 const readTranslations = async (
   target: ContentApiTarget,
   id: number,

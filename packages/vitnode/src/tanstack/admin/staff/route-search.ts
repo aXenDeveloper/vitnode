@@ -17,14 +17,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The URL contract both staff lists share.
- *
- * One contract for two routes, because administrators and moderators are the
- * same table over two API endpoints - `staffListAdminQuery` is literally one
- * schema. Every rule these four apply is `tanstack/admin/table-search.ts`'.
- */
-
 export type StaffRouteSearch = AdminTableRouteSearch<AdminStaffOrderBy>;
 export type UncheckedStaffSearch = UncheckedAdminTableSearch<AdminStaffOrderBy>;
 

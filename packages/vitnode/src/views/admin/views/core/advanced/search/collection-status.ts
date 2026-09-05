@@ -20,16 +20,6 @@ export interface SearchCollection {
   total: null | number;
 }
 
-/**
- * What `total` is actually counting for this collection.
- *
- * A multi-language collection is indexed once per translation, and its indexer
- * counts published *translations* - so comparing that against distinct items
- * would report a fully-indexed collection with three languages as 33% covered.
- * One rule, read off the data rather than configured, so a collection that gains
- * a second language starts being measured correctly without anything being
- * switched on.
- */
 export const getCollectionIndexedCount = (
   collection: Partial<Pick<SearchCollection, "documents" | "languages">> &
     Pick<SearchCollection, "indexed">,
@@ -43,21 +33,6 @@ export const getCollectionIndexedCount = (
 
 export type CollectionStatus = "empty" | "indexed" | "stale" | "unmanaged";
 
-/**
- * Nothing indexed, exactly covered, out of step, or outside the rebuild system.
- *
- * "Out of step" is any mismatch, in **either** direction. Fewer documents than
- * source records means something was missed; more means documents survive for
- * records that no longer qualify - and calling that one healthy is how a stale
- * index stays invisible.
- *
- * "Unmanaged" comes first and does not look at the counts at all: without an
- * indexer there is no source to compare against, so `indexed` matching `total`
- * would only mean the fallback matched itself. It says nothing about the plugin -
- * registering an indexer is optional, and a plugin that only ever calls
- * `search.index()` keeps its collection perfectly current without one. All that
- * is known is that a rebuild cannot reproduce it.
- */
 export const getCollectionStatus = (
   collection: Partial<Pick<SearchCollection, "documents" | "languages">> &
     Pick<SearchCollection, "hasIndexer" | "indexed" | "total">,
@@ -71,13 +46,6 @@ export const getCollectionStatus = (
   return "stale";
 };
 
-/**
- * Indexed items as a percentage of source items, or `null` when there is no
- * source count to divide by.
- *
- * Can exceed 100 - that is the point, and the number is shown as it is. Use
- * {@link getCollectionCoverageBar} for the width of anything drawn.
- */
 export const getCollectionCoverage = (
   collection: Partial<Pick<SearchCollection, "documents" | "languages">> &
     Pick<SearchCollection, "indexed" | "total">,

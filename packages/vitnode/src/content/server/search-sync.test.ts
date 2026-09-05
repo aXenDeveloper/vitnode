@@ -51,11 +51,6 @@ const draftRow = {
   status: "draft" as const,
 };
 
-/**
- * The generated routes with the service, the search engine and the logger
- * stubbed, so each case drives the real handler and asserts on what reached
- * `c.get("search")`.
- */
 const harness = ({
   logFails = false,
   model = searchable,

@@ -6,21 +6,6 @@ import type { RevokeDeviceResult } from "@/views/auth/settings/devices/devices-r
 
 import { devicesQueryKey } from "@/views/auth/settings/devices/devices-query";
 
-/**
- * `/settings/devices`' contract with the cache underneath it.
- *
- * Pure functions and one `QueryClient` held in memory. The *meaning* of a
- * devices request - the key, the request, what a refusal is, and whether a
- * finished revoke makes the list stale - lives in
- * `views/auth/settings/devices/devices-query.ts` and is asserted beside it. What
- * is asserted here is that this namespace asks for the right one, and that a
- * revoke invalidates exactly the one entry it should and nothing else.
- *
- * The revoke's transport is stubbed rather than reached. There is no HTTP here:
- * the only thing under test is which statuses cause an invalidation, which is
- * the decision that replaced `revalidatePath('/[locale]/(main)', 'layout')`.
- */
-
 /** What the stubbed browser revoke answers with on the next call. */
 let nextRevokeResult: RevokeDeviceResult = { data: true };
 
@@ -86,16 +71,6 @@ describe("this namespace asks for the shared devices list, not its own", () => {
     expect(devicesQuery(USER).retry).toBe(false);
   });
 
-  /**
-   * The privacy invariant at this namespace's own seam.
-   *
-   * The browser's `QueryClient` is created once per document and outlives a
-   * sign-out, so `["devices", "me"]` was only unique for as long as "me" was:
-   * the second visitor to sign in on one browser would have found the entry
-   * already filled, made no request, and been shown the first visitor's
-   * operating systems, browsers and IP addresses. No request means Hono never
-   * saw the read it would have refused, which is why the key is the fix.
-   */
   it("gives two visitors two entries, so one cannot read the other's", () => {
     expect(hashKey(devicesQuery(USER).queryKey)).not.toBe(
       hashKey(devicesQuery(OTHER_USER).queryKey),

@@ -38,15 +38,6 @@ afterEach(() => {
   html().removeAttribute("data-theme");
 });
 
-/**
- * The script that paints the theme before React exists.
- *
- * It used to be inlined inside `ThemeProvider` and inserted through
- * `useServerInsertedHTML`, which tied the whole theme system to Next.js. It is
- * its own component now, so this is what has to keep being true: the same
- * options produce the same first frame, and that frame matches what the
- * provider settles on - a mismatch between the two *is* the flash.
- */
 describe("ThemeScript", () => {
   it("applies the stored theme to <html> before React renders", () => {
     localStorage.setItem("theme", "dark");

@@ -12,19 +12,6 @@ import type { VitNodeSocketUserId } from "@/ws/auth-sync";
 import { shouldReconnectForUser } from "@/ws/auth-sync";
 import { useVitNodeWebSocketContext } from "@/ws/provider";
 
-/**
- * Keeps the shared WebSocket authenticated as the visitor the app currently
- * believes in.
- *
- * Renders nothing and holds no state of its own: it is a client effect driven by
- * one input. Which is what makes it framework-neutral - the app decides where
- * `userId` comes from (`getSessionApi()` in Next.js, the canonical session query
- * in TanStack Start) and this only reacts to it changing.
- *
- * `undefined` means the session is not known yet, and is the normal first value
- * on a framework that reads it in the browser. It is deliberately not the same
- * as `null`; see {@link shouldReconnectForUser}, which owns that distinction.
- */
 export const WebSocketAuthSync = ({
   userId,
 }: {

@@ -22,21 +22,6 @@ import {
   removeContentOptions,
 } from "./invalidate";
 
-/**
- * What each write reaches, and - more importantly - what it does not.
- *
- * Asserted against a real `QueryClient` rather than a spy, because the property
- * that matters is the one React Query itself computes: `invalidateQueries`
- * matches by prefix, and "does this call reach that entry" is not something a
- * recorded argument list can answer.
- *
- * The delete case is the one with a user-visible failure behind it. A record
- * that is gone must not be renderable from the cache: its detail, its
- * translations, its revisions, its schedules and its delivery state are all
- * facts about something that no longer exists, and left merely stale they are
- * still served - the AdminCP's client is configured `refetchOnMount: false`.
- */
-
 const TYPE = "blog.post";
 const OTHER_TYPE = "blog.category";
 const ITEM = 42;
@@ -53,13 +38,6 @@ const keysFor = (type: string, item: number) => ({
   translations: contentTranslationsQueryKey(type, item),
 });
 
-/**
- * A client with every one of those entries already holding a value.
- *
- * `staleTime: Infinity` so nothing is stale until something invalidates it -
- * which is what makes "is this entry stale now" a statement about the call under
- * test rather than about the default.
- */
 const seed = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } },

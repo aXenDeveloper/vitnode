@@ -60,21 +60,6 @@ const statusStyles: Record<
   },
 };
 
-/**
- * Every collection in the search index, as a table both frameworks render.
- *
- * Was a Server Component; the fetch and the translator have been lifted out, and
- * the two row actions arrive as `actions` rather than importing server actions
- * directly. Nothing else about it changed - the same four columns, the same
- * coverage bar, the same client-side filtering.
- *
- * `search` is the table's own search box, and it filters *in this component*
- * rather than in a request: the whole collection list arrives in one status read
- * (there are as many rows as there are content types), so paging or querying the
- * API for it would be a round trip to filter a list already on screen. That is
- * why the `pageInfo` below is synthesised - the table is a renderer here, not a
- * pager.
- */
 export const CollectionsTableContent = ({
   actions,
   collections,

@@ -3,13 +3,6 @@ import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
 
-/**
- * A language model registered in `buildApiConfig({ ai: { models } })`. `model`
- * is any AI SDK `LanguageModel` - a Gateway model id string (e.g.
- * `"anthropic/claude-sonnet-5"`) or a provider instance (e.g.
- * `anthropic("claude-sonnet-5")`). `id` is the short name you select it by;
- * `name` is a human-readable label (surfaced to the client via the session API).
- */
 export interface AIModelDefinition {
   id: string;
   model: LanguageModel;
@@ -35,11 +28,7 @@ export interface AIConfig {
   embeddingModels?: AIEmbeddingModelDefinition[];
   /** Image models, resolved with `c.get("ai").imageModel(id?)`. */
   imageModels?: AIImageModelDefinition[];
-  /**
-   * The language models available to the app, resolved with
-   * `c.get("ai").model(id?)`. The **first** entry is the default (used when no
-   * id is passed). At least one is required.
-   */
+
   models: AIModelDefinition[];
 }
 
@@ -54,24 +43,6 @@ export interface AIPublicModel {
 const toModelId = (model: string | { modelId: string }): string =>
   typeof model === "string" ? model : model.modelId;
 
-/**
- * Model registry for the Vercel AI SDK. Instantiated per request and reached in
- * any route via `c.get("ai")`.
- *
- * It does **not** wrap the SDK - you call the native `ai` functions and pass a
- * resolved model in via `model`:
- *
- * ```ts
- * import { generateText } from "ai";
- *
- * const { text } = await generateText({
- *   model: c.get("ai").model(),        // default (first) model
- *   prompt: "Write a haiku about databases.",
- * });
- * ```
- *
- * Pass an id to pick a specific model: `c.get("ai").model("fast")`.
- */
 export class AIModel {
   constructor(c: Context) {
     this.c = c;
@@ -151,11 +122,6 @@ export class AIModel {
     return found.model;
   }
 
-  /**
-   * Serializable metadata for every configured language model (`id`, `name`,
-   * and the `model` id string). Safe to expose to the client - returns `[]`
-   * when AI is not configured. The first entry is the default.
-   */
   models(): AIPublicModel[] {
     const ai = this.c.get("core").ai;
 

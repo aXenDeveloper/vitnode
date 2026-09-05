@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -16,22 +17,6 @@ import {
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
-
-/**
- * The two reads behind `/admin/core/debug`: the system log, and a snapshot of
- * the queue.
- *
- * They live in one module because they are one screen and share one permission -
- * both routes declare
- * `adminStaffPermission: { module: "debug", permission: "can_view" }` - but they
- * are two cache entries, because the log pages and the snapshot does not.
- *
- * The queue snapshot here is *not* the queue list at
- * `/admin/core/advanced/queue`: that one is paginated, filterable and gated on
- * `queue.can_view`; this one is four counters and whatever is currently pending
- * or processing, gated on `debug.can_view`. Two endpoints, two permissions, two
- * cache entries.
- */
 
 export const debugAdminModuleRef = adminModuleRef<typeof debugAdminModule>();
 
@@ -72,10 +57,11 @@ export type DebugLogsPageFetcher = (
   params: DebugLogsParams,
 ) => Promise<DebugLogsPage>;
 
-/** One page of the log, fetched from the browser. */
-export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
+/** One page of the log, over whichever transport the host hands in. */
+export const debugLogsPageFetcher =
+  (transport: UniversalFetcher): DebugLogsPageFetcher =>
   async params => {
-    const response = await fetcherClient(debugAdminModuleRef, {
+    const response = await transport(debugAdminModuleRef, {
       args: { query: params },
       method: "get",
       module: "debug",
@@ -94,17 +80,16 @@ export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
     return await response.json();
   };
 
+/** One page of the log, fetched from the browser. */
+export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
+  debugLogsPageFetcher(fetcherClient);
+
 /** The root every cached page of the system log hangs off. */
 export const debugLogsQueryRoot = adminQueryRoot("debug-logs");
 
 export const debugLogsQueryKey = (params: DebugLogsParams) =>
   [...debugLogsQueryRoot, params] as const;
 
-/**
- * The system log, as the one query definition every caller shares.
- *
- * `retry: false`, for the reason every AdminCP read refuses to retry.
- */
 export const debugLogsQueryOptions = ({
   fetchPage = fetchDebugLogsPageInBrowser,
   params,
@@ -150,21 +135,27 @@ export interface DebugQueueSnapshot {
 /** The read, as arguments to whichever fetcher is carrying it. */
 export type DebugQueueFetcher = () => Promise<DebugQueueSnapshot>;
 
+/** The snapshot, over whichever transport the host hands in. */
+export const debugQueueFetcher =
+  (transport: UniversalFetcher): DebugQueueFetcher =>
+  async () => {
+    const response = await transport(debugAdminModuleRef, {
+      method: "get",
+      module: "debug",
+      path: "/queue",
+      prefixPath: DEBUG_PREFIX_PATH,
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(response.status, "the queue snapshot");
+    }
+
+    return await response.json();
+  };
+
 /** The snapshot, fetched from the browser. */
-export const fetchDebugQueueInBrowser: DebugQueueFetcher = async () => {
-  const response = await fetcherClient(debugAdminModuleRef, {
-    method: "get",
-    module: "debug",
-    path: "/queue",
-    prefixPath: DEBUG_PREFIX_PATH,
-  });
-
-  if (!response.ok) {
-    throw new AdminRequestError(response.status, "the queue snapshot");
-  }
-
-  return await response.json();
-};
+export const fetchDebugQueueInBrowser: DebugQueueFetcher =
+  debugQueueFetcher(fetcherClient);
 
 /** The cache entry the queue snapshot reads and writes. */
 export const debugQueueQueryKey = adminQueryRoot("debug-queue");

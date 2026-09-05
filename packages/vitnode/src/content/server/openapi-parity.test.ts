@@ -26,25 +26,6 @@ import { createContentModel } from "./model";
 import { buildContentPublicRoutes } from "./public-routes";
 import { buildContentRoutes } from "./routes";
 
-/**
- * The document says one thing; the runtime does another.
- *
- * Every generated route declares its responses in OpenAPI, and a generated
- * client is built from exactly that. These tests serve the document the app
- * really publishes and check the body the handler really produced against it -
- * so a `409` that answers with prose where the document promises a
- * discriminated union fails here rather than in somebody's generated client.
- *
- * Two halves, and both matter:
- *
- * 1. **the status is declared** - a runtime `409` on a route whose document
- *    lists only `200` and `404` is a contract break even when the body is fine;
- * 2. **the body validates** - against the emitted JSON Schema rather than
- *    against the Zod object it came from. The two are not interchangeable:
- *    `z.date()` renders as `{ type: "string", format: "date-time" }`, which is
- *    exactly what `c.json(row)` sends and exactly what the Zod object rejects.
- */
-
 vi.mock("../../api/lib/check-staff-permission", () => ({
   assertStaffPermission: async () => await Promise.resolve(),
 }));
@@ -115,14 +96,6 @@ interface Suite {
   routeOf: (method: string, path: string) => RouteConfig;
 }
 
-/**
- * The response schema the **document** publishes for one status.
- *
- * Not the Zod object the route was built from: `z.date()` renders as
- * `{ type: "string", format: "date-time" }`, which is what the handler really
- * sends, while the Zod object rejects that string outright. Reading the emitted
- * document is the only way to check the contract a client actually consumes.
- */
 const documentedSchema = (
   suite: Suite,
   route: RouteConfig,

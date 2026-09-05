@@ -1,5 +1,3 @@
-'use client'
-
 import { Button } from '@vitnode/core/components/ui/button'
 import { Card } from '@vitnode/core/components/ui/card'
 import { ArrowRight, CheckCircle, Eye, Home, Star, Trash2 } from 'lucide-react'

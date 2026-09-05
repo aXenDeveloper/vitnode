@@ -84,16 +84,6 @@ const RemoveAction = ({
   );
 };
 
-/**
- * The identifiers a drop leaves behind, or `null` when nothing moved.
- *
- * Exported and separate from the context that calls it because it is the only
- * part of a drag with a *value* in it: everything else - the sensors, the
- * collision detection, the transform on the card - is how the gesture felt, and
- * this is what it did. A drop outside the list, or onto the row it started from,
- * changes nothing and must not write to the form: an `onChange` with the same
- * array is still a dirty form and still an unsaved-changes prompt.
- */
 export const fileGalleryDrop = (
   ids: readonly number[],
   {

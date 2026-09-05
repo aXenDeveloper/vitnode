@@ -7,23 +7,6 @@ import { NEXT_INTL, NEXT_ONLY } from "@/tests/import-graph";
 
 const srcRoot = resolve(import.meta.dirname, "../..");
 
-/**
- * Everything the shared provider layer is allowed to reach, transitively.
- *
- * The reason this scan exists has outlived the two-host situation that prompted
- * it. It was written because `apps/docs` (Next.js) and `apps/web` (TanStack
- * Start) both mounted this tree, so a `next/*` import anywhere under it was a
- * build failure in the app without Next.js - surfacing in whichever module
- * happened to import it, a long way from the line that caused it. There is one
- * host now, and the same import would instead be a package that silently
- * requires a framework it no longer declares.
- *
- * `NEXT_INTL` covers the root entry too, which it deliberately did not before:
- * that entry re-exports `use-intl` and resolves fine, which is exactly what let
- * it survive - and what made two components read a `use-intl` context from a
- * module record nothing provided into.
- */
-
 const EXTENSIONS = [".ts", ".tsx", "/index.ts", "/index.tsx"];
 
 const resolveModule = (base: string): null | string => {

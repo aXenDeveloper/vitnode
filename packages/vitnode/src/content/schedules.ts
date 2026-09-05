@@ -21,13 +21,7 @@ export interface ContentSchedule {
   completedAt: Date | null | string;
   createdAt: Date | string;
   createdBy: null | number;
-  /**
-   * Why the announcements for a *completed* schedule have not gone out yet.
-   *
-   * A separate field from `lastError` because it means something different: the
-   * record really did publish, and what is still being retried is the event,
-   * the search write and the cache invalidation.
-   */
+
   effectsError: null | string;
   id: number;
   lastError: null | string;
@@ -43,13 +37,6 @@ export interface ContentScheduleTimingInput {
   scheduledFor: Date;
 }
 
-/**
- * Whether a requested schedule makes sense, and why not when it does not.
- *
- * Pure, and shared by the client and the server on purpose: the dialog can
- * refuse an impossible date before the round trip, and the route stays the
- * authority - both from one function, so they cannot drift into disagreeing.
- */
 export const contentScheduleTimingError = ({
   action,
   now,

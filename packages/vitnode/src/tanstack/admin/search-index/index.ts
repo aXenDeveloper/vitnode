@@ -1,17 +1,3 @@
-/**
- * `/admin/core/advanced/search` - the search index's health, for a TanStack
- * Start host.
- *
- *     ./query         one query definition, and the two mutations that make it
- *                     stale - each refreshing on success
- *     ./route-search  one parameter: the collections table's search box
- *     ./route         the screen: namespaces, permission, loader, component
- *     ./server        the SSR transport, reached only through `./query`
- *
- * `SearchIndexContent` and its three buttons are framework-free and imported
- * from `@/views/admin/views/core/advanced/search` by both applications; the two
- * frameworks differ only in what an action does after it succeeds.
- */
 export {
   invalidateSearchIndex,
   searchIndexQuery,

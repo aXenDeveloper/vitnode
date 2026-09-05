@@ -10,19 +10,6 @@ import {
   createContentPublicProjector,
 } from "./public-service";
 
-/**
- * What a public response is allowed to contain, stated as an exact set.
- *
- * Every other public test asserts that a particular field is present or a
- * particular one is absent. This one asserts the **whole** key set, which is the
- * only shape of assertion that catches a field nobody thought to check: a leaf
- * added to a group later, a system column that started being selected, an
- * internal storage name leaking through the flattening.
- *
- * The fixture is deliberately hostile - every kind has a public member and a
- * private sibling, so "the allowlist is a filter" has something to be wrong
- * about in each of them.
- */
 const contentType = defineContentType({
   id: "test.privacy",
   tableName: "test_privacy",
@@ -89,15 +76,6 @@ const contentType = defineContentType({
 const model = createContentModel(contentType);
 const project = createContentPublicProjector(contentType);
 
-/**
- * A raw row carrying **everything** - including the values the projector must
- * drop and the flattened storage names it must never surface.
- *
- * Group leaves arrive already nested, which is what the read layer hands the
- * projector; the flat `seoRobots`-style columns are added alongside so a
- * projector that copied unknown keys through would be caught here rather than
- * in production.
- */
 const rawRow = {
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   faq: [

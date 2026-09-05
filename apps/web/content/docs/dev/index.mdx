@@ -1,33 +1,55 @@
 ---
 title: Introduction
-description: VitNode is a plugin-based framework for community apps - a TanStack Start front end, a Hono API, Postgres, and an AdminCP you do not have to build.
+description: Build a TanStack Start and Hono application with VitNode plugins, then deploy and operate it confidently.
 icon: Power
 ---
 
+import {
+  BookOpenIcon,
+  PackagePlusIcon,
+  RocketIcon,
+  ServerIcon,
+} from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-VitNode gives you the parts of an application nobody enjoys writing twice:
-accounts, roles, sessions, staff permissions, uploads, search, an admin panel and
-a content layer - already built, already migrated, already translated. Your own
-features arrive as **plugins** that claim URLs, database tables, API routes and
-AdminCP screens as first-class citizens rather than as bolted-on extras.
+VitNode is a **TanStack Start** front end, a **Hono** API, Postgres, and an
+AdminCP. Its important rule is pleasantly simple: product features live in
+**plugins**. A plugin owns its pages, APIs, data, translations, and AdminCP
+extensions, so your host app does not become a drawer full of mystery cables.
 
-Underneath it is an ordinary modern stack: a [TanStack
-Start](https://tanstack.com/start) front end on Vite and React 19, a
-[Hono](https://hono.dev/) API that owns every security decision, and
-[Drizzle](https://orm.drizzle.team/) over Postgres.
+{/* Image prompt: Clean dark-theme architecture diagram. A TanStack Start application and Hono API sit in the center, Postgres below, and three colorful plugin packages connect to routes, API modules, data, and AdminCP. Keep labels large and legible, 1600x900. */}
 
-{/* Image prompt: A clean architecture diagram, 1600x900, dark theme with two accent colours. Left to right: a browser window, an arrow to a box labelled "TanStack Start - routes, rendering, TanStack Query", an arrow to a box labelled "Hono API - auth, permissions, modules", an arrow to a Postgres cylinder labelled "Drizzle". Below, three small stacked cards labelled "plugin" with arrows feeding into both the Start box (routes) and the Hono box (API modules and tables). */}
-
-<Callout type="info" title="You are reading the canary docs">
-  These pages track the `canary` line (VitNode 2.0), which moves quickly. If a
-  page and the code disagree, the code wins - and a
-  [contribution](/docs/dev/contribution) fixing the page is very welcome.
+<Callout type="info" title="Canary documentation">
+  These pages follow VitNode 2.0 on the `canary` branch. It moves quickly; when
+  code and prose disagree, trust the code and send the prose a friendly PR.
 </Callout>
 
-## Quick start
+## Start with a running app
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Create a VitNode app'>
+<Cards>
+  <Card
+    icon={<RocketIcon />}
+    title="Get an app running"
+    description="Scaffold VitNode, migrate Postgres, and enter AdminCP."
+    href="/docs/dev/setup"
+  />
+  <Card
+    icon={<PackagePlusIcon />}
+    title="Create a plugin"
+    description="Make the package that will own your first feature."
+    href="/docs/dev/plugins/create"
+  />
+  <Card
+    icon={<ServerIcon />}
+    title="Deploy VitNode"
+    description="Build, migrate, and run your app on a server or container."
+    href="/docs/dev/deployments/self-hosted"
+  />
+</Cards>
+
+## Create an app
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a VitNode app">
 
 ```bash tab="bun"
 bun create vitnode-app@canary
@@ -38,106 +60,46 @@ pnpm create vitnode-app@canary
 ```
 
 ```bash tab="npm"
-npx create-vitnode-app@canary
+npm create vitnode-app@canary
 ```
 
 </Tabs>
 
-The CLI asks which shape you want - **Single App** (a TanStack Start app with the
-Hono API mounted inside it at `/api`), **Monorepo App** (front end and API served
-separately) or **Only API** - then scaffolds it, generates your first migration
-and, if you let it, installs everything. The full walkthrough, including the
-first sign-in, is in [Getting started](/docs/dev/setup).
+Choose **Single App** for one TanStack Start app with Hono at `/api`, or a
+monorepo when web and API deploy separately. If you plan to create plugins,
+enable **Turborepo** during setup: the generator needs a workspace root.
 
-## What you need
+## The five-minute path
 
-| Software                                | Minimum | Recommended | What it is for                                                                      |
-| --------------------------------------- | ------- | ----------- | ----------------------------------------------------------------------------------- |
-| [Node.js](https://nodejs.org/)          | 22      | 24          | Runs the Hono API, the Vite dev server and the built Nitro server.                  |
-| [Postgres](https://www.postgresql.org/) | 17      | 17.5        | Every table VitNode has: users, roles, sessions, languages, files, content, search. |
-| [pnpm](https://pnpm.io/)                | 11      | 11.9        | Installing packages and running scripts - the manager this repository pins.         |
-| [bun](https://bun.com/) or npm          | –       | –           | Fully supported alternatives; the CLI writes whichever you pick.                    |
+1. Start Postgres (Docker is the low-drama local choice).
+2. Run `db:migrate` to create core tables and your first administrator.
+3. Run `dev`, then visit `http://localhost:3000/admin`.
+4. Create a plugin for your first product page, API endpoint, content type, or
+   dashboard widget.
 
-Where those numbers come from, so you can check them: `engines.node` in the root
-`package.json` says `>=22`, `.nvmrc` says `22`, and CI builds on Node 24 with
-`pnpm@11.9.0` (the version pinned by `packageManager`). Numbers we can point at
-beat numbers that merely sound reassuring, which is why bun and npm have none -
-nothing in the repository pins them, and `create-vitnode-app` records whichever
-release you already have.
+Every command above is expanded in [Getting started](/docs/dev/setup). From
+there, [Build your first plugin](/docs/guides/first-plugin) gives you a real
+route to visit—not just a philosophical plugin.
 
-<Callout type="info" title="Why the table says 17">
-  Every migration in this repository was generated against Postgres 17. The
-  bundled `docker-compose.yml` does not pull the stock image, though - it builds
-  `docker/postgres/Dockerfile`, which is `postgres:17.5-alpine` plus a hunspell
-  Polish dictionary and a registered `polish` text-search configuration, because
-  the stock image ships neither and Postgres full-text search is the default
-  [search engine](/docs/dev/search). Older majors are untested rather than
-  known-broken.
-</Callout>
-
-## Optional services
-
-None of these are required to run VitNode. Each one turns on a capability, and
-each one is a small block of config away.
-
-| Service                                        | Package                     | What it adds                                                                                                                                   |
-| ---------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Redis 8](/docs/dev/advanced/redis)            | built in                    | A shared cache on `c.get("cache")`, cached session lookups, and a [rate limiter](/docs/dev/advanced/rate-limiter) that holds across instances. |
-| [Docker](https://www.docker.com/)              | –                           | Postgres and Redis locally with one `docker:dev`, using the compose file the CLI writes for you.                                               |
-| [Elasticsearch 9](/docs/dev/search)            | `@vitnode/elasticsearch`    | Moves search off Postgres full-text, which is the default engine.                                                                              |
-| [SMTP](/docs/dev/email/nodemailer)             | `@vitnode/nodemailer`       | Transactional email through any SMTP server.                                                                                                   |
-| [Resend](/docs/dev/email/resend)               | `@vitnode/resend`           | Transactional email through Resend's API instead.                                                                                              |
-| [S3 or Cloudflare R2](/docs/dev/storage/s3-r2) | `@vitnode/s3`               | File uploads in object storage instead of on the API's disk.                                                                                   |
-| [Supabase](/docs/dev/storage/supabase)         | `@vitnode/supabase-storage` | Uploads in Supabase buckets - and a managed Postgres to aim `POSTGRES_URL` at.                                                                 |
-| [node-cron](/docs/dev/cron/node-cron)          | `@vitnode/node-cron`        | Runs scheduled tasks in-process, without an external scheduler.                                                                                |
-| [Captcha](/docs/dev/captcha)                   | built in                    | Cloudflare Turnstile or reCAPTCHA v3 on sign-up and password reset.                                                                            |
-| [SSO](/docs/dev/sso)                           | built in                    | Sign in with Discord, Google or Facebook.                                                                                                      |
-| [AI](/docs/dev/ai)                             | built in                    | Model access through the Vercel AI SDK registry on `c.get("ai")`.                                                                              |
-
-## How this section is organised
-
-The sidebar has five groups, and they run roughly in the order you will need
-them:
-
-| Group              | What lives there                                                                                                                                                                                            |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Start here**     | Installing, plugin creation, deployment and shape of an app: [Getting started](/docs/dev/setup), [Create a plugin](/docs/dev/plugins/create), [Deployments](/docs/dev/deployments/self-hosted), [Architecture](/docs/dev/architecture). |
-| **Framework**      | The TanStack Start runtime: [Routing](/docs/dev/routing), [Data loading](/docs/dev/data-loading), [Fetcher](/docs/dev/fetcher), [Cache](/docs/dev/cache), [Database](/docs/dev/database), [i18n](/docs/dev/i18n). |
-| **Extend VitNode** | Your own features: [Content Engine](/docs/dev/content-engine), [Roles](/docs/dev/working-with-users/roles), [Events](/docs/dev/events).                                                                   |
-| **Services**       | Things VitNode talks to: [Search](/docs/dev/search), [Storage](/docs/dev/storage), [Email](/docs/dev/email), [Cron](/docs/dev/cron), [WebSocket](/docs/dev/websocket), [Redis](/docs/dev/advanced/redis).   |
-| **Operate**        | Keeping it running smoothly: [Debugging](/docs/dev/debugging), [Swagger](/docs/dev/swagger), [Contribution](/docs/dev/contribution).                                                                      |
-
-## Where to go next
+## Find the right reference
 
 <Cards>
   <Card
-    title="Create a plugin"
-    description="The VitNode way: build features as installable plugins"
-    href="/docs/dev/plugins/create"
+    icon={<PackagePlusIcon />}
+    title="Plugin routes"
+    description="Claim public or AdminCP URLs without adding host route files."
+    href="/docs/dev/plugins/routes"
   />
   <Card
-    title="Getting started"
-    description="From the CLI to your first admin sign-in"
-    href="/docs/dev/setup"
+    icon={<ServerIcon />}
+    title="Admin Control Panel"
+    description="Add plugin-owned screens, navigation, permissions, and widgets."
+    href="/docs/dev/plugins/admin"
   />
   <Card
-    title="Deployments"
-    description="Take your VitNode app live with self-hosted or cloud configs"
-    href="/docs/dev/deployments/self-hosted"
-  />
-  <Card
-    title="Architecture"
-    description="Where TanStack Start, TanStack Query and Hono meet"
-    href="/docs/dev/architecture"
-  />
-  <Card
-    title="Routing"
-    description="Plugin route manifests, shells and route modules"
-    href="/docs/dev/routing"
-  />
-  <Card
+    icon={<BookOpenIcon />}
     title="Content Engine"
-    description="Declare a content type, get the CRUD and AdminCP for free"
+    description="Define content once and receive data, API, and AdminCP tools."
     href="/docs/dev/content-engine"
   />
 </Cards>

@@ -13,20 +13,6 @@ import type { AdminScreenContext } from "../screen";
 import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 
-/**
- * `/admin/core/staff/{admins,moderators}/create` - adding a role or a user to a
- * staff group.
- *
- * The permission is `staff_admins.can_create` or `staff_moderators.can_create`,
- * checked in the loader. The Next.js page checks the same tuple with
- * `checkAdminPermissionApi` and answers `notFound()`; this answers the router's
- * `notFound()`, which the AdminCP shell renders in place of the page - the same
- * outcome, one navigation earlier.
- *
- * The entry this creates grants **nothing**. Permissions are chosen on the edit
- * screen, so a successful create navigates there with the new id.
- */
-
 /** Only the two namespaces the screen renders from - no catalog is read here. */
 export const ADMIN_STAFF_CREATE_NAMESPACES = [
   "admin.staff",

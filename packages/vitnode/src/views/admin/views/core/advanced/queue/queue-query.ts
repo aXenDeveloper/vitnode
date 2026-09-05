@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { queueAdminModule } from "@/api/modules/admin/advanced/queue/queue.admin.module";
+import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -63,45 +64,39 @@ export type QueuePage = AdminTablePage<QueueTaskRow>;
 /** How a page is actually fetched. See {@link queueQueryOptions}. */
 export type QueuePageFetcher = (params: QueueParams) => Promise<QueuePage>;
 
+/** One page, over whichever transport the host hands in. */
+export const queuePageFetcher =
+  (transport: UniversalFetcher): QueuePageFetcher =>
+  async params => {
+    const response = await transport(queueAdminModuleRef, {
+      args: { query: params },
+      method: "get",
+      module: "queue",
+      path: "/",
+      prefixPath: QUEUE_PREFIX_PATH,
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the queue list",
+        describeAdminParams(params),
+      );
+    }
+
+    return await response.json();
+  };
+
 /** One page, fetched from the browser. */
-export const fetchQueuePageInBrowser: QueuePageFetcher = async params => {
-  const response = await fetcherClient(queueAdminModuleRef, {
-    args: { query: params },
-    method: "get",
-    module: "queue",
-    path: "/",
-    prefixPath: QUEUE_PREFIX_PATH,
-  });
-
-  if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      "the queue list",
-      describeAdminParams(params),
-    );
-  }
-
-  return await response.json();
-};
+export const fetchQueuePageInBrowser: QueuePageFetcher =
+  queuePageFetcher(fetcherClient);
 
 /** The root every cached page of the queue list hangs off. */
 export const queueQueryRoot = adminQueryRoot("queue");
 
-/**
- * The cache entry one page of the list reads and writes.
- *
- * The normalised parameters, which for this table includes the status filter -
- * two filters are two different sets of rows, so they have to be two entries.
- */
 export const queueQueryKey = (params: QueueParams) =>
   [...queueQueryRoot, params] as const;
 
-/**
- * The queue list, as the one query definition every caller shares.
- *
- * `retry: false` for the same reason the cron list refuses to retry: every
- * failure this read can produce is made worse by repeating it.
- */
 export const queueQueryOptions = ({
   fetchPage = fetchQueuePageInBrowser,
   params,

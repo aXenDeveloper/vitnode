@@ -1,11 +1,5 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
-/**
- * The simplest possible content type: one text field.
- *
- * It exists mostly so `example.article` has something to relate to, which is
- * what proves the `relation` field end to end.
- */
 export const categoryContentType = defineContentType({
   id: "example.category",
   tableName: "example_categories",

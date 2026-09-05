@@ -15,22 +15,6 @@ import {
   stripComments,
 } from "@/tests/import-graph";
 
-/**
- * The invariant Stage 17 bought, asserted over the whole package at once.
- *
- * The fourteen `*-boundaries.test.ts` files each police one subtree, because
- * each was written when that subtree was split in two and had a Next.js half to
- * point at. This one replaces the thing those halves used to make possible: a
- * *whole package* claim, which could not be made while the package deliberately
- * contained Next.js code.
- *
- * It also absorbs what `lib/next-cache/inventory.test.ts` did. That file listed
- * six Next-cache entries with a `deleteWhen` condition each and failed when the
- * list stopped being true; every condition is now met, so the list is replaced
- * by the assertion it was counting down to - there is no Next.js cache code, and
- * the framework-neutral cache is still here.
- */
-
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = here;
 const packageRoot = resolve(here, "..");
@@ -56,16 +40,6 @@ const filesUnder = (dir: string): string[] => {
   });
 };
 
-/**
- * Every specifier named anywhere in a file, including the ones only a test
- * writes.
- *
- * Broader than `runtimeImports` on purpose. That function answers "what does
- * this module load", which is the right question for a reachability walk and the
- * wrong one here: `vi.mock("next/headers")` loads nothing, but a file that
- * mocks a Next.js module is a file still written against Next.js, and it would
- * survive an import-only scan indefinitely.
- */
 const namedSpecifiers = (path: string): string[] => {
   const source = stripComments(readFileSync(path, "utf8"));
 
@@ -390,18 +364,6 @@ describe("@vitnode/core stays framework-neutral", () => {
 });
 
 describe("core reaches navigation through a seam, not a router", () => {
-  /**
-   * The injected `LinkComponent` architecture, as an assertion.
-   *
-   * Around twenty components take a link component and a pathname as props so
-   * that this package renders in a host that is not this repository's. Nothing
-   * enforced it before except the fact that core could not import a router
-   * without breaking the Next.js app; with one host left, that accident is gone
-   * and the rule needs stating.
-   *
-   * `src/tanstack/**` is exempt and must be: it is the namespace whose entire
-   * job is binding core to TanStack Start.
-   */
   const neutral = filesUnder(join(packageRoot, "src")).filter(
     path =>
       !path.startsWith(join(packageRoot, "src/tanstack")) &&

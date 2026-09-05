@@ -4,23 +4,13 @@ import {
   pluginConfigTemplate,
   pluginMessagesTemplate,
   pluginPackageExports,
-  pluginRouteManifestTemplate,
   pluginRouteModuleTemplate,
   pluginRouteScaffold,
+  pluginRoutesTemplate,
   pluginVariableName,
   routeSlugFor,
 } from "./route-templates.js";
 
-/**
- * The scaffold's pure half.
- *
- * Nothing here spawns the CLI or writes a file: what is worth pinning is that
- * the bytes a new plugin starts with are the ones VitNode's build can read, and
- * that is a string comparison. The cross-file assertions matter more than the
- * snapshots - a template that is merely *different* is a diff to approve, while
- * a manifest whose `entry` names a file the scaffold does not write is a plugin
- * that fails its first `vite build` with a resolution error.
- */
 describe("routeSlugFor", () => {
   it("drops a scope, which a route path may not contain", () => {
     expect(routeSlugFor("@acme/blog")).toBe("blog");
@@ -56,31 +46,37 @@ describe("pluginVariableName", () => {
   });
 });
 
-describe("the generated route manifest", () => {
-  it("declares one route, in the canonical shape", () => {
-    const manifest = pluginRouteManifestTemplate("@acme/blog");
+describe("the generated route tree", () => {
+  it("declares one page, in the canonical shape", () => {
+    const routes = pluginRoutesTemplate("@acme/blog");
 
-    expect(manifest).toContain(
-      'import type { PluginRouteDefinition } from "@vitnode/core/routing";',
+    expect(routes).toContain(
+      'import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";',
     );
-    expect(manifest).toContain("export const routes: PluginRouteDefinition[]");
-    expect(manifest).toContain('entry: "routes/home-page",');
-    expect(manifest).toContain('id: "home",');
-    expect(manifest).toContain('path: "/blog",');
+    expect(routes).toContain("export const routes = definePluginRoutes([");
+    expect(routes).toContain('page("/blog", {');
+    expect(routes).toContain(
+      'component: lazy(() => import("./pages/home-page")),',
+    );
   });
 
-  it("declares an entry with no file extension", () => {
-    // An entry is a package export subpath and the export map adds the
-    // extension. `routes/home-page.tsx` would resolve to
-    // `dist/src/routes/home-page.tsx.js` and fail naming a file nobody wrote.
-    expect(pluginRouteManifestTemplate("blog")).not.toMatch(
-      /entry: "[^"]*\.[cm]?[jt]sx?"/,
+  it("never imports the page it names", () => {
+    const routes = pluginRoutesTemplate("blog");
+    const imports = [...routes.matchAll(/^import .*? from "([^"]+)";$/gm)].map(
+      match => match[1],
     );
+
+    expect(imports).toEqual(["@vitnode/core/routing"]);
+    expect(routes).toContain("lazy(() => import(");
+  });
+
+  it("declares no route id, which VitNode derives", () => {
+    expect(pluginRoutesTemplate("blog")).not.toMatch(/^\s*id:/m);
   });
 
   it("never writes a framework's path spelling", () => {
-    const manifest = pluginRouteManifestTemplate("blog");
-    const declared = /path: "([^"]+)"/.exec(manifest)?.[1];
+    const routes = pluginRoutesTemplate("blog");
+    const declared = /page\("([^"]+)"/.exec(routes)?.[1];
 
     expect(declared).toBe("/blog");
     expect(declared).not.toMatch(/[[\]$]/);
@@ -142,10 +138,10 @@ describe("the generated messages", () => {
 });
 
 describe("the generated config", () => {
-  it("registers the manifest's own array, not a second copy", () => {
+  it("registers the tree's own array, not a second copy", () => {
     const config = pluginConfigTemplate("@acme/blog");
 
-    expect(config).toContain('import { routes } from "./routes/manifest";');
+    expect(config).toContain('import { routes } from "./routes";');
     expect(config).toContain("routes,");
   });
 
@@ -175,9 +171,8 @@ describe("the generated package exports", () => {
     return wildcard.import.replace("*", subpath);
   };
 
-  it("resolves a route entry to build output", () => {
-    expect(resolve("routes/manifest")).toBe("./dist/src/routes/manifest.js");
-    expect(resolve("routes/home-page")).toBe("./dist/src/routes/home-page.js");
+  it("resolves the plugin's routes module to build output", () => {
+    expect(resolve("routes")).toBe("./dist/src/routes.js");
   });
 
   it("resolves the plugin's locales, which the wildcard cannot", () => {
@@ -210,19 +205,19 @@ describe("the generated package exports", () => {
 });
 
 describe("the scaffold as a whole", () => {
-  it("writes a file for every entry its manifest declares", () => {
-    // The failure this prevents: a manifest whose `entry` names a module the
-    // scaffold does not create, which fails the app's build at resolution time
-    // with a message about the app rather than about the plugin.
+  it("writes a file for every module its route tree names", () => {
+    // The failure this prevents: a `lazy()` naming a module the scaffold does
+    // not create, which is a chunk request that 404s at the first navigation
+    // rather than anything a build would notice.
     const files = pluginRouteScaffold("@acme/blog");
-    const manifest = files["src/routes/manifest.ts"];
-    const entries = [...manifest.matchAll(/entry: "([^"]+)"/g)].map(
+    const routes = files["src/routes.ts"];
+    const named = [...routes.matchAll(/import\("\.\/([^"]+)"\)/g)].map(
       match => match[1],
     );
 
-    expect(entries).not.toEqual([]);
-    entries.forEach(entry => {
-      expect(Object.keys(files)).toContain(`src/${entry}.tsx`);
+    expect(named).not.toEqual([]);
+    named.forEach(module => {
+      expect(Object.keys(files)).toContain(`src/${module}.tsx`);
     });
   });
 

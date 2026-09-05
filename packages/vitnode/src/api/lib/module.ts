@@ -20,22 +20,8 @@ export interface BaseBuildModuleReturn<
   M extends string = string,
   Routes extends Route<P>[] = Route<P>[],
 > {
-  /**
-   * The models behind those content types - table, columns, schemas and
-   * services, not just the definition.
-   *
-   * Collected recursively like `contentTypes`, and exposed on the request
-   * context so background work can find the model for a content type id. The
-   * scheduled-publication queue task is the reason it exists: it runs in a cron
-   * request that has no idea which plugin owns the record it is publishing.
-   */
   contentModels?: AnyContentModel[];
-  /**
-   * Content types whose CRUD routes this module serves. Unlike `events` and
-   * `cronJobs`, these are collected recursively by `buildApiPlugin`, so a
-   * generated content module can sit wherever it reads best in the tree -
-   * usually nested inside the plugin's own `admin` module.
-   */
+
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs: BuildCronReturn[];
   events: BuildEventListenerReturn[];

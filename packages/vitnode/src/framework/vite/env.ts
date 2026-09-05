@@ -2,58 +2,12 @@ import type { Plugin } from "vite";
 
 import { loadEnv } from "vite";
 
-/**
- * The `NEXT_PUBLIC_*` values every VitNode app's browser bundle needs literally.
- *
- * `@vitnode/core`'s config reads `process.env.NEXT_PUBLIC_API_URL` to build
- * absolute API URLs, and it is the same module on both sides of the render - so
- * the fetcher running in a client component needs that read to resolve to
- * something in a browser, where there is no `process`. Next.js solves this by
- * inlining `NEXT_PUBLIC_*` into the client bundle; this is the same trick, so
- * the variable names stay exactly as they are and no existing install has to
- * rename anything.
- *
- * An explicit list rather than a prefix rule: everything here is compiled into
- * JavaScript that anyone can read, so it should be a decision, not a consequence
- * of what somebody happened to call a variable. These two are the ones *this
- * package* reads. An application publishes one more through `clientEnv` rather
- * than by editing this list - see {@link VitNodeEnvOptions.clientEnv}.
- */
 const CLIENT_ENV_KEYS = ["NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"] as const;
 
 export interface VitNodeEnvOptions {
-  /**
-   * Extra keys to inline into the client bundle, on top of the two above.
-   *
-   * For values the *application* reads in the browser, which the package cannot
-   * know about. Anything named here is public by construction, so the list is
-   * the place a reviewer looks to see what an app publishes.
-   *
-   * An analytics key, a public map token, a second origin an app genuinely
-   * talks to from the browser. The distinction is ownership rather than
-   * sensitivity: a value every VitNode install needs belongs on the list above,
-   * and a value one deployment happens to read belongs to that deployment. VitNode's
-   * own apps name nothing here.
-   */
   clientEnv?: readonly string[];
 }
 
-/**
- * Environment handling for a VitNode app on Vite - `@vitnode/core/framework/vite`.
- *
- * Two halves, deliberately different:
- *
- * - **Server.** `.env` is loaded into `process.env` so anything reading it at
- *   config or request time sees it, whatever import runs first. Nothing is
- *   inlined, so `CONFIG`'s lazy getters keep reading the live environment and a
- *   built server can still be pointed at a different API by its host.
- * - **Client.** Only the keys above plus `clientEnv`, and only as literals in
- *   the browser bundle.
- *
- * Secrets - `POSTGRES_URL`, `REDIS_URL`, `CRON_SECRET` - are loaded for the
- * server and never defined for the client, which is the entire reason the two
- * halves are written separately.
- */
 export const vitNodeEnv = ({
   clientEnv = [],
 }: VitNodeEnvOptions = {}): Plugin => {

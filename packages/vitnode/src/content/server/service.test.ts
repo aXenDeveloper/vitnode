@@ -47,18 +47,9 @@ interface RecordedCall {
   op: string;
 }
 
-/**
- * A chainable stand-in for the Drizzle client. Each top-level `select`,
- * `insert`, `update` or `delete` shifts the next queued result, and every
- * builder call is recorded so tests can assert on the shape of the query.
- */
 const createDbMock = (
   results: unknown[][],
-  /**
-   * Anything else the service reads off the context - `i18n`, for the locale a
-   * relation label is resolved in. Everything the Stage 1-8 suites drive needs
-   * only `db`, so the default keeps them byte-identical.
-   */
+
   variables: Record<string, unknown> = {},
 ) => {
   const calls: RecordedCall[] = [];
@@ -501,15 +492,6 @@ describe("content service", () => {
     });
   });
 
-  /**
-   * A relation whose target names a **localized** field as its title.
-   *
-   * `test.localized-category` keeps its `name` on `test_localized_categories_translations`,
-   * so the base table has nothing to join to and the id is all a plain label
-   * resolver could produce. What is asserted here is the generic fix: two joins
-   * onto the target's translation table - the reader's language and the
-   * target's own default - and a `coalesce` between them.
-   */
   describe("a localized relation label", () => {
     /** `core_languages`, as the registry query returns it. */
     const LANGUAGES = [

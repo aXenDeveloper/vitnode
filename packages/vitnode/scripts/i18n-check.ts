@@ -73,6 +73,13 @@ export const i18nCheck = async (flag?: string) => {
 
   const webConfig = await getConfig({ optional: true });
   const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  // The app's own message loaders live in the server-only config now, because
+  // the shared one is browser-safe. Read from both, so an installation still on
+  // the old shape - loaders inside `i18n.messages` - is measured correctly.
+  const serverConfig = await getConfig({
+    optional: true,
+    type: "server.config",
+  });
   const config = webConfig ?? apiConfig;
 
   if (!config) {
@@ -85,7 +92,7 @@ export const i18nCheck = async (flag?: string) => {
   const scope = appScope({ api: apiConfig !== null, web: webConfig !== null });
   const defaultLocale = config.i18n?.defaultLocale ?? "en";
   const declared = (config.i18n?.locales ?? []).map(locale => locale.code);
-  const appMessages = config.i18n?.messages ?? {};
+  const appMessages = serverConfig?.messages ?? config.i18n?.messages ?? {};
   // Web and API plugins differ in everything but the id, which is all we need;
   // union across both configs so an API-only plugin is still checked.
   const pluginIds = [
@@ -246,7 +253,7 @@ export const i18nCheck = async (flag?: string) => {
       problems += 1;
       console.log(
         red(
-          `  ${location} is never loaded - add \`"${file.pluginId}": () => import("./locales/${file.pluginId}/${file.locale}.json")\` under \`i18n.messages.${file.locale}\`.`,
+          `  ${location} is never loaded - add \`"${file.pluginId}": () => import("./${file.pluginId}/${file.locale}.json")\` under \`"${file.locale}"\` in \`src/locales/app.ts\`.`,
         ),
       );
     } else if (declared.length > 0 && !declared.includes(file.locale)) {

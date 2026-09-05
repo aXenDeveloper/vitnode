@@ -11,38 +11,10 @@ import {
 import { SESSION_QUERY_KEY } from "./state";
 import { setAuthTransport } from "./transport";
 
-/**
- * The canonical session query's policy, and the one property of it that a route
- * guard's correctness rests on.
- *
- * No render, no request and no DOM: `sessionQueryOptions()` is an object, and
- * everything below drives a `QueryClient` held in memory with the transport
- * stubbed. What is being exercised is this app's *reading* rules - which call
- * consults an invalidation, and which does not - because those are the rules
- * whose being wrong is silent.
- */
-
-/**
- * What the stubbed session read does next, and how often it was asked.
- *
- * A rejection is a *value* rather than a spy reconfigured per test: one flag is
- * less machinery, and it keeps the transport below a plain object.
- */
 let nextSession: SessionApi = { user: null } as SessionApi;
 let nextFailure: Error | null = null;
 let reads = 0;
 
-/**
- * The application's half, stubbed - and stubbed through the real seam.
- *
- * `setAuthTransport` is exactly how `apps/web` supplies its `createServerFn`,
- * so nothing here is mocked away: the query definition under test resolves its
- * reader the same way it does in production, and a change to how it reaches the
- * transport would fail these tests rather than slip past a module mock.
- *
- * Only `readSession` is real work; the seven mutations are unreachable from
- * anything below.
- */
 const unreachable = () => {
   throw new Error("the session query calls no mutation");
 };
@@ -85,22 +57,6 @@ describe("the canonical session query", () => {
   });
 });
 
-/**
- * What a guard sees after a sign-in, which is the whole of this suite.
- *
- * The bug these pin is not hypothetical - it was live until Stage 9's review.
- * `ensureAuthState` read through `ensureQueryData`, which returns cached data
- * the moment any exists and consults neither staleness nor invalidation:
- *
- *     if (cachedData !== undefined) return Promise.resolve(cachedData)
- *
- * so `invalidateSession()` did not, on its own, make the next guard re-read. It
- * worked only because `invalidateQueries` ends in
- * `refetchQueries({ type: 'active' })` and `RealtimeListeners` happens to mount
- * an observer of that entry at the root - a component that exists for the
- * WebSocket's sake. Every one of these tests runs with **no observers at all**,
- * which is what makes them a test of the guard rather than of that accident.
- */
 describe("a guard reads the session again once it has been invalidated", () => {
   it("reads once when nothing is cached", async () => {
     const queryClient = new QueryClient();

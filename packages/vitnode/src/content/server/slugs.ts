@@ -34,25 +34,12 @@ export interface ContentSlugNormalizer {
   withUpdateSlugs: (patch: Record<string, unknown>) => Record<string, unknown>;
 }
 
-/**
- * The slug rules, in one place.
- *
- * Shared by the plain service and the editorial one rather than duplicated: a
- * restore writes through the same normalisation an update does, and two copies
- * of "never re-derive on update" is exactly the pair that drifts.
- */
 export const createSlugNormalizer = (
   contentTypeId: string,
   fields: ContentFieldMap,
 ): ContentSlugNormalizer => {
   const slugFields = slugFieldsOf(fields);
 
-  /**
-   * Normalises a slug and refuses one that folds to nothing.
-   *
-   * Nothing random or numeric is appended - `slugify` is deterministic, and
-   * uniqueness belongs to the unique index, which surfaces a clash as a 409.
-   */
   const toSlug = (
     slugField: SlugFieldConfig,
     value: string,

@@ -12,34 +12,6 @@ import {
   staffPermissionModuleFor,
 } from "./admin-permissions";
 
-/**
- * The frontend's permission tuples, held to the API routes that enforce them.
- *
- * `admin-permissions.ts` exists because these tuples used to be written out
- * inline everywhere one is checked - a Server Component's gate, a client
- * component's hook, a route loader - and a permission spelled `can_edit_admin`
- * in one place and `can_edit_admins` in another is a button shown to somebody
- * the API refuses, or hidden from somebody it would allow. Neither failure is
- * visible from the code that causes it, and neither is a type error.
- *
- * ## Why this reads source rather than importing the routes
- *
- * `buildRoute` does not keep `adminStaffPermission` on the object it returns -
- * it turns the declaration into middleware and drops it - so there is nothing to
- * import. The declarations are still the single source of truth, so they are
- * read where they are written. The staff module needs the same treatment for a
- * second reason: its writes call `assertStaffPermission` *inside* the handler,
- * because the permission depends on the `{type}` in the path, so no route
- * declaration exists to import even in principle.
- *
- * ## What it does not claim
- *
- * That the frontend gate is the boundary. `api/config.ts` puts
- * `globalAdminMiddleware()` in front of every `/admin/` request and each handler
- * re-checks the staff tables. What is asserted here is that the two halves agree
- * about *names*.
- */
-
 const here = dirname(fileURLToPath(import.meta.url));
 const apiModules = resolve(here, "../../../../../api/modules/admin");
 

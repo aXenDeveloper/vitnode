@@ -9,35 +9,11 @@ import type { ContentAdminRouteData } from "./route";
 import { RouteMessages } from "../../i18n/route-messages";
 
 export interface ContentAdminRouteProps extends ContentAdminRouteData {
-  /**
-   * Controls for the heading - the list's create button, and nothing else so
-   * far.
-   *
-   * A slot rather than a prop the shell fills in, because what belongs there is
-   * a property of *which* screen this is: a list offers "Create", and the two
-   * form screens offer their actions inside the form rather than beside the
-   * title.
-   */
   actions?: React.ReactNode;
-  /**
-   * The screen itself.
-   *
-   * The list table, the create form and the edit form are mounted by the host's
-   * route from `@vitnode/core/tanstack/admin/content/*`; this module owns the
-   * chrome they sit in - the provider, the heading, the layout - which is what
-   * every content type shares whichever of the three it is showing.
-   */
+
   children?: React.ReactNode;
 }
 
-/**
- * The Content Engine screen's shell.
- *
- * `RouteMessages` mounts exactly the namespaces the loader warmed, so nothing
- * suspends on the first paint. The heading is the content type's own noun,
- * resolved through the same ICU plural the sidebar entry uses - so the crumb,
- * the menu item and this title read identically in every language.
- */
 export const ContentAdminRouteContent = ({
   action,
   actions,

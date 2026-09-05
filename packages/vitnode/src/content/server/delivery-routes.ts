@@ -19,30 +19,6 @@ import { ContentDeliveryNotEnabled } from "../errors";
 import { resolveContentPublicLocale } from "../locale";
 import { listContentLanguages } from "./language-resolver";
 
-/**
- * The public delivery routes one content type with `delivery` gets.
- *
- * ```http
- * GET /api/{pluginId}/content/{publicApi.path}/delivery/resolve/{slug}
- * GET /api/{pluginId}/content/{publicApi.path}/delivery/item/{id}
- * GET /api/{pluginId}/content/{publicApi.path}/delivery/sitemap      (delivery.sitemap)
- * ```
- *
- * They exist because a frontend is very often **not** the process that holds the
- * database: VitNode's split deployment runs Next.js against a separate API, so
- * `generateMetadata`, a catch-all route and a `sitemap.xml` handler all need an
- * HTTP answer rather than a service call. A single-process install can still use
- * `model.deliveryService(c)` directly and never touch these.
- *
- * Every path begins with the static `delivery` segment, which is what makes them
- * impossible to shadow: `/{slug}` is one segment and these are two or three, so a
- * record whose slug happens to be `delivery` or `sitemap` still resolves the
- * ordinary way, whatever order the routes are registered in.
- *
- * No `adminStaffPermission` and no `/admin/` anywhere in the path - public delivery
- * resolution is exactly as public as the content it describes, and requiring a
- * session to learn a canonical URL would be requiring one to render a page.
- */
 export const buildContentDeliveryRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,
@@ -71,14 +47,6 @@ export const buildContentDeliveryRoutes = <
       }
     : {};
 
-  /**
-   * Which language this request is for.
-   *
-   * The same resolution the public read routes use, for the same reason: an
-   * explicit `?locale=` that names no language this install serves is a request for
-   * something that does not exist, and substituting the default would announce an
-   * English canonical URL under a Polish one.
-   */
   const localeFor = async (c: Context) => {
     if (!localized) return { locale: undefined, source: "default" as const };
 
@@ -122,17 +90,6 @@ export const buildContentDeliveryRoutes = <
     seo: zodSeo,
   });
 
-  /**
-   * The resolution, as a discriminated union.
-   *
-   * Three arms rather than a nullable object with an optional `location`, because
-   * the three outcomes need three different HTTP responses and a client that had to
-   * infer which one it was holding would eventually redirect to `undefined`.
-   *
-   * Nothing internal is in it: no `languageId`, no `pluginId`, no `retiredAt`. Those
-   * are storage details of `core_content_slug_history`, and a public contract that
-   * carried them would be a public contract that could not change.
-   */
   const zodResolution = z.discriminatedUnion("type", [
     zodMetadata.extend({ type: z.literal("content") }),
     z.object({

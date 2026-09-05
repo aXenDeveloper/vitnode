@@ -13,25 +13,6 @@ import { contentSearchUrl } from "../search";
 const normalize = (value: unknown): string =>
   typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
 
-/**
- * One configured search field, resolved to text.
- *
- * Three shapes, one rule - what a reader would see, in the order they would see
- * it:
- *
- * - `"title"` is the value on the row;
- * - `"seo.description"` is the leaf of a group, or nothing when the group is
- *   `null`;
- * - `"faq.question"` is **every** child's leaf, joined in **position order**.
- *   Position order rather than insertion order, because position is what the
- *   page renders and an index that disagreed with the page would highlight the
- *   wrong entry. The join is a newline, so two entries never run together into a
- *   phrase neither of them contains.
- *
- * A relation is never here: `defineContentType` refuses one in every search
- * slot, and indexing foreign keys as text would make a record match a number
- * somebody typed into a search box.
- */
 const readSearchValue = (
   values: Record<string, unknown>,
   name: string,
@@ -67,14 +48,6 @@ const toTimestamp = (value: unknown): Date | null | string | undefined => {
   return value === null ? null : undefined;
 };
 
-/**
- * Whether one row is currently publicly visible.
- *
- * {@link isContentPubliclyVisible} with the column coercion in front of it, so
- * "is this public" and "can this be indexed" stay two separate questions - a
- * published record whose title is blank is the first but not the second, and it
- * needs its stale document removed rather than left alone.
- */
 export const isContentRowPublic = (row: object): boolean => {
   const values = row as Record<string, unknown>;
 
@@ -84,28 +57,6 @@ export const isContentRowPublic = (row: object): boolean => {
   });
 };
 
-/**
- * Projects one content record into a search document.
- *
- * Returns `null` - not a partial document - whenever the record must not be
- * indexed: search is off, the row is not publicly visible, or the title or slug
- * is missing. Every caller treats `null` as "make sure nothing is indexed for
- * this record", so there is one decision and not one per call site.
- *
- * Visibility is {@link isContentPubliclyVisible}, the same predicate the Server
- * Actions use to decide which cache tags to expire. The engine has exactly two
- * definitions of "public" - that one and `publishedCondition` in SQL - and this
- * adds no third.
- *
- * Nothing outside `publicApi.fields` can reach the document: `defineContentType`
- * has already proven every indexed field name is in that allowlist, so a private
- * column cannot be read here even by mistake.
- *
- * `row` is `object` rather than `ContentSelect<TDefinition>` because columns are
- * read by a name resolved at runtime, and an unresolved generic row type is not
- * assignable to an index signature - typing it strictly would push a cast to
- * every call site instead of keeping the one honest cast here.
- */
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
   row: object,
@@ -181,27 +132,6 @@ export const contentSearchDocument = (
   };
 };
 
-/**
- * Projects one *translation* into a search document.
- *
- * A localized record is indexed **once per published translation**, and each
- * document is the two halves of the page the reader would land on: shared values
- * off the base row, localized ones off the translation. Indexing the base row
- * alone would put one language in the index and rank every other one as a miss.
- *
- * Visibility is {@link isContentTranslationPubliclyVisible} - the base row *and*
- * the translation both published - which is the same subordination the public
- * read enforces in SQL. A translation is never indexed for a draft record, in any
- * language.
- *
- * `createdAt` is this language's publication date when it has one, so "newest"
- * sorts a late translation where it actually appeared rather than where its
- * record did.
- *
- * Returns `null` for everything that must not be indexed, so every caller has one
- * decision to make: "make sure nothing is indexed for this record in this
- * language".
- */
 export const contentTranslationSearchDocument = (
   definition: AnyContentTypeDefinition,
   {

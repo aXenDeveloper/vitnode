@@ -1,20 +1,5 @@
 export type { AdminTableNavigate } from "../table-search";
-/**
- * `/admin/core/users/roles` - the AdminCP roles list, for a TanStack Start host.
- *
- *     ./query         one query definition, and the three writes that invalidate
- *                     it - including the admin session, because a role carries
- *                     permissions
- *     ./route         namespaces, permission and loader - the eager half a route
- *                     file's `loader` imports, and deliberately free of the
- *                     screen's component tree
- *     ./screen        the rendered screen, reached only through `component:`
- *     ./route-search  the URL contract
- *     ./server        the SSR transport, reached only through `./query`
- *
- * The table itself is framework-free and lives in
- * `@/views/admin/views/core/users/roles`, which both applications render.
- */
+
 export {
   adminRolesQuery,
   invalidateAfterAdminRoleChange,

@@ -33,14 +33,6 @@ interface RecordedCall {
   op: string;
 }
 
-/**
- * A chainable stand-in for the Drizzle client, in the same shape
- * `service.test.ts` uses.
- *
- * The first `select().from()` of a request is the language registry, so it is
- * answered from `LANGUAGES` rather than from the queue - which keeps every test
- * below queueing only the rows it actually cares about.
- */
 const createDbMock = (results: unknown[][], languages = LANGUAGES) => {
   const calls: RecordedCall[] = [];
   const queue = [...results];
@@ -121,12 +113,6 @@ const translationRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-/**
- * The translation model, narrowed once.
- *
- * `translationService` is `undefined` without localization, so TypeScript refuses
- * the call until the check has been made.
- */
 const translations = (c: Context) => {
   const build = localized.translationService;
   if (!build) throw new Error("Expected a translation service.");
@@ -438,17 +424,6 @@ describe("update", () => {
   });
 });
 
-/**
- * One rule for a language the install has switched off, stated in both
- * directions.
- *
- * Adding content to a locale nothing renders is not useful, so `create`,
- * `update` and `publish` all refuse it. Taking content *down* has to keep
- * working - an administrator who has just disabled a language usually wants to
- * unpublish or delete what is in it, and refusing would strand published pages in
- * a locale nobody can edit. So `unpublish`, `delete` and the history reads accept
- * it.
- */
 describe("a disabled language", () => {
   const publishedRow = (overrides: Record<string, unknown> = {}) => ({
     ...translationRow({ languageId: 2, version: 2 }),

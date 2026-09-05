@@ -23,24 +23,6 @@ import { Button } from "@/components/ui/button";
 
 import { SelectableCard } from "../selectable-card";
 
-/**
- * Adding a role or a user to a staff group.
- *
- * Two questions and one button: *which kind of subject*, and *which one*. The
- * API takes exactly one of `roleId` or `userId` - a refinement, not a
- * convention - so the two pickers are alternatives rather than fields, which is
- * what the pair of cards is saying.
- *
- * The entry it creates grants **nothing**. Permissions are chosen on the edit
- * screen, which is why a successful create navigates there rather than back to
- * the list: a two-step flow, and landing on the list would look like the create
- * had silently done nothing.
- *
- * Every framework-specific decision arrives as a prop - the two searches, the
- * write, and where to go afterwards - so the same component serves the Next.js
- * page and the TanStack route.
- */
-
 export interface CreateStaffFormProps {
   /** Performs the write. Exactly one of `roleId`/`userId` is ever set. */
   onCreate: (args: {

@@ -13,14 +13,6 @@ import { Button } from "@/components/ui/button";
 
 import type { DeleteAdminFiles } from "../files-delete";
 
-/**
- * "Delete selected", over the rows the table has ticked.
- *
- * `onDeleteFiles` is the framework seam - a server action in Next.js, a browser
- * call plus a query invalidation in TanStack Start. Everything else, including
- * the two-step force pass for files only retained revisions are holding, is the
- * same in both.
- */
 export const FilesBulkActions = ({
   onDeleteFiles,
 }: {

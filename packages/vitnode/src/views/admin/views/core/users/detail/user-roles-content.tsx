@@ -56,15 +56,6 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-/**
- * A user's roles on the AdminCP detail page, with no framework in them.
- *
- * One primary role and any number of secondary ones. The dialog holds the
- * *complete* intended set and sends it as a replacement, matching the API - "add
- * these, remove those" would let two administrators editing at once produce a
- * set neither of them chose.
- */
-
 export type UpdateAdminUserRoles = (
   id: number,
   input: { roleId: number; secondaryRoleIds: number[] },
@@ -201,12 +192,6 @@ const EditRolesForm = ({
   const [secondaryIds, setSecondaryIds] =
     React.useState<number[]>(initialSecondaryIds);
 
-  /**
-   * Roles seen so far, by id.
-   *
-   * The picker returns a page at a time, so a role chosen ten searches ago has
-   * to stay renderable in the badge list after the options have been replaced.
-   */
   const [knownRoles, setKnownRoles] = React.useState<Map<number, UserRoleRef>>(
     () =>
       new Map(

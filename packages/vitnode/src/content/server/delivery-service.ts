@@ -29,25 +29,10 @@ import { readContentDeliverySitemapPage } from "./delivery-sitemap";
 import { findContentLanguage } from "./language-resolver";
 import { createContentSlugHistoryModel } from "./slug-history-model";
 
-/**
- * Everything a page needs to render one record's `<head>`.
- *
- * Two locales, not one, and the distinction is the whole reason this type exists:
- * `requestedLocale` is what the URL asked for and `locale` is what the reader is
- * actually being shown. With `localization.fallback: "default"` those differ, and a
- * canonical URL built from the first would announce `/pl/articles/x` for an English
- * translation - a URL that answers 404, self-referentially declared canonical.
- */
 export interface ContentDeliveryMetadata {
   /** Real published translations only. Empty for a nonlocalized content type. */
   alternates: ContentDeliveryAlternate[];
-  /**
-   * The canonical path of the version actually being served.
-   *
-   * `null` only when the record has no public URL in that language at all, which
-   * for a resolved record means its slug is empty - a row written straight into the
-   * database rather than through the engine.
-   */
+
   canonicalPath: null | string;
   /** Present only when the caller supplied an origin. */
   canonicalUrl?: null | string;
@@ -55,17 +40,7 @@ export interface ContentDeliveryMetadata {
   hreflang: ContentDeliveryHreflang;
   /** Whether `locale` differs from `requestedLocale`. */
   isFallback: boolean;
-  /**
-   * The record's identifier, when the public projection carries one.
-   *
-   * `null` for a content type whose `publicApi.fields` withholds `id`, and that is
-   * deliberate rather than a gap: delivery metadata is read off the **public**
-   * projection, so it cannot report a column the public API declined to publish.
-   * Expose `"id"` in the allowlist and it is always present.
-   *
-   * A resolution reached through {@link ContentDeliveryService.findById} always
-   * carries it, because the caller supplied it.
-   */
+
   itemId: null | number;
   /** The language this response is actually in. */
   locale: null | string;
@@ -78,14 +53,6 @@ export interface ContentDeliveryMetadata {
   seo: ContentDeliverySeo;
 }
 
-/**
- * What one public path resolves to.
- *
- * A discriminated union rather than a nullable metadata object, because the three
- * outcomes need three different HTTP responses and a caller that had to infer
- * which one it was holding would get it wrong. `redirect` carries its own status
- * so a frontend never hardcodes one.
- */
 export type ContentDeliveryResolution =
   | (ContentDeliveryMetadata & { type: "content" })
   | { location: string; status: 308; type: "redirect" }
@@ -107,52 +74,19 @@ export interface ContentDeliverySitemapArgs {
   locale?: string;
 }
 
-/**
- * The read-only delivery layer of one content type.
- *
- * There is deliberately **no mutation here at all**. Slug history is written by
- * the editorial services, inside the transaction that moves the slug, because that
- * is the only place the two can be atomic - and exposing a `reserve` here would be
- * an invitation to write one without the other. This object answers questions.
- *
- * Every answer is derived from the **public** projection, not from the base row:
- * `findById` and `resolveSlug` go through `model.publicService`, so the publication
- * predicate, the field allowlist and the Stage 5 fallback rules are the ones
- * already tested rather than a second implementation that agrees on the day it is
- * written. That is also what makes "SEO cannot leak a private field" true here for
- * free: a private column is never fetched, so it is not in the row this reads.
- */
 export interface ContentDeliveryService {
-  /**
-   * Every published translation's URL, in a stable order.
-   *
-   * Only real ones. A locale served by the fallback has no URL of its own, so it
-   * is absent - listing it would announce an `hreflang` alternate that answers
-   * 404 and invite a crawler to index the same content twice.
-   */
   alternates: (itemId: number) => Promise<ContentDeliveryAlternate[]>;
   /** Delivery metadata by identifier, honouring the content type's fallback. */
   findById: (
     itemId: number,
     options?: ContentDeliveryReadOptions,
   ) => Promise<ContentDeliveryMetadata | null>;
-  /**
-   * Every address this record has ever answered to, current one first.
-   *
-   * Read-only, and the AdminCP's delivery panel is its only caller today. It needs
-   * no permission of its own beyond the one that let the reader see the record.
-   */
+
   history: (
     itemId: number,
     options?: { locale?: string },
   ) => Promise<ContentSlugHistoryEntry[]>;
-  /**
-   * Resolves a whole public path: `/pl/articles/stary-slug`.
-   *
-   * The one method a catch-all route calls. It parses the path with the same rules
-   * {@link contentDeliveryPath} builds it by, so a path this engine did not produce
-   * is `not_found` rather than a guess.
-   */
+
   resolvePath: (
     path: string,
     options?: { origin?: string },
@@ -216,14 +150,6 @@ export const createContentDeliveryService = <
     pluginId,
   });
 
-  /**
-   * The language a historical URL belongs to.
-   *
-   * `null` whenever the slug is shared, which covers both a nonlocalized content
-   * type and a localized one whose slug lives on the base row - in the second case
-   * every language answers to the same segment, so one reservation is correct for
-   * all of them.
-   */
   const historyLanguageId = async (
     locale: null | string,
   ): Promise<null | number> => {
@@ -284,15 +210,6 @@ export const createContentDeliveryService = <
   ): Promise<ContentDeliveryAlternate[]> =>
     localized ? await readDeliveryAlternates({ c, itemId, model }) : [];
 
-  /**
-   * The record's canonical path **in one specific language**, or `null`.
-   *
-   * Strict about the language on purpose. `publicService.findById` may fall back,
-   * and a redirect must not: sending `/pl/articles/stary-slug` to the English
-   * canonical would answer a Polish URL with an English page and permanently tell
-   * a crawler that is correct. So a row that came back in another language is
-   * treated as "this locale has no published version", which is what it is.
-   */
   const strictCanonicalPath = async (
     itemId: number,
     locale: null | string,
@@ -319,14 +236,6 @@ export const createContentDeliveryService = <
       : contentDeliveryPath({ definition, locale: served, slug });
   };
 
-  /**
-   * The language a read is *actually* for.
-   *
-   * The default locale when the caller named none, because that is what the public
-   * service resolves internally - and the history lookup has to be about the same
-   * language, or the live branch would search `en` while the redirect branch searched
-   * the shared rows and found nothing.
-   */
   const localeFor = (locale: string | undefined): null | string => {
     if (!localized) return null;
 

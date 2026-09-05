@@ -44,33 +44,6 @@ import {
 } from "./route-search";
 import { ContentRowActions } from "./row-actions";
 
-/**
- * `/admin/content/{path}` - one content type's records, for a TanStack Start
- * host.
- *
- * The same table the Next.js AdminCP renders, from the same specs: the columns
- * are `buildContentColumnSpec`'s, the cells are `ContentCell` or the plugin's
- * override, the actions are `row-actions-model`'s, and the URL contract is
- * `./route-search`'s. Nothing about the table was redesigned and nothing is
- * derived from a Zod schema here - a definition becomes a column spec in one
- * place, and both AdminCPs read that.
- *
- * What is genuinely this host's:
- *
- *     useSuspenseQuery         instead of an awaited server fetch
- *     DataTableNavigationProvider  instead of next-intl's locale-aware push
- *     browser writes + invalidation  instead of Server Actions + revalidatePath
- *
- * ## Labels are resolved here rather than carried from the loader
- *
- * `ContentLabels` is four strings and three *functions* - a field labeller, an
- * enum labeller and a section labeller, each of which reads a key assembled at
- * runtime. Functions do not survive a loader's serialization to the browser, so
- * they are rebuilt from the messages the route already warmed, through the same
- * `contentLabelsFrom` the Next.js screen uses. Nothing suspends doing it: the
- * loader warmed exactly the namespaces `RouteMessages` mounts.
- */
-
 /** What the list screen needs on top of the route data the loader returned. */
 export interface ContentListScreenProps {
   contentTypeId: string;
@@ -78,13 +51,7 @@ export interface ContentListScreenProps {
   LinkComponent?: AuthLinkComponent;
   /** How a table control changes the URL - the Stage 7 seam. */
   navigate: AdminTableNavigate<ContentListRouteSearch>;
-  /**
-   * The normalised URL contract, as the loader computed it.
-   *
-   * Optional, and derived from the same `contentListRouteParams` when absent -
-   * so the key this screen reads is the key the loader warmed whether or not the
-   * loader data carried it.
-   */
+
   params?: ContentListParams;
   /** This installation's content types, with their override components. */
   registry: ContentFrontendRegistry;
@@ -102,20 +69,6 @@ interface ContentListTableProps extends Pick<
   params: ContentListParams;
 }
 
-/**
- * The table itself - the one component that suspends.
- *
- * `useSuspenseQuery` over the identical options the loader ensured, so on the
- * first paint the rows are there. A later *refetch* does not suspend either: the
- * previous page stays on screen while an invalidated entry refreshes, which is
- * what keeps a delete from blanking the table under the dialog that is still
- * open.
- *
- * A failed read is left to reject. The query throws an `AdminRequestError`
- * rather than resolving to an empty page, and the route's error boundary owns
- * the screen from there - because a table with no rows is what a content type
- * nobody has written in looks like, and those two must never be confusable.
- */
 const ContentListTable = ({
   columnSpecs,
   entry,
@@ -132,16 +85,6 @@ const ContentListTable = ({
     contentListPageQuery({ definition, locale, params, pluginId }),
   );
 
-  /**
-   * The Stage 7 seam, and the whole of what this screen tells the table about
-   * navigation: where it is, and how to get somewhere else. No pathname - with
-   * no destination the router stays on this route and changes only its search,
-   * which is all a pager, a sort header, a search box or a filter ever does.
-   *
-   * `contentListSearchFrom` re-validates what the control wrote against this
-   * content type's own contract, so a control cannot produce a sort column the
-   * definition does not have.
-   */
   const navigation = React.useMemo<DataTableNavigation>(
     () => ({
       navigate: async nextSearch => {

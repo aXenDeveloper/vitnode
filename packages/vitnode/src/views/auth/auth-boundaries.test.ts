@@ -14,17 +14,8 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * The auth screens, split down the middle.
- *
- * The same boundary `feed-boundaries.test.ts` draws around the search feed, for
- * the same reason and with the same machinery: a shared component that reaches
- * `@/lib/navigation` - or anything else built on Next's request scope - cannot
- * be rendered by a TanStack Start route, and nothing about that failure is
- * visible until somebody tries.
- */
 const SHARED = {
-  breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-main-content.tsx"),
+  breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-trail-content.tsx"),
   card: join(here, "sign-in/sign-in-content.tsx"),
   changePasswordForm: join(
     here,
@@ -51,13 +42,7 @@ const SHARED = {
 };
 
 /** The Next.js half: server actions, `next/cache`, locale-aware navigation. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
+
 const DELETED_NEXT_HALF = {
   breadcrumbTrail: join(here, "../breadcrumb/breadcrumb-main.tsx"),
   card: join(here, "sign-in/sign-in-card.tsx"),
@@ -194,21 +179,6 @@ describe("the shared views take their framework parts as props", () => {
   });
 });
 
-/**
- * The settings screens, split the same way.
- *
- * `SettingsShell` was visually reusable and structurally Next-only: it read
- * `usePathname` to decide the narrow-screen behaviour, it imported `next-intl`'s
- * `Link` for the back link, and it imported the navigation, which read the same
- * pathname a second time for the active item. Three separate reasons a TanStack
- * Start layout route could not render it, and none of them visible in what it
- * looks like.
- *
- * What replaced them is one rule: the frame and the menu are *told* where the
- * visitor is and how to build a link. The assertions below are about that shape
- * as well as about the absence of a specifier, because a shared component can
- * also fail by taking the wrong thing as a prop.
- */
 describe("the settings frame is told its framework parts", () => {
   const withoutComments = (path: string): string =>
     readFileSync(path, "utf8")

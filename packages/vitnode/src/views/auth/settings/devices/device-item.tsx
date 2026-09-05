@@ -19,20 +19,6 @@ const icons = {
   tablet: TabletIcon,
 } as const;
 
-/**
- * One device, as a card both frameworks render.
- *
- * Everything that used to make this a Next.js Server Component has been taken
- * out: it no longer awaits `getTranslations`, and the revoke it offers arrives as
- * a prop instead of being imported. What is left is the part that was always
- * worth sharing - the icon, the current-device badge, the relative last-seen
- * date, the three details and the layout of all of it.
- *
- * The row is handed over whole rather than spread as eight props, which is what
- * lets `isRevokableDevice` read it: the rule about the current device is one
- * statement in `devices-revoke.ts` and this is the only place it is applied to a
- * button.
- */
 export const DeviceItem = ({
   device,
   onRevoke,

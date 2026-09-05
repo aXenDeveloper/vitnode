@@ -233,14 +233,6 @@ const sameValue = (current: unknown, next: unknown): boolean => {
   return current === next;
 };
 
-/**
- * The keys an update actually changes. Values equal to what is already stored
- * are dropped, so `content.*.updated` never reports a field that did not move.
- *
- * Driven by the content type's own field names rather than by `Object.keys` on
- * the patch: that keeps the result typed as the field-name union, and it can
- * never surface a key the content type does not declare.
- */
 export const diffChangedFields = <TName extends string>(
   fieldNames: readonly TName[],
   current: Record<string, unknown>,
@@ -250,20 +242,6 @@ export const diffChangedFields = <TName extends string>(
     name => patch[name] !== undefined && !sameValue(current[name], patch[name]),
   );
 
-/**
- * The **canonical paths** a patch actually changes, groups included.
- *
- * A scalar contributes its own name. A group contributes one path per leaf the
- * patch names *and* moves, so `{ seo: { description } }` reports
- * `["seo.description"]` and never `["seo"]` - which is what makes a changed-field
- * list precise enough for a cache decision and a search decision to be made from
- * it. `seo: null` reports every leaf that was not already null, because that is
- * exactly what it blanks.
- *
- * `current` is a **column** row, as it comes back from Postgres; the patch is in
- * logical shape. Comparing across the two is the whole job, and doing it here is
- * what stops each service from flattening by hand.
- */
 export const diffChangedPaths = (
   fields: ContentFieldMap,
   current: Record<string, unknown>,
@@ -315,13 +293,6 @@ export const diffChangedPaths = (
   return changed;
 };
 
-/**
- * The column patch for a set of changed paths.
- *
- * Only the leaves that moved are written, so an `UPDATE` touches `seoTitle` and
- * leaves `seoDescription` alone - which is what a partial group update has to
- * mean if two people editing different leaves are not to overwrite each other.
- */
 export const changedPathsToColumns = (
   fields: ContentFieldMap,
   patch: Record<string, unknown>,
@@ -364,13 +335,6 @@ export const toColumnValues = (
     }),
   );
 
-/**
- * A whole logical value object, flattened into the columns an `INSERT` writes.
- *
- * {@link contentValuesToColumns} with the `dateTime` coercion applied
- * afterwards, so a create writes `seo_title` from `{ seo: { title } }` and an
- * ISO string still becomes a `Date`.
- */
 export const toInsertColumns = (
   fields: ContentFieldMap,
   values: Record<string, unknown>,

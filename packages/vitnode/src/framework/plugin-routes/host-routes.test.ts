@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { PluginRoute } from "../../routing/types.js";
 
 import { buildPluginRouteManifest } from "../../routing/manifest.js";
+import { definePluginRoutes, lazy, page } from "../../routing/tree.js";
 import {
   assertNoHostRouteCollision,
   hostRoutePathsFromFiles,
@@ -16,11 +17,15 @@ const manifestOf = (...paths: string[]): PluginRoute[] =>
   buildPluginRouteManifest([
     {
       pluginId: "@vitnode/example",
-      routes: paths.map((path, index) => ({
-        entry: `routes/page-${index}`,
-        id: `page-${index}`,
-        path,
-      })),
+      routes: definePluginRoutes(
+        paths.map(path =>
+          page(path, {
+            component: lazy(
+              async () => await Promise.resolve({ default: () => null }),
+            ),
+          }),
+        ),
+      ),
     },
   ]);
 

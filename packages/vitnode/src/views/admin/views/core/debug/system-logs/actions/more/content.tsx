@@ -22,17 +22,6 @@ import type { DebugLogRow } from "../../../debug-query";
 import { BadgeStatus } from "../../badges/badge-status";
 import { BadgeTypeLog } from "../../badges/badge-type-log";
 
-/**
- * One log line, in full.
- *
- * `LinkComponent` is the one thing it cannot decide for itself: the only link on
- * the dialog points at `/admin/core/users/{id}`, and turning that into a
- * navigation is the question whose answer differs between the two frameworks -
- * `next-intl`'s locale-aware `Link` in one, and in the other a link that asks
- * the route tree whether this application can render the destination at all.
- * During Stage 12 it cannot: the users screen is still the Next.js AdminCP's, so
- * the host's migration link renders a document navigation to it.
- */
 export const ContentMoreActionSystemLogs = ({
   content,
   ipAddress,

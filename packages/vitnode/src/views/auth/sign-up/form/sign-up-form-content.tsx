@@ -22,19 +22,6 @@ import { type SignUpSubmit, useSignUpForm } from "./use-sign-up-form";
 
 export type { SignUpSubmit };
 
-/**
- * The registration fields, their validation and their failure states - shared.
- *
- * Everything that used to be Next-only here has become a prop. The form no
- * longer imports a server action or `@/lib/navigation`: it is handed
- * {@link SignUpSubmit} and a way to render a link, and those are the only two
- * things it cannot answer for itself.
- *
- * What it keeps is the whole of the experience: `AutoForm`'s per-field shake and
- * submit-button state, the live user-code preview under the username, the
- * password checklist tooltip, the captcha widget, and the newsletter checkbox
- * that only appears on a deployment with an email adapter.
- */
 export const SignUpFormContent = ({
   captcha,
   isEmail,
@@ -43,11 +30,7 @@ export const SignUpFormContent = ({
   termsHref = "/terms",
 }: {
   captcha: z.infer<typeof routeMiddlewareSchema>["captcha"];
-  /**
-   * Whether this deployment has an email adapter. It decides two things at once:
-   * whether the newsletter checkbox is offered, and - on the API's side - whether
-   * a new account starts verified or waits on a confirmation link.
-   */
+
   isEmail: boolean;
   LinkComponent: AuthLinkComponent;
   onSignUp: SignUpSubmit;

@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormRadioGroup } from '@vitnode/core/components/form/fields/radio-group'
 import { z } from 'zod'

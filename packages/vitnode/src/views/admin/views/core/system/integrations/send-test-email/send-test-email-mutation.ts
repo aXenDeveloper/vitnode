@@ -5,20 +5,6 @@ import type { zodSendTestEmailSchema } from "@/api/modules/admin/debug/routes/se
 import { fetcherClient } from "@/lib/fetcher-client";
 import { debugAdminModuleRef } from "@/views/admin/views/core/system/integrations/integrations-query";
 
-/**
- * Sending a test email, as a contract both frameworks satisfy.
- *
- * `POST /admin/debug/send-test-email` declares
- * `adminStaffPermission: { module: "system", permission: "can_send_test_email" }`
- * and re-checks it on every request, so the browser may call it directly and
- * there is no server function in between.
- *
- * The Next.js app keeps its server action - not because the mutation needs a
- * server, but because changing how the Next.js AdminCP sends this request is not
- * part of migrating the TanStack one. Both satisfy {@link SendTestEmail}, so the
- * dialog takes one and stops caring.
- */
-
 export type SendTestEmailBody = z.infer<typeof zodSendTestEmailSchema>;
 
 /** What the dialog is handed instead of a mutation. */

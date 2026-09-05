@@ -1,22 +1,5 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
-/**
- * The localization reference: one content type with both halves of the partition,
- * and - from Stage 5B - the whole editorial layer on top of it.
- *
- * `featured` is shared, so it lives on `example_localized_articles`. `title`,
- * `slug` and `body` are localized, so they live on
- * `example_localized_articles_translations` - one row per language, each with its
- * own `version`, its own `status`, its own `publishedAt` and its own revision
- * history, and a unique `(languageId, slug)` index so `/en/hello` and `/pl/hello`
- * can both exist while a second English `hello` is a 409.
- *
- * From Stage 5C it is public as well: `publicApi` exposes the localized `title`,
- * `slug` and `body` alongside the shared `featured`, and a public read resolves one
- * language - explicitly, negotiated or the default - with `fallback: "default"`
- * serving English to a locale that has no translation of its own. `search`
- * indexes one document per published translation rather than one per record.
- */
 export const localizedArticleContentType = defineContentType({
   id: "example.localized-article",
   tableName: "example_localized_articles",
@@ -38,16 +21,6 @@ export const localizedArticleContentType = defineContentType({
   // publishing the English copy of a draft article puts nothing on the internet.
   publication: { enabled: true },
 
-  /**
-   * The public read layer, over both halves of the partition.
-   *
-   * `orderableFields` names shared columns only, and that is a rule rather than
-   * an oversight: a list ordered by a localized title would reshuffle itself for
-   * every language, and a cursor would mean two different positions across a
-   * fallback set. `searchableFields` and `filterableFields` *may* name localized
-   * fields - both are evaluated against the one translation the reader is being
-   * served, so they can never match a language nobody will see.
-   */
   publicApi: {
     enabled: true,
     path: "localized-articles",
@@ -59,17 +32,6 @@ export const localizedArticleContentType = defineContentType({
     defaultOrder: "desc",
   },
 
-  /**
-   * One search document per **published** translation.
-   *
-   * `titleField` and `contentFields` name localized fields, which is the whole
-   * point: an index built from the base row would hold no prose at all here,
-   * since every text field on this content type is localized.
-   *
-   * `{locale}` in `pathTemplate` is required rather than optional - two languages
-   * routinely answer to the same slug, so a template without it would give every
-   * translation of a record the same link.
-   */
   search: {
     enabled: true,
     titleField: "title",

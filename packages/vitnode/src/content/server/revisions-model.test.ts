@@ -82,13 +82,6 @@ const harness = ({ total }: { total: number }) => {
   };
 };
 
-/**
- * Reads the cursor value back out of the condition the model built.
- *
- * The model passes it as a bound parameter, so it turns up in the SQL's
- * `queryChunks` as a plain number - which is enough to make the stub behave
- * like a real exclusive `WHERE version < $cursor`.
- */
 const cursorOf = (condition: unknown): null | number => {
   const walk = (value: unknown): unknown[] =>
     value !== null && typeof value === "object" && "queryChunks" in value

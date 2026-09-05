@@ -4,19 +4,6 @@ import type { AdminTableContract } from "./params";
 
 import { normalizeAdminTableParams } from "./params";
 
-/**
- * What an AdminCP list URL is allowed to mean.
- *
- * Every rule here exists because the alternative is a visible failure: a request
- * the API answers with `400`, a cache key that cannot describe the request it
- * names, or two entries holding identical rows. The four admin tables share this
- * normaliser, so a rule proved once holds for all of them.
- *
- * The contracts below stand in for the real screens' - three sortable columns,
- * optionally a search box, optionally a status filter - because what is being
- * tested is the normaliser, not the cron route's column list.
- */
-
 const plain: AdminTableContract<"createdAt" | "lastRun" | "name"> = {
   orderBy: ["createdAt", "lastRun", "name"],
 };

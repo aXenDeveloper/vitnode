@@ -90,13 +90,6 @@ const translationOutcome = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-/**
- * Whether the write that just ran was inside a transaction that committed.
- *
- * The `db` stub runs the callback and remembers whether it threw - which is
- * exactly the property under test: one refusal anywhere in a composite save has
- * to take the whole save with it.
- */
 interface TxLog {
   committed: boolean;
   entered: boolean;

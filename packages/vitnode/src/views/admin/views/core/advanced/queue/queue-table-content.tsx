@@ -10,21 +10,6 @@ import type { QueuePage, QueueTaskRow } from "./queue-query";
 import { QueueStatusBadge } from "./badges/status-badge";
 import { QUEUE_STATUSES } from "./queue-query";
 
-/**
- * The queue list, as a table both frameworks render.
- *
- * The seven columns, the status badge, the attempt counter, the truncated last
- * error and the status filter - all of it shared, with fetching and translation
- * lifted out to whoever is rendering it.
- *
- *     Next.js         queue-table-view.tsx           fetch
- *     TanStack Start  routes/_admin/…/advanced/queue  loader + useSuspenseQuery
- *                                     \       /
- *                                QueueTableContent
- *
- * `ContentDataTable` rather than `DataTable`, because `DataTable` *is* the
- * Next.js wiring; the caller mounts the navigation seam it needs.
- */
 export const QueueTableContent = ({ data }: { data: QueuePage }) => {
   const t = useTranslations("admin.advanced.queue");
 

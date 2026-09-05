@@ -1,37 +1,11 @@
-@import 'tailwindcss';
-@import 'shadcn/tailwind.css';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+@import "tw-animate-css";
 
-
-/*
- * VitNode's components ship compiled, so Tailwind cannot find their classes by
- * scanning this app's source. Pointing it at core's build output is what makes
- * the toaster, the tooltip and everything else that follows look like VitNode
- * instead of unstyled markup.
- *
- * `dist/src/tanstack` is the line that is easiest to leave off and hardest to
- * diagnose. `@vitnode/core/tanstack/*` is markup as much as it is orchestration
- * - the header bar, the language switcher, the debug ribbon, the not-found
- * screen - and a class written *there* exists nowhere else, because this app
- * inherits those components rather than writing their markup. Without it a class
- * like `.w-34` is never generated, an `<svg>` with a viewBox and no width
- * collapses, and the header renders with no logo at all.
- *
- * Add a line per plugin that ships compiled components of its own.
- *
- * The paths are relative to this file. In a monorepo where the package manager
- * hoists to the repository root, that is `../../../node_modules/...` - the
- * generator rewrites them when it knows.
- */
 @source "../node_modules/@vitnode/core/dist/src/components";
 @source "../node_modules/@vitnode/core/dist/src/tanstack";
 @source "../node_modules/@vitnode/core/dist/src/views";
 
-/*
- * The design tokens every VitNode component reads. `.dark` is what
- * `ThemeScript` and `ThemeProvider` put on `<html>`, so the whole palette
- * switches from that one class.
- */
 :root:not(.dark) {
   --background: oklch(0.97 0 0);
   --foreground: oklch(0.145 0 0);
@@ -149,12 +123,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/*
- * Last, so that a stylesheet a package brings in cannot outrank it in this
- * layer: `@layer base` rules are ordered by where they appear, and a library
- * that sets its own `body { background-color: ... }` would otherwise repaint
- * whichever pages happen to load it.
- */
 @layer base {
   * {
     @apply border-border outline-ring/50;

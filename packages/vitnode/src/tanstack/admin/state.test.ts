@@ -19,16 +19,6 @@ import {
   isAdminAccess,
 } from "./state";
 
-/**
- * The admin access rules, as a table.
- *
- * No render, no request, no DOM - `./state` imports nothing at runtime except
- * the permission predicate every frontend already shares, which is what lets the
- * whole policy be exercised here rather than through a browser. What is being
- * pinned is the half whose being wrong is *silent*: a status the AdminCP would
- * read as a denial, or a permission set an outage would produce.
- */
-
 interface TestSession {
   permissions: StaffPermissionSet;
   user: { id: number };
@@ -64,14 +54,6 @@ describe("the status policy", () => {
     expect(adminSessionReadFromStatus(403)).toEqual({ status: "denied" });
   });
 
-  /**
-   * The assertion this whole feature exists for.
-   *
-   * A rate limit and a failing database are not permission decisions, and an
-   * AdminCP that reads them as one signs every administrator out during an
-   * outage - then presents them with a sign-in form for a session they already
-   * hold, because the sign-in screen is where a denied administrator is sent.
-   */
   it.each([429, 500, 502, 503, 504])("never reads %i as a denial", status => {
     const read = adminSessionReadFromStatus(status);
 
@@ -79,14 +61,6 @@ describe("the status policy", () => {
     expect(read.status).not.toBe("denied");
   });
 
-  /**
-   * The reason the policy is an allowlist rather than `status >= 400`.
-   *
-   * Each of these is a reply an inverted rule would have read as an
-   * administrator holding no permissions: a `204` with no body, a `302` a
-   * redirect-following fetch turned into somebody's login page, a `401` from a
-   * proxy in front of the API.
-   */
   it.each([204, 301, 302, 401, 418])(
     "never reads %i as a grant or a denial",
     status => {
@@ -176,12 +150,6 @@ describe("the permission set an access decision carries", () => {
     expect(adminPermissionsOf(granted(permissions))).toBe(permissions);
   });
 
-  /**
-   * A denial is a real answer, not a failure signal: the API was asked and said
-   * this browser holds no admin session, so it holds no admin permissions. A
-   * *failed* read never reaches here - it rejects in the query - which is why
-   * this can be an empty set without being ambiguous.
-   */
   it("is the shared empty set when denied", () => {
     expect(adminPermissionsOf(denied)).toBe(EMPTY_STAFF_PERMISSION_SET);
   });
@@ -226,11 +194,6 @@ describe("checking one permission", () => {
     ).toBe(true);
   });
 
-  /**
-   * The namespacing rule that makes a plugin's permissions its own. A plugin
-   * declares `module`/`permission` strings that may collide with core's, and the
-   * `plugin` field is what keeps a grant under one from opening the other.
-   */
   it("does not let a core grant open a plugin's page", () => {
     expect(
       hasAdminPermission(granted(setOf(usersView)), {

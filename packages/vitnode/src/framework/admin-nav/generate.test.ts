@@ -2,16 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { generateAdminNavSource } from "./generate";
 
-/**
- * The AdminCP navigation projection, as bytes.
- *
- * Asserted literally rather than by parsing, for the same reason the plugin
- * route registry is: this file is committed, so it appears in diffs, and a
- * generator that reordered itself or reflowed an entry would produce a diff on
- * somebody else's machine and none on the author's. "Same configuration, same
- * bytes" is the property, and the only honest way to state it is to write the
- * bytes down.
- */
 describe("generateAdminNavSource", () => {
   it("writes an empty projection when no plugin has navigation", () => {
     const source = generateAdminNavSource([]);
@@ -53,11 +43,6 @@ describe("generateAdminNavSource", () => {
     ).toBeLessThan(generateAdminNavSource(modules).indexOf("@vitnode/example"));
   });
 
-  /**
-   * Positional aliases, because a plugin id is not a JavaScript identifier -
-   * deriving one would mean two ids differing only in punctuation colliding on
-   * a single binding, silently.
-   */
   it("gives each module its own alias", () => {
     const source = generateAdminNavSource([
       { pluginId: "@vitnode/blog", specifier: "@vitnode/blog/admin/nav" },

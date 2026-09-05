@@ -79,14 +79,6 @@ const slugifyModule = (value: string): string =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-/**
- * Checks that every column an index names is one it can actually be built on.
- *
- * A repeatable leaf and a to-many relation are refused **loudly** rather than
- * silently dropped: `{ on: ["faq.answer"] }` looks like it works, and an index
- * that was quietly not created is a performance bug nobody can see. Both live on
- * their own generated tables, which already carry the indexes they need.
- */
 const assertIndexable = (
   id: string,
   names: readonly string[],
@@ -132,12 +124,6 @@ const assertIndexable = (
   }
 };
 
-/**
- * Declares a content type. The result is plain data - zod and objects only -
- * so the same definition can be imported by `buildPlugin` (client) and by
- * `createContentModel` in `src/database/*.ts` (server) without dragging Drizzle
- * into a client bundle.
- */
 export const defineContentType = <
   TId extends string,
   TFields extends ContentFieldsConstraint<
@@ -209,28 +195,14 @@ export const defineContentType = <
   search,
   tableName,
 }: {
-  /**
-   * How the AdminCP presents this content type. Every key has a default, so a
-   * content type that wants the generated screens as they come omits it - the
-   * record's name is a translation, not something declared here.
-   */
   admin?: ContentAdminConfig<
     TFields,
     TPublication,
     ContentEditorialEnabled<TEditorial>
   >;
-  /**
-   * Opts into the delivery layer: canonical URLs, slug history, automatic
-   * redirects, localized alternates, `hreflang`, SEO projection and sitemap
-   * entries. Needs `publicApi`, and every SEO field it names has to be in
-   * `publicApi.fields`. Omit it and nothing about the content type changes.
-   */
+
   delivery?: TDelivery;
-  /**
-   * Opts into the editorial workflow: a `version` column, optimistic locking
-   * and revision history, plus optional preview and scheduling. Omit it and
-   * nothing changes.
-   */
+
   editorial?: TEditorial;
   fields: TFields;
   id: TId;
@@ -239,11 +211,7 @@ export const defineContentType = <
     TPublication,
     ContentEditorialEnabled<TEditorial>
   >[];
-  /**
-   * Opts into per-language content: every field marked `localized: true` moves
-   * into a generated `<tableName>_translations` table, one row per language.
-   * Omit it and nothing changes.
-   */
+
   localization?: TLocalization;
   /**
    * Opts into a generated read-only public API. Needs `publication` and exactly
@@ -253,11 +221,7 @@ export const defineContentType = <
     ContentPublicApiConfig<TPublicField> | { enabled: TPublicEnabled };
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: ContentPublicationConfig | { enabled: TPublication };
-  /**
-   * Opts into automatic search synchronization. Needs `publication` and
-   * `publicApi`, and every indexed field must be in `publicApi.fields`. Omit it
-   * and nothing is indexed.
-   */
+
   search?: TSearch;
   tableName: string;
 }): ContentTypeDefinition<

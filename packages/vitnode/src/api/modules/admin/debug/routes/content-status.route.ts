@@ -44,12 +44,7 @@ const contentTypeSchema = z.object({
         /** Why the provider could not be counted, when that is the answer. */
         error: z.string().optional(),
         healthy: z.boolean().nullable(),
-        /**
-         * Every document the provider holds, in any locale.
-         *
-         * The guard against a document left behind in a locale the database no
-         * longer knows about, which per-locale counts can never ask for.
-         */
+
         indexedTotal: z.number().nullable(),
         name: z.string(),
         /** Whether the provider was actually asked. */
@@ -68,20 +63,6 @@ const contentTypeSchema = z.object({
     .nullable(),
 });
 
-/**
- * What the Content Engine looks like from the outside, right now.
- *
- * Sits beside `/search/status` under the same `system: can_view` permission,
- * and answers the questions that one cannot: `/search/status` reports what is
- * *in* the index, and this reports what the **database** says should be there.
- * A collection can be 100% covered by the first and still be missing every
- * Polish document, because coverage is measured against the indexer's own count
- * and drift is measured against the rows.
- *
- * Aggregates only - two counts per content type - so it is safe to open on an
- * install with a large table. Nothing here mutates anything; repairing drift is
- * `/search/rebuild`, which is a separate decision and a separate route.
- */
 export const contentStatusDebugAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_view" },

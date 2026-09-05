@@ -31,22 +31,6 @@ const importsFrom = (path: string): string[] =>
     .map(match => match[1] ?? match[2])
     .filter(Boolean);
 
-/**
- * The layer rule the whole engine rests on, asserted rather than remembered.
- *
- * `content/` and `content/server/` are loaded by `apps/api` - a plain
- * `@hono/node-server` process - and by drizzle-kit, which executes
- * `src/database/*.ts` to read the tables. Both `next/*` and `server-only`
- * throw there, so an accidental import does not fail in CI: it fails when
- * somebody runs a migration.
- *
- * The rule used to have two halves, and only one of them is left. `content/next/`
- * was the layer those imports were *allowed* in - the Next.js host adapter over
- * `content/delivery.ts` and the Hono delivery routes - and `content/admin/` was
- * excluded alongside it because `fetch.server.ts` there carried `server-only` on
- * purpose. Both are gone, so the whole of `content/**` is now held to the rule
- * that two thirds of it were held to before.
- */
 describe("layer boundaries", () => {
   const engineFiles = filesUnder(here).filter(
     path => !/\.test(-d)?\.tsx?$/.test(path),

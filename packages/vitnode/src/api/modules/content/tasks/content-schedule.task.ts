@@ -5,15 +5,6 @@ import { CONTENT_QUEUE_TASK_SCHEDULE } from "@/content/const";
 
 import { executeContentSchedule } from "../helpers/execute-content-schedule";
 
-/**
- * The payload is a **pointer**, not data.
- *
- * Everything that matters - which record, which action, whether it is still
- * wanted - is re-read from the schedule row under a lock. A payload carrying
- * the action would go stale the moment somebody rescheduled, and a payload
- * carrying the item id would be a way to publish an arbitrary record by
- * inserting a queue row.
- */
 export const contentSchedulePayloadSchema = z.object({
   generation: z.number().int().positive(),
   scheduleId: z.number().int().positive(),

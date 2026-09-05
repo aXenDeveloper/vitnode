@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormCombobox } from '@vitnode/core/components/form/fields/combobox'
 import { z } from 'zod'

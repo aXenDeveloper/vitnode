@@ -24,49 +24,8 @@ import type {
 
 import { USER_HEADER_HREF, userHeaderMenu } from "./user-header-model";
 
-/**
- * The user area of the main header, rendered by both applications.
- *
- * Presentation only, and framework-free on purpose: it reaches nothing from
- * `next/*`, nothing from `next-intl`'s Next-only entries and no server action,
- * so a TanStack Start route renders exactly what the Next.js header renders. The
- * three things it cannot decide for itself - the session, how a path becomes a
- * navigation, and what ends a session - arrive as props.
- *
- *     UserHeaderContent
- *       state === "loading"        -> the placeholder, at the size of the real thing
- *       state === "anonymous"      -> log in, register
- *       state === "authenticated"  -> avatar -> account links, staff link, sign out
- *
- * It does not fetch the session. That is the whole reason it is reusable: the two
- * applications get it from places that have nothing in common - a Server
- * Component awaiting `getSessionApi()`, and the one canonical session query a
- * router's guards already read - and a component that asked for it itself would
- * be a second source of truth in the app that already has one.
- *
- * The same boundary `SearchFeedContent`, `HeaderContent` and the auth screens
- * draw, for the same reason.
- */
-
-/**
- * What stands in for the user area while the session is unknown.
- *
- * `h-9 w-32` is the size of the two guest buttons, which is the wider of the two
- * outcomes - so the header settles into its final width rather than growing when
- * the session lands. Exported because the Next.js header renders it as a
- * `<Suspense>` fallback *above* this component, before any state exists.
- */
 export const UserHeaderSkeleton = () => <Skeleton className="h-9 w-32" />;
 
-/**
- * Ending the session, as the header asks for it.
- *
- * Nothing is returned, because what happens next is entirely the caller's
- * business and the two answers share nothing: a Next.js server action
- * revalidates the layout and redirects, while TanStack Start replaces the cached
- * session and invalidates the router so the guards notice. The header's only job
- * is to say when.
- */
 export type UserHeaderSignOut = () => Promise<void> | void;
 
 const AnonymousUserHeader = ({

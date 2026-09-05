@@ -109,12 +109,6 @@ const StaffEditHeader = ({
   );
 };
 
-/**
- * The form, or the sentence that replaces it.
- *
- * `protected` and `self` are the two entries the API refuses to update, so the
- * screen says why instead of offering a save that would answer `403`.
- */
 const StaffEditBody = ({
   grantedKeys,
   id,

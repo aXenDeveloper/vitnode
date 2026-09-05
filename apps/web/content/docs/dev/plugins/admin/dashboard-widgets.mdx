@@ -1,238 +1,116 @@
 ---
 title: Dashboard Widgets
-description: Add drag-and-drop widgets to the AdminCP dashboard from your plugin with customizable layouts, sizing, and settings dialogs.
+description: Add a configurable AdminCP dashboard widget from a VitNode plugin with sizing, permissions, and optional settings.
 icon: LayoutDashboard
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { BarChart3Icon, Settings2Icon } from 'lucide-react'
 
-The AdminCP dashboard at `/admin/core` is an interactive grid of widgets. Each administrator arranges their own board: drag to reorder, resize cards, or add widgets from the side panel.
+Dashboard widgets are **AdminCP plugin extensions**. Define the component and
+register it in the same plugin factory that owns the feature; the host dashboard
+then discovers it automatically.
 
-{/* Image prompt: VitNode AdminCP dashboard widget customization drawer open at /admin/core. Left side displays active dashboard widgets in a responsive grid layout with drag handles. Right side displays the slide-over drawer "Available widgets" showing custom plugin widgets with icons, titles, and descriptions. Save and Cancel buttons at the bottom. Dark theme, 1600x900. */}
-
-## Register a Widget
+{/* Image prompt: VitNode AdminCP dashboard with a “Site notes” statistics widget in a draggable grid. Show the widget drawer, resize affordance, and settings gear. Dark theme, 1600x900. */}
 
 <Steps>
-<Step>
+  <Step>
 
-### 1. Write the Widget Component
+### Build the widget component
 
-Create a React component accepting `AdminDashboardWidgetProps`:
+```tsx title="plugins/site-notes/src/views/admin/widgets/stats-widget.tsx"
+import type { AdminDashboardWidgetProps } from '@vitnode/core/lib/plugin'
 
-```tsx title="plugins/blog/src/views/admin/widgets/stats-widget.tsx"
-import type { AdminDashboardWidgetProps } from "@vitnode/core/lib/plugin"
-
-export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => {
-  return (
-    <div className="flex flex-col gap-2 p-2">
-      <span className="text-sm text-muted-foreground">Total Published Articles</span>
-      <p className="text-3xl font-bold tabular-nums">42</p>
-    </div>
-  )
-}
+export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => (
+  <div className="flex flex-col gap-1 p-2">
+    <span className="text-muted-foreground text-sm">Published notes</span>
+    <strong className="text-3xl tabular-nums">
+      {String(settings.total ?? 42)}
+    </strong>
+  </div>
+)
 ```
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 2. Register Widget in Plugin Config
+### Register it in the existing plugin factory
 
-Add the widget to `admin.dashboard.widgets` in `src/config.tsx`:
+```tsx title="plugins/site-notes/src/config.tsx"
+import { BarChart3Icon } from 'lucide-react'
 
-```tsx title="plugins/blog/src/config.tsx"
-import { buildPlugin } from "@vitnode/core/lib/plugin"
-import { BarChart3Icon } from "lucide-react"
-import { StatsWidget } from "./views/admin/widgets/stats-widget"
+import { StatsWidget } from './views/admin/widgets/stats-widget'
 
-export const blogPlugin = () =>
+export const siteNotesPlugin = () =>
   buildPlugin({
-    pluginId: "blog",
     admin: {
       dashboard: {
-        // [!code ++:11]
         widgets: [
+          // [!code ++:9]
           {
-            id: "stats",
             component: StatsWidget,
-            icon: <BarChart3Icon />,
-            defaultSpan: 1,
-            defaultRows: 1,
             defaultEnabled: true,
+            defaultRows: 1,
+            defaultSpan: 1,
+            icon: <BarChart3Icon />,
+            id: 'stats',
           },
         ],
       },
     },
+    messages,
+    pluginId: '@acme/site-notes',
+    routes,
   })
 ```
 
-</Step>
-<Step>
+The full widget id is namespaced by the plugin, so `stats` will not collide with
+another plugin’s idea of a stats card. A good thing—statistics are dramatic
+enough already.
 
-### 3. Add Translations
+  </Step>
+  <Step>
 
-Provide the widget's title and description in your plugin's locale file:
+### Add a permission or settings UI when needed
 
-```json title="plugins/blog/src/locales/en.json"
+Add `permission` to hide a widget from staff who should not see it. Add
+`settingsComponent` when administrators need to save preferences; both stay in
+the plugin alongside the widget.
+
+```tsx title="plugins/site-notes/src/config.tsx"
 {
-  "@vitnode/blog": {
-    "admin": {
-      "dashboard": {
-        "widgets": {
-          "stats": {
-            "title": "Blog Statistics",
-            "desc": "Overview of published articles and views."
-          }
-        }
-      }
-    }
-  }
+  component: StatsWidget,
+  // [!code ++:4]
+  permission: { module: 'site_notes', permission: 'can_view_stats' },
+  settingsComponent: StatsSettings,
+  id: 'stats',
 }
 ```
 
-</Step>
+  </Step>
 </Steps>
 
----
+## Widget options
 
-## Adding a Settings Dialog
-
-Admins can configure widget preferences (e.g. date range or filtering) via a gear icon on the card:
-
-<Steps>
-<Step>
-
-### 1. Create the Settings Form with `AutoForm`
-
-Use `useWidgetSettingsDialog` to save values and close the dialog:
-
-```tsx title="plugins/blog/src/views/admin/widgets/stats-settings.tsx"
-import { AutoForm } from "@vitnode/core/components/form/auto-form"
-import { AutoFormSelect } from "@vitnode/core/components/form/fields/select"
-import { useWidgetSettingsDialog } from "@vitnode/core/views/admin/views/core/dashboard/grid/widget-settings-dialog"
-import { z } from "zod"
-
-const formSchema = z.object({
-  range: z.enum(["month", "year"]).default("month"),
-})
-
-export const StatsSettings = ({ settings }: { settings: { range?: "month" | "year" } }) => {
-  const { save } = useWidgetSettingsDialog()
-
-  return (
-    <AutoForm
-      fields={[
-        {
-          id: "range",
-          component: (props) => <AutoFormSelect label="Date Range" {...props} />,
-        },
-      ]}
-      formSchema={formSchema}
-      onSubmit={async (values) => {
-        await save({ range: values.range }) // [!code highlight]
-      }}
-      submitButtonProps={{ children: "Save Settings" }}
-    />
-  )
-}
-```
-
-</Step>
-<Step>
-
-### 2. Attach `settingsComponent` in Config
-
-```tsx title="plugins/blog/src/config.tsx"
-widgets: [
-  {
-    id: "stats",
-    component: StatsWidget,
-    settingsComponent: StatsSettings, // [!code ++]
-  },
-]
-```
-
-</Step>
-</Steps>
-
----
-
-## Sizing and Grid Responsiveness
-
-Columns collapse responsively across screen viewports:
-
-| Viewport | Columns | Behavior |
-| :--- | :--- | :--- |
-| `< 768px` (Mobile) | 1 | All widgets occupy full width |
-| `768px – 1279px` (Tablet) | 2 | Max 2 columns; span 3 collapses to 2 |
-| `≥ 1280px` (Desktop) | 3 | Renders full declared `span` (1, 2, or 3) |
-
----
-
-## Widget Configuration Options
-
-<TypeTable
-  type={{
-    id: {
-      description: "Unique widget ID within this plugin.",
-      required: true,
-      type: "string",
-    },
-    component: {
-      description: "React component rendering the widget card.",
-      required: true,
-      type: "React.ComponentType<AdminDashboardWidgetProps>",
-    },
-    icon: {
-      description: "Lucide icon displayed in the widget drawer and card header.",
-      type: "React.ReactNode",
-    },
-    defaultSpan: {
-      default: "1",
-      description: "Default width in grid columns (1, 2, or 3).",
-      type: "1 | 2 | 3",
-    },
-    defaultRows: {
-      default: "1",
-      description: "Default height in grid rows (1, 2, or 3).",
-      type: "1 | 2 | 3",
-    },
-    minSpan: {
-      default: "1",
-      description: "Minimum columns the admin can resize down to.",
-      type: "1 | 2 | 3",
-    },
-    defaultEnabled: {
-      default: "false",
-      description: "Whether the widget is placed on fresh dashboards by default.",
-      type: "boolean",
-    },
-    allowMultiple: {
-      default: "false",
-      description: "Allows admins to place multiple independent copies.",
-      type: "boolean",
-    },
-    permission: {
-      description: "Hides the widget unless the admin holds this staff permission.",
-      type: "{ module: string; permission: string }",
-    },
-    settingsComponent: {
-      description: "Form component rendered inside configuration modal.",
-      type: "React.ComponentType<AdminDashboardWidgetProps>",
-    },
-  }}
-/>
-
-## Learn More
+| Option                        | What it controls                                  |
+| ----------------------------- | ------------------------------------------------- |
+| `defaultSpan` / `defaultRows` | Initial grid size from 1 to 3 columns or rows.    |
+| `minSpan`                     | Narrowest allowed width.                          |
+| `defaultEnabled`              | Whether a new dashboard receives the widget.      |
+| `allowMultiple`               | Whether an admin may place more than one copy.    |
+| `permission`                  | Staff permission required to see the widget.      |
+| `settingsComponent`           | Plugin form shown by the widget settings control. |
 
 <Cards>
   <Card
-    title="AdminCP Pages"
-    description="Custom admin pages, layouts, and sidebar navigation"
+    icon={<Settings2Icon />}
+    title="AdminCP pages"
+    description="Add plugin-owned routes and browser-safe sidebar navigation."
     href="/docs/dev/plugins/admin"
   />
   <Card
-    title="Staff Permissions"
-    description="Protect admin capabilities behind role permissions"
+    icon={<BarChart3Icon />}
+    title="Staff permissions"
+    description="Define permissions before exposing staff-only capabilities."
     href="/docs/dev/working-with-users/staff-permissions"
   />
 </Cards>

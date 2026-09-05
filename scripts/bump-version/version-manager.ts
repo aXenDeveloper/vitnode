@@ -9,6 +9,7 @@ interface Config {
   TAG_PREFIX: string;
   TAG_SUFFIX: string;
   COMMIT_MESSAGE: string;
+  SOURCE_OF_TRUTH_PACKAGE: string;
 }
 
 const CONFIG: Config = {
@@ -16,6 +17,7 @@ const CONFIG: Config = {
   TAG_PREFIX: "v",
   TAG_SUFFIX: "",
   COMMIT_MESSAGE: "ci: version bump to {{version}}",
+  SOURCE_OF_TRUTH_PACKAGE: "create-vitnode-app",
 };
 
 export class VersionManager {
@@ -40,7 +42,7 @@ export class VersionManager {
         join(
           this.env.WORKSPACE,
           "packages",
-          "create-vitnode-app",
+          CONFIG.SOURCE_OF_TRUTH_PACKAGE,
           "package.json",
         ),
         "utf8",
@@ -56,11 +58,19 @@ export class VersionManager {
 
   calculateNewVersion(currentVersion: string) {
     const versionType = this.getVersionType(currentVersion);
-    const npmOutput = execSync(
-      `npm version --git-tag-version=false --commit-hooks=false --workspaces --workspaces-update=false ${versionType}`,
+    execSync(
+      `npm version --git-tag-version=false --commit-hooks=false --workspace=${CONFIG.SOURCE_OF_TRUTH_PACKAGE} --workspaces-update=false ${versionType}`,
       { cwd: this.env.WORKSPACE },
-    ).toString();
-    return `${CONFIG.TAG_PREFIX}${this.parseNpmVersionOutput(npmOutput)}${CONFIG.TAG_SUFFIX}`;
+    );
+
+    const newVersion = this.getCurrentVersion();
+    if (newVersion === currentVersion) {
+      throw new Error(
+        `npm version left ${CONFIG.SOURCE_OF_TRUTH_PACKAGE} at ${currentVersion}`,
+      );
+    }
+
+    return `${CONFIG.TAG_PREFIX}${newVersion}${CONFIG.TAG_SUFFIX}`;
   }
 
   getVersionType(currentVersion: string): string {
@@ -81,14 +91,6 @@ export class VersionManager {
       }
     }
     return VERSION_TYPE;
-  }
-
-  parseNpmVersionOutput(output: string): string {
-    const result = output.trim().split(EOL).pop();
-    if (!result) {
-      throw new Error("Failed to parse npm version output");
-    }
-    return result.replace(/^v/, "");
   }
 
   async applyVersion(

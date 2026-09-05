@@ -14,18 +14,6 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * `/settings/devices`, split down the middle.
- *
- * The same boundary `files-boundaries.test.ts` and `auth-boundaries.test.ts`
- * draw, with the same machinery and for the same reason: a shared module that
- * reaches `next/headers`, a server action or `@/lib/navigation` cannot be loaded
- * by a TanStack Start route, and nothing about that failure is visible until
- * somebody tries. A scan is the only way to state it, because the offending
- * import is usually two files away from the one being written - this feature's
- * would have been the server action, imported by the revoke button, behind the
- * list.
- */
 const SHARED = {
   item: join(here, "device-item.tsx"),
   list: join(here, "devices-content.tsx"),
@@ -36,13 +24,7 @@ const SHARED = {
 };
 
 /** The Next.js half: `next/navigation`, `next/cache`, `fetcher()`, the action. */
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
+
 const DELETED_NEXT_HALF = {
   list: join(here, "devices-list.tsx"),
   page: join(here, "devices.tsx"),

@@ -27,23 +27,6 @@ import {
   buildTranslationSystemColumns,
 } from "./column-builders";
 
-/**
- * Builds the `pgTable` holding one localized content type's translations.
- *
- * One table per content type, not one shared table for the whole install. That
- * is the entire design decision, and everything good about it follows from it:
- * real column types, real `NOT NULL`, a real unique index on `(languageId, slug)`,
- * Drizzle inference that knows what `title` is, and a migration `drizzle-kit`
- * generates rather than a JSONB blob or an EAV table nobody can index.
- *
- * Like {@link createContentTable} the result is an ordinary Drizzle table, so
- * `drizzle-kit` discovers it by runtime identity when it globs the plugin's built
- * `dist/src/database/*.js`. Export it from the plugin's database module:
- *
- * ```ts
- * export const example_articles_translations = articleContent.translationTable;
- * ```
- */
 export const createContentTranslationTable = <
   TDefinition extends AnyContentTypeDefinition,
 >(

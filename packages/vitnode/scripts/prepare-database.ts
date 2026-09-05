@@ -60,21 +60,7 @@ const getMigrationsFolder = async (): Promise<string> => {
 // for any missing config: search still tokenizes and matches, it just skips
 // stemming. Configs that already exist (including a real dictionary) are left
 // untouched.
-/**
- * Whether a failure is Postgres saying "somebody else created that already".
- *
- * Two SQLSTATEs, and the second is the one that actually happens.
- * `CREATE TEXT SEARCH CONFIGURATION` has no `IF NOT EXISTS`, so two sessions
- * racing on it do not get `42710 duplicate_object` - they get
- * `23505 unique_violation` from the unique index on `pg_ts_config.cfgname`,
- * because both passed the existence check before either inserted. The original
- * code tolerated only `42710`, which is why the race failed a whole bootstrap.
- *
- * Walks `cause`, because the code is one wrapper deep: Drizzle 1.0 raises a
- * `DrizzleQueryError` carrying no `code` of its own, with the driver's
- * `PostgresError` as its `cause`. Reading only the outermost `code` finds
- * `undefined` and rethrows.
- */
+
 const isAlreadyCreatedError = (error: unknown): boolean => {
   const TOLERATED = new Set([
     "23505", // unique_violation - lost the insert race

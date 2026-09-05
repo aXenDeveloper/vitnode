@@ -22,29 +22,6 @@ import type { AdminUserRow, AdminUsersPage } from "./users-query";
 
 import { ADMIN_USERS_DEFAULT_ORDER } from "./users-query";
 
-/**
- * The AdminCP users table, with no framework in it.
- *
- * The same columns, the same empty state, the same sort and the same role
- * filter the Next.js `UsersAdminView` renders - lifted out of the Server
- * Component so a TanStack Start route can render them too. What the Server
- * Component keeps is the part only it can do: reading the page with the request's
- * own cookies.
- *
- * Three things arrive as props because they are the three a shared table cannot
- * resolve for itself:
- *
- *     data           the page, from whichever transport fetched it
- *     LinkComponent  how this application renders an internal link
- *     onVerifyEmail  the row action's write, and what to do about the cache
- *     searchRoles    how the role filter looks roles up
- *
- * `ContentDataTable` rather than `DataTable`: the latter is the Next.js binding
- * and mounts `NextDataTableNavigation`. The caller mounts a
- * `DataTableNavigationProvider` of its own instead, which is what makes the
- * URL controls work in either router.
- */
-
 /** Verifying one user's email, from wherever the caller gets it done. */
 export type VerifyAdminUserEmail = (
   id: number,
@@ -57,13 +34,6 @@ export interface UsersAdminTableProps {
   searchRoles: AdminRoleSearch;
 }
 
-/**
- * The row actions: verify an unverified email, and open the user.
- *
- * Gated on `users:can_edit` read from the AdminCP permission context, which both
- * shells mount from the same admin session - so the button is hidden for exactly
- * the administrators the API would refuse.
- */
 const UserRowActions = ({
   LinkComponent,
   onVerifyEmail,

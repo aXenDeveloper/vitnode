@@ -9,12 +9,6 @@ export interface QueueTaskOutcome {
   status: QueueTaskStatus;
 }
 
-/**
- * Decide the next state of a task after its handler ran. `attempts` is the
- * count including the run that just happened. Without an error the task is
- * `completed`; with one it is retried (`pending` with a backoff `availableAt`)
- * until `maxAttempts` is reached, after which it is `failed`.
- */
 export const resolveQueueTaskOutcome = ({
   attempts,
   maxAttempts,

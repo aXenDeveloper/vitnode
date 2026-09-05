@@ -9,21 +9,6 @@ import type { FileGalleryRow } from "./file-gallery";
 
 import { FileGallery, fileGalleryDrop } from "./file-gallery";
 
-/**
- * What a person is offered, which is a different question from what the value
- * holds.
- *
- * Two rules are asserted here and nowhere else, because both are about a control
- * being present or absent rather than about a number moving:
- *
- * - **`ordered: false` has no handles.** The API stores that collection by
- *   ascending `core_files.id`, so a handle would appear to set an order the save
- *   then quietly normalises away - a control that lies about what it does.
- * - **A file still uploading is not draggable.** It has no `core_files.id` to
- *   sort by and nothing to save; dragging it would be dragging something that
- *   does not exist yet.
- */
-
 beforeAll(() => {
   // dnd-kit measures its droppables. jsdom has no ResizeObserver, and a missing
   // one is a thrown constructor rather than a degraded layout.

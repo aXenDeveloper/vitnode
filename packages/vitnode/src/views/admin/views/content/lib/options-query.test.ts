@@ -10,20 +10,6 @@ import {
   contentOptionsTarget,
 } from "./options-query";
 
-/**
- * Where a `relation`/`user` picker's options are cached, as a key.
- *
- * Two failures live here and they pull in opposite directions:
- *
- * - **Too specific** and one mutation cannot expire the pickers it invalidated,
- *   so a deleted category stays on offer in every article form until a reload.
- * - **Too loose** and two different pickers - or the same picker in two
- *   languages - share an entry, so one shows the other's rows.
- *
- * The rule that resolves both is that every key here is a *literal prefix
- * extension* of `contentOptionsQueryRoot(target)`, and nothing else is.
- */
-
 const field = (
   name: string,
   targetContentTypeId?: string,

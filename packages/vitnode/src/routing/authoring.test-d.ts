@@ -11,11 +11,6 @@ import type {
 
 import { definePluginRoute } from "./authoring";
 
-/**
- * The helper earns its place by inferring, so every assertion here is about
- * inference. Its runtime behaviour - returning its argument - is not worth a
- * test, and its shape is `PluginRouteOptions`, which `./module` owns.
- */
 describe("definePluginRoute", () => {
   it("accepts every member of the contract, and only those", () => {
     // The helper re-declares `head` and `load` to control where each type is

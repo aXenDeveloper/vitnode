@@ -16,33 +16,6 @@ const TOOLS = [
   { href: 'https://www.postgresql.org/', logo: <PostgreSQLLogo /> },
 ]
 
-/**
- * What VitNode is built on, as a row that scrolls.
- *
- * The list is the section's only real content, and this stage changed two
- * entries in it because they had stopped being true of the page they appear on.
- *
- * **Next.js is out.** It was the second mark in the row, and after this stage
- * the application rendering this row is TanStack Start. Next.js still serves
- * `/docs/*` until Stage 16 and still scaffolds a generated app, so it has not
- * left VitNode - but a row headed "Powering by the best tools" on the front page
- * of a TanStack Start site reads as a claim about *this* runtime, and that claim
- * was false. TanStack takes its place.
- *
- * **next-intl is out**, for the narrower version of the same reason: this
- * application reaches for `use-intl` directly and never for next-intl - which
- * `src/tests/isolation.test.ts` enforces - so its logotype was naming a package
- * the site does not run. `use-intl` has no mark of its own, and inventing one to
- * keep the count at seven would be worse than six honest entries.
- *
- * Everything else is the section as it was: same frame, same fades at both
- * edges, same speeds, same marks.
- *
- * Plain `<a>` rather than the injected `LinkComponent`, because every href here
- * leaves VitNode entirely. A `LinkComponent` takes a *path*; handing it
- * `https://hono.dev` would ask a router to match an absolute URL against the
- * route tree, which answers with something other than Hono's website.
- */
 export const PoweringBySection = () => (
   <section className="bg-background border-border/75 dark:border-border/50 overflow-hidden border">
     <div className="group relative m-auto max-w-7xl px-6">

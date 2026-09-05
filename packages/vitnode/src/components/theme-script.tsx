@@ -1,15 +1,5 @@
 import type { Attribute, ThemeProviderProps } from "./theme-provider";
 
-/**
- * Everything {@link ThemeProvider} does to the DOM, as one function that runs
- * before the first paint.
- *
- * Serialised into the page with `Function.prototype.toString()`, so it must
- * reference nothing but its own arguments: a closure over a module-level value
- * survives in this file and vanishes in the browser, where the value was never
- * defined. That is also why every option arrives as a parameter rather than
- * being read from a config.
- */
 const noFlashScript = (
   attribute: Attribute | Attribute[],
   storageKey: string,
@@ -74,19 +64,6 @@ export type ThemeScriptProps = Omit<
   "children" | "disableTransitionOnChange"
 >;
 
-/**
- * The script's source, ready for a `<script>` tag.
- *
- * Exported next to the component because a framework may want the string rather
- * than the element - and because it makes the script testable without a DOM
- * renderer, which is worth having for the one piece of code in VitNode that
- * runs before React exists.
- *
- * The defaults deliberately mirror {@link ThemeProvider}'s. The two read the
- * same `localStorage` key and write the same attributes, so a default that
- * drifts here is a theme flash: the script paints one theme and React replaces
- * it on hydration.
- */
 export const themeScriptSource = ({
   attribute = "class",
   enableColorScheme = true,

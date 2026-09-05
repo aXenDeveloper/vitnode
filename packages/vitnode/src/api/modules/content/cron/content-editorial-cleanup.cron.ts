@@ -8,19 +8,6 @@ import { pruneContentSchedules } from "@/content/server/schedules-model";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Sweeps up editorial rows that no longer describe anything.
- *
- * Revision retention is enforced inline, in the same transaction as the write,
- * so this is **not** the thing that keeps the table bounded on a healthy
- * install - an install with no cron adapter must not grow forever, and it does
- * not. What this handles is the case inline pruning structurally cannot: rows
- * whose content type stopped existing, so nothing will ever write to them again
- * and trigger a prune.
- *
- * Daily rather than hourly. Nothing here is urgent, and a plugin removed at
- * lunchtime does not need its history gone by teatime.
- */
 export const contentEditorialCleanupCron = buildCron({
   name: "content-editorial-cleanup",
   description:

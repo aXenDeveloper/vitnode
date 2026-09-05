@@ -26,31 +26,11 @@ export interface WebSocketManagerOptions {
 export interface WebSocketManager {
   destroy: () => void;
   getReadyState: () => number;
-  /**
-   * Drop the shared connection and open a fresh one. The new socket
-   * re-runs the handshake, so the server re-reads the session cookie - use
-   * this after sign-in/sign-out so the connection's user changes.
-   */
+
   reconnect: () => void;
   send: (message: VitNodeWSMessage) => void;
 }
 
-/**
- * Manages a single WebSocket connection shared across every tab of the same
- * origin.
- *
- * One tab is elected "leader" via the Web Locks API and owns the actual socket;
- * the other tabs are "followers". Outgoing messages from followers are relayed
- * to the leader, and every incoming server message is fanned out to all tabs
- * over a {@link BroadcastChannel}. This means data is shared across tabs with
- * exactly one connection and no duplicated messages.
- *
- * When the leader tab closes, its Web Lock is released and a follower is
- * automatically promoted, re-opening the socket.
- *
- * If the browser lacks the Web Locks API or `BroadcastChannel`, the manager
- * gracefully falls back to a per-tab connection.
- */
 export const createWebSocketManager = ({
   url,
   onMessage,

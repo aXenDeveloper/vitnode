@@ -13,23 +13,6 @@ import {
 import { RouteMessages } from "../../i18n/route-messages";
 import { AdminBreadcrumb } from "../breadcrumb";
 
-/**
- * The trail above the three staff screens.
- *
- * Two of its crumbs cannot be resolved from the navigation, which is what
- * `resolveBreadcrumb` normally does: `/admin/core/staff` is a nav *group* with no
- * page of its own, and the list beneath it appears in the sidebar under a
- * shorter name than the page's own heading. So both are named explicitly, from
- * `staffBreadcrumbLabels` - the same helper the Next.js `@breadcrumb` slots use,
- * so the two applications produce the same trail.
- *
- * ## Each one mounts `RouteMessages` of its own
- *
- * The shell renders the breadcrumb *above* the route's component, so it is
- * outside the provider that component mounts. Without this they would translate
- * against the root's `core.global` alone and render raw keys.
- */
-
 const STAFF_BREADCRUMB_NAMESPACES = ["admin.staff", "core.global"] as const;
 
 interface StaffBreadcrumbProps {

@@ -34,13 +34,6 @@ type EnumValuesOf<TField> = TField extends {
   ? [THead, ...TRest]
   : [string, ...string[]];
 
-/**
- * The Drizzle builder a single field descriptor compiles to.
- *
- * Builders carry no column-name generic: columns are declared with the
- * `camelCase.table(name, t => ({ ... }))` callback form used across the repo,
- * so Drizzle derives the name from the object key.
- */
 type BaseBuilderFor<TField> = TField extends { kind: "boolean" }
   ? PgBooleanBuilder
   : TField extends { kind: "dateTime" }
@@ -127,13 +120,6 @@ export type ContentTranslationColumnBuilders<
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
 
-/**
- * The `pgTable` a localized content type's translations compile to.
- *
- * Built with Drizzle's own `BuildColumns`, exactly like {@link ContentTable}, so
- * `$inferSelect` and `$inferInsert` come out of the same machinery a
- * hand-written `pgTable` uses.
- */
 export type ContentTranslationTable<
   TName extends string,
   TFields,
@@ -148,13 +134,6 @@ export type ContentTranslationTable<
   schema: undefined;
 }>;
 
-/**
- * The localized half of a field map, as a record.
- *
- * Spelled with a mapped type rather than `Pick` so the erased
- * `AnyContentTypeDefinition` - whose localized name union is `never` - resolves
- * to an empty record instead of to `never`.
- */
 type LocalizedFieldsOf<TDefinition> = ContentStorageFields<{
   [
     K in ContentLocalizedFieldName<TDefinition> &
@@ -162,15 +141,6 @@ type LocalizedFieldsOf<TDefinition> = ContentStorageFields<{
   ]: ContentFieldsOf<TDefinition>[K];
 }>;
 
-/**
- * The translation table for one definition.
- *
- * `string` rather than the literal translation table name: that name is derived
- * at *runtime* from `tableName` (suffixed, then clamped to 63 characters with a
- * fingerprint), and re-deriving the clamp in the type system would be a second
- * implementation of it. Nothing needs the literal - Drizzle only uses the name
- * parameter to prefix column names it never exposes by literal type.
- */
 export type ContentTranslationTableFor<TDefinition> = TDefinition extends {
   publication: { enabled: infer TPublication extends boolean };
 }
@@ -181,13 +151,6 @@ export type ContentTranslationTableFor<TDefinition> = TDefinition extends {
     >
   : never;
 
-/**
- * Column name -> Drizzle column on the translation table.
- *
- * The publication pair is gated exactly like {@link ContentColumnName} gates it
- * on the base table: a translation only carries `status` and `publishedAt` when
- * the content type has a lifecycle for them to describe.
- */
 export type ContentTranslationColumnName<TDefinition> =
   | ContentLocalizedFieldName<TDefinition>
   | ContentTranslationSystemField
@@ -195,12 +158,6 @@ export type ContentTranslationColumnName<TDefinition> =
       ? ContentPublicationField
       : never);
 
-/**
- * The `pgTable` a content type compiles to.
- *
- * Built with Drizzle's own `BuildColumns`, so `$inferSelect` and `$inferInsert`
- * come out of the same machinery a hand-written `pgTable` uses.
- */
 export type ContentTable<
   TName extends string,
   TFields,
@@ -227,16 +184,6 @@ type SharedFieldsOf<TDefinition> = {
   ]: ContentFieldsOf<TDefinition>[K];
 };
 
-/**
- * The type-level twin of `contentStorageColumns`.
- *
- * A field map, flattened into the columns it actually generates: scalars keep
- * their names, a group contributes `seoTitle` per leaf, and the two collection
- * kinds vanish because neither is a column here. Spelled out in the type system
- * as well as at runtime because `$inferSelect` and `$inferInsert` are what a
- * plugin's own hand-written queries are checked against - a table type that
- * still said `seo: <group>` would type-check code Postgres then rejects.
- */
 export type ContentStorageFields<TFields> = GroupLeafColumnsOf<TFields> &
   ScalarFieldsOf<TFields>;
 
@@ -250,18 +197,6 @@ type ScalarFieldsOf<TFields> = {
   ]: TFields[K];
 };
 
-/**
- * Every group leaf column of a field map, keyed by its generated column name.
- *
- * Written as **one** mapped type over the union of canonical paths rather than
- * as a per-group union folded back with the usual `UnionToIntersection` trick.
- * That trick puts the union in a function-parameter position, which makes
- * `TDefinition` contravariant in `ContentTableFor` and therefore invariant in
- * `ContentModel` - and an invariant `ContentModel<T>` is no longer assignable to
- * `ContentModel<AnyContentTypeDefinition>`, which every route builder and every
- * registry needs. It is the same trap `ResolvedContentAdminConfig` documents,
- * reached from a different direction.
- */
 type GroupLeafColumnsOf<TFields> = {
   [
     TPath in GroupLeafPathsOf<TFields> as ColumnNameOfPath<TPath>

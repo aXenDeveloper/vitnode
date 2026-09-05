@@ -14,26 +14,6 @@ import type { ContentAdminRouteData } from "../route";
 
 import { loadContentFormScreen } from "./route";
 
-/**
- * What a page-mode form loader does with a read it could not complete.
- *
- * The distinction the whole suite is about, because the two answers look the
- * same from inside the loader and mean opposite things to the person waiting:
- *
- *     /admin/content/blog/articles/999999/edit   no such record   404
- *     the API is down, rate-limiting, or wrong   an outage        error
- *
- * `ContentEditPageView`, the Next.js screen this replaced, answers `notFound()`
- * for *every* non-200 - so an unreachable API showed an administrator "not
- * found" for a record that exists. Preserving the route's semantics means
- * keeping the 404 for the case that really is one and not the rest, which is
- * why every assertion here is about a status code rather than about failing.
- *
- * A stub `QueryClient` and a stub registry: the loader's decision is made
- * entirely from what `ensureQueryData` settles to, so a rejecting stub is the
- * whole of the unit rather than a stand-in for one.
- */
-
 const definition = defineContentType({
   id: "blog.post",
   tableName: "blog_post",
@@ -49,14 +29,6 @@ const registry = buildContentFrontendRegistry([
   { pluginId: "@vitnode/blog", contentTypes: [{ definition }] },
 ]);
 
-/**
- * A root administrator - the permission checks are not what is under test.
- *
- * `status: "granted"` is what `adminPermissionsOf` reads; anything else empties
- * the permission set and `requireAdminPermission` answers `notFound()` before
- * the read this suite is about ever happens, which would make every assertion
- * below pass for the wrong reason.
- */
 const adminAccess = {
   session: { permissions: { permissions: [], root: true } },
   status: "granted",
@@ -74,12 +46,6 @@ const editRoute: ContentAdminRouteData = {
   title: "Articles",
 };
 
-/**
- * A `QueryClient` that only has to answer one method.
- *
- * `ensureQueryData` is the single call the loader makes, and the loader never
- * reads the client for anything else, so the cast is narrower than it looks.
- */
 const clientRejecting = (error: Error): AdminScreenContext["queryClient"] =>
   ({
     ensureQueryData: async () => await Promise.reject(error),
@@ -103,13 +69,6 @@ describe("a record that is not there", () => {
     ).rejects.toSatisfy(isNotFound);
   });
 
-  /**
-   * A refusal from the API is the *authorization* answer, and it can arrive on
-   * a screen the route guard already admitted: the guard decides on a cached
-   * permission set, and a permission revoked mid-session is only visible here.
-   * `requireAdminPermission` answers that with `notFound()` too, so both
-   * readings of "you may not open this" produce one screen.
-   */
   it("treats a refusal the same way", async () => {
     await expect(
       load(new AdminRequestError(403, "blog.post #999999")),
@@ -128,12 +87,6 @@ describe("a read that failed", () => {
     await expect(load(error)).rejects.not.toSatisfy(isNotFound);
   });
 
-  /**
-   * `rawApiFetch` throws a plain `Error` for a 500 before an
-   * `AdminRequestError` is ever built, and a schema mismatch between the
-   * installed plugin and the running API arrives as one too. Neither carries a
-   * status, and neither is a missing record.
-   */
   it("propagates an error that carries no status at all", async () => {
     const error = new Error("500 - http://localhost/api/...");
 

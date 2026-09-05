@@ -15,17 +15,6 @@ import {
   passwordResetNamespaces,
 } from "./recovery";
 
-/**
- * Password recovery as data: which screen a URL asks for, what a route may write
- * back into that URL, which strings each screen needs, and whether this
- * deployment has the flow at all.
- *
- * Every function here is total over a query object, so the whole of the route's
- * contract is stated without a router, a request or a render. What the route
- * *does* with each answer - `notFound()`, an error, a form - is the host's, and
- * is asserted where the route lives.
- */
-
 /** What the API actually puts in a recovery email: 32 random bytes, base64url. */
 const TOKEN = "PSyRy0nQ0hRnfx3iCYldQ40mBLU9lqfDWtvNhrTsJI4";
 
@@ -80,16 +69,6 @@ describe("the reset-password search schema", () => {
 });
 
 describe("a recovery URL survives the router serialising it back", () => {
-  /**
-   * The canonical-location check, exercised against the router's own default
-   * search serialisers rather than described in prose.
-   *
-   * `loadServerRoute` rebuilds the location from the validated search and
-   * redirects when the result differs from the URL that arrived. So the schema's
-   * output has to stringify back to exactly the query it was parsed from - and
-   * this is the pair of functions that decides that, `JSON.parse` per value one
-   * way and its inverse the other.
-   */
   it.each([
     // The ordinary link.
     `?token=${TOKEN}&userId=123`,

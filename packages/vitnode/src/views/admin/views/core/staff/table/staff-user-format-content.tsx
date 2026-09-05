@@ -7,14 +7,6 @@ import type { RoleNameEntry } from "@/components/role-name";
 import { Avatar } from "@/components/avatar";
 import { resolveRoleName } from "@/components/role-name";
 
-/**
- * A staff entry's user, coloured by their role.
- *
- * The framework-neutral half of `StaffUserFormat`, which is an async Server
- * Component built on `next-intl/server`'s `getLocale()`. Same reasoning as
- * `RoleFormatContent`: one string lookup was making every screen that renders a
- * staff row Next-only.
- */
 export const StaffUserFormatContent = ({
   user,
 }: {

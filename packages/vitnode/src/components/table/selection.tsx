@@ -30,14 +30,6 @@ const getPortalContainer = () => document.body;
 /** No DOM to portal into on the server, and the bar starts empty anyway. */
 const getNoPortalContainer = () => null;
 
-/**
- * The rows a bulk action is about.
- *
- * Only usable inside a `DataTable` given `bulkActions`: the bar that renders
- * those actions sits inside this provider, so an action component reads the
- * ticked ids straight from here instead of the table having to thread them
- * through a node it was handed.
- */
 export const useDataTableSelection = (): SelectionDataTable => {
   const value = React.use(SelectionContext);
 

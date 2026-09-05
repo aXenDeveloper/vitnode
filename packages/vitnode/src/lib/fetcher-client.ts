@@ -4,6 +4,7 @@ import type {
 } from "@/api/lib/module";
 import type { Route } from "@/api/lib/route";
 
+import type { RawApiFetchArgs } from "./fetcher/raw";
 import type {
   FetcherParams,
   FetcherRequestOptions,
@@ -15,18 +16,9 @@ import type {
 
 import { coreFetcher } from "./fetcher/core";
 import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
+import { rawApiFetch } from "./fetcher/raw";
 import { CAPTCHA_TOKEN_HEADER } from "./fetcher/request-context";
 
-/**
- * Typed reference to a server module for use with {@link fetcherClient} inside
- * client components. Import the module as a **type only** (so no server code is
- * bundled) and pass its `pluginId`; the returned stub carries just the field the
- * fetcher reads at runtime while keeping paths, methods and responses fully typed.
- *
- * @example
- * import type { myPluginModule } from "@/api/my-plugin.module";
- * const ref = clientModule<typeof myPluginModule>("@my-plugin/core");
- */
 export const clientModule = <T extends BaseBuildModuleReturn>(
   pluginId: T["pluginId"],
 ): T => ({ pluginId }) as unknown as T;
@@ -74,7 +66,7 @@ export async function fetcherClient<
     method,
     module,
     args,
-    options,
+    options: { credentials: "include", ...options },
     withPagination,
     prefixPath,
     additionalHeaders,
@@ -88,3 +80,39 @@ export async function fetcherClient<
 
   return response;
 }
+
+/**
+ * The one signature a fetch can have in **both** runtimes.
+ *
+ * The browser's, deliberately: it is the narrower of the two, so a call typed
+ * against it carries no `allowSaveCookies`, no forwarded headers and no origin
+ * override - none of which a browser can honour. `tanstack/fetcher`'s universal
+ * `fetcher` and this module's `fetcherClient` both satisfy it, which is what
+ * lets a feature take its transport as an argument.
+ */
+export type UniversalFetcher = typeof fetcherClient;
+
+/** {@link RawApiFetchArgs} minus the two fields only a server can act on. */
+export type UniversalRawFetchArgs = Omit<
+  RawApiFetchArgs,
+  "additionalHeaders" | "origin"
+>;
+
+/**
+ * An untyped call from the browser - the Content Engine's generated modules.
+ *
+ * `credentials: "include"` for the reason `fetcherClient` has it: the API's
+ * origin may be a separate host, and a cross-origin `fetch` sends no cookie
+ * without it.
+ */
+export const rawFetcherClient = async ({
+  options,
+  ...args
+}: UniversalRawFetchArgs): Promise<Response> =>
+  await rawApiFetch({
+    ...args,
+    options: { credentials: "include", ...options },
+  });
+
+/** The {@link UniversalFetcher} of untyped calls. See {@link rawFetcherClient}. */
+export type UniversalRawFetcher = typeof rawFetcherClient;

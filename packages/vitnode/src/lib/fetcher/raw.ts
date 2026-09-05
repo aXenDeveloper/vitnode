@@ -12,24 +12,9 @@ export interface RawApiFetchArgs {
   method: string;
   /** Module path under the plugin, e.g. `admin/content/articles`. */
   module: string;
-  /**
-   * Extra `fetch` init, for the things a caller genuinely owns - `credentials`,
-   * and an {@link AbortSignal} from a cancellable read.
-   *
-   * `method` is omitted alongside `body` and `headers` because the spread below
-   * comes *last*: without it, an `options.method` would silently win over the
-   * `method` this call was built from, and a `get` would leave as a `post`. The
-   * three fields this function computes are the three it does not accept.
-   */
+
   options?: Omit<RequestInit, "body" | "headers" | "method">;
-  /**
-   * Origin to build the URL against, instead of `NEXT_PUBLIC_API_URL`.
-   *
-   * For a runtime that serves the API itself, the right origin is the one the
-   * request being handled arrived on: it is only knowable per request, and on a
-   * preview deployment it is a hostname nobody configured. Left unset in the
-   * browser, which keeps reading `CONFIG.api`.
-   */
+
   origin?: string;
   params?: Record<string, unknown>;
   /** Route path within the module, e.g. `/` or `/{id}`. */

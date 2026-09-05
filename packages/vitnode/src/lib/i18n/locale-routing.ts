@@ -2,18 +2,6 @@ import type { LocaleConfig, VitNodeI18nConfig } from "./types";
 
 import { negotiateLocale } from "./negotiate-locale";
 
-/**
- * Paths that never carry a locale prefix.
- *
- * `/api` is the VitNode API - a locale segment in front of it would be a
- * different URL to every client that has one hardcoded, and the API negotiates
- * its own language from the request anyway. `/admin` is the AdminCP, which is
- * behind a login and reads the operator's own preference rather than the URL:
- * prefixing it would double every admin URL for no crawler that will ever see
- * it.
- *
- * Both cover their descendants. Anything else is a public, localizable page.
- */
 export const DEFAULT_IGNORED_LOCALE_PATHS = ["/admin", "/api"] as const;
 
 /** How a locale is (or is not) written into a public URL. */
@@ -26,24 +14,11 @@ export interface LocaleRoutingConfig {
    * Defaults to {@link DEFAULT_IGNORED_LOCALE_PATHS}.
    */
   ignoredPaths?: readonly string[];
-  /**
-   * - `"as-needed"` (the default) - the default locale has no prefix, every
-   *   other one does. This is the shape VitNode serves.
-   * - `"always"` - every locale is prefixed, the default one included.
-   * - `"never"` - no URL carries a locale; the visitor's cookie decides.
-   */
+
   localePrefix?: LocalePrefixMode;
   locales: readonly string[];
 }
 
-/**
- * Where a locale may be read from when the URL does not carry one.
- *
- * Public URLs never consult either: see {@link LocaleRouting.resolveLocale}.
- * Both are read only on the branch that needs them, so a caller may pass
- * getters that go and find a cookie jar - on a public URL they are never
- * invoked.
- */
 export interface LocaleSources {
   acceptLanguage?: null | string;
   cookieLocale?: null | string;
@@ -61,11 +36,7 @@ export interface LocaleRouting {
   deLocalizePathname: (pathname: string) => string;
   /** {@link deLocalizePathname}, applied to a URL's path and nothing else. */
   deLocalizeUrl: (url: URL) => URL;
-  /**
-   * The locale `pathname` is written in, or `undefined` when it carries none.
-   * Only a prefix this configuration would itself emit counts, so under
-   * `"as-needed"` the default locale's `/en/...` is not one.
-   */
+
   extractLocaleFromPath: (pathname: string) => string | undefined;
   isSupportedLocale: (value: null | string | undefined) => value is string;
   readonly localePrefix: LocalePrefixMode;
@@ -79,15 +50,7 @@ export interface LocaleRouting {
    * already canonical.
    */
   redirectPathnameFor: (pathname: string) => string | undefined;
-  /**
-   * The single authoritative answer to "which language is this request in?".
-   *
-   * A runtime supplies whichever sources it can honour. The TanStack Start app
-   * passes only `cookieLocale` on purpose - see `src/tanstack/i18n/locale.ts`
-   * - because an `Accept-Language` answer the browser cannot reproduce is a
-   * hydration mismatch waiting to happen. Both sources are kept here for a
-   * runtime that has somewhere hydration-safe to put the negotiated result.
-   */
+
   resolveLocale: (pathname: string, sources?: LocaleSources) => string;
   /** `true` for `/api`, `/api/x`, `/admin`, `/admin/x`; `false` for `/discover`. */
   shouldIgnoreLocalePath: (pathname: string) => boolean;

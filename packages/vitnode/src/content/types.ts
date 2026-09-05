@@ -53,16 +53,7 @@ export interface ContentFieldShared<
 > {
   /** Free text or an i18n key surfaced in AdminCP and OpenAPI. */
   description?: string;
-  /**
-   * The value is stored per language, in the generated translation table rather
-   * than on the base table.
-   *
-   * Declared here - on every kind - so `fieldValue.localized` reads off the
-   * descriptor union without a narrowing dance. Only the three kinds in
-   * {@link CONTENT_LOCALIZED_FIELD_KINDS} accept it: the other builders do not
-   * take the argument at all, so `field.boolean({ localized: true })` is a
-   * compile error, and `defineContentType` refuses it again at runtime.
-   */
+
   localized?: boolean;
   /** Column accepts NULL, and `null` is a legal value. */
   nullable: TNullable;
@@ -91,26 +82,10 @@ export interface ContentTextField<
   unique?: boolean;
 }
 
-/**
- * Whether a slug has to be present in the create payload.
- *
- * Exactly the inverse of "it has a source": with one the engine can always
- * derive the value, without one nobody else can. That makes `required` a
- * consequence of `source` rather than a second knob, so `field.slug` does not
- * take it - the two could otherwise be set to contradict each other.
- */
 export type ContentSlugRequired<TSource> = TSource extends string
   ? false
   : true;
 
-/**
- * A URL segment: lowercase, ASCII, dash separated, unique across the table.
- *
- * Never nullable and never defaulted - a row without a slug could not be
- * addressed. `source` names the `text` field the value is derived from when a
- * create payload leaves it out; an update never re-derives it, so published
- * URLs stay put.
- */
 export interface ContentSlugField<
   TSource extends string | undefined = string | undefined,
   TLocalized extends boolean = boolean,
@@ -175,87 +150,25 @@ export interface ContentEnumField<
   values: TValues;
 }
 
-/**
- * A reference to one stored file in `core_files`.
- *
- * The column is an `integer` foreign key with `ON DELETE RESTRICT`, and that is
- * the whole storage model: the row holds an identifier, `core_files` holds the
- * name, the size, the media type and the storage key, and the storage adapter
- * holds the bytes. Nothing about the file is copied onto the content row, so a
- * renamed or re-encoded object is not two facts that can disagree.
- *
- * `maxBytes` is **not** optional. A file field with no ceiling is a form that
- * accepts a disk image, and a default here would be a number nobody chose
- * applied to every field in every plugin.
- *
- * `allowedMimeTypes` and `allowedExtensions` are two rules rather than one
- * spelled twice: the first is what the client *declared* the bytes are, the
- * second is what the file is *called*. A `picture.gif` carrying `image/png`
- * passes an extension-only check, which is why a strict field states both and
- * both have to match.
- *
- * `multiple: true` moves the reference off the row into a generated junction
- * table, exactly as it does for a `relation` - one row per file, with a
- * `position`. The per-file rules do not change: `maxBytes` and both allowlists
- * are checked against *each* entry, because a gallery of ten images is ten
- * uploads rather than one bigger one.
- */
 export interface ContentFileField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
   TMultiple extends boolean = boolean,
   TOrdered extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
-  /**
-   * Accepted file-name extensions, normalised to lowercase with a leading dot.
-   *
-   * Normalised by `field.file`, so `GIF`, `.gif` and `.Gif` are one rule.
-   * Omitted, any extension is accepted - the MIME list, the size and the storage
-   * adapter are still in force.
-   */
   allowedExtensions?: string[];
   /** Accepted media types, lowercased. Omitted, any type is accepted. */
   allowedMimeTypes?: string[];
   kind: "file";
-  /**
-   * The most files the field will hold. `multiple: true` only.
-   *
-   * Defaults to {@link CONTENT_FILE_COLLECTION_DEFAULT_MAX} and may not exceed
-   * {@link CONTENT_FILE_COLLECTION_ABSOLUTE_MAX}: every entry is a stored object
-   * that the record pins against deletion, and the whole list is read and
-   * rewritten as one.
-   */
+
   max?: number;
   /** Largest accepted upload, in bytes. Required, finite, and greater than zero. */
   maxBytes: number;
-  /**
-   * The fewest files to accept - `min: 1` is "at least one image".
-   *
-   * `multiple: true` only. A file collection can never be `required`, because
-   * the empty set is a legitimate value for a column that does not exist, so
-   * this is the shape a "you must upload something" rule actually takes.
-   */
+
   min?: number;
-  /**
-   * Store many files in a generated junction table instead of one on the row.
-   *
-   * Literal for the same reason {@link ContentRelationField.multiple} is: every
-   * partition keys off `{ multiple: true }`, and a widened `boolean` resolves a
-   * gallery back to the single-file branch.
-   */
+
   multiple: TMultiple;
-  /**
-   * Keep the order the files were added in.
-   *
-   * Defaults to **true** with `multiple: true`, unlike a relation: the order an
-   * editor built a gallery in is the order they meant it to read in. There are
-   * deliberately no reorder controls - rearranging is remove-and-re-add - so
-   * this is insertion order rather than a position anybody drags.
-   *
-   * `false` sorts by `core_files.id` instead, which makes `set([9, 2, 5])` and
-   * `set([2, 5, 9])` the same state rather than two writes that differ only in a
-   * column nobody declared.
-   */
+
   ordered: TOrdered;
 }
 
@@ -268,16 +181,6 @@ export interface ContentDateTimeField<
   kind: "dateTime";
 }
 
-/**
- * A reference to a VitNode user.
- *
- * `multiple: true` is the same move a to-many `relation` makes, and for the same
- * reason: a column cannot hold a set, so the references move into a generated
- * junction table whose second foreign key points at `core_users`. An article
- * with two authors is two junction rows, not a comma-separated column - so
- * `ON DELETE` still means something, and "which articles did this person write"
- * is an indexed lookup rather than a `LIKE`.
- */
 export interface ContentUserField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
@@ -287,56 +190,18 @@ export interface ContentUserField<
   kind: "user";
   /** The fewest people the field will accept. See {@link ContentRelationField.min}. */
   min?: number;
-  /**
-   * Many people instead of one.
-   *
-   * Literal rather than optional-boolean for the same reason
-   * {@link ContentRelationField.multiple} is: every partition keys off
-   * `{ multiple: true }`, and a widened `boolean` resolves a to-many field to
-   * the to-one branch - a foreign-key column that does not exist.
-   */
+
   multiple: TMultiple;
   onDelete: ContentOnDelete;
-  /**
-   * The author's order is the order the people come back in.
-   *
-   * Only meaningful with `multiple: true`, and it usually is meaningful: the
-   * first author of a piece is not an arbitrary member of a set.
-   */
+
   ordered: TOrdered;
 }
 
-/**
- * Structural match for a field whose values live in a junction table.
- *
- * Written once and reused, because "is this a set of references?" is the rule
- * that decides whether a field is a column or a table - and the version of that
- * rule that forgets `user` is a column the engine never generates and a value
- * that silently disappears.
- *
- * All three reference kinds, deliberately. A gallery is stored exactly like a
- * set of categories - a junction table with two foreign keys and a `position` -
- * and every caller of this rule is asking "is this a column?", which has the
- * same answer for a file, a category and a person.
- */
 interface ContentReferenceCollection {
   kind: "file" | "relation" | "user";
   multiple: true;
 }
 
-/**
- * A reference to another content type's rows.
- *
- * `multiple: false` is the Stage 1 shape: one nullable-or-not foreign key column
- * on the base table. `multiple: true` moves the reference off the row entirely
- * and into a generated junction table - see {@link ContentRelationJunction} -
- * because a column cannot hold a set.
- *
- * `target` is a thunk, which is also what makes a **self-relation** ordinary
- * rather than special: `target: () => articleContentType` inside
- * `articleContentType` is a forward reference resolved on first read, exactly
- * like two content types pointing at each other.
- */
 export interface ContentRelationField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
@@ -345,71 +210,19 @@ export interface ContentRelationField<
   TSelf extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "relation";
-  /**
-   * The fewest targets the field will accept, enforced by the generated schema.
-   *
-   * How a content type says "at least one" about something `required` cannot
-   * say it about: a to-many reference has no column, so the empty set is always
-   * a storable value and requiredness is a rule about the *record* instead. Only
-   * meaningful with `multiple: true`.
-   */
+
   min?: number;
-  /**
-   * Many targets instead of one.
-   *
-   * Literal rather than optional-boolean for the same reason `localized` is:
-   * every partition in this file keys off `{ multiple: true }`, and a widened
-   * `boolean` would resolve a to-many relation to the to-one branch - which is
-   * a foreign-key column that does not exist.
-   */
+
   multiple: TMultiple;
   onDelete: ContentOnDelete;
-  /**
-   * The author's order is the order the value comes back in.
-   *
-   * Only meaningful with `multiple: true`. Without it the set is stored in
-   * ascending target-id order, which is still deterministic - it is simply not
-   * something the author chose.
-   */
+
   ordered: TOrdered;
-  /**
-   * The target is **this** content type.
-   *
-   * `self: true` rather than `target: () => thisContentType`, and the reason is
-   * the type system rather than taste: a definition whose own field map
-   * mentions its own inferred type is circular, and TypeScript resolves that by
-   * quietly widening the whole definition to `any`. Every nested value type,
-   * every allowlist check and every compile-time guarantee in this file would
-   * disappear - silently, because `any` is not an error.
-   *
-   * `defineContentType` rebinds the thunk to the finished definition, so
-   * everything downstream sees an ordinary relation pointing at an ordinary
-   * content type.
-   *
-   * Literal, like `multiple` and `ordered`: `ContentReferences` subtracts a
-   * self-relation from the reference map it demands, and a widened `boolean`
-   * would leave it demanding the one thunk nobody can write.
-   */
+
   self: TSelf;
   /** Thunk so two content types can refer to each other. */
   target: () => AnyContentTypeDefinition;
 }
 
-/**
- * A reusable structured group: several leaves under one logical name.
- *
- * The value stays nested (`seo.title`), and the storage stays relational - each
- * leaf becomes an ordinary column on the base or translation table, called
- * `seoTitle`. There is no JSONB here: a
- * flattened column is indexable, constrainable and queryable, and a group is a
- * fixed set of leaves rather than an open bag.
- *
- * Localization is a property of the **group**, not of its leaves: `localized:
- * true` moves the whole group into the translation table. Marking a single leaf
- * would split one logical value across two tables with two different revision
- * histories and two different permissions, which is exactly the drift
- * `partitionContentFields` exists to prevent.
- */
 export interface ContentGroupField<
   TFields = ContentLeafFieldMap,
   TRequired extends boolean = boolean,
@@ -422,19 +235,6 @@ export interface ContentGroupField<
   localized: TLocalized;
 }
 
-/**
- * A repeatable structured group: zero or more ordered child rows.
- *
- * Stored in a generated child table (`example_articles_faq`) with a `serial`
- * primary key of its own, so a child has a **stable identity** that survives a
- * reorder - which is what makes "edit row 3" mean something and what lets a
- * revision restore put the same row back rather than a copy of it.
- *
- * Never nullable and never required: the value is an array, and the empty array
- * is the natural "nothing here". Never localized either - see
- * `apps/web/content/docs/dev/content-engine/repeatable-fields.mdx` for why that
- * is a later stage.
- */
 export interface ContentRepeatableField<
   TFields = ContentLeafFieldMap,
 > extends ContentFieldShared<false, false> {
@@ -462,15 +262,6 @@ export type ContentFieldDescriptor =
 
 export type ContentFieldKind = ContentFieldDescriptor["kind"];
 
-/**
- * The kinds a group leaf or a repeatable leaf may be.
- *
- * Scalars only. A nested group would need a second level of column naming and a
- * second level of partial-update merging for no modelling gain; a `slug` inside
- * a group would need its uniqueness scoped to something; and a `relation` or
- * `user` inside one would put a foreign key in a place the relation services do
- * not look. All four are definition-time errors.
- */
 export type ContentLeafFieldDescriptor =
   | ContentBooleanField
   | ContentDateTimeField
@@ -484,20 +275,6 @@ export type ContentFieldMap = Record<string, ContentFieldDescriptor>;
 /** A group's or repeatable's inner field map. Scalars only. */
 export type ContentLeafFieldMap = Record<string, ContentLeafFieldDescriptor>;
 
-/**
- * Type-parameter constraint for a field map - deliberately shallow.
- *
- * A constraint becomes a contextual type for the argument, so constraining to
- * `ContentFieldMap` would contextually type every `field.*()` call with
- * `ContentFieldDescriptor` and widen `required`, `nullable` and enum `values`
- * back to their generic defaults. Mentioning only `kind` still rejects
- * non-descriptors while leaving literal inference intact, and the reserved
- * system columns stay a compile error.
- *
- * `TPublication` extends the same trick to `status` and `publishedAt`, but only
- * when the content type opted into publication - a Stage 1 type is free to keep
- * declaring its own `status` enum. `TEditorial` does the same for `version`.
- */
 export type ContentFieldsConstraint<
   TPublication extends boolean = false,
   TEditorial extends boolean = false,
@@ -548,26 +325,12 @@ type ContentGroupValue<TFields> = Prettify<{
   [K in keyof TFields]: ContentFieldValue<TFields[K]>;
 }>;
 
-/**
- * One repeatable child row.
- *
- * `id` is the child table's own primary key and is always present on a read:
- * it is what a later `update`, `delete` or `reorder` addresses, and what a
- * revision restore matches an historical row against.
- */
 export type ContentRepeatableRow<TFields> = Prettify<
   {
     [K in keyof TFields]: ContentFieldValue<TFields[K]>;
   } & { id: number }
 >;
 
-/**
- * A create-shaped object over every key of a field map.
- *
- * Exported so the service can type a repeatable's child input from the leaves
- * the definition already declares, rather than falling back to
- * `Record<string, unknown>` and losing every one of them.
- */
 export type ContentValuesOf<TFields> = CreateValuesOf<TFields, keyof TFields>;
 
 /** The inner field map of one group or repeatable, by name. */
@@ -579,27 +342,10 @@ export type ContentInnerFieldsOf<TDefinition, TName> =
     ? TInner
     : never;
 
-/**
- * One repeatable child row as it is written.
- *
- * `id` is optional and is the whole write protocol: present means "update this
- * existing child", absent means "create a new one". Position comes from the
- * array order, so nothing carries it explicitly.
- */
 export type ContentRepeatableInputRow<TFields> = Prettify<
   CreateValuesOf<TFields, keyof TFields> & { id?: number }
 >;
 
-/**
- * The value as it comes back from the API (`select`).
- *
- * Structural on purpose: `TField` is unconstrained so this also works with the
- * shallow {@link ContentFieldsConstraint}.
- *
- * The three advanced kinds resolve before the scalar branch, because a `group`
- * has no scalar value at all and a to-many `relation` is a set of identifiers
- * rather than one.
- */
 export type ContentFieldValue<TField> = TField extends {
   fields: infer TInner;
   kind: "group";
@@ -611,11 +357,6 @@ export type ContentFieldValue<TField> = TField extends {
       ? number[]
       : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
-/**
- * The value as it is sent to the API. Identical to the select value except for
- * `dateTime`, which crosses the wire (and the AutoForm) as an ISO 8601 string -
- * `z.toJSONSchema` throws on `z.date()`, so a form schema can never hold one.
- */
 export type ContentFieldInput<TField> = TField extends {
   fields: infer TInner;
   kind: "group";
@@ -627,13 +368,6 @@ export type ContentFieldInput<TField> = TField extends {
       ? number[]
       : ApplyNullable<ScalarFieldInput<TField>, TField>;
 
-/**
- * The value a **partial** update may send for one field.
- *
- * Identical to {@link ContentFieldInput} everywhere except a group, where every
- * leaf becomes optional: `{ seo: { description } }` must be able to move one
- * leaf without restating the others, and without blanking them.
- */
 export type ContentFieldPatch<TField> = TField extends {
   fields: infer TInner;
   kind: "group";
@@ -682,18 +416,6 @@ type SharedFieldKeys<TFields> = Exclude<
   LocalizedFieldKeys<TFields>
 >;
 
-/**
- * Fields whose value is **not** a column on either generated table: a to-many
- * relation, which lives in a junction table, and a repeatable, which lives in a
- * child table.
- *
- * Everything that addresses a column - the admin list, an index, an equality
- * filter, `orderBy`, `ContentSelect` - subtracts these. Everything that
- * addresses a *value* - the create payload, the update patch, `changedFields` -
- * keeps them. That split is the whole of Stage 6's "opt-in" promise: a content
- * type that declares none of them has an empty subtraction and behaves exactly
- * as it did in Stage 5.
- */
 type CollectionFieldKeys<TFields> = {
   [K in keyof TFields]: TFields[K] extends { kind: "repeatable" }
     ? K
@@ -712,40 +434,16 @@ type GroupFieldKeys<TFields> = {
   [K in keyof TFields]: TFields[K] extends { kind: "group" } ? K : never;
 }[keyof TFields];
 
-/**
- * Shared fields that are **one** column: a scalar, not a group.
- *
- * A group occupies several columns under generated names, so it is not
- * something a list cell, an `orderBy` or an equality filter can address. Its
- * *leaves* are, under their canonical paths - see {@link ContentLeafPath}.
- */
 type ScalarColumnFieldKeys<TFields> = Exclude<
   ColumnFieldKeys<TFields>,
   GroupFieldKeys<TFields>
 >;
 
-/**
- * Every field that is **one** column on *either* generated table.
- *
- * The same subtraction as {@link ScalarColumnFieldKeys}, minus the shared/localized
- * split: a localized `text` is one column on the translation table, so it is
- * something the AdminCP can *show*. It is still not something the AdminCP can
- * *order or filter by* - that is a query over the base table - which is why the
- * two types exist rather than one.
- */
 type ScalarDisplayFieldKeys<TFields> = Exclude<
   Exclude<keyof TFields, CollectionFieldKeys<TFields>>,
   GroupFieldKeys<TFields>
 >;
 
-/**
- * The canonical dotted path of every group leaf: `"seo.title"`.
- *
- * One representation, used by `changedFields`, validation errors, index
- * declarations, `publicApi.fields`, `search.contentFields` and revision
- * diagnostics alike. The generated column name (`seoTitle`) is an internal
- * mapping and never appears in any of them.
- */
 export type ContentLeafPath<TFields> = string &
   {
     [K in GroupFieldKeys<TFields>]: TFields[K] extends {
@@ -1630,29 +1328,9 @@ export interface ContentDeliveryConfig<
   TDescription extends string = string,
   TNoIndex extends string = string,
 > {
-  /**
-   * Literal `true`, and only when the content type has a public API.
-   *
-   * `never` otherwise, which is what turns "delivery needs `publicApi`" into a
-   * compile error on the `enabled: true` itself rather than a boot-time throw. The
-   * runtime check stays as well, for a JavaScript caller and for a value that
-   * widened somewhere upstream.
-   */
   enabled: TPublicEnabled extends true ? true : never;
   hreflang?: ContentDeliveryHreflangConfig;
-  /**
-   * Gated on **editorial** as well as on the public API, and the second gate is not
-   * a taste decision: slug history has to be written in the same transaction as the
-   * slug mutation, the version check and the revision - and the only mutation paths
-   * that own such a transaction are the editorial ones. Without `editorial` a
-   * content type writes through the plain repository, which has no version to guard
-   * and no history to write, so `redirects: { enabled: true }` there would be a
-   * feature that silently records nothing.
-   *
-   * Only `redirects` is gated. Canonical URLs, SEO, alternates, `hreflang` and the
-   * sitemap are all reads over data the content type already has, and they remain
-   * available without `editorial`.
-   */
+
   redirects?: TPublicEnabled extends true
     ? TEditorialEnabled extends true
       ? ContentDeliveryRedirectsConfig | { enabled: false }
@@ -1662,13 +1340,6 @@ export interface ContentDeliveryConfig<
   sitemap?: ContentDeliverySitemapConfig | { enabled: false };
 }
 
-/**
- * Whether a `delivery` argument opted in.
- *
- * Read back off the argument for the same reason `ContentSearchEnabled` is: the
- * whole object is inferred as one type parameter, and an intersection member is
- * not an inference site, so this is the only way the literal survives.
- */
 export type ContentDeliveryEnabled<TDelivery> = TDelivery extends {
   enabled: true;
 }
@@ -1701,17 +1372,7 @@ export interface ResolvedContentDeliveryConfig<
     enabled: boolean;
     priority: null | number;
   };
-  /**
-   * Where the slug that addresses this content type lives.
-   *
-   * `"localized"` when `publicApi.slugField` is a localized field, `"shared"`
-   * otherwise - and it is the only thing the whole delivery layer branches on to
-   * decide which language a historical URL belongs to. A localized slug is
-   * reserved per language, a shared one once for the content type, and both are
-   * correct for the URLs they actually produce.
-   *
-   * `"none"` for a content type without delivery, which addresses nothing.
-   */
+
   slugScope: "localized" | "none" | "shared";
 }
 
@@ -1724,21 +1385,11 @@ export interface ContentEditorialRevisionsConfig {
   retention?: number;
 }
 
-/**
- * Opts into signed, expiring preview links for unpublished records.
- *
- * `enabled` is literal `true` for the same reason every other opt-in's is: a
- * widened `boolean` would silently resolve to "no preview".
- */
 export interface ContentEditorialPreviewConfig {
   enabled: true;
   /** How long a link stays valid. 1-1440 minutes, defaults to 15. */
   expiresInMinutes?: number;
-  /**
-   * Where the AdminCP sends a reviewer, e.g. `/articles/preview/{token}`.
-   * Relative, and `{token}` is the only placeholder. Omit it and the AdminCP
-   * links to the generated JSON endpoint instead.
-   */
+
   pathTemplate?: string;
 }
 
@@ -1746,21 +1397,6 @@ export interface ContentEditorialSchedulingConfig {
   enabled: true;
 }
 
-/**
- * Opts a content type into the editorial workflow: a `version` column,
- * optimistic locking and revision history.
- *
- * The two sub-features are gated on the capabilities they actually need, and
- * the `{ enabled: false }` branches are what turn a mistake into a compile
- * error rather than a boot-time one:
- *
- * - **preview** projects through `publicApi.fields`. Without a public allowlist
- *   there is nothing to project, so it needs `publicApi` (which already needs
- *   `publication`).
- * - **scheduling** moves `status`, so it needs `publication`. It does *not*
- *   need a public API - a content type may run the lifecycle for the AdminCP
- *   badge alone.
- */
 export interface ContentEditorialConfig<
   TPublicEnabled extends boolean = boolean,
   TPublication extends boolean = boolean,
@@ -1775,13 +1411,6 @@ export interface ContentEditorialConfig<
     : { enabled: false };
 }
 
-/**
- * Whether an `editorial` argument opted in, and into what.
- *
- * Read back off the argument for the same reason `ContentSearchEnabled` is: the
- * whole object is inferred as one type parameter, and an intersection member is
- * not an inference site, so this is the only way the literals survive.
- */
 export type ContentEditorialEnabled<TEditorial> = TEditorial extends {
   enabled: true;
 }
@@ -1818,13 +1447,6 @@ export interface ResolvedContentEditorialConfig<
   scheduling: { enabled: TScheduling };
 }
 
-/**
- * The one generated column `editorial` adds.
- *
- * Read-only on the wire like the publication columns: it appears in a response
- * so a client knows what to send back as `expectedVersion`, and it is absent
- * from the create and update schemas so nobody can write it.
- */
 type ContentEditorialColumns<TDefinition> = TDefinition extends {
   editorial: { enabled: true };
 }
@@ -1838,43 +1460,13 @@ type ContentEditorialColumns<TDefinition> = TDefinition extends {
 export type ContentLocalizationFallback =
   (typeof CONTENT_LOCALIZATION_FALLBACKS)[number];
 
-/**
- * Opts a content type into per-language content: the fields marked
- * `localized: true` move off the base table into a generated translation table,
- * one row per language.
- *
- * Nothing about the *UI* language changes - that is `core_languages_words` and
- * the ordinary i18n system. This is about the records themselves: an article
- * that exists in English and in Polish, with its own title, slug and body in
- * each.
- *
- * `enabled` is literal `true` for the same reason every other opt-in's is: every
- * conditional keys off `{ enabled: true }`, and a widened `boolean` would
- * silently resolve to "not localized".
- */
 export interface ContentLocalizationConfig {
-  /**
-   * The locale every record is created in, and the one translation a record can
-   * never be without. Must name a row in `core_languages`, which is checked
-   * against the database once, at boot - see `assertContentLocalizationLanguages`.
-   */
   defaultLocale: string;
   enabled: true;
-  /**
-   * What a public read should do for a locale with no translation. Resolved now
-   * and acted on in Stage 5C; `"none"` is the default because it is the only
-   * answer that cannot silently publish the wrong language.
-   */
+
   fallback?: ContentLocalizationFallback;
 }
 
-/**
- * `localization` after `defineContentType` has filled in every default.
- *
- * Generic over `enabled` for the same reason `publication` and `editorial` are:
- * a widened `boolean` would make every definition equally (un)localized, so
- * `LocalizedContentTypeDefinition` would only ever match after a cast.
- */
 export interface ResolvedContentLocalizationConfig<
   TEnabled extends boolean = boolean,
 > {
@@ -1887,13 +1479,6 @@ export interface ResolvedContentLocalizationConfig<
   translationTableName: string;
 }
 
-/**
- * Whether a `localization` argument opted in.
- *
- * Read back off the argument for the same reason `ContentSearchEnabled` is: the
- * whole object is inferred as one type parameter, and an intersection member is
- * not an inference site, so this is the only way the literal survives.
- */
 export type ContentLocalizationEnabled<TLocalization> = TLocalization extends {
   enabled: true;
 }
@@ -1912,12 +1497,6 @@ export type ContentSharedFieldName<TDefinition> = SharedFieldKeys<
 > &
   string;
 
-/**
- * The localized half of a create payload - one locale's worth of values.
- *
- * Empty (`{}`) for a content type with no localized fields, which is what makes
- * `translation:` impossible to fill in by accident on a Stage 1-4 definition.
- */
 export type ContentLocalizedValues<TDefinition> = CreateValuesOf<
   ContentFieldsOf<TDefinition>,
   keyof ContentFieldsOf<TDefinition> &
@@ -1936,15 +1515,6 @@ export type ContentLocalizedUpdateValues<TDefinition> = Prettify<
   Partial<ContentLocalizedValues<TDefinition>>
 >;
 
-/**
- * One translation's own publication state, or nothing.
- *
- * Gated on the *base* content type having publication, for the same reason the
- * columns are: a translation status is only meaningful as something subordinate
- * to a global one. Optional members rather than a widened `string`, so reading
- * `row.status` on a content type without publication is a compile error rather
- * than a silent `undefined`.
- */
 export type ContentTranslationPublicationColumns<TDefinition> =
   TDefinition extends { publication: { enabled: true } }
     ? {
@@ -1968,13 +1538,6 @@ export type ContentTranslationRow<TDefinition> = Prettify<
   }
 >;
 
-/**
- * One translation without its values.
- *
- * What the list route returns, and deliberately so: the AdminCP needs to know
- * which languages exist, how stale each one is and whether each is published -
- * not to drag every article body in every language across the wire to find out.
- */
 export type ContentTranslationMeta<TDefinition = AnyContentTypeDefinition> =
   Prettify<
     ContentTranslationPublicationColumns<TDefinition> & {
@@ -1991,53 +1554,18 @@ export type ContentTranslationMeta<TDefinition = AnyContentTypeDefinition> =
 // Definition
 // ---------------------------------------------------------------------------
 
-/**
- * A content type whose records are synchronized with the search index.
- *
- * An intersection rather than a sixth type argument, for the same reason
- * {@link PublicContentTypeDefinition} is one: `enabled` is the only thing a
- * caller of the search layer needs pinned, and narrowing just that keeps every
- * concrete definition assignable.
- */
 export type SearchableContentTypeDefinition = AnyContentTypeDefinition & {
   search: { enabled: true };
 };
 
-/**
- * A content type that actually has a generated public API.
- *
- * The erased `AnyContentTypeDefinition` carries `enabled: boolean`, so it also
- * describes a content type with no public API at all - one whose `publicApi.path`
- * is the empty string. Anything that builds a public URL takes this instead, so
- * passing the wrong content type is a compile error rather than a request to
- * `/api/{pluginId}/content//`.
- *
- * An intersection rather than a fifth type argument: `enabled` is the only
- * parameter a caller of the public read layer needs pinned, and narrowing just
- * that one keeps every concrete definition assignable.
- */
 export type PublicContentTypeDefinition = AnyContentTypeDefinition & {
   publicApi: { enabled: true };
 };
 
-/**
- * A content type with the editorial workflow: it has a `version` column, its
- * writes are guarded by an expected version, and every real mutation leaves a
- * revision behind.
- *
- * An intersection rather than three more type arguments, for the same reason
- * {@link PublicContentTypeDefinition} is one.
- */
 export type EditorialContentTypeDefinition = AnyContentTypeDefinition & {
   editorial: { enabled: true };
 };
 
-/**
- * A content type whose drafts can be previewed.
- *
- * Both halves are pinned: the preview projects through `publicApi.fields`, so a
- * content type without a public allowlist cannot reach the token signer at all.
- */
 export type PreviewableContentTypeDefinition = EditorialContentTypeDefinition &
   PublicContentTypeDefinition & {
     editorial: { preview: { enabled: true } };
@@ -2050,50 +1578,18 @@ export type SchedulableContentTypeDefinition =
     publication: { enabled: true };
   };
 
-/**
- * A content type with a delivery layer: canonical URLs, alternates, SEO and a
- * sitemap.
- *
- * Both halves are pinned, because delivery is defined in terms of the public
- * projection: the canonical path is built from `publicApi.path` and the exposed
- * slug field, and every SEO field is one of `publicApi.fields`. A content type
- * without a public allowlist cannot reach the delivery service at all - which is
- * a compile error rather than an empty response.
- */
 export type DeliverableContentTypeDefinition = PublicContentTypeDefinition & {
   delivery: { enabled: true };
 };
 
-/**
- * A content type whose records exist in more than one language.
- *
- * An intersection rather than a tenth type argument, for the same reason
- * {@link PublicContentTypeDefinition} is one: `enabled` is the only thing the
- * translation layer needs pinned, and narrowing just that keeps every concrete
- * definition assignable to `AnyContentTypeDefinition`.
- */
 export type LocalizedContentTypeDefinition = AnyContentTypeDefinition & {
   localization: { enabled: true };
 };
 
-/**
- * Everything Stage 6 resolves once, at definition time.
- *
- * Empty arrays for a content type that declares no advanced field, which is what
- * makes "Stage 6 is opt-in" true rather than merely intended: every generator
- * below loops over these, and an empty loop generates nothing.
- */
 export interface ResolvedContentAdvancedConfig {
   /** One generated junction table per to-many relation field. */
   junctions: ContentRelationJunction[];
-  /**
-   * Every group leaf, by canonical path, with the column it compiles to.
-   *
-   * The single field-path mapping the whole engine reads: table generation,
-   * schemas, service reads and writes, revisions, the public projection, search
-   * and the AdminCP all take the column name from here rather than re-deriving
-   * it, so there is exactly one place the two representations meet.
-   */
+
   leaves: ContentLeafColumn[];
   /** One generated child table per repeatable field. */
   repeatables: ContentRepeatableTable[];
@@ -2129,11 +1625,7 @@ export interface ContentTypeDefinition<
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;
-  /**
-   * Canonical URLs, slug history, SEO and sitemap - or the disabled default when
-   * `delivery` is omitted, which is what keeps every Stage 1-7 content type
-   * byte-identical.
-   */
+
   delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
   editorial: ResolvedContentEditorialConfig<
@@ -2184,14 +1676,6 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
   ? TFields
   : never;
 
-/**
- * One base row.
- *
- * Shared fields only: a localized field's value lives on the translation table,
- * so it is not a column here and never comes back from a base read. For a
- * content type without localization every field is shared, so this is exactly
- * the type it always was.
- */
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
     ContentPublicationColumns<TDefinition> & {
@@ -2201,13 +1685,6 @@ export type ContentSelect<TDefinition> = Prettify<
     } & { createdAt: Date; id: number; updatedAt: Date }
 >;
 
-/**
- * One record with its advanced collections attached.
- *
- * What a detail read returns and what an editorial mutation echoes back. Two
- * extra queries per record rather than per row, and only where a caller asked
- * for the whole thing.
- */
 export type ContentDetail<TDefinition> = Prettify<
   ContentAdvancedValues<TDefinition> & ContentSelect<TDefinition>
 >;
@@ -2215,38 +1692,15 @@ export type ContentDetail<TDefinition> = Prettify<
 /** The base-table half of a create payload. See {@link ContentSharedValues}. */
 export type ContentCreateInput<TDefinition> = ContentSharedValues<TDefinition>;
 
-/**
- * A partial update.
- *
- * Partial one level deeper than `Partial<ContentCreateInput>` would be: a group
- * value may name a subset of its leaves, so `{ seo: { description } }` moves one
- * leaf and leaves `seo.title` exactly where it was. A collection is replaced
- * whole - `categories: [2, 5, 9]` is the complete new set - because a partial
- * set has no meaning that is not either "add" or "remove", and both of those are
- * their own service call.
- */
 export type ContentUpdateInput<TDefinition> = Prettify<{
   [K in SharedFieldKeys<ContentFieldsOf<TDefinition>>]?: ContentFieldPatch<
     ContentFieldsOf<TDefinition>[K]
   >;
 }>;
 
-/**
- * Every field name the content type declares, localized ones included.
- *
- * Use {@link ContentSharedFieldName} where a *column on the base table* is
- * meant - which is most places.
- */
 export type ContentFieldName<TDefinition> = keyof ContentFieldsOf<TDefinition> &
   string;
 
-/**
- * Shared field names of one or more kinds.
- *
- * Deliberately shared-only: everything derived from this - filters, ordering,
- * relation pickers - addresses a column on the *base* table, and a localized
- * field does not have one.
- */
 type FieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
   {
     [
@@ -2258,12 +1712,6 @@ type FieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
       : never;
   }[ScalarColumnFieldKeys<ContentFieldsOf<TDefinition>>];
 
-/**
- * Kinds the generated filter schema understands, derived from the one runtime
- * list in `const.ts` so the compile-time contract and the runtime guard are the
- * same list. `service.test-d.ts` asserts it stays a subset of
- * {@link ContentFieldKind}.
- */
 export type FilterableContentFieldKind =
   (typeof CONTENT_FILTERABLE_FIELD_KINDS)[number];
 
@@ -2287,40 +1735,15 @@ type AnyFieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = Exclude<
 > &
   string;
 
-/**
- * Field names a **public** filter may name.
- *
- * Wider than {@link FilterableContentFieldName} by exactly the localized half: an
- * admin list is a query over the base table, but a public localized read already
- * joins the translation it is serving, so filtering on a localized field is one
- * more predicate on a row it was fetching anyway - evaluated against the language
- * the reader will actually see.
- */
 export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
   TDefinition,
   FilterableContentFieldKind
 >;
 
-/**
- * The one filter a to-many relation accepts: "this record is related to *that*
- * row".
- *
- * An object rather than a bare identifier so it can never be confused with the
- * equality filter a to-one relation takes, and so the SQL it compiles to - an
- * indexed `EXISTS` over the junction table - is chosen by the shape of the value
- * rather than by looking up the descriptor twice. There is deliberately no
- * `containsAll`, no `containsAny` and no traversal: that is a query language,
- * and a hand-written route is the better answer to it.
- */
 export interface ContentRelationFilter {
   contains: number;
 }
 
-/**
- * Equality filters accepted by `service.findMany`, one key per filterable
- * field - plus `status` once publication is enabled, which is a generated
- * column rather than a declared field.
- */
 export type ContentFilterInput<TDefinition> = Partial<
   Record<ContentRelationCollectionName<TDefinition>, ContentRelationFilter> &
     (TDefinition extends { publication: { enabled: true } }
@@ -2332,19 +1755,6 @@ export type ContentFilterInput<TDefinition> = Partial<
     }
 >;
 
-/**
- * Columns `service.findMany` may order by.
- *
- * A compile-time approximation, and deliberately so: `admin.list.orderableFields`
- * is stored on the *resolved* (non-generic) admin config, so the configured
- * array is not recoverable as a type. Every field name is accepted here, and
- * the narrower runtime allowlist rejects the ones that were not configured.
- *
- * The generated publication columns are part of that allowlist at runtime -
- * `orderableColumns` appends them, and the generated route's `orderBy` enum
- * includes them - so they belong here too, but only for a content type that
- * actually opted in.
- */
 export type ContentOrderableFieldName<TDefinition> =
   | ContentSharedFieldName<TDefinition>
   | ContentSystemField
@@ -2365,22 +1775,6 @@ export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
 // Public projection
 // ---------------------------------------------------------------------------
 
-/**
- * How an exposed `relation` comes back: an identifier, and nothing else.
- *
- * Deliberately not the related row, and deliberately **not a label**. The
- * obvious label is the target's `admin.titleField`, but that is administrative
- * metadata: it may name a field the target does not expose publicly, the target
- * may have no `publicApi` at all, and the row it is read from may itself be a
- * draft. Publishing an internal name because two content types are related is
- * not a decision one allowlist should make on behalf of another.
- *
- * An identifier is enough to fetch the related row through its own public API,
- * which is the layer that decides what it is willing to say. Configurable
- * public relation labels are a later stage; deep nesting and arbitrary
- * population are the point at which a REST projection turns into GraphQL, and a
- * hand-written route is the better answer to that.
- */
 export interface ContentPublicRelation {
   id: number;
 }

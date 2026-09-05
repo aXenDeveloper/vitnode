@@ -10,17 +10,6 @@ import {
   normalizeAdminTableSearch,
 } from "./table-search";
 
-/**
- * The seam between an AdminCP list route's URL and its request.
- *
- * `views/admin/table/params.test.ts` proves what a *request* may contain; this
- * proves the three shapes around it stay in step - the address bar, the route's
- * validated search, and the query string the table's own controls read
- * themselves out of. The failures it guards against are the ones that only show
- * up in a browser: a page size written into every link, a sort header that
- * cannot round-trip its own click, a `first=%2220%22` in the address bar.
- */
-
 const contract: AdminTableContract<"createdAt" | "name"> = {
   orderBy: ["createdAt", "name"],
   search: true,
@@ -120,11 +109,6 @@ describe("every schema is total and idempotent", () => {
   });
 });
 
-/**
- * The search index screen has one parameter and no pager, so it deliberately
- * does *not* use the table contract above - a page size in the URL of a table
- * that cannot page would be a parameter nothing reads.
- */
 describe("the search index screen's single parameter", () => {
   it("keeps a term", () => {
     expect(normalizeSearchIndexRouteSearch({ search: "blog" })).toEqual({

@@ -21,19 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 
-/**
- * Creating a user from the AdminCP, with no framework in it.
- *
- * The dialog stays a shell and the form is loaded on demand - the Next.js
- * version does the same with `next/dynamic`, and for the same reason: the form
- * drags `AutoForm`, `react-hook-form` and zod behind it, and none of that is
- * worth downloading to look at a list of users. `React.lazy` is the
- * framework-neutral spelling.
- *
- * The write arrives as a prop so a Next.js page can hand it a Server Action
- * while a TanStack route hands it a browser call plus a query invalidation.
- */
-
 export type CreateAdminUser = (
   input: AdminUserCreateInput,
 ) => Promise<AdminMutationResult<AdminUserCreated>>;

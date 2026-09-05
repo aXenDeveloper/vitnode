@@ -16,12 +16,6 @@ import {
 import { Loader } from "@/components/ui/loader";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
-/**
- * `React.lazy` rather than `next/dynamic`, so this dialog renders in both
- * applications. The two do the same thing here - split the chunk and load it on
- * first render - and the `<React.Suspense>` below was always the boundary either
- * of them suspends against.
- */
 const ContentMoreActionSystemLogs = React.lazy(async () =>
   import("./content").then(module => ({
     default: module.ContentMoreActionSystemLogs,

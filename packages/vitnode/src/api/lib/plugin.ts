@@ -44,12 +44,6 @@ export function buildApiPlugin<P extends string>({
   permissionStaff,
   searchIndexers,
 }: {
-  /**
-   * The plugin's *server* strings - the ones emails and other server-rendered
-   * responses use - usually `import messages from "./locales/api"`. Kept apart
-   * from the frontend tree in `config.tsx` so an API-only app never loads admin
-   * UI copy. Omit it when the plugin renders nothing server-side.
-   */
   messages?: LocaleMessagesMap;
   modules?: BuildModuleReturn<P, string>[];
   permissionStaff?: PermissionStaffConfig;

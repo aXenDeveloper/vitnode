@@ -46,15 +46,6 @@ const REQUIRED_COLUMNS = [
   "publishedAt",
 ] as const;
 
-/**
- * Where each indexed value comes from.
- *
- * A rebuild cannot classify a search field by looking it up in the top-level
- * field maps: `seo.description` is not a key in either of them, and
- * `faq.question` is not a column at all. Resolving the paths once - here - is
- * what lets both indexers select real columns, fold groups back into their
- * logical shape, and batch the collections they actually need.
- */
 interface ContentSearchSources {
   /** Collection fields to batch-load for the page's parent ids. */
   collections: string[];
@@ -68,17 +59,6 @@ interface ContentSearchSources {
   sharedGroups: ContentFieldMap;
 }
 
-/**
- * Splits the configured search fields by where their values actually live.
- *
- * Three destinations, and a path is the only way to tell two of them apart:
- *
- * - a **scalar** field is a column, on whichever table its `localized` flag says;
- * - a **group leaf** is a column too, under its generated name, on the table the
- *   *group* moved to - localization is a property of the group, so one leaf can
- *   never be on the other side from its siblings;
- * - a **collection leaf** is not a column anywhere. Its parent is batch-loaded.
- */
 const resolveSearchSources = (
   definition: AnyContentTypeDefinition,
 ): ContentSearchSources => {
@@ -130,14 +110,6 @@ const resolveSearchSources = (
   return sources;
 };
 
-/**
- * The shared collections for one rebuild page, in one batch per field.
- *
- * Keyed by parent id and deduplicated first, which is what makes the localized
- * rebuild safe: a record with three published translations appears three times on
- * a page, and loading its FAQ once rather than three times is the difference
- * between a bounded query count and an N+1.
- */
 const loadSearchCollections = async ({
   advanced,
   c,
@@ -157,13 +129,6 @@ const loadSearchCollections = async ({
   return await advanced.loadMany(unique, c.get("db"), wanted);
 };
 
-/**
- * A generated indexer, pinned to the modern page contract.
- *
- * `SearchIndexer.load` also accepts the deprecated bare-array result, for
- * hand-written indexers that predate it. A generated one never returns that, and
- * saying so keeps the guarantee in the type rather than in a comment.
- */
 export interface ContentSearchIndexer extends SearchIndexer {
   load: (
     c: Context,
@@ -172,25 +137,6 @@ export interface ContentSearchIndexer extends SearchIndexer {
   ) => Promise<SearchIndexerPage>;
 }
 
-/**
- * Adapts one content type to the engine's {@link SearchIndexer} contract, so a
- * full or per-collection rebuild can stream its published records.
- *
- * Registered automatically by `buildContentAdminModule` for every content type
- * with `search: { enabled: true }` - manual indexers registered by a plugin are
- * untouched and keep working exactly as before.
- *
- * Two properties matter for review:
- *
- * 1. **Only published rows are read.** `publishedCondition` is not a parameter -
- *    both queries `and` it in themselves, so there is no argument a caller could
- *    forget, and it is the same SQL predicate the public read layer uses.
- * 2. **Only projected columns are read.** The `SELECT` is built from the
- *    configured search fields, all of which `defineContentType` has already
- *    proven are in `publicApi.fields`. A private column is never fetched, and
- *    column names are resolved into Drizzle columns rather than interpolated
- *    into SQL.
- */
 export const createContentSearchIndexer = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -214,14 +160,6 @@ export const createContentSearchIndexer = <
     ]),
   );
 
-  /**
-   * The keyset cursor, per request.
-   *
-   * A `WeakMap` keyed by the Hono context, exactly as the localized indexer
-   * does: the rebuild task calls `load` repeatedly within one request, and the
-   * entry is collected with it. A fresh request starts at the beginning, which
-   * is what a rebuild means.
-   */
   const cursors = new WeakMap<Context, number>();
 
   return {
@@ -240,29 +178,6 @@ export const createContentSearchIndexer = <
       return row?.value ?? 0;
     },
 
-    /**
-     * Keyset paging on `id`, not `OFFSET`.
-     *
-     * `OFFSET` was wrong twice over. It re-reads and discards every earlier row,
-     * so page 500 of a rebuild costs five hundred pages of work - and worse, the
-     * offset counts rows in a set that is *moving*: a record unpublished after
-     * page one shifts everything behind it forward by one, and the next
-     * `OFFSET 100` steps straight over a row nobody ever indexed. A rebuild that
-     * silently misses rows is the failure a rebuild exists to fix.
-     *
-     * `WHERE id > :last` has neither problem. It seeks on the primary key, and
-     * it is anchored to a value rather than to a position, so rows appearing or
-     * disappearing behind the cursor cannot move it.
-     *
-     * The `offset` argument stays in the signature because the
-     * {@link SearchIndexer} contract is shared with hand-written indexers; it is
-     * used only as the "this is a fresh pass" signal, exactly as the localized
-     * indexer uses it.
-     *
-     * `itemsRead` is the row count, not the document count. A published row with
-     * no usable title projects to nothing, and reporting that as "no items"
-     * would end the rebuild before the valid rows after it.
-     */
     load: async (c, offset, limit) => {
       // The contract's only signal that this is a fresh pass rather than the
       // next page of one.
@@ -316,28 +231,6 @@ export const createContentSearchIndexer = <
   };
 };
 
-/**
- * The localized rebuild: one document per **published translation**.
- *
- * Two things make it a different function rather than a flag on the one above:
- *
- * 1. **The unit of paging is a translation, not a record.** `itemsRead` has to
- *    count translation rows, or a record with three languages would advance the
- *    offset by one and the rebuild would read it again forever.
- * 2. **Paging is keyset, not offset.** The cursor is `(itemId, languageId)`,
- *    which is the translation table's primary key, so a page can neither overlap
- *    nor skip while rows are being published underneath it - and Postgres seeks
- *    to it on the index rather than counting past every earlier row, which is
- *    what makes a rebuild of a large table finish in linear time.
- *
- * The `offset` the contract hands in is used only as a *position counter*: the
- * cursor is derived from the previous page's last row and kept here, keyed by
- * the request, so the contract stays unchanged for every existing indexer.
- *
- * Both halves of the visibility rule are in the query: the base row's published
- * predicate and the translation's. A translation of a draft record is not read,
- * so it can never be indexed.
- */
 export const createContentLocalizedSearchIndexer = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -375,14 +268,6 @@ export const createContentLocalizedSearchIndexer = <
   const visible = (): SQL | undefined =>
     and(publishedCondition(base), publishedCondition(translation));
 
-  /**
-   * The keyset cursor, per request.
-   *
-   * A `WeakMap` keyed by the Hono context, for the same reason the language
-   * registry uses one: the rebuild task calls `load` repeatedly within one
-   * request, and the entry is collected with it. A fresh request starts at the
-   * beginning, which is what a rebuild means.
-   */
   const cursors = new WeakMap<
     Context,
     { itemId: number; languageId: number }

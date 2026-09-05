@@ -10,16 +10,6 @@ import {
   isContentPublished,
 } from "./publication";
 
-/**
- * The publication state machine, as the AdminCP reads it.
- *
- * Every assertion here is about a value that arrives off `JSON.parse` and is
- * therefore `unknown` at the call site. That is the whole reason this module
- * exists: five screens used to answer `status === "published"` independently,
- * and none of them had a rule for what a `null`, a number or a status from a
- * newer API meant.
- */
-
 describe("reading a status off the wire", () => {
   it("keeps the two the engine declares", () => {
     for (const status of CONTENT_PUBLICATION_STATUSES) {

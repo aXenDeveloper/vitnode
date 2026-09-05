@@ -3,11 +3,6 @@ import { randomUUID } from "node:crypto";
 
 import { getFileExtension, replaceFileExtension } from "../file-extension";
 
-/**
- * Re-exported rather than defined here: `AutoFormFile` runs the same extension
- * check in the browser, and this module cannot cross that boundary - it imports
- * `node:crypto` at the top level.
- */
 export { getFileExtension, replaceFileExtension };
 
 /** One path segment: letters, numbers, hyphens and underscores, never leading. */
@@ -47,12 +42,6 @@ export const sanitizeFolder = (folder: string): string => {
   return folder;
 };
 
-/**
- * Collision-free stored file name: a random UUID keeps the original extension
- * but discards the user-provided name, so no lookups or races are needed. Pass
- * `extension` (including the leading dot) to override the extension, e.g. when
- * an image has been converted to a different format.
- */
 export const generateStorageFileName = (
   originalName: string,
   extension?: string,

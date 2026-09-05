@@ -1,5 +1,3 @@
-'use client'
-
 import { useDataTableSelection } from '@vitnode/core/components/table/selection'
 import { Button } from '@vitnode/core/components/ui/button'
 import { Trash2Icon } from 'lucide-react'

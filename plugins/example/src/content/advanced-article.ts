@@ -2,39 +2,6 @@ import { defineContentType, field } from "@vitnode/core/content";
 
 import { categoryContentType } from "./category";
 
-/**
- * The Stage 6 reference: every advanced modeling shape on one content type.
- *
- * - **`categories`** - an unordered to-many relation. Its values live in
- *   `example_advanced_articles_categories`, a junction table with a real
- *   foreign key at each end; `onDelete: "restrict"` means Postgres itself
- *   refuses to delete a category that is still in use, rather than a check in
- *   service code that a direct `DELETE` would walk past.
- * - **`relatedArticles`** - an **ordered self-relation**, declared with
- *   `self: true` rather than `target: () => advancedArticleContentType`. The
- *   difference is not stylistic: a definition whose field map mentions its own
- *   inferred type is circular, and TypeScript resolves that by widening the
- *   whole definition to `any` - silently taking every nested value type with
- *   it. `ordered: true` keeps the author's order, and `UNIQUE (itemId,
- *   position)` is what makes that order a fact rather than a hope.
- * - **`seo`** - a **localized** group. Its leaves are stored as `seoTitle` and
- *   `seoDescription` on the *translation* table, so every language gets its own
- *   SEO copy - and the value stays nested (`row.seo.title`) whatever the columns
- *   are called.
- * - **`syndication`** - a **shared** group. Same mechanics, on the base table.
- *   Kept separate from `seo` on purpose: localization is a property of the whole
- *   group, so a group cannot have one localized leaf and one shared one. Two
- *   groups is the shape that says which is which.
- * - **`faq`** - a repeatable. Its children live in
- *   `example_advanced_articles_faq`, each with a `serial` primary key of its own
- *   so identity survives a reorder, and `search.contentFields` indexes their
- *   prose in position order.
- *
- * What is deliberately **not** here is the combination Stage 6 refuses:
- * `field.repeatable({ localized: true })`, and a `localized: true` leaf inside
- * either kind. See
- * `apps/web/content/docs/dev/content-engine/relations-and-advanced-modeling.mdx`.
- */
 export const advancedArticleContentType = defineContentType({
   id: "example.advanced-article",
   tableName: "example_advanced_articles",
@@ -99,14 +66,7 @@ export const advancedArticleContentType = defineContentType({
     syndication: field.group({
       fields: {
         indexable: field.boolean({ defaultValue: true }),
-        /**
-         * The Stage 8 `noIndexField`, and shared rather than localized on purpose.
-         *
-         * Sitemap exclusion and the `robots` metadata are driven by the same
-         * boolean, so they cannot disagree - and a per-locale value would give one
-         * record one answer per language while it has a single canonical decision.
-         * `delivery` refuses a localized field here for exactly that reason.
-         */
+
         noIndex: field.boolean({ defaultValue: false }),
         priority: field.number({
           integer: true,
@@ -127,21 +87,6 @@ export const advancedArticleContentType = defineContentType({
     }),
   },
 
-  /**
-   * Leaf-level allowlisting.
-   *
-   * `seo.title` and `seo.description` are public; `syndication.priority` is
-   * public and `syndication.indexable` is **not**, which is the whole point of
-   * naming leaves rather than groups: exposing one leaf must not expose its
-   * neighbours, and a leaf added later stays private until somebody says
-   * otherwise.
-   *
-   * `categories` is exposed as identifiers. Not as expanded rows: a category has
-   * its own public API, its own allowlist and its own publication state, and
-   * publishing another content type's data because two records are related is
-   * not a decision this allowlist gets to make. `relatedArticles` is private
-   * altogether.
-   */
   publicApi: {
     enabled: true,
     path: "advanced-articles",
@@ -171,11 +116,6 @@ export const advancedArticleContentType = defineContentType({
     defaultOrder: "desc",
   },
 
-  /**
-   * A document per published translation, built from three kinds of value at
-   * once: a plain localized field, a localized group leaf, and a repeatable's
-   * children joined in position order.
-   */
   search: {
     enabled: true,
     titleField: "title",
@@ -184,22 +124,6 @@ export const advancedArticleContentType = defineContentType({
     pathTemplate: "/{locale}/advanced-articles/{slug}",
   },
 
-  /**
-   * The Stage 8 reference for a **localized** content type.
-   *
-   * Its canonical path carries the locale - `/pl/advanced-articles/moj-artykul` -
-   * and so does its slug history: the slug is `localized: true`, so each language
-   * gets its own reservation and changing the English URL creates no Polish
-   * redirect.
-   *
-   * `seo` reads the localized group, so every language has its own title and
-   * description, with `fallbackTitleField: "title"` filling in when `seo.title` is
-   * empty - which it usually is, because nobody writes one twice.
-   *
-   * `hreflang.xDefault` points at the default locale's canonical path, and only when
-   * that language is genuinely published: an `x-default` pointing at a translation
-   * this record does not have would be a hint to crawl a 404.
-   */
   delivery: {
     enabled: true,
     redirects: { enabled: true },

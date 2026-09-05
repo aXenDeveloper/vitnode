@@ -5,21 +5,13 @@ import type {
   ContentSelect,
   ContentSystemField,
 } from "../content/types";
-import type { PluginRouteDefinition } from "../routing/types";
+import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
+import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
 import type { LocaleMessagesMap } from "./i18n/types";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
-/**
- * Picked from the navigation *model* rather than from a component's props.
- *
- * The model is the framework-neutral declaration every host reads; a component
- * is one host's way of drawing it. Picking from a component would put whichever
- * host that component belongs to into the graph of `buildPlugin` - and this
- * module is what every plugin imports, so that coupling would travel to all of
- * them.
- */
 interface AdminNavItem extends Pick<
   ResolvedAdminNavItem,
   "href" | "icon" | "isOpenInNewTab"
@@ -28,14 +20,6 @@ interface AdminNavItem extends Pick<
   permission?: AdminNavPermission;
 }
 
-/**
- * One hand-declared AdminCP sidebar entry, with whatever sits under it.
- *
- * Named rather than written inline on {@link BuildPluginReturn} because
- * {@link AdminNavPluginSource} needs the same shape: a plugin declares its
- * navigation once, and both the full registration and the browser-safe
- * projection read that one declaration.
- */
 export type AdminNavDeclaration = AdminNavItem & {
   items?: Omit<AdminNavItem, "icon">[];
 };
@@ -46,32 +30,6 @@ export type AdminNavContentType = Pick<
   "definition" | "icon"
 >;
 
-/**
- * A plugin's AdminCP navigation, and nothing else about the plugin.
- *
- * What a plugin exports from `admin/nav` - a **browser-safe** module - so an
- * application can put its sidebar entries on screen without importing the
- * plugin's frontend registration. That distinction is the whole reason this type
- * exists: `blogPlugin()` registers content types *with their editing screens*
- * attached - a Tiptap field, a form layout, a table cell - which reach core's
- * form stack and, today, `next/dynamic`. A TanStack Start application cannot
- * hold that graph, and it does not need to in order to draw a list of links.
- *
- * So the two are separated by what they carry rather than by a build flag:
- *
- *     config.tsx     the whole registration - screens, field overrides, widgets
- *     admin/nav      the ids, hrefs, permissions, icons and content definitions
- *
- * A content type definition is client-safe by construction (zod and plain data,
- * no Drizzle, no components), and an icon is an element from an icon set. That
- * is the entire payload.
- *
- * Structurally a {@link BuildPluginReturn}, so `adminNavDeclarations` reads a
- * list of these exactly as it reads a list of configured plugins - one
- * navigation model, one set of rules, whichever door the data came through.
- * A plugin writes it once and spreads it into its own `buildPlugin` call, which
- * is what stops the two lists drifting.
- */
 export interface AdminNavPluginSource {
   admin?: { nav?: AdminNavDeclaration[] };
   contentTypes?: AdminNavContentType[];
@@ -107,20 +65,6 @@ export interface ContentCellProps<
   row: ContentSelect<TDefinition>;
 }
 
-/**
- * Everything a custom form layout is handed, and nothing more.
- *
- * Deliberately all serialisable: a layout is a client component referenced from
- * `config.tsx`, which is a **server** module, so React props cross an RSC
- * boundary to reach it. Field elements, the form instance and the submit action
- * are not here for exactly that reason - they come from
- * `useContentForm()`/`ContentFormField`, which are client context and therefore
- * never cross anything.
- *
- * There is no database handle, Drizzle table, Hono context or mutation model in
- * this shape, and there is not going to be: a layout decides where a field
- * appears, and the Content Engine decides what happens when it is submitted.
- */
 export interface ContentFormLayoutProps {
   contentTypeId: string;
   /** `undefined` while creating - the record does not exist yet. */
@@ -138,14 +82,6 @@ export type ContentFormLayout = (
   props: ContentFormLayoutProps,
 ) => React.ReactNode;
 
-/**
- * Layout overrides for the generated create and edit forms.
- *
- * `layout` alone covers the common case - one editor screen used for both - and
- * `create`/`edit` override it when they genuinely differ. Normalised by
- * `resolveContentFormLayout`, so nothing downstream has to know about the
- * fallback.
- */
 export interface ContentTypeFormsRegistration {
   create?: { layout?: ContentFormLayout };
   edit?: { layout?: ContentFormLayout };
@@ -172,40 +108,16 @@ export interface ContentTypeFrontendRegistration {
   definition: AnyContentTypeDefinition;
   fields?: Record<
     string,
-    { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
+    {
+      component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+      skeleton?: ContentFormSkeletonControl;
+    }
   >;
   /** Custom create/edit form layouts. Presentation only - see `forms`. */
   forms?: ContentTypeFormsRegistration;
   icon?: React.ReactNode;
 }
 
-/**
- * A plugin's Content Engine frontend registration, and nothing else about the
- * plugin.
- *
- * What a plugin exports from `admin/content` - a **browser-safe** module - so an
- * application can render the generated content screens without importing the
- * plugin's whole `buildPlugin` call. The same split {@link AdminNavPluginSource}
- * makes, one level further in:
- *
- *     admin/nav       ids, hrefs, permissions, icons, content definitions
- *     admin/content   the above, plus field, column and form-layout overrides
- *     config.tsx      the whole plugin - messages, routes, API wiring
- *
- * The difference between the first two is what a screen needs over what a link
- * needs. A sidebar entry is a string and an icon; a content *screen* is those
- * plus the components that replace a generated input, a generated table cell and
- * a generated form layout. Both are browser-safe, and neither is the server
- * config: `vitnode.config.ts` carries message loaders and API plugins, which a
- * browser bundle has no business holding.
- *
- * Structurally a subset of {@link BuildPluginReturn}, deliberately, and that is
- * what stops the two lists drifting: a plugin writes its registrations once
- * here, `config.tsx` spreads them into `buildPlugin`, and the Next.js
- * application and the TanStack Start application read the same declarations
- * through two doors. A `BuildPluginReturn[]` also satisfies
- * `ContentFrontendPluginSource[]`, so one registry builder serves both.
- */
 export interface ContentFrontendPluginSource {
   contentTypes?: ContentTypeFrontendRegistration[];
   pluginId: string;
@@ -226,36 +138,18 @@ interface TypedContentTypeRegistration<
   fields?: Partial<
     Record<
       keyof TDefinition["fields"] & string,
-      { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
+      {
+        component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+        skeleton?: ContentFormSkeletonControl;
+      }
     >
   >;
-  /**
-   * Replace the generated form **layout** - where the fields are, not what they
-   * do.
-   *
-   * The Content Engine still owns the form schema, the validation, the defaults,
-   * the mutation, the version precondition, the structured errors, the toast and
-   * the cache invalidation. A layout places `<ContentFormField name="..." />`
-   * and `<ContentFormActions />` inside one shared form instance.
-   */
+
   forms?: ContentTypeFormsRegistration;
   /** Sidebar icon. Defaults to a generic document icon. */
   icon?: React.ReactNode;
 }
 
-/**
- * Registers a content type with the AdminCP.
- *
- * The `definition` is the *same object* the API plugin registers - it is
- * client-safe by construction (zod and plain data, no Drizzle), so the two
- * sides cannot drift. Component overrides live here rather than on the
- * definition, because the definition is also imported by `src/database/*.ts`,
- * which Drizzle Kit executes.
- *
- * The wrapper exists to type-check `fields` and `columns` against the
- * definition's own field names before erasing the generic - the same shape as
- * `buildEventListener`.
- */
 export function contentTypeAdmin<TDefinition extends AnyContentTypeDefinition>(
   registration: TypedContentTypeRegistration<TDefinition>,
 ): ContentTypeFrontendRegistration {
@@ -272,22 +166,8 @@ export interface BuildPluginReturn<P extends string = string> {
   contentTypes?: ContentTypeFrontendRegistration[];
   messages?: LocaleMessagesMap;
   pluginId: P;
-  /**
-   * Public pages this plugin contributes, declared rather than shipped as a
-   * framework's route files.
-   *
-   * Optional: a plugin that contributes an API module, a content type or only
-   * strings declares no routes at all. `buildPluginRouteManifest` turns every
-   * plugin's list into the application's route manifest, which is compiled into
-   * a literal registry at build time.
-   *
-   * There was a second, older path until the Next.js cutover: a plugin could
-   * instead ship a `src/routes/{main,admin,blank,breadcrumb}/` tree of App Router
-   * pages, which a copier wrote into every Next.js app's `src/app/`. Nothing is
-   * copied anywhere now - a route module stays in this package's own `dist` and
-   * the app imports it from there. See `src/routing/`.
-   */
-  routes?: PluginRouteDefinition[];
+
+  routes?: PluginRoutes;
 }
 
 export function buildPlugin<P extends string>(

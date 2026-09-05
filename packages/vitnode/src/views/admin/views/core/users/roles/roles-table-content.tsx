@@ -69,20 +69,6 @@ import type {
 
 import { ADMIN_ROLES_DEFAULT_ORDER } from "./roles-query";
 
-/**
- * The AdminCP roles table, with no framework in it.
- *
- * Columns, the members link, the edit dialog and the delete flow - lifted out of
- * the Next.js Server Component so a TanStack route renders the same screen. The
- * three writes and the role search arrive as props, because how a write ends
- * (revalidate a path, or invalidate a query key) is the application's question
- * rather than the table's.
- *
- * The form itself is loaded lazily, exactly as the Next.js version loads it with
- * `next/dynamic`: it drags `AutoForm`, the colour picker and the multi-language
- * inputs behind it, and none of that is worth downloading to look at a list.
- * `React.lazy` is the framework-neutral spelling of the same thing.
- */
 const AdminRoleFormContent = React.lazy(async () =>
   import("./role-form-content").then(module => ({
     default: module.AdminRoleFormContent,
@@ -101,12 +87,6 @@ export interface RolesAdminTableProps {
   searchRoles: AdminRoleSearch;
 }
 
-/**
- * The role a deleted role's members are moved into.
- *
- * The role being deleted is excluded, because moving members into the role that
- * is about to stop existing is the one choice that cannot work.
- */
 const MoveRolePicker = ({
   excludeId,
   onSelect,
@@ -210,13 +190,6 @@ const MoveRolePicker = ({
   );
 };
 
-/**
- * Deleting a role.
- *
- * A role with members cannot simply vanish - everybody needs a role - so the
- * dialog will not submit until a destination is chosen, and the toast says how
- * many people moved where. A role with no members skips all of it.
- */
 const DeleteRoleAction = ({
   onDelete,
   onSaved,
@@ -357,15 +330,6 @@ const EditRoleAction = ({
   );
 };
 
-/**
- * Which of the two buttons a row shows.
- *
- * Four permissions and one structural rule, exactly as the Next.js version has
- * them: a system role (protected, default, root or guest) can never be deleted
- * whatever the permission set says, and a role that *grants administrator
- * access* needs the elevated `can_edit_admin` / `can_delete_admin` on top of the
- * ordinary one. Both are re-checked by the API.
- */
 const RoleRowActions = ({
   onDelete,
   onSave,

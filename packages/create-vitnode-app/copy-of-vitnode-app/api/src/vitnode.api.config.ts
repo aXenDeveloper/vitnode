@@ -3,8 +3,6 @@ import { config } from "dotenv";
 import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
-import { i18n } from "./i18n.js";
-
 config({
   quiet: true,
 });
@@ -14,15 +12,16 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
-  /**
-   * The installation's languages - see `src/i18n.ts`, and keep it in step with
-   * the web app's file of the same name.
-   *
-   * This app owns the schema, so `vitnode db:prepare` seeds `core_languages`
-   * from this list. Leave it out and the seed falls back to `en` alone, whatever
-   * the site serves.
-   */
-  i18n,
+  
+  i18n: {
+    defaultLocale: "en",
+    locales: [{ code: "en", name: "English" }],
+    /**
+     * Explicit, because this API renders emails on a server: without one, dates
+     * format in whatever zone the host happens to run in.
+     */
+    timeZone: "UTC",
+  },
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,

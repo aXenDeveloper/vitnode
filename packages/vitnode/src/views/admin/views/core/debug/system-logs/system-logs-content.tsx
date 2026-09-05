@@ -16,21 +16,6 @@ import { BadgeTypeLog } from "./badges/badge-type-log";
 /** How much of a log line is shown before it is cut. */
 const CONTENT_CHARACTERS = 50;
 
-/**
- * The system log, as a table both frameworks render.
- *
- * The six columns, the two badges, the truncated message and the detail dialog -
- * shared. Fetching and translation are lifted out to whoever is rendering it.
- *
- *     Next.js         system-logs-view.tsx      fetch
- *     TanStack Start  routes/_admin/…/debug     loader + useSuspenseQuery
- *                                 \       /
- *                        SystemLogsContent
- *
- * `LinkComponent` reaches the detail dialog, which is the only thing on this
- * table that navigates: it links a log line to the user who caused it, at
- * `/admin/core/users/{id}`. See `actions/more/content.tsx`.
- */
 export const SystemLogsContent = ({
   data,
   LinkComponent,

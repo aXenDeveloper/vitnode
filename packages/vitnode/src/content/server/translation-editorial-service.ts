@@ -48,25 +48,11 @@ import { createContentRevisionsModel } from "./revisions-model";
 import { createSlugNormalizer } from "./slugs";
 import { CONTENT_TRANSLATION_INITIAL_VERSION } from "./translation-model";
 
-/**
- * Everything the post-commit effects need about one translation mutation.
- *
- * The localized mirror of `ContentEditorialOutcome`, and `previousSlug` is
- * load-bearing for the same reason: once the write returns, the old localized URL
- * is gone, and invalidating the wrong locale's slug tag leaves a moved Polish page
- * resolving at its old address.
- */
 export interface ContentTranslationEditorialOutcome<TDefinition> {
   /** `false` when nothing moved: no write, no revision, no event, no tags. */
   changed: boolean;
   changedFields: ContentLocalizedFieldName<TDefinition>[];
-  /**
-   * What this mutation did to **this locale's** public URL, or absent.
-   *
-   * Absent for every content type without `delivery`, and for one whose slug is
-   * shared - a shared slug is a column on the base row, so a translation mutation
-   * cannot move it and the base editorial service owns its history.
-   */
+
   delivery?: ContentDeliveryOutcome;
   languageId: number;
   /** The canonical `core_languages.code`, never the caller's casing. */
@@ -107,11 +93,7 @@ export interface ContentTranslationEditorialService<TDefinition> {
     values: ContentLocalizedValues<TDefinition>,
     options: ContentTranslationEditorialOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition>>;
-  /**
-   * Removes one translation. Refuses the default locale, and refuses a version
-   * that moved - a delete is the widest possible overwrite, and a confirmation
-   * dialog cannot ask about a change the person has not seen.
-   */
+
   delete: (
     itemId: number,
     locale: string,
@@ -134,15 +116,7 @@ export interface ContentTranslationEditorialService<TDefinition> {
     locale: string,
     options: ContentTranslationEditorialTransitionOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition> | null>;
-  /**
-   * Rolls one locale's *field values* back to an earlier revision of that same
-   * locale.
-   *
-   * Never crosses a locale, never touches shared fields, and never moves
-   * publication state. The historical version number is not restored either: the
-   * translation moves forward to a new version whose revision says where the
-   * values came from.
-   */
+
   restore: (
     itemId: number,
     locale: string,
@@ -168,21 +142,6 @@ export interface ContentRevisionDetailForLocale extends ContentRevisionMeta {
   snapshot: ContentTranslationRevisionSnapshot;
 }
 
-/**
- * The transactional editorial layer for translations.
- *
- * It holds exactly the rule the base editorial service holds, one row down:
- * **the translation write, its version increment and its revision insert are one
- * transaction, and nothing else is in it.** No event, no search call, no cache
- * API - those run after the commit, in `contentTranslationEffects`, because a
- * rolled-back transaction cannot un-send them.
- *
- * The data operations themselves are not duplicated here. `translation-model.ts`
- * owns the conditional writes, the slug uniqueness and the default-translation
- * invariant; this adds the transaction, the revision and the outcome the effects
- * need. That split is what lets `localizedService.create` call the model inside
- * somebody else's transaction without dragging a revision or an event along.
- */
 export const createContentTranslationEditorialService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -216,14 +175,7 @@ export const createContentTranslationEditorialService = <
   }
 
   const { localizedFields } = partitionContentFields(definition.fields);
-  /**
-   * Every canonical path this locale owns: a scalar by its own name, a group by
-   * each of its leaves.
-   *
-   * What a create "changed", and the vocabulary the base half already reports -
-   * `seo.title` rather than `seo`, so a listener, a cache decision and the search
-   * synchronizer all read the same strings whichever half moved.
-   */
+
   const localizedPaths = Object.entries(localizedFields).flatMap(
     ([name, fieldValue]) =>
       fieldValue.kind === "group"
@@ -254,15 +206,6 @@ export const createContentTranslationEditorialService = <
     definition.delivery.slugScope === "localized";
   const slugHistory = contentSlugHistoryFor({ c, definition, pluginId });
 
-  /**
-   * The delivery half of one translation mutation, inside its transaction.
-   *
-   * The publication test is the **subordinated** one - the base row published *and*
-   * this translation published - because that is what makes a localized URL public.
-   * A published Polish translation of a draft article is not an address anybody can
-   * reach, so reserving its slug would hand out a permanent claim on a URL that was
-   * never live.
-   */
   const applyDelivery = async (
     tx: ContentDatabase,
     {
@@ -315,13 +258,6 @@ export const createContentTranslationEditorialService = <
     });
   };
 
-  /**
-   * The publication state one translation held before a transition.
-   *
-   * The localized twin of the base service's `invert`, and correct for the same
-   * reason: a transition is guarded on the state it changes, so a `publish` that
-   * returned a row can only have found it unpublished.
-   */
   const invertTranslation = (
     operation: "publish" | "unpublish",
     row: ContentTranslationRow<TDefinition>,
@@ -330,15 +266,6 @@ export const createContentTranslationEditorialService = <
     status: operation === "publish" ? "draft" : "published",
   });
 
-  /**
-   * One locale's revision model.
-   *
-   * Built per call rather than cached, because the language it is scoped to comes
-   * out of the request. Everything inside it - the scope predicate, retention
-   * pruning, the cursor - is the shared implementation with `languageId` bound,
-   * so a locale's history is pruned to its own retention window rather than
-   * competing with every other language for the same fifty slots.
-   */
   const revisionsFor = (
     languageId: number,
   ): ContentRevisionsModel<ContentTranslationRevisionSnapshot> =>

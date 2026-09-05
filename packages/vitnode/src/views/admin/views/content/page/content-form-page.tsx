@@ -8,6 +8,7 @@ import type { ContentFormLayout } from "@/lib/plugin";
 
 import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
+import type { ContentFormSkeletonOverrides } from "../form/skeleton";
 
 import { ContentForm } from "../actions/content-form";
 import { useContentFormNavigation } from "../form/navigation";
@@ -20,6 +21,7 @@ export interface ContentFormPageProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  fieldSkeletons?: ContentFormSkeletonOverrides;
   header: ContentFormHeaderValue;
   layout?: ContentFormLayout;
   publication?: boolean;
@@ -47,16 +49,6 @@ export const ContentFormPage = ({
 
   return (
     <ContentForm
-      /**
-       * What the form is editing, as a key.
-       *
-       * It was the pathname until Stage 13, which is the same fact spelled in
-       * one framework's terms: a content form page's URL *is* its content type
-       * plus its action plus its record. Spelling it from the spec instead
-       * remounts on exactly the same transitions - a different record, a
-       * different content type, create becoming edit - under a router with no
-       * `usePathname`, and without a pathname the form otherwise has no use for.
-       */
       key={`${props.spec.contentTypeId}#${data?.id ?? "new"}`}
       {...props}
       data={data}

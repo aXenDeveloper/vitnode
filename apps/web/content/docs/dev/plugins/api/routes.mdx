@@ -1,150 +1,116 @@
 ---
 title: API Routes
-description: Build OpenAPI-validated Hono API routes in VitNode plugins with path params, query validation, and typed response bodies.
+description: Validate plugin-owned Hono route inputs and responses with Zod, then protect staff actions with a clear permission.
 icon: Network
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { BoxIcon, ShieldCheckIcon, ZapIcon } from 'lucide-react'
 
-Every API route in VitNode is defined with `buildRoute` from `@vitnode/core/api/lib/route`. It validates incoming requests with Zod, infers types for `fetcherClient`, and generates interactive OpenAPI/Swagger documentation automatically.
+Create [the plugin](/docs/dev/plugins/create) and its [API module](/docs/dev/plugins/api/modules)
+first. Then put the endpoint in that module so its validation, permission, and
+OpenAPI record travel together.
 
-## Quick start
+<Steps>
+  <Step>
 
-Define an API route with validation schemas:
+### Validate input and response
 
-```ts title="plugins/blog/src/api/modules/posts/routes/get-by-id.route.ts"
-import { z } from "@hono/zod-openapi"
-import { buildRoute } from "@vitnode/core/api/lib/route"
+```ts title="plugins/site-notes/src/api/modules/notes/get.route.ts"
+import { z } from '@hono/zod-openapi'
+import { buildRoute } from '@vitnode/core/api/lib/route'
 
-// [!code ++:27]
-export const getPostByIdRoute = buildRoute({
-  pluginId: "blog",
+export const getNoteRoute = buildRoute({
+  pluginId: '@acme/site-notes',
   route: {
-    method: "get",
-    path: "/{id}",
+    method: 'get',
+    path: '/{id}',
     request: {
-      params: z.object({
-        id: z.coerce.number(),
-      }),
+      params: z.object({ id: z.coerce.number().int().positive() }),
     },
+    responses: {
+      // [!code ++:7]
+      200: {
+        content: {
+          'application/json': {
+            schema: z.object({ id: z.number(), title: z.string() }),
+          },
+        },
+        description: 'One site note.',
+      },
+    },
+  },
+  handler: (c) => {
+    const { id } = c.req.valid('param')
+    return c.json({ id, title: 'Plugin-owned note' })
+  },
+})
+```
+
+  </Step>
+  <Step>
+
+### Gate an AdminCP action
+
+Add `adminStaffPermission` to an action that only staff should call. The API
+still authorizes server-side; a hidden button is merely good manners.
+
+```ts title="plugins/site-notes/src/api/modules/notes/publish.route.ts"
+import { z } from '@hono/zod-openapi'
+import { buildRoute } from '@vitnode/core/api/lib/route'
+
+export const publishNoteRoute = buildRoute({
+  // [!code ++:13]
+  adminStaffPermission: {
+    module: 'site_notes',
+    permission: 'can_publish',
+  },
+  pluginId: '@acme/site-notes',
+  route: {
+    method: 'post',
+    path: '/{id}/publish',
     responses: {
       200: {
         content: {
-          "application/json": {
-            schema: z.object({
-              id: z.number(),
-              title: z.string(),
-            }),
+          'application/json': {
+            schema: z.object({ published: z.literal(true) }),
           },
         },
-        description: "Post details",
+        description: 'The note was published.',
       },
     },
   },
-  handler: async (c) => {
-    const { id } = c.req.valid("param")
-    return c.json({ id, title: "Getting started with VitNode" })
-  },
+  handler: async (c) => c.json({ published: true }),
 })
 ```
 
-Register the route inside a module's `routes` array:
+  </Step>
+</Steps>
 
-```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
-export const postsModule = buildModule({
-  pluginId: "blog",
-  name: "posts",
-  routes: [getPostByIdRoute], // [!code ++]
-})
-```
+{/* Image prompt: Dark-theme API documentation screenshot. Show an OpenAPI endpoint for a plugin route with path parameter validation, a successful JSON response, and a staff-permission lock badge. 1440x900. */}
 
----
-
-## Handling Inputs
-
-### 1. Request Body (JSON)
-
-```ts
-request: {
-  body: {
-    content: {
-      "application/json": {
-        schema: z.object({
-          title: z.string().min(3),
-          content: z.string(),
-        }),
-      },
-    },
-  },
-}
-
-// In handler:
-const { title, content } = c.req.valid("json")
-```
-
-### 2. Query Parameters
-
-```ts
-request: {
-  query: z.object({
-    page: z.coerce.number().default(1),
-    filter: z.string().optional(),
-  }),
-}
-
-// In handler:
-const { page, filter } = c.req.valid("query")
-```
-
----
-
-## `buildRoute` Options
-
-<TypeTable
-  type={{
-    pluginId: {
-      description: "Plugin identifier owning this route.",
-      required: true,
-      type: "string",
-    },
-    route: {
-      description: "OpenAPI route specification (method, path, request, responses).",
-      required: true,
-      type: "RouteConfig",
-    },
-    handler: {
-      description: "Route execution function taking Hono context c.",
-      required: true,
-      type: "(c: Context) => Promise<Response> | Response",
-    },
-    adminStaffPermission: {
-      description: "Restricts endpoint access to staff holding this permission.",
-      type: "{ module: string; permission: string }",
-    },
-    withCaptcha: {
-      default: "false",
-      description: "Demands and verifies challenge token before execution.",
-      type: "boolean",
-    },
-  }}
-/>
-
-## Learn More
+<Callout type="idea" title="One route, one plugin owner">
+  Keep handlers with the feature that owns the data. The host API config only
+  composes plugins; it should not become a surprise sequel to your business
+  logic.
+</Callout>
 
 <Cards>
   <Card
-    title="API Modules"
-    description="Organize routes into sub-applications"
+    icon={<BoxIcon />}
+    title="API modules"
+    description="Register a module and its plugin API factory with the Hono application."
     href="/docs/dev/plugins/api/modules"
   />
   <Card
-    title="Fetcher"
-    description="Call plugin routes from frontend components"
-    href="/docs/dev/fetcher"
+    icon={<ShieldCheckIcon />}
+    title="Staff permissions"
+    description="Define the permission catalog that gates AdminCP actions."
+    href="/docs/dev/working-with-users/staff-permissions"
   />
   <Card
-    title="Staff Permissions"
-    description="Protect endpoints with permission gates"
-    href="/docs/dev/working-with-users/staff-permissions"
+    icon={<ZapIcon />}
+    title="Typed fetcher"
+    description="Call validated plugin endpoints from the TanStack Start UI."
+    href="/docs/dev/fetcher"
   />
 </Cards>

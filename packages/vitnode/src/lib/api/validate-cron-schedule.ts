@@ -1,17 +1,3 @@
-/**
- * Validates a cron schedule expression
- * Supports standard cron format: minute hour day month weekday
- * Also supports extended format with seconds (6 fields): second minute hour day month weekday
- *
- *
- * @example
- * ```typescript
- * validateCronSchedule("0 0 * * *") // true - runs at midnight every day
- * validateCronSchedule("*\/5 * * * *") // true - runs every 5 minutes
- * validateCronSchedule("0 0 1 * *") // true - runs at midnight on the first day of each month
- * validateCronSchedule("invalid") // false
- * ```
- */
 export function validateCronSchedule(schedule: string): boolean {
   if (!schedule || typeof schedule !== "string") {
     return false;

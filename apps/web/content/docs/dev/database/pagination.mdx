@@ -1,29 +1,35 @@
 ---
 title: Pagination
-description: Cursor pagination in VitNode - the withPagination helper on your Hono route, and the validated search, query, and data table that consume it.
+description: Add stable cursor pagination to a plugin API route and navigate its results from a typed plugin page.
 icon: ChevronsRight
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 VitNode uses cursor-based pagination rather than offset pagination. Cursors ensure stable page boundaries even while records are created or deleted, with zero database performance degradation on large tables.
 
 ## Quick start
 
-### 1. Backend: Paginated API Route
+<Steps>
+<Step>
+
+### Add a paginated API route
 
 Use `withPagination` from `@vitnode/core/api/lib/with-pagination`:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/get.route.ts"
-import { getColumns } from "drizzle-orm"
-import { withPagination, zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
-import { blog_posts } from "@/database/posts"
+import { getColumns } from 'drizzle-orm'
+import {
+  withPagination,
+  zodPaginationQuery,
+} from '@vitnode/core/api/lib/with-pagination'
+import { blog_posts } from '@/database/posts'
 
 export const getPostsRoute = buildRoute({
-  pluginId: "blog",
+  pluginId: 'blog',
   route: {
-    method: "get",
-    path: "/",
+    method: 'get',
+    path: '/',
     request: {
       query: zodPaginationQuery,
     },
@@ -31,13 +37,13 @@ export const getPostsRoute = buildRoute({
   handler: async (c) => {
     const data = await withPagination({
       c,
-      params: { query: c.req.valid("query") },
+      params: { query: c.req.valid('query') },
       primaryCursor: blog_posts.id,
       table: blog_posts,
-      orderBy: { column: blog_posts.createdAt, order: "desc" },
+      orderBy: { column: blog_posts.createdAt, order: 'desc' },
       query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
-          .get("db")
+          .get('db')
           .select({ ...getColumns(blog_posts), ...cursorSelection })
           .from(blog_posts)
           .where(where)
@@ -52,15 +58,16 @@ export const getPostsRoute = buildRoute({
 
 The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pageInfo }`.
 
----
+</Step>
+</Steps>
 
 ## Why Cursors Over Offsets
 
-| Metric | `LIMIT ... OFFSET` | Keyset Cursor |
-| ------ | ------------------ | ------------- |
-| Insert / Delete mid-walk | Rows shift, duplicate, or skip | Unaffected (stable pointer) |
-| Deep pagination (Page 10,000) | Full table scan up to offset | Single indexed B-tree lookup |
-| Sort order stability | Prone to non-deterministic ties | Guaranteed by primaryCursor tiebreaker |
+| Metric                        | `LIMIT ... OFFSET`              | Keyset Cursor                          |
+| ----------------------------- | ------------------------------- | -------------------------------------- |
+| Insert / Delete mid-walk      | Rows shift, duplicate, or skip  | Unaffected (stable pointer)            |
+| Deep pagination (Page 10,000) | Full table scan up to offset    | Single indexed B-tree lookup           |
+| Sort order stability          | Prone to non-deterministic ties | Guaranteed by primaryCursor tiebreaker |
 
 ---
 
@@ -69,44 +76,47 @@ The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pag
 <TypeTable
   type={{
     c: {
-      description: "Hono request context.",
+      description: 'Hono request context.',
       required: true,
-      type: "Context",
+      type: 'Context',
     },
     params: {
-      description: "Validated query parameters: { query: { cursor, first, last, search } }.",
+      description:
+        'Validated query parameters: { query: { cursor, first, last, search } }.',
       required: true,
-      type: "object",
+      type: 'object',
     },
     table: {
-      description: "Drizzle table being paged (used for total count).",
+      description: 'Drizzle table being paged (used for total count).',
       required: true,
-      type: "PgTable",
+      type: 'PgTable',
     },
     primaryCursor: {
-      description: "Unique numeric column acting as deterministic tiebreaker.",
+      description: 'Unique numeric column acting as deterministic tiebreaker.',
       required: true,
-      type: "PaginationCursorColumn",
+      type: 'PaginationCursorColumn',
     },
     orderBy: {
-      description: "Sorting column and direction.",
+      description: 'Sorting column and direction.',
       required: true,
       type: "{ column: PgColumn; order: 'asc' | 'desc' }",
     },
     query: {
-      description: "Callback executing the paged Drizzle select query.",
+      description: 'Callback executing the paged Drizzle select query.',
       required: true,
-      type: "(args) => Promise<Row[]>",
+      type: '(args) => Promise<Row[]>',
     },
     where: {
-      description: "Additional SQL filter conditions applied before pagination.",
+      description:
+        'Additional SQL filter conditions applied before pagination.',
       required: false,
-      type: "SQL",
+      type: 'SQL',
     },
     search: {
-      description: "Array of text columns to match against ?search= with ILIKE.",
+      description:
+        'Array of text columns to match against ?search= with ILIKE.',
       required: false,
-      type: "PgColumn[]",
+      type: 'PgColumn[]',
     },
   }}
 />
@@ -133,12 +143,27 @@ The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pag
 
 <TypeTable
   type={{
-    totalCount: { description: "Total rows matching criteria across all pages.", type: "number" },
-    count: { description: "Number of rows in current page.", type: "number" },
-    hasNextPage: { description: "True if another page exists forward.", type: "boolean" },
-    hasPreviousPage: { description: "True if a previous page exists backward.", type: "boolean" },
-    startCursor: { description: "Cursor for first row in page (null if empty).", type: "string | null" },
-    endCursor: { description: "Cursor for last row in page (null if empty).", type: "string | null" },
+    totalCount: {
+      description: 'Total rows matching criteria across all pages.',
+      type: 'number',
+    },
+    count: { description: 'Number of rows in current page.', type: 'number' },
+    hasNextPage: {
+      description: 'True if another page exists forward.',
+      type: 'boolean',
+    },
+    hasPreviousPage: {
+      description: 'True if a previous page exists backward.',
+      type: 'boolean',
+    },
+    startCursor: {
+      description: 'Cursor for first row in page (null if empty).',
+      type: 'string | null',
+    },
+    endCursor: {
+      description: 'Cursor for last row in page (null if empty).',
+      type: 'string | null',
+    },
   }}
 />
 
@@ -146,73 +171,88 @@ The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pag
 
 ## Frontend Integration
 
-### 1. Route Search Schema
+<Steps>
+<Step>
 
-In your route file, validate pagination search parameters using `zodPaginationQuery`:
+### Move through results from a plugin page
 
-```tsx title="apps/web/src/routes/_main/posts.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
-import { postsQuery } from "#/features/posts/query"
+Plugin routes normalize their own query string with `parseSearch`, then receive
+the typed `search`, `loaderData`, and same-page `navigate` function. That is all
+a list needs—no host route file required.
 
-export const Route = createFileRoute("/_main/posts")({
-  validateSearch: (search) => zodPaginationQuery.parse(search),
-  loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) =>
-    await context.queryClient.ensureQueryData(postsQuery(deps)),
-  component: PostsPage,
-})
-```
+```tsx title="plugins/blog/src/pages/posts-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
 
-### 2. Render `ContentDataTable`
-
-Feed the paginated data directly into VitNode's `ContentDataTable`:
-
-```tsx title="apps/web/src/features/posts/posts-table.tsx"
-import { ContentDataTable } from "@vitnode/core/components/table/content"
-import { DataTableNavigationProvider } from "@vitnode/core/components/table/provider"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { Route } from "#/routes/_main/posts"
-import { postsQuery } from "./query"
-
-export const PostsTable = () => {
-  const search = Route.useSearch()
-  const navigate = Route.useNavigate()
-  const { data } = useSuspenseQuery(postsQuery(search))
-
-  return (
-    <DataTableNavigationProvider navigate={navigate} search={search}>
-      <ContentDataTable
-        columns={columns}
-        data={data}
-        defaultPageSize={10}
-      />
-    </DataTableNavigationProvider>
-  )
+interface PostsSearch {
+  cursor?: string
+  first: number
 }
+
+// [!code ++:11]
+export const route = definePluginRoute({
+  parseSearch: (input) => {
+    const search = input as Record<string, unknown>
+    const first = Number(search.first)
+
+    return {
+      cursor: typeof search.cursor === 'string' ? search.cursor : undefined,
+      first: Number.isInteger(first) && first > 0 ? first : 10,
+    }
+  },
+  load: async ({ search }) => await fetchPosts(search),
+})
+
+const PostsPage = ({
+  loaderData,
+  navigate,
+  search,
+}: PluginRoutePageProps<
+  Awaited<ReturnType<typeof fetchPosts>>,
+  PostsSearch
+>) => (
+  <button
+    disabled={!loaderData.pageInfo.hasNextPage}
+    onClick={() =>
+      void navigate({
+        resetScroll: false,
+        search: {
+          ...search,
+          cursor: loaderData.pageInfo.endCursor ?? undefined, // [!code ++]
+        },
+      })
+    }
+    type="button"
+  >
+    Next page
+  </button>
+)
+
+export default PostsPage
 ```
 
----
+</Step>
+</Steps>
 
 ## Custom Filtering and Search
 
 To add search and custom filters, pass the parameters into `withPagination`:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/get.route.ts"
-import { eq } from "drizzle-orm"
+import { eq } from 'drizzle-orm'
 
 const data = await withPagination({
   c,
-  params: { query: c.req.valid("query") },
+  params: { query: c.req.valid('query') },
   table: blog_posts,
   primaryCursor: blog_posts.id,
-  orderBy: { column: blog_posts.createdAt, order: "desc" },
+  orderBy: { column: blog_posts.createdAt, order: 'desc' },
   // [!code ++:3]
   search: [blog_posts.title, blog_posts.content],
   where: categoryId ? eq(blog_posts.categoryId, categoryId) : undefined,
   query: async ({ cursorSelection, limit, where, orderBy }) =>
     await c
-      .get("db")
+      .get('db')
       .select({ ...getColumns(blog_posts), ...cursorSelection })
       .from(blog_posts)
       .where(where)
@@ -226,11 +266,15 @@ const data = await withPagination({
 ## Best Practices
 
 <Callout type="info" title="Opaque cursors">
-  Cursors encode the specific column ordering. If the user changes sort order or filter criteria, reset the cursor to `undefined` so pagination starts from the first page.
+  Cursors encode the specific column ordering. If the user changes sort order or
+  filter criteria, reset the cursor to `undefined` so pagination starts from the
+  first page.
 </Callout>
 
 <Callout type="warn" title="Always apply callback where and orderBy">
-  `withPagination` injects cursor conditions directly into the callback's `where` and `orderBy`. Always pass those arguments straight to Drizzle's query methods without rebuilding them.
+  `withPagination` injects cursor conditions directly into the callback's
+  `where` and `orderBy`. Always pass those arguments straight to Drizzle's query
+  methods without rebuilding them.
 </Callout>
 
 ## Learn More

@@ -54,14 +54,6 @@ export const versionsPackageJson = {
   tailwindVite: "^4.2",
   nitro: "3.0.260610-beta",
 
-  /**
-   * Externalised in the app's `vite.config.ts` rather than bundled, so it has to
-   * be a real dependency of the app.
-   *
-   * Nitro re-resolves externals itself and traces this one into the output. See
-   * the `ssr.external` note in the generated `vite.config.ts` for why bundling
-   * it breaks every page that renders a dialog.
-   */
   tslib: "^2.8.1",
 
   swcCli: "^0.8.1",

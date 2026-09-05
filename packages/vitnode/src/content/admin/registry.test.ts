@@ -143,11 +143,6 @@ describe("buildContentFrontendRegistry", () => {
     });
   });
 
-  /**
-   * `admin.path` and `definition.id` are allowed to disagree, and the resolver
-   * is keyed by the path. A registry whose `lookup` reached for the id instead
-   * would break exactly the content types that renamed themselves.
-   */
   describe("lookup, as the route resolver reads it", () => {
     const registry = buildContentFrontendRegistry([
       plugin("@vitnode/blog", renamed),
@@ -166,11 +161,6 @@ describe("buildContentFrontendRegistry", () => {
     });
   });
 
-  /**
-   * The same `validateContentTypes` the API side runs, which is what stops the
-   * two registrations silently disagreeing. Every message names the plugin, the
-   * content type and the reason.
-   */
   describe("validation", () => {
     it("rejects two plugins registering one content type id", () => {
       expect(() =>

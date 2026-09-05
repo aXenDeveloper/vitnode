@@ -6,15 +6,6 @@ import {
   headerNavItems,
 } from "./header-nav";
 
-/**
- * The main nav, as the two frameworks build it.
- *
- * `headerNavItems` is the whole of what they share: a label from a translator
- * each resolves in its own way, paired with an href neither is allowed to spell
- * itself. What is pinned here is that pairing - the destinations, the order, and
- * that the hrefs stay internal - because a difference in any of the three is a
- * header that looks migrated and navigates somewhere else.
- */
 describe("the main nav", () => {
   const labels = { discover: "Discover", search: "Search" };
 

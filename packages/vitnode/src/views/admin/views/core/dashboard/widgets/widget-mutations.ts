@@ -8,26 +8,6 @@ import { adminModuleRef } from "@/views/admin/admin-request";
 
 import type { DashboardMutationResult } from "./dashboard-actions";
 
-/**
- * The two mutations a *widget* performs from inside itself, as browser calls.
- *
- * Distinct from `DashboardActions`, which is what the board does: these are what
- * the notes widget's autosave and the send-notification widget's button do, and
- * they need no seam at all.
- *
- * Both were `"use server"` modules whose entire body was one `fetcher()` call -
- * no `revalidatePath`, no cookie to set, nothing a server was needed for. As
- * server actions they were a `POST` back to the application which then called
- * Hono; as browser calls they are the same authenticated request with one hop
- * instead of two. The admin cookie travels either way, because the call is
- * same-origin and the browser attaches it.
- *
- * `PUT /admin/admin/dashboard/widget-settings` declares
- * `adminStaffPermission: { module: "dashboard", permission: "can_edit" }`, and
- * `POST /admin/admin/notifications/send` declares its own; both are re-checked
- * against the staff tables on every request.
- */
-
 const adminModuleClientRef = adminModuleRef<typeof adminModule>();
 
 /** One widget's settings, saved. */

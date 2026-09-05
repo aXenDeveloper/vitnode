@@ -1,17 +1,3 @@
-/**
- * Universal Content Engine - client-safe surface.
- *
- * Everything exported here is plain data plus zod: it is safe to import from a
- * client component, from `buildPlugin`, and from `src/database/*.ts` (which
- * Drizzle Kit executes). Anything that needs Drizzle or Hono lives in
- * `@vitnode/core/content/server`.
- *
- * There was a third entrypoint, `@vitnode/core/content/next`, holding the host
- * adapters that turned this surface into a framework's page, metadata and
- * revalidation calls. It is gone: `resolveContentDelivery`, `contentDeliverySeo`
- * and the sitemap builders here are the whole delivery surface, and a host maps
- * them onto its own conventions.
- */
 export {
   contentEntityKey,
   contentI18nKeys,
@@ -31,14 +17,7 @@ export type {
   ContentFrontendRegistry,
   RegisteredFrontendContentType,
 } from "./admin/registry";
-/**
- * The AdminCP route resolver, and the lookup a registry satisfies.
- *
- * Here rather than only in `content/admin/` because it is pure and
- * framework-neutral - it maps a slug onto a content type and one of three
- * screens, over a predicate `ContentFrontendRegistry.lookup` provides - and a
- * host that owns `/admin/content/*` cannot use the registry without it.
- */
+
 export { resolveContentAdminRoute } from "./admin/route";
 export type {
   ContentAdminAction,

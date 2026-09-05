@@ -32,16 +32,6 @@ import {
   partitionContentStorage,
 } from "./paths";
 
-/**
- * Resolves - and checks - everything Stage 6 adds to a content type.
- *
- * Every rule here fails at **definition time**, which is to say at import time,
- * which is to say before the process is serving anything. A generated table name
- * that collides, a leaf that shadows a declared column, a localized repeatable:
- * all of them are mistakes whose first symptom would otherwise be a query
- * against a table that does not exist, on a Tuesday, in production.
- */
-
 const emptyAdvanced: ResolvedContentAdvancedConfig = {
   junctions: [],
   leaves: [],
@@ -56,15 +46,6 @@ export const contentAdvancedDisabled = (): ResolvedContentAdvancedConfig => ({
   repeatables: [],
 });
 
-/**
- * `("example_articles", "relatedArticles")` -> `example_articles_related_articles`.
- *
- * Deterministic and clamped: a long base table plus a long field name passes
- * Postgres' 63-character limit easily, and Postgres truncates silently - so two
- * fields whose names differ only past the cut would generate one table and
- * quietly share it. `clampWithFingerprint` is what the index and translation
- * table names already use.
- */
 export const contentCollectionTableName = (
   tableName: string,
   field: string,
@@ -145,21 +126,6 @@ const assertLeafFields = ({
   }
 };
 
-/**
- * Every rule a **group** has to satisfy.
- *
- * The two nullability rules are the ones worth the words, because both are about
- * making "the group has no value" and "one leaf happens to be empty" two
- * different states rather than one ambiguous row:
- *
- * 1. `nullable: true` needs every leaf nullable. `seo: null` writes `NULL` to
- *    every leaf column, and it cannot do that to a `NOT NULL` one.
- * 2. A group that is not `required: true` may be left out of a create payload,
- *    so every leaf has to be writable without input - nullable or defaulted. A
- *    `required: true` non-nullable leaf inside an optional group would be a row
- *    that can never be inserted, which is the same failure `assertField` already
- *    catches one level up.
- */
 const assertGroup = (
   id: string,
   name: string,
@@ -249,15 +215,6 @@ const assertRepeatable = (
   }
 };
 
-/**
- * The rules a to-many reference obeys, whatever it points at.
- *
- * One function for `relation` and `user` because the three things it refuses are
- * properties of the *storage* rather than of the target: a junction row is not a
- * column, so it cannot be null, cannot be per-language, and has nothing for
- * `"set null"` to null. The noun changes so the message reads like the field the
- * author actually wrote.
- */
 const assertReferenceCollection = (
   id: string,
   name: string,
@@ -302,19 +259,6 @@ const assertReferenceCollection = (
   }
 };
 
-/**
- * Every rule a to-many **file** field obeys.
- *
- * Its own function rather than a branch in {@link assertReferenceCollection},
- * because the two differ in what they are allowed to say: a relation carries an
- * `onDelete` the author chooses, while a gallery's is fixed at `restrict` by the
- * engine - Postgres refusing to delete a file a record still shows is the whole
- * point - and a gallery carries a `max`, which a relation does not.
- *
- * The three refusals are properties of the *storage*, exactly as they are for a
- * relation: a junction row is not a column, so it cannot be null, cannot be
- * per-language, and the empty set is what "no files" looks like.
- */
 const assertFileCollection = (
   id: string,
   name: string,
@@ -348,13 +292,6 @@ const assertFileCollection = (
   }
 };
 
-/**
- * A to-one **file** field may not carry `min`, `max` or `ordered`.
- *
- * All three describe a list, and one file is not one. Refused rather than
- * ignored: a `field.file({ max: 5 })` that silently stored one file is a
- * gallery the author thinks they declared.
- */
 const assertSingleFile = (
   id: string,
   name: string,
@@ -376,12 +313,6 @@ const assertSingleFile = (
   );
 };
 
-/**
- * A to-one reference may not carry `ordered`, which would mean nothing.
- *
- * Applied to `user` as well as `relation`: `field.user({ ordered: true })`
- * without `multiple` is the same mistake, and one person has no order either.
- */
 const assertReference = (
   id: string,
   name: string,
@@ -408,13 +339,6 @@ const assertReference = (
   }
 };
 
-/**
- * Checks every advanced field and resolves the tables they generate.
- *
- * Runs from `defineContentType` before anything else reads the field map, so a
- * generated column name is known to be free by the time the index resolver, the
- * schema builder and the admin resolver each look at it.
- */
 export const resolveContentAdvanced = ({
   fields,
   id,
@@ -477,13 +401,6 @@ export const resolveContentAdvanced = ({
   return { junctions, leaves, repeatables: repeatableTables };
 };
 
-/**
- * Every generated leaf column has to be a name nothing else claims.
- *
- * `seo.title` compiles to `seoTitle`, and a content type that *also* declares a
- * field called `seoTitle` would generate one column and have two fields read it
- * - which is a silent data bug, not a crash, so it is refused here.
- */
 const assertLeafColumnsAreFree = (
   id: string,
   fields: ContentFieldMap,
@@ -526,15 +443,6 @@ const assertLeafColumnsAreFree = (
   }
 };
 
-/**
- * Two advanced fields must not generate the same table.
- *
- * Reachable in exactly one way that is not a typo: two long field names whose
- * generated table names collide **after** the identifier clamp. The fingerprint
- * makes that vanishingly unlikely rather than impossible, so it is checked
- * rather than assumed - and a content type must not generate a table sharing its
- * own name either.
- */
 const assertGeneratedTableNames = (
   id: string,
   tableName: string,
@@ -555,18 +463,6 @@ const assertGeneratedTableNames = (
   }
 };
 
-/**
- * Exactly one of `self` and `target`, on every relation.
- *
- * Runs **before** `bindSelfRelations` rebinds the thunk, which is the only
- * moment the two are still distinguishable: after binding, a self-relation's
- * `target` is a real function too.
- *
- * Checked here rather than by a union in `field.relation`'s signature, because
- * a union there would stop TypeScript inferring `self` as a literal - and
- * `ContentReferences` reads that literal to decide which relations a database
- * module has to supply a thunk for.
- */
 export const assertContentRelationTargets = (
   id: string,
   fields: ContentFieldMap,

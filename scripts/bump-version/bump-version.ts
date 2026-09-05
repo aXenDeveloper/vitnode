@@ -1,10 +1,4 @@
-/**
- * VitNode Bump Version Script
- *
- * This script handles version bumping and file synchronization for VitNode packages.
- * It copies files and folders from the main web app to the create-vitnode-app template
- * and manages package version updates across the workspace.
- */
+
 
 import { validateEnvironment } from "./environment.ts";
 import { FileCopyManager } from "./files/file-copy-manager.ts";

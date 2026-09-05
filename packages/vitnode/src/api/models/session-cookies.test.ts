@@ -40,13 +40,6 @@ const AUTHORIZATION: Authorization = {
   ssoAdapters: [],
 };
 
-/**
- * A Drizzle stand-in: every builder method returns the same chainable object,
- * and awaiting it hands back rows chosen by the operation and table.
- *
- * These tests are about the `Set-Cookie` a model emits, so the queries only have
- * to resolve - not to be right.
- */
 const fakeDb = () => {
   const chain = (kind: string, table: unknown) => {
     const op = { kind, table };

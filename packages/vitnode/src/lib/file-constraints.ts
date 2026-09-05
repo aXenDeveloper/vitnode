@@ -1,21 +1,6 @@
 import { getFileExtension } from "./file-extension";
 import { formatBytes } from "./format-bytes";
 
-/**
- * The three rules an upload is checked against.
- *
- * Its own module, with no Content Engine and no Node built-ins behind it,
- * because the same three questions are asked in three places and there must be
- * exactly one answer to each:
- *
- * - in the browser, before the upload starts, so picking a 40 MB video for a
- *   5 MB field costs nothing;
- * - in the upload route, on the file that arrived;
- * - and again on the `core_files` row a content mutation names.
- *
- * The server is authoritative - the browser copy is a courtesy - but they cannot
- * *disagree*, which is what a second implementation would eventually do.
- */
 export interface FileConstraints {
   /** Lowercase, leading dot. Omitted, any extension is accepted. */
   allowedExtensions?: readonly string[];
@@ -25,14 +10,6 @@ export interface FileConstraints {
   maxBytes: number;
 }
 
-/**
- * One file's identity, as either side of the wire can describe it.
- *
- * `name` because the extension rule is about the file name, `mimeType` because
- * the MIME rule is about the declared content type. They are checked
- * **independently**: a `picture.gif` that is really a PNG passes the first and
- * fails the second, which is exactly the case an extension-only check misses.
- */
 export interface FileCandidate {
   mimeType: null | string | undefined;
   name: string;
@@ -49,13 +26,6 @@ export interface FileRejection {
   value: string;
 }
 
-/**
- * Checks a file against a set of constraints, or returns `null`.
- *
- * Size first, then media type, then extension, and **every configured rule has
- * to pass**. With both lists set, `picture.gif` declared `image/png` is refused,
- * and so is `picture.png` declared `image/gif`.
- */
 export const validateFile = (
   { allowedExtensions, allowedMimeTypes, maxBytes }: FileConstraints,
   file: FileCandidate,

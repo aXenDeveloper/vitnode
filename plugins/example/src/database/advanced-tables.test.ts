@@ -10,15 +10,6 @@ import {
   example_advanced_articles_translations,
 } from "./advanced-articles";
 
-/**
- * What Stage 6 actually generates, read off Drizzle's own table metadata.
- *
- * The same shape of test `tables.test.ts` runs for the base and translation
- * tables, and for the same reason: the migration is generated from these
- * objects, so an assertion here is an assertion about the SQL - one that fails
- * at `pnpm test` rather than at `drizzle-kit generate` three commits later.
- */
-
 const base = getTableConfig(example_advanced_articles);
 const junction = getTableConfig(example_advanced_articles_categories);
 const selfJunction = getTableConfig(example_advanced_articles_related_articles);

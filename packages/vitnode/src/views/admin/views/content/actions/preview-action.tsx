@@ -15,16 +15,6 @@ import { contentErrorKey } from "../lib/mutation-feedback";
 import { ContentPanel } from "./content-panel";
 import { useContentEditorialTransport } from "./editorial-transport";
 
-/**
- * A signed link to the current draft, minted on the click and not before.
- *
- * Deliberately **not** a cached query. A preview URL carries a short-lived
- * bearer token for an unpublished record, so it is minted when the dialog opens
- * and forgotten when it closes - caching one would leave a live credential in
- * the browser for every row somebody glanced at, and serving a stale one back
- * would hand out a token that has already expired.
- */
-
 const COPIED_FEEDBACK_MS = 2000;
 
 const CopyButton = ({ label, url }: { label: string; url: string }) => {

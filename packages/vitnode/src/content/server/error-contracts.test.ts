@@ -19,20 +19,6 @@ import {
 import { withHttpErrors } from "./http-errors";
 import { withTranslationHttpErrors } from "./translation-http-errors";
 
-/**
- * What a client is allowed to learn when a write fails.
- *
- * Two rules, and the second is the one that needs a test rather than a comment:
- *
- * 1. **Every expected failure has a stable contract** - a status, and for the
- *    ones a client has to branch on, a `code`. A caller cannot be asked to parse
- *    English, and it certainly cannot be asked to parse a SQLSTATE.
- * 2. **Nothing internal crosses the boundary.** A driver error carries the
- *    constraint name, often the column, and sometimes the value that clashed.
- *    None of that may reach a response body - it is a schema description handed
- *    to whoever asked, and on a public route it is handed to anyone.
- */
-
 const CONTENT_TYPE_ID = "test.article";
 
 /** The whole response, as a client would see it. */
@@ -134,11 +120,6 @@ describe("expected database failures map onto stable contracts", () => {
     }
   });
 
-  /**
-   * Postgres 18 reports an explicit `ON DELETE RESTRICT` as `23001`
-   * (restrict_violation) where earlier majors reported `23503`. Both have to map
-   * to the same 409, or upgrading the database would change an API contract.
-   */
   it("answers the same way on both Postgres codes for a blocked delete", async () => {
     const statuses = await Promise.all(
       ["23001", "23503"].map(async code => {
@@ -211,15 +192,6 @@ describe("domain failures map onto their documented codes", () => {
     });
   });
 
-  /**
-   * A reserved historical address, which a `23505` could not have explained.
-   *
-   * Two constraints can refuse the same write - the live slug index and the
-   * history reservation - and the driver's code is identical for both. So the
-   * reservation is checked in the transaction and raised as a domain error, and
-   * this is the arm it lands on: a 409 that names the slug and the locale rather
-   * than a SQLSTATE the client would have to guess at.
-   */
   it("answers a reserved address with its own 409 code", async () => {
     const result = await responseOf(
       throwing(
@@ -483,11 +455,6 @@ describe("translation failures keep their own union", () => {
   });
 });
 
-/**
- * The regression that matters most, because its symptom is invisible: a response
- * body that happens to contain the constraint name reads fine to a human and
- * hands an attacker the schema.
- */
 describe("no internal detail crosses the boundary", () => {
   const LEAKS = [
     "example_articles_code_key",

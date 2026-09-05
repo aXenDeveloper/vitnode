@@ -4,7 +4,8 @@ description: How VitNode merges translations from installed packages, and how to
 icon: Globe
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 VitNode provides full internationalization out of the box. Every package (`@vitnode/core` and plugins) maintains its own locale files, which VitNode merges per request: core strings first, plugin strings second, and your host app overrides last.
 
@@ -33,30 +34,72 @@ npx vitnode i18n:check
 
 </Tabs>
 
-`i18n:create` creates translation files across your workspace and registers the language in your configuration. `i18n:check` scans for missing or untranslated keys.
+`i18n:create` adds the language to `src/vitnode.config.ts`, seeds a translation file per installed package, and registers the loaders in `src/locales/app.ts`. `i18n:check` scans for missing or untranslated keys - including a file nobody imports, which is the usual reason a translation "does not apply".
 
 ---
 
 ## Language Configuration
 
-Declare supported languages in `apps/web/src/i18n.ts`:
+Locale metadata is plain data, so it lives in the browser-safe [shared config](/docs/dev/configuration) - one declaration, read by the router, the document shell and (in a single app) the API that sends your emails:
 
-```ts title="apps/web/src/i18n.ts"
-export const i18n = {
-  defaultLocale: "en",
-  locales: [
-    { code: "en", name: "English" },
-    // [!code ++:1]
-    { code: "de", name: "Deutsch" },
-  ],
-}
+```ts title="apps/web/src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  i18n: {
+    defaultLocale: 'en',
+    locales: [
+      { code: 'en', name: 'English' },
+      // [!code ++:1]
+      { code: 'de', name: 'Deutsch' },
+    ],
+    timeZone: 'UTC',
+  },
+  // ...
+})
+```
+
+`timeZone` is explicit on purpose: your app renders on a server, and without one `use-intl` formats dates in whatever zone the server happens to run in - then warns that the client will disagree.
+
+Because `buildConfig` keeps those codes as literal types, `'de'` is now part of your `Locale` union and a typo in `defaultLocale` is a type error.
+
+---
+
+## Where the loaders go
+
+A `() => import('./de.json')` reads a file out of a package's build output, so it is the one part of i18n that must never reach a browser. Two files own it, and both are registered through the **server-only** config:
+
+| File                      | Holds                                                |
+| :------------------------ | :--------------------------------------------------- |
+| `src/locales/packages.ts` | one loader per language each installed package ships |
+| `src/locales/app.ts`      | your own rewordings, merged last                     |
+
+```ts title="apps/web/src/vitnode.server.config.ts"
+export const vitNodeServerConfig = buildServerConfig({
+  config: vitNodeConfig, // the locale list above
+  messages: appMessages, // src/locales/app.ts
+  packageMessages, // src/locales/packages.ts
+})
+```
+
+<Callout type="warn" title="Not in vitnode.config.ts">
+  Putting a loader in the shared config puts every plugin's AdminCP copy in your
+  browser bundle, and makes your Vite build execute it. `vitnode i18n:create`
+  writes to the right file for you.
+</Callout>
+
+Adding a language to a package that ships it needs one line in `src/locales/packages.ts`:
+
+```ts title="apps/web/src/locales/packages.ts"
+[CORE.pluginId]: {
+  en: async () => await import('@vitnode/core/locales/en.json'),
+  de: async () => await import('@vitnode/core/locales/de.json'), // [!code ++]
+},
 ```
 
 ---
 
 ## Overriding Strings
 
-To customize existing text from core or a third-party plugin, add an override file in `apps/web/src/locales/{pluginId}/{locale}.json`:
+To customize existing text from core or a third-party plugin, add an override file in `apps/web/src/locales/{pluginId}/{locale}.json` and register it in `src/locales/app.ts`:
 
 ```json title="apps/web/src/locales/@vitnode/core/en.json"
 {
@@ -68,17 +111,26 @@ To customize existing text from core or a third-party plugin, add an override fi
 }
 ```
 
+```ts title="apps/web/src/locales/app.ts"
+export const appMessages: AppMessagesMap = {
+  // [!code ++:3]
+  en: {
+    '@vitnode/core': async () => await import('./@vitnode/core/en.json'),
+  },
+}
+```
+
 Because your app overrides are merged last, only the keys you specify are overwritten. Everything else continues to fall back to the package defaults.
 
 ---
 
 ## Translation Architecture
 
-| Source | Role | Order |
-| :--- | :--- | :--- |
-| `@vitnode/core` | Base strings for auth, admin shells, and dialogs | Base layer |
-| **Plugins** | Domain strings declared in `plugins/*/src/locales` | Second layer |
-| **Host Application** | Custom overrides in `apps/web/src/locales` | Highest priority (wins) |
+| Source               | Role                                               | Order                   |
+| :------------------- | :------------------------------------------------- | :---------------------- |
+| `@vitnode/core`      | Base strings for auth, admin shells, and dialogs   | Base layer              |
+| **Plugins**          | Domain strings declared in `plugins/*/src/locales` | Second layer            |
+| **Host Application** | Custom overrides in `apps/web/src/locales`         | Highest priority (wins) |
 
 Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw key paths from displaying in production.
 
@@ -96,8 +148,13 @@ Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw k
     href="/docs/dev/i18n/messages"
   />
   <Card
-    title="Server-Side i18n"
+    title="API i18n"
     description="Localize transactional emails and error responses"
     href="/docs/dev/i18n/server"
+  />
+  <Card
+    title="Configuration"
+    description="The shared and server-only config files, side by side"
+    href="/docs/dev/configuration"
   />
 </Cards>

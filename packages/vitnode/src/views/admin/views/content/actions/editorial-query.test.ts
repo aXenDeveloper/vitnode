@@ -19,14 +19,6 @@ import {
   nextContentRevisionCursor,
 } from "./editorial-query";
 
-/**
- * The editorial panels' cache keys and the pure arithmetic around them.
- *
- * Prefixes, again, because that is the only property React Query uses: a delete
- * removes `contentItemQueryRoot`, and every one of these has to sit under it or
- * a deleted record's history survives in memory and can be rendered.
- */
-
 const isPrefixOf = (
   prefix: readonly unknown[],
   key: readonly unknown[],

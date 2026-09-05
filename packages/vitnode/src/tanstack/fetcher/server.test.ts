@@ -36,6 +36,8 @@ const lastCall = () => {
 beforeEach(() => {
   apiFetch.mockReset();
   setCookie.mockReset();
+  // The default topology: the app serves its own API, so nothing names one.
+  vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
   requestUrl = "https://preview.example.com/login";
   requestHeaders.set("cookie", "vitnode_auth=abc");
   requestHeaders.set("user-agent", "Mozilla/5.0");
@@ -83,7 +85,24 @@ describe("the request the visitor made is the request the API sees", () => {
     expect(lastCall().url.pathname).toBe("/api/@vitnode/core/users/session");
   });
 
+  it("calls a configured separate API server instead of itself", async () => {
+    // `create-vitnode` scaffolds `apps/web` on `:3000` and `apps/api` on
+    // `:8000`, so this request's own origin has no `/api/*` to answer.
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
+
+    await fetcher(usersModule, {
+      method: "get",
+      module: "users",
+      path: "/session",
+    });
+
+    expect(lastCall().url.origin).toBe("http://localhost:8000");
+    expect(lastCall().url.pathname).toBe("/api/@vitnode/core/users/session");
+  });
+
   it("lets an explicit origin win", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
+
     await fetcher(usersModule, {
       method: "get",
       module: "users",
@@ -237,5 +256,18 @@ describe("outside a request", () => {
     });
 
     expect(lastCall().url.origin).not.toBe("https://preview.example.com");
+  });
+
+  it("uses a configured API server", async () => {
+    requestUrl = null;
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.com");
+
+    await fetcher(usersModule, {
+      method: "get",
+      module: "users",
+      path: "/session",
+    });
+
+    expect(lastCall().url.origin).toBe("https://api.example.com");
   });
 });

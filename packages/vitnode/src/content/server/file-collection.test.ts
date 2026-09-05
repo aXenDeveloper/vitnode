@@ -79,13 +79,6 @@ const rejectionOf = async (
   throw new Error("Expected the reference check to refuse this payload.");
 };
 
-/**
- * The runtime half of `field.file({ multiple: true })`.
- *
- * Every case here is about **arity**: the same four rules the single-file suite
- * covers, applied once per entry, plus the two places where "not loaded" and
- * "empty" have to stay different answers.
- */
 describe("contentFileFields", () => {
   it("finds both arities, because both hold files", () => {
     // A single file is a column and a gallery is a junction table, so the two sit

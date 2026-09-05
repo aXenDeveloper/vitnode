@@ -1,65 +1,70 @@
 ---
 title: Routing
-description: Claim a URL in VitNode - plugin manifest routes for reusable packages, and host app routes for site-specific pages.
+description: Add public and AdminCP URLs through a plugin's route tree, with TanStack Start loaders, metadata, and code splitting.
 icon: Route
 ---
 
-import { File, Files, Folder } from "fumadocs-ui/components/files"
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { DatabaseIcon, FileTextIcon, RouteIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-VitNode uses TanStack Start for routing. Routes are divided into three tiers:
+VitNode uses TanStack Start, but feature routes begin in a plugin. A plugin's
+`routes.ts` is a small tree of declarations - a path, and the module that renders
+it - so the package owns the page without copying files into
+`apps/web/src/routes`.
 
-| Tier | Declaration | Location | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Plugin Routes** | `routes/manifest.ts` | `plugins/*/src/routes/manifest.ts` | **Recommended**. Reusable across any VitNode install. |
-| **Application Routes** | File-based routes | `apps/web/src/routes/**` | Site-specific pages owned directly by your app. |
-| **Core Routes** | Code-based routes | Built into `@vitnode/core` | System routes (`/login`, `/admin/*`, `/search`). |
-
----
-
-## 1. Create a Page in a Plugin (Recommended)
-
-Plugins declare routes as serializable data. The build system mounts them into the route tree with SSR and automatic code splitting.
+| Put it in        | Use it for                                                      | Default  |
+| ---------------- | --------------------------------------------------------------- | -------- |
+| **Plugin route** | Product pages, feature flows, content delivery, AdminCP screens | Yes      |
+| **Host route**   | Shell, framework wiring, docs, or a truly site-wide integration | Rare     |
+| **Core route**   | Login, AdminCP frame, search, and other VitNode system screens  | Built in |
 
 <Steps>
-<Step>
+  <Step>
 
-### Declare the Route in `routes/manifest.ts`
+### Declare the plugin URL
 
-```ts title="plugins/blog/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from "@vitnode/core/routing"
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:5]
-  {
-    entry: "routes/blog-page",
-    id: "blog",
-    path: "/blog",
-  },
-]
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/notes', {
+    component: lazy(() => import('./pages/notes-page')),
+  }),
+])
 ```
 
-</Step>
-<Step>
+Use `:slug` for a dynamic segment, such as `page('/notes/:slug', …)`. VitNode
+maps it to TanStack Start’s internal `$slug` spelling for you.
 
-### Create the Page Component
+`lazy` names the page module without importing it: the literal `import()` is
+what Vite follows to give the page a chunk of its own, and it does not run until
+somebody opens the route.
 
-```tsx title="plugins/blog/src/routes/blog-page.tsx"
-const BlogPage = () => (
-  <div className="container mx-auto p-4">
-    <h1 className="text-3xl font-bold">Blog Overview</h1>
+  </Step>
+  <Step>
+
+### Add the page module
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+const NotesPage = () => (
+  <div className="container mx-auto flex max-w-3xl flex-col gap-4 p-4">
+    <h2 className="text-3xl font-semibold">Site notes</h2>
+    <p className="text-muted-foreground">
+      A route that lives with its feature.
+    </p>
   </div>
 )
 
-export default BlogPage
+export default NotesPage
 ```
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### View the Page
+### Run it
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run a plugin route">
 
 ```bash tab="bun"
 bun dev
@@ -75,123 +80,69 @@ npm run dev
 
 </Tabs>
 
-Open `http://localhost:3000/blog`.
+Open `http://localhost:3000/notes`.
 
-</Step>
+  </Step>
 </Steps>
 
----
+## Load data and set metadata
 
-## 2. Create a Page in Your Application
+Export `route` from the same plugin module. Declare `load` before `head` so
+TypeScript carries the inferred data into your metadata:
 
-When creating a page that belongs only to your host site, add a file in `apps/web/src/routes/`:
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { definePluginRoute } from '@vitnode/core/routing'
 
-<Steps>
-<Step>
-
-### Choose a Pathless Shell
-
-- `_main/` for public pages (with header, navigation, and footer).
-- `_admin/` for administrative screens.
-
-</Step>
-<Step>
-
-### Create the Route File
-
-```tsx title="apps/web/src/routes/_main/about.tsx"
-import { createFileRoute } from "@tanstack/react-router"
-import { pageHead } from "#/lib/page-head"
-
-export const Route = createFileRoute("/_main/about")({
-  head: () =>
-    pageHead({
-      title: "About Us",
-      description: "Learn more about our team and mission.",
-    }),
-  component: AboutPage,
-})
-
-function AboutPage() {
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold">About Us</h1>
-    </div>
-  )
-}
-```
-
-</Step>
-</Steps>
-
----
-
-## Dynamic Segments & Parameters
-
-Dynamic parameters differ slightly between manifests and route files:
-
-| Context | Syntax | Example | Access Parameter |
-| :--- | :--- | :--- | :--- |
-| **Plugin Manifest** | `:param` | `path: "/blog/:slug"` | `params.slug` in `load` / props |
-| **App Route File** | `$param` | `_main/blog.$slug.tsx` | `Route.useParams().slug` |
-
-VitNode compiles `:slug` into TanStack Router's `$slug` syntax automatically.
-
----
-
-## Plugin Route Lifecycle (`definePluginRoute`)
-
-To load data, define metadata, or customize breadcrumbs in a plugin route module, export `route`:
-
-```tsx title="plugins/blog/src/routes/post-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing"
-import { definePluginRoute } from "@vitnode/core/routing"
-
-interface Post {
-  title: string
+interface Note {
   body: string
+  title: string
 }
 
-// [!code ++:10]
+// [!code ++:9]
 export const route = definePluginRoute({
-  load: async ({ params }) => {
-    return await fetchPostBySlug(params.slug)
-  },
+  load: async ({ params }) => await fetchNote(params.slug),
   head: ({ loaderData }) => ({
+    description: loaderData?.body.slice(0, 155),
     title: loaderData?.title,
   }),
 })
 
-const PostPage = ({ loaderData }: PluginRoutePageProps<Post>) => (
-  <article className="container mx-auto p-4">
-    <h1 className="text-3xl font-bold">{loaderData.title}</h1>
+const NotePage = ({ loaderData }: PluginRoutePageProps<Note>) => (
+  <article className="container mx-auto max-w-3xl p-4">
+    <h2 className="text-3xl font-semibold">{loaderData.title}</h2>
     <p>{loaderData.body}</p>
   </article>
 )
 
-export default PostPage
+export default NotePage
 ```
 
-<Callout type="info" title="Declare load above head">
-  TypeScript infers `loaderData` in `head` and the page component from what `load` returns. Always declare `load` before `head`.
+<Callout type="idea" title="The host is the exception">
+  Keep host routes for app-wide framing or infrastructure. If a route belongs to
+  a feature, make a plugin first—even when the feature starts small. Small
+  things have a habit of bringing friends.
 </Callout>
 
-## Learn More
+## Continue from the route
 
 <Cards>
   <Card
-    title="Route Manifest"
-    description="Complete reference for layouts, admin areas, and guards"
-    href="/docs/dev/plugins/route-manifest"
+    icon={<RouteIcon />}
+    title="Plugin routes reference"
+    description="Configure areas, layouts, messages, guards, search, and dynamic paths."
+    href="/docs/dev/plugins/routes"
   />
   <Card
-    title="Data Loading"
-    description="Server data loading and client hydration"
+    icon={<DatabaseIcon />}
+    title="Data loading"
+    description="Use loader data with TanStack Query and server-aware caching."
     href="/docs/dev/data-loading"
   />
   <Card
-    title="Metadata & SEO"
-    description="Page titles, descriptions, and Open Graph tags"
+    icon={<FileTextIcon />}
+    title="Metadata and SEO"
+    description="Set useful titles, descriptions, robots, and social metadata."
     href="/docs/dev/routing/metadata"
   />
 </Cards>

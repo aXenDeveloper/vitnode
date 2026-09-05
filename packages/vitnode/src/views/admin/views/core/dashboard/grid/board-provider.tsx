@@ -37,13 +37,6 @@ import { panelWidgetId } from "./panel-drag-id";
 import { WidgetCardContent } from "./widget-card";
 
 interface DashboardBoardContextProps {
-  /**
-   * The four things the board can do, handed down rather than imported.
-   *
-   * The settings dialog is three components below this provider and needs two of
-   * them; reading them from the board's own context is what stops
-   * `DashboardGrid` and `WidgetCard` having to carry props they do not use.
-   */
   actions: DashboardActions;
   available: DashboardWidgetOption[];
   dispatch: React.Dispatch<DashboardLayoutAction>;
@@ -86,17 +79,6 @@ interface DashboardBoardProviderProps {
   managedIds: string[];
 }
 
-/**
- * The board: its layout state, its drag-and-drop, and the four actions it can
- * perform.
- *
- * Framework-free since Stage 12. What used to be imported here - two server
- * actions and `next-intl`'s router - arrives as {@link DashboardActions}, whose
- * two saves are responsible for refreshing on success (`revalidatePath` in
- * Next.js, a query invalidation in TanStack Start). Everything else about the
- * board is unchanged, including the reducer, the drag sensors and the rule that
- * a stored layout resets the working copy when it comes back changed.
- */
 export const DashboardBoardProvider = ({
   actions,
   catalog,

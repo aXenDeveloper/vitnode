@@ -4,17 +4,6 @@ import type { AutoFormFileValue } from "./file-shared";
 
 import { fileIdsOfFormValue, resolveFormFiles } from "./file-shared";
 
-/**
- * The rule behind both file controls: **the form value decides what is shown.**
- *
- * These are not decorative assertions. The version before this one held the
- * chosen file in component state, so pressing Remove threw the descriptor away -
- * and any path that put the value back without remounting the control (a dialog
- * reopened, a row replaced by a refresh, a save rolled back) left the editor
- * looking at an empty drop zone for a record whose column still held the file.
- * Every case below is one half of that bug.
- */
-
 const file = (id: number, name = `photo-${id}.webp`): AutoFormFileValue => ({
   id,
   mimeType: "image/webp",

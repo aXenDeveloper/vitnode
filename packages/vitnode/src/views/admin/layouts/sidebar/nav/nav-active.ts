@@ -2,27 +2,6 @@ import type { AdminNavItem, AdminNavSubItem } from "./nav-model";
 
 import { normalizeUrl } from "../../normalize-url";
 
-/**
- * Which sidebar entry the current URL is "on" - as arithmetic over two strings.
- *
- * Split out of `ItemNavAdmin` in Stage 12 for the same reason `nav-model` was
- * split out of `getAdminNav`: the rule is identical in both frameworks and only
- * the *source* of the pathname differs. Next.js reads it from `usePathname`,
- * TanStack Start from `useRouterState`, and neither spelling belongs in a rule
- * that is really about trailing slashes and prefixes.
- *
- * The pathname handed in is always **internal** - no locale prefix. `/admin` is
- * outside the localized URL space in both applications, so this is a statement
- * about what already arrives rather than a normalization anybody has to perform.
- */
-
-/**
- * Whether `pathname` is `href` or lives underneath it.
- *
- * The `/` in the prefix test is what stops `/admin/core/users` from claiming
- * `/admin/core/users-import`: without it, any href that is a *string* prefix of
- * the pathname would match, and two unrelated screens would highlight together.
- */
 export const isPathnameUnderHref = (
   pathname: string,
   href: string,

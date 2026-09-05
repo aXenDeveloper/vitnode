@@ -27,25 +27,6 @@ const isVisible = (row: PublicationRow): boolean =>
 const asSlug = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
-/**
- * Which languages one record is publicly reachable in, and under which URL.
- *
- * This is the one place the fallback rule is *evaluated* rather than described,
- * and it lives on the server for a reason: answering it needs the language
- * registry, the base row's publication state and every translation's, and a
- * caller that tried to assemble those itself would be reimplementing
- * `createContentLocalizedPublicService`'s visibility test in a second place - the
- * classic pair that drifts, with a stale cache as the symptom.
- *
- * `hasOwnTranslation` means **served by a translation of its own**, not "a
- * translation row exists". A locale whose translation is still a draft is served
- * the default one, so it is a downstream consumer of the default locale's cache
- * and has to be expired when that changes.
- *
- * Every *enabled* language is reported, including the ones with no translation at
- * all: with `fallback: "default"` those have public pages too, and pages that
- * nothing ever expires are worse than pages that are not cached.
- */
 export const contentPublicLocaleStates = async <
   TDefinition extends AnyContentTypeDefinition,
 >(

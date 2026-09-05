@@ -1,72 +1,18 @@
-import type { PluginRoute } from "../../routing/types.js";
-import type {
-  PluginRouteEntryDeclaration,
-  PluginRouteEntrySource,
-  ResolvedPluginRouteModule,
-  ResolvedPluginRouteSearchModule,
-} from "./types.js";
+import type { ResolvedPluginRoutesModule } from "./types.js";
 
-import { pluginRouteId } from "../../routing/manifest.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "./diagnostics.js";
 
-/**
- * A plugin id, which in VitNode is also the package name the route module is
- * imported from - `@vitnode/example`, `my-plugin`.
- *
- * Matched rather than trusted because it is concatenated into an import
- * specifier that is then written into a source file. Everything npm allows in a
- * name is allowed here; nothing else is, which rules out quotes, whitespace,
- * newlines, backslashes and `..` in one go.
- */
 const PLUGIN_ID_PATTERN =
   /^(?:@[A-Za-z0-9][A-Za-z0-9._-]*\/)?[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-/** One path segment: no dots-only segments, so `.` and `..` cannot appear. */
-const SEGMENT_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-
-/**
- * An extension on an entry, which is always a mistake.
- *
- * A plugin's export map maps subpaths to build output - `"./*"` to
- * `"./dist/src/*.js"` - so the subpath is extensionless. `"routes/page.tsx"`
- * would resolve to `dist/src/routes/page.tsx.js` and fail with a message about a
- * file nobody wrote, so it is worth naming here instead.
- */
-const ENTRY_EXTENSION_PATTERN = /\.[cm]?[jt]sx?$/;
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const assertSegmentedPath = ({
-  label,
-  source,
-  value,
-}: {
-  label: string;
-  source: string;
-  value: string;
-}): void => {
-  if (value === "" || value !== value.trim()) {
-    throw new Error(
-      `${ERROR_PREFIX} ${source} declares a route with ${label} ${JSON.stringify(value)}, which is empty or padded with whitespace.`,
-    );
-  }
-
-  const segments = value.split("/");
-  const invalid = segments.filter(segment => !SEGMENT_PATTERN.test(segment));
-
-  if (invalid.length > 0) {
-    throw new Error(
-      `${ERROR_PREFIX} ${source} declares a route with ${label} ${JSON.stringify(value)}. Use "/"-separated segments of letters, digits, ".", "_" and "-" - a leading "/", a "." or ".." segment, a backslash or a quote is never valid, because this is written into a generated import.`,
-    );
-  }
-};
 
 /** Validates a plugin id and returns it unchanged, so it can be used inline. */
 export const assertPluginId = (pluginId: string, source: string): string => {
   if (!PLUGIN_ID_PATTERN.test(pluginId)) {
     throw new Error(
-      `${ERROR_PREFIX} ${source} declares the plugin id ${JSON.stringify(pluginId)}, which is not a package name. A route module is imported from the plugin's package, so the id has to be one.`,
+      `${ERROR_PREFIX} ${source} declares the plugin id ${JSON.stringify(pluginId)}, which is not a package name. A plugin's routes module is imported from the plugin's package, so the id has to be one.`,
     );
   }
 
@@ -89,19 +35,6 @@ export const toSingleQuotedLiteral = (value: string): string =>
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")}'`;
 
-/**
- * Reads the configured plugin ids out of an already-loaded `vitnode.config.ts`.
- *
- * The app's config is the source of truth for which plugins exist, so it is also
- * the source of truth for whose routes get bundled: a plugin that is installed
- * but not listed here contributes nothing, and no `node_modules` scan can
- * accidentally put it back.
- *
- * Pure, and separate from the loading, so the narrowing every generated build
- * depends on is testable without a module loader. `source` only ever appears in
- * error messages - it is the config's path, which the caller knows and this
- * does not.
- */
 export const pluginIdsFromLoadedConfig = (
   loaded: unknown,
   source: string,
@@ -123,7 +56,7 @@ export const pluginIdsFromLoadedConfig = (
   return plugins.map((plugin: unknown, index) => {
     if (!isRecord(plugin) || typeof plugin.pluginId !== "string") {
       throw new Error(
-        `${ERROR_PREFIX} \`vitNodeConfig.plugins[${index}]\` in ${source} has no string \`pluginId\`.`,
+        `${ERROR_PREFIX} \`vitNodeConfig.plugins[${String(index)}]\` in ${source} has no string \`pluginId\`.`,
       );
     }
 
@@ -131,21 +64,13 @@ export const pluginIdsFromLoadedConfig = (
   });
 };
 
-/**
- * Reads the route declarations out of an already-loaded plugin route manifest.
- *
- * Pure for the same reason as {@link pluginIdsFromLoadedConfig}, and equally
- * strict: a manifest that exports the wrong shape has to fail here, with the
- * specifier in the message, rather than three steps later as a generated file
- * that will not compile.
- */
-export const routeDeclarationsFromManifest = (
+export const routeDeclarationsFromRoutesModule = (
   loaded: unknown,
   source: string,
-): PluginRouteEntryDeclaration[] => {
+): unknown[] => {
   if (!isRecord(loaded) || !("routes" in loaded)) {
     throw new Error(
-      `${ERROR_PREFIX} ${source} does not export \`routes\`. A plugin route manifest exports an array of \`{ id, entry }\`.`,
+      `${ERROR_PREFIX} ${source} does not export \`routes\`. A plugin's routes module is \`export const routes = definePluginRoutes([...])\`.`,
     );
   }
 
@@ -155,169 +80,40 @@ export const routeDeclarationsFromManifest = (
     throw new Error(`${ERROR_PREFIX} \`routes\` in ${source} is not an array.`);
   }
 
-  return routes.map((route: unknown, index) => {
-    if (
-      !isRecord(route) ||
-      typeof route.id !== "string" ||
-      typeof route.entry !== "string"
-    ) {
-      throw new Error(
-        `${ERROR_PREFIX} \`routes[${index}]\` in ${source} is not a \`{ id: string, entry: string }\` record.`,
-      );
-    }
+  const legacy = (routes as unknown[]).filter(
+    route => isRecord(route) && typeof route.entry === "string",
+  );
 
-    return { entry: route.entry, id: route.id };
-  });
-};
-
-/**
- * Every configured plugin's declarations, validated and put in a fixed order.
- *
- * Two guarantees, and both are the reason this is a separate step rather than
- * something the generator does inline:
- *
- * - **Deterministic.** The result is sorted by key with a code-unit comparison,
- *   not `localeCompare`, so it does not depend on the machine's locale, on the
- *   order the plugins were configured in, or on the order any directory was read
- *   in. The same configuration produces the same bytes.
- * - **Loud.** A malformed id, an entry with a `..` segment or an extension, and
- *   two declarations claiming one key all throw here - at build time, naming the
- *   plugin - rather than turning into a generated import that fails somewhere in
- *   a browser.
- *
- * It stops at what can be decided from the declarations alone. Whether
- * `<pluginId>/<entry>` actually resolves to a file is a filesystem question, and
- * the caller that owns the filesystem asks it, using `specifier`.
- */
-export const resolvePluginRouteModules = (
-  sources: readonly PluginRouteEntrySource[],
-): ResolvedPluginRouteModule[] => {
-  const modules: ResolvedPluginRouteModule[] = [];
-
-  for (const source of sources) {
-    const pluginId = assertPluginId(source.pluginId, "vitnode.config.ts");
-
-    for (const route of source.routes ?? []) {
-      assertSegmentedPath({ label: "id", source: pluginId, value: route.id });
-      assertSegmentedPath({
-        label: "entry",
-        source: pluginId,
-        value: route.entry,
-      });
-
-      if (ENTRY_EXTENSION_PATTERN.test(route.entry)) {
-        throw new Error(
-          `${ERROR_PREFIX} ${pluginId} declares the entry ${JSON.stringify(route.entry)} with a file extension. An entry is a package export subpath, and a plugin's export map adds the extension - drop it.`,
-        );
-      }
-
-      modules.push({
-        entry: route.entry,
-        key: pluginRouteId(pluginId, route.id),
-        pluginId,
-        routeId: route.id,
-        specifier: `${pluginId}/${route.entry}`,
-      });
-    }
+  if (legacy.length > 0) {
+    throw new Error(
+      `${ERROR_PREFIX} ${source} exports the old flat route manifest - ${String(legacy.length)} route${legacy.length === 1 ? "" : "s"} declaring an \`entry\`. Plugin routes are now a nested tree: replace each record with \`page()\`, \`layout()\` or \`index()\` from \`@vitnode/core/routing\`, move \`entry\` to \`component: lazy(() => import("./pages/..."))\`, rename \`namespaces\` to \`messages\`, and drop \`id\`, \`kind\`, \`parentId\` and \`searchEntry\`. See https://vitnode.com/docs/dev/plugins/routes.`,
+    );
   }
 
-  return sortAndAssertUnique(modules);
+  return routes as unknown[];
 };
 
-/**
- * Sorts by key and rejects duplicates.
- *
- * Also applied by the generator, so a caller cannot hand it an unsorted list and
- * get a file whose bytes depend on argument order.
- */
-export const sortAndAssertUnique = (
-  modules: ResolvedPluginRouteModule[],
-): ResolvedPluginRouteModule[] => {
+export const sortAndAssertUniquePlugins = (
+  modules: readonly ResolvedPluginRoutesModule[],
+): ResolvedPluginRoutesModule[] => {
   const sorted = [...modules].sort((a, b) => {
-    if (a.key === b.key) return 0;
+    if (a.pluginId === b.pluginId) return 0;
 
-    return a.key < b.key ? -1 : 1;
+    return a.pluginId < b.pluginId ? -1 : 1;
   });
 
   const duplicates = sorted
     .filter(
-      (module, index) => index > 0 && module.key === sorted[index - 1].key,
+      (module, index) =>
+        index > 0 && module.pluginId === sorted[index - 1].pluginId,
     )
-    .map(module => module.key);
+    .map(module => module.pluginId);
 
   if (duplicates.length > 0) {
     throw new Error(
-      `${ERROR_PREFIX} Two route declarations claim the same registry key: ${[...new Set(duplicates)].map(key => JSON.stringify(key)).join(", ")}. A key is \`<pluginId>:<routeId>\`, so give the routes different ids.`,
+      `${ERROR_PREFIX} Two plugins claim the same id: ${[...new Set(duplicates)].map(id => JSON.stringify(id)).join(", ")}. A plugin id is the package name, so an app cannot configure one twice.`,
     );
   }
 
   return sorted;
-};
-
-/**
- * Every route in a manifest that declares an eager search schema, resolved to
- * the specifier that imports it.
- *
- * Read off the **built manifest** rather than off the raw declarations, so a
- * `searchEntry` reaches a generated file only by having survived
- * `buildPluginRouteManifest` - the same anti-drift ordering the module registry
- * has, for the same reason. A route removed from a plugin, or one whose
- * `searchEntry` failed validation, cannot leave a static import behind.
- *
- * Sorted by key, so the generated bytes do not depend on manifest order.
- *
- * Usually empty. Most routes read no query string, and one that does is usually
- * better served by its module's own lazy `parseSearch` - see
- * `PluginRouteDefinition.searchEntry` for the case that is not.
- */
-export const pluginRouteSearchModules = (
-  manifest: readonly PluginRoute[],
-): ResolvedPluginRouteSearchModule[] =>
-  manifest
-    .flatMap(route =>
-      route.searchEntry === null
-        ? []
-        : [
-            {
-              key: route.id,
-              pluginId: route.pluginId,
-              routeId: route.routeId,
-              searchEntry: route.searchEntry,
-              specifier: `${route.pluginId}/${route.searchEntry}`,
-            },
-          ],
-    )
-    .sort((a, b) => (a.key === b.key ? 0 : a.key < b.key ? -1 : 1));
-
-/**
- * A built manifest, as the per-plugin declarations the registry resolves from.
- *
- * The join between the two generated files, made structural. The manifest is the
- * resolved snapshot of what routes exist; this turns it back into the shape
- * {@link resolvePluginRouteModules} takes, so the registry's entries are
- * *derived* from the manifest's routes rather than read from a second pass over
- * the plugins - and a route can only get a module import by having survived
- * validation.
- *
- * `id` is the route's plugin-local `routeId`, because that is what a declaration
- * carries and what `pluginRouteId` namespaces; the global id the manifest
- * already holds is rebuilt from it, so the two are the same string by
- * construction rather than by agreement.
- *
- * Deterministic without sorting: a manifest is already ordered, and the resolver
- * sorts by key on top of that.
- */
-export const pluginRouteEntrySources = (
-  manifest: readonly PluginRoute[],
-): PluginRouteEntrySource[] => {
-  const byPlugin = new Map<string, PluginRouteEntryDeclaration[]>();
-
-  for (const route of manifest) {
-    const declarations = byPlugin.get(route.pluginId) ?? [];
-
-    declarations.push({ entry: route.entry, id: route.routeId });
-    byPlugin.set(route.pluginId, declarations);
-  }
-
-  return [...byPlugin].map(([pluginId, routes]) => ({ pluginId, routes }));
 };

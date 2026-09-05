@@ -184,18 +184,6 @@ describe("the pending window", () => {
   });
 });
 
-/**
- * What the configured `defaultPendingMs: 150` actually buys, measured rather
- * than assumed - because a zero threshold is the obvious-looking setting and it
- * is the wrong one.
- *
- * At zero, every navigation opens a pending window, so `defaultPendingMinMs`
- * applies to all of them: a loader that resolves in a microtask - a cached
- * TanStack Query read, which is most of them - is still held behind a skeleton
- * for the full minimum. A page that could have been instant is made slow in
- * order to look busy. The threshold is what lets that navigation go straight
- * through.
- */
 describe(`the configured threshold of ${PENDING_MS}ms`, () => {
   it("lets a navigation that beats it through with no skeleton at all", async () => {
     const router = routerFor(async () => await Promise.resolve(), {

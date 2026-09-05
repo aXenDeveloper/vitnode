@@ -28,37 +28,10 @@ import {
 } from "../paths";
 import { toColumnValues } from "./query";
 
-/**
- * The read and write layer for a content type's advanced collections.
- *
- * One module rather than one per kind, because a to-many relation and a
- * repeatable are the same problem twice: an ordered list of child rows keyed by
- * a parent, replaced as a whole, with a unique `(itemId, position)` that must
- * never be violated even for an instant. Sharing the write dance is what keeps
- * "reorder cannot produce a duplicate slot" one piece of code rather than two
- * that agree on the day they are written.
- *
- * **Nothing here locks anything.** Every mutation runs inside a transaction the
- * caller owns, and the caller has already taken the source record's lock -
- * optimistically through the guarded `version` UPDATE on an editorial content
- * type, pessimistically through `SELECT ... FOR UPDATE` on one without. That is
- * why two concurrent `set` calls cannot interleave here: one of them never
- * reaches this module.
- */
-
 /** One repeatable child, as it is written back. */
 type ChildValues = Record<string, unknown>;
 
 export interface ContentAdvancedStore {
-  /**
-   * The field names whose collections a patch would actually move.
-   *
-   * Read-only, so a caller can decide whether there is anything to write - and
-   * therefore whether to bump the version, write a revision and emit an event -
-   * before it takes the write lock. A reorder to the order that is already
-   * there comes back empty, which is what makes it a no-op rather than a
-   * version bump with nothing in it.
-   */
   diff: (
     tx: ContentDatabase,
     itemId: number,
@@ -68,61 +41,24 @@ export interface ContentAdvancedStore {
   readonly enabled: boolean;
   /** The collection field names, in declaration order. */
   readonly fields: string[];
-  /**
-   * Every collection of one record, in logical shape.
-   *
-   * `only` narrows it to the fields a caller actually needs: a public read wants
-   * the exposed ones and a search document wants the indexed ones, and querying
-   * a private junction table to discard the rows afterwards is work with no
-   * answer attached. Omit it for all of them.
-   */
+
   load: (
     itemId: number,
     database: ContentDatabase,
     only?: readonly string[],
   ) => Promise<Record<string, unknown>>;
-  /**
-   * Every collection of many records, in **two queries per collection field**
-   * rather than two per record.
-   *
-   * The whole reason a to-many relation is absent from `ContentSelect`: a list
-   * that carried one would issue a query per row, and an admin table of 25 rows
-   * with two collections would be 50 round trips.
-   */
+
   loadMany: (
     itemIds: readonly number[],
     database: ContentDatabase,
     only?: readonly string[],
   ) => Promise<Map<number, Record<string, unknown>>>;
-  /**
-   * An indexed `EXISTS` over one relation's junction table.
-   *
-   * `EXISTS` rather than a join, so a record matches once however many junction
-   * rows it has and the outer query needs no `DISTINCT`. The junction's primary
-   * key `(itemId, relatedItemId)` covers the lookup exactly.
-   */
+
   membershipCondition: (
     field: string,
     filter: ContentRelationFilter,
   ) => SQL | undefined;
-  /**
-   * Makes a historical collection state applicable to the record as it stands.
-   *
-   * Two different rules, because the two kinds fail differently:
-   *
-   * - a **repeatable child** that no longer exists is *recreated*. Its values
-   *   are all in the snapshot, so restoring it loses nothing except the original
-   *   identifier - and the alternative, refusing, would mean a record could
-   *   never be restored past a delete.
-   * - a **relation target** that no longer exists is *fatal*. Its values are not
-   *   in the snapshot and never were: the row belongs to another content type
-   *   with its own history, so there is nothing here to recreate it from.
-   *   `missingRelations` names the fields, and the caller turns that into a
-   *   structured not-restorable answer rather than a partial restore. A missing
-   *   **gallery entry** is the same answer for the same reason - the bytes are
-   *   gone and a snapshot holds an identifier, not a file - though the revision's
-   *   own file pins mean it should not be reachable.
-   */
+
   prepareRestore: (
     tx: ContentDatabase,
     itemId: number,
@@ -131,15 +67,7 @@ export interface ContentAdvancedStore {
     missingRelations: { field: string; ids: number[] }[];
     patch: Record<string, unknown>;
   }>;
-  /**
-   * The table one to-many field points at, read off its junction's foreign key.
-   *
-   * The picker's way in: a to-many reference has no column on this row, so
-   * "which table holds the things this field can choose from" is a question only
-   * the generated junction can answer. Read from the constraint rather than from
-   * the descriptor's `target()` thunk, so the table the picker offers rows from
-   * is by construction the table Postgres will check on write.
-   */
+
   targetTable: (field: string) => null | PgTable;
   /** Applies a patch's collection half. Returns the fields that moved. */
   write: (
@@ -162,13 +90,6 @@ const sameJunction = (
   current.length === desired.length &&
   current.every((row, index) => row.relatedItemId === desired[index]);
 
-/**
- * The order a relation's targets are stored in.
- *
- * An ordered relation keeps the author's order. An unordered one is sorted by
- * target id, which is what makes `set([9, 2, 5])` and `set([2, 5, 9])` the same
- * state rather than two writes that differ only in a column nobody declared.
- */
 const normalizeTargets = (
   ids: readonly number[],
   ordered: boolean,
@@ -194,13 +115,6 @@ const sameChildValues = (
     return before === after;
   });
 
-/**
- * Builds the store for one content type.
- *
- * Returns a disabled stub - every method a no-op - when the content type
- * declares no advanced collection, so every caller can use it unconditionally
- * and a Stage 1-5 content type still issues exactly the queries it always did.
- */
 export const createContentAdvancedStore = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -246,16 +160,6 @@ export const createContentAdvancedStore = <
   const leafNamesOf = (field: string): string[] =>
     Object.keys(contentInnerFields(fields[field]));
 
-  /**
-   * The target `id` column of one to-many relation, read off the junction's own
-   * foreign key.
-   *
-   * Read from the constraint rather than from the descriptor's `target()` thunk,
-   * so the table this checks is by construction the table Postgres will check.
-   * Resolved lazily and memoised: `foreignKey.reference()` is the thunk Drizzle
-   * leaves unevaluated so two content types can refer to each other, and forcing
-   * it at construction would defeat that.
-   */
   const targetColumns = new Map<string, null | PgColumn>();
   const relationTargetColumn = (field: string): null | PgColumn => {
     const cached = targetColumns.get(field);
@@ -278,14 +182,6 @@ export const createContentAdvancedStore = <
     return resolved;
   };
 
-  /**
-   * Refuses a relation set whose targets are not all real rows.
-   *
-   * Checked rather than left to the foreign key for the reason
-   * `ContentAdvancedInputError` documents: `23503` cannot say which of the two
-   * references failed, and a caller that sent a stale category id should be told
-   * that rather than told the article is gone.
-   */
   const assertTargetsExist = async (
     tx: ContentDatabase,
     field: string,
@@ -549,12 +445,6 @@ export const createContentAdvancedStore = <
     if (desired.length > 0) await settlePositions(tx, child, itemId);
   };
 
-  /**
-   * What a patch would change, and the desired state it would change it to.
-   *
-   * Computed once and reused by `diff` and `write`, so the no-op rule and the
-   * write agree by construction rather than by both reading the same comment.
-   */
   const plan = async (
     tx: ContentDatabase,
     itemId: number,
@@ -614,13 +504,6 @@ export const createContentAdvancedStore = <
     return changes;
   };
 
-  /**
-   * The collection fields one read should touch.
-   *
-   * An unknown name is dropped rather than rejected: callers pass an allowlist
-   * derived from configuration - the public `fields`, the search paths - and a
-   * name that is not a collection simply has no collection to load.
-   */
   const selected = (only?: readonly string[]): string[] =>
     only === undefined
       ? collectionNames

@@ -1,160 +1,116 @@
 ---
 title: API Modules
-description: Group plugin endpoints into named Hono modules and mount them under your plugin API namespace.
+description: Add a typed Hono API module to a VitNode plugin, register it once, and keep endpoint ownership with the feature.
 icon: Box
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { NetworkIcon, RouteIcon, ShieldCheckIcon } from 'lucide-react'
 
-A module is a Hono sub-application in VitNode. It organizes related routes, cron tasks, queue handlers, and event listeners under a common URL prefix.
+Start with [a plugin](/docs/dev/plugins/create), not a host endpoint. A module
+groups the plugin's Hono routes under one URL prefix and gives OpenAPI a tidy
+place to describe them.
 
-## Quick start
+{/* Image prompt: Dark-theme API ownership diagram. A Site notes plugin contains a Hono route, notes module, and config.api file; the app API configuration composes the plugin once. Show resulting GET endpoint, 1600x900. */}
 
-### 1. Create a Module
+<Steps>
+  <Step>
 
-Define a module with routes:
+### Define one plugin endpoint
 
-```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
-import { z } from "@hono/zod-openapi"
-import { buildModule } from "@vitnode/core/api/lib/module"
-import { buildRoute } from "@vitnode/core/api/lib/route"
+```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
+import { z } from '@hono/zod-openapi'
+import { buildRoute } from '@vitnode/core/api/lib/route'
 
-const listCategoriesRoute = buildRoute({
-  pluginId: "blog",
+export const listNotesRoute = buildRoute({
+  pluginId: '@acme/site-notes',
   route: {
-    method: "get",
-    path: "/",
+    method: 'get',
+    path: '/',
     responses: {
+      // [!code ++:7]
       200: {
         content: {
-          "application/json": {
-            schema: z.object({ categories: z.array(z.string()) }),
+          'application/json': {
+            schema: z.object({ notes: z.array(z.string()) }),
           },
         },
-        description: "List of categories",
+        description: 'Published site notes.',
       },
     },
   },
-  handler: (c) => c.json({ categories: ["news", "tech"] }),
-})
-
-// [!code ++:5]
-export const categoriesModule = buildModule({
-  pluginId: "blog",
-  name: "categories",
-  routes: [listCategoriesRoute],
+  handler: (c) => c.json({ notes: ['Hello plugin'] }),
 })
 ```
 
----
+  </Step>
+  <Step>
 
-### 2. Register Module in Plugin API Config
+### Group it and export the plugin API
 
-Mount the module in `src/config.api.ts`:
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
+import { buildModule } from '@vitnode/core/api/lib/module'
 
-```ts title="plugins/blog/src/config.api.ts"
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
-import { categoriesModule } from "./api/modules/categories/categories.module"
+import { listNotesRoute } from './list.route'
 
-export const blogApiPlugin = () =>
+export const notesModule = buildModule({
+  name: 'notes',
+  pluginId: '@acme/site-notes',
+  routes: [listNotesRoute], // [!code ++]
+})
+```
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+import { notesModule } from './api/modules/notes/notes.module'
+
+export const siteNotesApiPlugin = () =>
   buildApiPlugin({
-    pluginId: "blog",
-    // [!code ++:3]
-    modules: [
-      categoriesModule,
-    ],
+    modules: [notesModule], // [!code ++]
+    pluginId: '@acme/site-notes',
   })
 ```
 
-The route is now mounted at `GET /api/blog/categories`.
+  </Step>
+  <Step>
 
----
+### Compose it in the app API config
 
-## URL Path Assembly
+The app decides which installed plugins are active. Add the factory to the Hono
+config that serves your app (`apps/web` for a single app, or `apps/api` when it
+is separate):
 
-Endpoint URLs are composed automatically:
+```ts title="apps/web/src/vitnode.api.config.ts"
+import { siteNotesApiPlugin } from '@acme/site-notes/config.api' // [!code ++]
 
-| Segment | Origin | Example |
-| :--- | :--- | :--- |
-| `/api` | Root API route prefix | `/api` |
-| `/{pluginId}` | `pluginId` on `buildApiPlugin` | `/blog` |
-| `/{moduleName}` | `name` on `buildModule` | `/categories` |
-| `/{routePath}` | `path` on `buildRoute` | `/` $ightarrow$ `/api/blog/categories` |
-
----
-
-## Submodules
-
-Nest modules to organize complex features:
-
-```ts
-export const adminModule = buildModule({
-  pluginId: "blog",
-  name: "admin",
-  subModules: [
-    postsAdminModule,
-    categoriesAdminModule,
-  ],
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [siteNotesApiPlugin()], // [!code ++]
 })
 ```
 
-Routes in `postsAdminModule` answer under `/api/blog/admin/posts/...`.
+The endpoint is now `GET /api/@acme/site-notes/notes`. OpenAPI picks it up too;
+one less hand-written map to maintain.
 
----
-
-## `buildModule` Options
-
-<TypeTable
-  type={{
-    name: {
-      description: "URL segment for this module.",
-      required: true,
-      type: "string",
-    },
-    pluginId: {
-      description: "Identifier of the declaring plugin.",
-      required: true,
-      type: "string",
-    },
-    routes: {
-      default: "[]",
-      description: "Array of Hono routes built with buildRoute.",
-      type: "Route[]",
-    },
-    subModules: {
-      default: "[]",
-      description: "Child modules nested under this module.",
-      type: "Module[]",
-    },
-    cronJobs: {
-      default: "[]",
-      description: "Scheduled background jobs owned by this module.",
-      type: "CronJob[]",
-    },
-    queueTasks: {
-      default: "[]",
-      description: "Asynchronous tasks dispatched to the queue.",
-      type: "QueueTask[]",
-    },
-    events: {
-      default: "[]",
-      description: "Domain event listeners registered by this module.",
-      type: "EventListener[]",
-    },
-  }}
-/>
-
-## Learn More
+  </Step>
+</Steps>
 
 <Cards>
   <Card
-    title="Create a Plugin"
-    description="Full plugin scaffolding and registration workflow"
-    href="/docs/dev/plugins/create"
+    icon={<RouteIcon />}
+    title="Validate inputs"
+    description="Use Zod schemas for params, queries, request bodies, and typed responses."
+    href="/docs/dev/plugins/api/routes"
   />
   <Card
-    title="Fetcher"
-    description="Call Hono module routes with end-to-end type safety"
+    icon={<ShieldCheckIcon />}
+    title="Protect staff APIs"
+    description="Require a staff permission before an AdminCP action reaches its handler."
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+  <Card
+    icon={<NetworkIcon />}
+    title="Call the API"
+    description="Use VitNode's typed fetcher from a plugin-owned page or component."
     href="/docs/dev/fetcher"
   />
 </Cards>

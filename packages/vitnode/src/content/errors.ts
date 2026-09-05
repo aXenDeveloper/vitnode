@@ -4,11 +4,6 @@ import type { ContentScheduleCode } from "./schedules";
 export type ContentAdvancedCode =
   (typeof CONTENT_ADVANCED_CODES)[keyof typeof CONTENT_ADVANCED_CODES];
 
-/**
- * Thrown while a content type definition is being built or registered - always
- * at import/boot time, never per request. The message names the offending
- * content type so a misconfigured plugin fails loudly and obviously.
- */
 export class ContentEngineError extends Error {
   constructor(
     message: string,
@@ -188,13 +183,6 @@ export class ContentDefaultTranslationRequired extends ContentEngineError {
   readonly locale: string;
 }
 
-/**
- * A create for a locale that already has a translation.
- *
- * Its own error rather than a bare unique violation: "switch to the tab that
- * exists" and "that slug is taken" are different instructions, and the composite
- * primary key cannot tell a client which one it hit.
- */
 export class ContentTranslationExists extends ContentEngineError {
   constructor({
     contentTypeId,
@@ -219,14 +207,6 @@ export class ContentTranslationExists extends ContentEngineError {
   readonly locale: string;
 }
 
-/**
- * A locale that does not name a usable language.
- *
- * `reason` is what the routes branch on: an unknown locale is a 404 (there is no
- * such thing to address), a disabled one is a 409 (it exists, and this install
- * has switched it off). Both are per-request, and neither carries anything
- * beyond the locale the caller already sent.
- */
 export class ContentLanguageError extends ContentEngineError {
   constructor({
     contentTypeId,
@@ -253,13 +233,6 @@ export class ContentLanguageError extends ContentEngineError {
   readonly reason: "disabled" | "missing";
 }
 
-/**
- * A translation write for a base record that is not there.
- *
- * Checked before the insert rather than left to the foreign key: the driver's
- * `23503` cannot say *which* of the two references failed, and "the article is
- * gone" and "that language is gone" want different answers.
- */
 export class ContentTranslationItemMissing extends ContentEngineError {
   constructor({
     contentTypeId,

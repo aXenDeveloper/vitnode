@@ -5,20 +5,8 @@ import type { EnvVitNode } from "../middlewares/global.middleware";
 
 export { getWebSocketId } from "@/ws/types";
 
-/**
- * WebSocket context for controlling the connection. Use it to `send`, `close`
- * or read the `readyState`. The underlying runtime socket is exposed on
- * `ws.raw` and is left generic so the same handler works across runtimes
- * (node.js `ws`, Bun, ...).
- */
 export type VitNodeWSContext = WSContext;
 
-/**
- * Arguments passed to a registered WebSocket's `onMessage` handler.
- *
- * - `TReceive` - the payload the client sends for this socket.
- * - `TSend` - the payload the server sends back to the client.
- */
 export interface VitNodeWSMessageParams<TReceive = unknown, TSend = unknown> {
   /** Hono request context - reach the db, the user, the logger, etc. */
   c: Context<EnvVitNode>;
@@ -30,11 +18,6 @@ export interface VitNodeWSMessageParams<TReceive = unknown, TSend = unknown> {
   ws: VitNodeWSContext;
 }
 
-/**
- * A registered WebSocket. The generic argument types are only used at the
- * definition site (via {@link buildWebSocket}); once stored they are erased so
- * sockets with different message shapes can live in the same array.
- */
 export interface BuildWebSocketReturn {
   description?: string;
   /**
@@ -45,11 +28,6 @@ export interface BuildWebSocketReturn {
   onMessage: (params: VitNodeWSMessageParams) => Promise<void> | void;
 }
 
-/**
- * A registered WebSocket together with the plugin and module it belongs to.
- * The `module` is filled in when the module is built and the `pluginId` when
- * the plugin is built, mirroring how cron jobs are wired up.
- */
 export interface WebSocketConfig extends BuildWebSocketReturn {
   module: string;
   pluginId: string;

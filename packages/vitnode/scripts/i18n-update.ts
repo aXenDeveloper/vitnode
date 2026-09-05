@@ -22,15 +22,6 @@ const MAX_LISTED_KEYS = 8;
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/**
- * Reconciles a translation tree against the English source: the result has
- * exactly English's shape, but every leaf keeps the existing translation when
- * there is one and falls back to the English string when there is not.
- *
- * - a key English has but the translation lacks -> added, seeded with English
- * - a key the translation has but English no longer does -> dropped
- * - a key both have -> the existing translation is preserved, never overwritten
- */
 export const reconcileTree = (
   english: Record<string, unknown>,
   current: Record<string, unknown>,

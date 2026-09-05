@@ -14,18 +14,6 @@ import type { CreateAdminUser } from "./create-user-content";
 
 import { adminUserCreateConflictField } from "../users-mutations";
 
-/**
- * The create-user form itself - the lazy half of `CreateUserAdminContent`.
- *
- * Its own module so `React.lazy` has something to split on. Everything the
- * dialog needs before the form is opened stays in the other file; everything
- * here (`AutoForm`, `react-hook-form`, zod) arrives when somebody clicks.
- *
- * The three validation rules are the API's, restated: `zodCreateUserAdminSchema`
- * requires a name of at least three characters, a real email and a password of
- * at least eight. Restating them is what turns a `400` into an inline message
- * beside the field that caused it.
- */
 export const CreateUserForm = ({ onCreate }: { onCreate: CreateAdminUser }) => {
   const t = useTranslations("admin.user.create");
   const tError = useTranslations("core.global.errors");

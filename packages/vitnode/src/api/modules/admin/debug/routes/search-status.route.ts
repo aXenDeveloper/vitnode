@@ -21,29 +21,12 @@ const CONTENT_SEARCH_LOG_PREFIX = "[content-search]";
 const SYNC_ERROR_LIMIT = 10;
 
 const collectionSchema = z.object({
-  /**
-   * Index rows, counting one per language.
-   *
-   * Separate from `indexed`, which counts distinct items: multi-language content
-   * is indexed once per translation, so its coverage has to be measured in
-   * documents or a fully-indexed collection would read as 33%.
-   */
   documents: z.number(),
-  /**
-   * Whether an indexer is registered for this item type *right now*. A stored
-   * plugin owner does not imply one: the plugin may be uninstalled, renamed, or
-   * simply not loaded in this process.
-   */
+
   hasIndexer: z.boolean(),
   indexed: z.number(),
   itemType: z.string(),
-  /**
-   * One entry per language present in the index, newest first by count.
-   *
-   * Empty for a collection that is entirely language-agnostic. It is what makes
-   * "Polish is missing 40 documents" visible at all - a single total cannot say
-   * which language a rebuild failed halfway through.
-   */
+
   languages: z.array(
     z.object({
       documents: z.number(),

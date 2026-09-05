@@ -14,11 +14,7 @@ export const deleteFileAdminRoute = buildRoute({
       params: z.object({
         id: z.string().openapi({ example: "1" }),
       }),
-      /**
-       * Opt-in, and asked for only after a refusal has said what would be lost:
-       * `force` releases the retained revisions' pins, never a live content
-       * reference.
-       */
+
       query: z.object({
         force: z.enum(["true", "false"]).optional(),
       }),

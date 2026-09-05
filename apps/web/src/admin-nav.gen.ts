@@ -14,26 +14,7 @@ import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
 import { adminNav as adminNav0 } from '@vitnode/blog/admin/nav'
 import { adminNav as adminNav1 } from '@vitnode/example/admin/nav'
 
-/**
- * Every configured plugin's AdminCP navigation, as browser-safe data.
- *
- * A plugin appears here by exporting `admin/nav`, and a plugin that does not
- * contributes no sidebar entries. That is not an error - most plugins have
- * nothing to put in the AdminCP - and it is checked at build time rather than
- * discovered in a browser: the specifiers below are literal, so a bundler
- * resolves them and nothing is reached through a computed string.
- *
- * This is deliberately **not** the plugin's frontend registration.
- * `blogPlugin()` and friends register content types with their editing screens
- * attached - an editor field, a form layout, a table cell - the whole of core's
- * form stack. A sidebar needs ids, hrefs, permissions, icons and content type
- * definitions, all of which are plain data, so that is all this carries. See
- * `AdminNavPluginSource`.
- *
- * Navigation is not derived from the route manifest and never will be: a nav
- * entry may point at a plugin route, at a legacy screen, or at another origin,
- * and a plugin route may deliberately have no entry at all.
- */
+
 export const pluginAdminNav = [
   adminNav0, // @vitnode/blog
   adminNav1, // @vitnode/example

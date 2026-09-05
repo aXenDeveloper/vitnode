@@ -106,4 +106,19 @@ export default [
       ],
     },
   },
+  {
+    // A plugin's route tree - and only that file - is one
+    // `lazy(() => import("./pages/my-page"))` per route, which is VitNode's
+    // documented API: the callback is *stored*, never called here, so
+    // `promise-function-async` would ask every plugin author to write
+    // `async () => await import(...)` for a promise nobody in the file awaits.
+    //
+    // `**/src/routes.ts` rather than `**/routes.ts`, because the parent
+    // directory is what makes it a route tree: a plugin's is `src/routes.ts`,
+    // which is what its `<plugin>/routes` export subpath resolves to. Any other
+    // `routes.ts` - `src/content/server/routes.ts`, an API module's - keeps the
+    // rule, and should.
+    files: ["**/src/routes.ts", "**/src/routes.tsx"],
+    rules: { "@typescript-eslint/promise-function-async": "off" },
+  },
 ];

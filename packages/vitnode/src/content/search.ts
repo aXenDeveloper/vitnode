@@ -6,18 +6,6 @@ import {
 } from "./const";
 import { isContentReferenceCollection, splitContentFieldPath } from "./paths";
 
-/**
- * The public URL of one record, for a search hit.
- *
- * `null` for an empty slug rather than a throw: a slug column is `NOT NULL` and
- * `slugify` rejects a value that folds to nothing, so this is unreachable
- * through the engine - but a row written straight into the database must not
- * produce a link to `/articles/`.
- *
- * `encodeURIComponent` is defence in depth for the same reason. Substitution is
- * a single literal replace, and `defineContentType` has already proven the
- * template holds exactly one `{slug}` and no other placeholder.
- */
 export const contentSearchUrl = (
   definition: AnyContentTypeDefinition,
   slug: string,
@@ -47,15 +35,6 @@ export const contentSearchUrl = (
     : withSlug;
 };
 
-/**
- * A human-readable identifier for one search document, for log lines and the
- * AdminCP.
- *
- * **Not a storage key.** The search index identifies a document by
- * `(itemType, itemId, languageCode)`, and the content type id already carries
- * the plugin namespace (`plugin.entity`), so there is nothing for a second
- * identifier format to disambiguate.
- */
 export const contentSearchDocumentId = (
   definition: AnyContentTypeDefinition,
   id: number,

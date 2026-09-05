@@ -62,128 +62,50 @@ So write the logical path. Two things that look reasonable and are not:
   silent fallback would serve the same page at infinitely many URLs.
 </Callout>
 
-## Navigate from code
+## Update query state from a plugin page
 
-When the destination is decided by your code rather than by a click - after a
-form submits, after a mutation resolves - use the route's own `useNavigate`:
+Plugin route props expose a narrow `navigate` function for filters, sorting, and
+pagination on the page already being viewed. It keeps the plugin independent of
+the host router’s entire route tree.
 
-```tsx title="apps/web/src/routes/_main/contact.tsx"
-export const Route = createFileRoute('/_main/contact')({
-  component: ContactPage,
-})
+```tsx title="plugins/catalog/src/pages/catalog-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
 
-const ContactPage = () => {
-  const navigate = Route.useNavigate() // [!code ++]
-
-  const onSubmit = async (values: ContactValues) => {
-    const message = await sendMessage(values)
-
-    await navigate({ params: { id: message.id }, to: '/contact/$id' }) // [!code ++]
-  }
-
-  return <ContactForm onSubmit={onSubmit} />
+interface CatalogSearch {
+  page: number
 }
+
+const CatalogPage = ({
+  navigate,
+  search,
+}: PluginRoutePageProps<undefined, CatalogSearch>) => (
+  <button
+    onClick={() =>
+      void navigate({
+        resetScroll: false,
+        search: { page: search.page + 1 }, // [!code ++]
+      })
+    }
+    type="button"
+  >
+    Next page
+  </button>
+)
+
+export default CatalogPage
 ```
-
-`Route.useNavigate()` is that route's own, so `to` and `params` are typed
-against the route tree - a typo in the destination is a compile error rather
-than a 404. The locale rewrite applies here exactly as it does to a `Link`,
-because both go through the router's `buildLocation`: a Polish visitor ends up
-on `/pl/contact/42`.
-
-### Replace, when the page behind you is a dead end
-
-VitNode's own password-reset screen navigates with `replace: true` once the
-password has changed, and the reason is worth copying: the URL being left behind
-carries a recovery token, and a push would leave it one Back press away.
-
-```tsx
-await navigate({ replace: true, to: '/login' })
-```
-
-### Redirecting before a page renders
-
-If the decision is "this visitor may not be here at all", make it in
-`beforeLoad` rather than in a component. Core's own authenticated container does
-exactly that, and a `redirect()` thrown there means an anonymous visitor never
-receives a byte of the protected page - not a flash, not a hydration, not a
-`useEffect` that takes it away afterwards:
-
-```tsx
-throw redirect({
-  search: { returnTo: returnToFor(location) },
-  to: '/login',
-})
-```
-
-<Callout type="warn" title="Use `to` in a redirect, never `href`">
-  A redirect carrying `href` is used verbatim by the router - it short-circuits
-  before `buildLocation`, which is where the locale rewrite lives - so it would
-  drop a Polish visitor on the English page. Split the destination into `to`,
-  `search` and `hash` instead, and the prefix is written back for free.
-</Callout>
 
 ## Plugin route modules
 
-A plugin page must not import a router. That is the whole of what keeps one
-plugin installable into any VitNode host, and it means a plugin route module
-cannot build a locale-correct href for itself.
+A plugin route should not import the host router. Use its `navigate` prop for
+same-page filters, sort order, and pagination. For links to another internal
+screen, let the host render a link component; a plain `<a>` is for another
+origin only.
 
-Here is exactly what does and does not exist today:
-
-| Thing                                             | Status                                                                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| A router-neutral `Link` exported for plugin pages | **Does not exist.** `@vitnode/core/routing` exports no link component at all.                                                              |
-| `RouterLink`                                      | Real, from `@vitnode/core/tanstack/layout` - but it imports `@tanstack/react-router`, so importing it pins your plugin to a TanStack host. |
-| The `LinkComponent` prop convention               | Real, and used by every shared view in core. It takes an anchor's props with `href` required, and defaults to `RouterLink`.                |
-| `navigate`, handed to a plugin page               | Real, and narrow: it replaces **this page's query string** and nothing else.                                                               |
-
-So `LinkComponent` is a genuine seam - it is how core's own screens render under
-two frameworks without either being imported - but it is a prop a _host_ passes
-to a component it renders. The plugin route runtime renders your page itself,
-with a fixed set of props: `loaderData`, `params`, `search` and `navigate`. No
-link component among them.
-
-What works today:
-
-- **Render text instead of a link** where you can. This is why a plugin
-  breadcrumb is a label: the example plugin's own crumb is a `<span>`, next to a
-  comment saying that a locale-correct href needs the host's link component and
-  a plugin route module is handed nothing to build one with.
-- **Use `navigate` for query-string state.** A paginated list, a filter or a
-  sort control is not really a link - it is the same page with a different query
-  string, and that means the same thing under every router:
-
-  ```tsx
-  <button
-    onClick={() => {
-      void navigate({ resetScroll: false, search: { page: search.page + 1 } })
-    }}
-    type="button"
-  >
-    Next
-  </button>
-  ```
-
-  `resetScroll: false` is what stops a table jumping to the top when only the
-  page number changed.
-
-- **Accept a link component as a prop** in the presentational components your
-  page composes, and let whatever renders them decide. That is the shape core
-  uses, and it is what will make your components portable the day a
-  router-neutral link does arrive.
-- **Use a plain `<a href>` only for another origin.** An internal one triggers a
-  full page load and loses the locale prefix.
-
-## When to use what
-
-- **`<Link to>`** - anything inside this app. Typed against the route tree,
-  preloaded on hover, locale handled.
-- **`<a href>`** - another origin: GitHub, a status page, a provider's docs.
-- **`useNavigate()`** - a destination your code decided, such as after a form
-  submits or a record is created.
-- **`redirect()` in `beforeLoad`** - a visitor who should never see this page at
-  all.
+<Callout type="info" title="Keep plugins portable">
+  `navigate` only changes this plugin page's query string. That small boundary
+  is intentional—and saves future hosts from router spaghetti.
+</Callout>
 
 ## Next
 

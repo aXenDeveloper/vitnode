@@ -6,28 +6,6 @@ import { describe, expect, it } from "vitest";
 const here = dirname(fileURLToPath(import.meta.url));
 const routeMessages = readFileSync(join(here, "route-messages.tsx"), "utf8");
 
-/**
- * The bug this file exists to prevent coming back.
- *
- * `@vitnode/core` is external to a host's Vite SSR pass, so it is loaded by
- * Node, which resolves `use-intl` to its `default` (production) build; the app's
- * own source goes through Vite's module runner, which resolves the very same
- * package to its `development` build. Two files, two `createContext` calls, two
- * React contexts - and every `useTranslations` in the shared design system looks
- * for this package's one.
- *
- * Providing only one of the two is a 500 on the first render of any core
- * component, and - this is the part worth pinning - **only under `vite dev`**.
- * A production build merges both records into a single chunk, so the built
- * server, the SSR tests and CI were all green while `pnpm dev` was broken.
- * Nothing that runs in this suite can reproduce that, because Vitest resolves
- * both through Node and gets one record. So the guard is on the source.
- *
- * It lives beside the component rather than in the app because the component
- * does: `RouteMessages` is mounted by a root route for the shell's strings and
- * by a page for its own, and both of those used to be hand-written in
- * `apps/web`. One implementation, one guard.
- */
 describe("RouteMessages provides every intl context core might read", () => {
   it("mounts use-intl's provider, as this package resolves it", () => {
     expect(routeMessages).toMatch(

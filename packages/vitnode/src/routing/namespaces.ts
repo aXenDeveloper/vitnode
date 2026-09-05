@@ -1,22 +1,4 @@
 /**
- * Message namespaces, as one rule two layers apply.
- *
- * A namespace is a path into the merged message tree - `core.global`,
- * `@vitnode/blog.post` - and it is written down in two very different places: a
- * plugin *declares* the ones its route renders, at build time, in a manifest; a
- * browser *asks* for a set of them at runtime, through a server function that is
- * a public `POST` endpoint. The declaration is trusted and the request is not,
- * but what makes a namespace legal is the same question in both, so it is
- * answered once here.
- *
- * Pure and import-free, like everything in this layer: it is read by a build
- * running in Node with no framework loaded, by an app's browser bundle, and by
- * the i18n runtime that owns the fetch - see `@vitnode/core/tanstack/i18n`,
- * which validates its server function's input with {@link namespaceProblem}
- * rather than a second copy of these rules.
- */
-
-/**
  * More than any page has ever needed, and few enough that a caller asking for
  * thousands is refused rather than served.
  */
@@ -28,30 +10,12 @@ export const MAX_NAMESPACE_DEPTH = 8;
 /** Comfortably longer than the longest plugin id plus a namespace path. */
 export const MAX_NAMESPACE_LENGTH = 128;
 
-/**
- * Segments that must never reach a message tree walk.
- *
- * `__proto__`, `constructor` and `prototype` are the three steps of prototype
- * pollution. They are rejected rather than quietly dropped, because a namespace
- * containing one is not a namespace with a typo in it.
- */
 const UNSAFE_NAMESPACE_SEGMENTS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
   "prototype",
 ]);
 
-/**
- * What is wrong with one namespace, or `null` if nothing is.
- *
- * Returns the *predicate half* of a sentence - "must be a string." - so each
- * caller can put its own subject in front of it: the i18n server function says
- * `namespaces[0] must be a string.` and a route manifest names the plugin and
- * the route instead. One rule, two vocabularies, no drift.
- *
- * Deliberately says *what* was wrong and never *what was sent*: at the runtime
- * end the value is attacker-controlled and the message reaches a server log.
- */
 export const namespaceProblem = (value: unknown): null | string => {
   if (typeof value !== "string") return "must be a string.";
   if (value.length === 0) return "must not be empty.";

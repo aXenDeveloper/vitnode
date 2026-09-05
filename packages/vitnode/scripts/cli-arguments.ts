@@ -1,26 +1,3 @@
-/**
- * What `vitnode <command>` accepts, and the pure check that enforces it.
- *
- * Separated from `scripts.ts` so the contract can be read and tested without
- * running anything: no `dotenv`, no database, no compiler, no `process.exit`.
- * The entry point calls {@link parseCliArguments} and exits on a refusal
- * **before** it dispatches, which is the whole point - a typo has to fail rather
- * than change what a command does.
- *
- * ## The failure this exists to stop
- *
- * The entry point read `process.argv[2]` as the command and `process.argv[3]` as
- * "the flag", compared that one string to `"--generate"`, and ignored everything
- * else. So `vitnode migrate --generat` did not fail: the comparison was false,
- * and the command fell through to the *full* bootstrap - generate, apply, seed -
- * against whatever `POSTGRES_URL` names. A mistyped flag silently became a
- * different command. `vitnode i18n:check --cii` was the same shape with a
- * quieter cost: `isCi` was false, so a CI job asking for a hard failure got a
- * soft report and a zero exit.
- *
- * Both are now refusals, and neither reaches an implementation.
- */
-
 /** Every command the CLI dispatches on. */
 export type CliCommandName =
   | "build"
@@ -34,52 +11,15 @@ export type CliCommandName =
   | "migrate";
 
 export interface CliCommandArguments {
-  /**
-   * The flags this command accepts, exactly as they have to be spelled.
-   *
-   * Per command, never global: `--ci` is `i18n:check`'s and means nothing to
-   * `migrate`, and a whitelist shared across commands would make
-   * `vitnode migrate --ci` a legal way to ask for nothing.
-   */
   flags: readonly string[];
-  /**
-   * How many bare (non-flag) arguments the implementation actually reads.
-   *
-   * Read off the implementation rather than chosen: a command that reads
-   * `process.argv[3]` and nothing else takes one, and `"any"` is for the ones
-   * that join everything they are handed.
-   */
+
   positional: "any" | number;
   /** One line of usage, printed with every refusal. */
   usage: string;
-  /**
-   * The flags above that consume the following token as their value.
-   *
-   * `--model gpt-5` and `--model=gpt-5` are both spellings the implementation
-   * already accepts, so both are accepted here - and a value-taking flag with no
-   * value is a refusal rather than an `undefined` handed downstream.
-   */
+
   valueFlags?: readonly string[];
 }
 
-/**
- * The contract, per command, as data.
- *
- * Every entry was read off the implementation it describes, which is why three
- * of them take arguments that a glance at `scripts.ts` would not suggest:
- *
- * - `i18n:create` reads `process.argv.slice(3)` as `[code, ...nameParts]` and
- *   joins the tail into the language name, so anything supplied skips its prompt
- *   and the command works on a non-interactive stdin. Unbounded on purpose - a
- *   name is several words.
- * - `i18n:delete` reads `process.argv[3]` and only that, so it takes exactly one.
- * - `i18n:update:ai` parses its own `--model` / `--concurrency` and treats every
- *   remaining token as a locale code.
- *
- * Those three keep parsing their own `argv`; what changes is that they are no
- * longer reached with an `argv` this table rejects. The other six take nothing,
- * and said so only by ignoring what they were given.
- */
 export const COMMAND_ARGUMENTS: Record<CliCommandName, CliCommandArguments> = {
   build: { flags: [], positional: 0, usage: "vitnode build" },
   "db:prepare": { flags: [], positional: 0, usage: "vitnode db:prepare" },
@@ -124,15 +64,6 @@ export const isCliCommandName = (
 ): name is CliCommandName =>
   name !== undefined && Object.hasOwn(COMMAND_ARGUMENTS, name);
 
-/**
- * A validated invocation, or the reason it was refused.
- *
- * `args` is the argument list unchanged, and every token in it has been checked
- * against the command's own table - so `args.includes("--generate")` in the
- * entry point cannot be satisfied by anything but that exact spelling, and the
- * three commands that read their own `argv` are only ever started on an `argv`
- * this function accepted.
- */
 export type ParsedCli =
   | { args: readonly string[]; command: CliCommandName; ok: true }
   | { message: string; ok: false };

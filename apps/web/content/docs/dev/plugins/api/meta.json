@@ -1,4 +1,6 @@
 {
   "title": "REST API",
-  "pages": ["modules", "..."]
+  "description": "Build typed Hono modules and routes inside your VitNode plugin",
+  "icon": "Network",
+  "pages": ["modules", "routes"]
 }

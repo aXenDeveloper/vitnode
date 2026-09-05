@@ -21,24 +21,6 @@ import {
   publishedCondition,
 } from "./publication";
 
-/**
- * The localized alternates of one record: every language it is genuinely
- * published in, and its URL there.
- *
- * "Genuinely" is the whole of it, and it is why this is a query rather than a
- * projection of something the public read already returned. An alternate is a
- * promise that a URL resolves, so the predicate is the *same* subordinated
- * publication rule the public read applies - the base row published, the
- * translation published, both dated now or earlier - and a locale that only exists
- * through `fallback: "default"` fails it. Fabricating an alternate from a fallback
- * would announce `/de/articles/x` for a record with no German translation: an
- * `hreflang` pointing at a 404, and an invitation to index the English copy twice.
- *
- * A language the installation has switched off is filtered out too, in JavaScript
- * rather than in SQL - "enabled" is a fact about the app config, not a column on
- * `core_languages`, and `listContentLanguages` already holds it for the life of the
- * request.
- */
 export const readDeliveryAlternates = async <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -59,13 +41,6 @@ export const readDeliveryAlternates = async <
   return batched.get(itemId) ?? [];
 };
 
-/**
- * The same answer for a whole page of records, in one query.
- *
- * A sitemap with `xhtml:link` alternates needs the alternates of every URL on the
- * page, and a per-record query there is the classic N+1 that only becomes visible
- * once a site has content. One `IN` and one grouping pass instead.
- */
 export const readDeliveryAlternatesMany = async <
   TDefinition extends AnyContentTypeDefinition,
 >({

@@ -16,60 +16,16 @@ import {
   publishedCondition,
 } from "./publication";
 
-/**
- * Operational diagnostics for the Content Engine.
- *
- * Deliberately small, and deliberately **not** a monitoring product. It answers
- * three questions an operator actually asks at three in the morning, and
- * nothing else:
- *
- * 1. *Is the search index telling the truth?* - the database is the source of
- *    truth, so "how many documents should there be" is a `COUNT` over published
- *    rows, and "how many are there" is a `COUNT` over `core_search_index`. A
- *    difference is drift, and drift is repaired by a rebuild.
- * 2. *Did anything scheduled fail to announce itself?* - a scheduled transition
- *    that committed but whose event, index write or cache expiry did not is
- *    recorded on the schedule row as `effectsError`. One count per content type
- *    turns "somewhere in the install" into "this content type".
- * 3. *Which content types are even in play?* - what is registered, and which of
- *    the optional subsystems each one has switched on.
- *
- * No Prometheus, no time series, no dashboards - the install has none of those
- * and Stage 7 does not add them. Everything here is a handful of aggregate
- * queries, computed on demand, behind an admin permission.
- */
-
 /** One locale's share of a content type's index, from every storage that has one. */
 export interface ContentSearchDriftLocale {
-  /**
-   * `true` when the canonical table matches the database.
-   *
-   * A count is not a checksum: two documents can be stale and still count as
-   * two. It is the cheap check that catches the failure that actually happens -
-   * a live sync that threw, or a rebuild that stopped halfway - and it costs two
-   * aggregates rather than a full comparison.
-   */
   canonicalHealthy: boolean;
   /** Documents the canonical `core_search_index` holds for this locale. */
   canonicalIndexed: number;
   /** Published rows - or published translations - the database holds. */
   expected: number;
-  /**
-   * `""` for a content type that is not localized.
-   *
-   * The empty string is what `core_search_index` stores for language-agnostic
-   * content, so it is the honest key here rather than `null` - it is the value
-   * the row really holds.
-   */
+
   locale: string;
-  /**
-   * `true` when the active provider matches, `false` when it does not, and
-   * `null` when nobody looked.
-   *
-   * The three-way answer is the point. A provider that offers no diagnostics
-   * cannot be called healthy, and calling it healthy anyway is how an
-   * Elasticsearch outage hides behind a perfectly good canonical table.
-   */
+
   providerHealthy: boolean | null;
   /** Documents the active provider holds, or `null` when it cannot say. */
   providerIndexed: null | number;
@@ -81,26 +37,10 @@ export interface ContentSearchDriftProvider {
   error?: string;
   /** `null` when unverified - see {@link ContentSearchDriftLocale.providerHealthy}. */
   healthy: boolean | null;
-  /**
-   * Every document the provider holds for this content type, in **any** locale.
-   *
-   * The guard against ghosts. Per-locale counts can only ask about locales the
-   * database still knows about, so a document left behind in a locale that has
-   * since been removed - or one whose canonical row was deleted while the
-   * provider's delete failed - is invisible to them. A total is not: it is
-   * larger than `expectedTotal`, and that is enough to say something is wrong.
-   *
-   * `null` when the provider offers no diagnostics.
-   */
+
   indexedTotal: null | number;
   name: string;
-  /**
-   * Whether the provider was actually asked.
-   *
-   * `false` means it offers no `count`, so nothing about its contents is known.
-   * `true` with `healthy: false` means it was asked and it disagreed - or it
-   * threw, and `error` says so.
-   */
+
   verified: boolean;
 }
 
@@ -112,41 +52,12 @@ export interface ContentSearchDrift {
   contentTypeId: string;
   /** Published rows - or published translations - the database holds, all locales. */
   expectedTotal: number;
-  /**
-   * `true` only when the canonical table **and** the active provider both agree,
-   * per locale and in total.
-   *
-   * An unverified provider is not healthy: absence of evidence is reported as
-   * absence of evidence, and the operator decides what to do about it.
-   */
+
   healthy: boolean;
   locales: ContentSearchDriftLocale[];
   provider: ContentSearchDriftProvider;
 }
 
-/**
- * Compares what the database says should be indexed against what is - in the
- * canonical table **and** in the active search provider.
- *
- * The two are not the same question, and conflating them was the first gap this
- * closes. `SearchModel.index` writes `core_search_index` and then hands the
- * document to the provider; an Elasticsearch that refuses the second half leaves
- * a canonical table that is perfectly correct and a search box that is missing
- * results.
- *
- * The second gap is the opposite direction, and it needs a different instrument.
- * Deletion runs canonical-first: `SearchModel.delete` removes the row and then
- * asks the provider. If the provider's half fails, the document survives in a
- * locale that no longer appears in either the database or the canonical table -
- * so per-locale enumeration, which is built from those two, can never ask about
- * it. Hence `indexedTotal`: one unfiltered count that no amount of missing
- * enumeration can hide from.
- *
- * Costs: two aggregates for the canonical side, whatever the collection's size,
- * plus one provider total and one provider count per locale. The bundled
- * Postgres provider is skipped entirely - its store *is* the canonical table, so
- * asking twice would buy nothing.
- */
 export const contentSearchDrift = async (
   c: Context,
   { model }: Pick<RegisteredContentModel, "model">,
@@ -242,26 +153,6 @@ export const contentSearchDrift = async (
   };
 };
 
-/**
- * Asks the active provider how many documents it holds - in total, and per
- * locale.
- *
- * The total goes first and is asked **unconditionally**, including for a content
- * type with no rows and no canonical documents at all. That is the case the
- * per-locale loop cannot cover: with nothing to enumerate, `[].every(...)` is
- * `true`, and a ghost document would sail through as healthy.
- *
- * Three outcomes:
- *
- * - **canonical storage** - the bundled Postgres provider. Verified, and the
- *   canonical counts are its counts; no query is issued.
- * - **no `count`** - a provider that offers no diagnostics. Unverified, which is
- *   reported as such rather than turned into `healthy: true`.
- * - **it threw** - Elasticsearch is down. Verified and unhealthy, with the
- *   reason attached, and the status route still answers: a diagnostic that
- *   crashes when the thing it diagnoses is broken is a diagnostic nobody can
- *   use. A failure in either call is handled the same way.
- */
 const providerCounts = async (
   c: Context,
   {

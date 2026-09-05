@@ -18,13 +18,6 @@ const input = {
   wasPublic: false,
 };
 
-/**
- * One configured origin unless a test says otherwise.
- *
- * Explicit because the bridge has no fallback: an install that names no origin
- * is telling the API there is nothing to notify, so a helper that defaulted to
- * `undefined` would make every test below assert the empty case by accident.
- */
 const context = (overrides?: {
   cronSecret?: string;
   origins?: string[];

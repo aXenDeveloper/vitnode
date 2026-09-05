@@ -32,33 +32,8 @@ type ComboboxFetchData = (params: {
   search: string;
 }) => ComboboxAsyncItem[] | Promise<ComboboxAsyncItem[]>;
 
-/**
- * Where a *synchronous* combobox's disabled query sits.
- *
- * Only ever reached when no `fetchData` was supplied, which is the case the
- * props type below leaves without a `queryKey`. That query is `enabled: false`,
- * so the entry never holds anything - but it is named after its own inertness
- * rather than after a plausible `["combobox", …]` that a reader could mistake
- * for a real cache root, and it is *not* re-keyed on the search term, so an
- * option list nobody is fetching does not leave an entry per keystroke behind.
- */
 export const COMBOBOX_INERT_QUERY_KEY = "combobox:no-fetcher";
 
-/**
- * The async half's `queryKey` is **required**, and that is the whole of it.
- *
- * It used to be optional with a fallback of `[id ?? "combobox", { search }]`,
- * which meant a picker whose author forgot both props shared one cache entry
- * with every other picker in the application - an entry outside `["vitnode",
- * "admin"]`, which is the prefix a sign-out removes. Two administrators' search
- * results in one key that nothing drops. Every real caller passed a key already;
- * requiring it is what stops the next one relying on the trap.
- *
- * `id` stays required alongside it for the DOM, and the two are separate: `id`
- * identifies the control, `queryKey` identifies the *answers*, and a picker
- * offering categories caches under the categories rather than under the form it
- * happens to sit in.
- */
 type AutoFormComboboxProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Combobox>, "items" | "value"> & {
     className?: string;
@@ -129,15 +104,7 @@ export const AutoFormCombobox = ({
       return await fetchData({ search });
     },
     enabled: isAsync,
-    /**
-     * `retry: false`, the rule every AdminCP read follows.
-     *
-     * A picker's options come from the same admin API as the screen around it: a
-     * `403` is an authorization answer, and a `429` answered by sending the same
-     * search twice more is what the limiter asked the application to stop doing.
-     * A picker is also the one control where a retry is least useful - the
-     * reader is typing, and the next keystroke asks again anyway.
-     */
+
     retry: false,
   });
 

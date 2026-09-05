@@ -15,56 +15,18 @@ import {
 import { removeAdminIdentityQueries, removeAdminShellQueries } from "./queries";
 import { ADMIN_SESSION_QUERY_KEY } from "./state";
 
-/**
- * What an identity boundary throws away, and - just as load-bearing - what it
- * leaves alone.
- *
- * A `QueryClient` with data written into it and nothing else: no router, no
- * React, no server. Every assertion below is a statement about the *cache*,
- * which is the only thing these functions touch, so this is the whole of the
- * unit rather than a stand-in for one.
- *
- * The failure this guards against is silent by construction. A cache entry that
- * outlives the administrator it belonged to renders perfectly - it is somebody
- * else's data, drawn correctly - and there is no error, no warning and nothing
- * in a log. It only ever appears as one administrator being shown another's
- * screen, on a shared browser, after the first one's session ended.
- */
-
 /** The privileged families, one representative key each. */
 const ADMIN_SESSION = [...ADMIN_SESSION_QUERY_KEY];
 const ADMIN_SEARCH_USERS = [...ADMIN_SEARCH_USERS_QUERY_KEY, "ann"];
 const ADMIN_SCREEN = [...adminQueryRoot("files"), { page: 1 }];
 const ADMIN_DASHBOARD = [...adminQueryRoot("dashboard-layout")];
 
-/**
- * The Content Engine, one key per level of its family.
- *
- * Built by the real key builders rather than written out, because the property
- * being checked is that *those* stay under the AdminCP root - a key spelled by
- * hand here would keep passing after `content-query.ts` moved the family
- * somewhere this cleanup cannot reach.
- *
- * There is deliberately no `removeContentQueries` beside the two functions under
- * test. `contentQueryRoot()` is `["vitnode","admin","content"]`, so the existing
- * prefix removal already collects every content type an installation has and
- * every one a plugin adds later. A second per-feature cleanup list would be one
- * more thing to remember and one more thing to forget.
- */
 const CONTENT_LIST = [...contentListQueryKey("blog.post", { first: "25" })];
 const CONTENT_ITEM = [...contentItemQueryKey("blog.post", 42)];
 const CONTENT_OPTIONS = [
   ...contentOptionsQueryKey("blog.category", "category", "en"),
 ];
 
-/**
- * Entries that belong to other layers, and must survive.
- *
- * The public session is the pointed one: it is a different cookie answering a
- * different question, and `tanstack/auth` owns its lifecycle. A cleanup that
- * collected it would sign a visitor out of the public site because an
- * administrator signed in to the panel.
- */
 const PUBLIC_SESSION = ["vitnode", "session"];
 const INTL = ["vitnode", "intl", "en", ["core.global"]];
 const PLUGIN = ["@vitnode/example", "articles"];

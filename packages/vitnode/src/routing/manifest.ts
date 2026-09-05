@@ -1,335 +1,106 @@
+import type { FlatPluginRoute } from "./flatten";
+import type { PluginRouteLazyComponent } from "./tree";
 import type {
   PluginRoute,
-  PluginRouteDefinition,
-  PluginRouteKind,
   PluginRouteManifest,
+  PluginRouteSearchValidator,
   PluginRouteSource,
 } from "./types";
 
 import { PluginRouteError } from "./errors";
+import { flattenPluginRoutes } from "./flatten";
 import { buildPluginRouteGraph } from "./graph";
-import { namespaceProblem, normalizeNamespaceList } from "./namespaces";
 import { comparePluginRoutes } from "./order";
-import { parseRoutePath, routeMatchKey } from "./path";
-import {
-  PLUGIN_ROUTE_AREAS,
-  PLUGIN_ROUTE_ID_SEPARATOR,
-  PLUGIN_ROUTE_KINDS,
-  PLUGIN_ROUTE_REQUIREMENTS,
-} from "./types";
+import { routeMatchKey } from "./path";
+import { PLUGIN_ROUTE_ID_SEPARATOR } from "./types";
 
 export { comparePluginRoutes };
 
-/**
- * A `/`-separated identifier, and nothing that could escape a string literal.
- *
- * The same rule `framework/plugin-routes` applies to an id and to an entry, for
- * a reason this layer does not share - it writes both into a generated import.
- * They are stated identically anyway: an id this layer accepts and that one
- * rejects would be a route that validates and then fails the build.
- */
-const SEGMENTED =
-  /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
-
-/** An entry is a package export subpath, and export maps add the extension. */
-const ENTRY_EXTENSION = /\.[cm]?[jt]sx?$/;
-
-/**
- * A route's globally unique id.
- *
- * Namespaced by the plugin so two plugins can both call their landing page
- * `"index"` - which they will - without either having to know the other exists.
- */
 export const pluginRouteId = (pluginId: string, routeId: string): string =>
   `${pluginId}${PLUGIN_ROUTE_ID_SEPARATOR}${routeId}`;
+
+/**
+ * Every plugin route in an application, with the behaviour each one carries.
+ *
+ * The manifest is the data half - what routes exist, where, in which shape - and
+ * the two maps are the halves that cannot be serialised: the lazy component of
+ * each route, and the search schema of each route that declared one. All three
+ * come out of one pass over one set of declarations, so a route cannot appear in
+ * the manifest without its component or the other way round.
+ */
+export interface CompiledPluginRouteTrees {
+  components: Map<string, PluginRouteLazyComponent>;
+  manifest: PluginRouteManifest;
+  searchValidators: Map<string, PluginRouteSearchValidator>;
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const readEntry = (
-  entry: string | undefined,
-  pluginId: string,
-  routeId: string,
-  field = "entry",
-): string => {
-  const fail = (reason: string): never => {
+const readPluginId = (source: unknown): string => {
+  const pluginId = isRecord(source) ? source.pluginId : undefined;
+
+  if (typeof pluginId !== "string" || !/^\S+$/.test(pluginId)) {
     throw new PluginRouteError(
-      `Plugin route "${routeId}" from ${pluginId} has an invalid ${field} ${JSON.stringify(entry)}: ${reason}.`,
-      { code: "invalid-entry", pluginId, routeId },
-    );
-  };
-
-  if (typeof entry !== "string" || !SEGMENTED.test(entry)) {
-    return fail(
-      'expected a package export subpath such as "routes/example-page" - "/"-separated segments of letters, digits, ".", "_" and "-", with no leading slash and no ".." segment',
+      `A plugin registered routes without a plugin id (got ${JSON.stringify(pluginId)}).`,
+      { code: "invalid-plugin-id", pluginId: "" },
     );
   }
 
-  if (ENTRY_EXTENSION.test(entry)) {
-    return fail(
-      `an ${field} is a package export subpath and the plugin's export map adds the extension - drop it`,
-    );
-  }
-
-  return entry;
+  return pluginId;
 };
+
+const builtRoute = (pluginId: string, flat: FlatPluginRoute): PluginRoute => ({
+  area: flat.area,
+  id: pluginRouteId(pluginId, flat.routeId),
+  kind: flat.kind,
+  messages: flat.messages,
+  parentId:
+    flat.parentId === null ? null : pluginRouteId(pluginId, flat.parentId),
+  path: flat.path,
+  pluginId,
+  requires: flat.requires,
+  routeId: flat.routeId,
+  segments: flat.segments,
+});
 
 /**
- * A route's optional eager search module, validated the way its entry is.
+ * Every configured plugin's route tree, flattened, validated and ordered.
  *
- * Absent is the ordinary case and means `null` - most pages read no query
- * string, and one that does is usually better served by the module's own
- * `parseSearch`. See {@link PluginRouteDefinition.searchEntry} for when the
- * eager one is worth its place in the initial bundle.
- *
- * A layout may not declare one. A layout claims no URL of its own and is only
- * ever reached through a child, so a `validateSearch` on it would shape the
- * search of pages that never asked for it - and the child that did would have
- * two. Refused rather than ignored, for the same reason `requires` is refused in
- * the admin area: a field that reads as behaviour and has none is worse than no
- * field.
- */
-const readSearchEntry = (
-  searchEntry: string | undefined,
-  kind: PluginRouteKind,
-  pluginId: string,
-  routeId: string,
-): null | string => {
-  if (searchEntry === undefined) return null;
-
-  if (kind === "layout") {
-    throw new PluginRouteError(
-      `Plugin route "${routeId}" from ${pluginId} is a layout and declares a \`searchEntry\`. A layout claims no URL of its own, so it has no query string to validate - declare it on the page that reads the search instead.`,
-      { code: "invalid-entry", pluginId, routeId },
-    );
-  }
-
-  return readEntry(searchEntry, pluginId, routeId, "searchEntry");
-};
-
-/**
- * A declared `parentId`, as the global id the built route carries.
- *
- * The namespacing is the enforcement: a plugin writes its own local id and this
- * puts its own plugin's name in front of it, so there is no spelling of this
- * field that reaches another plugin's route. Cross-plugin nesting is not
- * forbidden by a check here - it is unrepresentable.
- */
-const readParentId = (
-  parentId: unknown,
-  pluginId: string,
-  routeId: string,
-): null | string => {
-  if (parentId === undefined || parentId === null) return null;
-
-  if (typeof parentId !== "string" || !SEGMENTED.test(parentId)) {
-    throw new PluginRouteError(
-      `Plugin route "${routeId}" from ${pluginId} declares an invalid parentId ${JSON.stringify(parentId)}. A parentId is another route's own \`id\` from the same plugin - not a path, and not a "<plugin>:<route>" pair.`,
-      { code: "invalid-parent", pluginId, routeId },
-    );
-  }
-
-  return pluginRouteId(pluginId, parentId);
-};
-
-const readNamespaces = (
-  namespaces: unknown,
-  pluginId: string,
-  routeId: string,
-): string[] => {
-  if (namespaces === undefined) return [];
-
-  if (!Array.isArray(namespaces)) {
-    throw new PluginRouteError(
-      `Plugin route "${routeId}" from ${pluginId} declares \`namespaces\` that is not an array.`,
-      { code: "invalid-namespace", pluginId, routeId },
-    );
-  }
-
-  // `Array.from` rather than `map`: `map` skips holes in a sparse array, so an
-  // entry could reach normalisation without ever being checked.
-  const checked = Array.from(namespaces, (value: unknown, index) => {
-    const problem = namespaceProblem(value);
-
-    if (problem) {
-      throw new PluginRouteError(
-        `Plugin route "${routeId}" from ${pluginId} declares namespaces[${index}] that ${problem}`,
-        { code: "invalid-namespace", pluginId, routeId },
-      );
-    }
-
-    return value as string;
-  });
-
-  return normalizeNamespaceList(checked);
-};
-
-const readDefinition = (
-  definition: unknown,
-  pluginId: string,
-  index: number,
-): PluginRoute => {
-  if (!isRecord(definition)) {
-    throw new PluginRouteError(
-      `Plugin ${pluginId} declared a route at index ${index} that is not an object.`,
-      { code: "malformed-route", pluginId },
-    );
-  }
-
-  // The only cast in the module. `routes` is typed, but a plugin is JavaScript
-  // by the time it is registered and its config is written by hand, so the
-  // fields are read defensively and the types are re-established here.
-  const {
-    area,
-    entry,
-    id,
-    kind,
-    namespaces,
-    parentId,
-    path,
-    requires,
-    searchEntry,
-  } = definition as Partial<PluginRouteDefinition>;
-
-  if (typeof id !== "string" || !SEGMENTED.test(id)) {
-    throw new PluginRouteError(
-      `Plugin ${pluginId} declared a route at index ${index} with an invalid id ${JSON.stringify(id)} - use letters, digits, ".", "-" and "_".`,
-      { code: "invalid-id", pluginId },
-    );
-  }
-
-  if (area !== undefined && !PLUGIN_ROUTE_AREAS.includes(area)) {
-    throw new PluginRouteError(
-      `Plugin route "${id}" from ${pluginId} declares the unknown area ${JSON.stringify(area)}. Known areas: ${PLUGIN_ROUTE_AREAS.join(", ")}.`,
-      { code: "invalid-area", pluginId, routeId: id },
-    );
-  }
-
-  if (kind !== undefined && !PLUGIN_ROUTE_KINDS.includes(kind)) {
-    throw new PluginRouteError(
-      `Plugin route "${id}" from ${pluginId} declares the unknown kind ${JSON.stringify(kind)}. Known kinds: ${PLUGIN_ROUTE_KINDS.join(", ")}.`,
-      { code: "invalid-kind", pluginId, routeId: id },
-    );
-  }
-
-  if (
-    requires !== undefined &&
-    requires !== null &&
-    !PLUGIN_ROUTE_REQUIREMENTS.includes(requires)
-  ) {
-    throw new PluginRouteError(
-      `Plugin route "${id}" from ${pluginId} declares the unknown requirement ${JSON.stringify(requires)}. Known requirements: ${PLUGIN_ROUTE_REQUIREMENTS.join(", ")}.`,
-      { code: "invalid-requires", pluginId, routeId: id },
-    );
-  }
-
-  // `requires` is about the public session; the AdminCP runs on a second one
-  // under its own cookie. An `admin` route already sits behind the shell's own
-  // guard, so `requires: "authenticated"` here is at best a restatement of
-  // something composition already provides - and `requires: "guest"` is a page
-  // no human being could reach, since the two guards would turn away everybody
-  // between them.
-  //
-  // Refused rather than ignored, because the field would read as enforcement
-  // while enforcing a different session's answer. The thing an author actually
-  // wants - "only staff with this permission" - is not this field in either
-  // area: it gates a page's *content*, through the same components the AdminCP's
-  // own screens use, and the API refuses the data regardless.
-  if (
-    requires !== undefined &&
-    requires !== null &&
-    (area ?? "main") === "admin"
-  ) {
-    throw new PluginRouteError(
-      `Plugin route "${id}" from ${pluginId} is in the "admin" area and declares \`requires: ${JSON.stringify(requires)}\`. \`requires\` is about the public session, and the AdminCP has its own - a route in the admin area is already behind the AdminCP's session guard, so drop the field. To gate the page on a staff permission, gate its content inside the route module instead.`,
-      { code: "requires-in-admin-area", pluginId, routeId: id },
-    );
-  }
-
-  if (typeof path !== "string") {
-    throw new PluginRouteError(
-      `Plugin route "${id}" from ${pluginId} declares no path (got ${JSON.stringify(path)}).`,
-      { code: "invalid-path", pluginId, routeId: id },
-    );
-  }
-
-  const parsed = parseRoutePath(path);
-
-  if (!parsed.ok) {
-    throw new PluginRouteError(
-      `Plugin route "${id}" from ${pluginId} has an invalid path: ${parsed.reason}.`,
-      { code: "invalid-path", path, pluginId, routeId: id },
-    );
-  }
-
-  return {
-    area: area ?? "main",
-    entry: readEntry(entry, pluginId, id),
-    id: pluginRouteId(pluginId, id),
-    kind: kind ?? "page",
-    namespaces: readNamespaces(namespaces, pluginId, id),
-    parentId: readParentId(parentId, pluginId, id),
-    path: parsed.path,
-    pluginId,
-    requires: requires ?? null,
-    routeId: id,
-    searchEntry: readSearchEntry(searchEntry, kind ?? "page", pluginId, id),
-    segments: parsed.segments,
-  };
-};
-
-/**
- * Every plugin route in an application, validated and deterministically ordered.
- *
- * Pure, and total in the only sense that matters: it either returns a manifest
- * no framework can misread, or it throws a {@link PluginRouteError} naming the
+ * Pure, and total in the only sense that matters: it either returns routes no
+ * framework can misread, or it throws a {@link PluginRouteError} naming the
  * plugin, the route and - on a collision - both sides of it. There is no third
  * outcome where a route is quietly dropped, because a page that silently stops
  * existing is the failure mode this whole function is for.
  *
- * Two kinds of check, in two places, because they answer different questions.
- * Here: is each route legal on its own, and does any two of them claim one URL.
- * In `buildPluginRouteGraph`, which this calls last: does the hierarchy they
- * describe hold together. Keeping the second in the graph is what lets the
- * runtime re-derive the tree from the generated manifest with the same function
- * that validated it.
+ * Three kinds of check, in three places, because they answer different
+ * questions. `flattenPluginRoutes`: is each route legal on its own, and does the
+ * tree it was written in make sense. Here: does any two of them claim one URL.
+ * In `buildPluginRouteGraph`, which this calls last: does the hierarchy the
+ * flattened list describes hold together.
  *
  * Registration order affects nothing but which plugin an error message calls
  * "first".
  */
-export const buildPluginRouteManifest = (
-  sources: PluginRouteSource[],
-): PluginRouteManifest => {
+export const compilePluginRouteTrees = (
+  sources: readonly PluginRouteSource[],
+): CompiledPluginRouteTrees => {
   const routes: PluginRoute[] = [];
+  const components = new Map<string, PluginRouteLazyComponent>();
+  const searchValidators = new Map<string, PluginRouteSearchValidator>();
   const byId = new Map<string, PluginRoute>();
   const byPath = new Map<string, PluginRoute>();
 
   for (const source of sources) {
-    const pluginId = isRecord(source) ? source.pluginId : undefined;
+    const pluginId = readPluginId(source);
 
-    if (typeof pluginId !== "string" || !/^\S+$/.test(pluginId)) {
-      throw new PluginRouteError(
-        `A plugin registered routes without a plugin id (got ${JSON.stringify(pluginId)}).`,
-        { code: "invalid-plugin-id", pluginId: "" },
-      );
-    }
-
-    const declared = (source.routes ?? []) as unknown[];
-
-    if (!Array.isArray(declared)) {
-      throw new PluginRouteError(
-        `Plugin ${pluginId} declared \`routes\` that is not an array.`,
-        { code: "malformed-route", pluginId },
-      );
-    }
-
-    declared.forEach((definition, index) => {
-      const route = readDefinition(definition, pluginId, index);
+    for (const flat of flattenPluginRoutes(pluginId, source.routes)) {
+      const route = builtRoute(pluginId, flat);
       const existingById = byId.get(route.id);
 
       if (existingById) {
         throw new PluginRouteError(
-          `Duplicate plugin route id "${route.id}": declared twice by ${pluginId}.`,
+          `Duplicate plugin route "${route.id}": ${pluginId} declares two ${route.kind}s at "${route.path}". Derived from the route's kind and its path, so two of them mean two routes claiming one URL - give one of them a different path.`,
           {
             code: "duplicate-id",
             conflictsWith: {
@@ -350,10 +121,9 @@ export const buildPluginRouteManifest = (
       // **`area` is deliberately not part of this key.** Both shells a host
       // mounts these under are *pathless* - `_main` and `_admin` contribute no
       // segment - so an area changes which frame draws the page and never which
-      // URL it answers. `main /reports` and `admin /reports` are therefore one
-      // URL claimed twice, and keying by area would have let the router's own
-      // ranking decide which of them a browser reaches. An admin route's
-      // `/admin` comes from its `path`, which the manifest spells out in full.
+      // URL it answers. `main /foo` and `admin /foo` are therefore one URL
+      // claimed twice, and keying by area would have let the router's own
+      // ranking decide which of them a browser reaches.
       //
       // Scoped by kind, and that is what nesting costs. A layout claims no URL,
       // so a layout at `/settings` and the index page inside it both spell
@@ -365,7 +135,7 @@ export const buildPluginRouteManifest = (
 
       if (existingByPath) {
         throw new PluginRouteError(
-          `Plugin route path collision on "${route.path}" (${route.area}): ${existingByPath.pluginId} already owns "${existingByPath.path}" as "${existingByPath.id}" (${existingByPath.area}), and ${pluginId} declares "${route.path}" as "${route.id}". Both match the same URLs - a shell is pathless, so an area frames a page rather than moving it - and VitNode will not let a router's ordering decide which one answers. Rename one of them.`,
+          `Plugin route path collision on "${route.path}" (${route.area}): ${existingByPath.pluginId} already owns "${existingByPath.path}" (${existingByPath.area}), and ${pluginId} declares "${route.path}". Both match the same URLs - a shell is pathless, so an area frames a page rather than moving it - and VitNode will not let a router's ordering decide which one answers. Give one of them a different path.`,
           {
             code: "duplicate-path",
             conflictsWith: {
@@ -382,16 +152,24 @@ export const buildPluginRouteManifest = (
       byId.set(route.id, route);
       byPath.set(pathKey, route);
       routes.push(route);
-    });
+      components.set(route.id, flat.component);
+
+      if (flat.search !== null) searchValidators.set(route.id, flat.search);
+    }
   }
 
   const manifest = routes.sort(comparePluginRoutes);
 
-  // Last, and for its exceptions rather than for its result: a manifest whose
-  // hierarchy does not hold together is not a manifest, and the build has to
-  // stop here rather than in a browser. The tree itself is rebuilt from this
+  // Last, and for its exceptions rather than for its result: a set of routes
+  // whose hierarchy does not hold together is not a manifest, and the build has
+  // to stop here rather than in a browser. The tree itself is rebuilt from this
   // list by whatever mounts it, with this same function.
   buildPluginRouteGraph(manifest);
 
-  return manifest;
+  return { components, manifest, searchValidators };
 };
+
+/** {@link compilePluginRouteTrees}, for a caller that only needs the data. */
+export const buildPluginRouteManifest = (
+  sources: readonly PluginRouteSource[],
+): PluginRouteManifest => compilePluginRouteTrees(sources).manifest;

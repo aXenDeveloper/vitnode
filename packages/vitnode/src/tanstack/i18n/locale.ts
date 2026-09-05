@@ -8,30 +8,8 @@ import { readLocaleCookie } from "@/lib/i18n/locale-cookie";
 
 import { getIntlRuntime } from "./runtime";
 
-/**
- * A base for parsing a router href that carries no origin. Never requested, and
- * never rendered - only `pathname`, `search` and `hash` are ever read back off
- * it.
- */
 const RELATIVE_BASE = "https://vitnode.invalid";
 
-/**
- * The remembered language, wherever this happens to be running.
- *
- * Only routes outside the localized URL space ever ask - `/admin`, and anything
- * else in `DEFAULT_IGNORED_LOCALE_PATHS`. A public URL says which language it is
- * in, and this must never get a vote there.
- *
- * `createIsomorphicFn` is what keeps that one question from becoming two
- * functions that drift, and it is the one Start primitive this package is
- * allowed to declare. In the browser bundle the host's Vite build compiles it,
- * so the `.server()` branch - and the `@tanstack/react-start/server` import
- * above with it - is dropped. On the server the package is un-compiled, and the
- * stub falls back to the `.server()` branch, which is the right answer there.
- * That asymmetry is the whole reason `.server()` is written first: the fallback
- * keeps the server implementation it was given and ignores a `.client()` chained
- * after it.
- */
 const readCookieLocale = createIsomorphicFn()
   .server(() => {
     try {
@@ -49,30 +27,6 @@ const readCookieLocale = createIsomorphicFn()
   // bundled into the server too - only the client build ever drops one.
   .client(() => readLocaleCookie(globalThis.document?.cookie));
 
-/**
- * The language a URL is served in - the one authoritative answer.
- *
- * Everything that needs a locale comes through here: the router rewrite that
- * writes prefixes into links, `<html lang>`, the message query, the switcher.
- * There is deliberately no second source to disagree with it.
- *
- * `publicPathname` is the URL in the address bar, *before* the router rewrote
- * the prefix away. Handing it the internal path would resolve every request to
- * the default locale.
- *
- * The cookie is the only source handed to the shared helper, and that is the
- * whole contract for a route with no locale in its URL: **cookie, then the
- * default.** The helper can also negotiate an `Accept-Language` header and
- * deliberately is not asked to - the browser cannot read request headers, so a
- * server that answered `pl` from one would hydrate to `en` on the client: a
- * flash of the wrong language and a React hydration mismatch on every first
- * visit. First-visit negotiation is a product decision that needs its own
- * hydration-safe design, not a source quietly added here.
- *
- * The type parameter is how an app keeps its own `"en" | "pl"` union: the answer
- * is either a code that app was configured with or its default, never anything
- * from the URL, so narrowing it is safe by construction.
- */
 export const resolveLocale = <TLocale extends string = string>(
   publicPathname: string,
 ): TLocale => {
@@ -87,36 +41,12 @@ export const resolveLocale = <TLocale extends string = string>(
   }) as TLocale;
 };
 
-/**
- * The path shown in the address bar, from a location the router parsed.
- *
- * Takes the one field it reads rather than a `ParsedLocation`, so it is equally
- * callable with `router.latestLocation`, with router state, and with a
- * `beforeLoad`'s `location` - three types that differ only in their search
- * schema.
- */
 export const publicPathnameOf = ({
   publicHref,
 }: {
   publicHref: string;
 }): string => new URL(publicHref, RELATIVE_BASE).pathname;
 
-/**
- * An internal href, written in the public shape for one language.
- *
- *     /blog/post-30  + pl -> /pl/blog/post-30
- *     /blog/post-30  + en -> /blog/post-30
- *     /admin/users   + pl -> /admin/users     (an ignored path takes no prefix)
- *
- * For links the router will never build. Anything it *does* build gets its
- * prefix from `rewrite.output` instead, and applying both would produce
- * `/pl/pl/...` - so this is only for a boundary where the destination belongs to
- * another application and the router is deliberately not involved.
- *
- * `localizeUrl` is the same rule the rewrite uses and is idempotent, so an href
- * that already carries a prefix keeps exactly one. The query string and hash are
- * preserved.
- */
 export const localizeHref = (href: string, locale: string): string => {
   const { localeRouting } = getIntlRuntime();
   const url = localeRouting.localizeUrl(new URL(href, RELATIVE_BASE), locale);

@@ -10,14 +10,6 @@ import { cn } from "@/lib/utils";
 
 import type { RebuildSearchIndex } from "./search-index-mutations";
 
-/**
- * "Rebuild the whole index", in the screen's header.
- *
- * `onRebuild` is the only thing it cannot decide for itself, and it carries the
- * refresh with it - `router.refresh()` in Next.js, a query invalidation in
- * TanStack Start. See `search-index-mutations.ts` for why that is folded into
- * the callback rather than passed alongside it.
- */
 export const SearchHeaderActions = ({
   onRebuild,
 }: {

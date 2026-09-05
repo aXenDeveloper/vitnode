@@ -12,20 +12,6 @@ import {
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
-/**
- * What a list route does with pagination input it cannot honour.
- *
- * Every case here used to be answered rather than refused: `first=0` clamped
- * its way into a one-row page that reported `hasNextPage: true`, `first=abc`
- * became `NaN` and fell through to the default page size, and `first` and
- * `last` together threw a bare `Error` that surfaced as a 500. Each of them is
- * a request nobody made, answered as if they had.
- *
- * The schema catches most of them at the edge and `parsePaginationParams`
- * catches the rest; both answer 400, which is the only thing a client has to
- * know.
- */
-
 vi.mock("../../api/lib/check-staff-permission", () => ({
   assertStaffPermission: async () => await Promise.resolve(),
 }));

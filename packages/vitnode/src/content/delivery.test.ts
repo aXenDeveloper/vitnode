@@ -15,14 +15,6 @@ import {
 } from "./delivery";
 import { field } from "./fields";
 
-/**
- * Stage 8 definition validation and the pure delivery projections.
- *
- * Everything here runs without a database, because everything here is a rule about
- * a *definition* or a pure function over a public row - and the rules are the half
- * of Stage 8 that has to fail loudly at boot rather than quietly at request time.
- */
-
 const base = {
   publication: { enabled: true } as const,
   tableName: "delivery_articles",

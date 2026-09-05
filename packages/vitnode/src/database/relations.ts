@@ -15,13 +15,6 @@ import * as secrets from "./secrets";
 import * as sessions from "./sessions";
 import * as users from "./users";
 
-/**
- * Every table `@vitnode/core` ships, in one object.
- *
- * `defineRelations` filters this down to the tables on its own - the modules
- * also export types, helpers and constants, and those are dropped rather than
- * mistaken for schema entries.
- */
 export const coreSchema = {
   ...admins,
   ...content,
@@ -39,17 +32,6 @@ export const coreSchema = {
   ...users,
 };
 
-/**
- * Relations for the core schema, in the Relational Queries v2 shape.
- *
- * v2 collects every relation in one place instead of a `relations()` call per
- * table, which is what makes the relation names autocomplete on
- * `db.query.<table>.findMany({ with: ... })`.
- *
- * The side that owns the foreign key spells out `from`/`to`; the opposite side
- * is declared with no config and paired by Drizzle, so a column only has to be
- * named once.
- */
 export const coreRelations = defineRelations(coreSchema, r => ({
   core_users: {
     group: r.one.core_roles({

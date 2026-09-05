@@ -11,30 +11,10 @@ import {
 import { TablePendingSkeleton } from "../../pending";
 import { routeContext, routeSearch } from "../types";
 
-/**
- * `/files` - the visitor's own files.
- *
- * One route serving two public URLs: the locale is stripped before matching and
- * written back into every link the router builds, so nothing here mentions a
- * language.
- *
- * Not to be confused with `/admin/core/system/files`, which is *every* file in
- * the installation - a different endpoint, a different permission and a different
- * cache family.
- */
 export const myFilesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   const route = createRoute({
     getParentRoute: () => parentRoute,
-    /**
-     * The request, as the only thing the loader re-runs for.
-     *
-     * The *normalised* parameters rather than the raw search, and that is what
-     * makes this exact. The router hands `loaderDeps` the validated search
-     * merged over everything else that was in the query string, so keying on it
-     * directly would re-run the loader for a stray `?utm_source=` - and, worse,
-     * would treat `?first=10` and no `first` as two different pages of the same
-     * rows.
-     */
+
     loaderDeps: ({ search }) => ({
       params: myFilesRouteParams(routeSearch(search)),
     }),

@@ -14,13 +14,6 @@ import {
   writeStaffPermissions,
 } from "./staff-permission-cache";
 
-/**
- * The slice of `CacheModel` this module uses, over a Map.
- *
- * `configured: false` reproduces a deployment without Redis, where every read
- * misses and every write is dropped - the case that has to keep working, since
- * Redis is optional.
- */
 const fakeCache = ({ configured = true }: { configured?: boolean } = {}) => {
   const store = new Map<string, string>();
 
@@ -45,13 +38,6 @@ const fakeCache = ({ configured = true }: { configured?: boolean } = {}) => {
   };
 };
 
-/**
- * A `db` whose `select()` chain hands back the next queued result set.
- *
- * `resolveStaffPermissions` runs three selects in a fixed order - secondary
- * roles, root roles, staff entries - so a queue is enough to drive it, and
- * `selects` is what the assertions about cache hits actually count.
- */
 const fakeDb = (results: unknown[][]) => {
   let index = 0;
   const state = { selects: 0 };

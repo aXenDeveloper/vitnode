@@ -17,25 +17,6 @@ import {
 } from "./state";
 import { setAdminTransport } from "./transport";
 
-/**
- * The canonical admin query's policy, and the two properties a route guard's
- * correctness rests on: that a failure never becomes a denial, and that one
- * administrator's answer cannot be reused for the next.
- *
- * No render, no request and no DOM: `adminSessionQueryOptions()` is an object,
- * and everything below drives a `QueryClient` held in memory with the transport
- * stubbed. What is being exercised is this package's *reading and forgetting*
- * rules, because those are the rules whose being wrong is silent.
- */
-
-/**
- * The application's half, stubbed - and stubbed through the real seam.
- *
- * `setAdminTransport` is exactly how `apps/web` supplies its `createServerFn`,
- * so nothing here is mocked away: the query definition under test resolves its
- * reader the same way it does in production, and a change to how it reaches the
- * transport would fail these tests rather than slip past a module mock.
- */
 let nextRead: AdminSessionReadResult = { status: "denied" };
 let reads = 0;
 
@@ -90,15 +71,6 @@ describe("the canonical admin session query", () => {
     expect(adminSessionQueryOptions().retry).toBe(false);
   });
 
-  /**
-   * The revocation contract, as one number.
-   *
-   * Not `Infinity`, and not the 30 seconds the public session takes. Removing
-   * somebody's admin access has to take effect promptly, and the caching that
-   * makes that affordable lives in the API - Redis, 60 seconds, invalidated by
-   * every mutation that changes the answer. The browser keeps no copy of its
-   * own.
-   */
   it("trusts nothing it has already read", () => {
     expect(adminSessionQueryOptions().staleTime).toBe(0);
   });
@@ -128,14 +100,6 @@ describe("what a read resolves to", () => {
     });
   });
 
-  /**
-   * The single most important assertion in this feature.
-   *
-   * A `429`, a `500` and an unreachable API all reject. If any of them resolved
-   * as `{ status: "denied" }`, the `_admin` guard would redirect a working
-   * administrator to the sign-in form during an outage - for a session they
-   * already hold.
-   */
   it.each([
     ["an API failure", { httpStatus: 500, status: "api_error" } as const],
     ["a rate limit", { httpStatus: 429, status: "api_error" } as const],
@@ -175,15 +139,6 @@ describe("what a read resolves to", () => {
   });
 });
 
-/**
- * The preload path - the one place the zero stale time does not apply.
- *
- * `defaultPreload: 'intent'` runs a route's whole `beforeLoad` chain on a hover,
- * and router-core has no staleness gate on `beforeLoad`, so before Stage 14 the
- * guard asked the API once per link a mouse crossed. What is asserted here is
- * the pair of properties that makes the fix safe rather than merely cheap: a
- * hover reuses the answer, and a navigation still does not.
- */
 describe("a hover reuses the answer a navigation would not", () => {
   it("asks once for a run of preloads", async () => {
     nextRead = adminA;
@@ -235,13 +190,6 @@ describe("a hover reuses the answer a navigation would not", () => {
     });
   });
 
-  /**
-   * An unreadable session is still not a denial, on the preload path either.
-   *
-   * This is why the preload uses `fetchQuery` rather than the tolerant
-   * `prefetchAdminAccess`: a caller gets a decision or a rejection, never
-   * `undefined` wearing the shape of an answer.
-   */
   it("rejects a failed read rather than answering with a denial", async () => {
     nextRead = { status: "api_error" };
     const queryClient = client();
@@ -302,15 +250,6 @@ describe("staleness", () => {
   });
 });
 
-/**
- * Admin A signs out, Admin B signs in, in the same browser.
- *
- * The `QueryClient` is per request on the server and per *browser* on the
- * client, so this is the one lifetime where two administrators can meet. The
- * isolation is bought here, by forgetting, rather than by anything in the key -
- * the browser cannot name the admin the cookie belongs to until the query
- * answers, so there is nothing trustworthy to key by.
- */
 describe("one administrator's answer is never reused for the next", () => {
   it("leaves nothing to render after a removal", async () => {
     nextRead = adminA;
@@ -370,13 +309,6 @@ describe("one administrator's answer is never reused for the next", () => {
   });
 });
 
-/**
- * The sign-in screen's read, which must survive an outage.
- *
- * `ensureAdminAccess` rejecting is right for the guard and wrong here: the same
- * rejection would replace the AdminCP's only entrance with an error page, so a
- * partial outage would leave nobody able to sign in and fix it.
- */
 describe("the tolerant read the sign-in screen uses", () => {
   it("answers with the decision when there was one", async () => {
     nextRead = adminA;

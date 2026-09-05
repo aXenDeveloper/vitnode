@@ -14,32 +14,11 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/**
- * The user header, split down the middle.
- *
- * The same boundary `theme-boundaries.test.ts` and `auth-boundaries.test.ts`
- * draw, for the same reason and with the same machinery: `UserHeaderContent` is
- * rendered by a TanStack Start route as well as by Next.js, and one import that
- * only resolves inside a Next.js app turns that route into a failure nobody sees
- * until they try it. This is the header slot most likely to acquire one - it is
- * the part with links, a session and a mutation in it.
- *
- * `next-user-header.tsx` is the control: it provably reaches the locale-aware
- * `Link` and the sign-out server action, which is exactly what the shared half
- * must not.
- */
 const SHARED = {
   content: join(here, "user-header-content.tsx"),
   model: join(here, "user-header-model.ts"),
 };
 
-/**
- * The Next.js half, by path, so its absence can be asserted.
- *
- * Named rather than deleted along with the assertions that used them: each was
- * the one place a Next.js API was allowed to appear in this subtree, and a test
- * that stops naming them cannot notice one coming back.
- */
 const DELETED_NEXT_HALF = join(here, "next-user-header.tsx");
 
 const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({

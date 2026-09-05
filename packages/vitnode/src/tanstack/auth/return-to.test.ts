@@ -6,11 +6,6 @@ import {
   sanitizeReturnTo,
 } from "./return-to";
 
-/**
- * The post-login redirect target, which is the one auth input any visitor can
- * put anything into. Everything here is a pure string transform, so the whole
- * rule can be stated as a table rather than exercised through a browser.
- */
 describe("sanitizeReturnTo keeps application-relative paths", () => {
   it.each([
     "/",

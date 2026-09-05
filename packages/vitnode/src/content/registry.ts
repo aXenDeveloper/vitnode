@@ -319,24 +319,9 @@ export const findContentTypeById = (
 ): RegisteredContentType | undefined =>
   entries.find(entry => entry.definition.id === id);
 
-/**
- * The **default** `admin.path`: `example.article` -> `example/article`.
- *
- * A default and nothing more - a content type is free to be addressed by a name
- * of its own (`blog.post` -> `blog/articles`), so nothing that builds a URL may
- * call this. They all read `admin.path`, which is what the href helpers below
- * take a whole definition for.
- */
 export const contentTypeToPath = (id: string): string =>
   id.split(".").join("/");
 
-/**
- * Enough of a definition to address its AdminCP screens.
- *
- * The href helpers take this rather than an id, because the two are allowed to
- * disagree: `blog.post` lives at `/admin/content/blog/articles`, and an id is no
- * longer something a URL can be derived from.
- */
 export type ContentAdminAddressable = Pick<AnyContentTypeDefinition, "admin">;
 
 /** `/admin/content/blog/articles` */

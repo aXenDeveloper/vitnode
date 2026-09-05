@@ -39,19 +39,6 @@ export interface StorageUploadResult {
   url: string;
 }
 
-/**
- * What {@link StorageModel.upload} returns: the adapter's result plus the
- * `core_files` row it just created.
- *
- * The adapter still returns only `{ key, url }` - it stores bytes and knows
- * nothing about the database - so this is a separate type rather than a widened
- * one. `id` is what a caller needs to *reference* the file: a Content Engine
- * file column holds it, and without it every upload route would have to look the
- * row back up by key.
- *
- * `dimensions` is `null` for a non-image and for an image the pipeline did not
- * measure (SVG and GIF are deliberately not re-encoded).
- */
 export interface StorageFileUploadResult extends StorageUploadResult {
   dimensions: null | { height: number; width: number };
   id: number;
@@ -61,25 +48,10 @@ export interface StorageFileUploadResult extends StorageUploadResult {
   size: number;
 }
 
-/**
- * Why {@link StorageModel.deleteFile} refused, and the body it refuses with.
- *
- * Defined in `@/lib/files/in-use` and re-exported here, so every existing
- * importer keeps working. The definition had to move because the browser reads
- * the same code off the same 409 - and importing it from this module dragged
- * Hono, Drizzle and `@/database` into the client bundle behind one string.
- */
 export type { StorageFileInUseBody } from "@/lib/files/in-use";
 export { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 
 export interface StorageDeleteFileOptions {
-  /**
-   * Drop the retained revisions' pins and delete the file anyway.
-   *
-   * Only ever gets past *history*. A live content reference is refused with or
-   * without it, because there is no version of "delete anyway" that leaves a
-   * published page unbroken.
-   */
   force?: boolean;
   /** Scopes the delete to one user's own uploads. */
   ownerId?: number;
@@ -120,12 +92,7 @@ export interface StorageUploadOptions {
   maxBytes?: number;
   /** Extra data stored in the `core_files.metadata` JSON column. */
   metadata?: Record<string, unknown>;
-  /**
-   * Owner recorded in `core_files.userId`. When omitted it defaults to the
-   * request's admin user (on admin routes), then the frontend session user, else
-   * null. Pass it explicitly - including `null` - to override, e.g. when an admin
-   * uploads on behalf of another user.
-   */
+
   userId?: null | number;
 }
 
@@ -135,28 +102,10 @@ interface ProcessedImage {
   // New extension (incl. leading dot) when the format changed, else null.
   extension: null | string;
   mimeType: string;
-  /**
-   * Why the configured WebP conversion did not happen, when it was configured
-   * and did not - otherwise null.
-   *
-   * Recorded on the `core_files` row because the decision is otherwise invisible:
-   * an install with `storage.image.webp` whose library has one stray PNG among
-   * the WebPs looks like a bug until this says which rule spared it.
-   */
+
   skippedConversion: null | string;
 }
 
-/**
- * The image decoded, and then could not be re-encoded because of a **format
- * limit rather than the bytes**: WebP allows at most 16383 pixels per side, and
- * a 20000px-wide PNG is a perfectly valid PNG.
- *
- * Its own class so a caller can tell this apart from a broken file - the upload
- * route answers `CONTENT_FILE_UNPROCESSABLE` for it instead of
- * `CONTENT_FILE_INVALID`. The distinction is the whole point: "corrupt" sends
- * somebody off to re-export an image that was never damaged, while naming the
- * pixel limit sends them to resize it, which is the thing that works.
- */
 export class StorageImageUnprocessableError extends HTTPException {
   constructor(message: string) {
     super(400, { message });
@@ -171,13 +120,6 @@ const WEBP_MAX_SIDE = 16383;
 /** Marks a row whose WebP conversion was skipped for the reason below. */
 const SKIPPED_WEBP_DIMENSIONS = "webp-dimension-limit";
 
-/**
- * Whether WebP can hold an image this size at all.
- *
- * Unmeasured dimensions answer `false`: an image libvips could not size up is
- * not one to pre-emptively give up converting, so the encoder stays the thing
- * that decides.
- */
 const exceedsWebpLimit = (
   dimensions: null | { height: number; width: number },
 ): boolean =>
@@ -188,15 +130,6 @@ const exceedsWebpLimit = (
 const imageFormatName = (mimeType: string): string =>
   (mimeType.split("/")[1] ?? mimeType).toUpperCase();
 
-/**
- * What sharp itself said, as a suffix - or nothing when it said nothing useful.
- *
- * libvips writes the actionable part of these ("Input buffer contains
- * unsupported image format", "vipspng: libpng read error", "Input Buffer is
- * empty"), and dropping it is what left an admin with a sentence that named no
- * cause. Only the first line is kept, and it is capped, because the rest is a
- * stack trace and this ends up in a form field.
- */
 const reasonSuffix = (error: unknown): string => {
   const first =
     error instanceof Error

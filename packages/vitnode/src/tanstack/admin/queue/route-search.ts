@@ -17,13 +17,6 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/**
- * The queue list's URL contract - the shared admin-table one with this screen's
- * declaration applied, so a host writes `validateSearch:
- * normalizeQueueRouteSearch` rather than restating which columns sort and which
- * statuses filter.
- */
-
 export type QueueRouteSearch = AdminTableRouteSearch<QueueOrderBy>;
 export type UncheckedQueueSearch = UncheckedAdminTableSearch<QueueOrderBy>;
 

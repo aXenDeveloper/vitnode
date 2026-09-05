@@ -1,126 +1,98 @@
 ---
 title: AdminCP Pages
-description: Ship custom plugin pages inside the VitNode admin panel with sidebar navigation, breadcrumbs, and staff permission gates.
+description: Add plugin-owned AdminCP pages, navigation, permissions, and dashboard extensions to the VitNode admin panel.
 icon: PanelsTopLeft
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { LayoutDashboardIcon, RouteIcon, ShieldCheckIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-An AdminCP page is an ordinary plugin route configured with `area: "admin"`. VitNode frames your page with the admin panel's sidebar, breadcrumbs header, command palette, and authenticated staff session.
-
-## Add an AdminCP Page
+AdminCP is a plugin surface. Give the plugin an `area: 'admin'` route and a
+browser-safe navigation declaration. The host supplies the panel shell; your
+plugin supplies the useful bit.
 
 <Steps>
-<Step>
+  <Step>
 
-### 1. Declare Route in Manifest
+### Claim an AdminCP route
 
-Add the route to `src/routes/manifest.ts` with `area: "admin"`:
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 
-```ts title="plugins/blog/src/routes/manifest.ts"
-import type { PluginRouteDefinition } from "@vitnode/core/routing"
-
-export const routes: PluginRouteDefinition[] = [
-  // [!code ++:7]
-  {
-    area: "admin",
-    entry: "routes/admin-settings",
-    id: "settings",
-    namespaces: ["@vitnode/blog.admin.settings"],
-    path: "/admin/blog/settings",
-  },
-]
+export const routes = definePluginRoutes([
+  // [!code ++:4]
+  page('/admin/site-notes/settings', {
+    area: 'admin',
+    component: lazy(() => import('./pages/admin-settings-page')),
+  }),
+])
 ```
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 2. Create the Page Component
+### Render the plugin page
 
-Export a React component as `default`:
-
-```tsx title="plugins/blog/src/routes/admin-settings.tsx"
-import { useTranslations } from "use-intl"
-
-const AdminSettingsPage = () => {
-  const t = useTranslations("@vitnode/blog.admin.settings")
-
-  return (
-    <div className="flex flex-col gap-4 p-4">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("desc")}</p>
-      </header>
-    </div>
-  )
-}
+```tsx title="plugins/site-notes/src/pages/admin-settings-page.tsx"
+const AdminSettingsPage = () => (
+  <div className="flex flex-col gap-2 p-4">
+    <h2 className="text-2xl font-semibold">Site notes settings</h2>
+    <p className="text-muted-foreground">Manage the notes plugin.</p>
+  </div>
+)
 
 export default AdminSettingsPage
 ```
 
-</Step>
-<Step>
+  </Step>
+  <Step>
 
-### 3. Add to AdminCP Sidebar Navigation
+### Add a sidebar entry
 
-Export `adminNav` from `src/admin/nav.tsx` to display a link in the AdminCP sidebar:
+Export `adminNav` from the plugin. Its small browser-safe shape is what the
+generated AdminCP registry imports—do not edit `admin-nav.gen.ts` yourself.
 
-```tsx title="plugins/blog/src/admin/nav.tsx"
-import type { PluginAdminNav } from "@vitnode/core/lib/plugin"
-import { SettingsIcon } from "lucide-react"
+```tsx title="plugins/site-notes/src/admin/nav.tsx"
+import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
+import { SettingsIcon } from 'lucide-react'
 
-export const adminNav: PluginAdminNav = {
-  nav: [
-    {
-      id: "settings",
-      icon: <SettingsIcon />,
-      href: "/admin/blog/settings",
-      // Restrict visibility to authorized staff
-      permission: { module: "blog", permission: "can_manage_settings" },
-    },
-  ],
-}
-```
-
-Export the module in `package.json`:
-
-```json title="plugins/blog/package.json"
-"exports": {
-  "./admin/nav": "./dist/src/admin/nav.js"
-}
-```
-
-</Step>
-<Step>
-
-### 4. Add Localization Messages
-
-Provide translations for the page and sidebar link in `src/locales/en.json`:
-
-```json title="plugins/blog/src/locales/en.json"
-{
-  "@vitnode/blog": {
-    "admin": {
-      "nav": {
-        "settings": "Settings"
+export const adminNav = {
+  pluginId: '@acme/site-notes',
+  admin: {
+    nav: [
+      // [!code ++:6]
+      {
+        href: '/admin/site-notes/settings',
+        icon: <SettingsIcon />,
+        id: 'settings',
+        permission: { module: 'site_notes', permission: 'can_manage_settings' },
       },
-      "settings": {
-        "title": "Blog Settings",
-        "desc": "Configure blog comments, moderation, and notifications."
-      }
-    }
-  }
-}
+    ],
+  },
+} satisfies AdminNavPluginSource
 ```
 
-</Step>
-<Step>
+The generator’s `./*` package export already exposes `admin/nav`; no manual
+`package.json` export is required. Spread the declaration into the plugin’s
+existing factory so the navigation and full registration share one source:
 
-### 5. Verify the Page
+```tsx title="plugins/site-notes/src/config.tsx"
+import { adminNav } from './admin/nav' // [!code ++]
 
-Start the dev server:
+export const siteNotesPlugin = () =>
+  buildPlugin({
+    ...adminNav, // [!code ++]
+    messages,
+    routes,
+  })
+```
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]}>
+  </Step>
+  <Step>
+
+### Verify the screen
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run the AdminCP extension">
 
 ```bash tab="bun"
 bun dev
@@ -136,48 +108,33 @@ npm run dev
 
 </Tabs>
 
-Open `http://localhost:3000/admin/blog/settings` to see your admin screen integrated into the panel.
+Visit `http://localhost:3000/admin/site-notes/settings` as a staff account with
+the declared permission.
 
-</Step>
+{/* Image prompt: VitNode AdminCP settings page contributed by a plugin. Show the existing admin sidebar with “Site notes” selected, a compact settings screen, breadcrumb, and staff-permission badge. Dark theme, 1440x900. */}
+
+  </Step>
 </Steps>
 
----
-
-## Gating What the Page Shows
-
-Protect administrative actions inside your component using `useStaffPermissions`:
-
-```tsx title="plugins/blog/src/routes/admin-settings.tsx"
-import { useStaffPermissions } from "@vitnode/core/hooks/use-staff-permissions"
-
-const AdminSettingsPage = () => {
-  const { hasPermission } = useStaffPermissions()
-  const canDelete = hasPermission({ module: "blog", permission: "can_delete_posts" })
-
-  return (
-    <div className="p-4">
-      {canDelete && <button className="text-destructive">Delete All Posts</button>}
-    </div>
-  )
-}
-```
-
-## Learn More
+## Extend the panel
 
 <Cards>
   <Card
-    title="Dashboard Widgets"
-    description="Build drag-and-drop dashboard widgets for AdminCP"
+    icon={<LayoutDashboardIcon />}
+    title="Dashboard widgets"
+    description="Add a plugin widget to the admin dashboard’s configurable grid."
     href="/docs/dev/plugins/admin/dashboard-widgets"
   />
   <Card
-    title="Staff Permissions"
-    description="Define and enforce administrative role permissions"
+    icon={<ShieldCheckIcon />}
+    title="Staff permissions"
+    description="Define the permissions that gate staff actions and navigation."
     href="/docs/dev/working-with-users/staff-permissions"
   />
   <Card
-    title="Route Manifest"
-    description="Declare public and admin routes across your plugin"
-    href="/docs/dev/plugins/route-manifest"
+    icon={<RouteIcon />}
+    title="Plugin routes"
+    description="Configure route areas, namespaces, guards, and parameters."
+    href="/docs/dev/plugins/routes"
   />
 </Cards>

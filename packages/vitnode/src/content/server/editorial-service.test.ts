@@ -32,14 +32,6 @@ interface RecordedCall {
   op: string;
 }
 
-/**
- * The chainable Drizzle stand-in from `service.test.ts`, plus `transaction`.
- *
- * The transaction callback receives the same handle, so a test can assert that
- * the content write and the revision insert landed in the same unit of work by
- * counting them - and `failAt` makes the revision insert throw so the rollback
- * path is exercised rather than assumed.
- */
 const createDbMock = (
   results: unknown[][],
   { failAt }: { failAt?: number } = {},
@@ -111,13 +103,6 @@ const createDbMock = (
 const opsOf = (calls: RecordedCall[], op: string) =>
   calls.filter(call => call.op === op).map(call => call.arg);
 
-/**
- * Which columns a Drizzle condition actually names.
- *
- * `JSON.stringify` cannot be used - a `PgColumn` holds a reference back to its
- * table - so the nested `queryChunks` are walked instead, collecting anything
- * that carries a column `name`.
- */
 const columnsIn = (condition: unknown): string[] => {
   const walk = (value: unknown): unknown[] =>
     value !== null && typeof value === "object" && "queryChunks" in value
@@ -129,12 +114,6 @@ const columnsIn = (condition: unknown): string[] => {
     .filter((name): name is string => typeof name === "string");
 };
 
-/**
- * `editorialService` is `undefined` for a content type without the workflow, so
- * every call site would otherwise need a non-null assertion. Throwing here
- * keeps the tests readable and fails loudly if a fixture ever loses its
- * `editorial` block.
- */
 const editorialServiceOf = <TDefinition extends AnyContentTypeDefinition>(
   model: ContentModel<TDefinition>,
   c: Context,

@@ -35,28 +35,9 @@ export interface ContentPublishedPayload {
   contentId: number;
   /** When the row was published for the *first* time; never rewritten. */
   publishedAt: Date;
-  /**
-   * The person who created the schedule that fired this, when one did.
-   *
-   * Absent on an interactive publish, so no existing listener sees a new field.
-   * It is the only way to answer "the system did it, on whose instruction" -
-   * the actor of a scheduled run is genuinely the system, and inventing a user
-   * id there would be a lie in the audit trail.
-   */
+
   scheduledBy?: null | number;
-  /**
-   * The booking that fired this, when one did - and the idempotency key for a
-   * listener that must act exactly once.
-   *
-   * Scheduled announcements are delivered **at least** once: they run in a
-   * queue task that retries whenever the event, the search write or a cache
-   * origin failed, and a retry re-emits an event that may already have been
-   * received. The id does not change between those attempts, so a listener that
-   * records "I have handled schedule 55" can safely ignore the second copy.
-   *
-   * Absent on an interactive publish, which is emitted once by the route that
-   * performed it and has no booking to point at.
-   */
+
   scheduleId?: number;
 }
 
@@ -68,18 +49,6 @@ export interface ContentUnpublishedPayload {
   scheduleId?: number;
 }
 
-/**
- * A record was rolled back to the field values of an earlier revision.
- *
- * Emitted **instead of** `updated`, not alongside it - the one-event-per-mutation
- * rule below holds here too, and a listener that fired twice would do every
- * piece of downstream work twice. `changedFields` is carried for exactly that
- * reason: porting an `updated` listener is a rename, not a rewrite.
- *
- * There is deliberately no publication field. A restore never moves `status` or
- * `publishedAt`, so anyone listening for a visibility change still only has to
- * watch `published` and `unpublished`.
- */
 export interface ContentRestoredPayload<TDefinition> {
   changedFields: ContentFieldName<TDefinition>[];
   contentId: number;
@@ -90,13 +59,6 @@ export interface ContentRestoredPayload<TDefinition> {
   version: number;
 }
 
-/**
- * A transition was booked for later, or the booking was called off.
- *
- * These are **not** revisions and consume no version: scheduling changes no
- * field value. When the schedule actually fires, the resulting transition emits
- * the ordinary `published`/`unpublished` event with `scheduledBy` set.
- */
 export interface ContentScheduledPayload {
   action: "publish" | "unpublish";
   /** The staff member who booked it. */
@@ -113,14 +75,6 @@ export interface ContentScheduleCancelledPayload {
   scheduleId: number;
 }
 
-/**
- * The two extra events a content type with `publication` emits.
- *
- * They are disjoint from `updated`: `status` and `publishedAt` are generated
- * columns, not declared fields, so an `updated` event alongside them would
- * carry an empty `changedFields` and lie about what moved. Exactly one event is
- * emitted per mutation, and a no-op publish emits nothing at all.
- */
 type ContentPublicationEventsFor<TDefinition extends { id: string }> =
   TDefinition extends { publication: { enabled: true } }
     ? Record<

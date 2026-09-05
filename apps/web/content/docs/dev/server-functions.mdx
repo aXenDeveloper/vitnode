@@ -1,97 +1,125 @@
 ---
 title: Server Functions & Isomorphic Fetching
-description: When to use TanStack Start server functions, createIsomorphicFn, and Hono API routes in VitNode.
+description: When to reach for the universal fetcher, the server fetcher, or a TanStack Start server function in VitNode.
 icon: ServerCog
 ---
 
-VitNode separates backend business logic into Hono API routes while using `createIsomorphicFn` for data fetching across SSR and client-side navigation.
+VitNode keeps backend business logic in Hono API routes. The frontend's only job
+is to call them - and for that, one universal fetcher covers SSR and browser
+navigation at once.
 
 ## Decision Matrix
 
-| Goal | Recommended Tool | Rationale |
-| :--- | :--- | :--- |
-| **Route Data Fetching** | `createIsomorphicFn` | SSR fetches directly on server; client fetches via `fetcherClient`. |
-| **API Endpoints & Mutations** | Hono API routes | Enforces staff permissions, validation schemas, and database transactions. |
-| **Cookie Minting on Host** | `createServerFn` (App only) | Only code inside the host request can set response headers directly. |
-| **Plugin Server Code** | Hono API modules | **Plugins must never declare `createServerFn`** (uncompiled handlers resolve to `undefined`). |
+| Goal                           | Recommended tool                                | Rationale                                                                                     |
+| :----------------------------- | :---------------------------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Route data fetching**        | `fetcher` from `@vitnode/core/tanstack/fetcher` | One call site. SSR forwards the request; the browser calls `/api/*` directly.                 |
+| **API endpoints & mutations**  | Hono API routes                                 | Enforces staff permissions, validation schemas, and database transactions.                    |
+| **Cookie minting on the host** | `createServerFn` + the server fetcher           | Only code inside the host request can set response headers directly.                          |
+| **Plugin server code**         | Hono API modules                                | **Plugins must never declare `createServerFn`** (uncompiled handlers resolve to `undefined`). |
 
-<Callout type="warn" title="No createServerFn in Plugins">
-  A plugin package may declare `createIsomorphicFn`, but never `createServerFn`. Server functions belong exclusively to the host application.
+<Callout type="warn" title="No createServerFn in plugins">
+  A plugin package may declare `createIsomorphicFn`, but never `createServerFn`.
+  Server functions belong exclusively to the host application.
 </Callout>
 
 ---
 
-## Isomorphic Data Fetching (`createIsomorphicFn`)
+## Fetching does not need `createIsomorphicFn`
 
-TanStack Router loaders run on the server during the initial paint, and on the client for subsequent navigations. `createIsomorphicFn` bridges both environments seamlessly:
+TanStack Router loaders run on the server for the first paint and in the browser
+for every navigation after it. That used to mean writing both halves by hand:
 
-```ts title="src/features/devices/fetcher.ts"
-import { createIsomorphicFn } from "@tanstack/react-start"
-import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client"
-import { fetcher } from "@vitnode/core/tanstack/fetcher/server"
-import type { usersModule } from "@vitnode/core/api/modules/users/users.module"
-
-const moduleRef = clientModule<typeof usersModule>("@vitnode/core")
-
+```ts
+// [!code --:3]
 export const fetchDevices = createIsomorphicFn()
-  // Server execution (SSR)
-  .server(async () => {
-    const res = await fetcher(usersModule, {
-      method: "get",
-      module: "users",
-      path: "/devices",
-    })
-    return await res.json()
-  })
-  // Client execution (SPA navigation)
-  .client(async () => {
-    const res = await fetcherClient(moduleRef, {
-      method: "get",
-      module: "users",
-      path: "/devices",
-    })
-    return await res.json()
-  })
+  .server(fetchDevicesOnServer)
+  .client(fetchDevicesInBrowser)
 ```
 
-Consume `fetchDevices` directly in your route loader:
+The universal `fetcher` already is that boundary, so a feature writes the fetch
+once:
 
-```tsx title="apps/web/src/routes/_main/devices.tsx"
-export const Route = createFileRoute("/_main/devices")({
-  loader: async () => await fetchDevices(),
-  component: DevicesPage,
+```ts title="plugins/devices/src/lib/fetch-devices.ts"
+import type { usersModule } from '@vitnode/core/api/modules/users/users.module'
+
+import { clientModule } from '@vitnode/core/lib/fetcher-client'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const users = clientModule<typeof usersModule>('@vitnode/core')
+
+// [!code ++:8]
+export const fetchDevices = async () => {
+  const response = await fetcher(users, {
+    method: 'get',
+    module: 'users',
+    path: '/devices',
+  })
+
+  return await response.json()
+}
+```
+
+```tsx title="plugins/devices/src/pages/devices-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+
+export const route = definePluginRoute({
+  load: async () => await fetchDevices(), // [!code ++]
 })
 ```
 
+The initial render forwards the visitor's cookie, user-agent and IP through the
+request-aware transport; later navigations are a direct same-origin `fetch` to
+Hono. See [Fetcher](/docs/dev/fetcher) for the full contract.
+
+`createIsomorphicFn` is still the right tool when the _two implementations
+genuinely differ_ - reading a cookie from the request on the server and from
+`document.cookie` in the browser, for instance. It is no longer how you fetch.
+
 ---
 
-## When to use `createServerFn` (Host App Only)
+## When to use `createServerFn` (host app only)
 
-Use `createServerFn` only when your host application needs to modify response cookies directly:
+Use `createServerFn` when your host application has to touch the response
+itself - which in practice means cookies:
 
-```ts title="apps/web/src/features/auth/server-fn.ts"
-import { createServerFn } from "@tanstack/react-start"
-import { setCookie } from "vinxi/http"
+```ts title="apps/web/src/lib/auth.ts"
+import { createServerFn } from '@tanstack/react-start'
+import { usersModule } from '@vitnode/core/api/modules/users/users.module'
+import { fetcher } from '@vitnode/core/tanstack/fetcher/server'
 
-export const setSessionTheme = createServerFn({ method: "POST" })
-  .validator((theme: string) => theme)
+export const signIn = createServerFn({ method: 'POST' })
+  .validator((body: { email: string; password: string }) => body)
   .handler(async ({ data }) => {
-    setCookie("theme", data, { path: "/", httpOnly: true })
-    return { success: true }
+    const response = await fetcher(usersModule, {
+      // [!code ++]
+      allowSaveCookies: true,
+      args: { body: data },
+      method: 'post',
+      module: 'users',
+      path: '/sign_in',
+    })
+
+    return { ok: response.ok }
   })
 ```
+
+Two things make this the exception rather than the rule:
+
+- it needs `allowSaveCookies`, which only the **server** fetcher offers;
+- it costs an extra hop - browser → server function → API. Reads should not pay
+  it, which is exactly why they use the universal `fetcher` instead.
 
 ## Learn More
 
 <Cards>
   <Card
+    title="Fetcher"
+    description="The three fetchers and when each one applies"
+    href="/docs/dev/fetcher"
+  />
+  <Card
     title="Data Loading"
     description="Query warming with TanStack Query and route loaders"
     href="/docs/dev/data-loading"
-  />
-  <Card
-    title="Fetcher"
-    description="Type-safe API client and header forwarding"
-    href="/docs/dev/fetcher"
   />
 </Cards>

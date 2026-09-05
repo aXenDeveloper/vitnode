@@ -1,0 +1,98 @@
+---
+title: Elasticsearch
+description: Replace VitNode's default Postgres search provider with Elasticsearch or OpenSearch and rebuild your index safely.
+icon: SearchCheck
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Use Elasticsearch when your site-wide search needs fuzzy matching, custom
+ranking, or a search cluster separate from Postgres. VitNode keeps Postgres as
+the canonical index; this adapter mirrors it, so switching is pleasantly boring.
+
+<Steps>
+<Step>
+
+### Install the adapter
+
+Run this in the app or API workspace that owns `vitnode.api.config.ts`.
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Install Elasticsearch support">
+
+```bash tab="bun"
+bun add @vitnode/elasticsearch@canary
+```
+
+```bash tab="pnpm"
+pnpm add @vitnode/elasticsearch@canary
+```
+
+```bash tab="npm"
+npm install @vitnode/elasticsearch@canary
+```
+
+</Tabs>
+
+</Step>
+<Step>
+
+### Add the cluster URL and adapter
+
+Set `ELASTICSEARCH_NODE` to your Elasticsearch or OpenSearch endpoint, then
+register the adapter in the API config.
+
+```bash title=".env"
+ELASTICSEARCH_NODE=http://localhost:9200
+```
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { ElasticsearchSearchAdapter } from '@vitnode/elasticsearch' // [!code ++]
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:5]
+  search: {
+    adapter: ElasticsearchSearchAdapter({
+      node: process.env.ELASTICSEARCH_NODE,
+      index: 'vitnode',
+    }),
+  },
+  plugins: [blogApiPlugin()],
+})
+```
+
+For Elastic Cloud, use `cloudId` and `apiKey` instead of `node`. The adapter
+also accepts `username` and `password` for a self-hosted secured cluster.
+
+</Step>
+<Step>
+
+### Rebuild the mirror
+
+Restart the API, then open **Core → Advanced → Search** in the AdminCP and run
+**Rebuild index**. New changes are mirrored automatically; the rebuild fills
+the historical records already in Postgres.
+
+{/* Image prompt: VitNode AdminCP search page showing Elasticsearch as connected, one “Rebuild index” button, a progress state, and collection counts. Dark theme, 1440x900. */}
+
+</Step>
+</Steps>
+
+<Callout type="warn" title="Keep Postgres">
+  Do not delete `core_search_index`. It remains VitNode's source of truth and
+  lets you switch providers without losing your map back home.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card
+    title="Search & Discovery"
+    description="Index plugin records and register rebuild indexers."
+    href="/docs/dev/search"
+  />
+  <Card
+    title="Content Engine"
+    description="Make a content type searchable without hand-writing an indexer."
+    href="/docs/dev/content-engine/content-delivery-and-seo"
+  />
+</Cards>

@@ -6,33 +6,6 @@ import {
   CONTENT_ADMIN_EDIT_SEGMENT,
 } from "@/content/index";
 
-/**
- * What trail a Content Engine URL has above it, decided without rendering
- * anything.
- *
- * The whole of the breadcrumb's logic: which segments `AdminBreadcrumb`
- * resolves, which href in the middle of them needs a label the navigation does
- * not carry, and whether there is a trail at all. `./breadcrumb.tsx` is then a
- * renderer over this - it translates the last label and mounts the namespaces,
- * and makes no decisions of its own.
- *
- * ## Why the decision is separate from the component
- *
- * The property worth protecting is a *guard*, and it is the one that broke the
- * AdminCP's 404 outright. The shell renders a route's `staticData.breadcrumb`
- * for every **matched** route, and a match whose loader answered `notFound()` is
- * still a match - so the host spreads a `Route.useLoaderData()` that is
- * `undefined`, and the component is handed no props at all. Reading a label off
- * nothing threw during the server render and replaced the 404 page with a blank
- * one, for exactly the URLs a 404 is for: an unresolvable content path, a record
- * that was deleted, a content type this administrator may not open.
- *
- * As a component that could only be checked by rendering it. As a function it is
- * five inputs and an answer, which is what {@link ContentBreadcrumbModel}'s
- * `kind: "none"` exists to make explicit rather than implicit in a `return
- * null`.
- */
-
 /** `/admin/content/blog/articles` - the list URL the trail passes through. */
 export const contentBreadcrumbListHref = (adminPath: string): string =>
   `/admin/content/${adminPath}`;

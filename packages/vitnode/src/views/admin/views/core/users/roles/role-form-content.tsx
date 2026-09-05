@@ -15,23 +15,6 @@ import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { useDialog } from "@/components/ui/dialog";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 
-/**
- * Creating and editing a role, as one form both frameworks mount.
- *
- * The Next.js version of this component reached for two things a package cannot
- * assume: `next-intl`'s `useTranslations`, and a `"use server"` module. The
- * strings now come from `use-intl` - the context `NextIntlClientProvider` and
- * `RouteMessages` both provide - and the write arrives as a prop, so a Next.js
- * page can keep handing it a Server Action while a TanStack route hands it a
- * browser call.
- *
- * `onSaved` is separate from `onSave` on purpose. The write and *what the
- * application does about it* are different questions with different answers per
- * framework: Next.js revalidates a path inside its action and then re-renders
- * the pathname, while TanStack invalidates a query key. Neither belongs in a
- * form.
- */
-
 /** The shape the roles API takes, as the form produces it. */
 export interface AdminRoleFormValues {
   allowUploadFiles: boolean;

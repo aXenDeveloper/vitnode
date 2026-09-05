@@ -64,13 +64,6 @@ const payloadFor = (
 };
 
 export interface ContentTranslationEffectsOptions {
-  /**
-   * The model, for a content type with `search`.
-   *
-   * A translation mutation moves exactly one language's document, and finding it
-   * takes the base row and the translation table - neither of which this function
-   * is otherwise given. Optional so every Stage 5B caller compiles unchanged.
-   */
   model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
   pluginId: string;
@@ -82,45 +75,12 @@ export interface ContentTranslationEffectsResult {
    * content type without `delivery`.
    */
   delivery?: ContentDeliveryEffectsResult;
-  /**
-   * What the event transport reported, or `null` for a no-op outcome.
-   *
-   * Present rather than discarded because `EventsModel.emit` does not throw:
-   * `failures` is the only place a dead listener or a broker outage is visible.
-   * A failure here never rolls the committed mutation back - it cannot, the
-   * transaction is closed - which is exactly why the caller gets to see it.
-   */
+
   event: EventEmitResult | null;
-  /**
-   * What the index write reported, or `null` when there was none to do - a
-   * content type without `search`, or a no-op outcome.
-   *
-   * A one-element array at most: a translation mutation is one language.
-   */
+
   search?: ContentSearchSyncOutcome[];
 }
 
-/**
- * Everything one translation mutation owes the rest of the system, once its
- * transaction has committed.
- *
- * The localized counterpart of `contentEditorialEffects`, and it exists for the
- * same reason: "which event does this operation emit" is a rule, and a rule copied
- * into six route handlers is a rule that will disagree with itself.
- *
- * **Call it only after the write has returned - never inside the transaction.** A
- * rollback cannot un-emit an event.
- *
- * A no-op outcome does nothing at all. That is what keeps a double-clicked publish
- * button and an empty edit from each producing a second event.
- *
- * Search synchronisation is scoped to the locale that moved: one translation is
- * one document, and rewriting the others would be work for a change none of them
- * contains. A translation that must not be indexed has its document deleted for
- * that language only. Cache invalidation is absent for the reason it is absent
- * from the base effects too - it needs the Next runtime, which the API process does
- * not have, so the Server Action owns it.
- */
 export const contentTranslationEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,

@@ -44,22 +44,6 @@ const findPackageJsonFiles = async (
   return results;
 };
 
-/**
- * Adds the newly created plugin to all workspace packages that depend on @vitnode/core.
- * This function:
- * 1. Finds all package.json files in the workspace (excluding node_modules and dist)
- * 2. Identifies packages that have @vitnode/core as a dependency
- * 3. Adds the new plugin as a dependency with the appropriate workspace reference
- * 4. Skips other packages in the same parent directory as the plugin (e.g., other plugins)
- * 5. Works with any folder structure (apps/, applications/, sandbox/, etc.)
- * 6. Respects the package manager's workspace protocol
- *
- * @param packageManager - The package manager being used (pnpm, npm, yarn, bun)
- * @param pluginName - The name of the plugin to add (e.g., "@my-org/my-plugin")
- * @param pluginPath - The absolute path to the plugin directory
- * @param rootPath - The absolute path to the monorepo root (where turbo.json is located)
- */
-
 export const addPluginToWorkspace = async ({
   packageManager,
   pluginName,

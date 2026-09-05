@@ -10,13 +10,6 @@ import { core_content_slug_history } from "../../database/content";
 import { contentDeliveryPath } from "../delivery";
 import { ContentDeliverySlugReserved } from "../errors";
 
-/**
- * One retired or current public address of one record.
- *
- * The AdminCP shows these, the resolver reads them and an audit reads them long
- * after the record is gone. `retiredAt === null` means "this is the address the
- * record answers to now"; anything else is a URL that redirects to it.
- */
 export interface ContentSlugHistoryEntry {
   createdAt: Date;
   itemId: number;
@@ -28,14 +21,6 @@ export interface ContentSlugHistoryEntry {
   slug: string;
 }
 
-/**
- * One address of one record, as every write names it.
- *
- * `languageId` is the storage key and `locale` is what an error message says out
- * loud - both, because the two are needed at different layers and deriving one
- * from the other here would mean a language lookup inside a transaction that
- * already knows the answer.
- */
 export interface ContentSlugHistoryTarget {
   itemId: number;
   /** `null` for a shared slug - see `core_content_slug_history`. */
@@ -45,56 +30,12 @@ export interface ContentSlugHistoryTarget {
   slug: string;
 }
 
-/**
- * The persistence half of slug history: reservations in, lookups out.
- *
- * Every write takes the transaction it should run in, and none of them opens one.
- * That is the whole design constraint: the slug mutation, the reservation and the
- * revision have to commit or roll back together, so this module can never be the
- * thing that decides when that happens. `editorial-service` and
- * `translation-editorial-service` own the transaction and call in.
- *
- * There is deliberately no `delete`. A retired URL is somebody's bookmark, and
- * removing the row would let unrelated content inherit it - so the only way
- * history shrinks is a deliberate, permissioned AdminCP action, which Stage 8 does
- * not ship.
- */
 export interface ContentSlugHistoryModel {
-  /**
-   * Refuses a slug that another record's history already owns.
-   *
-   * Called **before** the write it guards, so an editor is told at save time
-   * rather than at publish time - and so the failing transaction has done as
-   * little as possible. A slug this same record already owns is fine: moving from
-   * `b` back to `a` re-activates its own retired reservation rather than colliding
-   * with it.
-   */
   assertAvailable: (
     tx: ContentDatabase,
     args: ContentSlugHistoryTarget,
   ) => Promise<void>;
-  /**
-   * Records an address the caller can **prove** was live, if it is not on file.
-   *
-   * The lazy half of slug history, and the reason Stage 8 needs no backfill
-   * migration. A record published before this table existed has no row at all, so
-   * the first mutation that moves it off that address would find nothing to
-   * retire - and `/articles/hello` would be lost the moment somebody renamed it.
-   * A global backfill is not the answer: it would have to guess which historical
-   * values were ever public, and a draft's discarded slug must never become a
-   * redirect. The mutation itself does not have to guess. It is holding the row on
-   * both sides of its own write, so `wasPublic` is evidence rather than inference,
-   * and this is where that evidence is spent.
-   *
-   * Distinct from {@link reserve} in one deliberate way: a row that already exists
-   * is left **exactly** as it is, retired or not. This establishes a missing fact;
-   * it never brings a retired address back into service, which is `reserve`'s job
-   * and only correct when the record really is live there.
-   *
-   * Idempotent, transactional, and throws {@link ContentDeliverySlugReserved} when
-   * another record owns the address. Writes nothing but the row: no event, no
-   * cache tag, no search document.
-   */
+
   ensureCurrent: (
     tx: ContentDatabase,
     args: ContentSlugHistoryTarget & {
@@ -102,38 +43,17 @@ export interface ContentSlugHistoryModel {
       path: string;
     },
   ) => Promise<{ created: boolean }>;
-  /**
-   * Every address one record has ever had, newest first.
-   *
-   * Scoped by language when one is given, which is what makes the AdminCP's Polish
-   * tab show Polish URLs and nothing else.
-   */
+
   list: (
     args: { itemId: number; languageId?: null | number; limit?: number },
     database?: ContentDatabase,
   ) => Promise<ContentSlugHistoryEntry[]>;
-  /**
-   * The record a retired (or current) address belongs to, or `null`.
-   *
-   * The resolver's one lookup, and the reason the two partial unique indexes lead
-   * with `(contentTypeId, slug)`: this runs on a public request path for a URL that
-   * is very often a typo, so it has to be an index hit rather than a scan.
-   */
+
   owner: (
     args: { languageId: null | number; slug: string },
     database?: ContentDatabase,
   ) => Promise<ContentSlugHistoryEntry | null>;
-  /**
-   * Records one slug as the record's **current** public address.
-   *
-   * Idempotent: a republish of an unchanged slug re-activates the row it already
-   * has rather than inserting a second one, which is what keeps a retried queue
-   * task and a double-clicked publish button harmless.
-   *
-   * Throws {@link ContentDeliverySlugReserved} when another record owns the
-   * address, whichever order two concurrent writers arrive in - see the `claim`
-   * helper for why that is an insert rather than a check.
-   */
+
   reserve: (
     tx: ContentDatabase,
     args: ContentSlugHistoryTarget & {
@@ -141,14 +61,7 @@ export interface ContentSlugHistoryModel {
       path: string;
     },
   ) => Promise<{ created: boolean }>;
-  /**
-   * Stamps one of a record's own addresses as no longer current.
-   *
-   * `{ retired: true }` only when a row was actually there and actually active,
-   * which is precisely the "this URL was publicly addressable" test: a draft whose
-   * slug was corrected three times before it was ever published has no row to
-   * retire, so it creates no redirect and emits no event.
-   */
+
   retire: (
     tx: ContentDatabase,
     args: Omit<ContentSlugHistoryTarget, "locale">,
@@ -157,14 +70,6 @@ export interface ContentSlugHistoryModel {
 
 const HISTORY_LIST_LIMIT = 50;
 
-/**
- * The language predicate, written the one way that is correct for both cases.
- *
- * `IS NULL` for a shared slug and `=` for a localized one: `languageId = NULL` is
- * `NULL` in SQL, never `true`, so an equality comparison would silently match no
- * shared row at all - and a shared reservation that matches nothing is a
- * reservation that reserves nothing.
- */
 const languageCondition = (
   languageId: null | number,
   column: typeof core_content_slug_history.languageId,
@@ -229,29 +134,6 @@ export const createContentSlugHistoryModel = ({
     return row ? toEntry(row) : null;
   };
 
-  /**
-   * Takes one address for one record, or says who already has it.
-   *
-   * **Insert first, ask afterwards**, and that ordering is the whole point.
-   * `SELECT ... FOR UPDATE` locks rows that exist; there is no such thing as
-   * locking a row that does not. So two transactions reserving one *previously
-   * unseen* address both read nothing, both decide the address is free, and both
-   * insert - one of them straight into a `23505` from the partial unique index.
-   * The database stays consistent, but the contract does not: the loser gets a raw
-   * driver failure that the shared mapper reads as a generic unique clash, where
-   * Stage 8 promises `CONTENT_DELIVERY_SLUG_RESERVED` naming the slug and the
-   * locale. Which of the two a caller saw depended on timing.
-   *
-   * `ON CONFLICT DO NOTHING` moves the decision into the one place that can make
-   * it. The second insert takes a speculative-insertion lock, waits for the first
-   * transaction to finish, and then either does nothing (it committed) or inserts
-   * after all (it rolled back). `RETURNING` reports which happened, so the loser is
-   * identified rather than caught, and the address is never claimed by two writers.
-   *
-   * The follow-up read still takes `FOR UPDATE`: the row exists by then, and
-   * locking it is what serialises this claim against a concurrent `retire` of the
-   * same row.
-   */
   const claim = async (
     tx: ContentDatabase,
     {
@@ -374,13 +256,6 @@ export const createContentSlugHistoryModel = ({
   };
 };
 
-/**
- * The current address of several records at once, keyed by identifier.
- *
- * Batched rather than one query per record, because the AdminCP list and a sitemap
- * page both want a whole page's worth - and the alternative is the classic query
- * per row that only shows up as a problem in production.
- */
 export const contentSlugHistoryCurrentPaths = async (
   database: ContentDatabase,
   {
@@ -413,15 +288,6 @@ export const contentSlugHistoryCurrentPaths = async (
   return new Map(rows.map(row => [row.itemId, row.path]));
 };
 
-/**
- * The path one slug produces, or the empty string when it produces none.
- *
- * A thin wrapper over {@link contentDeliveryPath} for the write paths, which have
- * to store *something* in a `NOT NULL` column. An unbuildable path means the slug
- * was never addressable, so the caller does not reserve it at all - and this
- * returning `""` rather than throwing keeps that decision in the caller where the
- * surrounding transaction is.
- */
 export const contentSlugHistoryPath = ({
   definition,
   locale,

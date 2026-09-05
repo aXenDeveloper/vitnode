@@ -31,46 +31,13 @@ import {
   shouldSaveApiCookies,
 } from "@/lib/fetcher/set-cookie";
 
-/**
- * `.env` into `process.env`, for anything that still reads it: the browser
- * bundle's inlined `NEXT_PUBLIC_*` values, the database and Redis URLs a mounted
- * API needs, and `resolveApiOrigin`'s fallback below.
- *
- * A host's Vite config already does this for `vite dev` and `vite build`. This
- * covers `node .output/server/index.mjs`, where Vite is not involved, the same
- * way `apps/api` does it - and it has to happen here rather than in the host,
- * because this is the first server module every request-scoped read goes
- * through. dotenv does not overwrite what is already set, so a platform that
- * injects real environment variables still wins.
- */
 config({ quiet: true });
 
-/**
- * The origin to call `/api/*` on.
- *
- * A TanStack Start app *serves* the API, so the answer is not configuration - it
- * is whichever origin the request being rendered arrived on. Taking it from the
- * request is what makes a preview deployment work: its hostname is generated per
- * branch, so no `NEXT_PUBLIC_API_URL` could name it, and a hard-coded default
- * names a completely different app in development or nothing at all in
- * production.
- *
- * `getRequestUrl()` reads the `Host` header the request arrived with and honours
- * `x-forwarded-proto`, so a TLS-terminating proxy in front of a plain-HTTP
- * server still yields an `https:` origin. `x-forwarded-host` is deliberately
- * *not* honoured: it is a header a visitor can set, and these calls carry that
- * visitor's cookies, so trusting it would let a request point this server's API
- * calls at a host of the caller's choosing.
- *
- * Outside a request - boot, a script, a cron job - there is nothing to read and
- * `getRequestUrl()` throws, so `NEXT_PUBLIC_API_URL` remains the fallback.
- *
- * The browser reaches the same conclusion on its own: with nothing configured,
- * `CONFIG.api` reads the origin the document was served from, so a client-side
- * call stays on the same app. `NEXT_PUBLIC_API_URL` is therefore optional rather
- * than load-bearing - set it only to point at a separate API server.
- */
 export const resolveApiOrigin = (): string => {
+  // Through `CONFIG` rather than the variable directly, so the empty-value
+  // throw stays in one place - see the `??` note there.
+  if (process.env.NEXT_PUBLIC_API_URL !== undefined) return CONFIG.api.origin;
+
   try {
     return getRequestUrl().origin;
   } catch {
@@ -78,23 +45,6 @@ export const resolveApiOrigin = (): string => {
   }
 };
 
-/**
- * The request state a Start app forwards to the API, read off the request being
- * rendered.
- *
- * The API derives who is asking from `Cookie`, the device record from
- * `user-agent`, and the rate-limit key and audit IP from `x-forwarded-for`. Send
- * none of it and every SSR render is answered as an anonymous visitor sharing a
- * single rate-limit bucket - so this is the difference between signed-in HTML and
- * signed-out HTML, not a nicety.
- *
- * The allowlist itself lives in `@/lib/fetcher/request-context`, framework-free,
- * because only the reading is this runtime's. Nothing else
- * is copied across: `host` and `content-length` describe the page request rather
- * than the API call, and `origin`, `referer` and `authorization` are values the
- * API trusts, so forwarding whatever a visitor put in them would hand them state
- * they should not control.
- */
 export const getForwardedApiHeaders = ({
   captchaToken,
 }: { captchaToken?: string } = {}): Record<string, string> => {
@@ -112,18 +62,6 @@ export const getForwardedApiHeaders = ({
   });
 };
 
-/**
- * Copies the cookies the API just minted onto this response - what
- * `allowSaveCookies` below is built on.
- *
- * Sign-in, sign-up, sign-out and the SSO callback all answer with a
- * `Set-Cookie`, and so does any first call from a browser with no device cookie.
- * Those land on the API's response to *this server*, which the browser never
- * sees, so without this the visitor is signed in for exactly one render.
- *
- * Call it only for a response you meant to trust: it writes every cookie the
- * response carries.
- */
 export const saveApiCookies = (response: Response): void => {
   for (const { name, options, value } of parseSetCookies(
     response.headers.getSetCookie(),
@@ -132,18 +70,6 @@ export const saveApiCookies = (response: Response): void => {
   }
 };
 
-/**
- * The same request context, for a module the type system cannot name.
- *
- * A Content Engine module is generated at runtime from a definition, so there is
- * no `typeof` for {@link fetcher} to infer route literals from - see
- * `views/admin/views/content/content-request.ts`. Those calls still need the
- * visitor's cookies and this request's origin, and this is that half of
- * `fetcher` without the typing, so the transport is decided in one place rather
- * than reassembled per caller.
- *
- * Prefer {@link fetcher}. Reach for this only when the module is generated.
- */
 export const rawFetcher = async ({
   additionalHeaders,
   origin,
@@ -155,40 +81,6 @@ export const rawFetcher = async ({
     origin: origin ?? resolveApiOrigin(),
   });
 
-/**
- * The server-side fetcher: one call, the API module it talks to, and the route
- * on it.
- *
- *     const response = await fetcher(usersModule, {
- *       method: "post",
- *       module: "users",
- *       path: "/sign_in",
- *       allowSaveCookies: true,
- *       args: { body: { email, password } },
- *     });
- *
- * The same signature the Next.js `fetcher()` had, so a route literal, its
- * method, its `args` and the response schema all infer from the module and
- * nothing about a call is spelled twice. `args` is required exactly when the
- * route declares a body, params or a query - see {@link FetcherParams}.
- *
- * What it adds to `coreFetcher` is this request:
- *
- * - the visitor's `Cookie`, `user-agent` and `x-forwarded-for`, so the API knows
- *   who is asking and buckets the rate limiter correctly,
- * - the origin the page request arrived on, so a preview deployment calls
- *   itself,
- * - `captchaToken` as the header `captchaMiddleware` reads, and
- * - `allowSaveCookies`, which copies a `2xx`'s `Set-Cookie` onto the response
- *   this server is building. Without it a freshly minted session lives for
- *   exactly one render.
- *
- * Server-side only, and only inside a request: the headers come from the request
- * currently being handled, so a module-scope call has nothing to read. In
- * TanStack Start that means a `createServerFn` handler, a server route, or the
- * `.server()` branch of a `createIsomorphicFn` - not a route `loader`, which
- * also runs in the browser on client-side navigation.
- */
 export async function fetcher<
   M extends string,
   Routes extends Route[],
@@ -238,8 +130,9 @@ export async function fetcher<
       ...getForwardedApiHeaders({ captchaToken }),
       ...additionalHeaders,
     },
-    // Same-origin by construction, and ahead of `NEXT_PUBLIC_API_URL` - which
-    // an explicit `origin` on the call can still override.
+    // `NEXT_PUBLIC_API_URL` when a separate API server is configured, this
+    // request's own origin otherwise - and an explicit `origin` on the call
+    // overrides both.
     origin: origin ?? resolveApiOrigin(),
   } as FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
     FetcherRequestOptions);

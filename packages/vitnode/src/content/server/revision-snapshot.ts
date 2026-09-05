@@ -27,14 +27,6 @@ const toIsoOrNull = (value: unknown): null | string => {
   return toIso(value);
 };
 
-/**
- * One column value, flattened to something `JSON.parse` gives back unchanged.
- *
- * A `Date` becomes an ISO string; a relation or user is already the foreign key
- * integer; everything else is a primitive. Anything unrecognised becomes `null`
- * rather than being stringified, so a future column type cannot smuggle
- * `"[object Object]"` into a snapshot and have a restore write it back.
- */
 const toSnapshotValue = (value: unknown): ContentSnapshotScalar => {
   if (value === null || value === undefined) return null;
   if (value instanceof Date) return value.toISOString();
@@ -47,20 +39,6 @@ const toSnapshotValue = (value: unknown): ContentSnapshotScalar => {
   return null;
 };
 
-/**
- * One field's value, in the **logical** shape.
- *
- * A group is snapshotted as the nested object it is, read out of the flattened
- * columns the row actually carries - so a snapshot never mentions `seoTitle`,
- * and a later rename of the column-naming rule cannot invalidate the history. A
- * nullable group whose every leaf is empty is `null`, exactly as a read of it
- * would be.
- *
- * A collection is snapshotted as **identity**: a to-many relation as its ids in
- * stored order, a repeatable as its children each keyed by its own `id`. That is
- * what makes a restore able to put the same rows back rather than copies of
- * them, and what keeps one record's history from carrying another record's data.
- */
 const toFieldSnapshot = (
   name: string,
   fieldValue: ContentFieldMap[string],
@@ -110,23 +88,6 @@ const toFieldSnapshot = (
   return toSnapshotValue(values[name]);
 };
 
-/**
- * Builds the snapshot stored on a revision.
- *
- * Deterministic: field names are emitted in the content type's own declaration
- * order, so two equal states serialise byte for byte and a diff test is a table
- * rather than a set comparison.
- *
- * **Shared fields only.** A localized field is not a column on the base row, so
- * recording it here would write `null` for every language at once - and restoring
- * that snapshot would then try to blank a column the base table does not have.
- * Each language's values are snapshotted by
- * {@link contentTranslationRevisionSnapshot} instead, against its own history.
- *
- * The publication columns are recorded but are *not* restorable - they are
- * absent from `schemas.update`, so a restore structurally cannot move them.
- * They are here so the history can show what the lifecycle was at the time.
- */
 export const contentRevisionSnapshot = (
   definition: AnyContentTypeDefinition,
   row: object,
@@ -168,16 +129,6 @@ export const contentRevisionSnapshot = (
   return snapshot;
 };
 
-/**
- * A snapshot, shaped like the row it was taken from.
- *
- * Flat rather than nested, because the public projector reads a row by column
- * name and must not learn that a preview exists - one projection, one
- * allowlist, no second code path where a private field could slip through.
- *
- * Timestamps stay ISO strings. Hono serialises a `Date` to exactly that, so the
- * response body is byte-identical to a live read.
- */
 export const contentSnapshotRow = (
   snapshot: ContentRevisionSnapshot,
 ): Record<string, unknown> => ({
@@ -188,18 +139,6 @@ export const contentSnapshotRow = (
   updatedAt: snapshot.updatedAt,
 });
 
-/**
- * The part of a snapshot a restore may apply: currently declared fields only.
- *
- * A field the content type has since dropped is ignored rather than rejected -
- * the snapshot is a record of the past, and the past is allowed to mention
- * things that no longer exist. A field added since is simply absent, so the
- * record keeps whatever it holds now.
- *
- * The generated columns are never projected. `id`, `version` and the timestamps
- * belong to the row's identity, and `status`/`publishedAt` are lifecycle state
- * that only publish and unpublish may move.
- */
 export const projectRevisionSnapshot = (
   definition: AnyContentTypeDefinition,
   snapshot: ContentRevisionSnapshot,
@@ -214,15 +153,6 @@ export const projectRevisionSnapshot = (
   );
 };
 
-/**
- * The restorable half of a snapshot, for one set of currently declared fields.
- *
- * Shared by the base and translation projections rather than written twice: the
- * schema-evolution rules are identical on both sides - a field or a **leaf** the
- * content type has since dropped is ignored, one added since is absent - and two
- * copies of that rule is the pair where a localized group ends up restoring
- * something a shared one would not.
- */
 const projectSnapshotFields = (
   restorable: ContentFieldMap,
   stored: Record<string, ContentSnapshotValue>,
@@ -274,18 +204,6 @@ const pickLeaves = (
     leaves.filter(leaf => leaf in values).map(leaf => [leaf, values[leaf]]),
   );
 
-/**
- * Builds the snapshot stored on a *translation* revision.
- *
- * The localized half of {@link contentRevisionSnapshot}, and the split is a
- * containment boundary as much as a modelling one: a translation snapshot that
- * carried shared values would rewrite the whole record on a restore that asked
- * for one language.
- *
- * `locale` is recorded alongside `languageId` because the revision row's language
- * reference has no foreign key - a language can be deleted, and the history has
- * to stay readable when it is.
- */
 export const contentTranslationRevisionSnapshot = (
   definition: AnyContentTypeDefinition,
   row: object,
@@ -338,16 +256,6 @@ export const contentTranslationSnapshotRow = (
   version: snapshot.version,
 });
 
-/**
- * The part of a translation snapshot a restore may apply: currently declared
- * *localized* fields only.
- *
- * The same schema-evolution rules the shared projection follows - a field the
- * content type has since dropped is ignored, one added since is absent - and the
- * same exclusion of generated columns. `status` and `publishedAt` are lifecycle
- * state that only publish and unpublish may move, so restoring field values never
- * takes a translation off the internet or puts it on.
- */
 export const projectTranslationRevisionSnapshot = (
   definition: AnyContentTypeDefinition,
   snapshot: ContentTranslationRevisionSnapshot,

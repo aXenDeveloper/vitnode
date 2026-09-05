@@ -78,14 +78,6 @@ describe("devPlugin", () => {
     }
   });
 
-  /**
-   * The route copier is gone, and `vitnode dev` must not grow it back.
-   *
-   * It used to start a fourth process - a chokidar watcher copying the plugin's
-   * `src/routes/{main,admin,blank,breadcrumb}/` into every Next.js app's
-   * `src/app/`. Asserting the exact list rather than a count, because what would
-   * regress here is a *named* watcher reappearing, and the name is the evidence.
-   */
   it("spawns no fourth process for copying route files anywhere", () => {
     devPlugin({ initMessage: "dev" });
 

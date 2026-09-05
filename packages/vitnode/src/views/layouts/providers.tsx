@@ -13,14 +13,6 @@ import { CONFIG } from "@/lib/config";
 
 import { RateLimitListener } from "./rate-limit-listener";
 
-/**
- * The slice of the config the provider tree needs.
- *
- * Deliberately not the whole `VitNodeConfig`: `plugins` and `i18n.messages` hold
- * functions, which neither React nor a route loader can carry to the browser -
- * and on a framework without Server Components, importing the module they live
- * in is what drags an admin form into the client bundle.
- */
 export interface VitNodeProvidersConfig extends Pick<
   VitNodeConfig,
   "debug" | "theme"
@@ -28,19 +20,6 @@ export interface VitNodeProvidersConfig extends Pick<
   locales: LocaleConfig[];
 }
 
-/**
- * Every provider a VitNode page needs and no framework does.
- *
- * Theme, toasts, the rate-limit listener, tooltips and the language list: none
- * of them know which router rendered them, so both the Next.js app and the
- * TanStack Start app mount this same tree. What each framework *does* own stays
- * outside it - the progress bar and Query integration in Next.js
- * (`views/layouts/provider.tsx`), the router-owned QueryClient in TanStack Start.
- *
- * `ThemeProvider` sits outermost because `Toaster` reads the resolved theme, and
- * the no-flash script that paints the theme before React exists is rendered by
- * the shell instead (see `components/theme-script.tsx`).
- */
 export const VitNodeProviders = ({
   children,
   toaster,

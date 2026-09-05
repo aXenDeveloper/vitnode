@@ -4,18 +4,6 @@ import { cn } from '@vitnode/core/lib/utils'
 import { animate, motion, useMotionValue } from 'motion/react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
-/**
- * An element's width, kept current as it changes.
- *
- * The Next.js copy of this component used `react-use`'s `useMeasure`, and that
- * package is not a dependency of this application and is not worth becoming one
- * for a single `ResizeObserver`: it is a grab-bag of ~100 hooks, and the one
- * being borrowed is the eight lines below.
- *
- * A ref plus state rather than a callback ref, because the observer has to be
- * torn down as well as set up, and the width has to survive a re-render that
- * does not remount the node.
- */
 const useMeasuredWidth = () => {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -39,26 +27,8 @@ const useMeasuredWidth = () => {
   return [ref, width] as const
 }
 
-/**
- * A subscription that never fires, so the value below is read once per render.
- *
- * At module scope because `useSyncExternalStore` compares the subscribe
- * function by identity and re-subscribes when it changes - a new closure per
- * render would tear the store down and set it up again on every one.
- */
 const neverChanges = () => () => {}
 
-/**
- * `false` while the server renders and through hydration, `true` afterwards.
- *
- * `useSyncExternalStore`'s third argument is the server snapshot, which React
- * also uses for the client's *first* render - so the two agree and there is no
- * hydration mismatch, and the flag flips in the commit that follows.
- *
- * The point of asking is below: the marquee's second copy of its children is
- * scenery for an animation that cannot have started yet, and rendering it on
- * the server doubled this page's HTML.
- */
 const useIsHydrated = () =>
   useSyncExternalStore(
     neverChanges,
@@ -74,20 +44,6 @@ export interface InfiniteSliderProps {
   speedOnHover?: number
 }
 
-/**
- * A row that scrolls forever, and slows down when a pointer is over it.
- *
- * Ported from the Next.js homepage rather than rewritten: same motion value,
- * same duplicated children, same linear loop, same two-phase hover handling
- * where a speed change animates out the remaining distance before the loop
- * restarts at the new rate. What changed is the measurement (see
- * {@link useMeasuredWidth}) and the horizontal-only signature - the vertical and
- * reversed directions were options nothing on this site ever passed.
- *
- * `w-max` on the moving track and `overflow-hidden` on the frame are what make
- * the loop seamless: the children are rendered twice, and the track is
- * translated by exactly half its own width before snapping back.
- */
 export const InfiniteSlider = ({
   children,
   className,

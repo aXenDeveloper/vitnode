@@ -4,29 +4,6 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-/**
- * What VitNode's HTTP responses tell a browser or a CDN about caching.
- *
- * The API is a Hono app that answers with a visitor's session, an
- * administrator's screens, a plugin's domain data and a public content feed from
- * the same origin, over the same paths. There is exactly one safe default for
- * that shape: **say nothing, and let no shared cache think it may keep a copy.**
- *
- * So the rule this file pins is not "cache the public reads well". It is the
- * narrower and more important one:
- *
- * - No response may carry a directive that lets a *shared* cache store it -
- *   `public`, `s-maxage`, a positive `max-age` - unless somebody adds it here
- *   deliberately, with the response's privacy in front of them.
- * - No middleware may set a cache directive at all. A blanket policy over
- *   `/api` is how an authenticated response ends up in a CDN: it is applied by
- *   path, and privacy is not a property of a path.
- *
- * A response with no `Cache-Control` is still heuristically cacheable by an
- * intermediary in principle, which is why the one route that *can* return an
- * unpublished record says `private, no-store` out loud rather than relying on
- * the absence of a header.
- */
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = resolve(here, "../..");
 
@@ -76,29 +53,47 @@ const codeOf = (path: string): string =>
 /**
  * Every `Cache-Control` value a source sets, however it spells the assignment.
  *
- * Both forms are matched: the object literal a `c.json(body, status, headers)`
- * takes, and the `c.header("Cache-Control", value)` call. A value built from a
- * variable rather than a literal would not be captured - and would fail the
- * "only these files" assertion below, which is the point.
+ * Three forms are matched: the object literal a `c.json(body, status, headers)`
+ * takes, the `c.header("Cache-Control", value)` call, and a
+ * `headers.set("cache-control", NAME)` whose value is a `const` declared in the
+ * same file. That last one is not a convenience - the document rule is a named
+ * constant on purpose, so the invariant can be documented once and referred to,
+ * and a scan that could not follow it would report the file with no value and
+ * pin nothing.
+ *
+ * A value assembled at runtime is still not captured, and would show up here as
+ * a file with no values - which fails the "exactly the declared values"
+ * assertion below rather than passing quietly.
+ *
+ * De-duplicated: what matters is which directives a file can produce, not how
+ * many statements produce each one.
  */
-const cacheControlValues = (path: string): string[] =>
-  [
-    ...codeOf(path).matchAll(
-      /["'`]?[Cc]ache-[Cc]ontrol["'`]?\s*[,:]\s*["'`]([^"'`]*)["'`]/g,
+const cacheControlValues = (path: string): string[] => {
+  const code = codeOf(path);
+  const constants = new Map(
+    [
+      ...code.matchAll(
+        /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*["'`]([^"'`]*)["'`]/g,
+      ),
+    ].map(match => [match[1], match[2]] as const),
+  );
+
+  return [
+    ...new Set(
+      [
+        ...code.matchAll(
+          /["'`]?[Cc]ache-[Cc]ontrol["'`]?\s*[,:]\s*(?:["'`]([^"'`]*)["'`]|([A-Za-z_$][\w$]*))/g,
+        ),
+      ]
+        .map(match => match[1] ?? constants.get(match[2]))
+        .filter((value): value is string => value !== undefined),
     ),
-  ].map(match => match[1]);
+  ];
+};
 
 const mentionsCacheControl = (path: string): boolean =>
   /[Cc]ache-[Cc]ontrol/.test(codeOf(path));
 
-/**
- * Whether a directive lets a cache that serves more than one person keep a copy.
- *
- * The predicate the whole file turns on, written out rather than eyeballed.
- * `private` and `no-store` are the two that settle it in the safe direction;
- * anything with a positive freshness lifetime and no `private` is storable by a
- * proxy, and `public` says so outright.
- */
 const isSharedCacheable = (value: string): boolean => {
   const directives = value
     .toLowerCase()
@@ -116,14 +111,9 @@ const isSharedCacheable = (value: string): boolean => {
   });
 };
 
-/**
- * Every response header this package sets deliberately, and why.
- *
- * One entry. Adding a second is a decision about who may store a response, so it
- * belongs in a diff somebody reads rather than in a route nobody re-reads.
- */
 const DECLARED = {
   "content/server/public-routes.ts": ["private, no-store"],
+  "tanstack/start/document-headers.ts": ["private, no-store"],
 } satisfies Record<string, string[]>;
 
 describe("the cacheability predicate says what it means", () => {
@@ -199,15 +189,6 @@ describe("no response is offered to a shared cache", () => {
 });
 
 describe("no middleware applies a cache policy by path", () => {
-  /**
-   * The directories a blanket policy would be written in.
-   *
-   * `api/middlewares` is where a Hono middleware goes, `api/lib/route.ts` is the
-   * builder every route is registered through, and `api/config.ts` is where the
-   * app is assembled. A `Cache-Control` in any of the three would apply to
-   * responses whose privacy nobody looked at - including the session read, the
-   * AdminCP screens and a plugin's private data.
-   */
   const surfaces = () =>
     runtimeSources().filter(path => {
       const entry = asEntry(path);

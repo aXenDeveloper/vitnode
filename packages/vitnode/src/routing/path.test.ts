@@ -117,15 +117,6 @@ describe("paths a plugin may not declare", () => {
   });
 });
 
-/**
- * One canonical spelling, because a router only has one.
- *
- * The routers that consume this manifest match paths case-insensitively, so
- * `/Example` and `/example` are one URL to a browser and two strings to
- * `routeMatchKey` - a collision the validation could not see. Rejected rather
- * than lowercased: a plugin's public URL must not change behind its author's
- * back, and a build error is how they find out.
- */
 describe("static segments are lowercase", () => {
   it("accepts a lowercase path", () => {
     expect(parse("/example").path).toBe("/example");
@@ -159,13 +150,6 @@ describe("static segments are lowercase", () => {
   });
 });
 
-/**
- * The two syntaxes this representation exists to be independent of.
- *
- * A plugin author coming from either framework writes the one they know, so the
- * failure has to name the syntax and hand back the VitNode spelling rather than
- * saying "invalid path".
- */
 describe("framework syntax is rejected by name", () => {
   it("rejects Next.js filesystem syntax", () => {
     expect(reason("/example/[slug]")).toContain("Next.js filesystem syntax");
@@ -178,14 +162,6 @@ describe("framework syntax is rejected by name", () => {
   });
 });
 
-/**
- * Deferred on purpose - inventoried in the Stage 5 notes rather than guessed at.
- *
- * Core ships two catch-alls today (`admin/content/[...slug]` and the
- * `@breadcrumb` slots), both of which are AdminCP or parallel-route machinery
- * that this stage does not cover. Accepting `/x/*` here would mean deciding what
- * it means before anything needs it.
- */
 describe("route shapes this prototype defers", () => {
   it("rejects a catch-all", () => {
     expect(reason("/example/*")).toContain("catch-all");
@@ -258,13 +234,6 @@ describe("the URLs a path matches", () => {
   });
 });
 
-/**
- * The same key space, entered from a path an application's router already holds.
- *
- * This is what lets plugin-vs-application collisions be the same question as
- * plugin-vs-plugin instead of a second rule that agrees until somebody edits one.
- * `$id` is read as input syntax; nothing here imports a router.
- */
 describe("the URLs a TanStack path matches", () => {
   const key = routeMatchKeyFromTanStackPath;
 
@@ -309,12 +278,6 @@ describe("the URLs a TanStack path matches", () => {
     expect(key("/")).toBe("/");
   });
 
-  /**
-   * A splat swallows every remaining segment and a parameter swallows one, so
-   * they are not the same URL space and must not share a key. No canonical
-   * VitNode path can produce this marker - catch-alls are rejected - so a plugin
-   * route can never collide with an application splat by key.
-   */
   it("keeps a splat distinct from a parameter", () => {
     expect(key("/api/$")).toBe("/api/**");
     expect(key("/api/$")).not.toBe(key("/api/$id"));

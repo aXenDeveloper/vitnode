@@ -46,15 +46,6 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 const toModelId = (model: LanguageModel): string =>
   typeof model === "string" ? model : model.modelId;
 
-/**
- * A leaf worth sending to a model: it holds real prose once simple
- * interpolation placeholders (`{name}`) and markup tags (`<b>`) are removed.
- * A value that is only a placeholder, tag, punctuation, or number (`{count}`,
- * `<br/>`, `—`, `123`) has nothing to translate and is left untouched. ICU
- * message syntax like `{count, plural, one {# item} other {# items}}` carries
- * spaces/commas inside its braces, so it does not match the simple-placeholder
- * pattern and stays in - its `item`/`items` still need translating.
- */
 export const isTranslatable = (source: string): boolean => {
   const stripped = source
     .replace(/\{[a-zA-Z0-9_]+\}/g, "")
@@ -89,15 +80,6 @@ interface BatchTask {
   sources: string[];
 }
 
-/**
- * Every leaf the target still shows in English - a string key whose value is
- * byte-identical to the English source. After `reconcileTree` the target has
- * English's exact shape, so a leaf still equal to English is one nobody has
- * translated yet (freshly seeded, or deliberately left as-is). A human
- * translation differs from English and is therefore never collected, so this
- * command never re-translates or overwrites existing work. Empty and
- * letter-free sources are skipped - there is nothing to translate.
- */
 export const collectUntranslated = (
   english: Record<string, unknown>,
   target: Record<string, unknown>,
@@ -128,12 +110,6 @@ export const collectUntranslated = (
   return leaves;
 };
 
-/**
- * Returns a copy of `tree` with each `{ path, value }` written at its leaf. The
- * tree is cloned so the caller's object is never mutated. A path whose parents
- * are not objects (a shape that drifted since the leaves were collected) is
- * skipped defensively rather than clobbering an unrelated node.
- */
 export const applyTranslations = (
   tree: Record<string, unknown>,
   entries: { path: string[]; value: string }[],
@@ -170,12 +146,6 @@ export const chunk = <T>(items: T[], size: number): T[][] => {
   return batches;
 };
 
-/**
- * The distinct source strings across `leaves`, in first-seen order. Identical
- * English recurs a lot (`Save`, `Cancel`, `Name`), so translating each once per
- * locale and fanning the result back to every key that used it cuts the work
- * with no quality loss for UI copy.
- */
 export const uniqueSources = (leaves: TranslatableLeaf[]): string[] => {
   const seen = new Set<string>();
   const sources: string[] = [];
@@ -189,12 +159,6 @@ export const uniqueSources = (leaves: TranslatableLeaf[]): string[] => {
   return sources;
 };
 
-/**
- * Runs `worker` over `items` with at most `concurrency` calls in flight,
- * returning results in input order. A shared cursor hands each idle runner the
- * next item; there is no `await` between reading and advancing it, so the
- * single-threaded event loop makes the increment race-free.
- */
 export const mapPool = async <T, R>(
   items: T[],
   concurrency: number,
@@ -236,18 +200,6 @@ const withRetry = async <T>(fn: () => Promise<T>): Promise<T> => {
   throw lastError;
 };
 
-/**
- * Translates one batch of unique source strings with a configured AI SDK model.
- *
- * To keep tokens (and cost) down, input and output are bare positional string
- * arrays - no `{ id, text }`/`{ id, value }` scaffolding per item, and the
- * schema is just "array of string". Alignment is by index: the model must
- * return the translations in the same order. `temperature: 0` makes that
- * deterministic and re-runs idempotent. If the reply length doesn't match, the
- * whole batch is rejected (so `withRetry` retries and we never write a
- * misaligned translation) rather than trusting a partial answer. Returns a
- * source -> translation map.
- */
 const translateBatch = async ({
   code,
   languageName,

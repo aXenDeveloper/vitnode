@@ -7,15 +7,6 @@ import {
   returnToFor,
 } from "./redirects";
 
-/**
- * Where the auth flow sends people.
- *
- * Two directions, both pure string transforms, so the whole policy is a table:
- * what a blocked visitor carries to the login page, and where a signed-in one is
- * sent from it. The safety half - which targets are acceptable at all - is
- * `auth-return-to.test.ts`; these are the decisions layered on top of it.
- */
-
 describe("postAuthDestination", () => {
   it.each([
     ["/discover", "/discover"],

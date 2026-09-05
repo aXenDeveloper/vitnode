@@ -12,7 +12,7 @@ To keep the AdminCP sidebar light while lazy-loading heavy rich text editors on 
 | :--- | :--- | :--- |
 | `admin/nav` | `src/admin/nav.tsx` | Lightweight sidebar navigation entries and Lucide icons |
 | `admin/content` | `src/admin/content.tsx` | Content Engine editing screens, custom fields, and form layouts |
-| `config` | `src/config.tsx` | Master plugin definition mounted in host app `vitnode.config.ts` |
+| `config` | `src/config.tsx` | Master plugin definition - one declaration the two modules above are spread from |
 
 ---
 
@@ -61,12 +61,12 @@ export const adminContent = {
 
 ## 3. `config.tsx` (Root Plugin Config)
 
-Exports the main plugin factory used by host applications:
+The plugin's own single declaration - everything it registers, in one place, so the two browser-safe modules above cannot drift from it:
 
 ```tsx title="plugins/blog/src/config.tsx"
 import { buildPlugin } from "@vitnode/core/lib/plugin"
 import messages from "./locales"
-import { routes } from "./routes/manifest"
+import { routes } from "./routes"
 import { adminContent } from "./admin/content"
 
 export const blogPlugin = () =>
@@ -77,6 +77,13 @@ export const blogPlugin = () =>
     contentTypes: adminContent.contentTypes,
   })
 ```
+
+A host registers this factory in `vitnode.config.ts`. A Next.js host then walks
+the registry in its render pass; a TanStack Start host does not - the build
+generates one literal import of `admin/nav` and `admin/content` per configured
+plugin, and the content registry is loaded behind a dynamic `import()`, so an
+editing screen arrives with the route that renders it. Same declarations, two
+doors. See [Configuration](/docs/dev/configuration).
 
 ---
 
