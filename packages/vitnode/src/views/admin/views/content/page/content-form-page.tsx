@@ -8,6 +8,7 @@ import type { ContentFormLayout } from "@/lib/plugin";
 
 import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
+import type { ContentFormSkeletonOverrides } from "../form/skeleton";
 
 import { ContentForm } from "../actions/content-form";
 import { useContentFormNavigation } from "../form/navigation";
@@ -20,6 +21,7 @@ export interface ContentFormPageProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  fieldSkeletons?: ContentFormSkeletonOverrides;
   header: ContentFormHeaderValue;
   layout?: ContentFormLayout;
   publication?: boolean;

@@ -2,7 +2,7 @@
 
 import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/auto-form";
 
-import { Loader } from "@vitnode/core/components/ui/loader";
+import { ContentFormFieldSkeleton } from "@vitnode/core/content/admin-form";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -17,7 +17,7 @@ export const BlogArticleEditorField = (props: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog.admin.article");
 
   return (
-    <React.Suspense fallback={<Loader />}>
+    <React.Suspense fallback={<ContentFormFieldSkeleton control="editor" />}>
       <AutoFormEditor label={t("content.label")} {...props} />
     </React.Suspense>
   );

@@ -83,6 +83,60 @@ admin: {
 
 ---
 
+## The Loading Placeholder
+
+The create and edit screens never flash a spinner. While the form's code chunk
+and the record are still on their way, Content Engine draws a skeleton in the
+shape of the form you are about to get: the heading, description and back link
+render for real, and every field becomes a block the size of the control that
+replaces it.
+
+The placeholder is built from the content type's definition, so it needs no
+configuration - a `text` field becomes an input-sized block, a `boolean` becomes
+a switch, a `file` becomes a media box, and a to-many picker becomes a list. If
+you gave the content type its own layout, the placeholder renders *that* layout,
+so the fields land exactly where they will a moment later.
+
+### When an override is a different shape
+
+A field override can render something much bigger than its field kind suggests -
+the blog's `content` is declared a `textarea` but renders a full rich-text
+editor. Tell the placeholder what to draw with `skeleton`:
+
+```tsx title="plugins/blog/src/admin/content.tsx"
+contentTypeAdmin({
+  ...postNav,
+  fields: {
+    content: {
+      component: BlogArticleEditorField,
+      skeleton: "editor", // [!code ++]
+    },
+  },
+})
+```
+
+<TypeTable
+  type={{
+    skeleton: {
+      description:
+        "The silhouette this field's placeholder draws. Defaults to the one its field kind implies.",
+      type: '"editor" | "input" | "list" | "media" | "switch" | "textarea"',
+    },
+  }}
+/>
+
+The same block is available on its own, for a field that lazy-loads its control:
+
+```tsx title="plugins/blog/src/views/admin/article/editor-field.tsx"
+import { ContentFormFieldSkeleton } from "@vitnode/core/content/admin-form"
+
+;<React.Suspense fallback={<ContentFormFieldSkeleton control="editor" />}>
+  <AutoFormEditor label={t("content.label")} {...props} />
+</React.Suspense>
+```
+
+---
+
 ## Custom Screen Overrides
 
 For advanced layouts, replace the default screen with a custom React component:

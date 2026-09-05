@@ -75,9 +75,9 @@ export function ContentDataTable<T extends DataTableTMin>({
         </div>
       )}
 
-      <div className="[&>div]:rounded-md [&>div]:border">
+      <div className="[&>div]:bg-card [&>div]:rounded-md [&>div]:border">
         <Table {...props}>
-          <TableHeader className="bg-card">
+          <TableHeader className="bg-muted/60">
             <TableRow>
               {allColumns.map(column => {
                 const columnKey = column.id ?? String(column.accessorKey);

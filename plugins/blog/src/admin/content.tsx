@@ -17,7 +17,7 @@ export const adminContent = {
       ...blogPostNav,
       fields: {
         // The Tiptap editor, inside the same AutoForm as everything else.
-        content: { component: BlogArticleEditorField },
+        content: { component: BlogArticleEditorField, skeleton: "editor" },
       },
       forms: {
         // One layout for both actions - they are the same screen, and writing

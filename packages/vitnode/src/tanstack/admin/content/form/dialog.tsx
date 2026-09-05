@@ -4,6 +4,11 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { ContentFormDialog } from "@/views/admin/views/content/actions/form-dialog";
+import {
+  contentFieldSkeletonOverrides,
+  ContentFormSkeleton,
+  contentFormSkeletonShape,
+} from "@/views/admin/views/content/form/skeleton";
 
 import type { ContentFormDialogProps } from "../slots";
 
@@ -35,6 +40,24 @@ export const ContentAdminFormDialog = ({
           <ContentDialogForm
             entry={entry}
             row={row}
+            singular={singular}
+            title={title}
+          />
+        </ContentFormHost>
+      }
+      skeleton={
+        <ContentFormHost>
+          <ContentFormSkeleton
+            contentTypeId={entry.definition.id}
+            mode={action}
+            pluginId={entry.pluginId}
+            publication={entry.definition.publication.enabled}
+            shape={contentFormSkeletonShape({
+              definition: entry.definition,
+              overrides: contentFieldSkeletonOverrides(
+                entry.registration.fields,
+              ),
+            })}
             singular={singular}
             title={title}
           />

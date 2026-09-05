@@ -6,6 +6,10 @@ import type {
 } from "@/api/lib/module";
 import type { Route } from "@/api/lib/route";
 import type {
+  UniversalFetcher,
+  UniversalRawFetcher,
+} from "@/lib/fetcher-client";
+import type {
   FetcherParams,
   FetcherRequestOptions,
   GetModulePaths,
@@ -13,10 +17,6 @@ import type {
   GetValidPathsForModule,
   InferResponseType,
 } from "@/lib/fetcher/types";
-import type {
-  UniversalFetcher,
-  UniversalRawFetcher,
-} from "@/lib/fetcher-client";
 
 import {
   clientModule,

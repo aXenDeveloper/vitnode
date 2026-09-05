@@ -111,7 +111,6 @@ describe("the universal fetcher offers only what both runtimes can honour", () =
   });
 });
 
-
 describe("a plugin API client", () => {
   const usersApi = createApiClient<typeof usersModule>("@vitnode/core");
 

@@ -101,9 +101,9 @@ export const DataTableSkeleton = ({
         </div>
       )}
 
-      <div className="[&>div]:rounded-md [&>div]:border">
+      <div className="[&>div]:bg-card [&>div]:rounded-md [&>div]:border">
         <Table className="min-w-full">
-          <TableHeader className="bg-card">
+          <TableHeader className="bg-muted/60">
             <TableRow>
               {headerIds.map((hid, i) => (
                 <TableHead key={hid}>

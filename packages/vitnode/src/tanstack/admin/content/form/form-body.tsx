@@ -18,12 +18,13 @@ export const ContentDialogForm = ({
   singular: string;
   title?: string;
 }) => {
-  const { fieldOverrides, spec } = useContentTypeForm(entry);
+  const { fieldOverrides, fieldSkeletons, spec } = useContentTypeForm(entry);
 
   return (
     <ContentForm
       data={row}
       fieldOverrides={fieldOverrides}
+      fieldSkeletons={fieldSkeletons}
       presentation="dialog"
       publication={entry.definition.publication.enabled}
       singular={singular}

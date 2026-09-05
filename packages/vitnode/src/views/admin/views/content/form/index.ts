@@ -6,14 +6,20 @@ export {
   useContentFormOptional,
 } from "./context";
 export {
-  ContentFormActions,
-  ContentFormField,
   ContentFormHeader,
   ContentFormLayoutGrid,
   ContentFormMain,
-  ContentFormRemainingFields,
   ContentFormSection,
   ContentFormSidebar,
+} from "./layout-primitives";
+export {
+  ContentFormActions,
+  ContentFormField,
+  ContentFormRemainingFields,
   ContentFormStatus,
 } from "./primitives";
 export { ContentFormPublication } from "./publication-status";
+export {
+  ContentFormFieldSkeleton,
+  type ContentFormSkeletonControl,
+} from "./skeleton";

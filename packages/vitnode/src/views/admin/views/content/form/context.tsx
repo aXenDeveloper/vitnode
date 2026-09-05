@@ -35,6 +35,7 @@ export interface ContentFormContextValue {
     transition?: (action: "publish" | "unpublish") => Promise<boolean>;
   };
   singular: string;
+  skeleton?: boolean;
   title?: string;
 }
 
@@ -75,10 +76,11 @@ export const ContentFormProvider = ({
     headerRenderedRef.current = true;
   }, []);
 
-  const { fieldNames, header } = value;
+  const { fieldNames, header, skeleton } = value;
 
   React.useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the placeholder renders whatever the layout asks for, so there is nothing to warn about
+    if (process.env.NODE_ENV === "production" || skeleton) return;
 
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent -- nothing leaves this component; the effect is where it has to be computed, because what it compares against is what the children recorded while rendering
     const missing = fieldNames.filter(name => !renderedRef.current.has(name));

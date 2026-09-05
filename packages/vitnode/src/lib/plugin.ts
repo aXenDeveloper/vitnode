@@ -7,6 +7,7 @@ import type {
 } from "../content/types";
 import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
+import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
 import type { LocaleMessagesMap } from "./i18n/types";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
@@ -107,7 +108,10 @@ export interface ContentTypeFrontendRegistration {
   definition: AnyContentTypeDefinition;
   fields?: Record<
     string,
-    { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
+    {
+      component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+      skeleton?: ContentFormSkeletonControl;
+    }
   >;
   /** Custom create/edit form layouts. Presentation only - see `forms`. */
   forms?: ContentTypeFormsRegistration;
@@ -134,7 +138,10 @@ interface TypedContentTypeRegistration<
   fields?: Partial<
     Record<
       keyof TDefinition["fields"] & string,
-      { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
+      {
+        component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+        skeleton?: ContentFormSkeletonControl;
+      }
     >
   >;
 

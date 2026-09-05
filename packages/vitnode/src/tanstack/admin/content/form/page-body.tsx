@@ -46,7 +46,8 @@ const ContentCreateScreen = ({
   entry: RegisteredFrontendContentType;
 }) => {
   const t = useTranslations("core.content.create");
-  const { back, backHref, fieldOverrides, labels, spec } = useFormPage(entry);
+  const { back, backHref, fieldOverrides, fieldSkeletons, labels, spec } =
+    useFormPage(entry);
   const singular = labels.singular;
 
   return (
@@ -59,6 +60,7 @@ const ContentCreateScreen = ({
           : undefined
       }
       fieldOverrides={fieldOverrides}
+      fieldSkeletons={fieldSkeletons}
       header={{
         back,
         desc: t("desc", { name: singular }),
@@ -82,7 +84,8 @@ const ContentEditScreen = ({
   title: string;
 }) => {
   const t = useTranslations("core.content.edit");
-  const { back, backHref, fieldOverrides, labels, spec } = useFormPage(entry);
+  const { back, backHref, fieldOverrides, fieldSkeletons, labels, spec } =
+    useFormPage(entry);
   const singular = labels.singular;
   const request = {
     contentTypeId: entry.definition.id,
@@ -110,6 +113,7 @@ const ContentEditScreen = ({
       backHref={backHref}
       data={row}
       fieldOverrides={fieldOverrides}
+      fieldSkeletons={fieldSkeletons}
       header={{ back, desc: title, title: t("title", { name: singular }) }}
       layout={contentPageLayout(entry, "edit")}
       publication={entry.definition.publication.enabled}

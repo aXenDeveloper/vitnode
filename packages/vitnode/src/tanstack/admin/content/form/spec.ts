@@ -9,12 +9,14 @@ import type { ContentLabelTranslator } from "@/content/admin/labels";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentLabels } from "@/views/admin/views/content/content-labels";
+import type { ContentFormSkeletonOverrides } from "@/views/admin/views/content/form/skeleton";
 
 import { buildContentFormSpec } from "@/content/admin/spec";
 import {
   contentLabelsFrom,
   contentRouteNamespaces,
 } from "@/views/admin/views/content/content-labels";
+import { contentFieldSkeletonOverrides } from "@/views/admin/views/content/form/skeleton";
 
 import { useLocale } from "../../../i18n/locale";
 import { intlQueryOptions } from "../../../i18n/query";
@@ -25,6 +27,7 @@ export interface ContentTypeForm {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  fieldSkeletons: ContentFormSkeletonOverrides;
   labels: ContentLabels;
   spec: ContentFormSpec;
 }
@@ -65,6 +68,7 @@ export const useContentTypeForm = (
 
     return {
       fieldOverrides: fieldOverridesOf(entry),
+      fieldSkeletons: contentFieldSkeletonOverrides(entry.registration.fields),
       labels,
       spec: buildContentFormSpec({
         definition: entry.definition,

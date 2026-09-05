@@ -15,7 +15,6 @@ import type { ContentFormLayout } from "@/lib/plugin";
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { useDialog } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
 import {
   buildFormSchemaFromSpec,
   contentFormInitialValues,
@@ -28,6 +27,7 @@ import { CONTENT_PERMISSIONS } from "@/content/const";
 
 import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
+import type { ContentFormSkeletonOverrides } from "../form/skeleton";
 import type { ContentOptionsLoader } from "../lib/field-component";
 import type { ContentConflictState } from "./conflict-notice";
 
@@ -37,10 +37,14 @@ import {
   contentTranslationDiff,
   missingContentCollections,
 } from "../form/diff";
+import { ContentFormHeader } from "../form/layout-primitives";
 import { useContentFormNavigation } from "../form/navigation";
-import { ContentFormHeader } from "../form/primitives";
 import { ContentFormPublication } from "../form/publication-status";
 import { ContentFormSections } from "../form/sections";
+import {
+  ContentFormSkeleton,
+  contentSpecSkeletonShape,
+} from "../form/skeleton";
 import { useContentFormTransport } from "../form/transport";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
@@ -53,6 +57,7 @@ export interface ContentFormProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  fieldSkeletons?: ContentFormSkeletonOverrides;
   header?: ContentFormHeaderValue;
   layout?: ContentFormLayout;
   onCreated?: (id: number) => void;
@@ -66,6 +71,7 @@ export interface ContentFormProps {
 
 export const ContentForm = ({
   data,
+  fieldSkeletons,
   spec,
   translations,
   ...props
@@ -120,7 +126,21 @@ export const ContentForm = ({
     };
   }, [contentTypeId, data, pendingRow, transport]);
 
-  if (loaded === null || pendingRow) return <Loader />;
+  if (loaded === null || pendingRow) {
+    return (
+      <ContentFormSkeleton
+        contentTypeId={spec.contentTypeId}
+        header={props.presentation === "page" ? props.header : undefined}
+        layout={props.layout}
+        mode={data ? "edit" : "create"}
+        pluginId={spec.pluginId}
+        publication={props.publication}
+        shape={contentSpecSkeletonShape(spec, fieldSkeletons)}
+        singular={props.singular}
+        title={props.title}
+      />
+    );
+  }
 
   return (
     <ContentFormFields

@@ -10,12 +10,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
 
 export const ContentFormDialog = ({
   children,
   description,
   form,
+  skeleton,
   title,
 }: {
   /** The control that opens the dialog. */
@@ -23,6 +23,7 @@ export const ContentFormDialog = ({
   description: React.ReactNode;
   /** The form itself. Not rendered until the dialog opens. */
   form: React.ReactNode;
+  skeleton: React.ReactNode;
   title: React.ReactNode;
 }) => (
   <Dialog>
@@ -34,7 +35,7 @@ export const ContentFormDialog = ({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
 
-      <React.Suspense fallback={<Loader />}>{form}</React.Suspense>
+      <React.Suspense fallback={skeleton}>{form}</React.Suspense>
     </DialogContent>
   </Dialog>
 );
