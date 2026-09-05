@@ -416,6 +416,8 @@
 
 .mk-section-anchor {
   scroll-margin-top: 5rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

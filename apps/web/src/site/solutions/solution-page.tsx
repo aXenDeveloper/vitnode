@@ -6,7 +6,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@vitnode/core/components/ui/accordion'
-import { RouteMessages } from '@vitnode/core/tanstack/i18n'
 import { ArrowRight, Check, Clock, Plug, Sparkles, X } from 'lucide-react'
 import { createElement } from 'react'
 
@@ -25,7 +24,8 @@ import {
 
 import type { Availability, Solution, SolutionSection } from './data'
 
-import { findSolution, SOLUTION_ICONS, solutionPath, SOLUTIONS } from './data'
+import { solutionPath } from './catalog'
+import { SOLUTION_ICONS, SOLUTIONS } from './data'
 
 const casual = (label: string) =>
   /^[A-Z][a-z]/.test(label)
@@ -42,26 +42,6 @@ const SolutionIcon = ({
   className: string
   slug: string
 }) => renderIcon(SOLUTION_ICONS[slug] ?? Sparkles, className)
-
-export const SolutionsBreadcrumb = () => (
-  <RouteMessages>
-    <span>Solutions</span>
-  </RouteMessages>
-)
-
-export const SolutionBreadcrumb = ({
-  params,
-}: {
-  params: Readonly<Record<string, string>>
-}) => {
-  const solution = params.slug ? findSolution(params.slug) : undefined
-
-  return (
-    <RouteMessages>
-      <span>{solution?.name ?? 'Solution'}</span>
-    </RouteMessages>
-  )
-}
 
 const HeroShell = ({ children }: { children: React.ReactNode }) => (
   <>
@@ -553,7 +533,7 @@ export const SolutionPage = ({
             ))}
           </ul>
           <div className="w-full max-w-5xl pt-6">
-            <ScreenFrame screen={SCREENS[solution.heroScreen]} />
+            <ScreenFrame priority screen={SCREENS[solution.heroScreen]} />
           </div>
         </HeroShell>
       </section>

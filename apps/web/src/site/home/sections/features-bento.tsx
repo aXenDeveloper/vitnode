@@ -25,6 +25,7 @@ interface Feature {
   heading: string
   href: string
   Icon: LucideIcon
+  linkLabel: string
   text: string
   title: string
   Visual: () => React.ReactNode
@@ -36,6 +37,7 @@ const FEATURES: Feature[] = [
     heading: 'Describe it once. Ship the whole thing.',
     href: '/docs/dev/content-engine',
     Icon: Boxes,
+    linkLabel: 'Explore the Content Engine',
     text: 'Describe a content type in one file and get the database table, a typed API, admin screens, search indexing and translations. Articles, listings, docs, events: anything with a shape.',
     title: 'Content Engine',
     Visual: ContentEngineVisual,
@@ -44,6 +46,7 @@ const FEATURES: Feature[] = [
     heading: 'Hello, whole world.',
     href: '/docs/dev/i18n',
     Icon: Globe,
+    linkLabel: 'Read the internationalization guide',
     text: 'Every screen, email and content field can speak your members’ language. Add a locale with one command.',
     title: 'Internationalization',
     Visual: I18nVisual,
@@ -52,6 +55,7 @@ const FEATURES: Feature[] = [
     heading: 'Fast on the page. Fast on the API.',
     href: '/docs/dev/cache',
     Icon: Zap,
+    linkLabel: 'See how caching works',
     text: 'A front-end query cache plus an optional Redis layer on the API. Pages stop re-asking for what they already know.',
     title: 'Cache',
     Visual: CacheVisual,
@@ -60,6 +64,7 @@ const FEATURES: Feature[] = [
     heading: 'One action. Many good reactions.',
     href: '/docs/dev/events',
     Icon: Radio,
+    linkLabel: 'Learn how events work',
     text: 'Publish a post and let plugins react: send an email, refresh search, ping members. No spaghetti between features.',
     title: 'Events',
     Visual: EventsVisual,
@@ -68,6 +73,7 @@ const FEATURES: Feature[] = [
     heading: 'AI on your terms.',
     href: '/docs/dev/ai',
     Icon: Sparkles,
+    linkLabel: 'Build AI features',
     text: 'Summaries, drafts, streaming answers and embeddings with any provider through the Vercel AI SDK. You pick the model.',
     title: 'AI features',
     Visual: AiVisual,
@@ -77,6 +83,7 @@ const FEATURES: Feature[] = [
     heading: 'Less “where was that?”',
     href: '/docs/dev/search',
     Icon: Search,
+    linkLabel: 'Set up search and discovery',
     text: 'Site-wide search and a discovery feed across every plugin. Postgres out of the box, Elasticsearch when you outgrow it.',
     title: 'Search engine',
     Visual: SearchVisual,
@@ -86,6 +93,7 @@ const FEATURES: Feature[] = [
     heading: 'Good news travels live.',
     href: '/docs/dev/websocket',
     Icon: Bell,
+    linkLabel: 'Read the WebSocket docs',
     text: 'One authenticated WebSocket shared by every open tab pushes live toasts and updates from your API today. A notification centre with an inbox is planned.',
     title: 'WebSockets & live updates',
     Visual: RealtimeVisual,
@@ -110,7 +118,16 @@ export const FeaturesBentoSection = ({
 
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {FEATURES.map(
-        ({ className, heading, href, Icon, text, title, Visual }) => (
+        ({
+          className,
+          heading,
+          href,
+          Icon,
+          linkLabel,
+          text,
+          title,
+          Visual,
+        }) => (
           <article
             className={cn(
               'group bg-card hover:border-primary/40 flex flex-col gap-5 rounded-3xl border p-6 transition-colors',
@@ -137,7 +154,7 @@ export const FeaturesBentoSection = ({
                 {text}
               </p>
               <TextLink href={href} LinkComponent={LinkComponent}>
-                Learn more
+                {linkLabel}
               </TextLink>
             </div>
           </article>

@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
 
-import { RouteMessages } from '@vitnode/core/tanstack/i18n'
 import {
   Braces,
   Clock,
@@ -122,12 +121,6 @@ const STATUS_LABEL: Record<OfficialPlugin['status'], string> = {
   available: 'Available in canary',
   reference: 'Reference plugin',
 }
-
-export const PluginsBreadcrumb = () => (
-  <RouteMessages>
-    <span>Plugins</span>
-  </RouteMessages>
-)
 
 export const PluginsPage = ({
   LinkComponent,

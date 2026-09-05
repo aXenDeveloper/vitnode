@@ -77,11 +77,13 @@ import { blogPlugin } from '@vitnode/blog/config'
 plugins: [blogPlugin()]
 ```
 
-The factory carries the plugin's content types, its AdminCP navigation and its
-translations - one declaration, and the same one a Next.js host reads directly.
+The factory carries the plugin's identity, its locale barrel and its route
+declarations - plain data, and nothing that renders. Its AdminCP navigation and
+its Content Engine screens live in the plugin's `admin/nav` and `admin/content`
+modules instead, and they never pass through this object.
 
 What a TanStack Start app **renders** comes back through generated projections
-rather than out of this object, and that is the part worth knowing:
+of those modules, and that is the part worth knowing:
 
 | Generated file                | From                         | Loaded                                          |
 | :---------------------------- | :--------------------------- | :---------------------------------------------- |
@@ -92,7 +94,9 @@ rather than out of this object, and that is the part worth knowing:
 One literal import per configured plugin, written at build time. So a content
 type's editing screen - a Tiptap field, a form layout, a table cell - arrives
 with the route that renders it, not with the config that the document shell
-imports. See [Plugin routes](/docs/dev/plugins/routes) and
+imports. Spreading `admin/content` into the factory undoes exactly that: the
+whole editing stack rides along with every public page. See
+[Plugin routes](/docs/dev/plugins/routes) and
 [Plugin frontend modules](/docs/dev/content-engine/plugin-registration).
 
 <Callout type="info" title="Also register its locale files">
@@ -246,13 +250,18 @@ import { vitnode } from '@vitnode/core/framework/vite'
 export default defineConfig({
   plugins: [
     vitnode({ appRoot: import.meta.dirname }),
-    nitro(),
+    nitro({ compressPublicAssets: { brotli: true, gzip: true } }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
   ],
 })
 ```
+
+`compressPublicAssets` writes a `.br` and a `.gz` twin next to every built asset,
+so the Node server from `pnpm start` serves scripts and styles compressed the
+way a CDN would. The server-rendered HTML itself is not compressed by the Node
+server; put a reverse proxy or a platform such as Vercel in front of it for that.
 
 `appRoot` has to be `import.meta.dirname`: a Vite config is loaded with the
 working directory set to wherever the command ran, which in a monorepo is

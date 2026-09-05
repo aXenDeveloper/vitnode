@@ -17,7 +17,7 @@ const config = defineConfig({
     vitnode({ appRoot: import.meta.dirname }),
     fumadocsMdx(),
     devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+    nitro(),
     tailwindcss(),
     tanstackStart(),
     viteReact(),

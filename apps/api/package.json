@@ -10,7 +10,7 @@
     "dev": "vitnode db:prepare && tsx watch src/index.ts",
     "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "drizzle-kit": "drizzle-kit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

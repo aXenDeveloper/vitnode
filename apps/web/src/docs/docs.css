@@ -1,0 +1,10 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css';
+@import '../theme.css' theme(reference);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@source '../../node_modules/fumadocs-ui/dist/**/*.js';
+
+@custom-variant dark (&:where(.dark, .dark *));

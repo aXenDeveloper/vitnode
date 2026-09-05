@@ -1,16 +1,45 @@
 import { cn } from '@vitnode/core/lib/utils'
 
-import type { Screen } from './screens'
+import type { Screen, ScreenImage } from './screens'
 
-import { SCREEN_SIZE } from './screens'
+import { SCREEN_SIZE, SCREEN_SMALL_WIDTH } from './screens'
+
+const SIZES = '(min-width: 1024px) 1024px, 100vw'
+
+const ScreenImg = ({
+  alt,
+  className,
+  image,
+  priority,
+}: {
+  alt: string
+  className: string
+  image: ScreenImage
+  priority: boolean
+}) => (
+  <img
+    alt={alt}
+    className={className}
+    decoding="async"
+    fetchPriority={priority ? 'high' : undefined}
+    height={SCREEN_SIZE.height}
+    loading={priority ? 'eager' : 'lazy'}
+    sizes={SIZES}
+    src={image.large}
+    srcSet={`${image.small} ${SCREEN_SMALL_WIDTH}w, ${image.large} ${SCREEN_SIZE.width}w`}
+    width={SCREEN_SIZE.width}
+  />
+)
 
 export const ScreenFrame = ({
   className,
   note,
+  priority = false,
   screen,
 }: {
   className?: string
   note?: string
+  priority?: boolean
   screen: Screen
 }) => (
   <div
@@ -34,23 +63,17 @@ export const ScreenFrame = ({
       className="w-full"
       style={{ aspectRatio: `${SCREEN_SIZE.width} / ${SCREEN_SIZE.height}` }}
     >
-      <img
+      <ScreenImg
         alt={screen.alt}
         className="block size-full object-cover object-top dark:hidden"
-        decoding="async"
-        height={SCREEN_SIZE.height}
-        loading="lazy"
-        src={screen.light}
-        width={SCREEN_SIZE.width}
+        image={screen.light}
+        priority={priority}
       />
-      <img
+      <ScreenImg
         alt={screen.alt}
         className="hidden size-full object-cover object-top dark:block"
-        decoding="async"
-        height={SCREEN_SIZE.height}
-        loading="lazy"
-        src={screen.dark}
-        width={SCREEN_SIZE.width}
+        image={screen.dark}
+        priority={priority}
       />
     </div>
 

@@ -2,11 +2,10 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { RouterLink } from '@vitnode/core/tanstack/layout'
 
 import { marketingHead } from '#/site/marketing/metadata'
-import { findSolution, solutionPageMeta } from '#/site/solutions/data'
-import {
-  SolutionBreadcrumb,
-  SolutionPage,
-} from '#/site/solutions/solution-page'
+import { SolutionBreadcrumb } from '#/site/solutions/breadcrumb'
+import { findSolutionEntry, solutionPageMeta } from '#/site/solutions/catalog'
+import { findSolution } from '#/site/solutions/data'
+import { SolutionPage } from '#/site/solutions/solution-page'
 
 const SolutionRoute = () => {
   const { slug } = Route.useLoaderData()
@@ -18,7 +17,7 @@ const SolutionRoute = () => {
 }
 
 const headFor = (slug: string) => {
-  const solution = findSolution(slug)
+  const solution = findSolutionEntry(slug)
 
   return solution ? marketingHead(solutionPageMeta(solution)) : {}
 }
@@ -26,7 +25,7 @@ const headFor = (slug: string) => {
 export const Route = createFileRoute('/_main/solutions/$slug')({
   loader: ({ params }) => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error
-    if (!findSolution(params.slug)) throw notFound()
+    if (!findSolutionEntry(params.slug)) throw notFound()
 
     return { slug: params.slug }
   },

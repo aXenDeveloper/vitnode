@@ -73,19 +73,10 @@ export const adminNav = {
 ```
 
 The generator’s `./*` package export already exposes `admin/nav`; no manual
-`package.json` export is required. Spread the declaration into the plugin’s
-existing factory so the navigation and full registration share one source:
-
-```tsx title="plugins/site-notes/src/config.tsx"
-import { adminNav } from './admin/nav' // [!code ++]
-
-export const siteNotesPlugin = () =>
-  buildPlugin({
-    ...adminNav, // [!code ++]
-    messages,
-    routes,
-  })
-```
+`package.json` export is required, and nothing changes in `config.tsx`. The
+generated `admin-nav.gen.ts` imports `admin/nav` directly, and keeping the
+factory to plain data is what keeps the sidebar registration out of every
+public page's bundle.
 
   </Step>
   <Step>

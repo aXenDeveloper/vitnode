@@ -21,8 +21,9 @@ import {
   Trophy,
 } from 'lucide-react'
 
-import type { MarketingPageMeta } from '#/site/marketing/metadata'
 import type { ScreenKey } from '#/site/marketing/screens'
+
+import { solutionEntry } from './catalog'
 
 export type Availability = 'available' | 'plugin' | 'roadmap'
 
@@ -115,6 +116,7 @@ export interface Solution {
 
 export const SOLUTIONS: Solution[] = [
   {
+    ...solutionEntry('help-center'),
     audience: [
       'Product teams',
       'Hardware makers',
@@ -125,9 +127,6 @@ export const SOLUTIONS: Solution[] = [
       'Articles, guides and troubleshooting steps as content types, site-wide search on top, and a place for members to ask what the docs missed. Your team writes once, and the answer keeps working long after the ticket would have closed.',
     eyebrow: 'Solution · Help center',
     heroScreen: 'contentEditor',
-    metaDescription:
-      'Build a help center and knowledge base with VitNode: articles as content types, site-wide search, editor and reviewer roles, real-time updates and SSO. Free and open source.',
-    name: 'Help center',
     sections: [
       {
         description:
@@ -269,11 +268,11 @@ export const SOLUTIONS: Solution[] = [
         type: 'faq',
       },
     ],
-    slug: 'help-center',
     tagline: 'A knowledge base with a community attached.',
     title: 'Answers people find before they ask.',
   },
   {
+    ...solutionEntry('membership-site'),
     audience: [
       'Writers and podcasters',
       'Clubs and associations',
@@ -284,9 +283,6 @@ export const SOLUTIONS: Solution[] = [
       'Publish posts, gate them by tier, and keep the member list in your own database. Payments plug in through the provider you already use, and the framework takes nothing off the top.',
     eyebrow: 'Solution · Membership site',
     heroScreen: 'contentEditor',
-    metaDescription:
-      'Build a membership site with VitNode: posts with the blog plugin, tiers as roles, members-only content, social sign-in and real-time updates, on a domain you own. Open source and free.',
-    name: 'Membership site',
     sections: [
       {
         description:
@@ -415,11 +411,11 @@ export const SOLUTIONS: Solution[] = [
         type: 'faq',
       },
     ],
-    slug: 'membership-site',
     tagline: 'Tiers as roles, content behind a door you control.',
     title: 'Members-only, without the middleman.',
   },
   {
+    ...solutionEntry('open-source-hub'),
     audience: [
       'Maintainers',
       'Dev-tool startups',
@@ -430,9 +426,6 @@ export const SOLUTIONS: Solution[] = [
       'Release notes, guides and community updates as content types, contributors and maintainers as roles, Discord sign-in today and your own OAuth2 provider tomorrow. Plus docs your users’ AI agents can read too.',
     eyebrow: 'Solution · Open-source project hub',
     heroScreen: 'dashboard',
-    metaDescription:
-      'Build a home for your open-source project with VitNode: release notes and guides as content types, contributor roles, Discord and OAuth2 sign-in, real-time updates and agent-readable docs. Free and MIT-licensed.',
-    name: 'Open-source hub',
     sections: [
       {
         description:
@@ -620,11 +613,11 @@ export const SOLUTIONS: Solution[] = [
         type: 'faq',
       },
     ],
-    slug: 'open-source-hub',
     tagline: 'Announcements, contributors and docs in one place.',
     title: 'A home for your project that is not an issue tracker.',
   },
   {
+    ...solutionEntry('gaming-guild'),
     audience: [
       'Guilds and clans',
       'Esports teams',
@@ -635,9 +628,6 @@ export const SOLUTIONS: Solution[] = [
       'A home base for clans, guilds and esports teams: members sign in with Discord, roles mirror your ranks, announcements go out live to every open tab, and the roster stops living in a spreadsheet.',
     eyebrow: 'Solution · Gaming guild hub',
     heroScreen: 'login',
-    metaDescription:
-      'Build a guild or clan hub with VitNode: Discord sign-in, ranks as roles, announcements with real-time updates, events as a plugin and a multilingual roster. Free and open source.',
-    name: 'Gaming guild hub',
     sections: [
       {
         bullets: [
@@ -795,11 +785,11 @@ export const SOLUTIONS: Solution[] = [
         type: 'faq',
       },
     ],
-    slug: 'gaming-guild',
     tagline: 'Roster, events and news, with Discord sign-in built in.',
     title: 'Your guild deserves more than a pinned message.',
   },
   {
+    ...solutionEntry('multilingual-magazine'),
     audience: [
       'Magazines and newsrooms',
       'Company blogs',
@@ -810,9 +800,6 @@ export const SOLUTIONS: Solution[] = [
       'Articles with drafts, revisions, scheduling and a translation for every field. Canonical URLs, hreflang and the sitemap handle themselves, and authors, translators and editors each get exactly the permissions they need.',
     eyebrow: 'Solution · Multilingual magazine',
     heroScreen: 'contentEditor',
-    metaDescription:
-      'Run a multilingual magazine with VitNode: articles with per-field translations, editorial roles, scheduled publishing, hreflang and sitemap generated, and search across every language. Free and open source.',
-    name: 'Multilingual magazine',
     sections: [
       {
         description: 'One newsroom, every market, no copy-paste between sites.',
@@ -946,7 +933,6 @@ export const SOLUTIONS: Solution[] = [
         type: 'faq',
       },
     ],
-    slug: 'multilingual-magazine',
     tagline: 'An editorial workflow with translations built in.',
     title: 'One newsroom. Every language your readers speak.',
   },
@@ -962,15 +948,3 @@ export const SOLUTION_ICONS: Record<string, LucideIcon> = {
 
 export const findSolution = (slug: string) =>
   SOLUTIONS.find((solution) => solution.slug === slug)
-
-export const solutionPath = (slug: string) => `/solutions/${slug}`
-
-export const solutionPageMeta = (solution: Solution): MarketingPageMeta => ({
-  breadcrumbs: [
-    { name: 'Solutions', path: '/solutions' },
-    { name: solution.name, path: solutionPath(solution.slug) },
-  ],
-  description: solution.metaDescription,
-  path: solutionPath(solution.slug),
-  title: `${solution.name} - Solutions`,
-})

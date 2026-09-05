@@ -1,10 +1,11 @@
 import { buildPlugin } from "@vitnode/core/lib/plugin";
 
-import { adminContent } from "./admin/content";
+import { CONFIG_PLUGIN } from "@/const";
+
 import messages from "./locales";
 
 export const blogPlugin = () =>
   buildPlugin({
-    ...adminContent,
+    ...CONFIG_PLUGIN,
     messages,
   });

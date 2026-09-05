@@ -1,6 +1,5 @@
 import { Skeleton } from '@vitnode/core/components/ui/skeleton'
 import { cn } from '@vitnode/core/lib/utils'
-import { DocsPage } from 'fumadocs-ui/page'
 
 const DocsHeadingPendingSkeleton = () => (
   <div aria-hidden="true" className="flex flex-col gap-4">
@@ -49,19 +48,15 @@ const DocsPendingStatus = () => (
   </span>
 )
 
+const DOCS_PAGE_FRAME =
+  'mx-auto flex w-full max-w-225 flex-col gap-4 px-4 py-6 md:px-6 md:pt-8 xl:px-8 xl:pt-14'
+
 export const DocsPagePendingSkeleton = () => (
-  <DocsPage
-    aria-busy="true"
-    breadcrumb={{ enabled: false }}
-    data-slot="route-pending"
-    footer={{ enabled: false }}
-    tableOfContentPopover={{ enabled: true }}
-    toc={[]}
-  >
+  <div aria-busy="true" className={DOCS_PAGE_FRAME} data-slot="route-pending">
     <DocsPendingStatus />
     <DocsHeadingPendingSkeleton />
     <DocsProsePendingSkeleton />
-  </DocsPage>
+  </div>
 )
 
 const SIDEBAR_LINK_WIDTHS = ['w-4/5', 'w-3/5', 'w-2/3', 'w-1/2']
@@ -109,7 +104,7 @@ export const DocsShellPendingSkeleton = () => (
         <DocsSidebarGroupPendingSkeleton links={2} />
       </aside>
 
-      <div className="mx-auto flex w-full max-w-225 flex-col gap-4 px-4 py-6 md:px-6 md:pt-8 xl:px-8 xl:pt-14">
+      <div className={DOCS_PAGE_FRAME}>
         <DocsHeadingPendingSkeleton />
         <DocsProsePendingSkeleton />
       </div>
