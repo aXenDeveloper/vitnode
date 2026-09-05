@@ -39,9 +39,7 @@ export const InfiniteSlider = ({
 
     let animatedWidth = 0
 
-    const restart = () => {
-      const width = track.getBoundingClientRect().width
-
+    const restart = (width: number) => {
       if (width === 0 || width === animatedWidth) return
 
       animatedWidth = width
@@ -62,9 +60,9 @@ export const InfiniteSlider = ({
       )
     }
 
-    restart()
-
-    const observer = new ResizeObserver(restart)
+    const observer = new ResizeObserver(([entry]) => {
+      restart(entry.contentRect.width)
+    })
 
     observer.observe(track)
 

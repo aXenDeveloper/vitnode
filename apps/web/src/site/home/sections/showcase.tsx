@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import type { SiteLinkComponent } from '#/site/home/site-link'
 
@@ -29,6 +29,53 @@ const ShowcaseStill = () => {
   )
 }
 
+const useIsNearViewport = <T extends Element>(
+  ref: React.RefObject<null | T>,
+) => {
+  const [isNear, setIsNear] = useState(false)
+
+  useEffect(() => {
+    const element = ref.current
+
+    if (!element || isNear) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+
+        setIsNear(true)
+        observer.disconnect()
+      },
+      { rootMargin: '600px 0px' },
+    )
+
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isNear, ref])
+
+  return isNear
+}
+
+const ShowcaseStage = () => {
+  const ref = useRef<HTMLDivElement>(null)
+  const isNear = useIsNearViewport(ref)
+
+  return (
+    <div ref={ref}>
+      {isNear ? (
+        <Suspense fallback={<ShowcaseStill />}>
+          <ShowcaseCarousel />
+        </Suspense>
+      ) : (
+        <ShowcaseStill />
+      )}
+    </div>
+  )
+}
+
 export const ShowcaseSection = ({
   LinkComponent,
 }: {
@@ -55,8 +102,6 @@ export const ShowcaseSection = ({
       </TextLink>
     </div>
 
-    <Suspense fallback={<ShowcaseStill />}>
-      <ShowcaseCarousel />
-    </Suspense>
+    <ShowcaseStage />
   </MarketingSection>
 )

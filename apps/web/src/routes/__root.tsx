@@ -81,7 +81,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const locale = useLocale()
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html dir="ltr" lang={locale} suppressHydrationWarning>
       <head>
         <HeadContent />
         <ThemeScript {...theme} />

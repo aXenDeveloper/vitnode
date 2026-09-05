@@ -136,14 +136,23 @@ export const ThemeProvider = ({
       if (!next) return;
       const resolved = next === "system" ? getSystemTheme() : next;
       const el = document.documentElement;
-      const enable = disableTransitionOnChange ? disableTransitions() : null;
       const attrs = Array.isArray(attribute) ? attribute : [attribute];
+      const applied = value?.[resolved] ?? resolved;
+      const alreadyApplied = attrs.every(attr =>
+        attr === "class"
+          ? el.classList.contains(applied)
+          : el.getAttribute(attr) === resolved,
+      );
+
+      if (alreadyApplied) return;
+
+      const enable = disableTransitionOnChange ? disableTransitions() : null;
 
       attrs.forEach(attr => {
         if (attr === "class") {
           const classes = value ? themes.map(t => value[t] ?? t) : [...themes];
           el.classList.remove(...classes);
-          el.classList.add(value?.[resolved] ?? resolved);
+          el.classList.add(applied);
         } else {
           el.setAttribute(attr, resolved);
         }
