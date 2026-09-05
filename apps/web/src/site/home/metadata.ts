@@ -1,4 +1,4 @@
-export const HOME_TITLE = 'Community Framework for Building Apps'
+export const HOME_TITLE = 'Your Community, Your Kind of Place'
 
 export const HOME_DESCRIPTION =
-  'Build with TanStack Start and Hono.js. It provides a structured, plugin-based architecture with Admin Control Panel that makes development faster and less complex.'
+  'Create a community that feels like yours. VitNode is an open-source community framework with member accounts, content tools, plugins, and an admin panel. Explore the early 2.0 canary.'

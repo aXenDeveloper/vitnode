@@ -164,3 +164,182 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+@layer components {
+  .main-site {
+    --background: #fcfdfe;
+    --foreground: #18232f;
+    --card: #ffffff;
+    --card-foreground: #18232f;
+    --muted: #f0f4f8;
+    --muted-foreground: #526275;
+    --primary: #285ec8;
+    --primary-foreground: #ffffff;
+    --border: #e0e7ef;
+    --accent: #edf3fd;
+    --accent-foreground: #18232f;
+    --secondary: #f0f4f8;
+    --secondary-foreground: #18232f;
+    --ring: #285ec8;
+    @apply flex min-h-screen flex-col bg-background text-foreground;
+  }
+
+  .dark .main-site {
+    --background: #10171f;
+    --foreground: #eef3f9;
+    --card: #151f2a;
+    --card-foreground: #eef3f9;
+    --muted: #1c2836;
+    --muted-foreground: #afbed0;
+    --primary: #8ab4ff;
+    --primary-foreground: #10171f;
+    --border: #2a394b;
+    --accent: #1e3049;
+    --accent-foreground: #eef3f9;
+    --secondary: #1c2836;
+    --secondary-foreground: #eef3f9;
+    --ring: #8ab4ff;
+  }
+
+  .main-site > main {
+    @apply flex-1;
+  }
+
+  .main-site > header {
+    @apply border-b bg-background/95 text-foreground backdrop-blur;
+  }
+
+  .main-site > header > div {
+    @apply h-16 max-w-6xl rounded-none border-0 bg-transparent text-foreground shadow-none;
+  }
+
+  .main-site a:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+  }
+
+  .home-wrap {
+    @apply mx-auto w-full max-w-6xl px-6 sm:px-8;
+  }
+
+  .home-hero {
+    @apply flex flex-col items-center gap-12 pt-16 pb-8 md:gap-16 md:pt-24;
+    background: radial-gradient(
+      ellipse at 50% 65%,
+      color-mix(in srgb, var(--primary) 7%, transparent),
+      transparent 65%
+    );
+    color: var(--foreground);
+  }
+
+  .home-section {
+    @apply flex flex-col gap-10 py-16 md:gap-12 md:py-24;
+  }
+
+  .home-page section[id] {
+    scroll-margin-top: 6rem;
+  }
+
+  .home-eyebrow {
+    @apply flex flex-wrap items-center gap-2 text-sm font-medium text-primary;
+  }
+
+  .home-heading {
+    @apply text-3xl leading-tight font-medium tracking-tight text-balance sm:text-4xl lg:text-5xl;
+  }
+
+  .home-description {
+    @apply text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg;
+  }
+
+  .home-feature {
+    @apply flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground;
+    transition: border-color 180ms ease;
+  }
+
+  .home-feature:hover {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  }
+
+  .home-feature-copy {
+    @apply flex flex-col items-start gap-4 p-6 sm:p-8;
+  }
+
+  .home-feature-copy h3 {
+    @apply text-xl font-medium tracking-tight text-balance sm:text-2xl;
+  }
+
+  .home-feature-copy p {
+    @apply leading-relaxed text-pretty text-muted-foreground;
+  }
+
+  .home-text-link {
+    @apply inline-flex items-center gap-2 rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline;
+  }
+
+  .home-miniature {
+    @apply mx-6 mt-auto mb-6 flex flex-col gap-4 rounded-xl border bg-muted/30 p-4 text-sm text-foreground;
+  }
+
+  .home-pill {
+    @apply inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary;
+  }
+
+  .home-footer-link {
+    @apply inline-flex items-center gap-1 rounded-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline;
+  }
+
+  .home-closing {
+    background: radial-gradient(
+      ellipse at 50% 100%,
+      color-mix(in srgb, var(--primary) 9%, var(--background)),
+      var(--background) 70%
+    );
+    color: var(--foreground);
+  }
+
+  .home-connection {
+    stroke-dashoffset: -170;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-preview {
+    animation: home-arrive 650ms ease-out both;
+  }
+
+  .home-connection {
+    animation: home-connect 4s ease-out both;
+  }
+
+  @supports (animation-timeline: view()) {
+    .home-connection {
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-feature {
+    transition: none;
+  }
+}
+
+@keyframes home-arrive {
+  from {
+    transform: translateY(12px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-connect {
+  from {
+    stroke-dashoffset: 30;
+  }
+  to {
+    stroke-dashoffset: -170;
+  }
+}
