@@ -8,11 +8,11 @@ To keep the AdminCP sidebar light while lazy-loading heavy rich text editors on 
 
 ## The Three Frontend Modules
 
-| Module | Location | Purpose |
-| :--- | :--- | :--- |
-| `admin/nav` | `src/admin/nav.tsx` | Lightweight sidebar navigation entries and Lucide icons |
-| `admin/content` | `src/admin/content.tsx` | Content Engine editing screens, custom fields, and form layouts |
-| `config` | `src/config.tsx` | Master plugin definition - one declaration the two modules above are spread from |
+| Module          | Location                | Purpose                                                                                       |
+| :-------------- | :---------------------- | :-------------------------------------------------------------------------------------------- |
+| `admin/nav`     | `src/admin/nav.tsx`     | Lightweight sidebar navigation entries and Lucide icons                                       |
+| `admin/content` | `src/admin/content.tsx` | Content Engine editing screens, custom fields, and form layouts                               |
+| `config`        | `src/config.tsx`        | The plugin's identity, locale barrel and route declarations - plain data the browser may hold |
 
 ---
 
@@ -21,9 +21,9 @@ To keep the AdminCP sidebar light while lazy-loading heavy rich text editors on 
 Kept deliberately minimal so the AdminCP shell loads navigation without pulling in heavy editing components:
 
 ```tsx title="plugins/blog/src/admin/nav.tsx"
-import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin"
-import { FileTextIcon } from "lucide-react"
-import { postContentType } from "@/content/post"
+import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
+import { FileTextIcon } from 'lucide-react'
+import { postContentType } from '@/content/post'
 
 export const postNav = {
   definition: postContentType,
@@ -31,7 +31,7 @@ export const postNav = {
 }
 
 export const adminNav = {
-  pluginId: "blog",
+  pluginId: 'blog',
   contentTypes: [postNav],
 } satisfies AdminNavPluginSource
 ```
@@ -43,11 +43,11 @@ export const adminNav = {
 Loaded only when an administrator navigates into Content Engine screens:
 
 ```tsx title="plugins/blog/src/admin/content.tsx"
-import { contentTypeAdmin } from "@vitnode/core/lib/plugin"
-import { postNav } from "./nav"
+import { contentTypeAdmin } from '@vitnode/core/lib/plugin'
+import { postNav } from './nav'
 
 export const adminContent = {
-  pluginId: "blog",
+  pluginId: 'blog',
   contentTypes: [
     contentTypeAdmin({
       ...postNav,
@@ -61,29 +61,29 @@ export const adminContent = {
 
 ## 3. `config.tsx` (Root Plugin Config)
 
-The plugin's own single declaration - everything it registers, in one place, so the two browser-safe modules above cannot drift from it:
+The factory a host registers in `vitnode.config.ts`. It is bundled for the
+browser with the document shell, so it carries only what a browser may hold:
+the plugin id, its locale barrel and its route declarations.
 
 ```tsx title="plugins/blog/src/config.tsx"
-import { buildPlugin } from "@vitnode/core/lib/plugin"
-import messages from "./locales"
-import { routes } from "./routes"
-import { adminContent } from "./admin/content"
+import { buildPlugin } from '@vitnode/core/lib/plugin'
+import messages from './locales'
+import { routes } from './routes'
 
 export const blogPlugin = () =>
   buildPlugin({
-    pluginId: "blog",
+    pluginId: 'blog',
     messages,
     routes,
-    contentTypes: adminContent.contentTypes,
   })
 ```
 
-A host registers this factory in `vitnode.config.ts`. A Next.js host then walks
-the registry in its render pass; a TanStack Start host does not - the build
-generates one literal import of `admin/nav` and `admin/content` per configured
-plugin, and the content registry is loaded behind a dynamic `import()`, so an
-editing screen arrives with the route that renders it. Same declarations, two
-doors. See [Configuration](/docs/dev/configuration).
+Do not spread `admin/nav` or `admin/content` into it. The build generates one
+literal import of each per configured plugin - `admin/nav` with the AdminCP
+shell, `admin/content` behind a dynamic `import()` - so an editing screen arrives
+with the route that renders it. Spreading them into the factory puts the whole
+editing stack, rich text editor included, into every public page's bundle. See
+[Configuration](/docs/dev/configuration).
 
 ---
 

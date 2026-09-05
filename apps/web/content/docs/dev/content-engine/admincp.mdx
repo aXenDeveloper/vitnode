@@ -4,33 +4,37 @@ description: Configure zero-code AdminCP management screens, custom form layouts
 icon: LayoutDashboard
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 Content Engine automatically builds interactive management screens in the AdminCP without writing hand-rolled pages or form components.
 
 ## Quick start
 
-Register your content type in `src/config.tsx` with `contentTypeAdmin`:
+Register your content type in `src/admin/content.tsx` with `contentTypeAdmin`:
 
-```tsx title="plugins/blog/src/config.tsx"
-import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin"
-import { FileTextIcon } from "lucide-react"
-import { postContentType } from "./content/post"
+```tsx title="plugins/blog/src/admin/content.tsx"
+import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
+import { contentTypeAdmin } from '@vitnode/core/lib/plugin'
+import { FileTextIcon } from 'lucide-react'
+import { postContentType } from '@/content/post'
 
-export const blogPlugin = () =>
-  buildPlugin({
-    pluginId: "blog",
-    // [!code ++:6]
-    contentTypes: [
-      contentTypeAdmin({
-        definition: postContentType,
-        icon: <FileTextIcon />,
-      }),
-    ],
-  })
+export const adminContent = {
+  pluginId: 'blog',
+  // [!code ++:6]
+  contentTypes: [
+    contentTypeAdmin({
+      definition: postContentType,
+      icon: <FileTextIcon />,
+    }),
+  ],
+} satisfies ContentFrontendPluginSource
 ```
 
-The screen is immediately accessible at `/admin/content/blog/post`.
+The screen is immediately accessible at `/admin/content/blog/post`. The build
+imports this module for you through the generated content registry; keep it out
+of `config.tsx`, which is bundled with every public page. See
+[Plugin frontend modules](/docs/dev/content-engine/plugin-registration) for the
+matching `admin/nav.tsx` sidebar entry.
 
 ---
 
@@ -40,17 +44,17 @@ Control which columns, search inputs, and sortable headers appear in the AdminCP
 
 ```ts title="plugins/blog/src/content/post.ts"
 export const postContentType = defineContentType({
-  id: "blog.post",
-  tableName: "blog_posts",
-  fields: { /* ... */ },
+  id: 'blog.post',
+  tableName: 'blog_posts',
+  fields: {/* ... */},
   // [!code ++:9]
   admin: {
-    titleField: "title", // Primary record identifier in dialogs
+    titleField: 'title', // Primary record identifier in dialogs
     list: {
-      columns: ["title", "status", "author", "createdAt"],
-      searchableFields: ["title"],
-      orderableFields: ["title", "createdAt"],
-      defaultOrderBy: { column: "createdAt", order: "desc" },
+      columns: ['title', 'status', 'author', 'createdAt'],
+      searchableFields: ['title'],
+      orderableFields: ['title', 'createdAt'],
+      defaultOrderBy: { column: 'createdAt', order: 'desc' },
     },
   },
 })
@@ -94,7 +98,7 @@ replaces it.
 The placeholder is built from the content type's definition, so it needs no
 configuration - a `text` field becomes an input-sized block, a `boolean` becomes
 a switch, a `file` becomes a media box, and a to-many picker becomes a list. If
-you gave the content type its own layout, the placeholder renders *that* layout,
+you gave the content type its own layout, the placeholder renders _that_ layout,
 so the fields land exactly where they will a moment later.
 
 ### When an override is a different shape
@@ -109,7 +113,7 @@ contentTypeAdmin({
   fields: {
     content: {
       component: BlogArticleEditorField,
-      skeleton: "editor", // [!code ++]
+      skeleton: 'editor', // [!code ++]
     },
   },
 })
@@ -128,10 +132,10 @@ contentTypeAdmin({
 The same block is available on its own, for a field that lazy-loads its control:
 
 ```tsx title="plugins/blog/src/views/admin/article/editor-field.tsx"
-import { ContentFormFieldSkeleton } from "@vitnode/core/content/admin-form"
+import { ContentFormFieldSkeleton } from '@vitnode/core/content/admin-form'
 
 ;<React.Suspense fallback={<ContentFormFieldSkeleton control="editor" />}>
-  <AutoFormEditor label={t("content.label")} {...props} />
+  <AutoFormEditor label={t('content.label')} {...props} />
 </React.Suspense>
 ```
 

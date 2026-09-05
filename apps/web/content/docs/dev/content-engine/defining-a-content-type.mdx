@@ -4,9 +4,9 @@ description: Declare a Content Engine content type once to get a Postgres table,
 icon: FileCode
 ---
 
-import { File, Files, Folder } from "fumadocs-ui/components/files"
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 Content Engine generates a complete CRUD ecosystem from one declaration: a PostgreSQL table, Zod validation schemas, API endpoints, staff permissions, and AdminCP management screens.
 
@@ -15,14 +15,14 @@ Content Engine generates a complete CRUD ecosystem from one declaration: a Postg
 ### 1. Define the Content Type
 
 ```ts title="plugins/example/src/content/category.ts"
-import { defineContentType, field } from "@vitnode/core/content"
+import { defineContentType, field } from '@vitnode/core/content'
 
 export const categoryContentType = defineContentType({
-  id: "example.category",
-  tableName: "example_categories",
+  id: 'example.category',
+  tableName: 'example_categories',
   fields: {
     name: field.text({ required: true, minLength: 2, maxLength: 100 }),
-    slug: field.slug({ from: "name", required: true }),
+    slug: field.slug({ from: 'name', required: true }),
   },
 })
 ```
@@ -30,8 +30,8 @@ export const categoryContentType = defineContentType({
 ### 2. Create the Database Model
 
 ```ts title="plugins/example/src/database/categories.ts"
-import { createContentModel } from "@vitnode/core/content/server"
-import { categoryContentType } from "@/content/category"
+import { createContentModel } from '@vitnode/core/content/server'
+import { categoryContentType } from '@/content/category'
 
 export const categoryContent = createContentModel(categoryContentType)
 export const example_categories = categoryContent.table
@@ -69,16 +69,14 @@ Your table now exists in PostgreSQL.
 Add the model to your plugin's `config.api.ts`:
 
 ```ts title="plugins/example/src/config.api.ts"
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
-import { categoryContent } from "./database/categories"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+import { categoryContent } from './database/categories'
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: "@vitnode/example",
+    pluginId: '@vitnode/example',
     // [!code ++:3]
-    contentTypes: [
-      categoryContent,
-    ],
+    contentTypes: [categoryContent],
   })
 ```
 
@@ -89,25 +87,29 @@ This immediately registers full CRUD routes under `/api/@vitnode/example/admin/c
 
 ### 2. Register Screens in the AdminCP
 
-Connect the definition in `src/config.tsx`:
+Connect the definition in `src/admin/content.tsx`. The build imports this module
+through the generated content registry, so it never reaches a public page:
 
-```tsx title="plugins/example/src/config.tsx"
-import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin"
-import { FolderIcon } from "lucide-react"
-import { categoryContentType } from "./content/category"
+```tsx title="plugins/example/src/admin/content.tsx"
+import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
+import { contentTypeAdmin } from '@vitnode/core/lib/plugin'
+import { FolderIcon } from 'lucide-react'
+import { categoryContentType } from '@/content/category'
 
-export const examplePlugin = () =>
-  buildPlugin({
-    pluginId: "@vitnode/example",
-    // [!code ++:6]
-    contentTypes: [
-      contentTypeAdmin({
-        definition: categoryContentType,
-        icon: <FolderIcon />,
-      }),
-    ],
-  })
+export const adminContent = {
+  pluginId: '@vitnode/example',
+  // [!code ++:6]
+  contentTypes: [
+    contentTypeAdmin({
+      definition: categoryContentType,
+      icon: <FolderIcon />,
+    }),
+  ],
+} satisfies ContentFrontendPluginSource
 ```
+
+The sidebar entry comes from `src/admin/nav.tsx` the same way - see
+[Plugin frontend modules](/docs/dev/content-engine/plugin-registration).
 
 </Step>
 <Step>
@@ -151,25 +153,26 @@ You have a complete AdminCP data table with search, sorting, pagination, and mod
     id: {
       description: "Unique identifier formatted as '<plugin>.<name>'.",
       required: true,
-      type: "string",
+      type: 'string',
     },
     tableName: {
       description: "Postgres table name (e.g. 'example_categories').",
       required: true,
-      type: "string",
+      type: 'string',
     },
     fields: {
-      description: "Record containing field descriptors created with field.*.",
+      description: 'Record containing field descriptors created with field.*.',
       required: true,
-      type: "Record<string, ContentField>",
+      type: 'Record<string, ContentField>',
     },
     publication: {
-      description: "Enables draft/published workflows and publishedAt timestamps.",
-      type: "{ enabled: boolean }",
+      description:
+        'Enables draft/published workflows and publishedAt timestamps.',
+      type: '{ enabled: boolean }',
     },
     indexes: {
-      description: "Custom single or composite database indexes.",
-      type: "IndexDefinition[]",
+      description: 'Custom single or composite database indexes.',
+      type: 'IndexDefinition[]',
     },
   }}
 />

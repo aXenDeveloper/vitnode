@@ -1,37 +1,43 @@
-import { lazy, Suspense } from 'react'
-
 import type { SiteLinkComponent } from '#/site/home/site-link'
 
-import { AnimatedBeamHomeSkeleton } from '#/site/home/animated-beam/animated-beam-home-skeleton'
-import { AdminSection } from '#/site/home/sections/admin-panel'
-import { CallToActionSection } from '#/site/home/sections/call-to-action'
+import { AgentsSection } from '#/site/home/sections/agents'
+import { CommunitySection } from '#/site/home/sections/community'
+import { DevelopersSection } from '#/site/home/sections/developers'
+import { FaqSection } from '#/site/home/sections/faq'
+import { FeaturesBentoSection } from '#/site/home/sections/features-bento'
+import { FinalCtaSection } from '#/site/home/sections/final-cta'
 import { HeroSection } from '#/site/home/sections/hero'
+// import { MakerSection } from '#/site/home/sections/maker'
+import { OutcomesSection } from '#/site/home/sections/outcomes'
+import { PluginsSection } from '#/site/home/sections/plugins'
 import { PoweringBySection } from '#/site/home/sections/powering-by'
-
-const AnimatedBeamHome = lazy(async () => {
-  const { AnimatedBeamHome: Component } =
-    await import('#/site/home/animated-beam/animated-beam-home')
-
-  return { default: Component }
-})
+import { PricingSection } from '#/site/home/sections/pricing'
+import { SecuritySection } from '#/site/home/sections/security'
+import { ShowcaseSection } from '#/site/home/sections/showcase'
+import { CanaryNotice } from '#/site/marketing/shared'
 
 export const HomeRouteContent = ({
   LinkComponent,
 }: {
   LinkComponent: SiteLinkComponent
 }) => (
-  <div className="container mx-auto">
-    <HeroSection
-      LinkComponent={LinkComponent}
-      visual={
-        <Suspense fallback={<AnimatedBeamHomeSkeleton />}>
-          <AnimatedBeamHome LinkComponent={LinkComponent} />
-        </Suspense>
-      }
-    />
-
+  <div className="flex flex-col">
+    <HeroSection LinkComponent={LinkComponent} />
     <PoweringBySection />
-    <AdminSection />
-    <CallToActionSection />
+    <div className="container mx-auto px-4 pt-12 sm:px-6">
+      <CanaryNotice LinkComponent={LinkComponent} />
+    </div>
+    <OutcomesSection LinkComponent={LinkComponent} />
+    <FeaturesBentoSection LinkComponent={LinkComponent} />
+    <PluginsSection LinkComponent={LinkComponent} />
+    <ShowcaseSection LinkComponent={LinkComponent} />
+    <CommunitySection LinkComponent={LinkComponent} />
+    <AgentsSection LinkComponent={LinkComponent} />
+    <SecuritySection LinkComponent={LinkComponent} />
+    <DevelopersSection LinkComponent={LinkComponent} />
+    {/* <MakerSection /> */}
+    <PricingSection LinkComponent={LinkComponent} />
+    <FaqSection />
+    <FinalCtaSection LinkComponent={LinkComponent} />
   </div>
 )

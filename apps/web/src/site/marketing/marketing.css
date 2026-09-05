@@ -1,0 +1,821 @@
+@keyframes mk-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes mk-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mk-orbit-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes mk-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+@keyframes mk-pulse-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes mk-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
+@keyframes mk-ring {
+  0%,
+  55%,
+  100% {
+    transform: rotate(0deg);
+  }
+  8% {
+    transform: rotate(16deg);
+  }
+  16% {
+    transform: rotate(-14deg);
+  }
+  24% {
+    transform: rotate(10deg);
+  }
+  32% {
+    transform: rotate(-7deg);
+  }
+  40% {
+    transform: rotate(4deg);
+  }
+  48% {
+    transform: rotate(-2deg);
+  }
+}
+
+@keyframes mk-badge {
+  0%,
+  40%,
+  100% {
+    transform: scale(1);
+  }
+  10% {
+    transform: scale(1.35);
+  }
+  20% {
+    transform: scale(0.95);
+  }
+  30% {
+    transform: scale(1.15);
+  }
+}
+
+@keyframes mk-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-toast {
+  0%,
+  8% {
+    transform: translateX(48px);
+    opacity: 0;
+  }
+  18%,
+  72% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  82%,
+  100% {
+    transform: translateX(48px);
+    opacity: 0;
+  }
+}
+
+@keyframes mk-draw {
+  0%,
+  10% {
+    stroke-dashoffset: 100;
+  }
+  45%,
+  75% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes mk-grow {
+  0%,
+  8% {
+    transform: scaleX(0);
+  }
+  55%,
+  85% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes mk-travel {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes mk-twinkle {
+  0%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes mk-appear {
+  0%,
+  12% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  28%,
+  82% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  94%,
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+
+@keyframes mk-scan {
+  0% {
+    transform: translateY(-70px);
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(70px);
+    opacity: 0;
+  }
+}
+
+@keyframes mk-led {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes mk-ripple {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes mk-cycle-3 {
+  0%,
+  28% {
+    opacity: 1;
+  }
+  33%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-cycle-4 {
+  0%,
+  21% {
+    opacity: 1;
+  }
+  25%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-cycle-5 {
+  0%,
+  16% {
+    opacity: 1;
+  }
+  20%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-rise-4 {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  4%,
+  21% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  25%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes mk-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(24px, -18px) scale(1.06);
+  }
+  66% {
+    transform: translate(-18px, 14px) scale(0.96);
+  }
+}
+
+.mk-origin-center {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mk-origin-top {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+.mk-origin-left {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+}
+
+.mk-anim-float {
+  animation: mk-float 4.5s ease-in-out infinite;
+}
+
+.mk-anim-dash {
+  stroke-dasharray: 6 10;
+  animation: mk-dash 1.4s linear infinite;
+}
+
+.mk-anim-pulse-ring {
+  animation: mk-pulse-ring 3s ease-out infinite;
+}
+
+.mk-anim-breathe {
+  animation: mk-breathe 6s ease-in-out infinite;
+}
+
+.mk-anim-ring {
+  animation: mk-ring 3.2s ease-in-out infinite;
+}
+
+.mk-anim-badge {
+  animation: mk-badge 3.2s ease-in-out infinite;
+}
+
+.mk-anim-blink {
+  animation: mk-blink 1s steps(1) infinite;
+}
+
+.mk-anim-toast {
+  animation: mk-toast 6s ease-in-out infinite;
+}
+
+.mk-anim-draw {
+  stroke-dasharray: 100;
+  animation: mk-draw 4s ease-in-out infinite;
+}
+
+.mk-anim-grow {
+  animation: mk-grow 5s ease-in-out infinite;
+}
+
+.mk-anim-twinkle {
+  animation: mk-twinkle 2.4s ease-in-out infinite;
+}
+
+.mk-anim-appear {
+  animation: mk-appear 5s ease-in-out infinite;
+}
+
+.mk-anim-scan {
+  animation: mk-scan 3.5s ease-in-out infinite;
+}
+
+.mk-anim-led {
+  animation: mk-led 1.6s ease-in-out infinite;
+}
+
+.mk-anim-ripple {
+  animation: mk-ripple 3s ease-out infinite;
+}
+
+.mk-anim-cycle-3 {
+  animation: mk-cycle-3 6s ease-in-out infinite;
+}
+
+.mk-anim-cycle-4 {
+  animation: mk-cycle-4 8s ease-in-out infinite;
+}
+
+.mk-anim-cycle-5 {
+  animation: mk-cycle-5 10s ease-in-out infinite;
+}
+
+.mk-anim-rise-4 {
+  animation: mk-rise-4 8s ease-in-out infinite;
+}
+
+.mk-anim-drift {
+  animation: mk-drift 14s ease-in-out infinite;
+}
+
+.mk-anim-travel {
+  offset-rotate: 0deg;
+  animation: mk-travel 9s ease-in-out infinite;
+}
+
+.mk-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--border) 80%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--border) 80%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 40%,
+    black 30%,
+    transparent 100%
+  );
+}
+
+.mk-dots {
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--border) 100%, transparent) 1.2px,
+    transparent 1.2px
+  );
+  background-size: 22px 22px;
+}
+
+.mk-section-anchor {
+  scroll-margin-top: 5rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*='mk-anim-'] {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes mk-cycle-2 {
+  0%,
+  46% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-cycle-7 {
+  0%,
+  12% {
+    opacity: 1;
+  }
+  14.5%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mk-anim-cycle-7 {
+  animation: mk-cycle-7 14s ease-in-out infinite;
+}
+
+@keyframes mk-cycle-6 {
+  0%,
+  14% {
+    opacity: 1;
+  }
+  16.6%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mk-anim-cycle-6 {
+  animation: mk-cycle-6 12s ease-in-out infinite;
+}
+
+@keyframes mk-plug {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  20%,
+  86% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  92%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+.mk-anim-plug {
+  offset-rotate: 0deg;
+  animation: mk-plug 12s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes mk-plug-nav {
+  0%,
+  18% {
+    opacity: 0.3;
+  }
+  24%,
+  86% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.mk-anim-plug-nav {
+  animation: mk-plug-nav 12s ease-in-out infinite;
+}
+
+@keyframes mk-scroll-log {
+  to {
+    transform: translateY(-104px);
+  }
+}
+
+.mk-anim-scroll-log {
+  animation: mk-scroll-log 8s linear infinite;
+}
+
+@keyframes mk-step-1 {
+  0%,
+  4% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  8%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-step-2 {
+  0%,
+  18% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  22%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-step-3 {
+  0%,
+  32% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  36%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-step-4 {
+  0%,
+  46% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  50%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-step-5 {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  64%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-step-6 {
+  0%,
+  74% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  78%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mk-anim-step-1 {
+  animation: mk-step-1 14s ease-out infinite;
+}
+
+.mk-anim-step-2 {
+  animation: mk-step-2 14s ease-out infinite;
+}
+
+.mk-anim-step-3 {
+  animation: mk-step-3 14s ease-out infinite;
+}
+
+.mk-anim-step-4 {
+  animation: mk-step-4 14s ease-out infinite;
+}
+
+.mk-anim-step-5 {
+  animation: mk-step-5 14s ease-out infinite;
+}
+
+.mk-anim-step-6 {
+  animation: mk-step-6 14s ease-out infinite;
+}
+
+@keyframes mk-progress {
+  0%,
+  4% {
+    transform: scaleX(0);
+  }
+  88%,
+  94% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+.mk-anim-progress {
+  animation: mk-progress 14s linear infinite;
+}
+
+@keyframes mk-file-1 {
+  0%,
+  4% {
+    opacity: 0;
+  }
+  8%,
+  20% {
+    opacity: 1;
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-file-2 {
+  0%,
+  32% {
+    opacity: 0;
+  }
+  36%,
+  48% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-file-3 {
+  0%,
+  46% {
+    opacity: 0;
+  }
+  50%,
+  62% {
+    opacity: 1;
+  }
+  66%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-file-4 {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  64%,
+  76% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mk-anim-file-1 {
+  animation: mk-file-1 14s ease-out infinite;
+}
+
+.mk-anim-file-2 {
+  animation: mk-file-2 14s ease-out infinite;
+}
+
+.mk-anim-file-3 {
+  animation: mk-file-3 14s ease-out infinite;
+}
+
+.mk-anim-file-4 {
+  animation: mk-file-4 14s ease-out infinite;
+}
+
+@keyframes mk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mk-anim-spin {
+  animation: mk-spin 1.2s linear infinite;
+}
+
+@keyframes mk-gate {
+  0%,
+  20% {
+    opacity: 0.2;
+  }
+  24%,
+  60% {
+    opacity: 1;
+  }
+  64%,
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.mk-anim-gate {
+  animation: mk-gate 6s ease-in-out infinite;
+}
+
+@keyframes mk-bot-bounce {
+  0% {
+    transform: translateY(-64px);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  34% {
+    transform: translateY(0);
+  }
+  42% {
+    transform: translateY(-12px);
+  }
+  48% {
+    transform: translateY(-4px);
+  }
+  62% {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+}
+
+.mk-anim-bot-bounce {
+  animation: mk-bot-bounce 6s ease-in-out infinite;
+}
+
+@keyframes mk-bot-block {
+  0%,
+  32% {
+    opacity: 0;
+  }
+  36%,
+  58% {
+    opacity: 1;
+  }
+  64%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mk-anim-bot-block {
+  animation: mk-bot-block 6s ease-in-out infinite;
+}

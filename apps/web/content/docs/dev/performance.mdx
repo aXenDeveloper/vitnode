@@ -22,13 +22,13 @@ TanStack Start splits components into separate lazy chunks by default, keeping t
 
 TanStack Router automatically extracts route `component`, `errorComponent`, and `notFoundComponent` into lazy chunks:
 
-| Route Option       | Read When             | In Initial Bundle?  | Optimization                                  |
-| :----------------- | :-------------------- | :------------------ | :-------------------------------------------- |
-| `path`, `id`       | Route tree generation | **Yes**             | Keep route paths concise                      |
-| `head`             | Page navigation       | **Yes**             | Isolate metadata strings in leaf files        |
-| `loader`           | Pre-render            | **Yes (fn only)**   | `await import()` large dependencies inside fn |
-| `pendingComponent` | Route loading         | **Yes**             | Use lightweight SVG/CSS skeleton primitives   |
-| `component`        | Render                | **No (Lazy Chunk)** | Automatically code-split                      |
+| Route Option       | Read When             | In Initial Bundle?  | Optimization                                                            |
+| :----------------- | :-------------------- | :------------------ | :---------------------------------------------------------------------- |
+| `path`, `id`       | Route tree generation | **Yes**             | Keep route paths concise                                                |
+| `head`             | Page navigation       | **Yes**             | Isolate metadata strings in leaf files                                  |
+| `loader`           | Pre-render            | **Yes (fn only)**   | `await import()` large dependencies inside fn                           |
+| `pendingComponent` | Route loading         | **Yes**             | Plain skeleton markup only - never a layout component from a UI library |
+| `component`        | Render                | **No (Lazy Chunk)** | Automatically code-split                                                |
 
 ---
 
@@ -99,19 +99,88 @@ export const route = definePluginRoute({
 
 ### 4. Lazy Images Below the Fold
 
-Always specify explicit aspect ratios and `loading="lazy"` on images outside the initial viewport:
+Always specify explicit aspect ratios and `loading="lazy"` on images outside the initial viewport, and ship WebP with a `srcSet` so a phone never downloads the desktop rendition:
 
 ```tsx
 <img
-  src="/photo.webp"
+  src={photo.large}
+  srcSet={`${photo.small} 800w, ${photo.large} 1600w`}
+  sizes="(min-width: 1024px) 1024px, 100vw"
   alt="Community event"
-  width={800}
-  height={600}
+  width={1600}
+  height={866}
   loading="lazy"
   decoding="async"
-  className="aspect-4/3 object-cover rounded-lg"
+  className="aspect-video object-cover rounded-lg"
 />
 ```
+
+The one image that is the page's largest element on arrival - a hero screenshot - is the exception: give it `loading="eager"` and `fetchPriority="high"` so the browser asks for it first.
+
+### 5. Skip Rendering Work for Offscreen Sections
+
+A long marketing page can carry a hundred CSS animations, most of them below the fold. Give each section `content-visibility: auto` with a `contain-intrinsic-size` estimate and the browser skips style, layout and animation work for everything not near the viewport:
+
+```css title="apps/web/src/site/marketing/marketing.css"
+.mk-section-anchor {
+  scroll-margin-top: 5rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48rem;
+}
+```
+
+The home page went from 133 running animations to 42 on arrival with this one rule, and the pages still scroll and deep-link normally.
+
+### 6. Keep the Plugin Factory Light
+
+`vitnode.config.ts` is bundled with the document shell, so everything a plugin factory imports ships to every visitor. A factory that spreads `admin/content` or `admin/nav` drags the AdminCP editing stack - AutoForm, schemas, dialogs - into the public bundle. Keep it to `pluginId`, `messages` and `routes`; see [Plugin frontend modules](/docs/dev/content-engine/plugin-registration).
+
+### 7. Route-Scoped Stylesheets
+
+Tailwind emits one utility per class it finds in the sources you list. A documentation UI kit scanned globally pays its CSS on the home page too. Give it a stylesheet of its own and load it from the layout route that renders it:
+
+```css title="apps/web/src/docs/docs.css"
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css';
+@import '../theme.css' theme(reference);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@source '../../node_modules/fumadocs-ui/dist/**/*.js';
+```
+
+```tsx title="apps/web/src/routes/_docs.tsx"
+import docsCss from '#/docs/docs.css?url'
+
+export const Route = createFileRoute('/_docs')({
+  loader: async () => ({ pageTree: await getDocsPageTree() }),
+  head: () => ({ links: [{ href: docsCss, rel: 'stylesheet' }] }),
+  // ...
+})
+```
+
+`theme(reference)` makes the app's design tokens available to the second stylesheet without emitting them twice, and `source(none)` stops it from scanning the whole app again.
+
+### 8. Group Shared Vendor Modules
+
+Rolldown splits every module shared by two routes into its own file, which for an icon library means dozens of 300-byte requests per page. Group the libraries that are shared by design into one chunk each:
+
+```ts title="apps/web/vite.config.ts"
+build: {
+  rolldownOptions: {
+    output: {
+      advancedChunks: {
+        groups: [
+          { name: 'icons', test: /node_modules[\\/].*lucide-react/, minShareCount: 2 },
+        ],
+      },
+    },
+  },
+},
+```
+
+Group only libraries whose shared surface is small. A UI primitive library shared by every AdminCP screen turns into a single 280 KB chunk that public pages then download for a tooltip.
 
 ---
 
@@ -135,7 +204,7 @@ npm run build
 
 </Tabs>
 
-Inspect the output chunk sizes in `apps/web/dist/`. Keep any single lazy chunk below **150 KB** for optimal mobile performance.
+Inspect the output chunk sizes in `apps/web/.output/public/assets/`, then load a page in the browser's network panel and check what the document shell actually requests - a chunk the manifest never preloads can still arrive through a static import. Keep any single lazy chunk below **150 KB** for optimal mobile performance.
 
 ## Learn More
 

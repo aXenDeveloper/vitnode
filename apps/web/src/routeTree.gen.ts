@@ -14,10 +14,13 @@ import { Route as DocsRouteImport } from './routes/_docs'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as MainPluginsRouteImport } from './routes/_main/plugins'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
 import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
+import { Route as MainSolutionsIndexRouteImport } from './routes/_main/solutions/index'
+import { Route as MainSolutionsSlugRouteImport } from './routes/_main/solutions/$slug'
 import { Route as AdminAdminCoreIndexRouteImport } from './routes/_admin/admin.core.index'
 
 const AdminRoute = AdminRouteImport.update({
@@ -42,6 +45,11 @@ const MainIndexRoute = MainIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MainRoute,
 } as any)
+const MainPluginsRoute = MainPluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => MainRoute,
+} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
@@ -62,6 +70,16 @@ const DocsDocsSplatRoute = DocsDocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => DocsRoute,
 } as any)
+const MainSolutionsIndexRoute = MainSolutionsIndexRouteImport.update({
+  id: '/solutions/',
+  path: '/solutions/',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainSolutionsSlugRoute = MainSolutionsSlugRouteImport.update({
+  id: '/solutions/$slug',
+  path: '/solutions/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
 const AdminAdminCoreIndexRoute = AdminAdminCoreIndexRouteImport.update({
   id: '/admin/core/',
   path: '/admin/core/',
@@ -71,19 +89,25 @@ const AdminAdminCoreIndexRoute = AdminAdminCoreIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/plugins': typeof MainPluginsRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/$': typeof DocsDocsSplatRoute
+  '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs/': typeof DocsDocsIndexRoute
+  '/solutions/': typeof MainSolutionsIndexRoute
   '/admin/core/': typeof AdminAdminCoreIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/plugins': typeof MainPluginsRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/$': typeof DocsDocsSplatRoute
+  '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs': typeof DocsDocsIndexRoute
+  '/solutions': typeof MainSolutionsIndexRoute
   '/admin/core': typeof AdminAdminCoreIndexRoute
 }
 export interface FileRoutesById {
@@ -92,11 +116,14 @@ export interface FileRoutesById {
   '/_docs': typeof DocsRouteWithChildren
   '/_main': typeof MainRouteWithChildren
   '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/_main/plugins': typeof MainPluginsRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/_main/': typeof MainIndexRoute
   '/_docs/docs/$': typeof DocsDocsSplatRoute
+  '/_main/solutions/$slug': typeof MainSolutionsSlugRoute
   '/_docs/docs/': typeof DocsDocsIndexRoute
+  '/_main/solutions/': typeof MainSolutionsIndexRoute
   '/_admin/admin/core/': typeof AdminAdminCoreIndexRoute
 }
 export interface FileRouteTypes {
@@ -104,19 +131,25 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/llms-full.txt'
+    | '/plugins'
     | '/api/$'
     | '/docs/search'
     | '/docs/$'
+    | '/solutions/$slug'
     | '/docs/'
+    | '/solutions/'
     | '/admin/core/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/llms-full.txt'
+    | '/plugins'
     | '/api/$'
     | '/docs/search'
     | '/docs/$'
+    | '/solutions/$slug'
     | '/docs'
+    | '/solutions'
     | '/admin/core'
   id:
     | '__root__'
@@ -124,11 +157,14 @@ export interface FileRouteTypes {
     | '/_docs'
     | '/_main'
     | '/llms-full.txt'
+    | '/_main/plugins'
     | '/api/$'
     | '/docs/search'
     | '/_main/'
     | '/_docs/docs/$'
+    | '/_main/solutions/$slug'
     | '/_docs/docs/'
+    | '/_main/solutions/'
     | '/_admin/admin/core/'
   fileRoutesById: FileRoutesById
 }
@@ -178,6 +214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/plugins': {
+      id: '/_main/plugins'
+      path: '/plugins'
+      fullPath: '/plugins'
+      preLoaderRoute: typeof MainPluginsRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -205,6 +248,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsDocsSplatRouteImport
       parentRoute: typeof DocsRoute
+    }
+    '/_main/solutions/': {
+      id: '/_main/solutions/'
+      path: '/solutions'
+      fullPath: '/solutions/'
+      preLoaderRoute: typeof MainSolutionsIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/solutions/$slug': {
+      id: '/_main/solutions/$slug'
+      path: '/solutions/$slug'
+      fullPath: '/solutions/$slug'
+      preLoaderRoute: typeof MainSolutionsSlugRouteImport
+      parentRoute: typeof MainRoute
     }
     '/_admin/admin/core/': {
       id: '/_admin/admin/core/'
@@ -239,11 +296,17 @@ const DocsRouteChildren: DocsRouteChildren = {
 const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
 interface MainRouteChildren {
+  MainPluginsRoute: typeof MainPluginsRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainSolutionsSlugRoute: typeof MainSolutionsSlugRoute
+  MainSolutionsIndexRoute: typeof MainSolutionsIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
+  MainPluginsRoute: MainPluginsRoute,
   MainIndexRoute: MainIndexRoute,
+  MainSolutionsSlugRoute: MainSolutionsSlugRoute,
+  MainSolutionsIndexRoute: MainSolutionsIndexRoute,
 }
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)

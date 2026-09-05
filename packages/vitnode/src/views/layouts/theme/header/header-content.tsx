@@ -28,7 +28,10 @@ export const HeaderLayoutContent = ({
   user,
   ...props
 }: HeaderLayoutContentProps) => (
-  <header className={cn("sticky top-0 z-20 w-full", className)} {...props}>
+  <header
+    className={cn("sticky top-0 z-20 w-full sm:top-2", className)}
+    {...props}
+  >
     <div className="dark:bg-background/75 bg-card/75 container mx-auto flex h-14 items-center border-b px-4 py-2 backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
       <LinkComponent href={HEADER_HREF.home}>{logo}</LinkComponent>
 
