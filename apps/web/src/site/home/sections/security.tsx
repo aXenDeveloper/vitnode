@@ -4,7 +4,7 @@ import { Bot, Fingerprint, Gauge, KeyRound, ShieldUser } from 'lucide-react'
 
 import type { SiteLinkComponent } from '#/site/home/site-link'
 
-import { ShieldVisual } from '#/site/home/illustrations/security-hosting'
+import { GatesVisual } from '#/site/home/illustrations/gates'
 import { SectionHeading, TextLink } from '#/site/marketing/shared'
 
 const GUARDS: { Icon: LucideIcon; text: string; title: string }[] = [
@@ -47,7 +47,7 @@ export const SecuritySection = ({
   >
     <div className="bg-card grid items-center gap-8 rounded-3xl border p-6 sm:p-10 lg:grid-cols-5">
       <div className="flex justify-center lg:col-span-2">
-        <ShieldVisual />
+        <GatesVisual />
       </div>
 
       <div className="flex flex-col gap-6 lg:col-span-3">

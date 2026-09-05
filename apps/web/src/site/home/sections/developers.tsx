@@ -22,8 +22,8 @@ const COMMANDS = [
     line: 'pnpm create vitnode-app@canary',
   },
   {
-    comment: 'start Postgres, migrate, run',
-    line: 'pnpm docker:dev && pnpm db:migrate && pnpm dev',
+    comment: 'start Postgres and run',
+    line: 'pnpm docker:dev && pnpm dev',
   },
   {
     comment: 'your first feature gets its own package',

@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://vitnode.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://vitnode.com/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vitnode.com/plugins</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vitnode.com/solutions</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vitnode.com/solutions/help-center</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vitnode.com/solutions/membership-site</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vitnode.com/solutions/open-source-hub</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vitnode.com/solutions/multilingual-magazine</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vitnode.com/solutions/gaming-guild</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vitnode.com/docs/dev</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://vitnode.com/docs/dev/setup</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vitnode.com/docs/guides/first-plugin</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>

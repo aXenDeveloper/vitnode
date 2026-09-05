@@ -11,17 +11,35 @@ import {
 
 const BRAND_BLUE = '#3261bf'
 
-const PAGES = {
-  home: { description: HOME_DESCRIPTION, path: '/', title: HOME_TITLE },
-  pricing: {
-    description:
-      'VitNode pricing is a very short conversation: the whole community framework is free and open source under the MIT licence. See what is included and what you still pay for.',
-    path: '/pricing',
-    title: 'Pricing - Free Forever, Open Source',
-  },
-} as const
+export interface MarketingCrumb {
+  name: string
+  path: string
+}
 
-type MarketingPage = keyof typeof PAGES
+export interface MarketingPageMeta {
+  breadcrumbs?: MarketingCrumb[]
+  description: string
+  path: string
+  title: string
+}
+
+export const MARKETING_PAGES = {
+  home: { description: HOME_DESCRIPTION, path: '/', title: HOME_TITLE },
+  plugins: {
+    breadcrumbs: [{ name: 'Plugins', path: '/plugins' }],
+    description:
+      'Every VitNode feature ships as a plugin. Meet the blog plugin, the example plugin for learning, and see what a plugin of your own looks like.',
+    path: '/plugins',
+    title: 'Plugins - The Blog, the Example and Features of Your Own',
+  },
+  solutions: {
+    breadcrumbs: [{ name: 'Solutions', path: '/solutions' }],
+    description:
+      'Five solutions built with VitNode: a help center, a membership site, an open-source project hub, a gaming guild hub and a multilingual magazine, each with the flow, the roles and real screens.',
+    path: '/solutions',
+    title: 'Solutions - Five Sites Built with VitNode',
+  },
+} satisfies Record<string, MarketingPageMeta>
 
 const softwareNode = {
   '@id': `${SITE_ORIGIN}/#software`,
@@ -37,15 +55,20 @@ const softwareNode = {
   version: '2.0 canary',
 }
 
-const breadcrumbNode = (name: string, url: string) => ({
+const breadcrumbNode = (crumbs: MarketingCrumb[]) => ({
   '@type': 'BreadcrumbList',
   itemListElement: [
     { '@type': 'ListItem', item: `${SITE_ORIGIN}/`, name: 'Home', position: 1 },
-    { '@type': 'ListItem', item: url, name, position: 2 },
+    ...crumbs.map(({ name, path }, index) => ({
+      '@type': 'ListItem',
+      item: new URL(path, SITE_ORIGIN).href,
+      name,
+      position: index + 2,
+    })),
   ],
 })
 
-const structuredData = (page: MarketingPage, url: string) => ({
+const structuredData = (page: MarketingPageMeta, url: string) => ({
   '@context': 'https://schema.org',
   '@graph': [
     {
@@ -59,14 +82,14 @@ const structuredData = (page: MarketingPage, url: string) => ({
       '@id': `${url}#webpage`,
       '@type': 'WebPage',
       about: { '@id': softwareNode['@id'] },
-      description: PAGES[page].description,
+      description: page.description,
       inLanguage: 'en',
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
-      name: `${PAGES[page].title} - VitNode`,
+      name: `${page.title} - VitNode`,
       url,
     },
     softwareNode,
-    ...(page === 'pricing'
+    ...(page.path === '/'
       ? [
           {
             '@type': 'Offer',
@@ -74,16 +97,16 @@ const structuredData = (page: MarketingPage, url: string) => ({
             itemOffered: { '@id': softwareNode['@id'] },
             price: '0',
             priceCurrency: 'USD',
-            url,
+            url: `${url}#pricing`,
           },
-          breadcrumbNode('Pricing', url),
         ]
       : []),
+    ...(page.breadcrumbs ? [breadcrumbNode(page.breadcrumbs)] : []),
   ],
 })
 
-export const marketingHead = (page: MarketingPage) => {
-  const { description, path, title } = PAGES[page]
+export const marketingHead = (page: MarketingPageMeta) => {
+  const { description, path, title } = page
   const url = new URL(path, SITE_ORIGIN).href
   const socialTitle = `${title} - VitNode`
   const head = pageHead({

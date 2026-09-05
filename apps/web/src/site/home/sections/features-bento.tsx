@@ -86,8 +86,8 @@ const FEATURES: Feature[] = [
     heading: 'Good news travels live.',
     href: '/docs/dev/websocket',
     Icon: Bell,
-    text: 'One authenticated WebSocket shared by every open tab pushes notifications, live counters and toasts. No refresh button required.',
-    title: 'WebSockets & notifications',
+    text: 'One authenticated WebSocket shared by every open tab pushes live toasts and updates from your API today. A notification centre with an inbox is planned.',
+    title: 'WebSockets & live updates',
     Visual: RealtimeVisual,
   },
 ]

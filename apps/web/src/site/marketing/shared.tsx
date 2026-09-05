@@ -129,10 +129,7 @@ export const MarketingActions = ({
 }) => (
   <div className={cn('flex flex-wrap items-center gap-3', className)}>
     <LinkComponent
-      className={cn(
-        buttonVariants({ size: 'lg' }),
-        'mk-shine relative overflow-hidden px-5',
-      )}
+      className={cn(buttonVariants({ size: 'lg' }), 'px-5')}
       href="/docs/dev/setup"
     >
       Start building free

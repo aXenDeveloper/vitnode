@@ -12,19 +12,19 @@ const CARDS = [
   {
     Icon: UsersRound,
     status: 'Included',
-    text: 'Primary and secondary groups, coloured name badges and sensible seeded defaults. Organise people the way your community actually works.',
+    text: 'Primary and secondary groups, coloured names and sensible seeded defaults. Organise people the way your community actually works.',
     title: 'Member roles',
   },
   {
     Icon: Gavel,
     status: 'On the roadmap',
-    text: 'Moderators already get their own role and permission set. A dedicated moderation workspace with reports and queues is next in line.',
+    text: 'Moderators already have their own permission set in the AdminCP. A dedicated moderation workspace is one of the next things being built.',
     title: 'Moderator CP',
   },
   {
     Icon: UserRound,
     status: 'Included',
-    text: 'Registration, sign-in, email verification, password reset and device sessions are ready before you write your first page.',
+    text: 'Registration, sign-in, password reset, social login and device sessions are ready before you write your first page.',
     title: 'Accounts & sessions',
   },
   {
@@ -46,7 +46,7 @@ export const CommunitySection = ({
         <SectionHeading
           eyebrow="Made for people, managed by people"
           id="community-title"
-          title="A community. With a little less chaos."
+          title="A community. With less chaos."
         >
           Members sign up, get roles and earn trust. Your team keeps the place
           healthy from a panel built for the job, not from a spreadsheet and a

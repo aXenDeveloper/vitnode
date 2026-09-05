@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@vitnode/core/lib/utils'
 import {
   Bell,
+  Boxes,
   Braces,
   Check,
   Database,
@@ -14,7 +15,9 @@ import {
   Monitor,
   Search,
   ShieldCheck,
+  Smartphone,
   Sparkles,
+  Tablet,
   Zap,
 } from 'lucide-react'
 
@@ -54,41 +57,54 @@ const CODE_LINES = [
   { text: 'defineContentType({', tone: 'plain' },
   { text: '  id: "blog.article",', tone: 'plain' },
   { text: '  fields: {', tone: 'plain' },
-  { text: '    title: field.text(),', tone: 'accent' },
+  { text: '    title: field.text({ required: true }),', tone: 'accent' },
   { text: '    body: field.richText(),', tone: 'accent' },
   { text: '    cover: field.image(),', tone: 'accent' },
   { text: '  },', tone: 'plain' },
   { text: '})', tone: 'plain' },
 ] as const
 
-const CONTENT_OUTPUTS: { Icon: LucideIcon; label: string }[] = [
-  { Icon: Database, label: 'PostgreSQL table' },
-  { Icon: Braces, label: 'Typed CRUD API' },
-  { Icon: ShieldCheck, label: 'Staff permissions' },
-  { Icon: LayoutDashboard, label: 'AdminCP screens' },
-  { Icon: Search, label: 'Search index' },
-  { Icon: Languages, label: 'Translations' },
-  { Icon: FileCheck, label: 'Zod validation' },
+const CONTENT_OUTPUTS: { Icon: LucideIcon; label: string; meta: string }[] = [
+  { Icon: Database, label: 'PostgreSQL table', meta: 'blog_articles' },
+  { Icon: FileCheck, label: 'Zod validation', meta: 'z.object({ … })' },
+  { Icon: Braces, label: 'Typed CRUD API', meta: 'GET /api/articles' },
+  {
+    Icon: ShieldCheck,
+    label: 'Staff permissions',
+    meta: 'can_view · can_edit',
+  },
+  {
+    Icon: LayoutDashboard,
+    label: 'AdminCP screens',
+    meta: 'list · create · edit',
+  },
+  { Icon: Languages, label: 'Translations', meta: 'en · pl · es · ja' },
 ]
 
+const OUTPUT_ROW_Y = [330, 420, 510]
+const OUTPUT_LEFT_X = 24
+const OUTPUT_RIGHT_X = 312
+const OUTPUT_WIDTH = 224
+const OUTPUT_HEIGHT = 60
+const TRUNK_X = 280
+
 export const ContentEngineVisual = () => (
-  <Visual viewBox="0 0 560 352">
+  <Visual viewBox="0 0 560 600">
     <rect
       className="fill-card stroke-border"
-      height={196}
+      height={170}
       rx={16}
       strokeWidth={1.5}
-      width={216}
-      x={16}
-      y={78}
+      width={480}
+      x={40}
+      y={24}
     />
-    <circle className="fill-red-400/70" cx={36} cy={98} r={4} />
-    <circle className="fill-amber-400/70" cx={50} cy={98} r={4} />
-    <circle className="fill-emerald-400/70" cx={64} cy={98} r={4} />
-    <text className="fill-muted-foreground font-mono text-xs" x={80} y={102}>
-      article.ts
+    <circle className="fill-red-400/70" cx={60} cy={44} r={4} />
+    <circle className="fill-amber-400/70" cx={74} cy={44} r={4} />
+    <circle className="fill-emerald-400/70" cx={88} cy={44} r={4} />
+    <text className="fill-muted-foreground font-mono text-xs" x={104} y={48}>
+      plugins/blog/src/content/article.ts
     </text>
-
     {CODE_LINES.map(({ text, tone }, index) => (
       <text
         className={cn(
@@ -96,69 +112,162 @@ export const ContentEngineVisual = () => (
           tone === 'accent' ? 'fill-primary' : 'fill-foreground/80',
         )}
         key={text}
-        x={30}
+        x={56}
         xmlSpace="preserve"
-        y={132 + index * 17}
+        y={72 + index * 16}
       >
         {text}
       </text>
     ))}
 
-    {CONTENT_OUTPUTS.map(({ Icon, label }, index) => {
-      const y = 44 + index * 44
-      const path = `M232 176 C 290 176, 290 ${y}, 344 ${y}`
+    <line
+      className="stroke-border"
+      strokeWidth={2}
+      x1={TRUNK_X}
+      x2={TRUNK_X}
+      y1={194}
+      y2={232}
+    />
+    <circle
+      className="mk-anim-travel fill-primary"
+      r={5}
+      style={{
+        animationDuration: '1.6s',
+        offsetPath: `path('M${TRUNK_X} 194 L${TRUNK_X} 232')`,
+      }}
+    />
+
+    <rect
+      className="mk-anim-breathe mk-origin-center fill-primary/20"
+      height={64}
+      rx={32}
+      width={212}
+      x={174}
+      y={220}
+    />
+    <rect
+      className="fill-primary drop-shadow-md"
+      height={44}
+      rx={22}
+      width={188}
+      x={186}
+      y={230}
+    />
+    <Boxes
+      className="text-primary-foreground"
+      height={18}
+      strokeWidth={2}
+      width={18}
+      x={206}
+      y={243}
+    />
+    <text
+      className="fill-primary-foreground text-sm font-semibold"
+      x={232}
+      y={257}
+    >
+      Content Engine
+    </text>
+
+    <line
+      className="stroke-border"
+      strokeWidth={2}
+      x1={TRUNK_X}
+      x2={TRUNK_X}
+      y1={274}
+      y2={OUTPUT_ROW_Y[2] ?? 510}
+    />
+    <line
+      className="mk-anim-dash stroke-primary/60"
+      strokeWidth={2}
+      x1={TRUNK_X}
+      x2={TRUNK_X}
+      y1={274}
+      y2={OUTPUT_ROW_Y[2] ?? 510}
+    />
+
+    {CONTENT_OUTPUTS.map(({ Icon, label, meta }, index) => {
+      const left = index % 2 === 0
+      const x = left ? OUTPUT_LEFT_X : OUTPUT_RIGHT_X
+      const y = OUTPUT_ROW_Y[Math.floor(index / 2)] ?? 330
+      const branchEnd = left ? x + OUTPUT_WIDTH : x
 
       return (
         <g key={label}>
-          <path className="stroke-border" d={path} strokeWidth={1.5} />
-          <path
-            className="mk-anim-dash mk-anim-cycle-7 stroke-primary"
-            d={path}
+          <line
+            className="stroke-border"
             strokeWidth={2}
+            x1={TRUNK_X}
+            x2={branchEnd}
+            y1={y}
+            y2={y}
+          />
+          <line
+            className="mk-anim-cycle-6 stroke-primary"
+            strokeWidth={2.5}
             style={stagger(index, CONTENT_OUTPUTS.length, 2)}
+            x1={TRUNK_X}
+            x2={branchEnd}
+            y1={y}
+            y2={y}
           />
           <rect
             className="fill-card stroke-border"
-            height={36}
-            rx={10}
+            height={OUTPUT_HEIGHT}
+            rx={14}
             strokeWidth={1.5}
-            width={200}
-            x={344}
-            y={y - 18}
+            width={OUTPUT_WIDTH}
+            x={x}
+            y={y - OUTPUT_HEIGHT / 2}
           />
           <rect
-            className="mk-anim-cycle-7 fill-primary/10 stroke-primary"
-            height={36}
-            rx={10}
+            className="mk-anim-cycle-6 fill-primary/10 stroke-primary"
+            height={OUTPUT_HEIGHT}
+            rx={14}
             strokeWidth={1.5}
             style={stagger(index, CONTENT_OUTPUTS.length, 2)}
-            width={200}
-            x={344}
-            y={y - 18}
+            width={OUTPUT_WIDTH}
+            x={x}
+            y={y - OUTPUT_HEIGHT / 2}
+          />
+          <rect
+            className="fill-primary/10"
+            height={32}
+            rx={10}
+            width={32}
+            x={x + 14}
+            y={y - 16}
           />
           <Icon
             className="text-primary"
             height={16}
             strokeWidth={2}
             width={16}
-            x={358}
+            x={x + 22}
             y={y - 8}
           />
           <text
             className="fill-foreground text-xs font-semibold"
-            x={384}
-            y={y + 4}
+            x={x + 56}
+            y={y - 4}
           >
             {label}
           </text>
+          <text
+            className="fill-muted-foreground font-mono text-xs"
+            x={x + 56}
+            y={y + 14}
+          >
+            {meta}
+          </text>
           <Check
-            className="mk-anim-cycle-7 text-emerald-500"
+            className="mk-anim-cycle-6 text-emerald-500"
             height={16}
             strokeWidth={2.5}
             style={stagger(index, CONTENT_OUTPUTS.length, 2)}
             width={16}
-            x={518}
-            y={y - 8}
+            x={x + OUTPUT_WIDTH - 26}
+            y={y - 24}
           />
         </g>
       )
@@ -167,18 +276,10 @@ export const ContentEngineVisual = () => (
     <text
       className="fill-muted-foreground text-xs"
       textAnchor="middle"
-      x={124}
-      y={300}
+      x={TRUNK_X}
+      y={578}
     >
-      One definition in
-    </text>
-    <text
-      className="fill-muted-foreground text-xs"
-      textAnchor="middle"
-      x={444}
-      y={340}
-    >
-      A whole product out
+      one definition in · a whole product out
     </text>
   </Visual>
 )
@@ -274,7 +375,16 @@ export const I18nVisual = () => (
           y={116}
         />
         <text
-          className="fill-foreground text-xs font-semibold mix-blend-difference"
+          className="fill-muted-foreground text-xs font-semibold"
+          textAnchor="middle"
+          x={197 + index * 32}
+          y={131}
+        >
+          {code}
+        </text>
+        <text
+          className="mk-anim-cycle-4 fill-primary-foreground text-xs font-semibold"
+          style={stagger(index, 4, 2)}
           textAnchor="middle"
           x={197 + index * 32}
           y={131}
@@ -405,69 +515,125 @@ export const CacheVisual = () => (
   </Visual>
 )
 
-const LISTENERS: { Icon: LucideIcon; label: string }[] = [
-  { Icon: Mail, label: 'Send email' },
-  { Icon: Search, label: 'Update search' },
-  { Icon: Bell, label: 'Notify members' },
+const EVENT_LOG = [
+  { name: 'user.created', tone: 'fill-emerald-500' },
+  { name: 'blog.post.created', tone: 'fill-primary' },
+  { name: 'role.updated', tone: 'fill-amber-500' },
+  { name: 'file.uploaded', tone: 'fill-primary' },
 ]
+
+const LISTENERS: { Icon: LucideIcon; label: string; y: number }[] = [
+  { Icon: Mail, label: 'Send email', y: 46 },
+  { Icon: Search, label: 'Reindex', y: 90 },
+  { Icon: Bell, label: 'Broadcast', y: 134 },
+]
+
+const LOG_ROW = 26
+const LOG = { height: 140, width: 166, x: 16, y: 20 }
+const CHIP = { height: 30, width: 106, x: 202 }
 
 export const EventsVisual = () => (
   <Visual>
-    {[0, 1, 2].map((index) => (
-      <circle
-        className="mk-anim-ripple mk-origin-center stroke-primary"
-        cx={72}
-        cy={90}
-        key={index}
-        r={22}
-        strokeWidth={1.5}
-        style={delay(index)}
-      />
-    ))}
+    <defs>
+      <clipPath id="events-log-clip">
+        <rect height={LOG_ROW * 4} width={LOG.width} x={LOG.x} y={LOG.y + 32} />
+      </clipPath>
+    </defs>
 
-    {LISTENERS.map(({ Icon, label }, index) => {
-      const y = 44 + index * 46
-      const path = `M128 90 C 150 90, 150 ${y}, 174 ${y}`
+    <rect
+      className="fill-card stroke-border"
+      height={LOG.height}
+      rx={14}
+      strokeWidth={1.5}
+      width={LOG.width}
+      x={LOG.x}
+      y={LOG.y}
+    />
+    <circle
+      className="mk-anim-twinkle mk-origin-center fill-emerald-500"
+      cx={32}
+      cy={38}
+      r={4}
+    />
+    <text className="fill-muted-foreground font-mono text-xs" x={42} y={42}>
+      event bus · live
+    </text>
+    <line
+      className="stroke-border"
+      strokeWidth={1}
+      x1={LOG.x}
+      x2={LOG.x + LOG.width}
+      y1={52}
+      y2={52}
+    />
+
+    <g clipPath="url(#events-log-clip)">
+      <g className="mk-anim-scroll-log">
+        {[...EVENT_LOG, ...EVENT_LOG].map(({ name, tone }, index) => (
+          <g key={`${name}-${index < EVENT_LOG.length ? 'a' : 'b'}`}>
+            <circle
+              className={tone}
+              cx={32}
+              cy={52 + index * LOG_ROW + 13}
+              r={3}
+            />
+            <text
+              className="fill-foreground font-mono text-xs"
+              x={42}
+              y={52 + index * LOG_ROW + 17}
+            >
+              {name}
+            </text>
+          </g>
+        ))}
+      </g>
+    </g>
+
+    {LISTENERS.map(({ Icon, label, y }, index) => {
+      const path = `M${LOG.x + LOG.width} 90 C ${LOG.x + LOG.width + 12} 90, ${CHIP.x - 12} ${y}, ${CHIP.x} ${y}`
 
       return (
         <g key={label}>
           <path className="stroke-border" d={path} strokeWidth={1.5} />
-          <path
-            className="mk-anim-dash mk-anim-cycle-3 stroke-primary"
-            d={path}
-            strokeWidth={2}
-            style={stagger(index, LISTENERS.length, 2)}
+          <circle
+            className="mk-anim-travel fill-primary"
+            r={3.5}
+            style={{
+              animationDelay: `-${index * 0.8}s`,
+              animationDuration: '2.4s',
+              offsetPath: `path('${path}')`,
+            }}
           />
           <rect
             className="fill-card stroke-border"
-            height={32}
+            height={CHIP.height}
             rx={10}
             strokeWidth={1.5}
-            width={130}
-            x={174}
-            y={y - 16}
+            width={CHIP.width}
+            x={CHIP.x}
+            y={y - CHIP.height / 2}
           />
           <rect
             className="mk-anim-cycle-3 fill-primary/10 stroke-primary"
-            height={32}
+            height={CHIP.height}
             rx={10}
             strokeWidth={1.5}
             style={stagger(index, LISTENERS.length, 2)}
-            width={130}
-            x={174}
-            y={y - 16}
+            width={CHIP.width}
+            x={CHIP.x}
+            y={y - CHIP.height / 2}
           />
           <Icon
             className="text-primary"
             height={14}
             strokeWidth={2}
             width={14}
-            x={186}
+            x={CHIP.x + 10}
             y={y - 7}
           />
           <text
             className="fill-foreground text-xs font-semibold"
-            x={208}
+            x={CHIP.x + 30}
             y={y + 4}
           >
             {label}
@@ -475,23 +641,6 @@ export const EventsVisual = () => (
         </g>
       )
     })}
-
-    <rect
-      className="fill-primary drop-shadow-md"
-      height={36}
-      rx={10}
-      width={112}
-      x={16}
-      y={72}
-    />
-    <text
-      className="fill-primary-foreground font-mono text-xs font-semibold"
-      textAnchor="middle"
-      x={72}
-      y={94}
-    >
-      post.published
-    </text>
   </Visual>
 )
 
@@ -506,7 +655,7 @@ export const AiVisual = () => (
       x={16}
       y={18}
     />
-    <rect className="fill-muted" height={28} rx={9} width={168} x={32} y={34} />
+    <rect className="fill-muted" height={28} rx={9} width={200} x={32} y={34} />
     <text className="fill-foreground text-xs" x={44} y={52}>
       Summarize this thread for me
     </text>
@@ -568,7 +717,7 @@ export const AiVisual = () => (
 const SEARCH_RESULTS = [
   { meta: 'Guide · 4 min', title: 'Welcome aboard: your first week' },
   { meta: 'Rules · 2 min', title: 'Community guidelines' },
-  { meta: 'Forum · 18 replies', title: 'How to ask a great question' },
+  { meta: 'Guide · 6 min', title: 'How to ask a great question' },
 ]
 
 export const SearchVisual = () => (
@@ -700,6 +849,12 @@ export const SearchVisual = () => (
   </Visual>
 )
 
+const DEVICES: { Icon: LucideIcon; name: string }[] = [
+  { Icon: Monitor, name: 'desktop' },
+  { Icon: Smartphone, name: 'phone' },
+  { Icon: Tablet, name: 'tablet' },
+]
+
 export const RealtimeVisual = () => (
   <Visual viewBox="0 0 560 210">
     <g className="mk-anim-ring mk-origin-top">
@@ -713,15 +868,7 @@ export const RealtimeVisual = () => (
       />
     </g>
     <g className="mk-anim-badge mk-origin-center">
-      <circle className="fill-red-500 drop-shadow-md" cx={116} cy={66} r={13} />
-      <text
-        className="fill-white text-xs font-bold"
-        textAnchor="middle"
-        x={116}
-        y={70}
-      >
-        3
-      </text>
+      <circle className="fill-red-500 drop-shadow-md" cx={114} cy={66} r={7} />
     </g>
 
     {[0, 1, 2].map((index) => (
@@ -741,7 +888,7 @@ export const RealtimeVisual = () => (
         height={64}
         rx={14}
         strokeWidth={1.5}
-        width={200}
+        width={290}
         x={244}
         y={36}
       />
@@ -755,10 +902,10 @@ export const RealtimeVisual = () => (
         y={61}
       />
       <text className="fill-foreground text-xs font-semibold" x={290} y={64}>
-        New reply to your post
+        Hello from the admin
       </text>
       <text className="fill-muted-foreground text-xs" x={290} y={82}>
-        Alex · just now
+        from the dashboard widget
       </text>
     </g>
 
@@ -768,7 +915,7 @@ export const RealtimeVisual = () => (
         height={64}
         rx={14}
         strokeWidth={1.5}
-        width={200}
+        width={290}
         x={244}
         y={112}
       />
@@ -782,58 +929,40 @@ export const RealtimeVisual = () => (
         y={137}
       />
       <text className="fill-foreground text-xs font-semibold" x={290} y={140}>
-        Mia mentioned you
+        Maintenance at 22:00
       </text>
       <text className="fill-muted-foreground text-xs" x={290} y={158}>
-        in #introductions
+        broadcast to everyone online
       </text>
     </g>
 
-    <rect
-      className="fill-card stroke-border"
-      height={44}
-      rx={12}
-      strokeWidth={1.5}
-      width={88}
-      x={456}
-      y={46}
-    />
-    <circle
-      className="mk-anim-twinkle mk-origin-center fill-emerald-500"
-      cx={472}
-      cy={68}
-      r={4}
-    />
-    <text className="fill-foreground text-xs font-semibold" x={482} y={65}>
-      1,204
-    </text>
-    <text className="fill-muted-foreground text-xs" x={482} y={80}>
-      online now
-    </text>
-
-    <rect
-      className="fill-card stroke-border"
-      height={44}
-      rx={12}
-      strokeWidth={1.5}
-      width={88}
-      x={456}
-      y={112}
-    />
-    <text className="fill-foreground text-xs font-semibold" x={468} y={131}>
-      1 socket
-    </text>
-    <text className="fill-muted-foreground text-xs" x={468} y={146}>
-      every tab
-    </text>
-
-    <text
-      className="fill-muted-foreground text-xs"
-      textAnchor="middle"
-      x={88}
-      y={186}
-    >
-      Cookie-authenticated
-    </text>
+    {DEVICES.map(({ Icon, name }, index) => (
+      <g key={name}>
+        <rect
+          className="fill-card stroke-border"
+          height={30}
+          rx={9}
+          strokeWidth={1.5}
+          width={44}
+          x={22 + index * 50}
+          y={158}
+        />
+        <Icon
+          className="text-foreground"
+          height={14}
+          strokeWidth={2}
+          width={14}
+          x={30 + index * 50}
+          y={166}
+        />
+        <circle
+          className="mk-anim-led fill-emerald-500"
+          cx={54 + index * 50}
+          cy={173}
+          r={3}
+          style={{ animationDelay: `-${index * 0.5}s` }}
+        />
+      </g>
+    ))}
   </Visual>
 )

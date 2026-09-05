@@ -47,7 +47,7 @@ export const HeroSection = ({
 
         <p className="text-muted-foreground max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
           VitNode is a free, open-source community framework. Members, roles,
-          content, live notifications, search and an Admin Control Panel come in
+          content, real-time updates, search and an Admin Control Panel come in
           the box. Your ideas go on top. Plugins hold it all together.
         </p>
 

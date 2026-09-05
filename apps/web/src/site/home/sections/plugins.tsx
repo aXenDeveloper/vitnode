@@ -9,9 +9,9 @@ import {
   Images,
   Mail,
   Megaphone,
-  MessagesSquare,
   PenLine,
   ShoppingBag,
+  Star,
   Ticket,
   Trophy,
 } from 'lucide-react'
@@ -28,13 +28,13 @@ import {
 
 const BENEFITS = [
   'A feature keeps its pages, API, data, translations and admin screens together.',
-  'Install a plugin and it appears in the AdminCP, the search index and the activity feed on its own.',
+  'Install a plugin and its screens appear in the AdminCP. Its records can publish into the search index and the Discover feed.',
   'Build it once, reuse it across every community you run.',
 ]
 
-const PLUGIN_IDEAS: { Icon: LucideIcon; label: string }[] = [
+export const PLUGIN_IDEAS: { Icon: LucideIcon; label: string }[] = [
   { Icon: PenLine, label: 'Blog' },
-  { Icon: MessagesSquare, label: 'Forum' },
+  { Icon: Star, label: 'Reviews' },
   { Icon: Images, label: 'Gallery' },
   { Icon: ShoppingBag, label: 'Shop' },
   { Icon: CalendarDays, label: 'Events' },

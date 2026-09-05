@@ -8,9 +8,9 @@ const COLUMNS = [
   {
     links: [
       { href: '/', label: 'Overview' },
-      { href: '/pricing', label: 'Pricing (free, really)' },
+      { href: '/solutions', label: 'Solutions' },
+      { href: '/plugins', label: 'Plugins' },
       { href: '/docs/dev/content-engine', label: 'Content Engine' },
-      { href: '/docs/dev/plugins/create', label: 'Plugin system' },
       { href: '/docs/dev/plugins/admin', label: 'Admin Control Panel' },
     ],
     title: 'Product',
@@ -40,7 +40,7 @@ const COLUMNS = [
 ]
 
 export const SiteFooter = () => (
-  <footer className="border-t">
+  <footer className="border-t mt-20">
     <div className="container mx-auto flex flex-col gap-12 px-4 py-12 sm:px-6 sm:py-16">
       <div className="grid gap-10 lg:grid-cols-5">
         <div className="flex flex-col gap-4 lg:col-span-2">
@@ -52,6 +52,12 @@ export const SiteFooter = () => (
             open source, with the boring parts already done.
           </p>
           <CanaryPill />
+          <a
+            className="text-muted-foreground hover:text-foreground w-fit text-sm font-medium transition-colors"
+            href="/#pricing"
+          >
+            Pricing: $0, forever
+          </a>
           <a
             className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-2 text-sm font-medium transition-colors"
             href={REPOSITORY_URL}

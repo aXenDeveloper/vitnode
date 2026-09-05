@@ -2,17 +2,17 @@ import type { LucideIcon } from 'lucide-react'
 
 import {
   Bell,
+  FileText,
   Globe,
-  Heart,
-  MessageCircle,
   Plug,
+  Search,
   ShieldCheck,
   Sparkles,
   Users,
 } from 'lucide-react'
 
-const CX = 260
-const CY = 230
+const CX = 270
+const CY = 240
 
 interface OrbitNode {
   angle: number
@@ -31,9 +31,9 @@ const ORBITS: Orbit[] = [
     duration: 32,
     nodes: [
       { angle: 30, Icon: Users },
-      { angle: 210, Icon: MessageCircle },
+      { angle: 210, Icon: FileText },
     ],
-    radius: 96,
+    radius: 92,
   },
   {
     duration: 52,
@@ -42,17 +42,17 @@ const ORBITS: Orbit[] = [
       { angle: 200, Icon: Globe },
       { angle: 320, Icon: Bell },
     ],
-    radius: 154,
-    reverse: true,
+    radius: 146,
   },
   {
     duration: 76,
     nodes: [
       { angle: 140, Icon: ShieldCheck },
       { angle: 20, Icon: Sparkles },
-      { angle: 260, Icon: Heart },
+      { angle: 260, Icon: Search },
     ],
-    radius: 208,
+    radius: 196,
+    reverse: true,
   },
 ]
 
@@ -122,12 +122,41 @@ const OrbitRing = ({ duration, nodes, radius, reverse }: Orbit) => (
   </g>
 )
 
+const FloatingCard = ({
+  children,
+  delay,
+  height = 44,
+  width,
+  x,
+  y,
+}: {
+  children: React.ReactNode
+  delay: number
+  height?: number
+  width: number
+  x: number
+  y: number
+}) => (
+  <g className="mk-anim-float" style={{ animationDelay: `-${delay}s` }}>
+    <rect
+      className="fill-card stroke-border drop-shadow-md"
+      height={height}
+      rx={14}
+      strokeWidth={1.5}
+      width={width}
+      x={x}
+      y={y}
+    />
+    {children}
+  </g>
+)
+
 export const HeroOrbit = () => (
   <svg
     aria-hidden
     className="h-auto w-full max-w-xl"
     fill="none"
-    viewBox="0 0 520 460"
+    viewBox="0 0 540 480"
     xmlns="http://www.w3.org/2000/svg"
   >
     <defs>
@@ -205,89 +234,83 @@ export const HeroOrbit = () => (
         height={56}
         rx={14}
         strokeWidth={1.5}
-        width={184}
-        x={322}
-        y={28}
+        width={188}
+        x={332}
+        y={32}
       />
-      <circle className="fill-primary/10" cx={348} cy={56} r={16} />
+      <circle className="fill-primary/10" cx={358} cy={60} r={16} />
       <Bell
         className="text-primary"
         height={16}
         strokeWidth={2}
         width={16}
-        x={340}
-        y={48}
+        x={350}
+        y={52}
       />
-      <circle className="fill-red-500" cx={357} cy={46} r={4} />
-      <text className="fill-foreground text-xs font-semibold" x={374} y={52}>
-        Alex replied to you
+      <circle className="fill-red-500" cx={367} cy={50} r={4} />
+      <text className="fill-foreground text-xs font-semibold" x={384} y={56}>
+        Hello from the admin
       </text>
-      <text className="fill-muted-foreground text-xs" x={374} y={70}>
-        just now · live
+      <text className="fill-muted-foreground text-xs" x={384} y={74}>
+        live · over WebSocket
       </text>
     </g>
 
-    <g className="mk-anim-float">
-      <rect
-        className="fill-primary drop-shadow-md"
-        height={40}
-        rx={14}
-        width={84}
-        x={28}
-        y={352}
+    <FloatingCard delay={2.4} width={150} x={28} y={40}>
+      <circle className="fill-primary/10" cx={50} cy={62} r={14} />
+      <Users
+        className="text-primary"
+        height={14}
+        strokeWidth={2.2}
+        width={14}
+        x={43}
+        y={55}
       />
-      <circle className="fill-primary-foreground" cx={56} cy={372} r={4} />
-      <circle
-        className="fill-primary-foreground mk-anim-blink"
-        cx={70}
-        cy={372}
-        r={4}
-      />
-      <circle
-        className="fill-primary-foreground mk-anim-blink"
-        cx={84}
-        cy={372}
-        r={4}
-        style={{ animationDelay: '-0.3s' }}
-      />
-    </g>
+      <text className="fill-foreground text-xs font-semibold" x={72} y={59}>
+        +42 members
+      </text>
+      <text className="fill-muted-foreground text-xs" x={72} y={74}>
+        joined this week
+      </text>
+    </FloatingCard>
 
-    <g className="mk-anim-float" style={{ animationDelay: '-1.2s' }}>
+    <FloatingCard delay={0} height={52} width={204} x={28} y={392}>
       <rect
-        className="fill-card stroke-border drop-shadow-md"
-        height={40}
-        rx={14}
-        strokeWidth={1.5}
-        width={110}
-        x={392}
-        y={392}
+        className="fill-primary/10"
+        height={32}
+        rx={9}
+        width={32}
+        x={40}
+        y={402}
       />
-      <Heart
-        className="fill-red-500 text-red-500"
+      <FileText
+        className="text-primary"
         height={16}
+        strokeWidth={2}
         width={16}
-        x={406}
-        y={404}
+        x={48}
+        y={410}
       />
-      <text className="fill-foreground text-xs font-semibold" x={430} y={417}>
-        128 likes
+      <text className="fill-foreground text-xs font-semibold" x={82} y={414}>
+        New article published
       </text>
-    </g>
+      <text className="fill-muted-foreground text-xs" x={82} y={430}>
+        Blog · 2 min read
+      </text>
+    </FloatingCard>
 
-    <g className="mk-anim-float" style={{ animationDelay: '-2.4s' }}>
-      <rect
-        className="fill-card stroke-border drop-shadow-md"
-        height={40}
-        rx={14}
-        strokeWidth={1.5}
-        width={132}
-        x={20}
-        y={40}
+    <FloatingCard delay={1.2} width={124} x={384} y={400}>
+      <Globe
+        className="text-primary"
+        height={16}
+        strokeWidth={2}
+        width={16}
+        x={398}
+        y={414}
       />
-      <Users className="text-primary" height={16} width={16} x={34} y={52} />
-      <text className="fill-foreground text-xs font-semibold" x={58} y={65}>
-        +42 new members
+      <text className="fill-foreground text-xs font-semibold" x={422} y={426}>
+        EN · PL · ES
       </text>
-    </g>
+    </FloatingCard>
   </svg>
 )

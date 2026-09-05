@@ -1,63 +1,46 @@
 import type { LucideIcon } from 'lucide-react'
 
 import {
-  BookOpen,
   Bot,
-  Boxes,
-  Braces,
+  Check,
+  FileCode2,
+  FileJson,
   FileText,
-  ListChecks,
-  MessageSquare,
-  Rocket,
+  Folder,
+  FolderOpen,
 } from 'lucide-react'
 
-const ROUTE =
-  'M40 280 H148 Q160 280 160 268 V132 Q160 120 172 120 H308 Q320 120 320 132 V228 Q320 240 332 240 H468 Q480 240 480 228 V80'
-
-interface Station {
+interface TreeRow {
+  depth: number
+  highlight?: 1 | 2 | 3 | 4
   Icon: LucideIcon
   label: string
-  labelSide: 'bottom' | 'left' | 'right' | 'top'
-  x: number
-  y: number
 }
 
-const STATIONS: Station[] = [
-  {
-    Icon: MessageSquare,
-    label: 'Your prompt',
-    labelSide: 'right',
-    x: 40,
-    y: 280,
-  },
-  { Icon: FileText, label: 'AGENTS.md', labelSide: 'right', x: 160, y: 215 },
-  { Icon: BookOpen, label: 'llms-full.txt', labelSide: 'top', x: 232, y: 120 },
-  {
-    Icon: Braces,
-    label: 'Typed API + OpenAPI',
-    labelSide: 'right',
-    x: 320,
-    y: 195,
-  },
-  {
-    Icon: Boxes,
-    label: 'Plugin boundaries',
-    labelSide: 'bottom',
-    x: 400,
-    y: 240,
-  },
-  {
-    Icon: ListChecks,
-    label: 'Lint & conventions',
-    labelSide: 'left',
-    x: 480,
-    y: 155,
-  },
-  { Icon: Rocket, label: 'Shipped feature', labelSide: 'left', x: 480, y: 80 },
+const TREE: TreeRow[] = [
+  { depth: 0, Icon: FileText, highlight: 1, label: 'AGENTS.md' },
+  { depth: 0, Icon: FileText, label: 'llms-full.txt' },
+  { depth: 0, Icon: FolderOpen, label: 'plugins/events' },
+  { depth: 1, Icon: FileCode2, highlight: 2, label: 'config.ts' },
+  { depth: 1, Icon: FileCode2, highlight: 3, label: 'routes.ts' },
+  { depth: 1, Icon: Folder, label: 'api/modules' },
+  { depth: 2, Icon: FileCode2, highlight: 3, label: 'events.ts' },
+  { depth: 1, Icon: Folder, label: 'pages' },
+  { depth: 2, Icon: FileCode2, highlight: 4, label: 'admin-events.tsx' },
+  { depth: 1, Icon: FileJson, label: 'locales/en.json' },
 ]
 
-const LABEL_WIDTH = 150
-const LABEL_HEIGHT = 34
+const STEPS = [
+  'Read AGENTS.md conventions',
+  'Loaded llms-full.txt: routing, plugins',
+  'Scaffolded plugins/events',
+  'Added /events route, RSVP API module',
+  'Registered AdminCP page + permission',
+  'Lint and typecheck clean. Ready to review.',
+]
+
+const ROW_HEIGHT = 24
+const TREE_TOP = 70
 
 export const AgentMap = () => (
   <svg
@@ -67,91 +50,54 @@ export const AgentMap = () => (
     viewBox="0 0 560 340"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <defs>
-      <pattern
-        height={28}
-        id="agent-grid"
-        patternUnits="userSpaceOnUse"
-        width={28}
-      >
-        <path className="stroke-border/70" d="M28 0H0V28" strokeWidth={1} />
-      </pattern>
-    </defs>
     <rect
       className="fill-card stroke-border"
-      height={320}
-      rx={24}
+      height={308}
+      rx={18}
       strokeWidth={1.5}
-      width={544}
-      x={8}
-      y={10}
+      width={200}
+      x={16}
+      y={16}
     />
-    <rect
-      fill="url(#agent-grid)"
-      height={296}
-      rx={16}
-      width={520}
-      x={20}
-      y={22}
-    />
-
-    <path
+    <text className="fill-muted-foreground text-xs font-semibold" x={32} y={44}>
+      YOUR REPOSITORY
+    </text>
+    <line
       className="stroke-border"
-      d={ROUTE}
-      strokeLinecap="round"
-      strokeWidth={6}
-    />
-    <path
-      className="mk-anim-dash stroke-primary/60"
-      d={ROUTE}
-      strokeLinecap="round"
-      strokeWidth={2}
+      strokeWidth={1}
+      x1={16}
+      x2={216}
+      y1={56}
+      y2={56}
     />
 
-    {STATIONS.map(({ Icon, label, labelSide, x, y }) => {
-      const labelX =
-        labelSide === 'right'
-          ? x + 18
-          : labelSide === 'left'
-            ? x - 18 - LABEL_WIDTH
-            : x - LABEL_WIDTH / 2
-      const labelY =
-        labelSide === 'top'
-          ? y - 26 - LABEL_HEIGHT
-          : labelSide === 'bottom'
-            ? y + 26
-            : y - LABEL_HEIGHT / 2
+    {TREE.map(({ depth, highlight, Icon, label }, index) => {
+      const y = TREE_TOP + index * ROW_HEIGHT
 
       return (
         <g key={label}>
-          <circle
-            className="fill-card stroke-primary"
-            cx={x}
-            cy={y}
-            r={8}
-            strokeWidth={3}
-          />
-          <rect
-            className="fill-card stroke-border drop-shadow-sm"
-            height={LABEL_HEIGHT}
-            rx={10}
-            strokeWidth={1.5}
-            width={LABEL_WIDTH}
-            x={labelX}
-            y={labelY}
-          />
+          {highlight ? (
+            <rect
+              className={`mk-anim-file-${highlight} fill-primary/12`}
+              height={ROW_HEIGHT - 4}
+              rx={6}
+              width={184}
+              x={24}
+              y={y - 2}
+            />
+          ) : null}
           <Icon
-            className="text-primary"
-            height={16}
+            className={highlight ? 'text-primary' : 'text-muted-foreground'}
+            height={14}
             strokeWidth={2}
-            width={16}
-            x={labelX + 10}
-            y={labelY + 9}
+            width={14}
+            x={32 + depth * 14}
+            y={y + 3}
           />
           <text
-            className="fill-foreground text-xs font-semibold"
-            x={labelX + 34}
-            y={labelY + 21}
+            className={`text-xs ${highlight ? 'fill-foreground font-medium' : 'fill-muted-foreground'}`}
+            x={52 + depth * 14}
+            y={y + 14}
           >
             {label}
           </text>
@@ -159,17 +105,98 @@ export const AgentMap = () => (
       )
     })}
 
-    <g className="mk-anim-travel" style={{ offsetPath: `path('${ROUTE}')` }}>
-      <circle className="fill-primary/25" r={20} />
-      <circle className="fill-primary drop-shadow-md" r={13} />
-      <Bot
-        className="text-primary-foreground"
-        height={16}
-        strokeWidth={2.2}
-        width={16}
-        x={-8}
-        y={-8}
-      />
-    </g>
+    <rect
+      className="fill-card stroke-border"
+      height={308}
+      rx={18}
+      strokeWidth={1.5}
+      width={312}
+      x={232}
+      y={16}
+    />
+    <circle className="fill-primary" cx={256} cy={40} r={11} />
+    <Bot
+      className="text-primary-foreground"
+      height={13}
+      strokeWidth={2.2}
+      width={13}
+      x={249.5}
+      y={33.5}
+    />
+    <text className="fill-foreground text-xs font-semibold" x={274} y={44}>
+      Coding agent
+    </text>
+    <circle
+      className="mk-anim-twinkle mk-origin-center fill-emerald-500"
+      cx={520}
+      cy={40}
+      r={4}
+    />
+    <text
+      className="fill-muted-foreground text-xs"
+      textAnchor="end"
+      x={510}
+      y={44}
+    >
+      working
+    </text>
+    <line
+      className="stroke-border"
+      strokeWidth={1}
+      x1={232}
+      x2={544}
+      y1={56}
+      y2={56}
+    />
+
+    <rect
+      className="fill-muted"
+      height={30}
+      rx={10}
+      width={264}
+      x={264}
+      y={68}
+    />
+    <text className="fill-foreground text-xs" x={276} y={87}>
+      “Build an events plugin with RSVPs.”
+    </text>
+
+    {STEPS.map((step, index) => {
+      const y = 118 + index * 28
+
+      return (
+        <g className={`mk-anim-step-${index + 1}`} key={step}>
+          <circle className="fill-emerald-500/15" cx={258} cy={y} r={9} />
+          <Check
+            className="text-emerald-600 dark:text-emerald-400"
+            height={11}
+            strokeWidth={3}
+            width={11}
+            x={252.5}
+            y={y - 5.5}
+          />
+          <text className="fill-foreground text-xs" x={276} y={y + 4}>
+            {step}
+          </text>
+        </g>
+      )
+    })}
+
+    <rect
+      className="fill-muted"
+      height={6}
+      rx={3}
+      width={264}
+      x={264}
+      y={300}
+    />
+    <rect
+      className="mk-anim-progress mk-origin-left fill-primary"
+      height={6}
+      rx={3}
+      width={264}
+      x={264}
+      y={300}
+    />
   </svg>
 )

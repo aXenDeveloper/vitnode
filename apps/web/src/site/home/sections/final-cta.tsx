@@ -2,7 +2,7 @@ import { Sparkles } from 'lucide-react'
 
 import type { SiteLinkComponent } from '#/site/home/site-link'
 
-import { MarketingActions, TextLink } from '#/site/marketing/shared'
+import { MarketingActions } from '#/site/marketing/shared'
 
 export const FinalCtaSection = ({
   LinkComponent,
@@ -38,9 +38,6 @@ export const FinalCtaSection = ({
         className="justify-center"
         LinkComponent={LinkComponent}
       />
-      <TextLink href="/pricing" LinkComponent={LinkComponent}>
-        Check the price. Spoiler: it is $0.
-      </TextLink>
     </div>
   </section>
 )
