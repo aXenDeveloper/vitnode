@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox'
 import { z } from 'zod'

@@ -1,5 +1,3 @@
-'use client'
-
 import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog'
 import { Button } from '@vitnode/core/components/ui/button'
 import { toast } from 'sonner'

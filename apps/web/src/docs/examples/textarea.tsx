@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea'
 import { z } from 'zod'

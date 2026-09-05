@@ -1,5 +1,3 @@
-'use client'
-
 import { Progress } from '@vitnode/core/components/ui/progress'
 import React from 'react'
 

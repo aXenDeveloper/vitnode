@@ -1,5 +1,3 @@
-'use client'
-
 import type { RoleOption } from '@vitnode/core/components/form/fields/roles'
 
 import { AutoForm } from '@vitnode/core/components/form/auto-form'

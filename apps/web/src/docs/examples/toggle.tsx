@@ -1,5 +1,3 @@
-'use client'
-
 import { Toggle } from '@vitnode/core/components/ui/toggle'
 import { Bold } from 'lucide-react'
 

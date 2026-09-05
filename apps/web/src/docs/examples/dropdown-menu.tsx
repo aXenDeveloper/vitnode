@@ -1,5 +1,3 @@
-'use client'
-
 import { Button } from '@vitnode/core/components/ui/button'
 import {
   DropdownMenu,

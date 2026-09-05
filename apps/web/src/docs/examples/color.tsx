@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormColor } from '@vitnode/core/components/form/fields/color'
 import { z } from 'zod'

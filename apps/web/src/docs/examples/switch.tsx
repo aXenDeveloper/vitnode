@@ -1,5 +1,3 @@
-'use client'
-
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormSwitch } from '@vitnode/core/components/form/fields/switch'
 import { z } from 'zod'
