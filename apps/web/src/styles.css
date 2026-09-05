@@ -3,6 +3,7 @@
 @import 'tw-animate-css';
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
+@import './site/marketing/marketing.css';
 
 @source "../node_modules/@vitnode/core/dist/src/components";
 @source "../node_modules/@vitnode/core/dist/src/tanstack";

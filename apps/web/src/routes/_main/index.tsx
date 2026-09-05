@@ -1,20 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { RouterLink } from '@vitnode/core/tanstack/layout'
 
-import { pageHead } from '#/lib/page-head'
 import { HomeRouteContent } from '#/site/home/home-content'
-import { HOME_DESCRIPTION, HOME_TITLE } from '#/site/home/metadata'
+import { marketingHead } from '#/site/marketing/metadata'
+
+const HomeRoute = () => <HomeRouteContent LinkComponent={RouterLink} />
 
 export const Route = createFileRoute('/_main/')({
-  head: () =>
-    pageHead({
-      description: HOME_DESCRIPTION,
-      robots: 'index, follow',
-      title: HOME_TITLE,
-    }),
+  head: () => marketingHead('home'),
   component: HomeRoute,
 })
-
-function HomeRoute() {
-  return <HomeRouteContent LinkComponent={RouterLink} />
-}

@@ -6,16 +6,25 @@ import {
 } from '@vitnode/core/tanstack/layout'
 
 import { MainHeader } from '#/components/main-header'
+import { SiteFooter } from '#/site/marketing/footer'
+
+const MainLayout = () => {
+  return (
+    <>
+      <ThemeLayoutContent
+        breadcrumb={<MainBreadcrumb />}
+        header={<MainHeader />}
+      >
+        <div id="main-content" tabIndex={-1}>
+          <Outlet />
+        </div>
+      </ThemeLayoutContent>
+      <SiteFooter />
+    </>
+  )
+}
 
 export const Route = createFileRoute('/_main')({
   loader: async ({ context }) => await loadMainShell(context),
   component: MainLayout,
 })
-
-function MainLayout() {
-  return (
-    <ThemeLayoutContent breadcrumb={<MainBreadcrumb />} header={<MainHeader />}>
-      <Outlet />
-    </ThemeLayoutContent>
-  )
-}
