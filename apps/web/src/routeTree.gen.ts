@@ -14,6 +14,7 @@ import { Route as DocsRouteImport } from './routes/_docs'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as MainPricingRouteImport } from './routes/_main/pricing'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
@@ -40,6 +41,11 @@ const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
 const MainIndexRoute = MainIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainPricingRoute = MainPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => MainRoute,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -71,6 +77,7 @@ const AdminAdminCoreIndexRoute = AdminAdminCoreIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/pricing': typeof MainPricingRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/$': typeof DocsDocsSplatRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/pricing': typeof MainPricingRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/$': typeof DocsDocsSplatRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/_docs': typeof DocsRouteWithChildren
   '/_main': typeof MainRouteWithChildren
   '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/_main/pricing': typeof MainPricingRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/_main/': typeof MainIndexRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/llms-full.txt'
+    | '/pricing'
     | '/api/$'
     | '/docs/search'
     | '/docs/$'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/llms-full.txt'
+    | '/pricing'
     | '/api/$'
     | '/docs/search'
     | '/docs/$'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/_docs'
     | '/_main'
     | '/llms-full.txt'
+    | '/_main/pricing'
     | '/api/$'
     | '/docs/search'
     | '/_main/'
@@ -176,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof MainIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/pricing': {
+      id: '/_main/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof MainPricingRouteImport
       parentRoute: typeof MainRoute
     }
     '/api/$': {
@@ -239,10 +258,12 @@ const DocsRouteChildren: DocsRouteChildren = {
 const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
 interface MainRouteChildren {
+  MainPricingRoute: typeof MainPricingRoute
   MainIndexRoute: typeof MainIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
+  MainPricingRoute: MainPricingRoute,
   MainIndexRoute: MainIndexRoute,
 }
 
