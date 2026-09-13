@@ -79,7 +79,6 @@
         "unhealthy": "Niedostępny",
         "never": "Nigdy",
         "rebuild": "Przebuduj indeks",
-        "rebuilding": "Kolejkowanie…",
         "rebuildQueued": "Zlecono przebudowę indeksu wyszukiwania.",
         "rebuildError": "Nie udało się zlecić przebudowy.",
         "reindex": "Przeindeksuj",
@@ -352,10 +351,12 @@
     "profile": {
       "title": "{name} (@{nameCode})",
       "metaDesc": "Zobacz profil {name} (@{nameCode}): role i datę dołączenia do społeczności.",
-      "joined": "W społeczności od <time>{date}</time>",
       "about": "O użytkowniku",
       "memberSince": "Członek od",
+      "headline": "Nagłówek",
+      "role": "Rola",
       "secondaryRoles": "Role dodatkowe",
+      "editProfile": "Edytuj profil",
       "notFound": {
         "title": "Nie znaleziono profilu",
         "desc": "Ten użytkownik nie istnieje lub zmienił swoją nazwę."

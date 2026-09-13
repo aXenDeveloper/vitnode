@@ -79,7 +79,6 @@
         "unhealthy": "Unavailable",
         "never": "Never",
         "rebuild": "Rebuild index",
-        "rebuilding": "Queuing…",
         "rebuildQueued": "Search index rebuild queued.",
         "rebuildError": "Could not queue the rebuild.",
         "reindex": "Reindex",
@@ -379,10 +378,12 @@
     "profile": {
       "title": "{name} (@{nameCode})",
       "metaDesc": "See {name} (@{nameCode}): their roles and when they joined the community.",
-      "joined": "Joined <time>{date}</time>",
       "about": "About",
       "memberSince": "Member since",
+      "headline": "Headline",
+      "role": "Role",
       "secondaryRoles": "Secondary roles",
+      "editProfile": "Edit profile",
       "notFound": {
         "title": "Profile not found",
         "desc": "This user doesn't exist, or their username has changed."

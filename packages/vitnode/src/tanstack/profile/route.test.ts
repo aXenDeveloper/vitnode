@@ -15,6 +15,7 @@ const profile: UserProfile = {
   avatarUrl: null,
   coverUrl: null,
   createdAt: "2025-11-15T12:18:00.109Z",
+  headline: null,
   id: 1,
   name: "aXen",
   nameCode: "aXen",

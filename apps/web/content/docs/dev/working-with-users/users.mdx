@@ -151,6 +151,25 @@ used, so turning it on early cannot leave a profile with an empty heading.
 The AdminCP and search always show `name`, the account's own nickname - staff
 need the identifier the account is filed under.
 
+### What the profile header shows
+
+{/* Image prompt: VitNode public profile header at /users/aXen. Wide cover image with a rounded-square avatar overlapping its bottom-left corner, the display name and @nameCode beside it, and a single row of muted meta items with small icons - a briefcase for the headline, a shield for the primary role, a calendar for the join date - with an "Edit profile" outline button at the far right. Light theme, 1440x400. */}
+
+`GET /api/@vitnode/core/users/profile/{nameCode}` answers with the header's whole
+payload: `name` (already resolved), `nameCode`, `headline`, `avatarUrl`,
+`coverUrl`, `avatarColor`, `createdAt`, the primary `role` and any
+`secondaryRoles`. The header draws the headline, the role and the join date as
+one row of meta items, each with its own icon, and stacks them centred under the
+avatar on a phone.
+
+`headline` follows the install switch: with `users.personalInformation.headline`
+set to `false` the route returns `null` for everyone, so turning the field off
+takes it off public profiles too, without touching what members had written.
+
+The **Edit profile** button is the header's action slot. It is rendered only for
+the account's own profile; a host that renders `ProfileContent` itself can pass
+any `action` it likes - a follow button, a "message" link, nothing at all.
+
 ### Who may edit it
 
 Each role has **Allow editing personal information** on its **Profile** tab

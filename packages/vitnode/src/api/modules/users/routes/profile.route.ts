@@ -25,6 +25,7 @@ export const profileRoute = buildRoute({
               id: z.number(),
               name: z.string(),
               nameCode: z.string(),
+              headline: z.string().nullable(),
               avatarColor: z.string(),
               avatarUrl: z.string().nullable(),
               coverUrl: z.string().nullable(),
@@ -68,6 +69,9 @@ export const profileRoute = buildRoute({
             user.showRealName,
         }),
         nameCode: user.nameCode,
+        headline: c.get("core").personalInformationFields.headline
+          ? user.headline
+          : null,
         avatarColor: user.avatarColor,
         avatarUrl: user.avatarUrl,
         coverUrl: user.coverUrl,
