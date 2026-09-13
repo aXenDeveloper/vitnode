@@ -2,7 +2,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { HeaderContent } from "@/components/ui/header-content";
@@ -16,7 +15,6 @@ import type { AdminDebugRouteData } from "./route";
 import type { DebugRouteSearch, UncheckedDebugSearch } from "./route-search";
 
 import { RouteMessages } from "../../i18n/route-messages";
-import { RouterLink } from "../../layout/router-link";
 import { AdminPermissionGate } from "../permissions";
 import { debugLogsQuery, debugQueueQuery, useClearAdminCache } from "./query";
 import { ADMIN_DEBUG_NAMESPACES } from "./route";
@@ -24,14 +22,12 @@ import { DEBUG_MODULE } from "./route";
 import { debugSearchFrom, debugSearchParams } from "./route-search";
 
 export interface AdminDebugRouteProps extends AdminDebugRouteData {
-  LinkComponent?: AuthLinkComponent;
   navigate: AdminTableNavigate<DebugRouteSearch>;
   search: UncheckedDebugSearch;
 }
 
 export const AdminDebugRouteContent = ({
   description,
-  LinkComponent = RouterLink,
   logsTitle,
   navigate,
   params,
@@ -74,7 +70,7 @@ export const AdminDebugRouteContent = ({
 
         <HeaderContent className="mt-8" h2={logsTitle} />
         <DataTableNavigationProvider value={navigation}>
-          <SystemLogsContent data={logs} LinkComponent={LinkComponent} />
+          <SystemLogsContent data={logs} />
         </DataTableNavigationProvider>
       </div>
     </RouteMessages>

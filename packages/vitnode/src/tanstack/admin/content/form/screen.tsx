@@ -1,7 +1,6 @@
 import React from "react";
 
 import type { ContentFrontendRegistry } from "@/content/index";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import type { ContentAdminRouteData } from "../route";
 import type { ContentFormScreenData } from "./route";
@@ -17,14 +16,11 @@ const ContentFormPageBody = React.lazy(async () =>
 
 export interface ContentFormScreenProps
   extends ContentAdminRouteData, ContentFormScreenData {
-  /** How a path becomes a navigation. Defaults to the router's own link. */
-  LinkComponent?: AuthLinkComponent;
   /** This installation's content types, with their override components. */
   registry: ContentFrontendRegistry;
 }
 
 export const ContentFormScreen = ({
-  LinkComponent,
   registry,
   ...route
 }: ContentFormScreenProps) => {
@@ -33,7 +29,7 @@ export const ContentFormScreen = ({
   if (route.action === "list" || !entry) return null;
 
   return (
-    <ContentFormHost LinkComponent={LinkComponent}>
+    <ContentFormHost>
       {/*
        * The boundary the lazy body suspends against.
        *

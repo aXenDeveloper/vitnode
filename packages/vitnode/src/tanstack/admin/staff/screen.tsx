@@ -1,9 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
@@ -23,7 +23,6 @@ import { ADMIN_STAFF_NAMESPACES } from "./route";
 import { staffSearchFrom, staffSearchParams } from "./route-search";
 
 export interface AdminStaffRouteProps extends AdminStaffRouteData {
-  LinkComponent: AuthLinkComponent;
   navigate: AdminTableNavigate<StaffRouteSearch>;
   search: UncheckedStaffSearch;
 }
@@ -32,7 +31,6 @@ export const AdminStaffRouteContent = ({
   adminUserId,
   createLabel,
   description,
-  LinkComponent,
   navigate,
   params,
   search,
@@ -62,23 +60,15 @@ export const AdminStaffRouteContent = ({
       <div className="p-4">
         <HeaderContent desc={description} h1={title}>
           <AdminStaffPermissionGate {...adminStaffPermissions(type).create}>
-            <LinkComponent
-              className={buttonVariants()}
-              href={staffCreateHref(type)}
-            >
+            <Link className={buttonVariants()} to={staffCreateHref(type)}>
               <PlusIcon />
               {createLabel}
-            </LinkComponent>
+            </Link>
           </AdminStaffPermissionGate>
         </HeaderContent>
 
         <DataTableNavigationProvider value={navigation}>
-          <StaffTableContent
-            data={data}
-            LinkComponent={LinkComponent}
-            onDelete={onDelete}
-            type={type}
-          />
+          <StaffTableContent data={data} onDelete={onDelete} type={type} />
         </DataTableNavigationProvider>
       </div>
     </RouteMessages>

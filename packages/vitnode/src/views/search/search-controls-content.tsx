@@ -14,10 +14,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 
-import type {
-  SearchFeedLinkComponent,
-  SearchFeedVariant,
-} from "./search-feed-content";
+import type { SearchFeedVariant } from "./search-feed-content";
 import type {
   SearchFeedParams,
   SearchFeedQueryOptions,
@@ -41,14 +38,12 @@ export type SearchFeedQueryFactory = (
 ) => SearchFeedQueryOptions;
 
 export const SearchControlsContent = ({
-  LinkComponent,
   defaultParams,
   feedQuery,
   variant = "timeline",
 }: {
   defaultParams: SearchFeedParams;
   feedQuery: SearchFeedQueryFactory;
-  LinkComponent: SearchFeedLinkComponent;
   variant?: SearchFeedVariant;
 }) => {
   const t = useTranslations("core.search");
@@ -126,11 +121,7 @@ export const SearchControlsContent = ({
         </NativeSelect>
       </div>
 
-      <SearchFeedContent
-        LinkComponent={LinkComponent}
-        queryOptions={feedQuery(params)}
-        variant={variant}
-      />
+      <SearchFeedContent queryOptions={feedQuery(params)} variant={variant} />
     </div>
   );
 };

@@ -3,7 +3,6 @@ import React from "react";
 
 import type { AdminUserSearch } from "@/views/admin/layouts/search/search-users";
 import type { AdminNavBundle } from "@/views/admin/layouts/sidebar/nav/nav-model";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { Separator } from "@/components/ui/separator";
 import {
@@ -15,7 +14,6 @@ import { NavSidebarAdminContent } from "@/views/admin/layouts/sidebar/nav/nav-co
 import { SidebarAdminContent } from "@/views/admin/layouts/sidebar/sidebar-content";
 
 import { RouteMessages } from "../i18n/route-messages";
-import { RouterLink } from "../layout/router-link";
 import { RouteGuardPending } from "../pending/guard-pending";
 import { useAdminBreadcrumb } from "./breadcrumb";
 import { adminShellNamespaces } from "./intl";
@@ -27,7 +25,6 @@ import { AdminUserBar } from "./user-bar";
 export const AdminShellContent = ({
   children,
   languageSwitcher,
-  LinkComponent = RouterLink,
   nav,
   onNavigate,
   searchUsers,
@@ -35,8 +32,6 @@ export const AdminShellContent = ({
   children: React.ReactNode;
   /** The host's language switcher, or nothing on a single-language install. */
   languageSwitcher?: React.ReactNode;
-  LinkComponent?: AuthLinkComponent;
-
   nav?: AdminNavBundle;
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;
@@ -55,7 +50,6 @@ export const AdminShellContent = ({
         <AdminNavProvider declarations={nav?.declarations}>
           <AdminShellFrame
             languageSwitcher={languageSwitcher}
-            LinkComponent={LinkComponent}
             onNavigate={onNavigate}
             searchUsers={searchUsers}
           >
@@ -70,13 +64,11 @@ export const AdminShellContent = ({
 const AdminShellFrame = ({
   children,
   languageSwitcher,
-  LinkComponent,
   onNavigate,
   searchUsers,
 }: {
   children: React.ReactNode;
   languageSwitcher?: React.ReactNode;
-  LinkComponent: AuthLinkComponent;
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;
 }) => {
@@ -88,19 +80,9 @@ const AdminShellFrame = ({
   return (
     <SidebarProvider>
       <SidebarAdminContent
-        LinkComponent={LinkComponent}
-        userBar={
-          <AdminUserBar
-            languageSwitcher={languageSwitcher}
-            LinkComponent={LinkComponent}
-          />
-        }
+        userBar={<AdminUserBar languageSwitcher={languageSwitcher} />}
       >
-        <NavSidebarAdminContent
-          LinkComponent={LinkComponent}
-          nav={nav}
-          pathname={pathname}
-        />
+        <NavSidebarAdminContent nav={nav} pathname={pathname} />
       </SidebarAdminContent>
 
       <SidebarInset>
@@ -117,11 +99,7 @@ const AdminShellFrame = ({
           )}
 
           <div className="ml-auto flex shrink-0 items-center justify-center gap-2 px-2">
-            <AdminSearch
-              LinkComponent={LinkComponent}
-              onNavigate={onNavigate}
-              searchUsers={searchUsers}
-            />
+            <AdminSearch onNavigate={onNavigate} searchUsers={searchUsers} />
           </div>
         </header>
 

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "use-intl";
@@ -8,20 +9,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "@/lib/motion";
 
-import type { AuthLinkComponent } from "../../auth-link";
-
 import { AUTH_HREF } from "../../auth-link";
 import { type SignInSubmit, useSignInForm } from "./use-sign-in-form";
 
 export type { SignInSubmit };
 
 export const SignInFormContent = ({
-  LinkComponent,
   onSignIn,
   resetPasswordHref = AUTH_HREF.resetPassword,
   showResetPassword = false,
 }: {
-  LinkComponent?: AuthLinkComponent;
   onSignIn: SignInSubmit;
   resetPasswordHref?: string;
   /** Whether this deployment has an email adapter that can send a reset link. */
@@ -60,13 +57,13 @@ export const SignInFormContent = ({
               <AutoFormInput
                 label={t("password.label")}
                 labelRight={
-                  showResetPassword && LinkComponent ? (
-                    <LinkComponent
+                  showResetPassword ? (
+                    <Link
                       className="text-primary hover:underline"
-                      href={resetPasswordHref}
+                      to={resetPasswordHref}
                     >
                       {t("password.reset")}
-                    </LinkComponent>
+                    </Link>
                   ) : undefined
                 }
                 type="password"

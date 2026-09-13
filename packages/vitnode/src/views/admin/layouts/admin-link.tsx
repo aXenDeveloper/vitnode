@@ -1,10 +1,17 @@
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
+import { Link } from "@tanstack/react-router";
 
 import { isExternalHref } from "./normalize-url";
 
-const ExternalLink: AuthLinkComponent = props => <a {...props} />;
+export interface AdminLinkProps extends Omit<
+  React.ComponentProps<"a">,
+  "href"
+> {
+  href: string;
+}
 
-export const adminLinkFor = (
-  href: string,
-  LinkComponent: AuthLinkComponent,
-): AuthLinkComponent => (isExternalHref(href) ? ExternalLink : LinkComponent);
+export const AdminLink = ({ href, ...props }: AdminLinkProps) =>
+  isExternalHref(href) ? (
+    <a href={href} {...props} />
+  ) : (
+    <Link {...props} to={href} />
+  );

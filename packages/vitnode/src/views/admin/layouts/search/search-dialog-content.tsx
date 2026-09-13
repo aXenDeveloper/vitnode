@@ -4,8 +4,6 @@ import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { Avatar } from "@/components/avatar";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import {
@@ -24,7 +22,7 @@ import { CONFIG_PLUGIN } from "@/config";
 import type { AdminSearchNavItem } from "./flatten-nav";
 import type { AdminUserSearch } from "./search-users";
 
-import { adminLinkFor } from "../admin-link";
+import { AdminLink } from "../admin-link";
 import { isExternalHref } from "../normalize-url";
 import {
   MAX_SEARCH_RESULTS,
@@ -37,11 +35,9 @@ import { splitResultBudget } from "./split-results";
 
 const NavCommandItem = ({
   item,
-  LinkComponent,
   onNavigate,
 }: {
   item: AdminSearchNavItem;
-  LinkComponent: AuthLinkComponent;
   onNavigate: (href: string) => void;
 }) => {
   const linkRef = React.useRef<HTMLAnchorElement>(null);
@@ -58,26 +54,16 @@ const NavCommandItem = ({
   if (item.isOpenInNewTab || isExternalHref(item.href)) {
     return (
       <CommandItem onSelect={() => linkRef.current?.click()} value={item.href}>
-        {/*
-         * `createElement` rather than JSX, for the same reason
-         * `tanstack/i18n/route-messages` uses it: naming a component that came
-         * out of a function in render reads as one *declared* there, which is
-         * what `static-components` bans and what would remount a subtree every
-         * render. `adminLinkFor` returns one of two module-scope references, so
-         * the element type is stable and nothing below it ever remounts.
-         */}
-        {React.createElement(
-          adminLinkFor(item.href, LinkComponent),
-          {
-            className: "flex min-w-0 flex-1 items-center gap-2",
-            href: item.href,
-            onClick: (event: React.MouseEvent) => event.stopPropagation(),
-            ref: linkRef,
-            rel: item.isOpenInNewTab ? "noopener noreferrer" : undefined,
-            target: item.isOpenInNewTab ? "_blank" : undefined,
-          },
-          content,
-        )}
+        <AdminLink
+          className="flex min-w-0 flex-1 items-center gap-2"
+          href={item.href}
+          onClick={event => event.stopPropagation()}
+          ref={linkRef}
+          rel={item.isOpenInNewTab ? "noopener noreferrer" : undefined}
+          target={item.isOpenInNewTab ? "_blank" : undefined}
+        >
+          {content}
+        </AdminLink>
       </CommandItem>
     );
   }
@@ -91,7 +77,6 @@ const NavCommandItem = ({
 
 export interface SearchAdminDialogContentProps {
   items: AdminSearchNavItem[];
-  LinkComponent: AuthLinkComponent;
   onNavigate: (href: string) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -101,7 +86,6 @@ export interface SearchAdminDialogContentProps {
 
 export const SearchAdminDialogContent = ({
   items,
-  LinkComponent,
   onNavigate,
   onOpenChange,
   open,
@@ -231,7 +215,6 @@ export const SearchAdminDialogContent = ({
                 <NavCommandItem
                   item={item}
                   key={item.href}
-                  LinkComponent={LinkComponent}
                   onNavigate={navigateOnClose}
                 />
               ))}

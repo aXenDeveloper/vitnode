@@ -11,7 +11,6 @@ import type { ContentColumnSpec } from "@/content/index";
 import type { ContentLabelTranslator } from "@/content/index";
 import type { ContentLabels } from "@/views/admin/views/content/content-labels";
 import type { ContentRowData } from "@/views/admin/views/content/table/cells";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableSkeleton } from "@/components/table/data-table-content";
@@ -45,8 +44,6 @@ import { ContentRowActions } from "./row-actions";
 /** What the list screen needs on top of the route data the loader returned. */
 export interface ContentListScreenProps {
   contentTypeId: string;
-  /** How a path becomes a navigation. Defaults to the router's own link. */
-  LinkComponent?: AuthLinkComponent;
   /** How a table control changes the URL - the Stage 7 seam. */
   navigate: AdminTableNavigate<ContentListRouteSearch>;
 
@@ -59,7 +56,7 @@ export interface ContentListScreenProps {
 
 interface ContentListTableProps extends Pick<
   ContentListScreenProps,
-  "LinkComponent" | "navigate" | "search"
+  "navigate" | "search"
 > {
   columnSpecs: ContentColumnSpec[];
   entry: RegisteredFrontendContentType;
@@ -71,7 +68,6 @@ const ContentListTable = ({
   columnSpecs,
   entry,
   labels,
-  LinkComponent,
   navigate,
   params,
   search,
@@ -112,22 +108,13 @@ const ContentListTable = ({
         renderRowActions: (row: ContentRowData) => (
           <ContentRowActions
             entry={entry}
-            LinkComponent={LinkComponent}
             locale={locale}
             row={row}
             singular={labels.singular}
           />
         ),
       }),
-    [
-      columnSpecs,
-      entry,
-      labels.singular,
-      LinkComponent,
-      locale,
-      registration,
-      t,
-    ],
+    [columnSpecs, entry, labels.singular, locale, registration, t],
   );
 
   return (
@@ -155,13 +142,9 @@ const ContentListTable = ({
  * one control on this screen that does not depend on them.
  */
 export const ContentListActions = ({
-  LinkComponent,
   registry,
   contentTypeId,
-}: Pick<
-  ContentListScreenProps,
-  "contentTypeId" | "LinkComponent" | "registry"
->) => {
+}: Pick<ContentListScreenProps, "contentTypeId" | "registry">) => {
   const entry = registry.byId(contentTypeId);
   const t = useTranslations() as unknown as ContentLabelTranslator;
 
@@ -170,7 +153,6 @@ export const ContentListActions = ({
   return (
     <ContentCreateAction
       entry={entry}
-      LinkComponent={LinkComponent}
       singular={contentLabelsFrom(entry, t).singular}
     />
   );
@@ -188,7 +170,6 @@ export const ContentListActions = ({
  */
 export const ContentListScreen = ({
   contentTypeId,
-  LinkComponent,
   navigate,
   params,
   registry,
@@ -230,7 +211,6 @@ export const ContentListScreen = ({
         columnSpecs={columnSpecs}
         entry={entry}
         labels={labels}
-        LinkComponent={LinkComponent}
         navigate={navigate}
         params={listParams}
         search={search}

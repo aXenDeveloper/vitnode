@@ -54,10 +54,8 @@ const staffListRoute =
 
     route.update({
       component: lazyRouteComponent(async () => {
-        const [{ AdminStaffRouteContent }, { RouterLink }] = await Promise.all([
-          import("../../admin/staff/screen"),
-          import("../../layout/router-link"),
-        ]);
+        const { AdminStaffRouteContent } =
+          await import("../../admin/staff/screen");
 
         return {
           default: function AdminStaffRoute() {
@@ -66,7 +64,6 @@ const staffListRoute =
             return (
               <AdminStaffRouteContent
                 {...route.useLoaderData()}
-                LinkComponent={RouterLink}
                 // Narrowed to the two fields the table asks for, and memoised so the
                 // screen's own `useMemo` over it keeps holding.
                 navigate={useCallback(
@@ -115,11 +112,8 @@ const staffCreateRoute =
 
     route.update({
       component: lazyRouteComponent(async () => {
-        const [{ AdminStaffCreateRouteContent }, { RouterLink }] =
-          await Promise.all([
-            import("../../admin/staff/create-screen"),
-            import("../../layout/router-link"),
-          ]);
+        const { AdminStaffCreateRouteContent } =
+          await import("../../admin/staff/create-screen");
 
         return {
           default: function AdminStaffCreateRoute() {
@@ -128,7 +122,6 @@ const staffCreateRoute =
             return (
               <AdminStaffCreateRouteContent
                 {...route.useLoaderData()}
-                LinkComponent={RouterLink}
                 navigate={useCallback(
                   async (href: string) => {
                     await router.navigate({ to: href });
@@ -169,11 +162,8 @@ const staffEditRoute =
 
     route.update({
       component: lazyRouteComponent(async () => {
-        const [{ AdminStaffEditRouteContent }, { RouterLink }] =
-          await Promise.all([
-            import("../../admin/staff/edit-screen"),
-            import("../../layout/router-link"),
-          ]);
+        const { AdminStaffEditRouteContent } =
+          await import("../../admin/staff/edit-screen");
 
         return {
           default: function AdminStaffEditRoute() {
@@ -182,7 +172,6 @@ const staffEditRoute =
             return (
               <AdminStaffEditRouteContent
                 {...route.useLoaderData()}
-                LinkComponent={RouterLink}
                 navigate={useCallback(
                   async (href: string) => {
                     await router.navigate({ to: href });

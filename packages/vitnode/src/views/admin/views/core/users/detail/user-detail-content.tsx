@@ -1,8 +1,8 @@
+import { Link } from "@tanstack/react-router";
 import { ExternalLinkIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { AdminRoleSearch } from "@/views/admin/views/core/users/roles/roles-query";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
@@ -34,7 +34,6 @@ import { UserRolesCardContent } from "./user-roles-content";
 
 export interface UserDetailProps {
   canEdit: boolean;
-  LinkComponent: AuthLinkComponent;
   onRemoveImage: RemoveAdminUserImage;
   onUpdate: UpdateAdminUser;
   onUpdateRoles: UpdateAdminUserRoles;
@@ -46,7 +45,6 @@ export interface UserDetailProps {
 
 export const UserDetailContent = ({
   canEdit,
-  LinkComponent,
   onRemoveImage,
   onUpdate,
   onUpdateRoles,
@@ -163,10 +161,7 @@ export const UserDetailContent = ({
                     className="w-full"
                     nativeButton={false}
                     render={
-                      <LinkComponent
-                        href={`/users/${user.nameCode}`}
-                        target="_blank"
-                      />
+                      <Link target="_blank" to={`/users/${user.nameCode}`} />
                     }
                     variant="ghost"
                   >

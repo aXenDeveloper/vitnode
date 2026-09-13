@@ -20,19 +20,15 @@ export const ssoCallbackRoute: CoreAuthRouteFactory = ({ parentRoute }) => {
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ SsoCallbackRouteContent }, { ErrorActions }, { RouterLink }] =
-        await Promise.all([
-          import("../../auth/sso-screen"),
-          import("../../layout/error-actions"),
-          import("../../layout/router-link"),
-        ]);
+      const [{ SsoCallbackRouteContent }, { ErrorActions }] = await Promise.all(
+        [import("../../auth/sso-screen"), import("../../layout/error-actions")],
+      );
 
       return {
         default: function SsoCallbackRoute() {
           return (
             <SsoCallbackRouteContent
               errorActions={<ErrorActions />}
-              LinkComponent={RouterLink}
               providerId={route.useParams().providerId}
               search={route.useSearch()}
             />

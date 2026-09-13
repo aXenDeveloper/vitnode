@@ -1,20 +1,17 @@
+import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
 import { Card, CardDescription } from "@/components/ui/card";
-
-import type { AuthLinkComponent } from "../auth-link";
 
 import { AUTH_HREF } from "../auth-link";
 import { WrapperSignUp } from "./wrapper";
 
 export const SignUpContent = ({
   form,
-  LinkComponent,
   signInHref = AUTH_HREF.signIn,
   sso,
 }: {
   form: React.ReactNode;
-  LinkComponent: AuthLinkComponent;
   signInHref?: string;
   sso?: React.ReactNode;
 }) => {
@@ -41,12 +38,9 @@ export const SignUpContent = ({
           <div className="text-accent-foreground p-6 text-center text-sm">
             {t.rich("already_have_account", {
               link: text => (
-                <LinkComponent
-                  className="text-primary font-semibold"
-                  href={signInHref}
-                >
+                <Link className="text-primary font-semibold" to={signInHref}>
                   {text}
-                </LinkComponent>
+                </Link>
               ),
             })}
           </div>

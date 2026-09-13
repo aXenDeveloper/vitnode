@@ -1,9 +1,6 @@
 import React from "react";
 
-import type {
-  HeaderContentBack,
-  HeaderContentBackLinkComponent,
-} from "@/components/ui/header-content";
+import type { HeaderContentBack } from "@/components/ui/header-content";
 
 export interface ContentFormHeaderValue {
   back: HeaderContentBack;
@@ -11,14 +8,10 @@ export interface ContentFormHeaderValue {
   title: React.ReactNode;
 }
 
-export type ContentFormLinkComponent = HeaderContentBackLinkComponent;
-
 export interface ContentFormContextValue {
   fieldNames: string[];
   fields: Record<string, React.ReactNode>;
   header?: ContentFormHeaderValue;
-
-  LinkComponent: ContentFormLinkComponent;
   localizedFieldNames: string[];
   markHeaderRendered?: () => void;
   markRendered?: (name: string) => void;

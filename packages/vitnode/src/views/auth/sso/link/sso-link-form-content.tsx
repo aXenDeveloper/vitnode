@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "use-intl";
@@ -10,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "@/lib/motion";
 
-import type { AuthLinkComponent } from "../../auth-link";
 import type { SSOLinkOffer } from "./schema";
 
 import { AUTH_HREF } from "../../auth-link";
@@ -21,7 +21,6 @@ export type { SSOLinkSubmit };
 const EMAIL_FIELD_ID = "sso-link-email";
 
 export const SSOLinkFormContent = ({
-  LinkComponent,
   offer,
   onLink,
   providerName,
@@ -29,7 +28,6 @@ export const SSOLinkFormContent = ({
   showResetPassword = false,
   signInHref = AUTH_HREF.signIn,
 }: {
-  LinkComponent: AuthLinkComponent;
   offer: SSOLinkOffer;
   onLink: SSOLinkSubmit;
   providerName: () => React.ReactNode;
@@ -72,12 +70,12 @@ export const SSOLinkFormContent = ({
                   label={t("password.label")}
                   labelRight={
                     showResetPassword ? (
-                      <LinkComponent
+                      <Link
                         className="text-primary hover:underline"
-                        href={resetPasswordHref}
+                        to={resetPasswordHref}
                       >
                         {t("password.reset")}
-                      </LinkComponent>
+                      </Link>
                     ) : undefined
                   }
                   type="password"
@@ -103,9 +101,7 @@ export const SSOLinkFormContent = ({
             className="w-full"
             nativeButton={false}
             render={
-              <LinkComponent
-                href={showResetPassword ? resetPasswordHref : signInHref}
-              />
+              <Link to={showResetPassword ? resetPasswordHref : signInHref} />
             }
           >
             {showResetPassword

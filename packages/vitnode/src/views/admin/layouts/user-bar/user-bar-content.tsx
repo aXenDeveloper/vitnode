@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   BugIcon,
   ChevronsUpDownIcon,
@@ -7,8 +8,6 @@ import {
   LogOut,
 } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { NewTabIndicator } from "@/components/new-tab-indicator";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
@@ -41,12 +40,10 @@ export interface AdminUserBarUser {
 
 export const UserBarAdminContent = ({
   languageSwitcher,
-  LinkComponent,
   onSignOut,
   user,
 }: {
   languageSwitcher?: React.ReactNode;
-  LinkComponent: AuthLinkComponent;
   onSignOut: () => Promise<void> | void;
   user: AdminUserBarUser;
 }) => {
@@ -86,17 +83,13 @@ export const UserBarAdminContent = ({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem
-                render={<LinkComponent href="/" target="_blank" />}
-              >
+              <DropdownMenuItem render={<Link target="_blank" to="/" />}>
                 <HomeIcon />
                 {t("home_page")}
                 <NewTabIndicator />
               </DropdownMenuItem>
               {canViewDebug && (
-                <DropdownMenuItem
-                  render={<LinkComponent href="/admin/core/debug" />}
-                >
+                <DropdownMenuItem render={<Link to="/admin/core/debug" />}>
                   <BugIcon />
                   {t("debug")}
                 </DropdownMenuItem>

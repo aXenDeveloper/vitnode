@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { EyeOffIcon, SaveIcon, SendIcon } from "lucide-react";
 import React from "react";
@@ -7,8 +8,6 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import { AutoFormSubmitButton } from "@/components/form/auto-form";
 import { Button } from "@/components/ui/button";
 import { contentPublicationTransition } from "@/content/publication";
-
-import type { ContentFormLinkComponent } from "./context";
 
 import { useContentForm } from "./context";
 import { ContentFormPublication } from "./publication-status";
@@ -148,7 +147,6 @@ export const ContentFormActions = ({
   submitLabel?: React.ReactNode;
 }) => {
   const t = useTranslations("core.global");
-  const { LinkComponent } = useContentForm();
 
   return (
     <div
@@ -157,37 +155,15 @@ export const ContentFormActions = ({
     >
       {children}
       {cancelHref ? (
-        <ContentFormCancel href={cancelHref} LinkComponent={LinkComponent}>
+        <Button
+          nativeButton={false}
+          render={<Link to={cancelHref} />}
+          variant="ghost"
+        >
           {t("cancel")}
-        </ContentFormCancel>
+        </Button>
       ) : null}
       <ContentFormSubmit label={submitLabel} />
     </div>
   );
 };
-
-/**
- * The cancel button, wearing the host's link.
- *
- * Its own component so the injected one arrives as a **prop**: a component read
- * out of a hook and rendered in the same pass is a component created during
- * render, which React is entitled to remount. `HeaderContent` takes its
- * `BackLink` the same way, and for the same reason.
- */
-const ContentFormCancel = ({
-  children,
-  href,
-  LinkComponent,
-}: {
-  children: React.ReactNode;
-  href: string;
-  LinkComponent: ContentFormLinkComponent;
-}) => (
-  <Button
-    nativeButton={false}
-    render={<LinkComponent href={href} />}
-    variant="ghost"
-  >
-    {children}
-  </Button>
-);

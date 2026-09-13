@@ -1,7 +1,5 @@
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { DateFormat } from "@/components/date-format";
 import { ContentDataTable } from "@/components/table/content";
 
@@ -14,13 +12,7 @@ import { BadgeTypeLog } from "./badges/badge-type-log";
 /** How much of a log line is shown before it is cut. */
 const CONTENT_CHARACTERS = 50;
 
-export const SystemLogsContent = ({
-  data,
-  LinkComponent,
-}: {
-  data: DebugLogsPage;
-  LinkComponent: AuthLinkComponent;
-}) => {
+export const SystemLogsContent = ({ data }: { data: DebugLogsPage }) => {
   const t = useTranslations("admin.debug.logs");
 
   return (
@@ -67,9 +59,7 @@ export const SystemLogsContent = ({
           id: "actions",
           header: "",
           align: "right",
-          cell: ({ row }) => (
-            <MoreActionSystemLogs {...row} LinkComponent={LinkComponent} />
-          ),
+          cell: ({ row }) => <MoreActionSystemLogs {...row} />,
         },
       ]}
       edges={data.edges}

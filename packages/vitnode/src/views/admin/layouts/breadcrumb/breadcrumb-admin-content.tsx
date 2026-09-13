@@ -1,5 +1,3 @@
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { BreadcrumbCrumbItems } from "@/views/breadcrumb/breadcrumb-render-content";
 
 import type { NavAdminParent } from "../sidebar/nav/nav-model";
@@ -9,8 +7,6 @@ import { resolveBreadcrumb } from "./resolve-breadcrumb";
 export interface BreadcrumbAdminContentProps {
   /** Explicit labels by href, for a crumb the navigation cannot name. */
   labels?: Record<string, string>;
-  LinkComponent: AuthLinkComponent;
-
   nav: NavAdminParent[];
   /** The last crumb's label, when the page knows it and the navigation cannot. */
   overrideLastLabel?: string;
@@ -20,7 +16,6 @@ export interface BreadcrumbAdminContentProps {
 
 export const BreadcrumbAdminContent = ({
   labels,
-  LinkComponent,
   nav,
   overrideLastLabel,
   segments,
@@ -43,5 +38,5 @@ export const BreadcrumbAdminContent = ({
     crumbs[crumbs.length - 1].label = overrideLastLabel;
   }
 
-  return <BreadcrumbCrumbItems crumbs={crumbs} LinkComponent={LinkComponent} />;
+  return <BreadcrumbCrumbItems crumbs={crumbs} />;
 };

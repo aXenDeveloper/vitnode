@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -30,10 +31,6 @@ export interface SearchFeedLinkProps {
   className?: string;
   href: string;
 }
-
-export type SearchFeedLinkComponent = (
-  props: SearchFeedLinkProps,
-) => React.ReactNode;
 
 const getSnippet = (content: string): string =>
   content.length > SNIPPET_LENGTH
@@ -77,7 +74,7 @@ export type SearchFeedHrefKind = "external" | "internal" | "unsafe";
 /**
  * What kind of destination an indexed `url` is.
  *
- * - `internal` - a path this app routes. The framework's `LinkComponent` gets it.
+ * - `internal` - a path this app routes. The router's `Link` gets it.
  * - `external` - an allowlisted scheme, or a protocol-relative `//host/path`
  *   (kept because it is existing behaviour). A bare `<a>` gets it; no router
  *   would accept it anyway.
@@ -100,12 +97,7 @@ export const classifySearchFeedHref = (href: string): SearchFeedHrefKind => {
   return SAFE_EXTERNAL_SCHEMES.has(scheme) ? "external" : "unsafe";
 };
 
-const ResultLink = ({
-  LinkComponent,
-  children,
-  className,
-  href,
-}: SearchFeedLinkProps & { LinkComponent: SearchFeedLinkComponent }) => {
+const ResultLink = ({ children, className, href }: SearchFeedLinkProps) => {
   const kind = classifySearchFeedHref(href);
 
   if (kind === "unsafe") return <span className={className}>{children}</span>;
@@ -119,25 +111,15 @@ const ResultLink = ({
   }
 
   return (
-    <LinkComponent className={className} href={href}>
+    <Link className={className} to={href}>
       {children}
-    </LinkComponent>
+    </Link>
   );
 };
 
-const ItemTitle = ({
-  LinkComponent,
-  item,
-}: {
-  item: SearchResultItem;
-  LinkComponent: SearchFeedLinkComponent;
-}) =>
+const ItemTitle = ({ item }: { item: SearchResultItem }) =>
   item.url ? (
-    <ResultLink
-      className="hover:underline"
-      href={item.url}
-      LinkComponent={LinkComponent}
-    >
+    <ResultLink className="hover:underline" href={item.url}>
       {item.title}
     </ResultLink>
   ) : (
@@ -145,13 +127,11 @@ const ItemTitle = ({
   );
 
 const TimelineItem = ({
-  LinkComponent,
   item,
   isLast,
 }: {
   isLast: boolean;
   item: SearchResultItem;
-  LinkComponent: SearchFeedLinkComponent;
 }) => {
   const t = useTranslations("core.search");
   const renderer = getSearchTypeRenderer(item.itemType);
@@ -193,7 +173,6 @@ const TimelineItem = ({
           <ResultLink
             className="hover:bg-muted/50 flex flex-col gap-1 rounded-lg border p-4 transition-colors"
             href={item.url}
-            LinkComponent={LinkComponent}
           >
             {content}
           </ResultLink>
@@ -207,13 +186,7 @@ const TimelineItem = ({
   );
 };
 
-const SearchResultCard = ({
-  LinkComponent,
-  item,
-}: {
-  item: SearchResultItem;
-  LinkComponent: SearchFeedLinkComponent;
-}) => {
+const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
   const t = useTranslations("core.search");
   const renderer = getSearchTypeRenderer(item.itemType);
   const Icon = renderer.icon;
@@ -245,7 +218,7 @@ const SearchResultCard = ({
           </div>
 
           <h3 className="text-foreground truncate text-lg font-semibold">
-            <ItemTitle item={item} LinkComponent={LinkComponent} />
+            <ItemTitle item={item} />
           </h3>
 
           {snippet && (
@@ -260,11 +233,9 @@ const SearchResultCard = ({
 };
 
 export const SearchFeedContent = ({
-  LinkComponent,
   queryOptions,
   variant = "list",
 }: {
-  LinkComponent: SearchFeedLinkComponent;
   queryOptions: SearchFeedQueryOptions;
   variant?: SearchFeedVariant;
 }) => {
@@ -332,7 +303,6 @@ export const SearchFeedContent = ({
               isLast={index === items.length - 1}
               item={item}
               key={`${item.itemType}-${item.itemId}`}
-              LinkComponent={LinkComponent}
             />
           ))}
         </ol>
@@ -345,11 +315,7 @@ export const SearchFeedContent = ({
   return (
     <div className="flex flex-col gap-3">
       {items.map(item => (
-        <SearchResultCard
-          item={item}
-          key={`${item.itemType}-${item.itemId}`}
-          LinkComponent={LinkComponent}
-        />
+        <SearchResultCard item={item} key={`${item.itemType}-${item.itemId}`} />
       ))}
 
       {loadMore}

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 
 import {
@@ -7,15 +8,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-import type { AuthLinkComponent } from "../auth/auth-link";
 import type { BreadcrumbCrumb } from "./crumb";
 
 export const BreadcrumbCrumbItems = ({
   crumbs,
-  LinkComponent,
 }: {
   crumbs: readonly BreadcrumbCrumb[];
-  LinkComponent: AuthLinkComponent;
 }) => (
   <>
     {crumbs.map((crumb, index) => (
@@ -26,9 +24,7 @@ export const BreadcrumbCrumbItems = ({
             <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
           ) : crumb.isLink ? (
             <BreadcrumbLink
-              render={
-                <LinkComponent href={crumb.href}>{crumb.label}</LinkComponent>
-              }
+              render={<Link to={crumb.href}>{crumb.label}</Link>}
             />
           ) : (
             <span>{crumb.label}</span>

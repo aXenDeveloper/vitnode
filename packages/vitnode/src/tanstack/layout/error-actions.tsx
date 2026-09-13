@@ -1,20 +1,11 @@
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { cn } from "cn";
 import { ArrowLeft, HomeIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { Button, buttonVariants } from "@/components/ui/button";
 
-import { RouterLink } from "./router-link";
-
-export const ErrorActions = ({
-  LinkComponent = RouterLink,
-}: {
-  /** How a path becomes a navigation. See {@link RouterLink} for the default. */
-  LinkComponent?: AuthLinkComponent;
-}) => {
+export const ErrorActions = () => {
   const router = useRouter();
   const t = useTranslations("core.global");
 
@@ -31,10 +22,10 @@ export const ErrorActions = ({
         {t("go_back")}
       </Button>
 
-      <LinkComponent className={cn(buttonVariants({ size: "lg" }))} href="/">
+      <Link className={cn(buttonVariants({ size: "lg" }))} to="/">
         <HomeIcon />
         {t("back_home")}
-      </LinkComponent>
+      </Link>
     </>
   );
 };

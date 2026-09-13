@@ -1,7 +1,6 @@
 import React from "react";
 
 import type { ContentFrontendRegistry } from "@/content/index";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import type { AdminTableNavigate } from "../table-search";
 import type { ContentFormScreenData } from "./form";
@@ -19,8 +18,6 @@ import { ContentAdminRouteContent } from "./route-screen";
 export interface ContentAdminScreenProps
   extends ContentAdminRouteData, ContentFormScreenData {
   children?: React.ReactNode;
-  /** How a path becomes a navigation. Defaults to the router's own link. */
-  LinkComponent?: AuthLinkComponent;
   /** How a table control changes the URL - the Stage 7 seam. */
   navigate: AdminTableNavigate<ContentListRouteSearch>;
   /** This installation's content types, with their override components. */
@@ -31,7 +28,6 @@ export interface ContentAdminScreenProps
 
 export const ContentAdminScreenContent = ({
   children,
-  LinkComponent,
   navigate,
   registry,
   search,
@@ -46,7 +42,6 @@ export const ContentAdminScreenContent = ({
         isList ? (
           <ContentListActions
             contentTypeId={routeData.contentTypeId}
-            LinkComponent={LinkComponent}
             registry={registry}
           />
         ) : undefined
@@ -55,20 +50,13 @@ export const ContentAdminScreenContent = ({
       {isList ? (
         <ContentListScreen
           contentTypeId={routeData.contentTypeId}
-          LinkComponent={LinkComponent}
           navigate={navigate}
           params={routeData.listParams}
           registry={registry}
           search={search}
         />
       ) : (
-        (children ?? (
-          <ContentFormScreen
-            {...routeData}
-            LinkComponent={LinkComponent}
-            registry={registry}
-          />
-        ))
+        (children ?? <ContentFormScreen {...routeData} registry={registry} />)
       )}
     </ContentAdminRouteContent>
   );

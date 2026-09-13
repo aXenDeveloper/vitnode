@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
@@ -5,44 +6,10 @@ import type { ContentRevisionMeta } from "@/content/revisions";
 
 import { UserFormat } from "@/components/user-format";
 
-import type { ContentFormLinkComponent } from "../../form/context";
-
-import { useContentFormNavigation } from "../../form/navigation";
-
 type RevisionActorMeta = Pick<
   ContentRevisionMeta,
   "actorName" | "actorRoleColor" | "actorRolePrefix" | "actorUserId"
 >;
-
-const RevisionActorLink = ({
-  actorName,
-  actorRoleColor,
-  actorRolePrefix,
-  actorUserId,
-  className,
-  LinkComponent,
-}: RevisionActorMeta & {
-  actorName: string;
-  actorUserId: number;
-  className?: string;
-  LinkComponent: ContentFormLinkComponent;
-}) => (
-  <LinkComponent
-    className={cn(
-      "hover:text-foreground truncate underline-offset-3 hover:underline",
-      className,
-    )}
-    href={`/admin/core/users/${actorUserId}`}
-  >
-    <UserFormat
-      format
-      user={{
-        name: actorName,
-        role: { color: actorRoleColor, prefix: actorRolePrefix },
-      }}
-    />
-  </LinkComponent>
-);
 
 export const RevisionActor = ({
   className,
@@ -52,21 +19,29 @@ export const RevisionActor = ({
   revision: RevisionActorMeta;
 }) => {
   const t = useTranslations("core.content.history");
-  const { LinkComponent } = useContentFormNavigation();
+  const { actorName, actorRoleColor, actorRolePrefix, actorUserId } = revision;
 
-  if (revision.actorUserId === null || revision.actorName === null) {
+  if (actorUserId === null || actorName === null) {
     return (
       <span className={cn("truncate", className)}>{t("system_actor")}</span>
     );
   }
 
   return (
-    <RevisionActorLink
-      {...revision}
-      actorName={revision.actorName}
-      actorUserId={revision.actorUserId}
-      className={className}
-      LinkComponent={LinkComponent}
-    />
+    <Link
+      className={cn(
+        "hover:text-foreground truncate underline-offset-3 hover:underline",
+        className,
+      )}
+      to={`/admin/core/users/${actorUserId}`}
+    >
+      <UserFormat
+        format
+        user={{
+          name: actorName,
+          role: { color: actorRoleColor, prefix: actorRolePrefix },
+        }}
+      />
+    </Link>
   );
 };

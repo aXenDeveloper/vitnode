@@ -2,7 +2,6 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
@@ -28,7 +27,6 @@ import { ADMIN_USERS_NAMESPACES } from "./route";
 import { usersSearchFrom, usersSearchParams } from "./route-search";
 
 export interface AdminUsersRouteProps extends AdminUsersRouteData {
-  LinkComponent: AuthLinkComponent;
   navigate: AdminTableNavigate<UsersRouteSearch>;
   search: UncheckedUsersSearch;
 }
@@ -36,7 +34,6 @@ export interface AdminUsersRouteProps extends AdminUsersRouteData {
 export const AdminUsersRouteContent = ({
   adminUserId,
   description,
-  LinkComponent,
   navigate,
   params,
   search,
@@ -84,7 +81,6 @@ export const AdminUsersRouteContent = ({
         <DataTableNavigationProvider value={navigation}>
           <UsersAdminTableContent
             data={data}
-            LinkComponent={LinkComponent}
             onVerifyEmail={onVerifyEmail}
             searchRoles={searchAdminRolesInBrowser}
           />

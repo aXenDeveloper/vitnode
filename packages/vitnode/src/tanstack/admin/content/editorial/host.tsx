@@ -3,21 +3,16 @@ import { useRouter } from "@tanstack/react-router";
 import React from "react";
 
 import type { ContentFormNavigation } from "@/views/admin/views/content/form/navigation";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { ContentEditorialTransportProvider } from "@/views/admin/views/content/actions/editorial-transport";
 import { ContentFormNavigationProvider } from "@/views/admin/views/content/form/navigation";
 
-import { RouterLink } from "../../../layout/router-link";
 import { contentEditorialTransport } from "./transport";
 
 export const ContentEditorialHost = ({
   children,
-  LinkComponent = RouterLink,
 }: {
   children: React.ReactNode;
-  /** How a path becomes a navigation. See {@link RouterLink} for the default. */
-  LinkComponent?: AuthLinkComponent;
 }) => {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -29,7 +24,6 @@ export const ContentEditorialHost = ({
 
   const navigation = React.useMemo<ContentFormNavigation>(
     () => ({
-      LinkComponent,
       navigate: href => {
         void router.navigate({ href });
       },
@@ -37,7 +31,7 @@ export const ContentEditorialHost = ({
         void router.invalidate();
       },
     }),
-    [LinkComponent, router],
+    [router],
   );
 
   return (

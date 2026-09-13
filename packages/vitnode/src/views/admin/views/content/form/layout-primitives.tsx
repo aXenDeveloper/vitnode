@@ -12,7 +12,7 @@ export const ContentFormHeader = ({
   children?: React.ReactNode;
   className?: string;
 }) => {
-  const { header, LinkComponent, markHeaderRendered } = useContentForm();
+  const { header, markHeaderRendered } = useContentForm();
 
   markHeaderRendered?.();
 
@@ -21,7 +21,6 @@ export const ContentFormHeader = ({
   return (
     <HeaderContent
       back={header.back}
-      BackLink={LinkComponent}
       className={className}
       desc={header.desc}
       h1={header.title}

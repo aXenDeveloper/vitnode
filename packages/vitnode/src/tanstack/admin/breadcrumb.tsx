@@ -1,14 +1,11 @@
 import { useMatches, useRouter } from "@tanstack/react-router";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { BreadcrumbAdminContent } from "@/views/admin/layouts/breadcrumb/breadcrumb-admin-content";
 import { BreadcrumbTrailContent } from "@/views/breadcrumb/breadcrumb-trail-content";
 
 import type { RouteBreadcrumbGroup } from "../breadcrumb/model";
 
 import { breadcrumbGroup, breadcrumbTrail } from "../breadcrumb/model";
-import { RouterLink } from "../layout/router-link";
 import { useRouteNavigationPending } from "../pending/navigation-pending";
 import { BreadcrumbPendingSkeleton } from "../pending/shapes";
 import { useAdminNav } from "./nav";
@@ -28,13 +25,11 @@ export const useAdminBreadcrumb = (): React.ReactNode => {
 
 export const AdminBreadcrumb = ({
   labels,
-  LinkComponent = RouterLink,
   overrideLastLabel,
   segments,
 }: {
   /** Explicit labels by href, for a crumb the navigation cannot name. */
   labels?: Record<string, string>;
-  LinkComponent?: AuthLinkComponent;
   /** The last crumb's label, when the page knows it and the navigation cannot. */
   overrideLastLabel?: string;
   /** The path below `/admin`, e.g. `["core", "users"]`. */
@@ -42,8 +37,6 @@ export const AdminBreadcrumb = ({
 }) => (
   <BreadcrumbAdminContent
     labels={labels}
-    LinkComponent={LinkComponent}
-
     nav={useAdminNav()}
     overrideLastLabel={overrideLastLabel}
     segments={segments}

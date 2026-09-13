@@ -2,17 +2,6 @@ import type { LucideIcon } from "lucide-react";
 
 import { FileIcon, KeyRoundIcon, SettingsIcon, UserIcon } from "lucide-react";
 
-export interface UserHeaderLinkProps extends Omit<
-  React.ComponentProps<"a">,
-  "href"
-> {
-  href: string;
-}
-
-export type UserHeaderLinkComponent = (
-  props: UserHeaderLinkProps,
-) => React.ReactNode;
-
 export interface UserHeaderUser {
   avatarColor: string;
   avatarUrl?: null | string;

@@ -164,7 +164,7 @@ const ContentFormFields = ({
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
   const { setOpen } = useDialog();
-  const { LinkComponent, refresh } = useContentFormNavigation();
+  const { refresh } = useContentFormNavigation();
   const transport = useContentFormTransport();
   const locale = useLocale();
   const invalidateOptions = useInvalidateContentOptions();
@@ -446,11 +446,6 @@ const ContentFormFields = ({
           <ContentFormProvider
             value={{
               fieldNames: spec.fields.map(field => field.name),
-              // A plugin's own form layout renders `ContentFormHeader` and
-              // `ContentFormActions`, whose two links have to be the host's.
-              // Injected rather than imported by the primitives, so the same
-              // layout renders under a router that is not Next's.
-              LinkComponent,
               fields: renderedFields,
               header: presentation === "page" ? header : undefined,
               localizedFieldNames: localizedFields,

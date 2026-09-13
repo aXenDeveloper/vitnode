@@ -36,23 +36,10 @@ describe("the shared header is framework-neutral", () => {
       );
     },
   );
-
-  it("never reaches a router", () => {
-    // `@vitnode/core` renders in whatever host mounts it, so the shared header
-    // reaches navigation through an injected `LinkComponent` rather than
-    // through a router of its own.
-    const reached = [...externalGraph(SHARED.header).keys()];
-
-    expect(reached.some(one => one.startsWith("@tanstack/"))).toBe(false);
-  });
 });
 
 describe("the shared header takes its framework parts as props", () => {
   const code = withoutComments(SHARED.header);
-
-  it("takes its links as a component rather than importing one", () => {
-    expect(code).toContain("LinkComponent");
-  });
 
   it.each(["logo", "navigation", "user"])(
     "asks for %s rather than resolving it",

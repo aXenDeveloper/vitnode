@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { LockIcon, PencilIcon, ShieldUserIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -8,7 +9,6 @@ import type {
   AdminStaffPage,
   AdminStaffRow,
 } from "@/views/admin/views/core/staff/staff-query";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
@@ -29,7 +29,6 @@ import { StaffUserFormatContent } from "./staff-user-format-content";
 
 export interface StaffTableProps {
   data: AdminStaffPage;
-  LinkComponent: AuthLinkComponent;
   onDelete: (args: {
     id: number;
     type: PermissionStaffType;
@@ -39,13 +38,11 @@ export interface StaffTableProps {
 }
 
 const StaffRowActions = ({
-  LinkComponent,
   onDelete,
   onDeleted,
   row,
   type,
 }: {
-  LinkComponent: AuthLinkComponent;
   onDelete: StaffTableProps["onDelete"];
   onDeleted?: () => void;
   row: AdminStaffRow;
@@ -74,13 +71,13 @@ const StaffRowActions = ({
   return (
     <div className="flex items-center justify-end gap-1">
       {canEdit && (
-        <LinkComponent
+        <Link
           aria-label={t("table.edit")}
           className={buttonVariants({ size: "icon-sm", variant: "ghost" })}
-          href={staffEditHref(type, row.id)}
+          to={staffEditHref(type, row.id)}
         >
           <PencilIcon />
-        </LinkComponent>
+        </Link>
       )}
 
       {canDelete && (
@@ -118,7 +115,6 @@ const StaffRowActions = ({
 
 export const StaffTableContent = ({
   data,
-  LinkComponent,
   onDelete,
   onDeleted,
   type,
@@ -170,7 +166,6 @@ export const StaffTableContent = ({
           align: "right",
           cell: ({ row }) => (
             <StaffRowActions
-              LinkComponent={LinkComponent}
               onDelete={onDelete}
               onDeleted={onDeleted}
               row={row}

@@ -1,4 +1,4 @@
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
+import { Link } from "@tanstack/react-router";
 
 import { LogoVitNode } from "@/components/logo-vitnode";
 import {
@@ -10,18 +10,16 @@ import {
 
 export const SidebarAdminContent = ({
   children,
-  LinkComponent,
   userBar,
 }: {
   children: React.ReactNode;
-  LinkComponent: AuthLinkComponent;
   userBar?: React.ReactNode;
 }) => (
   <Sidebar variant="floating">
     <SidebarHeader className="flex h-16 flex-row items-center gap-2 border-b">
-      <LinkComponent className="px-2" href="/admin/core">
+      <Link className="px-2" to="/admin/core">
         <LogoVitNode className="size-8" small />
-      </LinkComponent>
+      </Link>
     </SidebarHeader>
 
     <SidebarContent>{children}</SidebarContent>

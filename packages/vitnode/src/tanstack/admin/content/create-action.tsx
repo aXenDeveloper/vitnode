@@ -1,25 +1,21 @@
+import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { RegisteredFrontendContentType } from "@/content/index";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { Button } from "@/components/ui/button";
 import { CONTENT_PERMISSIONS, contentCreateHref } from "@/content/index";
 
-import { RouterLink } from "../../layout/router-link";
 import { useAdminPermission } from "../permissions";
 import { ContentFormDialogSlot } from "./slot-render";
 import { contentAdminSlots } from "./slots";
 
 export const ContentCreateAction = ({
   entry,
-  LinkComponent = RouterLink,
   singular,
 }: {
   entry: RegisteredFrontendContentType;
-  /** How a path becomes a navigation. See {@link RouterLink} for the default. */
-  LinkComponent?: AuthLinkComponent;
   singular: string;
 }) => {
   const { definition, pluginId } = entry;
@@ -39,7 +35,7 @@ export const ContentCreateAction = ({
     return (
       <Button
         nativeButton={false}
-        render={<LinkComponent href={contentCreateHref(definition)} />}
+        render={<Link to={contentCreateHref(definition)} />}
       >
         <PlusIcon />
         {label}

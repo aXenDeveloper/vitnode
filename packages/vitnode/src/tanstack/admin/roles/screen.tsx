@@ -2,7 +2,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
@@ -25,7 +24,6 @@ import { ADMIN_ROLES_NAMESPACES } from "./route";
 import { rolesSearchFrom, rolesSearchParams } from "./route-search";
 
 export interface AdminRolesRouteProps extends AdminRolesRouteData {
-  LinkComponent: AuthLinkComponent;
   navigate: AdminTableNavigate<RolesRouteSearch>;
   search: UncheckedRolesSearch;
 }
@@ -33,7 +31,6 @@ export interface AdminRolesRouteProps extends AdminRolesRouteData {
 export const AdminRolesRouteContent = ({
   adminUserId,
   description,
-  LinkComponent,
   navigate,
   params,
   search,
@@ -67,7 +64,6 @@ export const AdminRolesRouteContent = ({
         <DataTableNavigationProvider value={navigation}>
           <RolesAdminTableContent
             data={data}
-            LinkComponent={LinkComponent}
             onDelete={onDelete}
             onSave={onSave}
             onSaved={onSaved}

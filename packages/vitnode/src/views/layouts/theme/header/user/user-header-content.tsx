@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { LogOutIcon, Settings2Icon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -18,11 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserMenuIdentity } from "@/components/user-menu-identity";
 
-import type {
-  UserHeaderLinkComponent,
-  UserHeaderState,
-  UserHeaderUser,
-} from "./user-header-model";
+import type { UserHeaderState, UserHeaderUser } from "./user-header-model";
 
 import { USER_HEADER_HREF, userHeaderMenu } from "./user-header-model";
 
@@ -57,10 +54,8 @@ const PreferencesMenu = ({
 
 const AnonymousUserHeader = ({
   languageSwitcher,
-  LinkComponent,
 }: {
   languageSwitcher?: React.ReactNode;
-  LinkComponent: UserHeaderLinkComponent;
 }) => {
   const t = useTranslations("core.global");
 
@@ -68,31 +63,26 @@ const AnonymousUserHeader = ({
     <>
       <PreferencesMenu languageSwitcher={languageSwitcher} />
 
-      <LinkComponent
+      <Link
         className={buttonVariants({ variant: "ghost" })}
-        href={USER_HEADER_HREF.signIn}
+        to={USER_HEADER_HREF.signIn}
       >
         {t("login")}
-      </LinkComponent>
+      </Link>
 
-      <LinkComponent
-        className={buttonVariants()}
-        href={USER_HEADER_HREF.signUp}
-      >
+      <Link className={buttonVariants()} to={USER_HEADER_HREF.signUp}>
         {t("register")}
-      </LinkComponent>
+      </Link>
     </>
   );
 };
 
 const AuthenticatedUserHeader = ({
   languageSwitcher,
-  LinkComponent,
   onSignOut,
   user,
 }: {
   languageSwitcher?: React.ReactNode;
-  LinkComponent: UserHeaderLinkComponent;
   onSignOut: UserHeaderSignOut;
   user: UserHeaderUser;
 }) => {
@@ -120,10 +110,7 @@ const AuthenticatedUserHeader = ({
                 <DropdownMenuItem
                   key={key}
                   render={
-                    <LinkComponent
-                      href={href}
-                      target={newTab ? "_blank" : undefined}
-                    />
+                    <Link target={newTab ? "_blank" : undefined} to={href} />
                   }
                 >
                   <Icon />
@@ -157,30 +144,22 @@ const AuthenticatedUserHeader = ({
 
 export const UserHeaderContent = ({
   languageSwitcher,
-  LinkComponent,
   onSignOut,
   state,
 }: {
   languageSwitcher?: React.ReactNode;
-  LinkComponent: UserHeaderLinkComponent;
   onSignOut: UserHeaderSignOut;
   state: UserHeaderState;
 }) => {
   if (state.status === "loading") return <UserHeaderSkeleton />;
 
   if (state.status === "anonymous") {
-    return (
-      <AnonymousUserHeader
-        languageSwitcher={languageSwitcher}
-        LinkComponent={LinkComponent}
-      />
-    );
+    return <AnonymousUserHeader languageSwitcher={languageSwitcher} />;
   }
 
   return (
     <AuthenticatedUserHeader
       languageSwitcher={languageSwitcher}
-      LinkComponent={LinkComponent}
       onSignOut={onSignOut}
       user={state.user}
     />

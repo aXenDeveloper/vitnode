@@ -1,7 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { SSOCallbackContent } from "@/views/auth/sso/callback/sso-callback-content";
 import { useSSOCallback } from "@/views/auth/sso/callback/use-sso-callback";
 
@@ -15,14 +13,12 @@ import { SSO_CALLBACK_NAMESPACES } from "./sso-route";
 export interface SsoCallbackRouteProps {
   /** The "go back" / "go home" pair a host renders on a dead-end screen. */
   errorActions: React.ReactNode;
-  LinkComponent: AuthLinkComponent;
   providerId: string;
   search: { code?: string; error?: string; state?: string };
 }
 
 export const SsoCallbackRouteContent = ({
   errorActions,
-  LinkComponent,
   providerId,
   search,
 }: SsoCallbackRouteProps) => {
@@ -54,7 +50,6 @@ export const SsoCallbackRouteContent = ({
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
       <SSOCallbackContent
         errorActions={errorActions}
-        LinkComponent={LinkComponent}
         onLink={linkSso}
         providerId={providerId}
         providers={ssoProvidersOf(config)}

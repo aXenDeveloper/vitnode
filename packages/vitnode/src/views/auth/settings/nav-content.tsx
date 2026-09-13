@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import {
   KeyRoundIcon,
@@ -8,7 +9,6 @@ import { useTranslations } from "use-intl";
 
 import { buttonVariants } from "@/components/ui/button";
 
-import type { AuthLinkComponent } from "../auth-link";
 import type { SettingsNavKey } from "./settings-nav";
 
 import { isSettingsNavItemActive, SETTINGS_NAV_ITEMS } from "./settings-nav";
@@ -19,13 +19,7 @@ const ICONS: Record<SettingsNavKey, React.ComponentType> = {
   security: KeyRoundIcon,
 };
 
-export const SettingsNavContent = ({
-  LinkComponent,
-  pathname,
-}: {
-  LinkComponent: AuthLinkComponent;
-  pathname: string;
-}) => {
+export const SettingsNavContent = ({ pathname }: { pathname: string }) => {
   const t = useTranslations("core.auth.settings.nav");
 
   return (
@@ -35,18 +29,18 @@ export const SettingsNavContent = ({
         const isActive = isSettingsNavItemActive(item, pathname);
 
         return (
-          <LinkComponent
+          <Link
             aria-current={isActive ? "page" : undefined}
             className={cn(
               buttonVariants({ variant: isActive ? "secondary" : "ghost" }),
               "w-full justify-start gap-2",
             )}
-            href={item.href}
             key={item.href}
+            to={item.href}
           >
             <Icon />
             {t(item.key)}
-          </LinkComponent>
+          </Link>
         );
       })}
     </nav>

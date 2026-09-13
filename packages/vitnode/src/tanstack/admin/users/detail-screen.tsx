@@ -2,9 +2,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-import type { SearchFeedLinkComponent } from "@/views/search/search-feed-content";
-
 import { useAdminStaffPermissions } from "@/components/staff-permission/provider";
 import { UserDetailContent } from "@/views/admin/views/core/users/detail/user-detail-content";
 import { canEditAdminUser } from "@/views/admin/views/core/users/detail/user-query";
@@ -18,21 +15,16 @@ import { RouteMessages } from "../../i18n/route-messages";
 import { ADMIN_USER_NAMESPACES } from "./detail-route";
 import { adminUserQuery, useAdminUserMutations } from "./query";
 
-export interface AdminUserRouteProps extends AdminUserRouteData {
-  LinkComponent: AuthLinkComponent;
-}
+export type AdminUserRouteProps = AdminUserRouteData;
 
 const UserTimeline = ({
-  LinkComponent,
   locale,
   userId,
 }: {
-  LinkComponent: SearchFeedLinkComponent;
   locale: string;
   userId: number;
 }) => (
   <SearchFeedContent
-    LinkComponent={LinkComponent}
     queryOptions={searchFeedQueryOptions({
       locale,
       params: { authorId: String(userId), sort: "newest" },
@@ -41,12 +33,7 @@ const UserTimeline = ({
   />
 );
 
-const AdminUserScreen = ({
-  adminUserId,
-  id,
-  LinkComponent,
-  locale,
-}: AdminUserRouteProps) => {
+const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const t = useTranslations("admin.user.show.images");
   const { data: user } = useSuspenseQuery(adminUserQuery({ adminUserId, id }));
   const { onRemoveImage, onUpdate, onUpdateRoles, onUploadImage } =
@@ -57,7 +44,6 @@ const AdminUserScreen = ({
     <div className="p-4">
       <UserDetailContent
         canEdit={canEditAdminUser(permissions, { isAdmin: user.isAdmin })}
-        LinkComponent={LinkComponent}
         onRemoveImage={async (userId, kind) => {
           await onRemoveImage(userId, kind);
           toast.success(t(`${kind}.removed`), {
@@ -73,13 +59,7 @@ const AdminUserScreen = ({
           });
         }}
         searchRoles={searchAdminRolesInBrowser}
-        timeline={
-          <UserTimeline
-            LinkComponent={LinkComponent}
-            locale={locale}
-            userId={user.id}
-          />
-        }
+        timeline={<UserTimeline locale={locale} userId={user.id} />}
         user={user}
       />
     </div>

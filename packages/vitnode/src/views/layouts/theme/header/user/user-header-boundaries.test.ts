@@ -42,12 +42,6 @@ describe("the shared user header is framework-neutral", () => {
     },
   );
 
-  it.each(sharedEntries)("$name never reaches a router", ({ path }) => {
-    const reached = [...externalGraph(path).keys()];
-
-    expect(reached.some(one => one.startsWith("@tanstack/"))).toBe(false);
-  });
-
   it("never reaches the session read either", () => {
     // The whole point of taking a state instead of fetching one: a shared
     // component that imported `getSessionApi` would be a second source of
@@ -65,10 +59,6 @@ describe("the shared user header takes its framework parts as props", () => {
       .replace(/\/\/.*$/gm, "");
 
   const code = withoutComments(SHARED.content);
-
-  it("takes its links as a component", () => {
-    expect(code).toContain("LinkComponent");
-  });
 
   it("asks for a sign-out callback rather than calling a mutation", () => {
     expect(code).toContain("onSignOut");

@@ -3,8 +3,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createTranslator } from "use-intl";
 
-import type { HeaderLinkComponent } from "@/views/layouts/theme/header/header-nav";
-
 import { LogoVitNodeBrand } from "@/components/logo-vitnode";
 import { HeaderLayoutContent } from "@/views/layouts/theme/header/header-content";
 import {
@@ -15,7 +13,6 @@ import {
 import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { intlQueryOptions } from "../i18n/query";
-import { RouterLink } from "./router-link";
 
 export const HEADER_NAMESPACES = ["core.search"] as const;
 
@@ -27,12 +24,9 @@ interface HeaderNavMessages {
 }
 
 export const Header = ({
-  LinkComponent = RouterLink,
   logo = <LogoVitNodeBrand />,
   user,
 }: {
-  LinkComponent?: HeaderLinkComponent;
-
   logo?: React.ReactNode;
   /** The session slot - avatar and menu when signed in, sign-in button when not. */
   user?: React.ReactNode;
@@ -48,7 +42,6 @@ export const Header = ({
 
   return (
     <HeaderLayoutContent
-      LinkComponent={LinkComponent}
       logo={logo}
       navigation={headerNavItems({
         discover: t(HEADER_NAV_MESSAGE_KEYS.discover),

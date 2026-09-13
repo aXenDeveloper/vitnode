@@ -68,16 +68,12 @@ const loginRoute: CoreAuthRouteFactory = ({
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ LoginRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../auth/login-screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { LoginRouteContent } = await import("../../auth/login-screen");
 
       return {
         default: function LoginRoute() {
           return (
             <LoginRouteContent
-              LinkComponent={RouterLink}
               navigate={useAppNavigate()}
               returnTo={route.useSearch().returnTo}
             />
@@ -122,19 +118,12 @@ const registerRoute: CoreAuthRouteFactory = ({
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ RegisterRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../auth/register-screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { RegisterRouteContent } =
+        await import("../../auth/register-screen");
 
       return {
         default: function RegisterRoute() {
-          return (
-            <RegisterRouteContent
-              LinkComponent={RouterLink}
-              navigate={useAppNavigate()}
-            />
-          );
+          return <RegisterRouteContent navigate={useAppNavigate()} />;
         },
       };
     }),

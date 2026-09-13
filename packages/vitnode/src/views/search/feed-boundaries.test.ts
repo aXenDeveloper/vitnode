@@ -12,8 +12,6 @@ const SHARED_ENTRY = join(here, "search-feed-content.tsx");
 
 const SHARED_CONTROLS = join(here, "search-controls-content.tsx");
 
-const HEADER_CONTENT = join(here, "../../components/ui/header-content.tsx");
-
 describe("the shared search feed is framework-neutral", () => {
   it("takes its translations from use-intl", () => {
     expect(runtimeImports(SHARED_ENTRY)).toContain("use-intl");
@@ -35,16 +33,6 @@ describe("the shared search feed is framework-neutral", () => {
   });
 });
 
-describe("the shared header is framework-neutral", () => {
-  it("takes the back link as a prop instead of importing one", () => {
-    const code = readFileSync(HEADER_CONTENT, "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/.*$/gm, "");
-
-    expect(code).toContain("BackLink");
-  });
-});
-
 describe("the shared search controls are framework-neutral", () => {
   it("takes its translations from use-intl", () => {
     expect(runtimeImports(SHARED_CONTROLS)).toContain("use-intl");
@@ -60,7 +48,7 @@ describe("the shared search controls are framework-neutral", () => {
     expect(reached).toContain("lucide-react");
   });
 
-  it("takes its query and its link as props rather than building either", () => {
+  it("takes its query as a prop rather than building one", () => {
     const code = readFileSync(SHARED_CONTROLS, "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
@@ -70,7 +58,6 @@ describe("the shared search controls are framework-neutral", () => {
     expect(code).not.toContain("useLocale");
     expect(code).not.toContain("searchFeedQueryOptions");
     expect(code).toContain("feedQuery: SearchFeedQueryFactory;");
-    expect(code).toContain("LinkComponent: SearchFeedLinkComponent;");
     // One feed, and it is the shared one. A second renderer here is the drift
     // this boundary exists to prevent.
     expect(code.match(/<SearchFeedContent/g)).toHaveLength(1);

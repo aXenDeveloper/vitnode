@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,6 @@ import { Card, CardDescription } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import { ErrorContent } from "@/views/error/error-content";
 
-import type { AuthLinkComponent } from "../../auth-link";
 import type { SSOLinkSubmit } from "../link/sso-link-form-content";
 import type { SSOProvider } from "../providers";
 import type { SSOCallbackState } from "./use-sso-callback";
@@ -14,7 +14,6 @@ import { AUTH_HREF } from "../../auth-link";
 import { SSOLinkFormContent } from "../link/sso-link-form-content";
 
 export const SSOCallbackContent = ({
-  LinkComponent,
   errorActions,
   onLink,
   providerId,
@@ -25,7 +24,6 @@ export const SSOCallbackContent = ({
   state,
 }: {
   errorActions?: React.ReactNode;
-  LinkComponent: AuthLinkComponent;
   onLink: SSOLinkSubmit;
   providerId: string;
   providers: readonly SSOProvider[];
@@ -70,7 +68,6 @@ export const SSOCallbackContent = ({
             </div>
 
             <SSOLinkFormContent
-              LinkComponent={LinkComponent}
               offer={state.offer}
               onLink={onLink}
               providerName={providerName}
@@ -83,12 +80,9 @@ export const SSOCallbackContent = ({
           <div className="text-accent-foreground p-6 text-center text-sm">
             {t.rich("link.other_account", {
               link: text => (
-                <LinkComponent
-                  className="text-primary font-semibold"
-                  href={signInHref}
-                >
+                <Link className="text-primary font-semibold" to={signInHref}>
                   {text}
-                </LinkComponent>
+                </Link>
               ),
             })}
           </div>
@@ -103,7 +97,7 @@ export const SSOCallbackContent = ({
         actions={
           <Button
             nativeButton={false}
-            render={<LinkComponent href={signInHref} />}
+            render={<Link to={signInHref} />}
             size="lg"
           >
             {t("email_exists.sign_in")}
