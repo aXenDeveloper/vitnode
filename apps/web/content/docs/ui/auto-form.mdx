@@ -421,6 +421,42 @@ const formSchema = z.object({
 />
 ```
 
+### Typing the value
+
+`AutoForm` picks the control from your Zod schema while the page runs, so the props it hands your `component` function cannot know what the value holds - that is why the example above casts `props.field.value`.
+
+Move the control into its own component and it can say what it expects. `FormFieldApi<TValue>` types the value you read **and** the change you send back, so a wrong shape is a build error instead of a validation message:
+
+```tsx
+import type { FormFieldApi } from "@vitnode/core/components/form/auto-form";
+
+const ColorPicker = ({
+  field,
+}: {
+  field: FormFieldApi<string | undefined>;
+}) => (
+  <input
+    {...field}
+    className="h-10 w-24 cursor-pointer rounded-md border p-1"
+    type="color"
+    value={field.value ?? "#000000"}
+  />
+);
+
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "custom_color",
+      component: props => <ColorPicker field={props.field} />,
+    },
+  ]}
+  onSubmit={values => console.log(values)}
+/>;
+```
+
+`field.onChange` still takes either the value itself or the DOM change event - it unwraps the event for you, so `onChange={field.onChange}` keeps working.
+
 ## Tabs
 
 Group fields into tabs by passing the `tabs` prop and tagging each field with a

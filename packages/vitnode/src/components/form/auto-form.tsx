@@ -12,7 +12,7 @@ import { useTranslations } from "use-intl";
 import z from "zod";
 
 import type { routeMiddlewareSchema } from "../../api/modules/middleware/route";
-import type { FormFieldApi, FormMode, FormSubmitMeta } from "../ui/form";
+import type { AnyFormFieldApi, FormMode, FormSubmitMeta } from "../ui/form";
 
 import { useCaptcha } from "../../hooks/use-captcha";
 import {
@@ -34,7 +34,7 @@ import {
   TabsTrigger,
 } from "../ui/tabs";
 
-export type { FormFieldApi } from "../ui/form";
+export type { AnyFormFieldApi, FormFieldApi } from "../ui/form";
 export { setFormFieldError } from "../ui/form";
 
 interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
@@ -67,7 +67,7 @@ export interface AutoFormTab {
 export interface ItemAutoFormComponentProps {
   children?: React.ReactNode;
   description?: React.ReactNode;
-  field: FormFieldApi;
+  field: AnyFormFieldApi;
   itemParams?: InputParams;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;

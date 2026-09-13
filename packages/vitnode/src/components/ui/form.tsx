@@ -20,16 +20,20 @@ export interface FormSubmitMeta {
   intent?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FormFieldValue = any;
+export interface FormFieldChangeEvent {
+  target: { checked?: boolean; type?: string; value?: unknown };
+}
 
-export interface FormFieldApi {
+export interface FormFieldApi<TValue = unknown> {
   disabled?: boolean;
   name: string;
   onBlur: () => void;
-  onChange: (change: FormFieldValue) => void;
-  value: FormFieldValue;
+  onChange: (change: FormFieldChangeEvent | TValue) => void;
+  value: TValue;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyFormFieldApi = FormFieldApi<any>;
 
 export interface FormFieldError {
   message: string;
@@ -60,7 +64,7 @@ const useFormApi = () => {
   return context;
 };
 
-const valueOfChange = (change: FormFieldValue): FormFieldValue => {
+const valueOfChange = (change: unknown): unknown => {
   if (change === null || typeof change !== "object" || !("target" in change)) {
     return change;
   }
@@ -70,7 +74,7 @@ const valueOfChange = (change: FormFieldValue): FormFieldValue => {
   return target.type === "checkbox" ? target.checked : target.value;
 };
 
-const toFormFieldApi = (field: AnyFieldApi): FormFieldApi => ({
+const toFormFieldApi = (field: AnyFieldApi): AnyFormFieldApi => ({
   name: field.name,
   onBlur: () => {
     field.handleBlur();
@@ -248,7 +252,7 @@ const FormField = ({
 }: {
   name: string;
   render: (props: {
-    field: FormFieldApi;
+    field: AnyFormFieldApi;
     fieldState: FormFieldState;
   }) => React.ReactNode;
 }) => {

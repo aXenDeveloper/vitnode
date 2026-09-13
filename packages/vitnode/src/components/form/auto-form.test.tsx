@@ -13,6 +13,7 @@ import { setFormFieldError } from "../ui/form";
 import { AutoForm } from "./auto-form";
 import { AutoFormArray } from "./fields/array";
 import { AutoFormInput } from "./fields/input";
+import { AutoFormNumber } from "./fields/number";
 
 const settled = async (interaction: () => void) => {
   await act(async () => {
@@ -239,5 +240,68 @@ describe("AutoFormArray", () => {
 
     expect(rows()).toHaveLength(1);
     expect(rows()[0].value).toBe("second");
+  });
+
+  const amountsSchema = z.object({
+    amounts: z
+      .array(z.object({ value: z.number().nullable().default(null) }))
+      .default([]),
+  });
+
+  const renderAmounts = () => {
+    render(
+      <IntlProvider locale="en" messages={messages}>
+        <AutoForm
+          fields={[
+            {
+              id: "amounts",
+              component: fieldProps => (
+                <AutoFormArray
+                  {...fieldProps}
+                  addButtonLabel="Add amount"
+                  fields={[
+                    {
+                      id: "value",
+                      component: subProps => (
+                        <AutoFormNumber label="Amount" {...subProps} />
+                      ),
+                    },
+                  ]}
+                  label="Amounts"
+                />
+              ),
+            },
+          ]}
+          formSchema={amountsSchema}
+          onSubmit={vi.fn()}
+        />
+      </IntlProvider>,
+    );
+  };
+
+  const amounts = () =>
+    Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[name^="amounts["]'),
+    );
+
+  it("keeps the state a row's control owns when an earlier row is removed", async () => {
+    renderAmounts();
+
+    const add = screen.getByRole("button", { name: "Add amount" });
+    for (const _ of [0, 1, 2]) {
+      await settled(() => {
+        add.click();
+      });
+    }
+
+    await type(amounts()[0], "1");
+    await type(amounts()[1], "2");
+    await type(amounts()[2], "3");
+
+    await settled(() => {
+      screen.getAllByRole("button", { name: "Remove" })[1].click();
+    });
+
+    expect(amounts().map(input => input.value)).toEqual(["1", "3"]);
   });
 });

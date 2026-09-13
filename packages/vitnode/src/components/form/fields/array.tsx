@@ -25,6 +25,22 @@ import {
   useFormField,
 } from "../../ui/form";
 
+const reconcileRowKeys = (previous: number[], length: number): number[] => {
+  if (previous.length >= length) {
+    return previous.slice(0, length);
+  }
+
+  const nextKey = previous.length > 0 ? Math.max(...previous) + 1 : 0;
+
+  return [
+    ...previous,
+    ...Array.from(
+      { length: length - previous.length },
+      (_, at) => nextKey + at,
+    ),
+  ];
+};
+
 export interface AutoFormArrayField {
   className?: string;
   component: (props: ItemAutoFormComponentProps) => React.ReactNode;
@@ -65,6 +81,18 @@ export const AutoFormArray = ({
     return Array.isArray(rows) ? rows.length : 0;
   });
 
+  const [storedRowKeys, setStoredRowKeys] = React.useState<number[]>(() =>
+    reconcileRowKeys([], length),
+  );
+  const rowKeys =
+    storedRowKeys.length === length
+      ? storedRowKeys
+      : reconcileRowKeys(storedRowKeys, length);
+
+  if (rowKeys !== storedRowKeys) {
+    setStoredRowKeys(rowKeys);
+  }
+
   const maxItems = maxItemsProp ?? otherProps.maxItems;
   const minItems = minItemsProp ?? otherProps.minItems ?? 0;
 
@@ -77,10 +105,10 @@ export const AutoFormArray = ({
       {!!description && <FieldDescription>{description}</FieldDescription>}
 
       <FieldGroup className="gap-4">
-        {Array.from({ length }, (_, index) => (
+        {rowKeys.map((rowKey, index) => (
           <Field
             className="@md/field-group:items-end"
-            key={index}
+            key={rowKey}
             orientation="responsive"
           >
             {fieldDefinitions.map(fieldDef => {
@@ -164,6 +192,9 @@ export const AutoFormArray = ({
                 <Button
                   aria-label={t("remove")}
                   onClick={() => {
+                    setStoredRowKeys(previous =>
+                      previous.filter((_, at) => at !== index),
+                    );
                     removeFormFieldValue(form, id, index);
                   }}
                   size="icon"
