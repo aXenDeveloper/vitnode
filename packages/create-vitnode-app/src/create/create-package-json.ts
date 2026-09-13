@@ -60,7 +60,8 @@ export const rootScripts = (
 ) => ({
   "db:migrate": "turbo db:migrate",
   "db:prepare": "turbo db:prepare",
-  dev: "turbo db:prepare && turbo dev",
+  "build:plugins": "turbo build:plugins",
+  dev: "turbo build:plugins && turbo db:prepare && turbo dev",
   build: "turbo build",
   start: "turbo start",
   "i18n:create": "turbo i18n:create",

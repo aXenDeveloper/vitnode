@@ -3,6 +3,7 @@
   "ui": "tui",
   "tasks": {
     "db:prepare": {
+      "dependsOn": ["^build:plugins"],
       "cache": false,
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL"]
@@ -13,8 +14,12 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL"]
     },
+    "build:plugins": {
+      "dependsOn": ["^build:plugins"],
+      "outputs": ["dist/**"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build:plugins", "^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".output/**", "dist/**"],
       "env": ["POSTGRES_URL", "VITNODE_API_URL", "VITNODE_WEB_URL"]

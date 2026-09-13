@@ -150,6 +150,12 @@ npm run dev
 
 </Tabs>
 
+The root `dev` script compiles every plugin before anything starts, then leaves
+each one's watcher running beside the app—a plugin's package points at its
+`dist`, so it has to exist before the app can import it. Build them on their own
+with `build:plugins` when you need to; `build` and the database bootstrap already
+wait for it.
+
 Open `http://localhost:3000/site-notes`. The page comes from the plugin, gets
 its own chunk, and greets you with whatever its own endpoint answered—rendered
 on the server for this first visit, fetched in the browser on the next
