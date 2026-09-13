@@ -8,6 +8,7 @@ import { userHeaderState } from "@/views/layouts/theme/header/user/user-header-m
 
 import { useSignOutAction } from "../auth/actions";
 import { useSessionQuery } from "../auth/session-query";
+import { LanguageSwitcher } from "./language-switcher";
 import { RouterLink } from "./router-link";
 
 export const UserHeader = ({
@@ -32,6 +33,7 @@ export const UserHeader = ({
 
   return (
     <UserHeaderContent
+      languageSwitcher={<LanguageSwitcher />}
       LinkComponent={LinkComponent}
       onSignOut={onSignOut}
       state={userHeaderState({ isError, session: data })}

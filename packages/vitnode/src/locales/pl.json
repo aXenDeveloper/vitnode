@@ -194,6 +194,15 @@
           "delete": "Usuń tabelę"
         }
       },
+      "theme": {
+        "label": "Motyw",
+        "light": "Jasny",
+        "dark": "Ciemny",
+        "system": "Systemowy"
+      },
+      "language": "Język",
+      "opens_in_new_tab": "Otwiera się w nowej karcie",
+      "preferences": "Preferencje",
       "theme_switcher": "Zmień motyw",
       "language_switcher": "Zmień język",
       "toggle_sidebar": "Przełącz pasek boczny",
@@ -691,6 +700,8 @@
         "user_bar": {
           "home_page": "Strona główna",
           "debug": "Panel debugowania",
+          "website": "Strona VitNode",
+          "report_issue": "Zgłoś problem",
           "log_out": "Wyloguj się"
         },
         "system": {

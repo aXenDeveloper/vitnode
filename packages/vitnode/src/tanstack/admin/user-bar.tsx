@@ -11,8 +11,10 @@ import { useAdminUser } from "./permissions";
 import { removeAdminIdentityQueries } from "./queries";
 
 export const AdminUserBar = ({
+  languageSwitcher,
   LinkComponent,
 }: {
+  languageSwitcher?: React.ReactNode;
   LinkComponent: AuthLinkComponent;
 }) => {
   const user = useAdminUser();
@@ -38,6 +40,7 @@ export const AdminUserBar = ({
 
   return (
     <UserBarAdminContent
+      languageSwitcher={languageSwitcher}
       LinkComponent={LinkComponent}
       onSignOut={handleSignOut}
       user={user}

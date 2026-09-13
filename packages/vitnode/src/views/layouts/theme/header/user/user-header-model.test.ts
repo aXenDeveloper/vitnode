@@ -11,6 +11,7 @@ import {
 
 const user = (overrides: Partial<UserHeaderUser> = {}): UserHeaderUser => ({
   avatarColor: "ff0000",
+  email: "ada@example.com",
   isAdmin: false,
   name: "Ada",
   nameCode: "ada",

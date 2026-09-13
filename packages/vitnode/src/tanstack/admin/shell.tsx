@@ -88,8 +88,13 @@ const AdminShellFrame = ({
   return (
     <SidebarProvider>
       <SidebarAdminContent
-        languageSwitcher={languageSwitcher}
         LinkComponent={LinkComponent}
+        userBar={
+          <AdminUserBar
+            languageSwitcher={languageSwitcher}
+            LinkComponent={LinkComponent}
+          />
+        }
       >
         <NavSidebarAdminContent
           LinkComponent={LinkComponent}
@@ -117,7 +122,6 @@ const AdminShellFrame = ({
               onNavigate={onNavigate}
               searchUsers={searchUsers}
             />
-            <AdminUserBar LinkComponent={LinkComponent} />
           </div>
         </header>
 

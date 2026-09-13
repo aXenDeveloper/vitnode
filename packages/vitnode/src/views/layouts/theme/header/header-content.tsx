@@ -1,6 +1,5 @@
 import { cn } from "cn";
 
-import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
 import { buttonVariants } from "@/components/ui/button";
 
 import type { HeaderLinkComponent, HeaderNavItem } from "./header-nav";
@@ -11,7 +10,6 @@ export interface HeaderLayoutContentProps extends Omit<
   React.ComponentProps<"header">,
   "children"
 > {
-  languageSwitcher?: React.ReactNode;
   LinkComponent: HeaderLinkComponent;
   logo: React.ReactNode;
   navigation: HeaderNavItem[];
@@ -21,7 +19,6 @@ export interface HeaderLayoutContentProps extends Omit<
 export const HeaderLayoutContent = ({
   LinkComponent,
   className,
-  languageSwitcher,
   logo,
   navigation,
   user,
@@ -46,11 +43,7 @@ export const HeaderLayoutContent = ({
         ))}
       </nav>
 
-      <div className="ml-auto flex items-center gap-2">
-        {languageSwitcher}
-        <ThemeSwitcher />
-        {user}
-      </div>
+      <div className="ml-auto flex items-center gap-2">{user}</div>
     </div>
   </header>
 );

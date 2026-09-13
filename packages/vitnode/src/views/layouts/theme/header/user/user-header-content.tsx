@@ -1,18 +1,22 @@
-import { LogOutIcon } from "lucide-react";
+import { LogOutIcon, Settings2Icon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/avatar";
+import { NewTabIndicator } from "@/components/new-tab-indicator";
+import { ThemeSwitcherMenu } from "@/components/switchers/themes/theme-switcher-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserMenuIdentity } from "@/components/user-menu-identity";
 
 import type {
   UserHeaderLinkComponent,
@@ -26,15 +30,44 @@ export const UserHeaderSkeleton = () => <Skeleton className="h-9 w-32" />;
 
 export type UserHeaderSignOut = () => Promise<void> | void;
 
+const PreferencesMenu = ({
+  languageSwitcher,
+}: {
+  languageSwitcher?: React.ReactNode;
+}) => {
+  const t = useTranslations("core.global");
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button aria-label={t("preferences")} size="icon" variant="ghost" />
+        }
+      >
+        <Settings2Icon />
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-48 p-2">
+        <ThemeSwitcherMenu />
+        {languageSwitcher}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
 const AnonymousUserHeader = ({
+  languageSwitcher,
   LinkComponent,
 }: {
+  languageSwitcher?: React.ReactNode;
   LinkComponent: UserHeaderLinkComponent;
 }) => {
   const t = useTranslations("core.global");
 
   return (
     <>
+      <PreferencesMenu languageSwitcher={languageSwitcher} />
+
       <LinkComponent
         className={buttonVariants({ variant: "ghost" })}
         href={USER_HEADER_HREF.signIn}
@@ -53,10 +86,12 @@ const AnonymousUserHeader = ({
 };
 
 const AuthenticatedUserHeader = ({
+  languageSwitcher,
   LinkComponent,
   onSignOut,
   user,
 }: {
+  languageSwitcher?: React.ReactNode;
   LinkComponent: UserHeaderLinkComponent;
   onSignOut: UserHeaderSignOut;
   user: UserHeaderUser;
@@ -72,10 +107,13 @@ const AuthenticatedUserHeader = ({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64 p-2">
+        <DropdownMenuLabel className="flex items-center gap-2 p-1 font-normal">
+          <UserMenuIdentity user={user} />
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
         {userHeaderMenu(user).map(group => (
-          // Every group is followed by a separator, and the sign-out group
-          // below is what the last one separates from. `userHeaderMenu` never
-          // returns an empty group, so this cannot draw a stray rule.
           <React.Fragment key={group[0].key}>
             <DropdownMenuGroup>
               {group.map(({ href, Icon, key, newTab }) => (
@@ -90,6 +128,7 @@ const AuthenticatedUserHeader = ({
                 >
                   <Icon />
                   <span>{t(key)}</span>
+                  {newTab && <NewTabIndicator />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -99,7 +138,14 @@ const AuthenticatedUserHeader = ({
         ))}
 
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={onSignOut}>
+          <ThemeSwitcherMenu />
+          {languageSwitcher}
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={onSignOut} variant="destructive">
             <LogOutIcon />
             <span>{t("log_out")}</span>
           </DropdownMenuItem>
@@ -110,10 +156,12 @@ const AuthenticatedUserHeader = ({
 };
 
 export const UserHeaderContent = ({
+  languageSwitcher,
   LinkComponent,
   onSignOut,
   state,
 }: {
+  languageSwitcher?: React.ReactNode;
   LinkComponent: UserHeaderLinkComponent;
   onSignOut: UserHeaderSignOut;
   state: UserHeaderState;
@@ -121,11 +169,17 @@ export const UserHeaderContent = ({
   if (state.status === "loading") return <UserHeaderSkeleton />;
 
   if (state.status === "anonymous") {
-    return <AnonymousUserHeader LinkComponent={LinkComponent} />;
+    return (
+      <AnonymousUserHeader
+        languageSwitcher={languageSwitcher}
+        LinkComponent={LinkComponent}
+      />
+    );
   }
 
   return (
     <AuthenticatedUserHeader
+      languageSwitcher={languageSwitcher}
       LinkComponent={LinkComponent}
       onSignOut={onSignOut}
       user={state.user}

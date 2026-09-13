@@ -207,6 +207,15 @@
           "delete": "Delete table"
         }
       },
+      "theme": {
+        "label": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "language": "Language",
+      "opens_in_new_tab": "Opens in a new tab",
+      "preferences": "Preferences",
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",
       "toggle_sidebar": "Toggle Sidebar",
@@ -946,6 +955,8 @@
         "user_bar": {
           "home_page": "Home Page",
           "debug": "Debug Panel",
+          "website": "VitNode Website",
+          "report_issue": "Report an Issue",
           "log_out": "Log Out"
         },
         "system": {

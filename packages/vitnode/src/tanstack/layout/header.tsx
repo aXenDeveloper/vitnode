@@ -15,7 +15,6 @@ import {
 import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { intlQueryOptions } from "../i18n/query";
-import { LanguageSwitcher } from "./language-switcher";
 import { RouterLink } from "./router-link";
 
 export const HEADER_NAMESPACES = ["core.search"] as const;
@@ -49,7 +48,6 @@ export const Header = ({
 
   return (
     <HeaderLayoutContent
-      languageSwitcher={<LanguageSwitcher />}
       LinkComponent={LinkComponent}
       logo={logo}
       navigation={headerNavItems({
