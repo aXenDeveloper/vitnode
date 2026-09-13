@@ -1,6 +1,6 @@
 ---
 title: Auto Form
-description: Component creates form based on Zod schemas & react-hook-form with validation
+description: Component creates form based on Zod schemas & TanStack Form with validation
 ---
 
 ## Preview
@@ -378,7 +378,7 @@ the same tuple and return `{ languageCode, value }[]` - the shape
 
 ## Custom Fields
 
-Because Auto Form fields are controlled entirely by the `component` property function, creating a custom field component is just a matter of rendering your own UI using the provided props. The props passed to the `component` function contain the field properties managed by `react-hook-form` along with Zod validation details.
+Because Auto Form fields are controlled entirely by the `component` property function, creating a custom field component is just a matter of rendering your own UI using the provided props. The props passed to the `component` function contain the field properties managed by TanStack Form along with Zod validation details.
 
 Here is an example of creating a custom color picker input:
 
@@ -557,9 +557,32 @@ To activate submit button and handle form submission with the `onSubmit` callbac
 />
 ```
 
+### When Validation Messages Appear
+
+Auto Form always knows whether the values satisfy the schema - that is what keeps the submit button disabled until they do - but it holds the messages back until they are useful. By default it says nothing until the first submit attempt. Pass `mode` to speak up sooner:
+
+| `mode`                    | A field's message appears...      |
+| ------------------------- | --------------------------------- |
+| `"onSubmit"` *(default)*  | after the first submit attempt    |
+| `"onBlur"` / `"onTouched"`| once the field has been left      |
+| `"onChange"` / `"all"`    | as soon as the field is edited    |
+
+```tsx
+<AutoForm
+  fields={
+    [
+      /* ...field definitions */
+    ]
+  }
+  formSchema={formSchema}
+  mode="all"
+  onSubmit={values => {}}
+/>
+```
+
 ### Accessing the Form Instance
 
-The `onSubmit` callback provides access to the React Hook Form instance as a second parameter:
+The `onSubmit` callback provides access to the TanStack Form instance as a second parameter, so you can read and write the form's state after the values have been handed over:
 
 ```tsx
 <AutoForm
@@ -570,13 +593,30 @@ The `onSubmit` callback provides access to the React Hook Form instance as a sec
   }
   formSchema={formSchema}
   onSubmit={(values, form) => {
-    // Access form methods
-    form.setError("username", {
-      type: "manual",
-      message: "Username already taken",
-    });
+    form.setFieldValue("username", values.username.trim());
+    form.reset();
   }}
 />
+```
+
+### Showing a Refusal the Server Named
+
+When the API turns a submission down for a reason it can point at a field - a username that is already taken, say - put that message on the field with `setFormFieldError`. It focuses the field, blocks submission while the rejected value is still in it, and clears itself the moment the field is edited:
+
+```tsx
+import { setFormFieldError } from "@vitnode/core/components/ui/form";
+
+<AutoForm
+  fields={
+    [
+      /* ...field definitions */
+    ]
+  }
+  formSchema={formSchema}
+  onSubmit={(values, form) => {
+    setFormFieldError(form, "username", "Username already taken");
+  }}
+/>;
 ```
 
 You can also define the submission handler separately:
@@ -587,15 +627,15 @@ import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
 
 ```tsx
 const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form) => {
-  try {
-    await saveData(values);
-    toast.success("Form submitted successfully");
-  } catch (error) {
-    form.setError("root", {
-      type: "manual",
-      message: "Failed to submit form",
-    });
+  const result = await saveData(values);
+
+  if (result.conflict) {
+    setFormFieldError(form, "username", "Username already taken");
+
+    return;
   }
+
+  toast.success("Form submitted successfully");
 };
 
 // Then in your component

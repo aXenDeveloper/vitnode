@@ -1,20 +1,18 @@
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import {
+  type FormApi,
+  type FormAsyncValidateOrFn,
+  type FormValidateOrFn,
+  type StandardSchemaV1,
+  useForm,
+  useSelector,
+} from "@tanstack/react-form";
 import { useAnimate, useReducedMotion } from "motion/react";
 import { useEffect } from "react";
-import {
-  type ControllerRenderProps,
-  type FieldPath,
-  type FieldValues,
-  type Mode,
-  useForm,
-  useFormContext,
-  type UseFormReturn,
-  useFormState,
-} from "react-hook-form";
 import { useTranslations } from "use-intl";
 import z from "zod";
 
 import type { routeMiddlewareSchema } from "../../api/modules/middleware/route";
+import type { FormFieldApi, FormMode, FormSubmitMeta } from "../ui/form";
 
 import { useCaptcha } from "../../hooks/use-captcha";
 import {
@@ -27,7 +25,7 @@ import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "../../lib/motion";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";
-import { Form, FormField } from "../ui/form";
+import { Form, FormField, useFormApi } from "../ui/form";
 import {
   Tabs,
   TabsContent,
@@ -35,6 +33,9 @@ import {
   TabsPanels,
   TabsTrigger,
 } from "../ui/tabs";
+
+export type { FormFieldApi } from "../ui/form";
+export { setFormFieldError } from "../ui/form";
 
 interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
   children?: ItemAutoFormProps<T>[];
@@ -44,17 +45,16 @@ interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
 
 type ItemAutoFormProps<
   T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>,
-  TName extends FieldPath<z.infer<T>> = FieldPath<z.infer<T>>,
 > = ItemAutoFormSharedProps<T> &
   (
     | {
         component: (props: ItemAutoFormComponentProps) => React.ReactNode;
-        id: TName;
+        id: string;
       }
     | {
         component?: never;
         description?: React.ReactNode;
-        id: TName;
+        id: string;
         label?: React.ReactNode;
       }
   );
@@ -67,7 +67,7 @@ export interface AutoFormTab {
 export interface ItemAutoFormComponentProps {
   children?: React.ReactNode;
   description?: React.ReactNode;
-  field: ControllerRenderProps<FieldValues, string>;
+  field: FormFieldApi;
   itemParams?: InputParams;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
@@ -84,6 +84,26 @@ export interface ItemAutoFormComponentProps {
     type?: string;
   };
 }
+
+type AutoFormValidator<T extends z.ZodObject<z.ZodRawShape>> = StandardSchemaV1<
+  z.input<T>,
+  z.output<T>
+>;
+
+export type AutoFormApi<T extends z.ZodObject<z.ZodRawShape>> = FormApi<
+  z.input<T>,
+  AutoFormValidator<T>,
+  AutoFormValidator<T>,
+  FormAsyncValidateOrFn<z.input<T>> | undefined,
+  FormValidateOrFn<z.input<T>> | undefined,
+  FormAsyncValidateOrFn<z.input<T>> | undefined,
+  AutoFormValidator<T>,
+  FormAsyncValidateOrFn<z.input<T>> | undefined,
+  FormValidateOrFn<z.input<T>> | undefined,
+  FormAsyncValidateOrFn<z.input<T>> | undefined,
+  FormAsyncValidateOrFn<z.input<T>> | undefined,
+  FormSubmitMeta
+>;
 
 const usesFormValues = <T extends z.ZodObject<z.ZodRawShape>>(
   item: ItemAutoFormProps<T>,
@@ -124,13 +144,14 @@ export const AutoFormSubmitButton = ({
   variant?: React.ComponentProps<typeof Button>["variant"];
 }) => {
   const t = useTranslations("core.global");
-  const { control } = useFormContext();
-  const { isSubmitting, isValid } = useFormState({ control });
+  const { form } = useFormApi();
+  const canSubmit = useSelector(form.store, state => state.canSubmit);
+  const isSubmitting = useSelector(form.store, state => state.isSubmitting);
 
   return (
     <Button
       className={className}
-      disabled={!isValid || isSubmitting}
+      disabled={!canSubmit}
       isLoading={isSubmitting}
       type="submit"
       value={intent}
@@ -141,35 +162,18 @@ export const AutoFormSubmitButton = ({
   );
 };
 
-const submitIntentOf = (
-  event: React.BaseSyntheticEvent | undefined,
-): string | undefined => {
-  const native = event?.nativeEvent;
-  if (!native || !("submitter" in native)) return undefined;
-
-  const { submitter } = native as SubmitEvent;
-
-  return submitter instanceof HTMLButtonElement && submitter.value !== ""
-    ? submitter.value
-    : undefined;
-};
-
-export type AutoFormOnSubmit<
-  T extends z.ZodObject<z.ZodRawShape>,
-  TContext = unknown,
-> = (
+export type AutoFormOnSubmit<T extends z.ZodObject<z.ZodRawShape>> = (
   values: z.infer<T>,
-  form: UseFormReturn<z.input<T>, TContext, z.output<T>>,
+  form: AutoFormApi<T>,
   options: {
     captchaToken: string;
     intent?: string;
   },
 ) => Promise<void> | void;
 
-export function AutoForm<
-  T extends z.ZodObject<z.ZodRawShape>,
-  TContext = unknown,
->({
+const emptySubmitMeta: FormSubmitMeta = {};
+
+export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   formSchema,
   mode,
   onSubmit: onSubmitProp,
@@ -185,8 +189,8 @@ export function AutoForm<
   fields: ItemAutoFormProps<T>[];
   formSchema: T;
   layout?: (renderedFields: Record<string, React.ReactNode>) => React.ReactNode;
-  mode?: Mode;
-  onSubmit?: AutoFormOnSubmit<T, TContext>;
+  mode?: FormMode;
+  onSubmit?: AutoFormOnSubmit<T>;
   submitButtonProps?: Omit<
     React.ComponentProps<typeof Button>,
     "isLoading" | "type"
@@ -202,39 +206,41 @@ export function AutoForm<
   const t = useTranslations("core.global");
   const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
   const inputParams = getZodInputParams(jsonSchema);
-  const form = useForm<z.core.input<T>, TContext, z.core.output<T>>({
-    resolver: standardSchemaResolver<
-      z.core.input<T>,
-      TContext,
-      z.core.output<T>
-    >(formSchema),
+  const validator: AutoFormValidator<T> = formSchema;
+  const form = useForm({
     defaultValues: getDefaults<T>(jsonSchema),
-    mode,
-  });
+    onSubmit: async ({ formApi, meta, value }) => {
+      const parsedValues = formSchema.safeParse(value);
+      if (!parsedValues.success) return;
 
-  const onSubmit = async (
-    values: z.infer<T>,
-    event?: React.BaseSyntheticEvent,
-  ) => {
-    const parsedValues = formSchema.safeParse(values);
-    if (parsedValues.success) {
-      await onSubmitProp?.(parsedValues.data, form, {
+      await onSubmitProp?.(parsedValues.data, formApi, {
         captchaToken: captcha ? await getTokenCaptcha() : "",
-        intent: submitIntentOf(event),
+        intent: meta.intent,
       });
 
       if (captcha) {
         onResetCaptcha();
       }
-    }
-  };
+    },
+    onSubmitMeta: emptySubmitMeta,
+    validators: {
+      onChange: validator,
+      onMount: validator,
+      onSubmit: validator,
+    },
+  });
 
   const hasConditionalFields = fields.some(item => usesFormValues(item));
-  // Only subscribe to value changes when a field actually needs them, so forms
-  // without conditional fields keep their previous (non re-rendering) behavior.
-  // The subscription-driven re-render is intentional here.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const watchedValues = hasConditionalFields ? form.watch() : undefined;
+  const watchedValues = useSelector(form.store, state =>
+    hasConditionalFields ? state.values : undefined,
+  );
+  const submitCount = useSelector(
+    form.store,
+    state => state.submissionAttempts,
+  );
+  const canSubmit = useSelector(form.store, state => state.canSubmit);
+  const isSubmitting = useSelector(form.store, state => state.isSubmitting);
+
   const isFieldVisible = (item: ItemAutoFormProps<T>) => {
     if (!item.hidden || !watchedValues) return true;
 
@@ -275,7 +281,7 @@ export function AutoForm<
             <AutoFormField
               invalid={fieldState.invalid}
               orientation="responsive"
-              submitCount={form.formState.submitCount}
+              submitCount={submitCount}
             >
               {component({
                 field,
@@ -327,12 +333,8 @@ export function AutoForm<
 
   const submitButton = (
     <Button
-      disabled={
-        !form.formState.isValid ||
-        form.formState.isSubmitting ||
-        (captcha && !isReady)
-      }
-      isLoading={form.formState.isSubmitting}
+      disabled={!canSubmit || (captcha && !isReady)}
+      isLoading={isSubmitting}
       {...submitButtonProps}
       aria-label={submitButtonProps?.["aria-label"] ?? t("submit")}
       type="submit"
@@ -343,7 +345,7 @@ export function AutoForm<
 
   if (layout) {
     return (
-      <Form form={form} onSubmit={onSubmit} {...props}>
+      <Form form={form} mode={mode} {...props}>
         {layout(
           Object.fromEntries(
             fields
@@ -360,7 +362,7 @@ export function AutoForm<
   }
 
   return (
-    <Form form={form} onSubmit={onSubmit} {...props}>
+    <Form form={form} mode={mode} {...props}>
       {tabs?.length ? (
         <Tabs defaultValue={tabs[0].value}>
           <TabsList>

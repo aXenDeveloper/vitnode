@@ -7,6 +7,7 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { useDialog } from "@/components/ui/dialog";
+import { setFormFieldError } from "@/components/ui/form";
 
 import type { CreateAdminUser } from "./create-user-content";
 
@@ -52,11 +53,7 @@ export const CreateUserForm = ({ onCreate }: { onCreate: CreateAdminUser }) => {
         : null;
 
     if (field) {
-      form.setError(
-        field,
-        { message: t(`${field}.exists`), type: "manual" },
-        { shouldFocus: true },
-      );
+      setFormFieldError(form, field, t(`${field}.exists`));
 
       return;
     }

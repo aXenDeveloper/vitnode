@@ -1,8 +1,7 @@
-import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-
 import React from "react";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
+import type { FormFieldApi } from "@/components/ui/form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
 
 import type { ContentOptionsLoader } from "./field-component";
@@ -26,7 +25,7 @@ export const ContentLeafField = ({
   spec,
   value,
 }: ContentLeafFieldProps) => {
-  const controller = React.useMemo<ControllerRenderProps<FieldValues, string>>(
+  const controller = React.useMemo<FormFieldApi>(
     () => ({
       disabled: false,
       name,
@@ -40,7 +39,6 @@ export const ContentLeafField = ({
 
         onChange(unwrapped);
       },
-      ref: () => undefined,
       value: value ?? "",
     }),
     [name, onChange, value],

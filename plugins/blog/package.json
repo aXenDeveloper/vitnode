@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.6.3",
+    "@tanstack/react-form": "^1.33.5",
     "@vitnode/core": "workspace:*",
     "ai": "^7.0.99",
     "drizzle-kit": "1.0.0-rc.4",
@@ -47,7 +48,6 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-email": "^6.9.5",
-    "react-hook-form": "^7.88.0",
     "sonner": "^2.0.8",
     "use-intl": "^4.14.4",
     "zod": "^4.6.2"
