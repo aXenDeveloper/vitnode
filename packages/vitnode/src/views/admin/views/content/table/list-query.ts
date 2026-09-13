@@ -54,9 +54,6 @@ export const zodContentListPage = z.object({
   pageInfo: zodPageInfo,
 });
 
-const _pageInfoMatches: AdminTablePageInfo = {} as z.infer<typeof zodPageInfo>;
-void _pageInfoMatches;
-
 export interface ContentListRequest {
   contentTypeId: string;
 

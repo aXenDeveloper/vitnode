@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useAnimate, useReducedMotion } from "motion/react";
 import { useEffect } from "react";
 import {
@@ -203,7 +203,11 @@ export function AutoForm<
   const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
   const inputParams = getZodInputParams(jsonSchema);
   const form = useForm<z.core.input<T>, TContext, z.core.output<T>>({
-    resolver: zodResolver(formSchema),
+    resolver: standardSchemaResolver<
+      z.core.input<T>,
+      TContext,
+      z.core.output<T>
+    >(formSchema),
     defaultValues: getDefaults<T>(jsonSchema),
     mode,
   });

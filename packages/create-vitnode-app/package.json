@@ -37,19 +37,19 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^8.5.2",
+    "@inquirer/prompts": "^8.7.2",
     "commander": "^15.0.0",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1",
     "validate-npm-package-name": "^8.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.5.1",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
-    "eslint": "^10.7.0",
+    "eslint": "^10.10.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   }
 }

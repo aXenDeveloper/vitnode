@@ -34,7 +34,6 @@ export const useSignUpForm = ({ onSignUp }: { onSignUp: SignUpSubmit }) => {
   });
 
   const onSubmit: AutoFormOnSubmit<SignUpFormSchema> = async (
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     { terms: _terms, ...values }: SignUpFormValues,
     form,
     { captchaToken },

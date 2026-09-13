@@ -463,8 +463,7 @@ describe("contentScheduleEffectsPayloadSchema", () => {
   });
 
   it("refuses a payload missing the record it is about", () => {
-    const { itemId, ...rest } = payload();
-    void itemId;
+    const { itemId: _itemId, ...rest } = payload();
 
     expect(contentScheduleEffectsPayloadSchema.safeParse(rest).success).toBe(
       false,

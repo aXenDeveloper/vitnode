@@ -24,7 +24,6 @@ export const RunActionCronTable = ({
     module: "cron",
     permission: "can_run",
   });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, formAction, isPending] = useActionState(async () => {
     const mutation = await onRun(id);
     if (mutation?.error) {

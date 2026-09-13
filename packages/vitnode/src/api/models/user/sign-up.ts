@@ -132,7 +132,6 @@ export const signUp = async (
     })
     .returning();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _, ...user } = data;
 
   // The insert above runs on `c.get("db")` (auto-commit), so the row is

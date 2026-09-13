@@ -20,7 +20,6 @@ export const ContentConfirmAction = ({
   const t = useTranslations("core.global.confirm_action");
   const { setOpen } = useAlertDialog();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, formAction, isLoading] = React.useActionState(async () => {
     await onSubmit({ onClose: () => setOpen?.(false) });
   }, null);
