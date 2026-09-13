@@ -3,8 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import type {
+  PluginConfigRegistration,
+  RegisterPluginStatus,
+} from "./add-plugin-to-config.js";
+
 import {
   addPluginToConfig,
+  needsManualRegistration,
   registerPluginInSource,
 } from "./add-plugin-to-config.js";
 
@@ -201,6 +207,169 @@ export default defineConfig({
     );
 
     expect(app(nested).source).toContain("plugins: [siteNotesPlugin()],");
+  });
+});
+
+describe("finding the array the config actually uses", () => {
+  it("skips a commented-out plugins key", () => {
+    const { source } = app(
+      APP_CONFIG.replace("  plugins: [],", "  // plugins: [],\n  plugins: [],"),
+    );
+
+    expect(source).toContain("// plugins: [],");
+    expect(source).toContain("plugins: [siteNotesPlugin()],");
+  });
+
+  it("skips a plugins key inside a block comment", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "  plugins: [],",
+        "  /* plugins: [oldPlugin()] */\n  plugins: [],",
+      ),
+    );
+
+    expect(source).toContain("/* plugins: [oldPlugin()] */");
+    expect(source).toContain("plugins: [siteNotesPlugin()],");
+  });
+
+  it("skips a nested property that happens to be called plugins", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "  plugins: [],",
+        "  editor: { plugins: [] },\n  plugins: [],",
+      ),
+    );
+
+    expect(source).toContain("editor: { plugins: [] },");
+    expect(source).toContain("plugins: [siteNotesPlugin()],");
+  });
+
+  it("skips a plugins key inside a string", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "  plugins: [],",
+        '  note: "plugins: [x()]",\n  plugins: [],',
+      ),
+    );
+
+    expect(source).toContain('note: "plugins: [x()]",');
+    expect(source).toContain("plugins: [siteNotesPlugin()],");
+  });
+
+  it("still finds a quoted key", () => {
+    const { source } = app(APP_CONFIG.replace("plugins:", '"plugins":'));
+
+    expect(source).toContain('"plugins": [siteNotesPlugin()],');
+  });
+
+  it("reports a builder call it only sees in a comment", () => {
+    const commented = `export const vitNodeConfig = {
+  // was: buildConfig({ plugins: [] })
+  plugins: [],
+};
+`;
+
+    expect(app(commented).status).toBe("no-config-call");
+  });
+
+  it("reports an aliased builder rather than editing the wrong thing", () => {
+    const aliased = APP_CONFIG.replace(
+      "import { buildConfig }",
+      "import { buildConfig as build }",
+    ).replace("buildConfig({", "build({");
+
+    expect(app(aliased).status).toBe("no-config-call");
+    expect(app(aliased).source).toBe(aliased);
+  });
+
+  it("does not mistake a longer identifier for the builder", () => {
+    const other = APP_CONFIG.replace("buildConfig({", "myBuildConfig({");
+
+    expect(app(other).status).toBe("no-config-call");
+  });
+});
+
+describe("entries that carry a comment", () => {
+  it("puts the comma before a trailing line comment, not inside it", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "plugins: [],",
+        "plugins: [\n    blogPlugin() // keep this\n  ],",
+      ),
+    );
+
+    expect(source).toContain(
+      "plugins: [\n    blogPlugin(), // keep this\n    siteNotesPlugin(),\n  ],",
+    );
+    expect(source).not.toContain("// keep this,");
+  });
+
+  it("puts the comma before a trailing block comment", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "plugins: [],",
+        "plugins: [\n    blogPlugin() /* keep */\n  ],",
+      ),
+    );
+
+    expect(source).toContain(
+      "plugins: [\n    blogPlugin(), /* keep */\n    siteNotesPlugin(),\n  ],",
+    );
+  });
+
+  it("adds no second comma when the entry already has one", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "plugins: [],",
+        "plugins: [\n    blogPlugin(), // keep this\n  ],",
+      ),
+    );
+
+    expect(source).toContain("blogPlugin(), // keep this");
+    expect(source).not.toContain("blogPlugin(),, ");
+  });
+
+  it("is not fooled by a comment marker inside a string argument", () => {
+    const { source } = app(
+      APP_CONFIG.replace(
+        "plugins: [],",
+        'plugins: [\n    blogPlugin("//")\n  ],',
+      ),
+    );
+
+    expect(source).toContain(
+      'plugins: [\n    blogPlugin("//"),\n    siteNotesPlugin(),\n  ],',
+    );
+  });
+});
+
+describe("needsManualRegistration", () => {
+  const at = (status: RegisterPluginStatus): PluginConfigRegistration => ({
+    file: `/${status}.ts`,
+    status,
+  });
+
+  it("names every config the generator could not edit", () => {
+    expect(
+      needsManualRegistration([
+        at("registered"),
+        at("already-registered"),
+        at("no-plugins-array"),
+        at("no-config-call"),
+      ]).map(({ file }) => file),
+    ).toEqual(["/no-plugins-array.ts", "/no-config-call.ts"]);
+  });
+
+  it("reports an unrecognised config even when another one succeeded", () => {
+    expect(
+      needsManualRegistration([at("registered"), at("no-config-call")]),
+    ).toHaveLength(1);
+  });
+
+  it("stays quiet when every config was handled", () => {
+    expect(
+      needsManualRegistration([at("registered"), at("already-registered")]),
+    ).toEqual([]);
   });
 });
 

@@ -21,9 +21,11 @@ export type {
   MultiLangValueItem,
 } from "@/lib/helpers/multi-lang";
 
-export const useMultiLangField = (
-  field: FormFieldApi<MultiLangValue | undefined>,
-) => {
+export interface MultiLangFieldProps {
+  field: FormFieldApi<MultiLangValue | undefined>;
+}
+
+export const useMultiLangField = (field: MultiLangFieldProps["field"]) => {
   const languages = useLanguages();
   const locale = useLocale();
   const [selected, setSelected] = React.useState(

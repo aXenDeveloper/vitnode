@@ -11,7 +11,10 @@ import type { PluginConfigRegistration } from "./add-plugin-to-config.js";
 import { getPackageManagerFromRoot } from "../../helpers/get-package-manager-from-root.js";
 import { installDependencies } from "../../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../../helpers/is-folder-empty.js";
-import { addPluginToConfig } from "./add-plugin-to-config.js";
+import {
+  addPluginToConfig,
+  needsManualRegistration,
+} from "./add-plugin-to-config.js";
 import { addPluginToWorkspace } from "./add-plugin-to-workspace.js";
 import { createPluginPackageJSON } from "./create-package-json.js";
 import { pluginRouteScaffold } from "./route-templates.js";
@@ -57,13 +60,16 @@ const reportConfigRegistrations = ({
     );
   });
 
-  const unusable = registrations.filter(
-    ({ status }) => status === "no-plugins-array",
-  );
+  const unusable = needsManualRegistration(registrations);
 
-  unusable.forEach(({ file }) => {
+  unusable.forEach(({ file, status }) => {
+    const reason =
+      status === "no-plugins-array"
+        ? "has no `plugins` array"
+        : "declares no VitNode config call";
+
     console.log(
-      `  ${color.yellow("!")} ${color.cyan(relative(rootPath, file))} has no \`plugins\` array - add ${color.cyan(pluginName)} to it by hand.`,
+      `  ${color.yellow("!")} ${color.cyan(relative(rootPath, file))} ${reason} - add ${color.cyan(pluginName)} to it by hand.`,
     );
   });
 

@@ -9,7 +9,11 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
-import { MultiLangSelect, useMultiLangField } from "./multi-lang";
+import {
+  type MultiLangFieldProps,
+  MultiLangSelect,
+  useMultiLangField,
+} from "./multi-lang";
 
 type AutoFormTextareaProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Textarea>, "value"> & {
@@ -26,9 +30,13 @@ const MultiLangTextarea = ({
   field,
   itemParams,
   ...props
-}: Omit<AutoFormTextareaProps, "children" | "multiLang" | "otherProps"> & {
-  isOptional?: boolean;
-}) => {
+}: MultiLangFieldProps &
+  Omit<
+    AutoFormTextareaProps,
+    "children" | "field" | "multiLang" | "otherProps"
+  > & {
+    isOptional?: boolean;
+  }) => {
   const { languages, selected, setSelected, currentValue, setValue } =
     useMultiLangField(field);
   const { maxLength, minLength } = getMultiLangConstraints(itemParams);

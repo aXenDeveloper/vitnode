@@ -111,20 +111,91 @@ const closingBracketOf = (source: string, open: number): number => {
   return -1;
 };
 
+const endOfComment = (source: string, index: number): number => {
+  if (source[index] !== "/") return index;
+
+  if (source[index + 1] === "/") {
+    const newline = source.indexOf("\n", index);
+
+    return newline === -1 ? source.length : newline;
+  }
+
+  if (source[index + 1] === "*") {
+    const end = source.indexOf("*/", index + 2);
+
+    return end === -1 ? source.length : end + 2;
+  }
+
+  return index;
+};
+
+type PluginsArrayScan =
+  | { close: number; kind: "found"; open: number }
+  | { kind: "no-config-call" }
+  | { kind: "no-plugins-array" };
+
 const findPluginsArray = (
   source: string,
-  from: number,
-): null | { close: number; open: number } => {
-  const key = /\bplugins\s*:\s*\[/g;
-  key.lastIndex = from;
+  builder: string,
+): PluginsArrayScan => {
+  const call = new RegExp(String.raw`(?<![$\w])${builder}\s*\(`, "y");
+  const key = /(?<![$\w])(?:plugins|"plugins"|'plugins')\s*:\s*\[/y;
+  let depth = 0;
+  let index = 0;
+  let entered = false;
 
-  const match = key.exec(source);
-  if (!match) return null;
+  while (index < source.length) {
+    const char = source[index];
+    const afterComment = endOfComment(source, index);
 
-  const open = match.index + match[0].length - 1;
-  const close = closingBracketOf(source, open);
+    if (afterComment !== index) {
+      index = afterComment;
+      continue;
+    }
 
-  return close === -1 ? null : { close, open };
+    if (!entered) {
+      call.lastIndex = index;
+      const match = call.exec(source);
+
+      if (match) {
+        entered = true;
+        depth = 1;
+        index += match[0].length;
+        continue;
+      }
+    } else if (depth === 2) {
+      key.lastIndex = index;
+      const match = key.exec(source);
+
+      if (match) {
+        const open = index + match[0].length - 1;
+        const close = closingBracketOf(source, open);
+
+        return close === -1
+          ? { kind: "no-plugins-array" }
+          : { close, kind: "found", open };
+      }
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      index = endOfStringLiteral(source, index);
+      continue;
+    }
+
+    if (entered) {
+      if (char === "[" || char === "(" || char === "{") {
+        depth += 1;
+      } else if (char === "]" || char === ")" || char === "}") {
+        depth -= 1;
+
+        if (depth === 0) return { kind: "no-plugins-array" };
+      }
+    }
+
+    index += 1;
+  }
+
+  return entered ? { kind: "no-plugins-array" } : { kind: "no-config-call" };
 };
 
 const readImports = (source: string): ImportStatement[] => {
@@ -196,6 +267,33 @@ const withImport = (
   return `${source.slice(0, last.end)}\n${statement}${source.slice(last.end)}`;
 };
 
+const endOfLastCode = (source: string): number => {
+  let index = 0;
+  let last = 0;
+
+  while (index < source.length) {
+    const char = source[index];
+    const afterComment = endOfComment(source, index);
+
+    if (afterComment !== index) {
+      index = afterComment;
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      index = endOfStringLiteral(source, index);
+      last = index;
+      continue;
+    }
+
+    if (!/\s/.test(char)) last = index + 1;
+
+    index += 1;
+  }
+
+  return last;
+};
+
 const withEntry = (
   source: string,
   { close, open }: { close: number; open: number },
@@ -219,24 +317,23 @@ const withEntry = (
     return `${head}${body}${separator}${call}${tail}`;
   }
 
-  const entries = body.trimEnd();
-  const trailing = body.slice(entries.length);
+  const entries = body.slice(0, endOfLastCode(body));
+  const after = body.slice(entries.length);
+  const comments = after.replace(/\s+$/, "");
+  const trailing = after.slice(comments.length);
   const indent =
     /^[ \t]*(?=\S)/m.exec(body.slice(body.indexOf("\n") + 1))?.[0] ?? "  ";
   const comma = entries.endsWith(",") ? "" : ",";
 
-  return `${head}${entries}${comma}\n${indent}${call},${trailing}${tail}`;
+  return `${head}${entries}${comma}${comments}\n${indent}${call},${trailing}${tail}`;
 };
 
 export const registerPluginInSource = (
   source: string,
   { builder, factory, module }: RegisterPluginArgs,
 ): RegisterPluginResult => {
-  const builderAt = source.indexOf(`${builder}(`);
-  if (builderAt === -1) return { source, status: "no-config-call" };
-
-  const range = findPluginsArray(source, builderAt);
-  if (!range) return { source, status: "no-plugins-array" };
+  const range = findPluginsArray(source, builder);
+  if (range.kind !== "found") return { source, status: range.kind };
 
   const called = new RegExp(`\\b${factory}\\s*\\(`);
   const hasEntry = called.test(source.slice(range.open + 1, range.close));
@@ -260,6 +357,13 @@ export interface PluginConfigRegistration {
   file: string;
   status: RegisterPluginStatus;
 }
+
+export const needsManualRegistration = (
+  registrations: PluginConfigRegistration[],
+): PluginConfigRegistration[] =>
+  registrations.filter(
+    ({ status }) => status !== "already-registered" && status !== "registered",
+  );
 
 const readEntries = async (dir: string): Promise<Dirent[]> => {
   try {
