@@ -86,7 +86,7 @@ export const CommunitySection = () => (
             <span
               className={
                 status === 'Included'
-                  ? 'bg-success/15 text-success rounded-full px-2.5 py-1 text-xs font-semibold'
+                  ? 'bg-primary/15 text-success rounded-full px-2.5 py-1 text-xs font-semibold'
                   : 'bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-xs font-semibold'
               }
             >

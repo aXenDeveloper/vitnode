@@ -495,6 +495,40 @@ import { AutoFormSwitch } from "@vitnode/core/components/form/fields/switch";
 />
 ```
 
+### Nested Fields
+
+A toggle and the settings it unlocks belong together, so let them share one
+card. Pass those settings as `children` and they render inside the switch's
+border, expanding and collapsing with it - no `hidden` predicate required, the
+switch is the one asking the question.
+
+<Preview name="auto-form-nested-fields" />
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "allow_uploads",
+      component: props => <AutoFormSwitch {...props} label="Allow uploads" />,
+      children: [ // [!code ++]
+        { // [!code ++]
+          id: "max_storage", // [!code ++]
+          component: props => <AutoFormInput {...props} label="Max storage" />, // [!code ++]
+        }, // [!code ++]
+      ], // [!code ++]
+    },
+  ]}
+/>
+```
+
+<Callout>
+  Nested fields unmount while the switch is off, so give them a `default` in the
+  schema just like conditional fields. They can still carry their own `hidden`
+  predicate for extra conditions, and their `tab` is ignored - a child lives in
+  whatever tab its parent does.
+</Callout>
+
 ## Form Submission
 
 To activate submit button and handle form submission with the `onSubmit` callback:
