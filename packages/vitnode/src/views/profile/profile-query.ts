@@ -31,6 +31,7 @@ export interface UserProfile {
   avatarUrl: null | string;
   coverUrl: null | string;
   createdAt: Date | string;
+  headline: null | string;
   id: number;
   name: string;
   nameCode: string;

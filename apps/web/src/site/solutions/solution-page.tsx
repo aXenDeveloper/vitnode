@@ -10,6 +10,7 @@ import {
 import { ArrowRight, Check, Clock, Plug, Sparkles, X } from 'lucide-react'
 import { createElement } from 'react'
 
+import { MarketingPage } from '@/site/marketing/marketing-page'
 import { ScreenFrame } from '@/site/marketing/screen-frame'
 import { SCREENS } from '@/site/marketing/screens'
 import {
@@ -92,7 +93,7 @@ const FlowBlock = ({
     <ol className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {section.steps.map(({ Icon, text, title }, index) => (
         <li
-          className="bg-card relative flex flex-col gap-4 rounded-3xl border p-6"
+          className="bg-muted/60 relative flex flex-col gap-4 rounded-3xl p-6"
           key={title}
         >
           <div className="flex items-center justify-between">
@@ -127,7 +128,7 @@ const BeforeAfterBlock = ({
         title={section.title}
       />
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="bg-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-8">
+        <div className="bg-muted/60 flex flex-col gap-4 rounded-3xl p-6 sm:p-8">
           <p className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
             Before
           </p>
@@ -144,7 +145,7 @@ const BeforeAfterBlock = ({
             ))}
           </ul>
         </div>
-        <div className="bg-card border-primary/40 flex flex-col gap-4 rounded-3xl border p-6 shadow-lg sm:p-8">
+        <div className="bg-muted/60 border-primary/40 flex flex-col gap-4 rounded-3xl p-6 shadow-lg sm:p-8">
           <p className="text-primary text-sm font-semibold tracking-wide uppercase">
             With VitNode
           </p>
@@ -230,7 +231,7 @@ const ChecklistBlock = ({
 
           return (
             <li
-              className="bg-card flex items-center justify-between gap-4 rounded-2xl border px-4 py-3"
+              className="bg-muted/60 flex items-center justify-between gap-4 rounded-2xl px-4 py-3"
               key={label}
             >
               <span className="text-sm font-medium text-pretty">{label}</span>
@@ -271,7 +272,7 @@ const LadderBlock = ({
     <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {section.tiers.map(({ name, perks }, index) => (
         <li
-          className={`bg-card flex flex-col gap-3 rounded-3xl border p-6 ${LADDER_OFFSET[index] ?? ''}`}
+          className={`bg-muted/60 flex flex-col gap-3 rounded-3xl p-6 ${LADDER_OFFSET[index] ?? ''}`}
           key={name}
         >
           <span className="text-muted-foreground font-mono text-xs">
@@ -346,7 +347,7 @@ const ModelBlock = ({
       <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {section.types.map(({ fields, name }, index) => (
           <li className="flex flex-col gap-3" key={name}>
-            <div className="bg-card overflow-hidden rounded-2xl border">
+            <div className="bg-muted/60 overflow-hidden rounded-2xl">
               <div className="bg-primary text-primary-foreground flex items-center justify-between px-4 py-2 font-mono text-xs">
                 <span>defineContentType</span>
                 <span>{index + 1}</span>
@@ -395,7 +396,7 @@ const FaqBlock = ({
       id={`faq-${section.title}`}
       title={section.title}
     />
-    <Accordion className="bg-card mx-auto w-full max-w-3xl rounded-3xl border px-6">
+    <Accordion className="bg-muted/60 mx-auto w-full max-w-3xl rounded-3xl px-6">
       {section.items.map(({ answer, question }) => (
         <AccordionItem key={question} value={question}>
           <AccordionTrigger className="text-base">{question}</AccordionTrigger>
@@ -450,7 +451,7 @@ const SolutionCard = ({
   variant: 'compact' | 'full'
 }) => (
   <Link
-    className="group bg-card hover:border-primary/40 flex h-full flex-col gap-3 rounded-3xl border p-6 transition-colors"
+    className="group bg-muted/60 hover:bg-primary/10 flex h-full flex-col gap-3 rounded-3xl p-6 transition-colors"
     params={{ slug: solution.slug }}
     to="/solutions/$slug"
   >
@@ -487,17 +488,14 @@ export const SolutionPage = ({ solution }: { solution: Solution }) => {
   const others = SOLUTIONS.filter((item) => item.slug !== solution.slug)
 
   return (
-    <div className="flex flex-col">
+    <MarketingPage>
       <section
         aria-labelledby="solution-title"
         className="relative overflow-hidden"
       >
         <HeroShell>
           <span className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-2xl">
-            <SolutionIcon
-              className="mk-anim-float size-7"
-              slug={solution.slug}
-            />
+            <SolutionIcon className="size-7" slug={solution.slug} />
           </span>
           <Eyebrow>{solution.eyebrow}</Eyebrow>
           <h1
@@ -513,7 +511,7 @@ export const SolutionPage = ({ solution }: { solution: Solution }) => {
           <ul className="flex flex-wrap justify-center gap-2">
             {solution.audience.map((item) => (
               <li
-                className="bg-card rounded-full border px-3 py-1 text-xs font-semibold"
+                className="bg-muted rounded-full px-3 py-1 text-xs font-semibold"
                 key={item}
               >
                 {item}
@@ -548,7 +546,7 @@ export const SolutionPage = ({ solution }: { solution: Solution }) => {
         aria-labelledby="solution-cta-title"
         className="container mx-auto px-4 pb-16 sm:px-6 sm:pb-24"
       >
-        <div className="bg-card flex flex-col items-center gap-6 rounded-3xl border px-6 py-16 text-center">
+        <div className="bg-muted/60 flex flex-col items-center gap-6 rounded-3xl px-6 py-16 text-center">
           <h2
             className="max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl"
             id="solution-cta-title"
@@ -563,12 +561,12 @@ export const SolutionPage = ({ solution }: { solution: Solution }) => {
           <TextLink to="/plugins">See the plugins that ship today</TextLink>
         </div>
       </section>
-    </div>
+    </MarketingPage>
   )
 }
 
 export const SolutionsIndexPage = () => (
-  <div className="flex flex-col">
+  <MarketingPage>
     <section
       aria-labelledby="solutions-title"
       className="relative overflow-hidden"
@@ -602,5 +600,5 @@ export const SolutionsIndexPage = () => (
       </ul>
       <CanaryNotice />
     </MarketingSection>
-  </div>
+  </MarketingPage>
 )

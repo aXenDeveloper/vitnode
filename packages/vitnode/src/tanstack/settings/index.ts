@@ -1,9 +1,12 @@
 export { SettingsLayoutContent } from "./layout";
 
+export { OverviewSettings } from "./overview";
 export * from "./route";
+
 export type { SettingsNavKey } from "./route";
 
-export { OverviewSettings } from "@/views/auth/settings/overview/overview";
+export type { SettingsOverviewUser } from "@/views/auth/settings/overview/overview";
+export { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 export { SecuritySettings } from "@/views/auth/settings/security/security";
 
 export type { SettingsBreadcrumbContentProps } from "@/views/auth/settings/settings-breadcrumb-content";
@@ -11,7 +14,6 @@ export { SettingsBreadcrumbContent } from "@/views/auth/settings/settings-breadc
 export {
   activeSettingsNavKey,
   isSettingsNavItemActive,
-  isSettingsRootPath,
   SETTINGS_NAV_ITEMS,
   SETTINGS_ROOT_HREF,
   settingsNavHref,

@@ -1,6 +1,5 @@
 import { cn } from "cn";
 import {
-  ChevronRightIcon,
   KeyRoundIcon,
   MonitorSmartphoneIcon,
   UserRoundIcon,
@@ -47,7 +46,6 @@ export const SettingsNavContent = ({
           >
             <Icon />
             {t(item.key)}
-            <ChevronRightIcon className="ml-auto opacity-60 sm:hidden" />
           </LinkComponent>
         );
       })}

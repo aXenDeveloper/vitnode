@@ -79,7 +79,6 @@
         "unhealthy": "Niedostępny",
         "never": "Nigdy",
         "rebuild": "Przebuduj indeks",
-        "rebuilding": "Kolejkowanie…",
         "rebuildQueued": "Zlecono przebudowę indeksu wyszukiwania.",
         "rebuildError": "Nie udało się zlecić przebudowy.",
         "reindex": "Przeindeksuj",
@@ -326,6 +325,7 @@
         "internal_server_error": "Wewnętrzny błąd serwera.",
         "field_required": "To pole jest wymagane.",
         "field_min_length": "To pole musi mieć co najmniej {min, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}}.",
+        "field_invalid_phone": "Podaj prawidłowy numer telefonu.",
         "captcha_internal_error": "Weryfikacja captcha nie powiodła się. Spróbuj ponownie później."
       },
       "user_bar": {
@@ -349,12 +349,14 @@
       }
     },
     "profile": {
-      "title": "Profil {name}",
-      "metaDesc": "Zobacz profil {name}: role i datę dołączenia do społeczności.",
-      "joined": "W społeczności od <time>{date}</time>",
+      "title": "{name} (@{nameCode})",
+      "metaDesc": "Zobacz profil {name} (@{nameCode}): role i datę dołączenia do społeczności.",
       "about": "O użytkowniku",
       "memberSince": "Członek od",
+      "headline": "Nagłówek",
+      "role": "Rola",
       "secondaryRoles": "Role dodatkowe",
+      "editProfile": "Edytuj profil",
       "notFound": {
         "title": "Nie znaleziono profilu",
         "desc": "Ten użytkownik nie istnieje lub zmienił swoją nazwę."
@@ -570,6 +572,26 @@
           "overview": "Przegląd",
           "devices": "Urządzenia",
           "security": "Bezpieczeństwo"
+        },
+        "overview": {
+          "desc": "Twój awatar i dane Twojego konta.",
+          "emailNotVerified": "Niezweryfikowany",
+          "edit": "Edytuj",
+          "personalTitle": "Informacje osobiste",
+          "personalDialogDesc": "Opowiedz społeczności, kim jesteś. Każde pole jest opcjonalne.",
+          "nickname": "Pseudonim",
+          "showRealName": "Pokazuj moje prawdziwe imię",
+          "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim.",
+          "firstName": "Imię",
+          "lastName": "Nazwisko",
+          "phone": "Telefon",
+          "email": "Adres e-mail",
+          "secondaryRoles": "Role dodatkowe",
+          "headline": "Nagłówek",
+          "headlineDesc": "Jedna linijka o Tobie, do {max} znaków.",
+          "save": "Zapisz zmiany",
+          "saved": "Informacje osobiste zaktualizowane.",
+          "savedDesc": "Twój profil od razu pokazuje nowe dane."
         },
         "devices": {
           "title": "Urządzenia",
@@ -893,6 +915,10 @@
           "in_unit": "w kB",
           "or": "lub",
           "unlimited": "Bez limitu"
+        },
+        "personal_info": {
+          "allow_edit": "Zezwalaj na edycję informacji osobistych",
+          "allow_edit_desc": "Członkowie tej roli mogą ustawić imię, nazwisko i nagłówek oraz wybrać, którą nazwę pokazuje ich profil."
         },
         "images": {
           "in_unit": "kB",

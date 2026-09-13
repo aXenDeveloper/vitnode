@@ -4,7 +4,13 @@ import { cn } from 'cn'
 import { Check, Coffee, HeartHandshake } from 'lucide-react'
 
 import { REPOSITORY_URL, SPONSOR_URL } from '@/site/marketing/links'
-import { Eyebrow, GitHubIcon, MarketingSection } from '@/site/marketing/shared'
+import {
+  BUTTON,
+  Eyebrow,
+  GitHubIcon,
+  MarketingSection,
+  SURFACE,
+} from '@/site/marketing/shared'
 
 const INCLUDED = [
   'The whole framework, every feature, no tiers',
@@ -15,8 +21,12 @@ const INCLUDED = [
 
 export const PricingSection = () => (
   <MarketingSection id="pricing" labelledBy="pricing-title">
-    <div className="bg-card relative flex flex-col items-center gap-6 overflow-hidden rounded-3xl border px-6 py-16 text-center sm:py-20">
-      <div aria-hidden className="mk-dots absolute inset-0 -z-10 opacity-60" />
+    <div
+      className={cn(
+        SURFACE.tint,
+        'relative flex flex-col items-center gap-6 overflow-hidden px-6 py-16 text-center sm:py-20',
+      )}
+    >
       <div
         aria-hidden
         className="mk-anim-drift bg-primary/15 absolute -top-32 left-1/2 -z-10 size-96 -translate-x-1/2 rounded-full blur-3xl"
@@ -39,7 +49,7 @@ export const PricingSection = () => (
         </span>
       </p>
 
-      <p className="text-muted-foreground max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+      <p className="text-muted-foreground font-book max-w-xl text-lg leading-relaxed text-pretty">
         No plans, no seats, no “contact sales” button. The entire framework for
         every member you will ever have. You can still make your contribution: a
         pull request, a bug report, or a donation that keeps the maintainer
@@ -48,7 +58,7 @@ export const PricingSection = () => (
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <a
-          className={cn(buttonVariants({ size: 'lg' }), 'px-5')}
+          className={cn(buttonVariants({ size: 'lg' }), BUTTON)}
           href={REPOSITORY_URL}
           rel="noopener noreferrer"
           target="_blank"
@@ -59,7 +69,7 @@ export const PricingSection = () => (
         <a
           className={cn(
             buttonVariants({ size: 'lg', variant: 'outline' }),
-            'px-5',
+            BUTTON,
           )}
           href={SPONSOR_URL}
           rel="noopener noreferrer"
@@ -71,7 +81,7 @@ export const PricingSection = () => (
         <Link
           className={cn(
             buttonVariants({ size: 'lg', variant: 'outline' }),
-            'px-5',
+            BUTTON,
           )}
           params={{ _splat: 'dev/contribution' }}
           to="/docs/$"
@@ -81,12 +91,12 @@ export const PricingSection = () => (
         </Link>
       </div>
 
-      <ul className="grid gap-x-8 gap-y-2 text-left text-sm sm:grid-cols-2">
+      <ul className="grid gap-x-8 gap-y-2 text-left font-book sm:grid-cols-2">
         {INCLUDED.map((item) => (
           <li className="flex items-start gap-2" key={item}>
             <Check
               aria-hidden
-              className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+              className="text-success mt-1 size-4 shrink-0"
               strokeWidth={3}
             />
             {item}
@@ -94,7 +104,7 @@ export const PricingSection = () => (
         ))}
       </ul>
 
-      <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
+      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
         Servers, databases and coffee still cost money. VitNode does not.
         Donations go through GitHub Sponsors, straight to the people building
         it.

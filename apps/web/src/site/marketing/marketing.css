@@ -406,18 +406,12 @@
   );
 }
 
-.mk-dots {
-  background-image: radial-gradient(
-    color-mix(in oklab, var(--border) 100%, transparent) 1.2px,
-    transparent 1.2px
-  );
-  background-size: 22px 22px;
-}
-
 .mk-section-anchor {
   scroll-margin-top: 5rem;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 48rem;
+}
+
+[data-offscreen] [class*='mk-anim-'] {
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {

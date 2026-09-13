@@ -3,9 +3,10 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ScreenFrame } from '@/site/marketing/screen-frame'
 import { SCREENS } from '@/site/marketing/screens'
 import {
+  ActionLink,
   MarketingSection,
   SectionHeading,
-  TextLink,
+  SectionRow,
 } from '@/site/marketing/shared'
 
 import { SLIDES } from './showcase-slides'
@@ -76,7 +77,13 @@ const ShowcaseStage = () => {
 
 export const ShowcaseSection = () => (
   <MarketingSection id="admincp" labelledBy="showcase-title">
-    <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+    <SectionRow
+      action={
+        <ActionLink params={{ _splat: 'dev/plugins/admin' }} to="/docs/$">
+          Explore the AdminCP
+        </ActionLink>
+      }
+    >
       <SectionHeading
         eyebrow="The real product, not a mockup"
         id="showcase-title"
@@ -86,15 +93,7 @@ export const ShowcaseSection = () => (
         staff, content, integrations, cron, queues and logs. One place, fewer
         “where do I change this?” messages. Flip through a few real screens.
       </SectionHeading>
-
-      <TextLink
-        className="shrink-0"
-        params={{ _splat: 'dev/plugins/admin' }}
-        to="/docs/$"
-      >
-        Explore the AdminCP docs
-      </TextLink>
-    </div>
+    </SectionRow>
 
     <ShowcaseStage />
   </MarketingSection>

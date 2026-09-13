@@ -18,18 +18,18 @@ const TOOLS = [
 export const PoweringBySection = () => (
   <section
     aria-label="Technologies VitNode is built on"
-    className="bg-background overflow-hidden border-y"
+    className="overflow-hidden"
   >
-    <div className="container mx-auto flex flex-col items-center gap-4 px-4 py-6 sm:px-6 md:flex-row md:gap-8">
-      <p className="text-muted-foreground shrink-0 text-sm font-medium md:max-w-40 md:border-r md:pr-6 md:text-end">
-        Standing on the shoulders of tools you already trust
+    <div className="container mx-auto flex flex-col items-center gap-6 px-4 py-10 sm:px-6">
+      <p className="text-muted-foreground font-mono text-xs font-medium tracking-wider uppercase">
+        Built on tools your team already trusts
       </p>
 
-      <div className="relative w-full min-w-0 flex-1">
+      <div className="relative w-full min-w-0">
         <InfiniteSlider gap={100} speed={40} speedOnHover={20}>
           {TOOLS.map(({ href, logo }) => (
             <a
-              className="flex items-center justify-center gap-2"
+              className="flex items-center justify-center gap-2 opacity-60 transition-opacity hover:opacity-100"
               href={href}
               key={href}
               rel="noopener noreferrer"
@@ -40,8 +40,8 @@ export const PoweringBySection = () => (
           ))}
         </InfiniteSlider>
 
-        <div className="from-background pointer-events-none absolute inset-y-0 left-0 w-20 bg-linear-to-r" />
-        <div className="from-background pointer-events-none absolute inset-y-0 right-0 w-20 bg-linear-to-l" />
+        <div className="from-background pointer-events-none absolute inset-y-0 left-0 w-24 bg-linear-to-r" />
+        <div className="from-background pointer-events-none absolute inset-y-0 right-0 w-24 bg-linear-to-l" />
       </div>
     </div>
   </section>

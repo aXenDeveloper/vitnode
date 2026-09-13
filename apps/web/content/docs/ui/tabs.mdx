@@ -1,0 +1,93 @@
+---
+title: Tabs
+description: Switch between panels of content with an indicator that slides and panels that follow.
+---
+
+## Preview
+
+<Preview name="tabs" />
+
+## Usage
+
+```ts
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsPanels,
+  TabsTrigger,
+} from '@vitnode/core/components/ui/tabs'
+```
+
+```tsx
+<Tabs defaultValue="overview">
+  <TabsList>
+    <TabsTrigger value="overview">Overview</TabsTrigger>
+    <TabsTrigger value="activity">Activity</TabsTrigger>
+    <TabsTrigger value="billing">Billing</TabsTrigger>
+  </TabsList>
+
+  <TabsPanels>
+    <TabsContent value="overview">Overview panel</TabsContent>
+    <TabsContent value="activity">Activity panel</TabsContent>
+    <TabsContent value="billing">Billing panel</TabsContent>
+  </TabsPanels>
+</Tabs>
+```
+
+## Motion
+
+Three things move when a tab is activated, all with the same easing:
+
+- **The indicator** slides and resizes to the new tab. It lives inside `TabsList` automatically — you never render it yourself.
+- **The panels** slide in the direction you travelled. Pick a tab on the right and the new panel enters from the right while the old one leaves to the left.
+- **The panel area** animates its height, so a short panel growing into a tall one never makes the page (or the dialog around it) jump.
+
+Prefer `prefers-reduced-motion: reduce`? Every one of those transitions is switched off, and the tabs swap instantly.
+
+### TabsPanels is required
+
+`TabsPanels` is the element that measures the panels, animates the height and clips the panel sliding away. Always wrap your `TabsContent` elements in it, and keep it free of extra padding — it already carries its own, so focus rings never get clipped at rest.
+
+```tsx
+<TabsPanels>
+  <TabsContent value="overview">Overview panel</TabsContent>
+</TabsPanels>
+```
+
+## Line variant
+
+Pass `variant="line"` to `TabsList` for an underline instead of a filled pill. The motion is identical.
+
+<Preview name="tabs-line" />
+
+```tsx
+<TabsList variant="line">
+  <TabsTrigger value="posts">Posts</TabsTrigger>
+  <TabsTrigger value="comments">Comments</TabsTrigger>
+</TabsList>
+```
+
+## Vertical tabs
+
+Set `orientation="vertical"` on `Tabs` to stack the triggers next to the panels. The indicator moves up and down, and the panels slide vertically to match.
+
+```tsx
+<Tabs defaultValue="overview" orientation="vertical">
+  {/* ... */}
+</Tabs>
+```
+
+## Keep panels mounted
+
+Panels unmount when they are not active. Forms — where a field on a hidden tab still has to be registered and submitted — pass `keepMounted` instead, which is exactly what [Auto Form](/docs/ui/auto-form) does for its tabs.
+
+```tsx
+<TabsContent keepMounted value="overview">
+  Overview panel
+</TabsContent>
+```
+
+## API Reference
+
+[Base UI - Tabs](https://base-ui.com/react/components/tabs)

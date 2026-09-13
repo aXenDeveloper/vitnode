@@ -28,9 +28,16 @@ import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";
 import { Form, FormField } from "../ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsPanels,
+  TabsTrigger,
+} from "../ui/tabs";
 
 interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
+  children?: ItemAutoFormProps<T>[];
   hidden?: (values: z.input<T>) => boolean;
   tab?: string;
 }
@@ -58,6 +65,7 @@ export interface AutoFormTab {
 }
 
 export interface ItemAutoFormComponentProps {
+  children?: React.ReactNode;
   description?: React.ReactNode;
   field: ControllerRenderProps<FieldValues, string>;
   itemParams?: InputParams;
@@ -76,6 +84,12 @@ export interface ItemAutoFormComponentProps {
     type?: string;
   };
 }
+
+const usesFormValues = <T extends z.ZodObject<z.ZodRawShape>>(
+  item: ItemAutoFormProps<T>,
+): boolean =>
+  typeof item.hidden === "function" ||
+  (item.children?.some(child => usesFormValues(child)) ?? false);
 
 function AutoFormField({
   invalid,
@@ -211,9 +225,7 @@ export function AutoForm<
     }
   };
 
-  const hasConditionalFields = fields.some(
-    item => typeof item.hidden === "function",
-  );
+  const hasConditionalFields = fields.some(item => usesFormValues(item));
   // Only subscribe to value changes when a field actually needs them, so forms
   // without conditional fields keep their previous (non re-rendering) behavior.
   // The subscription-driven re-render is intentional here.
@@ -248,6 +260,7 @@ export function AutoForm<
 
     if (!item.component) return null;
     const { component } = item;
+    const nestedFields = item.children?.filter(isFieldVisible) ?? [];
 
     return (
       <FormField
@@ -262,6 +275,9 @@ export function AutoForm<
             >
               {component({
                 field,
+                children: nestedFields.length
+                  ? nestedFields.map(renderField)
+                  : undefined,
                 description:
                   typeof params.description === "string"
                     ? params.description
@@ -351,19 +367,21 @@ export function AutoForm<
             ))}
           </TabsList>
 
-          {tabs.map(tab => (
-            <TabsContent
-              className="mt-0 space-y-6"
-              keepMounted
-              key={tab.value}
-              value={tab.value}
-            >
-              {fields
-                .filter(item => (item.tab ?? tabs[0].value) === tab.value)
-                .filter(isFieldVisible)
-                .map(renderField)}
-            </TabsContent>
-          ))}
+          <TabsPanels>
+            {tabs.map(tab => (
+              <TabsContent
+                className="flex flex-col gap-6"
+                keepMounted
+                key={tab.value}
+                value={tab.value}
+              >
+                {fields
+                  .filter(item => (item.tab ?? tabs[0].value) === tab.value)
+                  .filter(isFieldVisible)
+                  .map(renderField)}
+              </TabsContent>
+            ))}
+          </TabsPanels>
         </Tabs>
       ) : (
         fields.filter(isFieldVisible).map(renderField)

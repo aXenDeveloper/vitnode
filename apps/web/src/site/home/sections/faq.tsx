@@ -82,11 +82,11 @@ export const FaqSection = () => (
       start.
     </SectionHeading>
 
-    <Accordion className="bg-card mx-auto w-full max-w-3xl rounded-3xl border px-6">
+    <Accordion className="bg-muted/60 mx-auto w-full max-w-3xl rounded-3xl px-6 sm:px-8">
       {FAQS.map(({ answer, question }) => (
         <AccordionItem key={question} value={question}>
-          <AccordionTrigger className="text-base">{question}</AccordionTrigger>
-          <AccordionContent className="text-muted-foreground leading-relaxed text-pretty">
+          <AccordionTrigger className="text-lg">{question}</AccordionTrigger>
+          <AccordionContent className="text-muted-foreground font-book text-base leading-relaxed text-pretty">
             {answer}
           </AccordionContent>
         </AccordionItem>

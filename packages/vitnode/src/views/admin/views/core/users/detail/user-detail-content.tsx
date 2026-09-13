@@ -8,7 +8,13 @@ import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsPanels,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { UserCoverImage } from "@/components/user-cover-image";
 
 import type { UpdateAdminUser } from "./user-fields-content";
@@ -63,124 +69,126 @@ export const UserDetailContent = ({
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="overview">
-        <div className="flex w-full flex-col gap-4">
-          <Card className="w-full overflow-hidden pt-0">
-            <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
-              <UserCoverImage url={user.coverUrl} />
-              {user.coverUrl ? null : (
-                <span className="sr-only">{t("coverPlaceholder")}</span>
-              )}
-              {canEdit && (
-                <div className="absolute inset-e-3 top-3">
-                  <AdminUserImageDialog
-                    hasImage={user.coverUrl !== null}
-                    id={user.id}
-                    kind="cover"
-                    limit={user.imagePolicy.cover}
-                    onRemove={onRemoveImage}
-                    onUpload={onUploadImage}
-                  />
-                </div>
-              )}
-            </div>
-
-            <CardContent className="flex flex-col">
-              <div className="-mt-16 mb-4 flex justify-center">
-                <div className="relative">
-                  <Avatar
-                    className="border-card size-32 border-4"
-                    loading="eager"
-                    size={128}
-                    user={user}
-                  />
-                  {canEdit && (
-                    <div className="absolute inset-e-0 bottom-0">
-                      <AdminUserImageDialog
-                        hasImage={user.avatarUrl !== null}
-                        id={user.id}
-                        kind="avatar"
-                        limit={user.imagePolicy.avatar}
-                        onRemove={onRemoveImage}
-                        onUpload={onUploadImage}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <EditUserFieldContent
-                as="h2"
-                canEdit={canEdit}
-                field="name"
-                id={user.id}
-                label={t("editName")}
-                onUpdate={onUpdate}
-                showUnverified={!user.emailVerified}
-                value={user.name}
-                valueClassName="text-foreground truncate text-2xl font-bold"
-              />
-
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground truncate text-sm">
-                  @{user.nameCode}
-                </span>
+      <TabsPanels>
+        <TabsContent value="overview">
+          <div className="flex w-full flex-col gap-4">
+            <Card className="w-full overflow-hidden pt-0">
+              <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
+                <UserCoverImage url={user.coverUrl} />
+                {user.coverUrl ? null : (
+                  <span className="sr-only">{t("coverPlaceholder")}</span>
+                )}
                 {canEdit && (
-                  <EditNameCodeContent
-                    id={user.id}
-                    nameCode={user.nameCode}
-                    onUpdate={onUpdate}
-                  />
+                  <div className="absolute inset-e-3 top-3">
+                    <AdminUserImageDialog
+                      hasImage={user.coverUrl !== null}
+                      id={user.id}
+                      kind="cover"
+                      limit={user.imagePolicy.cover}
+                      onRemove={onRemoveImage}
+                      onUpload={onUploadImage}
+                    />
+                  </div>
                 )}
               </div>
 
-              <div className="mt-3">
-                <EditUserFieldContent
-                  canEdit={canEdit}
-                  field="email"
-                  id={user.id}
-                  label={t("editEmail")}
-                  onUpdate={onUpdate}
-                  type="email"
-                  value={user.email}
-                  valueClassName="text-foreground truncate font-medium"
-                />
-              </div>
-
-              <p className="text-muted-foreground mt-1 text-sm">
-                {t("joined")} <DateFormat date={user.createdAt} />
-              </p>
-
-              <div className="mt-6">
-                <Button
-                  className="w-full"
-                  nativeButton={false}
-                  render={
-                    <LinkComponent
-                      href={`/users/${user.nameCode}`}
-                      target="_blank"
+              <CardContent className="flex flex-col">
+                <div className="-mt-16 mb-4 flex justify-center">
+                  <div className="relative">
+                    <Avatar
+                      className="border-card size-32 border-4"
+                      loading="eager"
+                      size={128}
+                      user={user}
                     />
-                  }
-                  variant="ghost"
-                >
-                  {t("goToProfile")} <ExternalLinkIcon />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    {canEdit && (
+                      <div className="absolute inset-e-0 bottom-0">
+                        <AdminUserImageDialog
+                          hasImage={user.avatarUrl !== null}
+                          id={user.id}
+                          kind="avatar"
+                          limit={user.imagePolicy.avatar}
+                          onRemove={onRemoveImage}
+                          onUpload={onUploadImage}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-          <UserRolesCardContent
-            canEdit={canEdit}
-            id={user.id}
-            onUpdateRoles={onUpdateRoles}
-            role={user.role}
-            searchRoles={searchRoles}
-            secondaryRoles={user.secondaryRoles}
-          />
-        </div>
-      </TabsContent>
+                <EditUserFieldContent
+                  as="h2"
+                  canEdit={canEdit}
+                  field="name"
+                  id={user.id}
+                  label={t("editName")}
+                  onUpdate={onUpdate}
+                  showUnverified={!user.emailVerified}
+                  value={user.name}
+                  valueClassName="text-foreground truncate text-2xl font-bold"
+                />
 
-      <TabsContent value="timeline">{timeline}</TabsContent>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground truncate text-sm">
+                    @{user.nameCode}
+                  </span>
+                  {canEdit && (
+                    <EditNameCodeContent
+                      id={user.id}
+                      nameCode={user.nameCode}
+                      onUpdate={onUpdate}
+                    />
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <EditUserFieldContent
+                    canEdit={canEdit}
+                    field="email"
+                    id={user.id}
+                    label={t("editEmail")}
+                    onUpdate={onUpdate}
+                    type="email"
+                    value={user.email}
+                    valueClassName="text-foreground truncate font-medium"
+                  />
+                </div>
+
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("joined")} <DateFormat date={user.createdAt} />
+                </p>
+
+                <div className="mt-6">
+                  <Button
+                    className="w-full"
+                    nativeButton={false}
+                    render={
+                      <LinkComponent
+                        href={`/users/${user.nameCode}`}
+                        target="_blank"
+                      />
+                    }
+                    variant="ghost"
+                  >
+                    {t("goToProfile")} <ExternalLinkIcon />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <UserRolesCardContent
+              canEdit={canEdit}
+              id={user.id}
+              onUpdateRoles={onUpdateRoles}
+              role={user.role}
+              searchRoles={searchRoles}
+              secondaryRoles={user.secondaryRoles}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="timeline">{timeline}</TabsContent>
+      </TabsPanels>
     </Tabs>
   );
 };

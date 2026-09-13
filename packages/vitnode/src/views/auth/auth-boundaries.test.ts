@@ -141,21 +141,19 @@ describe("the settings frame is told its framework parts", () => {
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
 
-  it("takes the navigation as a slot and the back link as a component", () => {
-    const code = withoutComments(SHARED.settingsShell);
-
-    expect(code).toContain("nav: React.ReactNode;");
-    expect(code).toContain("BackLink: AuthLinkComponent;");
+  it("takes the navigation as a slot", () => {
+    expect(withoutComments(SHARED.settingsShell)).toContain(
+      "nav: React.ReactNode;",
+    );
   });
 
   it("takes where it is as a prop rather than asking", () => {
-    // The one decision neither half can make for itself. `isSettingsRootPath`
-    // and the active-item rule are shared; reading the pathname is not.
+    // The one decision neither half can make for itself. The active-item rule
+    // is shared; reading the pathname is not.
     for (const path of [SHARED.settingsShell, SHARED.settingsNav]) {
       expect(withoutComments(path)).not.toContain("usePathname");
     }
 
-    expect(withoutComments(SHARED.settingsShell)).toContain("isRoot: boolean;");
     expect(withoutComments(SHARED.settingsNav)).toContain("pathname: string;");
   });
 

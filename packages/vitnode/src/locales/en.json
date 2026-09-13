@@ -79,7 +79,6 @@
         "unhealthy": "Unavailable",
         "never": "Never",
         "rebuild": "Rebuild index",
-        "rebuilding": "Queuing…",
         "rebuildQueued": "Search index rebuild queued.",
         "rebuildError": "Could not queue the rebuild.",
         "reindex": "Reindex",
@@ -353,6 +352,7 @@
         "internal_server_error": "Internal server error.",
         "field_required": "This field is required.",
         "field_min_length": "This field must be at least {min} characters.",
+        "field_invalid_phone": "Enter a valid phone number.",
         "captcha_internal_error": "Captcha validation failed. Please try again later."
       },
       "user_bar": {
@@ -376,12 +376,14 @@
       }
     },
     "profile": {
-      "title": "{name}'s profile",
-      "metaDesc": "See {name}'s profile: their roles and when they joined the community.",
-      "joined": "Joined <time>{date}</time>",
+      "title": "{name} (@{nameCode})",
+      "metaDesc": "See {name} (@{nameCode}): their roles and when they joined the community.",
       "about": "About",
       "memberSince": "Member since",
+      "headline": "Headline",
+      "role": "Role",
       "secondaryRoles": "Secondary roles",
+      "editProfile": "Edit profile",
       "notFound": {
         "title": "Profile not found",
         "desc": "This user doesn't exist, or their username has changed."
@@ -597,6 +599,26 @@
           "overview": "Overview",
           "devices": "Devices",
           "security": "Security"
+        },
+        "overview": {
+          "desc": "Your avatar and the details on your account.",
+          "emailNotVerified": "Not verified",
+          "edit": "Edit",
+          "personalTitle": "Personal Information",
+          "personalDialogDesc": "Tell the community who you are. Every field is optional.",
+          "nickname": "Nickname",
+          "showRealName": "Show my real name",
+          "showRealNameDesc": "Your profile shows your first and last name instead of your nickname. Your nickname is used until you set one.",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "phone": "Phone",
+          "email": "Email address",
+          "secondaryRoles": "Secondary roles",
+          "headline": "Headline",
+          "headlineDesc": "One line about you, up to {max} characters.",
+          "save": "Save changes",
+          "saved": "Personal information updated.",
+          "savedDesc": "Your profile shows the new details right away."
         },
         "devices": {
           "title": "Devices",
@@ -1148,6 +1170,10 @@
           "in_unit": "in kB",
           "or": "or",
           "unlimited": "Unlimited"
+        },
+        "personal_info": {
+          "allow_edit": "Allow editing personal information",
+          "allow_edit_desc": "Members of this role can set their first name, last name, headline, and choose which name their profile shows."
         },
         "images": {
           "in_unit": "kB",

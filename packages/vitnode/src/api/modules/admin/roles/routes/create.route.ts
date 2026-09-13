@@ -41,6 +41,7 @@ export const zodCreateRoleAdminSchema = z.object({
   totalMaxStorage: zodRoleStorageSchema.optional(),
   maxStorageForSubmit: zodRoleStorageSchema.optional(),
   allowUploadAvatar: z.boolean().optional(),
+  allowEditPersonalInfo: z.boolean().optional(),
   maxAvatarSize: zodRoleImageSizeSchema.optional(),
   allowUploadCover: z.boolean().optional(),
   maxCoverSize: zodRoleImageSizeSchema.optional(),
@@ -86,6 +87,7 @@ export const createRoleAdminRoute = buildRoute({
       totalMaxStorage,
       maxStorageForSubmit,
       allowUploadAvatar,
+      allowEditPersonalInfo,
       maxAvatarSize,
       allowUploadCover,
       maxCoverSize,
@@ -101,6 +103,9 @@ export const createRoleAdminRoute = buildRoute({
         totalMaxStorage: totalMaxStorage ?? null,
         maxStorageForSubmit: maxStorageForSubmit ?? null,
         ...(allowUploadAvatar === undefined ? {} : { allowUploadAvatar }),
+        ...(allowEditPersonalInfo === undefined
+          ? {}
+          : { allowEditPersonalInfo }),
         ...(maxAvatarSize === undefined ? {} : { maxAvatarSize }),
         ...(allowUploadCover === undefined ? {} : { allowUploadCover }),
         ...(maxCoverSize === undefined ? {} : { maxCoverSize }),

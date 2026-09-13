@@ -97,6 +97,11 @@ The canonical user table contains:
 | `name`          | `varchar(255)` | Display name                                          |
 | `nameCode`      | `varchar(255)` | URL-safe slug for profile URLs (`/users/[nameCode]`)  |
 | `email`         | `varchar(255)` | Unique account login email                            |
+| `firstName`     | `varchar(128)` | Given name, set by the user (nullable)                |
+| `lastName`      | `varchar(128)` | Family name, set by the user (nullable)               |
+| `phone`         | `varchar(32)`  | Contact number, their own (nullable)                  |
+| `headline`      | `varchar(100)` | One line about the user, their own (nullable)         |
+| `showRealName`  | `boolean`      | Show the real name publicly instead of `name`         |
 | `roleId`        | `integer`      | Primary role ID (FK to `core_roles`)                  |
 | `avatarColor`   | `varchar(6)`   | Hex color for letter avatars                          |
 | `avatarId`      | `integer`      | Uploaded avatar, a `core_files` row (nullable)        |
@@ -107,7 +112,108 @@ The canonical user table contains:
 Every user payload the API hands out - the session, the public profile, the
 AdminCP list and detail, search hit authors - carries the two images resolved
 to URLs as `avatarUrl` and `coverUrl`. Both are `null` until something is
-uploaded, and the `Avatar` component falls back to the letter avatar on its own.
+uploaded, and the `Avatar` component falls back to the letter avatar on its own -
+drawn from the first character of `nameCode`, never of the displayed name, so a
+member who changes which name their profile shows keeps the same face in every
+list they appear in.
+
+### Personal information
+
+`firstName`, `lastName`, `phone` and `headline` are the user's own to set, at **Settings →
+Overview** (`/settings`). All three are optional, all three are stored as `null`
+rather than an empty string when cleared, and the session payload carries them
+so anything already reading the session can show them without a second request.
+
+| Method  | Path                                 | Who                                  |
+| :------ | :----------------------------------- | :----------------------------------- |
+| `GET`   | `/api/@vitnode/core/users/me/policy` | The signed-in user - may they edit?  |
+| `PATCH` | `/api/@vitnode/core/users/me`        | The signed-in user, on their own row |
+
+The body takes any subset of
+`{ firstName, lastName, phone, headline, showRealName }` -
+a field left out is left alone, and a text field sent as `""` or whitespace is
+cleared. Writing invalidates the user's cached session and emits
+[`user.updated`](/docs/dev/events/built-in-events).
+
+`phone` is the one field with a shape: digits and the punctuation international
+numbers are written with (`+`, spaces, `-`, `(` and `)`), up to 32 characters.
+Anything else is rejected by the form and by the route. It is **not** on the
+public profile payload - only the account's own session carries it.
+
+### Which name the public sees
+
+`showRealName` decides whether a profile is headed by the nickname (`name`) or by
+`firstName lastName`. The public profile route resolves it **server-side** and
+returns the answer as `name`, so a real name the user has not published never
+leaves the API. When the switch is on but neither half is set, the nickname is
+used, so turning it on early cannot leave a profile with an empty heading.
+
+The AdminCP and search always show `name`, the account's own nickname - staff
+need the identifier the account is filed under.
+
+### What the profile header shows
+
+{/* Image prompt: VitNode public profile header at /users/aXen. Wide cover image with a rounded-square avatar overlapping its bottom-left corner, the display name and @nameCode beside it, and a single row of muted meta items with small icons - a briefcase for the headline, a shield for the primary role, a calendar for the join date - with an "Edit profile" outline button at the far right. Light theme, 1440x400. */}
+
+`GET /api/@vitnode/core/users/profile/{nameCode}` answers with the header's whole
+payload: `name` (already resolved), `nameCode`, `headline`, `avatarUrl`,
+`coverUrl`, `avatarColor`, `createdAt`, the primary `role` and any
+`secondaryRoles`. The header draws the headline, the role and the join date as
+one row of meta items, each with its own icon, and stacks them centred under the
+avatar on a phone.
+
+`headline` follows the install switch: with `users.personalInformation.headline`
+set to `false` the route returns `null` for everyone, so turning the field off
+takes it off public profiles too, without touching what members had written.
+
+The **Edit profile** button is the header's action slot. It is rendered only for
+the account's own profile; a host that renders `ProfileContent` itself can pass
+any `action` it likes - a follow button, a "message" link, nothing at all.
+
+### Who may edit it
+
+Each role has **Allow editing personal information** on its **Profile** tab
+(`allowEditPersonalInfo`, default `true`). A user may edit only when **every**
+role they hold allows it - one role that switches it off is enough to lock the
+card.
+
+That is the opposite of the image allowances, which grant on _any_ role, and
+deliberately so: this column defaults to `true`, so under "any role grants" an
+administrator who switched it off on one role would find it silently re-granted
+by every other role the member happens to hold, and the setting would almost
+never take effect.
+
+The settings card hides its **Edit** button when the answer is no, and
+`PATCH /users/me` answers `403` regardless of what the UI showed.
+
+### Turning fields off for the whole install
+
+Roles decide _who_ may edit. The API config decides _which fields exist at all_.
+Every field is on unless you set it to `false` in `vitnode.api.config.ts`:
+
+```ts title="vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  users: {
+    personalInformation: {
+      phone: false,
+      headline: false,
+      showRealName: false,
+    },
+  },
+})
+```
+
+The keys are `firstName`, `lastName`, `phone`, `headline` and `showRealName`. A
+field switched off disappears from the settings card and from its form, and
+`PATCH /users/me` refuses to write it even if a caller sends it anyway - so a
+stale browser tab or a hand-rolled request cannot get around it.
+
+Switching a field off never deletes anything: the column keeps whatever members
+had already set, so turning it back on restores their values. With
+`showRealName` off, every profile is headed by the nickname again, whatever
+individual members had chosen. With **every** field off there is nothing left to
+edit, so the **Edit** button disappears too.
 
 ---
 
@@ -126,6 +232,10 @@ Administrators can view, edit, ban, and assign roles to users at **Core → User
   with a picture already set, a pair of radio buttons chooses between them and
   the confirm button reads **Upload** or **Delete** to match; with nothing set
   yet, the dialog goes straight to the picker.
+- **Settings overview** (`/settings`): the avatar and its camera button only,
+  beside the name, code name, role and email the account carries, above the
+  personal information the user sets for themselves. The cover is
+  edited on the profile page.
 - **AdminCP** (`/admin/core/users/[id]`): the same two buttons and the same
   dialog, for anybody holding `users:can_edit` - plus `users:can_edit_admin`
   when the target is an administrator. Staff can always set an image, even when
@@ -135,12 +245,13 @@ Administrators can view, edit, ban, and assign roles to users at **Core → User
 
 Each role decides, on its **Profile** tab at **Core → Users → Roles**:
 
-| Setting                  | Column              | Default |
-| :----------------------- | :------------------ | :------ |
-| Allow avatar upload      | `allowUploadAvatar` | `true`  |
-| Maximum avatar size (kB) | `maxAvatarSize`     | `2048`  |
-| Allow cover image upload | `allowUploadCover`  | `true`  |
-| Maximum cover size (kB)  | `maxCoverSize`      | `5120`  |
+| Setting                            | Column                  | Default |
+| :--------------------------------- | :---------------------- | :------ |
+| Allow editing personal information | `allowEditPersonalInfo` | `true`  |
+| Allow avatar upload                | `allowUploadAvatar`     | `true`  |
+| Maximum avatar size (kB)           | `maxAvatarSize`         | `2048`  |
+| Allow cover image upload           | `allowUploadCover`      | `true`  |
+| Maximum cover size (kB)            | `maxCoverSize`          | `5120`  |
 
 A user with several roles is allowed as soon as **one** of them allows the
 image, and gets the **most generous** cap among those roles. The cap is shown in

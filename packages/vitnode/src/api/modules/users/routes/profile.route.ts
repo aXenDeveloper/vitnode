@@ -4,6 +4,7 @@ import { resolveUserRoles, userRoleSchema } from "@/api/lib/resolve-user-roles";
 import { buildRoute } from "@/api/lib/route";
 import { UserModel } from "@/api/models/user";
 import { CONFIG_PLUGIN } from "@/config";
+import { displayNameOf } from "@/lib/user-personal-information";
 
 export const profileRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -24,6 +25,7 @@ export const profileRoute = buildRoute({
               id: z.number(),
               name: z.string(),
               nameCode: z.string(),
+              headline: z.string().nullable(),
               avatarColor: z.string(),
               avatarUrl: z.string().nullable(),
               coverUrl: z.string().nullable(),
@@ -60,8 +62,16 @@ export const profileRoute = buildRoute({
     return c.json(
       {
         id: user.id,
-        name: user.name,
+        name: displayNameOf({
+          ...user,
+          showRealName:
+            c.get("core").personalInformationFields.showRealName &&
+            user.showRealName,
+        }),
         nameCode: user.nameCode,
+        headline: c.get("core").personalInformationFields.headline
+          ? user.headline
+          : null,
         avatarColor: user.avatarColor,
         avatarUrl: user.avatarUrl,
         coverUrl: user.coverUrl,

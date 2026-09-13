@@ -1,4 +1,3 @@
-import { cn } from "cn";
 import { RefreshCwIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -31,9 +30,9 @@ export const SearchHeaderActions = ({
   };
 
   return (
-    <Button disabled={isPending} onClick={rebuild}>
-      <RefreshCwIcon className={cn(isPending && "animate-spin")} />
-      {isPending ? t("admin.rebuilding") : t("admin.rebuild")}
+    <Button isLoading={isPending} onClick={rebuild}>
+      <RefreshCwIcon />
+      {t("admin.rebuild")}
     </Button>
   );
 };

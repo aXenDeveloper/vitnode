@@ -22,6 +22,7 @@ export const ROLE_DEFAULT_COVER_SIZE_KB = 5120;
 
 /** The shape the roles API takes, as the form produces it. */
 export interface AdminRoleFormValues {
+  allowEditPersonalInfo: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
@@ -36,6 +37,7 @@ export interface AdminRoleFormValues {
 
 /** The row an edit re-opens with. Absent for a create. */
 export interface AdminRoleFormData {
+  allowEditPersonalInfo: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
@@ -78,6 +80,9 @@ export const AdminRoleFormContent = ({
       .default(fallback);
 
   const formSchema = z.object({
+    allowEditPersonalInfo: z
+      .boolean()
+      .default(data?.allowEditPersonalInfo ?? true),
     allowUploadAvatar: z.boolean().default(data?.allowUploadAvatar ?? true),
     allowUploadCover: z.boolean().default(data?.allowUploadCover ?? true),
     allowUploadFiles: z.boolean().default(data?.allowUploadFiles ?? false),
@@ -169,6 +174,34 @@ export const AdminRoleFormContent = ({
           tab: "general",
         },
         {
+          children: [
+            {
+              component: props => (
+                <AutoFormNullableNumber
+                  label={t("form.upload.total_max_storage")}
+                  min={0}
+                  orLabel={t("form.upload.or")}
+                  toggleLabel={t("form.upload.unlimited")}
+                  unitLabel={t("form.upload.in_unit")}
+                  {...props}
+                />
+              ),
+              id: "totalMaxStorage",
+            },
+            {
+              component: props => (
+                <AutoFormNullableNumber
+                  label={t("form.upload.max_storage_for_submit")}
+                  min={0}
+                  orLabel={t("form.upload.or")}
+                  toggleLabel={t("form.upload.unlimited")}
+                  unitLabel={t("form.upload.in_unit")}
+                  {...props}
+                />
+              ),
+              id: "maxStorageForSubmit",
+            },
+          ],
           component: props => (
             <AutoFormSwitch label={t("form.upload.allow")} {...props} />
           ),
@@ -177,35 +210,31 @@ export const AdminRoleFormContent = ({
         },
         {
           component: props => (
-            <AutoFormNullableNumber
-              label={t("form.upload.total_max_storage")}
-              min={0}
-              orLabel={t("form.upload.or")}
-              toggleLabel={t("form.upload.unlimited")}
-              unitLabel={t("form.upload.in_unit")}
+            <AutoFormSwitch
               {...props}
+              description={t("form.personal_info.allow_edit_desc")}
+              label={t("form.personal_info.allow_edit")}
             />
           ),
-          hidden: values => !values.allowUploadFiles,
-          id: "totalMaxStorage",
-          tab: "content",
+          id: "allowEditPersonalInfo",
+          tab: "profile",
         },
         {
-          component: props => (
-            <AutoFormNullableNumber
-              label={t("form.upload.max_storage_for_submit")}
-              min={0}
-              orLabel={t("form.upload.or")}
-              toggleLabel={t("form.upload.unlimited")}
-              unitLabel={t("form.upload.in_unit")}
-              {...props}
-            />
-          ),
-          hidden: values => !values.allowUploadFiles,
-          id: "maxStorageForSubmit",
-          tab: "content",
-        },
-        {
+          children: [
+            {
+              component: props => (
+                <AutoFormNumber
+                  label={t("form.images.avatar.max_size")}
+                  max={ROLE_IMAGE_SIZE_MAX_KB}
+                  min={1}
+                  step={1}
+                  unitLabel={t("form.images.in_unit")}
+                  {...props}
+                />
+              ),
+              id: "maxAvatarSize",
+            },
+          ],
           component: props => (
             <AutoFormSwitch label={t("form.images.avatar.allow")} {...props} />
           ),
@@ -213,40 +242,25 @@ export const AdminRoleFormContent = ({
           tab: "profile",
         },
         {
-          component: props => (
-            <AutoFormNumber
-              label={t("form.images.avatar.max_size")}
-              max={ROLE_IMAGE_SIZE_MAX_KB}
-              min={1}
-              step={1}
-              unitLabel={t("form.images.in_unit")}
-              {...props}
-            />
-          ),
-          hidden: values => !values.allowUploadAvatar,
-          id: "maxAvatarSize",
-          tab: "profile",
-        },
-        {
+          children: [
+            {
+              component: props => (
+                <AutoFormNumber
+                  label={t("form.images.cover.max_size")}
+                  max={ROLE_IMAGE_SIZE_MAX_KB}
+                  min={1}
+                  step={1}
+                  unitLabel={t("form.images.in_unit")}
+                  {...props}
+                />
+              ),
+              id: "maxCoverSize",
+            },
+          ],
           component: props => (
             <AutoFormSwitch label={t("form.images.cover.allow")} {...props} />
           ),
           id: "allowUploadCover",
-          tab: "profile",
-        },
-        {
-          component: props => (
-            <AutoFormNumber
-              label={t("form.images.cover.max_size")}
-              max={ROLE_IMAGE_SIZE_MAX_KB}
-              min={1}
-              step={1}
-              unitLabel={t("form.images.in_unit")}
-              {...props}
-            />
-          ),
-          hidden: values => !values.allowUploadCover,
-          id: "maxCoverSize",
           tab: "profile",
         },
       ]}

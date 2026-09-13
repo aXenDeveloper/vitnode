@@ -20,4 +20,5 @@ export const core_roles = camelCase.table.withRLS("core_roles", t => ({
   maxAvatarSize: t.integer().notNull().default(2048),
   allowUploadCover: t.boolean().notNull().default(true),
   maxCoverSize: t.integer().notNull().default(5120),
+  allowEditPersonalInfo: t.boolean().notNull().default(true),
 }));

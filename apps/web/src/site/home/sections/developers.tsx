@@ -1,7 +1,11 @@
+import { cn } from 'cn'
+
 import {
+  ActionLink,
   MarketingSection,
   SectionHeading,
-  TextLink,
+  SectionRow,
+  SURFACE,
 } from '@/site/marketing/shared'
 
 const STACK = [
@@ -31,36 +35,52 @@ const COMMANDS = [
 
 export const DevelopersSection = () => (
   <MarketingSection id="developers" labelledBy="developers-title">
-    <div className="grid items-center gap-12 lg:grid-cols-2">
-      <div className="flex flex-col gap-8">
-        <SectionHeading
-          eyebrow="A little something for the builders"
-          id="developers-title"
-          title="Less setup déjà vu."
-        >
-          Start a project, build a plugin, make it yours. Familiar tools
-          underneath, end-to-end types in between, and more of your actual
-          product on top.
-        </SectionHeading>
+    <SectionRow
+      action={
+        <ActionLink params={{ _splat: 'guides/first-plugin' }} to="/docs/$">
+          Build your first plugin
+        </ActionLink>
+      }
+    >
+      <SectionHeading
+        eyebrow="A little something for the builders"
+        id="developers-title"
+        title="Less setup déjà vu."
+      >
+        Start a project, build a plugin, make it yours. Familiar tools
+        underneath, end-to-end types in between, and more of your actual product
+        on top.
+      </SectionHeading>
+    </SectionRow>
 
+    <div className="grid items-stretch gap-6 lg:grid-cols-5">
+      <div
+        className={cn(
+          SURFACE.soft,
+          'flex flex-col gap-6 p-7 sm:p-8 lg:col-span-2',
+        )}
+      >
+        <h3 className="text-xl font-semibold tracking-tight">
+          The stack underneath
+        </h3>
         <ul className="flex flex-wrap gap-2">
           {STACK.map((item) => (
             <li
-              className="bg-card rounded-full border px-3 py-1 text-xs font-semibold"
+              className="bg-background rounded-full px-3.5 py-1.5 text-sm font-medium"
               key={item}
             >
               {item}
             </li>
           ))}
         </ul>
-
-        <TextLink params={{ _splat: 'guides/first-plugin' }} to="/docs/$">
-          Build your first plugin in ten minutes
-        </TextLink>
+        <p className="text-muted-foreground font-book leading-relaxed text-pretty">
+          Node.js 22+, Postgres or Docker, and whichever package manager you
+          already argue about. bun, pnpm and npm are all welcome.
+        </p>
       </div>
 
-      <div className="bg-card overflow-hidden rounded-3xl border shadow-lg">
-        <div className="bg-muted/60 flex items-center gap-2 border-b px-4 py-3">
+      <div className={cn(SURFACE.dark, 'overflow-hidden lg:col-span-3')}>
+        <div className="bg-muted/60 flex items-center gap-2 border-b px-5 py-3">
           <span aria-hidden className="flex gap-1.5">
             <span className="size-3 rounded-full bg-red-400/80" />
             <span className="size-3 rounded-full bg-amber-400/80" />
@@ -70,8 +90,8 @@ export const DevelopersSection = () => (
             terminal
           </span>
         </div>
-        <pre className="overflow-x-auto p-6 font-mono text-sm leading-relaxed">
-          <code className="flex flex-col gap-4">
+        <pre className="overflow-x-auto p-7 font-mono text-sm leading-relaxed sm:p-8">
+          <code className="flex flex-col gap-5">
             {COMMANDS.map(({ comment, line }) => (
               <span className="flex flex-col gap-1" key={line}>
                 <span className="text-muted-foreground"># {comment}</span>
@@ -83,9 +103,6 @@ export const DevelopersSection = () => (
             ))}
           </code>
         </pre>
-        <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-          Node.js 22+ · Postgres or Docker · bun, pnpm and npm all welcome
-        </p>
       </div>
     </div>
   </MarketingSection>

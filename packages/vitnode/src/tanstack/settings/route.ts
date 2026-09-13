@@ -12,6 +12,7 @@ import { intlQueryOptions } from "../i18n/query";
 export const SETTINGS_NAMESPACES = [
   "core.auth.settings",
   "core.global",
+  "core.profile.images",
 ] as const;
 
 interface SettingsMessages {

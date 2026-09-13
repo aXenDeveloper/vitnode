@@ -17,18 +17,23 @@ const anonymousSession: SessionApi = { user: null };
 const userFixture = (overrides: Partial<AuthUser> = {}): AuthUser => ({
   avatarColor: "#101010",
   avatarUrl: null,
+  headline: null,
+  phone: null,
   birthday: null,
   coverUrl: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   email: "test@test.com",
   emailVerified: true,
+  firstName: null,
   id: 1,
   isAdmin: false,
   isModerator: false,
+  lastName: null,
   name: "Test",
   nameCode: "test",
   newsletter: false,
   roleId: 1,
+  showRealName: false,
   ...overrides,
 });
 

@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 
+import { cn } from 'cn'
 import {
   BarChart3,
   BookOpen,
@@ -19,9 +20,11 @@ import {
 import { PluginDiagram } from '@/site/home/illustrations/plugin-diagram'
 import { InfiniteSlider } from '@/site/home/infinite-slider'
 import {
+  ActionLink,
   MarketingSection,
   SectionHeading,
-  TextLink,
+  SectionRow,
+  SURFACE,
 } from '@/site/marketing/shared'
 
 const BENEFITS = [
@@ -46,66 +49,71 @@ export const PLUGIN_IDEAS: { Icon: LucideIcon; label: string }[] = [
 ]
 
 export const PluginsSection = () => (
-  <div className="bg-muted/40 border-y">
-    <MarketingSection id="plugins" labelledBy="plugins-title">
-      <div className="grid items-center gap-12 lg:grid-cols-2">
-        <div className="flex flex-col gap-8">
-          <SectionHeading
-            eyebrow="The plugin system"
-            id="plugins-title"
-            title="Big ideas. Small, swappable pieces."
-          >
-            Your community should not outgrow its own software. In VitNode every
-            feature is a plugin, so adding the next big thing never means
-            rewriting the last one.
-          </SectionHeading>
+  <MarketingSection id="plugins" labelledBy="plugins-title">
+    <SectionRow
+      action={
+        <ActionLink params={{ _splat: 'dev/plugins/create' }} to="/docs/$">
+          Meet your first plugin
+        </ActionLink>
+      }
+    >
+      <SectionHeading
+        eyebrow="The plugin system"
+        id="plugins-title"
+        title="Big ideas. Small, swappable pieces."
+      >
+        Your community should not outgrow its own software. In VitNode every
+        feature is a plugin, so adding the next big thing never means rewriting
+        the last one.
+      </SectionHeading>
+    </SectionRow>
 
-          <ul className="flex flex-col gap-3">
-            {BENEFITS.map((benefit) => (
-              <li className="flex items-start gap-3" key={benefit}>
-                <span className="bg-primary/10 text-primary mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full">
-                  <Check aria-hidden className="size-3.5" strokeWidth={3} />
-                </span>
-                <span className="text-sm leading-relaxed text-pretty sm:text-base">
-                  {benefit}
-                </span>
-              </li>
-            ))}
-          </ul>
+    <div className="grid items-center gap-6 lg:grid-cols-5">
+      <ul
+        className={cn(
+          SURFACE.soft,
+          'flex flex-col gap-5 p-7 sm:p-8 lg:col-span-2',
+        )}
+      >
+        {BENEFITS.map((benefit) => (
+          <li className="flex items-start gap-3" key={benefit}>
+            <span className="bg-primary/10 text-primary mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full">
+              <Check aria-hidden className="size-3.5" strokeWidth={3} />
+            </span>
+            <span className="font-book leading-relaxed text-pretty">
+              {benefit}
+            </span>
+          </li>
+        ))}
+      </ul>
 
-          <TextLink params={{ _splat: 'dev/plugins/create' }} to="/docs/$">
-            Meet your first plugin
-          </TextLink>
-        </div>
-
-        <div className="bg-card rounded-3xl border p-4 sm:p-6">
-          <PluginDiagram />
-        </div>
+      <div className={cn(SURFACE.tint, 'p-4 sm:p-6 lg:col-span-3')}>
+        <PluginDiagram />
       </div>
+    </div>
 
-      <div className="flex flex-col gap-4">
-        <p className="text-muted-foreground text-center text-sm font-medium">
-          What could a plugin be? Anything your community asks for next.
-        </p>
+    <div className="flex flex-col gap-4">
+      <p className="text-muted-foreground text-center text-sm font-medium">
+        What could a plugin be? Anything your community asks for next.
+      </p>
 
-        <div className="relative">
-          <InfiniteSlider gap={12} speed={36} speedOnHover={12}>
-            {PLUGIN_IDEAS.map(({ Icon, label }) => (
-              <span
-                className="bg-card flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold whitespace-nowrap"
-                key={label}
-              >
-                <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg">
-                  <Icon aria-hidden className="size-4" />
-                </span>
-                {label}
+      <div className="relative">
+        <InfiniteSlider gap={12} speed={36} speedOnHover={12}>
+          {PLUGIN_IDEAS.map(({ Icon, label }) => (
+            <span
+              className="bg-muted/60 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium whitespace-nowrap"
+              key={label}
+            >
+              <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg">
+                <Icon aria-hidden className="size-4" />
               </span>
-            ))}
-          </InfiniteSlider>
-          <div className="from-muted/40 pointer-events-none absolute inset-y-0 left-0 w-16 bg-linear-to-r" />
-          <div className="from-muted/40 pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l" />
-        </div>
+              {label}
+            </span>
+          ))}
+        </InfiniteSlider>
+        <div className="from-background pointer-events-none absolute inset-y-0 left-0 w-16 bg-linear-to-r" />
+        <div className="from-background pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l" />
       </div>
-    </MarketingSection>
-  </div>
+    </div>
+  </MarketingSection>
 )

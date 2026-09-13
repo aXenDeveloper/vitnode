@@ -5,6 +5,17 @@ import { ArrowRight, Bird } from 'lucide-react'
 
 import { REPOSITORY_URL } from './links'
 
+export const BUTTON = 'h-11 rounded-xl px-5 text-base'
+
+export const SURFACE = {
+  dark: 'dark bg-background text-foreground rounded-3xl border',
+  primary: 'bg-primary text-primary-foreground rounded-3xl',
+  soft: 'bg-muted/60 rounded-3xl',
+  tint: 'bg-primary/5 rounded-3xl',
+} as const
+
+export type Surface = keyof typeof SURFACE
+
 export const GitHubIcon = ({ className }: { className?: string }) => (
   <svg
     aria-hidden
@@ -28,7 +39,7 @@ export const Eyebrow = ({
 }) => (
   <p
     className={cn(
-      'text-primary text-sm font-semibold tracking-wide uppercase',
+      'text-muted-foreground font-mono text-xs font-medium tracking-wider uppercase',
       className,
     )}
   >
@@ -45,7 +56,7 @@ export const SectionHeading = ({
 }: {
   align?: 'center' | 'start'
   children?: React.ReactNode
-  eyebrow: string
+  eyebrow?: string
   id: string
   title: string
 }) => (
@@ -55,18 +66,31 @@ export const SectionHeading = ({
       align === 'center' && 'mx-auto items-center text-center',
     )}
   >
-    <Eyebrow>{eyebrow}</Eyebrow>
+    {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
     <h2
-      className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
+      className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
       id={id}
     >
       {title}
     </h2>
     {children ? (
-      <p className="text-muted-foreground text-base leading-relaxed text-pretty sm:text-lg">
+      <p className="text-muted-foreground font-book text-lg leading-relaxed text-pretty">
         {children}
       </p>
     ) : null}
+  </div>
+)
+
+export const SectionRow = ({
+  action,
+  children,
+}: {
+  action?: React.ReactNode
+  children: React.ReactNode
+}) => (
+  <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between md:gap-10">
+    {children}
+    {action ? <div className="shrink-0">{action}</div> : null}
   </div>
 )
 
@@ -84,7 +108,7 @@ export const MarketingSection = ({
   <section
     aria-labelledby={labelledBy}
     className={cn(
-      'mk-section-anchor container mx-auto flex flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24',
+      'mk-section-anchor container mx-auto flex flex-col gap-10 px-4 py-16 sm:px-6 sm:py-24',
       className,
     )}
     id={id}
@@ -101,7 +125,7 @@ const TextLinkAnchor = ({
 }: React.ComponentProps<'a'>) => (
   <a
     className={cn(
-      'group text-primary inline-flex w-fit items-center gap-1 text-sm font-semibold underline-offset-4 hover:underline',
+      'group text-primary inline-flex w-fit items-center gap-1 text-base font-medium underline-offset-4 hover:underline',
       className,
     )}
     rel={target === '_blank' ? 'noopener noreferrer' : undefined}
@@ -118,10 +142,29 @@ const TextLinkAnchor = ({
 
 export const TextLink = createLink(TextLinkAnchor)
 
+const ActionLinkAnchor = ({
+  children,
+  className,
+  target,
+  variant = 'default',
+  ...props
+}: React.ComponentProps<'a'> & { variant?: 'default' | 'outline' }) => (
+  <a
+    className={cn(buttonVariants({ size: 'lg', variant }), BUTTON, className)}
+    rel={target === '_blank' ? 'noopener noreferrer' : undefined}
+    target={target}
+    {...props}
+  >
+    {children}
+  </a>
+)
+
+export const ActionLink = createLink(ActionLinkAnchor)
+
 export const MarketingActions = ({ className }: { className?: string }) => (
   <div className={cn('flex flex-wrap items-center gap-3', className)}>
     <Link
-      className={cn(buttonVariants({ size: 'lg' }), 'px-5')}
+      className={cn(buttonVariants({ size: 'lg' }), BUTTON)}
       params={{ _splat: 'dev/setup' }}
       to="/docs/$"
     >
@@ -130,7 +173,7 @@ export const MarketingActions = ({ className }: { className?: string }) => (
     </Link>
 
     <a
-      className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), 'px-5')}
+      className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), BUTTON)}
       href={REPOSITORY_URL}
       rel="noopener noreferrer"
       target="_blank"
@@ -159,17 +202,20 @@ export const CanaryPill = ({ className }: { className?: string }) => (
 export const CanaryNotice = () => (
   <aside
     aria-label="Canary release status"
-    className="bg-card flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
+    className={cn(
+      SURFACE.tint,
+      'flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6',
+    )}
   >
-    <span className="bg-primary/10 text-primary flex size-12 shrink-0 items-center justify-center rounded-xl">
-      <Bird aria-hidden className="mk-anim-float size-6" />
+    <span className="bg-primary/10 text-primary flex size-12 shrink-0 items-center justify-center rounded-2xl">
+      <Bird aria-hidden className="size-6" />
     </span>
 
     <div className="flex flex-1 flex-col gap-1">
-      <p className="font-semibold">
+      <p className="text-lg font-semibold tracking-tight">
         Very early. Very canary. Still a bit fluffy.
       </p>
-      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+      <p className="text-muted-foreground font-book leading-relaxed text-pretty">
         VitNode 2.0 is an early development build. Expect bugs, unfinished
         corners and breaking changes between releases. Perfect for exploring and
         prototyping. Not yet the place for your production community.

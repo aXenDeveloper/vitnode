@@ -41,6 +41,11 @@ const guides = createContentModel(testLocalizedGuideContentType);
 
 const adminUser = {
   avatarColor: "000000",
+  headline: null,
+  phone: null,
+  showRealName: false,
+  firstName: null,
+  lastName: null,
   avatarUrl: null,
   birthday: null,
   coverUrl: null,

@@ -16,8 +16,9 @@ import type { CoreRouteFactory } from "../types";
 
 import { devicesQuery } from "../../devices/query";
 import { RouteMessages } from "../../i18n/route-messages";
-import { RouterLink } from "../../layout/router-link";
 import { FeedPendingSkeleton, FormPendingSkeleton } from "../../pending";
+import { userProfileQuery } from "../../profile/query";
+import { personalInfoPolicyQuery } from "../../settings/personal-policy";
 import {
   loadSettingsPanel,
   SETTINGS_NAMESPACES,
@@ -63,7 +64,7 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       return {
         default: function SettingsLayout() {
           return (
-            <SettingsLayoutContent LinkComponent={RouterLink}>
+            <SettingsLayoutContent>
               <Outlet />
             </SettingsLayoutContent>
           );
@@ -76,7 +77,6 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
     navKey: SettingsNavKey,
     path: string,
     loadPanel: () => Promise<{ default: React.FunctionComponent }>,
-    { crumb = true }: { crumb?: boolean } = {},
   ): AnyRoute =>
     createRoute({
       getParentRoute: () => layout,
@@ -87,10 +87,47 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
       path,
       component: lazyRouteComponent(loadPanel),
       pendingComponent: FormPendingSkeleton,
-      ...(crumb
-        ? { staticData: { breadcrumb: <SettingsBreadcrumb navKey={navKey} /> } }
-        : {}),
+      staticData: { breadcrumb: <SettingsBreadcrumb navKey={navKey} /> },
     });
+
+  const overview: AnyRoute = createRoute({
+    getParentRoute: () => layout,
+
+    loader: async ({ context }) => {
+      const narrowed = routeContext<
+        SettingsLoaderContext & { auth: { user: { nameCode: string } } }
+      >(context);
+      const { nameCode } = narrowed.auth.user;
+
+      const [data] = await Promise.all([
+        loadSettingsPanel(narrowed, "overview"),
+        narrowed.queryClient.query({
+          ...userProfileQuery(nameCode),
+          staleTime: "static",
+        }),
+        narrowed.queryClient.query(personalInfoPolicyQuery()),
+      ]);
+
+      return { ...data, nameCode };
+    },
+    head: ({ loaderData }) => pageHead({ ...loaderData }),
+    path: "/",
+    pendingComponent: FormPendingSkeleton,
+  });
+
+  overview.update({
+    component: lazyRouteComponent(async () => {
+      const { OverviewSettings } = await import("../../settings/overview");
+
+      return {
+        default: function OverviewRoute() {
+          return (
+            <OverviewSettings nameCode={overview.useLoaderData().nameCode} />
+          );
+        },
+      };
+    }),
+  });
 
   const devices: AnyRoute = createRoute({
     getParentRoute: () => layout,
@@ -132,19 +169,7 @@ export const settingsRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
   });
 
   layout.addChildren([
-    panel(
-      "overview",
-      "/",
-      async () => ({
-        default: (await import("@/views/auth/settings/overview/overview"))
-          .OverviewSettings,
-      }),
-      { crumb: false },
-    ),
-    panel("overview", "/overview", async () => ({
-      default: (await import("@/views/auth/settings/overview/overview"))
-        .OverviewSettings,
-    })),
+    overview,
     panel("security", "/security", async () => ({
       default: (await import("@/views/auth/settings/security/security"))
         .SecuritySettings,

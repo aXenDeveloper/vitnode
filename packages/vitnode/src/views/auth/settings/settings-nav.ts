@@ -1,38 +1,27 @@
 import { normalizeUrl } from "@/lib/utils";
 
-/** Where the settings screens are rooted, and the mobile "back" destination. */
+/** Where the settings screens are rooted, and the overview panel's own URL. */
 export const SETTINGS_ROOT_HREF = "/settings";
 
 export type SettingsNavKey = "devices" | "overview" | "security";
 
 export interface SettingsNavItem {
-  aliases: readonly string[];
   href: string;
   /** The `core.auth.settings.nav` key this item's label comes from. */
   key: SettingsNavKey;
 }
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
-  {
-    aliases: [SETTINGS_ROOT_HREF],
-    href: "/settings/overview",
-    key: "overview",
-  },
-  { aliases: [], href: "/settings/devices", key: "devices" },
-  { aliases: [], href: "/settings/security", key: "security" },
+  { href: SETTINGS_ROOT_HREF, key: "overview" },
+  { href: "/settings/devices", key: "devices" },
+  { href: "/settings/security", key: "security" },
 ];
-
-export const isSettingsRootPath = (pathname: string): boolean =>
-  normalizeUrl(pathname) === SETTINGS_ROOT_HREF;
 
 /** Whether one navigation item is the panel `pathname` is showing. */
 export const isSettingsNavItemActive = (
   item: SettingsNavItem,
   pathname: string,
-): boolean =>
-  [item.href, ...item.aliases].some(
-    href => normalizeUrl(href) === normalizeUrl(pathname),
-  );
+): boolean => normalizeUrl(item.href) === normalizeUrl(pathname);
 
 export const activeSettingsNavKey = (
   pathname: string,

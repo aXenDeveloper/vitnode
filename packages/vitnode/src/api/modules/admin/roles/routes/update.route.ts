@@ -25,6 +25,7 @@ export const zodUpdateRoleAdminSchema = z
     totalMaxStorage: zodRoleStorageSchema,
     maxStorageForSubmit: zodRoleStorageSchema,
     allowUploadAvatar: z.boolean(),
+    allowEditPersonalInfo: z.boolean(),
     maxAvatarSize: zodRoleImageSizeSchema,
     allowUploadCover: z.boolean(),
     maxCoverSize: zodRoleImageSizeSchema,
@@ -118,6 +119,10 @@ export const updateRoleAdminRoute = buildRoute({
     if (body.maxStorageForSubmit !== undefined) {
       values.maxStorageForSubmit = body.maxStorageForSubmit;
     }
+    if (body.allowEditPersonalInfo !== undefined) {
+      values.allowEditPersonalInfo = body.allowEditPersonalInfo;
+    }
+
     if (body.allowUploadAvatar !== undefined) {
       values.allowUploadAvatar = body.allowUploadAvatar;
     }

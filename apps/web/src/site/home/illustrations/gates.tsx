@@ -172,22 +172,5 @@ export const GatesVisual = () => (
         y={gateY(0) - 14.5}
       />
     </g>
-
-    <text
-      className="fill-muted-foreground text-xs"
-      textAnchor="middle"
-      x={MEMBER_LANE}
-      y={GATE_TOP - 32}
-    >
-      member
-    </text>
-    <text
-      className="fill-muted-foreground text-xs"
-      textAnchor="middle"
-      x={BOT_LANE}
-      y={GATE_TOP - 32}
-    >
-      bot
-    </text>
   </svg>
 )

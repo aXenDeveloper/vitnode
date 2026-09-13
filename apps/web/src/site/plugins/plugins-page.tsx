@@ -17,6 +17,7 @@ import type { ScreenKey } from '@/site/marketing/screens'
 
 import { InfiniteSlider } from '@/site/home/infinite-slider'
 import { PLUGIN_IDEAS } from '@/site/home/sections/plugins'
+import { MarketingPage } from '@/site/marketing/marketing-page'
 import { ScreenFrame } from '@/site/marketing/screen-frame'
 import { SCREENS } from '@/site/marketing/screens'
 import {
@@ -122,7 +123,7 @@ const STATUS_LABEL: Record<OfficialPlugin['status'], string> = {
 }
 
 export const PluginsPage = () => (
-  <div className="flex flex-col">
+  <MarketingPage>
     <section
       aria-labelledby="plugins-title"
       className="relative overflow-hidden"
@@ -207,7 +208,7 @@ export const PluginsPage = () => (
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {highlights.map((item) => (
                     <li
-                      className="bg-card rounded-xl border px-3 py-2 text-sm"
+                      className="bg-muted/60 rounded-xl px-3 py-2 text-sm"
                       key={item}
                     >
                       {item}
@@ -250,7 +251,7 @@ export const PluginsPage = () => (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {ANATOMY.map(({ Icon, text, title }) => (
             <li
-              className="bg-card flex flex-col gap-3 rounded-2xl border p-5"
+              className="bg-muted/60 flex flex-col gap-3 rounded-2xl p-5"
               key={title}
             >
               <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
@@ -272,7 +273,7 @@ export const PluginsPage = () => (
             <InfiniteSlider gap={12} speed={36} speedOnHover={12}>
               {PLUGIN_IDEAS.map(({ Icon, label }) => (
                 <span
-                  className="bg-card flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold whitespace-nowrap"
+                  className="bg-muted/60 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold whitespace-nowrap"
                   key={label}
                 >
                   <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg">
@@ -290,7 +291,7 @@ export const PluginsPage = () => (
     </div>
 
     <MarketingSection labelledBy="plugins-cta-title">
-      <div className="bg-card flex flex-col items-center gap-6 rounded-3xl border px-6 py-16 text-center">
+      <div className="bg-muted/60 flex flex-col items-center gap-6 rounded-3xl px-6 py-16 text-center">
         <h2
           className="max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl"
           id="plugins-cta-title"
@@ -309,5 +310,5 @@ export const PluginsPage = () => (
       </div>
       <CanaryNotice />
     </MarketingSection>
-  </div>
+  </MarketingPage>
 )

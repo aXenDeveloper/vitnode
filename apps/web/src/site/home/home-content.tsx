@@ -12,10 +12,11 @@ import { PoweringBySection } from '@/site/home/sections/powering-by'
 import { PricingSection } from '@/site/home/sections/pricing'
 import { SecuritySection } from '@/site/home/sections/security'
 import { ShowcaseSection } from '@/site/home/sections/showcase'
+import { MarketingPage } from '@/site/marketing/marketing-page'
 import { CanaryNotice } from '@/site/marketing/shared'
 
 export const HomeRouteContent = () => (
-  <div className="flex flex-col">
+  <MarketingPage>
     <HeroSection />
     <PoweringBySection />
     <div className="container mx-auto px-4 pt-12 sm:px-6">
@@ -33,5 +34,5 @@ export const HomeRouteContent = () => (
     <PricingSection />
     <FaqSection />
     <FinalCtaSection />
-  </div>
+  </MarketingPage>
 )
