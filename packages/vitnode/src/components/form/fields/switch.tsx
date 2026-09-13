@@ -27,12 +27,24 @@ export const AutoFormSwitch = ({
   return (
     <div
       className={cn(
-        "flex flex-row items-center justify-between rounded-lg border p-4",
+        "flex flex-row items-center gap-4 rounded-lg border p-4",
         className,
       )}
     >
+      <FormControl>
+        <Switch
+          checked={field.value ?? false}
+          className="shrink-0"
+          onCheckedChange={(checked, eventDetails) => {
+            field.onChange(checked);
+            props?.onCheckedChange?.(checked, eventDetails);
+          }}
+          {...props}
+        />
+      </FormControl>
+
       {!!(label ?? description) && (
-        <div className="space-y-0.5">
+        <div className="flex flex-1 flex-col gap-0.5">
           {!!label && (
             <AutoFormLabel
               className="text-base"
@@ -45,17 +57,6 @@ export const AutoFormSwitch = ({
           {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
         </div>
       )}
-
-      <FormControl>
-        <Switch
-          checked={field.value ?? false}
-          onCheckedChange={(checked, eventDetails) => {
-            field.onChange(checked);
-            props?.onCheckedChange?.(checked, eventDetails);
-          }}
-          {...props}
-        />
-      </FormControl>
     </div>
   );
 };

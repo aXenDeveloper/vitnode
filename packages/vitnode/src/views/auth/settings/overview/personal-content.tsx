@@ -1,9 +1,11 @@
-import { cn } from "cn";
 import { PencilIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { UserPersonalInformation } from "@/lib/user-personal-information";
+import type {
+  PersonalInformationFields,
+  UserPersonalInformation,
+} from "@/lib/user-personal-information";
 import type { ProfileRole } from "@/views/profile/profile-query";
 
 import { RoleFormatContent } from "@/components/role-format-content";
@@ -37,14 +39,12 @@ const PersonalFormSkeleton = () => (
 
 const Detail = ({
   children,
-  className,
   label,
 }: {
   children: React.ReactNode;
-  className?: string;
   label: string;
 }) => (
-  <div className={cn("flex min-w-0 flex-col gap-1", className)}>
+  <div className="flex min-w-0 flex-col gap-1">
     <dt className="text-muted-foreground text-sm">{label}</dt>
     <dd className="text-foreground font-medium wrap-anywhere">{children}</dd>
   </div>
@@ -59,33 +59,39 @@ export interface PersonalInformationUser extends UserPersonalInformation {
 
 export const PersonalInformationContent = ({
   canEdit,
+  fields,
   onUpdate,
   user,
 }: {
   canEdit: boolean;
+  fields: PersonalInformationFields;
   onUpdate: UpdatePersonalInformation;
   user: PersonalInformationUser;
 }) => {
   const t = useTranslations("core.auth.settings.overview");
 
   const details = [
-    <Detail className="sm:col-span-2" key="nickname" label={t("nickname")}>
+    <Detail key="nickname" label={t("nickname")}>
       {user.name}
     </Detail>,
-    user.firstName === null ? null : (
+    fields.firstName && user.firstName !== null ? (
       <Detail key="firstName" label={t("firstName")}>
         {user.firstName}
       </Detail>
-    ),
-    user.lastName === null ? null : (
+    ) : null,
+    fields.lastName && user.lastName !== null ? (
       <Detail key="lastName" label={t("lastName")}>
         {user.lastName}
       </Detail>
-    ),
-    <Detail className="sm:col-span-2" key="publicName" label={t("publicName")}>
-      {user.showRealName ? t("publicNameReal") : t("publicNameNickname")}
-    </Detail>,
-    <Detail className="sm:col-span-2" key="email" label={t("email")}>
+    ) : null,
+    fields.phone && user.phone !== null ? (
+      <Detail key="phone" label={t("phone")}>
+        <a className="hover:underline" href={`tel:${user.phone}`}>
+          {user.phone}
+        </a>
+      </Detail>
+    ) : null,
+    <Detail key="email" label={t("email")}>
       <span className="flex flex-wrap items-center gap-2">
         {user.email}
         {user.emailVerified ? null : (
@@ -93,12 +99,13 @@ export const PersonalInformationContent = ({
         )}
       </span>
     </Detail>,
+    fields.headline && user.headline !== null ? (
+      <Detail key="headline" label={t("headline")}>
+        {user.headline}
+      </Detail>
+    ) : null,
     user.secondaryRoles.length === 0 ? null : (
-      <Detail
-        className="sm:col-span-2"
-        key="secondaryRoles"
-        label={t("secondaryRoles")}
-      >
+      <Detail key="secondaryRoles" label={t("secondaryRoles")}>
         <ul className="flex flex-wrap gap-x-4 gap-y-1">
           {user.secondaryRoles.map(role => (
             <li key={role.id}>
@@ -106,11 +113,6 @@ export const PersonalInformationContent = ({
             </li>
           ))}
         </ul>
-      </Detail>
-    ),
-    user.headline === null ? null : (
-      <Detail className="sm:col-span-2" key="headline" label={t("headline")}>
-        {user.headline}
       </Detail>
     ),
   ].filter(detail => detail !== null);
@@ -139,7 +141,11 @@ export const PersonalInformationContent = ({
               </DialogHeader>
 
               <React.Suspense fallback={<PersonalFormSkeleton />}>
-                <PersonalFormContent onUpdate={onUpdate} user={user} />
+                <PersonalFormContent
+                  fields={fields}
+                  onUpdate={onUpdate}
+                  user={user}
+                />
               </React.Suspense>
             </DialogContent>
           </Dialog>

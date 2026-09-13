@@ -22,6 +22,7 @@ import type {
 } from "./lib/i18n/types";
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { BuildPluginReturn } from "./lib/plugin";
+import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
 
 export type { LocaleConfig };
 
@@ -125,6 +126,16 @@ export interface VitNodeApiConfig {
       quality?: number;
       webp?: boolean;
     };
+  };
+  users?: {
+    /**
+     * Which personal-information fields this install offers. Every field is on
+     * unless it is set to `false`, and turning one off hides it from the
+     * settings card and its form and makes the API refuse to write it - the
+     * column keeps whatever it already held, so switching it back on restores
+     * what members had set.
+     */
+    personalInformation?: PersonalInformationFieldsConfig;
   };
 }
 

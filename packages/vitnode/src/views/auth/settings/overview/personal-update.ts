@@ -2,7 +2,10 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { usersModule } from "@/api/modules/users/users.module";
 import type { UniversalFetcher } from "@/lib/fetcher-client";
-import type { UserPersonalInformation } from "@/lib/user-personal-information";
+import type {
+  PersonalInformationFields,
+  UserPersonalInformation,
+} from "@/lib/user-personal-information";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
@@ -12,6 +15,7 @@ const usersModuleRef = clientModule<typeof usersModule>(CONFIG_PLUGIN.pluginId);
 
 export interface PersonalInfoPolicy {
   canEdit: boolean;
+  fields: PersonalInformationFields;
 }
 
 export type PersonalInfoPolicyFetcher = () => Promise<PersonalInfoPolicy>;

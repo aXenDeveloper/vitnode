@@ -12,6 +12,8 @@ import {
   USER_FIRST_NAME_MAX_LENGTH,
   USER_HEADLINE_MAX_LENGTH,
   USER_LAST_NAME_MAX_LENGTH,
+  USER_PHONE_MAX_LENGTH,
+  USER_PHONE_PATTERN,
 } from "@/lib/user-personal-information";
 
 const nullableText = (max: number) => z.string().max(max).nullable();
@@ -24,6 +26,14 @@ export const zodUpdateMeSchema = z
     lastName: nullableText(USER_LAST_NAME_MAX_LENGTH).openapi({
       example: "Boruch",
     }),
+    phone: z
+      .string()
+      .max(USER_PHONE_MAX_LENGTH)
+      .refine(value => value === "" || USER_PHONE_PATTERN.test(value), {
+        message: "Invalid phone number",
+      })
+      .nullable()
+      .openapi({ example: "+48 600 700 800" }),
     headline: nullableText(USER_HEADLINE_MAX_LENGTH).openapi({
       example: "Team Manager",
     }),
@@ -37,6 +47,7 @@ export const zodUpdateMeSchema = z
 export const zodPersonalInformation = z.object({
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
+  phone: z.string().nullable(),
   headline: z.string().nullable(),
   showRealName: z.boolean(),
 });
@@ -94,19 +105,43 @@ export const updateMeRoute = buildRoute({
       );
     }
 
-    const values = personalInformationChanges(c.req.valid("json"));
+    const values = personalInformationChanges(
+      c.req.valid("json"),
+      policy.fields,
+    );
+    const columns = {
+      firstName: core_users.firstName,
+      lastName: core_users.lastName,
+      phone: core_users.phone,
+      headline: core_users.headline,
+      showRealName: core_users.showRealName,
+    };
+
+    // A body of nothing but fields this install has switched off leaves nothing
+    // to write, and `set({})` is a Drizzle error rather than a no-op. Answer
+    // with the row as it stands: the caller asked for a change that does not
+    // apply here, which is not a failure on their part.
+    if (Object.keys(values).length === 0) {
+      const [current] = await c
+        .get("db")
+        .select(columns)
+        .from(core_users)
+        .where(eq(core_users.id, user.id))
+        .limit(1);
+
+      if (!current) {
+        throw new HTTPException(401, { message: "Unauthorized" });
+      }
+
+      return c.json(current, 200);
+    }
 
     const [updated] = await c
       .get("db")
       .update(core_users)
       .set(values)
       .where(eq(core_users.id, user.id))
-      .returning({
-        firstName: core_users.firstName,
-        lastName: core_users.lastName,
-        headline: core_users.headline,
-        showRealName: core_users.showRealName,
-      });
+      .returning(columns);
 
     if (!updated) {
       throw new HTTPException(401, { message: "Unauthorized" });

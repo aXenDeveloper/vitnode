@@ -95,6 +95,7 @@ const PLUGIN_ID = "@vitnode/example";
 const adminUser = {
   avatarColor: "000000",
   headline: null,
+  phone: null,
   showRealName: false,
   firstName: null,
   lastName: null,

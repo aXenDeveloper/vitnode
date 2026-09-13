@@ -23,6 +23,7 @@ export const sessionRoute = buildRoute({
                   nameCode: z.string(),
                   firstName: z.string().nullable(),
                   lastName: z.string().nullable(),
+                  phone: z.string().nullable(),
                   headline: z.string().nullable(),
                   showRealName: z.boolean(),
                   createdAt: z.date(),

@@ -6,6 +6,7 @@ import type { CacheClient } from "@/api/lib/cache";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
+import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
@@ -32,6 +33,7 @@ import { ensureContentPreviewSecret } from "@/content/server/preview-secret";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
+import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
@@ -81,6 +83,7 @@ export interface EnvVariablesVitNode {
       name: string;
       nameCode: string;
       newsletter: boolean;
+      phone: null | string;
       roleId: number;
       showRealName: boolean;
     };
@@ -127,6 +130,8 @@ export interface EnvVariablesVitNode {
       title: string;
     };
     permissionStaff: PermissionStaffCatalogEntry[];
+    /** Which personal-information fields this install offers. */
+    personalInformationFields: PersonalInformationFields;
     plugins: { id: string }[];
     queue: (BuildQueueTaskReturn & { module: string; pluginId: string })[];
     search: { adapter: SearchProviderApiPlugin };
@@ -163,6 +168,7 @@ export interface EnvVariablesVitNode {
     name: string;
     nameCode: string;
     newsletter: boolean;
+    phone: null | string;
     roleId: number;
     showRealName: boolean;
   };
@@ -182,6 +188,7 @@ export const globalMiddleware = ({
   i18n,
   search,
   storage,
+  users,
   cacheClient,
 }: Pick<
   VitNodeApiConfig,
@@ -197,6 +204,7 @@ export const globalMiddleware = ({
   | "plugins"
   | "search"
   | "storage"
+  | "users"
 > &
   Pick<VitNodeConfig, "metadata"> & {
     cacheClient: CacheClient | null;
@@ -378,6 +386,9 @@ export const globalMiddleware = ({
         cookieDomain: authorization?.cookieDomain,
       },
       captcha,
+      personalInformationFields: resolvePersonalInformationFields(
+        users?.personalInformation,
+      ),
       contentPreviewSecret,
       cronSecret: CONFIG.cronJobSecret,
       hasCronAdapter: !!cron,

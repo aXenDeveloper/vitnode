@@ -44,6 +44,7 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
       canEditPersonalInfo={policy.canEdit}
       editor={editor}
       onUpdate={onUpdate}
+      personalFields={policy.fields}
       user={{
         ...profile,
         headline: session.user.headline,
@@ -52,6 +53,7 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
         firstName: session.user.firstName,
         lastName: session.user.lastName,
         name: session.user.name,
+        phone: session.user.phone,
         showRealName: session.user.showRealName,
       }}
     />

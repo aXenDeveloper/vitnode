@@ -99,6 +99,7 @@ The canonical user table contains:
 | `email`         | `varchar(255)` | Unique account login email                            |
 | `firstName`     | `varchar(128)` | Given name, set by the user (nullable)                |
 | `lastName`      | `varchar(128)` | Family name, set by the user (nullable)               |
+| `phone`         | `varchar(32)`  | Contact number, their own (nullable)                  |
 | `headline`      | `varchar(100)` | One line about the user, their own (nullable)         |
 | `showRealName`  | `boolean`      | Show the real name publicly instead of `name`         |
 | `roleId`        | `integer`      | Primary role ID (FK to `core_roles`)                  |
@@ -111,11 +112,14 @@ The canonical user table contains:
 Every user payload the API hands out - the session, the public profile, the
 AdminCP list and detail, search hit authors - carries the two images resolved
 to URLs as `avatarUrl` and `coverUrl`. Both are `null` until something is
-uploaded, and the `Avatar` component falls back to the letter avatar on its own.
+uploaded, and the `Avatar` component falls back to the letter avatar on its own -
+drawn from the first character of `nameCode`, never of the displayed name, so a
+member who changes which name their profile shows keeps the same face in every
+list they appear in.
 
 ### Personal information
 
-`firstName`, `lastName` and `headline` are the user's own to set, at **Settings →
+`firstName`, `lastName`, `phone` and `headline` are the user's own to set, at **Settings →
 Overview** (`/settings`). All three are optional, all three are stored as `null`
 rather than an empty string when cleared, and the session payload carries them
 so anything already reading the session can show them without a second request.
@@ -125,10 +129,16 @@ so anything already reading the session can show them without a second request.
 | `GET`   | `/api/@vitnode/core/users/me/policy` | The signed-in user - may they edit?  |
 | `PATCH` | `/api/@vitnode/core/users/me`        | The signed-in user, on their own row |
 
-The body takes any subset of `{ firstName, lastName, headline, showRealName }` -
+The body takes any subset of
+`{ firstName, lastName, phone, headline, showRealName }` -
 a field left out is left alone, and a text field sent as `""` or whitespace is
 cleared. Writing invalidates the user's cached session and emits
 [`user.updated`](/docs/dev/events/built-in-events).
+
+`phone` is the one field with a shape: digits and the punctuation international
+numbers are written with (`+`, spaces, `-`, `(` and `)`), up to 32 characters.
+Anything else is rejected by the form and by the route. It is **not** on the
+public profile payload - only the account's own session carries it.
 
 ### Which name the public sees
 
@@ -156,6 +166,35 @@ never take effect.
 
 The settings card hides its **Edit** button when the answer is no, and
 `PATCH /users/me` answers `403` regardless of what the UI showed.
+
+### Turning fields off for the whole install
+
+Roles decide _who_ may edit. The API config decides _which fields exist at all_.
+Every field is on unless you set it to `false` in `vitnode.api.config.ts`:
+
+```ts title="vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  users: {
+    personalInformation: {
+      phone: false,
+      headline: false,
+      showRealName: false,
+    },
+  },
+})
+```
+
+The keys are `firstName`, `lastName`, `phone`, `headline` and `showRealName`. A
+field switched off disappears from the settings card and from its form, and
+`PATCH /users/me` refuses to write it even if a caller sends it anyway - so a
+stale browser tab or a hand-rolled request cannot get around it.
+
+Switching a field off never deletes anything: the column keeps whatever members
+had already set, so turning it back on restores their values. With
+`showRealName` off, every profile is headed by the nickname again, whatever
+individual members had chosen. With **every** field off there is nothing left to
+edit, so the **Edit** button disappears too.
 
 ---
 

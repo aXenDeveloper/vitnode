@@ -18,6 +18,7 @@ const userFixture = (overrides: Partial<AuthUser> = {}): AuthUser => ({
   avatarColor: "#101010",
   avatarUrl: null,
   headline: null,
+  phone: null,
   birthday: null,
   coverUrl: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),

@@ -26,7 +26,7 @@ export interface AvatarUser {
  * data URI is inline anyway - the browser has the bytes before it can defer.
  */
 export const Avatar = ({
-  user: { avatarColor, avatarUrl, name },
+  user: { avatarColor, avatarUrl, name, nameCode },
   className,
   size,
   ...props
@@ -47,7 +47,7 @@ export const Avatar = ({
       onError={() => {
         if (stored) setFailedUrl(stored);
       }}
-      src={stored ?? generateLetterPhoto(name.slice(0, 1), avatarColor)}
+      src={stored ?? generateLetterPhoto(nameCode.slice(0, 1), avatarColor)}
       width={size}
       {...props}
     />

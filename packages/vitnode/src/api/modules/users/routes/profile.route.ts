@@ -61,7 +61,12 @@ export const profileRoute = buildRoute({
     return c.json(
       {
         id: user.id,
-        name: displayNameOf(user),
+        name: displayNameOf({
+          ...user,
+          showRealName:
+            c.get("core").personalInformationFields.showRealName &&
+            user.showRealName,
+        }),
         nameCode: user.nameCode,
         avatarColor: user.avatarColor,
         avatarUrl: user.avatarUrl,

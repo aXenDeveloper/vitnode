@@ -1,22 +1,51 @@
 export const USER_FIRST_NAME_MAX_LENGTH = 128;
 export const USER_LAST_NAME_MAX_LENGTH = 128;
 export const USER_HEADLINE_MAX_LENGTH = 100;
+export const USER_PHONE_MAX_LENGTH = 32;
+
+/** Digits and the punctuation international numbers are written with. */
+export const USER_PHONE_PATTERN = /^[\d\s+()-]+$/;
 
 export interface UserPersonalInformation {
   firstName: null | string;
   headline: null | string;
   lastName: null | string;
+  phone: null | string;
   showRealName: boolean;
 }
 
 export const PERSONAL_INFORMATION_TEXT_FIELDS = [
   "firstName",
   "lastName",
+  "phone",
   "headline",
+] as const satisfies readonly (keyof UserPersonalInformation)[];
+
+export const PERSONAL_INFORMATION_FIELDS = [
+  ...PERSONAL_INFORMATION_TEXT_FIELDS,
+  "showRealName",
 ] as const satisfies readonly (keyof UserPersonalInformation)[];
 
 export type UserPersonalInformationTextField =
   (typeof PERSONAL_INFORMATION_TEXT_FIELDS)[number];
+
+export type UserPersonalInformationField =
+  (typeof PERSONAL_INFORMATION_FIELDS)[number];
+
+export type PersonalInformationFields = Record<
+  UserPersonalInformationField,
+  boolean
+>;
+
+export type PersonalInformationFieldsConfig =
+  Partial<PersonalInformationFields>;
+
+export const resolvePersonalInformationFields = (
+  config: PersonalInformationFieldsConfig = {},
+): PersonalInformationFields =>
+  Object.fromEntries(
+    PERSONAL_INFORMATION_FIELDS.map(field => [field, config[field] !== false]),
+  ) as PersonalInformationFields;
 
 export const normalizePersonalField = (value: unknown): null | string => {
   if (typeof value !== "string") return null;
@@ -27,14 +56,15 @@ export const normalizePersonalField = (value: unknown): null | string => {
 };
 
 export const personalInformationChanges = (
-  input: Partial<Record<keyof UserPersonalInformation, unknown>>,
+  input: Partial<Record<UserPersonalInformationField, unknown>>,
+  fields: PersonalInformationFields = resolvePersonalInformationFields(),
 ): Partial<UserPersonalInformation> => ({
   ...Object.fromEntries(
-    PERSONAL_INFORMATION_TEXT_FIELDS.filter(field => field in input).map(
-      field => [field, normalizePersonalField(input[field])],
-    ),
+    PERSONAL_INFORMATION_TEXT_FIELDS.filter(
+      field => fields[field] && field in input,
+    ).map(field => [field, normalizePersonalField(input[field])]),
   ),
-  ...(typeof input.showRealName === "boolean"
+  ...(fields.showRealName && typeof input.showRealName === "boolean"
     ? { showRealName: input.showRealName }
     : {}),
 });

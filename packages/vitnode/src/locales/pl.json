@@ -326,6 +326,7 @@
         "internal_server_error": "Wewnętrzny błąd serwera.",
         "field_required": "To pole jest wymagane.",
         "field_min_length": "To pole musi mieć co najmniej {min, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}}.",
+        "field_invalid_phone": "Podaj prawidłowy numer telefonu.",
         "captcha_internal_error": "Weryfikacja captcha nie powiodła się. Spróbuj ponownie później."
       },
       "user_bar": {
@@ -349,8 +350,8 @@
       }
     },
     "profile": {
-      "title": "Profil {name}",
-      "metaDesc": "Zobacz profil {name}: role i datę dołączenia do społeczności.",
+      "title": "{name} (@{nameCode})",
+      "metaDesc": "Zobacz profil {name} (@{nameCode}): role i datę dołączenia do społeczności.",
       "joined": "W społeczności od <time>{date}</time>",
       "about": "O użytkowniku",
       "memberSince": "Członek od",
@@ -578,13 +579,11 @@
           "personalTitle": "Informacje osobiste",
           "personalDialogDesc": "Opowiedz społeczności, kim jesteś. Każde pole jest opcjonalne.",
           "nickname": "Pseudonim",
-          "publicName": "Nazwa publiczna",
-          "publicNameNickname": "Twój pseudonim",
-          "publicNameReal": "Twoje imię i nazwisko",
           "showRealName": "Pokazuj moje prawdziwe imię",
           "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim.",
           "firstName": "Imię",
           "lastName": "Nazwisko",
+          "phone": "Telefon",
           "email": "Adres e-mail",
           "secondaryRoles": "Role dodatkowe",
           "headline": "Nagłówek",

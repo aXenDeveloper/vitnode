@@ -134,6 +134,7 @@ export function VitNodeAPI({
       events: vitNodeApiConfig.events,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,
+      users: vitNodeApiConfig.users,
       plugins,
       cacheClient: redisClient,
     }),

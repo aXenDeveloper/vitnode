@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c49ea4fc-e4d0-4e81-9ed2-39f81ab66b3a",
+  "id": "dde898da-7c8a-40ad-af0f-8d221bc7c5c9",
   "prevIds": [
     "911db9d8-9728-4c60-8aad-6788fdda067f"
   ],
@@ -2637,6 +2637,19 @@
       "generated": null,
       "identity": null,
       "name": "lastName",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_users"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "phone",
       "entityType": "columns",
       "schema": "public",
       "table": "core_users"

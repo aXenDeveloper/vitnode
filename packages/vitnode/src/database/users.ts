@@ -9,6 +9,7 @@ import {
   USER_FIRST_NAME_MAX_LENGTH,
   USER_HEADLINE_MAX_LENGTH,
   USER_LAST_NAME_MAX_LENGTH,
+  USER_PHONE_MAX_LENGTH,
 } from "@/lib/user-personal-information";
 
 import { core_files } from "./files";
@@ -24,6 +25,7 @@ export const core_users = camelCase.table.withRLS(
     email: t.varchar({ length: 255 }).notNull().unique(),
     firstName: t.varchar({ length: USER_FIRST_NAME_MAX_LENGTH }),
     lastName: t.varchar({ length: USER_LAST_NAME_MAX_LENGTH }),
+    phone: t.varchar({ length: USER_PHONE_MAX_LENGTH }),
     headline: t.varchar({ length: USER_HEADLINE_MAX_LENGTH }),
     showRealName: t.boolean().notNull().default(false),
     password: t.varchar(),

@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { UserImageEditor } from "@/views/profile/images/types";
 import type { ProfileRole } from "@/views/profile/profile-query";
 
@@ -25,17 +26,22 @@ export interface SettingsOverviewUser extends PersonalInformationUser {
 export const OverviewSettingsContent = ({
   canEditPersonalInfo,
   editor,
+  personalFields,
   onUpdate,
   user,
 }: {
   canEditPersonalInfo: boolean;
   editor?: UserImageEditor;
   onUpdate: UpdatePersonalInformation;
+  personalFields: PersonalInformationFields;
   user: SettingsOverviewUser;
 }) => {
   const t = useTranslations("core.auth.settings.overview");
   const tNav = useTranslations("core.auth.settings.nav");
-  const displayName = displayNameOf(user);
+  const displayName = displayNameOf({
+    ...user,
+    showRealName: personalFields.showRealName && user.showRealName,
+  });
 
   return (
     <>
@@ -78,6 +84,7 @@ export const OverviewSettingsContent = ({
 
         <PersonalInformationContent
           canEdit={canEditPersonalInfo}
+          fields={personalFields}
           onUpdate={onUpdate}
           user={user}
         />

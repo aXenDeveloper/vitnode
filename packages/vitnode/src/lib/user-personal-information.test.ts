@@ -5,6 +5,8 @@ import {
   fullNameOf,
   normalizePersonalField,
   personalInformationChanges,
+  resolvePersonalInformationFields,
+  USER_PHONE_PATTERN,
 } from "./user-personal-information";
 
 describe("one personal field on its way to the column", () => {
@@ -61,6 +63,65 @@ describe("which columns a PATCH body actually writes", () => {
 
   it("writes nothing for an empty body", () => {
     expect(personalInformationChanges({})).toEqual({});
+  });
+
+  it("refuses a field the install has switched off", () => {
+    // The form does not offer it, but a PATCH body is network input.
+    expect(
+      personalInformationChanges(
+        { firstName: "Emirhan", headline: "Team Manager", showRealName: true },
+        resolvePersonalInformationFields({
+          headline: false,
+          showRealName: false,
+        }),
+      ),
+    ).toEqual({ firstName: "Emirhan" });
+  });
+});
+
+describe("what counts as a phone number", () => {
+  it.each([
+    "+48 600 700 800",
+    "600700800",
+    "(022) 123-45-67",
+    "+1 (555) 010-9999",
+  ])("accepts %j", value => {
+    expect(USER_PHONE_PATTERN.test(value)).toBe(true);
+  });
+
+  it.each(["call me", "600-700-800 ext. 4", "<script>", "600@700"])(
+    "rejects %j",
+    value => {
+      expect(USER_PHONE_PATTERN.test(value)).toBe(false);
+    },
+  );
+});
+
+describe("which personal fields an install offers", () => {
+  it("offers all of them by default", () => {
+    expect(resolvePersonalInformationFields()).toEqual({
+      firstName: true,
+      headline: true,
+      lastName: true,
+      phone: true,
+      showRealName: true,
+    });
+  });
+
+  it("turns off only what the config says `false`", () => {
+    expect(resolvePersonalInformationFields({ headline: false })).toEqual({
+      firstName: true,
+      headline: false,
+      lastName: true,
+      phone: true,
+      showRealName: true,
+    });
+  });
+
+  it("treats an omitted field as on, so adding a field never hides it", () => {
+    expect(
+      resolvePersonalInformationFields({ firstName: undefined }).firstName,
+    ).toBe(true);
   });
 });
 

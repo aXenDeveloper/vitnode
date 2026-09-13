@@ -20,6 +20,7 @@ export const getUserById = async ({ id, c }: { c: Context; id: number }) => {
       nameCode: core_users.nameCode,
       firstName: core_users.firstName,
       lastName: core_users.lastName,
+      phone: core_users.phone,
       headline: core_users.headline,
       showRealName: core_users.showRealName,
       createdAt: core_users.createdAt,
