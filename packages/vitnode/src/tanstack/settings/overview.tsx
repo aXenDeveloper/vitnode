@@ -30,11 +30,13 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
     async input => {
       const result = await updatePersonalInformationInBrowser(input);
 
-      if (result.data) await invalidateSession(queryClient);
+      if (result.data) {
+        await Promise.all([invalidateSession(queryClient), refresh()]);
+      }
 
       return result;
     },
-    [queryClient],
+    [queryClient, refresh],
   );
 
   if (!session.user) return null;
