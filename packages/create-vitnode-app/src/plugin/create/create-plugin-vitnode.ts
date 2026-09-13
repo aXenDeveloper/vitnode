@@ -1,15 +1,17 @@
 import { existsSync } from "fs";
 import { cp, mkdir, rename, writeFile } from "fs/promises";
 import ora from "ora";
-import { dirname, join } from "path";
+import { dirname, join, relative } from "path";
 import color from "picocolors";
 import { fileURLToPath } from "url";
 
 import type { CreatePluginCliReturn } from "../questions.js";
+import type { PluginConfigRegistration } from "./add-plugin-to-config.js";
 
 import { getPackageManagerFromRoot } from "../../helpers/get-package-manager-from-root.js";
 import { installDependencies } from "../../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../../helpers/is-folder-empty.js";
+import { addPluginToConfig } from "./add-plugin-to-config.js";
 import { addPluginToWorkspace } from "./add-plugin-to-workspace.js";
 import { createPluginPackageJSON } from "./create-package-json.js";
 import { pluginRouteScaffold } from "./route-templates.js";
@@ -34,6 +36,42 @@ const writePluginRouteScaffold = async ({
       writeFile(join(pluginPath, file), contents, "utf-8"),
     ),
   );
+};
+
+const reportConfigRegistrations = ({
+  pluginName,
+  registrations,
+  rootPath,
+}: {
+  pluginName: string;
+  registrations: PluginConfigRegistration[];
+  rootPath: string;
+}) => {
+  const registered = registrations.filter(
+    ({ status }) => status === "registered",
+  );
+
+  registered.forEach(({ file }) => {
+    console.log(
+      `  ${color.green("+")} Registered in ${color.cyan(relative(rootPath, file))}`,
+    );
+  });
+
+  const unusable = registrations.filter(
+    ({ status }) => status === "no-plugins-array",
+  );
+
+  unusable.forEach(({ file }) => {
+    console.log(
+      `  ${color.yellow("!")} ${color.cyan(relative(rootPath, file))} has no \`plugins\` array - add ${color.cyan(pluginName)} to it by hand.`,
+    );
+  });
+
+  if (registered.length === 0 && unusable.length === 0) {
+    console.log(
+      `  ${color.yellow("!")} No VitNode config found. Add ${color.cyan(`${pluginName}/config`)} to your app's \`vitnode.config.ts\` and ${color.cyan(`${pluginName}/config.api`)} to its \`vitnode.api.config.ts\`.`,
+    );
+  }
 };
 
 export const createPluginVitNode = async ({
@@ -84,7 +122,7 @@ export const createPluginVitNode = async ({
     await rename(npmIgnoreTemplatePath, dotNpmIgnorePath);
   }
 
-  spinner.text = "Writing the plugin's first route...";
+  spinner.text = "Writing the plugin's first route and API...";
   await writePluginRouteScaffold({ pluginName, pluginPath });
 
   spinner.text = "Creating package.json...";
@@ -137,6 +175,13 @@ export const createPluginVitNode = async ({
     rootPath,
   });
 
+  spinner.text = "Registering the plugin with the apps that can serve it...";
+  const registrations = await addPluginToConfig({
+    pluginName,
+    pluginPath,
+    rootPath,
+  });
+
   if (install) {
     spinner.text = "Installing dependencies...";
     await installDependencies({
@@ -148,4 +193,6 @@ export const createPluginVitNode = async ({
   spinner.succeed(
     `${color.green("Success!")} Created ${color.cyan(pluginName)} at ${color.cyan(pluginPath)}`,
   );
+
+  reportConfigRegistrations({ pluginName, registrations, rootPath });
 };

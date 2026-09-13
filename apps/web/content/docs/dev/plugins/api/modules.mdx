@@ -10,6 +10,12 @@ Start with [a plugin](/docs/dev/plugins/create), not a host endpoint. A module
 groups the plugin's Hono routes under one URL prefix and gives OpenAPI a tidy
 place to describe them.
 
+<Callout type="info" title="A generated plugin already has one">
+  `create-vitnode-app --plugin` writes a `hello` module, its `config.api.ts` and
+  a page that calls it. Read on for what each piece does—then rename them, or add
+  a second module beside them.
+</Callout>
+
 {/* Image prompt: Dark-theme API ownership diagram. A Site notes plugin contains a Hono route, notes module, and config.api file; the app API configuration composes the plugin once. Show resulting GET endpoint, 1600x900. */}
 
 <Steps>
@@ -70,6 +76,10 @@ export const siteNotesApiPlugin = () =>
     pluginId: '@acme/site-notes',
   })
 ```
+
+This file, and not `config.tsx`: the API config reaches your handlers, database
+and secrets, while `config.tsx` is read by the browser build. A module
+registered in the wrong one is shipped to every visitor.
 
   </Step>
   <Step>

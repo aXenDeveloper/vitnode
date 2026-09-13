@@ -24,15 +24,30 @@ choose a transport.
 ### Define it in your plugin
 
 Keep this in one plugin file. Features import `notesApi`; they never set up a
-module reference themselves.
+module reference themselves. `create-vitnode-app --plugin` writes this file for
+you—the shape below is what it generates.
 
 ```ts title="plugins/site-notes/src/api/client.ts"
-import type { notesModule } from "../api/notes.module"
+import type { ApiClient } from "@vitnode/core/tanstack/fetcher"
 
 import { createApiClient } from "@vitnode/core/tanstack/fetcher"
 
-export const notesApi = createApiClient<typeof notesModule>("@acme/site-notes")
+import type { notesModule } from "./modules/notes/notes.module"
+
+export const notesApi: ApiClient<typeof notesModule> =
+  createApiClient<typeof notesModule>("@acme/site-notes")
 ```
+
+<Callout type="warn" title="Both halves of that line earn their keep">
+  `import type` is what keeps Hono and your handlers out of the browser bundle—a
+  value import would ship the whole API to every visitor, and nothing would fail
+  to compile.
+
+  The `ApiClient` annotation is what keeps your plugin's `.d.ts` small. Without
+  it, declaration emit resolves the client's type in full and writes every route
+  the module serves into your build output: 200KB for a single route, and every
+  app that installs the plugin type-checks it.
+</Callout>
 
 </Step>
 

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AdminBreadcrumb } from "@vitnode/core/tanstack/admin";
+import { adminBreadcrumb } from "@vitnode/core/tanstack/admin";
 import {
   AdminDashboardRouteContent,
   loadAdminDashboardRoute,
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_admin/admin/core/")({
   component: AdminDashboardRoute,
   
   staticData: {
-    breadcrumb: <AdminBreadcrumb segments={["core"]} />,
+    breadcrumb: adminBreadcrumb({ segments: ["core"] }),
   },
 });
 

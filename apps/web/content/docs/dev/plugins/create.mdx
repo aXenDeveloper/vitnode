@@ -4,7 +4,7 @@ description: Scaffold a VitNode plugin, register its package in your host app, a
 icon: PackagePlus
 ---
 
-import { DatabaseIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import { BoxIcon, DatabaseIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 A plugin is the starting point for a VitNode feature. It keeps routes, API
@@ -41,9 +41,24 @@ npm create vitnode-app@canary -- --plugin
 
 </Tabs>
 
-The CLI creates `plugins/site-notes`, adds it as a workspace dependency, and
-gives it a route, locale, and config skeleton. It does **not** enable the
-feature for the host—that explicit switch is next.
+The CLI creates `plugins/site-notes` with a working slice of a feature, end to
+end:
+
+| File | What it is |
+| ---- | ---------- |
+| `src/const.ts` | The plugin's id, written once and read by everything below |
+| `src/routes.ts` | The URLs the plugin owns |
+| `src/pages/home-page.tsx` | The page, and the loader that calls the API |
+| `src/api/modules/hello/hello.route.ts` | One `GET` endpoint, described with Zod |
+| `src/api/modules/hello/hello.module.ts` | The endpoint's URL prefix |
+| `src/api/client.ts` | The typed fetcher the page calls it through |
+| `src/config.tsx` | What the app registers |
+| `src/config.api.ts` | What the app's **API** registers |
+| `src/locales/` | The strings the page renders |
+
+It also registers the plugin for you: as a workspace dependency of every package
+that depends on `@vitnode/core`, and in each of their VitNode configs. Check what
+it wrote—that is the next step.
 
   </Step>
   <Step>
@@ -67,26 +82,49 @@ export const routes = definePluginRoutes([
   </Step>
   <Step>
 
-### Register the plugin with the host
+### Check the two registrations
 
-Import the plugin factory in the host config and add it to `plugins`:
+A plugin has two halves, registered separately because different builds read
+them: `config.tsx` goes into the browser bundle, while `config.api.ts` reaches
+your handlers, database and secrets. The generator adds both, and prints each
+file it touched:
 
 ```ts title="apps/web/src/vitnode.config.ts"
 import { siteNotesPlugin } from '@acme/site-notes/config' // [!code ++]
 import { buildConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeConfig = buildConfig({
-  plugins: [
-    siteNotesPlugin(), // [!code ++]
-  ],
+  plugins: [siteNotesPlugin()], // [!code ++]
 })
 ```
 
-That is the only composition step - the factory carries the plugin's routes,
-content types and AdminCP navigation, and the feature stays in its package. Your
-build reads this list and generates one literal import per plugin for each of
-those, so a page or an editing screen loads with the route that needs it rather
-than with the config. See [Configuration](/docs/dev/configuration).
+```ts title="apps/web/src/vitnode.api.config.ts"
+import { siteNotesApiPlugin } from '@acme/site-notes/config.api' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [siteNotesApiPlugin()], // [!code ++]
+})
+```
+
+The first line is the whole composition step for the UI: the factory carries the
+plugin's routes, content types and AdminCP navigation, and the feature stays in
+its package. Your build reads that list and generates one literal import per
+plugin for each of those, so a page or an editing screen loads with the route
+that needs it rather than with the config. See
+[Configuration](/docs/dev/configuration).
+
+The second gives you `GET /api/@acme/site-notes/hello`, and puts it in OpenAPI
+without another line. Remove it and the page still renders—its loader just gets a
+404 instead of a greeting.
+
+<Callout type="info" title="When the generator says it found no config">
+  It edits the `vitnode.config.ts` and `vitnode.api.config.ts` of every package
+  that depends on `@vitnode/core`, and skips anything else. A config somewhere
+  unusual—or a `plugins` array the generator could not find—is reported rather
+  than guessed at: add the two lines above by hand. Running the generator again
+  never duplicates a registration.
+</Callout>
 
 Its translations need one more line, in `src/locales/packages.ts` - see
 [Languages & Localization](/docs/dev/i18n).
@@ -113,9 +151,12 @@ npm run dev
 </Tabs>
 
 Open `http://localhost:3000/site-notes`. The page comes from the plugin, gets
-its own chunk, and never moves house. Tiny victory dance optional.
+its own chunk, and greets you with whatever its own endpoint answered—rendered
+on the server for this first visit, fetched in the browser on the next
+navigation, from the one `helloApi.fetch` call in its loader. Tiny victory dance
+optional.
 
-{/* Image prompt: Split-screen developer tutorial image. Left shows a plugin folder with routes.ts, locale, and pages files. Right shows the resulting /site-notes page in a VitNode app. Dark theme, precise code-like labels, 1600x900. */}
+{/* Image prompt: Split-screen developer tutorial image. Left shows a plugin folder with routes.ts, config.api.ts, an api/modules/hello folder, locale, and pages files. Right shows the resulting /site-notes page in a VitNode app, rendering a greeting returned by the plugin's own endpoint. Dark theme, precise code-like labels, 1600x900. */}
 
   </Step>
 </Steps>
@@ -128,6 +169,12 @@ its own chunk, and never moves house. Tiny victory dance optional.
     title="Plugin routes"
     description="Add nested layouts, dynamic URLs, loaders, metadata, and guards."
     href="/docs/dev/plugins/routes"
+  />
+  <Card
+    icon={<BoxIcon />}
+    title="API modules"
+    description="Add another endpoint beside the generated one, with Zod-validated inputs."
+    href="/docs/dev/plugins/api/modules"
   />
   <Card
     icon={<DatabaseIcon />}

@@ -47,7 +47,7 @@ interface RouteShape {
   };
 }
 
-interface ModuleSpec {
+export interface ModuleSpec {
   readonly modules?: readonly ModuleSpec[];
   readonly name: string;
   readonly routes: readonly RouteShape[];
@@ -146,7 +146,7 @@ type InferStatusCode<K> = K extends `${infer N extends number}`
     ? K
     : never;
 
-interface BaseFetcherParams<
+export interface BaseFetcherParams<
   M extends string,
   Routes extends Route[],
   Modules extends BaseBuildModuleReturn[],
