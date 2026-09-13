@@ -1,7 +1,6 @@
 export {
   type ContentFormContextValue,
   type ContentFormHeaderValue,
-  type ContentFormLinkComponent,
   useContentForm,
   useContentFormOptional,
 } from "./context";

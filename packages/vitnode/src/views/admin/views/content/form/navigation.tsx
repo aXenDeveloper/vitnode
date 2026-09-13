@@ -1,10 +1,6 @@
 import React from "react";
 
-import type { ContentFormLinkComponent } from "./context";
-
 export interface ContentFormNavigation {
-  LinkComponent: ContentFormLinkComponent;
-
   navigate: (href: string) => void;
 
   refresh: () => void;

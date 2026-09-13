@@ -45,10 +45,8 @@ const usersListRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ AdminUsersRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../admin/users/screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { AdminUsersRouteContent } =
+        await import("../../admin/users/screen");
 
       return {
         default: function AdminUsersRoute() {
@@ -57,7 +55,6 @@ const usersListRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
           return (
             <AdminUsersRouteContent
               {...route.useLoaderData()}
-              LinkComponent={RouterLink}
               navigate={useCallback(
                 async ({
                   resetScroll,
@@ -104,10 +101,8 @@ const rolesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ AdminRolesRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../admin/roles/screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { AdminRolesRouteContent } =
+        await import("../../admin/roles/screen");
 
       return {
         default: function AdminRolesRoute() {
@@ -116,7 +111,6 @@ const rolesRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
           return (
             <AdminRolesRouteContent
               {...route.useLoaderData()}
-              LinkComponent={RouterLink}
               navigate={useCallback(
                 async ({
                   resetScroll,
@@ -161,19 +155,12 @@ const userRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ AdminUserRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../admin/users/detail-screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { AdminUserRouteContent } =
+        await import("../../admin/users/detail-screen");
 
       return {
         default: function AdminUserRoute() {
-          return (
-            <AdminUserRouteContent
-              {...route.useLoaderData()}
-              LinkComponent={RouterLink}
-            />
-          );
+          return <AdminUserRouteContent {...route.useLoaderData()} />;
         },
       };
     }),

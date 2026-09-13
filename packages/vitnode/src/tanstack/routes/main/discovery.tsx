@@ -23,19 +23,12 @@ const discoverRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ DiscoverRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../search/discover-screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { DiscoverRouteContent } =
+        await import("../../search/discover-screen");
 
       return {
         default: function DiscoverRoute() {
-          return (
-            <DiscoverRouteContent
-              {...route.useLoaderData()}
-              LinkComponent={RouterLink}
-            />
-          );
+          return <DiscoverRouteContent {...route.useLoaderData()} />;
         },
       };
     }),
@@ -66,19 +59,11 @@ const searchRoute: CoreRouteFactory = ({ pageHead, parentRoute }) => {
 
   route.update({
     component: lazyRouteComponent(async () => {
-      const [{ SearchRouteContent }, { RouterLink }] = await Promise.all([
-        import("../../search/search-screen"),
-        import("../../layout/router-link"),
-      ]);
+      const { SearchRouteContent } = await import("../../search/search-screen");
 
       return {
         default: function SearchRoute() {
-          return (
-            <SearchRouteContent
-              {...route.useLoaderData()}
-              LinkComponent={RouterLink}
-            />
-          );
+          return <SearchRouteContent {...route.useLoaderData()} />;
         },
       };
     }),

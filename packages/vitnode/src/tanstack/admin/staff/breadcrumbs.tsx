@@ -1,7 +1,6 @@
 import { useTranslations } from "use-intl";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import {
   STAFF_TYPE_SEGMENT,
@@ -14,7 +13,6 @@ import { AdminBreadcrumb } from "../breadcrumb";
 const STAFF_BREADCRUMB_NAMESPACES = ["admin.staff", "core.global"] as const;
 
 interface StaffBreadcrumbProps {
-  LinkComponent?: AuthLinkComponent;
   type: PermissionStaffType;
 }
 
@@ -29,40 +27,37 @@ const useStaffLabels = (type: PermissionStaffType) => {
   });
 };
 
-const StaffListCrumb = ({ LinkComponent, type }: StaffBreadcrumbProps) => {
+const StaffListCrumb = ({ type }: StaffBreadcrumbProps) => {
   const labels = useStaffLabels(type);
 
   return (
     <AdminBreadcrumb
       labels={labels}
-      LinkComponent={LinkComponent}
       segments={["core", "staff", STAFF_TYPE_SEGMENT[type]]}
     />
   );
 };
 
-const StaffCreateCrumb = ({ LinkComponent, type }: StaffBreadcrumbProps) => {
+const StaffCreateCrumb = ({ type }: StaffBreadcrumbProps) => {
   const labels = useStaffLabels(type);
   const t = useTranslations("admin.staff.create");
 
   return (
     <AdminBreadcrumb
       labels={labels}
-      LinkComponent={LinkComponent}
       overrideLastLabel={t("button")}
       segments={["core", "staff", STAFF_TYPE_SEGMENT[type], "create"]}
     />
   );
 };
 
-const StaffEditCrumb = ({ LinkComponent, type }: StaffBreadcrumbProps) => {
+const StaffEditCrumb = ({ type }: StaffBreadcrumbProps) => {
   const labels = useStaffLabels(type);
   const t = useTranslations("admin.staff.edit");
 
   return (
     <AdminBreadcrumb
       labels={labels}
-      LinkComponent={LinkComponent}
       overrideLastLabel={t("title")}
       segments={["core", "staff", STAFF_TYPE_SEGMENT[type], "edit"]}
     />

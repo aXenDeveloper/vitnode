@@ -1,24 +1,25 @@
-import { LogOutIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { LogOutIcon, Settings2Icon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/avatar";
+import { NewTabIndicator } from "@/components/new-tab-indicator";
+import { ThemeSwitcherMenu } from "@/components/switchers/themes/theme-switcher-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserMenuIdentity } from "@/components/user-menu-identity";
 
-import type {
-  UserHeaderLinkComponent,
-  UserHeaderState,
-  UserHeaderUser,
-} from "./user-header-model";
+import type { UserHeaderState, UserHeaderUser } from "./user-header-model";
 
 import { USER_HEADER_HREF, userHeaderMenu } from "./user-header-model";
 
@@ -26,38 +27,62 @@ export const UserHeaderSkeleton = () => <Skeleton className="h-9 w-32" />;
 
 export type UserHeaderSignOut = () => Promise<void> | void;
 
-const AnonymousUserHeader = ({
-  LinkComponent,
+const PreferencesMenu = ({
+  languageSwitcher,
 }: {
-  LinkComponent: UserHeaderLinkComponent;
+  languageSwitcher?: React.ReactNode;
+}) => {
+  const t = useTranslations("core.global");
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button aria-label={t("preferences")} size="icon" variant="ghost" />
+        }
+      >
+        <Settings2Icon />
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-48 p-2">
+        <ThemeSwitcherMenu />
+        {languageSwitcher}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const AnonymousUserHeader = ({
+  languageSwitcher,
+}: {
+  languageSwitcher?: React.ReactNode;
 }) => {
   const t = useTranslations("core.global");
 
   return (
     <>
-      <LinkComponent
+      <PreferencesMenu languageSwitcher={languageSwitcher} />
+
+      <Link
         className={buttonVariants({ variant: "ghost" })}
-        href={USER_HEADER_HREF.signIn}
+        to={USER_HEADER_HREF.signIn}
       >
         {t("login")}
-      </LinkComponent>
+      </Link>
 
-      <LinkComponent
-        className={buttonVariants()}
-        href={USER_HEADER_HREF.signUp}
-      >
+      <Link className={buttonVariants()} to={USER_HEADER_HREF.signUp}>
         {t("register")}
-      </LinkComponent>
+      </Link>
     </>
   );
 };
 
 const AuthenticatedUserHeader = ({
-  LinkComponent,
+  languageSwitcher,
   onSignOut,
   user,
 }: {
-  LinkComponent: UserHeaderLinkComponent;
+  languageSwitcher?: React.ReactNode;
   onSignOut: UserHeaderSignOut;
   user: UserHeaderUser;
 }) => {
@@ -72,24 +97,25 @@ const AuthenticatedUserHeader = ({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64 p-2">
+        <DropdownMenuLabel className="flex items-center gap-2 p-1 font-normal">
+          <UserMenuIdentity user={user} />
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
         {userHeaderMenu(user).map(group => (
-          // Every group is followed by a separator, and the sign-out group
-          // below is what the last one separates from. `userHeaderMenu` never
-          // returns an empty group, so this cannot draw a stray rule.
           <React.Fragment key={group[0].key}>
             <DropdownMenuGroup>
               {group.map(({ href, Icon, key, newTab }) => (
                 <DropdownMenuItem
                   key={key}
                   render={
-                    <LinkComponent
-                      href={href}
-                      target={newTab ? "_blank" : undefined}
-                    />
+                    <Link target={newTab ? "_blank" : undefined} to={href} />
                   }
                 >
                   <Icon />
                   <span>{t(key)}</span>
+                  {newTab && <NewTabIndicator />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -99,7 +125,14 @@ const AuthenticatedUserHeader = ({
         ))}
 
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={onSignOut}>
+          <ThemeSwitcherMenu />
+          {languageSwitcher}
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={onSignOut} variant="destructive">
             <LogOutIcon />
             <span>{t("log_out")}</span>
           </DropdownMenuItem>
@@ -110,23 +143,23 @@ const AuthenticatedUserHeader = ({
 };
 
 export const UserHeaderContent = ({
-  LinkComponent,
+  languageSwitcher,
   onSignOut,
   state,
 }: {
-  LinkComponent: UserHeaderLinkComponent;
+  languageSwitcher?: React.ReactNode;
   onSignOut: UserHeaderSignOut;
   state: UserHeaderState;
 }) => {
   if (state.status === "loading") return <UserHeaderSkeleton />;
 
   if (state.status === "anonymous") {
-    return <AnonymousUserHeader LinkComponent={LinkComponent} />;
+    return <AnonymousUserHeader languageSwitcher={languageSwitcher} />;
   }
 
   return (
     <AuthenticatedUserHeader
-      LinkComponent={LinkComponent}
+      languageSwitcher={languageSwitcher}
       onSignOut={onSignOut}
       user={state.user}
     />

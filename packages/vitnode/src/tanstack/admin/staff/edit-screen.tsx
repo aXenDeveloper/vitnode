@@ -1,7 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { RoleFormatContent } from "@/components/role-format-content";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,7 +18,6 @@ import { ADMIN_STAFF_EDIT_NAMESPACES } from "./edit-route";
 import { useStaffSaveCallback } from "./query";
 
 export interface AdminStaffEditRouteProps extends AdminStaffEditRouteData {
-  LinkComponent: AuthLinkComponent;
   /** Where a saved entry returns to. The host navigates; the package decides. */
   navigate: (href: string) => Promise<void> | void;
 }
@@ -29,7 +27,6 @@ export const AdminStaffEditRouteContent = ({
   backLabel,
   grantedKeys,
   id,
-  LinkComponent,
   navigate,
   plugins,
   subject,
@@ -45,7 +42,6 @@ export const AdminStaffEditRouteContent = ({
         <StaffEditHeader
           backHref={backHref}
           backLabel={backLabel}
-          LinkComponent={LinkComponent}
           subject={subject}
           title={title}
         />
@@ -70,13 +66,11 @@ export const AdminStaffEditRouteContent = ({
 const StaffEditHeader = ({
   backHref,
   backLabel,
-  LinkComponent,
   subject,
   title,
 }: {
   backHref: string;
   backLabel: string;
-  LinkComponent: AuthLinkComponent;
   subject: AdminStaffEditSubject;
   title: string;
 }) => {
@@ -96,13 +90,10 @@ const StaffEditHeader = ({
       }
       h1={title}
     >
-      <LinkComponent
-        className={buttonVariants({ variant: "outline" })}
-        href={backHref}
-      >
+      <Link className={buttonVariants({ variant: "outline" })} to={backHref}>
         <ArrowLeftIcon />
         {backLabel}
-      </LinkComponent>
+      </Link>
     </HeaderContent>
   );
 };
@@ -118,7 +109,7 @@ const StaffEditBody = ({
   unrestricted,
 }: Omit<
   AdminStaffEditRouteProps,
-  "backHref" | "backLabel" | "LinkComponent" | "navigate" | "title"
+  "backHref" | "backLabel" | "navigate" | "title"
 > & {
   onSave: ReturnType<typeof useStaffSaveCallback>;
   onSaved: () => Promise<void>;

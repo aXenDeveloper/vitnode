@@ -1,5 +1,3 @@
-import type { SearchFeedLinkComponent } from "@/views/search/search-feed-content";
-
 import { HeaderContent } from "@/components/ui/header-content";
 import { SearchControlsContent } from "@/views/search/search-controls-content";
 
@@ -12,10 +10,9 @@ import { SEARCH_NAMESPACES } from "./search-route";
 
 export const SearchRouteContent = ({
   description,
-  LinkComponent,
   params,
   title,
-}: SearchRouteData & { LinkComponent: SearchFeedLinkComponent }) => {
+}: SearchRouteData) => {
   const locale = useLocale();
 
   return (
@@ -29,7 +26,6 @@ export const SearchRouteContent = ({
             feedQueryOptions({ locale, params: feedParams })
           }
           key={params.search ?? ""}
-          LinkComponent={LinkComponent}
           variant="timeline"
         />
       </div>

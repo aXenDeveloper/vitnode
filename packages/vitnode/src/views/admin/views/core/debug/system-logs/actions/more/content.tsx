@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   CalendarIcon,
   GlobeIcon,
@@ -7,8 +8,6 @@ import {
   UserIcon,
 } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
@@ -29,13 +28,12 @@ export const ContentMoreActionSystemLogs = ({
   createdAt,
   type,
   id,
-  LinkComponent,
   method,
   path,
   userAgent,
   statusCode,
   user,
-}: DebugLogRow & { LinkComponent: AuthLinkComponent }) => {
+}: DebugLogRow) => {
   const t = useTranslations("admin.debug.logs.more");
 
   return (
@@ -107,13 +105,13 @@ export const ContentMoreActionSystemLogs = ({
                   <UserIcon className="size-3" />
                   {t("log_overview.user")}
                 </Label>
-                <LinkComponent
+                <Link
                   className="border-input bg-background hover:bg-accent hover:text-accent-foreground block rounded-md border px-3 py-2 text-sm font-medium"
-                  href={`/admin/core/users/${user.id}`}
                   id="user-link"
+                  to={`/admin/core/users/${user.id}`}
                 >
                   {user.name} (#{user.id})
-                </LinkComponent>
+                </Link>
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { UserRoundPenIcon } from "lucide-react";
 import React from "react";
@@ -11,7 +12,6 @@ import { userProfileQueryKey } from "@/views/profile/profile-query";
 
 import { useSessionQuery } from "../auth/session-query";
 import { RouteMessages } from "../i18n/route-messages";
-import { RouterLink } from "../layout/router-link";
 import { useOwnUserImageEditor } from "./own-image-editor";
 import { userProfileQuery } from "./query";
 import { PROFILE_NAMESPACES } from "./route";
@@ -25,13 +25,13 @@ const EditProfileAction = () => {
   const t = useTranslations("core.profile");
 
   return (
-    <RouterLink
+    <Link
       className={cn(buttonVariants({ variant: "outline" }))}
-      href={USER_HEADER_HREF.settings}
+      to={USER_HEADER_HREF.settings}
     >
       <UserRoundPenIcon aria-hidden="true" />
       {t("editProfile")}
-    </RouterLink>
+    </Link>
   );
 };
 

@@ -11,7 +11,6 @@ import type { ContentFormHeaderValue } from "./context";
 
 import { ContentFormProvider } from "./context";
 import { ContentFormHeader, ContentFormSection } from "./layout-primitives";
-import { useContentFormNavigation } from "./navigation";
 
 export type ContentFormSkeletonControl =
   "editor" | "input" | "list" | "media" | "switch" | "textarea";
@@ -218,8 +217,6 @@ export const ContentFormSkeleton = ({
   singular,
   title,
 }: ContentFormSkeletonProps) => {
-  const { LinkComponent } = useContentFormNavigation();
-
   const fields = Object.fromEntries(
     shape.fields.map(field => [
       field.name,
@@ -233,7 +230,6 @@ export const ContentFormSkeleton = ({
         fieldNames: shape.fields.map(field => field.name),
         fields,
         header,
-        LinkComponent,
         localizedFieldNames: [],
         mode,
         publication: { canPublish: false, enabled: publication },

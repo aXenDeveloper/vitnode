@@ -1,21 +1,16 @@
 import { useRouter } from "@tanstack/react-router";
 
 import type { AdminUserSearch } from "@/views/admin/layouts/search/search-users";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { SearchAdminContent } from "@/views/admin/layouts/search/search-content";
 
-import { RouterLink } from "../layout/router-link";
 import { useAdminSearchNavItems } from "./nav";
 import { readAdminUserSearch } from "./user-search";
 
 export const AdminSearch = ({
-  LinkComponent = RouterLink,
   onNavigate,
   searchUsers = readAdminUserSearch,
 }: {
-  LinkComponent?: AuthLinkComponent;
-
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;
 }) => {
@@ -25,7 +20,6 @@ export const AdminSearch = ({
   return (
     <SearchAdminContent
       items={items}
-      LinkComponent={LinkComponent}
       onNavigate={onNavigate ?? (href => void router.navigate({ to: href }))}
       searchUsers={searchUsers}
     />

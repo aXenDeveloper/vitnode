@@ -2,8 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { UserBarAdminContent } from "@/views/admin/layouts/user-bar/user-bar-content";
 
 import { useSignOutAction } from "../auth/actions";
@@ -11,9 +9,9 @@ import { useAdminUser } from "./permissions";
 import { removeAdminIdentityQueries } from "./queries";
 
 export const AdminUserBar = ({
-  LinkComponent,
+  languageSwitcher,
 }: {
-  LinkComponent: AuthLinkComponent;
+  languageSwitcher?: React.ReactNode;
 }) => {
   const user = useAdminUser();
   const signOut = useSignOutAction();
@@ -38,7 +36,7 @@ export const AdminUserBar = ({
 
   return (
     <UserBarAdminContent
-      LinkComponent={LinkComponent}
+      languageSwitcher={languageSwitcher}
       onSignOut={handleSignOut}
       user={user}
     />

@@ -1,7 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { normalizeAdminUserId } from "@/views/admin/views/core/users/detail/user-query";
 
 import type { RouteBreadcrumbProps } from "../../breadcrumb/model";
@@ -13,11 +11,8 @@ import { ADMIN_USER_NAMESPACES } from "./detail-route";
 import { adminUserQuery } from "./query";
 
 export const AdminUserBreadcrumbContent = ({
-  LinkComponent,
   params,
-}: Partial<Pick<RouteBreadcrumbProps, "params">> & {
-  LinkComponent?: AuthLinkComponent;
-}) => {
+}: Partial<Pick<RouteBreadcrumbProps, "params">>) => {
   const adminUserId = useAdminIdentity();
   const raw: unknown = params?.id;
   const id = normalizeAdminUserId(typeof raw === "string" ? raw : undefined);
@@ -29,7 +24,6 @@ export const AdminUserBreadcrumbContent = ({
   return (
     <RouteMessages namespaces={ADMIN_USER_NAMESPACES}>
       <AdminBreadcrumb
-        LinkComponent={LinkComponent}
         overrideLastLabel={data?.name}
         segments={["core", "users", id ?? (typeof raw === "string" ? raw : "")]}
       />

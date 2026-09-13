@@ -1,12 +1,3 @@
-export interface HeaderLinkProps extends Omit<
-  React.ComponentProps<"a">,
-  "href"
-> {
-  href: string;
-}
-
-export type HeaderLinkComponent = (props: HeaderLinkProps) => React.ReactNode;
-
 /** Where the main header points. Internal paths, with no locale prefix in them. */
 export const HEADER_HREF = {
   discover: "/discover",

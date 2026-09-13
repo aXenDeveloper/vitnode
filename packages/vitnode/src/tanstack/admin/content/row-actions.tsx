@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   CalendarClockIcon,
   EllipsisIcon,
@@ -18,7 +19,6 @@ import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentRowActionId } from "@/views/admin/views/content/actions/row-actions-model";
 import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 import type { ContentRowMutationResult } from "@/views/admin/views/content/table/list-mutations";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,6 @@ import {
 import { contentErrorKey } from "@/views/admin/views/content/lib/mutation-feedback";
 import { contentRowTitle } from "@/views/admin/views/content/table/columns";
 
-import { RouterLink } from "../../layout/router-link";
 import { useAdminPermission } from "../permissions";
 import {
   contentApiTarget,
@@ -60,8 +59,6 @@ import { contentAdminSlots, registeredContentRowPanels } from "./slots";
 
 export interface ContentRowActionsProps {
   entry: RegisteredFrontendContentType;
-  /** How a path becomes a navigation. See {@link RouterLink} for the default. */
-  LinkComponent?: AuthLinkComponent;
   /** The language the list is being read in. */
   locale: string;
   row: ContentRowData;
@@ -174,13 +171,11 @@ const PublishRowAction = ({
 
 const EditRowAction = ({
   entry,
-  LinkComponent = RouterLink,
   row,
   singular,
   title,
 }: {
   entry: RegisteredFrontendContentType;
-  LinkComponent?: AuthLinkComponent;
   row: ContentRowData;
   singular: string;
   title: string;
@@ -211,9 +206,7 @@ const EditRowAction = ({
               <Button
                 aria-label={label}
                 nativeButton={false}
-                render={
-                  <LinkComponent href={contentEditHref(definition, row.id)} />
-                }
+                render={<Link to={contentEditHref(definition, row.id)} />}
                 size="icon"
                 variant="ghost"
               >
@@ -463,7 +456,6 @@ const ContentRowActionsMenu = ({
 
 export const ContentRowActions = ({
   entry,
-  LinkComponent,
   locale,
   row,
   singular,
@@ -480,7 +472,6 @@ export const ContentRowActions = ({
       />
       <EditRowAction
         entry={entry}
-        LinkComponent={LinkComponent}
         row={row}
         singular={singular}
         title={title}

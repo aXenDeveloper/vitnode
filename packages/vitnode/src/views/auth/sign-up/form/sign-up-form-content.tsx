@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
@@ -13,8 +14,6 @@ import { AutoFormInput } from "@/components/form/fields/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 
-import type { AuthLinkComponent } from "../../auth-link";
-
 import { PasswordInput } from "../components/password-input";
 import { type SignUpSubmit, useSignUpForm } from "./use-sign-up-form";
 
@@ -23,14 +22,12 @@ export type { SignUpSubmit };
 export const SignUpFormContent = ({
   captcha,
   isEmail,
-  LinkComponent,
   onSignUp,
   termsHref = "/terms",
 }: {
   captcha: z.infer<typeof routeMiddlewareSchema>["captcha"];
 
   isEmail: boolean;
-  LinkComponent: AuthLinkComponent;
   onSignUp: SignUpSubmit;
   termsHref?: string;
 }) => {
@@ -87,9 +84,9 @@ export const SignUpFormContent = ({
               {...props}
               description={t.rich("terms.desc", {
                 link: text => (
-                  <LinkComponent className="text-primary" href={termsHref}>
+                  <Link className="text-primary" to={termsHref}>
                     {text}
-                  </LinkComponent>
+                  </Link>
                 ),
               })}
               label={t("terms.label")}

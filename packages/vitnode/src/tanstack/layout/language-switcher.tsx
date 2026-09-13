@@ -1,5 +1,5 @@
 import { useLanguages } from "@/components/languages-provider";
-import { LanguageSwitcherContent } from "@/components/switchers/langs/language-switcher-content";
+import { LanguageSwitcherMenu } from "@/components/switchers/langs/language-switcher-menu";
 
 import { useLocale } from "../i18n/locale";
 import { useSwitchLocale } from "../i18n/switch-locale";
@@ -12,7 +12,7 @@ export const LanguageSwitcher = () => {
   if (languages.length <= 1) return null;
 
   return (
-    <LanguageSwitcherContent
+    <LanguageSwitcherMenu
       currentLocale={locale}
       // Narrowed inside `useSwitchLocale`, which refuses a code the app was not
       // configured with - so a click handler carries no locale cast.

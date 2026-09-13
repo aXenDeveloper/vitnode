@@ -1,5 +1,3 @@
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { SignUpFormContent } from "@/views/auth/sign-up/form/sign-up-form-content";
 import { SignUpContent } from "@/views/auth/sign-up/sign-up-content";
 import { SSOButtonsContent } from "@/views/auth/sso/buttons/sso-buttons-content";
@@ -13,14 +11,10 @@ import { postAuthDestination } from "./redirects";
 import { REGISTER_NAMESPACES } from "./register-route";
 
 export interface RegisterRouteProps {
-  LinkComponent: AuthLinkComponent;
   navigate: AuthNavigate;
 }
 
-export const RegisterRouteContent = ({
-  LinkComponent,
-  navigate,
-}: RegisterRouteProps) => {
+export const RegisterRouteContent = ({ navigate }: RegisterRouteProps) => {
   const { data: config } = useMiddlewareConfigQuery();
   const signUp = useSignUpAction({
     destination: () => postAuthDestination(undefined),
@@ -34,11 +28,9 @@ export const RegisterRouteContent = ({
           <SignUpFormContent
             captcha={config.captcha}
             isEmail={config.isEmail}
-            LinkComponent={LinkComponent}
             onSignUp={signUp}
           />
         }
-        LinkComponent={LinkComponent}
         sso={
           <SSOButtonsContent
             onSelectProvider={startSsoAction}

@@ -2,8 +2,6 @@ import { SearchIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -23,12 +21,10 @@ const SearchAdminDialogContent = React.lazy(async () =>
 
 export const SearchAdminContent = ({
   items,
-  LinkComponent,
   onNavigate,
   searchUsers,
 }: {
   items: AdminSearchNavItem[];
-  LinkComponent: AuthLinkComponent;
   onNavigate: (href: string) => void;
   /** See {@link SearchAdminDialogContentProps.searchUsers}. */
   searchUsers?: AdminUserSearch;
@@ -71,7 +67,6 @@ export const SearchAdminContent = ({
 
   const dialogProps: Omit<SearchAdminDialogContentProps, "onOpenChange"> = {
     items,
-    LinkComponent,
     onNavigate,
     open,
     searchUsers,

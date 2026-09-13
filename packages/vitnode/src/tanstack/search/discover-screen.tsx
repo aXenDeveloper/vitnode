@@ -1,5 +1,3 @@
-import type { SearchFeedLinkComponent } from "@/views/search/search-feed-content";
-
 import { HeaderContent } from "@/components/ui/header-content";
 import { SearchFeedContent } from "@/views/search/search-feed-content";
 
@@ -12,9 +10,8 @@ import { DISCOVER_NAMESPACES } from "./discover-route";
 
 export const DiscoverRouteContent = ({
   description,
-  LinkComponent,
   title,
-}: DiscoverRouteData & { LinkComponent: SearchFeedLinkComponent }) => {
+}: DiscoverRouteData) => {
   const locale = useLocale();
 
   return (
@@ -23,7 +20,6 @@ export const DiscoverRouteContent = ({
         <HeaderContent desc={description} h1={title} />
 
         <SearchFeedContent
-          LinkComponent={LinkComponent}
           queryOptions={discoverFeedQueryOptions({ locale })}
           variant="timeline"
         />

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { ArrowLeftIcon } from "lucide-react";
 
@@ -18,34 +19,18 @@ export interface HeaderContentBack {
   label: React.ReactNode;
 }
 
-export interface HeaderContentBackLinkProps extends Omit<
-  React.ComponentProps<"a">,
-  "href"
-> {
-  href: string;
-}
-
-export type HeaderContentBackLinkComponent = (
-  props: HeaderContentBackLinkProps,
-) => React.ReactNode;
-
-type HeaderContentBackProps =
-  | { back: HeaderContentBack; BackLink: HeaderContentBackLinkComponent }
-  | { back?: never; BackLink?: never };
-
 interface HeaderContentBaseProps {
+  back?: HeaderContentBack;
   children?: React.ReactNode;
   className?: string;
   desc?: React.ReactNode;
   ref?: React.RefCallback<HTMLDivElement>;
 }
 
-export type HeaderContentProps = HeaderContentBackProps &
-  HeaderContentBaseProps &
+export type HeaderContentProps = HeaderContentBaseProps &
   (HeaderContentH1Props | HeaderContentH2Props);
 
 export const HeaderContent = ({
-  BackLink,
   back,
   children,
   className,
@@ -77,10 +62,10 @@ export const HeaderContent = ({
 
       {!!back || !!children ? (
         <div className="flex w-full flex-col flex-wrap items-center justify-center gap-2 sm:w-auto sm:flex-row [&>*]:w-full [&>*]:sm:w-auto">
-          {back && BackLink ? (
+          {back ? (
             <Button
               nativeButton={false}
-              render={<BackLink href={back.href} />}
+              render={<Link to={back.href} />}
               variant="outline"
             >
               <ArrowLeftIcon />

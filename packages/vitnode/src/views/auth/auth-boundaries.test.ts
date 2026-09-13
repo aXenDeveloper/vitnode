@@ -75,18 +75,6 @@ describe("the shared views take their framework parts as props", () => {
     expect(code).not.toContain("mutationApi");
   });
 
-  it("takes its links as a component in every view that renders one", () => {
-    for (const path of [
-      SHARED.card,
-      SHARED.signInForm,
-      SHARED.signUpCard,
-      SHARED.signUpForm,
-      SHARED.ssoCallback,
-    ]) {
-      expect(withoutComments(path)).toContain("LinkComponent");
-    }
-  });
-
   it("asks for a sign-up callback rather than calling a mutation", () => {
     const code = withoutComments(SHARED.signUpForm);
 
@@ -154,11 +142,7 @@ describe("the settings frame is told its framework parts", () => {
       expect(withoutComments(path)).not.toContain("usePathname");
     }
 
-    expect(withoutComments(SHARED.settingsNav)).toContain("pathname: string;");
-  });
-
-  it("takes its links as a component in the menu", () => {
-    expect(withoutComments(SHARED.settingsNav)).toContain("LinkComponent");
+    expect(withoutComments(SHARED.settingsNav)).toContain("pathname: string");
   });
 
   it("keeps the menu and the active-item rule as data, not markup", () => {

@@ -1,8 +1,6 @@
 import { cn } from "cn";
 import { ChevronRight, MenuIcon } from "lucide-react";
-import React, { useEffect, useState } from "react";
-
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
+import { useEffect, useState } from "react";
 
 import {
   Collapsible,
@@ -21,11 +19,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import type { AdminNavItem, AdminNavSubItem } from "./nav-model";
 
-import { adminLinkFor } from "../../admin-link";
+import { AdminLink } from "../../admin-link";
 import { navItemActivity } from "./nav-active";
 
 export interface ItemNavAdminContentProps extends AdminNavItem {
-  LinkComponent: AuthLinkComponent;
   pathname: string;
 }
 
@@ -40,7 +37,6 @@ export const ItemNavAdminContent = ({
   icon,
   items = [],
   isOpenInNewTab,
-  LinkComponent,
   pathname,
 }: ItemNavAdminContentProps) => {
   const { toggleSidebar } = useSidebar();
@@ -75,11 +71,13 @@ export const ItemNavAdminContent = ({
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={isActive}
-          render={React.createElement(adminLinkFor(href, LinkComponent), {
-            href,
-            onClick: closeOnMobile,
-            ...externalProps(isOpenInNewTab),
-          })}
+          render={
+            <AdminLink
+              href={href}
+              onClick={closeOnMobile}
+              {...externalProps(isOpenInNewTab)}
+            />
+          }
           tooltip={title}
         >
           {content}
@@ -117,14 +115,13 @@ export const ItemNavAdminContent = ({
             <SidebarMenuSubItem key={item.href}>
               <SidebarMenuSubButton
                 isActive={item.href === activeChild}
-                render={React.createElement(
-                  adminLinkFor(item.href, LinkComponent),
-                  {
-                    href: item.href,
-                    onClick: closeOnMobile,
-                    ...externalProps(item.isOpenInNewTab),
-                  },
-                )}
+                render={
+                  <AdminLink
+                    href={item.href}
+                    onClick={closeOnMobile}
+                    {...externalProps(item.isOpenInNewTab)}
+                  />
+                }
               >
                 {item.title}
               </SidebarMenuSubButton>

@@ -1,25 +1,15 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { externalGraph, runtimeImports } from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const srcRoot = resolve(here, "../../../..");
 
 const SHARED = {
   header: join(here, "header-content.tsx"),
-  languageSwitcher: join(
-    srcRoot,
-    "components/switchers/langs/language-switcher-content.tsx",
-  ),
-  /** The theme toggle, reused unchanged rather than extracted - see below. */
-  themeSwitcher: join(
-    srcRoot,
-    "components/switchers/themes/theme-switcher.tsx",
-  ),
 };
 
 const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
@@ -46,25 +36,12 @@ describe("the shared header is framework-neutral", () => {
       );
     },
   );
-
-  it("never reaches a router", () => {
-    // `@vitnode/core` renders in whatever host mounts it, so the shared header
-    // reaches navigation through an injected `LinkComponent` rather than
-    // through a router of its own.
-    const reached = [...externalGraph(SHARED.header).keys()];
-
-    expect(reached.some(one => one.startsWith("@tanstack/"))).toBe(false);
-  });
 });
 
 describe("the shared header takes its framework parts as props", () => {
   const code = withoutComments(SHARED.header);
 
-  it("takes its links as a component rather than importing one", () => {
-    expect(code).toContain("LinkComponent");
-  });
-
-  it.each(["logo", "navigation", "languageSwitcher", "user"])(
+  it.each(["logo", "navigation", "user"])(
     "asks for %s rather than resolving it",
     slot => {
       expect(code).toContain(slot);
@@ -79,32 +56,10 @@ describe("the shared header takes its framework parts as props", () => {
     expect(code).not.toContain("getTranslations");
   });
 
-  it("renders the theme switcher itself", () => {
-    // Not a prop: it was already framework-neutral - the assertions above are
-    // over its real import graph - so injecting it would be a prop every caller
-    // has to pass and nobody gets to answer differently.
-    expect(code).toContain("<ThemeSwitcher />");
-  });
-});
-
-describe("the shared language switcher takes the navigation as a callback", () => {
-  const code = withoutComments(SHARED.languageSwitcher);
-
-  it("asks for a select handler rather than moving the URL itself", () => {
-    expect(code).toContain("onSelect");
-    expect(code).not.toContain("useRouter");
-    expect(code).not.toContain("usePathname");
-  });
-
-  it("is the only copy of the dropdown", () => {
-    // One copy, and this is it. A second `DropdownMenu` would mean two
-    // applications rendering different markup for the same control.
-    expect(code).toContain("DropdownMenu");
-  });
-
-  it("reads no URL itself, so no host has to wrap it in Suspense", () => {
-    expect(code).not.toContain("usePathname");
-    expect(code).not.toContain("useRouter");
-    expect(code).not.toContain("React.Suspense");
+  it("carries no preference controls of its own", () => {
+    // Theme and language moved into the user menu, which is the `user` slot.
+    // A switcher back in the bar would be a second copy of both controls.
+    expect(code).not.toContain("ThemeSwitcher");
+    expect(code).not.toContain("languageSwitcher");
   });
 });

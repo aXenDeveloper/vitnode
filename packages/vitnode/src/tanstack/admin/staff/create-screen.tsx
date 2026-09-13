@@ -1,6 +1,5 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
-
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
@@ -16,7 +15,6 @@ import { ADMIN_STAFF_CREATE_NAMESPACES } from "./create-route";
 import { useStaffCreateCallback } from "./query";
 
 export interface AdminStaffCreateRouteProps extends AdminStaffCreateRouteData {
-  LinkComponent: AuthLinkComponent;
   /** Where a created entry is opened. The host navigates; the package decides. */
   navigate: (href: string) => Promise<void> | void;
 }
@@ -25,7 +23,6 @@ export const AdminStaffCreateRouteContent = ({
   backHref,
   backLabel,
   description,
-  LinkComponent,
   navigate,
   title,
   type,
@@ -36,13 +33,13 @@ export const AdminStaffCreateRouteContent = ({
     <RouteMessages namespaces={ADMIN_STAFF_CREATE_NAMESPACES}>
       <div className="mx-auto max-w-4xl p-4">
         <HeaderContent desc={description} h1={title}>
-          <LinkComponent
+          <Link
             className={buttonVariants({ variant: "outline" })}
-            href={backHref}
+            to={backHref}
           >
             <ArrowLeftIcon />
             {backLabel}
-          </LinkComponent>
+          </Link>
         </HeaderContent>
 
         <CreateStaffFormContent

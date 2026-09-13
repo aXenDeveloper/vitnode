@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import {
   ChevronsUpDownIcon,
@@ -13,7 +14,6 @@ import { useDebouncedCallback } from "use-debounce";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { DateFormat } from "@/components/date-format";
 import { RoleFormatContent } from "@/components/role-format-content";
@@ -75,7 +75,6 @@ const AdminRoleFormContent = React.lazy(async () =>
 
 export interface RolesAdminTableProps {
   data: AdminRolesPage;
-  LinkComponent: AuthLinkComponent;
   onDelete: (args: {
     id: number;
     moveToRoleId?: number;
@@ -407,7 +406,6 @@ export const CreateRoleAction = ({
 
 export const RolesAdminTableContent = ({
   data,
-  LinkComponent,
   onDelete,
   onSave,
   onSaved,
@@ -432,12 +430,12 @@ export const RolesAdminTableContent = ({
 
             return (
               <TooltipWithContent text={t("openUsersTooltip")}>
-                <LinkComponent
+                <Link
                   className="text-primary inline-flex items-center gap-2"
-                  href={`/admin/core/users?roleId=${row.id}`}
+                  to={`/admin/core/users?roleId=${row.id}`}
                 >
                   {row.usersCount} <ExternalLink className="size-4" />
-                </LinkComponent>
+                </Link>
               </TooltipWithContent>
             );
           },

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { CheckIcon, MailIcon, PenIcon, UserSearchIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -5,7 +6,6 @@ import { useTranslations } from "use-intl";
 
 import type { FilterOption } from "@/components/table/filters";
 import type { AdminRoleSearch } from "@/views/admin/views/core/users/roles/roles-query";
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
 
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
@@ -28,17 +28,14 @@ export type VerifyAdminUserEmail = (
 
 export interface UsersAdminTableProps {
   data: AdminUsersPage;
-  LinkComponent: AuthLinkComponent;
   onVerifyEmail: VerifyAdminUserEmail;
   searchRoles: AdminRoleSearch;
 }
 
 const UserRowActions = ({
-  LinkComponent,
   onVerifyEmail,
   row,
 }: {
-  LinkComponent: AuthLinkComponent;
   onVerifyEmail: VerifyAdminUserEmail;
   row: AdminUserRow;
 }) => {
@@ -56,12 +53,12 @@ const UserRowActions = ({
       />
 
       <TooltipWithContent text={t("edit")}>
-        <LinkComponent
+        <Link
           className={buttonVariants({ variant: "ghost" })}
-          href={`/admin/core/users/${row.id}`}
+          to={`/admin/core/users/${row.id}`}
         >
           <PenIcon />
-        </LinkComponent>
+        </Link>
       </TooltipWithContent>
     </>
   );
@@ -122,7 +119,6 @@ const VerifyEmailButton = ({
 
 export const UsersAdminTableContent = ({
   data,
-  LinkComponent,
   onVerifyEmail,
   searchRoles,
 }: UsersAdminTableProps) => {
@@ -213,11 +209,7 @@ export const UsersAdminTableContent = ({
         {
           align: "right",
           cell: ({ row }) => (
-            <UserRowActions
-              LinkComponent={LinkComponent}
-              onVerifyEmail={onVerifyEmail}
-              row={row}
-            />
+            <UserRowActions onVerifyEmail={onVerifyEmail} row={row} />
           ),
           className: "w-10",
           header: "",

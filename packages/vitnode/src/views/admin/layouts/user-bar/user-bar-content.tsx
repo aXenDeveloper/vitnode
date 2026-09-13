@@ -1,11 +1,17 @@
-import { BugIcon, HomeIcon, LogOut } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  BugIcon,
+  ChevronsUpDownIcon,
+  CircleAlertIcon,
+  GlobeIcon,
+  HomeIcon,
+  LogOut,
+} from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type { AuthLinkComponent } from "@/views/auth/auth-link";
-
-import { Avatar } from "@/components/avatar";
+import { NewTabIndicator } from "@/components/new-tab-indicator";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
-import { Button } from "@/components/ui/button";
+import { ThemeSwitcherMenu } from "@/components/switchers/themes/theme-switcher-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +21,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { UserMenuIdentity } from "@/components/user-menu-identity";
 import { CONFIG_PLUGIN } from "@/config";
+import { VITNODE_ISSUES_URL, VITNODE_WEBSITE_URL } from "@/lib/docs-links";
 
 export interface AdminUserBarUser {
   avatarColor: string;
@@ -25,15 +39,16 @@ export interface AdminUserBarUser {
 }
 
 export const UserBarAdminContent = ({
-  LinkComponent,
+  languageSwitcher,
   onSignOut,
   user,
 }: {
-  LinkComponent: AuthLinkComponent;
+  languageSwitcher?: React.ReactNode;
   onSignOut: () => Promise<void> | void;
   user: AdminUserBarUser;
 }) => {
   const t = useTranslations("admin.global.nav.user_bar");
+  const { isMobile } = useSidebar();
   const canViewDebug = useAdminStaffPermission({
     plugin: CONFIG_PLUGIN.pluginId,
     module: "debug",
@@ -41,48 +56,87 @@ export const UserBarAdminContent = ({
   });
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button aria-label={user.name} size="icon" variant="ghost" />}
-      >
-        <Avatar size={24} user={user} />
-      </DropdownMenuTrigger>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton
+                aria-label={user.name}
+                className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
+                size="lg"
+              />
+            }
+          >
+            <UserMenuIdentity user={user} />
+            <ChevronsUpDownIcon className="ms-auto" />
+          </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        className="w-(--anchor-width) min-w-56 rounded-lg"
-        side="bottom"
-        sideOffset={4}
-      >
-        <DropdownMenuLabel className="p-0 font-normal">
-          <div className="flex flex-col px-2 py-2 text-left">
-            <span className="font-medium">{user.name}</span>
-            <span className="text-muted-foreground text-xs">{user.email}</span>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem render={<LinkComponent href="/" target="_blank" />}>
-            <HomeIcon />
-            {t("home_page")}
-          </DropdownMenuItem>
-          {canViewDebug && (
-            <DropdownMenuItem
-              render={<LinkComponent href="/admin/core/debug" />}
-            >
-              <BugIcon />
-              {t("debug")}
+          <DropdownMenuContent
+            align="end"
+            className="w-(--anchor-width) min-w-56 rounded-lg"
+            side={isMobile ? "bottom" : "right"}
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="flex items-center gap-2 p-1 font-normal">
+              <UserMenuIdentity user={user} />
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem render={<Link target="_blank" to="/" />}>
+                <HomeIcon />
+                {t("home_page")}
+                <NewTabIndicator />
+              </DropdownMenuItem>
+              {canViewDebug && (
+                <DropdownMenuItem render={<Link to="/admin/core/debug" />}>
+                  <BugIcon />
+                  {t("debug")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                render={
+                  <a
+                    href={VITNODE_WEBSITE_URL}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  />
+                }
+              >
+                <GlobeIcon />
+                {t("website")}
+                <NewTabIndicator />
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                render={
+                  <a
+                    href={VITNODE_ISSUES_URL}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  />
+                }
+              >
+                <CircleAlertIcon />
+                {t("report_issue")}
+                <NewTabIndicator />
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <ThemeSwitcherMenu />
+              {languageSwitcher}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onSignOut} variant="destructive">
+              <LogOut />
+              {t("log_out")}
             </DropdownMenuItem>
-          )}
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive data-highlighted:text-destructive"
-          onClick={onSignOut}
-        >
-          <LogOut />
-          {t("log_out")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 };
