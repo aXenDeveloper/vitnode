@@ -7,17 +7,22 @@ import { fileURLToPath } from "url";
 
 import type { CreatePluginCliReturn } from "../questions.js";
 import type { PluginConfigRegistration } from "./add-plugin-to-config.js";
+import type { DevServerTarget } from "./restart-dev-servers.js";
 
 import { getPackageManagerFromRoot } from "../../helpers/get-package-manager-from-root.js";
 import { installDependencies } from "../../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../../helpers/is-folder-empty.js";
+import { runPackageScript } from "../../helpers/run-package-script.js";
 import {
   addPluginToConfig,
   needsManualRegistration,
 } from "./add-plugin-to-config.js";
 import { addPluginToWorkspace } from "./add-plugin-to-workspace.js";
 import { createPluginPackageJSON } from "./create-package-json.js";
+import { devCommandFor, restartDevServers } from "./restart-dev-servers.js";
 import { pluginRouteScaffold } from "./route-templates.js";
+
+const BUILD_SCRIPT = "build:plugins";
 
 const writePluginRouteScaffold = async ({
   pluginName,
@@ -78,6 +83,31 @@ const reportConfigRegistrations = ({
       `  ${color.yellow("!")} No VitNode config found. Add ${color.cyan(`${pluginName}/config`)} to your app's \`vitnode.config.ts\` and ${color.cyan(`${pluginName}/config.api`)} to its \`vitnode.api.config.ts\`.`,
     );
   }
+};
+
+const reportDevServerRestarts = ({
+  packageManager,
+  pluginName,
+  restarted,
+  rootPath,
+}: {
+  packageManager: string;
+  pluginName: string;
+  restarted: DevServerTarget[];
+  rootPath: string;
+}) => {
+  restarted.forEach(({ dir, kind }) => {
+    const what = kind === "vite" ? "dev server and its API" : "API";
+    const where = relative(rootPath, dir);
+
+    console.log(
+      `  ${color.green("\u21bb")} Restarted the ${what} in ${color.cyan(where === "" ? "." : where)}`,
+    );
+  });
+
+  console.log(
+    `  ${color.yellow("!")} Restart ${color.cyan(devCommandFor(packageManager))} to rebuild ${color.cyan(pluginName)} as you edit it - a plugin's own watcher starts with the dev command.`,
+  );
 };
 
 export const createPluginVitNode = async ({
@@ -188,17 +218,49 @@ export const createPluginVitNode = async ({
     rootPath,
   });
 
+  let built = false;
+
   if (install) {
     spinner.text = "Installing dependencies...";
     await installDependencies({
       packageManager,
       cwd: pluginPath,
     });
+
+    spinner.text = "Building the plugin...";
+    const build = await runPackageScript({
+      cwd: pluginPath,
+      packageManager,
+      script: BUILD_SCRIPT,
+    });
+
+    built = build.ok;
+
+    if (!build.ok) {
+      spinner.warn(
+        `${color.yellow("Could not build")} ${color.cyan(pluginName)}. Run ${color.cyan(`${packageManager.split("@")[0]} run ${BUILD_SCRIPT}`)} in ${color.cyan(relative(rootPath, pluginPath))} and restart your dev server.`,
+      );
+      console.log(color.dim(build.output.trimEnd()));
+      spinner.start();
+    }
   }
+
+  const restarted = built
+    ? await restartDevServers({ registrations, rootPath })
+    : [];
 
   spinner.succeed(
     `${color.green("Success!")} Created ${color.cyan(pluginName)} at ${color.cyan(pluginPath)}`,
   );
 
   reportConfigRegistrations({ pluginName, registrations, rootPath });
+
+  if (built) {
+    reportDevServerRestarts({
+      packageManager,
+      pluginName,
+      restarted,
+      rootPath,
+    });
+  }
 };

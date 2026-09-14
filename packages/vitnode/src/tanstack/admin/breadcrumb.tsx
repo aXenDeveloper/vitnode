@@ -5,13 +5,13 @@ import { BreadcrumbTrailContent } from "@/views/breadcrumb/breadcrumb-trail-cont
 
 import type { RouteBreadcrumbGroup } from "../breadcrumb/model";
 
-import { breadcrumbGroup, breadcrumbTrail } from "../breadcrumb/model";
+import { breadcrumbGroup, useBreadcrumbTrail } from "../breadcrumb/model";
 import { useRouteNavigationPending } from "../pending/navigation-pending";
 import { BreadcrumbPendingSkeleton } from "../pending/shapes";
 import { useAdminNav } from "./nav";
 
 export const useAdminBreadcrumb = (): React.ReactNode => {
-  const entries = breadcrumbTrail(useMatches());
+  const entries = useBreadcrumbTrail(useMatches());
   const isNavigating = useRouteNavigationPending(
     useRouter().options.defaultPendingMs ?? 0,
   );

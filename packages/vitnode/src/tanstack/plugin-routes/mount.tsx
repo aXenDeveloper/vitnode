@@ -257,7 +257,10 @@ export const withPluginRoutes = <TRouteTree extends AnyRoute>(
   // It applies only when the option is absent entirely - a host that passes the
   // record has answered the question, and an area missing from its answer is
   // missing rather than defaulted somewhere else.
-  const areaRoutes: PluginRouteAreaRoutes = mountUnder ?? { main: routeTree };
+  const areaRoutes: PluginRouteAreaRoutes = mountUnder ?? {
+    blank: routeTree,
+    main: routeTree,
+  };
   const byMountPoint = specsByMountPoint(areaRoutes, specs);
 
   // Once, over every spec and against the whole tree from its root - a plugin

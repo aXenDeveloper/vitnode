@@ -1,6 +1,6 @@
-export type PluginRouteArea = "admin" | "main";
+export type PluginRouteArea = "admin" | "blank" | "main";
 
-export const PLUGIN_ROUTE_AREAS: PluginRouteArea[] = ["admin", "main"];
+export const PLUGIN_ROUTE_AREAS: PluginRouteArea[] = ["admin", "blank", "main"];
 
 export type PluginRouteKind = "layout" | "page";
 

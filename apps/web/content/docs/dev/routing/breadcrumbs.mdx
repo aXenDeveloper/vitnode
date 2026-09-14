@@ -1,0 +1,168 @@
+---
+title: Breadcrumbs
+description: Contribute one localized crumb per plugin route and let VitNode assemble the trail for public pages and AdminCP screens.
+icon: Milestone
+---
+
+import { DatabaseIcon, LayoutDashboardIcon, MapIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+VitNode renders breadcrumb trails automatically in both the public site header and the AdminCP shell. **A route joins the trail by declaring a crumb**, and the trail reads parent to child:
+
+```text
+Home / Notes / Getting Started
+```
+
+A route declares only what its own crumb should display. VitNode manages the rest: accessible `<nav>` markup, separators, locale-aware links, and `aria-current="page"` semantics. No manual link construction, no duplicated trails, and zero drama.
+
+## Static crumb
+
+Declare a breadcrumb function directly inside `definePluginRoute`. Because it renders within the route's declared namespaces, `useTranslations` works out of the box:
+
+```tsx title="plugins/site-notes/src/pages/notes-layout.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+import { useTranslations } from 'use-intl'
+
+// [!code ++:7]
+export const route = definePluginRoute({
+  breadcrumb: () => {
+    const t = useTranslations('@acme/site-notes')
+
+    return t('title')
+  },
+})
+
+const NotesLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="container mx-auto flex max-w-4xl flex-col gap-6 p-4">
+      <header className="border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-balance">
+          Notes
+        </h1>
+      </header>
+      <main>{children}</main>
+    </div>
+  )
+}
+
+export default NotesLayout
+```
+
+{/* Image prompt: Modern web header showing breadcrumb trail Home / Notes with Notes highlighted in dark theme, 1440x900. */}
+
+## Dynamic crumb from loader
+
+When a route is dynamic (such as `/notes/:slug`), its breadcrumb can read directly from the route's `loaderData`. This ensures the trail shows human-readable titles instead of raw IDs, without firing a second network request:
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from '@vitnode/core/routing'
+
+interface Note {
+  content: string
+  title: string
+}
+
+export const route = definePluginRoute({
+  load: async ({ params }): Promise<Note> => {
+    return {
+      content: 'Loaded securely from your plugin loader.',
+      title: `Note: ${params.slug}`,
+    }
+  },
+  head: ({ loaderData, params }) => ({
+    title: loaderData?.title ?? params.slug,
+  }),
+  // [!code ++:1]
+  breadcrumb: ({ loaderData }) => loaderData.title,
+})
+
+const NotePage = ({ loaderData }: PluginRoutePageProps<Note>) => {
+  return (
+    <article className="container mx-auto flex max-w-3xl flex-col gap-4 p-4">
+      <h2 className="text-3xl font-semibold tracking-tight text-balance">
+        {loaderData.title}
+      </h2>
+      <p className="text-muted-foreground leading-relaxed text-pretty">
+        {loaderData.content}
+      </p>
+    </article>
+  )
+}
+
+export default NotePage
+```
+
+The inline `breadcrumb` receives `{ loaderData, params, search }`—the exact same typed context passed to `head` and the page component.
+
+{/* Image prompt: Header breadcrumb trail showing Home / Notes / Note: getting-started with the final crumb active, 1440x900. */}
+
+## Omitting a route
+
+Silence is the default: a route that declares no `breadcrumb` adds none, and the crumbs above it stay intact. Set `breadcrumb: false` when you want that silence to be deliberate—an `index()` page whose parent layout already names the screen, say:
+
+```tsx title="plugins/site-notes/src/pages/notes-index-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+
+// [!code ++:3]
+export const route = definePluginRoute({
+  breadcrumb: false,
+})
+
+const NotesIndexPage = () => {
+  return (
+    <div>
+      <p className="text-muted-foreground leading-relaxed text-pretty">
+        Welcome to Site Notes.
+      </p>
+    </div>
+  )
+}
+
+export default NotesIndexPage
+```
+
+Both spellings do the same thing. The trail simply ends at the deepest route that does declare a crumb, and that crumb is the one marked `aria-current="page"`.
+
+## Trail behavior
+
+| Declaration             | Behavior in breadcrumb trail                                                |
+| :---------------------- | :-------------------------------------------------------------------------- |
+| `breadcrumb: Component` | Contributes one crumb with access to `loaderData`, `params`, and `search`   |
+| `breadcrumb: false`     | Omitted from trail; parent crumbs remain visible                            |
+| Omitted / `undefined`   | The default: omitted from trail                                             |
+| Intermediate crumbs     | Automatically rendered as locale-aware links to their respective route URLs |
+| Leaf crumb (last item)  | Rendered as text without a link and marked with `aria-current="page"`       |
+
+<Callout type="warn" title="Return text or inline elements, not a trail">
+  A breadcrumb component should return text or an inline element (like an icon with text). Never render `<Breadcrumb>`, `<nav>`, links, or separators—the shell creates the landmark and manages links and separators for you.
+</Callout>
+
+<Callout type="info" title="AdminCP labels">
+  In the AdminCP, breadcrumbs seamlessly coordinate with the admin navigation
+  declared in `admin/nav.tsx`. When a route matches a sidebar item, its
+  translated label is resolved automatically.
+</Callout>
+
+<Cards>
+  <Card
+    icon={<MapIcon />}
+    title="Plugin Routes"
+    description="Declare the route tree where layouts, pages, and dynamic segments define crumbs."
+    href="/docs/dev/plugins/routes"
+  />
+  <Card
+    icon={<DatabaseIcon />}
+    title="Data Loading"
+    description="Fetch data in loaders so crumbs and pages receive typed loaderData."
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    icon={<LayoutDashboardIcon />}
+    title="AdminCP Pages"
+    description="Mount plugin screens, navigation links, and permissions in the AdminCP."
+    href="/docs/dev/plugins/admin"
+  />
+</Cards>

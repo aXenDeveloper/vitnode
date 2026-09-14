@@ -1,0 +1,329 @@
+---
+title: Routes
+description: Declare plugin-owned URLs as a nested route tree with lazy pages, loaders, metadata, messages, and breadcrumbs.
+icon: Map
+---
+
+import { DatabaseIcon, LayoutDashboardIcon, MilestoneIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { ImgDocs } from '@/components/fumadocs/img'
+import generatedPageImage from './generated-page-image.png'
+
+Start by [creating a plugin](/docs/dev/plugins/create). A plugin's `src/routes.ts`
+is its promise to the app: which URLs it owns, and which module renders each one.
+The host turns that promise into lazy TanStack Start routes—no copied page files,
+no drama.
+
+## Simple route
+
+You can declare a single page with a path and a lazy component:
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/notes', {
+    component: lazy(() => import('./pages/note-page')),
+  }),
+])
+```
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+const NotePage = () => {
+  return (
+    <div className="container mx-auto max-w-2xl p-4">
+      <h1 className="text-2xl font-semibold tracking-tight text-balance">
+        A note delivered by the Site notes plugin
+      </h1>
+    </div>
+  )
+}
+
+export default NotePage
+```
+
+<ImgDocs
+  src={generatedPageImage}
+  alt="Generated plugin page with title and link to README"
+/>
+
+### Render without the main layout
+
+Every route picks a shell with `area`. The default is `'main'`, which frames the
+page in the host's public layout—header, breadcrumbs, navigation, footer.
+
+Set `area: 'blank'` for a page that should stand on its own: an embed, a kiosk
+screen, a print view, a checkout step with nothing to wander off to.
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  // [!code ++:4]
+  page('/notes/embed', {
+    area: 'blank',
+    component: lazy(() => import('./pages/notes-embed-page')),
+  }),
+])
+```
+
+A blank page is mounted at the root of the host's route tree, so it still gets
+the document, the theme, the providers, and translations. It simply has no
+chrome around it—which also means no breadcrumb trail, so give the page its own
+way back.
+
+| `area`    | Renders inside                                             |
+| :-------- | :--------------------------------------------------------- |
+| `'main'`  | The public layout: header, breadcrumbs, footer (default)   |
+| `'blank'` | Nothing but the app root—no chrome at all                  |
+| `'admin'` | The [AdminCP shell](#admincp-routes): sidebar, staff guard |
+
+Only a top-level route chooses an area. Every route nested in a `layout()`
+renders in the shell its layout renders in, so it may not declare one of its
+own.
+
+## Dynamic route
+
+Use `:slug` for dynamic segments. VitNode converts it to TanStack Start's
+internal `$slug` spelling while keeping your plugin portable.
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/notes/:slug', {
+    component: lazy(() => import('./pages/note-page-slug')),
+  }),
+])
+```
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+const NotePage = ({ params }: PluginRoutePageProps) => {
+  return (
+    <article className="container mx-auto max-w-3xl p-4">
+      <h2 className="text-3xl font-semibold tracking-tight text-balance">
+        {params.slug}
+      </h2>
+    </article>
+  )
+}
+
+export default NotePage
+```
+
+{/* Image prompt: Browser showing /notes/getting-started with a clean modern page heading 'getting-started' in dark theme, max-w-3xl container, 1440x900. */}
+
+## Metadata (Head)
+
+The `head` function returns the page's `<title>` and `<meta>` tags. It runs
+after the loader, so it can use the data to make a unique title, description, and other SEO tags.
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import {
+  // [!code ++:1]
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from '@vitnode/core/routing'
+
+// [!code ++:6]
+export const route = definePluginRoute({
+  head: ({ params }) => ({
+    description: 'A note delivered by the Site notes plugin.',
+    title: params.slug,
+  }),
+})
+
+const NotePage = ({ params }: PluginRoutePageProps) => {
+  return (
+    <article className="container mx-auto max-w-3xl p-4">
+      <h2 className="text-3xl font-semibold tracking-tight text-balance">
+        {params.slug}
+      </h2>
+    </article>
+  )
+}
+
+export default NotePage
+```
+
+## Loaders
+
+Fetch data in `load`. It runs on the server during SSR and on the client for subsequent navigations. Data returned from `load` is automatically passed to both `head` (for dynamic metadata) and the page component as `loaderData`.
+
+<Callout type="info" title="Declare load above head">
+  Always declare `load` **above** `head` in `definePluginRoute`. TypeScript
+  infers the type of `loaderData` in `head` directly from the return type of
+  `load`.
+</Callout>
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from '@vitnode/core/routing'
+
+interface Note {
+  content: string
+  title: string
+}
+
+export const route = definePluginRoute({
+  // [!code ++:6]
+  load: async ({ params }): Promise<Note> => {
+    return {
+      content: 'Loaded securely from your plugin loader.',
+      title: `Note: ${params.slug}`,
+    }
+  },
+  head: ({ loaderData, params }) => ({
+    description: loaderData?.content,
+    title: loaderData?.title ?? params.slug,
+  }),
+})
+
+const NotePage = ({ loaderData }: PluginRoutePageProps<Note>) => {
+  return (
+    <article className="container mx-auto flex max-w-3xl flex-col gap-4 p-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {loaderData.title}
+      </h1>
+      <p className="text-muted-foreground leading-relaxed text-pretty">
+        {loaderData.content}
+      </p>
+    </article>
+  )
+}
+
+export default NotePage
+```
+
+{/* Image prompt: Browser preview showing the rendered note page with title and content in container, 1440x900. */}
+
+## Nested routes and layouts
+
+A `layout()` wraps child routes in a shared UI frame without claiming a URL segment of its own. Use `index()` to render a page at the layout's root path.
+
+Every path nested inside a layout is **relative** to its parent:
+
+```ts title="plugins/site-notes/src/routes.ts"
+import {
+  definePluginRoutes,
+  index,
+  layout,
+  lazy,
+  page,
+} from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  layout('/notes', {
+    component: lazy(() => import('./pages/notes-layout')),
+    children: [
+      index({
+        component: lazy(() => import('./pages/notes-index-page')),
+      }),
+      page(':slug', {
+        component: lazy(() => import('./pages/note-page-slug')),
+      }),
+    ],
+  }),
+])
+```
+
+A layout component renders `{children}`:
+
+```tsx title="plugins/site-notes/src/pages/notes-layout.tsx"
+const NotesLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="container mx-auto flex max-w-4xl flex-col gap-6 p-4">
+      <header className="border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-balance">
+          Site Notes
+        </h1>
+      </header>
+      <main>{children}</main>
+    </div>
+  )
+}
+
+export default NotesLayout
+```
+
+| Route helper            | URL resolved   | Purpose                                               |
+| :---------------------- | :------------- | :---------------------------------------------------- |
+| `layout('/notes', ...)` | —              | Wraps nested child routes with a persistent UI shell  |
+| `index(...)`            | `/notes`       | Renders at the exact URL of the parent layout         |
+| `page(':slug', ...)`    | `/notes/:slug` | Relative leaf route rendered inside the parent layout |
+
+## AdminCP routes
+
+Mount a screen in the staff-only Admin Control Panel by adding `area: 'admin'`. It automatically inherits the AdminCP shell, sidebar, and staff authentication guard:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/admin/notes', {
+  // [!code ++:1]
+  area: 'admin',
+  component: lazy(() => import('./pages/admin-notes-page')),
+  messages: ['@acme/site-notes.admin'],
+})
+```
+
+## Search parameters
+
+Type and validate query strings (like pagination or filters). Declare `search` on the route for eager URL-level validation before code chunks load:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/notes', {
+  component: lazy(() => import('./pages/notes-page')),
+  // [!code ++:3]
+  search: (input: Record<string, unknown>) => ({
+    page: Number(input.page) || 1,
+  }),
+})
+```
+
+The component receives typed `search` values and a `navigate` helper:
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+interface NotesSearch {
+  page: number
+}
+
+const NotesPage = ({
+  navigate,
+  search,
+}: PluginRoutePageProps<undefined, NotesSearch>) => (
+  <button
+    onClick={() => void navigate({ search: { page: search.page + 1 } })}
+    type="button"
+  >
+    Next Page ({search.page})
+  </button>
+)
+
+export default NotesPage
+```
+
+<Cards>
+  <Card
+    icon={<DatabaseIcon />}
+    title="Data Loading"
+    description="Learn universal fetchers, cache invalidation, and background mutations."
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    icon={<MilestoneIcon />}
+    title="Breadcrumbs"
+    description="Customize static and dynamic breadcrumbs across public and admin pages."
+    href="/docs/dev/plugins/breadcrumbs"
+  />
+  <Card
+    icon={<LayoutDashboardIcon />}
+    title="AdminCP Pages"
+    description="Mount plugin screens, navigation links, and permissions in the AdminCP."
+    href="/docs/dev/plugins/admin"
+  />
+</Cards>

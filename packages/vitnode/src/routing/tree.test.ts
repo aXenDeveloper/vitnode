@@ -473,13 +473,19 @@ describe("the area", () => {
     expect(error.message).toContain("Only a top-level route chooses its shell");
   });
 
+  it("keeps a route that asks for no shell at all", () => {
+    expect(
+      flatten(page("/kiosk", { area: "blank", component: lazyPage() }))[0].area,
+    ).toBe("blank");
+  });
+
   it("refuses an area VitNode does not have", () => {
     expect(
       thrownBy(() =>
         flatten(
           page(
             "/catalog",
-            withExtra({ component: lazyPage() }, { area: "blank" }),
+            withExtra({ component: lazyPage() }, { area: "sidebar" }),
           ),
         ),
       ).code,

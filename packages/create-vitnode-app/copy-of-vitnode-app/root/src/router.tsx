@@ -34,7 +34,11 @@ const routeTree = withCoreRootRoutes(
   withCoreAdminRoutes(
     withCoreMainRoutes(
       withPluginRoutes(fileRouteTree, pluginRouteSpecs(pluginRouteSources), {
-        mountUnder: { admin: adminShellRoute, main: mainShellRoute },
+        mountUnder: {
+          admin: adminShellRoute,
+          blank: fileRouteTree,
+          main: mainShellRoute,
+        },
         pageHead,
       }),
       { localeRouting, mountUnder: mainShellRoute, pageHead },

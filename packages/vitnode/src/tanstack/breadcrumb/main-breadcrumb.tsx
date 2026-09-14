@@ -4,10 +4,10 @@ import { BreadcrumbTrailContent } from "@/views/breadcrumb/breadcrumb-trail-cont
 
 import { useRouteNavigationPending } from "../pending/navigation-pending";
 import { BreadcrumbPendingSkeleton } from "../pending/shapes";
-import { breadcrumbTrail } from "./model";
+import { useBreadcrumbTrail } from "./model";
 
 export const MainBreadcrumb = () => {
-  const entries = breadcrumbTrail(useMatches());
+  const entries = useBreadcrumbTrail(useMatches());
   const isNavigating = useRouteNavigationPending(
     useRouter().options.defaultPendingMs ?? 0,
   );

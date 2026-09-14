@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, useSyncExternalStore } from "react";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -18,11 +18,24 @@ export interface RouteBreadcrumbGroup {
   group: React.ComponentType<RouteBreadcrumbProps>;
 }
 
-export type RouteBreadcrumb =
+export type RouteBreadcrumbDeclaration =
   | false
   | React.ComponentType<RouteBreadcrumbProps>
   | React.ReactNode
   | RouteBreadcrumbGroup;
+
+export interface RouteBreadcrumbDeferred {
+  resolve: () => RouteBreadcrumbDeclaration | undefined;
+  subscribe: (listener: () => void) => () => void;
+}
+
+export type RouteBreadcrumb =
+  RouteBreadcrumbDeclaration | RouteBreadcrumbDeferred;
+
+export const breadcrumbDeferred = (
+  resolve: RouteBreadcrumbDeferred["resolve"],
+  subscribe: RouteBreadcrumbDeferred["subscribe"],
+): RouteBreadcrumbDeferred => ({ resolve, subscribe });
 
 /** Declares that one route contributes {@link RouteBreadcrumbGroup} crumbs. */
 export const breadcrumbGroup = (
@@ -56,6 +69,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isGroup = (value: unknown): value is RouteBreadcrumbGroup =>
   isRecord(value) && typeof value.group === "function";
 
+const isDeferred = (value: unknown): value is RouteBreadcrumbDeferred =>
+  isRecord(value) && typeof value.resolve === "function";
+
+const declarationOf = (
+  breadcrumb: RouteBreadcrumb | undefined,
+): RouteBreadcrumbDeclaration | undefined =>
+  isDeferred(breadcrumb) ? breadcrumb.resolve() : breadcrumb;
+
 const propsFor = (match: BreadcrumbMatch): RouteBreadcrumbProps => ({
   loaderData: match.loaderData,
   params: isRecord(match.params)
@@ -69,7 +90,7 @@ export const breadcrumbTrail = (
   matches: readonly BreadcrumbMatch[],
 ): BreadcrumbTrailEntry[] => {
   const entries = matches.flatMap((match, position) => {
-    const declared = match.staticData.breadcrumb;
+    const declared = declarationOf(match.staticData.breadcrumb);
 
     if (declared === undefined || declared === null || declared === false) {
       return [];
@@ -121,4 +142,34 @@ export const breadcrumbTrail = (
   if (last) last.isCurrent = true;
 
   return entries;
+};
+
+const deferredCrumbs = (
+  matches: readonly BreadcrumbMatch[],
+): RouteBreadcrumbDeferred[] =>
+  matches.flatMap(match =>
+    isDeferred(match.staticData.breadcrumb)
+      ? [match.staticData.breadcrumb]
+      : [],
+  );
+
+const resolutionOf = (deferred: readonly RouteBreadcrumbDeferred[]): string =>
+  deferred.map(entry => (entry.resolve() === undefined ? "-" : "+")).join("");
+
+export const useBreadcrumbTrail = (
+  matches: readonly BreadcrumbMatch[],
+): BreadcrumbTrailEntry[] => {
+  const deferred = deferredCrumbs(matches);
+  const subscribe = (listener: () => void) => {
+    const unsubscribes = deferred.map(entry => entry.subscribe(listener));
+
+    return () => {
+      for (const unsubscribe of unsubscribes) unsubscribe();
+    };
+  };
+  const resolution = () => resolutionOf(deferred);
+
+  useSyncExternalStore(subscribe, resolution, resolution);
+
+  return breadcrumbTrail(matches);
 };

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BreadcrumbMatch, RouteBreadcrumbProps } from "./model";
 
-import { breadcrumbGroup, breadcrumbTrail } from "./model";
+import { breadcrumbDeferred, breadcrumbGroup, breadcrumbTrail } from "./model";
 
 const labelsOf = (matches: readonly BreadcrumbMatch[]): string[] =>
   breadcrumbTrail(matches).map(entry => entry.content as string);
@@ -135,5 +135,37 @@ describe("breadcrumbTrail", () => {
 
     expect(breadcrumbTrail([match(Crumb)])[0].spansItems).toBe(false);
     expect(breadcrumbTrail([match("Catalog")])[0].spansItems).toBe(false);
+  });
+});
+
+describe("a deferred crumb", () => {
+  const never = () => () => undefined;
+  const deferred = (resolve: () => unknown) =>
+    breadcrumbDeferred(resolve as () => undefined, never);
+
+  it("contributes the declaration it resolves to", () => {
+    expect(labelsOf([match(deferred(() => "Catalog"))])).toEqual(["Catalog"]);
+  });
+
+  it("contributes nothing while it has not resolved", () => {
+    expect(breadcrumbTrail([match(deferred(() => undefined))])).toEqual([]);
+  });
+
+  it("contributes nothing when it resolves to `false`", () => {
+    expect(breadcrumbTrail([match(deferred(() => false))])).toEqual([]);
+  });
+
+  it("leaves the deepest contributing route as the current page", () => {
+    const trail = breadcrumbTrail([
+      match("Catalog", { pathname: "/catalog" }),
+      match(
+        deferred(() => undefined),
+        { pathname: "/catalog/42" },
+      ),
+    ]);
+
+    expect(trail).toHaveLength(1);
+    expect(trail[0].isCurrent).toBe(true);
+    expect(trail[0].href).toBe("/catalog");
   });
 });
