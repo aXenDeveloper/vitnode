@@ -130,6 +130,11 @@
       "types": "./dist/src/framework/content-registry/index.d.ts",
       "default": "./dist/src/framework/content-registry/index.js"
     },
+    "./framework/package-messages": {
+      "import": "./dist/src/framework/package-messages/index.js",
+      "types": "./dist/src/framework/package-messages/index.d.ts",
+      "default": "./dist/src/framework/package-messages/index.js"
+    },
     "./framework/plugin-routes": {
       "import": "./dist/src/framework/plugin-routes/index.js",
       "types": "./dist/src/framework/plugin-routes/index.d.ts",

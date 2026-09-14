@@ -146,10 +146,15 @@ export const pluginVariableName = (pluginName: string): string => {
 /**
  * `src/config.tsx` - what an application registers.
  *
- * The routes and the messages, and nothing else. `routes` is the same tree
- * `routes.ts` exports, handed on unchanged: an app on Vite reads that file
- * directly at build time and an app that registers the plugin the ordinary way
- * reads it through here, so the two paths cannot describe different routes.
+ * The routes, the locale files and the messages, and nothing else. `routes` is
+ * the same tree `routes.ts` exports, handed on unchanged: an app on Vite reads
+ * that file directly at build time and an app that registers the plugin the
+ * ordinary way reads it through here, so the two paths cannot describe
+ * different routes.
+ *
+ * `localeFiles` is the same list as the barrel above it, spelled as specifiers
+ * rather than as loaders: an app's build writes its own loaders from it, and a
+ * literal package subpath is the only form its bundler can resolve.
  */
 export const pluginConfigTemplate = (pluginName: string): string =>
   `import { buildPlugin } from "@vitnode/core/lib/plugin";
@@ -162,6 +167,9 @@ import { routes } from "./routes";
 export const ${pluginVariableName(pluginName)} = () =>
   buildPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    localeFiles: {
+      en: "${pluginName}/locales/en.json",
+    },
     messages,
     routes,
   });

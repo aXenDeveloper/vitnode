@@ -53,20 +53,11 @@ export const vitNodeApiConfig = buildApiConfig({
   </Step>
   <Step>
 
-### Enable the web plugin and its messages
+### Enable the web plugin
 
-The host registers the lightweight plugin identity and static locale loaders:
-
-```ts title="apps/web/src/locales/packages.ts"
-import { CONFIG_PLUGIN as BLOG } from '@vitnode/blog/const' // [!code ++]
-
-export const packageMessages = {
-  // [!code ++:3]
-  [BLOG.pluginId]: {
-    en: async () => await import('@vitnode/blog/locales/en.json'),
-  },
-}
-```
+One line, and it brings the blog's pages, its AdminCP screens and its
+translations with it - your build reads the factory and writes the loaders into
+`src/package-messages.gen.ts` for you:
 
 ```ts title="apps/web/src/vitnode.config.ts"
 import { blogPlugin } from '@vitnode/blog/config' // [!code ++]

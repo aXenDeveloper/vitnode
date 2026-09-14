@@ -39,8 +39,8 @@ const appMessagesToSources = (
  * `buildMessagesSources` below is the normal way in, and it calls this. It is
  * exported for the one case that cannot use it: a bundled runtime, where each
  * package's locale barrel has to be replaced by loaders the bundler can follow
- * (see `apps/web/src/locales/packages.ts`). Splitting overrides per plugin
- * namespace is fiddly enough that copying it there would be a second
+ * (see the generated `src/package-messages.gen.ts`). Splitting overrides per
+ * plugin namespace is fiddly enough that copying it there would be a second
  * implementation to keep in step.
  */
 export const buildAppMessagesSources = (

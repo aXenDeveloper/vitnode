@@ -67,16 +67,16 @@ Because `buildConfig` keeps those codes as literal types, `'de'` is now part of 
 
 A `() => import('./de.json')` reads a file out of a package's build output, so it is the one part of i18n that must never reach a browser. Two files own it, and both are registered through the **server-only** config:
 
-| File                      | Holds                                                |
-| :------------------------ | :--------------------------------------------------- |
-| `src/locales/packages.ts` | one loader per language each installed package ships |
-| `src/locales/app.ts`      | your own rewordings, merged last                     |
+| File                          | Holds                                                | Who writes it |
+| :---------------------------- | :--------------------------------------------------- | :------------ |
+| `src/package-messages.gen.ts` | one loader per language each installed package ships | your build    |
+| `src/locales/app.ts`          | your own rewordings, merged last                     | you           |
 
 ```ts title="apps/web/src/vitnode.server.config.ts"
 export const vitNodeServerConfig = buildServerConfig({
   config: vitNodeConfig, // the locale list above
   messages: appMessages, // src/locales/app.ts
-  packageMessages, // src/locales/packages.ts
+  packageMessages, // src/package-messages.gen.ts
 })
 ```
 
@@ -86,14 +86,25 @@ export const vitNodeServerConfig = buildServerConfig({
   writes to the right file for you.
 </Callout>
 
-Adding a language to a package that ships it needs one line in `src/locales/packages.ts`:
+### The generated half
 
-```ts title="apps/web/src/locales/packages.ts"
-[CORE.pluginId]: {
-  en: async () => await import('@vitnode/core/locales/en.json'),
-  de: async () => await import('@vitnode/core/locales/de.json'), // [!code ++]
-},
+Registering a plugin is the whole step. Every VitNode build reads the `plugins` in your `vitnode.config.ts`, takes the `localeFiles` each factory declares, and writes `src/package-messages.gen.ts` - core's own languages plus one block per plugin:
+
+```ts title="apps/web/src/package-messages.gen.ts"
+export const packageMessages: Record<string, LocaleMessagesMap> = {
+  '@vitnode/core': {
+    en: async () => await import('@vitnode/core/locales/en.json'),
+    de: async () => await import('@vitnode/core/locales/de.json'),
+  },
+  '@acme/blog': {
+    en: async () => await import('@acme/blog/locales/en.json'),
+  },
+}
 ```
+
+Don't edit it - it is rewritten on every `dev` and `build`, which is why it sits in your `.gitignore`. Every specifier is a literal because that is the only kind a bundler can resolve: `import(pkg + '/locales/' + locale + '.json')` resolves to nothing. Every loader stays dynamic, so a language's JSON is a chunk of its own and the server loads only the locale a request asked for.
+
+A package ships whatever languages it ships, so adding one to it is the package author's line to write rather than yours - see [Creating a plugin](/docs/dev/plugins/create). A language nobody has translated still renders: missing keys fall back to `defaultLocale`.
 
 ---
 

@@ -8,7 +8,7 @@ import type {
 import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
-import type { LocaleMessagesMap } from "./i18n/types";
+import type { LocaleFilesMap, LocaleMessagesMap } from "./i18n/types";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
@@ -164,6 +164,20 @@ export interface BuildPluginReturn<P extends string = string> {
     nav?: AdminNavDeclaration[];
   };
   contentTypes?: ContentTypeFrontendRegistration[];
+  /**
+   * Every locale file this plugin ships, as literal `*.json` specifiers an
+   * app's bundler can resolve - `{ en: "@acme/blog/locales/en.json" }`.
+   *
+   * Declared rather than derived from `pluginId`, because where a package keeps
+   * its JSON is the package's own business and its `exports` map is what
+   * decides whether a path resolves at all.
+   *
+   * This is what an app's translations are actually loaded from. `messages`
+   * below is the plugin's own barrel, whose `import("./en.json")` is relative
+   * to the plugin's build output and so is a specifier no host bundler can
+   * follow.
+   */
+  localeFiles?: LocaleFilesMap;
   messages?: LocaleMessagesMap;
   pluginId: P;
 

@@ -126,7 +126,8 @@ without another line. Remove it and the page still renders—its loader just get
   never duplicates a registration.
 </Callout>
 
-Its translations need one more line, in `src/locales/packages.ts` - see
+Its translations come with it: the factory declares its own `localeFiles`, and
+the app's build turns them into loaders in `src/package-messages.gen.ts` - see
 [Languages & Localization](/docs/dev/i18n).
 
   </Step>

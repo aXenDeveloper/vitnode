@@ -7,6 +7,10 @@ import type { PluginRouteCompilerSource } from "../plugin-routes";
 import { definePluginRoutes, lazy, page } from "../../routing/tree";
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
+import {
+  generatePackageMessagesSource,
+  resolvePackageMessagesModules,
+} from "../package-messages";
 import { compilePluginRoutes } from "../plugin-routes";
 import { readOptionalPluginModules } from "./plugin-routes";
 
@@ -48,6 +52,15 @@ const ROUTES: Record<string, PluginRouteCompilerSource> = {
   },
 };
 
+/** What each plugin's factory declares, keyed by plugin id. */
+const LOCALE_FILES: Record<string, Record<string, string>> = {
+  "@acme/blog": {
+    en: "@acme/blog/locales/en.json",
+    pl: "@acme/blog/locales/pl.json",
+  },
+  "@acme/shop": { en: "@acme/shop/locales/en.json" },
+};
+
 /** Every generated file, for a given configured plugin list. */
 const projectionsFor = (pluginIds: readonly string[]) => {
   const compiled = compilePluginRoutes({
@@ -69,11 +82,25 @@ const projectionsFor = (pluginIds: readonly string[]) => {
         WORKSPACE,
       ).modules,
     ),
+    packageMessages: generatePackageMessagesSource(
+      resolvePackageMessagesModules(
+        pluginIds.map(pluginId => ({
+          localeFiles: LOCALE_FILES[pluginId],
+          pluginId,
+        })),
+        "src/vitnode.config.ts",
+      ),
+    ),
     registry: compiled.source,
   };
 };
 
-const FILES = ["adminNav", "contentRegistry", "registry"] as const;
+const FILES = [
+  "adminNav",
+  "contentRegistry",
+  "packageMessages",
+  "registry",
+] as const;
 
 const BOTH = ["@acme/blog", "@acme/shop"];
 
@@ -108,11 +135,14 @@ describe("determinism, across every projection at once", () => {
     expect(shuffled.registry.indexOf("@acme/blog")).toBeLessThan(
       shuffled.registry.indexOf("@acme/shop"),
     );
+    expect(shuffled.packageMessages.indexOf("@acme/blog")).toBeLessThan(
+      shuffled.packageMessages.indexOf("@acme/shop"),
+    );
   });
 });
 
 describe("a plugin is enabled, or it is not - never half of each", () => {
-  it("puts an enabled plugin in all three projections", () => {
+  it("puts an enabled plugin in all four projections", () => {
     const enabled = projectionsFor(BOTH);
 
     FILES.forEach(file => {
@@ -120,7 +150,7 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
   });
 
-  it("removes a disabled plugin from all three, in one step", () => {
+  it("removes a disabled plugin from all four, in one step", () => {
     const disabled = projectionsFor(["@acme/blog"]);
 
     FILES.forEach(file => {
@@ -179,6 +209,9 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
     expect(none.adminNav).toContain("[]");
     expect(none.contentRegistry).toContain("[]");
+    // Except this one, which still registers core: an app with no plugins has
+    // no plugin translations and every string core renders.
+    expect(none.packageMessages).toContain("'@vitnode/core'");
   });
 });
 

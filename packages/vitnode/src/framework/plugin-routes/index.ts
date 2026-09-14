@@ -20,6 +20,7 @@ export {
 export {
   assertPluginId,
   pluginIdsFromLoadedConfig,
+  pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
   sortAndAssertUniquePlugins,
   toSingleQuotedLiteral,
