@@ -4,15 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 import type { DashboardActions } from "@/views/admin/views/core/dashboard/widgets/dashboard-actions";
-import type { DashboardLayoutFetcher } from "@/views/admin/views/core/dashboard/widgets/layout-query";
 import type { ResolvedDashboardWidget } from "@/views/admin/views/core/dashboard/widgets/types";
 
-import { fetcher } from "@/tanstack/fetcher";
 import { widgetIdOf } from "@/views/admin/views/core/dashboard/widgets/instance-id";
 import {
-  dashboardLayoutFetcher,
   dashboardLayoutQueryKey,
   dashboardLayoutQueryOptions,
+  fetchDashboardLayout,
   saveDashboardLayoutInBrowser,
 } from "@/views/admin/views/core/dashboard/widgets/layout-query";
 import { saveWidgetSettingsInBrowser } from "@/views/admin/views/core/dashboard/widgets/widget-mutations";
@@ -20,9 +18,6 @@ import { saveWidgetSettingsInBrowser } from "@/views/admin/views/core/dashboard/
 import type { AdminIdentity } from "../identity";
 
 import { useAdminIdentity } from "../identity";
-
-const fetchDashboardLayout: DashboardLayoutFetcher =
-  dashboardLayoutFetcher(fetcher);
 
 export const dashboardLayoutQuery = (adminUserId: AdminIdentity) =>
   dashboardLayoutQueryOptions({

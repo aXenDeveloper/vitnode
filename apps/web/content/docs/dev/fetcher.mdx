@@ -1,80 +1,120 @@
 ---
-title: Fetcher
-description: Call your Hono API with end-to-end type safety.
+title: API Fetcher
+description: Call Hono endpoints with end-to-end type safety using a universal client that works seamlessly across SSR and the browser.
 icon: ArrowRightLeft
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { BoxesIcon, DatabaseIcon, MapIcon, ServerIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-<Callout type="info" title="Use this by default">
-  In a TanStack Start app, use `fetcher` through a plugin API client. The same
-  request works during SSR and browser navigation.
-</Callout>
+In TanStack Start, network calls must bridge two execution environments: server rendering during SSR and browser navigation afterwards.
 
-During SSR, VitNode forwards the visitor’s request to the API. In the browser,
-it calls `/api/*` directly. You do not need to write `createIsomorphicFn()` or
-choose a transport.
+VitNode's universal `fetcher` from `@vitnode/core/tanstack/fetcher` eliminates duplicate transport logic. During SSR, it relays visitor cookies, IP addresses, and headers to the API; in the browser, it calls `/api/*` directly with `credentials: "include"`. One call, end-to-end type inference, zero drama.
 
-## Create your API client once
+## The universal call
 
-<Steps>
-
-<Step>
-
-### Define it in your plugin
-
-Keep this in one plugin file. Features import `notesApi`; they never set up a
-module reference themselves. `create-vitnode-app --plugin` writes this file for
-you—the shape below is what it generates.
-
-```ts title="plugins/site-notes/src/api/client.ts"
-import type { ApiClient } from "@vitnode/core/tanstack/fetcher"
-
-import { createApiClient } from "@vitnode/core/tanstack/fetcher"
-
-import type { notesModule } from "./modules/notes/notes.module"
-
-export const notesApi: ApiClient<typeof notesModule> =
-  createApiClient<typeof notesModule>("@acme/site-notes")
-```
-
-<Callout type="warn" title="Both halves of that line earn their keep">
-  `import type` is what keeps Hono and your handlers out of the browser bundle—a
-  value import would ship the whole API to every visitor, and nothing would fail
-  to compile.
-
-  The `ApiClient` annotation is what keeps your plugin's `.d.ts` small. Without
-  it, declaration emit resolves the client's type in full and writes every route
-  the module serves into your build output: 200KB for a single route, and every
-  app that installs the plugin type-checks it.
-</Callout>
-
-</Step>
-
-<Step>
-
-### Fetch data
+Call `fetcher` inline at the call site. The router automatically infers available modules, HTTP methods, arguments, and return types from your plugin's API registry:
 
 ```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
-import { queryOptions } from "@tanstack/react-query"
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
-import { notesApi } from "../../api/client"
+const response = await fetcher({
+  plugin: '@acme/site-notes',
+  method: 'get',
+  module: 'notes',
+  path: '/',
+})
 
-export const notesQueryKey = ["@acme/site-notes", "notes"] as const
+if (response.ok) {
+  const { notes } = await response.json()
+}
+```
+
+Four fields identify an endpoint:
+
+| Field    | Description                                                    | Inferred from                        |
+| :------- | :------------------------------------------------------------- | :----------------------------------- |
+| `plugin` | Package name of the target plugin                              | App-configured plugin registry       |
+| `module` | Module path under the plugin (e.g. `'notes'`, `'admin/notes'`) | Plugin's `buildApiPlugin` definition |
+| `path`   | Route path declared inside the module (`'/'`, `'/{id}'`)       | Module's route declarations          |
+| `method` | HTTP method declared for that path (`'get'`, `'post'`, etc.)   | Declared routes for that path        |
+
+## Type inference & compile checks
+
+The fetcher checks your endpoint definition through `ApiPluginRegistry`. An invalid method, typo in the path, or missing parameter is caught at compile time:
+
+```ts
+await fetcher({
+  plugin: '@acme/site-notes',
+  // @ts-expect-error Type '"delete"' is not assignable to type '"get"'.
+  method: 'delete',
+  module: 'notes',
+  path: '/',
+})
+```
+
+The response is status-aware: `response.status` is typed as a union of declared HTTP codes (e.g. `200 | 404`). Once you narrow on `response.status`, `response.json()` automatically narrows to that status code's specific response schema.
+
+## Arguments: body, params, and query
+
+The `args` object is required whenever a route declares Zod schemas for parameters, queries, or request bodies:
+
+```ts title="plugins/site-notes/src/features/notes/pin-note.ts"
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+export const pinNote = async (id: string, pinned: boolean) => {
+  const response = await fetcher({
+    plugin: '@acme/site-notes',
+    // [!code ++:4]
+    args: {
+      body: { pinned },
+      params: { id },
+    },
+    method: 'post',
+    module: 'notes',
+    path: '/{id}/pin',
+  })
+
+  if (response.status === 404) return null
+
+  // Narrowed to 200: typed as the pinned Note object
+  return await response.json()
+}
+```
+
+- `params` — Interpolated into path parameters like `/{id}`.
+- `query` — Serialized into the URL query string (e.g. `?search=term&page=1`).
+- `body` — Serialized as JSON.
+- `formData` — Pass `formData` instead of `args.body` for file uploads.
+- `captchaToken` — Pass `captchaToken` for captcha-protected endpoints.
+
+## Using fetcher in queries & mutations
+
+<Tabs items={["Route Query", "Mutation"]}>
+  <Tab value="Route Query">
+
+Warm queries in your route's `load` function and read from the cache with `useQuery`:
+
+```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
+import { queryOptions } from '@tanstack/react-query'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+export const notesQueryKey = ['@acme/site-notes', 'notes'] as const
 
 export const notesQuery = () =>
   queryOptions({
     queryKey: notesQueryKey,
     queryFn: async ({ signal }) => {
-      const response = await notesApi.fetch({
-        method: "get",
-        module: "notes",
+      const response = await fetcher({
+        plugin: '@acme/site-notes',
+        method: 'get',
+        module: 'notes',
         options: { signal },
-        path: "/",
+        path: '/',
       })
 
       if (!response.ok) {
-        throw new Error(`The notes API answered ${response.status}.`)
+        throw new Error(`Failed to load notes: ${response.status}`)
       }
 
       return await response.json()
@@ -82,59 +122,55 @@ export const notesQuery = () =>
   })
 ```
 
-</Step>
-
-</Steps>
-
-## Use it on a page or in a mutation
-
-<Tabs items={["Initial page", "Mutation"]}>
-  <Tab value="Initial page">
-
-Warm the query in the route loader. The component reads that same cache entry
-with `useQuery(notesQuery())`.
-
-```ts title="plugins/site-notes/src/routes/notes.tsx"
-import { definePluginRoute } from "@vitnode/core/routing"
-
-import { notesQuery } from "../features/notes/notes-query"
+```ts title="plugins/site-notes/src/pages/notes-page.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+import { notesQuery } from '../features/notes/notes-query'
 
 export const route = definePluginRoute({
-  load: async ({ context }) =>
-    await context.queryClient.query({ ...notesQuery(), staleTime: "static" }),
+  load: async ({ context }) => {
+    return await context.queryClient.query({
+      ...notesQuery(),
+      staleTime: 'static',
+    })
+  },
 })
 ```
 
   </Tab>
-
   <Tab value="Mutation">
 
-Use the same API client, then invalidate the data that changed.
+Execute mutations and invalidate affected cache tags:
 
-```tsx title="plugins/site-notes/src/features/notes/create-note.tsx"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-
-import { notesApi } from "../../api/client"
-import { notesQueryKey } from "./notes-query"
+```tsx title="plugins/site-notes/src/features/notes/use-create-note.ts"
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+import { toast } from 'sonner'
+import { notesQueryKey } from './notes-query'
 
 export const useCreateNote = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (title: string) => {
-      const response = await notesApi.fetch({
+      const response = await fetcher({
+        plugin: '@acme/site-notes',
         args: { body: { title } },
-        method: "post",
-        module: "notes",
-        path: "/",
+        method: 'post',
+        module: 'notes',
+        path: '/',
       })
 
-      if (!response.ok) throw new Error("Could not create the note.")
+      if (!response.ok) {
+        throw new Error('Failed to create note.')
+      }
 
       return await response.json()
     },
-    onSuccess: async () =>
-      await queryClient.invalidateQueries({ queryKey: notesQueryKey }),
+    onSuccess: async () => {
+      // Invalidate cache and trigger sonner toast
+      await queryClient.invalidateQueries({ queryKey: notesQueryKey })
+      toast.success('Note created successfully!')
+    },
   })
 }
 ```
@@ -142,34 +178,63 @@ export const useCreateNote = () => {
   </Tab>
 </Tabs>
 
-## Server-only work
+## Universal vs. server-only fetcher
 
-Use `@vitnode/core/tanstack/fetcher/server` only for a server function, cookie
-relay, cron/job, secret, or a custom API origin.
+`fetcher` from `@vitnode/core/tanstack/fetcher` is the universal client. For operations that run exclusively on the server (server functions, cron tasks, or external secrets), use `@vitnode/core/tanstack/fetcher/server`:
 
-<Callout type="warn" title="Keep it server-only">
-  Put code that imports this fetcher in a `*.server.ts` file, or call it only
-  from a server function.
+| Feature                            | Universal (`fetcher`) | Server-only (`fetcher/server`) | Description                                          |
+| :--------------------------------- | :-------------------: | :----------------------------: | :--------------------------------------------------- |
+| Standard queries & mutations       |           ✓           |               ✓                | End-to-end typed requests                            |
+| `args`, `formData`, `captchaToken` |           ✓           |               ✓                | Request parameter serialization                      |
+| `allowSaveCookies`                 |                       |               ✓                | Relays API `Set-Cookie` headers back to the browser  |
+| `additionalHeaders`                |                       |               ✓                | Forwards internal credentials or custom headers      |
+| `origin`                           |                       |               ✓                | Directs requests to an alternative upstream API host |
+
+<Callout type="warn" title="Keep server code out of browser bundles">
+  Import from `@vitnode/core/tanstack/fetcher/server` only inside `*.server.ts`
+  files or `createServerFn` handlers. Value imports of backend factories or
+  server fetchers should never reach client bundles.
 </Callout>
 
-## What the types do
+## Content Engine routes
 
-- `method`, `module`, and `path` are always required.
-- `args` is required when the route declares a body, params, or query.
-- TypeScript infers the valid route, arguments, response status, and JSON body.
+Public routes created via [Content Engine](/docs/dev/content-engine) (`publicApi`) are automatically typed under `module: "content/<path>"`:
 
-Generated Content Engine modules have no static module type, so use
-`rawFetcher` for them instead.
+```ts
+const response = await fetcher({
+  plugin: '@vitnode/blog',
+  args: { params: { slug: 'welcome' } },
+  method: 'get',
+  module: 'content/posts',
+  path: '/{slug}',
+})
+```
+
+For generated AdminCP content modules where schemas are dynamic, use `rawFetcher` from `@vitnode/core/tanstack/fetcher` instead. See [Content Engine](/docs/dev/content-engine) for defining content types, schema modeling, and generating CRUD APIs.
 
 <Cards>
   <Card
+    icon={<BoxesIcon />}
+    title="Content Engine"
+    description="Define content types, schemas, and typed public endpoints."
+    href="/docs/dev/content-engine"
+  />
+  <Card
+    icon={<DatabaseIcon />}
     title="Data Loading"
-    description="Load and cache API data with TanStack Query"
+    description="Learn caching, query prefetching, and TanStack Query integration."
     href="/docs/dev/data-loading"
   />
   <Card
+    icon={<MapIcon />}
+    title="Plugin Routes"
+    description="Define route trees, lazy pages, loaders, and breadcrumbs."
+    href="/docs/dev/plugins/routes"
+  />
+  <Card
+    icon={<ServerIcon />}
     title="Server Functions"
-    description="Use server-only code when a request needs it"
+    description="Implement server-only workflows, cookie relays, and background jobs."
     href="/docs/dev/server-functions"
   />
 </Cards>

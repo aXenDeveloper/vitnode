@@ -1,8 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { usersModule } from "@/api/modules/users/users.module";
-
 const requestHeaders = new Headers();
 const setCookie = vi.fn();
 let requestUrl: null | string = "https://preview.example.com/login";
@@ -48,7 +46,8 @@ beforeEach(() => {
 
 describe("the request the visitor made is the request the API sees", () => {
   it("forwards the cookie, user agent and forwarded-for chain", async () => {
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -65,7 +64,8 @@ describe("the request the visitor made is the request the API sees", () => {
   it("falls back to the connection IP when no proxy wrote a chain", async () => {
     requestHeaders.delete("x-forwarded-for");
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -75,7 +75,8 @@ describe("the request the visitor made is the request the API sees", () => {
   });
 
   it("calls the origin this request arrived on", async () => {
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -90,7 +91,8 @@ describe("the request the visitor made is the request the API sees", () => {
     // `:8000`, so this request's own origin has no `/api/*` to answer.
     vi.stubEnv("VITNODE_API_URL", "http://localhost:8000");
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -103,7 +105,8 @@ describe("the request the visitor made is the request the API sees", () => {
   it("lets an explicit origin win", async () => {
     vi.stubEnv("VITNODE_API_URL", "http://localhost:8000");
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       origin: "https://api.example.com",
@@ -116,7 +119,8 @@ describe("the request the visitor made is the request the API sees", () => {
 
 describe("the route's arguments reach the wire", () => {
   it("sends a body as JSON", async () => {
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       args: { body: { email: "a@b.c", password: "secret" } },
       method: "post",
       module: "users",
@@ -133,7 +137,8 @@ describe("the route's arguments reach the wire", () => {
   });
 
   it("substitutes path parameters", async () => {
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       args: { params: { publicId: "device-7" } },
       method: "delete",
       module: "users",
@@ -148,7 +153,8 @@ describe("the route's arguments reach the wire", () => {
 
 describe("captchaToken", () => {
   it("is sent as the header the middleware reads", async () => {
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       args: { body: { email: "a@b.c" } },
       captchaToken: "solved",
       method: "post",
@@ -162,7 +168,8 @@ describe("captchaToken", () => {
   it("sends no header at all when the deployment has no captcha", async () => {
     // An empty token is a *present* header with no token, which a configured
     // deployment rejects as `400`. The absence is the meaningful part.
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       args: { body: { email: "a@b.c" } },
       captchaToken: "",
       method: "post",
@@ -184,7 +191,8 @@ describe("allowSaveCookies", () => {
   it("copies the API's cookies onto this response", async () => {
     apiFetch.mockReturnValue(withSetCookie(201));
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       allowSaveCookies: true,
       args: { body: { email: "a@b.c", password: "secret" } },
       method: "post",
@@ -202,7 +210,8 @@ describe("allowSaveCookies", () => {
   it("ignores a refusal's cookies", async () => {
     apiFetch.mockReturnValue(withSetCookie(403));
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       allowSaveCookies: true,
       args: { body: { email: "a@b.c", password: "wrong" } },
       method: "post",
@@ -216,7 +225,8 @@ describe("allowSaveCookies", () => {
   it("writes nothing unless it was asked to", async () => {
     apiFetch.mockReturnValue(withSetCookie(201));
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       args: { body: { email: "a@b.c", password: "secret" } },
       method: "post",
       module: "users",
@@ -249,7 +259,8 @@ describe("outside a request", () => {
   it("falls back to the configured API origin", async () => {
     requestUrl = null;
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -262,7 +273,8 @@ describe("outside a request", () => {
     requestUrl = null;
     vi.stubEnv("VITNODE_API_URL", "https://api.example.com");
 
-    await fetcher(usersModule, {
+    await fetcher({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",

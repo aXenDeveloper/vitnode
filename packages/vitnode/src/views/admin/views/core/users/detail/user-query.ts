@@ -1,21 +1,20 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { StaffPermissionSet } from "@/api/lib/permission-staff";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type { UserImagePolicy } from "@/lib/user-images";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminUserRole } from "@/views/admin/views/core/users/list/users-query";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 import {
   ADMIN_USERS_SCREEN,
   adminScopedQueryKey,
 } from "@/views/admin/views/core/shared/admin-scope";
-import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
 const MAX_USER_ID = 2_147_483_647;
 
@@ -53,25 +52,21 @@ export interface AdminUserDetail {
 
 export type AdminUserFetcher = (id: string) => Promise<AdminUserDetail>;
 
-export const adminUserFetcher =
-  (transport: UniversalFetcher): AdminUserFetcher =>
-  async id => {
-    const response = await transport(adminModuleRef, {
-      args: { params: { id } },
-      method: "get",
-      module: "admin/users",
-      path: "/{id}",
-    });
+export const fetchAdminUser: AdminUserFetcher = async id => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { params: { id } },
+    method: "get",
+    module: "admin/users",
+    path: "/{id}",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(response.status, "a user", `id=${id}`);
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "a user", `id=${id}`);
+  }
 
-    return await response.json();
-  };
-
-export const fetchAdminUserInBrowser: AdminUserFetcher =
-  adminUserFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const adminUserQueryKey = ({
   adminUserId,
@@ -83,7 +78,7 @@ export const adminUserQueryKey = ({
 
 export const adminUserQueryOptions = ({
   adminUserId,
-  fetchUser = fetchAdminUserInBrowser,
+  fetchUser = fetchAdminUser,
   id,
 }: {
   adminUserId: AdminIdentity;

@@ -5,23 +5,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import React from "react";
 
-import type {
-  DebugLogsPageFetcher,
-  DebugLogsParams,
-  DebugQueueFetcher,
-} from "@/views/admin/views/core/debug/debug-query";
+import type { DebugLogsParams } from "@/views/admin/views/core/debug/debug-query";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
-  debugLogsPageFetcher,
   debugLogsQueryOptions,
-  debugQueueFetcher,
   debugQueueQueryOptions,
+  fetchDebugLogsPage,
+  fetchDebugQueue,
 } from "@/views/admin/views/core/debug/debug-query";
-
-const fetchDebugLogsPage: DebugLogsPageFetcher = debugLogsPageFetcher(fetcher);
-
-const fetchDebugQueue: DebugQueueFetcher = debugQueueFetcher(fetcher);
 
 export const debugLogsQuery = ({ params }: { params: DebugLogsParams }) =>
   debugLogsQueryOptions({ fetchPage: fetchDebugLogsPage, params });

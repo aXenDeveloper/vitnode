@@ -26,11 +26,11 @@ export type {
   UserProfileFetcher,
 } from "@/views/profile/profile-query";
 export {
+  fetchUserProfile,
   isProfileNotFound,
   normalizeProfileNameCode,
   PROFILE_QUERY_ROOT,
   ProfileRequestError,
-  userProfileFetcher,
   userProfileQueryKey,
   userProfileQueryOptions,
 } from "@/views/profile/profile-query";

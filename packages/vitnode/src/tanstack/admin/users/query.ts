@@ -9,26 +9,19 @@ import type {
   RemoveAdminUserImage,
   UploadAdminUserImage,
 } from "@/views/admin/views/core/users/detail/user-images-content";
-import type {
-  AdminUserDetail,
-  AdminUserFetcher,
-} from "@/views/admin/views/core/users/detail/user-query";
+import type { AdminUserDetail } from "@/views/admin/views/core/users/detail/user-query";
 import type { UpdateAdminUserRoles } from "@/views/admin/views/core/users/detail/user-roles-content";
-import type {
-  AdminUsersPageFetcher,
-  AdminUsersParams,
-} from "@/views/admin/views/core/users/list/users-query";
+import type { AdminUsersParams } from "@/views/admin/views/core/users/list/users-query";
 import type { VerifyAdminUserEmail } from "@/views/admin/views/core/users/list/users-table-content";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
-  adminUserFetcher,
   adminUserQueryOptions,
+  fetchAdminUser,
 } from "@/views/admin/views/core/users/detail/user-query";
 import {
-  adminUsersPageFetcher,
   adminUsersQueryOptions,
   adminUsersQueryRoot,
+  fetchAdminUsersPage,
 } from "@/views/admin/views/core/users/list/users-query";
 import {
   removeAdminUserImage,
@@ -41,10 +34,6 @@ import {
 import { useAdminIdentity } from "../identity";
 import { invalidateAdminSession } from "../session-query";
 
-const fetchUsersPage: AdminUsersPageFetcher = adminUsersPageFetcher(fetcher);
-
-const fetchUser: AdminUserFetcher = adminUserFetcher(fetcher);
-
 export const adminUsersQuery = ({
   adminUserId,
   params,
@@ -54,7 +43,7 @@ export const adminUsersQuery = ({
 }) =>
   adminUsersQueryOptions({
     adminUserId,
-    fetchPage: fetchUsersPage,
+    fetchPage: fetchAdminUsersPage,
     params,
   });
 
@@ -65,7 +54,7 @@ export const adminUserQuery = ({
 }: {
   adminUserId: AdminIdentity;
   id: string;
-}) => adminUserQueryOptions({ adminUserId, fetchUser, id });
+}) => adminUserQueryOptions({ adminUserId, fetchUser: fetchAdminUser, id });
 
 export const invalidateAdminUsers = async (
   queryClient: QueryClient,

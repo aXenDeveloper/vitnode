@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  pluginApiClientTemplate,
   pluginApiConfigTemplate,
   pluginApiModuleTemplate,
   pluginApiRouteTemplate,
   pluginApiVariableName,
   pluginConfigTemplate,
   pluginConstTemplate,
+  pluginGlobalTypesTemplate,
   pluginMessagesTemplate,
   pluginPackageExports,
   pluginRouteModuleTemplate,
@@ -147,8 +147,9 @@ describe("the generated route module", () => {
     expect(imports).toEqual([
       "@vitnode/core/routing",
       "@vitnode/core/routing",
+      "@vitnode/core/tanstack/fetcher",
       "use-intl",
-      "@/api/client",
+      "@/const",
     ]);
     expect(imports).not.toContain("@tanstack/react-router");
   });
@@ -236,6 +237,7 @@ describe("the generated constant", () => {
     Object.entries(files)
       .filter(
         ([file]) =>
+          file !== "global.d.ts" &&
           file !== "src/const.ts" &&
           file !== "src/locales/en.json" &&
           file !== "src/pages/home-page.tsx" &&
@@ -279,20 +281,44 @@ describe("the generated API module", () => {
   });
 });
 
-describe("the generated API client", () => {
-  it("names the module as a type, which is what keeps Hono out of the browser", () => {
-    const client = pluginApiClientTemplate();
+describe("the generated type registrations", () => {
+  it("imports the API factory as a type, which is what keeps Hono out of the browser", () => {
+    const types = pluginGlobalTypesTemplate("@acme/blog");
 
-    expect(client).toContain(
-      'import type { helloModule } from "@/api/modules/hello/hello.module";',
+    expect(types).toContain(
+      'import type { blogApiPlugin } from "./src/config.api";',
     );
-    expect(client).not.toMatch(/^import \{[^}]*helloModule/m);
+    expect(types).not.toMatch(/^import \{[^}]*ApiPlugin/m);
   });
 
-  it("annotates the client, which keeps the plugin's declarations small", () => {
-    expect(pluginApiClientTemplate()).toContain(
-      "export const helloApi: ApiClient<typeof helloModule> =",
+  it("registers the plugin's API under its own id, so its pages can call it", () => {
+    const types = pluginGlobalTypesTemplate("@acme/blog");
+
+    expect(types).toContain(
+      'declare module "@vitnode/core/lib/fetcher/registry" {',
     );
+    expect(types).toContain("interface ApiPluginRegistry {");
+    expect(types).toContain('"@acme/blog": typeof blogApiPlugin;');
+  });
+
+  it("keeps the message tree registration a generated plugin always had", () => {
+    const types = pluginGlobalTypesTemplate("blog");
+
+    expect(types).toContain('declare module "use-intl" {');
+    expect(types).toContain(
+      "Messages: typeof plugin & typeof core & typeof coreApi;",
+    );
+  });
+
+  it("loads the registry module it augments, or the augmentation would merge into nothing", () => {
+    expect(pluginGlobalTypesTemplate("blog")).toContain(
+      'export type { ApiPluginRegistry } from "@vitnode/core/lib/fetcher/registry";',
+    );
+  });
+
+  it("evaluates nothing", () => {
+    // A `.d.ts` that ran the factory would build a Hono app at type-check time.
+    expect(pluginGlobalTypesTemplate("blog")).not.toContain("()");
   });
 });
 
@@ -380,7 +406,7 @@ describe("the scaffold as a whole", () => {
     });
   });
 
-  it("writes a file for every module the API config and client name", () => {
+  it("writes a file for every module the API config names", () => {
     const files = pluginRouteScaffold("@acme/blog");
 
     expect(Object.keys(files)).toContain(
@@ -389,9 +415,10 @@ describe("the scaffold as a whole", () => {
     expect(Object.keys(files)).toContain(
       "src/api/modules/hello/hello.route.ts",
     );
-    expect(Object.keys(files)).toContain("src/api/client.ts");
     expect(Object.keys(files)).toContain("src/config.api.ts");
     expect(Object.keys(files)).toContain("src/const.ts");
+    expect(Object.keys(files)).toContain("global.d.ts");
+    expect(Object.keys(files)).not.toContain("src/api/client.ts");
   });
 
   it("writes the messages barrel the config registers", () => {
@@ -409,7 +436,8 @@ describe("the scaffold as a whole", () => {
     // reaches an app through its package exports, and the app's own generated
     // registry is rewritten from the plugin list on every build.
     Object.keys(pluginRouteScaffold("blog")).forEach(file => {
-      expect(file.startsWith("src/")).toBe(true);
+      expect(file.startsWith("src/") || file === "global.d.ts").toBe(true);
+      expect(file).not.toContain("..");
     });
   });
 

@@ -2,8 +2,8 @@ import type { z } from "zod";
 
 import type { zodSendTestEmailSchema } from "@/api/modules/admin/debug/routes/send-test-email.route";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
-import { debugAdminModuleRef } from "@/views/admin/views/core/system/integrations/integrations-query";
 
 export type SendTestEmailBody = z.infer<typeof zodSendTestEmailSchema>;
 
@@ -15,13 +15,13 @@ export type SendTestEmail = (
 /** Sends the test email from the browser. */
 export const sendTestEmailInBrowser: SendTestEmail = async body => {
   try {
-    const response = await fetcherClient(debugAdminModuleRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { body },
       method: "post",
-      module: "debug",
+      module: "admin/debug",
       options: { credentials: "include" },
       path: "/send-test-email",
-      prefixPath: "/admin",
     });
 
     if (!response.ok) return { error: await response.text() };

@@ -1,13 +1,12 @@
 import type { UserImageKind } from "@/lib/user-images";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { readApiErrorMessage } from "@/lib/read-api-error";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
 } from "@/views/admin/views/core/shared/admin-mutation";
-
-import { adminModuleRef } from "./list/users-query";
 
 export interface AdminUserUpdateInput {
   email?: string;
@@ -32,7 +31,8 @@ export const updateAdminUser = async (
     expected: 200,
     parse: async response => (await response.json()) as AdminUserUpdated,
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body, params: { id: String(id) } },
         method: "patch",
         module: "admin/users",
@@ -60,7 +60,8 @@ export const verifyAdminUserEmail = async (
     expected: 200,
     parse: async response => (await response.json()) as AdminUserVerified,
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { params: { id: String(id) } },
         method: "post",
         module: "admin/users",
@@ -88,7 +89,8 @@ export const createAdminUser = async (
     expected: 201,
     parse: async response => (await response.json()) as AdminUserCreated,
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body },
         method: "post",
         module: "admin/users",
@@ -134,7 +136,8 @@ export const uploadAdminUserImage = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetcherClient(adminModuleRef, {
+  const response = await fetcherClient({
+    plugin: CONFIG_PLUGIN.pluginId,
     args: { params: { id: String(id), kind } },
     formData,
     method: "post",
@@ -157,7 +160,8 @@ export const removeAdminUserImage = async (
   id: number,
   kind: UserImageKind,
 ): Promise<void> => {
-  const response = await fetcherClient(adminModuleRef, {
+  const response = await fetcherClient({
+    plugin: CONFIG_PLUGIN.pluginId,
     args: { params: { id: String(id), kind } },
     method: "delete",
     module: "admin/users",

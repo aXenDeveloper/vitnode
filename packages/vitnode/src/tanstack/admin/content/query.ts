@@ -7,10 +7,7 @@ import type {
   ContentRowMutationArgs,
   ContentRowMutationResult,
 } from "@/views/admin/views/content/table/list-mutations";
-import type {
-  ContentListPageFetcher,
-  ContentListRequest,
-} from "@/views/admin/views/content/table/list-query";
+import type { ContentListRequest } from "@/views/admin/views/content/table/list-query";
 
 import {
   invalidateContentItem,
@@ -23,17 +20,13 @@ import {
   setContentPublicationInBrowser,
 } from "@/views/admin/views/content/table/list-mutations";
 import {
-  contentListPageFetcher,
   contentListQueryOptions,
+  fetchContentListPage,
 } from "@/views/admin/views/content/table/list-query";
 
 import type { ContentListParams } from "./route-search";
 
 import { contentListQuery } from "./route-search";
-import { contentApiFetch } from "./transport";
-
-const fetchContentListPage: ContentListPageFetcher =
-  contentListPageFetcher(contentApiFetch);
 
 /** Which generated module serves one content type's admin routes. */
 export const contentApiTarget = (

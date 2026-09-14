@@ -1,11 +1,8 @@
 import { infiniteQueryOptions } from "@tanstack/react-query";
 
-import type { searchModule } from "@/api/modules/search/search.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
-
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 
 import type { SearchFeedPage } from "./types";
 
@@ -25,10 +22,6 @@ export interface SearchFeedParams {
   to?: string;
   types?: string;
 }
-
-export const searchModuleRef = clientModule<typeof searchModule>(
-  CONFIG_PLUGIN.pluginId,
-);
 
 export interface SearchFeedPageArgs {
   cursor: SearchFeedCursor;
@@ -128,21 +121,23 @@ export type SearchFeedPageFetcher = (
  * The request, the cursor and the refusal check are all here, so SSR and the
  * browser cannot drift: only the transport differs, and it is an argument.
  */
-export const searchFeedPageFetcher =
-  (transport: UniversalFetcher): SearchFeedPageFetcher =>
-  async (args, { signal } = {}) => {
-    const response = await transport(searchModuleRef, {
-      args: { query: searchFeedQuery(args) },
-      method: "get",
-      module: "search",
-      options: { signal },
-      path: "/",
-    });
+export const fetchSearchFeedPage: SearchFeedPageFetcher = async (
+  args,
+  { signal } = {},
+) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: searchFeedQuery(args) },
+    method: "get",
+    module: "search",
+    options: { signal },
+    path: "/",
+  });
 
-    assertSearchFeedResponse(response, args);
+  assertSearchFeedResponse(response, args);
 
-    return await response.json();
-  };
+  return await response.json();
+};
 
 /**
  * One page, fetched from the browser.
@@ -151,9 +146,6 @@ export const searchFeedPageFetcher =
  * VitNode client call uses - same-origin, cookies attached by the browser
  * itself, and a 429 routed to the global rate-limit notice.
  */
-export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher =
-  searchFeedPageFetcher(fetcherClient);
-
 /**
  * The feed, as the one query definition every caller shares.
  *
@@ -189,7 +181,7 @@ export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher =
  * off), so a hydrated feed is not refetched behind the reader.
  */
 export const searchFeedQueryOptions = ({
-  fetchPage = fetchSearchFeedPageInBrowser,
+  fetchPage = fetchSearchFeedPage,
   initialData,
   locale,
   params,

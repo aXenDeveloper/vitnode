@@ -14,6 +14,7 @@ import {
 import { pathToFileURL } from "node:url";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
+import type { ResolvedApiPluginModule } from "../api-registry";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PackageMessagesSource } from "../package-messages";
 import type {
@@ -23,6 +24,7 @@ import type {
 } from "../plugin-routes";
 
 import { generateAdminNavSource } from "../admin-nav";
+import { generateApiRegistrySource } from "../api-registry";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
@@ -46,6 +48,8 @@ const ADMIN_NAV_SUBPATH = "admin/nav";
 
 const ADMIN_CONTENT_SUBPATH = "admin/content";
 
+const API_CONFIG_SUBPATH = "config.api";
+
 const ERROR_PREFIX = "[VitNode plugin routes]";
 
 /** Where a file-based router keeps an app's own route files, by convention. */
@@ -63,6 +67,8 @@ const pathsFor = (appRoot: string) => ({
   config: join(appRoot, "src", "vitnode.config.ts"),
 
   adminNav: join(appRoot, "src", "admin-nav.gen.ts"),
+
+  apiRegistry: join(appRoot, "src", "api-registry.gen.ts"),
 
   contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
 
@@ -403,11 +409,17 @@ const discover = async (
       ADMIN_CONTENT_SUBPATH,
       resolvePackageFile,
     );
+  const apiRegistry = readOptionalPluginModules<ResolvedApiPluginModule>(
+    pluginIds,
+    API_CONFIG_SUBPATH,
+    resolvePackageFile,
+  );
 
   const watch = [
     ...loaded.flatMap(({ watch: file }) => file ?? []),
     ...adminNav.watch,
     ...contentRegistry.watch,
+    ...apiRegistry.watch,
   ];
 
   onLoaded?.(watch);
@@ -431,6 +443,7 @@ const discover = async (
 
   return {
     adminNav: adminNav.modules,
+    apiRegistry: apiRegistry.modules,
     compiled,
     contentRegistry: contentRegistry.modules,
     packageMessages,
@@ -450,19 +463,20 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-/** All four generated files, from one discovery pass. */
+/** All five generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
 ): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { adminNav, compiled, contentRegistry, packageMessages } =
+  const { adminNav, apiRegistry, compiled, contentRegistry, packageMessages } =
     await discover(appRoot, options, onLoaded);
 
   await Promise.all([
     writeIfChanged(paths.registry, compiled.source),
     writeIfChanged(paths.adminNav, generateAdminNavSource(adminNav)),
+    writeIfChanged(paths.apiRegistry, generateApiRegistrySource(apiRegistry)),
     writeIfChanged(
       paths.contentRegistry,
       generateContentRegistrySource(contentRegistry),

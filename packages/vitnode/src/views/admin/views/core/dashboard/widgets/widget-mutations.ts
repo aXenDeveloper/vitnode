@@ -1,14 +1,11 @@
 import type { z } from "zod";
 
-import type { adminModule } from "@/api/modules/admin/admin.module";
 import type { zodSendNotificationSchema } from "@/api/modules/admin/routes/notifications.route";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
-import { adminModuleRef } from "@/views/admin/admin-request";
 
 import type { DashboardMutationResult } from "./dashboard-actions";
-
-const adminModuleClientRef = adminModuleRef<typeof adminModule>();
 
 /** One widget's settings, saved. */
 export const saveWidgetSettingsInBrowser = async ({
@@ -19,7 +16,8 @@ export const saveWidgetSettingsInBrowser = async ({
   widgetId: string;
 }): Promise<DashboardMutationResult> => {
   try {
-    const response = await fetcherClient(adminModuleClientRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { body: { settings, widgetId } },
       method: "put",
       module: "admin/dashboard",
@@ -42,7 +40,8 @@ export const sendNotificationInBrowser = async (
   body: z.infer<typeof zodSendNotificationSchema>,
 ): Promise<DashboardMutationResult> => {
   try {
-    const response = await fetcherClient(adminModuleClientRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { body },
       method: "post",
       module: "admin",

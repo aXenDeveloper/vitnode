@@ -15,7 +15,7 @@ export const buildContentAdminModule = <P extends string>({
 }: {
   contentTypes: AnyContentModel[];
   pluginId: P;
-}): BuildModuleReturn<P, "content"> => {
+}): BuildModuleReturn<NoInfer<P>, "content"> => {
   const modules = contentTypes.map(model => {
     // Every `src/database/*.ts` has loaded by the time this module is built, so
     // it is the first safe moment to check that each relation points at the

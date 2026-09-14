@@ -60,12 +60,12 @@ import { articleContent } from "./content/articles"
 
 export const blogApiPlugin = () =>
   buildApiPlugin({
-    pluginId: "blog",
+    pluginId: "@acme/blog",
     modules: [
       // [!code ++:4]
       buildContentPublicModule({
         contentTypes: [articleContent],
-        pluginId: "blog",
+        pluginId: "@acme/blog",
       }),
     ],
   })
@@ -73,8 +73,49 @@ export const blogApiPlugin = () =>
 
 The module exposes two public endpoints:
 
-- `GET /api/{pluginId}/{path}`: Lists published records with cursor pagination, optional `search`, equality `filters`, and `orderBy`.
-- `GET /api/{pluginId}/{path}/{slug}`: Retrieves a single published record resolved by its public slug.
+- `GET /api/{pluginId}/content/{path}`: Lists published records with cursor pagination, optional `search`, equality `filters`, and `orderBy`.
+- `GET /api/{pluginId}/content/{path}/{slug}`: Retrieves a single published record resolved by its public slug.
+
+</Step>
+  <Step>
+
+### Read it with the fetcher
+
+`buildContentPublicModule` keeps every generated route in its type, so the
+universal fetcher infers them like any hand-written module. The module path is
+`content/` followed by the content type's `publicApi.path`:
+
+```ts title="plugins/blog/src/features/articles/article-query.ts"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
+
+// [!code ++:8]
+export const fetchArticle = async (slug: string) => {
+  const response = await fetcher({
+    plugin: "@acme/blog",
+    args: { params: { slug } },
+    method: "get",
+    module: "content/articles",
+    path: "/{slug}",
+  })
+
+  if (response.status === 404) return null
+
+  return await response.json()
+}
+
+export const fetchArticles = async (search?: string) =>
+  await fetcher({
+    plugin: "@acme/blog",
+    args: { query: { first: "20", orderBy: "title", search } },
+    method: "get",
+    module: "content/articles",
+    path: "/",
+  })
+```
+
+A content type without `publicApi` contributes no module, so
+`module: "content/categories"` for a private type is a compile error rather
+than a 404 at runtime.
 
 </Step>
   <Step>

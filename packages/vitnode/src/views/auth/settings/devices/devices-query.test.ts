@@ -26,12 +26,7 @@ describe("one list per visitor, one cache entry each", () => {
     // in the same entry or the loader fills one while the component reads the
     // other.
     expect(hashKey(devicesQueryOptions({ userId: 10 }).queryKey)).toBe(
-      hashKey(
-        devicesQueryOptions({
-          fetchDevices: async () => Promise.resolve({ devices: [] }),
-          userId: 10,
-        }).queryKey,
-      ),
+      hashKey(devicesQueryOptions({ userId: 10 }).queryKey),
     );
   });
 

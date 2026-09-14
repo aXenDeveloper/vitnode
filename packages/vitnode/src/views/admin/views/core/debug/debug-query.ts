@@ -1,7 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -9,19 +7,14 @@ import type {
 } from "@/views/admin/table/params";
 import type { QueueStatus } from "@/views/admin/views/core/advanced/queue/queue-query";
 
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import {
-  adminModuleRef,
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
-
-export const debugAdminModuleRef = adminModuleRef<typeof debugAdminModule>();
-
-/** The debug module is mounted under `/admin`, not at the plugin root. */
-export const DEBUG_PREFIX_PATH = "/admin";
 
 // ------------------------------------------------------------ system log ---
 
@@ -58,31 +51,25 @@ export type DebugLogsPageFetcher = (
 ) => Promise<DebugLogsPage>;
 
 /** One page of the log, over whichever transport the host hands in. */
-export const debugLogsPageFetcher =
-  (transport: UniversalFetcher): DebugLogsPageFetcher =>
-  async params => {
-    const response = await transport(debugAdminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "debug",
-      path: "/logs",
-      prefixPath: DEBUG_PREFIX_PATH,
-    });
+export const fetchDebugLogsPage: DebugLogsPageFetcher = async params => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/debug",
+    path: "/logs",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the system log",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the system log",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-/** One page of the log, fetched from the browser. */
-export const fetchDebugLogsPageInBrowser: DebugLogsPageFetcher =
-  debugLogsPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 /** The root every cached page of the system log hangs off. */
 export const debugLogsQueryRoot = adminQueryRoot("debug-logs");
@@ -91,7 +78,7 @@ export const debugLogsQueryKey = (params: DebugLogsParams) =>
   [...debugLogsQueryRoot, params] as const;
 
 export const debugLogsQueryOptions = ({
-  fetchPage = fetchDebugLogsPageInBrowser,
+  fetchPage = fetchDebugLogsPage,
   params,
 }: {
   fetchPage?: DebugLogsPageFetcher;
@@ -136,32 +123,26 @@ export interface DebugQueueSnapshot {
 export type DebugQueueFetcher = () => Promise<DebugQueueSnapshot>;
 
 /** The snapshot, over whichever transport the host hands in. */
-export const debugQueueFetcher =
-  (transport: UniversalFetcher): DebugQueueFetcher =>
-  async () => {
-    const response = await transport(debugAdminModuleRef, {
-      method: "get",
-      module: "debug",
-      path: "/queue",
-      prefixPath: DEBUG_PREFIX_PATH,
-    });
+export const fetchDebugQueue: DebugQueueFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/debug",
+    path: "/queue",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(response.status, "the queue snapshot");
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the queue snapshot");
+  }
 
-    return await response.json();
-  };
-
-/** The snapshot, fetched from the browser. */
-export const fetchDebugQueueInBrowser: DebugQueueFetcher =
-  debugQueueFetcher(fetcherClient);
+  return await response.json();
+};
 
 /** The cache entry the queue snapshot reads and writes. */
 export const debugQueueQueryKey = adminQueryRoot("debug-queue");
 
 export const debugQueueQueryOptions = ({
-  fetchSnapshot = fetchDebugQueueInBrowser,
+  fetchSnapshot = fetchDebugQueue,
 }: {
   fetchSnapshot?: DebugQueueFetcher;
 } = {}) =>

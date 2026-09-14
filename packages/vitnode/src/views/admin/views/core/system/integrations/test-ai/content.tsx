@@ -2,8 +2,6 @@ import { LoaderCircleIcon, TriangleAlertIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
+import { fetcherClient } from "@/lib/fetcher-client";
 
 import type { TestAIModel } from "./test-ai";
 
@@ -55,17 +53,14 @@ export const ContentTestAI = ({ models }: { models: TestAIModel[] }) => {
     setError(null);
 
     try {
-      const res = await fetcherClient(
-        clientModule<typeof debugAdminModule>(CONFIG_PLUGIN.pluginId),
-        {
-          prefixPath: "/admin",
-          module: "debug",
-          path: "/test-ai",
-          method: "post",
-          args: { body: { model, prompt } },
-          options: { credentials: "include", signal: controller.signal },
-        },
-      );
+      const res = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        module: "admin/debug",
+        path: "/test-ai",
+        method: "post",
+        args: { body: { model, prompt } },
+        options: { credentials: "include", signal: controller.signal },
+      });
 
       if (!res.ok || !res.body) {
         setError((await res.text()) || tError("internal_server_error"));

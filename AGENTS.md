@@ -33,14 +33,15 @@ import { Activity } from "react";
 ### Fetching APIs
 
 - `fetcher` from `@vitnode/core/tanstack/fetcher` is universal - one call, SSR and browser. Never hand-write `createIsomorphicFn().server(...).client(...)` for a fetch.
-- It takes a lightweight `clientModule<typeof x>(pluginId)` reference, which is safe in both runtimes; only the explicit server fetcher takes the real API module.
-- `@vitnode/core/tanstack/fetcher/server` is for work that is genuinely server-only: server functions, `allowSaveCookies` cookie relay, cron/jobs, upstream secrets or a different `origin`.
-- `@vitnode/core/lib/fetcher-client` stays the framework-neutral browser default. A shared `views/*` module takes its transport as a `UniversalFetcher` argument and defaults it to `fetcherClient`; the `tanstack/*` adapter binds the universal one.
+- A call names the plugin, never an API module: `fetcher({ plugin: "@vitnode/core", method: "get", module: "users", path: "/devices" })`. `plugin`, `module` (any nesting depth, `admin/advanced/cron`), `path`, `method`, `args` and the response are all inferred from the plugin API registry; an invalid combination is a compile error at the offending property.
+- The registry is `ApiPluginRegistry` in `@vitnode/core/lib/fetcher/registry`. Core registers itself; an app's `src/api-registry.gen.ts` registers every configured plugin that exports `config.api`, with type-only imports; a plugin registers its own API in its `global.d.ts` so its pages can call it. Never import a plugin API factory as a value outside `vitnode.api.config.ts`.
+- `@vitnode/core/tanstack/fetcher/server` is for work that is genuinely server-only: server functions, `allowSaveCookies` cookie relay, cron/jobs, upstream secrets or a different `origin`. Same call shape, more options.
+- Shared `views/*` query modules call `fetcher` directly - no injected transport, no browser-only twin. `@vitnode/core/lib/fetcher-client` is the framework-neutral browser primitive the universal fetcher is built on, for code that never renders on a server.
 - Write the route inline at the call site - never build a request object elsewhere and pass it in.
 - Never annotate the result; the fetcher infers it. Put the shared contract on the feature's own `*Fetcher` type instead.
 - `args` is required exactly when the route declares a body, params or a query.
 - `captchaToken` for captcha-gated routes.
-- `rawFetcher` only for generated Content Engine modules, which have no type to infer from. It is universal too, with the same server-only twin.
+- `rawFetcher` only for generated Content Engine admin modules, which have no type to infer from. It is universal too, with the same server-only twin. A content type's *public* routes are typed: `module: "content/<publicApi.path>"`.
 
 ### Caching APIs
 

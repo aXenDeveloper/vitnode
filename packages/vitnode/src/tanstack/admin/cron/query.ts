@@ -3,24 +3,18 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
-import type {
-  CronPageFetcher,
-  CronParams,
-} from "@/views/admin/views/core/advanced/cron/cron-query";
+import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-query";
 import type {
   RunCron,
   RunCronResult,
 } from "@/views/admin/views/core/advanced/cron/run-action/run-cron";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
-  cronPageFetcher,
   cronQueryOptions,
   cronQueryRoot,
+  fetchCronPage,
 } from "@/views/admin/views/core/advanced/cron/cron-query";
 import { runCronInBrowser } from "@/views/admin/views/core/advanced/cron/run-action/run-cron";
-
-const fetchCronPage: CronPageFetcher = cronPageFetcher(fetcher);
 
 export const cronQuery = ({ params }: { params: CronParams }) =>
   cronQueryOptions({ fetchPage: fetchCronPage, params });

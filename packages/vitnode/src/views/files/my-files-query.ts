@@ -1,20 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { userFilesModule } from "@/api/modules/users/files/files.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
-
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { readFirstValue, readPageSize } from "@/lib/table-params";
-
-export const userFilesModuleRef = clientModule<typeof userFilesModule>(
-  CONFIG_PLUGIN.pluginId,
-);
-
-/** The module is mounted under `/users`, not at the plugin root. */
-export const FILES_PREFIX_PATH = "/users";
+import { fetcher } from "@/tanstack/fetcher";
 
 /** The columns the list route will sort by. Anything else is ignored. */
 export const MY_FILES_ORDER_BY = ["createdAt", "name", "size"] as const;
@@ -152,25 +142,23 @@ export const isMyFilesRequestError = (
 ): error is MyFilesRequestError =>
   error instanceof Error && error.name === MY_FILES_REQUEST_ERROR;
 
-export const myFilesPageFetcher =
-  (transport: UniversalFetcher): MyFilesPageFetcher =>
-  async (params, { signal } = {}) => {
-    const response = await transport(userFilesModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "files",
-      options: { signal },
-      path: "/",
-      prefixPath: FILES_PREFIX_PATH,
-    });
+export const fetchMyFilesPage: MyFilesPageFetcher = async (
+  params,
+  { signal } = {},
+) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "users/files",
+    options: { signal },
+    path: "/",
+  });
 
-    if (!response.ok) throw new MyFilesRequestError(response.status, params);
+  if (!response.ok) throw new MyFilesRequestError(response.status, params);
 
-    return await response.json();
-  };
-
-export const fetchMyFilesPageInBrowser: MyFilesPageFetcher =
-  myFilesPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const MY_FILES_IDENTITY_ROOT = ["files", "user"] as const;
 
@@ -186,7 +174,7 @@ export const myFilesQueryKey = ({
 }) => [...myFilesQueryRoot(userId), params] as const;
 
 export const myFilesQueryOptions = ({
-  fetchPage = fetchMyFilesPageInBrowser,
+  fetchPage = fetchMyFilesPage,
   params,
   userId,
 }: {

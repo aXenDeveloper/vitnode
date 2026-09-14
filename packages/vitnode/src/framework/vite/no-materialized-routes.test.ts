@@ -175,7 +175,7 @@ describe("where the generation pass is allowed to write", () => {
    * And each of those is a generated data file at the top of `src/` - never a
    * page, and never inside a directory a router reads as routes.
    */
-  it("writes four generated data files and no source file", () => {
+  it("writes five generated data files and no source file", () => {
     // `?? destination` rather than a non-null assertion: an unresolved key is a
     // real possible failure - a `writeIfChanged(paths.somethingNew, …)` whose
     // key `pathsFor` does not declare - and it should fail the assertion below
@@ -187,6 +187,7 @@ describe("where the generation pass is allowed to write", () => {
 
     expect([...files].sort()).toEqual([
       "admin-nav.gen.ts",
+      "api-registry.gen.ts",
       "content-registry.gen.ts",
       "package-messages.gen.ts",
       "plugin-routes.gen.ts",

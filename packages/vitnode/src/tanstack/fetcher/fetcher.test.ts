@@ -4,8 +4,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { usersModule } from "@/api/modules/users/users.module";
-
 import { offenders, stripComments } from "@/tests/import-graph";
 
 const requestHeaders = new Headers();
@@ -20,11 +18,9 @@ vi.mock("@tanstack/react-start/server", () => ({
 }));
 
 const { createIsomorphicFn } = await import("@tanstack/react-start");
-const { clientModule, fetcherClient, rawFetcherClient } =
+const { fetcherClient, rawFetcherClient } =
   await import("@/lib/fetcher-client");
 const { fetcher, rawFetcher } = await import("./index");
-
-const users = clientModule<typeof usersModule>("@vitnode/core");
 
 const apiFetch = vi.fn<(url: string | URL, init?: RequestInit) => Response>();
 
@@ -67,7 +63,12 @@ describe("which branch runs", () => {
 
 describe("the server branch is the request-aware transport", () => {
   it("forwards the visitor's cookie, user agent and forwarded-for chain", async () => {
-    await fetcher(users, { method: "get", module: "users", path: "/session" });
+    await fetcher({
+      plugin: "@vitnode/core",
+      method: "get",
+      module: "users",
+      path: "/session",
+    });
 
     const { headers } = lastCall();
 
@@ -77,7 +78,12 @@ describe("the server branch is the request-aware transport", () => {
   });
 
   it("resolves the API origin from the request it is serving", async () => {
-    await fetcher(users, { method: "get", module: "users", path: "/session" });
+    await fetcher({
+      plugin: "@vitnode/core",
+      method: "get",
+      module: "users",
+      path: "/session",
+    });
 
     expect(lastCall().url.origin).toBe("https://preview.example.com");
     expect(lastCall().url.pathname).toBe("/api/@vitnode/core/users/session");
@@ -86,7 +92,12 @@ describe("the server branch is the request-aware transport", () => {
   it("calls a separately configured API server instead of itself", async () => {
     vi.stubEnv("VITNODE_API_URL", "http://localhost:8000");
 
-    await fetcher(users, { method: "get", module: "users", path: "/session" });
+    await fetcher({
+      plugin: "@vitnode/core",
+      method: "get",
+      module: "users",
+      path: "/session",
+    });
 
     expect(lastCall().url.origin).toBe("http://localhost:8000");
   });
@@ -94,7 +105,8 @@ describe("the server branch is the request-aware transport", () => {
   it("mints no cookie of its own, because the universal call cannot ask for one", async () => {
     const { setCookie } = await import("@tanstack/react-start/server");
 
-    await fetcher(users, {
+    await fetcher({
+      plugin: "@vitnode/core",
       args: { body: { email: "a@b.c", password: "secret" } },
       method: "post",
       module: "users",
@@ -127,7 +139,8 @@ describe("the browser branch talks to the Hono API directly", () => {
   });
 
   it("makes one request, to /api/*, with the browser's own cookies", async () => {
-    await fetcherClient(users, {
+    await fetcherClient({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -141,7 +154,8 @@ describe("the browser branch talks to the Hono API directly", () => {
   });
 
   it("routes nothing through a server-function endpoint", async () => {
-    await fetcherClient(users, {
+    await fetcherClient({
+      plugin: "@vitnode/core",
       args: { body: { email: "a@b.c", password: "secret" } },
       method: "post",
       module: "users",
@@ -154,7 +168,8 @@ describe("the browser branch talks to the Hono API directly", () => {
   });
 
   it("forges none of the headers only a server may send", async () => {
-    await fetcherClient(users, {
+    await fetcherClient({
+      plugin: "@vitnode/core",
       method: "get",
       module: "users",
       path: "/session",
@@ -186,6 +201,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const UNIVERSAL_ENTRY = join(here, "index.ts");
 const SERVER_ENTRY = join(here, "server.ts");
 const BROWSER_ENTRY = join(here, "../../lib/fetcher-client.ts");
+const REGISTRY = join(here, "../../lib/fetcher/registry.ts");
 
 /** What must never reach a browser bundle through this module. */
 const SERVER_ONLY = [
@@ -204,7 +220,7 @@ describe("what the Start compiler is given", () => {
     // A wrapper around `createIsomorphicFn` compiles to nothing: the transform
     // matches the literal `.server(x).client(y)` call and rewrites *that*.
     expect(source).toMatch(
-      /export const fetcher = createIsomorphicFn\(\)\s*\.server\(serverFetcher\)\s*\.client\(fetcherClient\)/,
+      /export const fetcher = createIsomorphicFn\(\)\s*\.server\(serverFetcher as IsomorphicFetcher\)\s*\.client\(fetcherClient\)/,
     );
     expect(source).toMatch(
       /export const rawFetcher = createIsomorphicFn\(\)\s*\.server\(serverRawFetcher\)\s*\.client\(rawFetcherClient\)/,
@@ -219,7 +235,7 @@ describe("what the Start compiler is given", () => {
     // `SERVER_ONLY` names.
     const clientOutput = source
       .replace(
-        /createIsomorphicFn\(\)\s*\.server\((\w+)\)\s*\.client\((\w+)\)/g,
+        /createIsomorphicFn\(\)\s*\.server\((\w+)(?: as \w+)?\)\s*\.client\((\w+)(?: as \w+)?\)/g,
         "$2",
       )
       .replace(/import\s*\{[\s\S]*?\}\s*from\s*"\.\/server";/, "");
@@ -252,9 +268,17 @@ describe("the browser transport is browser-shaped on its own", () => {
     expect(offenders(BROWSER_ENTRY, SERVER_ONLY)).toEqual([]);
   });
 
-  it("never pulls the API's runtime in behind a module reference", () => {
-    // `clientModule<typeof x>()` is a type-only reference to an API module. A
-    // value import of one would bring Hono and Drizzle into the bundle.
+  it("never pulls the API's runtime in behind the plugin registry", () => {
     expect(offenders(BROWSER_ENTRY, API_RUNTIME)).toEqual([]);
+    expect(offenders(REGISTRY, [...API_RUNTIME, ...SERVER_ONLY])).toEqual([]);
+  });
+
+  it("reaches the core API plugin through the registry as a type and nothing else", () => {
+    const registry = stripComments(readFileSync(REGISTRY, "utf8"));
+
+    expect(registry).toMatch(
+      /import type \{ newBuildPluginApiCore \} from "@\/api\/plugin";/,
+    );
+    expect(registry).not.toMatch(/^import \{/m);
   });
 });

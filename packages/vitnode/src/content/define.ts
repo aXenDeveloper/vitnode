@@ -182,6 +182,7 @@ export const defineContentType = <
         ContentDeliveryNoIndexField<TFields, TPublicField>
       >
     | { enabled: false } = { enabled: false },
+  TPublicPath extends string = string,
 >({
   admin = {},
   delivery,
@@ -218,7 +219,8 @@ export const defineContentType = <
    * one exposed slug field. Omit it and nothing public is generated.
    */
   publicApi?:
-    ContentPublicApiConfig<TPublicField> | { enabled: TPublicEnabled };
+    | ContentPublicApiConfig<TPublicField, TPublicPath>
+    | { enabled: TPublicEnabled };
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: ContentPublicationConfig | { enabled: TPublication };
 
@@ -235,7 +237,8 @@ export const defineContentType = <
   ContentPreviewEnabled<TEditorial>,
   ContentSchedulingEnabled<TEditorial>,
   ContentLocalizationEnabled<TLocalization>,
-  ContentDeliveryEnabled<TDelivery>
+  ContentDeliveryEnabled<TDelivery>,
+  TPublicPath
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -442,7 +445,8 @@ export const defineContentType = <
     ContentPreviewEnabled<TEditorial>,
     ContentSchedulingEnabled<TEditorial>,
     ContentLocalizationEnabled<TLocalization>,
-    ContentDeliveryEnabled<TDelivery>
+    ContentDeliveryEnabled<TDelivery>,
+    TPublicPath
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
@@ -467,7 +471,8 @@ export const defineContentType = <
     },
     publicApi: resolvedPublicApi as ResolvedContentPublicApiConfig<
       TPublicField,
-      TPublicEnabled
+      TPublicEnabled,
+      TPublicPath
     >,
     schemas: buildContentSchemas<
       ContentTypeDefinition<
@@ -481,7 +486,8 @@ export const defineContentType = <
         ContentPreviewEnabled<TEditorial>,
         ContentSchedulingEnabled<TEditorial>,
         ContentLocalizationEnabled<TLocalization>,
-        ContentDeliveryEnabled<TDelivery>
+        ContentDeliveryEnabled<TDelivery>,
+        TPublicPath
       >
     >({
       admin: resolvedAdmin,

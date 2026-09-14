@@ -168,16 +168,12 @@ change.
 
 ### Send the token
 
-`captchaToken` is a first-class fetcher option, on both the browser fetcher and
-the server one, and it spells the `x-vitnode-captcha-token` header for you. An
+`captchaToken` is a first-class fetcher option, on both the universal fetcher
+and the server one, and it spells the `x-vitnode-captcha-token` header for you. An
 empty string sends no header at all.
 
 ```ts title="src/site/contact/send-message.ts"
-import type { contactModule } from '@vitnode/my-plugin/api/modules/contact/contact.module'
-
-import { clientModule, fetcherClient } from '@vitnode/core/lib/fetcher-client'
-
-const contact = clientModule<typeof contactModule>('@vitnode/my-plugin')
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
 export const sendMessage = async ({
   captchaToken,
@@ -186,7 +182,8 @@ export const sendMessage = async ({
   captchaToken: string
   message: string
 }) =>
-  await fetcherClient(contact, {
+  await fetcher({
+    plugin: '@vitnode/my-plugin',
     method: 'post',
     module: 'contact',
     path: '/',

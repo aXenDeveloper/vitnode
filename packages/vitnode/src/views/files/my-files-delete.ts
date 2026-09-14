@@ -1,15 +1,13 @@
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 import type { DeleteFileResult } from "@/lib/files/in-use";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import {
   runBulkFileDelete,
   shouldRefreshAfterBulkDelete,
 } from "@/lib/files/bulk-delete";
 import { readFileInUse } from "@/lib/files/in-use";
-import { FILES_PREFIX_PATH } from "@/views/files/my-files-query";
-
-import { userFilesModuleRef } from "./my-files-query";
 
 export interface DeleteMyFileArgs {
   force?: boolean;
@@ -34,16 +32,16 @@ export const deleteMyFileInBrowser: DeleteMyFile = async ({
   id,
 }) => {
   try {
-    const response = await fetcherClient(userFilesModuleRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: {
         params: { id: String(id) },
         query: force ? { force: "true" } : {},
       },
       method: "delete",
-      module: "files",
+      module: "users/files",
       options: { credentials: "include" },
       path: "/{id}",
-      prefixPath: FILES_PREFIX_PATH,
     });
 
     if (response.status !== 200) {

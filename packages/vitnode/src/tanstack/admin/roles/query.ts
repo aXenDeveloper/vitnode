@@ -5,22 +5,18 @@ import React from "react";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminRoleFormProps } from "@/views/admin/views/core/users/roles/role-form-content";
-import type {
-  AdminRolesPageFetcher,
-  AdminRolesParams,
-} from "@/views/admin/views/core/users/roles/roles-query";
+import type { AdminRolesParams } from "@/views/admin/views/core/users/roles/roles-query";
 import type { RolesAdminTableProps } from "@/views/admin/views/core/users/roles/roles-table-content";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
   createAdminRole,
   deleteAdminRole,
   updateAdminRole,
 } from "@/views/admin/views/core/users/roles/roles-mutations";
 import {
-  adminRolesPageFetcher,
   adminRolesQueryOptions,
   adminRolesQueryRoot,
+  fetchAdminRolesPage,
 } from "@/views/admin/views/core/users/roles/roles-query";
 
 import { useAdminIdentity } from "../identity";
@@ -32,8 +28,6 @@ import { invalidateAdminUsers } from "../users/query";
  * three mutations.
  */
 
-const fetchRolesPage: AdminRolesPageFetcher = adminRolesPageFetcher(fetcher);
-
 export const adminRolesQuery = ({
   adminUserId,
   params,
@@ -41,7 +35,11 @@ export const adminRolesQuery = ({
   adminUserId: AdminIdentity;
   params: AdminRolesParams;
 }) =>
-  adminRolesQueryOptions({ adminUserId, fetchPage: fetchRolesPage, params });
+  adminRolesQueryOptions({
+    adminUserId,
+    fetchPage: fetchAdminRolesPage,
+    params,
+  });
 
 export const invalidateAfterAdminRoleChange = async (
   queryClient: QueryClient,

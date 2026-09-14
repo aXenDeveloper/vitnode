@@ -1,17 +1,11 @@
-import type {
-  SearchFeedPageFetcher,
-  SearchFeedParams,
-} from "@/views/search/search-feed-query";
+import type { SearchFeedParams } from "@/views/search/search-feed-query";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
-  searchFeedPageFetcher,
+  fetchSearchFeedPage,
   searchFeedQueryKey,
   searchFeedQueryOptions,
 } from "@/views/search/search-feed-query";
-
-export const fetchSearchFeedPage: SearchFeedPageFetcher =
-  searchFeedPageFetcher(fetcher);
+export { fetchSearchFeedPage } from "@/views/search/search-feed-query";
 
 export const feedQueryKey = ({
   locale,

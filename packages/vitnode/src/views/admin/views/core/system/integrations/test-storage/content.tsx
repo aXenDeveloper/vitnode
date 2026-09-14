@@ -9,8 +9,6 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Attachment,
@@ -23,7 +21,7 @@ import {
   AttachmentTrigger,
 } from "@/components/ui/attachment";
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
+import { fetcherClient } from "@/lib/fetcher-client";
 
 export const ContentTestStorage = () => {
   const t = useTranslations("admin.system.integrations.storage.test");
@@ -36,17 +34,14 @@ export const ContentTestStorage = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetcherClient(
-        clientModule<typeof debugAdminModule>(CONFIG_PLUGIN.pluginId),
-        {
-          prefixPath: "/admin",
-          module: "debug",
-          path: "/test-storage-upload",
-          method: "post",
-          formData,
-          options: { credentials: "include" },
-        },
-      );
+      const res = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        module: "admin/debug",
+        path: "/test-storage-upload",
+        method: "post",
+        formData,
+        options: { credentials: "include" },
+      });
       if (!res.ok) throw new Error(await res.text());
 
       return await res.json();

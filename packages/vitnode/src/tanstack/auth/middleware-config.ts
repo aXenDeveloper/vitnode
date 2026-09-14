@@ -2,11 +2,10 @@ import type { z } from "zod";
 
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-import type { middlewareModule } from "@/api/modules/middleware/middleware.module";
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 import type { SSOProvider } from "@/views/auth/sso/providers";
 
-import { clientModule } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcher } from "@/tanstack/fetcher";
 import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 
@@ -28,11 +27,10 @@ export const knownMiddlewareConfig = (
   config: MiddlewareConfig,
 ): MiddlewareConfigState => ({ ...config, isKnown: true });
 
-const middleware = clientModule<typeof middlewareModule>("@vitnode/core");
-
 const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
   try {
-    const response = await fetcher(middleware, {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       method: "get",
       module: "middleware",
       path: "/",

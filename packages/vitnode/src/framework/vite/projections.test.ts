@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
+import type { ResolvedApiPluginModule } from "../api-registry";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PluginRouteCompilerSource } from "../plugin-routes";
 
 import { definePluginRoutes, lazy, page } from "../../routing/tree";
 import { generateAdminNavSource } from "../admin-nav";
+import { generateApiRegistrySource } from "../api-registry";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
@@ -27,9 +29,11 @@ const resolverFor =
 const WORKSPACE = resolverFor({
   "@acme/blog/admin/content": "/pkg/blog/dist/admin/content.js",
   "@acme/blog/admin/nav": "/pkg/blog/dist/admin/nav.js",
+  "@acme/blog/config.api": "/pkg/blog/dist/config.api.js",
   "@acme/blog/routes": "/pkg/blog/dist/routes.js",
   "@acme/shop/admin/content": "/pkg/shop/dist/admin/content.js",
   "@acme/shop/admin/nav": "/pkg/shop/dist/admin/nav.js",
+  "@acme/shop/config.api": "/pkg/shop/dist/config.api.js",
   "@acme/shop/routes": "/pkg/shop/dist/routes.js",
 });
 
@@ -75,6 +79,13 @@ const projectionsFor = (pluginIds: readonly string[]) => {
         WORKSPACE,
       ).modules,
     ),
+    apiRegistry: generateApiRegistrySource(
+      readOptionalPluginModules<ResolvedApiPluginModule>(
+        pluginIds,
+        "config.api",
+        WORKSPACE,
+      ).modules,
+    ),
     contentRegistry: generateContentRegistrySource(
       readOptionalPluginModules<ResolvedContentRegistryModule>(
         pluginIds,
@@ -97,6 +108,7 @@ const projectionsFor = (pluginIds: readonly string[]) => {
 
 const FILES = [
   "adminNav",
+  "apiRegistry",
   "contentRegistry",
   "packageMessages",
   "registry",
@@ -138,11 +150,14 @@ describe("determinism, across every projection at once", () => {
     expect(shuffled.packageMessages.indexOf("@acme/blog")).toBeLessThan(
       shuffled.packageMessages.indexOf("@acme/shop"),
     );
+    expect(shuffled.apiRegistry.indexOf("@acme/blog")).toBeLessThan(
+      shuffled.apiRegistry.indexOf("@acme/shop"),
+    );
   });
 });
 
 describe("a plugin is enabled, or it is not - never half of each", () => {
-  it("puts an enabled plugin in all four projections", () => {
+  it("puts an enabled plugin in all five projections", () => {
     const enabled = projectionsFor(BOTH);
 
     FILES.forEach(file => {
@@ -150,7 +165,7 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
   });
 
-  it("removes a disabled plugin from all four, in one step", () => {
+  it("removes a disabled plugin from all five, in one step", () => {
     const disabled = projectionsFor(["@acme/blog"]);
 
     FILES.forEach(file => {
@@ -209,6 +224,7 @@ describe("a plugin is enabled, or it is not - never half of each", () => {
     });
     expect(none.adminNav).toContain("[]");
     expect(none.contentRegistry).toContain("[]");
+    expect(none.apiRegistry).toContain("interface ApiPluginRegistry {\n  }");
     // Except this one, which still registers core: an app with no plugins has
     // no plugin translations and every string core renders.
     expect(none.packageMessages).toContain("'@vitnode/core'");

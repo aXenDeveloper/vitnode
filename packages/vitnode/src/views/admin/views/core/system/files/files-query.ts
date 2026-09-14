@@ -1,26 +1,19 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { filesAdminModule } from "@/api/modules/admin/files/files.admin.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
   AdminTableParams,
 } from "@/views/admin/table/params";
 
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import {
-  adminModuleRef,
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
-
-export const filesAdminModuleRef = adminModuleRef<typeof filesAdminModule>();
-
-/** The module is mounted under `/admin`, not at the plugin root. */
-export const ADMIN_FILES_PREFIX_PATH = "/admin";
 
 export const ADMIN_FILES_ORDER_BY = ["name", "size", "createdAt"] as const;
 export type AdminFilesOrderBy = (typeof ADMIN_FILES_ORDER_BY)[number];
@@ -71,31 +64,25 @@ export type AdminFilesPageFetcher = (
 ) => Promise<AdminFilesPage>;
 
 /** One page, over whichever transport the host hands in. */
-export const adminFilesPageFetcher =
-  (transport: UniversalFetcher): AdminFilesPageFetcher =>
-  async params => {
-    const response = await transport(filesAdminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "files",
-      path: "/",
-      prefixPath: ADMIN_FILES_PREFIX_PATH,
-    });
+export const fetchAdminFilesPage: AdminFilesPageFetcher = async params => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/files",
+    path: "/",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the uploaded files list",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the uploaded files list",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-/** One page, fetched from the browser. */
-export const fetchAdminFilesPageInBrowser: AdminFilesPageFetcher =
-  adminFilesPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 /** The root every cached page of the admin file list hangs off. */
 export const adminFilesQueryRoot = adminQueryRoot("files");
@@ -104,7 +91,7 @@ export const adminFilesQueryKey = (params: AdminFilesParams) =>
   [...adminFilesQueryRoot, params] as const;
 
 export const adminFilesQueryOptions = ({
-  fetchPage = fetchAdminFilesPageInBrowser,
+  fetchPage = fetchAdminFilesPage,
   params,
 }: {
   fetchPage?: AdminFilesPageFetcher;

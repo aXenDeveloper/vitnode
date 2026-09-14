@@ -1,26 +1,19 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
   AdminTableParams,
 } from "@/views/admin/table/params";
 
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import {
-  adminModuleRef,
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
-
-export const cronAdminModuleRef = adminModuleRef<typeof cronAdminModule>();
-
-/** The module is mounted under `/admin/advanced`, not at the plugin root. */
-export const CRON_PREFIX_PATH = "/admin/advanced";
 
 export const CRON_ORDER_BY = ["createdAt", "lastRun", "nextRun"] as const;
 export type CronOrderBy = (typeof CRON_ORDER_BY)[number];
@@ -50,30 +43,25 @@ export type CronPage = AdminTablePage<CronJobRow>;
 /** How a page is actually fetched. See {@link cronQueryOptions}. */
 export type CronPageFetcher = (params: CronParams) => Promise<CronPage>;
 
-export const cronPageFetcher =
-  (transport: UniversalFetcher): CronPageFetcher =>
-  async params => {
-    const response = await transport(cronAdminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "cron",
-      path: "/",
-      prefixPath: CRON_PREFIX_PATH,
-    });
+export const fetchCronPage: CronPageFetcher = async params => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/advanced/cron",
+    path: "/",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the cron list",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the cron list",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-export const fetchCronPageInBrowser: CronPageFetcher =
-  cronPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 /** The root every cached page of the cron list hangs off. */
 export const cronQueryRoot = adminQueryRoot("cron");
@@ -82,7 +70,7 @@ export const cronQueryKey = (params: CronParams) =>
   [...cronQueryRoot, params] as const;
 
 export const cronQueryOptions = ({
-  fetchPage = fetchCronPageInBrowser,
+  fetchPage = fetchCronPage,
   params,
 }: {
   fetchPage?: CronPageFetcher;

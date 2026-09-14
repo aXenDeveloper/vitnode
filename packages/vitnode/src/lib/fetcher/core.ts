@@ -1,93 +1,54 @@
 import type {
-  BaseBuildModuleReturn,
-  BuildModuleReturn,
-} from "@/api/lib/module";
-import type { Route } from "@/api/lib/route";
-
-import type {
-  FetcherParams,
+  FetcherRequest,
   FetcherRequestOptions,
-  GetModulePaths,
-  GetValidMethodForPath,
-  GetValidPathsForModule,
-  InferResponseType,
+  FetcherResponse,
+  PluginRouteMethod,
+  RegisteredPluginId,
 } from "./types";
 
 import { rawApiFetch } from "./raw";
 
-type CoreFetcherOptions<
-  M extends string,
-  Routes extends Route[],
-  Modules extends BaseBuildModuleReturn[],
-  ModuleName extends GetModulePaths<M, Modules>,
-  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
-  Method extends GetValidMethodForPath<
-    ModuleName,
-    SelectedPath,
-    M,
-    Routes,
-    Modules
-  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
-> = FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
-  FetcherRequestOptions;
+interface FetcherInput {
+  body?: unknown;
+  params?: Record<string, unknown>;
+  query?: Record<string, string | string[]>;
+}
 
 export async function coreFetcher<
+  P extends RegisteredPluginId,
   M extends string,
-  Routes extends Route[],
-  Modules extends BaseBuildModuleReturn[],
-  ModuleName extends GetModulePaths<M, Modules>,
-  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
-  Method extends GetValidMethodForPath<
-    ModuleName,
-    SelectedPath,
-    M,
-    Routes,
-    Modules
-  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
->(
-  { pluginId }: BuildModuleReturn<string, M, Routes, Modules>,
-  {
-    path,
-    method,
-    module,
-    args,
-    options,
-    additionalHeaders = {},
-    withPagination = false,
-    prefixPath = "",
-    formData,
-    origin,
-  }: CoreFetcherOptions<M, Routes, Modules, ModuleName, SelectedPath, Method>,
-): Promise<
-  InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
+  Path extends string,
+  Method extends string = PluginRouteMethod<P, M, Path>,
+>({
+  plugin,
+  module,
+  path,
+  method,
+  args,
+  options,
+  additionalHeaders = {},
+  withPagination = false,
+  formData,
+  origin,
+}: FetcherRequest<P, M, Path, Method> & FetcherRequestOptions): Promise<
+  FetcherResponse<P, M, Path, Method>
 > {
+  const input = args as FetcherInput | undefined;
+
   const response = await rawApiFetch({
     additionalHeaders,
-    body: args && "body" in args ? args.body : undefined,
+    body: input?.body,
     formData,
     method,
     module,
     options,
     origin,
-    params:
-      args && "params" in args
-        ? (args.params as Record<string, unknown>)
-        : undefined,
+    params: input?.params,
     path,
-    pluginId,
-    prefixPath,
-    query:
-      args && "query" in args
-        ? (args.query as Record<string, string | string[]>)
-        : undefined,
+    pluginId: plugin,
+    query: input?.query,
     withPagination,
   });
 
-  return response as InferResponseType<
-    M,
-    Routes,
-    Modules,
-    ModuleName,
-    SelectedPath
-  >;
+  return response as FetcherResponse<P, M, Path, Method>;
 }

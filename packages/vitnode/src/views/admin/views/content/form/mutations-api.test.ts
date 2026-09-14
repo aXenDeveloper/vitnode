@@ -12,7 +12,7 @@ vi.mock("../content-request", async () => {
 
   return {
     ...actual,
-    contentApiFetchInBrowser: async (request: ContentApiRequest) =>
+    contentApiFetch: async (request: ContentApiRequest) =>
       await fetchMock(request),
   };
 });

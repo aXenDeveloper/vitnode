@@ -7,21 +7,16 @@ import type {
   SearchIndexActions,
   SearchIndexMutationResult,
 } from "@/views/admin/views/core/advanced/search/search-index-mutations";
-import type { SearchIndexStatusFetcher } from "@/views/admin/views/core/advanced/search/search-index-query";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
   clearSearchCollectionInBrowser,
   rebuildSearchIndexInBrowser,
 } from "@/views/admin/views/core/advanced/search/search-index-mutations";
 import {
+  fetchSearchIndexStatus,
   searchIndexQueryKey,
   searchIndexQueryOptions,
-  searchIndexStatusFetcher,
 } from "@/views/admin/views/core/advanced/search/search-index-query";
-
-const fetchSearchIndexStatus: SearchIndexStatusFetcher =
-  searchIndexStatusFetcher(fetcher);
 
 /** The status, as the one query definition the loader and the component share. */
 export const searchIndexQuery = () =>

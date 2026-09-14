@@ -371,10 +371,11 @@ describe("the browser adapter", () => {
     expect(imports).not.toContain("@/tanstack/fetcher/server");
     expect(imports).not.toContain("@tanstack/react-start/server-only");
     expect(imports.some(one => one.endsWith("/server"))).toBe(false);
-    // The universal fetcher and the plugin-id reference, which are safe in both
+    // The universal fetcher and the plugin id, which are safe in both
     // runtimes - that pair is the whole transport surface it may reach.
     expect(imports).toContain("@/tanstack/fetcher");
-    expect(imports).toContain("@/lib/fetcher-client");
+    expect(imports).toContain("@/config");
+    expect(imports).not.toContain("@/lib/fetcher-client");
   });
 
   it("shares its request mapping with the server adapter", () => {

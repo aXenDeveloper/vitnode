@@ -36,9 +36,10 @@ export const pluginRouteModuleTemplate = (pluginName: string): string =>
   `import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
 import { definePluginRoute } from "@vitnode/core/routing";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { useTranslations } from "use-intl";
 
-import { helloApi } from "@/api/client";
+import { CONFIG_PLUGIN } from "@/const";
 
 interface HelloMessage {
   message: string;
@@ -46,7 +47,8 @@ interface HelloMessage {
 
 export const route = definePluginRoute<HelloMessage>({
   load: async () => {
-    const response = await helloApi.fetch({
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       method: "get",
       module: "hello",
       path: "/",
@@ -221,20 +223,6 @@ export const helloModule = buildModule({
 });
 `;
 
-export const pluginApiClientTemplate = (): string =>
-  `import type { ApiClient } from "@vitnode/core/tanstack/fetcher";
-
-import { createApiClient } from "@vitnode/core/tanstack/fetcher";
-
-import type { helloModule } from "@/api/modules/hello/hello.module";
-
-import { CONFIG_PLUGIN } from "@/const";
-
-export const helloApi: ApiClient<typeof helloModule> = createApiClient<
-  typeof helloModule
->(CONFIG_PLUGIN.pluginId);
-`;
-
 export const pluginApiConfigTemplate = (pluginName: string): string =>
   `import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
@@ -247,6 +235,30 @@ export const ${pluginApiVariableName(pluginName)} = () =>
     pluginId: CONFIG_PLUGIN.pluginId,
     modules: [helloModule],
   });
+`;
+
+export const pluginGlobalTypesTemplate = (pluginName: string): string =>
+  `/// <reference types="use-intl" />
+
+import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
+import core from "@vitnode/core/locales/en.json" with { type: "json" };
+import plugin from "./src/locales/en.json" with { type: "json" };
+
+import type { ${pluginApiVariableName(pluginName)} } from "./src/config.api";
+
+declare module "use-intl" {
+  interface AppConfig {
+    Messages: typeof plugin & typeof core & typeof coreApi;
+  }
+}
+
+declare module "@vitnode/core/lib/fetcher/registry" {
+  interface ApiPluginRegistry {
+    "${pluginName}": typeof ${pluginApiVariableName(pluginName)};
+  }
+}
+
+export type { ApiPluginRegistry } from "@vitnode/core/lib/fetcher/registry";
 `;
 
 /**
@@ -280,7 +292,7 @@ export const pluginPackageExports = (): Record<
 export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
-  "src/api/client.ts": pluginApiClientTemplate(),
+  "global.d.ts": pluginGlobalTypesTemplate(pluginName),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
   "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),

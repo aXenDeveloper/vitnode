@@ -1,16 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
-import type {
-  ContentItemFetcher,
-  ContentTranslationsFetcher,
-} from "@/views/admin/views/content/form/item-query";
 import type { ContentFormTransport } from "@/views/admin/views/content/form/transport";
 
 import { contentFrontendRegistry } from "@/content/index";
 import {
-  contentItemFetcher,
-  contentTranslationsFetcher,
+  fetchContentItem,
+  fetchContentTranslations,
 } from "@/views/admin/views/content/form/item-query";
 import {
   createContentInBrowser,
@@ -24,13 +20,6 @@ import {
 } from "@/views/admin/views/content/form/mutations-api";
 
 import { contentApiTarget, invalidateContentAfterWrite } from "../query";
-import { contentApiFetch } from "../transport";
-
-const fetchContentItem: ContentItemFetcher =
-  contentItemFetcher(contentApiFetch);
-
-const fetchContentTranslations: ContentTranslationsFetcher =
-  contentTranslationsFetcher(contentApiFetch);
 
 export { fetchContentItem, fetchContentTranslations };
 

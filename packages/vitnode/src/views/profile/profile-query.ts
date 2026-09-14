@@ -1,11 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type { RoleNameEntry } from "@/components/role-name";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 
-import { usersModule } from "@/api/modules.client";
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 
 export const MAX_NAME_CODE_LENGTH = 255;
 
@@ -58,25 +57,21 @@ export const isProfileNotFound = (error: unknown): boolean =>
   error.name === PROFILE_REQUEST_ERROR &&
   (error as ProfileRequestError).status === 404;
 
-export const userProfileFetcher =
-  (transport: UniversalFetcher): UserProfileFetcher =>
-  async nameCode => {
-    const response = await transport(usersModule, {
-      args: { params: { nameCode: encodeURIComponent(nameCode) } },
-      method: "get",
-      module: "users",
-      path: "/profile/{nameCode}",
-    });
+export const fetchUserProfile: UserProfileFetcher = async nameCode => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { params: { nameCode: encodeURIComponent(nameCode) } },
+    method: "get",
+    module: "users",
+    path: "/profile/{nameCode}",
+  });
 
-    if (!response.ok) {
-      throw new ProfileRequestError(response.status, nameCode);
-    }
+  if (!response.ok) {
+    throw new ProfileRequestError(response.status, nameCode);
+  }
 
-    return await response.json();
-  };
-
-export const fetchUserProfileInBrowser: UserProfileFetcher =
-  userProfileFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const PROFILE_QUERY_ROOT = ["vitnode", "profile"] as const;
 
@@ -84,7 +79,7 @@ export const userProfileQueryKey = (nameCode: string) =>
   [...PROFILE_QUERY_ROOT, nameCode] as const;
 
 export const userProfileQueryOptions = ({
-  fetchProfile = fetchUserProfileInBrowser,
+  fetchProfile = fetchUserProfile,
   nameCode,
 }: {
   fetchProfile?: UserProfileFetcher;

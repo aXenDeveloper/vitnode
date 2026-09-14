@@ -91,6 +91,7 @@ of those modules, and that is the part worth knowing:
 | `src/admin-nav.gen.ts`        | the plugin's `admin/nav`     | with the AdminCP shell                          |
 | `src/content-registry.gen.ts` | the plugin's `admin/content` | behind a dynamic `import()` in `src/router.tsx` |
 | `src/package-messages.gen.ts` | the factory's `localeFiles`  | per request, one locale at a time               |
+| `src/api-registry.gen.ts`     | the plugin's `config.api`    | never - type-only, it teaches the fetcher which plugins exist |
 
 One literal import per configured plugin, written at build time. So a content
 type's editing screen - a Tiptap field, a form layout, a table cell - arrives

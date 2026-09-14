@@ -1,15 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { usersModule } from "@/api/modules/users/users.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
-
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-
-export const usersModuleRef = clientModule<typeof usersModule>(
-  CONFIG_PLUGIN.pluginId,
-);
+import { fetcher } from "@/tanstack/fetcher";
 
 /** Which icon a row gets, and the only three values the API will send. */
 export const DEVICE_TYPES = ["desktop", "tablet", "mobile"] as const;
@@ -53,35 +46,25 @@ export const isDevicesRequestError = (
 ): error is DevicesRequestError =>
   error instanceof Error && error.name === DEVICES_REQUEST_ERROR;
 
-export const devicesFetcher =
-  (transport: UniversalFetcher): DevicesFetcher =>
-  async () => {
-    const response = await transport(usersModuleRef, {
-      method: "get",
-      module: "users",
-      path: "/devices",
-    });
+export const fetchDevices: DevicesFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "users",
+    path: "/devices",
+  });
 
-    if (!response.ok) throw new DevicesRequestError(response.status);
+  if (!response.ok) throw new DevicesRequestError(response.status);
 
-    return await response.json();
-  };
-
-export const fetchDevicesInBrowser: DevicesFetcher =
-  devicesFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const DEVICES_IDENTITY_ROOT = ["devices", "user"] as const;
 
 export const devicesQueryKey = (userId: number) =>
   [...DEVICES_IDENTITY_ROOT, userId] as const;
 
-export const devicesQueryOptions = ({
-  fetchDevices = fetchDevicesInBrowser,
-  userId,
-}: {
-  fetchDevices?: DevicesFetcher;
-  userId: number;
-}) =>
+export const devicesQueryOptions = ({ userId }: { userId: number }) =>
   queryOptions({
     // `userId` is deliberately absent from the request: the owner comes from
     // the session cookie, on the server, on every call.
