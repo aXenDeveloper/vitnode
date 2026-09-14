@@ -1,9 +1,9 @@
 import type { PluginRoutePageProps } from "@/routing";
 
 import { DevicesPanelContent } from "@/tanstack/devices/panel";
-import { devicesQuery } from "@/tanstack/devices/query";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
+import { devicesQueryOptions } from "@/views/auth/settings/devices/devices-query";
 
 interface DevicesData {
   userId: number;
@@ -18,7 +18,7 @@ export const route = defineAuthenticatedRoute<DevicesData>({
     const userId = context.auth.user.id;
 
     await context.queryClient.query({
-      ...devicesQuery(userId),
+      ...devicesQueryOptions({ userId }),
       staleTime: "static",
     });
 

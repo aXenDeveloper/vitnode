@@ -1,5 +1,4 @@
 import type { PluginRouteTranslator } from "@/routing";
-
 import type { AdminFilesParams } from "@/views/admin/views/core/system/files/files-query";
 
 import type { AdminScreenContext } from "../screen";

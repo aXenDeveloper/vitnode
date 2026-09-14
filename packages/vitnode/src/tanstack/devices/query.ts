@@ -9,16 +9,11 @@ import type {
   RevokeDeviceResult,
 } from "@/views/auth/settings/devices/devices-revoke";
 
-import {
-  devicesQueryKey,
-  devicesQueryOptions,
-} from "@/views/auth/settings/devices/devices-query";
+import { devicesQueryKey } from "@/views/auth/settings/devices/devices-query";
 import {
   revokeDeviceInBrowser,
   shouldRefreshAfterRevoke,
 } from "@/views/auth/settings/devices/devices-revoke";
-
-export const devicesQuery = (userId: number) => devicesQueryOptions({ userId });
 
 export const invalidateDevices = async (
   queryClient: QueryClient,

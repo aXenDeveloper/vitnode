@@ -1,6 +1,6 @@
-import type { PluginRouteTranslator } from "@/routing";
-
 import type { QueryClient } from "@tanstack/react-query";
+
+import type { PluginRouteTranslator } from "@/routing";
 
 import { discoverFeedQueryOptions } from "./discover";
 

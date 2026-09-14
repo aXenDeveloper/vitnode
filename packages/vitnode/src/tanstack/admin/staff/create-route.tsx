@@ -1,6 +1,5 @@
-import type { PluginRouteTranslator } from "@/routing";
-
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
+import type { PluginRouteTranslator } from "@/routing";
 
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 import {

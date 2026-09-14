@@ -1,7 +1,6 @@
-import type { PluginRouteTranslator } from "@/routing";
-
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { PluginRouteTranslator } from "@/routing";
 import type { MyFilesParams } from "@/views/files/my-files-query";
 
 import type { MyFilesRouteSearch } from "./route-search";

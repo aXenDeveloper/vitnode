@@ -1,5 +1,4 @@
 import type { PluginRouteTranslator } from "@/routing";
-
 import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-query";
 
 import type { AdminScreenContext } from "../screen";

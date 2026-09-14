@@ -1,5 +1,4 @@
 import type { PluginRouteTranslator } from "@/routing";
-
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminRolesParams } from "@/views/admin/views/core/users/roles/roles-query";
 

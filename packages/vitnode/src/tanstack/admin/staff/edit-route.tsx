@@ -1,10 +1,9 @@
-import type { PluginRouteTranslator } from "@/routing";
-
 import type { QueryClient } from "@tanstack/react-query";
 
 import { notFound } from "@tanstack/react-router";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
+import type { PluginRouteTranslator } from "@/routing";
 import type { StaffPluginGroup } from "@/views/admin/views/core/staff/staff-model";
 import type {
   AdminStaffRole,

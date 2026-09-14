@@ -1,9 +1,10 @@
 import type { PluginRouteTranslator } from "@/routing";
 
+import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
+
 import type { AdminScreenContext } from "../screen";
 
 import { requireAdminPermission } from "../screen";
-import { integrationsQuery } from "./query";
 
 /**
  * `/admin/core/system/integrations`, as everything a TanStack Start route needs
@@ -39,7 +40,7 @@ export const loadAdminIntegrationsRoute = async ({
   requireAdminPermission(adminAccess, SYSTEM_VIEW_PERMISSION);
 
   await queryClient.query({
-    ...integrationsQuery(),
+    ...integrationsQueryOptions(),
     staleTime: "static",
   });
 

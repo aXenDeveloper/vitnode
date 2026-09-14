@@ -1,10 +1,11 @@
-export { integrationsQuery, invalidateIntegrations } from "./query";
+export { invalidateIntegrations } from "./query";
 export type { AdminIntegrationsRouteData } from "./route";
 export {
   ADMIN_INTEGRATIONS_NAMESPACES,
   loadAdminIntegrationsRoute,
 } from "./route";
 export { AdminIntegrationsRouteContent } from "./screen";
+export { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
 
 export type {
   AdminIntegrationModel,

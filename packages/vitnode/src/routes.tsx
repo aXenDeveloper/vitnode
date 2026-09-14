@@ -42,12 +42,12 @@ import {
   ProfilePendingSkeleton,
   TablePendingSkeleton,
 } from "./tanstack/pending";
+import { PROFILE_NAMESPACES } from "./tanstack/profile/route";
 import {
   DISCOVER_NAMESPACES,
   SEARCH_NAMESPACES,
 } from "./tanstack/search/namespaces";
 import { normalizeSearchRouteSearch } from "./tanstack/search/route-search";
-import { PROFILE_NAMESPACES } from "./tanstack/profile/route";
 import { SETTINGS_NAMESPACES } from "./tanstack/settings/route";
 
 /**

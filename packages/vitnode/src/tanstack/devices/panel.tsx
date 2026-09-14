@@ -4,8 +4,9 @@ import { useTranslations } from "use-intl";
 import { HeaderContent } from "@/components/ui/header-content";
 import { DevicesContent } from "@/views/auth/settings/devices/devices-content";
 import { DevicesListSkeleton } from "@/views/auth/settings/devices/devices-list-skeleton";
+import { devicesQueryOptions } from "@/views/auth/settings/devices/devices-query";
 
-import { devicesQuery, useRevokeDeviceCallback } from "./query";
+import { useRevokeDeviceCallback } from "./query";
 
 const DevicesHeading = () => {
   const t = useTranslations("core.auth.settings.devices");
@@ -21,23 +22,12 @@ export const DevicesPanelPending = () => (
 );
 
 export const DevicesPanelContent = ({ userId }: { userId: number }) => {
-  const { data } = useSuspenseQuery(devicesQuery(userId));
+  const { data } = useSuspenseQuery(devicesQueryOptions({ userId }));
   const onRevoke = useRevokeDeviceCallback(userId);
 
   return (
     <>
       <DevicesHeading />
-
-      {/*
-        The shared list, handed the two things it cannot resolve for itself:
-        the devices, and the revoke.
-
-        The revoke goes straight from the browser to Hono - no server function in
-        between, because it needs no server-only secret and sets no cookie - and
-        ends in an invalidation of the one `devices/me` entry, but only when the
-        list is actually wrong. A `429` or a `401` left it exactly as it was, and
-        refetching would send the same read back into whatever refused the first.
-      */}
       <DevicesContent devices={data.devices} onRevoke={onRevoke} />
     </>
   );

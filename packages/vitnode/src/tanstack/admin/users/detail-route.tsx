@@ -1,7 +1,6 @@
 import { notFound } from "@tanstack/react-router";
 
 import type { PluginRouteTranslator } from "@/routing";
-
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
@@ -34,9 +33,9 @@ export const loadAdminUserRoute = async ({
   queryClient,
   t,
 }: AdminScreenContext & {
-  t: PluginRouteTranslator;
   /** The `$id` segment, exactly as it was typed. Nothing has checked it yet. */
   id: string;
+  t: PluginRouteTranslator;
 }): Promise<AdminUserRouteData> => {
   requireAdminPermission(adminAccess, ADMIN_USER_PERMISSIONS.view);
 

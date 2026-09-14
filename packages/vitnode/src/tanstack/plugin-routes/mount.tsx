@@ -35,8 +35,8 @@ import {
 import { PLUGIN_ROUTES_ROUTE_ID } from "./container";
 import { pluginRouteGuard } from "./guard";
 import { normalizePluginRouteHead } from "./head";
-import { pluginRouteTranslator } from "./translator";
 import { pluginRouteSearchDeps } from "./specs";
+import { pluginRouteTranslator } from "./translator";
 
 export interface PluginRouteRuntimeContext {
   /** Present in the `admin` area, contributed by the AdminCP shell. */

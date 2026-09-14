@@ -1,5 +1,4 @@
 import type { PluginRouteTranslator } from "@/routing";
-
 import type { DebugLogsParams } from "@/views/admin/views/core/debug/debug-query";
 
 import type { AdminScreenContext } from "../screen";

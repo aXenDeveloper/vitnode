@@ -1,7 +1,6 @@
-import { SecuritySettings } from "@/views/auth/settings/security/security";
-
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
+import { SecuritySettings } from "@/views/auth/settings/security/security";
 
 export const route = defineAuthenticatedRoute({
   head: ({ t }) => ({

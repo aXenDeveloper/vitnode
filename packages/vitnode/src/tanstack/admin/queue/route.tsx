@@ -1,5 +1,4 @@
 import type { PluginRouteTranslator } from "@/routing";
-
 import type { QueueParams } from "@/views/admin/views/core/advanced/queue/queue-query";
 
 import type { AdminScreenContext } from "../screen";

@@ -1,9 +1,8 @@
-import type { PluginRouteTranslator } from "@/routing";
-
 import type { QueryClient } from "@tanstack/react-query";
 
 import { notFound } from "@tanstack/react-router";
 
+import type { PluginRouteTranslator } from "@/routing";
 import type { UserProfile } from "@/views/profile/profile-query";
 
 import {
