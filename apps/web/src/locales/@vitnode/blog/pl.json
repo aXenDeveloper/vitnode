@@ -1,0 +1,69 @@
+{
+  "@vitnode/blog": {
+    "admin": {
+      "article": {
+        "content": {
+          "label": "Treść"
+        },
+        "form": {
+          "cover": {
+            "title": "Obraz wyróżniający"
+          },
+          "publish": "Publikacja",
+          "settings": {
+            "title": "Ustawienia artykułu"
+          }
+        }
+      },
+      "category": {
+        "color": {
+          "desc": "Wyświetlany obok kategorii na listach.",
+          "label": "Kolor",
+          "none": "Brak koloru"
+        }
+      }
+    },
+    "content": {
+      "category": {
+        "desc": "Grupuj artykuły razem.",
+        "fields": {
+          "color": "Kolor",
+          "name": "Nazwa",
+          "updatedAt": "Zaktualizowano"
+        },
+        "label": "{count, plural, one {Kategoria} few {Kategorie} many {Kategorii} other {Kategorii}}",
+        "title": "Kategorie"
+      },
+      "post": {
+        "desc": "Pisz artykuły na blogu i zarządzaj nimi.",
+        "fields": {
+          "authorId": "Autor",
+          "categoryId": "Kategoria",
+          "content": "Treść",
+          "coverImage": "Obraz wyróżniający",
+          "coverImageAlt": "Tekst alternatywny obrazu",
+          "friendlyUrl": "Przyjazny adres URL",
+          "publishedAt": "Opublikowano",
+          "status": "Status",
+          "title": "Tytuł",
+          "updatedAt": "Zaktualizowano"
+        },
+        "label": "{count, plural, one {Artykuł} few {Artykuły} many {Artykułów} other {Artykułu}}",
+        "title": "Artykuły"
+      }
+    },
+    "title": "Blog"
+  },
+  "@vitnode/blog:categories": "Kategorie",
+  "@vitnode/blog:categories:can_create": "Tworzenie kategorii",
+  "@vitnode/blog:categories:can_delete": "Usuwanie kategorii",
+  "@vitnode/blog:categories:can_edit": "Edytowanie kategorii",
+  "@vitnode/blog:categories:can_view": "Wyświetlanie listy kategorii",
+  "@vitnode/blog:posts": "Artykuły",
+  "@vitnode/blog:posts:can_create": "Tworzenie artykułów",
+  "@vitnode/blog:posts:can_delete": "Usuwanie artykułów",
+  "@vitnode/blog:posts:can_edit": "Edytowanie artykułów",
+  "@vitnode/blog:posts:can_publish": "Publikowanie i cofanie publikacji artykułów",
+  "@vitnode/blog:posts:can_restore": "Przywracanie wcześniejszej wersji artykułu",
+  "@vitnode/blog:posts:can_view": "Wyświetlanie listy artykułów"
+}

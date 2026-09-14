@@ -90,8 +90,23 @@ describe("the generated route tree", () => {
       match => match[1],
     );
 
-    expect(imports).toEqual(["@vitnode/core/routing"]);
+    expect(imports).toEqual(["@vitnode/core/routing", "./const"]);
+    expect(imports).not.toContain("./pages/home-page");
     expect(routes).toContain("lazy(() => import(");
+  });
+
+  /**
+   * The namespace is built by the *generated* plugin at runtime, from its own
+   * `CONFIG_PLUGIN`. Written into a template literal inside a template literal,
+   * so its backticks and `${}` have to survive generation rather than be
+   * evaluated by it - the difference between a plugin that compiles and one
+   * whose `routes.ts` says `messages: [".home"]`.
+   */
+  it("leaves the message namespace for the generated plugin to build", () => {
+    const routes = pluginRoutesTemplate("@acme/blog");
+
+    expect(routes).toContain("messages: [`${CONFIG_PLUGIN.pluginId}.home`],");
+    expect(routes).not.toContain("@acme/blog.home");
   });
 
   it("declares no route id, which VitNode derives", () => {

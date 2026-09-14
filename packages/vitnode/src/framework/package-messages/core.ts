@@ -14,5 +14,4 @@ export const CORE_PLUGIN_ID = "@vitnode/core";
  */
 export const CORE_LOCALE_FILES: Record<string, string> = {
   en: "@vitnode/core/locales/en.json",
-  pl: "@vitnode/core/locales/pl.json",
 };

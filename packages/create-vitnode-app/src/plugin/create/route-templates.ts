@@ -14,9 +14,12 @@ export const pluginRoutesTemplate = (pluginName: string): string => {
 
   return `import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
 
+import { CONFIG_PLUGIN } from "./const";
+
 export const routes = definePluginRoutes([
   page("/${slug}", {
     component: lazy(() => import("./pages/home-page")),
+    messages: [\`\${CONFIG_PLUGIN.pluginId}.home\`],
   }),
 ]);
 `;

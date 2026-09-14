@@ -94,7 +94,6 @@ Registering a plugin is the whole step. Every VitNode build reads the `plugins` 
 export const packageMessages: Record<string, LocaleMessagesMap> = {
   '@vitnode/core': {
     en: async () => await import('@vitnode/core/locales/en.json'),
-    de: async () => await import('@vitnode/core/locales/de.json'),
   },
   '@acme/blog': {
     en: async () => await import('@acme/blog/locales/en.json'),
@@ -104,13 +103,22 @@ export const packageMessages: Record<string, LocaleMessagesMap> = {
 
 Don't edit it - it is rewritten on every `dev` and `build`, which is why it sits in your `.gitignore`. Every specifier is a literal because that is the only kind a bundler can resolve: `import(pkg + '/locales/' + locale + '.json')` resolves to nothing. Every loader stays dynamic, so a language's JSON is a chunk of its own and the server loads only the locale a request asked for.
 
-A package ships whatever languages it ships, so adding one to it is the package author's line to write rather than yours - see [Creating a plugin](/docs/dev/plugins/create). A language nobody has translated still renders: missing keys fall back to `defaultLocale`.
+<Callout type="info" title="Packages ship English">
+  `@vitnode/core` and the plugins in this repository ship `en` and nothing else.
+  Every other language is the install's own, which is what the next section is
+  for - and it is why a language you add is a file in **your** app rather than a
+  pull request against a package.
+</Callout>
 
 ---
 
 ## Overriding Strings
 
-To customize existing text from core or a third-party plugin, add an override file in `apps/web/src/locales/{pluginId}/{locale}.json` and register it in `src/locales/app.ts`:
+Your own translations live in `apps/web/src/locales/{pluginId}/{locale}.json`, registered in `src/locales/app.ts`. The same file does both jobs: a whole language a package does not ship, and a reword of a string it does.
+
+One file per package per language, holding that package's web **and** email strings together - an app keeps them in one tree where a package ships two, so the copy in an email cannot drift from the copy on the page.
+
+To reword something core already says:
 
 ```json title="apps/web/src/locales/@vitnode/core/en.json"
 {
@@ -133,15 +141,35 @@ export const appMessages: AppMessagesMap = {
 
 Because your app overrides are merged last, only the keys you specify are overwritten. Everything else continues to fall back to the package defaults.
 
+A whole language looks exactly the same, because it is the same mechanism - this repository's own Polish is a pair of files nobody's `node_modules` contains:
+
+```ts title="apps/web/src/locales/app.ts"
+export const appMessages: AppMessagesMap = {
+  pl: {
+    '@vitnode/blog': async () => await import('./@vitnode/blog/pl.json'),
+    '@vitnode/core': async () => await import('./@vitnode/core/pl.json'),
+  },
+}
+```
+
+If your app also serves the API, register the same map there so emails speak the language too - `i18n.messages` in `vitnode.api.config.ts`:
+
+```ts title="apps/web/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  i18n: { ...vitNodeConfig.i18n, messages: appMessages }, // [!code highlight]
+  // ...
+})
+```
+
 ---
 
 ## Translation Architecture
 
-| Source               | Role                                               | Order                   |
-| :------------------- | :------------------------------------------------- | :---------------------- |
-| `@vitnode/core`      | Base strings for auth, admin shells, and dialogs   | Base layer              |
-| **Plugins**          | Domain strings declared in `plugins/*/src/locales` | Second layer            |
-| **Host Application** | Custom overrides in `apps/web/src/locales`         | Highest priority (wins) |
+| Source               | Role                                                        | Order                   |
+| :------------------- | :---------------------------------------------------------- | :---------------------- |
+| `@vitnode/core`      | Base strings for auth, admin shells, and dialogs            | Base layer              |
+| **Plugins**          | Domain strings declared in `plugins/*/src/locales`          | Second layer            |
+| **Host Application** | Your own languages and rewordings in `apps/web/src/locales` | Highest priority (wins) |
 
 Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw key paths from displaying in production.
 

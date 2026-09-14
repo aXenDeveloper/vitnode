@@ -23,11 +23,9 @@ import type { LocaleMessagesMap } from '@vitnode/core/lib/i18n/types'
 export const packageMessages: Record<string, LocaleMessagesMap> = {
   '@vitnode/core': {
     en: async () => await import('@vitnode/core/locales/en.json'),
-    pl: async () => await import('@vitnode/core/locales/pl.json'),
   },
   '@vitnode/blog': {
     en: async () => await import('@vitnode/blog/locales/en.json'),
-    pl: async () => await import('@vitnode/blog/locales/pl.json'),
   },
   '@vitnode/example': {
     en: async () => await import('@vitnode/example/locales/en.json'),

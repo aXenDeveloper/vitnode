@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ResolvedPackageMessagesModule } from "./types.js";
 
+import { CORE_LOCALE_FILES } from "./core.js";
 import { generatePackageMessagesSource } from "./generate.js";
 
 const blog: ResolvedPackageMessagesModule = {
@@ -69,8 +70,8 @@ describe("generatePackageMessagesSource", () => {
 
     expect(source).not.toMatch(/^import .*\.json/m);
     expect(source.match(/await import\(/g)).toHaveLength(
-      // core's two, plus the blog's two
-      4,
+      Object.keys(CORE_LOCALE_FILES).length +
+        Object.keys(blog.localeFiles).length,
     );
   });
 

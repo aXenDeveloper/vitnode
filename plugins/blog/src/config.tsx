@@ -9,7 +9,6 @@ export const blogPlugin = () =>
     ...CONFIG_PLUGIN,
     localeFiles: {
       en: "@vitnode/blog/locales/en.json",
-      pl: "@vitnode/blog/locales/pl.json",
     },
     messages,
   });
