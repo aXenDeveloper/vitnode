@@ -74,6 +74,25 @@ export const contentListRouteParams = (
   filters: contentListFilters(input, definition),
 });
 
+/**
+ * The content list route's `search`, which carries the query string through
+ * unchanged.
+ *
+ * A content list's URL contract is a function of *its own content type* - which
+ * columns it sorts by, which filters it accepts, what page size its API defaults
+ * to - and a route's `search` is handed the query string alone, never the path
+ * params, so it cannot know which content type this URL is for.
+ * {@link normalizeContentListSearch} is therefore the loader's job, where the
+ * splat has just resolved.
+ *
+ * Declaring it is not optional: a route with no `search` and no `parseSearch`
+ * is handed `{}`, so every paginated, sorted or filtered URL would load the
+ * default list.
+ */
+export const contentListRouteSearch = (
+  input: Record<string, unknown>,
+): ContentListRouteSearch => input;
+
 export const normalizeContentListSearch = (
   input: UncheckedContentListSearch,
   definition: AnyContentTypeDefinition,

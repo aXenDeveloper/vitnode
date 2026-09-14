@@ -1,4 +1,5 @@
 import { defineRoutes, index, layout, lazy, page } from "./routing";
+import { contentListRouteSearch } from "./tanstack/admin/content/route-search";
 import { ADMIN_CRON_NAMESPACES } from "./tanstack/admin/cron/route";
 import { normalizeCronRouteSearch } from "./tanstack/admin/cron/route-search";
 import { ADMIN_DEBUG_NAMESPACES } from "./tanstack/admin/debug/route";
@@ -280,5 +281,6 @@ export const routes = defineRoutes([
     area: "admin",
     component: lazy(() => import("./pages/admin/content")),
     pendingComponent: TablePendingSkeleton,
+    search: contentListRouteSearch,
   }),
 ]);

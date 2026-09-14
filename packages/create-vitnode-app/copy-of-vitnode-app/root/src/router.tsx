@@ -11,8 +11,9 @@ import {
 } from "@vitnode/core/tanstack/layout";
 import { RoutePendingSpinner } from "@vitnode/core/tanstack/pending";
 import {
+  configureContentRegistry,
   pluginRouteSpecs,
-  withPluginRoutes,
+  withVitNodeRoutes,
 } from "@vitnode/core/tanstack/plugin-routes";
 
 // Imported for its side effect: this module calls `configureIntl`, which is
@@ -27,14 +28,17 @@ configureContentRegistry(
   async () => (await import("./content-registry.gen")).contentRegistry,
 );
 
-const routeTree = withVitNodeRoutes(fileRouteTree, pluginRouteSpecs(pluginRouteSources), {
-        mountUnder: {
-          admin: adminShellRoute,
-          blank: fileRouteTree,
-          main: mainShellRoute,
-        },
-        pageHead,
-});
+const routeTree = withVitNodeRoutes(
+  fileRouteTree,
+  pluginRouteSpecs(pluginRouteSources),
+  {
+    mountUnder: {
+      admin: adminShellRoute,
+      blank: fileRouteTree,
+      main: mainShellRoute,
+    },
+  },
+);
 
 export function getRouter() {
   const queryClient = createVitNodeQueryClient();

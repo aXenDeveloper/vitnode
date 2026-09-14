@@ -8,9 +8,10 @@ import type { PluginRoute } from "./routing";
 import { routes } from "./routes";
 import { compilePluginRouteTrees, routeMatchKey } from "./routing";
 
-const manifest = compilePluginRouteTrees([
+const compiled = compilePluginRouteTrees([
   { pluginId: "@vitnode/core", routes },
-]).manifest;
+]);
+const manifest = compiled.manifest;
 
 const pathsIn = (area: PluginRoute["area"]) =>
   manifest.filter(route => route.area === area).map(route => route.path);
@@ -108,6 +109,36 @@ describe("core's route tree", () => {
   it("leaves the admin area's session to the AdminCP shell", () => {
     for (const route of manifest) {
       if (route.area === "admin") expect(route.requires).toBeNull();
+    }
+  });
+
+  /**
+   * A route whose page reads `search` has to declare one: with neither a
+   * declared `search` nor a `parseSearch` on the module, the runtime hands the
+   * loader `{}` and every paginated, sorted or filtered URL quietly loads the
+   * default view.
+   *
+   * The Content Engine's splat is the one that cannot normalise in `search` -
+   * the query string arrives without the path params, so nothing there knows
+   * which content type the URL is for - and it is exactly the route where
+   * forgetting to carry it through costs the most.
+   */
+  it("carries the query string through on every route that reads it", () => {
+    const declared = new Set(compiled.searchValidators.keys());
+
+    expect(declared).toContain("@vitnode/core:page#/admin/content/*");
+
+    for (const path of [
+      "/admin/core/advanced/cron",
+      "/admin/core/advanced/queue",
+      "/admin/core/system/files",
+      "/admin/core/users",
+      "/admin/core/users/roles",
+      "/files",
+      "/login",
+      "/search",
+    ]) {
+      expect(declared).toContain(`@vitnode/core:page#${path}`);
     }
   });
 
