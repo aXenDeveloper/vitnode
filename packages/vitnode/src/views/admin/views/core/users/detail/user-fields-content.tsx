@@ -28,6 +28,7 @@ import {
   DialogTrigger,
   useDialog,
 } from "@/components/ui/dialog";
+import { setFormFieldError } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
@@ -218,11 +219,7 @@ const NameCodeForm = ({
     }
 
     if (result.error.status === 409) {
-      form.setError(
-        "newNameCode",
-        { message: t("nameCodeExists"), type: "manual" },
-        { shouldFocus: true },
-      );
+      setFormFieldError(form, "newNameCode", t("nameCodeExists"));
 
       return;
     }

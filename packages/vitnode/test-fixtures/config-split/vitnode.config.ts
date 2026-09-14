@@ -11,5 +11,14 @@ export const vitNodeConfig = buildConfig({
     timeZone: "UTC",
   },
   metadata: { shortTitle: "Fixture", title: "Fixture" },
-  plugins: [{ pluginId: "@acme/blog" }, { pluginId: "@acme/docs" }],
+  plugins: [
+    {
+      localeFiles: {
+        en: "@acme/blog/locales/en.json",
+        pl: "@acme/blog/locales/pl.json",
+      },
+      pluginId: "@acme/blog",
+    },
+    { pluginId: "@acme/docs" },
+  ],
 });

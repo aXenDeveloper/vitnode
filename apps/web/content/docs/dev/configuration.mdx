@@ -90,6 +90,7 @@ of those modules, and that is the part worth knowing:
 | `src/plugin-routes.gen.ts`    | the plugin's `src/routes.ts` | per route, behind `lazy()`                      |
 | `src/admin-nav.gen.ts`        | the plugin's `admin/nav`     | with the AdminCP shell                          |
 | `src/content-registry.gen.ts` | the plugin's `admin/content` | behind a dynamic `import()` in `src/router.tsx` |
+| `src/package-messages.gen.ts` | the factory's `localeFiles`  | per request, one locale at a time               |
 
 One literal import per configured plugin, written at build time. So a content
 type's editing screen - a Tiptap field, a form layout, a table cell - arrives
@@ -99,12 +100,13 @@ whole editing stack rides along with every public page. See
 [Plugin routes](/docs/dev/plugins/routes) and
 [Plugin frontend modules](/docs/dev/content-engine/plugin-registration).
 
-<Callout type="info" title="Also register its locale files">
+<Callout type="info" title="Where its locale files come from">
   The `messages` a factory carries is the plugin's own locale barrel, which loads
   its JSON with `import('./en.json', { with: { type: 'json' } })` - a specifier
-  no bundler follows. VitNode reads translations from
-  `src/locales/packages.ts` instead, so add a line there per language the plugin
-  ships. [Languages & Localization](/docs/dev/i18n) has the detail.
+  no bundler follows. The factory's `localeFiles` is the same list spelled as
+  package subpaths, and that is what your app's translations are loaded from:
+  your build writes the loaders into `src/package-messages.gen.ts` for you.
+  [Languages & Localization](/docs/dev/i18n) has the detail.
 </Callout>
 
 <Callout type="warn" title="Build-time cost">
@@ -127,7 +129,7 @@ import '@tanstack/react-start/server-only'
 import { buildServerConfig } from '@vitnode/core/vitnode.config'
 
 import { appMessages } from '@/locales/app'
-import { packageMessages } from '@/locales/packages'
+import { packageMessages } from '@/package-messages.gen'
 import { vitNodeConfig } from '@/vitnode.config'
 
 export const vitNodeServerConfig = buildServerConfig({
@@ -145,7 +147,7 @@ the document shell read. Hand the whole thing to the loader:
 export const loadIntlMessages = createIntlMessagesLoader(vitNodeServerConfig)
 ```
 
-`packageMessages` is one line per language a package ships, and `messages` is
+`packageMessages` is generated from the plugins you configured, and `messages` is
 where you reword a string a package translates differently to how you want it.
 [Languages & Localization](/docs/dev/i18n) covers both.
 

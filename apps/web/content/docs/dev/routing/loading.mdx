@@ -1,0 +1,137 @@
+---
+title: Loading States
+description: Render instant skeleton shapes and pending spinners while TanStack Start routes load data or download chunks.
+icon: LoaderCircle
+---
+
+import { DatabaseIcon, MapIcon, TriangleAlertIcon } from 'lucide-react'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+While a route loader executes or a lazy page chunk downloads, VitNode provides instant visual feedback so users never see an unresponsive screen.
+
+Loading states operate at two distinct layers:
+
+1. **Global router transitions** — A non-intrusive spinner rendered when navigating between routes.
+2. **Component-level Suspense** — Purpose-built skeleton shapes matching your layout while asynchronous data streams in.
+
+## Global router pending state
+
+TanStack Router displays a pending component during route transitions. VitNode configures this globally in `router.tsx` using `RoutePendingSpinner` with built-in debouncing:
+
+```tsx title="apps/web/src/router.tsx"
+import { createRouter as createTanStackRouter } from '@tanstack/react-router'
+import { RoutePendingSpinner } from '@vitnode/core/tanstack/pending'
+
+export function getRouter() {
+  return createTanStackRouter({
+    routeTree,
+    // [!code ++:3]
+    defaultPendingComponent: RoutePendingSpinner,
+    defaultPendingMs: 150,
+    defaultPendingMinMs: 300,
+  })
+}
+```
+
+- `defaultPendingMs: 150` — Prevents visual flickering on fast network responses by waiting 150ms before showing the spinner.
+- `defaultPendingMinMs: 300` — Ensures that once shown, the spinner remains visible for at least 300ms to avoid jarring flashes.
+
+{/* Image prompt: Minimal centered loading spinner in a clean dark UI shell with accessible aria-live indicator, 1440x900. */}
+
+## Component skeletons with Suspense
+
+For feature pages with multiple asynchronous queries, wrap content in React `<Suspense>` using VitNode's pre-built pending skeletons:
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
+import { Suspense } from 'react'
+
+const NotesList = () => {
+  // Asynchronously fetched notes
+  return <div>Notes List</div>
+}
+
+const NotesPage = () => {
+  return (
+    <div className="container mx-auto max-w-3xl p-4">
+      {/* [!code ++:3] */}
+      <Suspense fallback={<FeedPendingSkeleton rows={4} />}>
+        <NotesList />
+      </Suspense>
+    </div>
+  )
+}
+
+export default NotesPage
+```
+
+{/* Image prompt: Skeletons of note cards with pulsing placeholders for title, text lines, and avatar in dark theme, 1440x900. */}
+
+## Pre-built skeleton shapes
+
+Import pre-built skeletons directly from `@vitnode/core/tanstack/pending`:
+
+| Skeleton shape         | Layout pattern                                | Typical use case                        |
+| :--------------------- | :-------------------------------------------- | :-------------------------------------- |
+| `FeedPendingSkeleton`  | Card timeline with avatars and text rows      | Activity feeds, note lists, blog posts  |
+| `TablePendingSkeleton` | Search toolbar, column headers, and rows      | AdminCP data tables, member directories |
+| `CardsPendingSkeleton` | Responsive 1/2/3 column card grid             | Dashboard widgets, product catalogs     |
+| `FormPendingSkeleton`  | Stacked input placeholders and action buttons | Settings forms, modal dialogs           |
+| `AuthPendingSkeleton`  | Centered authentication card with form inputs | Sign-in, sign-up, password reset        |
+| `RoutePendingSpinner`  | Centered accessible spinner                   | Full-page transition fallbacks          |
+
+## Customizing skeleton props
+
+All skeleton shapes accept props from `RoutePendingSkeletonProps` to adapt to your layout:
+
+```tsx title="plugins/site-notes/src/pages/notes-admin-page.tsx"
+import { TablePendingSkeleton } from '@vitnode/core/tanstack/pending'
+import { Suspense } from 'react'
+
+const AdminNotesPage = () => {
+  return (
+    <Suspense
+      fallback={
+        // [!code ++:4]
+        <TablePendingSkeleton
+          className="p-6"
+          rows={8}
+          withDescription={false}
+        />
+      }
+    >
+      <AdminNotesTable />
+    </Suspense>
+  )
+}
+
+export default AdminNotesPage
+```
+
+| Prop              | Type      | Default     | Description                                                   |
+| :---------------- | :-------- | :---------- | :------------------------------------------------------------ |
+| `rows`            | `number`  | `3` to `6`  | Number of skeleton items, rows, or cards to display           |
+| `withDescription` | `boolean` | `true`      | Whether to display a skeleton subtitle under the heading      |
+| `className`       | `string`  | `undefined` | Additional Tailwind utility classes merged onto the container |
+| `label`           | `string`  | `'Loading'` | Accessible screen-reader label (`aria-label`)                 |
+
+<Cards>
+  <Card
+    icon={<DatabaseIcon />}
+    title="Data Loading"
+    description="Learn universal fetchers, cache invalidation, and background mutations."
+    href="/docs/dev/data-loading"
+  />
+  <Card
+    icon={<MapIcon />}
+    title="Plugin Routes"
+    description="Declare routes, lazy page components, metadata, and breadcrumbs."
+    href="/docs/dev/plugins/routes"
+  />
+  <Card
+    icon={<TriangleAlertIcon />}
+    title="Errors & Not Found"
+    description="Handle 404, 500, and error boundaries in routes."
+    href="/docs/dev/routing/not-found"
+  />
+</Cards>

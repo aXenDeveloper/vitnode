@@ -6,6 +6,7 @@ import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
+import { appMessages } from './locales/app'
 import { vitNodeConfig } from './vitnode.config'
 
 config({ quiet: true })
@@ -35,7 +36,13 @@ export const vitNodeApiConfig = buildApiConfig({
       bucket: process.env.SUPABASE_STORAGE_BUCKET,
     }),
   },
-  i18n: vitNodeConfig.i18n,
+  /**
+   * The shared locale list, plus this app's own translations - the same files
+   * `vitnode.server.config.ts` registers for the frontend. Each one holds a
+   * package's web and email strings together, so the two runtimes read one
+   * file and the email half cannot drift from the UI half.
+   */
+  i18n: { ...vitNodeConfig.i18n, messages: appMessages },
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,

@@ -3,7 +3,14 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { pluginIdsFromLoadedConfig } from "../plugin-routes";
+import {
+  generatePackageMessagesSource,
+  resolvePackageMessagesModules,
+} from "../package-messages";
+import {
+  pluginIdsFromLoadedConfig,
+  pluginsFromLoadedConfig,
+} from "../plugin-routes";
 
 const fixtureRoot = resolve(
   import.meta.dirname,
@@ -39,6 +46,29 @@ describe("the shared config is browser-safe and build-time cheap", () => {
     await expect(load(serverConfig)).rejects.toThrow(
       "the server-only config was loaded",
     );
+  });
+
+  /**
+   * The whole path a locale file takes, over a config file on disk: declared in
+   * the shared config, read without evaluating anything the plugin ships, and
+   * written out as a literal an app's bundler can follow.
+   */
+  it("turns the declared locale files into literal imports", async () => {
+    const source = generatePackageMessagesSource(
+      resolvePackageMessagesModules(
+        pluginsFromLoadedConfig(await load(sharedConfig), "vitnode.config.ts"),
+        "vitnode.config.ts",
+      ),
+    );
+
+    expect(source).toContain(
+      "en: async () => await import('@acme/blog/locales/en.json'),",
+    );
+    expect(source).toContain(
+      "pl: async () => await import('@acme/blog/locales/pl.json'),",
+    );
+    // `@acme/docs` declares none, so it has no entry at all.
+    expect(source).not.toContain("@acme/docs");
   });
 
   it("carries the locale declaration the rest of the app reads", async () => {

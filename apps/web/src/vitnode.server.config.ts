@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only'
 import { buildServerConfig } from '@vitnode/core/vitnode.config'
 
 import { appMessages } from '@/locales/app'
-import { packageMessages } from '@/locales/packages'
+import { packageMessages } from '@/package-messages.gen'
 import { vitNodeConfig } from '@/vitnode.config'
 
 export const vitNodeServerConfig = buildServerConfig({

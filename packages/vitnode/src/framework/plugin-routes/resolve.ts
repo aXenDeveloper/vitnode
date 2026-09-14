@@ -1,5 +1,7 @@
+import type { PackageMessagesSource } from "../package-messages/resolve.js";
 import type { ResolvedPluginRoutesModule } from "./types.js";
 
+import { localeFilesFromDeclaration } from "../package-messages/resolve.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "./diagnostics.js";
 
 const PLUGIN_ID_PATTERN =
@@ -35,10 +37,19 @@ export const toSingleQuotedLiteral = (value: string): string =>
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")}'`;
 
-export const pluginIdsFromLoadedConfig = (
+/**
+ * Every plugin an app configured, as much of each one as a build tool reads:
+ * its id, and the locale files it declares.
+ *
+ * Nothing here is evaluated beyond the config module itself - a route tree, an
+ * AdminCP navigation declaration and a content registration are all reached
+ * through their own package subpaths instead, and a locale file through the
+ * literal specifier this returns.
+ */
+export const pluginsFromLoadedConfig = (
   loaded: unknown,
   source: string,
-): string[] => {
+): PackageMessagesSource[] => {
   if (!isRecord(loaded) || !isRecord(loaded.vitNodeConfig)) {
     throw new Error(
       `${ERROR_PREFIX} ${source} does not export \`vitNodeConfig\`. It has to, because the configured plugins are what the route registry is generated from.`,
@@ -60,9 +71,21 @@ export const pluginIdsFromLoadedConfig = (
       );
     }
 
-    return assertPluginId(plugin.pluginId, source);
+    return {
+      localeFiles: localeFilesFromDeclaration(
+        plugin.localeFiles,
+        `\`vitNodeConfig.plugins[${String(index)}].localeFiles\` in ${source}`,
+      ),
+      pluginId: assertPluginId(plugin.pluginId, source),
+    };
   });
 };
+
+export const pluginIdsFromLoadedConfig = (
+  loaded: unknown,
+  source: string,
+): string[] =>
+  pluginsFromLoadedConfig(loaded, source).map(plugin => plugin.pluginId);
 
 export const routeDeclarationsFromRoutesModule = (
   loaded: unknown,

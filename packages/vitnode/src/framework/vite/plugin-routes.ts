@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedContentRegistryModule } from "../content-registry";
+import type { PackageMessagesSource } from "../package-messages";
 import type {
   CompiledPluginRoutes,
   HostRoutePath,
@@ -24,10 +25,14 @@ import type {
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
 import {
+  generatePackageMessagesSource,
+  resolvePackageMessagesModules,
+} from "../package-messages";
+import {
   compilePluginRoutes,
   hostRoutePathsFromFiles,
   lazyImportSpecifier,
-  pluginIdsFromLoadedConfig,
+  pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
 } from "../plugin-routes";
 import { createGenerationQueue } from "./generation-queue";
@@ -61,6 +66,8 @@ const pathsFor = (appRoot: string) => ({
 
   contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
 
+  packageMessages: join(appRoot, "src", "package-messages.gen.ts"),
+
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
 
   staleManifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
@@ -82,23 +89,31 @@ const resolverFor = (appRoot: string) => {
   };
 };
 
-const readConfiguredPluginIds = async (
+const readConfiguredPlugins = async (
   appRoot: string,
   configPath: string,
-): Promise<string[]> => {
+): Promise<PackageMessagesSource[]> => {
   const jiti = createJiti(pathToFileURL(join(appRoot, "package.json")).href, {
     interopDefault: true,
     moduleCache: false,
   });
 
-  return pluginIdsFromLoadedConfig(
+  return pluginsFromLoadedConfig(
     await jiti.import(configPath),
     relative(appRoot, configPath),
   );
 };
 
-export const configuredPluginIds = async (appRoot: string): Promise<string[]> =>
-  await readConfiguredPluginIds(appRoot, pathsFor(appRoot).config);
+export const configuredPluginIds = async (
+  appRoot: string,
+): Promise<string[]> => {
+  const plugins = await readConfiguredPlugins(
+    appRoot,
+    pathsFor(appRoot).config,
+  );
+
+  return plugins.map(plugin => plugin.pluginId);
+};
 
 const readPluginRoutes = async (
   pluginId: string,
@@ -366,7 +381,12 @@ const discover = async (
 ) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
-  const pluginIds = await readConfiguredPluginIds(appRoot, paths.config);
+  const plugins = await readConfiguredPlugins(appRoot, paths.config);
+  const pluginIds = plugins.map(plugin => plugin.pluginId);
+  const packageMessages = resolvePackageMessagesModules(
+    plugins,
+    relative(appRoot, paths.config),
+  );
   const loaded = await Promise.all(
     pluginIds.map(async pluginId =>
       readPluginRoutes(pluginId, resolvePackageFile),
@@ -413,6 +433,7 @@ const discover = async (
     adminNav: adminNav.modules,
     compiled,
     contentRegistry: contentRegistry.modules,
+    packageMessages,
     watch,
   };
 };
@@ -429,18 +450,15 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-/** All three generated files, from one discovery pass. */
+/** All four generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
 ): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { adminNav, compiled, contentRegistry } = await discover(
-    appRoot,
-    options,
-    onLoaded,
-  );
+  const { adminNav, compiled, contentRegistry, packageMessages } =
+    await discover(appRoot, options, onLoaded);
 
   await Promise.all([
     writeIfChanged(paths.registry, compiled.source),
@@ -448,6 +466,10 @@ const writeGenerated = async (
     writeIfChanged(
       paths.contentRegistry,
       generateContentRegistrySource(contentRegistry),
+    ),
+    writeIfChanged(
+      paths.packageMessages,
+      generatePackageMessagesSource(packageMessages),
     ),
     removeIfPresent(paths.staleManifest),
   ]);

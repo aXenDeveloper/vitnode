@@ -74,6 +74,40 @@ describe("loadMessages", () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
+  /**
+   * The shape this repository itself runs: `@vitnode/core` and its plugins ship
+   * English, and Polish lives in `apps/web/src/locales/`. So the only source
+   * that has the requested locale at all is an optional app override, and it
+   * still has to render - over the packages' English, key by key.
+   */
+  it("serves a locale only the app ships", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const messages = await loadMessages({
+      defaultLocale: "en",
+      locale: "pl",
+      sources: [
+        source("@vitnode/core", { en: { core: { of: "of", save: "Save" } } }),
+        source("@vitnode/blog", { en: { "@vitnode/blog": { title: "Blog" } } }),
+        source("app:@vitnode/core", { pl: { core: { save: "Zapisz" } } }, true),
+        source(
+          "app:@vitnode/blog",
+          { pl: { "@vitnode/blog": { title: "Blog po polsku" } } },
+          true,
+        ),
+      ],
+    });
+
+    expect(messages).toEqual({
+      "@vitnode/blog": { title: "Blog po polsku" },
+      // `of` is untranslated, so it comes from the default locale rather than
+      // rendering as its own key.
+      core: { of: "of", save: "Zapisz" },
+    });
+    // And it is not the "nothing provides this locale" path.
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("warns once and keeps going when a loader throws", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const sources: MessagesSource[] = [

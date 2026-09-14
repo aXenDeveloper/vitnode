@@ -6,6 +6,18 @@ export type MessagesLoader = () => Promise<{ default: Messages }>;
 /** Every locale a package ships, keyed by locale code. */
 export type LocaleMessagesMap = Record<string, MessagesLoader>;
 
+/**
+ * Every locale file a package ships, keyed by locale code - each value a
+ * literal `*.json` import specifier an app's bundler can follow.
+ *
+ * Declarative on purpose: this is the half of a package's translations that
+ * travels through the browser-safe plugin factory, so it holds no loader and
+ * no code. VitNode's Vite plugin writes the loaders from it, into the app's
+ * own `src/package-messages.gen.ts`, where the specifiers are literals the
+ * bundler resolves at build time.
+ */
+export type LocaleFilesMap = Record<string, string>;
+
 export type AppMessagesMap = Record<string, Record<string, MessagesLoader>>;
 
 /** A package - core or a plugin - contributing messages to the merged tree. */

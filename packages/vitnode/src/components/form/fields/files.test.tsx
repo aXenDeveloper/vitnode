@@ -1,16 +1,11 @@
+import { type AnyFormApi, useForm } from "@tanstack/react-form";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import {
-  type FieldValues,
-  FormProvider,
-  useForm,
-  type UseFormReturn,
-} from "react-hook-form";
 import { IntlProvider } from "use-intl";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { FormField } from "@/components/ui/form";
+import { Form, FormField } from "@/components/ui/form";
 import messages from "@/locales/en.json";
 
 import type { AutoFormFileValue } from "./file-shared";
@@ -57,13 +52,13 @@ const field = (
   let running = 0;
   let peak = 0;
   const values: { gallery: number[] } = { gallery: props.ids ?? [] };
-  let control: null | UseFormReturn = null;
+  let control: AnyFormApi | null = null;
 
-  // Widened deliberately, so the form infers `FieldValues` rather than
-  // `{ gallery: number[] }`. `AutoFormFiles` takes the `FieldValues` field every
+  // Widened deliberately, so the form infers an open record rather than
+  // `{ gallery: number[] }`. `AutoFormFiles` takes the loosely typed field every
   // `AutoForm` control takes, and a narrower form here would be asserting
   // against a contract the component does not have.
-  const defaults: FieldValues = { gallery: props.ids ?? [] };
+  const defaults: Record<string, unknown> = { gallery: props.ids ?? [] };
 
   const Harness = () => {
     const form = useForm({ defaultValues: defaults });
@@ -80,9 +75,8 @@ const field = (
     return (
       <IntlProvider locale="en" messages={messages}>
         <QueryClientProvider client={client}>
-          <FormProvider {...form}>
+          <Form form={form}>
             <FormField
-              control={form.control}
               name="gallery"
               render={({ field: controlled }) => {
                 values.gallery = controlled.value ?? [];
@@ -119,7 +113,7 @@ const field = (
                 );
               }}
             />
-          </FormProvider>
+          </Form>
         </QueryClientProvider>
       </IntlProvider>
     );
@@ -289,7 +283,7 @@ describe("AutoFormFiles", () => {
     expect(rendered()).toEqual(["A.webp", "B.webp", "C.webp"]);
 
     await settled(() => {
-      gallery.form.setValue("gallery", [103, 101, 102]);
+      gallery.form.setFieldValue("gallery", [103, 101, 102]);
     });
     expect(rendered()).toEqual(["C.webp", "A.webp", "B.webp"]);
 

@@ -10,6 +10,16 @@ import { pluginPackageExports } from "./route-templates.js";
 const writeJson = async (path: string, data: unknown) =>
   writeFile(path, JSON.stringify(data, null, 2));
 
+export const pluginScripts = (eslint: boolean) => ({
+  "build:plugins": "vitnode build",
+  dev: "vitnode dev",
+  "dev:email": "email dev --dir src/emails",
+  ...withIf(eslint, {
+    lint: "turbo lint",
+    "lint:fix": "turbo lint:fix",
+  }),
+});
+
 export const createPluginPackageJSON = async ({
   pluginName,
   pluginPath,
@@ -26,18 +36,11 @@ export const createPluginPackageJSON = async ({
     version: "0.1.0",
     private: true,
     type: "module",
-    scripts: {
-      "build:plugins": "vitnode build",
-      dev: "vitnode dev",
-      "dev:email": "email dev --dir src/emails",
-      ...withIf(eslint, {
-        lint: "turbo lint",
-        "lint:fix": "turbo lint:fix",
-      }),
-    },
+    scripts: pluginScripts(eslint),
     exports: pluginPackageExports(),
     dependencies: {
       "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
+      "@tanstack/react-form": versionsPackageJson.tanstackReactForm,
       "@vitnode/core": vitnodeVersionRange,
       "drizzle-kit": versionsPackageJson.drizzleKit,
       "drizzle-orm": versionsPackageJson.drizzleOrm,
@@ -46,7 +49,6 @@ export const createPluginPackageJSON = async ({
       react: versionsPackageJson.react,
       "react-dom": versionsPackageJson.reactDom,
       "react-email": versionsPackageJson.reactEmail,
-      "react-hook-form": versionsPackageJson.rhf,
       sonner: versionsPackageJson.sonner,
       "use-intl": versionsPackageJson.useIntl,
       zod: versionsPackageJson.zod,

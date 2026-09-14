@@ -149,7 +149,25 @@ export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
 
 A plugin owns its languages, and it splits them the same way the framework does: frontend strings in `src/locales/`, server strings (emails) in `src/locales/api/`. Each tree gets a barrel and is registered with the matching config - the frontend tree with `buildPlugin` in `config.tsx`, the server tree with `buildApiPlugin` in `config.api.ts`.
 
-Most plugins render nothing server-side, so they ship only the frontend tree and register `messages` in `config.tsx` alone. Add the `api/` tree only when your plugin sends email:
+Most plugins render nothing server-side, so they ship only the frontend tree. That one is registered twice, and the two halves are not interchangeable:
+
+```ts title="plugins/{your_plugin}/src/config.tsx"
+import messages from './locales'
+
+export const yourPlugin = () =>
+  buildPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    localeFiles: {
+      // [!code ++:2]
+      en: '@acme/your-plugin/locales/en.json',
+    },
+    messages,
+  })
+```
+
+`messages` is your own barrel, whose `import('./en.json')` is relative to your build output - right for anything running inside your package, and a specifier no host bundler can follow. `localeFiles` is the same list written as the subpaths your `package.json` exports, and it is what an app's translations are actually loaded from: the app's build turns it into literal imports in `src/package-messages.gen.ts`. Ship both, and keep them in step.
+
+Add the `api/` tree only when your plugin sends email:
 
 ```ts title="plugins/{your_plugin}/src/locales/api/index.ts"
 import type { LocaleMessagesMap } from '@vitnode/core/lib/i18n/types'
@@ -172,7 +190,7 @@ export const yourApiPlugin = () =>
   })
 ```
 
-Adding a language later is a new file plus one line in the barrel - apps pick it up on their next install, and can translate your plugin without forking it by dropping a file in their own `src/locales/{your_plugin}/`.
+Adding a language later is a new file plus one line in each list that names it - apps pick it up on their next install, and can translate your plugin without forking it by dropping a file in their own `src/locales/{your_plugin}/`.
 
 ## Typing the keys
 

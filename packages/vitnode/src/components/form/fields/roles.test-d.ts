@@ -30,7 +30,7 @@ describe("AutoFormRolesProps", () => {
 
   it("accepts a browser search over the Hono roles endpoint", () => {
     const searchInBrowser = async (
-      search: string,
+      _search: string,
     ): Promise<
       {
         color: null | string;
@@ -38,8 +38,6 @@ describe("AutoFormRolesProps", () => {
         name: { languageCode: string; name: string }[];
       }[]
     > => {
-      void search;
-
       return await Promise.resolve([]);
     };
 

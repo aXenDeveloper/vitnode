@@ -3,6 +3,8 @@ import { useTranslations } from "use-intl";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
+import { setFormFieldError } from "@/components/ui/form";
+
 import type {
   SignUpFormSchema,
   SignUpFormValues,
@@ -34,7 +36,6 @@ export const useSignUpForm = ({ onSignUp }: { onSignUp: SignUpSubmit }) => {
   });
 
   const onSubmit: AutoFormOnSubmit<SignUpFormSchema> = async (
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     { terms: _terms, ...values }: SignUpFormValues,
     form,
     { captchaToken },
@@ -52,16 +53,10 @@ export const useSignUpForm = ({ onSignUp }: { onSignUp: SignUpSubmit }) => {
     }
 
     if (outcome.kind === "field") {
-      form.setError(
+      setFormFieldError(
+        form,
         outcome.field,
-        {
-          type: "manual",
-          message:
-            outcome.field === "email"
-              ? t("email.exists")
-              : t("username.exists"),
-        },
-        { shouldFocus: true },
+        outcome.field === "email" ? t("email.exists") : t("username.exists"),
       );
 
       return;

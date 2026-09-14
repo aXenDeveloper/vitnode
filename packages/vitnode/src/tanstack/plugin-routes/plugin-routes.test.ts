@@ -167,6 +167,9 @@ describe("plugin route areas", () => {
   const adminRoute = (path = "/admin/reports") =>
     page(path, { area: "admin", component: lazyModule() });
 
+  const blankRoute = (path = "/kiosk") =>
+    page(path, { area: "blank", component: lazyModule() });
+
   /** A root with both shells, each already holding a page of the app's own. */
   const shells = () => {
     const root = createRootRoute();
@@ -207,6 +210,28 @@ describe("plugin route areas", () => {
     // Neither shell lost the page it already had.
     expect(main.children).toHaveLength(2);
     expect(admin.children).toHaveLength(2);
+  });
+
+  it("mounts a blank route under the root, outside both shells", () => {
+    const { admin, main, tree } = shells();
+
+    withPluginRoutes(tree, specsOf(pageAt("/example"), blankRoute()), {
+      mountUnder: { admin, blank: tree, main },
+      pageHead,
+    });
+
+    expect(mountedPaths(tree)).toEqual(["/kiosk"]);
+    expect(mountedPaths(main)).toEqual(["/example"]);
+    expect(containerOf(admin)).toBeUndefined();
+    expect(tree.children).toHaveLength(3);
+  });
+
+  it("hangs a blank route from the root when the host named no shells", () => {
+    const { tree } = shells();
+
+    withPluginRoutes(tree, specsOf(blankRoute()), { pageHead });
+
+    expect(mountedPaths(tree)).toEqual(["/kiosk"]);
   });
 
   /**

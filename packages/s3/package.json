@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/s3",
-  "version": "2.0.0-canary.9",
+  "version": "2.0.0-canary.12",
   "description": "AWS S3 and Cloudflare R2 storage adapter for VitNode file uploads.",
   "author": "VitNode Team",
   "license": "MIT",
@@ -31,15 +31,15 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1092.0"
+    "@aws-sdk/client-s3": "^3.1131.0"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.15.46",
+    "@swc/core": "^1.16.2",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
-    "eslint": "^10.7.0",
-    "tsc-alias": "^1.9.1",
+    "eslint": "^10.10.0",
+    "tsc-alias": "^1.9.5",
     "typescript": "^6.0.3"
   }
 }

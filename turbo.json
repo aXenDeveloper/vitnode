@@ -44,7 +44,7 @@
     "build": {
       "dependsOn": ["^build:plugins", "^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".output/**", "dist/**"],
+      "outputs": [".output/**", ".vercel/output/**", "dist/**"],
       "env": ["POSTGRES_URL", "VITNODE_API_URL", "VITNODE_WEB_URL"]
     },
     "build:scripts": {

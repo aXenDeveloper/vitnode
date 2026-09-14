@@ -4,6 +4,11 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { createVitNodeQueryClient } from "@vitnode/core/lib/query-client";
 import { createLocaleRewrite } from "@vitnode/core/tanstack/i18n";
+import {
+  Error500Page,
+  ErrorActions,
+  NotFound,
+} from "@vitnode/core/tanstack/layout";
 import { pageHead } from "@vitnode/core/tanstack/metadata";
 import { RoutePendingSpinner } from "@vitnode/core/tanstack/pending";
 import {
@@ -29,7 +34,11 @@ const routeTree = withCoreRootRoutes(
   withCoreAdminRoutes(
     withCoreMainRoutes(
       withPluginRoutes(fileRouteTree, pluginRouteSpecs(pluginRouteSources), {
-        mountUnder: { admin: adminShellRoute, main: mainShellRoute },
+        mountUnder: {
+          admin: adminShellRoute,
+          blank: fileRouteTree,
+          main: mainShellRoute,
+        },
         pageHead,
       }),
       { localeRouting, mountUnder: mainShellRoute, pageHead },
@@ -55,6 +64,8 @@ export function getRouter() {
     rewrite: createLocaleRewrite(() => holder.current),
     routeTree,
     scrollRestoration: true,
+    defaultNotFoundComponent: () => <NotFound actions={<ErrorActions />} />,
+    defaultErrorComponent: () => <Error500Page actions={<ErrorActions />} />,
   });
 
   holder.current = router;

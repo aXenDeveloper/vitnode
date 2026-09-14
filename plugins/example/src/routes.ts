@@ -6,17 +6,27 @@ import {
   page,
 } from "@vitnode/core/routing";
 
+import type { ExampleSearch } from "./pages/example-page";
+
 import { browseSearch } from "./pages/browse-search";
 
 export const routes = definePluginRoutes([
-  page("/example", {
+  page("/example/:slug", {
     component: lazy(() => import("./pages/example-page")),
+    search: (input): ExampleSearch => ({
+      tab: input.tab === "details" ? "details" : "summary",
+    }),
   }),
 
   page("/example/browse", {
     component: lazy(() => import("./pages/browse-page")),
     messages: ["@vitnode/example.browse"],
     search: browseSearch,
+  }),
+
+  page("/example/embed", {
+    area: "blank",
+    component: lazy(() => import("./pages/embed-page")),
   }),
 
   layout("/example/guide", {

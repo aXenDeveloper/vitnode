@@ -60,7 +60,8 @@ export const rootScripts = (
 ) => ({
   "db:migrate": "turbo db:migrate",
   "db:prepare": "turbo db:prepare",
-  dev: "turbo db:prepare && turbo dev",
+  "build:plugins": "turbo build:plugins",
+  dev: "turbo build:plugins && turbo db:prepare && turbo dev",
   build: "turbo build",
   start: "turbo start",
   "i18n:create": "turbo i18n:create",
@@ -226,6 +227,7 @@ const apiDevDeps = (pm: string, eslint: boolean) => ({
 
 const tanstackWebDeps = {
   "@tailwindcss/vite": versionsPackageJson.tailwindVite,
+  "@tanstack/react-form": versionsPackageJson.tanstackReactForm,
   "@tanstack/react-query": versionsPackageJson.tanstackReactQuery,
   "@tanstack/react-router": versionsPackageJson.tanstackReactRouter,
   "@tanstack/react-router-ssr-query":
@@ -236,7 +238,6 @@ const tanstackWebDeps = {
   nitro: versionsPackageJson.nitro,
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
-  "react-hook-form": versionsPackageJson.rhf,
   sonner: versionsPackageJson.sonner,
   tailwindcss: versionsPackageJson.tailwind,
   tslib: versionsPackageJson.tslib,
@@ -248,7 +249,6 @@ const singleAppDeps = {
   ...tanstackWebDeps,
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
   "@hono/zod-validator": versionsPackageJson.honoZodValidator,
-  "@hookform/resolvers": versionsPackageJson.rhfResolvers,
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
   hono: versionsPackageJson.hono,
@@ -290,7 +290,6 @@ const webDeps = {
 
 const webDevDeps = (eslint: boolean) => ({
   ...tanstackWebDevDeps,
-  "@hookform/resolvers": versionsPackageJson.rhfResolvers,
   "class-variance-authority": versionsPackageJson.cva,
   ...withIf(eslint, { eslint: versionsPackageJson.eslint }),
 });

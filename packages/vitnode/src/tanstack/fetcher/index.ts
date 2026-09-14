@@ -40,7 +40,7 @@ export const rawFetcher = createIsomorphicFn()
   .server(serverRawFetcher)
   .client(rawFetcherClient) as UniversalRawFetcher;
 
-type ApiClient<T extends BaseBuildModuleReturn> =
+export type ApiClient<T extends BaseBuildModuleReturn> =
   T extends BuildModuleReturn<
     string,
     infer MainModule extends string,

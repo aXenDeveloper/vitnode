@@ -398,7 +398,7 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
     case "group":
       return leafObjectSchema(spec);
     case "number": {
-      // A number input hands react-hook-form a string, so the form schema
+      // A number input hands the form a string, so the form schema
       // coerces - `z.number()` would reject "0" and disable submit.
       let schema = spec.integer ? z.coerce.number().int() : z.coerce.number();
       if (spec.min !== undefined) schema = schema.min(spec.min);

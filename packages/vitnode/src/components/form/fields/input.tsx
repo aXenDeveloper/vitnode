@@ -11,7 +11,11 @@ import { FormControl, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
-import { MultiLangSelect, useMultiLangField } from "./multi-lang";
+import {
+  type MultiLangFieldProps,
+  MultiLangSelect,
+  useMultiLangField,
+} from "./multi-lang";
 
 type AutoFormInputProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "value"> & {
@@ -28,9 +32,13 @@ const MultiLangInput = ({
   pattern,
   type,
   ...props
-}: Omit<AutoFormInputProps, "children" | "multiLang" | "otherProps"> & {
-  isOptional?: boolean;
-}) => {
+}: MultiLangFieldProps &
+  Omit<
+    AutoFormInputProps,
+    "children" | "field" | "multiLang" | "otherProps"
+  > & {
+    isOptional?: boolean;
+  }) => {
   const { languages, selected, setSelected, currentValue, setValue } =
     useMultiLangField(field);
   const { maxLength, minLength } = getMultiLangConstraints(itemParams);

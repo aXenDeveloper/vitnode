@@ -3,7 +3,14 @@ export type {
   BreadcrumbMatch,
   BreadcrumbTrailEntry,
   RouteBreadcrumb,
+  RouteBreadcrumbDeclaration,
+  RouteBreadcrumbDeferred,
   RouteBreadcrumbGroup,
   RouteBreadcrumbProps,
 } from "./model";
-export { breadcrumbGroup, breadcrumbTrail } from "./model";
+export {
+  breadcrumbDeferred,
+  breadcrumbGroup,
+  breadcrumbTrail,
+  useBreadcrumbTrail,
+} from "./model";

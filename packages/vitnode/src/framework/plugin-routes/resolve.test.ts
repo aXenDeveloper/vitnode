@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertPluginId,
   pluginIdsFromLoadedConfig,
+  pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
   sortAndAssertUniquePlugins,
   toSingleQuotedLiteral,
@@ -147,6 +148,57 @@ describe("pluginIdsFromLoadedConfig", () => {
         "src/vitnode.config.ts",
       ),
     ).toThrow(/which is not a package name/);
+  });
+});
+
+describe("pluginsFromLoadedConfig", () => {
+  it("carries each plugin's locale manifest through unevaluated", () => {
+    expect(
+      pluginsFromLoadedConfig(
+        {
+          vitNodeConfig: {
+            plugins: [
+              {
+                localeFiles: {
+                  pl: "@acme/blog/locales/pl.json",
+                  en: "@acme/blog/locales/en.json",
+                },
+                pluginId: "@acme/blog",
+              },
+              { pluginId: "@acme/quiet" },
+            ],
+          },
+        },
+        "src/vitnode.config.ts",
+      ),
+    ).toEqual([
+      {
+        localeFiles: {
+          en: "@acme/blog/locales/en.json",
+          pl: "@acme/blog/locales/pl.json",
+        },
+        pluginId: "@acme/blog",
+      },
+      { localeFiles: undefined, pluginId: "@acme/quiet" },
+    ]);
+  });
+
+  it("names the plugin whose manifest is wrong by its index", () => {
+    expect(() =>
+      pluginsFromLoadedConfig(
+        {
+          vitNodeConfig: {
+            plugins: [
+              { pluginId: "@acme/blog" },
+              { localeFiles: { en: "./en.json" }, pluginId: "@acme/docs" },
+            ],
+          },
+        },
+        "src/vitnode.config.ts",
+      ),
+    ).toThrow(
+      /`vitNodeConfig\.plugins\[1\]\.localeFiles` in src\/vitnode\.config\.ts/,
+    );
   });
 });
 

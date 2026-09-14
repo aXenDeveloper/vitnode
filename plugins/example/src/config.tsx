@@ -8,6 +8,9 @@ import { routes } from "./routes";
 export const examplePlugin = () =>
   buildPlugin({
     ...CONFIG_PLUGIN,
+    localeFiles: {
+      en: "@vitnode/example/locales/en.json",
+    },
     messages,
     routes,
   });

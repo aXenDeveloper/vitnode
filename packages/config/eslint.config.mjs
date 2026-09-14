@@ -34,6 +34,7 @@ export default [
       "@typescript-eslint/no-confusing-void-expression": "off",
       "@typescript-eslint/no-unnecessary-type-parameters": "off",
       "@typescript-eslint/no-misused-spread": "off",
+      "@typescript-eslint/no-generated-empty-object-type": "off",
       "perfectionist/sort-decorators": "warn",
       "perfectionist/sort-modules": "off",
       "perfectionist/sort-switch-case": "warn",
@@ -78,6 +79,8 @@ export default [
         {
           ignoreRestSiblings: false,
           caughtErrorsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
         },
       ],
       "@typescript-eslint/no-empty-function": "off",

@@ -21,9 +21,21 @@ const createVitNodeApi = () => {
 // server modules on HMR, so the instance is parked on `globalThis` to keep one
 // API per process instead of one per edit.
 const cache = globalThis as typeof globalThis & {
-  __vitnodeApi?: ReturnType<typeof createVitNodeApi>
+  __vitnodeApi?: {
+    app: ReturnType<typeof createVitNodeApi>
+    plugins: string
+  }
 }
 
-export const vitNodeApi = (cache.__vitnodeApi ??= createVitNodeApi())
+const configuredPlugins = vitNodeApiConfig.plugins
+  .map((plugin) => plugin.pluginId)
+  .sort()
+  .join(',')
+
+if (cache.__vitnodeApi?.plugins !== configuredPlugins) {
+  cache.__vitnodeApi = { app: createVitNodeApi(), plugins: configuredPlugins }
+}
+
+export const vitNodeApi = cache.__vitnodeApi.app
 
 export const apiBridge = createApiBridge(vitNodeApi)

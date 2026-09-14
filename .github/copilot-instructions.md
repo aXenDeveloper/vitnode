@@ -16,7 +16,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
   - TanStack Start on Vite, file-based routes under `apps/web/src/routes/`
   - Navigation: use `@vitnode/core/tanstack/layout`'s `RouterLink`, or TanStack
     Router's own `Link` / `useNavigate`.
-  - Forms: Use `react-hook-form@7`, `createServerFn` for mutations
+  - Forms: Use `@tanstack/react-form@1`, `createServerFn` for mutations
   - UI: Shadcn UI, Tailwind CSS 4, dark/light mode with system detection
   - i18n: Use `use-intl`, `t('key')` for translations, `createTranslator`
     (server), `useTranslations` (client)
@@ -53,7 +53,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
 ## Integration & Conventions
 
 - **External:**
-  - TanStack Start, TanStack Router, TanStack Query, Hono.js, Drizzle ORM, Zod, react-hook-form, Shadcn UI, Tailwind, use-intl
+  - TanStack Start, TanStack Router, TanStack Query, TanStack Form, Hono.js, Drizzle ORM, Zod, Shadcn UI, Tailwind, use-intl
 - **Internal:**
   - Navigation, config, API, middleware, plugin system
 - **Security:**

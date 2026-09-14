@@ -7,7 +7,11 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
-import { MultiLangSelect, useMultiLangField } from "./multi-lang";
+import {
+  type MultiLangFieldProps,
+  MultiLangSelect,
+  useMultiLangField,
+} from "./multi-lang";
 
 type AutoFormEditorProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Editor>, "onChange" | "value"> & {
@@ -21,9 +25,13 @@ const MultiLangEditor = ({
   isOptional,
   field,
   ...props
-}: Omit<AutoFormEditorProps, "itemParams" | "multiLang" | "otherProps"> & {
-  isOptional?: boolean;
-}) => {
+}: MultiLangFieldProps &
+  Omit<
+    AutoFormEditorProps,
+    "field" | "itemParams" | "multiLang" | "otherProps"
+  > & {
+    isOptional?: boolean;
+  }) => {
   const { languages, selected, setSelected, currentValue, setValue } =
     useMultiLangField(field);
 

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  pluginApiClientTemplate,
+  pluginApiConfigTemplate,
+  pluginApiModuleTemplate,
+  pluginApiRouteTemplate,
+  pluginApiVariableName,
   pluginConfigTemplate,
+  pluginConstTemplate,
   pluginMessagesTemplate,
   pluginPackageExports,
   pluginRouteModuleTemplate,
@@ -46,6 +52,24 @@ describe("pluginVariableName", () => {
   });
 });
 
+describe("pluginApiVariableName", () => {
+  it("names the API factory after the UI one", () => {
+    expect(pluginApiVariableName("@acme/my-blog")).toBe("myBlogApiPlugin");
+  });
+
+  it("does not say Plugin twice either", () => {
+    expect(pluginApiVariableName("my-vitnode-plugin")).toBe(
+      "myVitnodeApiPlugin",
+    );
+  });
+
+  it("stays distinct from the UI factory, which an app imports beside it", () => {
+    expect(pluginApiVariableName("@acme/blog")).not.toBe(
+      pluginVariableName("@acme/blog"),
+    );
+  });
+});
+
 describe("the generated route tree", () => {
   it("declares one page, in the canonical shape", () => {
     const routes = pluginRoutesTemplate("@acme/blog");
@@ -66,8 +90,23 @@ describe("the generated route tree", () => {
       match => match[1],
     );
 
-    expect(imports).toEqual(["@vitnode/core/routing"]);
+    expect(imports).toEqual(["@vitnode/core/routing", "./const"]);
+    expect(imports).not.toContain("./pages/home-page");
     expect(routes).toContain("lazy(() => import(");
+  });
+
+  /**
+   * The namespace is built by the *generated* plugin at runtime, from its own
+   * `CONFIG_PLUGIN`. Written into a template literal inside a template literal,
+   * so its backticks and `${}` have to survive generation rather than be
+   * evaluated by it - the difference between a plugin that compiles and one
+   * whose `routes.ts` says `messages: [".home"]`.
+   */
+  it("leaves the message namespace for the generated plugin to build", () => {
+    const routes = pluginRoutesTemplate("@acme/blog");
+
+    expect(routes).toContain("messages: [`${CONFIG_PLUGIN.pluginId}.home`],");
+    expect(routes).not.toContain("@acme/blog.home");
   });
 
   it("declares no route id, which VitNode derives", () => {
@@ -105,7 +144,27 @@ describe("the generated route module", () => {
     // A route module is compiled into the plugin's `dist` and imported by
     // whichever app installed it, so a router import is a way of making the
     // plugin installable into exactly one kind of app.
-    expect(imports).toEqual(["use-intl"]);
+    expect(imports).toEqual([
+      "@vitnode/core/routing",
+      "@vitnode/core/routing",
+      "use-intl",
+      "@/api/client",
+    ]);
+    expect(imports).not.toContain("@tanstack/react-router");
+  });
+
+  it("renders what the plugin's own endpoint answered", () => {
+    const module = pluginRouteModuleTemplate("blog");
+
+    expect(module).toContain("export const route = definePluginRoute");
+    expect(module).toContain('module: "hello",');
+    expect(module).toContain("{loaderData.message}");
+  });
+
+  it("declares the loader's shape, so the schema and the page check each other", () => {
+    expect(pluginRouteModuleTemplate("blog")).toContain(
+      "definePluginRoute<HelloMessage>",
+    );
   });
 
   it("renders no <main>, which the application shell owns", () => {
@@ -133,7 +192,11 @@ describe("the generated messages", () => {
       { home: Record<string, string> }
     >;
 
-    expect(Object.keys(messages.blog.home).sort()).toEqual(["desc", "title"]);
+    expect(Object.keys(messages.blog.home).sort()).toEqual([
+      "api",
+      "desc",
+      "title",
+    ]);
   });
 });
 
@@ -145,16 +208,112 @@ describe("the generated config", () => {
     expect(config).toContain("routes,");
   });
 
-  it("names the plugin by its package name", () => {
-    expect(pluginConfigTemplate("@acme/blog")).toContain(
-      'pluginId: "@acme/blog",',
-    );
+  it("names the plugin through the one constant that holds its id", () => {
+    const config = pluginConfigTemplate("@acme/blog");
+
+    expect(config).toContain('import { CONFIG_PLUGIN } from "@/const";');
+    expect(config).toContain("pluginId: CONFIG_PLUGIN.pluginId,");
+    expect(config).not.toContain('"@acme/blog"');
   });
 
   it("exports a factory whose name is a legal identifier", () => {
     expect(pluginConfigTemplate("@acme/my-blog")).toContain(
       "export const myBlogPlugin = () =>",
     );
+  });
+});
+
+describe("the generated constant", () => {
+  it("holds the plugin's id as a literal, which the fetcher infers from", () => {
+    const constants = pluginConstTemplate("@acme/blog");
+
+    expect(constants).toContain('pluginId: "@acme/blog" as const,');
+  });
+
+  it("is the only generated file that spells the plugin's id out", () => {
+    const files = pluginRouteScaffold("@acme/blog");
+
+    Object.entries(files)
+      .filter(
+        ([file]) =>
+          file !== "src/const.ts" &&
+          file !== "src/locales/en.json" &&
+          file !== "src/pages/home-page.tsx" &&
+          file !== "src/routes.ts",
+      )
+      .forEach(([, contents]) => {
+        expect(contents).not.toContain('"@acme/blog"');
+      });
+  });
+});
+
+describe("the generated API route", () => {
+  it("describes its response, which is what the page's types come from", () => {
+    const route = pluginApiRouteTemplate();
+
+    expect(route).toContain('method: "get",');
+    expect(route).toContain('path: "/",');
+    expect(route).toContain("schema: z.object({ message: z.string() }),");
+  });
+
+  it("declares only a status that carries content", () => {
+    const declared = [
+      ...pluginApiRouteTemplate().matchAll(/^\s{6}(\d{3}): \{$/gm),
+    ].map(match => match[1]);
+
+    expect(declared).toEqual(["200"]);
+  });
+});
+
+describe("the generated API module", () => {
+  it("mounts the route under the name the page asks the fetcher for", () => {
+    expect(pluginApiModuleTemplate()).toContain('name: "hello",');
+    expect(pluginRouteModuleTemplate("blog")).toContain('module: "hello",');
+  });
+
+  it("registers the route's own export, not a second copy", () => {
+    const module = pluginApiModuleTemplate();
+
+    expect(module).toContain('import { helloRoute } from "./hello.route";');
+    expect(module).toContain("routes: [helloRoute],");
+  });
+});
+
+describe("the generated API client", () => {
+  it("names the module as a type, which is what keeps Hono out of the browser", () => {
+    const client = pluginApiClientTemplate();
+
+    expect(client).toContain(
+      'import type { helloModule } from "@/api/modules/hello/hello.module";',
+    );
+    expect(client).not.toMatch(/^import \{[^}]*helloModule/m);
+  });
+
+  it("annotates the client, which keeps the plugin's declarations small", () => {
+    expect(pluginApiClientTemplate()).toContain(
+      "export const helloApi: ApiClient<typeof helloModule> =",
+    );
+  });
+});
+
+describe("the generated API config", () => {
+  it("registers the module", () => {
+    const config = pluginApiConfigTemplate("@acme/blog");
+
+    expect(config).toContain(
+      'import { helloModule } from "./api/modules/hello/hello.module";',
+    );
+    expect(config).toContain("modules: [helloModule],");
+  });
+
+  it("exports a factory an app can import beside the UI one", () => {
+    expect(pluginApiConfigTemplate("@acme/my-blog")).toContain(
+      "export const myBlogApiPlugin = () =>",
+    );
+  });
+
+  it("stays out of the config the browser build reads", () => {
+    expect(pluginConfigTemplate("@acme/blog")).not.toContain("helloModule");
   });
 });
 
@@ -219,6 +378,20 @@ describe("the scaffold as a whole", () => {
     named.forEach(module => {
       expect(Object.keys(files)).toContain(`src/${module}.tsx`);
     });
+  });
+
+  it("writes a file for every module the API config and client name", () => {
+    const files = pluginRouteScaffold("@acme/blog");
+
+    expect(Object.keys(files)).toContain(
+      "src/api/modules/hello/hello.module.ts",
+    );
+    expect(Object.keys(files)).toContain(
+      "src/api/modules/hello/hello.route.ts",
+    );
+    expect(Object.keys(files)).toContain("src/api/client.ts");
+    expect(Object.keys(files)).toContain("src/config.api.ts");
+    expect(Object.keys(files)).toContain("src/const.ts");
   });
 
   it("writes the messages barrel the config registers", () => {

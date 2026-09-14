@@ -1,8 +1,7 @@
-import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
+import type { FormFieldApi } from "@/components/ui/form";
 import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 import type { LocaleConfig } from "@/vitnode.config";
 
@@ -22,9 +21,11 @@ export type {
   MultiLangValueItem,
 } from "@/lib/helpers/multi-lang";
 
-export const useMultiLangField = (
-  field: ControllerRenderProps<FieldValues, string>,
-) => {
+export interface MultiLangFieldProps {
+  field: FormFieldApi<MultiLangValue | undefined>;
+}
+
+export const useMultiLangField = (field: MultiLangFieldProps["field"]) => {
   const languages = useLanguages();
   const locale = useLocale();
   const [selected, setSelected] = React.useState(
@@ -34,7 +35,7 @@ export const useMultiLangField = (
       locale,
   );
 
-  const value = field.value as MultiLangValue | undefined;
+  const { value } = field;
 
   const setValue = (newValue: string) => {
     field.onChange(upsertLangValue(value, selected, newValue));

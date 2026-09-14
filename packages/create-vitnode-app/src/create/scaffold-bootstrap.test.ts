@@ -30,6 +30,7 @@ const REMOVED = [
   ["the AdminCP user search", "lib/admin-search.ts"],
   ["the AdminCP navigation", "lib/admin-nav.ts"],
   ["the Content Engine registry", "lib/content-registry.ts"],
+  ["the installed packages' translations", "locales/packages.ts"],
 ] as const;
 
 describe("bootstrap a generated application no longer owns", () => {
@@ -80,6 +81,26 @@ describe("what reads the generated projections", () => {
     expect(router).toContain('await import("./content-registry.gen")');
     expect(router).not.toMatch(/^import .*content-registry\.gen/m);
     expect(router).not.toContain("./lib/content-registry");
+  });
+
+  /**
+   * The file `locales/packages.ts` used to be, and the reason it is gone: the
+   * plugin list it repeated is the one in `vitnode.config.ts`, and a second
+   * copy of it could only ever drift.
+   */
+  it("reads the package translations from the generated file", () => {
+    const config = withoutComments(read("vitnode.server.config.ts"));
+
+    expect(config).toContain('from "@/package-messages.gen"');
+    expect(config).toContain("packageMessages,");
+    expect(config).not.toContain("@/locales/packages");
+  });
+
+  it("leaves the app's own overrides where an author edits them", () => {
+    expect(readdirSync(join(appRoot, "locales")).sort()).toEqual(["app.ts"]);
+    expect(withoutComments(read("vitnode.server.config.ts"))).toContain(
+      'from "@/locales/app"',
+    );
   });
 
   it("never re-derives what the generated files already export", () => {

@@ -3,31 +3,23 @@ export const routeSlugFor = (pluginName: string): string =>
     ? pluginName.slice(pluginName.indexOf("/") + 1)
     : pluginName;
 
+export const pluginConstTemplate = (pluginName: string): string =>
+  `export const CONFIG_PLUGIN = {
+  pluginId: "${pluginName}" as const,
+};
+`;
+
 export const pluginRoutesTemplate = (pluginName: string): string => {
   const slug = routeSlugFor(pluginName);
 
   return `import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
 
-/**
- * The routes this plugin contributes to whatever app installs it.
- *
- * Browser-safe data: a path, and the module that renders it. \`lazy\` keeps that
- * \`import()\` a literal the bundler can follow *without running it*, so your page
- * gets a chunk of its own and is fetched when somebody navigates to it - not
- * before. Never import a page into this file: a component named here is in the
- * initial bundle of every page on the site, which is why VitNode refuses one.
- *
- * Your page is never copied into the application either. The app holds one static
- * import of this tree, and nothing else.
- *
- * Add a route by adding a \`page()\`. \`path\` is the public URL, written in
- * VitNode's own spelling: a dynamic segment is \`:id\`, never Next's \`[id]\` and
- * never TanStack's \`$id\`. To nest pages inside a shared frame, wrap them in a
- * \`layout()\` and give each child a path relative to it.
- */
+import { CONFIG_PLUGIN } from "./const";
+
 export const routes = definePluginRoutes([
   page("/${slug}", {
     component: lazy(() => import("./pages/home-page")),
+    messages: [\`\${CONFIG_PLUGIN.pluginId}.home\`],
   }),
 ]);
 `;
@@ -36,16 +28,35 @@ export const routes = definePluginRoutes([
 /**
  * `src/pages/home-page.tsx` - the page itself.
  *
- * Deliberately the *minimum* module: a default export and nothing else. A route
- * module may also export a `route` for its loader, metadata and breadcrumb, and
- * the comment says where to read about that rather than scaffolding an empty one
- * - a generated `route = definePluginRoute({})` would be a thing to delete.
+ * A default export and a `route` whose loader calls the plugin's own endpoint
+ * through the universal fetcher: rendered on the server for the first visit,
+ * fetched in the browser on a navigation, from one call.
  */
 export const pluginRouteModuleTemplate = (pluginName: string): string =>
-  `import { useTranslations } from "use-intl";
+  `import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
+import { definePluginRoute } from "@vitnode/core/routing";
+import { useTranslations } from "use-intl";
 
-const HomePage = () => {
+import { helloApi } from "@/api/client";
+
+interface HelloMessage {
+  message: string;
+}
+
+export const route = definePluginRoute<HelloMessage>({
+  load: async () => {
+    const response = await helloApi.fetch({
+      method: "get",
+      module: "hello",
+      path: "/",
+    });
+
+    return await response.json();
+  },
+});
+
+const HomePage = ({ loaderData }: PluginRoutePageProps<HelloMessage>) => {
   const t = useTranslations("${pluginName}");
 
   return (
@@ -57,6 +68,11 @@ const HomePage = () => {
       <p className="text-muted-foreground leading-relaxed text-pretty">
         {t("home.desc")}
       </p>
+
+      <div className="bg-card text-card-foreground flex flex-col gap-1 rounded-lg border p-4">
+        <span className="text-muted-foreground text-sm">{t("home.api")}</span>
+        <span className="font-medium">{loaderData.message}</span>
+      </div>
     </div>
   );
 };
@@ -76,6 +92,7 @@ export const pluginMessagesTemplate = (pluginName: string): string =>
     {
       [pluginName]: {
         home: {
+          api: "Your plugin's API answered:",
           desc: "This page ships inside the plugin and is served by the app that installed it.",
           title: "Hello from your plugin",
         },
@@ -93,7 +110,6 @@ export const pluginMessagesTemplate = (pluginName: string): string =>
  */
 export const pluginMessagesBarrelTemplate = (): string =>
   `import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
-
 
 const messages: LocaleMessagesMap = {
   en: async () => await import("./en.json", { with: { type: "json" } }),
@@ -133,23 +149,103 @@ export const pluginVariableName = (pluginName: string): string => {
 /**
  * `src/config.tsx` - what an application registers.
  *
- * The routes and the messages, and nothing else. `routes` is the same tree
- * `routes.ts` exports, handed on unchanged: an app on Vite reads that file
- * directly at build time and an app that registers the plugin the ordinary way
- * reads it through here, so the two paths cannot describe different routes.
+ * The routes, the locale files and the messages, and nothing else. `routes` is
+ * the same tree `routes.ts` exports, handed on unchanged: an app on Vite reads
+ * that file directly at build time and an app that registers the plugin the
+ * ordinary way reads it through here, so the two paths cannot describe
+ * different routes.
+ *
+ * `localeFiles` is the same list as the barrel above it, spelled as specifiers
+ * rather than as loaders: an app's build writes its own loaders from it, and a
+ * literal package subpath is the only form its bundler can resolve.
  */
 export const pluginConfigTemplate = (pluginName: string): string =>
   `import { buildPlugin } from "@vitnode/core/lib/plugin";
 
+import { CONFIG_PLUGIN } from "@/const";
+
 import messages from "./locales";
 import { routes } from "./routes";
 
-
 export const ${pluginVariableName(pluginName)} = () =>
   buildPlugin({
-    pluginId: "${pluginName}",
+    pluginId: CONFIG_PLUGIN.pluginId,
+    localeFiles: {
+      en: "${pluginName}/locales/en.json",
+    },
     messages,
     routes,
+  });
+`;
+
+export const pluginApiVariableName = (pluginName: string): string =>
+  pluginVariableName(pluginName).replace(/Plugin$/, "ApiPlugin");
+
+export const pluginApiRouteTemplate = (): string =>
+  `import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+export const helloRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    path: "/",
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ message: z.string() }),
+          },
+        },
+        description: "A greeting from the plugin.",
+      },
+    },
+  },
+  handler: c => c.json({ message: \`Hello from \${CONFIG_PLUGIN.pluginId}!\` }),
+});
+`;
+
+export const pluginApiModuleTemplate = (): string =>
+  `import { buildModule } from "@vitnode/core/api/lib/module";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import { helloRoute } from "./hello.route";
+
+export const helloModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "hello",
+  routes: [helloRoute],
+});
+`;
+
+export const pluginApiClientTemplate = (): string =>
+  `import type { ApiClient } from "@vitnode/core/tanstack/fetcher";
+
+import { createApiClient } from "@vitnode/core/tanstack/fetcher";
+
+import type { helloModule } from "@/api/modules/hello/hello.module";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+export const helloApi: ApiClient<typeof helloModule> = createApiClient<
+  typeof helloModule
+>(CONFIG_PLUGIN.pluginId);
+`;
+
+export const pluginApiConfigTemplate = (pluginName: string): string =>
+  `import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import { helloModule } from "./api/modules/hello/hello.module";
+
+export const ${pluginApiVariableName(pluginName)} = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [helloModule],
   });
 `;
 
@@ -184,7 +280,12 @@ export const pluginPackageExports = (): Record<
 export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
+  "src/api/client.ts": pluginApiClientTemplate(),
+  "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
+  "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
+  "src/config.api.ts": pluginApiConfigTemplate(pluginName),
   "src/config.tsx": pluginConfigTemplate(pluginName),
+  "src/const.ts": pluginConstTemplate(pluginName),
   "src/locales/en.json": pluginMessagesTemplate(pluginName),
   "src/locales/index.ts": pluginMessagesBarrelTemplate(),
   "src/pages/home-page.tsx": pluginRouteModuleTemplate(pluginName),

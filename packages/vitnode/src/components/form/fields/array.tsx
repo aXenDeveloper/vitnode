@@ -1,7 +1,7 @@
+import { getBy, useSelector } from "@tanstack/react-form";
 import { cn } from "cn";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import React from "react";
-import { useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslations } from "use-intl";
 
 import type { InputParams } from "../../../lib/helpers/auto-form";
@@ -17,7 +17,29 @@ import {
   FieldLegend,
   FieldSet,
 } from "../../ui/field";
-import { FormField } from "../../ui/form";
+import {
+  FormField,
+  pushFormFieldValue,
+  removeFormFieldValue,
+  useFormApi,
+  useFormField,
+} from "../../ui/form";
+
+const reconcileRowKeys = (previous: number[], length: number): number[] => {
+  if (previous.length >= length) {
+    return previous.slice(0, length);
+  }
+
+  const nextKey = previous.length > 0 ? Math.max(...previous) + 1 : 0;
+
+  return [
+    ...previous,
+    ...Array.from(
+      { length: length - previous.length },
+      (_, at) => nextKey + at,
+    ),
+  ];
+};
 
 export interface AutoFormArrayField {
   className?: string;
@@ -48,23 +70,34 @@ export const AutoFormArray = ({
   itemParams,
   otherProps,
 }: AutoFormArrayProps) => {
-  const { control, formState } = useFormContext();
+  const { form } = useFormApi();
+  const { errors } = useFormField();
   const t = useTranslations("core.global");
   const id = parentField.name;
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: id,
+  const length = useSelector(form.store, state => {
+    const rows: unknown = getBy(state.values, id);
+
+    return Array.isArray(rows) ? rows.length : 0;
   });
+
+  const [storedRowKeys, setStoredRowKeys] = React.useState<number[]>(() =>
+    reconcileRowKeys([], length),
+  );
+  const rowKeys =
+    storedRowKeys.length === length
+      ? storedRowKeys
+      : reconcileRowKeys(storedRowKeys, length);
+
+  if (rowKeys !== storedRowKeys) {
+    setStoredRowKeys(rowKeys);
+  }
 
   const maxItems = maxItemsProp ?? otherProps.maxItems;
   const minItems = minItemsProp ?? otherProps.minItems ?? 0;
 
-  const canRemove = fields.length > minItems;
-  const canAdd = !maxItems || fields.length < maxItems;
-
-  const arrayError = formState.errors[id] as
-    undefined | { message?: string; root?: { message?: string } };
+  const canRemove = length > minItems;
+  const canAdd = !maxItems || length < maxItems;
 
   return (
     <FieldSet className={cn("gap-4", className)}>
@@ -72,14 +105,14 @@ export const AutoFormArray = ({
       {!!description && <FieldDescription>{description}</FieldDescription>}
 
       <FieldGroup className="gap-4">
-        {fields.map((field, index) => (
+        {rowKeys.map((rowKey, index) => (
           <Field
             className="@md/field-group:items-end"
-            key={field.id}
+            key={rowKey}
             orientation="responsive"
           >
             {fieldDefinitions.map(fieldDef => {
-              const fullFieldName = `${id}.${index}.${fieldDef.id}`;
+              const fullFieldName = `${id}[${index}].${fieldDef.id}`;
               const fieldParams = itemParams
                 ? getNestedParam(itemParams, fieldDef.id)
                 : undefined;
@@ -154,11 +187,16 @@ export const AutoFormArray = ({
               );
             })}
 
-            {canRemove && showRemoveButton && fields.length > 0 && (
+            {canRemove && showRemoveButton && length > 0 && (
               <FieldLegend className="mb-2 flex justify-end">
                 <Button
                   aria-label={t("remove")}
-                  onClick={() => remove(index)}
+                  onClick={() => {
+                    setStoredRowKeys(previous =>
+                      previous.filter((_, at) => at !== index),
+                    );
+                    removeFormFieldValue(form, id, index);
+                  }}
                   size="icon"
                   type="button"
                   variant="ghost"
@@ -182,7 +220,7 @@ export const AutoFormArray = ({
               },
               {},
             );
-            append(newItem);
+            pushFormFieldValue(form, id, newItem);
           }}
           size="sm"
           type="button"
@@ -193,11 +231,7 @@ export const AutoFormArray = ({
         </Button>
       </FieldGroup>
 
-      {(arrayError?.root?.message ?? arrayError?.message) && (
-        <FieldError
-          errors={[{ message: arrayError.root?.message ?? arrayError.message }]}
-        />
-      )}
+      {errors.length > 0 && <FieldError errors={errors} />}
     </FieldSet>
   );
 };

@@ -336,11 +336,11 @@ describe("malformed sources", () => {
 
 describe("the areas", () => {
   it("are listed in a fixed order", () => {
-    expect(PLUGIN_ROUTE_AREAS).toEqual(["admin", "main"]);
+    expect(PLUGIN_ROUTE_AREAS).toEqual(["admin", "blank", "main"]);
   });
 
   it("are a closed union at the type level", () => {
-    const areas: PluginRouteArea[] = ["admin", "main"];
+    const areas: PluginRouteArea[] = ["admin", "blank", "main"];
 
     expect(areas).toHaveLength(PLUGIN_ROUTE_AREAS.length);
   });

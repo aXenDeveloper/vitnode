@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import type { RouteBreadcrumbProps } from "../breadcrumb/model";
+import type {
+  RouteBreadcrumbDeferred,
+  RouteBreadcrumbProps,
+} from "../breadcrumb/model";
 
 import { pluginRouteBreadcrumb } from "./components";
 import { pluginRouteModuleRef } from "./module-ref";
@@ -30,20 +33,46 @@ const props: RouteBreadcrumbProps = {
   search: {},
 };
 
+const crumbOf = (deferred: RouteBreadcrumbDeferred) => {
+  const declared = deferred.resolve();
+
+  if (typeof declared !== "function") {
+    throw new Error(`expected a crumb component, got ${typeof declared}`);
+  }
+
+  return declared;
+};
+
 describe("pluginRouteBreadcrumb", () => {
-  it("renders nothing until the route's module has arrived", async () => {
+  it("resolves to nothing until the route's module has arrived", async () => {
     const { load, ready, ref } = moduleWith({
       breadcrumb: () => "MacBook Pro",
     });
-    const Breadcrumb = pluginRouteBreadcrumb(ref, []);
+    const deferred = pluginRouteBreadcrumb(ref, []);
 
-    const { container } = render(<Breadcrumb {...props} />);
-
-    expect(container.innerHTML).toBe("");
+    expect(deferred.resolve()).toBeUndefined();
 
     ready();
     await load();
+
+    const Crumb = crumbOf(deferred);
+
+    render(<Crumb {...props} />);
     await screen.findByText("MacBook Pro");
+  });
+
+  it("tells the trail when the module arrives", async () => {
+    const { load, ready, ref } = moduleWith({
+      breadcrumb: () => "MacBook Pro",
+    });
+    const listener = vi.fn();
+
+    pluginRouteBreadcrumb(ref, []).subscribe(listener);
+
+    ready();
+    await load();
+
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("hands the plugin's crumb this route's own loader data", async () => {
@@ -55,15 +84,16 @@ describe("pluginRouteBreadcrumb", () => {
         return given.loaderData.name;
       },
     });
-    const Breadcrumb = pluginRouteBreadcrumb(ref, []);
+    const deferred = pluginRouteBreadcrumb(ref, []);
 
     ready();
     await load();
-    render(<Breadcrumb {...props} />);
+
+    const Crumb = crumbOf(deferred);
+
+    render(<Crumb {...props} />);
 
     await screen.findByText("MacBook Pro");
-    // Unwrapped from the runtime's envelope: a plugin sees its own `load`
-    // result and its own validated search, never the envelope itself.
     expect(seen).toEqual([
       {
         loaderData: { name: "MacBook Pro" },
@@ -73,27 +103,35 @@ describe("pluginRouteBreadcrumb", () => {
     ]);
   });
 
-  it("renders nothing for a module that declares `breadcrumb: false`", async () => {
-    const { load, ready, ref } = moduleWith({ breadcrumb: false });
-    const Breadcrumb = pluginRouteBreadcrumb(ref, []);
+  it("resolves to one component however often it is asked", async () => {
+    const { load, ready, ref } = moduleWith({
+      breadcrumb: () => "MacBook Pro",
+    });
+    const deferred = pluginRouteBreadcrumb(ref, []);
 
     ready();
     await load();
 
-    const { container } = render(<Breadcrumb {...props} />);
-
-    expect(container.innerHTML).toBe("");
+    expect(deferred.resolve()).toBe(deferred.resolve());
   });
 
-  it("renders nothing for a module that declares no crumb at all", async () => {
-    const { load, ready, ref } = moduleWith({});
-    const Breadcrumb = pluginRouteBreadcrumb(ref, []);
+  it("resolves to `false` for a module that declares `breadcrumb: false`", async () => {
+    const { load, ready, ref } = moduleWith({ breadcrumb: false });
+    const deferred = pluginRouteBreadcrumb(ref, []);
 
     ready();
     await load();
 
-    const { container } = render(<Breadcrumb {...props} />);
+    expect(deferred.resolve()).toBe(false);
+  });
 
-    expect(container.innerHTML).toBe("");
+  it("resolves to nothing for a module that declares no crumb at all", async () => {
+    const { load, ready, ref } = moduleWith({});
+    const deferred = pluginRouteBreadcrumb(ref, []);
+
+    ready();
+    await load();
+
+    expect(deferred.resolve()).toBeUndefined();
   });
 });

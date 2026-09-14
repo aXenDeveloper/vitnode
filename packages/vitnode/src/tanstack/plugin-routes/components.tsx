@@ -4,19 +4,18 @@ import {
   useNavigate,
   useParams,
 } from "@tanstack/react-router";
-import {
-  createElement,
-  Suspense,
-  useCallback,
-  useSyncExternalStore,
-} from "react";
+import { createElement, Suspense, useCallback } from "react";
 
 import type { CheckedPluginRouteModule } from "@/routing";
 
-import type { RouteBreadcrumbProps } from "../breadcrumb/model";
+import type {
+  RouteBreadcrumbDeferred,
+  RouteBreadcrumbProps,
+} from "../breadcrumb/model";
 import type { RuntimePluginRoutePageProps } from "./loader-data";
 import type { PluginRouteModuleRef } from "./module-ref";
 
+import { breadcrumbDeferred } from "../breadcrumb/model";
 import { RouteMessages } from "../i18n/route-messages";
 import {
   pluginRouteLoaderData,
@@ -102,32 +101,54 @@ export const pluginLayoutComponent = (
   };
 };
 
+type DeclaredBreadcrumb = Exclude<
+  NonNullable<CheckedPluginRouteModule["route"]["breadcrumb"]>,
+  false
+>;
+
 export const pluginRouteBreadcrumb = (
   module: PluginRouteModuleRef,
   namespaces: readonly string[],
-): React.FunctionComponent<RouteBreadcrumbProps> => {
-  // Defined once per route rather than per render, which is what
-  // `useSyncExternalStore` needs of them - and there is nothing reactive to
-  // depend on: one component is built per module.
-  const subscribe = (listener: () => void) => module.subscribe(listener);
-  const snapshot = () => module.current?.route.breadcrumb;
+): RouteBreadcrumbDeferred => {
+  let built:
+    | undefined
+    | {
+        component: React.FunctionComponent<RouteBreadcrumbProps>;
+        declared: DeclaredBreadcrumb;
+      };
 
-  return function PluginRouteBreadcrumb(props: RouteBreadcrumbProps) {
-    const Breadcrumb = useSyncExternalStore(subscribe, snapshot, snapshot);
+  const componentFor = (declared: DeclaredBreadcrumb) => {
+    if (built?.declared !== declared) {
+      built = {
+        component: function PluginRouteBreadcrumb(props: RouteBreadcrumbProps) {
+          return (
+            <Suspense>
+              {withMessages(
+                namespaces,
+                createElement(declared, {
+                  loaderData: pluginRouteLoaderData(props.loaderData),
+                  params: props.params,
+                  search: pluginRouteSearch(props.loaderData),
+                }),
+              )}
+            </Suspense>
+          );
+        },
+        declared,
+      };
+    }
 
-    if (!Breadcrumb) return null;
-
-    return (
-      <Suspense>
-        {withMessages(
-          namespaces,
-          createElement(Breadcrumb, {
-            loaderData: pluginRouteLoaderData(props.loaderData),
-            params: props.params,
-            search: pluginRouteSearch(props.loaderData),
-          }),
-        )}
-      </Suspense>
-    );
+    return built.component;
   };
+
+  return breadcrumbDeferred(
+    () => {
+      const declared = module.current?.route.breadcrumb;
+
+      return declared === undefined || declared === false
+        ? declared
+        : componentFor(declared);
+    },
+    listener => module.subscribe(listener),
+  );
 };

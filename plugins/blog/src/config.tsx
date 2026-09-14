@@ -7,5 +7,8 @@ import messages from "./locales";
 export const blogPlugin = () =>
   buildPlugin({
     ...CONFIG_PLUGIN,
+    localeFiles: {
+      en: "@vitnode/blog/locales/en.json",
+    },
     messages,
   });

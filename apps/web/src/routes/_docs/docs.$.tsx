@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { pageHead } from '@vitnode/core/tanstack/metadata'
 import { Suspense } from 'react'
 
+import { DocsError, DocsNotFound } from '@/docs/error-views'
 import { DocsPageContent } from '@/docs/page-content'
 import { DocsPagePendingSkeleton } from '@/docs/pending'
 import { DOCS_STALE_TIME } from '@/docs/shared'
@@ -24,11 +25,13 @@ export const Route = createFileRoute('/_docs/docs/$')({
         title: loaderData?.metaTitle,
         type: 'article',
       },
-      robots: 'index, follow',
+      robots: loaderData ? 'index, follow' : 'noindex, nofollow',
       title: loaderData?.metaTitle,
     }),
   staleTime: DOCS_STALE_TIME,
   component: DocsRoute,
+  errorComponent: DocsError,
+  notFoundComponent: DocsNotFound,
   pendingComponent: DocsPagePendingSkeleton,
 })
 

@@ -1,13 +1,12 @@
-import type { DefaultValues } from "react-hook-form";
 import type { z } from "zod";
 
 type NestedParamValue = InputParams[string] | undefined;
 
-export function getDefaults<T extends z.ZodType>(
+export function getDefaults<T extends z.ZodType = z.ZodObject<z.ZodRawShape>>(
   jsonSchema?: z.core.JSONSchema.JSONSchema,
-): DefaultValues<z.input<T>> {
+): z.input<T> {
   if (!jsonSchema?.properties) {
-    return {} as DefaultValues<z.input<T>>;
+    return {} as z.input<T>;
   }
 
   const defaultValues: Record<string, unknown> = {};
@@ -30,7 +29,7 @@ export function getDefaults<T extends z.ZodType>(
     defaultValues[key] = undefined;
   }
 
-  return defaultValues as DefaultValues<z.input<T>>;
+  return defaultValues as z.input<T>;
 }
 
 export interface InputParams {

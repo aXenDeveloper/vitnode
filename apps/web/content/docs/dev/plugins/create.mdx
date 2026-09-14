@@ -4,7 +4,12 @@ description: Scaffold a VitNode plugin, register its package in your host app, a
 icon: PackagePlus
 ---
 
-import { DatabaseIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import {
+  BoxIcon,
+  DatabaseIcon,
+  LayoutDashboardIcon,
+  RouteIcon,
+} from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 A plugin is the starting point for a VitNode feature. It keeps routes, API
@@ -41,60 +46,10 @@ npm create vitnode-app@canary -- --plugin
 
 </Tabs>
 
-The CLI creates `plugins/site-notes`, adds it as a workspace dependency, and
-gives it a route, locale, and config skeleton. It does **not** enable the
-feature for the host—that explicit switch is next.
-
   </Step>
   <Step>
 
-### Keep the route in the plugin
-
-The generated `routes.ts` is the public contract. Add another `page()` here when
-the plugin needs another URL; never copy its page into `apps/web/src/routes`.
-
-```ts title="plugins/site-notes/src/routes.ts"
-import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
-
-export const routes = definePluginRoutes([
-  // [!code ++:3]
-  page('/site-notes', {
-    component: lazy(() => import('./pages/home-page')),
-  }),
-])
-```
-
-  </Step>
-  <Step>
-
-### Register the plugin with the host
-
-Import the plugin factory in the host config and add it to `plugins`:
-
-```ts title="apps/web/src/vitnode.config.ts"
-import { siteNotesPlugin } from '@acme/site-notes/config' // [!code ++]
-import { buildConfig } from '@vitnode/core/vitnode.config'
-
-export const vitNodeConfig = buildConfig({
-  plugins: [
-    siteNotesPlugin(), // [!code ++]
-  ],
-})
-```
-
-That is the only composition step - the factory carries the plugin's routes,
-content types and AdminCP navigation, and the feature stays in its package. Your
-build reads this list and generates one literal import per plugin for each of
-those, so a page or an editing screen loads with the route that needs it rather
-than with the config. See [Configuration](/docs/dev/configuration).
-
-Its translations need one more line, in `src/locales/packages.ts` - see
-[Languages & Localization](/docs/dev/i18n).
-
-  </Step>
-  <Step>
-
-### Run it and visit the route
+### Run/Restart it and visit the route
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start the plugin in development">
 
@@ -112,10 +67,20 @@ npm run dev
 
 </Tabs>
 
-Open `http://localhost:3000/site-notes`. The page comes from the plugin, gets
-its own chunk, and never moves house. Tiny victory dance optional.
+  </Step>
+  <Step>
 
-{/* Image prompt: Split-screen developer tutorial image. Left shows a plugin folder with routes.ts, locale, and pages files. Right shows the resulting /site-notes page in a VitNode app. Dark theme, precise code-like labels, 1600x900. */}
+### Check the generated page
+
+Visit the route printed in the console, such as `http://localhost:3000/site-notes`. You should see a page with a title and a link to the plugin's README.
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import generatedPageImage from './generated-page-image.png'
+
+<ImgDocs
+  src={generatedPageImage}
+  alt="Generated plugin page with title and link to README"
+/>
 
   </Step>
 </Steps>
@@ -128,6 +93,12 @@ its own chunk, and never moves house. Tiny victory dance optional.
     title="Plugin routes"
     description="Add nested layouts, dynamic URLs, loaders, metadata, and guards."
     href="/docs/dev/plugins/routes"
+  />
+  <Card
+    icon={<BoxIcon />}
+    title="API modules"
+    description="Add another endpoint beside the generated one, with Zod-validated inputs."
+    href="/docs/dev/plugins/api/modules"
   />
   <Card
     icon={<DatabaseIcon />}
