@@ -1,16 +1,20 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { createTranslator } from "use-intl";
-
 import { intlQueryOptions } from "../i18n/query";
 import { passwordResetNamespaces } from "./recovery";
 
 /** What {@link loadPasswordResetRoute} returns. */
 export interface PasswordResetRouteData {
   namespaces: readonly string[];
-  title: string;
 }
 
+/**
+ * Warms the namespaces this screen renders, which depend on the mode the URL is
+ * asking for - the change-password form has copy the request form does not.
+ *
+ * The route's *title* is not here: it lives in `core.auth.reset_password`, which
+ * both modes declare, so `head` translates it directly.
+ */
 export const loadPasswordResetRoute = async ({
   locale,
   mode,
@@ -21,18 +25,11 @@ export const loadPasswordResetRoute = async ({
   queryClient: QueryClient;
 }): Promise<PasswordResetRouteData> => {
   const namespaces = passwordResetNamespaces(mode);
-  const intl = await queryClient.query({
+
+  await queryClient.query({
     ...intlQueryOptions({ locale, namespaces }),
     staleTime: "static",
   });
 
-  const title = createTranslator({
-    locale,
-    messages: intl.messages as {
-      core: { auth: { reset_password: { title: string } } };
-    },
-    namespace: "core.auth.reset_password",
-  })("title");
-
-  return { namespaces, title };
+  return { namespaces };
 };

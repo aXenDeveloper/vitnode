@@ -28,13 +28,16 @@ export interface PluginRouteSpec {
   module: PluginRouteModuleRef;
 
   namespaces: string[];
+
   /**
    * The **global** id of the plugin route this one is nested inside, or `null`
    * for one that hangs from the plugin container.
    */
   parentId: null | string;
-
   path: string;
+
+  /** The component this route draws while it loads, if it declared one. */
+  pendingComponent: null | React.FunctionComponent;
   /** The manifest entry this spec was built from, unchanged. */
   route: PluginRoute;
 
@@ -66,7 +69,7 @@ export const pluginRouteSearchDeps = (
 export const pluginRouteSpecs = (
   sources: readonly PluginRouteDeclarationSource[],
 ): PluginRouteSpec[] => {
-  const { components, manifest, searchValidators } =
+  const { components, manifest, pendingComponents, searchValidators } =
     compilePluginRouteTrees(sources);
   const graph = buildPluginRouteGraph(manifest);
 
@@ -85,6 +88,7 @@ export const pluginRouteSpecs = (
       module: pluginRouteModuleRef(component.load, route.id),
       namespaces: pluginRouteMessageNamespaces(node),
       parentId: node.parent?.route.id ?? null,
+      pendingComponent: pendingComponents.get(route.id) ?? null,
       path: toTanStackRoutePath(
         node.parent === null ? route.segments : node.relativeSegments,
       ),

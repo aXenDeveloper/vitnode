@@ -32,6 +32,7 @@ import {
 } from "../package-messages";
 import {
   compilePluginRoutes,
+  CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
   lazyImportSpecifier,
   pluginsFromLoadedConfig,
@@ -129,6 +130,15 @@ const readPluginRoutes = async (
   const file = resolvePackageFile(specifier);
 
   if (file === null) {
+    // Core always ships a routes module, so failing to resolve one means the
+    // package has not been built - which is worth saying outright rather than
+    // silently serving an application with none of its own screens.
+    if (pluginId === CORE_PLUGIN_ID) {
+      throw new Error(
+        `${ERROR_PREFIX} Could not resolve "${specifier}". Every VitNode application gets core's own routes from it, so this usually means @vitnode/core has not been built yet - run its \`build:plugins\` script.`,
+      );
+    }
+
     assertNoLegacyRouteManifest(pluginId, resolvePackageFile);
 
     return { source: { pluginId }, watch: null };
@@ -393,8 +403,13 @@ const discover = async (
     plugins,
     relative(appRoot, paths.config),
   );
+  // Core first, always, and never from the configured list: core is not a
+  // plugin, its screens are what makes an application a VitNode application, and
+  // an app that could forget to configure them would be an app with no `/login`.
+  // `assertPluginId` refuses a plugin that claims this id, so there is exactly
+  // one source under it.
   const loaded = await Promise.all(
-    pluginIds.map(async pluginId =>
+    [CORE_PLUGIN_ID, ...pluginIds].map(async pluginId =>
       readPluginRoutes(pluginId, resolvePackageFile),
     ),
   );

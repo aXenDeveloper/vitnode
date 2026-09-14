@@ -1,8 +1,7 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { searchIndexQuery } from "./query";
 
@@ -29,32 +28,20 @@ const SEARCH_INDEX_PERMISSION = {
 
 export const loadAdminSearchIndexRoute = async ({
   adminAccess,
-  locale,
   queryClient,
-}: AdminScreenContext): Promise<AdminSearchIndexRouteData> => {
+  t,
+}: AdminScreenContext & {
+  t: PluginRouteTranslator;
+}): Promise<AdminSearchIndexRouteData> => {
   requireAdminPermission(adminAccess, SEARCH_INDEX_PERMISSION);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({
-        locale,
-        namespaces: ADMIN_SEARCH_INDEX_NAMESPACES,
-      }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...searchIndexQuery(),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      core: { search: { admin: { desc: string; title: string } } };
-    },
-    namespace: "core.search.admin",
+  await queryClient.query({
+    ...searchIndexQuery(),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), title: t("title") };
+  return {
+    description: t("core.search.admin.desc"),
+    title: t("core.search.admin.title"),
+  };
 };

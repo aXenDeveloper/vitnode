@@ -5,6 +5,7 @@ export type {
 } from "./compile.js";
 export { compilePluginRoutes } from "./compile.js";
 export { lazyImportSpecifier } from "./component-source.js";
+export { CORE_PLUGIN_ID, CORE_ROUTES_SPECIFIER } from "./core.js";
 export {
   annotatePluginRouteError,
   PLUGIN_ROUTES_ERROR_PREFIX,

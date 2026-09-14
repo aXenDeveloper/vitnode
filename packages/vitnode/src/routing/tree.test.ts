@@ -259,6 +259,34 @@ describe("the shape of a tree", () => {
     expect(error.message).toContain("index()");
   });
 
+  /**
+   * A catch-all matches every remaining segment, so a layout ending in one would
+   * match before any of its children and then match everything - the children
+   * would be unreachable rather than nested.
+   */
+  it("refuses a layout whose path ends in a catch-all", () => {
+    const error = thrownBy(() =>
+      flatten(
+        layout("/admin/content/*", {
+          component: lazyPage(),
+          children: [index({ component: lazyPage() })],
+        }),
+      ),
+    );
+
+    expect(error.code).toBe("invalid-path");
+    expect(error.message).toContain("page()");
+  });
+
+  it("carries a catch-all page through to its segments", () => {
+    const [route] = flatten(
+      page("/admin/content/*", { area: "admin", component: lazyPage() }),
+    );
+
+    expect(route.path).toBe("/admin/content/*");
+    expect(route.segments.at(-1)).toEqual({ kind: "splat" });
+  });
+
   it("refuses an index route with no layout around it", () => {
     const error = thrownBy(() => flatten(index({ component: lazyPage() })));
 

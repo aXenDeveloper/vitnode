@@ -1,7 +1,8 @@
+import type { PluginRouteTranslator } from "@/routing";
+
 import type { QueryClient } from "@tanstack/react-query";
 
 import { notFound } from "@tanstack/react-router";
-import { createTranslator } from "use-intl";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { StaffPluginGroup } from "@/views/admin/views/core/staff/staff-model";
@@ -80,10 +81,12 @@ export const loadAdminStaffEditRoute = async ({
   id: raw,
   locale,
   queryClient,
+  t,
   type,
 }: AdminScreenContext & {
   /** The `$id` segment, exactly as it was typed. Nothing has checked it yet. */
   id: string;
+  t: PluginRouteTranslator;
   type: PermissionStaffType;
 }): Promise<AdminStaffEditRouteData> => {
   requireAdminPermission(adminAccess, adminStaffPermissions(type).edit);
@@ -97,11 +100,7 @@ export const loadAdminStaffEditRoute = async ({
 
   const adminUserId = adminIdentityOf(adminAccess);
 
-  const [intl, catalog, entry] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_STAFF_EDIT_NAMESPACES }),
-      staleTime: "static",
-    }),
+  const [catalog, entry] = await Promise.all([
     queryClient.query({
       ...adminStaffCatalogQuery({ adminUserId }),
       staleTime: "static",
@@ -118,17 +117,9 @@ export const loadAdminStaffEditRoute = async ({
     queryClient,
   });
 
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: { staff: { edit: { back: string; title: string } } };
-    },
-    namespace: "admin.staff.edit",
-  });
-
   return {
     backHref: staffListHref(type),
-    backLabel: t("back"),
+    backLabel: t("admin.staff.edit.back"),
     grantedKeys: [...grantedStaffPermissionKeys(entry.permissions)],
     id,
     plugins: buildStaffPermissionGroups({
@@ -142,7 +133,7 @@ export const loadAdminStaffEditRoute = async ({
       self: entry.self,
       user: entry.user,
     },
-    title: t("title"),
+    title: t("admin.staff.edit.title"),
     type,
     unrestricted: entry.unrestricted,
   };

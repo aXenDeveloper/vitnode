@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_admin")({
       // session, and `sanitizeAdminReturnTo` rejects `/admin` as a target.
       //
       // Cast because `/admin` is not in this router's type table: it is
-      // `@vitnode/core`'s code-based route now, mounted by `withCoreRootRoutes`,
+      // `@vitnode/core`'s own declared route now, mounted by `withVitNodeRoutes`,
       // and code-based routes are outside the generated tree's types. The
       // *runtime* is unaffected, and `ADMIN_ENTRY_PATH` is the package's own
       // constant - so the path and the sign-in route that serves it are still one

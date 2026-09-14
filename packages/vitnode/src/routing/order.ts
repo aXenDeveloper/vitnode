@@ -1,5 +1,30 @@
 import type { PluginRoute, PluginRouteSegment } from "./types";
 
+/**
+ * How specific a segment is: the narrower set of URLs sorts first.
+ *
+ * A static segment matches one, a parameter matches one of anything, a catch-all
+ * matches every remaining segment - so this is the order a reader expects a
+ * manifest in, and the order a router would have to resolve them in anyway.
+ */
+const SEGMENT_RANK: Record<PluginRouteSegment["kind"], number> = {
+  param: 1,
+  splat: 2,
+  static: 0,
+};
+
+/** A segment's own text, for breaking a tie between two of the same kind. */
+const segmentText = (segment: PluginRouteSegment): string => {
+  switch (segment.kind) {
+    case "param":
+      return segment.name;
+    case "splat":
+      return "";
+    case "static":
+      return segment.value;
+  }
+};
+
 const compareSegments = (
   a: PluginRouteSegment[],
   b: PluginRouteSegment[],
@@ -11,11 +36,11 @@ const compareSegments = (
     const right = b[index];
 
     if (left.kind !== right.kind) {
-      return left.kind === "static" ? -1 : 1;
+      return SEGMENT_RANK[left.kind] - SEGMENT_RANK[right.kind];
     }
 
-    const leftText = left.kind === "static" ? left.value : left.name;
-    const rightText = right.kind === "static" ? right.value : right.name;
+    const leftText = segmentText(left);
+    const rightText = segmentText(right);
 
     if (leftText !== rightText) {
       return leftText < rightText ? -1 : 1;

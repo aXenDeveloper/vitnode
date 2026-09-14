@@ -1,13 +1,14 @@
 import { useMatches, useRouter } from "@tanstack/react-router";
 
+import type { PluginRouteBreadcrumbGroup } from "@/routing";
+
 import { BreadcrumbAdminContent } from "@/views/admin/layouts/breadcrumb/breadcrumb-admin-content";
 import { BreadcrumbTrailContent } from "@/views/breadcrumb/breadcrumb-trail-content";
 
-import type { RouteBreadcrumbGroup } from "../breadcrumb/model";
-
-import { breadcrumbGroup, useBreadcrumbTrail } from "../breadcrumb/model";
+import { useBreadcrumbTrail } from "../breadcrumb/model";
 import { useRouteNavigationPending } from "../pending/navigation-pending";
 import { BreadcrumbPendingSkeleton } from "../pending/shapes";
+import { routeBreadcrumbGroup } from "../plugin-routes/authoring";
 import { useAdminNav } from "./nav";
 
 export const useAdminBreadcrumb = (): React.ReactNode => {
@@ -43,9 +44,9 @@ export const AdminBreadcrumb = ({
   />
 );
 
-export const adminBreadcrumb = (
+export const adminBreadcrumb = <TData = unknown, TSearch = unknown>(
   props: Parameters<typeof AdminBreadcrumb>[0],
-): RouteBreadcrumbGroup =>
-  breadcrumbGroup(function AdminRouteBreadcrumb() {
+): PluginRouteBreadcrumbGroup<TData, TSearch> =>
+  routeBreadcrumbGroup(function AdminRouteBreadcrumb() {
     return <AdminBreadcrumb {...props} />;
   });

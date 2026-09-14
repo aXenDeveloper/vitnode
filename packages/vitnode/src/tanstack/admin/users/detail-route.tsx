@@ -1,5 +1,6 @@
 import { notFound } from "@tanstack/react-router";
-import { createTranslator } from "use-intl";
+
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
@@ -8,7 +9,6 @@ import { normalizeAdminUserId } from "@/views/admin/views/core/users/detail/user
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import { adminUserQuery } from "./query";
@@ -32,7 +32,9 @@ export const loadAdminUserRoute = async ({
   id: raw,
   locale,
   queryClient,
+  t,
 }: AdminScreenContext & {
+  t: PluginRouteTranslator;
   /** The `$id` segment, exactly as it was typed. Nothing has checked it yet. */
   id: string;
 }): Promise<AdminUserRouteData> => {
@@ -47,29 +49,15 @@ export const loadAdminUserRoute = async ({
 
   const adminUserId = adminIdentityOf(adminAccess);
 
-  const [intl, user] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_USER_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...adminUserQuery({ adminUserId, id }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: { user: { show: { title: string } } };
-    },
-    namespace: "admin.user.show",
+  const user = await queryClient.query({
+    ...adminUserQuery({ adminUserId, id }),
+    staleTime: "static",
   });
 
   return {
     adminUserId,
     id,
     locale,
-    title: `${user.name} - ${t("title")}`,
+    title: `${user.name} - ${t("admin.user.show.title")}`,
   };
 };

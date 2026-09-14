@@ -7,19 +7,28 @@ export type PluginRouteKind = "layout" | "page";
 /** Every kind a route may declare. */
 export const PLUGIN_ROUTE_KINDS: PluginRouteKind[] = ["layout", "page"];
 
-export type PluginRouteRequirement = "authenticated" | "guest";
+export type PluginRouteRequirement = "admin-guest" | "authenticated" | "guest";
 
 /** Every requirement a route may declare. */
 export const PLUGIN_ROUTE_REQUIREMENTS: PluginRouteRequirement[] = [
+  "admin-guest",
   "authenticated",
   "guest",
 ];
 
 export const PLUGIN_ROUTE_ID_SEPARATOR = ":";
 
-/** One parsed segment of a canonical VitNode route path. */
+/**
+ * One parsed segment of a canonical VitNode route path.
+ *
+ * A `splat` swallows every remaining segment and may only be the last one, which
+ * is what separates it from a `param`: `/admin/content/*` matches
+ * `/admin/content/a/b`, and `/admin/content/:id` does not.
+ */
 export type PluginRouteSegment =
-  { kind: "param"; name: string } | { kind: "static"; value: string };
+  | { kind: "param"; name: string }
+  | { kind: "splat" }
+  | { kind: "static"; value: string };
 
 export type PluginRouteSearchValidator = (
   input: Record<string, unknown>,

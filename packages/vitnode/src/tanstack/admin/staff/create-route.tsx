@@ -1,4 +1,4 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
@@ -10,7 +10,6 @@ import {
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 
 /** Only the two namespaces the screen renders from - no catalog is read here. */
@@ -29,41 +28,19 @@ export interface AdminStaffCreateRouteData {
 
 export const loadAdminStaffCreateRoute = async ({
   adminAccess,
-  locale,
-  queryClient,
+  t,
   type,
 }: AdminScreenContext & {
+  t: PluginRouteTranslator;
   type: PermissionStaffType;
 }): Promise<AdminStaffCreateRouteData> => {
   requireAdminPermission(adminAccess, adminStaffPermissions(type).create);
 
-  const intl = await queryClient.query({
-    ...intlQueryOptions({ locale, namespaces: ADMIN_STAFF_CREATE_NAMESPACES }),
-    staleTime: "static",
-  });
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: {
-        staff: {
-          create: {
-            admins: string;
-            back: string;
-            desc: string;
-            moderators: string;
-          };
-        };
-      };
-    },
-    namespace: "admin.staff.create",
-  });
-
-  return {
+  return await Promise.resolve({
     backHref: staffListHref(type),
-    backLabel: t("back"),
-    description: t("desc"),
-    title: t(STAFF_TYPE_SEGMENT[type]),
+    backLabel: t("admin.staff.create.back"),
+    description: t("admin.staff.create.desc"),
+    title: t(`admin.staff.create.${STAFF_TYPE_SEGMENT[type]}`),
     type,
-  };
+  });
 };

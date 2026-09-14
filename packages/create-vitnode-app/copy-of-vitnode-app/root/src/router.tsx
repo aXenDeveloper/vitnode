@@ -9,44 +9,32 @@ import {
   ErrorActions,
   NotFound,
 } from "@vitnode/core/tanstack/layout";
-import { pageHead } from "@vitnode/core/tanstack/metadata";
 import { RoutePendingSpinner } from "@vitnode/core/tanstack/pending";
 import {
   pluginRouteSpecs,
   withPluginRoutes,
 } from "@vitnode/core/tanstack/plugin-routes";
-import {
-  withCoreAdminRoutes,
-  withCoreMainRoutes,
-  withCoreRootRoutes,
-} from "@vitnode/core/tanstack/routes";
 
-import { localeRouting } from "./lib/i18n";
+// Imported for its side effect: this module calls `configureIntl`, which is
+// what registers the locale rules every route's redirects are rewritten by.
+import "./lib/i18n";
 import { pluginRouteSources } from "./plugin-routes.gen";
 import { Route as adminShellRoute } from "./routes/_admin";
 import { Route as mainShellRoute } from "./routes/_main";
 import { routeTree as fileRouteTree } from "./routeTree.gen";
 
-const loadContentRegistry = async () =>
-  (await import("./content-registry.gen")).contentRegistry;
+configureContentRegistry(
+  async () => (await import("./content-registry.gen")).contentRegistry,
+);
 
-const routeTree = withCoreRootRoutes(
-  withCoreAdminRoutes(
-    withCoreMainRoutes(
-      withPluginRoutes(fileRouteTree, pluginRouteSpecs(pluginRouteSources), {
+const routeTree = withVitNodeRoutes(fileRouteTree, pluginRouteSpecs(pluginRouteSources), {
         mountUnder: {
           admin: adminShellRoute,
           blank: fileRouteTree,
           main: mainShellRoute,
         },
         pageHead,
-      }),
-      { localeRouting, mountUnder: mainShellRoute, pageHead },
-    ),
-    { loadContentRegistry, mountUnder: adminShellRoute, pageHead },
-  ),
-  { localeRouting, mountUnder: fileRouteTree, pageHead },
-);
+});
 
 export function getRouter() {
   const queryClient = createVitNodeQueryClient();

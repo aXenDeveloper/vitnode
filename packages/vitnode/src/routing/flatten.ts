@@ -20,6 +20,7 @@ export interface FlatPluginRoute {
   messages: string[];
   parentId: null | string;
   path: string;
+  pendingComponent: null | React.FunctionComponent;
   requires: null | PluginRouteRequirement;
   routeId: string;
   search: null | PluginRouteSearchValidator;
@@ -139,6 +140,33 @@ const readComponent = (
     message: `${where} in ${pluginId} declares a \`component\` that is not \`${LAZY_EXAMPLE}\`.${eager} Write \`component: ${LAZY_EXAMPLE}\` - the import stays a literal Vite can follow, and nothing runs it until the route is matched or preloaded.`,
     pluginId,
   });
+};
+
+/**
+ * A route's pending component, checked.
+ *
+ * The one declaration field a router reads *before* the route's module exists,
+ * which is why it is imported here rather than named through `lazy()`: there is
+ * nothing to wait for it. That also means it is in the initial bundle, so this
+ * refuses anything that is not a component rather than letting a stray value
+ * become a render-time crash.
+ */
+const readPendingComponent = (
+  pendingComponent: unknown,
+  pluginId: string,
+  where: string,
+): null | React.FunctionComponent => {
+  if (pendingComponent === undefined || pendingComponent === null) return null;
+
+  if (typeof pendingComponent !== "function") {
+    return fail({
+      code: "invalid-pending",
+      message: `${where} in ${pluginId} declares a \`pendingComponent\` that is not a component (got ${typeof pendingComponent}). Import the component and name it directly - a router draws it before this route's own chunk has loaded, so it cannot be \`lazy()\`.`,
+      pluginId,
+    });
+  }
+
+  return pendingComponent as React.FunctionComponent;
 };
 
 const readSearch = (
@@ -284,6 +312,18 @@ const readNode = ({
     });
   }
 
+  // A catch-all swallows every remaining segment, so a layout ending in one
+  // leaves its children no URL to claim: the parent would match first and match
+  // everything. `page()` is the only shape a catch-all makes sense on.
+  if (declared.kind === "layout" && parsed.segments.at(-1)?.kind === "splat") {
+    return fail({
+      code: "invalid-path",
+      message: `${where} in ${pluginId} is a layout whose path ends in "*". A catch-all matches every remaining segment, so nothing nested inside it could ever be reached - declare it as a page() instead.`,
+      path: parsed.path,
+      pluginId,
+    });
+  }
+
   const children = declared.children ?? [];
 
   if (declared.kind === "layout" && children.length === 0) {
@@ -302,6 +342,11 @@ const readNode = ({
     messages: readMessages(declared.messages, pluginId, where),
     parentId: parent === null ? null : parent.routeId,
     path: parsed.path,
+    pendingComponent: readPendingComponent(
+      declared.pendingComponent,
+      pluginId,
+      where,
+    ),
     requires: readRequires(declared.requires, area, pluginId, where),
     routeId: pluginRouteIdFor(declared.kind, parsed.path),
     search: readSearch(declared.search, declared.kind, pluginId, where),

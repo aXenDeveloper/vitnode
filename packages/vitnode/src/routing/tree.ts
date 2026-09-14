@@ -46,6 +46,14 @@ interface PluginRouteDeclarationShared<TModule> {
     | '`component` must be lazy(() => import("./pages/my-page")): a component imported into routes.ts is in the initial bundle, so its page cannot be split into a chunk of its own.'
     | PluginRouteLazyComponent<TModule>;
   messages?: readonly string[];
+  /**
+   * Drawn while this route loads.
+   *
+   * Imported directly rather than named through `lazy()`, because a router needs
+   * it *before* the page's own chunk has arrived - so it is part of the initial
+   * bundle, and a heavy one is worth a second thought.
+   */
+  pendingComponent?: React.FunctionComponent;
   requires?: PluginRouteRequirement;
 }
 
@@ -87,6 +95,7 @@ export interface PluginRouteDeclaration {
   readonly kind: PluginRouteKind;
   readonly messages: readonly string[] | undefined;
   readonly path: null | string;
+  readonly pendingComponent: unknown;
   readonly requires: PluginRouteRequirement | undefined;
   readonly search: unknown;
 }
@@ -110,6 +119,7 @@ interface PluginRouteDeclarationOptions {
   children?: readonly PluginRouteDeclaration[];
   component: unknown;
   messages?: readonly string[];
+  pendingComponent?: unknown;
   requires?: PluginRouteRequirement;
   search?: unknown;
 }
@@ -129,6 +139,7 @@ const declaration = (
   kind: options.kind,
   messages: options.messages,
   path: options.path,
+  pendingComponent: options.pendingComponent,
   requires: options.requires,
   search: options.search,
 });
@@ -182,3 +193,13 @@ export const definePluginRoutes = (routes: PluginRoutes): PluginRoutes => {
 
   return routes;
 };
+
+/**
+ * {@link definePluginRoutes}, under the name core uses for its own tree.
+ *
+ * One function, two spellings, because "plugin" is wrong on exactly one caller:
+ * `@vitnode/core` declares its pages with this same vocabulary and is not a
+ * plugin. Everything downstream - the compiler, the manifest, the mount - treats
+ * the two the same, which is the whole point of core going through this door.
+ */
+export const defineRoutes = definePluginRoutes;

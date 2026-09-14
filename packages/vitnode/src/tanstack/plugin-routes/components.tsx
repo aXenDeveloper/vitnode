@@ -6,7 +6,11 @@ import {
 } from "@tanstack/react-router";
 import { createElement, Suspense, useCallback } from "react";
 
-import type { CheckedPluginRouteModule } from "@/routing";
+import type {
+  CheckedPluginRouteModule,
+  PluginRouteBreadcrumbGroup,
+  PluginRouteBreadcrumbProps,
+} from "@/routing";
 
 import type {
   RouteBreadcrumbDeferred,
@@ -101,10 +105,17 @@ export const pluginLayoutComponent = (
   };
 };
 
-type DeclaredBreadcrumb = Exclude<
-  NonNullable<CheckedPluginRouteModule["route"]["breadcrumb"]>,
-  false
+/** A crumb the module actually draws: the component half of either spelling. */
+type DeclaredBreadcrumb = React.ComponentType<
+  PluginRouteBreadcrumbProps<unknown>
 >;
+
+const isBreadcrumbGroup = (
+  value: unknown,
+): value is PluginRouteBreadcrumbGroup =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as PluginRouteBreadcrumbGroup).group === "function";
 
 export const pluginRouteBreadcrumb = (
   module: PluginRouteModuleRef,
@@ -145,8 +156,18 @@ export const pluginRouteBreadcrumb = (
     () => {
       const declared = module.current?.route.breadcrumb;
 
-      return declared === undefined || declared === false
-        ? declared
+      // `undefined` is "the module has not arrived yet, ask again"; `false` and
+      // `null` are both "this route contributes no crumb". They are kept apart
+      // here because only the first is worth re-resolving.
+      if (declared === undefined) return undefined;
+      if (declared === false || declared === null) return false;
+
+      // A group draws its own `<BreadcrumbItem>`s, so it stays a group all the
+      // way to the trail - wrapping it in one would nest items inside an item.
+      // Only the component inside it is wrapped, and it is wrapped the same way
+      // a plain crumb is.
+      return isBreadcrumbGroup(declared)
+        ? { group: componentFor(declared.group) }
         : componentFor(declared);
     },
     listener => module.subscribe(listener),

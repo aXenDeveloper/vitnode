@@ -1,10 +1,9 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { DebugLogsParams } from "@/views/admin/views/core/debug/debug-query";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { debugLogsQuery, debugQueueQuery } from "./query";
 
@@ -38,19 +37,16 @@ const DEBUG_VIEW_PERMISSION = {
 
 export const loadAdminDebugRoute = async ({
   adminAccess,
-  locale,
   params,
   queryClient,
+  t,
 }: AdminScreenContext & {
   params: DebugLogsParams;
+  t: PluginRouteTranslator;
 }): Promise<AdminDebugRouteData> => {
   requireAdminPermission(adminAccess, DEBUG_VIEW_PERMISSION);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_DEBUG_NAMESPACES }),
-      staleTime: "static",
-    }),
+  await Promise.all([
     queryClient.query({
       ...debugQueueQuery(),
       staleTime: "static",
@@ -61,26 +57,11 @@ export const loadAdminDebugRoute = async ({
     }),
   ]);
 
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: {
-        debug: {
-          desc: string;
-          logs: { title: string };
-          queue: { title: string };
-          title: string;
-        };
-      };
-    },
-    namespace: "admin.debug",
-  });
-
   return {
-    description: t("desc"),
-    logsTitle: t("logs.title"),
+    description: t("admin.debug.desc"),
+    logsTitle: t("admin.debug.logs.title"),
     params,
-    queueTitle: t("queue.title"),
-    title: t("title"),
+    queueTitle: t("admin.debug.queue.title"),
+    title: t("admin.debug.title"),
   };
 };

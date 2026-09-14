@@ -31,6 +31,14 @@ export const pluginRouteId = (pluginId: string, routeId: string): string =>
 export interface CompiledPluginRouteTrees {
   components: Map<string, PluginRouteLazyComponent>;
   manifest: PluginRouteManifest;
+  /**
+   * Each route's pending component, for the routes that declared one.
+   *
+   * A map rather than a field on {@link PluginRoute} for the same reason the
+   * lazy components are: the manifest is data, and a component is not something
+   * data can hold.
+   */
+  pendingComponents: Map<string, React.FunctionComponent>;
   searchValidators: Map<string, PluginRouteSearchValidator>;
 }
 
@@ -87,6 +95,7 @@ export const compilePluginRouteTrees = (
 ): CompiledPluginRouteTrees => {
   const routes: PluginRoute[] = [];
   const components = new Map<string, PluginRouteLazyComponent>();
+  const pendingComponents = new Map<string, React.FunctionComponent>();
   const searchValidators = new Map<string, PluginRouteSearchValidator>();
   const byId = new Map<string, PluginRoute>();
   const byPath = new Map<string, PluginRoute>();
@@ -154,6 +163,10 @@ export const compilePluginRouteTrees = (
       routes.push(route);
       components.set(route.id, flat.component);
 
+      if (flat.pendingComponent !== null) {
+        pendingComponents.set(route.id, flat.pendingComponent);
+      }
+
       if (flat.search !== null) searchValidators.set(route.id, flat.search);
     }
   }
@@ -166,7 +179,7 @@ export const compilePluginRouteTrees = (
   // list by whatever mounts it, with this same function.
   buildPluginRouteGraph(manifest);
 
-  return { components, manifest, searchValidators };
+  return { components, manifest, pendingComponents, searchValidators };
 };
 
 /** {@link compilePluginRouteTrees}, for a caller that only needs the data. */

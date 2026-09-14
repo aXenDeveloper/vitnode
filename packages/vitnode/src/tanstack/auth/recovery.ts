@@ -32,7 +32,14 @@ export const passwordResetMode = (
   return link ? { link, mode: "change" } : { mode: "request" };
 };
 
-const PASSWORD_RESET_BASE_NAMESPACES = [
+/**
+ * What both recovery screens render, and what the route declares.
+ *
+ * `head` translates its title out of `core.auth.reset_password`, which is in
+ * here - so the title is available before the loader has decided which mode the
+ * URL is asking for.
+ */
+export const PASSWORD_RESET_BASE_NAMESPACES = [
   "core.global",
   "core.auth.sign_up",
   "core.auth.reset_password",

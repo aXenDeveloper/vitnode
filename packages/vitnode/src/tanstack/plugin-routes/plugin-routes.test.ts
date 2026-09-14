@@ -11,7 +11,7 @@ import type { PluginRoutePageHead } from "./mount";
 
 import { fileRoutePaths } from "./collision";
 import { PLUGIN_ROUTES_ROUTE_ID } from "./container";
-import { withPluginRoutes } from "./mount";
+import { withVitNodeRoutes } from "./mount";
 import { pluginRouteSpecs } from "./specs";
 
 /** A page module, as a `lazy()` that resolves without a bundler. */
@@ -40,12 +40,12 @@ const pageHead: PluginRoutePageHead = ({ description, robots, title }) => ({
 });
 
 const mount = (tree: AnyRoute, specs: ReturnType<typeof pluginRouteSpecs>) =>
-  withPluginRoutes(tree, specs, { pageHead });
+  withVitNodeRoutes(tree, specs, { pageHead });
 
 const optionsOf = (route: AnyRoute): { id?: string; path?: string } =>
   route.options;
 
-describe("withPluginRoutes", () => {
+describe("withVitNodeRoutes", () => {
   const appTree = () => {
     const root = createRootRoute();
 
@@ -73,7 +73,7 @@ describe("withPluginRoutes", () => {
   });
 
   it("leaves the app route tree alone when no plugin declares a route", () => {
-    const tree = withPluginRoutes(appTree(), [], { pageHead });
+    const tree = withVitNodeRoutes(appTree(), [], { pageHead });
 
     expect(containerOf(tree)).toBeUndefined();
     expect(tree.children).toHaveLength(2);
@@ -111,7 +111,7 @@ describe("withPluginRoutes", () => {
     mount(tree, specsOf(pageAt("/page")));
     expect(containerOf(tree)).toBeDefined();
 
-    withPluginRoutes(tree, [], { pageHead });
+    withVitNodeRoutes(tree, [], { pageHead });
 
     expect(containerOf(tree)).toBeUndefined();
     expect(fileRoutePaths(tree)).toEqual(["/", "/discover"]);
@@ -132,7 +132,7 @@ describe("withPluginRoutes", () => {
       createRoute({ getParentRoute: () => shell, path: "/" }),
     ]);
 
-    const tree = withPluginRoutes(
+    const tree = withVitNodeRoutes(
       root.addChildren([shell]),
       specsOf(pageAt("/page")),
       { mountUnder: { main: shell }, pageHead },
@@ -200,7 +200,7 @@ describe("plugin route areas", () => {
   it("mounts each route under the shell its area names", () => {
     const { admin, main, tree } = shells();
 
-    withPluginRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
+    withVitNodeRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
       mountUnder: { admin, main },
       pageHead,
     });
@@ -215,7 +215,7 @@ describe("plugin route areas", () => {
   it("mounts a blank route under the root, outside both shells", () => {
     const { admin, main, tree } = shells();
 
-    withPluginRoutes(tree, specsOf(pageAt("/example"), blankRoute()), {
+    withVitNodeRoutes(tree, specsOf(pageAt("/example"), blankRoute()), {
       mountUnder: { admin, blank: tree, main },
       pageHead,
     });
@@ -229,7 +229,7 @@ describe("plugin route areas", () => {
   it("hangs a blank route from the root when the host named no shells", () => {
     const { tree } = shells();
 
-    withPluginRoutes(tree, specsOf(blankRoute()), { pageHead });
+    withVitNodeRoutes(tree, specsOf(blankRoute()), { pageHead });
 
     expect(mountedPaths(tree)).toEqual(["/kiosk"]);
   });
@@ -246,7 +246,7 @@ describe("plugin route areas", () => {
     const { main, tree } = shells();
 
     expect(() =>
-      withPluginRoutes(tree, specsOf(adminRoute()), {
+      withVitNodeRoutes(tree, specsOf(adminRoute()), {
         mountUnder: { main },
         pageHead,
       }),
@@ -257,7 +257,7 @@ describe("plugin route areas", () => {
     const { tree } = shells();
 
     expect(() =>
-      withPluginRoutes(tree, specsOf(adminRoute()), { pageHead }),
+      withVitNodeRoutes(tree, specsOf(adminRoute()), { pageHead }),
     ).toThrow(/"admin" area/);
   });
 
@@ -304,7 +304,7 @@ describe("plugin route areas", () => {
   it("mounts two areas whose paths genuinely differ", () => {
     const { admin, main, tree } = shells();
 
-    withPluginRoutes(tree, specsOf(pageAt("/reports"), adminRoute()), {
+    withVitNodeRoutes(tree, specsOf(pageAt("/reports"), adminRoute()), {
       mountUnder: { admin, main },
       pageHead,
     });
@@ -323,13 +323,13 @@ describe("plugin route areas", () => {
   it("clears one shell's subtree without touching the other's", () => {
     const { admin, main, tree } = shells();
 
-    withPluginRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
+    withVitNodeRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
       mountUnder: { admin, main },
       pageHead,
     });
     expect(containerOf(admin)).toBeDefined();
 
-    withPluginRoutes(tree, specsOf(pageAt("/example")), {
+    withVitNodeRoutes(tree, specsOf(pageAt("/example")), {
       mountUnder: { admin, main },
       pageHead,
     });
@@ -347,7 +347,7 @@ describe("plugin route areas", () => {
   it("shares one container when two areas name the same route", () => {
     const { main, tree } = shells();
 
-    withPluginRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
+    withVitNodeRoutes(tree, specsOf(pageAt("/example"), adminRoute()), {
       mountUnder: { admin: main, main },
       pageHead,
     });
@@ -365,7 +365,7 @@ describe("plugin route areas", () => {
     const { admin, main, tree } = shells();
 
     expect(() =>
-      withPluginRoutes(tree, specsOf(adminRoute("/admin/core")), {
+      withVitNodeRoutes(tree, specsOf(adminRoute("/admin/core")), {
         mountUnder: { admin, main },
         pageHead,
       }),
@@ -392,7 +392,7 @@ describe("a nested plugin subtree", () => {
 
   const mounted = () => {
     const root = createRootRoute();
-    const tree = withPluginRoutes(
+    const tree = withVitNodeRoutes(
       root.addChildren([
         createRoute({ getParentRoute: () => root, path: "/" }),
       ]),
@@ -450,7 +450,7 @@ describe("a nested plugin subtree", () => {
     ]);
 
     expect(() =>
-      withPluginRoutes(tree, specsOf(guide()), { pageHead }),
+      withVitNodeRoutes(tree, specsOf(guide()), { pageHead }),
     ).toThrow(/conflicts with application route/);
   });
 });
@@ -583,10 +583,18 @@ describe("fileRoutePaths", () => {
  * tree's shape. Nothing here mounts a router or renders a component.
  */
 describe("a plugin route's loader", () => {
-  /** The host's context. Its `queryClient` is unused: no route here declares namespaces. */
+  /**
+   * The host's context, with a field of its own that no route was promised.
+   *
+   * `queryClient` is never called here - no route in this block declares message
+   * namespaces - but it is a real value, because it is one of the fields that
+   * *is* projected and the tests below check it arrives.
+   */
+  const queryClient = { marker: "the host's own" } as never;
   const context = {
     locale: "pl",
-    queryClient: undefined as never,
+    queryClient,
+    somethingOnlyThisHostHas: "should not cross",
   };
 
   const loaderOf = (module: Record<string, unknown>) => {
@@ -642,23 +650,72 @@ describe("a plugin route's loader", () => {
     expect(result.search).toEqual({});
   });
 
-  /**
-   * The context boundary, from the runtime's side. `PluginRouteContext` is the
-   * whole of what a plugin is promised, so the host's own context - which holds
-   * this app's `QueryClient` - is projected rather than forwarded. Handing it
-   * over whole would make every field on it public plugin API by accident.
-   */
-  it("projects the public context, and does not forward the host's", async () => {
+  const contextOf = async (
+    hostContext: Record<string, unknown> = context,
+  ): Promise<Record<string, unknown>> => {
     const load = vi.fn(() => null);
+    const module = { default: () => null, route: { load } };
+    const root = createRootRoute();
+    const tree = mount(
+      root.addChildren([
+        createRoute({ getParentRoute: () => root, path: "/" }),
+      ]),
+      specsOf(page("/page", { component: lazyModule(module) })),
+    );
+    const container = (tree.children ?? []).find(
+      (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
+    );
+    const loader = (container?.children?.[0] as AnyRoute).options.loader as (
+      args: unknown,
+    ) => Promise<unknown>;
 
-    await loaderOf({ default: () => null, route: { load } })({});
+    await loader({ context: hostContext, deps: {}, params: {} });
 
     const [args] = load.mock.calls[0] as unknown as [
       { context: Record<string, unknown> },
     ];
 
-    expect(args.context).toEqual({ locale: "pl" });
-    expect(args.context).not.toHaveProperty("queryClient");
+    return args.context;
+  };
+
+  /**
+   * The context boundary, from the runtime's side: the host's context is
+   * projected rather than forwarded, so a field this particular host happens to
+   * carry does not become public API by accident - compiling today and arriving
+   * `undefined` on the next host.
+   *
+   * The locale and the query client are what every host promises. The client is
+   * in because VitNode's whole caching story is "warm the route's data in its
+   * loader", and a loader with no client has to fetch in render instead.
+   */
+  it("projects the promised context, and does not forward the host's", async () => {
+    expect(await contextOf()).toEqual({ locale: "pl", queryClient });
+  });
+
+  /**
+   * `auth` and `adminAccess` are not promises a route makes to itself - they are
+   * promises it has *earned*, by declaring `requires` or by being in the `admin`
+   * area. A route that declared neither must not be able to observe one, or the
+   * narrower authoring types would be describing a guarantee the runtime does
+   * not keep.
+   */
+  it("omits a session the host never resolved for this route", async () => {
+    const projected = await contextOf();
+
+    expect(projected).not.toHaveProperty("auth");
+    expect(projected).not.toHaveProperty("adminAccess");
+  });
+
+  it("carries the session across when the host resolved one", async () => {
+    const auth = { isAuthenticated: true };
+    const adminAccess = { session: "admin" };
+
+    expect(await contextOf({ ...context, adminAccess, auth })).toEqual({
+      adminAccess,
+      auth,
+      locale: "pl",
+      queryClient,
+    });
   });
 });
 
@@ -691,7 +748,7 @@ describe("a route's eager search schema", () => {
     specs: ReturnType<typeof pluginRouteSpecs>,
   ): Record<string, unknown> => {
     const root = createRootRoute();
-    const tree: AnyRoute = withPluginRoutes(root.addChildren([]), specs, {
+    const tree: AnyRoute = withVitNodeRoutes(root.addChildren([]), specs, {
       pageHead,
     });
     const container = (tree.children ?? []).find(
@@ -754,7 +811,7 @@ describe("a route's eager search schema", () => {
       page("/browse", { component: lazyModule(), search: validateSearch }),
     );
     const root = createRootRoute();
-    const tree: AnyRoute = withPluginRoutes(root.addChildren([]), [spec], {
+    const tree: AnyRoute = withVitNodeRoutes(root.addChildren([]), [spec], {
       pageHead,
     });
     const container = (tree.children ?? []).find(
@@ -771,5 +828,67 @@ describe("a route's eager search schema", () => {
         params: {},
       }),
     ).resolves.toEqual({ data: undefined, search: { page: 3 } });
+  });
+});
+
+/**
+ * `head` is the other half of the translator story, and the half that could not
+ * work before: it runs outside the React tree, so `useTranslations` has no
+ * provider to read. The strings reach it through the route's declared
+ * namespaces instead.
+ */
+describe("a plugin route's head", () => {
+  const messages = { "@acme/notes": { home: { title: "Notatki" } } };
+
+  const headOf = async (module: Record<string, unknown>) => {
+    const root = createRootRoute();
+    const tree = mount(
+      root.addChildren([
+        createRoute({ getParentRoute: () => root, path: "/" }),
+      ]),
+      specsOf(
+        page("/notes", {
+          component: lazyModule(module),
+          messages: ["@acme/notes.home"],
+        }),
+      ),
+    );
+    const container = (tree.children ?? []).find(
+      (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
+    );
+    const head = (container?.children?.[0] as AnyRoute).options.head as (
+      args: unknown,
+    ) => Promise<{ meta?: { content?: string; title?: string }[] }>;
+
+    return await head({
+      loaderData: { data: undefined, search: {} },
+      match: {
+        context: {
+          locale: "pl",
+          queryClient: {
+            query: async () => await Promise.resolve({ messages }),
+          },
+        },
+      },
+      params: {},
+    });
+  };
+
+  it("translates the title through the route's own namespaces", async () => {
+    const result = await headOf({
+      default: () => null,
+      route: {
+        head: ({ t }: { t: (key: string) => string }) => ({
+          title: t("@acme/notes.home.title"),
+        }),
+      },
+    });
+
+    // The site's own name is appended by `pageHead`, as it is for every route.
+    expect(result.meta).toContainEqual({ title: "Notatki - VitNode" });
+  });
+
+  it("hands `head` nothing to translate with when it declares no head", async () => {
+    expect(await headOf({ default: () => null, route: {} })).toEqual({});
   });
 });

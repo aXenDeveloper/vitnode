@@ -1,8 +1,7 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { integrationsQuery } from "./query";
 
@@ -32,32 +31,20 @@ const SYSTEM_VIEW_PERMISSION = {
 
 export const loadAdminIntegrationsRoute = async ({
   adminAccess,
-  locale,
   queryClient,
-}: AdminScreenContext): Promise<AdminIntegrationsRouteData> => {
+  t,
+}: AdminScreenContext & {
+  t: PluginRouteTranslator;
+}): Promise<AdminIntegrationsRouteData> => {
   requireAdminPermission(adminAccess, SYSTEM_VIEW_PERMISSION);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({
-        locale,
-        namespaces: ADMIN_INTEGRATIONS_NAMESPACES,
-      }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...integrationsQuery(),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: { system: { integrations: { desc: string; title: string } } };
-    },
-    namespace: "admin.system.integrations",
+  await queryClient.query({
+    ...integrationsQuery(),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), title: t("title") };
+  return {
+    description: t("admin.system.integrations.desc"),
+    title: t("admin.system.integrations.title"),
+  };
 };

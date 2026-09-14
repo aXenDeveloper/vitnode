@@ -1,10 +1,9 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { QueueParams } from "@/views/admin/views/core/advanced/queue/queue-query";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { queueQuery } from "./query";
 
@@ -32,32 +31,23 @@ const QUEUE_VIEW_PERMISSION = {
 
 export const loadAdminQueueRoute = async ({
   adminAccess,
-  locale,
   params,
   queryClient,
+  t,
 }: AdminScreenContext & {
   params: QueueParams;
+  t: PluginRouteTranslator;
 }): Promise<AdminQueueRouteData> => {
   requireAdminPermission(adminAccess, QUEUE_VIEW_PERMISSION);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_QUEUE_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...queueQuery({ params }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: { advanced: { queue: { desc: string; title: string } } };
-    },
-    namespace: "admin.advanced.queue",
+  await queryClient.query({
+    ...queueQuery({ params }),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), params, title: t("title") };
+  return {
+    description: t("admin.advanced.queue.desc"),
+    params,
+    title: t("admin.advanced.queue.title"),
+  };
 };

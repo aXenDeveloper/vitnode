@@ -96,9 +96,15 @@ describe("definePluginRoute", () => {
     });
   });
 
-  it("has no context type argument to bind", () => {
-    // `PluginRouteLoadArgs` is generic in the *search* only, so there is nowhere
-    // left to name a wider context even deliberately.
+  /**
+   * `PluginRouteLoadArgs` *is* generic in its context - that is how the framework
+   * layer describes the richer one a mounted route gets - but the parameter
+   * defaults to the public projection, and `definePluginRoute` pins it there.
+   * A plugin authoring through this door therefore has nowhere to name a wider
+   * context, which is the guarantee; the wider doors live in
+   * `@vitnode/core/tanstack/plugin-routes` and are named after what they promise.
+   */
+  it("defaults its context to the public projection", () => {
     expectTypeOf<
       PluginRouteLoadArgs<{ section: string }>["context"]
     >().toEqualTypeOf<PluginRouteContext>();

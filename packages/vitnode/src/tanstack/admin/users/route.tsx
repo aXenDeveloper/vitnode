@@ -1,4 +1,4 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminUsersParams } from "@/views/admin/views/core/users/list/users-query";
@@ -7,7 +7,6 @@ import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-pe
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import { adminUsersQuery } from "./query";
@@ -28,48 +27,26 @@ export interface AdminUsersRouteData {
 
 export const loadAdminUsersRoute = async ({
   adminAccess,
-  locale,
   params,
   queryClient,
+  t,
 }: AdminScreenContext & {
   params: AdminUsersParams;
+  t: PluginRouteTranslator;
 }): Promise<AdminUsersRouteData> => {
   requireAdminPermission(adminAccess, ADMIN_USER_PERMISSIONS.view);
 
   const adminUserId = adminIdentityOf(adminAccess);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_USERS_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...adminUsersQuery({ adminUserId, params }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const messages = intl.messages as {
-    admin: {
-      global: { nav: { users: { list: string } } };
-      user: { list: { desc: string } };
-    };
-  };
-  const t = createTranslator({
-    locale,
-    messages,
-    namespace: "admin.user.list",
-  });
-  const tNav = createTranslator({
-    locale,
-    messages,
-    namespace: "admin.global.nav.users",
+  await queryClient.query({
+    ...adminUsersQuery({ adminUserId, params }),
+    staleTime: "static",
   });
 
   return {
     adminUserId,
-    description: t("desc"),
+    description: t("admin.user.list.desc"),
     params,
-    title: tNav("list"),
+    title: t("admin.global.nav.users.list"),
   };
 };

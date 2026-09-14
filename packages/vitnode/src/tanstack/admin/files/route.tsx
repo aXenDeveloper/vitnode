@@ -1,10 +1,9 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { AdminFilesParams } from "@/views/admin/views/core/system/files/files-query";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { adminFilesQuery } from "./query";
 
@@ -39,32 +38,23 @@ const FILES_VIEW_PERMISSION = {
 
 export const loadAdminFilesRoute = async ({
   adminAccess,
-  locale,
   params,
   queryClient,
+  t,
 }: AdminScreenContext & {
   params: AdminFilesParams;
+  t: PluginRouteTranslator;
 }): Promise<AdminFilesRouteData> => {
   requireAdminPermission(adminAccess, FILES_VIEW_PERMISSION);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_FILES_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...adminFilesQuery({ params }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: { system: { files: { desc: string; title: string } } };
-    },
-    namespace: "admin.system.files",
+  await queryClient.query({
+    ...adminFilesQuery({ params }),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), params, title: t("title") };
+  return {
+    description: t("admin.system.files.desc"),
+    params,
+    title: t("admin.system.files.title"),
+  };
 };

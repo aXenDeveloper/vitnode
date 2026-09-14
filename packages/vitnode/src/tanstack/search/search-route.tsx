@@ -1,14 +1,13 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRouteTranslator } from "@/routing";
 
-import { createTranslator } from "use-intl";
+import type { QueryClient } from "@tanstack/react-query";
 
 import type { SearchFeedParams } from "@/views/search/search-feed-query";
 
-import { intlQueryOptions } from "../i18n/query";
 import { feedQueryOptions } from "./feed";
 import { searchRouteFeedParams } from "./route-search";
 
-export const SEARCH_NAMESPACES = ["core.global", "core.search"] as const;
+export { SEARCH_NAMESPACES } from "./namespaces";
 
 /** The narrowest slice of a route's context this loader reads. */
 export interface SearchLoaderContext {
@@ -27,27 +26,21 @@ export const loadSearchRoute = async ({
   locale,
   queryClient,
   search,
-}: SearchLoaderContext & { search?: string }): Promise<SearchRouteData> => {
+  t,
+}: SearchLoaderContext & {
+  search?: string;
+  t: PluginRouteTranslator;
+}): Promise<SearchRouteData> => {
   const params = searchRouteFeedParams({ search });
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: SEARCH_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.infiniteQuery({
-      ...feedQueryOptions({ locale, params }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      core: { search: { desc: string; title: string } };
-    },
-    namespace: "core.search",
+  await queryClient.infiniteQuery({
+    ...feedQueryOptions({ locale, params }),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), params, title: t("title") };
+  return {
+    description: t("core.search.desc"),
+    params,
+    title: t("core.search.title"),
+  };
 };

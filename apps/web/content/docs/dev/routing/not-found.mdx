@@ -37,16 +37,23 @@ When thrown, TanStack Router catches the signal and halts page execution, render
 
 ### Unmatched URLs keep the main shell
 
-When a visitor navigates to a non-existent URL, `withCoreMainRoutes` catches the route **inside the main shell** (`_main.tsx`).
+When a visitor navigates to a non-existent URL, the main shell (`_main.tsx`) is
+still matched, so the route is caught **inside** it.
 
 This ensures visitors never hit a blank, unstyled screen: they retain the main site header, navigation bar, and theme switcher, while search crawlers receive a real HTTP `404` status code:
 
 ```tsx title="apps/web/src/router.tsx"
-const routeTree = withCoreMainRoutes(fileRouteTree, {
-  localeRouting,
-  mountUnder: mainShellRoute,
-  pageHead,
-})
+const routeTree = withVitNodeRoutes(
+  fileRouteTree,
+  pluginRouteSpecs(pluginRouteSources),
+  {
+    mountUnder: {
+      admin: adminShellRoute,
+      blank: fileRouteTree,
+      main: mainShellRoute,
+    },
+  },
+)
 ```
 
 {/* Image prompt: VitNode 404 error page displayed inside the main site layout with header, 404 heading, localized description, and "Go back" / "Back to home" action buttons in dark theme, 1440x900. */}

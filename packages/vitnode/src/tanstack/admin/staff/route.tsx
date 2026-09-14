@@ -1,4 +1,4 @@
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
@@ -9,7 +9,6 @@ import { STAFF_TYPE_SEGMENT } from "@/views/admin/views/core/staff/staff-model";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import { adminStaffQuery } from "./query";
@@ -27,49 +26,34 @@ export interface AdminStaffRouteData {
 
 export const loadAdminStaffRoute = async ({
   adminAccess,
-  locale,
   params,
   queryClient,
+  t,
   type,
 }: AdminScreenContext & {
   params: AdminStaffParams;
+  t: PluginRouteTranslator;
   type: PermissionStaffType;
 }): Promise<AdminStaffRouteData> => {
   requireAdminPermission(adminAccess, adminStaffPermissions(type).view);
 
   const adminUserId = adminIdentityOf(adminAccess);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_STAFF_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...adminStaffQuery({ adminUserId, params, type }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: {
-        staff: {
-          admins: { create: string; desc: string; title: string };
-          moderators: { create: string; desc: string; title: string };
-        };
-      };
-    },
-    namespace:
-      `admin.staff.${STAFF_TYPE_SEGMENT[type]}` as "admin.staff.admins",
+  await queryClient.query({
+    ...adminStaffQuery({ adminUserId, params, type }),
+    staleTime: "static",
   });
+
+  // The kind of staff member is the URL, not a parameter, so it picks the
+  // branch of the message tree rather than being interpolated into a string.
+  const staff = `admin.staff.${STAFF_TYPE_SEGMENT[type]}`;
 
   return {
     adminUserId,
-    createLabel: t("create"),
-    description: t("desc"),
+    createLabel: t(`${staff}.create`),
+    description: t(`${staff}.desc`),
     params,
-    title: t("title"),
+    title: t(`${staff}.title`),
     type,
   };
 };
