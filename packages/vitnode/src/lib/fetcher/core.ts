@@ -1,9 +1,8 @@
 import type {
-  FetcherRequest,
+  FetcherCall,
   FetcherRequestOptions,
-  FetcherResponse,
-  PluginRouteMethod,
   RegisteredPluginId,
+  ResponseFor,
 } from "./types";
 
 import { rawApiFetch } from "./raw";
@@ -18,20 +17,20 @@ export async function coreFetcher<
   P extends RegisteredPluginId,
   M extends string,
   Path extends string,
-  Method extends string = PluginRouteMethod<P, M, Path>,
+  Method extends string,
 >({
-  plugin,
-  module,
-  path,
-  method,
-  args,
-  options,
   additionalHeaders = {},
-  withPagination = false,
+  args,
   formData,
+  method,
+  module,
+  options,
   origin,
-}: FetcherRequest<P, M, Path, Method> & FetcherRequestOptions): Promise<
-  FetcherResponse<P, M, Path, Method>
+  path,
+  plugin,
+  withPagination = false,
+}: FetcherCall<P, M, Path, Method, FetcherRequestOptions>): Promise<
+  ResponseFor<P, M, Path, Method>
 > {
   const input = args as FetcherInput | undefined;
 
@@ -50,5 +49,5 @@ export async function coreFetcher<
     withPagination,
   });
 
-  return response as FetcherResponse<P, M, Path, Method>;
+  return response as ResponseFor<P, M, Path, Method>;
 }

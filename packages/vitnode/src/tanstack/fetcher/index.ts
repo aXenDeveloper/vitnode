@@ -14,14 +14,17 @@ import {
 } from "./server";
 
 export type { FetcherClientOptions, UniversalFetcher, UniversalRawFetcher };
+export type { ApiEndpoint, ApiPluginContract } from "@/lib/fetcher/contract";
 export type { ApiPluginRegistry } from "@/lib/fetcher/registry";
 export type {
-  FetcherRequest,
-  FetcherResponse,
+  AllEndpoints,
+  ApiRequest,
+  PluginEndpoints,
   PluginModulePath,
   PluginRouteMethod,
   PluginRoutePath,
   RegisteredPluginId,
+  ResponseFor,
 } from "@/lib/fetcher/types";
 
 type IsomorphicFetcher = (request: never) => Promise<Response>;

@@ -1,10 +1,9 @@
 import type { RawApiFetchArgs } from "./fetcher/raw";
 import type {
-  FetcherRequest,
+  FetcherCall,
   FetcherRequestOptions,
-  FetcherResponse,
-  PluginRouteMethod,
   RegisteredPluginId,
+  ResponseFor,
 } from "./fetcher/types";
 
 import { coreFetcher } from "./fetcher/core";
@@ -12,14 +11,17 @@ import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
 import { rawApiFetch } from "./fetcher/raw";
 import { CAPTCHA_TOKEN_HEADER } from "./fetcher/request-context";
 
+export type { ApiEndpoint, ApiPluginContract } from "./fetcher/contract";
 export type { ApiPluginRegistry } from "./fetcher/registry";
 export type {
-  FetcherRequest,
-  FetcherResponse,
+  AllEndpoints,
+  ApiRequest,
+  PluginEndpoints,
   PluginModulePath,
   PluginRouteMethod,
   PluginRoutePath,
   RegisteredPluginId,
+  ResponseFor,
 } from "./fetcher/types";
 
 export type FetcherClientOptions = Omit<
@@ -33,19 +35,19 @@ export async function fetcherClient<
   P extends RegisteredPluginId,
   M extends string,
   Path extends string,
-  Method extends string = PluginRouteMethod<P, M, Path>,
+  Method extends string,
 >({
-  plugin,
-  module,
-  path,
-  method,
   args,
-  options,
-  withPagination = false,
   captchaToken,
   formData,
-}: FetcherClientOptions & FetcherRequest<P, M, Path, Method>): Promise<
-  FetcherResponse<P, M, Path, Method>
+  method,
+  module,
+  options,
+  path,
+  plugin,
+  withPagination = false,
+}: FetcherCall<P, M, Path, Method, FetcherClientOptions>): Promise<
+  ResponseFor<P, M, Path, Method>
 > {
   const additionalHeaders: Record<string, string> = {};
 
@@ -54,16 +56,16 @@ export async function fetcherClient<
   }
 
   const response = await coreFetcher<P, M, Path, Method>({
-    plugin,
-    module,
-    path,
-    method,
-    args,
-    options: { credentials: "include", ...options },
-    withPagination,
     additionalHeaders,
+    args,
     formData,
-  } as FetcherRequest<P, M, Path, Method> & FetcherRequestOptions);
+    method,
+    module,
+    options: { credentials: "include", ...options },
+    path,
+    plugin,
+    withPagination,
+  } as FetcherCall<P, M, Path, Method, FetcherRequestOptions>);
 
   if (isRateLimited(response)) {
     notifyRateLimited(response);

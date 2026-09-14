@@ -1,4 +1,5 @@
 export {
+  API_PLUGIN_TYPE,
   API_REGISTRY_SPECIFIER,
   generateApiRegistrySource,
 } from "./generate.js";

@@ -103,11 +103,11 @@ The call is the same shape as the universal one - `plugin`, `module`, `path`,
 `method`, `args` - and it is typed from the same registry. What the server
 fetcher adds is exactly what a browser cannot do:
 
-| Option              | What it does                                                  |
-| :------------------ | :------------------------------------------------------------ |
-| `allowSaveCookies`  | relays the API's `Set-Cookie` headers onto the host response  |
-| `additionalHeaders` | adds headers a browser may not forge, `Cookie` included       |
-| `origin`            | calls a different API origin than the configured one          |
+| Option              | What it does                                                 |
+| :------------------ | :----------------------------------------------------------- |
+| `allowSaveCookies`  | relays the API's `Set-Cookie` headers onto the host response |
+| `additionalHeaders` | adds headers a browser may not forge, `Cookie` included      |
+| `origin`            | calls a different API origin than the configured one         |
 
 Two things make this the exception rather than the rule:
 
@@ -125,12 +125,12 @@ end up in a shared module by accident.
 <Cards>
   <Card
     title="Fetcher"
-    description="The three fetchers and when each one applies"
+    description="The universal API client and server-only transport"
     href="/docs/dev/fetcher"
   />
   <Card
-    title="Data Loading"
-    description="Query warming with TanStack Query and route loaders"
-    href="/docs/dev/data-loading"
+    title="Plugin Routes"
+    description="Declare routes, lazy components, and loaders"
+    href="/docs/dev/plugins/routes"
   />
 </Cards>

@@ -1,6 +1,8 @@
 import { z } from "@hono/zod-openapi";
 import { describe, expectTypeOf, it } from "vitest";
 
+import type { ApiPluginContract } from "@/lib/fetcher/contract";
+
 import { buildModule } from "@/api/lib/module";
 import { buildApiPlugin } from "@/api/lib/plugin";
 import { buildRoute } from "@/api/lib/route";
@@ -110,9 +112,11 @@ const notesApiPlugin = () =>
     ],
   });
 
+type NotesApiPlugin = ApiPluginContract<ReturnType<typeof notesApiPlugin>>;
+
 declare module "../../lib/fetcher/registry" {
   interface ApiPluginRegistry {
-    "@acme/notes": typeof notesApiPlugin;
+    "@acme/notes": NotesApiPlugin;
   }
 }
 
@@ -124,6 +128,37 @@ describe("the plugin API keeps its literal shape", () => {
     expectTypeOf(plugin.modules[0]).toEqualTypeOf<typeof notesModule>();
     expectTypeOf(plugin.modules).toHaveProperty("length");
     expectTypeOf(plugin.modules.length).toEqualTypeOf<2>();
+  });
+});
+
+describe("the contract carries the API surface and nothing else", () => {
+  it("keeps the literal plugin id", () => {
+    expectTypeOf<NotesApiPlugin["pluginId"]>().toEqualTypeOf<"@acme/notes">();
+  });
+
+  it("flattens every module path, at every depth", () => {
+    expectTypeOf<NotesApiPlugin["modulePaths"]>().toEqualTypeOf<
+      "content" | "content/posts" | "notes" | "notes/tags" | "notes/tags/colors"
+    >();
+  });
+
+  it("correlates plugin, module, path and method on every endpoint", () => {
+    type Colors = Extract<
+      NotesApiPlugin["endpoints"],
+      { module: "notes/tags/colors" }
+    >;
+
+    expectTypeOf<Colors["plugin"]>().toEqualTypeOf<"@acme/notes">();
+    expectTypeOf<Colors["path"]>().toEqualTypeOf<"/">();
+    expectTypeOf<Colors["method"]>().toEqualTypeOf<"get">();
+  });
+
+  it("exposes no runtime member of the plugin it was built from", () => {
+    type Members = keyof NotesApiPlugin;
+
+    expectTypeOf<Members>().toEqualTypeOf<
+      "endpoints" | "modulePaths" | "modules" | "pluginId"
+    >();
   });
 });
 
@@ -245,6 +280,19 @@ describe("the universal fetcher rejects what the registry does not describe", ()
     });
   });
 
+  it("reports the field that is wrong, and only that field", async () => {
+    // A module nobody serves has no paths and no methods either, so the two
+    // fields that depend on it stay the caller's own rather than becoming
+    // `never` and burying the one mistake under three errors.
+    await fetcher({
+      plugin: "@acme/notes",
+      method: "get",
+      // @ts-expect-error -- not a module of `@acme/notes`
+      module: "does-not-exist",
+      path: "/anything",
+    });
+  });
+
   it("rejects a path the module does not serve", async () => {
     await fetcher({
       plugin: "@acme/notes",
@@ -258,11 +306,18 @@ describe("the universal fetcher rejects what the registry does not describe", ()
   it("rejects a method the route does not answer", async () => {
     await fetcher({
       plugin: "@acme/notes",
-      args: { query: {} },
       // @ts-expect-error -- the public list is a `get`
       method: "delete",
       module: "content/posts",
       path: "/",
+    });
+
+    await fetcher({
+      plugin: "@acme/notes",
+      // @ts-expect-error -- `/{id}/pin` is a `post`
+      method: "get",
+      module: "notes",
+      path: "/{id}/pin",
     });
   });
 

@@ -10,6 +10,7 @@
 /.swcrc
 /components.json
 /global.d.ts
+/test-fixtures
 /tsup.config.ts
 /vitest.config.ts
 /tsconfig.json

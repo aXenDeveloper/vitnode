@@ -224,7 +224,9 @@ export const helloModule = buildModule({
 `;
 
 export const pluginApiConfigTemplate = (pluginName: string): string =>
-  `import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+  `import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { CONFIG_PLUGIN } from "@/const";
 
@@ -235,30 +237,53 @@ export const ${pluginApiVariableName(pluginName)} = () =>
     pluginId: CONFIG_PLUGIN.pluginId,
     modules: [helloModule],
   });
+
+/**
+ * What an application's generated api-registry.gen.ts imports to make this
+ * plugin's routes callable through the fetcher.
+ *
+ * Reduced here, once, to the module tree and the route definitions - so no app
+ * that installs this plugin re-derives them, and none of the Hono, database or
+ * secret code behind the factory is reachable from a browser build.
+ */
+export type VitNodeApiPlugin = ApiPluginContract<
+  ReturnType<typeof ${pluginApiVariableName(pluginName)}>
+>;
 `;
 
-export const pluginGlobalTypesTemplate = (pluginName: string): string =>
+/**
+ * `test-fixtures/api-registry.d.ts` - what makes this plugin's own pages
+ * type-check before any application has installed it.
+ *
+ * The entry an app's generated `src/api-registry.gen.ts` will write, kept here
+ * rather than in `global.d.ts` and kept out of the published package: a plugin
+ * that registered itself would add its routes to the registry of every project
+ * that installed it, whether or not that project configured it.
+ */
+export const pluginApiRegistryFixtureTemplate = (pluginName: string): string =>
+  `import type { VitNodeApiPlugin } from "../src/config.api";
+
+declare module "@vitnode/core/lib/fetcher/registry" {
+  interface ApiPluginRegistry {
+    "${pluginName}": VitNodeApiPlugin;
+  }
+}
+
+export type { ApiPluginRegistry } from "@vitnode/core/lib/fetcher/registry";
+`;
+
+export const pluginGlobalTypesTemplate = (): string =>
   `/// <reference types="use-intl" />
 
 import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
 import core from "@vitnode/core/locales/en.json" with { type: "json" };
 import plugin from "./src/locales/en.json" with { type: "json" };
 
-import type { ${pluginApiVariableName(pluginName)} } from "./src/config.api";
-
 declare module "use-intl" {
   interface AppConfig {
     Messages: typeof plugin & typeof core & typeof coreApi;
   }
 }
-
-declare module "@vitnode/core/lib/fetcher/registry" {
-  interface ApiPluginRegistry {
-    "${pluginName}": typeof ${pluginApiVariableName(pluginName)};
-  }
-}
-
-export type { ApiPluginRegistry } from "@vitnode/core/lib/fetcher/registry";
 `;
 
 /**
@@ -292,7 +317,9 @@ export const pluginPackageExports = (): Record<
 export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
-  "global.d.ts": pluginGlobalTypesTemplate(pluginName),
+  "global.d.ts": pluginGlobalTypesTemplate(),
+  "test-fixtures/api-registry.d.ts":
+    pluginApiRegistryFixtureTemplate(pluginName),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
   "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),

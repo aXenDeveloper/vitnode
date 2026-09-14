@@ -276,9 +276,20 @@ describe("the browser transport is browser-shaped on its own", () => {
   it("reaches the core API plugin through the registry as a type and nothing else", () => {
     const registry = stripComments(readFileSync(REGISTRY, "utf8"));
 
+    // The already-reduced contract, not the plugin object: the registry's job
+    // is to name an API surface, not to resolve one.
     expect(registry).toMatch(
-      /import type \{ newBuildPluginApiCore \} from "@\/api\/plugin";/,
+      /import type \{ VitNodeApiPlugin \} from "@\/api\/plugin";/,
     );
     expect(registry).not.toMatch(/^import \{/m);
+  });
+
+  it("registers core and leaves every other plugin to the application", () => {
+    const registry = stripComments(readFileSync(REGISTRY, "utf8"));
+    const entries = [...registry.matchAll(/^\s*"([^"]+)":/gm)].map(
+      match => match[1],
+    );
+
+    expect(entries).toEqual(["@vitnode/core"]);
   });
 });

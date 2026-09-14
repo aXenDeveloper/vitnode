@@ -3,6 +3,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
+import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 
 import {
@@ -21,6 +22,8 @@ import type { WebSocketConfig } from "./websocket";
 import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 import { applyModuleTags } from "./openapi-tags";
+
+export type { ApiPluginContract };
 
 export interface BuildPluginApiReturn<
   P extends string = string,

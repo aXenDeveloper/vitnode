@@ -9,11 +9,10 @@ import { config } from "dotenv";
 
 import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
 import type {
-  FetcherRequest,
+  FetcherCall,
   FetcherRequestOptions,
-  FetcherResponse,
-  PluginRouteMethod,
   RegisteredPluginId,
+  ResponseFor,
 } from "@/lib/fetcher/types";
 
 import { CONFIG } from "@/lib/config";
@@ -84,31 +83,31 @@ export async function fetcher<
   P extends RegisteredPluginId,
   M extends string,
   Path extends string,
-  Method extends string = PluginRouteMethod<P, M, Path>,
+  Method extends string,
 >({
-  plugin,
-  module,
-  path,
-  method,
-  args,
-  options,
-  formData,
   additionalHeaders,
   allowSaveCookies = false,
+  args,
   captchaToken,
+  formData,
+  method,
+  module,
+  options,
   origin,
+  path,
+  plugin,
   withPagination = false,
-}: FetcherRequest<P, M, Path, Method> & FetcherServerOptions): Promise<
-  FetcherResponse<P, M, Path, Method>
+}: FetcherCall<P, M, Path, Method, FetcherServerOptions>): Promise<
+  ResponseFor<P, M, Path, Method>
 > {
   const response = await coreFetcher<P, M, Path, Method>({
-    plugin,
-    module,
-    path,
-    method,
     args,
-    options,
     formData,
+    method,
+    module,
+    options,
+    path,
+    plugin,
     withPagination,
     additionalHeaders: {
       ...getForwardedApiHeaders({ captchaToken }),
@@ -118,7 +117,7 @@ export async function fetcher<
     // request's own origin otherwise - and an explicit `origin` on the call
     // overrides both.
     origin: origin ?? resolveApiOrigin(),
-  } as FetcherRequest<P, M, Path, Method> & FetcherRequestOptions);
+  } as FetcherCall<P, M, Path, Method, FetcherRequestOptions>);
 
   if (allowSaveCookies && shouldSaveApiCookies((response as Response).status)) {
     saveApiCookies(response);

@@ -1,3 +1,5 @@
+import type { ApiPluginContract } from "@/lib/fetcher/contract";
+
 import { CONFIG_PLUGIN } from "@/config";
 
 import { buildApiPlugin } from "./lib/plugin";
@@ -75,3 +77,5 @@ export const newBuildPluginApiCore = buildApiPlugin({
     },
   },
 });
+
+export type VitNodeApiPlugin = ApiPluginContract<typeof newBuildPluginApiCore>;

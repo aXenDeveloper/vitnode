@@ -18,17 +18,26 @@ const SHOP: ResolvedApiPluginModule = {
 };
 
 describe("generateApiRegistrySource", () => {
-  it("imports every plugin API module as a type and nothing else", () => {
+  it("names one reduced type per plugin rather than a module namespace", () => {
     const source = generateApiRegistrySource([BLOG, SHOP]);
 
     expect(source).toContain(
-      "import type * as apiPlugin0 from '@acme/blog/config.api'",
+      "import type { VitNodeApiPlugin as ApiPlugin0 } from '@acme/blog/config.api'",
     );
     expect(source).toContain(
-      "import type * as apiPlugin1 from '@acme/shop/config.api'",
+      "import type { VitNodeApiPlugin as ApiPlugin1 } from '@acme/shop/config.api'",
     );
+    // A namespace import would make the registry resolve every export of a
+    // plugin's API config, and searching them for the factory.
+    expect(source).not.toContain("* as");
+  });
+
+  it("imports types and never values, and executes nothing", () => {
+    const source = generateApiRegistrySource([BLOG, SHOP]);
+
     expect(source).not.toMatch(/^import (?!type )/m);
     expect(source).not.toContain("()");
+    expect(source).not.toContain("typeof ");
   });
 
   it("augments the registry the fetcher reads, keyed by plugin id", () => {
@@ -36,7 +45,7 @@ describe("generateApiRegistrySource", () => {
 
     expect(source).toContain(`declare module '${API_REGISTRY_SPECIFIER}'`);
     expect(source).toContain("interface ApiPluginRegistry {");
-    expect(source).toContain("'@acme/blog': typeof apiPlugin0");
+    expect(source).toContain("'@acme/blog': ApiPlugin0");
   });
 
   it("sorts by plugin id, whatever order it was handed", () => {
@@ -54,7 +63,7 @@ describe("generateApiRegistrySource", () => {
     const source = generateApiRegistrySource([]);
 
     expect(source).toContain("interface ApiPluginRegistry {\n  }");
-    expect(source).not.toContain("import ");
+    expect(source).not.toMatch(/^import /m);
     expect(
       source
         .trimEnd()
@@ -81,7 +90,7 @@ describe("generateApiRegistrySource", () => {
     ]);
 
     expect(source).toContain("'@acme/it\\'s/config.api'");
-    expect(source).toContain("'@acme/it\\'s': typeof apiPlugin0");
+    expect(source).toContain("'@acme/it\\'s': ApiPlugin0");
   });
 
   it("is a pure function of its input", () => {

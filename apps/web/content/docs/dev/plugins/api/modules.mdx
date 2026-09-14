@@ -89,30 +89,45 @@ here is callable, and checked, the moment you save.
   </Step>
   <Step>
 
-### Register the API type for your own pages
+### Export the type an application registers
 
 Your pages call the endpoint through the universal fetcher, and the fetcher
-looks the plugin up in the API plugin registry. Register yours once, in the
-plugin's `global.d.ts`, as a **type** - `create-vitnode-app --plugin` writes
-this file for you:
+looks the plugin up in the API plugin registry. Export one reduced type beside
+your factory - `create-vitnode-app --plugin` writes this for you:
 
-```ts title="plugins/site-notes/global.d.ts"
-import type { siteNotesApiPlugin } from './src/config.api'
+```ts title="plugins/site-notes/src/config.api.ts"
+import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
 
-declare module '@vitnode/core/lib/fetcher/registry' {
-  interface ApiPluginRegistry {
-    '@acme/site-notes': typeof siteNotesApiPlugin // [!code ++]
-  }
-}
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
-export type { ApiPluginRegistry } from '@vitnode/core/lib/fetcher/registry'
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({ modules: [notesModule], pluginId: '@acme/site-notes' })
+
+// [!code ++:3]
+export type VitNodeApiPlugin = ApiPluginContract<
+  ReturnType<typeof siteNotesApiPlugin>
+>
 ```
 
-`import type` is the whole point: the factory is never executed here, so none
-of the Hono, database or secret code behind it is ever reached by a browser
-build. The app that installs your plugin writes its own entry into its
-`src/api-registry.gen.ts`, so this file is for developing the plugin on its
-own.
+`ApiPluginContract` keeps the four things a call needs - the literal plugin id,
+every module path you serve, your module tree and your route definitions - and
+drops everything else. Your Hono application, content models, event listeners,
+queue tasks, WebSockets, search indexers and messages are runtime concerns, so
+an app that installs your plugin never resolves them to type-check a call.
+
+`import type` is the whole point: the factory is never executed here, so none of
+the Hono, database or secret code behind it is ever reached by a browser build.
+
+<Callout type="warn" title="A plugin never registers itself">
+  Your package augments nothing. The app that installs you writes the entry into
+  its own generated `src/api-registry.gen.ts`, from the plugins it configured. A
+  package that registered itself would put its routes into the registry of every
+  project that merely installed it.
+
+  To type-check your own pages before any app has installed the plugin, the
+  scaffold writes `test-fixtures/api-registry.d.ts` - the same entry an app
+  generates, kept outside `src` and out of the published package.
+</Callout>
 
   </Step>
   <Step>
