@@ -1,7 +1,8 @@
 import { cn } from "cn";
+import { Icon } from "lucide-react";
 import React from "react";
 
-import { loadLucideIcons } from "./icon-registry";
+import { loadLucideIcon } from "./icon-registry";
 
 export interface DynamicIconProps {
   absoluteStrokeWidth?: boolean;
@@ -12,9 +13,9 @@ export interface DynamicIconProps {
 }
 
 const ResolvedIcon = ({ name, ...props }: DynamicIconProps) => {
-  const Icon = React.use(loadLucideIcons()).get(name);
+  const icon = React.use(loadLucideIcon(name));
 
-  return Icon ? React.createElement(Icon, props) : null;
+  return icon ? <Icon icon={icon} {...props} /> : null;
 };
 
 export const DynamicIcon = ({
