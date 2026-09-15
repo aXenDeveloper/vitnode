@@ -1,9 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
   pluginApiConfigTemplate,
   pluginApiModuleTemplate,
-  pluginApiRegistryFixtureTemplate,
   pluginApiRouteTemplate,
   pluginApiVariableName,
   pluginConfigTemplate,
@@ -239,7 +240,6 @@ describe("the generated constant", () => {
       .filter(
         ([file]) =>
           file !== "global.d.ts" &&
-          file !== "test-fixtures/api-registry.d.ts" &&
           file !== "src/const.ts" &&
           file !== "src/locales/en.json" &&
           file !== "src/pages/home-page.tsx" &&
@@ -303,22 +303,8 @@ describe("the generated type registrations", () => {
     expect(types).not.toContain("fetcher/registry");
   });
 
-  it("registers the plugin for its own type-checking, outside the package", () => {
-    const fixture = pluginApiRegistryFixtureTemplate("@acme/blog");
-
-    expect(fixture).toContain(
-      'import type { VitNodeApiPlugin } from "../src/config.api";',
-    );
-    expect(fixture).toContain('"@acme/blog": VitNodeApiPlugin;');
-    // A `declare module` merges only into a module the program has loaded.
-    expect(fixture).toContain(
-      'export type { ApiPluginRegistry } from "@vitnode/core/lib/fetcher/registry";',
-    );
-  });
-
   it("evaluates nothing", () => {
     // A `.d.ts` that ran the factory would build a Hono app at type-check time.
-    expect(pluginApiRegistryFixtureTemplate("blog")).not.toContain("()");
     expect(pluginGlobalTypesTemplate()).not.toContain("()");
   });
 });
@@ -402,6 +388,19 @@ describe("the generated package exports", () => {
   });
 });
 
+const templateTsconfigInclude = (): string[] =>
+  (
+    JSON.parse(
+      readFileSync(
+        join(
+          import.meta.dirname,
+          "../../../copy-of-vitnode-plugin/root/tsconfig.json",
+        ),
+        "utf-8",
+      ),
+    ) as { include: string[] }
+  ).include;
+
 describe("the scaffold as a whole", () => {
   it("writes a file for every module its route tree names", () => {
     // The failure this prevents: a `lazy()` naming a module the scaffold does
@@ -431,7 +430,6 @@ describe("the scaffold as a whole", () => {
     expect(Object.keys(files)).toContain("src/config.api.ts");
     expect(Object.keys(files)).toContain("src/const.ts");
     expect(Object.keys(files)).toContain("global.d.ts");
-    expect(Object.keys(files)).toContain("test-fixtures/api-registry.d.ts");
     expect(Object.keys(files)).not.toContain("src/api/client.ts");
   });
 
@@ -450,13 +448,26 @@ describe("the scaffold as a whole", () => {
     // reaches an app through its package exports, and the app's own generated
     // registry is rewritten from the plugin list on every build.
     Object.keys(pluginRouteScaffold("blog")).forEach(file => {
-      expect(
-        file.startsWith("src/") ||
-          file.startsWith("test-fixtures/") ||
-          file === "global.d.ts",
-      ).toBe(true);
+      expect(file.startsWith("src/") || file === "global.d.ts").toBe(true);
       expect(file).not.toContain("..");
     });
+  });
+
+  it("writes only into directories the template tsconfig compiles", () => {
+    // The failure this prevents: a scaffolded file TypeScript never loads.
+    Object.keys(pluginRouteScaffold("@acme/blog")).forEach(file => {
+      expect(templateTsconfigInclude()).toContain(
+        file.includes("/") ? file.slice(0, file.indexOf("/")) : file,
+      );
+    });
+  });
+
+  it("compiles the directory `vitnode build` generates into", () => {
+    // `types/api-registry.gen.ts` is what lets the home page's `fetcher` call
+    // name this plugin. The scaffold does not write it - core does, on every
+    // build - and outside `include` it is inert, which fails the plugin's own
+    // `vitnode build` on the page the scaffold just wrote.
+    expect(templateTsconfigInclude()).toContain("types");
   });
 
   it("is a pure function of the plugin name", () => {

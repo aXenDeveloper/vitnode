@@ -10,6 +10,7 @@
 /.swcrc
 /components.json
 /global.d.ts
+/types
 /tsup.config.ts
 /vitest.config.ts
 /tsconfig.json

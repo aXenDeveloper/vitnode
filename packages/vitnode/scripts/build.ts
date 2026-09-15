@@ -1,6 +1,8 @@
 import { runInteractiveShellCommand } from "./run-interactive-shell-command.js";
+import { writePluginApiRegistry } from "./write-plugin-api-registry.js";
 
 export const buildPlugin = async () => {
+  writePluginApiRegistry();
   await runInteractiveShellCommand("tsc", ["-p", "tsconfig.build.json"]);
   await runInteractiveShellCommand("swc", [
     "src",

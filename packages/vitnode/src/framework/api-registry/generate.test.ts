@@ -5,6 +5,7 @@ import type { ResolvedApiPluginModule } from "./types.js";
 import {
   API_REGISTRY_SPECIFIER,
   generateApiRegistrySource,
+  generatePluginApiRegistrySource,
 } from "./generate.js";
 
 const BLOG: ResolvedApiPluginModule = {
@@ -96,6 +97,46 @@ describe("generateApiRegistrySource", () => {
   it("is a pure function of its input", () => {
     expect(generateApiRegistrySource([BLOG, SHOP])).toBe(
       generateApiRegistrySource([BLOG, SHOP]),
+    );
+  });
+});
+
+describe("generatePluginApiRegistrySource", () => {
+  it("registers the one plugin against its own API config", () => {
+    const source = generatePluginApiRegistrySource("@acme/blog");
+
+    expect(source).toContain(
+      "import type { VitNodeApiPlugin } from '../src/config.api'",
+    );
+    expect(source).toContain("'@acme/blog': VitNodeApiPlugin");
+  });
+
+  it("augments the module an application's registry augments", () => {
+    const source = generatePluginApiRegistrySource("@acme/blog");
+
+    // A `declare module` merges only into a module the program has loaded, so
+    // the re-export is what pulls the registry in.
+    expect(source).toContain(`declare module '${API_REGISTRY_SPECIFIER}'`);
+    expect(source).toContain(
+      `export type { ApiPluginRegistry } from '${API_REGISTRY_SPECIFIER}'`,
+    );
+  });
+
+  it("imports types and never values, and executes nothing", () => {
+    const source = generatePluginApiRegistrySource("@acme/blog");
+
+    expect(source).not.toMatch(/^import (?!type )/m);
+    expect(source).not.toContain("()");
+    expect(source).not.toContain("typeof ");
+  });
+
+  it("escapes a plugin id rather than pasting it into a literal", () => {
+    expect(generatePluginApiRegistrySource("it's")).toContain("'it\\'s'");
+  });
+
+  it("is a pure function of the plugin id", () => {
+    expect(generatePluginApiRegistrySource("@acme/blog")).toBe(
+      generatePluginApiRegistrySource("@acme/blog"),
     );
   });
 });

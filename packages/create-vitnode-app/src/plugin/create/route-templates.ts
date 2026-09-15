@@ -251,27 +251,6 @@ export type VitNodeApiPlugin = ApiPluginContract<
 >;
 `;
 
-/**
- * `test-fixtures/api-registry.d.ts` - what makes this plugin's own pages
- * type-check before any application has installed it.
- *
- * The entry an app's generated `src/api-registry.gen.ts` will write, kept here
- * rather than in `global.d.ts` and kept out of the published package: a plugin
- * that registered itself would add its routes to the registry of every project
- * that installed it, whether or not that project configured it.
- */
-export const pluginApiRegistryFixtureTemplate = (pluginName: string): string =>
-  `import type { VitNodeApiPlugin } from "../src/config.api";
-
-declare module "@vitnode/core/lib/fetcher/registry" {
-  interface ApiPluginRegistry {
-    "${pluginName}": VitNodeApiPlugin;
-  }
-}
-
-export type { ApiPluginRegistry } from "@vitnode/core/lib/fetcher/registry";
-`;
-
 export const pluginGlobalTypesTemplate = (): string =>
   `/// <reference types="use-intl" />
 
@@ -318,8 +297,6 @@ export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
   "global.d.ts": pluginGlobalTypesTemplate(),
-  "test-fixtures/api-registry.d.ts":
-    pluginApiRegistryFixtureTemplate(pluginName),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
   "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),

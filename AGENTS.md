@@ -41,7 +41,7 @@ import { Activity } from "react";
 - Never annotate the result; the fetcher infers it. Put the shared contract on the feature's own `*Fetcher` type instead.
 - `args` is required exactly when the route declares a body, params or a query.
 - `captchaToken` for captcha-gated routes.
-- `rawFetcher` only for generated Content Engine admin modules, which have no type to infer from. It is universal too, with the same server-only twin. A content type's *public* routes are typed: `module: "content/<publicApi.path>"`.
+- `rawFetcher` only for generated Content Engine admin modules, which have no type to infer from. It is universal too, with the same server-only twin. A content type's _public_ routes are typed: `module: "content/<publicApi.path>"`.
 
 ### Caching APIs
 
@@ -102,7 +102,4 @@ npm i x
 # Testing
 
 - Write and run vitest unit tests for all new features and bug fixes - skip only if vitest isn't configured.
-- Don't write tests:
-  - for trivial code unless they have complex logic or edge cases
-  - for tests where it uses a database or external API
-  - how UI should be rendered (use playwright for that to write e2e tests)
+- Do not test trivial code, config, database models, third-party libraries or UI components.
