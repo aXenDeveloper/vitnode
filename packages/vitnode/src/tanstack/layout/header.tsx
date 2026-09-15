@@ -3,6 +3,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createTranslator } from "use-intl";
 
+import type { HeaderNavItem } from "@/views/layouts/theme/header/header-nav";
+
 import { LogoVitNodeBrand } from "@/components/logo-vitnode";
 import { HeaderLayoutContent } from "@/views/layouts/theme/header/header-content";
 import {
@@ -18,6 +20,46 @@ export const HEADER_NAMESPACES = ["core.search"] as const;
 
 export const headerIntlQueryOptions = ({ locale }: { locale: string }) =>
   intlQueryOptions({ locale, namespaces: HEADER_NAMESPACES });
+
+const EXAMPLE_NAV_ITEMS: HeaderNavItem[] = [
+  {
+    href: "/example-community",
+    items: [
+      {
+        description: "Threads from everyone building on VitNode.",
+        href: "/discover",
+        label: "Discussions",
+      },
+      {
+        description: "Who is here and what they are shipping.",
+        href: "/search",
+        label: "Members",
+      },
+    ],
+    label: "Community",
+  },
+  {
+    href: "/example-resources",
+    items: [
+      {
+        description: "Guides, the API reference and every plugin.",
+        href: "/docs",
+        label: "Documentation",
+      },
+      {
+        description: "Release notes, in order, newest first.",
+        href: "/discover",
+        label: "Changelog",
+      },
+      {
+        description: "Ask a question and get an answer from the team.",
+        href: "/search",
+        label: "Support",
+      },
+    ],
+    label: "Resources",
+  },
+];
 
 interface HeaderNavMessages {
   core: { search: { nav: { discover: string; search: string } } };
@@ -43,10 +85,13 @@ export const Header = ({
   return (
     <HeaderLayoutContent
       logo={logo}
-      navigation={headerNavItems({
-        discover: t(HEADER_NAV_MESSAGE_KEYS.discover),
-        search: t(HEADER_NAV_MESSAGE_KEYS.search),
-      })}
+      navigation={[
+        ...headerNavItems({
+          discover: t(HEADER_NAV_MESSAGE_KEYS.discover),
+          search: t(HEADER_NAV_MESSAGE_KEYS.search),
+        }),
+        ...EXAMPLE_NAV_ITEMS,
+      ]}
       user={user}
     />
   );
