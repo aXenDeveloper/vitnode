@@ -59,6 +59,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "embla-carousel-react",
   "input-otp",
   "lucide-react",
+  "lucide-react/dynamicIconImports.mjs",
   "motion/react",
   "react-colorful",
   "react-resizable-panels",

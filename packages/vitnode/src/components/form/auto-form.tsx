@@ -285,9 +285,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
             >
               {component({
                 field,
-                children: nestedFields.length
-                  ? nestedFields.map(renderField)
-                  : undefined,
+                ...(nestedFields.length
+                  ? { children: nestedFields.map(renderField) }
+                  : {}),
                 description:
                   typeof params.description === "string"
                     ? params.description

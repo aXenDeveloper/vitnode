@@ -7,7 +7,7 @@ import type { EmojiIconValue } from "@/lib/emoji-icon";
 import { Button } from "./button";
 import { EmojiPicker } from "./emoji-picker";
 import { IconPicker } from "./icon-picker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "./tabs";
 
 const PANEL_HEIGHT = 288;
 
@@ -54,22 +54,24 @@ export const EmojiIconPickerPanel = ({
         )}
       </div>
 
-      <TabsContent value="emoji">
-        <EmojiPicker
-          autoFocus
-          height={PANEL_HEIGHT}
-          onSelect={emoji => onChange({ type: "emoji", value: emoji })}
-        />
-      </TabsContent>
+      <TabsPanels>
+        <TabsContent value="emoji">
+          <EmojiPicker
+            autoFocus
+            height={PANEL_HEIGHT}
+            onSelect={emoji => onChange({ type: "emoji", value: emoji })}
+          />
+        </TabsContent>
 
-      <TabsContent value="icon">
-        <IconPicker
-          autoFocus
-          height={PANEL_HEIGHT}
-          onSelect={name => onChange({ type: "icon", value: name })}
-          value={value?.type === "icon" ? value.value : undefined}
-        />
-      </TabsContent>
+        <TabsContent value="icon">
+          <IconPicker
+            autoFocus
+            height={PANEL_HEIGHT}
+            onSelect={name => onChange({ type: "icon", value: name })}
+            value={value?.type === "icon" ? value.value : undefined}
+          />
+        </TabsContent>
+      </TabsPanels>
     </Tabs>
   );
 };

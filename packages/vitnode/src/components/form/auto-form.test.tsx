@@ -7,7 +7,7 @@ import { z } from "zod";
 import messages from "@/locales/en.json";
 
 import type { FormMode } from "../ui/form";
-import type { AutoFormOnSubmit } from "./auto-form";
+import type { AutoFormOnSubmit, ItemAutoFormComponentProps } from "./auto-form";
 
 import { setFormFieldError } from "../ui/form";
 import { AutoForm } from "./auto-form";
@@ -303,5 +303,35 @@ describe("AutoFormArray", () => {
     });
 
     expect(amounts().map(input => input.value)).toEqual(["1", "3"]);
+  });
+});
+
+describe("field props", () => {
+  it("omits children entirely when a field has no nested fields", async () => {
+    const received: ItemAutoFormComponentProps[] = [];
+
+    await settled(() => {
+      render(
+        <IntlProvider locale="en" messages={messages}>
+          <AutoForm
+            fields={[
+              {
+                id: "name",
+                component: fieldProps => {
+                  received.push(fieldProps);
+
+                  return <AutoFormInput label="Name" {...fieldProps} />;
+                },
+              },
+            ]}
+            formSchema={nameSchema}
+            onSubmit={() => {}}
+          />
+        </IntlProvider>,
+      );
+    });
+
+    expect(received.length).toBeGreaterThan(0);
+    expect(received.every(props => !("children" in props))).toBe(true);
   });
 });

@@ -10,9 +10,17 @@ export const HEADER_NAV_MESSAGE_KEYS = {
   search: "nav.search",
 } as const;
 
-/** One link in the main nav. */
+/** One link inside a nav dropdown. */
+export interface HeaderNavChildItem {
+  description?: string;
+  href: string;
+  label: string;
+}
+
+/** One entry in the main nav - a link, or a dropdown when it carries `items`. */
 export interface HeaderNavItem {
   href: string;
+  items?: HeaderNavChildItem[];
   label: string;
 }
 
