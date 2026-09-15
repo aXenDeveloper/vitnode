@@ -139,6 +139,11 @@ export type {
 } from "./preview-token";
 export { contentPublicLocaleStates } from "./public-locales";
 export { buildContentPublicModule } from "./public-module";
+export type {
+  ContentPublicModule,
+  ContentPublicModuleOf,
+  ContentPublicRoutes,
+} from "./public-module";
 export { buildContentPublicRoutes } from "./public-routes";
 export {
   contentPublicSelection,

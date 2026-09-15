@@ -1,8 +1,7 @@
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
 import type { Device } from "./devices-query";
-
-import { usersModuleRef } from "./devices-query";
 
 /** Signing out one device. The id is the row's own `publicId`. */
 export interface RevokeDeviceArgs {
@@ -37,7 +36,8 @@ export const revokeDeviceInBrowser: RevokeDevice = async ({ publicId }) => {
   if (!isDevicePublicId(publicId)) return { error: { status: 400 } };
 
   try {
-    const response = await fetcherClient(usersModuleRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { params: { publicId } },
       method: "delete",
       module: "users",

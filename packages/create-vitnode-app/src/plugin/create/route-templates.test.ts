@@ -1,13 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  pluginApiClientTemplate,
   pluginApiConfigTemplate,
   pluginApiModuleTemplate,
   pluginApiRouteTemplate,
   pluginApiVariableName,
   pluginConfigTemplate,
   pluginConstTemplate,
+  pluginGlobalTypesTemplate,
   pluginMessagesTemplate,
   pluginPackageExports,
   pluginRouteModuleTemplate,
@@ -147,8 +149,9 @@ describe("the generated route module", () => {
     expect(imports).toEqual([
       "@vitnode/core/routing",
       "@vitnode/core/routing",
+      "@vitnode/core/tanstack/fetcher",
       "use-intl",
-      "@/api/client",
+      "@/const",
     ]);
     expect(imports).not.toContain("@tanstack/react-router");
   });
@@ -236,6 +239,7 @@ describe("the generated constant", () => {
     Object.entries(files)
       .filter(
         ([file]) =>
+          file !== "global.d.ts" &&
           file !== "src/const.ts" &&
           file !== "src/locales/en.json" &&
           file !== "src/pages/home-page.tsx" &&
@@ -279,20 +283,29 @@ describe("the generated API module", () => {
   });
 });
 
-describe("the generated API client", () => {
-  it("names the module as a type, which is what keeps Hono out of the browser", () => {
-    const client = pluginApiClientTemplate();
+describe("the generated type registrations", () => {
+  it("keeps the message tree registration a generated plugin always had", () => {
+    const types = pluginGlobalTypesTemplate();
 
-    expect(client).toContain(
-      'import type { helloModule } from "@/api/modules/hello/hello.module";',
+    expect(types).toContain('declare module "use-intl" {');
+    expect(types).toContain(
+      "Messages: typeof plugin & typeof core & typeof coreApi;",
     );
-    expect(client).not.toMatch(/^import \{[^}]*helloModule/m);
   });
 
-  it("annotates the client, which keeps the plugin's declarations small", () => {
-    expect(pluginApiClientTemplate()).toContain(
-      "export const helloApi: ApiClient<typeof helloModule> =",
-    );
+  it("registers no API from inside the package", () => {
+    // A package-level augmentation lands in the registry of every project that
+    // installs the plugin, configured or not. The app's generated registry is
+    // the one source of truth.
+    const types = pluginGlobalTypesTemplate();
+
+    expect(types).not.toContain("ApiPluginRegistry");
+    expect(types).not.toContain("fetcher/registry");
+  });
+
+  it("evaluates nothing", () => {
+    // A `.d.ts` that ran the factory would build a Hono app at type-check time.
+    expect(pluginGlobalTypesTemplate()).not.toContain("()");
   });
 });
 
@@ -304,6 +317,18 @@ describe("the generated API config", () => {
       'import { helloModule } from "./api/modules/hello/hello.module";',
     );
     expect(config).toContain("modules: [helloModule],");
+  });
+
+  it("exports the reduced type an application's registry imports", () => {
+    const config = pluginApiConfigTemplate("@acme/my-blog");
+
+    expect(config).toContain(
+      'import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";',
+    );
+    expect(config).toContain(
+      "export type VitNodeApiPlugin = ApiPluginContract<",
+    );
+    expect(config).toContain("ReturnType<typeof myBlogApiPlugin>");
   });
 
   it("exports a factory an app can import beside the UI one", () => {
@@ -363,6 +388,19 @@ describe("the generated package exports", () => {
   });
 });
 
+const templateTsconfigInclude = (): string[] =>
+  (
+    JSON.parse(
+      readFileSync(
+        join(
+          import.meta.dirname,
+          "../../../copy-of-vitnode-plugin/root/tsconfig.json",
+        ),
+        "utf-8",
+      ),
+    ) as { include: string[] }
+  ).include;
+
 describe("the scaffold as a whole", () => {
   it("writes a file for every module its route tree names", () => {
     // The failure this prevents: a `lazy()` naming a module the scaffold does
@@ -380,7 +418,7 @@ describe("the scaffold as a whole", () => {
     });
   });
 
-  it("writes a file for every module the API config and client name", () => {
+  it("writes a file for every module the API config names", () => {
     const files = pluginRouteScaffold("@acme/blog");
 
     expect(Object.keys(files)).toContain(
@@ -389,9 +427,10 @@ describe("the scaffold as a whole", () => {
     expect(Object.keys(files)).toContain(
       "src/api/modules/hello/hello.route.ts",
     );
-    expect(Object.keys(files)).toContain("src/api/client.ts");
     expect(Object.keys(files)).toContain("src/config.api.ts");
     expect(Object.keys(files)).toContain("src/const.ts");
+    expect(Object.keys(files)).toContain("global.d.ts");
+    expect(Object.keys(files)).not.toContain("src/api/client.ts");
   });
 
   it("writes the messages barrel the config registers", () => {
@@ -409,8 +448,26 @@ describe("the scaffold as a whole", () => {
     // reaches an app through its package exports, and the app's own generated
     // registry is rewritten from the plugin list on every build.
     Object.keys(pluginRouteScaffold("blog")).forEach(file => {
-      expect(file.startsWith("src/")).toBe(true);
+      expect(file.startsWith("src/") || file === "global.d.ts").toBe(true);
+      expect(file).not.toContain("..");
     });
+  });
+
+  it("writes only into directories the template tsconfig compiles", () => {
+    // The failure this prevents: a scaffolded file TypeScript never loads.
+    Object.keys(pluginRouteScaffold("@acme/blog")).forEach(file => {
+      expect(templateTsconfigInclude()).toContain(
+        file.includes("/") ? file.slice(0, file.indexOf("/")) : file,
+      );
+    });
+  });
+
+  it("compiles the directory `vitnode build` generates into", () => {
+    // `types/api-registry.gen.ts` is what lets the home page's `fetcher` call
+    // name this plugin. The scaffold does not write it - core does, on every
+    // build - and outside `include` it is inert, which fails the plugin's own
+    // `vitnode build` on the page the scaffold just wrote.
+    expect(templateTsconfigInclude()).toContain("types");
   });
 
   it("is a pure function of the plugin name", () => {

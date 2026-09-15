@@ -1,14 +1,10 @@
 import { z } from "zod";
 
-import type { adminModule } from "@/api/modules/admin/admin.module";
 import type { AdminSearchUser } from "@/views/admin/layouts/search/search-users";
 
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule } from "@/lib/fetcher-client";
 import { fetcher } from "@/tanstack/fetcher";
 import { MAX_SEARCH_RESULTS } from "@/views/admin/layouts/search/constants";
-
-const admin = clientModule<typeof adminModule>(CONFIG_PLUGIN.pluginId);
 
 export const adminUserSearchInputSchema = z.string().trim().min(1).max(128);
 
@@ -20,7 +16,8 @@ export const readAdminUserSearch = async (
   if (!parsed.success) return [];
 
   try {
-    const response = await fetcher(admin, {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: {
         query: { first: String(MAX_SEARCH_RESULTS), search: parsed.data },
       },

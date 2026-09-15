@@ -1,3 +1,5 @@
+import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { buildContentPublicModule } from "@vitnode/core/content/server";
 
@@ -19,3 +21,7 @@ export const blogApiPlugin = () =>
       }),
     ],
   });
+
+export type VitNodeApiPlugin = ApiPluginContract<
+  ReturnType<typeof blogApiPlugin>
+>;

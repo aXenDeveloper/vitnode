@@ -1,8 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { createTranslator } from "use-intl";
-
-import { intlQueryOptions } from "../i18n/query";
 import { middlewareConfigQueryOptions } from "./middleware-config";
 
 export const LOGIN_NAMESPACES = [
@@ -17,47 +14,20 @@ export interface AuthLoaderContext {
   queryClient: QueryClient;
 }
 
-/** What an auth route's loader returns, and therefore what `head` receives. */
-export interface AuthRouteData {
-  title: string;
-}
-
-const translateAuthTitle = (
-  locale: string,
-  messages: unknown,
-  key: "login" | "register",
-): string =>
-  createTranslator({
-    locale,
-    messages: messages as {
-      core: { global: { login: string; register: string } };
-    },
-    namespace: "core.global",
-  })(key);
-
-const loadAuthCard = async (
-  { locale, queryClient }: AuthLoaderContext,
-  namespaces: readonly string[],
-  key: "login" | "register",
-): Promise<AuthRouteData> => {
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...middlewareConfigQueryOptions(),
-      staleTime: "static",
-    }),
-  ]);
-
-  return { title: translateAuthTitle(locale, intl.messages, key) };
+/**
+ * What both auth cards need before they render: the deployment's middleware
+ * configuration, which decides which SSO buttons exist.
+ *
+ * The title is no longer here - it is one string from `core.global`, and `head`
+ * translates it directly now that the route declares its namespaces.
+ */
+export const loadAuthCard = async ({
+  queryClient,
+}: AuthLoaderContext): Promise<void> => {
+  await queryClient.query({
+    ...middlewareConfigQueryOptions(),
+    staleTime: "static",
+  });
 };
 
-/** {@link loadAuthCard} for `/login`. */
-export const loadLoginRoute = async (
-  context: AuthLoaderContext,
-): Promise<AuthRouteData> =>
-  await loadAuthCard(context, LOGIN_NAMESPACES, "login");
-
-export { loadAuthCard, translateAuthTitle };
+export const loadLoginRoute = loadAuthCard;

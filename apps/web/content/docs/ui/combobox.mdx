@@ -62,7 +62,7 @@ const formSchema = z.object({
 import { z } from "zod";
 import { AutoForm } from "@vitnode/core/components/form/auto-form";
 import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
-import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 ```
 
 ```ts
@@ -81,7 +81,8 @@ const formSchema = z.object({
         <AutoFormCombobox
           {...props}
           fetchData={async ({ search }) => {
-            const res = await fetcherClient(categoriesModule, {
+            const res = await fetcher({
+              plugin: "@acme/blog",
               path: "/",
               method: "get",
               module: "categories",

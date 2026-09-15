@@ -11,25 +11,18 @@ import type {
   DeleteAdminFiles,
   DeleteAdminFilesArgs,
 } from "@/views/admin/views/core/system/files/files-delete";
-import type {
-  AdminFilesPageFetcher,
-  AdminFilesParams,
-} from "@/views/admin/views/core/system/files/files-query";
+import type { AdminFilesParams } from "@/views/admin/views/core/system/files/files-query";
 
 import { shouldRefreshAfterBulkDelete } from "@/lib/files/bulk-delete";
-import { fetcher } from "@/tanstack/fetcher";
 import {
   deleteAdminFileInBrowser,
   deleteAdminFilesInBrowser,
 } from "@/views/admin/views/core/system/files/files-delete";
 import {
-  adminFilesPageFetcher,
   adminFilesQueryOptions,
   adminFilesQueryRoot,
+  fetchAdminFilesPage,
 } from "@/views/admin/views/core/system/files/files-query";
-
-const fetchAdminFilesPage: AdminFilesPageFetcher =
-  adminFilesPageFetcher(fetcher);
 
 export const adminFilesQuery = ({ params }: { params: AdminFilesParams }) =>
   adminFilesQueryOptions({ fetchPage: fetchAdminFilesPage, params });

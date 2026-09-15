@@ -2,12 +2,12 @@ import type { z } from "zod";
 
 import type { zodCreateRoleAdminSchema } from "@/api/modules/admin/roles/routes/create.route";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
 } from "@/views/admin/views/core/shared/admin-mutation";
-import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
 export type AdminRoleInput = z.infer<typeof zodCreateRoleAdminSchema>;
 
@@ -18,7 +18,8 @@ export const createAdminRole = async (
     expected: 201,
     parse: async response => (await response.json()) as { id: number },
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body },
         method: "post",
         module: "admin/roles",
@@ -35,7 +36,8 @@ export const updateAdminRole = async (
     expected: 200,
     parse: () => true as const,
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body, params: { id: String(id) } },
         method: "patch",
         module: "admin/roles",
@@ -64,7 +66,8 @@ export const deleteAdminRole = async (args: {
     expected: 200,
     parse: () => true as const,
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: deleteAdminRoleArgs(args),
         method: "delete",
         module: "admin/roles",

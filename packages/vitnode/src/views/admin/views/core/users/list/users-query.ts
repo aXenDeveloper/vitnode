@@ -1,7 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { adminModule } from "@/api/modules/admin/admin.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -10,11 +8,12 @@ import type {
 } from "@/views/admin/table/params";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
-  adminModuleRef as buildAdminModuleRef,
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { normalizeAdminTableParams } from "@/views/admin/table/params";
@@ -23,8 +22,6 @@ import {
   adminScopedQueryKey,
   adminScopedQueryRoot,
 } from "@/views/admin/views/core/shared/admin-scope";
-
-export const adminModuleRef = buildAdminModuleRef<typeof adminModule>();
 
 /** The columns `listUsersAdminRoute` sorts by. Anything else is a `400`. */
 export const ADMIN_USERS_ORDER_BY = ["createdAt", "name"] as const;
@@ -117,30 +114,29 @@ export type AdminUsersPageFetcher = (
   options?: { signal?: AbortSignal },
 ) => Promise<AdminUsersPage>;
 
-export const adminUsersPageFetcher =
-  (transport: UniversalFetcher): AdminUsersPageFetcher =>
-  async (params, { signal } = {}) => {
-    const response = await transport(adminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "admin/users",
-      options: { signal },
-      path: "/list",
-    });
+export const fetchAdminUsersPage: AdminUsersPageFetcher = async (
+  params,
+  { signal } = {},
+) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/users",
+    options: { signal },
+    path: "/list",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the users list",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the users list",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-export const fetchAdminUsersPageInBrowser: AdminUsersPageFetcher =
-  adminUsersPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const adminUsersQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_USERS_SCREEN, adminUserId);
@@ -155,7 +151,7 @@ export const adminUsersQueryKey = ({
 
 export const adminUsersQueryOptions = ({
   adminUserId,
-  fetchPage = fetchAdminUsersPageInBrowser,
+  fetchPage = fetchAdminUsersPage,
   params,
 }: {
   adminUserId: AdminIdentity;
@@ -204,7 +200,8 @@ export const adminUserOptionsFrom = (
 export const searchAdminUsersInBrowser: AdminUserSearchOptions =
   async search => {
     try {
-      const response = await fetcherClient(adminModuleRef, {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { query: { first: String(ADMIN_USER_SEARCH_LIMIT), search } },
         method: "get",
         module: "admin/users",

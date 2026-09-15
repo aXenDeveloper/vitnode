@@ -14,6 +14,7 @@ import {
 import { pathToFileURL } from "node:url";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
+import type { ResolvedApiPluginModule } from "../api-registry";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PackageMessagesSource } from "../package-messages";
 import type {
@@ -23,6 +24,7 @@ import type {
 } from "../plugin-routes";
 
 import { generateAdminNavSource } from "../admin-nav";
+import { generateApiRegistrySource } from "../api-registry";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
@@ -30,6 +32,7 @@ import {
 } from "../package-messages";
 import {
   compilePluginRoutes,
+  CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
   lazyImportSpecifier,
   pluginsFromLoadedConfig,
@@ -45,6 +48,8 @@ const LEGACY_MANIFEST_SUBPATH = "routes/manifest";
 const ADMIN_NAV_SUBPATH = "admin/nav";
 
 const ADMIN_CONTENT_SUBPATH = "admin/content";
+
+const API_CONFIG_SUBPATH = "config.api";
 
 const ERROR_PREFIX = "[VitNode plugin routes]";
 
@@ -63,6 +68,8 @@ const pathsFor = (appRoot: string) => ({
   config: join(appRoot, "src", "vitnode.config.ts"),
 
   adminNav: join(appRoot, "src", "admin-nav.gen.ts"),
+
+  apiRegistry: join(appRoot, "src", "api-registry.gen.ts"),
 
   contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
 
@@ -123,6 +130,15 @@ const readPluginRoutes = async (
   const file = resolvePackageFile(specifier);
 
   if (file === null) {
+    // Core always ships a routes module, so failing to resolve one means the
+    // package has not been built - which is worth saying outright rather than
+    // silently serving an application with none of its own screens.
+    if (pluginId === CORE_PLUGIN_ID) {
+      throw new Error(
+        `${ERROR_PREFIX} Could not resolve "${specifier}". Every VitNode application gets core's own routes from it, so this usually means @vitnode/core has not been built yet - run its \`build:plugins\` script.`,
+      );
+    }
+
     assertNoLegacyRouteManifest(pluginId, resolvePackageFile);
 
     return { source: { pluginId }, watch: null };
@@ -387,8 +403,13 @@ const discover = async (
     plugins,
     relative(appRoot, paths.config),
   );
+  // Core first, always, and never from the configured list: core is not a
+  // plugin, its screens are what makes an application a VitNode application, and
+  // an app that could forget to configure them would be an app with no `/login`.
+  // `assertPluginId` refuses a plugin that claims this id, so there is exactly
+  // one source under it.
   const loaded = await Promise.all(
-    pluginIds.map(async pluginId =>
+    [CORE_PLUGIN_ID, ...pluginIds].map(async pluginId =>
       readPluginRoutes(pluginId, resolvePackageFile),
     ),
   );
@@ -403,11 +424,17 @@ const discover = async (
       ADMIN_CONTENT_SUBPATH,
       resolvePackageFile,
     );
+  const apiRegistry = readOptionalPluginModules<ResolvedApiPluginModule>(
+    pluginIds,
+    API_CONFIG_SUBPATH,
+    resolvePackageFile,
+  );
 
   const watch = [
     ...loaded.flatMap(({ watch: file }) => file ?? []),
     ...adminNav.watch,
     ...contentRegistry.watch,
+    ...apiRegistry.watch,
   ];
 
   onLoaded?.(watch);
@@ -431,6 +458,7 @@ const discover = async (
 
   return {
     adminNav: adminNav.modules,
+    apiRegistry: apiRegistry.modules,
     compiled,
     contentRegistry: contentRegistry.modules,
     packageMessages,
@@ -450,19 +478,20 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-/** All four generated files, from one discovery pass. */
+/** All five generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
 ): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { adminNav, compiled, contentRegistry, packageMessages } =
+  const { adminNav, apiRegistry, compiled, contentRegistry, packageMessages } =
     await discover(appRoot, options, onLoaded);
 
   await Promise.all([
     writeIfChanged(paths.registry, compiled.source),
     writeIfChanged(paths.adminNav, generateAdminNavSource(adminNav)),
+    writeIfChanged(paths.apiRegistry, generateApiRegistrySource(apiRegistry)),
     writeIfChanged(
       paths.contentRegistry,
       generateContentRegistrySource(contentRegistry),

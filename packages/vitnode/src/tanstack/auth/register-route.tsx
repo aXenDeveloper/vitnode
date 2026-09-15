@@ -1,4 +1,4 @@
-import type { AuthLoaderContext, AuthRouteData } from "./login-route";
+import type { AuthLoaderContext } from "./login-route";
 
 import { loadAuthCard } from "./login-route";
 
@@ -8,8 +8,9 @@ export const REGISTER_NAMESPACES = [
   "core.auth.sso",
 ] as const;
 
-/** The strings and the deployment configuration `/register` needs. */
+/** The deployment configuration `/register` needs. Its title is in `head`. */
 export const loadRegisterRoute = async (
   context: AuthLoaderContext,
-): Promise<AuthRouteData> =>
-  await loadAuthCard(context, REGISTER_NAMESPACES, "register");
+): Promise<void> => {
+  await loadAuthCard(context);
+};

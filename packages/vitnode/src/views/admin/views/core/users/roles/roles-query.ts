@@ -1,6 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -9,8 +8,10 @@ import type {
 } from "@/views/admin/table/params";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
   describeAdminParams,
@@ -21,7 +22,6 @@ import {
   adminScopedQueryKey,
   adminScopedQueryRoot,
 } from "@/views/admin/views/core/shared/admin-scope";
-import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
 /** The columns `listRolesAdminRoute` sorts by. */
 export const ADMIN_ROLES_ORDER_BY = ["id", "createdAt", "updatedAt"] as const;
@@ -79,29 +79,25 @@ export type AdminRolesPageFetcher = (
   params: AdminRolesParams,
 ) => Promise<AdminRolesPage>;
 
-export const adminRolesPageFetcher =
-  (transport: UniversalFetcher): AdminRolesPageFetcher =>
-  async params => {
-    const response = await transport(adminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "admin/roles",
-      path: "/list",
-    });
+export const fetchAdminRolesPage: AdminRolesPageFetcher = async params => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/roles",
+    path: "/list",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the roles list",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the roles list",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-export const fetchAdminRolesPageInBrowser: AdminRolesPageFetcher =
-  adminRolesPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const adminRolesQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_ROLES_SCREEN, adminUserId);
@@ -116,7 +112,7 @@ export const adminRolesQueryKey = ({
 
 export const adminRolesQueryOptions = ({
   adminUserId,
-  fetchPage = fetchAdminRolesPageInBrowser,
+  fetchPage = fetchAdminRolesPage,
   params,
 }: {
   adminUserId: AdminIdentity;
@@ -154,7 +150,8 @@ export const adminRoleOptionsFrom = (
 
 export const searchAdminRolesInBrowser: AdminRoleSearch = async search => {
   try {
-    const response = await fetcherClient(adminModuleRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { query: { first: String(ADMIN_ROLE_SEARCH_LIMIT), search } },
       method: "get",
       module: "admin/roles",

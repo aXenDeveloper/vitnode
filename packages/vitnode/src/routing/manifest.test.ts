@@ -143,6 +143,46 @@ describe("normalising a declaration", () => {
 
     expect(route.area).toBe("admin");
   });
+
+  /**
+   * A component, not a lazy specifier: a router draws it before the route's own
+   * chunk has arrived, so it is carried beside the manifest rather than in it -
+   * the manifest is data, and a component is not something data can hold.
+   */
+  it("carries a route's pending component beside the manifest", () => {
+    const Pending = () => null;
+    const compiled = compilePluginRouteTrees([
+      catalog(
+        page("/catalog", { component: lazyPage(), pendingComponent: Pending }),
+      ),
+    ]);
+
+    expect(compiled.pendingComponents.get("@acme/catalog:page#/catalog")).toBe(
+      Pending,
+    );
+    expect(compiled.manifest[0]).not.toHaveProperty("pendingComponent");
+  });
+
+  it("holds only the routes that declared one", () => {
+    const compiled = compilePluginRouteTrees([
+      catalog(page("/catalog", { component: lazyPage() })),
+    ]);
+
+    expect(compiled.pendingComponents.size).toBe(0);
+  });
+
+  it("refuses a pending component that is not one", () => {
+    expect(() =>
+      buildPluginRouteManifest([
+        catalog(
+          page("/catalog", {
+            component: lazyPage(),
+            pendingComponent: "table" as never,
+          }),
+        ),
+      ]),
+    ).toThrow(/`pendingComponent` that is not a component \(got string\)/);
+  });
 });
 
 describe("ordering is decided by the paths, not by the registration order", () => {

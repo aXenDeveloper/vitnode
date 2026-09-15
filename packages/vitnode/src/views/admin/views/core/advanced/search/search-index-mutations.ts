@@ -1,6 +1,5 @@
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
-
-import { searchDebugAdminModuleRef } from "./search-index-query";
 
 /** What a mutation reports back. `error` is the API's own text. */
 export interface SearchIndexMutationResult {
@@ -26,13 +25,13 @@ export interface SearchIndexActions {
 export const rebuildSearchIndexInBrowser: RebuildSearchIndex =
   async itemType => {
     try {
-      const response = await fetcherClient(searchDebugAdminModuleRef, {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body: itemType ? { itemType } : {} },
         method: "post",
-        module: "debug",
+        module: "admin/debug",
         options: { credentials: "include" },
         path: "/search/rebuild",
-        prefixPath: "/admin",
       });
 
       if (!response.ok) return { error: await response.text() };
@@ -47,13 +46,13 @@ export const rebuildSearchIndexInBrowser: RebuildSearchIndex =
 export const clearSearchCollectionInBrowser: ClearSearchCollection =
   async itemType => {
     try {
-      const response = await fetcherClient(searchDebugAdminModuleRef, {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body: { itemType } },
         method: "post",
-        module: "debug",
+        module: "admin/debug",
         options: { credentials: "include" },
         path: "/search/clear",
-        prefixPath: "/admin",
       });
 
       if (!response.ok) return { error: await response.text() };

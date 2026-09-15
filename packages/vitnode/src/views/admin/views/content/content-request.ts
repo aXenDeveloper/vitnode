@@ -1,9 +1,8 @@
 import type { z } from "zod";
 
-import type { UniversalRawFetcher } from "@/lib/fetcher-client";
 import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
 
-import { rawFetcherClient } from "@/lib/fetcher-client";
+import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
 /** Which generated module a request is for. */
@@ -39,17 +38,10 @@ export const contentApiFetchArgs = ({
   query,
 });
 
-/**
- * One request to a generated content module, over whichever transport it is
- * handed. See {@link ContentApiFetch}.
- *
- * No headers of its own - the session cookie is the browser's to attach and the
- * server transport's to forward, and the API derives who is asking from it.
- */
-export const contentApiFetcher =
-  (transport: UniversalRawFetcher): ContentApiFetch =>
-  async (request, { signal } = {}) =>
-    await transport({ ...contentApiFetchArgs(request), options: { signal } });
+export const contentApiFetch: ContentApiFetch = async (
+  request,
+  { signal } = {},
+) => await rawFetcher({ ...contentApiFetchArgs(request), options: { signal } });
 
 /**
  * How one content request is carried.
@@ -65,10 +57,6 @@ export type ContentApiFetch = (
   request: ContentApiRequest,
   options?: { signal?: AbortSignal },
 ) => Promise<Response>;
-
-/** The browser half of the transport. */
-export const contentApiFetchInBrowser: ContentApiFetch =
-  contentApiFetcher(rawFetcherClient);
 
 /** A request paired with what it was for, so a failure can say. */
 export interface ContentApiRead<TSchema extends z.ZodType> {

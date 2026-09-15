@@ -37,7 +37,7 @@ When a user visits a page (e.g. `/blog`):
 | **1. Request**            | Browser                | Visitor navigates to `/blog`                                        |
 | **2. Routing**            | Server (SSR) / Browser | TanStack Router matches route and executes `loader`                 |
 | **3. Query Warming**      | Server / Browser       | `context.queryClient.query` executes isomorphic fetcher             |
-| **4. RPC Call**           | Server / Browser       | `fetcher` (server) or `fetcherClient` (browser) calls Hono endpoint |
+| **4. RPC Call**           | Server / Browser       | The universal `fetcher` calls the Hono endpoint by plugin id        |
 | **5. API Middleware**     | Server (Hono)          | Verifies session cookie, applies rate limits, injects `c.get(db)`   |
 | **6. Handler & Database** | Server (Hono)          | Handler validates input and queries PostgreSQL via Drizzle          |
 | **7. Response**           | Server / Browser       | JSON data hydrates TanStack Query cache and paints component        |

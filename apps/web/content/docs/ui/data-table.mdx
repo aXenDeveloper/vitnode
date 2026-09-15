@@ -330,19 +330,17 @@ When the set of options is small and known ahead of time, pass them directly via
 
 ### Async filters
 
-When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server. Use a [Server Action](https://react.dev/reference/rsc/server-functions) so the lookup runs server-side:
+When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server. The universal fetcher answers from the browser here, with the visitor's own cookies:
 
-```tsx title="search-roles.action.tsx"
-"use server";
-
+```tsx title="search-roles.tsx"
 import type { FilterOption } from "@vitnode/core/components/table/filters";
 
-import { adminModule } from "@/api/modules/admin/admin.module";
 import { RoleFormat } from "@vitnode/core/components/role-format";
-import { fetcher } from "@vitnode/core/lib/fetcher";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 export const searchRoles = async (search: string): Promise<FilterOption[]> => {
-  const res = await fetcher(adminModule, {
+  const res = await fetcher({
+    plugin: "@vitnode/core",
     path: "/list",
     method: "get",
     module: "admin/roles",
@@ -509,8 +507,7 @@ import {
   DataTable,
   SearchParamsDataTable,
 } from "@vitnode/core/components/table/data-table";
-import { userModule } from "@/api/modules/user/user.module";
-import { fetcher } from "@vitnode/core/lib/fetcher";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 export const UsersView = async ({
   searchParams,
@@ -518,10 +515,11 @@ export const UsersView = async ({
   searchParams: Promise<SearchParamsDataTable>;
 }) => {
   const query = await searchParams;
-  const res = await fetcher(userModule, {
-    path: "/users",
+  const res = await fetcher({
+    plugin: "@vitnode/core",
+    path: "/list",
     method: "get",
-    module: "user",
+    module: "admin/users",
     args: {
       query,
     },

@@ -103,7 +103,7 @@ describe("readPluginRouteModule", () => {
         "p:page",
       ),
     ).toThrow(
-      /`route\.breadcrumb`, which must be a component or `false` \(got string\)/,
+      /`route\.breadcrumb`, which must be a component, a breadcrumbGroup\(\), or `false` \(got string\)/,
     );
   });
 
@@ -114,8 +114,50 @@ describe("readPluginRouteModule", () => {
         "p:page",
       ),
     ).toThrow(
-      /`route\.breadcrumb`, which must be a component or `false` \(got object\)/,
+      /`route\.breadcrumb`, which must be a component, a breadcrumbGroup\(\), or `false` \(got object\)/,
     );
+  });
+
+  /**
+   * A crumb whose answer is computed writes `null`, not `false`, and both mean
+   * the same thing to a trail.
+   */
+  it("keeps a `route.breadcrumb` of null", () => {
+    const checked = readPluginRouteModule(
+      { default: Page, route: { breadcrumb: null } },
+      "p:page",
+    );
+
+    expect(checked.route.breadcrumb).toBeNull();
+  });
+
+  it("keeps a breadcrumb group", () => {
+    const group = () => null;
+    const checked = readPluginRouteModule(
+      { default: Page, route: { breadcrumb: { group } } },
+      "p:page",
+    );
+
+    expect(checked.route.breadcrumb).toEqual({ group });
+  });
+
+  it("keeps a `route.notFound` component", () => {
+    const notFound = () => null;
+    const checked = readPluginRouteModule(
+      { default: Page, route: { notFound } },
+      "p:page",
+    );
+
+    expect(checked.route.notFound).toBe(notFound);
+  });
+
+  it("refuses a `route.notFound` that is not a component", () => {
+    expect(() =>
+      readPluginRouteModule(
+        { default: Page, route: { notFound: "nope" } },
+        "p:page",
+      ),
+    ).toThrow(/`route\.notFound`, which must be a function \(got string\)/);
   });
 
   it("does not carry unknown members of `route` through", () => {

@@ -11,7 +11,7 @@ import {
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiRequest } from "../content-request";
 
-import { contentApiFetchInBrowser } from "../content-request";
+import { contentApiFetch } from "../content-request";
 
 /** The shape `contentApiFetch` answers with on the server, read in a browser. */
 export interface ContentFetchResult<TData> {
@@ -38,7 +38,7 @@ export const sendContentApiRequest = async <TSchema extends z.ZodType>(
   let response: Response;
 
   try {
-    response = await contentApiFetchInBrowser(request);
+    response = await contentApiFetch(request);
   } catch (error) {
     return unreachableContentResult(error);
   }

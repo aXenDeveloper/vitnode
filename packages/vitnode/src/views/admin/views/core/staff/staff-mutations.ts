@@ -3,12 +3,12 @@ import type {
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
 } from "@/views/admin/views/core/shared/admin-mutation";
-import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
 export interface CreateStaffEntryInput {
   roleId?: number;
@@ -25,7 +25,8 @@ export const createStaffEntry = async ({
     expected: 201,
     parse: async response => (await response.json()) as { id: number },
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { body: { roleId, userId }, params: { type } },
         method: "post",
         module: "admin/staff",
@@ -60,7 +61,8 @@ export const updateStaffPermissions = async ({
         unrestricted: boolean;
       },
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: {
           body: { permissions, unrestricted },
           params: { id, type },
@@ -84,7 +86,8 @@ export const deleteStaffEntry = async ({
     expected: 200,
     parse: () => true as const,
     request: async () =>
-      await fetcherClient(adminModuleRef, {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
         args: { params: { id: String(id), type } },
         method: "delete",
         module: "admin/staff",

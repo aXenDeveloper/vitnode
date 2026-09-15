@@ -11,24 +11,18 @@ import type {
   DeleteMyFiles,
   DeleteMyFilesArgs,
 } from "@/views/files/my-files-delete";
-import type {
-  MyFilesPageFetcher,
-  MyFilesParams,
-} from "@/views/files/my-files-query";
+import type { MyFilesParams } from "@/views/files/my-files-query";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
   deleteMyFileInBrowser,
   deleteMyFilesInBrowser,
   shouldRefreshAfterBulkDelete,
 } from "@/views/files/my-files-delete";
 import {
-  myFilesPageFetcher,
+  fetchMyFilesPage,
   myFilesQueryOptions,
   myFilesQueryRoot,
 } from "@/views/files/my-files-query";
-
-const fetchMyFilesPage: MyFilesPageFetcher = myFilesPageFetcher(fetcher);
 
 export const myFilesQuery = ({
   params,

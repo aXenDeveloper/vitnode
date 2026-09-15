@@ -73,7 +73,7 @@ export function buildModule<
   routes: Routes;
   searchIndexers?: SearchIndexer[];
   webSockets?: BuildWebSocketReturn[];
-}): BuildModuleReturn<P, M, Routes, Modules> {
+}): BuildModuleReturn<NoInfer<P>, M, Routes, Modules> {
   const hono = new OpenAPIHono();
 
   if (routes) {

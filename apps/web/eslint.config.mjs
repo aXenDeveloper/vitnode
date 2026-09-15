@@ -19,6 +19,7 @@ export default [
       "src/routeTree.gen.ts",
       "src/plugin-routes.gen.ts",
       "src/admin-nav.gen.ts",
+      "src/api-registry.gen.ts",
       "src/content-registry.gen.ts",
       "src/package-messages.gen.ts",
       "scripts/**",

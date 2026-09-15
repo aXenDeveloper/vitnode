@@ -125,6 +125,11 @@
       "types": "./dist/src/framework/admin-nav/index.d.ts",
       "default": "./dist/src/framework/admin-nav/index.js"
     },
+    "./framework/api-registry": {
+      "import": "./dist/src/framework/api-registry/index.js",
+      "types": "./dist/src/framework/api-registry/index.d.ts",
+      "default": "./dist/src/framework/api-registry/index.js"
+    },
     "./framework/content-registry": {
       "import": "./dist/src/framework/content-registry/index.js",
       "types": "./dist/src/framework/content-registry/index.d.ts",

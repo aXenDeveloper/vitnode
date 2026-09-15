@@ -84,7 +84,7 @@ const embedModel = c.get('ai').embeddingModel()
 Provider instances and API keys stay on the server. What the browser gets is the
 public half of each entry - `id`, `name`, and the provider's model id string -
 published on the middleware route and read with
-[`useMiddlewareConfigQuery()`](/docs/dev/data-loading#deployment-configuration):
+[`useMiddlewareConfigQuery()`](/docs/dev/fetcher#deployment-configuration):
 
 ```tsx title="plugins/writer/src/pages/model-picker.tsx"
 import { useMiddlewareConfigQuery } from '@vitnode/core/tanstack/auth'

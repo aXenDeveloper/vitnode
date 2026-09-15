@@ -1,26 +1,19 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { queueAdminModule } from "@/api/modules/admin/advanced/queue/queue.admin.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
   AdminTableParams,
 } from "@/views/admin/table/params";
 
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 import {
-  adminModuleRef,
   AdminRequestError,
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
-
-export const queueAdminModuleRef = adminModuleRef<typeof queueAdminModule>();
-
-/** The module is mounted under `/admin/advanced`, not at the plugin root. */
-export const QUEUE_PREFIX_PATH = "/admin/advanced";
 
 /** The statuses a task can be in - `QUEUE_STATUSES` on `getQueueTasksRoute`. */
 export const QUEUE_STATUSES = [
@@ -65,31 +58,25 @@ export type QueuePage = AdminTablePage<QueueTaskRow>;
 export type QueuePageFetcher = (params: QueueParams) => Promise<QueuePage>;
 
 /** One page, over whichever transport the host hands in. */
-export const queuePageFetcher =
-  (transport: UniversalFetcher): QueuePageFetcher =>
-  async params => {
-    const response = await transport(queueAdminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "queue",
-      path: "/",
-      prefixPath: QUEUE_PREFIX_PATH,
-    });
+export const fetchQueuePage: QueuePageFetcher = async params => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/advanced/queue",
+    path: "/",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the queue list",
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the queue list",
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-/** One page, fetched from the browser. */
-export const fetchQueuePageInBrowser: QueuePageFetcher =
-  queuePageFetcher(fetcherClient);
+  return await response.json();
+};
 
 /** The root every cached page of the queue list hangs off. */
 export const queueQueryRoot = adminQueryRoot("queue");
@@ -98,7 +85,7 @@ export const queueQueryKey = (params: QueueParams) =>
   [...queueQueryRoot, params] as const;
 
 export const queueQueryOptions = ({
-  fetchPage = fetchQueuePageInBrowser,
+  fetchPage = fetchQueuePage,
   params,
 }: {
   fetchPage?: QueuePageFetcher;

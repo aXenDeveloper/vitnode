@@ -1,12 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { createTranslator } from "use-intl";
-
+import type { PluginRouteTranslator } from "@/routing";
 import type { MyFilesParams } from "@/views/files/my-files-query";
 
 import type { MyFilesRouteSearch } from "./route-search";
 
-import { intlQueryOptions } from "../i18n/query";
 import { myFilesQuery } from "./query";
 
 export const MY_FILES_NAMESPACES = ["core.files", "core.global"] as const;
@@ -28,34 +26,26 @@ export interface MyFilesRouteData {
 
 export const loadMyFilesRoute = async ({
   auth,
-  locale,
   params,
   queryClient,
+  t,
 }: MyFilesLoaderContext & {
   params: MyFilesParams;
+  t: PluginRouteTranslator;
 }): Promise<MyFilesRouteData> => {
   const userId = auth.user.id;
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: MY_FILES_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...myFilesQuery({ params, userId }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      core: { files: { desc: string; title: string } };
-    },
-    namespace: "core.files",
+  await queryClient.query({
+    ...myFilesQuery({ params, userId }),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), params, title: t("title"), userId };
+  return {
+    description: t("core.files.desc"),
+    params,
+    title: t("core.files.title"),
+    userId,
+  };
 };
 
 export type MyFilesNavigate = (options: {

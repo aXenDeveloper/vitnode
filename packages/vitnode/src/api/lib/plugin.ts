@@ -3,6 +3,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
+import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 
 import {
@@ -22,34 +23,49 @@ import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 import { applyModuleTags } from "./openapi-tags";
 
-export interface BuildPluginApiReturn {
+export type { ApiPluginContract };
+
+export interface BuildPluginApiReturn<
+  P extends string = string,
+  Modules extends readonly BaseBuildModuleReturn<P>[] =
+    readonly BaseBuildModuleReturn<P>[],
+> {
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
   messages?: LocaleMessagesMap;
+  modules: Modules;
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
-  pluginId: string;
+  pluginId: P;
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
 
-export function buildApiPlugin<P extends string>({
+export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
+  string,
+  readonly BaseBuildModuleReturn[]
+>;
+
+export function buildApiPlugin<
+  const P extends string,
+  const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
+>({
   pluginId,
   messages,
-  modules = [],
+  modules = [] as unknown as Modules,
   permissionStaff,
   searchIndexers,
 }: {
   messages?: LocaleMessagesMap;
-  modules?: BuildModuleReturn<P, string>[];
+  modules?: Modules;
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
   searchIndexers?: SearchIndexer[];
-}): BuildPluginApiReturn {
+}): BuildPluginApiReturn<P, Modules> {
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
 
@@ -97,6 +113,7 @@ export function buildApiPlugin<P extends string>({
   return {
     pluginId,
     messages,
+    modules,
     hono,
     openApiTags: [...new Set(openApiTags)],
     contentModels,

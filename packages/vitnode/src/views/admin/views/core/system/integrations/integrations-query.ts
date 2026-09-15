@@ -1,17 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
-
-import { fetcherClient } from "@/lib/fetcher-client";
+import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { adminModuleRef, AdminRequestError } from "@/views/admin/admin-request";
+import { fetcher } from "@/tanstack/fetcher";
+import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
-
-export const debugAdminModuleRef = adminModuleRef<typeof debugAdminModule>();
-
-/** The debug module is mounted under `/admin`, not at the plugin root. */
-export const ADMIN_DEBUG_PREFIX_PATH = "/admin";
 
 /** One AI model the "test AI" dialog can be pointed at. */
 export interface AdminIntegrationModel {
@@ -51,35 +44,25 @@ export interface AdminIntegrations {
 export type IntegrationsFetcher = () => Promise<AdminIntegrations>;
 
 /** The board's data, over whichever transport the host hands in. */
-export const integrationsFetcher =
-  (transport: UniversalFetcher): IntegrationsFetcher =>
-  async () => {
-    const response = await transport(debugAdminModuleRef, {
-      method: "get",
-      module: "debug",
-      path: "/integrations",
-      prefixPath: ADMIN_DEBUG_PREFIX_PATH,
-    });
+export const fetchIntegrations: IntegrationsFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/debug",
+    path: "/integrations",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(response.status, "the integrations board");
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the integrations board");
+  }
 
-    return await response.json();
-  };
-
-/** The board's data, fetched from the browser. */
-export const fetchIntegrationsInBrowser: IntegrationsFetcher =
-  integrationsFetcher(fetcherClient);
+  return await response.json();
+};
 
 /** The cache entry the board reads and writes. */
 export const integrationsQueryKey = adminQueryRoot("integrations");
 
-export const integrationsQueryOptions = ({
-  fetchIntegrations = fetchIntegrationsInBrowser,
-}: {
-  fetchIntegrations?: IntegrationsFetcher;
-} = {}) =>
+export const integrationsQueryOptions = () =>
   queryOptions({
     queryFn: async () => await fetchIntegrations(),
     queryKey: integrationsQueryKey,

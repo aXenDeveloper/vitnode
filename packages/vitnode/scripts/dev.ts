@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import { spawnCommand } from "./spawn-command.js";
+import { writePluginApiRegistry } from "./write-plugin-api-registry.js";
 
 const spawnWatch = (command: string, args: string[]) => {
   const child = spawnCommand(command, args, {
@@ -36,6 +37,8 @@ const spawnWatch = (command: string, args: string[]) => {
  * up when a route file is deleted.
  */
 export const devPlugin = ({ initMessage }: { initMessage: string }) => {
+  writePluginApiRegistry();
+
   const children = [
     spawnWatch("tsc", [
       "-w",

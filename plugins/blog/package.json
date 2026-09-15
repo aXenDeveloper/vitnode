@@ -33,8 +33,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:types": "vitest run --typecheck.only"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.6.3",

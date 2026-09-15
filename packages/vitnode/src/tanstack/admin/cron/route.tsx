@@ -1,10 +1,8 @@
-import { createTranslator } from "use-intl";
-
+import type { PluginRouteTranslator } from "@/routing";
 import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-query";
 
 import type { AdminScreenContext } from "../screen";
 
-import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
 import { cronQuery } from "./query";
 
@@ -27,32 +25,23 @@ const CRON_VIEW_PERMISSION = {
 
 export const loadAdminCronRoute = async ({
   adminAccess,
-  locale,
   params,
   queryClient,
+  t,
 }: AdminScreenContext & {
   params: CronParams;
+  t: PluginRouteTranslator;
 }): Promise<AdminCronRouteData> => {
   requireAdminPermission(adminAccess, CRON_VIEW_PERMISSION);
 
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: ADMIN_CRON_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...cronQuery({ params }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      admin: { advanced: { cron: { desc: string; title: string } } };
-    },
-    namespace: "admin.advanced.cron",
+  await queryClient.query({
+    ...cronQuery({ params }),
+    staleTime: "static",
   });
 
-  return { description: t("desc"), params, title: t("title") };
+  return {
+    description: t("admin.advanced.cron.desc"),
+    params,
+    title: t("admin.advanced.cron.title"),
+  };
 };

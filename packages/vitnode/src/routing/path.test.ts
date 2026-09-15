@@ -162,12 +162,41 @@ describe("framework syntax is rejected by name", () => {
   });
 });
 
-describe("route shapes this prototype defers", () => {
-  it("rejects a catch-all", () => {
-    expect(reason("/example/*")).toContain("catch-all");
-    expect(reason("/example/[...slug]")).toContain("bracket filesystem syntax");
+describe("a catch-all", () => {
+  it("reads a catch-all as its own kind of segment", () => {
+    expect(parse("/admin/content/*").segments).toEqual([
+      { kind: "static", value: "admin" },
+      { kind: "static", value: "content" },
+      { kind: "splat" },
+    ]);
   });
 
+  it("round-trips through the canonical spelling", () => {
+    expect(parse("/admin/content/*").path).toBe("/admin/content/*");
+  });
+
+  it("may be the whole path", () => {
+    expect(parse("/*").segments).toEqual([{ kind: "splat" }]);
+  });
+
+  /**
+   * A catch-all matches every remaining segment, so a segment after one could
+   * never be reached - and a route that can never match is worth a build error
+   * rather than a page nobody can open.
+   */
+  it("refuses a segment after a catch-all", () => {
+    expect(reason("/admin/content/*/edit")).toContain('after its "*"');
+    expect(reason("/admin/*/*")).toContain('after its "*"');
+  });
+
+  it("names the VitNode spelling for each framework's syntax", () => {
+    expect(reason("/example/$")).toContain('write "*"');
+    expect(reason("/example/**")).toContain('write "*"');
+    expect(reason("/example/[...slug]")).toContain("bracket filesystem syntax");
+  });
+});
+
+describe("route shapes this prototype defers", () => {
   it("rejects an optional segment", () => {
     expect(reason("/example/:slug?")).toContain("optional segment");
   });
@@ -282,6 +311,15 @@ describe("the URLs a TanStack path matches", () => {
     expect(key("/api/$")).toBe("/api/**");
     expect(key("/api/$")).not.toBe(key("/api/$id"));
     expect(key("/api/$")).not.toBe(routeMatchKey(parse("/api/:id").segments));
+  });
+
+  /**
+   * The two entrances to one key space have to agree about a catch-all too, or
+   * a plugin route at `/api/*` and an application route at `/api/$` would both
+   * claim every URL under `/api` without colliding.
+   */
+  it("gives an application's splat and a route's catch-all one key", () => {
+    expect(routeMatchKey(parse("/api/*").segments)).toBe(key("/api/$"));
   });
 
   /**

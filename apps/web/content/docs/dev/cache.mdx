@@ -43,7 +43,7 @@ const { data } = useSuspenseQuery(announcementsQueryOptions())
 
 Keep the fetcher and any `queryOptions` helper inside the plugin too. The plugin
 route is the SSR boundary; its screen can reuse the same query key for client
-updates. See [Data loading](/docs/dev/data-loading) for the isomorphic fetcher.
+updates. See [Data fetching](/docs/dev/fetcher) for the universal fetcher.
 
 ### Pick a lifetime that matches the data
 
@@ -174,8 +174,8 @@ should reach the database.
 
 <Cards>
   <Card
-    href="/docs/dev/data-loading"
-    title="Data loading"
+    href="/docs/dev/fetcher"
+    title="Data fetching"
     description="Query options, route loaders and the invalidation that keeps the app cache honest."
   />
   <Card

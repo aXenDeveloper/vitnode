@@ -6,6 +6,10 @@ import type { PluginRouteRequirement } from "@/routing";
 
 import type { AuthState } from "../auth/state";
 
+import { sanitizeAdminReturnTo } from "../admin/return-to";
+import { prefetchAdminAccess } from "../admin/session-query";
+import { canEnterAdmin } from "../admin/state";
+import { internalDestination } from "../auth/navigation";
 import {
   LOGIN_PATH,
   parseInternalDestination,
@@ -55,6 +59,29 @@ export const pluginRouteGuard = (
         search: { returnTo: returnToFor(location) },
         to: LOGIN_PATH,
       });
+    };
+  }
+
+  if (requires === "admin-guest") {
+    return async ({ context, search }) => {
+      // `prefetch` rather than `ensure`, and the difference is the whole guard:
+      // this is the page somebody lands on *because* they have no admin session,
+      // so a read that throws when there is none would break the only route that
+      // can fix it. No session, or one that cannot enter, means stay here.
+      const access = await prefetchAdminAccess(context.queryClient);
+
+      if (!access || !canEnterAdmin(access)) return undefined;
+
+      const { returnTo } = (search ?? {}) as { returnTo?: unknown };
+
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect(
+        internalDestination(
+          sanitizeAdminReturnTo(
+            typeof returnTo === "string" ? returnTo : undefined,
+          ),
+        ),
+      );
     };
   }
 

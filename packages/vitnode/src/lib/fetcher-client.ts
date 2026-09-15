@@ -1,17 +1,9 @@
-import type {
-  BaseBuildModuleReturn,
-  BuildModuleReturn,
-} from "@/api/lib/module";
-import type { Route } from "@/api/lib/route";
-
 import type { RawApiFetchArgs } from "./fetcher/raw";
 import type {
-  FetcherParams,
+  FetcherCall,
   FetcherRequestOptions,
-  GetModulePaths,
-  GetValidMethodForPath,
-  GetValidPathsForModule,
-  InferResponseType,
+  RegisteredPluginId,
+  ResponseFor,
 } from "./fetcher/types";
 
 import { coreFetcher } from "./fetcher/core";
@@ -19,41 +11,43 @@ import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
 import { rawApiFetch } from "./fetcher/raw";
 import { CAPTCHA_TOKEN_HEADER } from "./fetcher/request-context";
 
-export const clientModule = <T extends BaseBuildModuleReturn>(
-  pluginId: T["pluginId"],
-): T => ({ pluginId }) as unknown as T;
+export type { ApiEndpoint, ApiPluginContract } from "./fetcher/contract";
+export type { ApiPluginRegistry } from "./fetcher/registry";
+export type {
+  AllEndpoints,
+  ApiRequest,
+  PluginEndpoints,
+  PluginModulePath,
+  PluginRouteMethod,
+  PluginRoutePath,
+  RegisteredPluginId,
+  ResponseFor,
+} from "./fetcher/types";
+
+export type FetcherClientOptions = Omit<
+  FetcherRequestOptions,
+  "additionalHeaders" | "origin"
+> & {
+  captchaToken?: string;
+};
 
 export async function fetcherClient<
+  P extends RegisteredPluginId,
   M extends string,
-  Routes extends Route[],
-  Modules extends BaseBuildModuleReturn[],
-  ModuleName extends GetModulePaths<M, Modules>,
-  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
-  Method extends GetValidMethodForPath<
-    ModuleName,
-    SelectedPath,
-    M,
-    Routes,
-    Modules
-  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
->(
-  moduleReturn: BuildModuleReturn<string, M, Routes, Modules>,
-  {
-    path,
-    method,
-    module,
-    args,
-    options,
-    withPagination = false,
-    prefixPath = "",
-    captchaToken,
-    formData,
-  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
-    Omit<FetcherRequestOptions, "additionalHeaders" | "origin"> & {
-      captchaToken?: string;
-    },
-): Promise<
-  InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
+  Path extends string,
+  Method extends string,
+>({
+  args,
+  captchaToken,
+  formData,
+  method,
+  module,
+  options,
+  path,
+  plugin,
+  withPagination = false,
+}: FetcherCall<P, M, Path, Method, FetcherClientOptions>): Promise<
+  ResponseFor<P, M, Path, Method>
 > {
   const additionalHeaders: Record<string, string> = {};
 
@@ -61,18 +55,17 @@ export async function fetcherClient<
     additionalHeaders[CAPTCHA_TOKEN_HEADER] = captchaToken;
   }
 
-  const response = await coreFetcher(moduleReturn, {
-    path,
+  const response = await coreFetcher<P, M, Path, Method>({
+    additionalHeaders,
+    args,
+    formData,
     method,
     module,
-    args,
     options: { credentials: "include", ...options },
+    path,
+    plugin,
     withPagination,
-    prefixPath,
-    additionalHeaders,
-    formData,
-  } as FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
-    FetcherRequestOptions);
+  } as FetcherCall<P, M, Path, Method, FetcherRequestOptions>);
 
   if (isRateLimited(response)) {
     notifyRateLimited(response);

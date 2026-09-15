@@ -1,12 +1,10 @@
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 import type { DeleteFileResult } from "@/lib/files/in-use";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { runBulkFileDelete } from "@/lib/files/bulk-delete";
 import { readFileInUse } from "@/lib/files/in-use";
-import { ADMIN_FILES_PREFIX_PATH } from "@/views/admin/views/core/system/files/files-query";
-
-import { filesAdminModuleRef } from "./files-query";
 
 /** Deleting one file. `force` releases retained revisions; see `FileInUse`. */
 export interface DeleteAdminFileArgs {
@@ -33,16 +31,16 @@ export const deleteAdminFileInBrowser: DeleteAdminFile = async ({
   id,
 }) => {
   try {
-    const response = await fetcherClient(filesAdminModuleRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: {
         params: { id: String(id) },
         query: force ? { force: "true" } : {},
       },
       method: "delete",
-      module: "files",
+      module: "admin/files",
       options: { credentials: "include" },
       path: "/{id}",
-      prefixPath: ADMIN_FILES_PREFIX_PATH,
     });
 
     if (response.status !== 200) {

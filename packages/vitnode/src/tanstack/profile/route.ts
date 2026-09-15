@@ -1,8 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { notFound } from "@tanstack/react-router";
-import { createTranslator } from "use-intl";
 
+import type { PluginRouteTranslator } from "@/routing";
 import type { UserProfile } from "@/views/profile/profile-query";
 
 import {
@@ -10,13 +10,11 @@ import {
   normalizeProfileNameCode,
 } from "@/views/profile/profile-query";
 
-import { intlQueryOptions } from "../i18n/query";
 import { userProfileQuery } from "./query";
 
 export const PROFILE_NAMESPACES = ["core.global", "core.profile"] as const;
 
 export interface ProfileLoaderContext {
-  locale: string;
   queryClient: QueryClient;
 }
 
@@ -46,36 +44,25 @@ const ensureProfile = async (
 };
 
 export const loadProfileRoute = async ({
-  locale,
   nameCode: raw,
   queryClient,
-}: ProfileLoaderContext & { nameCode: string }): Promise<ProfileRouteData> => {
+  t,
+}: ProfileLoaderContext & {
+  nameCode: string;
+  t: PluginRouteTranslator;
+}): Promise<ProfileRouteData> => {
   const nameCode = normalizeProfileNameCode(raw);
   if (nameCode === null) {
     // eslint-disable-next-line @typescript-eslint/only-throw-error
     throw notFound();
   }
 
-  const [intl, user] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: PROFILE_NAMESPACES }),
-      staleTime: "static",
-    }),
-    ensureProfile(queryClient, nameCode),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      core: { profile: { metaDesc: string; title: string } };
-    },
-    namespace: "core.profile",
-  });
+  const user = await ensureProfile(queryClient, nameCode);
   const values = { name: user.name, nameCode: user.nameCode };
 
   return {
-    description: t("metaDesc", values),
+    description: t("core.profile.metaDesc", values),
     nameCode: user.nameCode,
-    title: t("title", values),
+    title: t("core.profile.title", values),
   };
 };

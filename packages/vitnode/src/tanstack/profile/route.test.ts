@@ -2,13 +2,14 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { isNotFound } from "@tanstack/react-router";
+import { createTranslator } from "use-intl";
 import { describe, expect, it } from "vitest";
 
 import type { UserProfile } from "@/views/profile/profile-query";
 
 import { ProfileRequestError } from "@/views/profile/profile-query";
 
-import { loadProfileRoute, PROFILE_NAMESPACES } from "./route";
+import { loadProfileRoute } from "./route";
 
 const profile: UserProfile = {
   avatarColor: "3b82f6",
@@ -32,8 +33,15 @@ const messages = {
   },
 };
 
-const isIntlKey = (queryKey: readonly unknown[]) =>
-  queryKey[0] === "vitnode" && queryKey[1] === "intl";
+/**
+ * The translator the runtime hands a loader, over the namespaces the route
+ * declared. The loader no longer fetches messages itself, so the fake client
+ * below answers only for the profile.
+ */
+const t = createTranslator({ locale: "en", messages }) as unknown as (
+  key: string,
+  values?: Record<string, unknown>,
+) => string;
 
 const clientAnswering = (
   answer: () => Promise<UserProfile>,
@@ -45,8 +53,6 @@ const clientAnswering = (
       query: async ({ queryKey }: { queryKey: readonly unknown[] }) => {
         requested.push([...queryKey]);
 
-        if (isIntlKey(queryKey)) return await Promise.resolve({ messages });
-
         return await answer();
       },
     } as unknown as QueryClient,
@@ -56,7 +62,7 @@ const clientAnswering = (
 
 const load = async (nameCode: string, answer: () => Promise<UserProfile>) => {
   const { queryClient, requested } = clientAnswering(answer);
-  const data = await loadProfileRoute({ locale: "en", nameCode, queryClient });
+  const data = await loadProfileRoute({ nameCode, queryClient, t });
 
   return { data, requested };
 };
@@ -70,7 +76,7 @@ describe("a handle that cannot be a profile", () => {
       );
 
       await expect(
-        loadProfileRoute({ locale: "en", nameCode, queryClient }),
+        loadProfileRoute({ nameCode, queryClient, t }),
       ).rejects.toSatisfy(isNotFound);
       expect(requested).toEqual([]);
     },
@@ -84,7 +90,7 @@ describe("a profile the API does not have", () => {
     );
 
     await expect(
-      loadProfileRoute({ locale: "en", nameCode: "nobody", queryClient }),
+      loadProfileRoute({ nameCode: "nobody", queryClient, t }),
     ).rejects.toSatisfy(isNotFound);
   });
 
@@ -97,23 +103,25 @@ describe("a profile the API does not have", () => {
       );
 
       await expect(
-        loadProfileRoute({ locale: "en", nameCode: "aXen", queryClient }),
+        loadProfileRoute({ nameCode: "aXen", queryClient, t }),
       ).rejects.toBe(error);
     },
   );
 });
 
 describe("a profile that exists", () => {
-  it("warms the route's strings and the profile together", async () => {
+  /**
+   * One read, not two: the route's strings are declared in `routes.tsx` and
+   * warmed by the runtime before this runs, so the loader fetches the profile
+   * and nothing else.
+   */
+  it("fetches the profile and nothing else", async () => {
     const { requested } = await load(
       "aXen",
       async () => await Promise.resolve(profile),
     );
 
-    expect(requested).toHaveLength(2);
-    expect(requested[0].slice(0, 3)).toEqual(["vitnode", "intl", "en"]);
-    expect(requested[0].slice(3)).toEqual([...PROFILE_NAMESPACES]);
-    expect(requested[1]).toEqual(["vitnode", "profile", "aXen"]);
+    expect(requested).toEqual([["vitnode", "profile", "aXen"]]);
   });
 
   it("titles the page after the member, as the API spells them", async () => {

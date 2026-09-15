@@ -86,7 +86,15 @@ const BrowsePage = ({
 };
 
 export const route = definePluginRoute({
-  head: () => ({ title: "Browse" }),
+  /**
+   * `head` runs outside the React tree, so `useTranslations` cannot reach it.
+   * `t` is the same strings by another door, over the namespaces this route
+   * declared in `routes.ts`.
+   */
+  head: ({ t }) => ({
+    description: t("@vitnode/example.browse.desc"),
+    title: t("@vitnode/example.browse.title"),
+  }),
 
   breadcrumb: false,
 });

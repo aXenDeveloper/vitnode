@@ -4,7 +4,6 @@ import type {
   PermissionsStaffArgs,
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -14,7 +13,6 @@ import type {
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { StaffCatalog } from "@/views/admin/views/core/staff/staff-model";
 
-import { fetcherClient } from "@/lib/fetcher-client";
 import {
   AdminRequestError,
   describeAdminParams,
@@ -26,7 +24,6 @@ import {
   adminScopedQueryRoot,
 } from "@/views/admin/views/core/shared/admin-scope";
 import { STAFF_TYPE_SEGMENT } from "@/views/admin/views/core/staff/staff-model";
-import { adminModuleRef } from "@/views/admin/views/core/users/list/users-query";
 
 /** The columns both staff lists sort by - `staffListAdminQuery`'s enum. */
 export const ADMIN_STAFF_ORDER_BY = ["id", "createdAt", "updatedAt"] as const;
@@ -54,7 +51,9 @@ export {
   adminStaffPermissions,
   staffPermissionModuleFor,
 } from "@/views/admin/views/core/shared/admin-permissions";
+import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
 
 /** A role reference as a staff row renders it. */
 export interface AdminStaffRole {
@@ -91,30 +90,30 @@ export type AdminStaffPageFetcher = (
   options?: { signal?: AbortSignal },
 ) => Promise<AdminStaffPage>;
 
-export const adminStaffPageFetcher =
-  (transport: UniversalFetcher): AdminStaffPageFetcher =>
-  async (type, params, { signal } = {}) => {
-    const response = await transport(adminModuleRef, {
-      args: { query: params },
-      method: "get",
-      module: "admin/staff",
-      options: { signal },
-      path: type === "admin" ? "/admins" : "/moderators",
-    });
+export const fetchAdminStaffPage: AdminStaffPageFetcher = async (
+  type,
+  params,
+  { signal } = {},
+) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/staff",
+    options: { signal },
+    path: type === "admin" ? "/admins" : "/moderators",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        `the ${STAFF_TYPE_SEGMENT[type]} staff list`,
-        describeAdminParams(params),
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      `the ${STAFF_TYPE_SEGMENT[type]} staff list`,
+      describeAdminParams(params),
+    );
+  }
 
-    return await response.json();
-  };
-
-export const fetchAdminStaffPageInBrowser: AdminStaffPageFetcher =
-  adminStaffPageFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const adminStaffQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_STAFF_SCREEN, adminUserId);
@@ -132,7 +131,7 @@ export const adminStaffQueryKey = ({
 
 export const adminStaffQueryOptions = ({
   adminUserId,
-  fetchPage = fetchAdminStaffPageInBrowser,
+  fetchPage = fetchAdminStaffPage,
   params,
   type,
 }: {
@@ -158,27 +157,23 @@ export const adminStaffQueryOptions = ({
 
 export type AdminStaffCatalogFetcher = () => Promise<StaffCatalog>;
 
-export const adminStaffCatalogFetcher =
-  (transport: UniversalFetcher): AdminStaffCatalogFetcher =>
-  async () => {
-    const response = await transport(adminModuleRef, {
-      method: "get",
-      module: "admin/staff",
-      path: "/permission-catalog",
-    });
+export const fetchAdminStaffCatalog: AdminStaffCatalogFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/staff",
+    path: "/permission-catalog",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "the staff permission catalog",
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the staff permission catalog",
+    );
+  }
 
-    return await response.json();
-  };
-
-export const fetchAdminStaffCatalogInBrowser: AdminStaffCatalogFetcher =
-  adminStaffCatalogFetcher(fetcherClient);
+  return await response.json();
+};
 
 /**
  * The catalog is what the *installation* declares, not what one administrator
@@ -190,7 +185,7 @@ export const adminStaffCatalogQueryKey = (adminUserId: AdminIdentity) =>
 
 export const adminStaffCatalogQueryOptions = ({
   adminUserId,
-  fetchCatalog = fetchAdminStaffCatalogInBrowser,
+  fetchCatalog = fetchAdminStaffCatalog,
 }: {
   adminUserId: AdminIdentity;
   fetchCatalog?: AdminStaffCatalogFetcher;
@@ -217,29 +212,28 @@ export type AdminStaffEntryFetcher = (
   id: string,
 ) => Promise<AdminStaffEntry>;
 
-export const adminStaffEntryFetcher =
-  (transport: UniversalFetcher): AdminStaffEntryFetcher =>
-  async (type, id) => {
-    const response = await transport(adminModuleRef, {
-      args: { params: { id, type } },
-      method: "get",
-      module: "admin/staff",
-      path: "/entry/{type}/{id}",
-    });
+export const fetchAdminStaffEntry: AdminStaffEntryFetcher = async (
+  type,
+  id,
+) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { params: { id, type } },
+    method: "get",
+    module: "admin/staff",
+    path: "/entry/{type}/{id}",
+  });
 
-    if (!response.ok) {
-      throw new AdminRequestError(
-        response.status,
-        "a staff entry",
-        `type=${type}, id=${id}`,
-      );
-    }
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "a staff entry",
+      `type=${type}, id=${id}`,
+    );
+  }
 
-    return await response.json();
-  };
-
-export const fetchAdminStaffEntryInBrowser: AdminStaffEntryFetcher =
-  adminStaffEntryFetcher(fetcherClient);
+  return await response.json();
+};
 
 export const adminStaffEntryQueryKey = ({
   adminUserId,
@@ -253,7 +247,7 @@ export const adminStaffEntryQueryKey = ({
 
 export const adminStaffEntryQueryOptions = ({
   adminUserId,
-  fetchEntry = fetchAdminStaffEntryInBrowser,
+  fetchEntry = fetchAdminStaffEntry,
   id,
   type,
 }: {

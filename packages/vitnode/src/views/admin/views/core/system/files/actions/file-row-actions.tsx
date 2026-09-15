@@ -8,11 +8,10 @@ import type { FileInUse } from "@/lib/files/in-use";
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
 import type { DeleteAdminFile } from "../files-delete";
-
-import { filesAdminModuleRef } from "../files-query";
 
 export const FileRowActions = ({
   canDelete,
@@ -36,9 +35,9 @@ export const FileRowActions = ({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const res = await fetcherClient(filesAdminModuleRef, {
-        prefixPath: "/admin",
-        module: "files",
+      const res = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        module: "admin/files",
         path: "/{id}/download",
         method: "get",
         args: { params: { id: String(id) } },

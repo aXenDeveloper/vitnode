@@ -81,6 +81,54 @@ This file, and not `config.tsx`: the API config reaches your handlers, database
 and secrets, while `config.tsx` is read by the browser build. A module
 registered in the wrong one is shipped to every visitor.
 
+`buildApiPlugin` keeps everything it was given as a literal type - the plugin
+id, the tuple of modules, and every module nested inside them. That type is
+what the [fetcher](/docs/dev/fetcher) infers routes from, so a route you add
+here is callable, and checked, the moment you save.
+
+  </Step>
+  <Step>
+
+### Export the type an application registers
+
+Your pages call the endpoint through the universal fetcher, and the fetcher
+looks the plugin up in the API plugin registry. Export one reduced type beside
+your factory - `create-vitnode-app --plugin` writes this for you:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
+
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({ modules: [notesModule], pluginId: '@acme/site-notes' })
+
+// [!code ++:3]
+export type VitNodeApiPlugin = ApiPluginContract<
+  ReturnType<typeof siteNotesApiPlugin>
+>
+```
+
+`ApiPluginContract` keeps the four things a call needs - the literal plugin id,
+every module path you serve, your module tree and your route definitions - and
+drops everything else. Your Hono application, content models, event listeners,
+queue tasks, WebSockets, search indexers and messages are runtime concerns, so
+an app that installs your plugin never resolves them to type-check a call.
+
+`import type` is the whole point: the factory is never executed here, so none of
+the Hono, database or secret code behind it is ever reached by a browser build.
+
+<Callout type="warn" title="A plugin never registers itself">
+  Your package augments nothing. The app that installs you writes the entry into
+  its own generated `src/api-registry.gen.ts`, from the plugins it configured. A
+  package that registered itself would put its routes into the registry of every
+  project that merely installed it.
+
+  To type-check your own pages before any app has installed the plugin, the
+  scaffold writes `test-fixtures/api-registry.d.ts` - the same entry an app
+  generates, kept outside `src` and out of the published package.
+</Callout>
+
   </Step>
   <Step>
 
@@ -99,7 +147,30 @@ export const vitNodeApiConfig = buildApiConfig({
 ```
 
 The endpoint is now `GET /api/@acme/site-notes/notes`. OpenAPI picks it up too;
-one less hand-written map to maintain.
+one less hand-written map to maintain. This is the one place `siteNotesApiPlugin()`
+is ever called - everywhere else it is a type.
+
+  </Step>
+  <Step>
+
+### Call it
+
+```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const response = await fetcher({
+  plugin: '@acme/site-notes', // [!code ++]
+  method: 'get',
+  module: 'notes',
+  path: '/',
+})
+
+const { notes } = await response.json()
+```
+
+Nothing but the plugin id crosses into the browser bundle. `module`, `path`,
+`method` and the response are inferred from the module tree registered above,
+and a typo in any of them is a compile error.
 
   </Step>
 </Steps>

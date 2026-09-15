@@ -3,7 +3,7 @@ import type { ContentPublicationAction } from "@/content/publication";
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
 
-import { contentApiFetchInBrowser } from "../content-request";
+import { contentApiFetch } from "../content-request";
 import { contentFailureResult } from "../lib/api-result";
 
 export type ContentRowMutationResult = ContentMutationResult & {
@@ -53,7 +53,7 @@ export const setContentPublicationInBrowser = async ({
 }): Promise<ContentRowMutationResult> =>
   await readResult(
     async () =>
-      await contentApiFetchInBrowser({
+      await contentApiFetch({
         method: "post",
         path: `/${id}/${action}`,
         target,
@@ -82,7 +82,7 @@ export const deleteContentInBrowser = async ({
 }): Promise<ContentRowMutationResult> =>
   await readResult(
     async () =>
-      await contentApiFetchInBrowser({
+      await contentApiFetch({
         ...(editorial ? { body: { expectedVersion: version } } : {}),
         method: "delete",
         path: `/${id}`,

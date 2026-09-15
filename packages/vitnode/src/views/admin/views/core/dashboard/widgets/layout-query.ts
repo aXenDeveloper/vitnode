@@ -1,13 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { adminModule } from "@/api/modules/admin/admin.module";
 import type { AdminDashboardWidgetLayoutItem } from "@/database/dashboard";
-import type { UniversalFetcher } from "@/lib/fetcher-client";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
+import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { adminModuleRef } from "@/views/admin/admin-request";
+import { fetcher } from "@/tanstack/fetcher";
 import {
   ADMIN_DASHBOARD_SCREEN,
   adminScopedQueryRoot,
@@ -16,8 +15,6 @@ import {
 import type { DashboardMutationResult } from "./dashboard-actions";
 import type { DashboardLayoutItem } from "./types";
 
-const adminModuleClientRef = adminModuleRef<typeof adminModule>();
-
 /** The read, as arguments to whichever fetcher is carrying it. */
 /** What the layout read resolves to: the stored items, or none. */
 export type DashboardStoredLayout = AdminDashboardWidgetLayoutItem[];
@@ -25,30 +22,25 @@ export type DashboardStoredLayout = AdminDashboardWidgetLayoutItem[];
 export type DashboardLayoutFetcher = () => Promise<DashboardStoredLayout>;
 
 /** The stored layout, over whichever transport the host hands in. */
-export const dashboardLayoutFetcher =
-  (transport: UniversalFetcher): DashboardLayoutFetcher =>
-  async () => {
-    const response = await transport(adminModuleClientRef, {
-      method: "get",
-      module: "admin/dashboard",
-      path: "/",
-    });
+export const fetchDashboardLayout: DashboardLayoutFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/dashboard",
+    path: "/",
+  });
 
-    if (!response.ok) return [];
+  if (!response.ok) return [];
 
-    return (await response.json()).widgets;
-  };
-
-/** The stored layout, fetched from the browser. */
-export const fetchDashboardLayoutInBrowser: DashboardLayoutFetcher =
-  dashboardLayoutFetcher(fetcherClient);
+  return (await response.json()).widgets;
+};
 
 export const dashboardLayoutQueryKey = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_DASHBOARD_SCREEN, adminUserId);
 
 export const dashboardLayoutQueryOptions = ({
   adminUserId,
-  fetchLayout = fetchDashboardLayoutInBrowser,
+  fetchLayout = fetchDashboardLayout,
 }: {
   adminUserId: AdminIdentity;
   fetchLayout?: DashboardLayoutFetcher;
@@ -68,7 +60,8 @@ export const saveDashboardLayoutInBrowser = async ({
   widgets: DashboardLayoutItem[];
 }): Promise<DashboardMutationResult> => {
   try {
-    const response = await fetcherClient(adminModuleClientRef, {
+    const response = await fetcherClient({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: {
         body: {
           managed,

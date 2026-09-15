@@ -1,11 +1,3 @@
-import type { BaseBuildModuleReturn } from "@/api/lib/module";
-
-import { CONFIG_PLUGIN } from "@/config";
-import { clientModule } from "@/lib/fetcher-client";
-
-export const adminModuleRef = <T extends BaseBuildModuleReturn>(): T =>
-  clientModule<T>(CONFIG_PLUGIN.pluginId);
-
 /** The `name` every {@link AdminRequestError} carries. See below. */
 const ADMIN_REQUEST_ERROR = "AdminRequestError";
 

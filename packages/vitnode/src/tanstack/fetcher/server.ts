@@ -7,19 +7,12 @@ import {
 } from "@tanstack/react-start/server";
 import { config } from "dotenv";
 
-import type {
-  BaseBuildModuleReturn,
-  BuildModuleReturn,
-} from "@/api/lib/module";
-import type { Route } from "@/api/lib/route";
 import type { RawApiFetchArgs } from "@/lib/fetcher/raw";
 import type {
-  FetcherParams,
+  FetcherCall,
   FetcherRequestOptions,
-  GetModulePaths,
-  GetValidMethodForPath,
-  GetValidPathsForModule,
-  InferResponseType,
+  RegisteredPluginId,
+  ResponseFor,
 } from "@/lib/fetcher/types";
 
 import { CONFIG } from "@/lib/config";
@@ -81,50 +74,40 @@ export const rawFetcher = async ({
     origin: origin ?? resolveApiOrigin(),
   });
 
+export type FetcherServerOptions = FetcherRequestOptions & {
+  allowSaveCookies?: boolean;
+  captchaToken?: string;
+};
+
 export async function fetcher<
+  P extends RegisteredPluginId,
   M extends string,
-  Routes extends Route[],
-  Modules extends BaseBuildModuleReturn[],
-  ModuleName extends GetModulePaths<M, Modules>,
-  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
-  Method extends GetValidMethodForPath<
-    ModuleName,
-    SelectedPath,
-    M,
-    Routes,
-    Modules
-  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
->(
-  moduleReturn: BuildModuleReturn<string, M, Routes, Modules>,
-  {
-    path,
-    method,
-    module,
-    args,
-    options,
-    formData,
-    additionalHeaders,
-    allowSaveCookies = false,
-    captchaToken,
-    origin,
-    prefixPath = "",
-    withPagination = false,
-  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
-    FetcherRequestOptions & {
-      allowSaveCookies?: boolean;
-      captchaToken?: string;
-    },
-): Promise<
-  InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
+  Path extends string,
+  Method extends string,
+>({
+  additionalHeaders,
+  allowSaveCookies = false,
+  args,
+  captchaToken,
+  formData,
+  method,
+  module,
+  options,
+  origin,
+  path,
+  plugin,
+  withPagination = false,
+}: FetcherCall<P, M, Path, Method, FetcherServerOptions>): Promise<
+  ResponseFor<P, M, Path, Method>
 > {
-  const response = await coreFetcher(moduleReturn, {
-    path,
+  const response = await coreFetcher<P, M, Path, Method>({
+    args,
+    formData,
     method,
     module,
-    args,
     options,
-    formData,
-    prefixPath,
+    path,
+    plugin,
     withPagination,
     additionalHeaders: {
       ...getForwardedApiHeaders({ captchaToken }),
@@ -134,8 +117,7 @@ export async function fetcher<
     // request's own origin otherwise - and an explicit `origin` on the call
     // overrides both.
     origin: origin ?? resolveApiOrigin(),
-  } as FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
-    FetcherRequestOptions);
+  } as FetcherCall<P, M, Path, Method, FetcherRequestOptions>);
 
   if (allowSaveCookies && shouldSaveApiCookies((response as Response).status)) {
     saveApiCookies(response);

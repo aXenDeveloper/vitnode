@@ -1,12 +1,7 @@
-import type { usersModule } from "@/api/modules/users/users.module";
-
 import { CONFIG_PLUGIN } from "@/config";
-import { clientModule } from "@/lib/fetcher-client";
 import { fetcher } from "@/tanstack/fetcher";
 
 import { createAuthOperations } from "./transport-operations";
-
-const users = clientModule<typeof usersModule>(CONFIG_PLUGIN.pluginId);
 
 /**
  * The browser's own transport: the universal fetcher, and no cookie relay.
@@ -17,7 +12,8 @@ const users = clientModule<typeof usersModule>(CONFIG_PLUGIN.pluginId);
  */
 const operations = createAuthOperations({
   changePasswordFromReset: async data =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { body: data },
       method: "post",
       module: "users",
@@ -25,7 +21,8 @@ const operations = createAuthOperations({
     }),
 
   completeSso: async data =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: {
         params: { providerId: data.providerId },
         query: { code: data.code, state: data.state },
@@ -36,7 +33,8 @@ const operations = createAuthOperations({
     }),
 
   linkSso: async data =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: {
         body: { password: data.password, token: data.token },
         params: { providerId: data.providerId },
@@ -47,14 +45,16 @@ const operations = createAuthOperations({
     }),
 
   readSession: async () =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       method: "get",
       module: "users",
       path: "/session",
     }),
 
   requestPasswordReset: async ({ captchaToken, email }) =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       captchaToken,
       args: { body: { email } },
       method: "post",
@@ -63,7 +63,8 @@ const operations = createAuthOperations({
     }),
 
   signIn: async data =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { body: data },
       method: "post",
       module: "users",
@@ -71,7 +72,8 @@ const operations = createAuthOperations({
     }),
 
   signOut: async data =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { body: { isAdmin: data.isAdmin ?? false } },
       method: "delete",
       module: "users",
@@ -79,7 +81,8 @@ const operations = createAuthOperations({
     }),
 
   signUp: async ({ captchaToken, ...body }) =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       captchaToken,
       args: { body },
       method: "post",
@@ -88,7 +91,8 @@ const operations = createAuthOperations({
     }),
 
   startSso: async data =>
-    await fetcher(users, {
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       args: { params: { providerId: data.providerId } },
       method: "post",
       module: "users/sso",

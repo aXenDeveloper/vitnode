@@ -7,28 +7,22 @@ import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { CreateStaffFormProps } from "@/views/admin/views/core/staff/create/create-staff-form-content";
 import type { EditStaffFormProps } from "@/views/admin/views/core/staff/edit/edit-staff-form-content";
-import type {
-  AdminStaffCatalogFetcher,
-  AdminStaffEntryFetcher,
-  AdminStaffPageFetcher,
-  AdminStaffParams,
-} from "@/views/admin/views/core/staff/staff-query";
+import type { AdminStaffParams } from "@/views/admin/views/core/staff/staff-query";
 import type { StaffTableProps } from "@/views/admin/views/core/staff/table/staff-table-content";
 
-import { fetcher } from "@/tanstack/fetcher";
 import {
   createStaffEntry,
   deleteStaffEntry,
   updateStaffPermissions,
 } from "@/views/admin/views/core/staff/staff-mutations";
 import {
-  adminStaffCatalogFetcher,
   adminStaffCatalogQueryOptions,
-  adminStaffEntryFetcher,
   adminStaffEntryQueryOptions,
-  adminStaffPageFetcher,
   adminStaffQueryOptions,
   adminStaffQueryRoot,
+  fetchAdminStaffCatalog,
+  fetchAdminStaffEntry,
+  fetchAdminStaffPage,
 } from "@/views/admin/views/core/staff/staff-query";
 
 import { useAdminIdentity } from "../identity";
@@ -38,13 +32,6 @@ import { invalidateAdminSession } from "../session-query";
  * The AdminCP staff screens for a TanStack Start host: three query definitions
  * and three mutations.
  */
-
-const fetchStaffPage: AdminStaffPageFetcher = adminStaffPageFetcher(fetcher);
-
-const fetchCatalog: AdminStaffCatalogFetcher =
-  adminStaffCatalogFetcher(fetcher);
-
-const fetchEntry: AdminStaffEntryFetcher = adminStaffEntryFetcher(fetcher);
 
 export const adminStaffQuery = ({
   adminUserId,
@@ -57,7 +44,7 @@ export const adminStaffQuery = ({
 }) =>
   adminStaffQueryOptions({
     adminUserId,
-    fetchPage: fetchStaffPage,
+    fetchPage: fetchAdminStaffPage,
     params,
     type,
   });
@@ -67,7 +54,10 @@ export const adminStaffCatalogQuery = ({
 }: {
   adminUserId: AdminIdentity;
 }) =>
-  adminStaffCatalogQueryOptions({ adminUserId, fetchCatalog: fetchCatalog });
+  adminStaffCatalogQueryOptions({
+    adminUserId,
+    fetchCatalog: fetchAdminStaffCatalog,
+  });
 
 export const adminStaffEntryQuery = ({
   adminUserId,
@@ -77,7 +67,13 @@ export const adminStaffEntryQuery = ({
   adminUserId: AdminIdentity;
   id: string;
   type: PermissionStaffType;
-}) => adminStaffEntryQueryOptions({ adminUserId, fetchEntry, id, type });
+}) =>
+  adminStaffEntryQueryOptions({
+    adminUserId,
+    fetchEntry: fetchAdminStaffEntry,
+    id,
+    type,
+  });
 
 export const invalidateAfterStaffChange = async (
   queryClient: QueryClient,

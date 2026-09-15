@@ -4,7 +4,14 @@ description: Declare plugin-owned URLs as a nested route tree with lazy pages, l
 icon: Map
 ---
 
-import { DatabaseIcon, LayoutDashboardIcon, MilestoneIcon } from 'lucide-react'
+import {
+  DatabaseIcon,
+  LanguagesIcon,
+  LayoutDashboardIcon,
+  LoaderCircleIcon,
+  MilestoneIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { ImgDocs } from '@/components/fumadocs/img'
 import generatedPageImage from './generated-page-image.png'
@@ -24,16 +31,21 @@ import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
 export const routes = definePluginRoutes([
   page('/notes', {
     component: lazy(() => import('./pages/note-page')),
+    messages: ['@acme/site-notes.home'],
   }),
 ])
 ```
 
 ```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import { useTranslations } from 'use-intl'
+
 const NotePage = () => {
+  const t = useTranslations('@acme/site-notes.home')
+
   return (
     <div className="container mx-auto max-w-2xl p-4">
       <h1 className="text-2xl font-semibold tracking-tight text-balance">
-        A note delivered by the Site notes plugin
+        {t('title')}
       </h1>
     </div>
   )
@@ -41,6 +53,8 @@ const NotePage = () => {
 
 export default NotePage
 ```
+
+The `messages` array specifies which translation namespaces this page requires. A namespace must always be a **dotted path** into your plugin's message tree (such as `@acme/site-notes.home` rather than the bare plugin ID), allowing VitNode to only download the strings that this screen renders. For more details on message structure and limits, see the [Namespaces](/docs/dev/i18n/namespaces) and [Translating Pages](/docs/dev/i18n/pages) guides.
 
 <ImgDocs
   src={generatedPageImage}
@@ -148,6 +162,72 @@ const NotePage = ({ params }: PluginRoutePageProps) => {
 export default NotePage
 ```
 
+### Localizing metadata
+
+`head` runs outside the React component tree—during SSR and on every
+navigation—so hooks like `useTranslations` cannot reach it. Instead, `head`
+receives `t`, a translator over the namespaces the route declared in `messages`:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/notes/:slug', {
+  component: lazy(() => import('./pages/note-page-slug')),
+  // [!code ++:1]
+  messages: ['@acme/site-notes.home'],
+})
+```
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+
+export const route = definePluginRoute({
+  // [!code ++:4]
+  head: ({ params, t }) => ({
+    description: t('@acme/site-notes.home.desc'),
+    title: `${t('@acme/site-notes.home.note')}: ${params.slug}`,
+  }),
+})
+```
+
+Keys are **full dotted paths**, namespace included. A component scopes itself
+once with `useTranslations('@acme/site-notes.home')` and then asks for
+`t('title')`; in `head` there is no component to scope, so the whole key is
+spelled out.
+
+Values interpolate the same way they do in a component:
+
+```tsx
+head: ({ t }) => ({
+  title: t('@acme/site-notes.home.greeting', { name: 'Ada' }),
+})
+```
+
+<Callout type="info" title="No extra request">
+  The route's namespaces are already fetched before `head` runs—the loader warms
+  them, and `head` runs after the loader—so translating metadata costs a cache
+  read, not a round trip.
+</Callout>
+
+`load` receives the same `t`, for a title that depends on data you are already
+fetching:
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+export const route = definePluginRoute({
+  load: async ({ params, t }) => {
+    const note = await findNote(params.slug)
+
+    return { heading: `${t('@acme/site-notes.home.note')}: ${note.title}` }
+  },
+  head: ({ loaderData }) => ({ title: loaderData?.heading }),
+})
+```
+
+<Callout type="warn" title="Declare the namespace first">
+  Calling `t` on a route that declares no `messages` throws, naming the
+  namespace to add. Echoing the key back instead would ship
+  `@acme/site-notes.home.title` into a `<title>`, where nothing would surface it
+  until it showed up in a search result.
+</Callout>
+
 ## Loaders
 
 Fetch data in `load`. It runs on the server during SSR and on the client for subsequent navigations. Data returned from `load` is automatically passed to both `head` (for dynamic metadata) and the page component as `loaderData`.
@@ -201,6 +281,186 @@ export default NotePage
 
 {/* Image prompt: Browser preview showing the rendered note page with title and content in container, 1440x900. */}
 
+## Breadcrumbs
+
+Declare a crumb directly in `definePluginRoute` to contribute to the public header or AdminCP breadcrumb trail.
+
+Because `breadcrumb` renders as a React component within the route's declared namespaces, `useTranslations` from `use-intl` works out of the box:
+
+```tsx title="plugins/site-notes/src/pages/notes-layout.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+import { useTranslations } from 'use-intl'
+
+// [!code ++:7]
+export const route = definePluginRoute({
+  breadcrumb: () => {
+    const t = useTranslations('@acme/site-notes.home')
+
+    return t('title')
+  },
+})
+```
+
+For dynamic routes, the crumb receives `{ loaderData }` and can combine dynamic records with localized copy:
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import { definePluginRoute } from '@vitnode/core/routing'
+import { useTranslations } from 'use-intl'
+
+export const route = definePluginRoute({
+  load: async ({ params }): Promise<Note> => {
+    return {
+      content: 'Loaded securely from your plugin loader.',
+      title: params.slug,
+    }
+  },
+  head: ({ loaderData, params }) => ({
+    title: loaderData?.title ?? params.slug,
+  }),
+  // [!code ++:5]
+  breadcrumb: ({ loaderData }) => {
+    const t = useTranslations('@acme/site-notes.home')
+
+    return `${t('note')}: ${loaderData.title}`
+  },
+})
+```
+
+For nested trails, deferred crumbs, and AdminCP trails, see the [Breadcrumbs guide](/docs/dev/routing/breadcrumbs).
+
+## Loading states
+
+While a route's loader runs, VitNode displays its `pendingComponent`:
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+// [!code ++:1]
+import { TablePendingSkeleton } from '@vitnode/core/tanstack/pending'
+
+export const routes = definePluginRoutes([
+  page('/notes', {
+    component: lazy(() => import('./pages/notes-page')),
+    // [!code ++:1]
+    pendingComponent: TablePendingSkeleton,
+  }),
+])
+```
+
+<Callout type="warn" title="A pending component is not code-split">
+  A router draws it *before* the page's own chunk has arrived, so there is
+  nothing to wait for it—TanStack Router never splits a `pendingComponent`, and
+  neither does VitNode. It is imported outright into the initial bundle. Keep it
+  to a skeleton.
+</Callout>
+
+VitNode ships pre-built skeleton shapes from `@vitnode/core/tanstack/pending`: `TablePendingSkeleton`, `FeedPendingSkeleton`, `FormPendingSkeleton`, `CardsPendingSkeleton`, `ProfilePendingSkeleton`, `AuthPendingSkeleton`, and `RoutePendingSpinner`.
+
+To customize skeleton props (such as `rows` or `className`), rename the file to `routes.tsx` and return a JSX element:
+
+```tsx title="plugins/site-notes/src/routes.tsx"
+page('/notes', {
+  component: lazy(() => import('./pages/notes-page')),
+  // [!code ++:1]
+  pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+})
+```
+
+If `pendingComponent` is omitted, the route falls back to the application's global `defaultPendingComponent`. Learn more in the [Loading States guide](/docs/dev/routing/loading).
+
+## Missing pages
+
+When a loader cannot find what the URL requested, throw `notFound()` from `@tanstack/react-router` to activate the route's `notFound` component:
+
+```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+import { notFound } from '@tanstack/react-router'
+import { definePluginRoute } from '@vitnode/core/routing'
+
+export const route = definePluginRoute({
+  load: async ({ params }) => {
+    const note = await findNote(params.slug)
+
+    // [!code ++:3]
+    if (!note) {
+      throw notFound()
+    }
+
+    return note
+  },
+
+  // [!code ++:5]
+  notFound: () => (
+    <div className="container mx-auto p-4">
+      <p className="text-muted-foreground leading-relaxed">No such note.</p>
+    </div>
+  ),
+})
+```
+
+Unlike `pendingComponent`, `notFound` is part of the lazy page chunk and costs unvisited routes nothing. If omitted, the route falls through to the application's global `defaultNotFoundComponent`, preserving the application layout and navigation shell. Learn more in the [Errors & Not Found guide](/docs/dev/routing/not-found).
+
+## Catch-all routes
+
+A `*` segment matches every remaining segment of the URL, allowing a single route to own an entire subtree. It must be the final segment of a path and is only permitted on `page()` declarations (a layout ending in `*` would match before its child routes):
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  // [!code ++:3]
+  page('/notes/*', {
+    component: lazy(() => import('./pages/notes-catch-all')),
+  }),
+])
+```
+
+The page reads the matched trailing path from `params._splat`:
+
+```tsx title="plugins/site-notes/src/pages/notes-catch-all.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+const NotesCatchAll = ({ params }: PluginRoutePageProps) => {
+  const segments = (params._splat ?? '').split('/').filter(Boolean)
+
+  return (
+    <div className="container mx-auto max-w-3xl p-4">
+      <p className="text-muted-foreground leading-relaxed">
+        {segments.join(' / ')}
+      </p>
+    </div>
+  )
+}
+
+export default NotesCatchAll
+```
+
+## Route protection (requires)
+
+Protect pages or entire layouts by declaring `requires`. VitNode checks the visitor's authentication state before the route chunk downloads:
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/notes/new', {
+    component: lazy(() => import('./pages/new-note-page')),
+    // [!code ++:1]
+    requires: 'authenticated',
+  }),
+])
+```
+
+| `requires`        | Behavior when not satisfied                                                | Typical use cases                         |
+| :---------------- | :------------------------------------------------------------------------- | :---------------------------------------- |
+| `'authenticated'` | Redirects guests to `/login` with `returnTo` set to the target path        | Dashboards, note editors, user settings   |
+| `'guest'`         | Redirects authenticated users away (to `/` or their post-auth destination) | Sign-in, account creation, password reset |
+| `'admin-guest'`   | Redirects staff with active admin sessions into the AdminCP                | AdminCP sign-in screen (`/admin`)         |
+
+<Callout type="info" title="AdminCP routes are pre-guarded">
+  Routes with `area: 'admin'` are automatically placed behind the AdminCP staff
+  session guard and cannot declare `requires`. To restrict access to specific
+  staff roles or permissions, gate content inside the route component or loader.
+</Callout>
+
 ## Nested routes and layouts
 
 A `layout()` wraps child routes in a shared UI frame without claiming a URL segment of its own. Use `index()` to render a page at the layout's root path.
@@ -219,6 +479,7 @@ import {
 export const routes = definePluginRoutes([
   layout('/notes', {
     component: lazy(() => import('./pages/notes-layout')),
+    messages: ['@acme/site-notes.home'],
     children: [
       index({
         component: lazy(() => import('./pages/notes-index-page')),
@@ -234,12 +495,16 @@ export const routes = definePluginRoutes([
 A layout component renders `{children}`:
 
 ```tsx title="plugins/site-notes/src/pages/notes-layout.tsx"
+import { useTranslations } from 'use-intl'
+
 const NotesLayout = ({ children }: { children: React.ReactNode }) => {
+  const t = useTranslations('@acme/site-notes.home')
+
   return (
     <div className="container mx-auto flex max-w-4xl flex-col gap-6 p-4">
       <header className="border-b pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-balance">
-          Site Notes
+          {t('title')}
         </h1>
       </header>
       <main>{children}</main>
@@ -296,12 +561,15 @@ const NotesPage = ({
   navigate,
   search,
 }: PluginRoutePageProps<undefined, NotesSearch>) => (
-  <button
-    onClick={() => void navigate({ search: { page: search.page + 1 } })}
-    type="button"
-  >
-    Next Page ({search.page})
-  </button>
+  <div className="container mx-auto p-4">
+    <button
+      className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      onClick={() => void navigate({ search: { page: search.page + 1 } })}
+      type="button"
+    >
+      Next Page ({search.page})
+    </button>
+  </div>
 )
 
 export default NotesPage
@@ -310,15 +578,33 @@ export default NotesPage
 <Cards>
   <Card
     icon={<DatabaseIcon />}
-    title="Data Loading"
+    title="Data Fetching"
     description="Learn universal fetchers, cache invalidation, and background mutations."
-    href="/docs/dev/data-loading"
+    href="/docs/dev/fetcher"
   />
   <Card
     icon={<MilestoneIcon />}
     title="Breadcrumbs"
     description="Customize static and dynamic breadcrumbs across public and admin pages."
-    href="/docs/dev/plugins/breadcrumbs"
+    href="/docs/dev/routing/breadcrumbs"
+  />
+  <Card
+    icon={<LoaderCircleIcon />}
+    title="Loading States"
+    description="Display debounced spinners and tailored skeleton fallbacks while pages stream."
+    href="/docs/dev/routing/loading"
+  />
+  <Card
+    icon={<TriangleAlertIcon />}
+    title="Errors & Not Found"
+    description="Render localized 404 and 500 boundaries while keeping application layouts intact."
+    href="/docs/dev/routing/not-found"
+  />
+  <Card
+    icon={<LanguagesIcon />}
+    title="Translations"
+    description="Stream localized message namespaces in parallel with route chunks using use-intl."
+    href="/docs/dev/i18n/pages"
   />
   <Card
     icon={<LayoutDashboardIcon />}

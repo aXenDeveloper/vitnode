@@ -1,13 +1,7 @@
-import type { PersonalInfoPolicyFetcher } from "@/views/auth/settings/overview/personal-update";
-
-import { fetcher } from "@/tanstack/fetcher";
 import {
-  personalInfoPolicyFetcher,
+  fetchPersonalInfoPolicy,
   personalInfoPolicyQueryOptions,
 } from "@/views/auth/settings/overview/personal-update";
 
-const fetchPolicy: PersonalInfoPolicyFetcher =
-  personalInfoPolicyFetcher(fetcher);
-
 export const personalInfoPolicyQuery = () =>
-  personalInfoPolicyQueryOptions({ fetchPolicy });
+  personalInfoPolicyQueryOptions({ fetchPolicy: fetchPersonalInfoPolicy });

@@ -4,6 +4,7 @@ export * from "./query";
 
 export {
   devicesQueryKey,
+  devicesQueryOptions,
   DevicesRequestError,
   isDevicesRequestError,
 } from "@/views/auth/settings/devices/devices-query";

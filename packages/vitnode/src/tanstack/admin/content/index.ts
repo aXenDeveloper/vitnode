@@ -130,8 +130,8 @@ export type {
   ContentApiTarget,
 } from "@/views/admin/views/content/content-request";
 export {
+  contentApiFetch,
   contentApiFetchArgs,
-  contentApiFetchInBrowser,
   readContentApiJson,
 } from "@/views/admin/views/content/content-request";
 

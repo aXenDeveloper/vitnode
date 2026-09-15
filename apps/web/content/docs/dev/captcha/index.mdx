@@ -65,21 +65,23 @@ export const createCommentRoute = buildRoute({
 
 ### 3. Render the Frontend Widget
 
-Include `<Captcha />` in your form and supply the received token to `fetcherClient`:
+Include `<Captcha />` in your form and supply the received token to the fetcher:
 
 ```tsx title="plugins/blog/src/views/comment-form.tsx"
 import { Captcha } from "@vitnode/core/components/captcha"
-import { fetcherClient } from "@vitnode/core/lib/fetcher-client"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
 
 export const CommentForm = () => {
   const [captchaToken, setCaptchaToken] = React.useState<string>()
 
   const handleSubmit = async () => {
-    await fetcherClient(commentsModule, {
+    await fetcher({
+      plugin: "@acme/blog",
       method: "post",
+      module: "comments",
       path: "/",
       captchaToken, // [!code ++]
-      body: { text: "Nice article!" },
+      args: { body: { text: "Nice article!" } },
     })
   }
 

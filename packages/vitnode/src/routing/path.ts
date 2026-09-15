@@ -29,13 +29,20 @@ const parseSegment = (
 
   if (raw.startsWith("$")) {
     return {
-      reason: `"${raw}" is TanStack Router syntax - write ":${raw.slice(1) || "name"}" instead`,
+      reason:
+        raw === "$"
+          ? '"$" is TanStack Router syntax for a catch-all - write "*" instead'
+          : `"${raw}" is TanStack Router syntax - write ":${raw.slice(1) || "name"}" instead`,
     };
   }
 
-  if (raw === "*" || raw === "**") {
+  if (raw === "*") {
+    return { segment: { kind: "splat" } };
+  }
+
+  if (raw === "**") {
     return {
-      reason: `"${raw}" is a catch-all segment, which VitNode route paths do not represent yet`,
+      reason: `"${raw}" is not how VitNode spells a catch-all - write "*" instead`,
     };
   }
 
@@ -133,64 +140,84 @@ export const parseRoutePath = (path: string): ParseRoutePathResult => {
       params.add(parsed.segment.name);
     }
 
+    // Checked as the *previous* segment gains a successor rather than by index,
+    // so the rule reads the same however the loop is written: a splat swallows
+    // everything after it, so there is nothing for a later segment to match.
+    if (segments.at(-1)?.kind === "splat") {
+      return {
+        ok: false,
+        reason: `"${path}" has a segment after its "*" - a catch-all matches every remaining segment, so it can only be last`,
+      };
+    }
+
     segments.push(parsed.segment);
   }
 
   return { ok: true, path: formatRoutePath(segments), segments };
 };
 
-/** Segments back to their canonical VitNode path. */
-export function formatRoutePath(segments: PluginRouteSegment[]): string {
-  if (segments.length === 0) return "/";
-
-  return `/${segments
-    .map(segment =>
-      segment.kind === "param" ? `:${segment.name}` : segment.value,
-    )
-    .join("/")}`;
-}
-
-export const toNextRoutePath = (segments: PluginRouteSegment[]): string => {
-  if (segments.length === 0) return "/";
-
-  return `/${segments
-    .map(segment =>
-      segment.kind === "param" ? `[${segment.name}]` : segment.value,
-    )
-    .join("/")}`;
-};
-
-/** Segments to TanStack Router syntax, `/blog/$slug`. */
-export const toTanStackRoutePath = (segments: PluginRouteSegment[]): string => {
-  if (segments.length === 0) return "/";
-
-  return `/${segments
-    .map(segment =>
-      segment.kind === "param" ? `$${segment.name}` : segment.value,
-    )
-    .join("/")}`;
-};
-
-export const routeMatchKey = (segments: PluginRouteSegment[]): string => {
-  if (segments.length === 0) return "/";
-
-  return `/${segments
-    .map(segment => (segment.kind === "param" ? ":" : segment.value))
-    .join("/")}`;
-};
-
 /**
- * A splat, in a {@link routeMatchKeyFromTanStackPath} key.
+ * A splat, in a route match key.
  *
  * Deliberately not `:`. A splat swallows every remaining segment and a parameter
- * swallows exactly one, so `/api/$` and `/api/:id` do *not* match the same URLs -
+ * swallows exactly one, so `/api/*` and `/api/:id` do *not* match the same URLs -
  * `/api/a/b` reaches only the first. Giving them one key would break the single
- * promise this whole key space makes: equal keys mean equal sets of URLs. No
- * canonical VitNode path can produce this marker, because `parseRoutePath`
- * rejects catch-alls outright, so a plugin route can never collide with an
- * application's splat by key.
+ * promise this whole key space makes: equal keys mean equal sets of URLs.
+ *
+ * Reached from both entrances - a VitNode path's `*` through {@link routeMatchKey}
+ * and an application's `$` through {@link routeMatchKeyFromTanStackPath} - so a
+ * plugin catch-all and an application catch-all at one URL collide, which is the
+ * whole point.
  */
 const MATCH_KEY_SPLAT = "**";
+
+/**
+ * One segment in each of the four spellings this module emits.
+ *
+ * Written once, as a total function over the segment union, so a new kind of
+ * segment is a compile error in every projection at once rather than an
+ * `undefined` that reaches a router as the string "undefined".
+ */
+const projectSegment = (
+  segment: PluginRouteSegment,
+  spelling: {
+    param: (name: string) => string;
+    splat: string;
+  },
+): string => {
+  switch (segment.kind) {
+    case "param":
+      return spelling.param(segment.name);
+    case "splat":
+      return spelling.splat;
+    case "static":
+      return segment.value;
+  }
+};
+
+const projectPath = (
+  segments: PluginRouteSegment[],
+  spelling: { param: (name: string) => string; splat: string },
+): string => {
+  if (segments.length === 0) return "/";
+
+  return `/${segments.map(segment => projectSegment(segment, spelling)).join("/")}`;
+};
+
+/** Segments back to their canonical VitNode path. */
+export function formatRoutePath(segments: PluginRouteSegment[]): string {
+  return projectPath(segments, { param: name => `:${name}`, splat: "*" });
+}
+
+export const toNextRoutePath = (segments: PluginRouteSegment[]): string =>
+  projectPath(segments, { param: name => `[${name}]`, splat: "[...slug]" });
+
+/** Segments to TanStack Router syntax, `/blog/$slug` and `/admin/content/$`. */
+export const toTanStackRoutePath = (segments: PluginRouteSegment[]): string =>
+  projectPath(segments, { param: name => `$${name}`, splat: "$" });
+
+export const routeMatchKey = (segments: PluginRouteSegment[]): string =>
+  projectPath(segments, { param: () => ":", splat: MATCH_KEY_SPLAT });
 
 /**
  * {@link routeMatchKey}, for a path already written in TanStack Router syntax.
@@ -273,6 +300,12 @@ export const relativeRouteSegments = (
       if (there.kind !== "static" || here.value !== there.value) return null;
       continue;
     }
+
+    // A splat carries no name, so matching kinds is the whole comparison. It can
+    // only ever be a parent's last segment, and `parseRoutePath` has already
+    // refused anything after one - so a child that got this far claims exactly
+    // its parent's URL.
+    if (here.kind === "splat") continue;
 
     if (there.kind !== "param" || here.name !== there.name) return null;
   }

@@ -36,9 +36,10 @@ export const pluginRouteModuleTemplate = (pluginName: string): string =>
   `import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
 import { definePluginRoute } from "@vitnode/core/routing";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { useTranslations } from "use-intl";
 
-import { helloApi } from "@/api/client";
+import { CONFIG_PLUGIN } from "@/const";
 
 interface HelloMessage {
   message: string;
@@ -46,7 +47,8 @@ interface HelloMessage {
 
 export const route = definePluginRoute<HelloMessage>({
   load: async () => {
-    const response = await helloApi.fetch({
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
       method: "get",
       module: "hello",
       path: "/",
@@ -221,22 +223,10 @@ export const helloModule = buildModule({
 });
 `;
 
-export const pluginApiClientTemplate = (): string =>
-  `import type { ApiClient } from "@vitnode/core/tanstack/fetcher";
-
-import { createApiClient } from "@vitnode/core/tanstack/fetcher";
-
-import type { helloModule } from "@/api/modules/hello/hello.module";
-
-import { CONFIG_PLUGIN } from "@/const";
-
-export const helloApi: ApiClient<typeof helloModule> = createApiClient<
-  typeof helloModule
->(CONFIG_PLUGIN.pluginId);
-`;
-
 export const pluginApiConfigTemplate = (pluginName: string): string =>
-  `import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+  `import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { CONFIG_PLUGIN } from "@/const";
 
@@ -247,6 +237,32 @@ export const ${pluginApiVariableName(pluginName)} = () =>
     pluginId: CONFIG_PLUGIN.pluginId,
     modules: [helloModule],
   });
+
+/**
+ * What an application's generated api-registry.gen.ts imports to make this
+ * plugin's routes callable through the fetcher.
+ *
+ * Reduced here, once, to the module tree and the route definitions - so no app
+ * that installs this plugin re-derives them, and none of the Hono, database or
+ * secret code behind the factory is reachable from a browser build.
+ */
+export type VitNodeApiPlugin = ApiPluginContract<
+  ReturnType<typeof ${pluginApiVariableName(pluginName)}>
+>;
+`;
+
+export const pluginGlobalTypesTemplate = (): string =>
+  `/// <reference types="use-intl" />
+
+import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
+import core from "@vitnode/core/locales/en.json" with { type: "json" };
+import plugin from "./src/locales/en.json" with { type: "json" };
+
+declare module "use-intl" {
+  interface AppConfig {
+    Messages: typeof plugin & typeof core & typeof coreApi;
+  }
+}
 `;
 
 /**
@@ -280,7 +296,7 @@ export const pluginPackageExports = (): Record<
 export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
-  "src/api/client.ts": pluginApiClientTemplate(),
+  "global.d.ts": pluginGlobalTypesTemplate(),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
   "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),

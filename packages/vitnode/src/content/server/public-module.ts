@@ -1,16 +1,45 @@
 import type { BuildModuleReturn } from "../../api/lib/module";
+import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";
 import { buildContentPublicRoutes } from "./public-routes";
 
-export const buildContentPublicModule = <P extends string>({
+export type ContentPublicRoutes<
+  P extends string,
+  TDefinition extends AnyContentTypeDefinition,
+> = ReturnType<typeof buildContentPublicRoutes<TDefinition, P>>;
+
+export type ContentPublicModuleOf<P extends string, Model> = Model extends {
+  definition: infer TDefinition extends AnyContentTypeDefinition;
+}
+  ? TDefinition extends {
+      publicApi: { enabled: true; path: infer Path extends string };
+    }
+    ? BuildModuleReturn<P, Path, ContentPublicRoutes<P, TDefinition>>
+    : never
+  : never;
+
+export type ContentPublicModule<
+  P extends string,
+  Models extends readonly AnyContentModel[],
+> = BuildModuleReturn<
+  P,
+  "content",
+  [],
+  ContentPublicModuleOf<P, Models[number]>[]
+>;
+
+export const buildContentPublicModule = <
+  const P extends string,
+  const Models extends readonly AnyContentModel[],
+>({
   contentTypes,
   pluginId,
 }: {
-  contentTypes: AnyContentModel[];
+  contentTypes: Models;
   pluginId: P;
-}): BuildModuleReturn<P, "content"> => {
+}): ContentPublicModule<NoInfer<P>, Models> => {
   const modules = contentTypes
     .filter(model => model.definition.publicApi.enabled)
     .map(model =>
@@ -27,5 +56,5 @@ export const buildContentPublicModule = <P extends string>({
     routes: [],
     modules,
     // No `contentTypes` - see the warning above.
-  });
+  }) as ContentPublicModule<NoInfer<P>, Models>;
 };

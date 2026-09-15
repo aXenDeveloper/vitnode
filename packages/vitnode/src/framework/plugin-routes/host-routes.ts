@@ -84,7 +84,7 @@ const tokenPath = (tokens: Token[]): string => {
  * ## What it is for, and what it is not
  *
  * This is the *build-time* half of the plugin-versus-host collision check. The
- * authoritative half runs where the real route tree exists - `withPluginRoutes`
+ * authoritative half runs where the real route tree exists - `withVitNodeRoutes`
  * walks it and refuses a plugin route that shadows an application URL - and it
  * cannot be wrong, because it is reading the router's own routes. This one can
  * only be *incomplete*, and is deliberately built so that incomplete is the only

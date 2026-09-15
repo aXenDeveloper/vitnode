@@ -1,11 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { createTranslator } from "use-intl";
+import type { PluginRouteTranslator } from "@/routing";
 
-import { intlQueryOptions } from "../i18n/query";
 import { discoverFeedQueryOptions } from "./discover";
 
-export const DISCOVER_NAMESPACES = ["core.global", "core.search"] as const;
+export { DISCOVER_NAMESPACES } from "./namespaces";
 
 /** The narrowest slice of a route's context this loader reads. */
 export interface DiscoverLoaderContext {
@@ -22,25 +21,17 @@ export interface DiscoverRouteData {
 export const loadDiscoverRoute = async ({
   locale,
   queryClient,
-}: DiscoverLoaderContext): Promise<DiscoverRouteData> => {
-  const [intl] = await Promise.all([
-    queryClient.query({
-      ...intlQueryOptions({ locale, namespaces: DISCOVER_NAMESPACES }),
-      staleTime: "static",
-    }),
-    queryClient.infiniteQuery({
-      ...discoverFeedQueryOptions({ locale }),
-      staleTime: "static",
-    }),
-  ]);
-
-  const t = createTranslator({
-    locale,
-    messages: intl.messages as {
-      core: { search: { discoverDesc: string; discoverTitle: string } };
-    },
-    namespace: "core.search",
+  t,
+}: DiscoverLoaderContext & {
+  t: PluginRouteTranslator;
+}): Promise<DiscoverRouteData> => {
+  await queryClient.infiniteQuery({
+    ...discoverFeedQueryOptions({ locale }),
+    staleTime: "static",
   });
 
-  return { description: t("discoverDesc"), title: t("discoverTitle") };
+  return {
+    description: t("core.search.discoverDesc"),
+    title: t("core.search.discoverTitle"),
+  };
 };

@@ -1,3 +1,4 @@
+export type { AuthoredPluginRouteOptions } from "./authoring";
 export { definePluginRoute } from "./authoring";
 export type { PluginRouteErrorCode, PluginRouteErrorDetails } from "./errors";
 export { PluginRouteError } from "./errors";
@@ -14,6 +15,8 @@ export {
 export type {
   CheckedPluginRouteModule,
   CheckedPluginRouteOptions,
+  PluginRouteBreadcrumbDeclaration,
+  PluginRouteBreadcrumbGroup,
   PluginRouteBreadcrumbProps,
   PluginRouteContext,
   PluginRouteHead,
@@ -25,6 +28,7 @@ export type {
   PluginRoutePageModule,
   PluginRoutePageProps,
   PluginRouteRobots,
+  PluginRouteTranslator,
 } from "./module";
 export { readPluginRouteModule } from "./module";
 export {
@@ -60,6 +64,7 @@ export type {
 } from "./tree";
 export {
   definePluginRoutes,
+  defineRoutes,
   index,
   isPluginRouteDeclaration,
   isPluginRouteLazyComponent,

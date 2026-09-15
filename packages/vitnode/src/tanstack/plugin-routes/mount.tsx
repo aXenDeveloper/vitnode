@@ -1,7 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AnyRoute } from "@tanstack/react-router";
+import type { NotFoundRouteProps } from "@tanstack/react-router";
 
-import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
+import {
+  createRoute,
+  lazyRouteComponent,
+  useRouter,
+} from "@tanstack/react-router";
 
 import type { PluginRouteArea } from "@/routing";
 
@@ -16,6 +21,7 @@ import type { PluginRouteSpec } from "./specs";
 // on a route's `staticData` - see `../breadcrumb/model`.
 import "../breadcrumb/model";
 import { intlQueryOptions } from "../i18n/query";
+import { pageHead as defaultPageHead } from "../metadata";
 import {
   assertNoAppCollision,
   declaredOptions,
@@ -30,8 +36,13 @@ import { PLUGIN_ROUTES_ROUTE_ID } from "./container";
 import { pluginRouteGuard } from "./guard";
 import { normalizePluginRouteHead } from "./head";
 import { pluginRouteSearchDeps } from "./specs";
+import { pluginRouteTranslator } from "./translator";
 
 export interface PluginRouteRuntimeContext {
+  /** Present in the `admin` area, contributed by the AdminCP shell. */
+  adminAccess?: unknown;
+  /** Present on a guarded route, contributed by that route's own guard. */
+  auth?: unknown;
   locale: string;
   queryClient: QueryClient;
 }
@@ -44,19 +55,27 @@ export type PluginRouteAreaRoutes = Partial<Record<PluginRouteArea, AnyRoute>>;
 
 export interface PluginRoutesMountOptions {
   mountUnder?: PluginRouteAreaRoutes;
-  pageHead: PluginRoutePageHead;
+  /**
+   * Optional, and only for an application that formats its titles differently:
+   * `pageHead` reads the site's own metadata from the VitNode config itself, so
+   * the default is already this application's.
+   */
+  pageHead?: PluginRoutePageHead;
 }
 
 const pluginRouteHead =
-  (module: PluginRouteModuleRef, pageHead: PluginRoutePageHead) =>
+  (spec: PluginRouteSpec, pageHead: PluginRoutePageHead) =>
   async ({
     loaderData,
+    match,
     params,
   }: {
     loaderData?: unknown;
+    /** The router hands `head` the match, and a match carries its context. */
+    match: { context: PluginRouteRuntimeContext };
     params: Readonly<Record<string, string>>;
   }): Promise<Partial<RouteHeadResult>> => {
-    const { route } = await module();
+    const { route } = await spec.module();
 
     if (!route.head) return {};
 
@@ -68,6 +87,10 @@ const pluginRouteHead =
           loaderData: envelope.data,
           params,
           search: envelope.search ?? {},
+          // `head` runs outside the React tree, so `useTranslations` cannot
+          // reach it. The namespaces are already cached by the loader, so this
+          // resolves without a request.
+          t: await pluginRouteTranslator(spec, match.context),
         }),
       ),
     );
@@ -96,6 +119,8 @@ const pluginRouteLoader =
             staleTime: "static",
           }),
     ]);
+    // Built from the query the line above just warmed, so it costs a cache read.
+    const t = await pluginRouteTranslator(spec, context);
 
     const search = spec.validateSearch
       ? deps
@@ -105,13 +130,27 @@ const pluginRouteLoader =
 
     return {
       data: route.load
-        ? // Projected, never forwarded. `context` here is the host's - it holds
-          // this app's `QueryClient` - and handing it over whole would make
-          // every field on it public plugin API by accident, compiling today and
-          // arriving `undefined` on a host that has no such field. What crosses
-          // the boundary is `PluginRouteContext` and only that.
+        ? // Projected, never forwarded. `context` here is the host's, and handing
+          // it over whole would make every field on it public API by accident -
+          // compiling today and arriving `undefined` on a host that has no such
+          // field. What crosses the boundary is the four fields below and
+          // nothing else, which is what `RouteLoadContext` and its two narrower
+          // spellings describe.
+          //
+          // `auth` and `adminAccess` are copied across only when the host put
+          // them there, so a route that declared neither `requires` nor the
+          // `admin` area cannot observe one - and the type it is authored
+          // against says the same.
           await route.load({
-            context: { locale: context.locale },
+            t,
+            context: {
+              ...(context.adminAccess === undefined
+                ? {}
+                : { adminAccess: context.adminAccess }),
+              ...(context.auth === undefined ? {} : { auth: context.auth }),
+              locale: context.locale,
+              queryClient: context.queryClient,
+            },
             params,
             search,
           })
@@ -119,6 +158,35 @@ const pluginRouteLoader =
       search,
     };
   };
+
+/**
+ * The screen a route shows when it - or its loader - answers `notFound()`.
+ *
+ * Lazy, and deliberately so: unlike the pending skeleton, which has to exist
+ * before the module does, a not-found screen is only ever rendered after the
+ * route has been matched. It can live in the module's own chunk and cost an
+ * unvisited route nothing.
+ *
+ * Every route gets one, because whether a module declares `notFound` is not
+ * knowable until the module has loaded and a route's options are fixed when the
+ * route is built. A module that declares none falls through to the application's
+ * own `defaultNotFoundComponent`, which is what the route would have reached had
+ * it declared nothing at all - so the fallback is the default, not a blank page.
+ */
+const pluginRouteNotFound = (spec: PluginRouteSpec) =>
+  lazyRouteComponent(async () => {
+    const { route } = await spec.module();
+
+    return {
+      default:
+        route.notFound ??
+        function PluginRouteNotFoundFallback(props: NotFoundRouteProps) {
+          const Default = useRouter().options.defaultNotFoundComponent;
+
+          return Default ? <Default {...props} /> : null;
+        },
+    };
+  });
 
 const pluginRouteOptions = (
   spec: PluginRouteSpec,
@@ -130,12 +198,19 @@ const pluginRouteOptions = (
     ...(beforeLoad ? { beforeLoad } : {}),
 
     ...(spec.validateSearch ? { validateSearch: spec.validateSearch } : {}),
+    // Absent rather than `undefined`, so a route that declares none leaves the
+    // router's own `defaultPendingComponent` in place instead of overriding it
+    // with nothing.
+    ...(spec.pendingComponent
+      ? { pendingComponent: spec.pendingComponent }
+      : {}),
+    notFoundComponent: pluginRouteNotFound(spec),
     component: lazyRouteComponent(async () => ({
       default: (spec.route.kind === "layout"
         ? pluginLayoutComponent
         : pluginPageComponent)(await spec.module(), spec.namespaces),
     })),
-    head: pluginRouteHead(spec.module, pageHead),
+    head: pluginRouteHead(spec, pageHead),
     loader: pluginRouteLoader(spec),
 
     loaderDeps: ({ search }: { search: unknown }) =>
@@ -247,10 +322,19 @@ const mountPluginSubtree = (
   mountPoint.addChildren([...siblings, container]);
 };
 
-export const withPluginRoutes = <TRouteTree extends AnyRoute>(
+/**
+ * Mounts every declared route - core's own and every configured plugin's - into
+ * an application's route tree.
+ *
+ * One call, because there is one kind of route now. `@vitnode/core` reaches this
+ * through the same registry a plugin does, so an application no longer composes
+ * `withCoreRootRoutes(withCoreAdminRoutes(withCoreMainRoutes(…)))` around it
+ * and can no longer get that nesting wrong.
+ */
+export const withVitNodeRoutes = <TRouteTree extends AnyRoute>(
   routeTree: TRouteTree,
   specs: PluginRouteSpec[],
-  { mountUnder, pageHead }: PluginRoutesMountOptions,
+  { mountUnder, pageHead = defaultPageHead }: PluginRoutesMountOptions,
 ): TRouteTree => {
   // Stage 11's default, kept: an application that names no shell has its plugin
   // pages hang from the tree's root, which is what a host with no chrome wants.
@@ -274,3 +358,6 @@ export const withPluginRoutes = <TRouteTree extends AnyRoute>(
 
   return routeTree;
 };
+
+/** @deprecated Renamed to {@link withVitNodeRoutes}; core's routes mount here too. */
+export const withPluginRoutes = withVitNodeRoutes;

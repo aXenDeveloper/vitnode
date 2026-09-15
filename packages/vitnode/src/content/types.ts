@@ -923,7 +923,10 @@ type ExposableFlatFieldKeys<TFields> = Exclude<
  * conditional keys off it, and a widened `boolean` would silently resolve to
  * "no public API".
  */
-export interface ContentPublicApiConfig<TField extends string = string> {
+export interface ContentPublicApiConfig<
+  TField extends string = string,
+  TPath extends string = string,
+> {
   defaultOrder?: "asc" | "desc";
   /** Defaults to `publishedAt`. Must be orderable. */
   defaultOrderBy?: "publishedAt" | TField;
@@ -935,7 +938,7 @@ export interface ContentPublicApiConfig<TField extends string = string> {
   /** Columns `orderBy` accepts, besides `publishedAt`. Defaults to none. */
   orderableFields?: readonly TField[];
   /** One lowercase URL segment, e.g. `articles`. Never `admin`. */
-  path: string;
+  path: TPath;
   /** Columns `search` scans. Defaults to none. */
   searchableFields?: readonly TField[];
 }
@@ -952,6 +955,7 @@ export interface ContentPublicApiConfig<TField extends string = string> {
 export interface ResolvedContentPublicApiConfig<
   TField extends string = string,
   TEnabled extends boolean = boolean,
+  TPath extends string = string,
 > {
   defaultOrder: "asc" | "desc";
   defaultOrderBy: string;
@@ -959,7 +963,7 @@ export interface ResolvedContentPublicApiConfig<
   fields: TField[];
   filterableFields: string[];
   orderableFields: string[];
-  path: string;
+  path: TPath;
   searchableFields: string[];
   /** The exposed slug field the detail route resolves by. */
   slugField: string;
@@ -1621,6 +1625,7 @@ export interface ContentTypeDefinition<
   TSchedulingEnabled extends boolean = boolean,
   TLocalizationEnabled extends boolean = boolean,
   TDeliveryEnabled extends boolean = boolean,
+  TPublicPath extends string = string,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
@@ -1644,7 +1649,11 @@ export interface ContentTypeDefinition<
   localization: ResolvedContentLocalizationConfig<TLocalizationEnabled>;
   /** Derived from `admin.permissionModule`, or the id without its plugin segment. */
   permissionModule: string;
-  publicApi: ResolvedContentPublicApiConfig<TPublicField, TPublicEnabled>;
+  publicApi: ResolvedContentPublicApiConfig<
+    TPublicField,
+    TPublicEnabled,
+    TPublicPath
+  >;
   publication: ResolvedContentPublicationConfig<TPublication>;
   /** Zod schemas generated from `fields`. */
   schemas: ContentSchemas<

@@ -6,16 +6,13 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { TranslationRow } from "../content-mutation";
-import type { ContentApiFetch, ContentApiTarget } from "../content-request";
+import type { ContentApiTarget } from "../content-request";
 
 import {
   contentItemQueryKey,
   contentTranslationsQueryKey,
 } from "../content-query";
-import {
-  contentApiFetchInBrowser,
-  readContentApiJson,
-} from "../content-request";
+import { contentApiFetch, readContentApiJson } from "../content-request";
 
 export const zodContentItem = z
   .object({
@@ -53,24 +50,21 @@ export type ContentTranslationsFetcher = (
   request: ContentItemRequest,
 ) => Promise<TranslationRow[]>;
 
-export const contentItemFetcher =
-  (fetchApi: ContentApiFetch): ContentItemFetcher =>
-  async request =>
-    await readContentApiJson(
-      await fetchApi({
-        method: "get",
-        path: `/${request.itemId}`,
-        target: request.target,
-      }),
-      { describe: describeContentItem(request), schema: zodContentItem },
-    );
+export const fetchContentItem: ContentItemFetcher = async request =>
+  await readContentApiJson(
+    await contentApiFetch({
+      method: "get",
+      path: `/${request.itemId}`,
+      target: request.target,
+    }),
+    { describe: describeContentItem(request), schema: zodContentItem },
+  );
 
-export const contentTranslationsFetcher =
-  (fetchApi: ContentApiFetch): ContentTranslationsFetcher =>
+export const fetchContentTranslations: ContentTranslationsFetcher =
   async request =>
     (
       await readContentApiJson(
-        await fetchApi({
+        await contentApiFetch({
           method: "get",
           path: `/${request.itemId}/translations`,
           target: request.target,
@@ -81,13 +75,6 @@ export const contentTranslationsFetcher =
         },
       )
     ).edges as unknown as TranslationRow[];
-
-export const fetchContentItemInBrowser: ContentItemFetcher = contentItemFetcher(
-  contentApiFetchInBrowser,
-);
-
-export const fetchContentTranslationsInBrowser: ContentTranslationsFetcher =
-  contentTranslationsFetcher(contentApiFetchInBrowser);
 
 /**
  * The record, as the one query definition a loader warms and a screen reads.
