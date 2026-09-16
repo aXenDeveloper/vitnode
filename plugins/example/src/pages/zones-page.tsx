@@ -1,15 +1,27 @@
 import type { AnyBlockInstance } from "@vitnode/core/blocks";
 
+import { createBlockRegistry } from "@vitnode/core/blocks";
+import { blocks as coreBlocks } from "@vitnode/core/blocks/built-in";
 import { ContentZone } from "@vitnode/core/blocks/zone";
+import {
+  AutoForm,
+  AutoFormSubmitButton,
+} from "@vitnode/core/components/form/auto-form";
+import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import {
   definePluginRoute,
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
+import { toast } from "sonner";
+import { z } from "zod";
 
+import { blocks as exampleBlocks } from "@/blocks";
 import {
   PAGE_BLOCKS_ALLOWED,
   PAGE_SIDEBAR_BLOCKS_ALLOWED,
 } from "@/content/page-blocks";
+
+const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks]);
 
 interface SettingsZones {
   afterProfile: AnyBlockInstance[];
@@ -72,13 +84,14 @@ export const route = definePluginRoute<SettingsZones>({
   head: () => ({ title: "Content zones" }),
 });
 
+const profileSchema = z.object({
+  displayName: z.string().min(1).max(60).default("Ada"),
+});
+
 const ProfileForm = () => (
-  <form
+  <section
     aria-labelledby="profile-heading"
     className="border-border flex flex-col gap-4 rounded-lg border p-4 md:p-6"
-    onSubmit={event => {
-      event.preventDefault();
-    }}
   >
     <div className="flex flex-col gap-1">
       <h2 className="text-lg font-semibold text-balance" id="profile-heading">
@@ -89,26 +102,29 @@ const ProfileForm = () => (
       </p>
     </div>
 
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium" htmlFor="profile-name">
-        Display name
-      </label>
-      <input
-        className="border-input bg-background rounded-md border px-3 py-2 text-sm"
-        defaultValue="Ada"
-        id="profile-name"
-        name="name"
-        type="text"
-      />
-    </div>
-
-    <button
-      className="bg-primary text-primary-foreground w-fit rounded-md px-4 py-2 text-sm font-medium"
-      type="submit"
+    <AutoForm
+      fields={[
+        {
+          component: props => (
+            <AutoFormInput
+              {...props}
+              autoComplete="nickname"
+              label="Display name"
+            />
+          ),
+          id: "displayName",
+        },
+      ]}
+      formSchema={profileSchema}
+      onSubmit={values => {
+        toast.success("Profile saved", {
+          description: `Nothing was stored - "${values.displayName}" is only here to show application UI between two zones.`,
+        });
+      }}
     >
-      Save
-    </button>
-  </form>
+      <AutoFormSubmitButton>Save</AutoFormSubmitButton>
+    </AutoForm>
+  </section>
 );
 
 const CHECKS = [
@@ -152,6 +168,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
           allowedBlocks={PAGE_BLOCKS_ALLOWED}
           blocks={loaderData.beforeProfile}
           id="settings:before-profile"
+          registry={blocksRegistry}
         />
 
         <ProfileForm />
@@ -160,6 +177,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
           allowedBlocks={PAGE_BLOCKS_ALLOWED}
           blocks={loaderData.afterProfile}
           id="settings:after-profile"
+          registry={blocksRegistry}
         />
       </div>
 
@@ -169,6 +187,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
         blocks={loaderData.sidebar}
         className="border-border w-full rounded-lg border p-4 md:w-64"
         id="settings:sidebar"
+        registry={blocksRegistry}
       />
     </div>
 
@@ -176,6 +195,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
       allowedBlocks={PAGE_BLOCKS_ALLOWED}
       blocks={loaderData.beforeFooter}
       id="settings:before-footer"
+      registry={blocksRegistry}
     />
   </div>
 );
