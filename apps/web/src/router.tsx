@@ -16,7 +16,6 @@ import {
   withVitNodeRoutes,
 } from '@vitnode/core/tanstack/plugin-routes'
 
-import './blocks.gen'
 // Imported for its side effect: this module calls `configureIntl`, which is
 // what registers the locale rules every route's redirects are rewritten by.
 import './lib/i18n'

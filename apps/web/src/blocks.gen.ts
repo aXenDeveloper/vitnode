@@ -11,9 +11,15 @@
 // plugin id.
 //
 // `blocksRegistry` is the registry itself: import it and hand it to
-// `<ContentRenderer registry={blocksRegistry} />`. Evaluating this module also
-// installs it as this process's default, which is what lets a renderer without
-// a `registry` prop - and a content type's write validation - find one.
+// `<ContentZone registry={blocksRegistry} />`.
+//
+// Import this module ONLY from a route that renders blocks. Every plugin's
+// block components are statically imported above, so anything that reaches
+// this file eagerly carries all of them - which is why it must not be pulled
+// in from a root module such as `router.tsx`.
+//
+// The API builds its own registry from the same plugins when it boots, so
+// write-time validation never depends on this file being evaluated.
 //
 // A block definition is metadata plus one public React component. There is no
 // editor code in here, and no request is made to build it.

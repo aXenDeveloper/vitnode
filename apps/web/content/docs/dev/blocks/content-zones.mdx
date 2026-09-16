@@ -6,7 +6,7 @@ icon: LayoutTemplate
 
 A **Content Zone** is a place on a page where block content may appear, named by the developer who put it there.
 
-```tsx
+```tsx title="src/routes/_main/pages.$slug.tsx"
 import { ContentZone } from "@vitnode/core/blocks/zone"
 
 import { blocksRegistry } from "@/blocks.gen"
@@ -219,6 +219,29 @@ One declaration, two readers, and the page imports an array rather than a conten
   A boundary test keeps that honest: `blocks/zone.tsx` reaches `react` and nothing else, `content/define.ts` reaches Zod, and `content/fields.ts` reaches nothing - the descriptors are cheap, the content *type* is not.
 </Callout>
 
+### Where the registry comes in
+
+Pass it, from the route that renders blocks:
+
+```tsx
+import { blocksRegistry } from "@/blocks.gen"
+```
+
+`blocks.gen.ts` statically imports every configured plugin's block components, so importing it from a root module - `router.tsx`, a root layout - would put every block in the application on every page, including the ones that render none. Import it in the route that needs it and it stays in that route's chunk. A test asserts the application's root router cannot reach it.
+
+A plugin cannot see the host's generated file at all, so a plugin-owned page builds the registry it needs from the blocks it knows about:
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
+import { createBlockRegistry } from "@vitnode/core/blocks"
+import { blocks as coreBlocks } from "@vitnode/core/blocks/built-in"
+
+import { blocks as exampleBlocks } from "@/blocks"
+
+const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks])
+```
+
+Either way the registry is a value the page owns, and nothing global had to be set up first.
+
 ## A zone never fetches
 
 `ContentZone` is rendering infrastructure. It takes block data as a prop and never goes looking for it.
@@ -358,6 +381,11 @@ Break a zone id on purpose, to confirm it fails loudly rather than silently:
 The page should throw a `BlockError` naming the id and the rule. Put it back.
 
 </Step>
+<Step>
+
+Open an unrelated route - `/`, or `/docs` - with the Network panel open, and confirm **no block module loads**. A page that renders no blocks should never request one. This is the property the root router must not break; the [import-graph test](#performance) is the standing guard, and this is how you see it.
+
+</Step>
 </Steps>
 
 ### A block whose plugin is gone
@@ -438,6 +466,17 @@ curl -s http://localhost:3000/example/zones | grep -cE 'dnd-kit|tiptap|cmdk'
 ```
 
 `0`. The [import-graph tests](#performance) are the standing guarantee; this is the spot check that the guarantee survived bundling.
+
+</Step>
+<Step>
+
+Load an unrelated route and confirm its chunks hold no block components - search the modules it preloads for a block id such as `core:hero`:
+
+```bash
+curl -s http://localhost:3000/ | grep -o '/assets/[^"]*\.js' | sort -u
+```
+
+Fetch those and grep for `core:hero`. Nothing should match: a page that renders no blocks must not carry any.
 
 </Step>
 </Steps>

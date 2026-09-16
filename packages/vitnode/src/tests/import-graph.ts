@@ -113,7 +113,10 @@ export const stripComments = (source: string): string => {
   return out;
 };
 
-export const runtimeImports = (path: string): string[] => {
+export const runtimeImports = (
+  path: string,
+  { dynamic = true }: { dynamic?: boolean } = {},
+): string[] => {
   const source = stripComments(readFileSync(path, "utf8")).replace(
     /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
     "$1",
@@ -124,8 +127,33 @@ export const runtimeImports = (path: string): string[] => {
       /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']|require\s*\(\s*["']([^"']+)["']/g,
     ),
   ]
+    .filter(match => dynamic || match[2] === undefined)
     .map(match => match[1] ?? match[2] ?? match[3] ?? match[4])
     .filter((specifier): specifier is string => Boolean(specifier));
+};
+
+export const reachedFiles = (
+  entry: string,
+  {
+    dynamic = true,
+    srcRoot = SRC_ROOT,
+  }: { dynamic?: boolean; srcRoot?: string } = {},
+): string[] => {
+  const seen = new Set<string>();
+
+  const walk = (file: string) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+
+    for (const specifier of runtimeImports(file, { dynamic })) {
+      const target = resolveSpecifier(specifier, file, srcRoot);
+      if (target) walk(target);
+    }
+  };
+
+  walk(entry);
+
+  return [...seen].map(file => relative(srcRoot, file)).sort();
 };
 
 export const externalGraph = (

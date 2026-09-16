@@ -54,7 +54,9 @@ setDefaultBlockRegistry(blocksRegistry)
 
 Installing a plugin is the whole registration step. Removing it takes its blocks with it, and a page that still references one keeps rendering everything else - see [Rendering](/docs/dev/blocks/rendering).
 
-A registry is a plain value, not a service: `createBlockRegistry` returns an isolated one, and every consumer takes it as an argument. The last line installs it as the process default, which is a convenience for two callers that cannot be handed one - a renderer used without a `registry` prop, and the Zod schema a content type builds while its plugin is still loading. Two applications in one process each create their own and pass it explicitly.
+A registry is a plain value, not a service: `createBlockRegistry` returns an isolated one, and every consumer takes it as an argument. The last line installs it as the process default, which is a convenience for a renderer used without a `registry` prop. Two applications in one process each create their own and pass it explicitly.
+
+Import `src/blocks.gen.ts` **only from a route that renders blocks** - it statically imports every plugin's block components, so a root module that touches it makes every visitor pay for all of them. The API never needs it: it builds its own registry from the same plugins when it boots, which is what validates every write.
 
 ## Where validation happens
 

@@ -34,7 +34,13 @@ For each stored instance it resolves the definition in the registry and renders 
 
 Pass it. `blocksRegistry` is exported from the generated `src/blocks.gen.ts`, and handing it to the renderer is explicit, testable, and works when one process serves more than one application.
 
-Evaluating `src/blocks.gen.ts` also installs that registry as the process default, so a renderer with no `registry` prop finds one. That fallback exists because two callers cannot be handed a registry: a renderer deep in a tree, and the Zod schema a content type builds while its plugin is still loading, long before an application exists. With neither, `ContentRenderer` throws a `BlockRegistryMissingError` naming both ways out.
+<Callout title="Import blocks.gen only where you render blocks" type="warn">
+  That file statically imports every configured plugin's block components, so anything that reaches it carries all of them. Import it from the route or page that renders blocks - never from `router.tsx`, a root layout, or any other module the whole application loads. A test asserts the application's root router cannot reach it.
+</Callout>
+
+Evaluating `src/blocks.gen.ts` also installs that registry as the process default, so a renderer with no `registry` prop finds one. Treat that as a convenience for a renderer deep inside a tree that cannot be handed one, not as setup: it only works if something already imported the file on that route.
+
+The API does not rely on it. It builds its own registry when it boots, from the same plugins' `blocks`, so write-time validation is never waiting on a front end to evaluate a module. With no registry at all, `ContentRenderer` throws a `BlockRegistryMissingError` naming both ways out.
 
 `setDefaultBlockRegistry` returns the function that undoes it, so a test - or a second application - can install one without leaking it:
 
