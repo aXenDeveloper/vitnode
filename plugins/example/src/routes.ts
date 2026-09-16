@@ -24,6 +24,10 @@ export const routes = definePluginRoutes([
     search: browseSearch,
   }),
 
+  page("/example/zones", {
+    component: lazy(() => import("./pages/zones-page")),
+  }),
+
   page("/example/embed", {
     area: "blank",
     component: lazy(() => import("./pages/embed-page")),
