@@ -392,42 +392,35 @@ describe("blocks the zone does not allow", () => {
   });
 });
 
-describe("the allowlist a blocks() field already declares", () => {
-  const contentField = { allowed: ["core:*"] } as const;
+describe("the wrapper element", () => {
+  it("is limited to a real DOM element, so the zone marker always lands", () => {
+    const { container } = render(
+      <ContentZone
+        as="aside"
+        blocks={[hero("Only", "01")]}
+        id="main"
+        registry={registry}
+      />,
+    );
 
-  it("is reused when the field descriptor is handed over", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const wrapper = container.querySelector("aside");
 
+    expect(wrapper?.getAttribute("data-vitnode-zone")).toBe("main");
+    expect(wrapper?.children).toHaveLength(1);
+  });
+
+  it("puts the blocks inside it, never beside it", () => {
     const { container } = render(
       <ContentZone
         as="section"
-        blocks={[hero("Allowed", "01"), note("Refused", "02")]}
-        field={contentField}
+        blocks={[hero("First", "01"), note("Second", "02")]}
         id="main"
         registry={registry}
       />,
     );
 
-    expect(screen.queryByText("Refused")).toBeNull();
-    expect(
-      container
-        .querySelector("section")
-        ?.getAttribute("data-vitnode-zone-allowed"),
-    ).toBe("core:*");
-  });
-
-  it("loses to an allowlist written on the zone itself", () => {
-    render(
-      <ContentZone
-        allowedBlocks="*"
-        blocks={[hero("Allowed", "01"), note("Also allowed", "02")]}
-        field={contentField}
-        id="main"
-        registry={registry}
-      />,
-    );
-
-    expect(screen.getByText("Also allowed")).toBeDefined();
+    expect(container.children).toHaveLength(1);
+    expect(container.querySelector("section")?.children).toHaveLength(2);
   });
 });
 

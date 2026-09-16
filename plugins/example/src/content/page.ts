@@ -1,5 +1,7 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
+import { PAGE_BLOCKS_ALLOWED } from "./page-blocks";
+
 export const pageContentType = defineContentType({
   id: "example.page",
   tableName: "example_pages",
@@ -9,7 +11,7 @@ export const pageContentType = defineContentType({
     slug: field.slug({ source: "title" }),
 
     content: field.blocks({
-      allowed: ["core:*", "example:callout"],
+      allowed: PAGE_BLOCKS_ALLOWED,
       max: 50,
     }),
   },

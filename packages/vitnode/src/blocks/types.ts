@@ -88,7 +88,3 @@ export interface ParsedContentZoneId {
   name: string;
   scope: string | undefined;
 }
-
-export interface ContentZoneField {
-  allowed: BlockAllowedSpec;
-}

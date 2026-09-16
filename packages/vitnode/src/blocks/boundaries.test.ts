@@ -105,8 +105,39 @@ describe("the public content zone", () => {
     expect(offenders(entry, ["zod"])).toStrictEqual([]);
   });
 
+  it("reaches no database or server code", () => {
+    expect(
+      offenders(entry, ["drizzle-orm", "drizzle-kit", "hono", "postgres"]),
+    ).toStrictEqual([]);
+  });
+
   it("renders through the public renderer rather than its own loop", () => {
     expect(readFileSync(entry, "utf8")).toContain("./renderer");
+  });
+
+  it("takes an allowlist, never a content type", () => {
+    const source = readFileSync(entry, "utf8");
+
+    expect(source).not.toContain("../content/");
+    expect(source).toContain("allowedBlocks");
+  });
+});
+
+describe("why a zone takes an allowlist and not a content type", () => {
+  it("costs a validation library, which a public page must not pay", () => {
+    expect(
+      reachedSpecifiers(join(here, "..", "content", "define.ts")),
+    ).toContain("zod");
+  });
+
+  it("is not a cost the field descriptors themselves carry", () => {
+    expect(
+      reachedSpecifiers(join(here, "..", "content", "fields.ts")),
+    ).toStrictEqual([]);
+  });
+
+  it("is a cost the zone avoids entirely", () => {
+    expect(reachedSpecifiers(join(here, "zone.tsx"))).not.toContain("zod");
   });
 });
 

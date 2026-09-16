@@ -125,6 +125,16 @@ Ask for a wrapper when you want one:
 | `className` only | a `<div>` with that class |
 | `as` (with or without `className`) | that element |
 
+`as` takes an **HTML element name** - `"section"`, `"aside"`, `"header"`, `"ul"` - and not a component. The wrapper's job is to carry the zone's identity into the DOM, and a component is free to drop the `data-*` props it is handed, which would lose that identity silently and only in the case nobody tests. If you want the zone inside a component of yours, compose instead of substituting:
+
+```tsx
+<Card>
+  <ContentZone id="settings:sidebar" blocks={content} />
+</Card>
+```
+
+That reads better anyway, and the zone stays exactly as heavy as it was.
+
 ## Empty zones
 
 An empty zone renders **nothing at all** - wrapper included.
@@ -135,7 +145,9 @@ An empty zone renders **nothing at all** - wrapper included.
 
 There is no empty container, no stray border and no gap in a flex column. `null`, `undefined` and `[]` behave identically, so a page whose zones are all empty is byte-for-byte a page without zones. The registry is not even consulted.
 
-An editor will need to *see* an empty zone in order to drop something into it. That is edit mode's job, and edit mode can render whatever placeholder it likes. Making every visitor download a marker for a zone nobody has filled in is not the way to get there.
+This is a deliberate performance and layout decision, not an oversight. Most zones in an application are empty most of the time - a page with eight placement points and two filled ones should cost exactly two. Emitting a marker element for the other six would put six nodes in every visitor's document, participate in every flex and grid calculation, and exist for the benefit of a person who is not there.
+
+An editor will need to *see* an empty zone in order to drop something into it. That is edit mode's job, and edit mode can render whatever placeholder it likes, because by then somebody has asked for it.
 
 ## Restricting what may go in a zone
 
@@ -151,11 +163,21 @@ An editor will need to *see* an empty zone in order to drop something into it. T
 
 There is one allowlist format in VitNode, one function that evaluates it, and this is it.
 
-### It is mostly for the editor
+### Two allowlists, two jobs
 
-Block data is validated **once, on write**. A `blocks()` field already refuses a block its `allowed` list does not name, so a stored instance has crossed that boundary before it ever reaches a page. Re-checking it on every render would buy nothing.
+The same value means two different things in two places, and the difference matters.
 
-So the zone allowlist follows the same `validate` modes the [renderer](/docs/dev/blocks/rendering#validation) already uses:
+| | `field.blocks({ allowed })` | `<ContentZone allowedBlocks>` |
+| :--- | :--- | :--- |
+| **Is** | a write boundary | a description of the location |
+| **Runs** | on every create and update | not at all in production |
+| **On refusal** | the whole request is a 422 | the block is skipped in development |
+| **Answers** | "may this be stored?" | "what belongs here?" |
+| **For** | the API | the future editor, and you reading the page |
+
+The field is the thing that *enforces*. A stored instance has already crossed it, so a page re-checking the same list on every render would be paying twice for one answer. The zone's copy exists to say what a location is for - which is what a block picker will need, and what a reader of the JSX needs.
+
+Public rendering is therefore **not** a second validation boundary. What the zone does with its allowlist follows the same `validate` modes the [renderer](/docs/dev/blocks/rendering#validation) already uses, and it *skips*, never rejects:
 
 | `validate` | A block the zone does not allow |
 | :--- | :--- |
@@ -163,28 +185,38 @@ So the zone allowlist follows the same `validate` modes the [renderer](/docs/dev
 | `"development"` *(default)* | is skipped in development, renders in production |
 | `"always"` | is skipped everywhere |
 
-In development the block is skipped, a dashed notice names it, and one `console.warn` is logged per block type. In production the write boundary is trusted and nothing is checked. Set `validate="always"` on a page rendering blocks the API never saw - a live import, a third-party feed.
+In development the block is skipped, a dashed notice names it, and one `console.warn` is logged per block type - a development aid for content that drifted, not a gate. In production the write boundary is trusted and nothing is checked at all.
 
-Its real job is the one it can do before any of that: telling a future block picker what belongs here.
+`validate="always"` is the exception, for a page rendering blocks the API never saw - a live import, a third-party feed. Even then it costs one `Map` lookup and a list scan per block, not a schema parse.
 
-### Reading the allowlist off the field
+### Declaring the allowlist once
 
-If the zone renders a `blocks()` field, that field already knows what it allows. Hand it over instead of writing the list twice:
+The zone's allowlist and the field's `allowed` are usually the same value, and writing it twice is a typo waiting to happen. Put it in a module of its own and import it from both:
 
-```tsx
-import { pageContentType } from "@vitnode/example/content/page"
+```ts title="plugins/example/src/content/page-blocks.ts"
+export const PAGE_BLOCKS_ALLOWED = ["core:*", "example:callout"] as const
+```
 
+```ts title="plugins/example/src/content/page.ts"
+content: field.blocks({ allowed: PAGE_BLOCKS_ALLOWED, max: 50 })
+```
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
 <ContentZone
-  id="main"
-  field={pageContentType.fields.content}
-  blocks={page.content}
+  id="settings:before-profile"
+  allowedBlocks={PAGE_BLOCKS_ALLOWED}
+  blocks={content}
 />
 ```
 
-`field` is read for its `allowed` and nothing else, and an explicit `allowedBlocks` wins over it.
+One declaration, two readers, and the page imports an array rather than a content type.
 
-<Callout title="Which one to use" type="info">
-  Importing a content type into a public page pulls the Content Engine's field factories into that page's bundle for one string. If the page already imports it, `field` is the honest way to stay in sync. If it does not, write `allowedBlocks` and keep the page light. The two are the same value either way - the duplication this avoids is a typo risk, not a correctness one, because the write boundary is the thing that actually enforces it.
+<Callout title="Why the zone does not take the field itself" type="warn">
+  An earlier draft of this API accepted `field={pageContentType.fields.content}` so the allowlist could be read straight off the descriptor. It was measured and removed.
+
+  A content type is authored by *calling* `defineContentType` at module scope, so importing one retains everything that call reaches - the field factories, the schema builders, Zod, the admin labels. On `/example/zones` the difference was **8 chunks and 23.5 kB** against **15 chunks and 181.8 kB**, to read one array of strings.
+
+  A boundary test keeps that honest: `blocks/zone.tsx` reaches `react` and nothing else, `content/define.ts` reaches Zod, and `content/fields.ts` reaches nothing - the descriptors are cheap, the content *type* is not.
 </Callout>
 
 ## A zone never fetches
@@ -231,7 +263,15 @@ When a zone renders a wrapper, the wrapper carries its identity:
 >
 ```
 
-That is the whole metadata story for now, and it is free: the attributes ride on an element you asked for anyway. There is no zone registry, no context and no module-level state holding a list of zones - a public page has nobody to tell.
+Two attributes, both short strings. That is the whole metadata story for now, and it is free: they ride on an element you asked for anyway. There is no zone registry, no context and no module-level state holding a list of zones - a public page has nobody to tell.
+
+The format stays small and predictable on purpose. An id, and a comma-separated allowlist. Nothing here will ever grow into a serialised JSON blob in an attribute: anything bigger than a couple of identifiers belongs in edit mode, where it can be a JavaScript value instead of a string somebody has to parse back out of the document.
+
+<Callout title="A zone without a wrapper has no marker - by design" type="warn">
+  Most zones render no element, so most zones leave no trace in view-mode HTML. That is the [empty-zone and no-wrapper behaviour](#what-a-zone-renders) working as intended, and it means **the set of zones on a page is not discoverable by scanning public DOM**.
+
+  Edit mode must not try. When it arrives it will know its zones because it rendered them - each `ContentZone` can register itself while edit mode is on - not by walking the document looking for attributes that were never promised to be there.
+</Callout>
 
 If you need those values yourself, `@vitnode/core/blocks` exports the pieces without any React:
 
@@ -255,13 +295,152 @@ parseContentZoneId("settings:before-profile")
 | `blocks` | — | The instances to render. `null`, `undefined` and `[]` all render nothing. |
 | `registry` | the process default | The registry to resolve blocks against. |
 | `allowedBlocks` | none | What may be placed here. Same shape as a `blocks()` field's `allowed`. |
-| `field` | none | A `blocks()` descriptor to read `allowed` from. |
-| `as` | none | An element or component to wrap in. |
+| `as` | none | An HTML element name to wrap in. Components are not accepted. |
 | `className` | none | A class for that wrapper. Implies `as="div"`. |
 | `validate` | `"development"` | Passed through to the renderer, and gates the allowlist check. |
 | `fallback` | a development-only notice | What to render for a block that is skipped. |
 
 Everything but `id` and `blocks` is optional and named, so later additions - a label, a maximum, a permission - are additions rather than a new signature.
+
+## Verifying it yourself
+
+`/example/zones` in the example plugin is the manual test page for everything above. It renders four zones around a locked profile form, and its own copy lists what each one should look like.
+
+### In development
+
+<Steps>
+<Step>
+
+Start the development environment from the repository root:
+
+```bash
+pnpm dev
+```
+
+</Step>
+<Step>
+
+Open [http://localhost:3000/example/zones](http://localhost:3000/example/zones) and check the page itself:
+
+| | Expected |
+| :--- | :--- |
+| Order | Blocks appear in the order the loader lists them - callout, then text. |
+| Locked UI | The profile form renders untouched between the two zones. |
+| Empty zone | `settings:before-footer` leaves no gap below the layout. |
+| Independence | Each zone renders its own blocks; none affects another. |
+
+</Step>
+<Step>
+
+Open DevTools → Elements and check the DOM:
+
+| Zone | Expected |
+| :--- | :--- |
+| `settings:sidebar` | `<aside data-vitnode-zone="settings:sidebar" data-vitnode-zone-allowed="core:text">` |
+| `settings:before-profile` | its two blocks, with **no** element wrapping them |
+| `settings:after-profile` | its block, with **no** element wrapping it |
+| `settings:before-footer` | nothing - no element, no comment, no whitespace node |
+
+</Step>
+<Step>
+
+Open DevTools → Network, filter to Fetch/XHR, and reload. `ContentZone` issues **no request of its own**: the blocks arrived with the route's loader data.
+
+</Step>
+<Step>
+
+Break a zone id on purpose, to confirm it fails loudly rather than silently:
+
+```tsx
+<ContentZone id="Settings Sidebar" blocks={loaderData.sidebar} />
+```
+
+The page should throw a `BlockError` naming the id and the rule. Put it back.
+
+</Step>
+</Steps>
+
+### A block whose plugin is gone
+
+Content outlives plugins, so the interesting case is a page referencing a block nothing registers. Simulate it **temporarily** - do not commit the change.
+
+<Steps>
+<Step>
+
+In `plugins/example/src/blocks.tsx`, comment the callout out of the registered list:
+
+```ts
+export const blocks = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  blocks: [], // was [calloutBlock]
+} satisfies BlockPluginSource
+```
+
+The loader in `zones-page.tsx` still places an `example:callout`, which is exactly the situation: stored content naming a block that is no longer installed.
+
+</Step>
+<Step>
+
+**In development**, reload `/example/zones`. Expect a dashed notice reading *Block "example:callout" is not registered*, one `console.warn` in the terminal and browser console, and **every other block still rendering** - the text block, the profile form, the CTA, the sidebar.
+
+</Step>
+<Step>
+
+**In production**, run the production flow below with the same edit in place. Expect the callout to be silently absent, no notice, no error, and a 200 response. A visitor sees a page with one section missing, not a stack trace.
+
+</Step>
+<Step>
+
+Revert `blocks.tsx`.
+
+</Step>
+</Steps>
+
+### Against a production build
+
+Dev-mode checks miss bundling, minification and real SSR, so repeat the important ones against a build:
+
+<Steps>
+<Step>
+
+Build and start:
+
+```bash
+pnpm build
+pnpm start
+```
+
+`pnpm build` runs `vite build` for the web app; `pnpm start` serves `.output/server/index.mjs`. To do just the web app, use `pnpm --filter web build` and `pnpm --filter web start`.
+
+</Step>
+<Step>
+
+Read the **server-rendered markup**, not the hydrated DOM - `view-source:`, or:
+
+```bash
+curl -s http://localhost:3000/example/zones | grep -o 'data-vitnode-zone[^>]*'
+```
+
+Exactly one match, for the sidebar. The unwrapped zones contribute no attribute, and the empty one contributes nothing.
+
+</Step>
+<Step>
+
+Confirm the block content is in the HTML the server sent, not painted in afterwards - search the source for a block's text. If it is there, the zone server-rendered and needs no hydration to be readable.
+
+</Step>
+<Step>
+
+Confirm no editor code reached the page:
+
+```bash
+curl -s http://localhost:3000/example/zones | grep -cE 'dnd-kit|tiptap|cmdk'
+```
+
+`0`. The [import-graph tests](#performance) are the standing guarantee; this is the spot check that the guarantee survived bundling.
+
+</Step>
+</Steps>
 
 ## What comes next
 

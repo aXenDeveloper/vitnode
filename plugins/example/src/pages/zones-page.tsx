@@ -1,4 +1,4 @@
-import type { AnyBlockInstance, BlockAllowedSpec } from "@vitnode/core/blocks";
+import type { AnyBlockInstance } from "@vitnode/core/blocks";
 
 import { ContentZone } from "@vitnode/core/blocks/zone";
 import {
@@ -6,7 +6,10 @@ import {
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
 
-const ALLOWED: BlockAllowedSpec = ["core:*", "example:callout"];
+import {
+  PAGE_BLOCKS_ALLOWED,
+  PAGE_SIDEBAR_BLOCKS_ALLOWED,
+} from "@/content/page-blocks";
 
 interface SettingsZones {
   afterProfile: AnyBlockInstance[];
@@ -20,10 +23,10 @@ export const route = definePluginRoute<SettingsZones>({
     afterProfile: [
       {
         data: {
-          description: "Two of them are placed around a form nobody can edit.",
+          description: "Four zones sit on this page. Two of them wrap nothing.",
           href: "/docs/dev/blocks/content-zones",
           label: "Read the guide",
-          title: "Four zones on this page",
+          title: "Content Zones",
         },
         id: "01JEXAMPLEZONESAFTERCTA01",
         type: "core:cta",
@@ -42,13 +45,22 @@ export const route = definePluginRoute<SettingsZones>({
         id: "01JEXAMPLEZONESBEFORE0001",
         type: "example:callout",
       },
+      {
+        data: {
+          body: "This zone holds two blocks, rendered in stored order. It was given no wrapper, so neither of them sits inside an element the zone added.",
+          heading: "Two blocks, one zone",
+          width: "prose",
+        },
+        id: "01JEXAMPLEZONESBEFORE0002",
+        type: "core:text",
+      },
     ],
 
     sidebar: [
       {
         data: {
-          body: "A zone with a wrapper carries `data-vitnode-zone` into the DOM. One without a wrapper adds no element at all.",
-          heading: "Need help?",
+          body: "This zone allows core:text and nothing else, while the zones around the form take the same allowlist the page content type declares.",
+          heading: "A narrower zone",
           width: "prose",
         },
         id: "01JEXAMPLEZONESSIDEBAR001",
@@ -99,6 +111,13 @@ const ProfileForm = () => (
   </form>
 );
 
+const CHECKS = [
+  "settings:before-profile - two blocks, no wrapper: no element around them in the DOM.",
+  "settings:after-profile - one block, no wrapper.",
+  "settings:sidebar - wrapped in <aside>, so it carries data-vitnode-zone and a narrower data-vitnode-zone-allowed.",
+  "settings:before-footer - empty: no markup at all, and no gap below the sidebar.",
+];
+
 const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
   <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
     <header className="flex flex-col gap-2">
@@ -111,10 +130,26 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
       </p>
     </header>
 
+    <section
+      aria-labelledby="checks-heading"
+      className="bg-muted/40 flex flex-col gap-2 rounded-lg p-4 text-sm"
+    >
+      <h2 className="font-semibold" id="checks-heading">
+        What to look for in DevTools
+      </h2>
+      <ul className="text-muted-foreground flex list-disc flex-col gap-1 pl-5 leading-relaxed">
+        {CHECKS.map(check => (
+          <li className="text-pretty" key={check}>
+            {check}
+          </li>
+        ))}
+      </ul>
+    </section>
+
     <div className="flex flex-col gap-6 md:flex-row md:items-start">
       <div className="flex flex-1 flex-col gap-6">
         <ContentZone
-          allowedBlocks={ALLOWED}
+          allowedBlocks={PAGE_BLOCKS_ALLOWED}
           blocks={loaderData.beforeProfile}
           id="settings:before-profile"
         />
@@ -122,14 +157,14 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
         <ProfileForm />
 
         <ContentZone
-          allowedBlocks={ALLOWED}
+          allowedBlocks={PAGE_BLOCKS_ALLOWED}
           blocks={loaderData.afterProfile}
           id="settings:after-profile"
         />
       </div>
 
       <ContentZone
-        allowedBlocks={ALLOWED}
+        allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
         as="aside"
         blocks={loaderData.sidebar}
         className="border-border w-full rounded-lg border p-4 md:w-64"
@@ -138,7 +173,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => (
     </div>
 
     <ContentZone
-      allowedBlocks={ALLOWED}
+      allowedBlocks={PAGE_BLOCKS_ALLOWED}
       blocks={loaderData.beforeFooter}
       id="settings:before-footer"
     />

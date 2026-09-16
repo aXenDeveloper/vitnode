@@ -76,7 +76,6 @@ export type {
   BlockUnknownData,
   BlockValidationMode,
   ContentZoneDefinition,
-  ContentZoneField,
   ParsedContentZoneId,
   RegisteredBlock,
 } from "./types";
