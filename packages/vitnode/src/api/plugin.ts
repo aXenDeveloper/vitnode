@@ -1,5 +1,6 @@
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 
+import { blocks } from "@/blocks/built-in";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { buildApiPlugin } from "./lib/plugin";
@@ -13,6 +14,7 @@ import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
+  blocks,
   modules: [
     middlewareModule,
     usersModule,

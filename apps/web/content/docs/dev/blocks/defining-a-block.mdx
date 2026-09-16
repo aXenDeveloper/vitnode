@@ -1,0 +1,110 @@
+---
+title: Defining a Block
+description: defineBlock takes an id, Content Engine fields and one React component, and infers the block's data type from the fields.
+icon: SquarePen
+---
+
+## One call
+
+```tsx title="plugins/example/src/blocks/callout.tsx"
+import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks"
+
+import { defineBlock } from "@vitnode/core/blocks"
+import { field } from "@vitnode/core/content"
+
+const calloutFields = {
+  body: field.textarea({ required: true, minLength: 1, maxLength: 600 }),
+  title: field.text({ required: true, minLength: 1, maxLength: 120 }),
+  tone: field.enum({
+    defaultValue: "info",
+    values: ["info", "success", "warning"],
+  }),
+}
+
+type CalloutData = BlockData<typeof calloutFields>
+
+const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
+  <aside>
+    <h2>{data.title}</h2>
+    <p>{data.body}</p>
+  </aside>
+)
+
+export const calloutBlock = defineBlock({
+  component: Callout,
+  description: "A short highlighted note in one of three tones.",
+  fields: calloutFields,
+  id: "callout",
+  name: "Callout",
+})
+```
+
+`BlockData<typeof calloutFields>` is the inferred data type: `title` and `body` are `string`, `tone` is `"info" | "success" | "warning" | undefined` because it has a default. Nothing is written twice.
+
+## Component props
+
+```ts
+interface BlockComponentProps<TData> {
+  /** The instance's own stable id - not the block's. */
+  blockId: string
+  data: TData
+  index: number
+  type: string
+}
+```
+
+`data` has already been through the block's schema when the component runs, so a component never checks for missing fields.
+
+## Ids are namespaced for you
+
+Write `id: "callout"`. The registry prefixes the namespace of the plugin that registered it, derived from the **last segment** of the package name:
+
+| Plugin | Block id | Stored as |
+| :--- | :--- | :--- |
+| `@vitnode/core` | `hero` | `core:hero` |
+| `@vitnode/blog` | `latest-posts` | `blog:latest-posts` |
+| `@acme/page-builder` | `pricing` | `page-builder:pricing` |
+
+Writing the namespace yourself is an error - a block would otherwise be addressable under two names, and content written under the wrong one would be unrenderable.
+
+Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blog`) collide. The registry refuses to build and names both; set `namespace` on one of their `blocks` modules to settle it.
+
+## Which fields a block may hold
+
+| Kind | Allowed | Why |
+| :--- | :--- | :--- |
+| `field.text()`, `field.textarea()` | ✅ | |
+| `field.number()`, `field.boolean()` | ✅ | |
+| `field.enum()`, `field.dateTime()` | ✅ | |
+| `field.group()` | ✅ | Nested objects are ordinary JSON. |
+| `field.file()`, `field.relation()`, `field.user()` | ❌ | A reference needs a foreign key to pin it, and a block's data is one JSON document with no columns to put one in. |
+| `field.repeatable()` | ❌ | Its rows are child-table rows, identified by a database id a JSON document does not have. |
+| `field.slug()` | ❌ | A slug is a record's address; a block is not addressable. |
+| `field.blocks()` | ❌ | Nested blocks are a later stage. |
+
+<Callout type="warn" title="Media in blocks">
+  A file reference inside a block would be a `core_files.id` with nothing stopping the Files screen from deleting the row it names - a published page would render a broken image with no warning anywhere. Content Engine pins every other file reference with `ON DELETE RESTRICT`, and blocks will get media once they can do the same. For now, put the image on the record and let the block choose how to present it.
+</Callout>
+
+## Localization
+
+A block's **fields** are never `localized: true`. There is no translation row for them to live in, and per-field locale maps inside JSON would be a second localization system that revisions, preview and the public locale resolution know nothing about.
+
+The **zone** is what translates:
+
+```ts
+content: field.blocks({ localized: true })
+```
+
+Each language then gets its own blocks, in its own order - which is what a translated page usually needs anyway. See [The blocks() field](/docs/dev/blocks/blocks-field#localization).
+
+## Validating data by hand
+
+Every definition carries a `parse`, typed by its fields:
+
+```ts
+const data = calloutBlock.parse({ title: "Heads up", body: "..." })
+// { title: "Heads up", body: "...", tone: "info" }
+```
+
+It applies defaults and throws a `BlockError` naming the field when the value does not fit. `calloutBlock.schema` is the underlying Zod object if you need `safeParse`.

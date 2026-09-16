@@ -4,12 +4,14 @@ import {
   boolean,
   doublePrecision,
   integer,
+  jsonb,
   serial,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
 
+import type { AnyBlockInstance } from "../../blocks/types";
 import type { ContentFieldDescriptor } from "../types";
 
 import {
@@ -141,6 +143,8 @@ export const buildContentColumn = ({
   }
 
   switch (fieldValue.kind) {
+    case "blocks":
+      return jsonb().$type<AnyBlockInstance[]>().notNull().default([]);
     case "boolean":
       return withModifiers(boolean(), {
         defaultValue: fieldValue.defaultValue,

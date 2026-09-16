@@ -1,0 +1,12 @@
+{
+  "title": "Blocks",
+  "description": "Composable, plugin-provided page sections a content type can store in order",
+  "icon": "Blocks",
+  "pages": [
+    "index",
+    "defining-a-block",
+    "blocks-field",
+    "rendering",
+    "end-to-end"
+  ]
+}

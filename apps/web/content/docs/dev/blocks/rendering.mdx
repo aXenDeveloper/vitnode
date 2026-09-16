@@ -1,0 +1,77 @@
+---
+title: Rendering Blocks
+description: ContentRenderer walks the stored instances, resolves each one in the registry, and renders it on the server like any other component.
+icon: MonitorPlay
+---
+
+## The renderer
+
+```tsx title="src/routes/_main/pages.$slug.tsx"
+import { ContentRenderer } from "@vitnode/core/blocks/renderer"
+
+import "@/blocks.gen"
+
+export const PageScreen = ({ page }: { page: PageContent }) => (
+  <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
+    <h1 className="text-3xl font-semibold text-balance">{page.title}</h1>
+
+    <ContentRenderer blocks={page.content} />
+  </main>
+)
+```
+
+For each stored instance it resolves the definition in the registry, parses `data` with that block's schema, and renders the component with the instance's own id as the React key - so re-ordering a page moves DOM nodes instead of re-mounting them.
+
+| Prop | Default | |
+| :--- | :--- | :--- |
+| `blocks` | — | The stored list. `null`, `undefined` and `[]` all render nothing. |
+| `registry` | the registered one | Pass one explicitly in a test, or to render against a subset. |
+| `fallback` | a development-only notice | What to render for a block the registry cannot resolve. |
+
+## Registering the registry
+
+`src/blocks.gen.ts` registers the registry when it is evaluated, so **something has to import it** before a page renders a zone. Import it from the route or screen that renders blocks rather than from the application root: a page with no zone then never loads any block component.
+
+Without it, `ContentRenderer` throws a `BlockRegistryMissingError` that names the file.
+
+## When a block is unavailable
+
+Content outlives plugins. A page may reference `blog:latest-posts` long after the Blog plugin was disabled, and a zone may hold data that no longer matches a block whose fields changed.
+
+Neither takes the page down. The offending instance is skipped and everything else renders.
+
+| | Behaviour |
+| :--- | :--- |
+| **Production** | Nothing is rendered in its place. A visitor sees a page with one section missing, not an error. |
+| **Development** | A dashed notice naming the block and why it was skipped, plus one `console.warn` per block type. |
+
+Pass `fallback` to decide for yourself:
+
+```tsx
+<ContentRenderer
+  blocks={page.content}
+  fallback={({ instance, reason }) =>
+    reason === "unknown-type" ? <PluginMissingNotice type={instance.type} /> : null
+  }
+/>
+```
+
+## Performance
+
+A block is a normal React component and the renderer is a loop.
+
+- **No request.** Definitions come from the configured plugins, not from the database. A page of hero + text + image + CTA is exactly as many requests as a page without blocks.
+- **No client state.** `ContentRenderer` holds none, subscribes to nothing, and renders on the server like anything else.
+- **No editor.** `@vitnode/core/blocks` is free of React entirely - it is the metadata surface the API validates with - and `@vitnode/core/blocks/renderer` reaches no drag-and-drop, AdminCP, form or query code. The split is asserted by tests so future editor code cannot drift into the public bundle.
+
+Keep your own block components in that spirit: a block that needs a chart library should `lazy()` it inside its own module, so a page that never places it never pays for it.
+
+## Content Zones
+
+The next stage puts the same model behind a zone a developer drops onto a real page:
+
+```tsx
+<ContentZone id="main" allowedBlocks={["core:*", "blog:*"]} />
+```
+
+An authorized editor clicks **Edit page** and arranges blocks on the page itself. Nothing on this page changes when it lands: a zone is a `blocks()` field plus an editing surface, and the renderer it uses in view mode is this one.

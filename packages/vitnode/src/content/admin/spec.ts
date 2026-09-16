@@ -266,9 +266,9 @@ export const buildContentFormSpec = ({
     // One form, shared and localized fields alike, in the order they were
     // declared. Where a value is *stored* is settled by `spec.localized` on the
     // way back out - it is not a reason to split the screen in two.
-    fields: definition.admin.form.fields.map(name =>
-      projectFormField(name, fields[name], labelEnum, labelField),
-    ),
+    fields: definition.admin.form.fields
+      .filter(name => fields[name]?.kind !== "blocks")
+      .map(name => projectFormField(name, fields[name], labelEnum, labelField)),
     sections: definition.admin.form.sections.map(section => {
       // Humanised from the name when nothing translates it, which is the same
       // fallback a field label gets - a form is readable before it is localized.
@@ -368,6 +368,14 @@ const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
 
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   switch (spec.kind) {
+    case "blocks":
+      return z.array(
+        z.object({
+          data: z.record(z.string(), z.unknown()),
+          id: z.string(),
+          type: z.string(),
+        }),
+      );
     case "boolean":
       return z.boolean();
     case "dateTime":

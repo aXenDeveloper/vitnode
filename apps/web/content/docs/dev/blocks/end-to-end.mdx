@@ -1,0 +1,278 @@
+---
+title: End-to-end Example
+description: Define a block, register it with a plugin, add a blocks() field, write a record, and render it - the whole path in seven steps.
+icon: Route
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+
+Everything below is the `@vitnode/example` plugin as it ships, so you can read the finished version in the repository.
+
+```text
+define block → register in plugin → blocks() field → create content → ContentRenderer
+```
+
+<Steps>
+<Step>
+
+## Define the block
+
+```tsx title="plugins/example/src/blocks/callout.tsx"
+import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks"
+
+import { defineBlock } from "@vitnode/core/blocks"
+import { field } from "@vitnode/core/content"
+import { cn } from "cn"
+
+const calloutFields = {
+  body: field.textarea({ required: true, minLength: 1, maxLength: 600 }),
+  title: field.text({ required: true, minLength: 1, maxLength: 120 }),
+  tone: field.enum({
+    defaultValue: "info",
+    values: ["info", "success", "warning"],
+  }),
+}
+
+type CalloutData = BlockData<typeof calloutFields>
+
+const tones: Record<string, string> = {
+  info: "border-primary/40 bg-primary/5",
+  success: "border-success/40 bg-success/5",
+  warning: "border-destructive/40 bg-destructive/5",
+}
+
+const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
+  <aside
+    className={cn(
+      "flex flex-col gap-2 rounded-lg border p-4 md:p-6",
+      tones[data.tone ?? "info"],
+    )}
+  >
+    <h2 className="text-base font-semibold text-balance md:text-lg">
+      {data.title}
+    </h2>
+    <p className="text-sm leading-relaxed text-pretty md:text-base">
+      {data.body}
+    </p>
+  </aside>
+)
+
+export const calloutBlock = defineBlock({
+  component: Callout,
+  description: "A short highlighted note in one of three tones.",
+  fields: calloutFields,
+  id: "callout",
+  name: "Callout",
+})
+```
+
+</Step>
+<Step>
+
+## Export the plugin's `blocks` module
+
+The subpath is the registration. Name the file `src/blocks.tsx` so it resolves as `@vitnode/example/blocks`.
+
+```tsx title="plugins/example/src/blocks.tsx"
+import type { BlockPluginSource } from "@vitnode/core/blocks"
+
+import { CONFIG_PLUGIN } from "@/const"
+
+import { calloutBlock } from "./blocks/callout"
+
+export const blocks = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  blocks: [calloutBlock],
+} satisfies BlockPluginSource
+```
+
+That is the whole registration for the browser. VitNode's Vite plugin finds the module, writes `src/blocks.gen.ts` in every application that configures the plugin, and the block is available as `example:callout`.
+
+Add `namespace: "acme"` here if the derived one - the last segment of the package name - is not the id you want.
+
+</Step>
+<Step>
+
+## Give the API the same list
+
+The API validates writes, so it needs the definitions too. Pass the **same object**:
+
+```ts title="plugins/example/src/config.api.ts"
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
+
+import { CONFIG_PLUGIN } from "@/const"
+
+import { blocks } from "./blocks" // [!code ++]
+
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    blocks, // [!code ++]
+    modules: [adminModule],
+  })
+```
+
+Passing a different plugin's module is an error - the API and the browser must namespace a block identically or a stored `type` would resolve to two different things.
+
+</Step>
+<Step>
+
+## Add a `blocks()` field to a content type
+
+```ts title="plugins/example/src/content/page.ts"
+import { defineContentType, field } from "@vitnode/core/content"
+
+export const pageContentType = defineContentType({
+  id: "example.page",
+  tableName: "example_pages",
+
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    content: field.blocks({
+      allowed: ["core:*", "example:callout"],
+      max: 50,
+    }),
+  },
+
+  publication: { enabled: true },
+
+  publicApi: {
+    enabled: true,
+    path: "pages",
+    fields: ["title", "slug", "content", "publishedAt"],
+  },
+})
+```
+
+```ts title="plugins/example/src/database/pages.ts"
+import { createContentModel } from "@vitnode/core/content/server"
+
+import { pageContentType } from "@/content/page"
+
+export const pageContent = createContentModel(pageContentType)
+
+export const example_pages = pageContent.table
+```
+
+Register `pageContent` in the plugin's admin module and its public module, exactly like any other content type.
+
+</Step>
+<Step>
+
+## Build and migrate
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+The generated migration is one table with one JSONB column for the zone:
+
+```sql
+CREATE TABLE "example_pages" (
+	"id" serial PRIMARY KEY,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	"publishedAt" timestamp,
+	"status" varchar(32) DEFAULT 'draft' NOT NULL,
+	"title" varchar(200) NOT NULL,
+	"slug" varchar(160) NOT NULL,
+	"content" jsonb DEFAULT '[]' NOT NULL
+);
+```
+
+</Step>
+<Step>
+
+## Create a record with blocks
+
+The generated admin route takes the zone as part of the payload. Give every instance its own stable id.
+
+The generated admin module has no static type to infer from, so it is reached with `rawFetcher` - the same call the AdminCP itself makes.
+
+```ts
+import { createBlockInstance } from "@vitnode/core/blocks"
+import { rawFetcher } from "@vitnode/core/tanstack/fetcher"
+
+await rawFetcher({
+  method: "post",
+  module: "content/page",
+  path: "/",
+  pluginId: "@vitnode/example",
+  prefixPath: "/admin",
+  body: {
+    title: "Build your community",
+    content: [
+      createBlockInstance("core:hero", {
+        title: "Build your community",
+        description: "Everything you need, in one place.",
+      }),
+      createBlockInstance("example:callout", {
+        title: "Heads up",
+        body: "Blocks are validated before they are stored.",
+        tone: "info",
+      }),
+    ],
+  },
+})
+```
+
+`content/page` is the content type's `permissionModule`, derived from the entity half of its id.
+
+Anything the registry refuses - an unregistered block, one the field does not allow, data that breaks a field, two instances sharing an id - is a 422 naming the index of the block at fault. Nothing half-valid is stored.
+
+</Step>
+<Step>
+
+## Render it
+
+```tsx title="src/site/pages/page-screen.tsx"
+import { ContentRenderer } from "@vitnode/core/blocks/renderer"
+
+import "@/blocks.gen"
+
+export const PageScreen = ({ page }: { page: PageContent }) => (
+  <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
+    <h1 className="text-3xl font-semibold text-balance">{page.title}</h1>
+
+    <ContentRenderer blocks={page.content} />
+  </main>
+)
+```
+
+Read the record with the generated public route - the zone comes back whole, in stored order:
+
+```ts
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
+
+const page = await fetcher({
+  plugin: "@vitnode/example",
+  method: "get",
+  module: "content/pages",
+  path: "/{slug}",
+  args: { param: { slug } },
+}).then(async res => await res.json())
+```
+
+That one is fully typed: `pages` is the content type's `publicApi.path`, and the response shape - `content` included - is inferred from the definition.
+
+No extra request is made for the blocks themselves: the definitions came from the plugin configuration when the application started.
+
+</Step>
+</Steps>
+
+## Where this goes next
+
+Content Zones and the Visual Editor sit on top of exactly this. A zone is a `blocks()` field with an editing surface; **Edit page** turns that surface on for an authorized editor; the block picker lists what `allowed` resolves to; and drag and drop re-orders the array whose order you have already been storing.

@@ -5,6 +5,8 @@ import type {
   ContentFileField,
 } from "./types";
 
+import { BLOCK_WILDCARD, CONTENT_BLOCKS_ABSOLUTE_MAX } from "../blocks/const";
+import { parseBlockId } from "../blocks/namespace";
 import {
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FIELD_NAME_PATTERN,
@@ -27,6 +29,7 @@ const SLUG_SOURCE_KINDS = new Set<ContentFieldDescriptor["kind"]>(["text"]);
 /** A field with no default that is neither required nor nullable is unwritable. */
 const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   if (fieldValue.kind === "dateTime") return fieldValue.defaultNow;
+  if (fieldValue.kind === "blocks") return true;
   // A group is writable because its leaves are - `resolveContentAdvanced`
   // proves each of them is nullable or defaulted when the group is optional.
   // A collection is writable because the empty set is its default.
@@ -87,6 +90,7 @@ export const assertFieldName = (
 };
 
 const FIELD_KINDS = new Set<string>([
+  "blocks",
   "boolean",
   "dateTime",
   "enum",
@@ -251,6 +255,48 @@ export const assertField = (
         `Field "${name}" has a maxLength of ${maxLength}; it must be positive.`,
         { contentTypeId: id },
       );
+    }
+  }
+
+  if (fieldValue.kind === "blocks") {
+    const { allowed, max, min } = fieldValue;
+
+    if (max !== undefined && (max <= 0 || max > CONTENT_BLOCKS_ABSOLUTE_MAX)) {
+      throw new ContentEngineError(
+        `Field "${name}" has a max of ${max}; it must be between 1 and ${CONTENT_BLOCKS_ABSOLUTE_MAX}.`,
+        { contentTypeId: id },
+      );
+    }
+    if (min !== undefined && min < 0) {
+      throw new ContentEngineError(
+        `Field "${name}" has a min of ${min}; it cannot be negative.`,
+        { contentTypeId: id },
+      );
+    }
+    if (min !== undefined && max !== undefined && min > max) {
+      throw new ContentEngineError(
+        `Field "${name}" has min ${min} greater than max ${max}.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (allowed !== BLOCK_WILDCARD) {
+      if (allowed.length === 0) {
+        throw new ContentEngineError(
+          `Field "${name}" allows no blocks at all, so nothing could ever be placed in it. Use \`allowed: "*"\`, or name the blocks it accepts.`,
+          { contentTypeId: id },
+        );
+      }
+
+      const malformed = allowed.find(
+        entry => entry !== BLOCK_WILDCARD && parseBlockId(entry) === null,
+      );
+      if (malformed !== undefined) {
+        throw new ContentEngineError(
+          `Field "${name}" allows "${malformed}", which is not a block id. Write "namespace:name", "namespace:*" or "*".`,
+          { contentTypeId: id },
+        );
+      }
     }
   }
 

@@ -1,0 +1,145 @@
+---
+title: The blocks() Field
+description: An ordered list of block instances stored in one JSONB column, validated against the registry on every write.
+icon: LayoutList
+---
+
+## Adding a zone to a content type
+
+```ts title="plugins/example/src/content/page.ts"
+import { defineContentType, field } from "@vitnode/core/content"
+
+export const pageContentType = defineContentType({
+  id: "example.page",
+  tableName: "example_pages",
+
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    // [!code ++:4]
+    content: field.blocks({
+      allowed: ["core:*", "example:callout"],
+      max: 50,
+    }),
+  },
+
+  publication: { enabled: true },
+})
+```
+
+| Option | Default | What it does |
+| :--- | :--- | :--- |
+| `allowed` | `"*"` | Which blocks may be placed here. |
+| `max` | `200` | Most instances one record may hold. |
+| `min` | none | Fewest instances. |
+| `localized` | `false` | Give every language its own blocks and order. |
+
+A `blocks()` field is never `required` and never `nullable` - the empty list is what "no blocks" is, so a create that says nothing about the zone gets `[]`.
+
+## Restricting what may go in
+
+`allowed` takes three shapes, and they mix freely:
+
+```ts
+field.blocks({ allowed: "*" })                          // every registered block
+field.blocks({ allowed: ["core:*", "blog:*"] })          // two whole plugins
+field.blocks({ allowed: ["core:hero", "core:text"] })    // exactly these two
+```
+
+A namespace wildcard is the useful middle: installing another plugin does not silently widen what a page may contain, while adding a block to a plugin you already trust does.
+
+The shape is a string union on purpose, so a later `{ categories: [...] }` or `{ excluding: [...] }` object can join the array without any existing definition changing.
+
+## The stored shape
+
+One JSONB column, `NOT NULL DEFAULT '[]'`:
+
+```sql
+"content" jsonb DEFAULT '[]' NOT NULL
+```
+
+holding an ordered list of instances:
+
+```json
+[
+  {
+    "id": "01JC4Z8N9WQKX7R2M5T6V3B8HD",
+    "type": "core:hero",
+    "data": { "title": "Build your community", "align": "start" }
+  },
+  {
+    "id": "01JC4Z8N9X3R7T2M5Q6K8V4B9F",
+    "type": "example:callout",
+    "data": { "title": "Heads up", "body": "...", "tone": "info" }
+  }
+]
+```
+
+| Key | Rule |
+| :--- | :--- |
+| `id` | Stable and unique **within the zone**. Never the array index - a reorder must not change what a block is. |
+| `type` | The globally unique block id. |
+| `data` | Validated against that block's own field schema. |
+
+Array order **is** the rendered order. Nothing sorts it.
+
+### Why one column
+
+A block instance is a document: an id, a type, and whatever that type declares. Splitting it across tables would buy a join per zone, a migration per new block, and an ordering Postgres would have to rebuild on every read. One `UPDATE` re-orders a whole page, and a revision snapshot of it is a value rather than a graph - which is what makes drafts, revisions and reusable blocks tractable later.
+
+### Instance ids
+
+`createBlockInstanceId()` produces a 26-character Crockford base32 identifier - 10 characters of millisecond timestamp, then 16 of randomness. It sorts by creation time, which is what lets a later merge of two edits order instances it has never seen.
+
+```ts
+import { createBlockInstance } from "@vitnode/core/blocks"
+
+const hero = createBlockInstance("core:hero", { title: "Build your community" })
+// { id: "01JC4Z8N9W…", type: "core:hero", data: { title: "…" } }
+```
+
+Storage accepts any stable id of 1-64 URL-safe characters, so an imported document or a reusable block can keep the identity it arrived with.
+
+## What the API checks on a write
+
+Every create and update runs the zone through the registry, and the whole request is refused if any instance fails:
+
+| Refused | Message |
+| :--- | :--- |
+| A block the field does not allow | `Block "core:cta" is not allowed in this field.` |
+| A block no plugin registers | `Block "shop:cart" is not registered. Install or enable the plugin that provides it.` |
+| Data the block's fields reject | `Block "core:hero" data is invalid - title: Too big…` |
+| Two instances sharing an id | `Block instance id "01…" appears more than once.` |
+
+Errors are keyed by the instance's index, so a client can point at the block that is wrong.
+
+## Localization
+
+```ts
+content: field.blocks({ localized: true })
+```
+
+The column moves to the generated translation table, exactly as a localized `text` field does. Each language then has its own blocks and its own order, with the translation lifecycle, revisions and preview it already had - no new concepts.
+
+## Exposing the zone publicly
+
+`blocks` is publicly exposable, and crosses whole:
+
+```ts
+publicApi: {
+  enabled: true,
+  path: "pages",
+  fields: ["title", "slug", "content", "publishedAt"],
+}
+```
+
+The public read returns the instances in stored order, each one's `data` already validated on the way in.
+
+## What a zone is not
+
+| | |
+| :--- | :--- |
+| **Not indexable** | A btree index over a JSONB document orders pages by their serialised bytes. `indexes` refuses it. |
+| **Not filterable or orderable** | For the same reason. |
+| **Not searchable** | Indexing block prose into search is its own stage. |
+| **Not an AdminCP form field** | The generated form and the DataTable both leave it out - a zone is arranged on the page by the Visual Editor, not typed into a control. Write it through the API until then. |

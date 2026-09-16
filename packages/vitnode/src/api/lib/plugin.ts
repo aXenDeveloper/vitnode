@@ -1,11 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { BlockPluginSource } from "@/blocks/types";
 import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 
+import { BlockError } from "@/blocks/errors";
 import {
   validateContentTypes,
   withContentPermissions,
@@ -30,6 +32,7 @@ export interface BuildPluginApiReturn<
   Modules extends readonly BaseBuildModuleReturn<P>[] =
     readonly BaseBuildModuleReturn<P>[],
 > {
+  blocks?: BlockPluginSource;
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
@@ -54,12 +57,14 @@ export function buildApiPlugin<
   const P extends string,
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
 >({
+  blocks,
   pluginId,
   messages,
   modules = [] as unknown as Modules,
   permissionStaff,
   searchIndexers,
 }: {
+  blocks?: BlockPluginSource;
   messages?: LocaleMessagesMap;
   modules?: Modules;
   permissionStaff?: PermissionStaffConfig;
@@ -68,6 +73,12 @@ export function buildApiPlugin<
 }): BuildPluginApiReturn<P, Modules> {
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
+
+  if (blocks && blocks.pluginId !== pluginId) {
+    throw new BlockError(
+      `Plugin "${pluginId}" registers the blocks module of "${blocks.pluginId}". Pass the object the plugin's own \`blocks\` module exports, so the API and the browser namespace them identically.`,
+    );
+  }
 
   const hono = new OpenAPIHono();
   const contentModels: AnyContentModel[] = [];
@@ -112,6 +123,7 @@ export function buildApiPlugin<
 
   return {
     pluginId,
+    blocks,
     messages,
     modules,
     hono,

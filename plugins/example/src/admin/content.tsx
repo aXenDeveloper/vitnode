@@ -2,9 +2,9 @@ import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
 
 import { CONFIG_PLUGIN } from "@/const";
 
-import { exampleArticleNav, exampleCategoryNav } from "./nav";
+import { exampleArticleNav, exampleCategoryNav, examplePageNav } from "./nav";
 
 export const adminContent = {
   pluginId: CONFIG_PLUGIN.pluginId,
-  contentTypes: [exampleArticleNav, exampleCategoryNav],
+  contentTypes: [exampleArticleNav, exampleCategoryNav, examplePageNav],
 } satisfies ContentFrontendPluginSource;

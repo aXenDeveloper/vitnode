@@ -16,6 +16,7 @@ import type {
   ResolvedContentPublicApiConfig,
 } from "./types";
 
+import { zodBlockInstances } from "../blocks/validate";
 import {
   contentAdvancedDisabled,
   contentFileCollectionMax,
@@ -164,9 +165,31 @@ const numberSchema = (fieldValue: {
 /** Row identifiers are always positive integers, whatever the field kind. */
 const referenceSchema = (): z.ZodNumber => z.number().int().positive();
 
+const blocksSelectSchema = (): z.ZodType =>
+  z.array(
+    z.object({
+      data: z.record(z.string(), z.unknown()),
+      id: z.string(),
+      type: z.string(),
+    }),
+  );
+
+const blocksInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType =>
+  zodBlockInstances(
+    fieldValue.kind === "blocks"
+      ? {
+          allowed: fieldValue.allowed,
+          max: fieldValue.max,
+          min: fieldValue.min,
+        }
+      : { allowed: "*" },
+  );
+
 /** The value as it leaves the API. */
 const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   switch (fieldValue.kind) {
+    case "blocks":
+      return blocksSelectSchema();
     case "boolean":
       return z.boolean();
     case "dateTime":
@@ -250,6 +273,7 @@ const applyPresence = (
   if (fieldValue.required) return schema;
 
   if (
+    fieldValue.kind !== "blocks" &&
     fieldValue.kind !== "dateTime" &&
     // A file field has no default and cannot have one: a `core_files.id` in a
     // definition would name a different row on every installation.
@@ -356,6 +380,9 @@ const inputShape = (
     names.map(name => {
       const fieldValue = fields[name];
 
+      if (fieldValue.kind === "blocks") {
+        return [name, blocksInputSchema(fieldValue).default([])];
+      }
       if (fieldValue.kind === "group") {
         return [name, groupInputSchema(fieldValue)];
       }
@@ -378,6 +405,11 @@ const inputShape = (
     }),
   );
 
+export const contentFieldValuesObject = (
+  fields: ContentFieldMap,
+): z.ZodObject<z.ZodRawShape> =>
+  z.strictObject(inputShape(fields, Object.keys(fields)));
+
 const updateShape = (
   fields: ContentFieldMap,
   names: readonly string[],
@@ -386,6 +418,9 @@ const updateShape = (
     names.map(name => {
       const fieldValue = fields[name];
 
+      if (fieldValue.kind === "blocks") {
+        return [name, blocksInputSchema(fieldValue).optional()];
+      }
       if (fieldValue.kind === "group") {
         return [name, groupPatchSchema(fieldValue)];
       }

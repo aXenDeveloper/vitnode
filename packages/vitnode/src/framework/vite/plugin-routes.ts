@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedApiPluginModule } from "../api-registry";
+import type { ResolvedBlocksModule } from "../blocks-registry";
 import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PackageMessagesSource } from "../package-messages";
 import type {
@@ -25,6 +26,7 @@ import type {
 
 import { generateAdminNavSource } from "../admin-nav";
 import { generateApiRegistrySource } from "../api-registry";
+import { generateBlocksRegistrySource } from "../blocks-registry";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
@@ -49,6 +51,10 @@ const ADMIN_NAV_SUBPATH = "admin/nav";
 
 const ADMIN_CONTENT_SUBPATH = "admin/content";
 
+const BLOCKS_SUBPATH = "blocks";
+
+const CORE_BLOCKS_SUBPATH = "blocks/built-in";
+
 const API_CONFIG_SUBPATH = "config.api";
 
 const ERROR_PREFIX = "[VitNode plugin routes]";
@@ -68,6 +74,8 @@ const pathsFor = (appRoot: string) => ({
   config: join(appRoot, "src", "vitnode.config.ts"),
 
   adminNav: join(appRoot, "src", "admin-nav.gen.ts"),
+
+  blocksRegistry: join(appRoot, "src", "blocks.gen.ts"),
 
   apiRegistry: join(appRoot, "src", "api-registry.gen.ts"),
 
@@ -429,12 +437,24 @@ const discover = async (
     API_CONFIG_SUBPATH,
     resolvePackageFile,
   );
+  const coreBlocks = readOptionalPluginModules<ResolvedBlocksModule>(
+    [CORE_PLUGIN_ID],
+    CORE_BLOCKS_SUBPATH,
+    resolvePackageFile,
+  );
+  const pluginBlocks = readOptionalPluginModules<ResolvedBlocksModule>(
+    pluginIds,
+    BLOCKS_SUBPATH,
+    resolvePackageFile,
+  );
 
   const watch = [
     ...loaded.flatMap(({ watch: file }) => file ?? []),
     ...adminNav.watch,
     ...contentRegistry.watch,
     ...apiRegistry.watch,
+    ...coreBlocks.watch,
+    ...pluginBlocks.watch,
   ];
 
   onLoaded?.(watch);
@@ -459,6 +479,7 @@ const discover = async (
   return {
     adminNav: adminNav.modules,
     apiRegistry: apiRegistry.modules,
+    blocksRegistry: [...coreBlocks.modules, ...pluginBlocks.modules],
     compiled,
     contentRegistry: contentRegistry.modules,
     packageMessages,
@@ -478,20 +499,30 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-/** All five generated files, from one discovery pass. */
+/** All six generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
 ): Promise<void> => {
   const paths = pathsFor(appRoot);
-  const { adminNav, apiRegistry, compiled, contentRegistry, packageMessages } =
-    await discover(appRoot, options, onLoaded);
+  const {
+    adminNav,
+    apiRegistry,
+    blocksRegistry,
+    compiled,
+    contentRegistry,
+    packageMessages,
+  } = await discover(appRoot, options, onLoaded);
 
   await Promise.all([
     writeIfChanged(paths.registry, compiled.source),
     writeIfChanged(paths.adminNav, generateAdminNavSource(adminNav)),
     writeIfChanged(paths.apiRegistry, generateApiRegistrySource(apiRegistry)),
+    writeIfChanged(
+      paths.blocksRegistry,
+      generateBlocksRegistrySource(blocksRegistry),
+    ),
     writeIfChanged(
       paths.contentRegistry,
       generateContentRegistrySource(contentRegistry),

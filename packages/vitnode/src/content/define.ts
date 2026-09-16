@@ -101,6 +101,13 @@ const assertIndexable = (
 
     if (!fieldValue) continue;
 
+    if (fieldValue.kind === "blocks") {
+      throw new ContentEngineError(
+        `indexes names the block zone "${owner}", which is one JSONB document rather than a value to compare. A btree index over it would order pages by their serialised bytes.`,
+        { contentTypeId: id },
+      );
+    }
+
     if (fieldValue.kind === "repeatable") {
       throw new ContentEngineError(
         `indexes names "${name}", which belongs to the repeatable "${owner}". Repeatable leaves are columns on a generated child table, not on the base table, so an index here would have nothing to cover. The child table already carries \`(itemId, position)\`.`,

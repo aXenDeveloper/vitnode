@@ -9,11 +9,15 @@ import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
+import { pageContent } from "@/database/pages";
+
+import { blocks } from "./blocks";
 import "@/api/lib/events";
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    blocks,
     modules: [
       adminModule,
       buildContentPublicModule({
@@ -23,6 +27,7 @@ export const exampleApiPlugin = () =>
           articleContent,
           categoryContent,
           localizedArticleContent,
+          pageContent,
         ],
       }),
     ],
