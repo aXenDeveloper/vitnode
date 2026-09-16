@@ -29,8 +29,17 @@ const heroBlock = defineBlock({
   id: "hero",
 });
 
+const noteBlock = defineBlock({
+  component: ({ data }: BlockComponentProps<{ body: string }>) => (
+    <p>{data.body}</p>
+  ),
+  fields: { body: field.text({ required: true }) },
+  id: "note",
+});
+
 const registry = createBlockRegistry([
   { pluginId: "@vitnode/core", blocks: [heroBlock], namespace: "core" },
+  { pluginId: "@vitnode/example", blocks: [noteBlock], namespace: "example" },
 ]);
 
 const instance = (title: string, id: string) => ({
@@ -364,5 +373,60 @@ describe("ContentRenderer", () => {
     );
 
     expect(screen.getAllByRole("heading")[1]).toBe(first);
+  });
+
+  describe("an allowlist the caller passes in", () => {
+    const mixed = [
+      { data: { title: "Allowed" }, id: "01", type: "core:hero" },
+      { data: { body: "Refused" }, id: "02", type: "example:note" },
+    ];
+
+    it("skips what it refuses and renders the rest", () => {
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      render(
+        <ContentRenderer
+          allowed={["core:*"]}
+          blocks={mixed}
+          registry={registry}
+        />,
+      );
+
+      expect(screen.getByRole("heading").textContent).toBe("Allowed");
+      expect(screen.queryByText("Refused")).toBeNull();
+    });
+
+    it("is not checked in production, where the write boundary already was", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      render(
+        <ContentRenderer
+          allowed={["core:*"]}
+          blocks={mixed}
+          registry={registry}
+        />,
+      );
+
+      expect(screen.getByText("Refused")).toBeDefined();
+    });
+
+    it("costs nothing when the caller has no allowlist", () => {
+      render(<ContentRenderer blocks={mixed} registry={registry} />);
+
+      expect(screen.getByText("Refused")).toBeDefined();
+    });
+
+    it("refuses a block before asking the registry about it", () => {
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      render(
+        <ContentRenderer
+          allowed={["core:*"]}
+          blocks={[{ data: {}, id: "01", type: "shop:cart" }]}
+          registry={registry}
+        />,
+      );
+
+      expect(screen.getByRole("note").textContent).toContain(
+        "is not allowed in this zone",
+      );
+    });
   });
 });

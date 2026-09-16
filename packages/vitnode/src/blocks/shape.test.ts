@@ -11,6 +11,7 @@ const Noop = () => null;
 
 const block = defineBlock({
   component: Noop,
+  id: "shape",
   fields: {
     align: field.enum({ defaultValue: "start", values: ["start", "center"] }),
     count: field.number({ integer: true }),

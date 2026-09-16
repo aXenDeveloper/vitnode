@@ -70,7 +70,7 @@ export interface BlockRegistry {
 
 export interface BlockRenderFallbackProps {
   instance: AnyBlockInstance;
-  reason: "invalid-data" | "unknown-type";
+  reason: "invalid-data" | "not-allowed" | "unknown-type";
 }
 
 export type BlockValidationMode = "always" | "development" | "never";
@@ -78,3 +78,17 @@ export type BlockValidationMode = "always" | "development" | "never";
 export type BlockRenderFallback = (
   props: BlockRenderFallbackProps,
 ) => null | ReactElement;
+
+export interface ContentZoneDefinition {
+  allowedBlocks?: BlockAllowedSpec;
+  id: string;
+}
+
+export interface ParsedContentZoneId {
+  name: string;
+  scope: string | undefined;
+}
+
+export interface ContentZoneField {
+  allowed: BlockAllowedSpec;
+}

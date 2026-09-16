@@ -15,6 +15,11 @@ export {
   BLOCK_WILDCARD,
   CONTENT_BLOCKS_ABSOLUTE_MAX,
   CONTENT_BLOCKS_DEFAULT_MAX,
+  CONTENT_ZONE_ALLOWED_ATTRIBUTE,
+  CONTENT_ZONE_ATTRIBUTE,
+  CONTENT_ZONE_ID_MAX_LENGTH,
+  CONTENT_ZONE_ID_PATTERN,
+  CONTENT_ZONE_SEPARATOR,
 } from "./const";
 export { defineBlock } from "./define";
 export type { DefineBlockArgs } from "./define";
@@ -70,6 +75,9 @@ export type {
   BlockRenderFallbackProps,
   BlockUnknownData,
   BlockValidationMode,
+  ContentZoneDefinition,
+  ContentZoneField,
+  ParsedContentZoneId,
   RegisteredBlock,
 } from "./types";
 export { parseBlockInstances, zodBlockInstances } from "./validate";
@@ -78,3 +86,10 @@ export type {
   BlockInstanceIssue,
   BlockInstancesResult,
 } from "./validate";
+export {
+  assertContentZoneId,
+  contentZoneAttributes,
+  formatBlockAllowed,
+  isContentZoneId,
+  parseContentZoneId,
+} from "./zone-meta";

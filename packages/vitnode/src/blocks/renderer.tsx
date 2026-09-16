@@ -4,6 +4,7 @@ import { createElement, Fragment } from "react";
 
 import type {
   AnyBlockInstance,
+  BlockAllowedSpec,
   BlockRegistry,
   BlockRenderFallback,
   BlockRenderFallbackProps,
@@ -11,7 +12,7 @@ import type {
 } from "./types";
 
 import { isBlockInstance } from "./instance";
-import { resolveBlockRegistry } from "./registry";
+import { isBlockAllowed, resolveBlockRegistry } from "./registry";
 import { blockDataShapeIssue } from "./shape";
 
 const isDevelopment = (): boolean => process.env.NODE_ENV !== "production";
@@ -27,6 +28,17 @@ const warn = (seen: null | Set<string>, key: string, message: string): void => {
   console.warn(`\x1b[34m[VitNode]\x1b[0m \x1b[33m${message}\x1b[0m`);
 };
 
+const HEADLINES: Record<
+  BlockRenderFallbackProps["reason"],
+  (instance: AnyBlockInstance) => string
+> = {
+  "invalid-data": instance =>
+    `Block "${instance.type}" has data that does not match its fields.`,
+  "not-allowed": instance =>
+    `Block "${instance.type}" is not allowed in this zone.`,
+  "unknown-type": instance => `Block "${instance.type}" is not registered.`,
+};
+
 const DevNotice = ({ instance, reason }: BlockRenderFallbackProps) => {
   if (!isDevelopment()) return null;
 
@@ -37,11 +49,7 @@ const DevNotice = ({ instance, reason }: BlockRenderFallbackProps) => {
       data-block-type={instance.type}
       role="note"
     >
-      <p className="font-medium text-pretty">
-        {reason === "unknown-type"
-          ? `Block "${instance.type}" is not registered.`
-          : `Block "${instance.type}" has data that does not match its fields.`}
-      </p>
+      <p className="font-medium text-pretty">{HEADLINES[reason](instance)}</p>
       <p className="mt-1 text-pretty">
         {reason === "unknown-type"
           ? "Install or enable the plugin that provides it, or remove the block. This notice is shown in development only - visitors see nothing."
@@ -51,14 +59,39 @@ const DevNotice = ({ instance, reason }: BlockRenderFallbackProps) => {
   );
 };
 
-const renderInstance = (
-  instance: AnyBlockInstance,
-  index: number,
-  registry: BlockRegistry,
-  fallback: BlockRenderFallback,
-  validate: boolean,
-  seen: null | Set<string>,
-): null | ReactElement => {
+interface RenderInstanceArgs {
+  allowed: BlockAllowedSpec | undefined;
+  fallback: BlockRenderFallback;
+  index: number;
+  instance: AnyBlockInstance;
+  registry: BlockRegistry;
+  seen: null | Set<string>;
+  validate: boolean;
+}
+
+const renderInstance = ({
+  allowed,
+  fallback,
+  index,
+  instance,
+  registry,
+  seen,
+  validate,
+}: RenderInstanceArgs): null | ReactElement => {
+  if (
+    validate &&
+    allowed !== undefined &&
+    !isBlockAllowed(allowed, instance.type)
+  ) {
+    warn(
+      seen,
+      `not-allowed:${instance.type}`,
+      `Block "${instance.type}" is stored here but the zone it is rendered in does not allow it. It is skipped.`,
+    );
+
+    return fallback({ instance, reason: "not-allowed" });
+  }
+
   const entry = registry.get(instance.type);
 
   if (!entry) {
@@ -94,6 +127,7 @@ const renderInstance = (
 };
 
 export interface ContentRendererProps {
+  allowed?: BlockAllowedSpec;
   blocks: null | readonly unknown[] | undefined;
   fallback?: BlockRenderFallback;
   registry?: BlockRegistry;
@@ -101,6 +135,7 @@ export interface ContentRendererProps {
 }
 
 export const ContentRenderer = ({
+  allowed,
   blocks,
   fallback = ({ instance, reason }) =>
     createElement(DevNotice, { instance, reason }),
@@ -129,7 +164,15 @@ export const ContentRenderer = ({
         return createElement(
           Fragment,
           { key: block.id },
-          renderInstance(block, index, resolved, fallback, validating, seen),
+          renderInstance({
+            allowed,
+            fallback,
+            index,
+            instance: block,
+            registry: resolved,
+            seen,
+            validate: validating,
+          }),
         );
       })}
     </>

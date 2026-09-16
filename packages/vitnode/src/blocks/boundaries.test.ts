@@ -24,11 +24,13 @@ describe("block metadata", () => {
     expect(reachedSpecifiers(entry)).not.toContain("react");
   });
 
-  it("does not re-export the renderer", () => {
+  it("does not re-export the renderer or the zone component", () => {
     const surface = readFileSync(entry, "utf8");
 
     expect(surface).not.toContain("./renderer");
+    expect(surface).not.toContain('from "./zone"');
     expect(surface).toContain("./registry");
+    expect(surface).toContain("./zone-meta");
   });
 
   it("reaches nothing an editor would need", () => {
@@ -75,6 +77,44 @@ describe("the public renderer", () => {
 
   it("does not reach a validation library", () => {
     expect(offenders(entry, ["zod"])).toStrictEqual([]);
+  });
+});
+
+describe("the public content zone", () => {
+  const entry = join(here, "zone.tsx");
+
+  it("reaches React and nothing else", () => {
+    expect(reachedSpecifiers(entry).sort()).toStrictEqual(["react"]);
+  });
+
+  it("reaches no editor, AdminCP or drag-and-drop code", () => {
+    expect(offenders(entry, EDITOR_PACKAGES)).toStrictEqual([]);
+  });
+
+  it("makes no request of its own", () => {
+    expect(offenders(entry, ["@tanstack/react-query"])).toStrictEqual([]);
+  });
+
+  it("does not need a router", () => {
+    expect(
+      offenders(entry, ["@tanstack/react-router", "@tanstack/react-start"]),
+    ).toStrictEqual([]);
+  });
+
+  it("does not reach a validation library", () => {
+    expect(offenders(entry, ["zod"])).toStrictEqual([]);
+  });
+
+  it("renders through the public renderer rather than its own loop", () => {
+    expect(readFileSync(entry, "utf8")).toContain("./renderer");
+  });
+});
+
+describe("zone metadata", () => {
+  const entry = join(here, "zone-meta.ts");
+
+  it("reaches no third-party module at all", () => {
+    expect(reachedSpecifiers(entry)).toStrictEqual([]);
   });
 });
 
