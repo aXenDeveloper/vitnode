@@ -1,5 +1,6 @@
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 
+import { cn } from "cn";
 import {
   createElement,
   useCallback,
@@ -13,26 +14,29 @@ import { useTranslations } from "use-intl";
 import type { ContentEditRuntime } from "../blocks/edit-context";
 import type { VisualEditorAdapter } from "./adapter/types";
 import type {
-  BlockPickerTarget,
+  EditorInsertRequest,
+  EditorInsertTarget,
+  EditorPanelMode,
   VisualEditorContextValue,
   VisualEditorSaveStatus,
 } from "./context";
+import type { VisualEditorAction } from "./state/types";
 
 import { ContentEditContext } from "../blocks/edit-context";
+import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
 import { buildSaveInput } from "./adapter/save-input";
-import { BlockPickerDialog } from "./block-picker/dialog";
 import { VisualEditorContext } from "./context";
 import { EditorDndProvider } from "./dnd/provider";
-import { BlockPropertiesPanel } from "./properties/panel";
+import { createBlockInstanceFor } from "./instance/defaults";
 import { EditorMessages } from "./runtime/editor-messages";
 import { LeaveConfirmDialog } from "./runtime/leave-confirm-dialog";
 import { UnsavedChangesGuard } from "./runtime/unsaved-guard";
+import { EditorSidebar } from "./sidebar/sidebar";
 import {
   initialVisualEditorState,
   isVisualEditorDirty,
   visualEditorReducer,
 } from "./state/reducer";
-import { EditorToolbar } from "./toolbar/toolbar";
 import { EditableZone } from "./zones/editable-zone";
 
 export interface EditorRootProps {
@@ -45,6 +49,10 @@ const contentEditRuntime: ContentEditRuntime = {
   renderZone: mount => createElement(EditableZone, mount),
 };
 
+const EDITOR_SHELL_STYLE = {
+  "--editor-sidebar-width": "clamp(20rem, 24vw, 22.5rem)",
+} as CSSProperties;
+
 const EditorShell = ({
   adapter,
   children,
@@ -56,11 +64,18 @@ const EditorShell = ({
     initialVisualEditorState,
   );
   const [preview, setPreview] = useState(false);
-  const [pickerTarget, setPickerTarget] = useState<BlockPickerTarget | null>(
+  const [panel, setPanel] = useState<EditorPanelMode>("blocks");
+  const [insertTarget, setInsertTarget] = useState<EditorInsertTarget | null>(
     null,
   );
   const [saveStatus, setSaveStatus] = useState<VisualEditorSaveStatus>("idle");
   const [leaving, setLeaving] = useState(false);
+
+  const [syncedSelection, setSyncedSelection] = useState(state.selectedBlockId);
+  if (syncedSelection !== state.selectedBlockId) {
+    setSyncedSelection(state.selectedBlockId);
+    setPanel(state.selectedBlockId === null ? "blocks" : "properties");
+  }
 
   const dirty = isVisualEditorDirty(state);
 
@@ -109,42 +124,103 @@ const EditorShell = ({
     onExit?.();
   }, [dirty, onExit]);
 
-  const openPicker = useCallback(
-    (target: BlockPickerTarget) => setPickerTarget(target),
-    [],
+  const dispatchAction = useCallback((action: VisualEditorAction) => {
+    if (action.type === "select") {
+      setPanel(action.blockId === null ? "blocks" : "properties");
+    }
+
+    dispatch(action);
+  }, []);
+
+  const insertBlock = useCallback(
+    (request: EditorInsertRequest) => {
+      const accepts = (candidate: string): boolean => {
+        const zone = state.zones[candidate];
+        if (!zone) return false;
+
+        const registry = zone.registry ?? getDefaultBlockRegistry();
+        if (!registry?.has(request.type)) return false;
+
+        return (
+          zone.allowedBlocks === undefined ||
+          isBlockAllowed(zone.allowedBlocks, request.type)
+        );
+      };
+
+      const zoneId =
+        request.zoneId ??
+        insertTarget?.zoneId ??
+        state.order.find(candidate => accepts(candidate));
+      if (zoneId === undefined || !accepts(zoneId)) return;
+
+      const zone = state.zones[zoneId];
+      const registry = zone.registry ?? getDefaultBlockRegistry();
+      const entry = registry?.get(request.type);
+      if (!entry) return;
+
+      const pending = insertTarget?.zoneId === zoneId ? insertTarget : null;
+      const instance = createBlockInstanceFor(entry);
+
+      dispatch({
+        index: request.index ?? pending?.index ?? zone.blocks.length,
+        instance,
+        type: "insert",
+        zoneId,
+      });
+      dispatch({ blockId: instance.id, type: "select" });
+      setPanel("properties");
+      setInsertTarget(null);
+    },
+    [insertTarget, state.order, state.zones],
   );
 
   const editor = useMemo<VisualEditorContextValue>(
     () => ({
       dirty,
       discard,
-      dispatch,
+      dispatch: dispatchAction,
       exit,
-      openPicker,
+      insertBlock,
+      insertTarget,
+      panel,
       preview,
       save,
       saveStatus,
+      setInsertTarget,
+      setPanel,
       setPreview,
       state,
     }),
-    [dirty, discard, exit, openPicker, preview, save, saveStatus, state],
+    [
+      dirty,
+      discard,
+      dispatchAction,
+      exit,
+      insertBlock,
+      insertTarget,
+      panel,
+      preview,
+      save,
+      saveStatus,
+      state,
+    ],
   );
 
   return (
     <VisualEditorContext value={editor}>
       <ContentEditContext value={contentEditRuntime}>
         <EditorDndProvider>
-          {children}
+          <div
+            className={cn(
+              "transition-[padding] duration-200 ease-linear",
+              !preview && "md:pe-(--editor-sidebar-width)",
+            )}
+            style={EDITOR_SHELL_STYLE}
+          >
+            {children}
 
-          <EditorToolbar />
-          <BlockPropertiesPanel />
-          <BlockPickerDialog
-            onOpenChange={open => {
-              if (!open) setPickerTarget(null);
-            }}
-            open={pickerTarget !== null}
-            target={pickerTarget}
-          />
+            <EditorSidebar />
+          </div>
         </EditorDndProvider>
       </ContentEditContext>
 

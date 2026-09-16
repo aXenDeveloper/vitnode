@@ -6,7 +6,7 @@ icon: MousePointerClick
 
 **Visual Edit Mode** is the part where somebody finally gets to move things around.
 
-A page renders its [content zones](/docs/dev/blocks/content-zones) the way it always has. An authorized person clicks **Edit page**, and the _same page_ - same layout, same fonts, same blocks - grows an outline around each zone, a drag handle on each block and a toolbar at the bottom. They rearrange, they save, they leave. Nobody was sent to a separate admin screen to guess what the result would look like.
+A page renders its [content zones](/docs/dev/blocks/content-zones) the way it always has. An authorized person clicks **Edit page**, and the _same page_ - same layout, same fonts, same blocks - grows an outline around each zone, a drag handle on each block and a sidebar down the right-hand side. They rearrange, they save, they leave. Nobody was sent to a separate admin screen to guess what the result would look like.
 
 ```text
 public page
@@ -16,7 +16,7 @@ the same page, editable
 public page again
 ```
 
-{/* Image prompt: A VitNode settings page in Visual Edit Mode. The page content is a normal-looking settings screen with a profile form in the middle; above and below it, two content zones are outlined with dashed borders and small corner labels reading "settings:before-profile" and "settings:after-profile". One block is selected with a blue ring and shows a small floating row of icon buttons (drag handle, duplicate, delete) in its top-right corner. A right-hand properties panel shows text fields for that block. A floating pill toolbar at the bottom centre reads "Editing page - Unsaved changes" with Preview, Discard, Save and Exit buttons. Dark theme, 1600x900. */}
+{/* Image prompt: A VitNode settings page in Visual Edit Mode. The left three quarters is a normal-looking settings screen with a profile form in the middle; above and below it, two content zones are outlined with dashed borders and small corner labels reading "settings:before-profile" and "settings:after-profile". One block is selected with a blue ring and shows a small floating row of icon buttons (drag handle, duplicate, delete) in its top-right corner. The right quarter is a full-height sidebar headed "Available Blocks" with a search field and a grouped list of draggable block cards under "Core" and "Example", and a footer holding Preview, Discard, Save and Finish editing buttons above a line reading "Unsaved changes". Dark theme, 1600x900. */}
 
 ## `ContentZone` did not change
 
@@ -84,12 +84,12 @@ const SettingsPage = () => {
 }
 ```
 
-| Prop       |          |                                                                                     |
-| :--------- | :------- | :---------------------------------------------------------------------------------- |
-| `enabled`  | required | `false` renders the children and nothing else. `true` loads the editor.             |
-| `children` | required | The page. Every `ContentZone` inside it becomes editable.                           |
-| `adapter`  | optional | Where **Save** sends its payload. Without one, Save says so and does nothing.       |
-| `onExit`   | optional | Called when the editor's **Exit** button is used, after the unsaved-changes prompt. |
+| Prop       |          |                                                                               |
+| :--------- | :------- | :---------------------------------------------------------------------------- |
+| `enabled`  | required | `false` renders the children and nothing else. `true` loads the editor.       |
+| `children` | required | The page. Every `ContentZone` inside it becomes editable.                     |
+| `adapter`  | optional | Where **Save** sends its payload. Without one, Save says so and does nothing. |
+| `onExit`   | optional | Called by **Finish editing**, after the unsaved-changes prompt.               |
 
 ### Who gets the button
 
@@ -112,7 +112,7 @@ Keep the button out of the DOM when the answer is no, and never rely on hiding i
 
 ## The lazy-loading guarantee
 
-The editor is not small. Drag and drop, a command-palette block picker, a form runtime and a properties panel add up, and every one of them is useless to a visitor reading the page.
+The editor is not small. Drag and drop, a block catalogue, a form runtime and a properties panel add up, and every one of them is useless to a visitor reading the page.
 
 So **none of it is in the public page's bundle**. `@vitnode/core/blocks/edit` reaches React and nothing else; the only path from it to the editor is a dynamic `import()` behind `React.lazy`:
 
@@ -125,15 +125,16 @@ The chunk is requested when `enabled` first flips to `true` - that is, on the fi
 ```text
 view mode      blocks/zone.tsx      → react
 edit seam      blocks/edit.tsx      → react
-first click    editor/root.tsx      → @dnd-kit, cmdk, @tanstack/react-form, sonner, …
+first click    editor/root.tsx      → @dnd-kit, @tanstack/react-form, sonner, …
 ```
 
 This is enforced, not merely intended. `packages/vitnode/src/editor/boundaries.test.ts` walks the real module graph and fails the build if the arrow ever points the wrong way:
 
 - `blocks/zone.tsx` and `blocks/edit.tsx` **eagerly** reach `react` and nothing else;
-- neither reaches `@dnd-kit/*`, `cmdk`, `@tanstack/react-form`, `sonner`, `@tanstack/react-query`, `@tanstack/react-router` or `zod`;
+- neither reaches `@dnd-kit/*`, `@tanstack/react-form`, `sonner`, `@tanstack/react-query`, `@tanstack/react-router`, `cmdk` or `zod`;
 - `blocks/edit.tsx` **does** reach `@dnd-kit/core` once dynamic imports are followed, which is the proof that the only path is a dynamic one;
-- nothing under `src/editor/**` reaches `views/admin/**`, or any database or server package.
+- nothing under `src/editor/**` reaches `views/admin/**`, or any database or server package;
+- the sidebar is the one panel `editor/root.tsx` mounts, `editor/toolbar/` and `editor/block-picker/dialog.tsx` do not exist, and the editor no longer reaches `cmdk` at all - a revert fails the test instead of quietly shipping a modal again.
 
 Turning that static `import` back on would be a one-line change and a silently 200 kB heavier home page. The test is the thing that notices.
 
@@ -167,11 +168,41 @@ edit mode   settings:before-footer   ┌ dashed box ┐
                                      └────────────┘
 ```
 
-Exit the editor and it disappears again. A page with eight placement points and two filled ones costs two in public, and shows all eight to the person arranging them.
+Finish editing and it disappears again. A page with eight placement points and two filled ones costs two in public, and shows all eight to the person arranging them.
 
-## The block picker
+## The editing sidebar
 
-**Add block** opens a searchable dialog of everything that may go in _that_ zone. Not everything installed - everything **allowed**.
+Everything the editor asks of you lives in one panel down the right-hand side: the block catalogue, the properties of whatever is selected, and the **Preview** / **Discard** / **Save** / **Finish editing** row at the bottom. There is no modal to open and dismiss, and no second panel competing for the same corner of the screen.
+
+The canvas is _padded_, not covered. The shell reserves the sidebar's width, so the page never slides underneath it and nothing you are arranging ends up hidden. Below `md` the same sidebar becomes a bottom sheet, because 360px of a phone is not a sidebar.
+
+### One panel, two modes
+
+|                      |                                                                                                  |
+| :------------------- | :----------------------------------------------------------------------------------------------- |
+| **Available Blocks** | A search field and every block this location accepts, grouped by the namespace that provides it. |
+| **Properties**       | The selected block's fields, with Duplicate and Delete under them.                               |
+
+Selecting a block switches to **Properties**. The **← Available Blocks** action at the top switches back _and_ clears the selection, so the page stops ringing a block you are no longer editing. Deleting the selected block does the same thing on its own.
+
+In **Preview** the sidebar collapses to a slim bar holding **Back to editing** and **Finish editing**. It never collapses to nothing - a preview you cannot leave is a trap - and the editor stays mounted behind it with every unsaved change intact.
+
+## Two ways to add a block
+
+A catalogue entry is a drag source _and_ a button, because those answer two different questions.
+
+|              |                                                                                                                                  |
+| :----------- | :------------------------------------------------------------------------------------------------------------------------------- |
+| **Drag it**  | You care where it goes. An insertion line shows the exact position while you are still holding it.                               |
+| **Click it** | You do not, or you already said where. It goes to the targeted zone - or, with nothing targeted, the first zone that accepts it. |
+
+**Add block** on a zone is what sets that target: the sidebar switches to **Available Blocks**, its header reads _For: settings:sidebar_, and the zone stays lit until a block lands or you clear it.
+
+Either gesture inserts the block, selects it and opens **Properties** in one step, so the next thing you do is fill it in.
+
+### The catalogue follows the target
+
+`allowedBlocks` on a zone is what the catalogue offers. Not everything installed - everything **allowed** in that location.
 
 ```tsx
 <ContentZone
@@ -181,36 +212,42 @@ Exit the editor and it disappears again. A page with eight placement points and 
 />
 ```
 
-That sidebar offers exactly one block in the picker. The zones around it, with `["core:*", "example:callout"]`, offer core's blocks plus the example plugin's callout. Same `allowedBlocks` value, same format as a [`blocks()` field's `allowed`](/docs/dev/blocks/blocks-field#restricting-what-may-go-in), now doing a third job: it is the picker's filter.
+Target that sidebar and the catalogue shows exactly one block. Clear the target and it shows the union of what the page's zones accept, because now any of them could be the destination. Same `allowedBlocks` value, same format as a [`blocks()` field's `allowed`](/docs/dev/blocks/blocks-field#restricting-what-may-go-in), now doing a third job.
 
-A zone that allows nothing the installation provides says so rather than opening an empty dialog.
+A zone that allows nothing the installation provides says so, rather than offering an empty list.
 
-<Callout title="The picker is not the write boundary">
+<Callout title="The catalogue is not the write boundary">
   The allowlist on a zone describes a location. The one on the `blocks()` field
-  **enforces**, on every create and update. The picker filtering by the zone's
-  copy is a courtesy to the person editing - the field is what refuses a block
-  that should never have been stored.
+  **enforces**, on every create and update. The catalogue filtering by the
+  zone's copy is a courtesy to the person editing - the field is what refuses a
+  block that should never have been stored.
 </Callout>
 
 ## Drag and drop
 
-Grab a block by its handle and move it.
+Grab a block by its handle, or a catalogue entry anywhere on its card, and move it.
 
 - **Reorder** inside a zone: drop it above or below a sibling.
 - **Move across zones**: drop it into another zone, or onto one of that zone's blocks to land at that position.
-- **Into an empty zone**: drop it anywhere on the dashed box.
+- **Into an empty zone**: drop it anywhere on the dashed placeholder.
 
 Identity is the block instance id throughout - never an array index - so a block that crosses a zone keeps being the same block, with the same data, and the properties panel does not blink.
 
+### Before or after, never into
+
+Dropping onto a block inserts **before** it or **after** it, decided by which half of it the pointer is over. That blue line is the answer, shown before you let go.
+
+Nothing ever lands _inside_ a block, and that is a reservation rather than a shortcut. "Drop into this block" is the natural gesture for a nested area - a columns block with sub-zones, a widget area - and spending it on something else now would leave that feature with no gesture left to claim. See [Extension points](#extension-points).
+
 ### An incompatible target refuses
 
-If you drag an `example:callout` toward a zone that allows `core:text` only, that zone turns red and says it does not accept what you are dragging. Let go and nothing happens: the block stays where it was.
+Drag an `example:callout` toward a zone that allows `core:text` only and the zone turns red and says it does not accept what you are dragging. Let go and nothing happens: a block stays where it was, a catalogue entry is simply not inserted.
 
-The refusal is computed from the same `isBlockAllowed` the field and the picker use. One allowlist format, one function that evaluates it, three places that ask.
+The refusal is computed from the same `isBlockAllowed` the field and the catalogue use. One allowlist format, one function that evaluates it, three places that ask.
 
 ## The properties panel
 
-Select a block and its fields appear in a panel: text, textarea, number, boolean, enum, date-time, and groups of those - the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold), as declared by `defineBlock`. The panel builds itself from the block definition, so a block that adds a field gets a control for it with no editor change at all.
+Select a block and its fields appear in the sidebar: text, textarea, number, boolean, enum, date-time, and groups of those - the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold), as declared by `defineBlock`. The panel builds itself from the block definition, so a block that adds a field gets a control for it with no editor change at all.
 
 Typing updates the block on the page **as you type**. There is no Apply button, and no preview pane to compare against, because the page _is_ the preview.
 
@@ -264,7 +301,8 @@ Being clear about the edges is more useful than a roadmap.
 
 |                                   |                                                                                                                                                                                                         |
 | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Nested blocks**                 | A zone holds a flat, ordered list. No columns-inside-columns, no block containing a zone.                                                                                                               |
+| **Nested blocks**                 | A zone holds a flat, ordered list. No columns-inside-columns, no block containing a zone - and the drop-onto-a-block gesture stays unspent, waiting for one.                                            |
+| **Presentation variants**         | An instance is `{ id, type, data }`. A block that should look different has to say so in its own data.                                                                                                  |
 | **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                      |
 | **Permission UI**                 | No roles screen, no per-zone locking. `canEditPage` and your API are the whole story.                                                                                                                   |
 | **Collaborative editing**         | One editor at a time. Two people on one page will overwrite each other.                                                                                                                                 |
@@ -274,6 +312,33 @@ Being clear about the edges is more useful than a roadmap.
 
 Everything in that table is a _later_ decision rather than a closed door - but none of it is in this stage, and none of it is implied by the APIs above.
 
+## Extension points
+
+Two of those rows were designed _around_ rather than merely skipped, and it is worth knowing the shape they are expected to take before you build on top of the editor. Neither exists today. Neither has a migration. Nothing below is an API yet.
+
+### Nested areas
+
+The insertion model resolves a drop on a block to _before it_ or _after it_, on purpose, so the third possibility stays free. A future columns block or widget area would claim it: the block declares areas of its own, each area behaves like a zone, and dropping onto the block means dropping into the area under the pointer.
+
+What that still needs: a nested shape for stored content - a zone's blocks are a flat array today - a recursive renderer, and an answer for what `allowedBlocks` means two levels down. Nothing stored now would have to change, since a flat list is a nested list that never nests, but nothing is promised either.
+
+### Presentation variants
+
+The other half of the same question is how a block looks, as opposed to what it says. Today a wide hero and a narrow hero are either two block types or a `width` field sitting in the middle of the copy. A variant would pull them apart:
+
+```ts
+interface BlockInstance {
+  data: BlockData
+  id: string
+  type: string
+  variant?: string
+}
+```
+
+Three concerns, kept separate: **data** is what the block says, **variant** is how this instance presents it, and an **area layout** would be how a container arranges its children. Mixing them is what turns a block definition into a settings screen.
+
+It was scoped out of Stage 3 for a boring reason: `variant` is not one optional property, it is a change to `blocks/validate.ts`, `isBlockInstance`, `blockDataShapeIssue` and every API path that writes an instance - a wide change whose risk is Stage 1 and Stage 2 regressions, for something no block asks for yet.
+
 ## Verifying it yourself
 
 `/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, an **Edit page** button and a mocked adapter that persists nothing and shows you the payload it was handed.
@@ -281,7 +346,7 @@ Everything in that table is a _later_ decision rather than a closed door - but n
 <Steps>
 <Step>
 
-**Start the development environment**
+**Load the page**
 
 ```bash
 pnpm dev
@@ -292,7 +357,7 @@ Open [http://localhost:3000/example/zones](http://localhost:3000/example/zones) 
 </Step>
 <Step>
 
-**Confirm the page is clean before you touch it**
+**Confirm no editor chunk was loaded**
 
 Reload and filter the request list to `/src/editor/`. **Nothing.** Not one editor module is requested for a page nobody is editing.
 
@@ -307,94 +372,124 @@ Reload and filter the request list to `/src/editor/`. **Nothing.** Not one edito
 </Step>
 <Step>
 
-**Enter the editor**
+**Click Edit page**
 
-Click **Edit page**.
+|         | Expected                                                    |
+| :------ | :---------------------------------------------------------- |
+| Network | Exactly one new chunk, on this click and not before.        |
+| Zones   | Dashed outlines with the zone id in the corner.             |
+| Layout  | Nothing jumped, except the canvas making room on the right. |
 
-|         | Expected                                                                                                    |
-| :------ | :---------------------------------------------------------------------------------------------------------- |
-| Network | Exactly one new chunk, on this click and not before.                                                        |
-| Zones   | Dashed outlines with the zone id in the corner - `settings:before-profile` and the rest.                    |
-| Toolbar | A floating bar at the bottom reading _Editing page - No changes yet_, with Preview, Discard, Save and Exit. |
-| Layout  | Nothing jumped. The blocks are where they were.                                                             |
-
-Click **Exit**, then **Edit page** again: the second time, **no** request is made. The chunk is already in memory.
+Click **Finish editing**, then **Edit page** again: the second time, **no** request is made. The chunk is already in memory.
 
 </Step>
 <Step>
 
-**The empty zone**
+**The sidebar appears on the right**
 
-`settings:before-footer` renders nothing in view mode. In edit mode it is a dashed box with **Add block**. Exit and confirm it vanishes completely - no empty container, no gap.
-
-</Step>
-<Step>
-
-**Add a block**
-
-Click **Add block** on the empty zone, search the picker, insert something.
-
-It appears in the zone, the toolbar switches to **Unsaved changes**, and the properties panel opens for the block you just added.
+|        | Expected                                                                                                    |
+| :----- | :---------------------------------------------------------------------------------------------------------- |
+| Header | _Available Blocks_.                                                                                         |
+| Body   | A search field and the installed blocks, grouped by namespace.                                              |
+| Footer | _No changes yet_, and the Preview, Discard, Save and Finish editing buttons.                                |
+| Canvas | The page is beside the sidebar, not under it. Narrow the window below `md` and the sidebar becomes a sheet. |
 
 </Step>
 <Step>
 
-**Select and edit**
+**Search the available blocks**
 
-Click any block. Expect a ring around it, a floating row of actions in its corner, and its fields in the panel.
-
-Type into a text field. The block on the page updates **while you type** - no Apply button, no delay.
+Type `call` into the search field: the list narrows to `example:callout`. Clear it and everything comes back. Nothing about the page or your changes moves while you search.
 
 </Step>
 <Step>
 
-**Reorder inside a zone**
+**Drag a block from the sidebar into the empty zone**
 
-Drag the second block of `settings:before-profile` above the first. Drop it, and confirm the new order holds when you click elsewhere.
+`settings:before-footer` is empty, so in edit mode it is a large dashed placeholder. Drag `core:text` from the sidebar onto it.
 
-</Step>
-<Step>
-
-**Move across zones**
-
-Drag a `core:text` block from `settings:before-profile` into `settings:sidebar`. It should land there and keep its content.
+It lands, it is selected, and the sidebar is already showing its **Properties**.
 
 </Step>
 <Step>
 
-**Try an invalid target**
+**Drag a block between two existing blocks**
 
-Drag the `example:callout` toward `settings:sidebar`, which allows `core:text` only.
+Go **← Available Blocks**, then drag `core:cta` over `settings:before-profile` and hover the _top half_ of its second block. A blue insertion line appears above that block; hover the bottom half and it moves below.
 
-The zone turns red and says it does not accept the block. Release: nothing moves. Then open **Add block** on that sidebar and confirm the picker offers `core:text` and nothing else.
-
-</Step>
-<Step>
-
-**Duplicate and delete**
-
-Use the copy action on a block: a second copy appears directly below it, with its own instance id and the same data. Delete it again with the bin action.
+Drop on the top half and the new block is second, not last.
 
 </Step>
 <Step>
 
-**Check the locked UI**
+**Move an existing block between compatible zones**
 
-While edit mode is on, the profile form in the middle of the page must have **no** outline, **no** drag handle and **no** overlay - and its input must still take focus and type.
+Drag the `core:text` block out of `settings:before-profile` by its handle and into `settings:after-profile`. It keeps its content and its instance id - the properties panel does not flicker on the way.
 
-Now click into a link or a button _inside a block_: nothing happens, because the block's content is `inert`. Toggle **Preview** and try again: it works. Toggle back.
+</Step>
+<Step>
+
+**Watch an incompatible zone refuse**
+
+Drag `example:callout` - from the sidebar, or from a zone that holds one - toward `settings:sidebar`, which allows `core:text` only.
+
+The zone turns red and says it does not accept the block. Release: nothing moves and nothing is inserted. Now press **Add block** inside that sidebar zone and confirm the catalogue offers `core:text` and nothing else.
+
+</Step>
+<Step>
+
+**Select a block**
+
+Click any block on the page. Expect a ring around it and a floating row of actions - drag handle, Duplicate, Delete - in its corner.
+
+</Step>
+<Step>
+
+**The sidebar switches to Properties**
+
+Same panel, different mode. Expect the block's name, its type underneath, its fields, a Duplicate and a Delete at the bottom, and a **← Available Blocks** at the top.
+
+</Step>
+<Step>
+
+**Edit a field**
+
+Type into the heading or body field of the selected block.
+
+</Step>
+<Step>
+
+**The block updates immediately**
+
+The block on the page changes **while you type** - no Apply button, no delay - and the sidebar footer switches to _Unsaved changes_.
+
+</Step>
+<Step>
+
+**Go back to Available Blocks**
+
+Press **← Available Blocks**. The catalogue returns and the ring on the page disappears, because that action clears the selection as well as the panel.
+
+</Step>
+<Step>
+
+**Preview**
+
+Press **Preview**. Outlines, handles and overlays go; the sidebar collapses to a slim bar with **Back to editing** and **Finish editing**. Click a link inside a block - it works now, because the `inert` wrapper is gone.
+
+**Back to editing** restores everything, unsaved changes included.
 
 </Step>
 <Step>
 
 **Save**
 
-Click **Save** in the toolbar - not the profile form's own Save button, which is there to prove the form still works.
+Press **Save** in the sidebar footer - not the profile form's own Save button, which is there to prove the form still works.
 
 |         | Expected                                                                                                          |
 | :------ | :---------------------------------------------------------------------------------------------------------------- |
 | Toast   | The page's mock adapter fires first, naming the changed zones and saying nothing was persisted.                   |
-| Toolbar | Switches from _Unsaved changes_ to _Saved_.                                                                       |
+| Footer  | Switches from _Unsaved changes_ to _Saved_.                                                                       |
 | Payload | A **Last save payload** block appears at the bottom of the page - open it and read the JSON the adapter received. |
 
 Check that `changedZoneIds` lists only the zones you actually touched.
@@ -402,28 +497,22 @@ Check that `changedZoneIds` lists only the zones you actually touched.
 </Step>
 <Step>
 
-**Discard**
+**Finish editing**
 
-Make another change, then use **Discard**. Every zone snaps back to what it looked like when the editor opened, and the toolbar stops saying _Unsaved changes_.
+Press **Finish editing**. The public page is back: no outlines, no sidebar, and `settings:before-footer` is invisible again because it is still empty.
 
-</Step>
-<Step>
-
-**Leave with unsaved changes**
-
-Make a change and click **Exit**. Expect a confirmation prompt, a **Keep editing** that returns you to the editor with the change intact, and a **Leave without saving** that drops it.
-
-Make another change and try to navigate away - a link in the site header, or the browser's back button. The same prompt should protect you.
-
-</Step>
-<Step>
-
-**Reload**
-
-Reload the page. Everything is back to the loader's content, because the playground adapter stores nothing. That is the adapter's doing, not the editor's: swap in one that writes to your API and the changes stay.
+Make one more change first and the same button asks before it leaves.
 
 </Step>
 </Steps>
+
+### While you are in there
+
+- **Discard** puts every zone back to what loaded, and the footer stops saying _Unsaved changes_.
+- **Duplicate** drops a copy directly below the original with its own instance id; **Delete** takes it away and returns the sidebar to the catalogue.
+- The profile form in the middle must have **no** outline, **no** handle and **no** overlay, and its input must still take focus and type. It is application code.
+- Navigating away with unsaved changes - a header link, or the back button - prompts, with **Keep editing** and **Leave without saving**.
+- Reloading starts over, because the playground adapter stores nothing. That is the adapter's doing, not the editor's.
 
 ### Against a production build
 
@@ -435,7 +524,7 @@ pnpm start
 Then confirm the editor never reached a visitor:
 
 ```bash
-curl -s http://localhost:3000/example/zones | grep -cE 'dnd-kit|cmdk|editor/root'
+curl -s http://localhost:3000/example/zones | grep -cE 'dnd-kit|editor/root'
 ```
 
 `0`. The [boundary test](#the-lazy-loading-guarantee) is the standing guarantee; this is the spot check that the guarantee survived bundling.

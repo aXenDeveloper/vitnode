@@ -15,6 +15,7 @@ import type { AnyBlockInstance } from "../../blocks/types";
 import type { EditableBlockIssue } from "./issue";
 
 import { useVisualEditor } from "../context";
+import { useEditorDnd } from "../dnd/context";
 import { useSortableBlock } from "../dnd/use-sortable-block";
 import { editableBlockIssue } from "./issue";
 
@@ -44,6 +45,7 @@ export const EditableBlockShell = ({
 }: EditableBlockShellProps): ReactElement => {
   const t = useTranslations("core.editor");
   const { dispatch, preview, state } = useVisualEditor();
+  const { dropIndicator } = useEditorDnd();
   const { dragging, handleProps, setNodeRef, style } = useSortableBlock({
     blockId: instance.id,
     index,
@@ -61,6 +63,8 @@ export const EditableBlockShell = ({
     entry,
     instance,
   });
+  const edge =
+    dropIndicator?.blockId === instance.id ? dropIndicator.edge : null;
 
   return (
     <div
@@ -71,6 +75,7 @@ export const EditableBlockShell = ({
       )}
       data-block-id={instance.id}
       data-block-type={instance.type}
+      data-drop-edge={edge ?? undefined}
       data-selected={selected ? "" : undefined}
       ref={setNodeRef}
       style={style}
@@ -139,6 +144,18 @@ export const EditableBlockShell = ({
           <TriangleAlertIcon aria-hidden="true" className="size-3" />
           {t(ISSUE_LABELS[issue])}
         </p>
+      )}
+
+      {edge === null ? null : (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "bg-primary pointer-events-none absolute inset-x-0 z-20 h-0.5 rounded-full",
+            edge === "before" ? "-top-1" : "-bottom-1",
+          )}
+        >
+          <span className="bg-primary absolute start-0 top-1/2 size-2 -translate-y-1/2 rounded-full" />
+        </span>
       )}
     </div>
   );

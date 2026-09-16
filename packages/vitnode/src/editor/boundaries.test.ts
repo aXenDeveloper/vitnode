@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -24,11 +24,10 @@ const EDITOR_PACKAGES = [
   "@tanstack/react-form",
   "@tanstack/react-query",
   "@tanstack/react-router",
-  "cmdk",
   "sonner",
 ];
 
-const PUBLIC_PAGE_FORBIDDEN = [...EDITOR_PACKAGES, "zod"];
+const PUBLIC_PAGE_FORBIDDEN = [...EDITOR_PACKAGES, "cmdk", "zod"];
 
 const SERVER_PACKAGES = ["drizzle-kit", "drizzle-orm", "hono", "postgres"];
 
@@ -158,11 +157,18 @@ describe("where the editor's weight actually sits", () => {
     );
   });
 
-  it("is the module that pays for the block picker and the toasts", () => {
-    const reached = reachedSpecifiers(entry, SRC_ROOT);
+  it("is the module that pays for the toasts", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT)).toContain("sonner");
+  });
 
-    expect(reached).toContain("cmdk");
-    expect(reached).toContain("sonner");
+  it("stopped paying for cmdk once the sidebar replaced the modal picker", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT)).not.toContain("cmdk");
+  });
+
+  it("mounts the one sidebar that is now both picker and toolbar", () => {
+    expect(reachedFiles(entry, { srcRoot: SRC_ROOT })).toContain(
+      "editor/sidebar/sidebar.tsx",
+    );
   });
 
   it("is a default export, because React.lazy takes nothing else", () => {
@@ -173,9 +179,12 @@ describe("where the editor's weight actually sits", () => {
 describe("which way the dependency arrow points", () => {
   const editorFiles = sourceFilesUnder(join(SRC_ROOT, "editor"));
 
-  it("has an editor to check", () => {
+  it("has an editor to check, sidebar included", () => {
     expect(editorFiles.length).toBeGreaterThan(10);
     expect(editorFiles).toContain(join(SRC_ROOT, "editor", "root.tsx"));
+    expect(editorFiles).toContain(
+      join(SRC_ROOT, "editor", "sidebar", "sidebar.tsx"),
+    );
   });
 
   it("never reaches AdminCP page code", () => {
@@ -201,21 +210,56 @@ describe("which way the dependency arrow points", () => {
   });
 });
 
-describe("the editor's published entry point", () => {
-  it("is reachable as `@vitnode/core/editor`", () => {
+describe("what the sidebar replaced", () => {
+  it("left no fixed bottom toolbar behind", () => {
+    expect(existsSync(join(SRC_ROOT, "editor", "toolbar"))).toBe(false);
+  });
+
+  it("left no modal block picker behind", () => {
+    expect(
+      existsSync(join(SRC_ROOT, "editor", "block-picker", "dialog.tsx")),
+    ).toBe(false);
+  });
+
+  it("put the footer actions and the catalog in the same aside", () => {
+    const reached = reachedFiles(
+      join(SRC_ROOT, "editor", "sidebar", "sidebar.tsx"),
+      {
+        srcRoot: SRC_ROOT,
+      },
+    );
+
+    expect(reached).toContain("editor/sidebar/blocks-panel.tsx");
+    expect(reached).toContain("editor/sidebar/footer.tsx");
+    expect(reached).toContain("editor/sidebar/preview-bar.tsx");
+    expect(reached).toContain("editor/properties/panel.tsx");
+  });
+});
+
+describe("the editor's published entry points", () => {
+  const exportMap = (): Record<string, unknown> => {
     const manifest: unknown = JSON.parse(
       readFileSync(join(SRC_ROOT, "..", "package.json"), "utf8"),
     );
 
-    const exportMap =
-      manifest instanceof Object && "exports" in manifest
-        ? (manifest.exports as Record<string, unknown>)
-        : {};
+    return manifest instanceof Object && "exports" in manifest
+      ? (manifest.exports as Record<string, unknown>)
+      : {};
+  };
 
-    expect(exportMap["./editor"]).toStrictEqual({
+  it("is reachable as `@vitnode/core/editor`", () => {
+    expect(exportMap()["./editor"]).toStrictEqual({
       default: "./dist/src/editor/index.js",
       import: "./dist/src/editor/index.js",
       types: "./dist/src/editor/index.d.ts",
+    });
+  });
+
+  it("publishes the adapter on its own, for a host that only saves", () => {
+    expect(exportMap()["./editor/adapter"]).toStrictEqual({
+      default: "./dist/src/editor/adapter/index.js",
+      import: "./dist/src/editor/adapter/index.js",
+      types: "./dist/src/editor/adapter/index.d.ts",
     });
   });
 });

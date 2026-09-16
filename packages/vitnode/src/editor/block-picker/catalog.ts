@@ -20,6 +20,16 @@ export interface BlockCatalogGroup {
   namespace: string;
 }
 
+export interface BlockCatalogSource {
+  allowedBlocks: BlockAllowedSpec | undefined;
+  registry: BlockRegistry | undefined;
+}
+
+export interface MergedBlockCatalog {
+  entries: BlockCatalogEntry[];
+  installed: number;
+}
+
 export const toBlockCatalogEntry = (
   entry: RegisteredBlock,
 ): BlockCatalogEntry => ({
@@ -34,6 +44,35 @@ export const blockCatalogFor = (
   allowed: BlockAllowedSpec | undefined,
 ): BlockCatalogEntry[] =>
   allowedBlocks(registry, allowed ?? BLOCK_WILDCARD).map(toBlockCatalogEntry);
+
+export const mergeBlockCatalogs = ({
+  fallback,
+  sources,
+}: {
+  fallback?: BlockRegistry | undefined;
+  sources: readonly BlockCatalogSource[];
+}): MergedBlockCatalog => {
+  const entries = new Map<string, BlockCatalogEntry>();
+  const installed = new Set<string>();
+
+  for (const source of sources) {
+    const registry = source.registry ?? fallback;
+    if (!registry) continue;
+
+    for (const block of registry.all()) installed.add(block.type);
+
+    for (const entry of blockCatalogFor(registry, source.allowedBlocks)) {
+      if (!entries.has(entry.type)) entries.set(entry.type, entry);
+    }
+  }
+
+  return {
+    entries: [...entries.values()].sort((left, right) =>
+      left.type.localeCompare(right.type),
+    ),
+    installed: installed.size,
+  };
+};
 
 export const matchesBlockQuery = (
   entry: BlockCatalogEntry,

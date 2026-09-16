@@ -10,6 +10,7 @@ import {
   blockCatalogFor,
   groupBlockCatalog,
   matchesBlockQuery,
+  mergeBlockCatalogs,
   toBlockCatalogEntry,
 } from "./catalog";
 
@@ -152,5 +153,52 @@ describe("groupBlockCatalog", () => {
         query: "carousel",
       }),
     ).toEqual([]);
+  });
+});
+
+describe("mergeBlockCatalogs", () => {
+  const coreOnly = createBlockRegistry([
+    {
+      blocks: [block("hero", "Hero"), block("text", "Rich text")],
+      pluginId: "@vitnode/core",
+    },
+  ]);
+
+  it("offers the union of every zone, de-duplicated by type", () => {
+    expect(
+      mergeBlockCatalogs({
+        sources: [
+          { allowedBlocks: ["core:hero"], registry },
+          { allowedBlocks: ["example:*"], registry },
+          { allowedBlocks: ["core:hero"], registry: coreOnly },
+        ],
+      }).entries.map(item => item.type),
+    ).toEqual(["core:hero", "example:callout"]);
+  });
+
+  it("counts what is installed apart from what an allowlist offers", () => {
+    const merged = mergeBlockCatalogs({
+      sources: [{ allowedBlocks: ["blog:post"], registry }],
+    });
+
+    expect(merged.entries).toEqual([]);
+    expect(merged.installed).toBe(4);
+  });
+
+  it("falls back to the registry a zone did not bring", () => {
+    expect(
+      mergeBlockCatalogs({
+        fallback: registry,
+        sources: [{ allowedBlocks: undefined, registry: undefined }],
+      }).entries.map(item => item.type),
+    ).toEqual(["core:cta", "core:hero", "core:text", "example:callout"]);
+  });
+
+  it("offers nothing when there is no registry to read", () => {
+    expect(
+      mergeBlockCatalogs({
+        sources: [{ allowedBlocks: undefined, registry: undefined }],
+      }),
+    ).toEqual({ entries: [], installed: 0 });
   });
 });

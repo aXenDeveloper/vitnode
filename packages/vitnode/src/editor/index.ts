@@ -7,7 +7,9 @@ export type {
   VisualEditorSaveInput,
 } from "./adapter/types";
 export type {
-  BlockPickerTarget,
+  EditorInsertRequest,
+  EditorInsertTarget,
+  EditorPanelMode,
   VisualEditorContextValue,
   VisualEditorSaveStatus,
 } from "./context";

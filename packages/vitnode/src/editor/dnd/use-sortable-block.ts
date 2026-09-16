@@ -34,7 +34,7 @@ export const useSortableBlock = ({
     transform,
     transition,
   } = useSortable({
-    data: { index, type, zoneId },
+    data: { index, kind: "existing-block", type, zoneId },
     disabled: preview,
     id: blockId,
   });
@@ -44,7 +44,6 @@ export const useSortableBlock = ({
     handleProps: {
       ...attributes,
       ...listeners,
-      className: "cursor-grab touch-none active:cursor-grabbing",
       ref: setActivatorNodeRef,
     },
     setNodeRef,

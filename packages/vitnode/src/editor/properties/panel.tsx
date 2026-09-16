@@ -1,6 +1,6 @@
 import type z from "zod";
 
-import { XIcon } from "lucide-react";
+import { CopyIcon, Trash2Icon } from "lucide-react";
 import { Fragment, type ReactElement, useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
@@ -102,8 +102,8 @@ const BlockPropertiesForm = ({
   );
 };
 
-export const BlockPropertiesPanel = (): null | ReactElement => {
-  const { dispatch, preview, state } = useVisualEditor();
+export const BlockPropertiesPanelContent = (): ReactElement => {
+  const { dispatch, setPanel, state } = useVisualEditor();
   const t = useTranslations("core.editor");
   const tGlobal = useTranslations("core.global");
 
@@ -112,61 +112,81 @@ export const BlockPropertiesPanel = (): null | ReactElement => {
       ? null
       : findBlock(state, state.selectedBlockId);
 
-  if (preview || !found) return null;
+  if (found === null) {
+    return (
+      <section aria-label={t("properties")} className="p-4">
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {t("no_selection")}
+        </p>
+      </section>
+    );
+  }
 
   const registry =
     state.zones[found.zoneId].registry ?? getDefaultBlockRegistry();
   const entry = registry?.get(found.instance.type);
   const issue = blockInstanceIssue(registry, found.instance);
+  const name = entry ? blockDisplayName(entry) : t("block.unknown.title");
 
   return (
-    <aside
-      aria-label={t("properties")}
-      className="border-border bg-background fixed inset-x-0 bottom-0 z-40 flex max-h-96 flex-col border-t shadow-lg md:inset-y-0 md:left-auto md:max-h-none md:w-80 md:border-t-0 md:border-l"
-    >
-      <header className="border-border flex items-start justify-between gap-2 border-b p-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-sm leading-none font-semibold text-balance">
-            {entry ? blockDisplayName(entry) : t("block.unknown.title")}
-          </h2>
-          <p className="text-muted-foreground truncate text-xs">
-            {found.instance.type}
+    <section aria-label={t("properties")} className="flex flex-col gap-4 p-4">
+      <div className="flex min-w-0 flex-col gap-1">
+        <h2 className="text-sm leading-none font-semibold text-balance">
+          {name}
+        </h2>
+        <p className="text-muted-foreground truncate text-xs">
+          {found.instance.type}
+        </p>
+      </div>
+
+      {issue === null ? null : (
+        <div
+          className="border-destructive/40 bg-destructive/10 text-destructive flex flex-col gap-1 rounded-md border p-3"
+          role="status"
+        >
+          <p className="text-sm leading-relaxed text-pretty">
+            {entry ? t("invalid_block") : t("block.issue.unknown_type")}
           </p>
+          <p className="text-xs leading-relaxed opacity-80">{issue}</p>
         </div>
+      )}
+
+      {entry ? (
+        <BlockPropertiesForm
+          entry={entry}
+          instance={found.instance}
+          key={found.instance.id}
+        />
+      ) : null}
+
+      <div className="border-border flex gap-2 border-t pt-4">
+        <Button
+          aria-label={t("block.duplicate", { name })}
+          className="flex-1"
+          onClick={() => {
+            dispatch({ blockId: found.instance.id, type: "duplicate" });
+          }}
+          size="sm"
+          variant="secondary"
+        >
+          <CopyIcon />
+          {t("duplicate")}
+        </Button>
 
         <Button
-          aria-label={tGlobal("close")}
+          aria-label={t("block.remove", { name })}
+          className="flex-1"
           onClick={() => {
-            dispatch({ blockId: null, type: "select" });
+            dispatch({ blockId: found.instance.id, type: "remove" });
+            setPanel("blocks");
           }}
-          size="icon-sm"
-          variant="ghost"
+          size="sm"
+          variant="destructive"
         >
-          <XIcon />
+          <Trash2Icon />
+          {tGlobal("remove")}
         </Button>
-      </header>
-
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-20 md:pb-4">
-        {issue === null ? null : (
-          <div
-            className="border-destructive/40 bg-destructive/10 text-destructive flex flex-col gap-1 rounded-md border p-3"
-            role="status"
-          >
-            <p className="text-sm leading-relaxed text-pretty">
-              {entry ? t("invalid_block") : t("block.issue.unknown_type")}
-            </p>
-            <p className="text-xs leading-relaxed opacity-80">{issue}</p>
-          </div>
-        )}
-
-        {entry ? (
-          <BlockPropertiesForm
-            entry={entry}
-            instance={found.instance}
-            key={found.instance.id}
-          />
-        ) : null}
       </div>
-    </aside>
+    </section>
   );
 };

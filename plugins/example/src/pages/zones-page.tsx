@@ -143,13 +143,18 @@ const VIEW_MODE_CHECKS = [
 ];
 
 const EDIT_MODE_CHECKS = [
-  "The editor chunk is fetched on the first Edit page click and never before it. Click Exit and Edit page again: the second click fetches nothing.",
-  "settings:before-footer becomes visible only in edit mode, as a drop target with its own Add block button. Exit and it disappears again.",
-  "Every block sits in an inert container, so a block's own links and buttons cannot be clicked or tabbed to. The Preview toggle gives them back.",
+  "The editor chunk is fetched on the first Edit page click and never before it. Use Finish editing and click Edit page again: the second click fetches nothing.",
+  "One sidebar opens on the right and the page is padded, never covered - the zones keep their full width under it. Narrow the window below md and the same sidebar becomes a bottom sheet.",
+  "settings:before-footer becomes visible only in edit mode, as a large dashed placeholder with its own Add block button. Finish editing and it disappears again.",
+  "Add block on a zone targets it: the sidebar switches to Available Blocks, its header reads For: that zone id, and the zone stays outlined until you clear the target.",
+  "A catalog entry is both draggable and clickable. Drag one between two blocks and an insertion line shows exactly where it will land; click one instead and it goes to the targeted zone, or to the first zone that accepts it.",
+  "Target settings:sidebar and the catalog offers core:text alone; clear the target and core:cta, core:hero and example:callout come back.",
+  "Dropping onto a block inserts before or after it, by which half of it the pointer is over. Nothing ever lands inside a block.",
+  "Drag example:callout over settings:sidebar: the zone turns red and the drop is refused, from the same allowlist the catalog filters by.",
+  "Select a block and the same sidebar switches to Properties. Back to Available Blocks clears the selection and returns to the catalog.",
+  "Every block sits in an inert container, so a block's own links and buttons cannot be clicked or tabbed to. Preview gives them back and collapses the sidebar to a slim bar with Back to editing and Finish editing.",
   "The profile form is application code: no overlay, no drag handle, and its input still takes focus while edit mode is on.",
-  "settings:sidebar offers core:text alone in the block picker; the zones around the form also offer core:cta, core:hero and example:callout.",
-  "Drag a block from one zone into another and the sidebar refuses anything that is not core:text.",
-  "Save runs this page's adapter: the editor toasts, and the exact payload it was handed appears at the bottom of the page.",
+  "Save runs this page's adapter from the sidebar footer: the status line above the buttons changes, the editor toasts, and the exact payload it was handed appears at the bottom of the page.",
 ];
 
 const canEditPage = (): boolean => process.env.NODE_ENV !== "production";
@@ -263,7 +268,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
           items={EDIT_MODE_CHECKS}
         />
 
-        <div className="flex flex-col gap-6 md:flex-row md:items-start">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex flex-1 flex-col gap-6">
             <ContentZone
               allowedBlocks={PAGE_BLOCKS_ALLOWED}
@@ -286,7 +291,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
             allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
             as="aside"
             blocks={loaderData.sidebar}
-            className="border-border w-full rounded-lg border p-4 md:w-64"
+            className="border-border w-full rounded-lg border p-4 lg:w-64"
             id="settings:sidebar"
             registry={blocksRegistry}
           />

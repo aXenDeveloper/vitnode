@@ -19,13 +19,13 @@ export const useZoneDroppable = ({
   zoneId: string;
 }): ZoneDroppable => {
   const { state } = useVisualEditor();
-  const { draggingBlockId, draggingType } = useEditorDnd();
+  const { dragging, draggingType } = useEditorDnd();
   const { isOver, setNodeRef } = useDroppable({
     data: { zoneId },
     id: zoneDroppableId(zoneId),
   });
 
-  const active = draggingBlockId !== null;
+  const active = dragging !== null;
   const rejected =
     active &&
     !isBlockAllowed(

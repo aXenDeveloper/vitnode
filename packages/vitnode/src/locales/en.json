@@ -878,7 +878,11 @@
     },
     "editor": {
       "title": "Editing page",
-      "exit": "Exit",
+      "available_blocks": "Available Blocks",
+      "finish": "Finish editing",
+      "back_to_editing": "Back to editing",
+      "insert_for": "For: {zone}",
+      "insert_clear": "Clear the target zone",
       "edit": "Edit",
       "preview": "Preview",
       "save": "Save",
@@ -889,13 +893,16 @@
       "unsaved": "Unsaved changes",
       "discard": "Discard changes",
       "discard_confirm": "Every block you added, moved or edited goes back to how the page was loaded. This cannot be undone.",
+      "duplicate": "Duplicate",
       "properties": "Properties",
+      "no_selection": "Select a block on the page to edit it here.",
       "group_enabled": "Has a value",
       "no_value": "No value",
       "invalid_block": "The data stored for this block does not match what the block declares, so it cannot be edited here.",
       "zone": {
         "label": "Content zone",
-        "empty": "This zone is empty.",
+        "drop_here": "Drag and drop blocks here",
+        "targeted": "Waiting for the block you pick next",
         "add_block": "Add block",
         "rejected": "This zone does not accept the block you are dragging."
       },
@@ -915,11 +922,12 @@
         }
       },
       "picker": {
-        "title": "Add a block",
-        "desc": "Pick a block to insert into this zone.",
         "search": "Search blocks…",
         "empty": "This zone does not accept any of the installed blocks.",
-        "no_results": "No blocks match your search."
+        "no_results": "No blocks match your search.",
+        "add": "Add the {name} block",
+        "hint": "Drag a block into a zone to choose exactly where it goes, or click it to add it to the first zone that accepts it.",
+        "none_installed": "No blocks are installed on this site yet."
       },
       "leave": {
         "title": "Leave without saving?",

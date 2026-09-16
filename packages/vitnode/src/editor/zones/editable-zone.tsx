@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 
 import type { ContentZoneMount } from "../../blocks/edit-context";
 import type { EditorZoneMount } from "../state/types";
+import type { ZoneDropState } from "./drop-state";
 
 import { isBlockInstance } from "../../blocks/instance";
 import { resolveBlockRegistry } from "../../blocks/registry";
@@ -18,31 +19,24 @@ import { EditableBlockShell } from "../block-shell/block-shell";
 import { useVisualEditor } from "../context";
 import { useZoneDroppable } from "../dnd/use-zone-droppable";
 import { ZoneSortable } from "../dnd/zone-sortable";
+import { zoneDropState } from "./drop-state";
 import { UnknownBlock } from "./unknown-block";
 
-type ZoneDropState = "idle" | "over" | "rejected" | "targeting";
-
-const DROP_CLASSES = {
-  idle: "outline-border/60 hover:outline-border",
-  over: "outline-primary ring-primary/40 ring-2",
-  rejected: "outline-destructive/60 bg-destructive/5",
-  targeting: "outline-border",
+const ZONE_CLASSES = {
+  idle: "bg-muted/20 outline-border/60 hover:outline-border",
+  inserting: "bg-primary/5 outline-primary/70 ring-primary/20 ring-2",
+  over: "bg-primary/5 outline-primary ring-primary/40 ring-2",
+  rejected: "bg-destructive/5 outline-destructive/60",
+  targeting: "bg-muted/20 outline-border",
 } as const satisfies Record<ZoneDropState, string>;
 
-const dropState = ({
-  active,
-  over,
-  rejected,
-}: {
-  active: boolean;
-  over: boolean;
-  rejected: boolean;
-}): ZoneDropState => {
-  if (rejected) return "rejected";
-  if (over) return "over";
-
-  return active ? "targeting" : "idle";
-};
+const PLACEHOLDER_CLASSES = {
+  idle: "border-border bg-muted/30",
+  inserting: "border-primary/60 bg-primary/5",
+  over: "border-primary bg-primary/10",
+  rejected: "border-destructive/60 bg-destructive/5",
+  targeting: "border-border bg-muted/30",
+} as const satisfies Record<ZoneDropState, string>;
 
 interface IncomingZone {
   signature: string;
@@ -51,7 +45,8 @@ interface IncomingZone {
 
 export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
   const t = useTranslations("core.editor");
-  const { dispatch, openPicker, preview, state } = useVisualEditor();
+  const { dispatch, insertTarget, preview, setInsertTarget, setPanel, state } =
+    useVisualEditor();
   const { active, over, rejected, setNodeRef } = useZoneDroppable({
     zoneId: mount.id,
   });
@@ -121,12 +116,14 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
     blocks.length === 0
       ? undefined
       : resolveBlockRegistry(zone?.registry ?? mount.registry);
-  const dropping = dropState({ active, over, rejected });
+  const inserting = insertTarget?.zoneId === mount.id;
+  const dropping = zoneDropState({ active, inserting, over, rejected });
 
   const addBlock = (
     <Button
       onClick={() => {
-        openPicker({ index: blocks.length, zoneId: mount.id });
+        setInsertTarget({ index: blocks.length, zoneId: mount.id });
+        setPanel("blocks");
       }}
       size="sm"
       variant="outline"
@@ -143,17 +140,50 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
   );
 
   const label = (
-    <span className="border-border bg-background text-muted-foreground pointer-events-none absolute start-2 -top-2.5 z-10 rounded-md border px-1.5 text-xs leading-relaxed">
+    <span
+      className={cn(
+        "bg-background pointer-events-none absolute start-2 -top-2.5 z-10 rounded-md border px-1.5 text-xs leading-relaxed transition-colors",
+        inserting
+          ? "border-primary text-primary"
+          : "border-border text-muted-foreground",
+      )}
+    >
       <span className="sr-only">{t("zone.label")} </span>
       {mount.id}
+      {inserting ? (
+        <span className="sr-only"> {t("zone.targeted")}</span>
+      ) : null}
     </span>
   );
 
   const body =
     blocks.length === 0 ? (
-      <div className="border-border text-muted-foreground flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-4">
-        <p className="text-xs leading-relaxed text-pretty">{t("zone.empty")}</p>
-        {rejected ? notAllowed : addBlock}
+      <div
+        className={cn(
+          "flex min-h-32 flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center transition-colors md:min-h-40",
+          PLACEHOLDER_CLASSES[dropping],
+        )}
+      >
+        {rejected ? (
+          notAllowed
+        ) : (
+          <>
+            <span
+              className={cn(
+                "flex size-10 items-center justify-center rounded-full border border-dashed transition-colors",
+                inserting || over
+                  ? "border-primary/60 text-primary"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              <PlusIcon aria-hidden="true" className="size-5" />
+            </span>
+            <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+              {t("zone.drop_here")}
+            </p>
+            {addBlock}
+          </>
+        )}
       </div>
     ) : (
       <ZoneSortable blockIds={blocks.map(instance => instance.id)}>
@@ -197,7 +227,7 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
       }),
       className: cn(
         "relative rounded-md outline-1 outline-offset-4 transition-colors outline-dashed",
-        DROP_CLASSES[dropping],
+        ZONE_CLASSES[dropping],
         mount.className,
       ),
       "data-editor-zone": dropping,

@@ -1,0 +1,89 @@
+import type { ReactElement } from "react";
+
+import { cn } from "cn";
+import { EyeIcon, LogOutIcon, SaveIcon, Undo2Icon } from "lucide-react";
+import { useTranslations } from "use-intl";
+
+import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
+import { Button } from "@/components/ui/button";
+
+import type { EditorStatus } from "./status";
+
+import { useVisualEditor } from "../context";
+import { editorStatus } from "./status";
+
+export const EditorSidebarFooter = (): ReactElement => {
+  const { dirty, discard, exit, preview, save, saveStatus, setPreview } =
+    useVisualEditor();
+  const t = useTranslations("core.editor");
+  const status = editorStatus(dirty, saveStatus);
+  const statusLabels: Record<EditorStatus, string> = {
+    error: t("error"),
+    idle: t("idle"),
+    saved: t("saved"),
+    saving: t("saving"),
+    unsaved: t("unsaved"),
+  };
+  const saving = saveStatus === "saving";
+
+  return (
+    <footer className="border-border flex flex-col gap-3 border-t p-4">
+      <p
+        className={cn(
+          "text-sm leading-relaxed",
+          status === "error" ? "text-destructive" : "text-muted-foreground",
+        )}
+        role="status"
+      >
+        {statusLabels[status]}
+      </p>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          aria-pressed={preview}
+          onClick={() => {
+            setPreview(!preview);
+          }}
+          size="sm"
+          variant="outline"
+        >
+          <EyeIcon />
+          {t("preview")}
+        </Button>
+
+        <ConfirmActionAlertDialog
+          description={t("discard_confirm")}
+          onSubmit={({ onClose }) => {
+            discard();
+            onClose();
+          }}
+          submitVariant="destructive"
+          textSubmit={t("discard")}
+          title={t("discard")}
+        >
+          <Button disabled={!dirty} size="sm" variant="ghost">
+            <Undo2Icon />
+            {t("discard")}
+          </Button>
+        </ConfirmActionAlertDialog>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          disabled={!dirty || saving}
+          isLoading={saving}
+          onClick={save}
+          variant="secondary"
+        >
+          <SaveIcon />
+          {t("save")}
+        </Button>
+
+        <Button onClick={exit}>
+          <LogOutIcon />
+          {t("finish")}
+        </Button>
+      </div>
+    </footer>
+  );
+};
