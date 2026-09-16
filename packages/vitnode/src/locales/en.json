@@ -875,6 +875,70 @@
           "version_conflict": "Someone else saved this language while you were editing."
         }
       }
+    },
+    "editor": {
+      "title": "Editing page",
+      "exit": "Exit",
+      "edit": "Edit",
+      "preview": "Preview",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "idle": "No changes yet",
+      "error": "Something went wrong",
+      "unsaved": "Unsaved changes",
+      "discard": "Discard changes",
+      "discard_confirm": "Every block you added, moved or edited goes back to how the page was loaded. This cannot be undone.",
+      "properties": "Properties",
+      "group_enabled": "Has a value",
+      "no_value": "No value",
+      "invalid_block": "The data stored for this block does not match what the block declares, so it cannot be edited here.",
+      "zone": {
+        "label": "Content zone",
+        "empty": "This zone is empty.",
+        "add_block": "Add block",
+        "rejected": "This zone does not accept the block you are dragging."
+      },
+      "block": {
+        "select": "Select the {name} block",
+        "drag": "Drag the {name} block to reorder it",
+        "duplicate": "Duplicate the {name} block",
+        "remove": "Remove the {name} block",
+        "issue": {
+          "unknown_type": "No block is installed for this type.",
+          "not_allowed": "This zone does not allow this block.",
+          "invalid_data": "The stored data does not match the fields this block declares."
+        },
+        "unknown": {
+          "title": "Unknown block",
+          "description": "Nothing installed on this site provides the block type {type}, so it cannot be rendered."
+        }
+      },
+      "picker": {
+        "title": "Add a block",
+        "desc": "Pick a block to insert into this zone.",
+        "search": "Search blocks…",
+        "empty": "This zone does not accept any of the installed blocks.",
+        "no_results": "No blocks match your search."
+      },
+      "leave": {
+        "title": "Leave without saving?",
+        "desc": "You have unsaved changes on this page. Leave now and they are gone.",
+        "cancel": "Keep editing",
+        "confirm": "Leave without saving"
+      },
+      "saved_toast": {
+        "title": "Page saved",
+        "desc": "Every zone on this page now matches what you see."
+      },
+      "save_error": {
+        "title": "Your changes were not saved",
+        "desc": "Something went wrong on the way to the server. Nothing you arranged has been lost - try again."
+      },
+      "no_adapter": {
+        "title": "Nowhere to save to",
+        "desc": "This page opened the editor without a save adapter, so there is nothing to store your changes in."
+      }
     }
   },
   "admin": {

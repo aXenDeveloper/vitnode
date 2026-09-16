@@ -9,6 +9,7 @@ import type {
   BlockValidationMode,
 } from "./types";
 
+import { useContentEditRuntime } from "./edit-context";
 import { ContentRenderer } from "./renderer";
 import { assertContentZoneId, contentZoneAttributes } from "./zone-meta";
 
@@ -33,7 +34,20 @@ export const ContentZone = ({
   registry,
   validate,
 }: ContentZoneProps): null | ReactElement => {
+  const editRuntime = useContentEditRuntime();
+
   assertContentZoneId(id);
+
+  if (editRuntime) {
+    return editRuntime.renderZone({
+      allowedBlocks,
+      as,
+      blocks,
+      className,
+      id,
+      registry,
+    });
+  }
 
   if (!blocks || blocks.length === 0) return null;
 

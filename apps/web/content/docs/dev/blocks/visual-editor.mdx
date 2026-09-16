@@ -1,0 +1,441 @@
+---
+title: Visual Edit Mode
+description: Turn a public page into an editing surface without changing a single ContentZone - and without shipping a byte of the editor to the people who are only reading.
+icon: MousePointerClick
+---
+
+**Visual Edit Mode** is the part where somebody finally gets to move things around.
+
+A page renders its [content zones](/docs/dev/blocks/content-zones) the way it always has. An authorized person clicks **Edit page**, and the _same page_ - same layout, same fonts, same blocks - grows an outline around each zone, a drag handle on each block and a toolbar at the bottom. They rearrange, they save, they leave. Nobody was sent to a separate admin screen to guess what the result would look like.
+
+```text
+public page
+   ↓ Edit page
+the same page, editable
+   ↓ Save
+public page again
+```
+
+{/* Image prompt: A VitNode settings page in Visual Edit Mode. The page content is a normal-looking settings screen with a profile form in the middle; above and below it, two content zones are outlined with dashed borders and small corner labels reading "settings:before-profile" and "settings:after-profile". One block is selected with a blue ring and shows a small floating row of icon buttons (drag handle, duplicate, delete) in its top-right corner. A right-hand properties panel shows text fields for that block. A floating pill toolbar at the bottom centre reads "Editing page - Unsaved changes" with Preview, Discard, Save and Exit buttons. Dark theme, 1600x900. */}
+
+## `ContentZone` did not change
+
+This is the promise the [Content Zones](/docs/dev/blocks/content-zones) page made, and it is worth being specific about how it was kept.
+
+```tsx
+<ContentZone
+  id="settings:before-profile"
+  blocks={content.beforeProfile}
+  registry={blocksRegistry}
+/>
+```
+
+That is the zone in view mode. It is also the zone in edit mode. There is no `EditableContentZone`, no `editable` prop, no second component to migrate to - and nothing stored today needs rewriting.
+
+Internally `ContentZone` asks one question before it renders: _is an edit runtime present?_ In view mode the answer is `null` and the Stage 2 path runs untouched, including the `return null` for an empty zone. In edit mode the runtime answers, and the zone hands it everything it knows - id, blocks, registry, allowlist, wrapper - and lets it render the editing surface instead.
+
+A visitor pays one `useContext` that answers `null`. That is the entire cost of a feature they will never see.
+
+## Turning it on
+
+Wrap the part of the page that contains your zones in `ContentEditorRuntime` and give it a boolean.
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
+import { ContentEditorRuntime } from "@vitnode/core/blocks/edit"
+
+const SettingsPage = () => {
+  const [editing, setEditing] = useState(false)
+
+  const adapter = useMemo<VisualEditorAdapter>(
+    () => ({
+      save: async (input) => {
+        await savePageZones(input)
+      },
+    }),
+    [],
+  )
+
+  return (
+    <ContentEditorRuntime
+      adapter={adapter}
+      enabled={editing}
+      onExit={() => {
+        setEditing(false)
+      }}
+    >
+      {canEditPage ? (
+        <Button
+          onClick={() => {
+            setEditing(true)
+          }}
+        >
+          Edit page
+        </Button>
+      ) : null}
+
+      <ContentZone
+        id="settings:before-profile"
+        blocks={content.beforeProfile}
+      />
+      <ProfileForm />
+      <ContentZone id="settings:after-profile" blocks={content.afterProfile} />
+    </ContentEditorRuntime>
+  )
+}
+```
+
+| Prop       |          |                                                                                     |
+| :--------- | :------- | :---------------------------------------------------------------------------------- |
+| `enabled`  | required | `false` renders the children and nothing else. `true` loads the editor.             |
+| `children` | required | The page. Every `ContentZone` inside it becomes editable.                           |
+| `adapter`  | optional | Where **Save** sends its payload. Without one, Save says so and does nothing.       |
+| `onExit`   | optional | Called when the editor's **Exit** button is used, after the unsaved-changes prompt. |
+
+### Who gets the button
+
+`canEditPage` in that snippet is **yours**. VitNode does not decide who may edit a page, because VitNode does not know what your pages are - a plugin's settings screen, a marketing page and a user profile have three different answers.
+
+Keep the button out of the DOM when the answer is no, and never rely on hiding it with CSS:
+
+```tsx
+{
+  canEditPage ? <Button onClick={startEditing}>Edit page</Button> : null
+}
+```
+
+<Callout title="The playground's answer is not a permission check" type="warn">
+  `/example/zones` computes `canEditPage` as `process.env.NODE_ENV !==
+  "production"`, which is a demo, not a rule. A real page asks your permission
+  system, and the save endpoint behind your adapter asks it again - a hidden
+  button has never stopped anybody.
+</Callout>
+
+## The lazy-loading guarantee
+
+The editor is not small. Drag and drop, a command-palette block picker, a form runtime and a properties panel add up, and every one of them is useless to a visitor reading the page.
+
+So **none of it is in the public page's bundle**. `@vitnode/core/blocks/edit` reaches React and nothing else; the only path from it to the editor is a dynamic `import()` behind `React.lazy`:
+
+```tsx title="packages/vitnode/src/blocks/edit.tsx"
+const EditorRoot = lazy(async () => await import('../editor/root'))
+```
+
+The chunk is requested when `enabled` first flips to `true` - that is, on the first click of **Edit page** - and never before.
+
+```text
+view mode      blocks/zone.tsx      → react
+edit seam      blocks/edit.tsx      → react
+first click    editor/root.tsx      → @dnd-kit, cmdk, @tanstack/react-form, sonner, …
+```
+
+This is enforced, not merely intended. `packages/vitnode/src/editor/boundaries.test.ts` walks the real module graph and fails the build if the arrow ever points the wrong way:
+
+- `blocks/zone.tsx` and `blocks/edit.tsx` **eagerly** reach `react` and nothing else;
+- neither reaches `@dnd-kit/*`, `cmdk`, `@tanstack/react-form`, `sonner`, `@tanstack/react-query`, `@tanstack/react-router` or `zod`;
+- `blocks/edit.tsx` **does** reach `@dnd-kit/core` once dynamic imports are followed, which is the proof that the only path is a dynamic one;
+- nothing under `src/editor/**` reaches `views/admin/**`, or any database or server package.
+
+Turning that static `import` back on would be a one-line change and a silently 200 kB heavier home page. The test is the thing that notices.
+
+## The interaction model
+
+A block is a real component. It contains links, buttons, forms, embedded video - things that do something when you click them. In edit mode, clicking one has to mean _select this block_, not _follow this link_.
+
+VitNode solves that with three layers on every block, and one escape hatch:
+
+|                         |                                                                                                                           |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------ |
+| **`inert` container**   | The block's own component renders inside an `inert` element, so nothing in it can be clicked, focused or tabbed to.       |
+| **Transparent overlay** | A full-size `<button>` above it. Clicking anywhere on the block selects it; screen readers get _"Select the Hero block"_. |
+| **Floating actions**    | A drag handle, Duplicate and Delete appear on hover, on focus, and while selected.                                        |
+| **Preview toggle**      | Removes all three. The block becomes the real thing again, exactly as a visitor sees it.                                  |
+
+The alternative - asking every block author to make their component "editor-aware" - was never on the table. A block's component is public rendering code, it is written by plugin authors who have never read the editor's source, and it must not grow a second mode. `inert` does the whole job in one attribute, from the outside.
+
+Preview is there because the illusion has to break sometimes. Does the video play? Does the accordion open? Is the call-to-action button the right size once it is actually hoverable? Toggle Preview, use the page like a visitor, toggle back.
+
+## Empty zones become visible
+
+An empty zone [renders nothing at all](/docs/dev/blocks/content-zones#empty-zones) in view mode - no wrapper, no placeholder, no gap. That is deliberate, and it stays true.
+
+In edit mode the same zone renders a dashed drop target with its id and an **Add block** button, because now somebody _is_ looking for a place to put something.
+
+```text
+view mode   settings:before-footer   (nothing)
+edit mode   settings:before-footer   ┌ dashed box ┐
+                                     │ + Add block │
+                                     └────────────┘
+```
+
+Exit the editor and it disappears again. A page with eight placement points and two filled ones costs two in public, and shows all eight to the person arranging them.
+
+## The block picker
+
+**Add block** opens a searchable dialog of everything that may go in _that_ zone. Not everything installed - everything **allowed**.
+
+```tsx
+<ContentZone
+  id="settings:sidebar"
+  allowedBlocks={['core:text']}
+  blocks={content.sidebar}
+/>
+```
+
+That sidebar offers exactly one block in the picker. The zones around it, with `["core:*", "example:callout"]`, offer core's blocks plus the example plugin's callout. Same `allowedBlocks` value, same format as a [`blocks()` field's `allowed`](/docs/dev/blocks/blocks-field#restricting-what-may-go-in), now doing a third job: it is the picker's filter.
+
+A zone that allows nothing the installation provides says so rather than opening an empty dialog.
+
+<Callout title="The picker is not the write boundary">
+  The allowlist on a zone describes a location. The one on the `blocks()` field
+  **enforces**, on every create and update. The picker filtering by the zone's
+  copy is a courtesy to the person editing - the field is what refuses a block
+  that should never have been stored.
+</Callout>
+
+## Drag and drop
+
+Grab a block by its handle and move it.
+
+- **Reorder** inside a zone: drop it above or below a sibling.
+- **Move across zones**: drop it into another zone, or onto one of that zone's blocks to land at that position.
+- **Into an empty zone**: drop it anywhere on the dashed box.
+
+Identity is the block instance id throughout - never an array index - so a block that crosses a zone keeps being the same block, with the same data, and the properties panel does not blink.
+
+### An incompatible target refuses
+
+If you drag an `example:callout` toward a zone that allows `core:text` only, that zone turns red and says it does not accept what you are dragging. Let go and nothing happens: the block stays where it was.
+
+The refusal is computed from the same `isBlockAllowed` the field and the picker use. One allowlist format, one function that evaluates it, three places that ask.
+
+## The properties panel
+
+Select a block and its fields appear in a panel: text, textarea, number, boolean, enum, date-time, and groups of those - the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold), as declared by `defineBlock`. The panel builds itself from the block definition, so a block that adds a field gets a control for it with no editor change at all.
+
+Typing updates the block on the page **as you type**. There is no Apply button, and no preview pane to compare against, because the page _is_ the preview.
+
+A block whose stored data does not match what its definition declares is not editable here - it is flagged on the page instead. Editing it would mean guessing which half is wrong, and guessing is how content gets quietly destroyed.
+
+## Saving is the host's job
+
+The editor never fetches. Not once. The only way anything leaves it is the adapter you passed:
+
+```ts
+interface VisualEditorSaveInput {
+  changedZoneIds: readonly string[]
+  zones: Readonly<Record<string, readonly AnyBlockInstance[]>>
+}
+
+interface VisualEditorAdapter {
+  save: (input: VisualEditorSaveInput) => Promise<void> | void
+}
+```
+
+`zones` holds every zone on the page keyed by its id; `changedZoneIds` names the ones that actually differ from what loaded. Resolve and the editor marks itself clean and toasts. Throw or reject and it shows an error and keeps the changes, so nothing is lost to a failed request.
+
+```tsx
+const adapter = useMemo<VisualEditorAdapter>(
+  () => ({
+    save: async ({ changedZoneIds, zones }) => {
+      await fetcher({
+        plugin: '@vitnode/example',
+        method: 'patch',
+        module: 'pages',
+        path: '/{id}/zones',
+        args: { param: { id: page.id }, json: { zones, changedZoneIds } },
+      })
+    },
+  }),
+  [page.id],
+)
+```
+
+### Why there is no zones table
+
+The obvious alternative is a `core_content_zones` table that stores `(zoneId, blocks)` for every page in the installation, and a generic save endpoint that writes to it. It was not built, on purpose.
+
+Block content already lives somewhere: in a [`blocks()` field](/docs/dev/blocks/blocks-field) on a content type, in a plugin's own settings row, in whatever column the page loads it from. A generic zones table would be a **second** home for the same data, and then two places to migrate, two permission models, two revision histories, and a stubborn class of bug where the page renders one copy and the editor saves the other.
+
+The adapter is the alternative: the page that knew how to _load_ its zones is the page that knows how to _save_ them. It writes to its own column, through its own API, behind its own permission check.
+
+## What Stage 3 deliberately does not do
+
+Being clear about the edges is more useful than a roadmap.
+
+|                                   |                                                                                                                                                                                                         |
+| :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Nested blocks**                 | A zone holds a flat, ordered list. No columns-inside-columns, no block containing a zone.                                                                                                               |
+| **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                      |
+| **Permission UI**                 | No roles screen, no per-zone locking. `canEditPage` and your API are the whole story.                                                                                                                   |
+| **Collaborative editing**         | One editor at a time. Two people on one page will overwrite each other.                                                                                                                                 |
+| **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel. |
+| **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                             |
+| **Inline rich text**              | Text is edited in the properties panel, not by clicking into the rendered paragraph.                                                                                                                    |
+
+Everything in that table is a _later_ decision rather than a closed door - but none of it is in this stage, and none of it is implied by the APIs above.
+
+## Verifying it yourself
+
+`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, an **Edit page** button and a mocked adapter that persists nothing and shows you the payload it was handed.
+
+<Steps>
+<Step>
+
+**Start the development environment**
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:3000/example/zones](http://localhost:3000/example/zones) with DevTools → Network open, filtered to **JS**.
+
+</Step>
+<Step>
+
+**Confirm the page is clean before you touch it**
+
+Reload and filter the request list to `/src/editor/`. **Nothing.** Not one editor module is requested for a page nobody is editing.
+
+<Callout title="One dev-server caveat" type="warn">
+  In this repository you will also see `@dnd-kit` on *every* route, `/`
+  included. Those come from the AdminCP dashboard grid, which the development
+  module graph reaches whatever page you open - not from the zones. The honest
+  measurement is the production build [at the end of this
+  page](#against-a-production-build).
+</Callout>
+
+</Step>
+<Step>
+
+**Enter the editor**
+
+Click **Edit page**.
+
+|         | Expected                                                                                                    |
+| :------ | :---------------------------------------------------------------------------------------------------------- |
+| Network | Exactly one new chunk, on this click and not before.                                                        |
+| Zones   | Dashed outlines with the zone id in the corner - `settings:before-profile` and the rest.                    |
+| Toolbar | A floating bar at the bottom reading _Editing page - No changes yet_, with Preview, Discard, Save and Exit. |
+| Layout  | Nothing jumped. The blocks are where they were.                                                             |
+
+Click **Exit**, then **Edit page** again: the second time, **no** request is made. The chunk is already in memory.
+
+</Step>
+<Step>
+
+**The empty zone**
+
+`settings:before-footer` renders nothing in view mode. In edit mode it is a dashed box with **Add block**. Exit and confirm it vanishes completely - no empty container, no gap.
+
+</Step>
+<Step>
+
+**Add a block**
+
+Click **Add block** on the empty zone, search the picker, insert something.
+
+It appears in the zone, the toolbar switches to **Unsaved changes**, and the properties panel opens for the block you just added.
+
+</Step>
+<Step>
+
+**Select and edit**
+
+Click any block. Expect a ring around it, a floating row of actions in its corner, and its fields in the panel.
+
+Type into a text field. The block on the page updates **while you type** - no Apply button, no delay.
+
+</Step>
+<Step>
+
+**Reorder inside a zone**
+
+Drag the second block of `settings:before-profile` above the first. Drop it, and confirm the new order holds when you click elsewhere.
+
+</Step>
+<Step>
+
+**Move across zones**
+
+Drag a `core:text` block from `settings:before-profile` into `settings:sidebar`. It should land there and keep its content.
+
+</Step>
+<Step>
+
+**Try an invalid target**
+
+Drag the `example:callout` toward `settings:sidebar`, which allows `core:text` only.
+
+The zone turns red and says it does not accept the block. Release: nothing moves. Then open **Add block** on that sidebar and confirm the picker offers `core:text` and nothing else.
+
+</Step>
+<Step>
+
+**Duplicate and delete**
+
+Use the copy action on a block: a second copy appears directly below it, with its own instance id and the same data. Delete it again with the bin action.
+
+</Step>
+<Step>
+
+**Check the locked UI**
+
+While edit mode is on, the profile form in the middle of the page must have **no** outline, **no** drag handle and **no** overlay - and its input must still take focus and type.
+
+Now click into a link or a button _inside a block_: nothing happens, because the block's content is `inert`. Toggle **Preview** and try again: it works. Toggle back.
+
+</Step>
+<Step>
+
+**Save**
+
+Click **Save** in the toolbar - not the profile form's own Save button, which is there to prove the form still works.
+
+|         | Expected                                                                                                          |
+| :------ | :---------------------------------------------------------------------------------------------------------------- |
+| Toast   | The page's mock adapter fires first, naming the changed zones and saying nothing was persisted.                   |
+| Toolbar | Switches from _Unsaved changes_ to _Saved_.                                                                       |
+| Payload | A **Last save payload** block appears at the bottom of the page - open it and read the JSON the adapter received. |
+
+Check that `changedZoneIds` lists only the zones you actually touched.
+
+</Step>
+<Step>
+
+**Discard**
+
+Make another change, then use **Discard**. Every zone snaps back to what it looked like when the editor opened, and the toolbar stops saying _Unsaved changes_.
+
+</Step>
+<Step>
+
+**Leave with unsaved changes**
+
+Make a change and click **Exit**. Expect a confirmation prompt, a **Keep editing** that returns you to the editor with the change intact, and a **Leave without saving** that drops it.
+
+Make another change and try to navigate away - a link in the site header, or the browser's back button. The same prompt should protect you.
+
+</Step>
+<Step>
+
+**Reload**
+
+Reload the page. Everything is back to the loader's content, because the playground adapter stores nothing. That is the adapter's doing, not the editor's: swap in one that writes to your API and the changes stay.
+
+</Step>
+</Steps>
+
+### Against a production build
+
+```bash
+pnpm build
+pnpm start
+```
+
+Then confirm the editor never reached a visitor:
+
+```bash
+curl -s http://localhost:3000/example/zones | grep -cE 'dnd-kit|cmdk|editor/root'
+```
+
+`0`. The [boundary test](#the-lazy-loading-guarantee) is the standing guarantee; this is the spot check that the guarantee survived bundling.

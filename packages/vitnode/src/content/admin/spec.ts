@@ -114,7 +114,7 @@ const systemKinds: Record<string, "number" | "publication" | "system"> = {
 };
 
 /** One field descriptor, projected into the serialisable form spec. */
-const projectFormField = (
+export const projectFormField = (
   name: string,
   fieldValue: ContentFieldDescriptor,
   labelEnum: ContentEnumLabeller,

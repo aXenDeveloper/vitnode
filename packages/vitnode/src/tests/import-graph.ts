@@ -156,9 +156,14 @@ export const reachedFiles = (
   return [...seen].map(file => relative(srcRoot, file)).sort();
 };
 
+export interface ImportGraphOptions {
+  dynamic?: boolean;
+}
+
 export const externalGraph = (
   entry: string,
   srcRoot: string = SRC_ROOT,
+  { dynamic = true }: ImportGraphOptions = {},
 ): Map<string, string[]> => {
   const found = new Map<string, string[]>();
   const parents = new Map<string, string>();
@@ -181,7 +186,7 @@ export const externalGraph = (
     if (seen.has(file)) return;
     seen.add(file);
 
-    for (const specifier of runtimeImports(file)) {
+    for (const specifier of runtimeImports(file, { dynamic })) {
       const target = resolveSpecifier(specifier, file, srcRoot);
 
       if (target) {
@@ -203,7 +208,8 @@ export const externalGraph = (
 export const reachedSpecifiers = (
   entry: string,
   srcRoot: string = SRC_ROOT,
-): string[] => [...externalGraph(entry, srcRoot).keys()];
+  options: ImportGraphOptions = {},
+): string[] => [...externalGraph(entry, srcRoot, options).keys()];
 
 /** A package and its subpaths, so `hono` matches `hono/cors` but not `honox`. */
 const matches = (specifier: string, forbidden: string): boolean =>
@@ -219,8 +225,9 @@ export const offenders = (
   entry: string,
   forbidden: string[],
   srcRoot: string = SRC_ROOT,
+  options: ImportGraphOptions = {},
 ): string[] =>
-  [...externalGraph(entry, srcRoot)]
+  [...externalGraph(entry, srcRoot, options)]
     .filter(([specifier]) => forbidden.some(one => matches(specifier, one)))
     .flatMap(([specifier, chains]) => chains.map(at => `${specifier} in ${at}`))
     .sort();

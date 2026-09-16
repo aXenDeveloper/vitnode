@@ -120,6 +120,16 @@
       "types": "./dist/src/content/hash.d.ts",
       "default": "./dist/src/content/hash.js"
     },
+    "./editor": {
+      "import": "./dist/src/editor/index.js",
+      "types": "./dist/src/editor/index.d.ts",
+      "default": "./dist/src/editor/index.js"
+    },
+    "./editor/adapter": {
+      "import": "./dist/src/editor/adapter/index.js",
+      "types": "./dist/src/editor/adapter/index.d.ts",
+      "default": "./dist/src/editor/adapter/index.js"
+    },
     "./routing": {
       "import": "./dist/src/routing/index.js",
       "types": "./dist/src/routing/index.d.ts",

@@ -1,0 +1,221 @@
+// @vitest-environment node
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+import {
+  offenders,
+  reachedFiles,
+  reachedSpecifiers,
+  SRC_ROOT,
+} from "@/tests/import-graph";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const blocks = join(SRC_ROOT, "blocks");
+
+const EAGERLY = { dynamic: false } as const;
+
+const EDITOR_PACKAGES = [
+  "@dnd-kit/core",
+  "@dnd-kit/modifiers",
+  "@dnd-kit/sortable",
+  "@dnd-kit/utilities",
+  "@tanstack/react-form",
+  "@tanstack/react-query",
+  "@tanstack/react-router",
+  "cmdk",
+  "sonner",
+];
+
+const PUBLIC_PAGE_FORBIDDEN = [...EDITOR_PACKAGES, "zod"];
+
+const SERVER_PACKAGES = ["drizzle-kit", "drizzle-orm", "hono", "postgres"];
+
+const sourceFilesUnder = (dir: string): string[] => {
+  const found: string[] = [];
+
+  const walk = (at: string) => {
+    for (const entry of readdirSync(at).sort()) {
+      const full = join(at, entry);
+
+      if (statSync(full).isDirectory()) {
+        walk(full);
+        continue;
+      }
+
+      if (!/\.tsx?$/.test(entry)) continue;
+      if (/\.test(-d)?\.tsx?$/.test(entry)) continue;
+
+      found.push(full);
+    }
+  };
+
+  walk(dir);
+
+  return found;
+};
+
+describe("the public content zone, now that an editor exists", () => {
+  const entry = join(blocks, "zone.tsx");
+
+  it("eagerly reaches React and nothing else", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT, EAGERLY).sort()).toStrictEqual([
+      "react",
+    ]);
+  });
+
+  it("has no dynamic import at all, so that is its entire graph", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT).sort()).toStrictEqual(["react"]);
+  });
+
+  it("reaches no editor package by either kind of import", () => {
+    expect(offenders(entry, PUBLIC_PAGE_FORBIDDEN, SRC_ROOT)).toStrictEqual([]);
+  });
+
+  it("reaches no database or server code", () => {
+    expect(offenders(entry, SERVER_PACKAGES, SRC_ROOT)).toStrictEqual([]);
+  });
+
+  it("asks for the edit runtime through a component-free module", () => {
+    const source = readFileSync(entry, "utf8");
+
+    expect(source).toContain('from "./edit-context"');
+    expect(source).not.toContain("../editor/");
+  });
+});
+
+describe("the edit seam a page opts into", () => {
+  const entry = join(blocks, "edit.tsx");
+
+  it("eagerly reaches React and nothing else", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT, EAGERLY).sort()).toStrictEqual([
+      "react",
+    ]);
+  });
+
+  it("eagerly reaches no editor package", () => {
+    expect(
+      offenders(entry, PUBLIC_PAGE_FORBIDDEN, SRC_ROOT, EAGERLY),
+    ).toStrictEqual([]);
+  });
+
+  it("does reach the editor once dynamic imports are followed", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT)).toContain("@dnd-kit/core");
+  });
+
+  it("reaches the editor by a dynamic import and by nothing else", () => {
+    const source = readFileSync(entry, "utf8");
+
+    expect(source).toContain("lazy(");
+    expect(source).toContain('import("../editor/root")');
+    expect(source).not.toContain('from "../editor/root"');
+  });
+
+  it("names the adapter type without importing its module", () => {
+    expect(readFileSync(entry, "utf8")).toContain(
+      'import type { VisualEditorAdapter } from "../editor/adapter/types"',
+    );
+  });
+});
+
+describe("the block metadata surface", () => {
+  const entry = join(blocks, "index.ts");
+
+  it("still pulls no React in", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT)).not.toContain("react");
+  });
+
+  it("still reaches nothing an editor needs", () => {
+    expect(offenders(entry, EDITOR_PACKAGES, SRC_ROOT)).toStrictEqual([]);
+  });
+
+  it("does not re-export the edit seam", () => {
+    const source = readFileSync(entry, "utf8");
+
+    expect(source).not.toContain("./edit");
+  });
+});
+
+describe("the public renderer", () => {
+  const entry = join(blocks, "renderer.tsx");
+
+  it("was left alone by edit mode and still reaches React only", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT).sort()).toStrictEqual(["react"]);
+  });
+});
+
+describe("where the editor's weight actually sits", () => {
+  const entry = join(SRC_ROOT, "editor", "root.tsx");
+
+  it("is the module that pays for drag and drop", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT)).toContain("@dnd-kit/core");
+  });
+
+  it("is the module that pays for the form stack", () => {
+    expect(reachedSpecifiers(entry, SRC_ROOT)).toContain(
+      "@tanstack/react-form",
+    );
+  });
+
+  it("is the module that pays for the block picker and the toasts", () => {
+    const reached = reachedSpecifiers(entry, SRC_ROOT);
+
+    expect(reached).toContain("cmdk");
+    expect(reached).toContain("sonner");
+  });
+
+  it("is a default export, because React.lazy takes nothing else", () => {
+    expect(readFileSync(entry, "utf8")).toContain("export default EditorRoot");
+  });
+});
+
+describe("which way the dependency arrow points", () => {
+  const editorFiles = sourceFilesUnder(join(SRC_ROOT, "editor"));
+
+  it("has an editor to check", () => {
+    expect(editorFiles.length).toBeGreaterThan(10);
+    expect(editorFiles).toContain(join(SRC_ROOT, "editor", "root.tsx"));
+  });
+
+  it("never reaches AdminCP page code", () => {
+    const crossings = editorFiles.flatMap(file =>
+      reachedFiles(file, { srcRoot: SRC_ROOT })
+        .filter(reached => reached.startsWith("views/admin/"))
+        .map(reached => `${relative(SRC_ROOT, file)} -> ${reached}`),
+    );
+
+    expect(crossings).toStrictEqual([]);
+  });
+
+  it("never reaches database or server code", () => {
+    const found = editorFiles.flatMap(file =>
+      offenders(file, SERVER_PACKAGES, SRC_ROOT),
+    );
+
+    expect(found).toStrictEqual([]);
+  });
+
+  it("is the only place this test file lives, next to what it guards", () => {
+    expect(here).toBe(join(SRC_ROOT, "editor"));
+  });
+});
+
+describe("the editor's published entry point", () => {
+  it("is reachable as `@vitnode/core/editor`", () => {
+    const manifest: unknown = JSON.parse(
+      readFileSync(join(SRC_ROOT, "..", "package.json"), "utf8"),
+    );
+
+    const exportMap =
+      manifest instanceof Object && "exports" in manifest
+        ? (manifest.exports as Record<string, unknown>)
+        : {};
+
+    expect(exportMap["./editor"]).toStrictEqual({
+      default: "./dist/src/editor/index.js",
+      import: "./dist/src/editor/index.js",
+      types: "./dist/src/editor/index.d.ts",
+    });
+  });
+});

@@ -481,18 +481,18 @@ Fetch those and grep for `core:hero`. Nothing should match: a page that renders 
 </Step>
 </Steps>
 
-## What comes next
+## The same zone, in edit mode
 
-Today a zone renders blocks. Later, the same zone will also be the surface an authorized editor arranges them on.
+A zone renders blocks. It is also the surface an authorized editor arranges them on - see [Visual Edit Mode](/docs/dev/blocks/visual-editor).
 
 ```text
-ContentZone today:
+ContentZone in view mode:
 render blocks
 
-ContentZone later:
-render blocks + an optional editing surface
+ContentZone in edit mode:
+render blocks + the editing surface
 ```
 
-The part worth saying now is what will **not** change. Zones are addressed by the ids you wrote, block instances by the ids already stored, and the allowlist by the format both the field and the zone already speak. Turning edit mode on is a change inside `ContentZone`, not a change to the pages that use it - so there is no `EditableContentZone` to migrate to, and nothing stored today needs rewriting for it.
+The part worth saying is what did **not** change. Zones are still addressed by the ids you wrote, block instances by the ids already stored, and the allowlist by the format both the field and the zone already speak. Edit mode is a change inside `ContentZone`, not a change to the pages that use it - so there is no `EditableContentZone` to migrate to, and nothing stored before it existed needed rewriting.
 
-There is no editor yet: no **Edit page** button, no drag and drop, no block picker, no properties panel. Those are the next stage.
+The editor is not in the bundle of a page nobody is editing. It arrives on the first click of **Edit page**, through a dynamic import that a [boundary test](/docs/dev/blocks/visual-editor#the-lazy-loading-guarantee) keeps honest.
