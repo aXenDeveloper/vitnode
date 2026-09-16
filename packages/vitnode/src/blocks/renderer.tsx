@@ -7,19 +7,22 @@ import type {
   BlockRegistry,
   BlockRenderFallback,
   BlockRenderFallbackProps,
+  BlockValidationMode,
 } from "./types";
 
 import { isBlockInstance } from "./instance";
-import { blockRegistry } from "./registry";
-
-const warned = new Set<string>();
+import { resolveBlockRegistry } from "./registry";
+import { blockDataShapeIssue } from "./shape";
 
 const isDevelopment = (): boolean => process.env.NODE_ENV !== "production";
 
-const warnOnce = (key: string, message: string): void => {
-  if (!isDevelopment() || warned.has(key)) return;
+const shouldValidate = (mode: BlockValidationMode): boolean =>
+  mode === "always" || (mode === "development" && isDevelopment());
 
-  warned.add(key);
+const warn = (seen: null | Set<string>, key: string, message: string): void => {
+  if (!seen || seen.has(key)) return;
+
+  seen.add(key);
   // eslint-disable-next-line no-console
   console.warn(`\x1b[34m[VitNode]\x1b[0m \x1b[33m${message}\x1b[0m`);
 };
@@ -53,11 +56,14 @@ const renderInstance = (
   index: number,
   registry: BlockRegistry,
   fallback: BlockRenderFallback,
+  validate: boolean,
+  seen: null | Set<string>,
 ): null | ReactElement => {
   const entry = registry.get(instance.type);
 
   if (!entry) {
-    warnOnce(
+    warn(
+      seen,
       `unknown:${instance.type}`,
       `Block "${instance.type}" is stored in content but no plugin registers it. It is skipped.`,
     );
@@ -65,13 +71,15 @@ const renderInstance = (
     return fallback({ instance, reason: "unknown-type" });
   }
 
-  let data;
-  try {
-    data = entry.definition.parse(instance.data);
-  } catch {
-    warnOnce(
+  const issue = validate
+    ? blockDataShapeIssue(entry.definition, instance.data)
+    : null;
+
+  if (issue !== null) {
+    warn(
+      seen,
       `invalid:${instance.type}`,
-      `Block "${instance.type}" is stored with data that does not match its fields. It is skipped.`,
+      `Block "${instance.type}" is stored with data that does not match its fields - ${issue}. It is skipped.`,
     );
 
     return fallback({ instance, reason: "invalid-data" });
@@ -79,7 +87,7 @@ const renderInstance = (
 
   return createElement(entry.definition.component, {
     blockId: instance.id,
-    data,
+    data: instance.data,
     index,
     type: instance.type,
   });
@@ -89,6 +97,7 @@ export interface ContentRendererProps {
   blocks: null | readonly unknown[] | undefined;
   fallback?: BlockRenderFallback;
   registry?: BlockRegistry;
+  validate?: BlockValidationMode;
 }
 
 export const ContentRenderer = ({
@@ -96,16 +105,20 @@ export const ContentRenderer = ({
   fallback = ({ instance, reason }) =>
     createElement(DevNotice, { instance, reason }),
   registry,
+  validate = "development",
 }: ContentRendererProps) => {
   if (!blocks || blocks.length === 0) return null;
 
-  const resolved = registry ?? blockRegistry();
+  const resolved = resolveBlockRegistry(registry);
+  const validating = shouldValidate(validate);
+  const seen = isDevelopment() ? new Set<string>() : null;
 
   return (
     <>
       {blocks.map((block, index) => {
         if (!isBlockInstance(block)) {
-          warnOnce(
+          warn(
+            seen,
             `shape:${String(index)}`,
             "A value in a blocks field is not a block instance. It is skipped.",
           );
@@ -116,7 +129,7 @@ export const ContentRenderer = ({
         return createElement(
           Fragment,
           { key: block.id },
-          renderInstance(block, index, resolved, fallback),
+          renderInstance(block, index, resolved, fallback, validating, seen),
         );
       })}
     </>

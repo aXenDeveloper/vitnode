@@ -4,12 +4,12 @@ import { describe, expect, it } from "vitest";
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
 import { BlockRegistryMissingError } from "./errors";
-import { buildBlockRegistry } from "./registry";
+import { createBlockRegistry } from "./registry";
 import { parseBlockInstances, zodBlockInstances } from "./validate";
 
 const Noop = () => null;
 
-const registry = buildBlockRegistry([
+const registry = createBlockRegistry([
   {
     pluginId: "@vitnode/core",
     namespace: "core",

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
 import { BlockError } from "./errors";
+import { parseBlockData } from "./schema";
 
 const Noop = () => null;
 
@@ -51,7 +52,7 @@ describe("defineBlock", () => {
         fields: { cover: field.file({ maxBytes: 1024 }) },
         id: "cover",
       }),
-    ).toThrow(/Allowed kinds/);
+    ).toThrow(/Supported kinds/);
   });
 
   it("refuses a localized field, and points at the zone instead", () => {
@@ -78,7 +79,7 @@ describe("defineBlock", () => {
     ).not.toThrow();
   });
 
-  describe("parse", () => {
+  describe("parseBlockData", () => {
     const block = defineBlock({
       component: Noop,
       fields: {
@@ -93,26 +94,26 @@ describe("defineBlock", () => {
     });
 
     it("applies the defaults declared by the fields", () => {
-      expect(block.parse({ title: "Build" })).toStrictEqual({
+      expect(parseBlockData(block, { title: "Build" })).toStrictEqual({
         title: "Build",
         variant: "default",
       });
     });
 
     it("rejects a value that breaks a field constraint", () => {
-      expect(() => block.parse({ title: "far too long to fit" })).toThrow(
-        BlockError,
-      );
+      expect(() =>
+        parseBlockData(block, { title: "far too long to fit" }),
+      ).toThrow(BlockError);
     });
 
     it("rejects a required field that is missing", () => {
-      expect(() => block.parse({})).toThrow(/title/);
+      expect(() => parseBlockData(block, {})).toThrow(/title/);
     });
 
     it("rejects keys the block does not declare", () => {
-      expect(() => block.parse({ hacked: true, title: "Build" })).toThrow(
-        BlockError,
-      );
+      expect(() =>
+        parseBlockData(block, { hacked: true, title: "Build" }),
+      ).toThrow(BlockError);
     });
   });
 });

@@ -1,6 +1,7 @@
 import type { AnyBlockInstance, BlockInstance } from "./types";
 
 import { BLOCK_INSTANCE_ID_LENGTH, BLOCK_INSTANCE_ID_PATTERN } from "./const";
+import { BlockError } from "./errors";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -9,20 +10,15 @@ const TIME_LENGTH = 10;
 const RANDOM_LENGTH = BLOCK_INSTANCE_ID_LENGTH - TIME_LENGTH;
 
 const randomBytes = (length: number): Uint8Array => {
-  const bytes = new Uint8Array(length);
   const source: Crypto | undefined = globalThis.crypto;
 
-  if (source?.getRandomValues) {
-    source.getRandomValues(bytes);
-
-    return bytes;
+  if (!source?.getRandomValues) {
+    throw new BlockError(
+      "This runtime has no `crypto.getRandomValues`, so a block instance id cannot be generated. A block id is a durable identity that revisions, reordering and merges are keyed by, and `Math.random()` is not strong enough to be one. VitNode requires Node 22 or later; in a browser `crypto.getRandomValues` is available in every context, secure or not.",
+    );
   }
 
-  for (let at = 0; at < length; at += 1) {
-    bytes[at] = Math.floor(Math.random() * 256);
-  }
-
-  return bytes;
+  return source.getRandomValues(new Uint8Array(length));
 };
 
 const encodeTime = (time: number): string => {

@@ -71,19 +71,23 @@ Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blo
 
 ## Which fields a block may hold
 
-| Kind | Allowed | Why |
+| Kind | Supported | Why |
 | :--- | :--- | :--- |
 | `field.text()`, `field.textarea()` | ✅ | |
 | `field.number()`, `field.boolean()` | ✅ | |
 | `field.enum()`, `field.dateTime()` | ✅ | |
 | `field.group()` | ✅ | Nested objects are ordinary JSON. |
-| `field.file()`, `field.relation()`, `field.user()` | ❌ | A reference needs a foreign key to pin it, and a block's data is one JSON document with no columns to put one in. |
-| `field.repeatable()` | ❌ | Its rows are child-table rows, identified by a database id a JSON document does not have. |
-| `field.slug()` | ❌ | A slug is a record's address; a block is not addressable. |
-| `field.blocks()` | ❌ | Nested blocks are a later stage. |
+| `field.file()`, `field.relation()`, `field.user()` | Not yet | A reference is a row identifier the owning record has to pin against deletion, and a value inside a JSON document has nowhere to put a foreign key. |
+| `field.repeatable()` | Not yet | Its rows are rows on a generated child table, identified by a database id a JSON document does not have. |
+| `field.slug()` | No | A slug is a record's address, and a block is not addressable on its own. |
+| `field.blocks()` | Not yet | Nested blocks need depth limits, their own allowlist and cycle detection first. |
 
-<Callout type="warn" title="Media in blocks">
-  A file reference inside a block would be a `core_files.id` with nothing stopping the Files screen from deleting the row it names - a published page would render a broken image with no warning anywhere. Content Engine pins every other file reference with `ON DELETE RESTRICT`, and blocks will get media once they can do the same. For now, put the image on the record and let the block choose how to present it.
+Every one of those rules lives in one table, `blockFieldKindRefusal`, and the error a refused field produces quotes the reason from it.
+
+<Callout title="Media and relations are a limitation of today, not of the model">
+  The serialized shape - `{ id, type, data }`, with `data` holding this field map's values - does not change when these land: a `file` field would store a `core_files.id` exactly as a file *column* does. What is missing is the lifecycle around it. A content column pins its file with `ON DELETE RESTRICT`, which is what makes the Files screen answer 409 instead of leaving a published page pointing at bytes that are gone; a value inside JSONB has no foreign key to carry that.
+
+  The intended solution is to extract a block's references out of its data on write - the field map already says which leaves are references - and pin them in a reference table the same way, so deletion, cleanup and `onDelete` keep working. Until that exists, storing a bare id in JSON would be a foreign key with none of the guarantees of one, which is worse than not supporting it. Put the image on the record for now and let the block choose how to present it.
 </Callout>
 
 ## Localization
@@ -96,15 +100,28 @@ The **zone** is what translates:
 content: field.blocks({ localized: true })
 ```
 
-Each language then gets its own blocks, in its own order - which is what a translated page usually needs anyway. See [The blocks() field](/docs/dev/blocks/blocks-field#localization).
+This is document-level localization, not translated field values: each language gets its own blocks, in its own order, and the two need not correspond at all.
+
+```text
+en:  Hero  →  Text  →  CTA
+pl:  Hero  →  CTA   →  Gallery
+```
+
+See [The blocks() field](/docs/dev/blocks/blocks-field#localization).
 
 ## Validating data by hand
 
-Every definition carries a `parse`, typed by its fields:
+A definition is metadata: an id, the field map and the component. It carries no schema of its own, which is what keeps `defineBlock` - and therefore every public page that renders a block - free of a validation library. The schema is derived from the fields on demand:
 
 ```ts
-const data = calloutBlock.parse({ title: "Heads up", body: "..." })
+import { blockDataSchema, parseBlockData } from "@vitnode/core/blocks"
+
+const data = parseBlockData(calloutBlock, { title: "Heads up", body: "..." })
 // { title: "Heads up", body: "...", tone: "info" }
+
+blockDataSchema(calloutBlock).safeParse(input)
 ```
 
-It applies defaults and throws a `BlockError` naming the field when the value does not fit. `calloutBlock.schema` is the underlying Zod object if you need `safeParse`.
+`parseBlockData` applies defaults and throws a `BlockError` naming the field when the value does not fit; its return type is inferred from the definition's field map. `blockDataSchema` is the underlying Zod object, built once per definition and cached.
+
+The Content Engine calls these for you on every write. You need them only when you are producing block data outside the API - a seed, a migration, an importer.

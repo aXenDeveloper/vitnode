@@ -1,5 +1,3 @@
-import { cn } from "cn";
-
 import type { BlockComponentProps, BlockData } from "../types";
 
 import { field } from "../../content/fields";
@@ -21,10 +19,7 @@ const paragraphs = (body: string): string[] =>
 
 const Text = ({ data }: BlockComponentProps<TextData>) => (
   <section
-    className={cn(
-      "flex flex-col gap-4 py-6",
-      data.width !== "full" && "max-w-prose",
-    )}
+    className={`flex flex-col gap-4 py-6 ${data.width === "full" ? "" : "max-w-prose"}`}
   >
     {data.heading ? (
       <h2 className="text-2xl font-semibold text-balance md:text-3xl">

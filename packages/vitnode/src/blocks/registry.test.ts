@@ -5,8 +5,15 @@ import type { BlockPluginSource } from "./types";
 
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
-import { BlockError } from "./errors";
-import { allowedBlocks, buildBlockRegistry, isBlockAllowed } from "./registry";
+import { BlockError, BlockRegistryMissingError } from "./errors";
+import {
+  allowedBlocks,
+  createBlockRegistry,
+  getDefaultBlockRegistry,
+  isBlockAllowed,
+  resolveBlockRegistry,
+  setDefaultBlockRegistry,
+} from "./registry";
 
 const Noop = () => null;
 
@@ -27,9 +34,9 @@ const source = (
   ...(namespace === undefined ? {} : { namespace }),
 });
 
-describe("buildBlockRegistry", () => {
+describe("createBlockRegistry", () => {
   it("namespaces every block by the last segment of its plugin id", () => {
-    const registry = buildBlockRegistry([
+    const registry = createBlockRegistry([
       source("@vitnode/core", ["hero"]),
       source("@vitnode/blog", ["latest-posts"]),
     ]);
@@ -39,7 +46,7 @@ describe("buildBlockRegistry", () => {
   });
 
   it("honours an explicit namespace over the derived one", () => {
-    const registry = buildBlockRegistry([
+    const registry = createBlockRegistry([
       source("@acme/page-builder", ["hero"], "acme"),
     ]);
 
@@ -49,7 +56,7 @@ describe("buildBlockRegistry", () => {
 
   it("refuses two plugins whose ids derive the same namespace", () => {
     expect(() =>
-      buildBlockRegistry([
+      createBlockRegistry([
         source("@vitnode/blog", ["latest-posts"]),
         source("@acme/blog", ["featured"]),
       ]),
@@ -58,12 +65,12 @@ describe("buildBlockRegistry", () => {
 
   it("refuses the same block id twice inside one plugin", () => {
     expect(() =>
-      buildBlockRegistry([source("@vitnode/blog", ["hero", "hero"])]),
+      createBlockRegistry([source("@vitnode/blog", ["hero", "hero"])]),
     ).toThrow(BlockError);
   });
 
   it("keeps one namespace when a plugin registers in two passes", () => {
-    const registry = buildBlockRegistry([
+    const registry = createBlockRegistry([
       source("@vitnode/blog", ["hero"]),
       source("@vitnode/blog", ["latest-posts"]),
     ]);
@@ -76,14 +83,14 @@ describe("buildBlockRegistry", () => {
   });
 
   it("answers an unregistered id with undefined rather than throwing", () => {
-    const registry = buildBlockRegistry([source("@vitnode/core", ["hero"])]);
+    const registry = createBlockRegistry([source("@vitnode/core", ["hero"])]);
 
     expect(registry.get("blog:latest-posts")).toBeUndefined();
     expect(registry.has("blog:latest-posts")).toBe(false);
   });
 
   it("lists a namespace's blocks", () => {
-    const registry = buildBlockRegistry([
+    const registry = createBlockRegistry([
       source("@vitnode/core", ["hero", "cta"]),
       source("@vitnode/blog", ["latest-posts"]),
     ]);
@@ -94,7 +101,7 @@ describe("buildBlockRegistry", () => {
   });
 
   it("sorts `all` by id, whatever the registration order", () => {
-    const registry = buildBlockRegistry([
+    const registry = createBlockRegistry([
       source("@vitnode/example", ["zeta", "alpha"]),
     ]);
 
@@ -127,7 +134,7 @@ describe("isBlockAllowed", () => {
 
 describe("allowedBlocks", () => {
   it("resolves a spec against the registry", () => {
-    const registry = buildBlockRegistry([
+    const registry = createBlockRegistry([
       source("@vitnode/core", ["hero", "cta"]),
       source("@vitnode/blog", ["latest-posts"]),
     ]);
@@ -137,5 +144,119 @@ describe("allowedBlocks", () => {
         entry => entry.type,
       ),
     ).toStrictEqual(["blog:latest-posts", "core:cta", "core:hero"]);
+  });
+});
+
+describe("namespace collisions", () => {
+  it("refuses one plugin claiming two namespaces", () => {
+    expect(() =>
+      createBlockRegistry([
+        source("@vitnode/blog", ["hero"]),
+        source("@vitnode/blog", ["cta"], "articles"),
+      ]),
+    ).toThrow(/One plugin owns one namespace/);
+  });
+
+  it("names both plugins when two derive the same namespace", () => {
+    expect(() =>
+      createBlockRegistry([
+        source("@vitnode/blog", ["hero"]),
+        source("@acme/blog", ["hero"]),
+      ]),
+    ).toThrow(/"@vitnode\/blog".*"@acme\/blog"/);
+  });
+
+  it("lets an explicit namespace settle a derived collision", () => {
+    const registry = createBlockRegistry([
+      source("@vitnode/blog", ["hero"]),
+      source("@acme/blog", ["hero"], "acme-blog"),
+    ]);
+
+    expect(registry.namespaces()).toStrictEqual(["acme-blog", "blog"]);
+  });
+
+  it("refuses a plugin claiming the namespace core reserved", () => {
+    expect(() =>
+      createBlockRegistry([
+        source("@vitnode/core", ["hero"], "core"),
+        source("@acme/core", ["hero"]),
+      ]),
+    ).toThrow(/claimed by both/);
+  });
+
+  it("derives a namespace from the plugin id alone, never from where it is installed", () => {
+    const one = createBlockRegistry([source("@vitnode/blog", ["hero"])]);
+    const two = createBlockRegistry([source("@vitnode/blog", ["hero"])]);
+
+    expect(one.all().map(entry => entry.type)).toStrictEqual(
+      two.all().map(entry => entry.type),
+    );
+  });
+});
+
+describe("registry isolation", () => {
+  it("keeps two registries from seeing each other's blocks", () => {
+    const core = createBlockRegistry([source("@vitnode/core", ["hero"])]);
+    const blog = createBlockRegistry([source("@vitnode/blog", ["hero"])]);
+
+    expect(core.has("core:hero")).toBe(true);
+    expect(core.has("blog:hero")).toBe(false);
+    expect(blog.has("core:hero")).toBe(false);
+    expect(blog.has("blog:hero")).toBe(true);
+  });
+
+  it("does not mutate a registry when another is built afterwards", () => {
+    const core = createBlockRegistry([source("@vitnode/core", ["hero"])]);
+    const before = core.all().map(entry => entry.type);
+
+    createBlockRegistry([source("@vitnode/blog", ["hero", "cta"])]);
+
+    expect(core.all().map(entry => entry.type)).toStrictEqual(before);
+  });
+});
+
+describe("the process default", () => {
+  it("is unset until something installs one", () => {
+    expect(getDefaultBlockRegistry()).toBeUndefined();
+    expect(() => resolveBlockRegistry()).toThrow(BlockRegistryMissingError);
+  });
+
+  it("is restored by the function that installed it", () => {
+    const registry = createBlockRegistry([source("@vitnode/core", ["hero"])]);
+    const restore = setDefaultBlockRegistry(registry);
+
+    expect(getDefaultBlockRegistry()).toBe(registry);
+
+    restore();
+
+    expect(getDefaultBlockRegistry()).toBeUndefined();
+  });
+
+  it("nests, so one application installing a registry cannot strand another", () => {
+    const outer = createBlockRegistry([source("@vitnode/core", ["hero"])]);
+    const inner = createBlockRegistry([source("@vitnode/blog", ["hero"])]);
+
+    const restoreOuter = setDefaultBlockRegistry(outer);
+    const restoreInner = setDefaultBlockRegistry(inner);
+
+    expect(getDefaultBlockRegistry()).toBe(inner);
+
+    restoreInner();
+    expect(getDefaultBlockRegistry()).toBe(outer);
+
+    restoreOuter();
+    expect(getDefaultBlockRegistry()).toBeUndefined();
+  });
+
+  it("is ignored whenever a registry is passed explicitly", () => {
+    const installed = createBlockRegistry([source("@vitnode/core", ["hero"])]);
+    const explicit = createBlockRegistry([source("@vitnode/blog", ["hero"])]);
+    const restore = setDefaultBlockRegistry(installed);
+
+    try {
+      expect(resolveBlockRegistry(explicit)).toBe(explicit);
+    } finally {
+      restore();
+    }
   });
 });

@@ -18,12 +18,13 @@ import {
 const describe = (entry: RegisteredBlock): string =>
   `${entry.pluginId} -> ${entry.type}`;
 
-export const buildBlockRegistry = (
+export const createBlockRegistry = (
   sources: readonly BlockPluginSource[],
 ): BlockRegistry => {
   const byType = new Map<string, RegisteredBlock>();
   const byNamespace = new Map<string, RegisteredBlock[]>();
   const namespaceOwner = new Map<string, string>();
+  const pluginNamespace = new Map<string, string>();
 
   for (const source of sources) {
     const namespace = assertBlockNamespace(
@@ -38,6 +39,14 @@ export const buildBlockRegistry = (
       );
     }
     namespaceOwner.set(namespace, source.pluginId);
+
+    const claimed = pluginNamespace.get(source.pluginId);
+    if (claimed !== undefined && claimed !== namespace) {
+      throw new BlockError(
+        `Plugin "${source.pluginId}" registers blocks under both "${claimed}" and "${namespace}". One plugin owns one namespace, so that a stored block id always names the plugin that has to be installed for it.`,
+      );
+    }
+    pluginNamespace.set(source.pluginId, namespace);
 
     for (const definition of source.blocks ?? []) {
       const type = qualifiedBlockId(namespace, assertBlockName(definition.id));
@@ -105,16 +114,27 @@ export const allowedBlocks = (
 ): readonly RegisteredBlock[] =>
   registry.all().filter(entry => isBlockAllowed(allowed, entry.type));
 
-let registered: BlockRegistry | undefined;
+let processDefault: BlockRegistry | undefined;
 
-export const setBlockRegistry = (registry: BlockRegistry): void => {
-  registered = registry;
+export const setDefaultBlockRegistry = (
+  registry: BlockRegistry | undefined,
+): (() => void) => {
+  const previous = processDefault;
+  processDefault = registry;
+
+  return () => {
+    processDefault = previous;
+  };
 };
 
-export const blockRegistry = (): BlockRegistry => {
-  if (!registered) throw new BlockRegistryMissingError();
+export const getDefaultBlockRegistry = (): BlockRegistry | undefined =>
+  processDefault;
 
-  return registered;
+export const resolveBlockRegistry = (
+  registry?: BlockRegistry,
+): BlockRegistry => {
+  const resolved = registry ?? processDefault;
+  if (!resolved) throw new BlockRegistryMissingError();
+
+  return resolved;
 };
-
-export const hasBlockRegistry = (): boolean => registered !== undefined;

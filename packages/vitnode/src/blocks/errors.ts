@@ -18,7 +18,7 @@ export class BlockError extends Error {
 }
 
 export const BLOCK_REGISTRY_MISSING =
-  "No block registry is registered. `src/blocks.gen.ts` calls setBlockRegistry() when it is evaluated, so an application has to load it before rendering or validating blocks; an API process registers one from the `blocks` its plugins declare in `buildApiPlugin`.";
+  "No block registry was given and none is installed as this process's default. Pass one - `<ContentRenderer registry={blocksRegistry} />`, or `zodBlockInstances({ registry })` - or install one with setDefaultBlockRegistry(), which `src/blocks.gen.ts` does when it is evaluated.";
 
 export class BlockRegistryMissingError extends BlockError {
   constructor() {

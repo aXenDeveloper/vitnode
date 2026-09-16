@@ -3,7 +3,10 @@ import { getTableConfig } from "drizzle-orm/pg-core";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { defineBlock } from "@/blocks/define";
-import { buildBlockRegistry, setBlockRegistry } from "@/blocks/registry";
+import {
+  createBlockRegistry,
+  setDefaultBlockRegistry,
+} from "@/blocks/registry";
 
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
@@ -33,8 +36,8 @@ const latestPostsBlock = defineBlock({
 });
 
 beforeAll(() => {
-  setBlockRegistry(
-    buildBlockRegistry([
+  setDefaultBlockRegistry(
+    createBlockRegistry([
       { pluginId: "@vitnode/core", blocks: [heroBlock], namespace: "core" },
       { pluginId: "@vitnode/blog", blocks: [latestPostsBlock] },
     ]),

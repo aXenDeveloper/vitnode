@@ -22,8 +22,8 @@ ContentRenderer
 | :--- | :--- |
 | **Id** | `hero`, written without a namespace. The registry prefixes the plugin's own, so it is stored as `core:hero`. |
 | **Fields** | Content Engine field descriptors - the same `field.text()`, `field.enum()` and friends a content type uses. There is no second schema system. |
-| **Component** | One public React component. It receives data the block's own schema has already validated. |
-| **Schema** | Derived from `fields`. You never write it. |
+| **Component** | One public React component. It receives the data the record stores for that instance. |
+| **Schema** | Derived from `fields` at the write boundary. You never write it, and a public render never builds it. |
 
 ## What a block is not
 
@@ -38,19 +38,31 @@ A block is **not** a content type. It has no table, no id of its own in the data
 Nothing is scanned and nothing is queried. A plugin exports a `blocks` module; VitNode's Vite plugin sees it and writes `src/blocks.gen.ts`, which builds the registry and registers it.
 
 ```ts title="src/blocks.gen.ts (generated)"
-import { buildBlockRegistry, setBlockRegistry } from "@vitnode/core/blocks"
+import { createBlockRegistry, setDefaultBlockRegistry } from "@vitnode/core/blocks"
 
 import { blocks as blocks0 } from "@vitnode/core/blocks/built-in"
 import { blocks as blocks1 } from "@vitnode/example/blocks"
 
 export const pluginBlocks = [blocks0, blocks1]
 
-export const blocksRegistry = buildBlockRegistry(pluginBlocks)
+export const blocksRegistry = createBlockRegistry(pluginBlocks)
 
-setBlockRegistry(blocksRegistry)
+setDefaultBlockRegistry(blocksRegistry)
 ```
 
 Installing a plugin is the whole registration step. Removing it takes its blocks with it, and a page that still references one keeps rendering everything else - see [Rendering](/docs/dev/blocks/rendering).
+
+A registry is a plain value, not a service: `createBlockRegistry` returns an isolated one, and every consumer takes it as an argument. The last line installs it as the process default, which is a convenience for two callers that cannot be handed one - a renderer used without a `registry` prop, and the Zod schema a content type builds while its plugin is still loading. Two applications in one process each create their own and pass it explicitly.
+
+## Where validation happens
+
+```text
+write (untrusted)   →  full schema check, defaults applied  →  JSONB
+read                →  nothing
+render (trusted)    →  nothing in production
+```
+
+Block data is validated once, where it arrives: every create and update runs each instance through its block's own schema before a row is written. What is stored has therefore already crossed a trusted boundary, and `ContentRenderer` does not check it again in production. In development it runs a cheap structural check so schema drift shows up while you work. [Rendering](/docs/dev/blocks/rendering#validation) has the detail and the escape hatch.
 
 ## Blocks that ship with core
 

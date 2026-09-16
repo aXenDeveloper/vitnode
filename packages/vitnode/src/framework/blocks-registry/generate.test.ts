@@ -22,7 +22,7 @@ describe("generateBlocksRegistrySource", () => {
     expect(source).toContain(
       "export const pluginBlocks: BlockPluginSource[] = []",
     );
-    expect(source).toContain("setBlockRegistry(blocksRegistry)");
+    expect(source).toContain("setDefaultBlockRegistry(blocksRegistry)");
     expect(source).not.toContain("import { blocks as");
   });
 

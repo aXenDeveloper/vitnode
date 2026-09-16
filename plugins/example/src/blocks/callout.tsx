@@ -2,7 +2,6 @@ import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks";
 
 import { defineBlock } from "@vitnode/core/blocks";
 import { field } from "@vitnode/core/content";
-import { cn } from "cn";
 
 const calloutFields = {
   body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
@@ -23,10 +22,7 @@ const tones: Record<string, string> = {
 
 const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
   <aside
-    className={cn(
-      "flex flex-col gap-2 rounded-lg border p-4 md:p-6",
-      tones[data.tone ?? "info"],
-    )}
+    className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? "info"]}`}
   >
     <h2 className="text-base font-semibold text-balance md:text-lg">
       {data.title}

@@ -18,14 +18,17 @@ const HEADER = `/* eslint-disable */
 // Same plugin configuration in, same bytes out: the entries are sorted by
 // plugin id.
 //
-// Evaluating this module registers the registry, so an application has to load
-// it before rendering a \`blocks\` field. A block definition is metadata plus one
-// public React component - there is no editor code in here, and no request is
-// made to build it.
+// \`blocksRegistry\` is the registry itself: import it and hand it to
+// \`<ContentRenderer registry={blocksRegistry} />\`. Evaluating this module also
+// installs it as this process's default, which is what lets a renderer without
+// a \`registry\` prop - and a content type's write validation - find one.
+//
+// A block definition is metadata plus one public React component. There is no
+// editor code in here, and no request is made to build it.
 
 import type { BlockPluginSource } from '${TYPES_SPECIFIER}'
 
-import { buildBlockRegistry, setBlockRegistry } from '${RUNTIME_SPECIFIER}'
+import { createBlockRegistry, setDefaultBlockRegistry } from '${RUNTIME_SPECIFIER}'
 `;
 
 const BODY_DOC = `
@@ -33,9 +36,9 @@ const BODY_DOC = `
 export const pluginBlocks`;
 
 const REGISTRATION = `
-export const blocksRegistry = buildBlockRegistry(pluginBlocks)
+export const blocksRegistry = createBlockRegistry(pluginBlocks)
 
-setBlockRegistry(blocksRegistry)
+setDefaultBlockRegistry(blocksRegistry)
 `;
 
 const importLines = (modules: ResolvedBlocksModule[]): string =>

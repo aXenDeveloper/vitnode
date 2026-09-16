@@ -14,7 +14,10 @@ import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
 import { describeError } from "@/api/lib/error-details";
 import { newBuildPluginApiCore } from "@/api/plugin";
-import { buildBlockRegistry, setBlockRegistry } from "@/blocks/registry";
+import {
+  createBlockRegistry,
+  setDefaultBlockRegistry,
+} from "@/blocks/registry";
 import { CONFIG_PLUGIN } from "@/config";
 import { CONFIG } from "@/lib/config";
 import { initRealtimePubSub } from "@/ws/registry";
@@ -69,8 +72,8 @@ export function VitNodeAPI({
 
   const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
 
-  setBlockRegistry(
-    buildBlockRegistry(plugins.flatMap(plugin => plugin.blocks ?? [])),
+  setDefaultBlockRegistry(
+    createBlockRegistry(plugins.flatMap(plugin => plugin.blocks ?? [])),
   );
 
   // The generated document names every route, parameter and response shape in

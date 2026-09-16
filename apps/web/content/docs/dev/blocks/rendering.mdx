@@ -9,36 +9,76 @@ icon: MonitorPlay
 ```tsx title="src/routes/_main/pages.$slug.tsx"
 import { ContentRenderer } from "@vitnode/core/blocks/renderer"
 
-import "@/blocks.gen"
+import { blocksRegistry } from "@/blocks.gen"
 
 export const PageScreen = ({ page }: { page: PageContent }) => (
   <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
     <h1 className="text-3xl font-semibold text-balance">{page.title}</h1>
 
-    <ContentRenderer blocks={page.content} />
+    <ContentRenderer blocks={page.content} registry={blocksRegistry} />
   </main>
 )
 ```
 
-For each stored instance it resolves the definition in the registry, parses `data` with that block's schema, and renders the component with the instance's own id as the React key - so re-ordering a page moves DOM nodes instead of re-mounting them.
+For each stored instance it resolves the definition in the registry and renders the component with the instance's own id as the React key - so re-ordering a page moves DOM nodes instead of re-mounting them.
 
 | Prop | Default | |
 | :--- | :--- | :--- |
 | `blocks` | — | The stored list. `null`, `undefined` and `[]` all render nothing. |
-| `registry` | the registered one | Pass one explicitly in a test, or to render against a subset. |
-| `fallback` | a development-only notice | What to render for a block the registry cannot resolve. |
+| `registry` | the process default | The registry to resolve against. Passing it is the normal way. |
+| `validate` | `"development"` | `"never"`, `"development"` or `"always"` - see below. |
+| `fallback` | a development-only notice | What to render for a block that cannot be resolved or fails a check. |
 
-## Registering the registry
+## Where the registry comes from
 
-`src/blocks.gen.ts` registers the registry when it is evaluated, so **something has to import it** before a page renders a zone. Import it from the route or screen that renders blocks rather than from the application root: a page with no zone then never loads any block component.
+Pass it. `blocksRegistry` is exported from the generated `src/blocks.gen.ts`, and handing it to the renderer is explicit, testable, and works when one process serves more than one application.
 
-Without it, `ContentRenderer` throws a `BlockRegistryMissingError` that names the file.
+Evaluating `src/blocks.gen.ts` also installs that registry as the process default, so a renderer with no `registry` prop finds one. That fallback exists because two callers cannot be handed a registry: a renderer deep in a tree, and the Zod schema a content type builds while its plugin is still loading, long before an application exists. With neither, `ContentRenderer` throws a `BlockRegistryMissingError` naming both ways out.
+
+`setDefaultBlockRegistry` returns the function that undoes it, so a test - or a second application - can install one without leaking it:
+
+```ts
+const restore = setDefaultBlockRegistry(registry)
+try {
+  // ...
+} finally {
+  restore()
+}
+```
+
+## Validation
+
+Block data is validated **once, on write**. Every create and update runs each instance through its block's schema before the row is written, applying defaults and rejecting anything the fields refuse. What is in the column has therefore already crossed a trusted boundary.
+
+So the renderer does not re-check it in production. A full Zod parse per block per render is real work on the hot path, and repeating a check the write boundary already made buys nothing.
+
+| `validate` | What happens |
+| :--- | :--- |
+| `"never"` | Resolve the block in the registry and render. Nothing else. |
+| `"development"` *(default)* | A structural check in development; `"never"` in production. |
+| `"always"` | The structural check everywhere. |
+
+The check is **structural, not a schema parse**: it reports a field the block no longer declares, a required field that is gone, a `null` in a field that is not nullable, and a value of the wrong kind. It deliberately does not police `minLength`, `max` or enum membership - those are the write boundary's job, and a too-long string is not a reason to blank a section of a live page.
+
+That is what catches the cases where stored data and a block definition have drifted apart:
+
+- a field renamed or made required after records were written
+- a row edited by hand in the database
+- content imported around the API
+
+None of them can take a page down: the instance is skipped and everything else renders.
+
+Set `validate="always"` on a page that renders block data the API never validated - a live import, a third-party feed. It costs one structural pass per block, not a schema parse.
+
+<Callout title="The renderer never transforms">
+  Whatever is stored is what the component receives, in every mode. Validation decides whether to render an instance; it never fills in defaults or coerces a value, so a page cannot look different in development from how it looks in production.
+</Callout>
 
 ## When a block is unavailable
 
-Content outlives plugins. A page may reference `blog:latest-posts` long after the Blog plugin was disabled, and a zone may hold data that no longer matches a block whose fields changed.
+Content outlives plugins. A page may reference `blog:latest-posts` long after the Blog plugin was disabled.
 
-Neither takes the page down. The offending instance is skipped and everything else renders.
+That never takes the page down, in any `validate` mode - resolving a block is a `Map` lookup, and a miss is handled the same way a failed check is.
 
 | | Behaviour |
 | :--- | :--- |
@@ -62,7 +102,8 @@ A block is a normal React component and the renderer is a loop.
 
 - **No request.** Definitions come from the configured plugins, not from the database. A page of hero + text + image + CTA is exactly as many requests as a page without blocks.
 - **No client state.** `ContentRenderer` holds none, subscribes to nothing, and renders on the server like anything else.
-- **No editor.** `@vitnode/core/blocks` is free of React entirely - it is the metadata surface the API validates with - and `@vitnode/core/blocks/renderer` reaches no drag-and-drop, AdminCP, form or query code. The split is asserted by tests so future editor code cannot drift into the public bundle.
+- **No validation library.** `defineBlock` and `ContentRenderer` do not reach Zod; the schema machinery lives in the write path. Bundling core's three blocks plus a plugin's, the registry and the renderer comes to about 25 kB of JavaScript with no third-party dependency in it at all.
+- **No editor.** `@vitnode/core/blocks` is free of React entirely - it is the metadata surface the API validates with - and `@vitnode/core/blocks/renderer` reaches no drag-and-drop, AdminCP, form or query code. Tests assert the reachable module graph of each entry point, so future editor code cannot drift into the public bundle.
 
 Keep your own block components in that spirit: a block that needs a chart library should `lazy()` it inside its own module, so a page that never places it never pays for it.
 

@@ -102,7 +102,10 @@ Storage accepts any stable id of 1-64 URL-safe characters, so an imported docume
 
 ## What the API checks on a write
 
-Every create and update runs the zone through the registry, and the whole request is refused if any instance fails:
+Every create and update runs the zone through the registry, once, before anything is stored - so a row that exists has already been validated. Nothing re-checks it on read, and [the renderer trusts it](/docs/dev/blocks/rendering#validation).
+
+
+The whole request is refused if any instance fails:
 
 | Refused | Message |
 | :--- | :--- |
@@ -119,7 +122,18 @@ Errors are keyed by the instance's index, so a client can point at the block tha
 content: field.blocks({ localized: true })
 ```
 
-The column moves to the generated translation table, exactly as a localized `text` field does. Each language then has its own blocks and its own order, with the translation lifecycle, revisions and preview it already had - no new concepts.
+The column moves to the generated translation table, exactly as a localized `text` field does, and keeps the translation lifecycle, revisions and preview it already had - no new concepts.
+
+What this localizes is the **whole block document**, not the text inside each block. Each language owns its own list: which blocks are in it, what is in them, and what order they come in. The two need not correspond at all.
+
+```text
+en:  core:hero  →  core:text  →  core:cta
+pl:  core:hero  →  core:cta   →  blog:gallery
+```
+
+That is deliberate. A translated landing page is rarely the same page with different words - a market may need a different call to action, or no gallery - and treating a zone as one translatable document is what makes that expressible. It is also the only model that reuses VitNode's existing localization: a per-field locale map inside JSON would be a second localization system that the translation table, the revision history and the public locale resolution all know nothing about.
+
+The cost is the other side of the same coin: adding a block to one language does not add it to the others, and there is no "this paragraph is the translation of that paragraph" link between two locales. A field inside a block is therefore never `localized: true`; see [Defining a block](/docs/dev/blocks/defining-a-block#localization).
 
 ## Exposing the zone publicly
 

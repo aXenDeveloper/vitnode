@@ -22,8 +22,6 @@ import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks"
 
 import { defineBlock } from "@vitnode/core/blocks"
 import { field } from "@vitnode/core/content"
-import { cn } from "cn"
-
 const calloutFields = {
   body: field.textarea({ required: true, minLength: 1, maxLength: 600 }),
   title: field.text({ required: true, minLength: 1, maxLength: 120 }),
@@ -43,10 +41,7 @@ const tones: Record<string, string> = {
 
 const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
   <aside
-    className={cn(
-      "flex flex-col gap-2 rounded-lg border p-4 md:p-6",
-      tones[data.tone ?? "info"],
-    )}
+    className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? "info"]}`}
   >
     <h2 className="text-base font-semibold text-balance md:text-lg">
       {data.title}
@@ -241,13 +236,13 @@ Anything the registry refuses - an unregistered block, one the field does not al
 ```tsx title="src/site/pages/page-screen.tsx"
 import { ContentRenderer } from "@vitnode/core/blocks/renderer"
 
-import "@/blocks.gen"
+import { blocksRegistry } from "@/blocks.gen"
 
 export const PageScreen = ({ page }: { page: PageContent }) => (
   <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
     <h1 className="text-3xl font-semibold text-balance">{page.title}</h1>
 
-    <ContentRenderer blocks={page.content} />
+    <ContentRenderer blocks={page.content} registry={blocksRegistry} />
   </main>
 )
 ```
@@ -268,7 +263,7 @@ const page = await fetcher({
 
 That one is fully typed: `pages` is the content type's `publicApi.path`, and the response shape - `content` included - is inferred from the definition.
 
-No extra request is made for the blocks themselves: the definitions came from the plugin configuration when the application started.
+No extra request is made for the blocks themselves: the definitions came from the plugin configuration when the application started, and nothing re-validates data the write in step 6 already checked.
 
 </Step>
 </Steps>

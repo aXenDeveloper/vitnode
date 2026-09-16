@@ -11,8 +11,8 @@ import {
   BLOCK_INSTANCE_ID_PATTERN,
   CONTENT_BLOCKS_DEFAULT_MAX,
 } from "./const";
-import { blockRegistry, isBlockAllowed } from "./registry";
-import { blockDataIssues } from "./schema";
+import { isBlockAllowed, resolveBlockRegistry } from "./registry";
+import { blockDataIssues, safeParseBlockData } from "./schema";
 
 export interface BlockInstanceIssue {
   index: number;
@@ -87,7 +87,7 @@ export const parseBlockInstances = ({
       return;
     }
 
-    const parsed = entry.definition.schema.safeParse(envelope.data);
+    const parsed = safeParseBlockData(entry.definition, envelope.data);
     if (!parsed.success) {
       issues.push({
         index,
@@ -98,7 +98,11 @@ export const parseBlockInstances = ({
       return;
     }
 
-    instances.push({ data: parsed.data, id, type });
+    instances.push({
+      data: parsed.data as Record<string, unknown>,
+      id,
+      type,
+    });
   });
 
   return { instances, issues };
@@ -113,7 +117,7 @@ export const zodBlockInstances = ({
   allowed: BlockAllowedSpec;
   max?: number;
   min?: number;
-  registry?: () => BlockRegistry;
+  registry?: (() => BlockRegistry) | BlockRegistry;
 }): z.ZodType<AnyBlockInstance[]> =>
   z
     .array(zodBlockEnvelope)
@@ -123,7 +127,9 @@ export const zodBlockInstances = ({
       const { instances, issues } = parseBlockInstances({
         allowed,
         envelopes: value,
-        registry: (registry ?? blockRegistry)(),
+        registry: resolveBlockRegistry(
+          typeof registry === "function" ? registry() : registry,
+        ),
       });
 
       for (const issue of issues) {

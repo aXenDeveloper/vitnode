@@ -138,8 +138,12 @@ export const externalGraph = (
 
   const chain = (file: string): string => {
     const parts: string[] = [];
-    for (let at: string | undefined = file; at; at = parents.get(at)) {
+    const walked = new Set<string>();
+
+    for (let at: string | undefined = file; at && !walked.has(at);) {
+      walked.add(at);
       parts.unshift(relative(srcRoot, at));
+      at = parents.get(at);
     }
 
     return parts.join(" -> ");

@@ -36,8 +36,28 @@ describe("block metadata", () => {
   });
 });
 
+describe("defining a block", () => {
+  const entry = join(here, "define.ts");
+
+  it("reaches no third-party module at all", () => {
+    expect(reachedSpecifiers(entry)).toStrictEqual([]);
+  });
+});
+
+describe("the registry", () => {
+  const entry = join(here, "registry.ts");
+
+  it("reaches no third-party module at all", () => {
+    expect(reachedSpecifiers(entry)).toStrictEqual([]);
+  });
+});
+
 describe("the public renderer", () => {
   const entry = join(here, "renderer.tsx");
+
+  it("reaches React and nothing else", () => {
+    expect(reachedSpecifiers(entry).sort()).toStrictEqual(["react"]);
+  });
 
   it("reaches no editor, AdminCP or drag-and-drop code", () => {
     expect(offenders(entry, EDITOR_PACKAGES)).toStrictEqual([]);
@@ -52,16 +72,32 @@ describe("the public renderer", () => {
       offenders(entry, ["@tanstack/react-router", "@tanstack/react-start"]),
     ).toStrictEqual([]);
   });
+
+  it("does not reach a validation library", () => {
+    expect(offenders(entry, ["zod"])).toStrictEqual([]);
+  });
+});
+
+describe("the write-time validator", () => {
+  const entry = join(here, "validate.ts");
+
+  it("is where the schema machinery lives", () => {
+    expect(reachedSpecifiers(entry)).toContain("zod");
+  });
+
+  it("still reaches no React", () => {
+    expect(reachedSpecifiers(entry)).not.toContain("react");
+  });
 });
 
 describe("core's own blocks", () => {
   const entry = join(here, "built-in", "index.tsx");
 
-  it("stay out of the AdminCP and the editor", () => {
+  it("stays out of the AdminCP and the editor", () => {
     expect(offenders(entry, EDITOR_PACKAGES)).toStrictEqual([]);
   });
 
-  it("render with nothing but React and a class helper", () => {
-    expect(reachedSpecifiers(entry).sort()).toStrictEqual(["cn", "zod"]);
+  it("reaches no third-party module at all", () => {
+    expect(reachedSpecifiers(entry)).toStrictEqual([]);
   });
 });

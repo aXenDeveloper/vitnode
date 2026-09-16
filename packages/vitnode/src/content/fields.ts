@@ -23,7 +23,7 @@ import {
   assertContentFileMaxBytes,
   normalizeContentFileExtensions,
   normalizeContentFileMimeTypes,
-} from "./files";
+} from "./file-rules";
 
 interface SharedArgs<
   TRequired extends boolean = false,

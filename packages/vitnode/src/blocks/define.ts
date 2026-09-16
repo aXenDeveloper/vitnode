@@ -1,5 +1,3 @@
-import type { z } from "zod";
-
 import type {
   BlockComponent,
   BlockData,
@@ -7,13 +5,8 @@ import type {
   BlockFieldMap,
 } from "./types";
 
-import { BlockError } from "./errors";
+import { assertBlockFields } from "./capabilities";
 import { assertBlockName } from "./namespace";
-import {
-  assertBlockFields,
-  blockDataIssues,
-  buildBlockDataSchema,
-} from "./schema";
 
 export interface DefineBlockArgs<
   TId extends string,
@@ -35,30 +28,14 @@ export const defineBlock = <
   fields,
   id,
   name,
-}: DefineBlockArgs<TId, TFields>): BlockDefinition<TId, BlockData<TFields>> => {
+}: DefineBlockArgs<TId, TFields>): BlockDefinition<TId, TFields> => {
   assertBlockName(id);
-
-  const map = assertBlockFields(id, fields);
-  const schema = buildBlockDataSchema(map);
 
   return {
     component: component as BlockComponent,
     description,
-    fields: map,
+    fields: assertBlockFields(id, fields),
     id,
     name,
-    parse: (value: unknown) => {
-      const parsed: z.ZodSafeParseResult<unknown> = schema.safeParse(value);
-
-      if (!parsed.success) {
-        throw new BlockError(
-          `Block data does not match the block's fields - ${blockDataIssues(parsed.error)}.`,
-          { blockId: id },
-        );
-      }
-
-      return parsed.data as BlockData<TFields>;
-    },
-    schema,
   };
 };

@@ -1,5 +1,11 @@
 export {
+  assertBlockFields,
   BLOCK_FIELD_KINDS,
+  blockFieldKindRefusal,
+  isBlockFieldKind,
+} from "./capabilities";
+export type { BlockFieldKind } from "./capabilities";
+export {
   BLOCK_ID_MAX_LENGTH,
   BLOCK_INSTANCE_ID_MAX_LENGTH,
   BLOCK_INSTANCE_ID_PATTERN,
@@ -9,7 +15,6 @@ export {
   BLOCK_WILDCARD,
   CONTENT_BLOCKS_ABSOLUTE_MAX,
   CONTENT_BLOCKS_DEFAULT_MAX,
-  isBlockFieldKind,
 } from "./const";
 export { defineBlock } from "./define";
 export type { DefineBlockArgs } from "./define";
@@ -34,13 +39,20 @@ export {
 export type { ParsedBlockId } from "./namespace";
 export {
   allowedBlocks,
-  blockRegistry,
-  buildBlockRegistry,
-  hasBlockRegistry,
+  createBlockRegistry,
+  getDefaultBlockRegistry,
   isBlockAllowed,
-  setBlockRegistry,
+  resolveBlockRegistry,
+  setDefaultBlockRegistry,
 } from "./registry";
-export { assertBlockFields, buildBlockDataSchema } from "./schema";
+export {
+  blockDataIssues,
+  blockDataSchema,
+  buildBlockDataSchema,
+  parseBlockData,
+  safeParseBlockData,
+} from "./schema";
+export { blockDataShapeIssue } from "./shape";
 export type {
   AnyBlockDefinition,
   AnyBlockInstance,
@@ -57,6 +69,7 @@ export type {
   BlockRenderFallback,
   BlockRenderFallbackProps,
   BlockUnknownData,
+  BlockValidationMode,
   RegisteredBlock,
 } from "./types";
 export { parseBlockInstances, zodBlockInstances } from "./validate";

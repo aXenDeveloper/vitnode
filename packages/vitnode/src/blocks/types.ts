@@ -1,5 +1,4 @@
 import type { ComponentType, ReactElement } from "react";
-import type { z } from "zod";
 
 import type { ContentFieldMap, ContentValuesOf } from "../content/types";
 
@@ -22,15 +21,13 @@ export type BlockComponent<TData = BlockUnknownData> = ComponentType<
 
 export interface BlockDefinition<
   TId extends string = string,
-  TData = BlockUnknownData,
+  TFields extends BlockFieldMap = ContentFieldMap,
 > {
   component: BlockComponent;
   description?: string;
-  fields: ContentFieldMap;
+  fields: TFields;
   id: TId;
   name?: string;
-  parse: (value: unknown) => TData;
-  schema: z.ZodObject<z.ZodRawShape>;
 }
 
 export type AnyBlockDefinition = BlockDefinition;
@@ -75,6 +72,8 @@ export interface BlockRenderFallbackProps {
   instance: AnyBlockInstance;
   reason: "invalid-data" | "unknown-type";
 }
+
+export type BlockValidationMode = "always" | "development" | "never";
 
 export type BlockRenderFallback = (
   props: BlockRenderFallbackProps,

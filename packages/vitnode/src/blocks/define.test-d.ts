@@ -12,6 +12,7 @@ import type {
 import { defineContentType } from "../content/define";
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
+import { parseBlockData } from "./schema";
 
 const heroFields = {
   description: field.textarea({ nullable: true }),
@@ -62,15 +63,19 @@ describe("defineBlock", () => {
     expectTypeOf(heroBlock.id).toEqualTypeOf<"hero">();
   });
 
-  it("types `parse` by the field map", () => {
-    expectTypeOf(heroBlock.parse({})).toEqualTypeOf<
+  it("keeps the field map, so the data type is recoverable from the definition", () => {
+    expectTypeOf(heroBlock.fields).toEqualTypeOf<typeof heroFields>();
+  });
+
+  it("types `parseBlockData` by the definition's field map", () => {
+    expectTypeOf(parseBlockData(heroBlock, {})).toEqualTypeOf<
       BlockData<typeof heroFields>
     >();
   });
 
   it("stays assignable to the erased definition a registry holds", () => {
     expectTypeOf<
-      BlockDefinition<"hero", BlockData<typeof heroFields>>
+      BlockDefinition<"hero", typeof heroFields>
     >().toExtend<AnyBlockDefinition>();
   });
 });

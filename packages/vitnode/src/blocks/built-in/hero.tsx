@@ -1,5 +1,3 @@
-import { cn } from "cn";
-
 import type { BlockComponentProps, BlockData } from "../types";
 
 import { field } from "../../content/fields";
@@ -24,10 +22,7 @@ const Hero = ({ data }: BlockComponentProps<HeroData>) => {
 
   return (
     <section
-      className={cn(
-        "flex flex-col gap-4 py-12 md:py-16",
-        centered && "items-center text-center",
-      )}
+      className={`flex flex-col gap-4 py-12 md:py-16 ${centered ? "items-center text-center" : ""}`}
     >
       {data.eyebrow ? (
         <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
