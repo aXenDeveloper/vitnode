@@ -13,6 +13,8 @@ Block Registry
   ↓ allowed by a blocks() field
 Content record
   ↓
+ContentZone
+  ↓
 ContentRenderer
 ```
 
@@ -30,7 +32,7 @@ ContentRenderer
 A block is **not** a content type. It has no table, no id of its own in the database, no permissions and no API routes. It is a value that lives inside a record - which is exactly why re-ordering a page is one `UPDATE` and not a migration.
 
 <Callout title="Visual editing comes later">
-  This is the runtime and data foundation. Blocks are defined, registered, stored, validated and rendered - there is no editor, no drag and drop, and no block picker yet. Content Zones and the Visual Editor build on top of everything on these pages without changing any of it.
+  This is the runtime and data foundation. Blocks are defined, registered, stored, validated, rendered, and placed in named [Content Zones](/docs/dev/blocks/content-zones) - there is no editor, no drag and drop, and no block picker yet. The Visual Editor builds on top of everything on these pages without changing any of it.
 </Callout>
 
 ## How blocks reach an application
@@ -89,6 +91,11 @@ Block data is validated once, where it arrives: every create and update runs eac
     title="Rendering"
     description="ContentRenderer, missing blocks, and why a block costs no extra request"
     href="/docs/dev/blocks/rendering"
+  />
+  <Card
+    title="Content Zones"
+    description="Naming a place on a page where blocks may appear, including around locked application UI"
+    href="/docs/dev/blocks/content-zones"
   />
   <Card
     title="End-to-end Example"

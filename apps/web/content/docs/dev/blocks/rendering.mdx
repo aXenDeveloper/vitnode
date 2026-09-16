@@ -28,6 +28,7 @@ For each stored instance it resolves the definition in the registry and renders 
 | `registry` | the process default | The registry to resolve against. Passing it is the normal way. |
 | `validate` | `"development"` | `"never"`, `"development"` or `"always"` - see below. |
 | `fallback` | a development-only notice | What to render for a block that cannot be resolved or fails a check. |
+| `allowed` | none | An allowlist to hold the instances to, under the same `validate` gate. [Content Zones](/docs/dev/blocks/content-zones#restricting-what-may-go-in-a-zone) pass theirs here. |
 
 ## Where the registry comes from
 
@@ -109,10 +110,10 @@ Keep your own block components in that spirit: a block that needs a chart librar
 
 ## Content Zones
 
-The next stage puts the same model behind a zone a developer drops onto a real page:
+`ContentRenderer` is the loop. A [Content Zone](/docs/dev/blocks/content-zones) is that loop with a name on it:
 
 ```tsx
-<ContentZone id="main" allowedBlocks={["core:*", "blog:*"]} />
+<ContentZone id="main" blocks={page.content} registry={blocksRegistry} />
 ```
 
-An authorized editor clicks **Edit page** and arranges blocks on the page itself. Nothing on this page changes when it lands: a zone is a `blocks()` field plus an editing surface, and the renderer it uses in view mode is this one.
+The name is what lets an editor put something in a particular place later, and what lets blocks sit around application UI that stays locked. A zone renders through this renderer, so everything on this page applies to it unchanged.

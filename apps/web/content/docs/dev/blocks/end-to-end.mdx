@@ -270,4 +270,10 @@ No extra request is made for the blocks themselves: the definitions came from th
 
 ## Where this goes next
 
-Content Zones and the Visual Editor sit on top of exactly this. A zone is a `blocks()` field with an editing surface; **Edit page** turns that surface on for an authorized editor; the block picker lists what `allowed` resolves to; and drag and drop re-orders the array whose order you have already been storing.
+[Content Zones](/docs/dev/blocks/content-zones) put a name on the place those blocks are rendered, so the step above becomes:
+
+```tsx
+<ContentZone id="main" blocks={page.content} registry={blocksRegistry} />
+```
+
+The Visual Editor then sits on top of exactly this. **Edit page** turns an editing surface on for an authorized editor; the block picker lists what the zone's allowlist resolves to; and drag and drop re-orders the array whose order you have already been storing.
