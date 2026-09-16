@@ -35,6 +35,8 @@ describe("ContentZone props", () => {
   });
 
   it("refuses a field descriptor that carries no allowlist", () => {
-    expectTypeOf(field.text({ required: true })).not.toExtend<ContentZoneField>();
+    expectTypeOf(
+      field.text({ required: true }),
+    ).not.toExtend<ContentZoneField>();
   });
 });
