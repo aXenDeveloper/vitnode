@@ -72,11 +72,6 @@ export type BlockAreaAlign = (typeof AREA_ALIGNS)[number];
 
 export type BlockAreaJustify = (typeof AREA_JUSTIFIES)[number];
 
-/**
- * How an area arranges the blocks it holds. Every value is a token VitNode
- * owns: an area never carries CSS, a class name or a pixel width, so a stored
- * layout can never reach past what the renderer is willing to draw.
- */
 export interface BlockAreaLayout {
   align?: BlockAreaAlign;
   columns: BlockAreaColumns;
@@ -84,11 +79,6 @@ export interface BlockAreaLayout {
   justify?: BlockAreaJustify;
 }
 
-/**
- * A layout relationship between blocks - not a block. An area owns the
- * arrangement of its children and holds no content of its own, which is why it
- * has `layout` where a block has `data`, and why it is never registered.
- */
 export interface BlockAreaInstance {
   children: readonly AnyBlockInstance[];
   id: string;
@@ -96,10 +86,6 @@ export interface BlockAreaInstance {
   layout: BlockAreaLayout;
 }
 
-/**
- * What a zone stores: blocks, and areas of blocks. A block keeps the shape it
- * has always had, so nothing persisted before areas existed needs rewriting.
- */
 export type ContentNode = AnyBlockInstance | BlockAreaInstance;
 
 export type BlockAllowedEntry = string;
@@ -128,10 +114,7 @@ export interface BlockRegistry {
 }
 
 export type BlockRenderFallbackReason =
-  | "invalid-data"
-  | "not-allowed"
-  | "unknown-type"
-  | "unknown-variant";
+  "invalid-data" | "not-allowed" | "unknown-type" | "unknown-variant";
 
 export interface BlockRenderFallbackProps {
   instance: AnyBlockInstance;

@@ -9,20 +9,13 @@ import type {
 
 export type EditorNodeKind = "area" | "block";
 
-/**
- * Zone-aware, container-aware identity. Two zones may hold instances with the
- * same id, and so may two areas, so nothing in the editor is ever addressed by
- * a bare instance id.
- */
 export interface EditorNodeRef {
-  /** The area holding this node, or `null` when it sits at the zone root. */
   areaId: null | string;
   kind: EditorNodeKind;
   nodeId: string;
   zoneId: string;
 }
 
-/** A list a node can live in: a zone's root, or one area inside it. */
 export interface EditorContainerRef {
   areaId: null | string;
   zoneId: string;

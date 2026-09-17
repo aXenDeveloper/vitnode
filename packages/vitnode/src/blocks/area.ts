@@ -56,11 +56,6 @@ export const isAreaLayout = (value: unknown): value is BlockAreaLayout => {
   );
 };
 
-/**
- * True for anything that claims to be an area, whether or not what it claims
- * holds up. Classification comes before validation: a malformed area has to be
- * reported as a broken area, never quietly re-read as a block.
- */
 export const isAreaLike = (value: unknown): boolean =>
   typeof value === "object" &&
   value !== null &&
@@ -105,11 +100,9 @@ export const createAreaInstance = ({
 
 export const contentNodeId = (node: ContentNode): string => node.id;
 
-export const areaChildren = (
-  node: ContentNode,
-): readonly AnyBlockInstance[] => (isBlockAreaInstance(node) ? node.children : []);
+export const areaChildren = (node: ContentNode): readonly AnyBlockInstance[] =>
+  isBlockAreaInstance(node) ? node.children : [];
 
-/** Every block in a tree, areas flattened in place, in stored order. */
 export const contentNodeBlocks = (
   nodes: readonly ContentNode[],
 ): readonly AnyBlockInstance[] =>

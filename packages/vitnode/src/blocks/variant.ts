@@ -21,12 +21,6 @@ export const findBlockVariant = (
 ): AnyBlockVariantDefinition | undefined =>
   blockVariants(definition).find(entry => entry.id === variant);
 
-/**
- * Presentation is resolved, never rewritten. A stored variant the block no
- * longer declares comes back as `unknown` so the caller can refuse it - a page
- * that silently swapped in the default would render something nobody chose,
- * and a save that silently swapped it in would lose what was stored.
- */
 export const resolveBlockVariant = (
   definition: AnyBlockDefinition,
   variant: string | undefined,
@@ -40,6 +34,5 @@ export const resolveBlockVariant = (
     : { kind: "resolved", variant };
 };
 
-export const blockVariantLabel = (
-  variant: BlockVariantDefinition,
-): string => variant.label ?? variant.id;
+export const blockVariantLabel = (variant: BlockVariantDefinition): string =>
+  variant.label ?? variant.id;
