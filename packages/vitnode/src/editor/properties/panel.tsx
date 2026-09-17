@@ -179,7 +179,7 @@ const BlockPropertiesPanelContent = ({
           className="flex-1"
           onClick={() => {
             dispatch({ ref: target, type: "remove" });
-            setPanel("blocks");
+            setPanel();
           }}
           size="sm"
           variant="destructive"

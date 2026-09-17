@@ -8,6 +8,7 @@ import type { BlockAreaInstance, BlockAreaLayout } from "../../blocks/types";
 import type { EditorNodeRef } from "../state/types";
 
 import {
+  areaLayoutWithDefaults,
   isAreaAlign,
   isAreaColumns,
   isAreaGap,
@@ -28,6 +29,7 @@ import {
   areaDeleteMode,
   nextAreaLayout,
 } from "./area-layout";
+import { afterDialogExit } from "./dialog-exit";
 import { LabelledControl } from "./labelled-control";
 
 interface TokenOption {
@@ -84,7 +86,7 @@ export const AreaPropertiesPanelContent = ({
   const t = useTranslations("core.editor");
   const [confirming, setConfirming] = useState(false);
 
-  const layout = area.layout;
+  const layout = areaLayoutWithDefaults(area.layout);
   const columns = layout.columns;
   const apply = (patch: Partial<BlockAreaLayout>): void => {
     dispatch({
@@ -96,7 +98,7 @@ export const AreaPropertiesPanelContent = ({
 
   const ungroup = (): void => {
     dispatch({ ref: target, type: "unwrap-area" });
-    setPanel("blocks");
+    setPanel();
   };
 
   return (
@@ -138,7 +140,7 @@ export const AreaPropertiesPanelContent = ({
           onSelect={value => {
             if (isAreaGap(value)) apply({ gap: value });
           }}
-          value={layout.gap ?? AREA_LAYOUT_OPTIONS.gap[0]}
+          value={layout.gap}
         />
 
         <AreaLayoutSelect
@@ -150,7 +152,7 @@ export const AreaPropertiesPanelContent = ({
           onSelect={value => {
             if (isAreaAlign(value)) apply({ align: value });
           }}
-          value={layout.align ?? AREA_LAYOUT_OPTIONS.align[0]}
+          value={layout.align}
         />
 
         <AreaLayoutSelect
@@ -162,7 +164,7 @@ export const AreaPropertiesPanelContent = ({
           onSelect={value => {
             if (isAreaJustify(value)) apply({ justify: value });
           }}
-          value={layout.justify ?? AREA_LAYOUT_OPTIONS.justify[0]}
+          value={layout.justify}
         />
       </div>
 
@@ -226,11 +228,14 @@ export const AreaPropertiesPanelContent = ({
           )
         }
         onOpenChange={setConfirming}
-        onSubmit={() => {
-          dispatch({ ref: target, type: "remove" });
-          setPanel("blocks");
+        onSubmit={({ onClose }) => {
+          afterDialogExit(onClose, () => {
+            dispatch({ ref: target, type: "remove" });
+            setPanel();
+          });
         }}
         open={confirming}
+        submitVariant="destructive"
         textSubmit={t("area.delete.confirm")}
         title={t("area.delete.title")}
       />

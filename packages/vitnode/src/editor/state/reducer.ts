@@ -16,8 +16,10 @@ import type {
   VisualEditorState,
 } from "./types";
 
-import { isBlockAreaInstance } from "../../blocks/area";
+import { contentNodeBlocks, isBlockAreaInstance } from "../../blocks/area";
 import { createBlockInstanceId } from "../../blocks/instance";
+import { getDefaultBlockRegistry } from "../../blocks/registry";
+import { resolveBlockVariant } from "../../blocks/variant";
 
 export const initialVisualEditorState: VisualEditorState = {
   droppedZoneIds: [],
@@ -257,11 +259,28 @@ export const isVisualEditorDirty = (state: VisualEditorState): boolean =>
     return zone !== undefined && zoneChanged(zone);
   });
 
+const hasUnresolvableVariant = (zone: EditorZoneState): boolean => {
+  const registry = zone.registry ?? getDefaultBlockRegistry();
+  if (!registry) return false;
+
+  return contentNodeBlocks(zone.nodes).some(block => {
+    const entry = registry.get(block.type);
+
+    return (
+      entry !== undefined &&
+      resolveBlockVariant(entry.definition, block.variant).kind === "unknown"
+    );
+  });
+};
+
 export const unsafeZoneIds = (state: VisualEditorState): string[] =>
   state.order.filter(zoneId => {
     const zone = state.zones[zoneId];
 
-    return zone !== undefined && zone.invalid.length > 0;
+    return (
+      zone !== undefined &&
+      (zone.invalid.length > 0 || hasUnresolvableVariant(zone))
+    );
   });
 
 const clampIndex = (index: number, length: number): number => {

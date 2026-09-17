@@ -81,31 +81,9 @@ const EditorShell = ({
   const dirty = isVisualEditorDirty(state);
   const unsafe = useMemo(() => unsafeZoneIds(state), [state]);
 
-  const setPanel = useCallback(
-    (mode: EditorPanelMode) => {
-      if (mode === "blocks") {
-        dispatch({ ref: null, type: "select" });
-
-        return;
-      }
-
-      if (mode !== "area" || selected === null) return;
-
-      const parentAreaId = selected.areaId;
-      if (parentAreaId === null) return;
-
-      dispatch({
-        ref: {
-          areaId: null,
-          kind: "area",
-          nodeId: parentAreaId,
-          zoneId: selected.zoneId,
-        },
-        type: "select",
-      });
-    },
-    [selected],
-  );
+  const setPanel = useCallback(() => {
+    dispatch({ ref: null, type: "select" });
+  }, []);
 
   const persist = useCallback(async (): Promise<boolean> => {
     if (!adapter) {

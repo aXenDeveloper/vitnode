@@ -25,7 +25,11 @@ import { useVisualEditor } from "../context";
 import { ContainerSortable } from "../dnd/container-sortable";
 import { useZoneDroppable } from "../dnd/use-container-droppable";
 import { EditableAreaFrame } from "./area-frame";
-import { InvalidBlock, UnknownBlock } from "./block-placeholder";
+import {
+  InvalidBlock,
+  UnknownBlock,
+  UnknownVariantBlock,
+} from "./block-placeholder";
 import { editableBlockRender } from "./block-render";
 import { classifyZoneEntries } from "./classify";
 import { zoneDropState } from "./drop-state";
@@ -64,6 +68,10 @@ const EditableBlockBody = ({
     return <UnknownBlock type={instance.type} />;
   }
 
+  if (render.kind === "unknown-variant") {
+    return <UnknownVariantBlock variant={render.variant} />;
+  }
+
   if (render.kind === "invalid-data") {
     return (
       <InvalidBlock
@@ -78,7 +86,7 @@ const EditableBlockBody = ({
     data: instance.data,
     index,
     type: instance.type,
-    variant: instance.variant,
+    variant: render.variant,
   });
 };
 
@@ -175,7 +183,7 @@ export const EditableZone = ({
           index: nodes.length,
           zoneId: mount.id,
         });
-        setPanel("blocks");
+        setPanel();
       }}
       size="sm"
       variant="outline"
@@ -262,6 +270,7 @@ export const EditableZone = ({
                   zoneId={mount.id}
                 >
                   <ContainerSortable
+                    columns={node.layout.columns}
                     container={{ areaId: node.id, zoneId: mount.id }}
                     nodes={node.children}
                   >

@@ -49,11 +49,13 @@ const source = (
 
 const areaSource = (
   partial: Partial<{
+    childTypes: readonly string[];
     container: EditorContainerRef;
     index: number;
     nodeId: string;
   }> = {},
 ): EditorDragSource => ({
+  childTypes: [],
   container: into("page:main"),
   index: 0,
   kind: "existing-area",
@@ -430,12 +432,48 @@ describe("readDropTarget", () => {
 });
 
 describe("dropEdgeFor", () => {
-  it("is before above the midpoint and after below it", () => {
-    const rect = { height: 100, top: 200 };
+  const rect = { height: 100, left: 400, top: 200, width: 100 };
 
+  it("is before above the midpoint and after below it", () => {
     expect(dropEdgeFor({ pointerY: 220, rect })).toBe("before");
     expect(dropEdgeFor({ pointerY: 250, rect })).toBe("after");
     expect(dropEdgeFor({ pointerY: 280, rect })).toBe("after");
+  });
+
+  it("reads the inline axis inside a multi-column area", () => {
+    const at = (pointerX: number) =>
+      dropEdgeFor({ axis: "horizontal", pointerX, pointerY: 280, rect });
+
+    expect(at(420)).toBe("before");
+    expect(at(480)).toBe("after");
+  });
+
+  it("ignores the block axis entirely once it reads the inline one", () => {
+    const at = (pointerY: number) =>
+      dropEdgeFor({ axis: "horizontal", pointerX: 420, pointerY, rect });
+
+    expect(at(210)).toBe("before");
+    expect(at(290)).toBe("before");
+  });
+
+  it("mirrors before and after when the page reads right to left", () => {
+    const at = (pointerX: number) =>
+      dropEdgeFor({
+        axis: "horizontal",
+        pointerX,
+        pointerY: 250,
+        rect,
+        rtl: true,
+      });
+
+    expect(at(480)).toBe("before");
+    expect(at(420)).toBe("after");
+  });
+
+  it("stays vertical when the pointer has no inline position to read", () => {
+    expect(dropEdgeFor({ axis: "horizontal", pointerY: 220, rect })).toBe(
+      "before",
+    );
   });
 });
 
@@ -1087,6 +1125,7 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "before",
         nodeId: "block-x",
         zoneId: "page:main",
@@ -1111,6 +1150,7 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "before",
         nodeId: "block-y",
         zoneId: "page:main",
@@ -1137,6 +1177,7 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "before",
         nodeId: "block-x",
         zoneId: "page:main",
@@ -1347,6 +1388,7 @@ describe("dropPlacement, from the catalog", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "before",
         nodeId: "block-b",
         zoneId: "page:main",
@@ -1363,6 +1405,7 @@ describe("dropPlacement, from the catalog", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "after",
         nodeId: "block-b",
         zoneId: "page:main",
@@ -1378,6 +1421,7 @@ describe("dropPlacement, from the catalog", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "after",
         nodeId: "block-c",
         zoneId: "page:main",
@@ -1422,6 +1466,7 @@ describe("dropPlacement, from the catalog", () => {
     ).toEqual({
       indicator: {
         areaId: "area-1",
+        axis: "vertical",
         edge: "after",
         nodeId: "block-x",
         zoneId: "page:main",
@@ -1442,6 +1487,7 @@ describe("dropPlacement, moving a node", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "after",
         nodeId: "block-c",
         zoneId: "page:main",
@@ -1459,6 +1505,7 @@ describe("dropPlacement, moving a node", () => {
 
     expect(placement?.indicator).toEqual({
       areaId: null,
+      axis: "vertical",
       edge: "after",
       nodeId: "block-c",
       zoneId: "page:main",
@@ -1474,6 +1521,7 @@ describe("dropPlacement, moving a node", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "after",
         nodeId: "block-c",
         zoneId: "page:main",
@@ -1490,6 +1538,7 @@ describe("dropPlacement, moving a node", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "before",
         nodeId: "block-a",
         zoneId: "page:main",
@@ -1545,6 +1594,7 @@ describe("dropPlacement, moving a node", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "after",
         nodeId: "block-y",
         zoneId: "page:aside",
@@ -1572,6 +1622,7 @@ describe("dropPlacement, moving a node", () => {
     ).toEqual({
       indicator: {
         areaId: "area-1",
+        axis: "vertical",
         edge: "after",
         nodeId: "block-c",
         zoneId: "page:main",
@@ -1599,6 +1650,7 @@ describe("dropPlacement, on its own", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "before",
         nodeId: "block-b",
         zoneId: "page:main",
@@ -1624,6 +1676,7 @@ describe("dropPlacement, on its own", () => {
     ).toEqual({
       indicator: {
         areaId: null,
+        axis: "vertical",
         edge: "after",
         nodeId: "block-c",
         zoneId: "page:main",
@@ -1631,5 +1684,123 @@ describe("dropPlacement, on its own", () => {
       position: 4,
       total: 4,
     });
+  });
+});
+
+describe("an area carries its children past a zone's allowlist", () => {
+  const sidebar = { container: into("page:sidebar") };
+
+  const targetAt = (container: EditorContainerRef): EditorDropTarget => ({
+    container,
+    edge: null,
+    index: null,
+    kind: null,
+    nodeId: null,
+  });
+
+  it("refuses an area whose child the target zone does not allow", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:text"],
+        source: areaSource({ childTypes: ["core:cta"] }),
+        target: targetAt(sidebar.container),
+      }),
+    ).toBe("not-allowed");
+  });
+
+  it("refuses it even when only one of several children is disallowed", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:text"],
+        source: areaSource({ childTypes: ["core:text", "core:cta"] }),
+        target: targetAt(sidebar.container),
+      }),
+    ).toBe("not-allowed");
+  });
+
+  it("allows an area whose children the target zone all accept", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:text"],
+        source: areaSource({ childTypes: ["core:text"] }),
+        target: targetAt(sidebar.container),
+      }),
+    ).toBeNull();
+  });
+
+  it("allows an empty area anywhere, because it carries nothing", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:text"],
+        source: areaSource({ childTypes: [] }),
+        target: targetAt(sidebar.container),
+      }),
+    ).toBeNull();
+  });
+
+  it("never blocks a reorder inside the zone the area already sits in", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:text"],
+        source: areaSource({
+          childTypes: ["core:cta"],
+          container: into("page:main"),
+        }),
+        target: targetAt(into("page:main")),
+      }),
+    ).toBeNull();
+  });
+
+  it("still refuses an area dropped inside another area", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: "*",
+        source: areaSource({ childTypes: [] }),
+        target: targetAt(into("page:main", "area-b")),
+      }),
+    ).toBe("nested-area");
+  });
+});
+
+describe("collision precedence knows what is being dragged", () => {
+  const innerBlock = {
+    id: nodeDraggableId(blockRef("page:main", "child-1", "area-b")),
+  };
+  const areaInterior = {
+    id: areaDroppableId({ areaId: "area-b", zoneId: "page:main" }),
+  };
+  const areaAtRoot = {
+    id: nodeDraggableId(areaNodeRef("page:main", "area-b")),
+  };
+  const zone = { id: zoneDroppableId("page:main") };
+
+  const collisions = [innerBlock, areaInterior, areaAtRoot, zone];
+
+  it("lets a block reach the inside of an area, as before", () => {
+    expect(
+      preferInnerCollisions(collisions, source({ type: "core:text" })),
+    ).toStrictEqual([innerBlock]);
+  });
+
+  it("gives a dragged area the target area's own root slot, not its inside", () => {
+    expect(preferInnerCollisions(collisions, areaSource())).toStrictEqual([
+      areaAtRoot,
+    ]);
+  });
+
+  it("does not strand a dragged area over an empty area's interior", () => {
+    expect(
+      preferInnerCollisions([areaInterior, areaAtRoot, zone], areaSource()),
+    ).toStrictEqual([areaAtRoot]);
+  });
+
+  it("falls through to the zone when an area is over nothing reorderable", () => {
+    expect(
+      preferInnerCollisions([areaInterior, zone], areaSource()),
+    ).toStrictEqual([areaInterior, zone]);
+  });
+
+  it("behaves exactly as before when nothing says what is dragged", () => {
+    expect(preferInnerCollisions(collisions)).toStrictEqual([innerBlock]);
   });
 });

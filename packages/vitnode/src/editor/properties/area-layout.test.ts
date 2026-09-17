@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import type { BlockAreaInstance } from "../../blocks/types";
 
+import {
+  AREA_JUSTIFY_CLASSES,
+  areaLayoutClassNames,
+  areaLayoutWithDefaults,
+} from "../../blocks/area";
 import { DEFAULT_AREA_LAYOUT } from "../../blocks/area";
 import {
   AREA_LAYOUT_OPTIONS,
@@ -74,5 +79,25 @@ describe("areaDeleteMode", () => {
     expect(
       areaDeleteMode(area([{ data: {}, id: "B1", type: "core:text" }])),
     ).toBe("holds-blocks");
+  });
+});
+
+describe("the layout the panel actually shows", () => {
+  it("resolves every omitted token to its real default, not the first option", () => {
+    expect(areaLayoutWithDefaults({ columns: 2 })).toStrictEqual({
+      align: "stretch",
+      columns: 2,
+      gap: "md",
+      justify: "stretch",
+    });
+  });
+
+  it("agrees with the classes the canvas draws for the same layout", () => {
+    const stored = { align: "stretch", columns: 2, gap: "md" } as const;
+    const shown = areaLayoutWithDefaults(stored);
+
+    expect(areaLayoutClassNames(stored)).toContain(
+      AREA_JUSTIFY_CLASSES[shown.justify],
+    );
   });
 });

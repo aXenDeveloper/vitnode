@@ -16,6 +16,7 @@ import type {
 import { createAreaInstance, isBlockAreaInstance } from "../../blocks/area";
 import { createBlockInstance } from "../../blocks/instance";
 import { createBlockRegistry } from "../../blocks/registry";
+import { field } from "../../content/fields";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
@@ -1216,6 +1217,74 @@ describe("persisted content the editor cannot read", () => {
     expect(unsafeZoneIds(mounted(mount("main", [block("a")])))).toStrictEqual(
       [],
     );
+  });
+
+  describe("a stored variant the block no longer offers", () => {
+    const variantRegistry = createBlockRegistry([
+      {
+        pluginId: "@vitnode/core",
+        blocks: [
+          {
+            component: () => null,
+            defaultVariant: "grid",
+            fields: { body: field.text({}) },
+            id: "text",
+            variants: [{ id: "grid" }, { id: "featured" }],
+          },
+        ],
+        namespace: "core",
+      },
+    ]);
+
+    const zoneWith = (
+      nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
+    ): VisualEditorState =>
+      mounted({
+        allowedBlocks: undefined,
+        id: "main",
+        invalid: [],
+        nodes,
+        registry: variantRegistry,
+      });
+
+    it("blocks the save, because the server would refuse it anyway", () => {
+      const stored = { ...block("a"), variant: "gone" };
+
+      expect(unsafeZoneIds(zoneWith([stored]))).toStrictEqual(["main"]);
+    });
+
+    it("blocks the save for a child of an area just the same", () => {
+      const stored = { ...block("a"), variant: "gone" };
+
+      expect(unsafeZoneIds(zoneWith([area([stored])]))).toStrictEqual(["main"]);
+    });
+
+    it("lets a declared variant through", () => {
+      const stored = { ...block("a"), variant: "featured" };
+
+      expect(unsafeZoneIds(zoneWith([stored]))).toStrictEqual([]);
+    });
+
+    it("lets a legacy block with no variant at all through", () => {
+      expect(unsafeZoneIds(zoneWith([block("a")]))).toStrictEqual([]);
+    });
+
+    it("clears once the variant is set to one the block declares", () => {
+      const stored = { ...block("a"), variant: "gone" };
+      const fixed = visualEditorReducer(zoneWith([stored]), {
+        ref: ref("main", stored.id),
+        type: "set-variant",
+        variant: "grid",
+      });
+
+      expect(unsafeZoneIds(fixed)).toStrictEqual([]);
+    });
+
+    it("says nothing about a type the registry does not know, as before", () => {
+      const stored = { ...createBlockInstance("core:gone", {}), variant: "x" };
+
+      expect(unsafeZoneIds(zoneWith([stored]))).toStrictEqual([]);
+    });
   });
 
   it("stays unsafe while a sibling block is edited, so the save cannot drop it", () => {

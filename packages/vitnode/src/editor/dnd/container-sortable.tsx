@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 
 import {
+  rectSortingStrategy,
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -13,10 +14,12 @@ import { nodeDraggableId } from "./resolve-drop";
 
 export const ContainerSortable = ({
   children,
+  columns = 1,
   container,
   nodes,
 }: {
   children: ReactNode;
+  columns?: number;
   container: EditorContainerRef;
   nodes: readonly ContentNode[];
 }): ReactElement => (
@@ -29,7 +32,7 @@ export const ContainerSortable = ({
         zoneId: container.zoneId,
       }),
     )}
-    strategy={verticalListSortingStrategy}
+    strategy={columns > 1 ? rectSortingStrategy : verticalListSortingStrategy}
   >
     {children}
   </SortableContext>

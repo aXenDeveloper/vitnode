@@ -15,7 +15,11 @@ import {
 } from "../../components/ui/select";
 import { useVisualEditor } from "../context";
 import { LabelledControl } from "./labelled-control";
-import { variantControlSpec } from "./selection";
+import {
+  VARIANT_CLEAR_VALUE,
+  variantControlSpec,
+  variantFromControlValue,
+} from "./selection";
 
 export const BlockVariantControl = ({
   definition,
@@ -31,12 +35,17 @@ export const BlockVariantControl = ({
   const { dispatch } = useVisualEditor();
   const spec = variantControlSpec(definition, variant);
 
-  if (!spec.visible && spec.unknown === null) return null;
+  if (!spec.visible) return null;
 
-  const items = spec.options.map(option => ({
-    label: blockVariantLabel(option),
-    value: option.id,
-  }));
+  const items = [
+    ...(spec.clearable
+      ? [{ label: t("variant.clear"), value: VARIANT_CLEAR_VALUE }]
+      : []),
+    ...spec.options.map(option => ({
+      label: blockVariantLabel(option),
+      value: option.id,
+    })),
+  ];
 
   return (
     <div className="flex flex-col gap-3">
@@ -51,36 +60,42 @@ export const BlockVariantControl = ({
         </div>
       )}
 
-      {spec.visible ? (
-        <LabelledControl
-          description={t("variant.hint")}
-          label={t("variant.label")}
-        >
-          {ids => (
-            <Select
-              items={items}
-              onValueChange={value => {
-                if (typeof value !== "string") return;
+      <LabelledControl
+        description={
+          spec.clearable
+            ? `${t("variant.hint")} ${t("variant.clear_hint")}`
+            : t("variant.hint")
+        }
+        label={t("variant.label")}
+      >
+        {ids => (
+          <Select
+            items={items}
+            onValueChange={value => {
+              if (typeof value !== "string") return;
 
-                dispatch({ ref: target, type: "set-variant", variant: value });
-              }}
-              value={spec.value ?? null}
-            >
-              <SelectTrigger {...ids} className="w-full">
-                <SelectValue placeholder={tGlobal("select_option")} />
-              </SelectTrigger>
+              dispatch({
+                ref: target,
+                type: "set-variant",
+                variant: variantFromControlValue(value),
+              });
+            }}
+            value={spec.value ?? null}
+          >
+            <SelectTrigger {...ids} className="w-full">
+              <SelectValue placeholder={tGlobal("select_option")} />
+            </SelectTrigger>
 
-              <SelectContent>
-                {items.map(item => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </LabelledControl>
-      ) : null}
+            <SelectContent>
+              {items.map(item => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </LabelledControl>
     </div>
   );
 };

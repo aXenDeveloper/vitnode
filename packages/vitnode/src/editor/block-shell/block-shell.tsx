@@ -26,6 +26,7 @@ const ISSUE_LABELS = {
   "invalid-data": "block.issue.invalid_data",
   "not-allowed": "block.issue.not_allowed",
   "unknown-type": "block.issue.unknown_type",
+  "unknown-variant": "block.issue.unknown_variant",
 } as const satisfies Record<EditableBlockIssue, string>;
 
 const actionClassName = cn(
@@ -76,12 +77,13 @@ export const EditableBlockShell = ({
     entry,
     instance,
   });
-  const edge =
+  const placed =
     dropIndicator?.nodeId === instance.id &&
     dropIndicator.zoneId === zoneId &&
     dropIndicator.areaId === areaId
-      ? dropIndicator.edge
+      ? dropIndicator
       : null;
+  const edge = placed?.edge ?? null;
 
   return (
     <div
@@ -163,12 +165,22 @@ export const EditableBlockShell = ({
         </p>
       )}
 
-      {edge === null ? null : (
+      {placed === null ? null : placed.axis === "horizontal" ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "bg-primary pointer-events-none absolute inset-y-0 z-20 w-0.5 rounded-full",
+            placed.edge === "before" ? "-start-1" : "-end-1",
+          )}
+        >
+          <span className="bg-primary absolute start-1/2 top-0 size-2 -translate-x-1/2 rounded-full rtl:translate-x-1/2" />
+        </span>
+      ) : (
         <span
           aria-hidden="true"
           className={cn(
             "bg-primary pointer-events-none absolute inset-x-0 z-20 h-0.5 rounded-full",
-            edge === "before" ? "-top-1" : "-bottom-1",
+            placed.edge === "before" ? "-top-1" : "-bottom-1",
           )}
         >
           <span className="bg-primary absolute start-0 top-1/2 size-2 -translate-y-1/2 rounded-full" />

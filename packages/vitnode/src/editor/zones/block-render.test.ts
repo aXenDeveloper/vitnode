@@ -21,6 +21,15 @@ const entry: RegisteredBlock = {
   type: "core:text",
 };
 
+const variantEntry: RegisteredBlock = {
+  ...entry,
+  definition: {
+    ...entry.definition,
+    defaultVariant: "grid",
+    variants: [{ id: "grid" }, { id: "featured" }],
+  },
+};
+
 const instance = (data: Record<string, unknown>): AnyBlockInstance => ({
   data,
   id: "01JEXAMPLEBLOCKRENDER0001",
@@ -34,7 +43,42 @@ describe("editableBlockRender", () => {
     expect(editableBlockRender({ entry, instance: valid })).toStrictEqual({
       entry,
       kind: "component",
+      variant: undefined,
     });
+  });
+
+  it("resolves the default variant for a block that declares variants", () => {
+    expect(
+      editableBlockRender({ entry: variantEntry, instance: valid }),
+    ).toStrictEqual({
+      entry: variantEntry,
+      kind: "component",
+      variant: "grid",
+    });
+  });
+
+  it("refuses to render a variant the block no longer declares", () => {
+    expect(
+      editableBlockRender({
+        entry: variantEntry,
+        instance: { ...valid, variant: "gone" },
+      }),
+    ).toStrictEqual({ kind: "unknown-variant", variant: "gone" });
+  });
+
+  it("refuses a variant on a block that declares none at all", () => {
+    expect(
+      editableBlockRender({ entry, instance: { ...valid, variant: "grid" } }),
+    ).toStrictEqual({ kind: "unknown-variant", variant: "grid" });
+  });
+
+  it("checks the variant before the data, so both are reported once fixed", () => {
+    expect(
+      editableBlockRender({
+        entry: variantEntry,
+        instance: { data: {}, id: valid.id, type: valid.type, variant: "gone" },
+      }),
+    ).toStrictEqual({ kind: "unknown-variant", variant: "gone" });
   });
 
   it("refuses to run a component for a type nothing registers", () => {
@@ -97,6 +141,26 @@ describe("editableBlockRender", () => {
     expect(editableBlockRender({ entry, instance: broken }).kind).toBe(
       "invalid-data",
     );
+  });
+
+  it("badges a variant the block no longer declares, so the canvas says so", () => {
+    expect(
+      editableBlockIssue({
+        allowedBlocks: undefined,
+        entry: variantEntry,
+        instance: { ...valid, variant: "gone" },
+      }),
+    ).toBe("unknown-variant");
+  });
+
+  it("badges nothing once a declared variant is picked again", () => {
+    expect(
+      editableBlockIssue({
+        allowedBlocks: undefined,
+        entry: variantEntry,
+        instance: { ...valid, variant: "featured" },
+      }),
+    ).toBeNull();
   });
 
   it("goes back to the component the moment the data matches again", () => {

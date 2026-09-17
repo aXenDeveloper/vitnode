@@ -37,7 +37,7 @@ export interface VisualEditorContextValue {
   save: () => void;
   saveStatus: VisualEditorSaveStatus;
   setInsertTarget: (target: EditorInsertTarget | null) => void;
-  setPanel: (panel: EditorPanelMode) => void;
+  setPanel: () => void;
   setPreview: (preview: boolean) => void;
   state: VisualEditorState;
   unsafeZoneIds: readonly string[];

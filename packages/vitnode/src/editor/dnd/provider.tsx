@@ -34,12 +34,14 @@ import type { EditorDndContextValue } from "./context";
 import type {
   DropPlacement,
   EditorDragSource,
+  EditorDropAxis,
   EditorDropEdge,
   EditorDropIndicator,
   EditorDropRejection,
   ResolvedDrop,
 } from "./resolve-drop";
 
+import { isBlockAreaInstance } from "../../blocks/area";
 import { parseBlockId } from "../../blocks/namespace";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { toBlockCatalogEntry } from "../block-picker/catalog";
@@ -57,6 +59,9 @@ import {
   readDropTarget,
   resolveDrop,
 } from "./resolve-drop";
+
+const isRtl = (): boolean =>
+  typeof document !== "undefined" && document.dir === "rtl";
 
 type DragOverlayPreview =
   | { entry: BlockCatalogEntry; kind: "catalog-block" }
@@ -107,7 +112,7 @@ export const EditorDndProvider = ({
   const [dragging, setDragging] = useState<EditorDragSource | null>(null);
   const [dropIndicator, setDropIndicator] =
     useState<EditorDropIndicator | null>(null);
-  const pointerYRef = useRef<null | number>(null);
+  const pointerRef = useRef<null | { x: number; y: number }>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -120,12 +125,13 @@ export const EditorDndProvider = ({
   );
 
   const collisionDetection = useCallback<CollisionDetection>(args => {
-    pointerYRef.current = args.pointerCoordinates?.y ?? null;
+    pointerRef.current = args.pointerCoordinates ?? null;
 
     const pointer = pointerWithin(args);
 
     return preferInnerCollisions(
       pointer.length > 0 ? pointer : rectIntersection(args),
+      readDragSource(args.active.data.current),
     );
   }, []);
 
@@ -196,13 +202,35 @@ export const EditorDndProvider = ({
       };
       if (!over) return outside;
 
-      const edgeFor = (): EditorDropEdge | null => {
-        const pointerY = pointerYRef.current;
+      const axisOf = (container: EditorContainerRef): EditorDropAxis => {
+        if (container.areaId === null) return "vertical";
 
-        if (pointerY === null) return null;
+        const area = containerNodes(state, {
+          areaId: null,
+          zoneId: container.zoneId,
+        })?.find(node => node.id === container.areaId);
+
+        return area && isBlockAreaInstance(area) && area.layout.columns > 1
+          ? "horizontal"
+          : "vertical";
+      };
+
+      const unplaced = readDropTarget(over.data.current, null);
+      const axis = unplaced === null ? "vertical" : axisOf(unplaced.container);
+
+      const edgeFor = (): EditorDropEdge | null => {
+        const pointer = pointerRef.current;
+
+        if (pointer === null) return null;
         if (isContainerDroppableId(String(over.id))) return null;
 
-        return dropEdgeFor({ pointerY, rect: over.rect });
+        return dropEdgeFor({
+          axis,
+          pointerX: pointer.x,
+          pointerY: pointer.y,
+          rect: over.rect,
+          rtl: isRtl(),
+        });
       };
 
       const target = readDropTarget(over.data.current, edgeFor());
@@ -224,6 +252,7 @@ export const EditorDndProvider = ({
           resolved === null
             ? null
             : dropPlacement({
+                axis,
                 container: target.container,
                 nodeIds: nodes.map(node => node.id),
                 overNodeId: target.nodeId,
@@ -311,7 +340,7 @@ export const EditorDndProvider = ({
   const reset = () => {
     setDragging(null);
     setDropIndicator(null);
-    pointerYRef.current = null;
+    pointerRef.current = null;
   };
 
   const showIndicator = (active: Active, over: null | Over) => {

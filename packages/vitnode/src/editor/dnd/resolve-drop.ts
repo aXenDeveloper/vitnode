@@ -18,6 +18,7 @@ export const NODE_DRAGGABLE_PREFIX = "vitnode-editor-node:";
 
 export type EditorDragSource =
   | {
+      childTypes: readonly string[];
       container: EditorContainerRef;
       index: number;
       kind: "existing-area";
@@ -34,8 +35,11 @@ export type EditorDragSource =
 
 export type EditorDropEdge = "after" | "before";
 
+export type EditorDropAxis = "horizontal" | "vertical";
+
 export interface EditorDropIndicator {
   areaId: null | string;
+  axis: EditorDropAxis;
   edge: EditorDropEdge;
   nodeId: string;
   zoneId: string;
@@ -164,7 +168,19 @@ export const readDragSource = (data: unknown): EditorDragSource | null => {
   }
 
   if (kind === "existing-area") {
-    return { container, index, kind, nodeId };
+    const { childTypes } = record;
+
+    return {
+      childTypes: Array.isArray(childTypes)
+        ? childTypes.filter(
+            (entry): entry is string => typeof entry === "string",
+          )
+        : [],
+      container,
+      index,
+      kind,
+      nodeId,
+    };
   }
 
   return typeof type === "string" && type !== ""
@@ -201,34 +217,55 @@ export const readDropTarget = (
 };
 
 export const dropEdgeFor = ({
+  axis = "vertical",
+  pointerX,
   pointerY,
   rect,
+  rtl = false,
 }: {
+  axis?: EditorDropAxis;
+  pointerX?: number;
   pointerY: number;
-  rect: { height: number; top: number };
-}): EditorDropEdge =>
-  pointerY < rect.top + rect.height / 2 ? "before" : "after";
+  rect: { height: number; left: number; top: number; width: number };
+  rtl?: boolean;
+}): EditorDropEdge => {
+  if (axis === "vertical" || pointerX === undefined) {
+    return pointerY < rect.top + rect.height / 2 ? "before" : "after";
+  }
+
+  const beforeInline = pointerX < rect.left + rect.width / 2;
+
+  return beforeInline !== rtl ? "before" : "after";
+};
 
 export const preferInnerCollisions = <
   TCollision extends { id: number | string },
 >(
   collisions: readonly TCollision[],
+  source?: EditorDragSource | null,
 ): TCollision[] => {
   const refs = collisions.map(
     collision =>
       [collision, nodeRefFromDraggableId(String(collision.id))] as const,
   );
 
-  const inArea = refs.filter(([, ref]) => ref !== null && ref.areaId !== null);
-  if (inArea.length > 0) return inArea.map(([collision]) => collision);
+  if (source?.kind !== "existing-area") {
+    const inArea = refs.filter(
+      ([, ref]) => ref !== null && ref.areaId !== null,
+    );
+    if (inArea.length > 0) return inArea.map(([collision]) => collision);
 
-  const areas = collisions.filter(collision =>
-    isAreaDroppableId(String(collision.id)),
-  );
-  if (areas.length > 0) return areas;
+    const areas = collisions.filter(collision =>
+      isAreaDroppableId(String(collision.id)),
+    );
+    if (areas.length > 0) return areas;
+  }
 
-  const atRoot = refs.filter(([, ref]) => ref !== null);
+  const atRoot = refs.filter(([, ref]) => ref !== null && ref.areaId === null);
   if (atRoot.length > 0) return atRoot.map(([collision]) => collision);
+
+  const anyNode = refs.filter(([, ref]) => ref !== null);
+  if (anyNode.length > 0) return anyNode.map(([collision]) => collision);
 
   return [...collisions];
 };
@@ -253,7 +290,14 @@ export const dropRejection = ({
   if (!target) return null;
 
   if (source.kind === "existing-area") {
-    return target.container.areaId === null ? null : "nested-area";
+    if (target.container.areaId !== null) return "nested-area";
+
+    return target.container.zoneId === source.container.zoneId ||
+      source.childTypes.every(type =>
+        isBlockAllowed(allowedBlocks ?? BLOCK_WILDCARD, type),
+      )
+      ? null
+      : "not-allowed";
   }
 
   return isBlockAllowed(allowedBlocks ?? BLOCK_WILDCARD, source.type)
@@ -316,11 +360,13 @@ export const resolveDrop = ({
 };
 
 export const dropPlacement = ({
+  axis = "vertical",
   container,
   nodeIds,
   overNodeId,
   resolved,
 }: {
+  axis?: EditorDropAxis;
   container: EditorContainerRef;
   nodeIds: readonly string[];
   overNodeId: null | string;
@@ -334,6 +380,7 @@ export const dropPlacement = ({
 
   const at = (index: number, edge: EditorDropEdge): EditorDropIndicator => ({
     areaId: container.areaId,
+    axis,
     edge,
     nodeId: remaining[index],
     zoneId: container.zoneId,

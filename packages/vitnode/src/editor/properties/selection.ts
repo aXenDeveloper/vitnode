@@ -16,11 +16,14 @@ export type EditorSelectionView =
   | { index: number; instance: AnyBlockInstance; kind: "block" };
 
 export interface VariantControlSpec {
+  clearable: boolean;
   options: readonly AnyBlockVariantDefinition[];
   unknown: null | string;
   value: string | undefined;
   visible: boolean;
 }
+
+export const VARIANT_CLEAR_VALUE = "vitnode:default-variant";
 
 export const selectedNode = (
   state: VisualEditorState,
@@ -41,11 +44,17 @@ export const variantControlSpec = (
   const options = blockVariants(definition);
   const resolution = resolveBlockVariant(definition, variant);
   const unknown = resolution.kind === "unknown" ? resolution.variant : null;
+  const clearable =
+    unknown !== null || (options.length > 1 && variant !== undefined);
 
   return {
+    clearable,
     options,
     unknown,
     value: resolution.kind === "resolved" ? resolution.variant : undefined,
-    visible: options.length > 1 || (options.length > 0 && unknown !== null),
+    visible: clearable || options.length > 1,
   };
 };
+
+export const variantFromControlValue = (value: string): string | undefined =>
+  value === VARIANT_CLEAR_VALUE ? undefined : value;

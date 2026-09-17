@@ -909,7 +909,8 @@
           "title": "This zone holds content the editor cannot read",
           "description": "These entries are stored here but are not content the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
           "remove": "Remove invalid entry"
-        }
+        },
+        "full": "This zone already holds as many blocks as it can."
       },
       "block": {
         "select": "Select the {name} block",
@@ -919,7 +920,8 @@
         "issue": {
           "unknown_type": "No block is installed for this type.",
           "not_allowed": "This zone does not allow this block.",
-          "invalid_data": "The stored data does not match the fields this block declares."
+          "invalid_data": "The stored data does not match the fields this block declares.",
+          "unknown_variant": "The stored variant is not one this block offers."
         },
         "invalid": {
           "title": "Block data needs fixing",
@@ -943,7 +945,8 @@
         "cancelled": "Dragging {name} was cancelled. Nothing changed.",
         "area_over": "{name} is over an area in the {zone} zone, position {position} of {total}.",
         "area_dropped": "{name} was dropped into an area in the {zone} zone, position {position} of {total}.",
-        "area_rejected": "An area cannot hold another area."
+        "area_rejected": "An area cannot hold another area.",
+        "area_full": "The area is full, so {name} cannot go in it."
       },
       "picker": {
         "search": "Search blocks…",
@@ -987,7 +990,10 @@
       "variant": {
         "label": "Variant",
         "hint": "How this block is presented. It changes the look, never the content.",
-        "unknown": "The stored variant “{variant}” is not one this block offers any more, so it cannot be rendered. Pick a variant below, or remove the block."
+        "unknown": "The stored variant “{variant}” is not one this block offers any more, so it cannot be rendered. Pick a variant below, or remove the block.",
+        "placeholder": "This block is stored with the variant “{variant}”, which it no longer offers, so it is not rendered here. Pick a variant in the properties panel, or remove the block.",
+        "clear": "Use the block's default",
+        "clear_hint": "Stores no variant, so this block follows whatever default it declares."
       },
       "area": {
         "name": "Area",
@@ -1031,7 +1037,8 @@
           "desc": "{count, plural, one {# block sits inside this area} other {# blocks sit inside this area}}. Deleting the area deletes them with it. Ungroup instead to keep them on the page.",
           "confirm": "Delete area and blocks",
           "ungroup": "Ungroup, keep blocks"
-        }
+        },
+        "full": "This area already holds as many blocks as it can."
       }
     }
   },

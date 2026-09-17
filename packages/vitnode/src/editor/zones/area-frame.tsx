@@ -69,6 +69,7 @@ export const EditableAreaFrame = ({
     zoneId,
   };
   const { dragging, handleProps, setNodeRef, style } = useSortableNode({
+    childTypes: area.children.map(child => child.type),
     index,
     nodeRef,
     type: undefined,
@@ -170,7 +171,6 @@ export const EditableAreaFrame = ({
             className={actionClassName}
             onClick={() => {
               select();
-              setPanel("area");
             }}
             type="button"
           >
@@ -275,7 +275,7 @@ export const EditableAreaFrame = ({
             <Button
               onClick={() => {
                 setInsertTarget({ areaId: area.id, index: 0, zoneId });
-                setPanel("blocks");
+                setPanel();
               }}
               size="sm"
               variant="outline"

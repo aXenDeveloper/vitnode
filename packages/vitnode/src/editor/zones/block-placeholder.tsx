@@ -46,3 +46,20 @@ export const InvalidBlock = ({
     </Placeholder>
   );
 };
+
+export const UnknownVariantBlock = ({
+  variant,
+}: {
+  variant: string;
+}): ReactElement => {
+  const t = useTranslations("core.editor");
+
+  return (
+    <Placeholder>
+      <p className="text-sm font-medium text-pretty">{t("variant.label")}</p>
+      <p className="text-xs leading-relaxed text-pretty">
+        {t("variant.placeholder", { variant })}
+      </p>
+    </Placeholder>
+  );
+};

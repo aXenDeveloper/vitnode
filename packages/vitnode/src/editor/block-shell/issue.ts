@@ -6,9 +6,10 @@ import type {
 
 import { isBlockAllowed } from "../../blocks/registry";
 import { blockDataShapeIssue } from "../../blocks/shape";
+import { resolveBlockVariant } from "../../blocks/variant";
 
 export type EditableBlockIssue =
-  "invalid-data" | "not-allowed" | "unknown-type";
+  "invalid-data" | "not-allowed" | "unknown-type" | "unknown-variant";
 
 export interface EditableBlockIssueArgs {
   allowedBlocks: BlockAllowedSpec | undefined;
@@ -28,6 +29,12 @@ export const editableBlockIssue = ({
     !isBlockAllowed(allowedBlocks, instance.type)
   ) {
     return "not-allowed";
+  }
+
+  if (
+    resolveBlockVariant(entry.definition, instance.variant).kind === "unknown"
+  ) {
+    return "unknown-variant";
   }
 
   return blockDataShapeIssue(entry.definition, instance.data) === null

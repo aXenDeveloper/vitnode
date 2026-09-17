@@ -10,7 +10,12 @@ import type { EditorNodeRef, VisualEditorState } from "../state/types";
 
 import { defineBlock } from "../../blocks/define";
 import { field } from "../../content/fields";
-import { selectedNode, variantControlSpec } from "./selection";
+import {
+  selectedNode,
+  VARIANT_CLEAR_VALUE,
+  variantControlSpec,
+  variantFromControlValue,
+} from "./selection";
 
 const block = (id: string): AnyBlockInstance => ({
   data: { title: id },
@@ -129,8 +134,32 @@ const plain = defineBlock({
 });
 
 describe("variantControlSpec", () => {
+  it("can always clear a stored variant the block no longer declares", () => {
+    expect(variantControlSpec(withVariants, "carousel").clearable).toBe(true);
+  });
+
+  it("offers a way out for a block that dropped its variants entirely", () => {
+    expect(variantControlSpec(plain, "carousel")).toStrictEqual({
+      clearable: true,
+      options: [],
+      unknown: "carousel",
+      value: undefined,
+      visible: true,
+    });
+  });
+
+  it("maps the clear choice onto an absent variant, not a string", () => {
+    expect(variantFromControlValue(VARIANT_CLEAR_VALUE)).toBeUndefined();
+    expect(variantFromControlValue("grid")).toBe("grid");
+  });
+
+  it("does not offer to clear what was never set", () => {
+    expect(variantControlSpec(withVariants, undefined).clearable).toBe(false);
+  });
+
   it("offers the declared variants and falls back to the default one", () => {
     expect(variantControlSpec(withVariants, undefined)).toStrictEqual({
+      clearable: false,
       options: withVariants.variants,
       unknown: null,
       value: "grid",
@@ -165,13 +194,14 @@ describe("variantControlSpec", () => {
     });
   });
 
-  it("shows nothing at all for a block that declares no variants", () => {
+  it("shows nothing for a block that declares no variants and stores none", () => {
     expect(variantControlSpec(plain, undefined)).toStrictEqual({
+      clearable: false,
       options: [],
       unknown: null,
       value: undefined,
       visible: false,
     });
-    expect(variantControlSpec(plain, "grid").visible).toBe(false);
+    expect(variantControlSpec(plain, "grid").visible).toBe(true);
   });
 });

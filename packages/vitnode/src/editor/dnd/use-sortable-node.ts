@@ -16,10 +16,12 @@ export interface SortableNode {
 }
 
 export const useSortableNode = ({
+  childTypes,
   index,
   nodeRef,
   type,
 }: {
+  childTypes?: readonly string[];
   index: number;
   nodeRef: EditorNodeRef;
   type: string | undefined;
@@ -37,6 +39,7 @@ export const useSortableNode = ({
   } = useSortable({
     data: {
       areaId: nodeRef.areaId,
+      childTypes,
       index,
       kind: nodeRef.kind === "area" ? "existing-area" : "existing-block",
       nodeId: nodeRef.nodeId,
