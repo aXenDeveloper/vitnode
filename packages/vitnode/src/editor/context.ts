@@ -2,16 +2,23 @@ import { createContext, use } from "react";
 
 import type { VisualEditorAction, VisualEditorState } from "./state/types";
 
-export type EditorPanelMode = "blocks" | "properties";
+export type EditorPanelMode = "area" | "blocks" | "properties";
 
 export interface EditorInsertTarget {
+  areaId: null | string;
   index: number;
   zoneId: string;
 }
 
 export interface EditorInsertRequest {
+  areaId?: null | string;
   index?: number;
   type: string;
+  zoneId?: string;
+}
+
+export interface EditorInsertAreaRequest {
+  index?: number;
   zoneId?: string;
 }
 
@@ -22,6 +29,7 @@ export interface VisualEditorContextValue {
   discard: () => void;
   dispatch: (action: VisualEditorAction) => void;
   exit: () => void;
+  insertArea: (request?: EditorInsertAreaRequest) => void;
   insertBlock: (request: EditorInsertRequest) => void;
   insertTarget: EditorInsertTarget | null;
   panel: EditorPanelMode;

@@ -10,6 +10,7 @@ export type {
   VisualEditorSaveResult,
 } from "./adapter/types";
 export type {
+  EditorInsertAreaRequest,
   EditorInsertRequest,
   EditorInsertTarget,
   EditorPanelMode,
