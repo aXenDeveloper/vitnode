@@ -2,15 +2,22 @@ import type { JSX, ReactElement } from "react";
 
 import { createContext, use } from "react";
 
-import type { BlockAllowedSpec, BlockRegistry } from "./types";
+import type {
+  BlockAllowedSpec,
+  BlockRegistry,
+  BlockRenderFallback,
+  BlockValidationMode,
+} from "./types";
 
 export interface ContentZoneMount {
   allowedBlocks: BlockAllowedSpec | undefined;
   as: keyof JSX.IntrinsicElements | undefined;
   blocks: null | readonly unknown[] | undefined;
   className: string | undefined;
+  fallback: BlockRenderFallback | undefined;
   id: string;
   registry: BlockRegistry | undefined;
+  validate: BlockValidationMode | undefined;
 }
 
 export interface ContentEditRuntime {

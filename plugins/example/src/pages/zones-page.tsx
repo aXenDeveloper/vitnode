@@ -1,4 +1,3 @@
-import type { AnyBlockInstance } from "@vitnode/core/blocks";
 import type {
   VisualEditorAdapter,
   VisualEditorSaveInput,
@@ -18,75 +17,55 @@ import {
   definePluginRoute,
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
-import { useMemo, useState } from "react";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import type { ExampleZonesRecord } from "@/content/zones-layout-fields";
+
 import { blocks as exampleBlocks } from "@/blocks";
+import { CONFIG_PLUGIN } from "@/const";
 import {
   PAGE_BLOCKS_ALLOWED,
   PAGE_SIDEBAR_BLOCKS_ALLOWED,
 } from "@/content/page-blocks";
+import {
+  DEFAULT_EXAMPLE_ZONES_LAYOUT,
+  EXAMPLE_ZONE_IDS,
+  fieldsToZones,
+  zonesToFields,
+} from "@/content/zones-layout-fields";
 
 const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks]);
 
-interface SettingsZones {
-  afterProfile: AnyBlockInstance[];
-  beforeFooter: AnyBlockInstance[];
-  beforeProfile: AnyBlockInstance[];
-  sidebar: AnyBlockInstance[];
+interface ZonesLayout {
+  source: "defaults" | "stored";
+  updatedAt: null | string;
+  zones: ExampleZonesRecord;
 }
 
-export const route = definePluginRoute<SettingsZones>({
-  load: (): SettingsZones => ({
-    afterProfile: [
-      {
-        data: {
-          description: "Four zones sit on this page. Two of them wrap nothing.",
-          href: "/docs/dev/blocks/content-zones",
-          label: "Read the guide",
-          title: "Content Zones",
-        },
-        id: "01JEXAMPLEZONESAFTERCTA01",
-        type: "core:cta",
-      },
-    ],
+const shippedDefaults = (): ZonesLayout => ({
+  source: "defaults",
+  updatedAt: null,
+  zones: fieldsToZones(DEFAULT_EXAMPLE_ZONES_LAYOUT),
+});
 
-    beforeFooter: [],
+export const route = definePluginRoute<ZonesLayout>({
+  load: async (): Promise<ZonesLayout> => {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "get",
+      module: "zones",
+      path: "/layout",
+    });
 
-    beforeProfile: [
-      {
-        data: {
-          body: "Everything above and below the profile form is block content an editor will be able to arrange. The form itself is application code and stays locked.",
-          title: "This notice lives in a zone",
-          tone: "info",
-        },
-        id: "01JEXAMPLEZONESBEFORE0001",
-        type: "example:callout",
-      },
-      {
-        data: {
-          body: "This zone holds two blocks, rendered in stored order. It was given no wrapper, so neither of them sits inside an element the zone added.",
-          heading: "Two blocks, one zone",
-          width: "prose",
-        },
-        id: "01JEXAMPLEZONESBEFORE0002",
-        type: "core:text",
-      },
-    ],
+    if (!response.ok) return shippedDefaults();
 
-    sidebar: [
-      {
-        data: {
-          body: "This zone allows core:text and nothing else, while the zones around the form take the same allowlist the page content type declares.",
-          heading: "A narrower zone",
-          width: "prose",
-        },
-        id: "01JEXAMPLEZONESSIDEBAR001",
-        type: "core:text",
-      },
-    ],
-  }),
+    const { fields, source, updatedAt } = await response.json();
+
+    return { source, updatedAt, zones: fieldsToZones(fields) };
+  },
 
   head: () => ({ title: "Content zones" }),
 });
@@ -150,11 +129,11 @@ const EDIT_MODE_CHECKS = [
   "A catalog entry is both draggable and clickable. Drag one between two blocks and an insertion line shows exactly where it will land; click one instead and it goes to the targeted zone, or to the first zone that accepts it.",
   "Target settings:sidebar and the catalog offers core:text alone; clear the target and core:cta, core:hero and example:callout come back.",
   "Dropping onto a block inserts before or after it, by which half of it the pointer is over. Nothing ever lands inside a block.",
-  "Drag example:callout over settings:sidebar: the zone turns red and the drop is refused, from the same allowlist the catalog filters by.",
+  "Drag example:callout over settings:sidebar: the zone turns red and the drop is refused, from the same allowlist the catalog filters by - and the API refuses it again from the field's own allowlist.",
   "Select a block and the same sidebar switches to Properties. Back to Available Blocks clears the selection and returns to the catalog.",
   "Every block sits in an inert container, so a block's own links and buttons cannot be clicked or tabbed to. Preview gives them back and collapses the sidebar to a slim bar with Back to editing and Finish editing.",
   "The profile form is application code: no overlay, no drag handle, and its input still takes focus while edit mode is on.",
-  "Save runs this page's adapter from the sidebar footer: the status line above the buttons changes, the editor toasts, and the exact payload it was handed appears at the bottom of the page.",
+  "Save runs this page's adapter from the sidebar footer, which writes the layout to the API. Reload the page and the zones come back exactly as you left them.",
 ];
 
 const canEditPage = (): boolean => process.env.NODE_ENV !== "production";
@@ -185,6 +164,22 @@ const Checklist = ({
   </section>
 );
 
+const LayoutSource = ({ source, updatedAt }: Omit<ZonesLayout, "zones">) => (
+  <p
+    className="text-muted-foreground text-sm leading-relaxed text-pretty"
+    data-testid="zones-layout-source"
+    data-zones-source={source}
+  >
+    {source === "stored"
+      ? `Showing the layout stored on the server${
+          updatedAt
+            ? `, last saved ${new Date(updatedAt).toLocaleString()}`
+            : ""
+        }.`
+      : "Showing the shipped defaults - nothing has been saved to the server yet."}
+  </p>
+);
+
 const SavedPayload = ({ input }: { input: VisualEditorSaveInput }) => (
   <details className="border-border rounded-lg border p-4 text-sm">
     <summary className="cursor-pointer font-semibold">
@@ -196,8 +191,10 @@ const SavedPayload = ({ input }: { input: VisualEditorSaveInput }) => (
     <div className="flex flex-col gap-2 pt-3">
       <p className="text-muted-foreground leading-relaxed text-pretty">
         Exactly what this page&apos;s <code>VisualEditorAdapter.save</code> was
-        handed. The playground keeps it in memory and writes nothing anywhere,
-        so a reload starts over.
+        handed. The adapter maps each zone id onto the matching field of the{" "}
+        <code>example.zones-layout</code> record and sends it to the API, which
+        re-validates every block against that field&apos;s own allowlist before
+        storing it.
       </p>
       <pre className="bg-muted/40 overflow-x-auto rounded-md p-3 text-xs leading-relaxed">
         {JSON.stringify(input, null, 2)}
@@ -206,22 +203,42 @@ const SavedPayload = ({ input }: { input: VisualEditorSaveInput }) => (
   </details>
 );
 
-const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
+const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
   const [editing, setEditing] = useState(false);
   const [lastSave, setLastSave] = useState<null | VisualEditorSaveInput>(null);
+  const [stored, setStored] = useState<Omit<ZonesLayout, "zones">>({
+    source: loaderData.source,
+    updatedAt: loaderData.updatedAt,
+  });
 
-  const adapter = useMemo<VisualEditorAdapter>(
-    () => ({
-      save: async input => {
-        await new Promise(resolve => {
-          setTimeout(resolve, 400);
-        });
+  const save = useCallback(
+    async (input: VisualEditorSaveInput) => {
+      const response = await fetcher({
+        plugin: CONFIG_PLUGIN.pluginId,
+        args: {
+          body: zonesToFields(
+            input.zones,
+            zonesToFields(loaderData.zones, DEFAULT_EXAMPLE_ZONES_LAYOUT),
+          ),
+        },
+        method: "put",
+        module: "admin/zones",
+        path: "/layout",
+      });
 
-        setLastSave(input);
-      },
-    }),
-    [],
+      if (!response.ok) {
+        throw new Error(`The zones layout route answered ${response.status}.`);
+      }
+
+      const { source, updatedAt } = await response.json();
+
+      setStored({ source, updatedAt });
+      setLastSave(input);
+    },
+    [loaderData.zones],
   );
+
+  const adapter = useMemo<VisualEditorAdapter>(() => ({ save }), [save]);
 
   return (
     <ContentEditorRuntime
@@ -241,6 +258,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
               A system page with four content zones. Blocks come from the route
               loader, so the zones themselves make no request.
             </p>
+            <LayoutSource {...stored} />
           </div>
 
           {canEditPage() && !editing ? (
@@ -272,8 +290,8 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
           <div className="flex flex-1 flex-col gap-6">
             <ContentZone
               allowedBlocks={PAGE_BLOCKS_ALLOWED}
-              blocks={loaderData.beforeProfile}
-              id="settings:before-profile"
+              blocks={loaderData.zones[EXAMPLE_ZONE_IDS.beforeProfile]}
+              id={EXAMPLE_ZONE_IDS.beforeProfile}
               registry={blocksRegistry}
             />
 
@@ -281,8 +299,8 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
 
             <ContentZone
               allowedBlocks={PAGE_BLOCKS_ALLOWED}
-              blocks={loaderData.afterProfile}
-              id="settings:after-profile"
+              blocks={loaderData.zones[EXAMPLE_ZONE_IDS.afterProfile]}
+              id={EXAMPLE_ZONE_IDS.afterProfile}
               registry={blocksRegistry}
             />
           </div>
@@ -290,17 +308,17 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<SettingsZones>) => {
           <ContentZone
             allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
             as="aside"
-            blocks={loaderData.sidebar}
+            blocks={loaderData.zones[EXAMPLE_ZONE_IDS.sidebar]}
             className="border-border w-full rounded-lg border p-4 lg:w-64"
-            id="settings:sidebar"
+            id={EXAMPLE_ZONE_IDS.sidebar}
             registry={blocksRegistry}
           />
         </div>
 
         <ContentZone
           allowedBlocks={PAGE_BLOCKS_ALLOWED}
-          blocks={loaderData.beforeFooter}
-          id="settings:before-footer"
+          blocks={loaderData.zones[EXAMPLE_ZONE_IDS.beforeFooter]}
+          id={EXAMPLE_ZONE_IDS.beforeFooter}
           registry={blocksRegistry}
         />
 

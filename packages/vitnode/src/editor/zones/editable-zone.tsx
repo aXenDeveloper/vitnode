@@ -8,6 +8,7 @@ import { useTranslations } from "use-intl";
 import { Button } from "@/components/ui/button";
 
 import type { ContentZoneMount } from "../../blocks/edit-context";
+import type { AnyBlockInstance, RegisteredBlock } from "../../blocks/types";
 import type { EditorZoneMount } from "../state/types";
 import type { ZoneDropState } from "./drop-state";
 
@@ -19,8 +20,9 @@ import { EditableBlockShell } from "../block-shell/block-shell";
 import { useVisualEditor } from "../context";
 import { useZoneDroppable } from "../dnd/use-zone-droppable";
 import { ZoneSortable } from "../dnd/zone-sortable";
+import { InvalidBlock, UnknownBlock } from "./block-placeholder";
+import { editableBlockRender } from "./block-render";
 import { zoneDropState } from "./drop-state";
-import { UnknownBlock } from "./unknown-block";
 
 const ZONE_CLASSES = {
   idle: "bg-muted/20 outline-border/60 hover:outline-border",
@@ -42,6 +44,40 @@ interface IncomingZone {
   signature: string;
   zone: EditorZoneMount;
 }
+
+interface EditableBlockBodyProps {
+  entry: RegisteredBlock | undefined;
+  index: number;
+  instance: AnyBlockInstance;
+}
+
+const EditableBlockBody = ({
+  entry,
+  index,
+  instance,
+}: EditableBlockBodyProps): ReactElement => {
+  const render = editableBlockRender({ entry, instance });
+
+  if (render.kind === "unknown-type") {
+    return <UnknownBlock type={instance.type} />;
+  }
+
+  if (render.kind === "invalid-data") {
+    return (
+      <InvalidBlock
+        detail={render.detail}
+        name={entry?.definition.name ?? instance.type}
+      />
+    );
+  }
+
+  return createElement(render.entry.definition.component, {
+    blockId: instance.id,
+    data: instance.data,
+    index,
+    type: instance.type,
+  });
+};
 
 export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
   const t = useTranslations("core.editor");
@@ -92,7 +128,9 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
     const rendered = createElement(ContentRenderer, {
       allowed: mount.allowedBlocks,
       blocks,
+      fallback: mount.fallback,
       registry: mount.registry,
+      validate: mount.validate,
     });
 
     if (mount.as === undefined && mount.className === undefined) {
@@ -187,27 +225,20 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
       </div>
     ) : (
       <ZoneSortable blockIds={blocks.map(instance => instance.id)}>
-        {blocks.map((instance, index) => {
-          const entry = registry?.get(instance.type);
-
-          return (
-            <EditableBlockShell
+        {blocks.map((instance, index) => (
+          <EditableBlockShell
+            index={index}
+            instance={instance}
+            key={instance.id}
+            zoneId={mount.id}
+          >
+            <EditableBlockBody
+              entry={registry?.get(instance.type)}
               index={index}
               instance={instance}
-              key={instance.id}
-              zoneId={mount.id}
-            >
-              {entry
-                ? createElement(entry.definition.component, {
-                    blockId: instance.id,
-                    data: instance.data,
-                    index,
-                    type: instance.type,
-                  })
-                : createElement(UnknownBlock, { type: instance.type })}
-            </EditableBlockShell>
-          );
-        })}
+            />
+          </EditableBlockShell>
+        ))}
       </ZoneSortable>
     );
 

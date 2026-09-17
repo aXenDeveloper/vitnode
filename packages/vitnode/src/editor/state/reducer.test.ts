@@ -4,6 +4,7 @@ import type { AnyBlockInstance } from "../../blocks/types";
 import type { EditorZoneMount, VisualEditorState } from "./types";
 
 import { createBlockInstance } from "../../blocks/instance";
+import { buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
   findBlock,
@@ -329,7 +330,10 @@ describe("visualEditorReducer", () => {
 
     expect(changedZoneIds(state)).toStrictEqual(["main"]);
 
-    const saved = visualEditorReducer(state, { type: "saved" });
+    const saved = visualEditorReducer(state, {
+      snapshot: buildSaveInput(state).zones,
+      type: "saved",
+    });
 
     expect(isVisualEditorDirty(saved)).toBe(false);
     expect(saved.zones.main.initial).toStrictEqual([a, b]);
@@ -389,5 +393,126 @@ describe("visualEditorReducer", () => {
     expect(
       visualEditorReducer(state, { blockId: "MISSING", type: "select" }),
     ).toBe(state);
+  });
+});
+
+describe("the baseline a saved snapshot writes", () => {
+  it("no edit during save: goes clean against the snapshot it sent", () => {
+    const [a, b] = [block("a"), block("b")];
+    const edited = visualEditorReducer(mounted(mount("main", [a])), {
+      index: 1,
+      instance: b,
+      type: "insert",
+      zoneId: "main",
+    });
+    const snapshot = buildSaveInput(edited).zones;
+
+    const saved = visualEditorReducer(edited, { snapshot, type: "saved" });
+
+    expect(saved.zones.main.initial).toBe(edited.zones.main.blocks);
+    expect(ids(saved, "main")).toStrictEqual([a.id, b.id]);
+    expect(isVisualEditorDirty(saved)).toBe(false);
+    expect(changedZoneIds(saved)).toStrictEqual([]);
+  });
+
+  it("edit during save: stays dirty, because the server never saw the late block", () => {
+    const [a, b, late] = [block("a"), block("b"), block("c")];
+    const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      index: 1,
+      instance: b,
+      type: "insert",
+      zoneId: "main",
+    });
+    const snapshot = buildSaveInput(sent).zones;
+    const current = visualEditorReducer(sent, {
+      index: 2,
+      instance: late,
+      type: "insert",
+      zoneId: "main",
+    });
+
+    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+
+    expect(saved.zones.main.initial).toStrictEqual([a, b]);
+    expect(ids(saved, "main")).toStrictEqual([a.id, b.id, late.id]);
+    expect(isVisualEditorDirty(saved)).toBe(true);
+    expect(changedZoneIds(saved)).toStrictEqual(["main"]);
+
+    const settled = visualEditorReducer(saved, {
+      snapshot: buildSaveInput(saved).zones,
+      type: "saved",
+    });
+
+    expect(isVisualEditorDirty(settled)).toBe(false);
+  });
+
+  it("names only the zones that still differ after a partial save", () => {
+    const [a, b, c, d] = [block("a"), block("b"), block("c"), block("d")];
+    const sent = visualEditorReducer(
+      mounted(mount("main", [a]), mount("aside", [c])),
+      { index: 1, instance: b, type: "insert", zoneId: "main" },
+    );
+    const snapshot = buildSaveInput(sent).zones;
+    const current = visualEditorReducer(sent, {
+      index: 1,
+      instance: d,
+      type: "insert",
+      zoneId: "aside",
+    });
+
+    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+
+    expect(changedZoneIds(saved)).toStrictEqual(["aside"]);
+    expect(saved.zones.main.initial).toStrictEqual([a, b]);
+    expect(saved.zones.aside.initial).toStrictEqual([c]);
+  });
+
+  it("leaves a zone that mounted after the save started on its own baseline", () => {
+    const [a, c, d] = [block("a"), block("c"), block("d")];
+    const sent = mounted(mount("main", [a]));
+    const snapshot = buildSaveInput(sent).zones;
+    const current = visualEditorReducer(
+      visualEditorReducer(sent, { type: "mount", zone: mount("aside", [c]) }),
+      { index: 1, instance: d, type: "insert", zoneId: "aside" },
+    );
+
+    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+
+    expect(Object.keys(snapshot)).toStrictEqual(["main"]);
+    expect(saved.zones.aside.initial).toStrictEqual([c]);
+    expect(changedZoneIds(saved)).toStrictEqual(["aside"]);
+  });
+
+  it("resurrects nothing for a zone the snapshot has and the page no longer does", () => {
+    const [a, c] = [block("a"), block("c")];
+    const snapshot = buildSaveInput(
+      mounted(mount("main", [a]), mount("aside", [c])),
+    ).zones;
+    const current = mounted(mount("main", [a]), mount("sidebar", []));
+
+    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+
+    expect(Object.keys(saved.zones)).toStrictEqual(["main", "sidebar"]);
+    expect(saved.zones.sidebar.blocks).toStrictEqual([]);
+    expect(saved.zones.sidebar.initial).toStrictEqual([]);
+    expect(isVisualEditorDirty(saved)).toBe(false);
+  });
+
+  it("keeps a page dirty when a discard lands before the save it raced", () => {
+    const [a, b] = [block("a"), block("b")];
+    const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      index: 1,
+      instance: b,
+      type: "insert",
+      zoneId: "main",
+    });
+    const snapshot = buildSaveInput(sent).zones;
+    const discarded = visualEditorReducer(sent, { type: "discard" });
+
+    const saved = visualEditorReducer(discarded, { snapshot, type: "saved" });
+
+    expect(ids(saved, "main")).toStrictEqual([a.id]);
+    expect(saved.zones.main.initial).toStrictEqual([a, b]);
+    expect(isVisualEditorDirty(saved)).toBe(true);
   });
 });

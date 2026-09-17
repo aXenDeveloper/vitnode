@@ -7,6 +7,7 @@ import {
   catalogDraggableId,
   catalogTypeFromDraggableId,
   dropEdgeFor,
+  dropPlacement,
   preferBlockCollisions,
   readDragSource,
   readDropTarget,
@@ -601,6 +602,213 @@ describe("resolveDrop, from the catalog", () => {
       toIndex: 1,
       toZoneId: "page:main",
       type: "example:callout",
+    });
+  });
+});
+
+const ids = ["block-a", "block-b", "block-c"];
+
+const placeFor = ({
+  allowedBlocks = "*",
+  blockIds = ids,
+  source: dragged,
+  target,
+  targetBlockCount = blockIds.length,
+}: {
+  allowedBlocks?: "*" | readonly string[];
+  blockIds?: readonly string[];
+  source: Parameters<typeof resolveDrop>[0]["source"];
+  target: EditorDropTarget;
+  targetBlockCount?: number;
+}) => {
+  const resolved = resolveDrop({
+    allowedBlocks,
+    source: dragged,
+    target,
+    targetBlockCount,
+  });
+  if (resolved === null) return null;
+
+  return dropPlacement({
+    blockIds,
+    overBlockId: target.blockId,
+    resolved,
+  });
+};
+
+describe("dropPlacement, from the catalog", () => {
+  it("keeps the pointer's own edge on the block it is over", () => {
+    expect(
+      placeFor({
+        source: fromCatalog("core:text"),
+        target: onBlock({ edge: "before", index: 1 }),
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-b", edge: "before" },
+      position: 2,
+      total: 4,
+    });
+
+    expect(
+      placeFor({
+        source: fromCatalog("core:text"),
+        target: onBlock({ edge: "after", index: 1 }),
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-b", edge: "after" },
+      position: 3,
+      total: 4,
+    });
+  });
+
+  it("points after the last block when the zone itself is the target", () => {
+    expect(
+      placeFor({ source: fromCatalog(), target: onZone("page:main") }),
+    ).toEqual({
+      indicator: { blockId: "block-c", edge: "after" },
+      position: 4,
+      total: 4,
+    });
+  });
+
+  it("shows no line in an empty zone, because there is nothing to draw it against", () => {
+    expect(
+      placeFor({
+        blockIds: [],
+        source: fromCatalog(),
+        target: onZone("page:aside"),
+        targetBlockCount: 0,
+      }),
+    ).toEqual({ indicator: null, position: 1, total: 1 });
+  });
+});
+
+describe("dropPlacement, moving a block", () => {
+  it("counts the landing against the list the block was removed from", () => {
+    expect(
+      placeFor({
+        source: source({ index: 0 }),
+        target: onBlock({ blockId: "block-c", edge: "after", index: 2 }),
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-c", edge: "after" },
+      position: 3,
+      total: 3,
+    });
+  });
+
+  it("never draws the line against the block being dragged", () => {
+    const placement = placeFor({
+      source: source({ blockId: "block-b", index: 1 }),
+      target: onBlock({ blockId: "block-c", edge: "after", index: 2 }),
+    });
+
+    expect(placement?.indicator).toEqual({
+      blockId: "block-c",
+      edge: "after",
+    });
+  });
+
+  it("places a keyboard drag, which carries no pointer edge at all", () => {
+    expect(
+      placeFor({
+        source: source({ index: 0 }),
+        target: onBlock({ blockId: "block-c", edge: null, index: 2 }),
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-c", edge: "after" },
+      position: 3,
+      total: 3,
+    });
+
+    expect(
+      placeFor({
+        source: source({ blockId: "block-c", index: 2 }),
+        target: onBlock({ blockId: "block-a", edge: null, index: 0 }),
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-a", edge: "before" },
+      position: 1,
+      total: 3,
+    });
+  });
+
+  it("shows nothing at all when the drop would change nothing", () => {
+    expect(
+      placeFor({
+        source: source({ index: 1 }),
+        target: onBlock({ blockId: "block-b", edge: "after", index: 0 }),
+      }),
+    ).toBeNull();
+  });
+
+  it("shows nothing at all when the zone refuses the block", () => {
+    expect(
+      placeFor({
+        allowedBlocks: ["core:*"],
+        source: source({ type: "example:callout" }),
+        target: onBlock({ blockId: "block-b", edge: "before", index: 1 }),
+      }),
+    ).toBeNull();
+  });
+
+  it("makes room for a block arriving from another zone", () => {
+    expect(
+      placeFor({
+        blockIds: ["block-x", "block-y"],
+        source: source({ index: 0 }),
+        target: onBlock({
+          blockId: "block-y",
+          edge: "after",
+          index: 1,
+          zoneId: "page:aside",
+        }),
+        targetBlockCount: 2,
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-y", edge: "after" },
+      position: 3,
+      total: 3,
+    });
+  });
+});
+
+describe("dropPlacement, on its own", () => {
+  it("falls back to the gap when the block it is over is not in the list", () => {
+    expect(
+      dropPlacement({
+        blockIds: ids,
+        overBlockId: "block-gone",
+        resolved: {
+          kind: "insert",
+          toIndex: 1,
+          toZoneId: "page:main",
+          type: "core:text",
+        },
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-b", edge: "before" },
+      position: 2,
+      total: 4,
+    });
+  });
+
+  it("clamps a landing index the list cannot hold", () => {
+    expect(
+      dropPlacement({
+        blockIds: ids,
+        overBlockId: null,
+        resolved: {
+          kind: "insert",
+          toIndex: 9,
+          toZoneId: "page:main",
+          type: "core:text",
+        },
+      }),
+    ).toEqual({
+      indicator: { blockId: "block-c", edge: "after" },
+      position: 4,
+      total: 4,
     });
   });
 });

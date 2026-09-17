@@ -44,8 +44,10 @@ export const ContentZone = ({
       as,
       blocks,
       className,
+      fallback,
       id,
       registry,
+      validate,
     });
   }
 

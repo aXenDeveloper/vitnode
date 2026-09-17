@@ -26,6 +26,10 @@ export interface VisualEditorState {
   zones: Readonly<Record<string, EditorZoneState>>;
 }
 
+export type VisualEditorSnapshot = Readonly<
+  Record<string, readonly AnyBlockInstance[]>
+>;
+
 export type VisualEditorAction =
   | { blockId: null | string; type: "select" }
   | { blockId: string; data: Record<string, unknown>; type: "update" }
@@ -38,6 +42,6 @@ export type VisualEditorAction =
       type: "insert";
       zoneId: string;
     }
+  | { snapshot: VisualEditorSnapshot; type: "saved" }
   | { type: "discard" }
-  | { type: "mount"; zone: EditorZoneMount }
-  | { type: "saved" };
+  | { type: "mount"; zone: EditorZoneMount };

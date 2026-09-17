@@ -20,7 +20,6 @@ import type {
   VisualEditorContextValue,
   VisualEditorSaveStatus,
 } from "./context";
-import type { VisualEditorAction } from "./state/types";
 
 import { ContentEditContext } from "../blocks/edit-context";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
@@ -64,50 +63,57 @@ const EditorShell = ({
     initialVisualEditorState,
   );
   const [preview, setPreview] = useState(false);
-  const [panel, setPanel] = useState<EditorPanelMode>("blocks");
   const [insertTarget, setInsertTarget] = useState<EditorInsertTarget | null>(
     null,
   );
   const [saveStatus, setSaveStatus] = useState<VisualEditorSaveStatus>("idle");
   const [leaving, setLeaving] = useState(false);
 
-  const [syncedSelection, setSyncedSelection] = useState(state.selectedBlockId);
-  if (syncedSelection !== state.selectedBlockId) {
-    setSyncedSelection(state.selectedBlockId);
-    setPanel(state.selectedBlockId === null ? "blocks" : "properties");
-  }
-
+  const panel: EditorPanelMode =
+    state.selectedBlockId === null ? "blocks" : "properties";
   const dirty = isVisualEditorDirty(state);
 
-  const save = useCallback(() => {
+  const setPanel = useCallback((mode: EditorPanelMode) => {
+    if (mode === "blocks") {
+      dispatch({ blockId: null, type: "select" });
+    }
+  }, []);
+
+  const persist = useCallback(async (): Promise<boolean> => {
     if (!adapter) {
       toast.error(t("no_adapter.title"), {
         description: t("no_adapter.desc"),
       });
 
-      return;
+      return false;
     }
 
-    const persist = async () => {
-      try {
-        await adapter.save(buildSaveInput(state));
-
-        dispatch({ type: "saved" });
-        setSaveStatus("saved");
-        toast.success(t("saved_toast.title"), {
-          description: t("saved_toast.desc"),
-        });
-      } catch {
-        setSaveStatus("error");
-        toast.error(t("save_error.title"), {
-          description: t("save_error.desc"),
-        });
-      }
-    };
-
+    const input = buildSaveInput(state);
     setSaveStatus("saving");
-    void persist();
+
+    try {
+      await adapter.save(input);
+    } catch {
+      setSaveStatus("error");
+      toast.error(t("save_error.title"), {
+        description: t("save_error.desc"),
+      });
+
+      return false;
+    }
+
+    dispatch({ snapshot: input.zones, type: "saved" });
+    setSaveStatus("saved");
+    toast.success(t("saved_toast.title"), {
+      description: t("saved_toast.desc"),
+    });
+
+    return true;
   }, [adapter, state, t]);
+
+  const save = useCallback(() => {
+    void persist();
+  }, [persist]);
 
   const discard = useCallback(() => {
     dispatch({ type: "discard" });
@@ -123,14 +129,6 @@ const EditorShell = ({
 
     onExit?.();
   }, [dirty, onExit]);
-
-  const dispatchAction = useCallback((action: VisualEditorAction) => {
-    if (action.type === "select") {
-      setPanel(action.blockId === null ? "blocks" : "properties");
-    }
-
-    dispatch(action);
-  }, []);
 
   const insertBlock = useCallback(
     (request: EditorInsertRequest) => {
@@ -168,7 +166,6 @@ const EditorShell = ({
         zoneId,
       });
       dispatch({ blockId: instance.id, type: "select" });
-      setPanel("properties");
       setInsertTarget(null);
     },
     [insertTarget, state.order, state.zones],
@@ -178,7 +175,7 @@ const EditorShell = ({
     () => ({
       dirty,
       discard,
-      dispatch: dispatchAction,
+      dispatch,
       exit,
       insertBlock,
       insertTarget,
@@ -194,7 +191,6 @@ const EditorShell = ({
     [
       dirty,
       discard,
-      dispatchAction,
       exit,
       insertBlock,
       insertTarget,
@@ -202,6 +198,7 @@ const EditorShell = ({
       preview,
       save,
       saveStatus,
+      setPanel,
       state,
     ],
   );
@@ -231,7 +228,16 @@ const EditorShell = ({
           onExit?.();
         }}
         onOpenChange={setLeaving}
+        onSave={() => {
+          void persist().then(saved => {
+            if (!saved) return;
+
+            setLeaving(false);
+            onExit?.();
+          });
+        }}
         open={leaving}
+        saveStatus={saveStatus}
       />
     </VisualEditorContext>
   );

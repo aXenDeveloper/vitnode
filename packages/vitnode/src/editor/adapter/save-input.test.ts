@@ -53,6 +53,15 @@ describe("buildSaveInput", () => {
     expect(Object.keys(input.zones)).toStrictEqual(["main"]);
   });
 
+  it("hands over the very arrays a save is later rebaselined to", () => {
+    const state = mounted(mount("main", [block("a")]), mount("aside", []));
+
+    const input = buildSaveInput(state);
+
+    expect(input.zones.main).toBe(state.zones.main.blocks);
+    expect(input.zones.aside).toBe(state.zones.aside.blocks);
+  });
+
   it("is empty before any zone mounts", () => {
     expect(buildSaveInput(initialVisualEditorState)).toStrictEqual({
       changedZoneIds: [],

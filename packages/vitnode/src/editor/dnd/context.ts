@@ -1,11 +1,8 @@
 import { createContext, use } from "react";
 
-import type { EditorDragSource, EditorDropEdge } from "./resolve-drop";
+import type { EditorDragSource, EditorDropIndicator } from "./resolve-drop";
 
-export interface EditorDropIndicator {
-  blockId: string;
-  edge: EditorDropEdge;
-}
+export type { EditorDropIndicator } from "./resolve-drop";
 
 export interface EditorDndContextValue {
   dragging: EditorDragSource | null;

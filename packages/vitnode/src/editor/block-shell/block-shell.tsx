@@ -14,6 +14,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { AnyBlockInstance } from "../../blocks/types";
 import type { EditableBlockIssue } from "./issue";
 
+import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useSortableBlock } from "../dnd/use-sortable-block";
@@ -55,7 +56,9 @@ export const EditableBlockShell = ({
   if (preview) return <>{children}</>;
 
   const zone = state.zones[zoneId];
-  const entry = zone?.registry?.get(instance.type);
+  const entry = (zone?.registry ?? getDefaultBlockRegistry())?.get(
+    instance.type,
+  );
   const name = entry?.definition.name ?? instance.type;
   const selected = state.selectedBlockId === instance.id;
   const issue = editableBlockIssue({

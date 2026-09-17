@@ -18,8 +18,7 @@ export const EditorSidebarFooter = (): ReactElement => {
   const t = useTranslations("core.editor");
   const status = editorStatus(dirty, saveStatus);
   const statusLabels: Record<EditorStatus, string> = {
-    error: t("error"),
-    idle: t("idle"),
+    failed: t("save_failed"),
     saved: t("saved"),
     saving: t("saving"),
     unsaved: t("unsaved"),
@@ -31,7 +30,7 @@ export const EditorSidebarFooter = (): ReactElement => {
       <p
         className={cn(
           "text-sm leading-relaxed",
-          status === "error" ? "text-destructive" : "text-muted-foreground",
+          status === "failed" ? "text-destructive" : "text-muted-foreground",
         )}
         role="status"
       >
@@ -61,7 +60,7 @@ export const EditorSidebarFooter = (): ReactElement => {
           textSubmit={t("discard")}
           title={t("discard")}
         >
-          <Button disabled={!dirty} size="sm" variant="ghost">
+          <Button disabled={!dirty || saving} size="sm" variant="ghost">
             <Undo2Icon />
             {t("discard")}
           </Button>

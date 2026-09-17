@@ -1,10 +1,17 @@
-import type { AnyBlockInstance } from "../../blocks/types";
+/* eslint-disable @typescript-eslint/no-invalid-void-type */
+import type { VisualEditorSnapshot } from "../state/types";
 
 export interface VisualEditorSaveInput {
   changedZoneIds: readonly string[];
-  zones: Readonly<Record<string, readonly AnyBlockInstance[]>>;
+  zones: VisualEditorSnapshot;
+}
+
+export interface VisualEditorSaveResult {
+  revision?: string;
 }
 
 export interface VisualEditorAdapter {
-  save: (input: VisualEditorSaveInput) => Promise<void> | void;
+  save: (
+    input: VisualEditorSaveInput,
+  ) => Promise<VisualEditorSaveResult | void> | VisualEditorSaveResult | void;
 }

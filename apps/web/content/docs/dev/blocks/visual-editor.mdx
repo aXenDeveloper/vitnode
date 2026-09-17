@@ -117,7 +117,7 @@ The editor is not small. Drag and drop, a block catalogue, a form runtime and a 
 So **none of it is in the public page's bundle**. `@vitnode/core/blocks/edit` reaches React and nothing else; the only path from it to the editor is a dynamic `import()` behind `React.lazy`:
 
 ```tsx title="packages/vitnode/src/blocks/edit.tsx"
-const EditorRoot = lazy(async () => await import('../editor/root'))
+const EditorRoot = lazy(async () => await import("../editor/root"))
 ```
 
 The chunk is requested when `enabled` first flips to `true` - that is, on the first click of **Edit page** - and never before.
@@ -207,7 +207,7 @@ Either gesture inserts the block, selects it and opens **Properties** in one ste
 ```tsx
 <ContentZone
   id="settings:sidebar"
-  allowedBlocks={['core:text']}
+  allowedBlocks={["core:text"]}
   blocks={content.sidebar}
 />
 ```
@@ -239,6 +239,28 @@ Dropping onto a block inserts **before** it or **after** it, decided by which ha
 
 Nothing ever lands _inside_ a block, and that is a reservation rather than a shortcut. "Drop into this block" is the natural gesture for a nested area - a columns block with sub-zones, a widget area - and spending it on something else now would leave that feature with no gesture left to claim. See [Extension points](#extension-points).
 
+### The keyboard does all of it too
+
+Drag and drop that needs a mouse is drag and drop half the people cannot use, so the handle is a real button and every gesture has a key.
+
+| Key                       | What it does                                                          |
+| :------------------------ | :-------------------------------------------------------------------- |
+| <kbd>Tab</kbd>            | Reaches the drag handle of a block, like any other button.            |
+| <kbd>Space</kbd>          | Picks the block up - and, the second time, drops it.                  |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Moves it through the positions of its zone and on into the next zone. |
+| <kbd>Esc</kbd>            | Puts it back where it started.                                        |
+
+The blue insertion line follows a keyboard drag exactly as it follows a pointer, because both are the same line: the editor asks its drop resolver where this block _would_ land right now and draws the answer. Nothing is measured twice, so the line cannot disagree with the drop - and when the answer is "nowhere" (the zone refuses the block, or it already sits in that spot) there is no line, which is the honest thing to draw.
+
+Screen readers get the same story in words. The editor localises dnd-kit's announcements through `core.editor.dnd.*`, so picking a block up, passing over a zone, being refused by one, and landing all read out with the **block's name and the zone's id** rather than the instance ids dnd-kit would otherwise spell aloud.
+
+```text
+Picked up Callout.
+Callout is over the settings:after-profile zone, position 1 of 2.
+The settings:sidebar zone does not accept Callout.
+Callout was dropped into the settings:after-profile zone, position 1 of 2.
+```
+
 ### An incompatible target refuses
 
 Drag an `example:callout` toward a zone that allows `core:text` only and the zone turns red and says it does not accept what you are dragging. Let go and nothing happens: a block stays where it was, a catalogue entry is simply not inserted.
@@ -258,9 +280,13 @@ A block whose stored data does not match what its definition declares is not edi
 The editor never fetches. Not once. The only way anything leaves it is the adapter you passed:
 
 ```ts
+type VisualEditorSnapshot = Readonly<
+  Record<string, readonly AnyBlockInstance[]>
+>
+
 interface VisualEditorSaveInput {
   changedZoneIds: readonly string[]
-  zones: Readonly<Record<string, readonly AnyBlockInstance[]>>
+  zones: VisualEditorSnapshot
 }
 
 interface VisualEditorAdapter {
@@ -270,15 +296,17 @@ interface VisualEditorAdapter {
 
 `zones` holds every zone on the page keyed by its id; `changedZoneIds` names the ones that actually differ from what loaded. Resolve and the editor marks itself clean and toasts. Throw or reject and it shows an error and keeps the changes, so nothing is lost to a failed request.
 
+The one rule the contract asks of you: **save what you were handed**. The editor rebases its idea of "unchanged" onto the snapshot it sent, not onto the state it is in when the promise resolves - so a word typed while the request was in flight is still unsaved afterwards, exactly as it should be.
+
 ```tsx
 const adapter = useMemo<VisualEditorAdapter>(
   () => ({
     save: async ({ changedZoneIds, zones }) => {
       await fetcher({
-        plugin: '@vitnode/example',
-        method: 'patch',
-        module: 'pages',
-        path: '/{id}/zones',
+        plugin: "@vitnode/example",
+        method: "patch",
+        module: "pages",
+        path: "/{id}/zones",
         args: { param: { id: page.id }, json: { zones, changedZoneIds } },
       })
     },
@@ -286,6 +314,20 @@ const adapter = useMemo<VisualEditorAdapter>(
   [page.id],
 )
 ```
+
+### Save stays, Finish editing leaves
+
+Two buttons, two different jobs, and it is worth being blunt about which is which.
+
+|                        |                                                                                                                                        |
+| :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| **Save**               | Runs the adapter and **stays in edit mode**. The footer goes from _Unsaved changes_ to _Saved_ and you carry on arranging.             |
+| **Finish editing**     | Leaves edit mode. With nothing unsaved it just leaves.                                                                                 |
+| **Finish while dirty** | Asks first: **Save and finish** (saves, then leaves - and stays put if the save fails), **Leave without saving**, or **Keep editing**. |
+
+Saving is not an exit, because the most common thing anybody does after saving is keep going. And leaving is not a save, because an editor that silently writes on the way out is an editor nobody trusts. **Discard** is the third option and the only one that throws work away - it puts every zone back to what loaded.
+
+The same question is asked by the browser: navigate away with unsaved changes and the guard prompts before the page goes.
 
 ### Why there is no zones table
 
@@ -311,6 +353,20 @@ Being clear about the edges is more useful than a roadmap.
 | **Inline rich text**              | Text is edited in the properties panel, not by clicking into the rendered paragraph.                                                                                                                    |
 
 Everything in that table is a _later_ decision rather than a closed door - but none of it is in this stage, and none of it is implied by the APIs above.
+
+## Known limitations
+
+The section above is about scope. This one is about rough edges in the part that _is_ built - the things you will notice, written down so you do not have to discover them.
+
+**A pointer drag's spoken position lags the line it draws.** The insertion line updates continuously, but the screen-reader announcement is only refreshed when the block underneath the pointer changes - move from a block's top half to its bottom half and the line jumps, the sentence does not. That is deliberate: the alternative is announcing on every pixel of movement, which floods a live region until it is useless. Keyboard dragging is unaffected, because every arrow key changes the target.
+
+**Locked application UI is not dimmed.** In edit mode the zones are outlined and labelled, and everything else on the page - your forms, your navigation, your buttons - looks exactly as it did. Nothing says "this part is not editable" except the absence of an outline.
+
+Dimming it would mean fading the page and un-fading the zones, and a descendant cannot undo an ancestor's `opacity` or `filter`: those create a new compositing context that the zone inside it is stuck in. The only other route is selector-based - "dim everything that does not contain a zone" - which would have to make assumptions about a page's DOM that VitNode does not get to make, since the page is yours. So Stage 3 emphasises the zones rather than de-emphasising the page, and a host that wants more can style `[data-vitnode-zone]` and its surroundings itself.
+
+**Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen, and everything works - but nothing is _tuned_ for touch: a drag competes with page scrolling, the sheet covers the page it is editing, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
+
+**There is no end-to-end test harness.** The pure logic is covered by vitest - the reducer, the drop resolver and its insertion placement, zone drop states, the save input, the catalogue, and the module-graph boundary test that keeps the editor out of public bundles. What no test covers is a real browser actually dragging something, so the [manual checklist](#verifying-it-yourself) is the regression suite for gestures. `apps/web` has no test runner configured at all, which is why the checklist lives in this page rather than in a spec file.
 
 ## Extension points
 
@@ -339,9 +395,11 @@ Three concerns, kept separate: **data** is what the block says, **variant** is h
 
 It was scoped out of Stage 3 for a boring reason: `variant` is not one optional property, it is a change to `blocks/validate.ts`, `isBlockInstance`, `blockDataShapeIssue` and every API path that writes an instance - a wide change whose risk is Stage 1 and Stage 2 regressions, for something no block asks for yet.
 
+So `variant` is **not** on `BlockInstance` today, and that is a decision rather than an oversight. Until it is, resist the obvious workaround: a `variant`, `style` or `size` field declared on the block and stored in `data` reads as content to every part of VitNode that touches an instance - validation, the properties panel, search indexing, whatever comes next - and the day a real `variant` arrives, every one of those smuggled fields is a migration. If a block genuinely needs two looks now, two block types is the cheaper mistake.
+
 ## Verifying it yourself
 
-`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, an **Edit page** button and a mocked adapter that persists nothing and shows you the payload it was handed.
+`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, an **Edit page** button, and a real adapter: it maps each zone id onto a field of an `example.zones-layout` record and saves it through a staff-guarded API route, so your changes survive a reload. Until something is saved the page serves the shipped defaults and says so.
 
 <Steps>
 <Step>
@@ -429,6 +487,15 @@ Drag the `core:text` block out of `settings:before-profile` by its handle and in
 </Step>
 <Step>
 
+**Move a block with the keyboard only**
+
+Put the mouse down. <kbd>Tab</kbd> to a block's drag handle, press <kbd>Space</kbd>, then <kbd>↓</kbd>.
+
+The blue insertion line appears under the block below, exactly as it does for a pointer - keep pressing <kbd>↓</kbd> and it walks into the next zone. <kbd>Space</kbd> drops the block where the line is; <kbd>Esc</kbd> puts it back. Whatever the line said, that is where the block lands.
+
+</Step>
+<Step>
+
 **Watch an incompatible zone refuse**
 
 Drag `example:callout` - from the sidebar, or from a zone that holds one - toward `settings:sidebar`, which allows `core:text` only.
@@ -501,7 +568,7 @@ Check that `changedZoneIds` lists only the zones you actually touched.
 
 Press **Finish editing**. The public page is back: no outlines, no sidebar, and `settings:before-footer` is invisible again because it is still empty.
 
-Make one more change first and the same button asks before it leaves.
+Now do it the other way round: click **Edit page**, change something, and press **Finish editing** without saving. The dialog offers **Save and finish**, **Leave without saving** and **Keep editing** - and note that **Save** on its own, back in the footer, would have kept you in edit mode instead.
 
 </Step>
 </Steps>

@@ -1,7 +1,10 @@
 import type {
+  Active,
+  Announcements,
   CollisionDetection,
   DragEndEvent,
   DragMoveEvent,
+  DragOverEvent,
   DragStartEvent,
   Over,
 } from "@dnd-kit/core";
@@ -22,21 +25,30 @@ import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { GripVerticalIcon, PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslations } from "use-intl";
 
 import type { BlockRegistry, RegisteredBlock } from "../../blocks/types";
 import type { BlockCatalogEntry } from "../block-picker/catalog";
 import type { EditorZoneState } from "../state/types";
-import type { EditorDndContextValue, EditorDropIndicator } from "./context";
-import type { EditorDragSource, EditorDropEdge } from "./resolve-drop";
+import type { EditorDndContextValue } from "./context";
+import type {
+  DropPlacement,
+  EditorDragSource,
+  EditorDropEdge,
+  EditorDropIndicator,
+  ResolvedDrop,
+} from "./resolve-drop";
 
+import { BLOCK_WILDCARD } from "../../blocks/const";
 import { parseBlockId } from "../../blocks/namespace";
-import { getDefaultBlockRegistry } from "../../blocks/registry";
+import { getDefaultBlockRegistry, isBlockAllowed } from "../../blocks/registry";
 import { toBlockCatalogEntry } from "../block-picker/catalog";
 import { BlockCatalogEntryCard } from "../block-picker/entry-card";
 import { useVisualEditor } from "../context";
 import { EditorDndContext } from "./context";
 import {
   dropEdgeFor,
+  dropPlacement,
   preferBlockCollisions,
   readDragSource,
   readDropTarget,
@@ -47,6 +59,14 @@ import {
 type DragOverlayPreview =
   | { entry: BlockCatalogEntry; kind: "catalog-block" }
   | { kind: "existing-block"; name: string; namespace: null | string };
+
+interface EditorDragPlan {
+  placement: DropPlacement | null;
+  rejected: boolean;
+  resolved: null | ResolvedDrop;
+  source: EditorDragSource;
+  zoneId: null | string;
+}
 
 const findRegisteredBlock = (
   zones: Readonly<Record<string, EditorZoneState>>,
@@ -77,6 +97,7 @@ export const EditorDndProvider = ({
 }: {
   children: ReactNode;
 }): ReactElement => {
+  const t = useTranslations("core.editor");
   const { dispatch, insertBlock, state } = useVisualEditor();
   const [dragging, setDragging] = useState<EditorDragSource | null>(null);
   const [dropIndicator, setDropIndicator] =
@@ -140,14 +161,137 @@ export const EditorDndProvider = ({
     };
   }, [dragging, state.zones]);
 
-  const edgeOver = (over: null | Over): EditorDropEdge | null => {
-    const pointerY = pointerYRef.current;
+  const blockName = useCallback(
+    (source: EditorDragSource): string => {
+      const found = findRegisteredBlock(state.zones, source.type);
 
-    if (!over || pointerY === null) return null;
-    if (zoneIdFromDroppableId(String(over.id)) !== null) return null;
+      return found?.definition.name ?? found?.definition.id ?? source.type;
+    },
+    [state.zones],
+  );
 
-    return dropEdgeFor({ pointerY, rect: over.rect });
-  };
+  const planDrop = useCallback(
+    (active: Active, over: null | Over): EditorDragPlan | null => {
+      const source = readDragSource(String(active.id), active.data.current);
+      if (!source) return null;
+
+      const outside: EditorDragPlan = {
+        placement: null,
+        rejected: false,
+        resolved: null,
+        source,
+        zoneId: null,
+      };
+      if (!over) return outside;
+
+      const edgeFor = (): EditorDropEdge | null => {
+        const pointerY = pointerYRef.current;
+
+        if (pointerY === null) return null;
+        if (zoneIdFromDroppableId(String(over.id)) !== null) return null;
+
+        return dropEdgeFor({ pointerY, rect: over.rect });
+      };
+
+      const target = readDropTarget(
+        String(over.id),
+        over.data.current,
+        edgeFor(),
+      );
+      const zone = target === null ? undefined : state.zones[target.zoneId];
+      if (!target || !zone) return outside;
+
+      const resolved = resolveDrop({
+        allowedBlocks: zone.allowedBlocks,
+        source,
+        target,
+        targetBlockCount: zone.blocks.length,
+      });
+
+      return {
+        placement:
+          resolved === null
+            ? null
+            : dropPlacement({
+                blockIds: zone.blocks.map(block => block.id),
+                overBlockId: target.blockId,
+                resolved,
+              }),
+        rejected: !isBlockAllowed(
+          zone.allowedBlocks ?? BLOCK_WILDCARD,
+          source.type,
+        ),
+        resolved,
+        source,
+        zoneId: target.zoneId,
+      };
+    },
+    [state.zones],
+  );
+
+  const announcements = useMemo<Announcements>(() => {
+    const landing = (active: Active, over: null | Over): string | undefined => {
+      if (over !== null && String(over.id) === String(active.id))
+        return undefined;
+
+      const plan = planDrop(active, over);
+      if (!plan) return undefined;
+
+      const name = blockName(plan.source);
+      if (plan.zoneId === null) return t("dnd.outside", { name });
+      if (plan.rejected) return t("dnd.rejected", { name, zone: plan.zoneId });
+      if (!plan.placement)
+        return t("dnd.unchanged", { name, zone: plan.zoneId });
+
+      return t("dnd.over", {
+        name,
+        position: plan.placement.position,
+        total: plan.placement.total,
+        zone: plan.zoneId,
+      });
+    };
+
+    return {
+      onDragCancel: ({ active }) => {
+        const source = readDragSource(String(active.id), active.data.current);
+
+        return t("dnd.cancelled", {
+          name: source === null ? String(active.id) : blockName(source),
+        });
+      },
+      onDragEnd: ({ active, over }) => {
+        const plan = planDrop(active, over);
+        if (!plan) return undefined;
+
+        const name = blockName(plan.source);
+
+        return plan.placement === null || plan.zoneId === null
+          ? t("dnd.not_dropped", { name })
+          : t("dnd.dropped", {
+              name,
+              position: plan.placement.position,
+              total: plan.placement.total,
+              zone: plan.zoneId,
+            });
+      },
+      onDragOver: ({ active, over }) => landing(active, over),
+      onDragStart: ({ active }) => {
+        const source = readDragSource(String(active.id), active.data.current);
+
+        return t("dnd.picked_up", {
+          name: source === null ? String(active.id) : blockName(source),
+        });
+      },
+    };
+  }, [blockName, planDrop, t]);
+
+  const accessibility = useMemo(
+    () => ({
+      announcements,
+      screenReaderInstructions: { draggable: t("dnd.instructions") },
+    }),
+    [announcements, t],
+  );
 
   const reset = () => {
     setDragging(null);
@@ -155,44 +299,30 @@ export const EditorDndProvider = ({
     pointerYRef.current = null;
   };
 
-  const onDragStart = ({ active }: DragStartEvent) => {
-    setDragging(readDragSource(String(active.id), active.data.current));
-  };
-
-  const onDragMove = ({ active, over }: DragMoveEvent) => {
-    const edge = edgeOver(over);
-    const blockId = over === null ? null : String(over.id);
-    const next =
-      edge === null || blockId === null || blockId === String(active.id)
-        ? null
-        : { blockId, edge };
+  const showIndicator = (active: Active, over: null | Over) => {
+    const next = planDrop(active, over)?.placement?.indicator ?? null;
 
     setDropIndicator(current =>
       sameIndicator(current, next) ? current : next,
     );
   };
 
+  const onDragStart = ({ active }: DragStartEvent) => {
+    setDragging(readDragSource(String(active.id), active.data.current));
+  };
+
+  const onDragMove = ({ active, over }: DragMoveEvent) => {
+    showIndicator(active, over);
+  };
+
+  const onDragOver = ({ active, over }: DragOverEvent) => {
+    showIndicator(active, over);
+  };
+
   const onDragEnd = ({ active, over }: DragEndEvent) => {
-    const edge = edgeOver(over);
+    const resolved = planDrop(active, over)?.resolved ?? null;
 
     reset();
-    if (!over) return;
-
-    const source = readDragSource(String(active.id), active.data.current);
-    if (!source) return;
-
-    const target = readDropTarget(String(over.id), over.data.current, edge);
-    if (!target) return;
-
-    const zone = state.zones[target.zoneId];
-    if (!zone) return;
-
-    const resolved = resolveDrop({
-      allowedBlocks: zone.allowedBlocks,
-      source,
-      target,
-      targetBlockCount: zone.blocks.length,
-    });
     if (!resolved) return;
 
     if (resolved.kind === "insert") {
@@ -216,12 +346,14 @@ export const EditorDndProvider = ({
   return (
     <EditorDndContext.Provider value={dnd}>
       <DndContext
+        accessibility={accessibility}
         collisionDetection={collisionDetection}
         id="vitnode-visual-editor"
         modifiers={[restrictToWindowEdges]}
         onDragCancel={reset}
         onDragEnd={onDragEnd}
         onDragMove={onDragMove}
+        onDragOver={onDragOver}
         onDragStart={onDragStart}
         sensors={sensors}
       >

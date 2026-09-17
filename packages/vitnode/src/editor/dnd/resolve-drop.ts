@@ -19,6 +19,17 @@ export type EditorDragSource =
 
 export type EditorDropEdge = "after" | "before";
 
+export interface EditorDropIndicator {
+  blockId: string;
+  edge: EditorDropEdge;
+}
+
+export interface DropPlacement {
+  indicator: EditorDropIndicator | null;
+  position: number;
+  total: number;
+}
+
 export interface EditorDropTarget {
   blockId: null | string;
   edge: EditorDropEdge | null;
@@ -183,5 +194,42 @@ export const resolveDrop = ({
     kind: "move",
     toIndex,
     toZoneId: target.zoneId,
+  };
+};
+
+export const dropPlacement = ({
+  blockIds,
+  overBlockId,
+  resolved,
+}: {
+  blockIds: readonly string[];
+  overBlockId: null | string;
+  resolved: ResolvedDrop;
+}): DropPlacement => {
+  const remaining =
+    resolved.kind === "move"
+      ? blockIds.filter(blockId => blockId !== resolved.blockId)
+      : blockIds;
+  const gap = clamp(resolved.toIndex, remaining.length);
+
+  const indicator = (): EditorDropIndicator | null => {
+    if (remaining.length === 0) return null;
+
+    const overIndex =
+      overBlockId === null ? -1 : remaining.indexOf(overBlockId);
+
+    if (overIndex === gap) return { blockId: remaining[gap], edge: "before" };
+    if (overIndex === gap - 1)
+      return { blockId: remaining[overIndex], edge: "after" };
+
+    return gap === remaining.length
+      ? { blockId: remaining[gap - 1], edge: "after" }
+      : { blockId: remaining[gap], edge: "before" };
+  };
+
+  return {
+    indicator: indicator(),
+    position: gap + 1,
+    total: remaining.length + 1,
   };
 };

@@ -5,6 +5,7 @@ export type {
 export type {
   VisualEditorAdapter,
   VisualEditorSaveInput,
+  VisualEditorSaveResult,
 } from "./adapter/types";
 export type {
   EditorInsertRequest,
@@ -20,5 +21,6 @@ export type {
   EditorZoneMount,
   EditorZoneState,
   VisualEditorAction,
+  VisualEditorSnapshot,
   VisualEditorState,
 } from "./state/types";

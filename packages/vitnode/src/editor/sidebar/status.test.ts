@@ -8,7 +8,7 @@ describe("the status line a sidebar footer reads", () => {
   });
 
   it("keeps a failed save visible instead of hiding it behind the edits", () => {
-    expect(editorStatus(true, "error")).toBe("error");
+    expect(editorStatus(true, "error")).toBe("failed");
   });
 
   it("calls a page with edits unsaved once a previous save has landed", () => {
@@ -19,7 +19,11 @@ describe("the status line a sidebar footer reads", () => {
     expect(editorStatus(false, "saved")).toBe("saved");
   });
 
-  it("starts idle", () => {
-    expect(editorStatus(false, "idle")).toBe("idle");
+  it("opens on saved, because an untouched page matches what is stored", () => {
+    expect(editorStatus(false, "idle")).toBe("saved");
+  });
+
+  it("flips back to unsaved the moment a saved page is edited again", () => {
+    expect(editorStatus(true, "idle")).toBe("unsaved");
   });
 });

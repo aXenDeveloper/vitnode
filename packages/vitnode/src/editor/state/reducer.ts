@@ -300,12 +300,18 @@ export const visualEditorReducer = (
       return {
         ...state,
         zones: Object.fromEntries(
-          Object.entries(state.zones).map(([id, zone]) => [
-            id,
-            zone.initial === zone.blocks
-              ? zone
-              : { ...zone, initial: zone.blocks },
-          ]),
+          Object.entries(state.zones).map(([id, zone]) => {
+            const persisted = Object.hasOwn(action.snapshot, id)
+              ? action.snapshot[id]
+              : zone.initial;
+
+            return [
+              id,
+              persisted === zone.initial
+                ? zone
+                : { ...zone, initial: persisted },
+            ];
+          }),
         ),
       };
 

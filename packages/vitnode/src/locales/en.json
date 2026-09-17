@@ -888,8 +888,7 @@
       "save": "Save",
       "saving": "Saving…",
       "saved": "Saved",
-      "idle": "No changes yet",
-      "error": "Something went wrong",
+      "save_failed": "Save failed",
       "unsaved": "Unsaved changes",
       "discard": "Discard changes",
       "discard_confirm": "Every block you added, moved or edited goes back to how the page was loaded. This cannot be undone.",
@@ -916,10 +915,26 @@
           "not_allowed": "This zone does not allow this block.",
           "invalid_data": "The stored data does not match the fields this block declares."
         },
+        "invalid": {
+          "title": "Block data needs fixing",
+          "description": "The saved data for the {name} block no longer matches the fields it declares, so it is not rendered here. Fix it in the properties panel, or remove the block.",
+          "detail": "What does not match: {issue}"
+        },
         "unknown": {
           "title": "Unknown block",
           "description": "Nothing installed on this site provides the block type {type}, so it cannot be rendered."
         }
+      },
+      "dnd": {
+        "instructions": "Press Space to pick up a block. Use the arrow keys to move it between positions and zones, Space to drop it where the line is, and Escape to put it back.",
+        "picked_up": "Picked up {name}.",
+        "outside": "{name} is not over a content zone.",
+        "rejected": "The {zone} zone does not accept {name}.",
+        "unchanged": "{name} is over the {zone} zone, where it already is.",
+        "over": "{name} is over the {zone} zone, position {position} of {total}.",
+        "dropped": "{name} was dropped into the {zone} zone, position {position} of {total}.",
+        "not_dropped": "{name} was not dropped anywhere. Nothing changed.",
+        "cancelled": "Dragging {name} was cancelled. Nothing changed."
       },
       "picker": {
         "search": "Search blocks…",
@@ -933,7 +948,10 @@
         "title": "Leave without saving?",
         "desc": "You have unsaved changes on this page. Leave now and they are gone.",
         "cancel": "Keep editing",
-        "confirm": "Leave without saving"
+        "confirm": "Leave without saving",
+        "save": "Save and finish",
+        "choice_title": "You have unsaved changes",
+        "choice_desc": "Save them before you finish, leave them behind, or keep editing this page."
       },
       "saved_toast": {
         "title": "Page saved",
