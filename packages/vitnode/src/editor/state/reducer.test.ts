@@ -2067,3 +2067,142 @@ describe("canonical content arriving from the page owner", () => {
     expect(isVisualEditorDirty(saved)).toBe(false);
   });
 });
+
+describe("a cross-zone move the target zone cannot render", () => {
+  const definition = (id: string) => ({
+    component: () => null,
+    fields: { body: field.text({}) },
+    id,
+  });
+
+  const coreOnly = createBlockRegistry([
+    {
+      pluginId: "@vitnode/core",
+      blocks: [definition("text"), definition("cta")],
+      namespace: "core",
+    },
+  ]);
+
+  const withBlog = createBlockRegistry([
+    {
+      pluginId: "@vitnode/core",
+      blocks: [definition("text")],
+      namespace: "core",
+    },
+    { pluginId: "@vitnode/blog", blocks: [definition("latest-posts")] },
+  ]);
+
+  const zone = (
+    id: string,
+    nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
+    registry: ReturnType<typeof createBlockRegistry>,
+  ): EditorZoneMount => ({
+    allowedBlocks: "*",
+    id,
+    invalid: [],
+    nodes,
+    registry,
+  });
+
+  const post = (): AnyBlockInstance =>
+    createBlockInstance("blog:latest-posts", { body: "x" });
+
+  const text = (): AnyBlockInstance =>
+    createBlockInstance("core:text", { body: "x" });
+
+  it("refuses a block the target zone's registry does not know", () => {
+    const moving = post();
+    const state = mounted(
+      zone("main", [moving], withBlog),
+      zone("aside", [], coreOnly),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: moving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(next.zones.aside.nodes).toStrictEqual([]);
+    expect(next.zones.main.nodes).toStrictEqual([moving]);
+  });
+
+  it("refuses the whole area when one child is unknown to the target", () => {
+    const [keep, drop] = [text(), post()];
+    const moving = area([keep, drop]);
+    const state = mounted(
+      zone("main", [moving], withBlog),
+      zone("aside", [], coreOnly),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: moving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(next.zones.aside.nodes).toStrictEqual([]);
+  });
+
+  it("lets a block the target zone does know across", () => {
+    const moving = text();
+    const state = mounted(
+      zone("main", [moving], withBlog),
+      zone("aside", [], coreOnly),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: moving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next.zones.aside.nodes.map(node => node.id)).toStrictEqual([
+      moving.id,
+    ]);
+    expect(next.zones.main.nodes).toStrictEqual([]);
+  });
+
+  it("never blocks a reorder inside the zone that already holds the block", () => {
+    const [first, second] = [post(), text()];
+    const state = mounted(zone("main", [first, second], withBlog));
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: first.id,
+      to: into("main"),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(next.zones.main.nodes.map(node => node.id)).toStrictEqual([
+      second.id,
+      first.id,
+    ]);
+  });
+
+  it("stays out of the way when no registry can be consulted at all", () => {
+    const moving = post();
+    const state = mounted(mount("main", [moving]), mount("aside", []));
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: moving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next.zones.aside.nodes.map(node => node.id)).toStrictEqual([
+      moving.id,
+    ]);
+  });
+});

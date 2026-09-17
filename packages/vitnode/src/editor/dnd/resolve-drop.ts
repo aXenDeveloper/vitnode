@@ -1,12 +1,9 @@
-import type { BlockAllowedSpec } from "../../blocks/types";
 import type {
   EditorContainerRef,
   EditorNodeKind,
   EditorNodeRef,
+  TargetCapabilities,
 } from "../state/types";
-
-import { BLOCK_WILDCARD } from "../../blocks/const";
-import { isBlockAllowed } from "../../blocks/registry";
 
 export const ZONE_DROPPABLE_PREFIX = "vitnode-editor-zone:";
 
@@ -59,10 +56,13 @@ export interface EditorDropTarget {
   nodeId: null | string;
 }
 
-export type EditorDropRejection = "nested-area" | "not-allowed";
+export type EditorDropRejection =
+  "nested-area" | "not-allowed" | "not-registered";
+
+export type { TargetCapabilities } from "../state/types";
 
 export interface ResolveDropArgs {
-  allowedBlocks: BlockAllowedSpec | undefined;
+  capabilities: TargetCapabilities;
   source: EditorDragSource;
   target: EditorDropTarget | null;
   targetNodeCount: number;
@@ -278,12 +278,33 @@ const sameContainer = (
   right: EditorContainerRef,
 ): boolean => left.zoneId === right.zoneId && left.areaId === right.areaId;
 
+const typeRejection = (
+  capabilities: TargetCapabilities,
+  type: string,
+): EditorDropRejection | null => {
+  if (!capabilities.registers(type)) return "not-registered";
+
+  return capabilities.allows(type) ? null : "not-allowed";
+};
+
+const firstRejection = (
+  capabilities: TargetCapabilities,
+  types: readonly string[],
+): EditorDropRejection | null => {
+  for (const type of types) {
+    const rejection = typeRejection(capabilities, type);
+    if (rejection !== null) return rejection;
+  }
+
+  return null;
+};
+
 export const dropRejection = ({
-  allowedBlocks,
+  capabilities,
   source,
   target,
 }: {
-  allowedBlocks: BlockAllowedSpec | undefined;
+  capabilities: TargetCapabilities;
   source: EditorDragSource;
   target: EditorDropTarget | null;
 }): EditorDropRejection | null => {
@@ -292,27 +313,22 @@ export const dropRejection = ({
   if (source.kind === "existing-area") {
     if (target.container.areaId !== null) return "nested-area";
 
-    return target.container.zoneId === source.container.zoneId ||
-      source.childTypes.every(type =>
-        isBlockAllowed(allowedBlocks ?? BLOCK_WILDCARD, type),
-      )
+    return target.container.zoneId === source.container.zoneId
       ? null
-      : "not-allowed";
+      : firstRejection(capabilities, source.childTypes);
   }
 
-  return isBlockAllowed(allowedBlocks ?? BLOCK_WILDCARD, source.type)
-    ? null
-    : "not-allowed";
+  return typeRejection(capabilities, source.type);
 };
 
 export const resolveDrop = ({
-  allowedBlocks,
+  capabilities,
   source,
   target,
   targetNodeCount,
 }: ResolveDropArgs): null | ResolvedDrop => {
   if (!target) return null;
-  if (dropRejection({ allowedBlocks, source, target }) !== null) return null;
+  if (dropRejection({ capabilities, source, target }) !== null) return null;
 
   if (source.kind === "catalog-block") {
     const toIndex =

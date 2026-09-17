@@ -1,9 +1,16 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import type { BlockAllowedSpec } from "../../blocks/types";
 import type { EditorContainerRef } from "../state/types";
-import type { EditorDragSource, EditorDropTarget } from "./resolve-drop";
+import type {
+  EditorDragSource,
+  EditorDropTarget,
+  TargetCapabilities,
+} from "./resolve-drop";
 
+import { BLOCK_WILDCARD } from "../../blocks/const";
+import { isBlockAllowed } from "../../blocks/registry";
 import {
   AREA_DROPPABLE_PREFIX,
   areaDroppableId,
@@ -25,6 +32,15 @@ import {
   ZONE_DROPPABLE_PREFIX,
   zoneDroppableId,
 } from "./resolve-drop";
+
+const accepting = (
+  allowedBlocks: BlockAllowedSpec | undefined,
+  registered?: readonly string[],
+): TargetCapabilities => ({
+  allows: type => isBlockAllowed(allowedBlocks ?? BLOCK_WILDCARD, type),
+  known: true,
+  registers: type => registered === undefined || registered.includes(type),
+});
 
 const into = (
   zoneId: string,
@@ -530,14 +546,14 @@ describe("dropRejection", () => {
   it("refuses an area dropped into an area, and nowhere else", () => {
     expect(
       dropRejection({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource(),
         target: onContainer("page:main", "area-2"),
       }),
     ).toBe("nested-area");
     expect(
       dropRejection({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource(),
         target: onContainer("page:aside"),
       }),
@@ -547,7 +563,7 @@ describe("dropRejection", () => {
   it("refuses an area landing on a block that lives inside an area", () => {
     expect(
       dropRejection({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource(),
         target: onNode({
           container: into("page:main", "area-2"),
@@ -560,7 +576,7 @@ describe("dropRejection", () => {
   it("never asks the block allowlist about an area", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: areaSource(),
         target: onContainer("page:aside"),
       }),
@@ -570,14 +586,14 @@ describe("dropRejection", () => {
   it("refuses a block the target zone does not allow, inside an area too", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: source({ type: "example:callout" }),
         target: onContainer("page:main", "area-1"),
       }),
     ).toBe("not-allowed");
     expect(
       dropRejection({
-        allowedBlocks: ["example:*"],
+        capabilities: accepting(["example:*"]),
         source: source({ type: "example:callout" }),
         target: onContainer("page:main", "area-1"),
       }),
@@ -586,7 +602,11 @@ describe("dropRejection", () => {
 
   it("says nothing at all with nowhere to drop", () => {
     expect(
-      dropRejection({ allowedBlocks: "*", source: source(), target: null }),
+      dropRejection({
+        capabilities: accepting("*"),
+        source: source(),
+        target: null,
+      }),
     ).toBeNull();
   });
 });
@@ -595,7 +615,7 @@ describe("resolveDrop", () => {
   it("drops nothing without a target", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source(),
         target: null,
         targetNodeCount: 3,
@@ -606,7 +626,7 @@ describe("resolveDrop", () => {
   it("drops nothing on the dragged node itself", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 1 }),
         target: onNode({ index: 1, nodeId: "block-a" }),
         targetNodeCount: 3,
@@ -617,7 +637,7 @@ describe("resolveDrop", () => {
   it("moves to the index of the node it was dropped on", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onNode({ index: 2, nodeId: "block-c" }),
         targetNodeCount: 3,
@@ -634,7 +654,7 @@ describe("resolveDrop", () => {
   it("appends to the end of its own container, accounting for its own removal", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onContainer("page:main"),
         targetNodeCount: 3,
@@ -651,7 +671,7 @@ describe("resolveDrop", () => {
   it("drops nothing when the node is already where it would land", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 2 }),
         target: onContainer("page:main"),
         targetNodeCount: 3,
@@ -662,7 +682,7 @@ describe("resolveDrop", () => {
   it("appends past the last node of another zone", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onContainer("page:aside"),
         targetNodeCount: 2,
@@ -679,7 +699,7 @@ describe("resolveDrop", () => {
   it("lands at index 0 in an empty zone", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 1 }),
         target: onContainer("page:aside"),
         targetNodeCount: 0,
@@ -696,7 +716,7 @@ describe("resolveDrop", () => {
   it("clamps an index the target container cannot hold", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source(),
         target: onNode({
           container: into("page:aside"),
@@ -717,7 +737,7 @@ describe("resolveDrop", () => {
   it("accepts a type the target zone allows by namespace", () => {
     expect(
       resolveDrop({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: source({ type: "core:hero" }),
         target: onContainer("page:aside"),
         targetNodeCount: 0,
@@ -734,7 +754,7 @@ describe("resolveDrop", () => {
   it("refuses a type the target zone does not allow", () => {
     expect(
       resolveDrop({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: source({ type: "example:callout" }),
         target: onContainer("page:aside"),
         targetNodeCount: 0,
@@ -745,7 +765,7 @@ describe("resolveDrop", () => {
   it("treats a zone without an allowlist as open to every block", () => {
     expect(
       resolveDrop({
-        allowedBlocks: undefined,
+        capabilities: accepting(undefined),
         source: source({ type: "example:callout" }),
         target: onContainer("page:aside"),
         targetNodeCount: 0,
@@ -764,7 +784,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("takes a block from the zone root into an area", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onContainer("page:main", "area-1"),
         targetNodeCount: 2,
@@ -781,7 +801,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("takes an area's child back out to the zone root", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ container: into("page:main", "area-1"), index: 0 }),
         target: onNode({ edge: "before", index: 1, nodeId: "block-b" }),
         targetNodeCount: 3,
@@ -798,7 +818,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("takes an area's child straight into another area", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ container: into("page:main", "area-1"), index: 0 }),
         target: onContainer("page:main", "area-2"),
         targetNodeCount: 1,
@@ -817,7 +837,7 @@ describe("resolveDrop, in and out of an area", () => {
 
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ container: inside, index: 0 }),
         target: onNode({
           container: inside,
@@ -837,7 +857,7 @@ describe("resolveDrop, in and out of an area", () => {
 
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ container: inside, index: 1 }),
         target: onNode({
           container: inside,
@@ -853,7 +873,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("treats the same id in the root and in an area as two different nodes", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0, nodeId: "block-x" }),
         target: onNode({
           container: into("page:main", "area-1"),
@@ -875,7 +895,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("reorders an area among the blocks at the zone root", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource({ index: 2 }),
         target: onNode({ edge: "before", index: 0, nodeId: "block-a" }),
         targetNodeCount: 3,
@@ -892,7 +912,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("carries an area into another zone's root", () => {
     expect(
       resolveDrop({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: areaSource({ index: 0 }),
         target: onContainer("page:aside"),
         targetNodeCount: 1,
@@ -909,7 +929,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("refuses an area dropped into an area, wherever inside it lands", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource(),
         target: onContainer("page:main", "area-2"),
         targetNodeCount: 0,
@@ -917,7 +937,7 @@ describe("resolveDrop, in and out of an area", () => {
     ).toBeNull();
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource(),
         target: onNode({
           container: into("page:main", "area-2"),
@@ -932,7 +952,7 @@ describe("resolveDrop, in and out of an area", () => {
   it("refuses a block the zone's allowlist rejects, inside one of its areas", () => {
     expect(
       resolveDrop({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: fromCatalog("example:callout"),
         target: onContainer("page:main", "area-1"),
         targetNodeCount: 0,
@@ -940,7 +960,7 @@ describe("resolveDrop, in and out of an area", () => {
     ).toBeNull();
     expect(
       resolveDrop({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: source({ type: "example:callout" }),
         target: onNode({
           container: into("page:main", "area-1"),
@@ -957,7 +977,7 @@ describe("resolveDrop, by pointer edge", () => {
   it("lands a block above the one it was dropped on", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onNode({ edge: "before", index: 2, nodeId: "block-c" }),
         targetNodeCount: 3,
@@ -974,7 +994,7 @@ describe("resolveDrop, by pointer edge", () => {
   it("lands a block below the one it was dropped on", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onNode({ edge: "after", index: 2, nodeId: "block-c" }),
         targetNodeCount: 3,
@@ -991,7 +1011,7 @@ describe("resolveDrop, by pointer edge", () => {
   it("counts an upward move against the list it was removed from", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 3 }),
         target: onNode({ edge: "before", index: 1 }),
         targetNodeCount: 4,
@@ -1006,7 +1026,7 @@ describe("resolveDrop, by pointer edge", () => {
 
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 3 }),
         target: onNode({ edge: "after", index: 1 }),
         targetNodeCount: 4,
@@ -1023,7 +1043,7 @@ describe("resolveDrop, by pointer edge", () => {
   it("drops nothing when the edge names the place it already sits", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 1 }),
         target: onNode({ edge: "after", index: 0 }),
         targetNodeCount: 3,
@@ -1034,7 +1054,7 @@ describe("resolveDrop, by pointer edge", () => {
   it("makes room for a block arriving from another zone", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 0 }),
         target: onNode({
           container: into("page:aside"),
@@ -1058,7 +1078,7 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
   it("moves the copy that was dragged, not the one in the target zone", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({
           container: into("page:aside"),
           index: 0,
@@ -1079,7 +1099,7 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
   it("treats a drop onto the other zone's namesake as a real move", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({
           container: into("page:aside"),
           index: 0,
@@ -1100,7 +1120,7 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
   it("still drops nothing onto itself within its own container", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: source({ index: 2, nodeId: "block-x" }),
         target: onNode({ edge: "after", index: 2, nodeId: "block-x" }),
         targetNodeCount: 3,
@@ -1192,7 +1212,7 @@ describe("resolveDrop, from the catalog", () => {
   it("inserts before the block it was dropped on", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog("core:text"),
         target: onNode({ edge: "before", index: 1 }),
         targetNodeCount: 3,
@@ -1208,7 +1228,7 @@ describe("resolveDrop, from the catalog", () => {
   it("inserts after the block it was dropped on", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog("core:text"),
         target: onNode({ edge: "after", index: 1 }),
         targetNodeCount: 3,
@@ -1224,7 +1244,7 @@ describe("resolveDrop, from the catalog", () => {
   it("inserts straight into an area", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog("core:text"),
         target: onContainer("page:main", "area-1"),
         targetNodeCount: 2,
@@ -1238,7 +1258,7 @@ describe("resolveDrop, from the catalog", () => {
 
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog("core:text"),
         target: onNode({
           container: into("page:main", "area-1"),
@@ -1258,7 +1278,7 @@ describe("resolveDrop, from the catalog", () => {
   it("never adjusts for a removal, because nothing is removed", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog(),
         target: onNode({ edge: "before", index: 2 }),
         targetNodeCount: 3,
@@ -1274,7 +1294,7 @@ describe("resolveDrop, from the catalog", () => {
   it("appends when it is dropped on the zone itself", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog(),
         target: onContainer("page:main"),
         targetNodeCount: 3,
@@ -1290,7 +1310,7 @@ describe("resolveDrop, from the catalog", () => {
   it("lands at index 0 in an empty zone", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog(),
         target: onContainer("page:aside"),
         targetNodeCount: 0,
@@ -1306,7 +1326,7 @@ describe("resolveDrop, from the catalog", () => {
   it("clamps an index past the end of the container", () => {
     expect(
       resolveDrop({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: fromCatalog(),
         target: onNode({ edge: "after", index: 9 }),
         targetNodeCount: 2,
@@ -1322,7 +1342,7 @@ describe("resolveDrop, from the catalog", () => {
   it("is refused by the target zone's allowlist", () => {
     expect(
       resolveDrop({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: fromCatalog("example:callout"),
         target: onContainer("page:main"),
         targetNodeCount: 0,
@@ -1333,7 +1353,7 @@ describe("resolveDrop, from the catalog", () => {
   it("is accepted when the allowlist names its namespace", () => {
     expect(
       resolveDrop({
-        allowedBlocks: ["example:*"],
+        capabilities: accepting(["example:*"]),
         source: fromCatalog("example:callout"),
         target: onContainer("page:main"),
         targetNodeCount: 1,
@@ -1350,20 +1370,20 @@ describe("resolveDrop, from the catalog", () => {
 const ids = ["block-a", "block-b", "block-c"];
 
 const placeFor = ({
-  allowedBlocks = "*",
+  capabilities = accepting("*"),
   nodeIds = ids,
   source: dragged,
   target,
   targetNodeCount = nodeIds.length,
 }: {
-  allowedBlocks?: "*" | readonly string[];
+  capabilities?: TargetCapabilities;
   nodeIds?: readonly string[];
   source: EditorDragSource;
   target: EditorDropTarget;
   targetNodeCount?: number;
 }) => {
   const resolved = resolveDrop({
-    allowedBlocks,
+    capabilities,
     source: dragged,
     target,
     targetNodeCount,
@@ -1560,7 +1580,7 @@ describe("dropPlacement, moving a node", () => {
   it("shows nothing at all when the zone refuses the block", () => {
     expect(
       placeFor({
-        allowedBlocks: ["core:*"],
+        capabilities: accepting(["core:*"]),
         source: source({ type: "example:callout" }),
         target: onNode({ edge: "before", index: 1 }),
       }),
@@ -1701,7 +1721,7 @@ describe("an area carries its children past a zone's allowlist", () => {
   it("refuses an area whose child the target zone does not allow", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:text"],
+        capabilities: accepting(["core:text"]),
         source: areaSource({ childTypes: ["core:cta"] }),
         target: targetAt(sidebar.container),
       }),
@@ -1711,7 +1731,7 @@ describe("an area carries its children past a zone's allowlist", () => {
   it("refuses it even when only one of several children is disallowed", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:text"],
+        capabilities: accepting(["core:text"]),
         source: areaSource({ childTypes: ["core:text", "core:cta"] }),
         target: targetAt(sidebar.container),
       }),
@@ -1721,7 +1741,7 @@ describe("an area carries its children past a zone's allowlist", () => {
   it("allows an area whose children the target zone all accept", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:text"],
+        capabilities: accepting(["core:text"]),
         source: areaSource({ childTypes: ["core:text"] }),
         target: targetAt(sidebar.container),
       }),
@@ -1731,7 +1751,7 @@ describe("an area carries its children past a zone's allowlist", () => {
   it("allows an empty area anywhere, because it carries nothing", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:text"],
+        capabilities: accepting(["core:text"]),
         source: areaSource({ childTypes: [] }),
         target: targetAt(sidebar.container),
       }),
@@ -1741,7 +1761,7 @@ describe("an area carries its children past a zone's allowlist", () => {
   it("never blocks a reorder inside the zone the area already sits in", () => {
     expect(
       dropRejection({
-        allowedBlocks: ["core:text"],
+        capabilities: accepting(["core:text"]),
         source: areaSource({
           childTypes: ["core:cta"],
           container: into("page:main"),
@@ -1754,7 +1774,7 @@ describe("an area carries its children past a zone's allowlist", () => {
   it("still refuses an area dropped inside another area", () => {
     expect(
       dropRejection({
-        allowedBlocks: "*",
+        capabilities: accepting("*"),
         source: areaSource({ childTypes: [] }),
         target: targetAt(into("page:main", "area-b")),
       }),
@@ -1802,5 +1822,139 @@ describe("collision precedence knows what is being dragged", () => {
 
   it("behaves exactly as before when nothing says what is dragged", () => {
     expect(preferInnerCollisions(collisions)).toStrictEqual([innerBlock]);
+  });
+});
+
+describe("a target only accepts what it both registers and allows", () => {
+  const targetOf = (container: EditorContainerRef): EditorDropTarget => ({
+    container,
+    edge: null,
+    index: null,
+    kind: null,
+    nodeId: null,
+  });
+
+  const zoneB = into("page:aside");
+  const areaInB = into("page:aside", "area-c");
+
+  const registersTextOnly = accepting("*", ["core:text"]);
+
+  it("refuses an existing block the target zone does not register", () => {
+    const args = {
+      capabilities: registersTextOnly,
+      source: source({ type: "blog:latest-posts" }),
+      target: targetOf(zoneB),
+    };
+
+    expect(dropRejection(args)).toBe("not-registered");
+    expect(resolveDrop({ ...args, targetNodeCount: 2 })).toBeNull();
+  });
+
+  it("refuses a catalog block the target zone does not register", () => {
+    const args = {
+      capabilities: registersTextOnly,
+      source: { kind: "catalog-block", type: "blog:latest-posts" } as const,
+      target: targetOf(zoneB),
+    };
+
+    expect(dropRejection(args)).toBe("not-registered");
+    expect(resolveDrop({ ...args, targetNodeCount: 2 })).toBeNull();
+  });
+
+  it("refuses a registered type the allowlist turns away", () => {
+    const args = {
+      capabilities: accepting(["core:*"], ["blog:latest-posts"]),
+      source: source({ type: "blog:latest-posts" }),
+      target: targetOf(zoneB),
+    };
+
+    expect(dropRejection(args)).toBe("not-allowed");
+    expect(resolveDrop({ ...args, targetNodeCount: 2 })).toBeNull();
+  });
+
+  it("accepts a type the target both registers and allows", () => {
+    const args = {
+      capabilities: accepting(["core:*"], ["core:text"]),
+      source: source({ type: "core:text" }),
+      target: targetOf(zoneB),
+    };
+
+    expect(dropRejection(args)).toBeNull();
+    expect(resolveDrop({ ...args, targetNodeCount: 2 })).not.toBeNull();
+  });
+
+  it("judges a drop into an area by its parent zone, exactly as at the root", () => {
+    const unregistered = source({ type: "blog:latest-posts" });
+
+    expect(
+      dropRejection({
+        capabilities: registersTextOnly,
+        source: unregistered,
+        target: targetOf(areaInB),
+      }),
+    ).toBe("not-registered");
+
+    expect(
+      dropRejection({
+        capabilities: registersTextOnly,
+        source: source({ type: "core:text" }),
+        target: targetOf(areaInB),
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a whole area when one child is unregistered", () => {
+    const args = {
+      capabilities: registersTextOnly,
+      source: areaSource({ childTypes: ["core:text", "blog:latest-posts"] }),
+      target: targetOf(zoneB),
+    };
+
+    expect(dropRejection(args)).toBe("not-registered");
+    expect(resolveDrop({ ...args, targetNodeCount: 2 })).toBeNull();
+  });
+
+  it("moves an area whose every child the target registers and allows", () => {
+    const args = {
+      capabilities: accepting("*", ["core:text", "core:cta"]),
+      source: areaSource({ childTypes: ["core:text", "core:cta"] }),
+      target: targetOf(zoneB),
+    };
+
+    expect(dropRejection(args)).toBeNull();
+    expect(resolveDrop({ ...args, targetNodeCount: 2 })).not.toBeNull();
+  });
+
+  it("reports the allowlist when a child is registered but forbidden", () => {
+    expect(
+      dropRejection({
+        capabilities: accepting(["core:*"], ["core:text", "blog:latest-posts"]),
+        source: areaSource({ childTypes: ["core:text", "blog:latest-posts"] }),
+        target: targetOf(zoneB),
+      }),
+    ).toBe("not-allowed");
+  });
+
+  it("still lets an area reorder inside the zone it already lives in", () => {
+    expect(
+      dropRejection({
+        capabilities: accepting("*", []),
+        source: areaSource({
+          childTypes: ["blog:latest-posts"],
+          container: into("page:main"),
+        }),
+        target: targetOf(into("page:main")),
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps refusing a nested area before it looks at any type", () => {
+    expect(
+      dropRejection({
+        capabilities: accepting("*", []),
+        source: areaSource({ childTypes: [] }),
+        target: targetOf(into("page:main", "area-b")),
+      }),
+    ).toBe("nested-area");
   });
 });

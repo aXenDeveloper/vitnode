@@ -27,6 +27,12 @@ export interface EditorNodeFound {
   node: ContentNode;
 }
 
+export interface TargetCapabilities {
+  allows: (type: string) => boolean;
+  known: boolean;
+  registers: (type: string) => boolean;
+}
+
 export interface EditorZoneInvalidEntry {
   index: number;
   value: unknown;

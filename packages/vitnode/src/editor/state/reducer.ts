@@ -20,6 +20,7 @@ import { contentNodeBlocks, isBlockAreaInstance } from "../../blocks/area";
 import { createBlockInstanceId } from "../../blocks/instance";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { resolveBlockVariant } from "../../blocks/variant";
+import { refusesAnyType, targetCapabilities } from "./capabilities";
 
 export const initialVisualEditorState: VisualEditorState = {
   droppedZoneIds: [],
@@ -573,6 +574,18 @@ const moveNode = (
   const node = from[index];
   const kind = nodeKindOf(node);
   if (kind === "area" && action.to.areaId !== null) return state;
+
+  if (
+    action.from.zoneId !== action.to.zoneId &&
+    refusesAnyType(
+      targetCapabilities(state, action.to),
+      isBlockAreaInstance(node)
+        ? node.children.map(child => child.type)
+        : [node.type],
+    )
+  ) {
+    return state;
+  }
 
   if (sameContainerRef(action.from, action.to)) {
     const reordered = updateContainer(source, action.from, nodes =>

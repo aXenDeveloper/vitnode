@@ -905,6 +905,7 @@
         "targeted": "Waiting for the block you pick next",
         "add_block": "Add block",
         "rejected": "This zone does not accept the block you are dragging.",
+        "not_registered": "No plugin installed here provides that block, so this zone cannot render it.",
         "invalid": {
           "title": "This zone holds content the editor cannot read",
           "description": "These entries are stored here but are not content the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
@@ -946,7 +947,8 @@
         "area_over": "{name} is over an area in the {zone} zone, position {position} of {total}.",
         "area_dropped": "{name} was dropped into an area in the {zone} zone, position {position} of {total}.",
         "area_rejected": "An area cannot hold another area.",
-        "area_full": "The area is full, so {name} cannot go in it."
+        "area_full": "The area is full, so {name} cannot go in it.",
+        "not_registered": "No plugin provides {name} in the {zone} zone, so it cannot go there."
       },
       "picker": {
         "search": "Search blocks…",
@@ -1005,6 +1007,7 @@
         "drop_here": "Drop blocks here",
         "add_block": "Add block",
         "rejected": "This area does not accept the block you are dragging.",
+        "not_registered": "No plugin installed here provides that block, so this area cannot hold it.",
         "nested_rejected": "An area cannot hold another area.",
         "columns": "Columns",
         "columns_value": "{columns, plural, one {# column} other {# columns}}",

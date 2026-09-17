@@ -263,3 +263,36 @@ describe("the editor's published entry points", () => {
     });
   });
 });
+
+describe("what decides whether a target accepts a block", () => {
+  const capabilities = join(SRC_ROOT, "editor", "state", "capabilities.ts");
+  const reducer = join(SRC_ROOT, "editor", "state", "reducer.ts");
+  const pureDrop = join(SRC_ROOT, "editor", "dnd", "resolve-drop.ts");
+
+  it("keeps the drop resolver pure, with no registry to consult on its own", () => {
+    const source = readFileSync(pureDrop, "utf8");
+
+    expect(reachedSpecifiers(pureDrop, SRC_ROOT)).toStrictEqual([]);
+    expect(source).not.toContain("blocks/registry");
+    expect(source).not.toContain("isBlockAllowed");
+    expect(source).toContain("TargetCapabilities");
+  });
+
+  it("answers the question in one module both layers can reach", () => {
+    expect(reachedFiles(reducer, { srcRoot: SRC_ROOT })).toContain(
+      "editor/state/capabilities.ts",
+    );
+    expect(readFileSync(capabilities, "utf8")).toContain(
+      'from "../../blocks/registry"',
+    );
+  });
+
+  it("leaves the reducer free of React and of drag and drop", () => {
+    expect(reachedSpecifiers(reducer, SRC_ROOT)).not.toContain("react");
+    expect(
+      reachedFiles(reducer, { srcRoot: SRC_ROOT }).filter(file =>
+        file.startsWith("editor/dnd/"),
+      ),
+    ).toStrictEqual([]);
+  });
+});

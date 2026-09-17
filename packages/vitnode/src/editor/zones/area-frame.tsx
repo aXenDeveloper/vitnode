@@ -28,6 +28,7 @@ import { useAreaDroppable } from "../dnd/use-container-droppable";
 import { useSortableNode } from "../dnd/use-sortable-node";
 import { sameNodeRef } from "../state/reducer";
 import { zoneDropState } from "./drop-state";
+import { AREA_REJECTION_LABELS } from "./rejection-labels";
 
 const DIALOG_EXIT_DELAY = 300;
 
@@ -244,11 +245,7 @@ export const EditableAreaFrame = ({
 
       {rejection === null ? null : (
         <p className="text-destructive mt-2 text-xs leading-relaxed text-pretty">
-          {t(
-            rejection === "nested-area"
-              ? "area.nested_rejected"
-              : "area.rejected",
-          )}
+          {t(AREA_REJECTION_LABELS[rejection])}
         </p>
       )}
 

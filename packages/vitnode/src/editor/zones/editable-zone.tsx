@@ -34,6 +34,7 @@ import { editableBlockRender } from "./block-render";
 import { classifyZoneEntries } from "./classify";
 import { zoneDropState } from "./drop-state";
 import { InvalidZoneEntries } from "./invalid-entries";
+import { ZONE_REJECTION_LABELS } from "./rejection-labels";
 
 const ZONE_CLASSES = {
   idle: "bg-muted/20 outline-border/60 hover:outline-border",
@@ -195,7 +196,9 @@ export const EditableZone = ({
 
   const notAllowed = (
     <p className="text-destructive text-xs leading-relaxed text-pretty">
-      {t("zone.rejected")}
+      {t(
+        rejection === null ? "zone.rejected" : ZONE_REJECTION_LABELS[rejection],
+      )}
     </p>
   );
 

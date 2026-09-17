@@ -4,6 +4,7 @@ import type { EditorContainerRef } from "../state/types";
 import type { EditorDropRejection } from "./resolve-drop";
 
 import { useVisualEditor } from "../context";
+import { targetCapabilities } from "../state/capabilities";
 import { useEditorDnd } from "./context";
 import {
   areaDroppableId,
@@ -38,7 +39,7 @@ const useContainerDroppable = ({
       dragging === null
         ? null
         : dropRejection({
-            allowedBlocks: state.zones[container.zoneId]?.allowedBlocks,
+            capabilities: targetCapabilities(state, container),
             source: dragging,
             target: {
               container,

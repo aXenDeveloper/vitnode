@@ -47,7 +47,9 @@ import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { toBlockCatalogEntry } from "../block-picker/catalog";
 import { BlockCatalogEntryCard } from "../block-picker/entry-card";
 import { useVisualEditor } from "../context";
+import { targetCapabilities } from "../state/capabilities";
 import { containerNodes } from "../state/reducer";
+import { DND_REJECTION_LABELS } from "../zones/rejection-labels";
 import { EditorDndContext } from "./context";
 import {
   dropEdgeFor,
@@ -238,9 +240,9 @@ export const EditorDndProvider = ({
         target === null ? null : containerNodes(state, target.container);
       if (!target || !nodes) return outside;
 
-      const allowedBlocks = state.zones[target.container.zoneId]?.allowedBlocks;
+      const capabilities = targetCapabilities(state, target.container);
       const resolved = resolveDrop({
-        allowedBlocks,
+        capabilities,
         source,
         target,
         targetNodeCount: nodes.length,
@@ -258,7 +260,7 @@ export const EditorDndProvider = ({
                 overNodeId: target.nodeId,
                 resolved,
               }),
-        rejection: dropRejection({ allowedBlocks, source, target }),
+        rejection: dropRejection({ capabilities, source, target }),
         resolved,
         source,
       };
@@ -276,10 +278,11 @@ export const EditorDndProvider = ({
 
       const name = dragName(plan.source);
       if (plan.container === null) return t("dnd.outside", { name });
-      if (plan.rejection === "nested-area") return t("dnd.area_rejected");
 
       const zone = plan.container.zoneId;
-      if (plan.rejection !== null) return t("dnd.rejected", { name, zone });
+      if (plan.rejection !== null) {
+        return t(DND_REJECTION_LABELS[plan.rejection], { name, zone });
+      }
       if (!plan.placement) return t("dnd.unchanged", { name, zone });
 
       return t(plan.container.areaId === null ? "dnd.over" : "dnd.area_over", {
