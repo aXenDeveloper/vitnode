@@ -366,3 +366,153 @@ describe("ContentRenderer", () => {
     expect(screen.getAllByRole("heading")[1]).toBe(first);
   });
 });
+
+describe("a block array that predates areas", () => {
+  it("renders exactly what it always did, with nothing wrapped around it", () => {
+    const { container } = render(
+      <ContentRenderer
+        blocks={[instance("First", "01"), instance("Second", "02")]}
+        registry={registry}
+      />,
+    );
+
+    expect(container.innerHTML).toBe(
+      '<h1 data-block="01" data-index="0">First</h1><h1 data-block="02" data-index="1">Second</h1>',
+    );
+    expect(container.querySelector("[data-area-id]")).toBeNull();
+  });
+
+  it("leaves a block with no variants of its own untouched", () => {
+    render(
+      <ContentRenderer
+        blocks={[{ ...instance("Plain", "01"), variant: undefined }]}
+        registry={registry}
+      />,
+    );
+
+    expect(screen.getByRole("heading").textContent).toBe("Plain");
+  });
+});
+
+describe("which presentation a block renders", () => {
+  const Card = ({ data, variant }: BlockComponentProps) => (
+    <article data-variant={variant ?? "none"}>{String(data.title)}</article>
+  );
+
+  const variantRegistry = createBlockRegistry([
+    {
+      pluginId: "@vitnode/core",
+      namespace: "core",
+      blocks: [
+        {
+          component: Card,
+          defaultVariant: "compact",
+          fields: heroFields,
+          id: "card",
+          variants: [{ id: "compact" }, { id: "wide" }],
+        },
+      ],
+    },
+  ]);
+
+  const card = (variant?: string) => ({
+    data: { title: "Card" },
+    id: "01",
+    type: "core:card",
+    ...(variant === undefined ? {} : { variant }),
+  });
+
+  it("hands the component the variant that is stored", () => {
+    render(
+      <ContentRenderer blocks={[card("wide")]} registry={variantRegistry} />,
+    );
+
+    expect(screen.getByRole("article").dataset.variant).toBe("wide");
+  });
+
+  it("falls back to the variant the block calls its default", () => {
+    render(<ContentRenderer blocks={[card()]} registry={variantRegistry} />);
+
+    expect(screen.getByRole("article").dataset.variant).toBe("compact");
+  });
+
+  it("hands no variant at all to a block that defines none", () => {
+    const plain = createBlockRegistry([
+      {
+        pluginId: "@vitnode/core",
+        namespace: "core",
+        blocks: [{ component: Card, fields: heroFields, id: "card" }],
+      },
+    ]);
+
+    render(<ContentRenderer blocks={[card()]} registry={plain} />);
+
+    expect(screen.getByRole("article").dataset.variant).toBe("none");
+  });
+
+  it("refuses a variant the block does not define, rather than guessing one", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(
+      <ContentRenderer blocks={[card("hero")]} registry={variantRegistry} />,
+    );
+
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.getByRole("note").textContent).toContain("variant");
+  });
+
+  it("says which block and which variant in development", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(
+      <ContentRenderer blocks={[card("hero")]} registry={variantRegistry} />,
+    );
+
+    expect(String(warn.mock.calls[0][0])).toContain("core:card");
+    expect(String(warn.mock.calls[0][0])).toContain("hero");
+  });
+
+  it("hands the fallback the reason, so an application can render its own", () => {
+    render(
+      <ContentRenderer
+        blocks={[card("hero")]}
+        fallback={({ reason }) => <p>{reason}</p>}
+        registry={variantRegistry}
+      />,
+    );
+
+    expect(screen.getByText("unknown-variant")).toBeTruthy();
+  });
+
+  it("refuses it even where the caller trusts the stored data", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    render(
+      <ContentRenderer
+        blocks={[card("hero"), instance("Beside", "02")]}
+        registry={createBlockRegistry([
+          {
+            pluginId: "@vitnode/core",
+            namespace: "core",
+            blocks: [
+              {
+                component: Card,
+                defaultVariant: "compact",
+                fields: heroFields,
+                id: "card",
+                variants: [{ id: "compact" }],
+              },
+              heroBlock,
+            ],
+          },
+        ])}
+        validate="never"
+      />,
+    );
+
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.getByRole("heading").textContent).toBe("Beside");
+  });
+});

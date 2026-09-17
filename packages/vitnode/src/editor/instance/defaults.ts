@@ -15,6 +15,7 @@ import type {
 import { createBlockInstance } from "../../blocks/instance";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { blockDataShapeIssue } from "../../blocks/shape";
+import { blockVariants, resolveBlockVariant } from "../../blocks/variant";
 import { humanizeFieldName } from "../../content/admin/labels";
 import { contentInnerFields } from "../../content/paths";
 
@@ -96,7 +97,11 @@ const blockDataDefaults = (fields: ContentFieldMap): BlockUnknownData =>
 export const createBlockInstanceFor = (
   entry: RegisteredBlock,
 ): AnyBlockInstance =>
-  createBlockInstance(entry.type, blockDataDefaults(entry.definition.fields));
+  createBlockInstance(
+    entry.type,
+    blockDataDefaults(entry.definition.fields),
+    entry.definition.defaultVariant,
+  );
 
 export const blockInstanceIssue = (
   registry: BlockRegistry | undefined,
@@ -108,6 +113,15 @@ export const blockInstanceIssue = (
   const entry = resolved.get(instance.type);
   if (!entry) {
     return `"${instance.type}" is not a registered block type. The plugin that owns it is either not installed or no longer registers it.`;
+  }
+
+  const resolution = resolveBlockVariant(entry.definition, instance.variant);
+  if (resolution.kind === "unknown") {
+    const declared = blockVariants(entry.definition);
+
+    return declared.length === 0
+      ? `"${resolution.variant}" is not a layout this block offers - it has none, so it always renders the one way.`
+      : `"${resolution.variant}" is not a layout this block offers. It offers ${declared.map(variant => `"${variant.id}"`).join(", ")}.`;
   }
 
   return blockDataShapeIssue(entry.definition, instance.data);

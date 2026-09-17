@@ -4,9 +4,10 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import type {
   AnyBlockDefinition,
-  AnyBlockInstance,
   BlockData,
   BlockDefinition,
+  BlockVariantDefinition,
+  ContentNode,
 } from "./types";
 
 import { defineContentType } from "../content/define";
@@ -80,11 +81,65 @@ describe("defineBlock", () => {
   });
 });
 
+const cardsBlock = defineBlock({
+  component: ({ data }) => data.title,
+  defaultVariant: "grid",
+  fields: { title: field.text({ required: true }) },
+  id: "cards",
+  variants: [{ id: "grid" }, { id: "featured" }] as const,
+});
+
+const quoteBlock = defineBlock({
+  component: ({ data }) => data.title,
+  fields: { title: field.text({ required: true }) },
+  id: "quote",
+});
+
+describe("defineBlock variants", () => {
+  it("narrows the default to the declared ids", () => {
+    expectTypeOf(cardsBlock.defaultVariant).toEqualTypeOf<
+      "featured" | "grid" | undefined
+    >();
+  });
+
+  it("refuses a default the block does not declare", () => {
+    defineBlock({
+      component: ({ data }) => data.title,
+      // @ts-expect-error "carousel" is not one of the declared variants.
+      defaultVariant: "carousel",
+      fields: { title: field.text({ required: true }) },
+      id: "cards",
+      variants: [{ id: "grid" }, { id: "featured" }] as const,
+    });
+  });
+
+  it("refuses a default on a block that declares none", () => {
+    defineBlock({
+      component: ({ data }) => data.title,
+      // @ts-expect-error a default needs variants to pick from.
+      defaultVariant: "grid",
+      fields: { title: field.text({ required: true }) },
+      id: "quote",
+    });
+  });
+
+  it("leaves a block with no variants carrying none", () => {
+    expectTypeOf(quoteBlock.variants).toEqualTypeOf<
+      readonly BlockVariantDefinition<never>[] | undefined
+    >();
+  });
+
+  it("stays assignable to the erased definition a registry holds", () => {
+    expectTypeOf(cardsBlock).toExtend<AnyBlockDefinition>();
+    expectTypeOf(quoteBlock).toExtend<AnyBlockDefinition>();
+  });
+});
+
 describe("field.blocks", () => {
-  it("reads back as an ordered list of instances", () => {
+  it("reads back as an ordered list of content nodes", () => {
     expectTypeOf<
       z.output<typeof pageContentType.schemas.select>["content"]
-    >().toEqualTypeOf<AnyBlockInstance[]>();
+    >().toEqualTypeOf<ContentNode[]>();
   });
 
   it("keeps the allowlist as literals", () => {

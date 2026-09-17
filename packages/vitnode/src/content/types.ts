@@ -1,4 +1,4 @@
-import type { AnyBlockInstance, BlockAllowedSpec } from "../blocks/types";
+import type { BlockAllowedSpec, ContentNode } from "../blocks/types";
 import type {
   CONTENT_ADMIN_FORM_MODES,
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
@@ -360,7 +360,7 @@ export type ContentRepeatableInputRow<TFields> = Prettify<
 >;
 
 export type ContentFieldValue<TField> = TField extends { kind: "blocks" }
-  ? AnyBlockInstance[]
+  ? ContentNode[]
   : TField extends {
         fields: infer TInner;
         kind: "group";
@@ -373,7 +373,7 @@ export type ContentFieldValue<TField> = TField extends { kind: "blocks" }
         : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
 export type ContentFieldInput<TField> = TField extends { kind: "blocks" }
-  ? AnyBlockInstance[]
+  ? ContentNode[]
   : TField extends {
         fields: infer TInner;
         kind: "group";

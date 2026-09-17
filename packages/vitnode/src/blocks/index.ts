@@ -1,8 +1,16 @@
 export {
+  AREA_ALIGN_CLASSES,
+  AREA_COLUMN_CLASSES,
+  AREA_GAP_CLASSES,
+  AREA_GRID_CLASS,
+  AREA_JUSTIFY_CLASSES,
   areaChildren,
+  areaLayoutClassNames,
   areaLayoutWithDefaults,
+  areaLikeId,
   contentNodeBlocks,
   contentNodeId,
+  contentNodeKey,
   createAreaInstance,
   DEFAULT_AREA_LAYOUT,
   isAreaAlign,
@@ -12,6 +20,7 @@ export {
   isAreaLayout,
   isAreaLike,
   isBlockAreaInstance,
+  isContentNode,
 } from "./area";
 export {
   assertBlockFields,
@@ -117,6 +126,19 @@ export type {
   RegisteredBlock,
 } from "./types";
 export {
+  parseBlockInstances,
+  parseContentNodes,
+  zodBlockInstances,
+  zodContentNode,
+  zodContentNodes,
+} from "./validate";
+export type {
+  BlockEnvelope,
+  BlockInstanceIssue,
+  BlockInstancesResult,
+  ContentNodePath,
+} from "./validate";
+export {
   blockVariantLabel,
   blockVariants,
   findBlockVariant,
@@ -124,12 +146,6 @@ export {
   resolveBlockVariant,
 } from "./variant";
 export type { BlockVariantResolution } from "./variant";
-export { parseBlockInstances, zodBlockInstances } from "./validate";
-export type {
-  BlockEnvelope,
-  BlockInstanceIssue,
-  BlockInstancesResult,
-} from "./validate";
 export {
   assertContentZoneId,
   contentZoneAttributes,

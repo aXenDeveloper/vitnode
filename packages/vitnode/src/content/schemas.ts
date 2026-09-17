@@ -16,7 +16,7 @@ import type {
   ResolvedContentPublicApiConfig,
 } from "./types";
 
-import { zodBlockInstances } from "../blocks/validate";
+import { zodBlockInstances, zodContentNode } from "../blocks/validate";
 import {
   contentAdvancedDisabled,
   contentFileCollectionMax,
@@ -165,14 +165,7 @@ const numberSchema = (fieldValue: {
 /** Row identifiers are always positive integers, whatever the field kind. */
 const referenceSchema = (): z.ZodNumber => z.number().int().positive();
 
-const blocksSelectSchema = (): z.ZodType =>
-  z.array(
-    z.object({
-      data: z.record(z.string(), z.unknown()),
-      id: z.string(),
-      type: z.string(),
-    }),
-  );
+const blocksSelectSchema = (): z.ZodType => z.array(zodContentNode);
 
 const blocksInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType =>
   zodBlockInstances(

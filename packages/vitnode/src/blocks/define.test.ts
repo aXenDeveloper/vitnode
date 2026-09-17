@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import type { AnyBlockVariantDefinition } from "./types";
+
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
 import { BlockError } from "./errors";
@@ -77,6 +79,76 @@ describe("defineBlock", () => {
         id: "media",
       }),
     ).not.toThrow();
+  });
+
+  describe("variants", () => {
+    const cards = (declaration: {
+      defaultVariant?: string;
+      variants?: readonly AnyBlockVariantDefinition[];
+    }) =>
+      defineBlock({
+        component: Noop,
+        fields: { title: field.text({ required: true }) },
+        id: "cards",
+        ...declaration,
+      });
+
+    it("keeps the variants and the default it was given", () => {
+      const block = cards({
+        defaultVariant: "grid",
+        variants: [{ id: "grid" }, { id: "featured" }],
+      });
+
+      expect(block.variants?.map(variant => variant.id)).toStrictEqual([
+        "grid",
+        "featured",
+      ]);
+      expect(block.defaultVariant).toBe("grid");
+    });
+
+    it("leaves both absent for a block that offers one layout", () => {
+      const block = cards({});
+
+      expect(block.variants).toBeUndefined();
+      expect(block.defaultVariant).toBeUndefined();
+    });
+
+    it("refuses a variant id that is not lowercase kebab-case", () => {
+      expect(() => cards({ variants: [{ id: "Grid" }] })).toThrow(
+        /lowercase letters/,
+      );
+      expect(() => cards({ variants: [{ id: "" }] })).toThrow(
+        /lowercase letters/,
+      );
+      expect(() => cards({ variants: [{ id: "a".repeat(33) }] })).toThrow(
+        /at most 32 characters/,
+      );
+    });
+
+    it("refuses two variants sharing an id", () => {
+      expect(() =>
+        cards({ variants: [{ id: "grid" }, { id: "grid" }] }),
+      ).toThrow(/declared twice/);
+    });
+
+    it("refuses an empty list rather than shipping an empty picker", () => {
+      expect(() => cards({ variants: [] })).toThrow(/list of nothing/);
+    });
+
+    it("refuses a default that names no declared variant", () => {
+      expect(() =>
+        cards({
+          defaultVariant: "carousel",
+          variants: [{ id: "grid" }, { id: "featured" }],
+        }),
+      ).toThrow(/does not declare/);
+    });
+
+    it("refuses a default on a block that declares no variants", () => {
+      expect(() => cards({ defaultVariant: "grid" })).toThrow(
+        /declares no `variants`/,
+      );
+    });
   });
 
   describe("parseBlockData", () => {

@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { BlockAllowedSpec } from "./types";
+import type { BlockAllowedSpec, ContentNode } from "./types";
 import type { ContentZoneProps } from "./zone";
 
 import { ContentZone } from "./zone";
@@ -32,6 +32,12 @@ describe("ContentZone props", () => {
     expectTypeOf<undefined>().toExtend<ContentZoneProps["as"]>();
 
     createElement(ContentZone, { as: "header", blocks: [], id: "main" });
+  });
+
+  it("takes a list holding areas as readily as one holding blocks", () => {
+    expectTypeOf<readonly ContentNode[]>().toExtend<
+      ContentZoneProps["blocks"]
+    >();
   });
 
   it("refuses a component as the wrapper, which could drop the zone marker", () => {

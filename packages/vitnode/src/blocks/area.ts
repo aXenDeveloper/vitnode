@@ -20,7 +20,11 @@ import {
   AREA_JUSTIFIES,
   CONTENT_AREA_KIND,
 } from "./const";
-import { createBlockInstanceId, isBlockInstanceId } from "./instance";
+import {
+  createBlockInstanceId,
+  isBlockInstance,
+  isBlockInstanceId,
+} from "./instance";
 
 export const DEFAULT_AREA_LAYOUT: Required<BlockAreaLayout> = {
   align: AREA_DEFAULT_ALIGN,
@@ -76,13 +80,20 @@ export const isBlockAreaInstance = (
   );
 };
 
+export const isContentNode = (value: unknown): value is ContentNode =>
+  isBlockAreaInstance(value) || isBlockInstance(value);
+
 export const areaLayoutWithDefaults = (
   layout: BlockAreaLayout,
 ): Required<BlockAreaLayout> => ({
-  align: layout.align ?? DEFAULT_AREA_LAYOUT.align,
-  columns: layout.columns,
-  gap: layout.gap ?? DEFAULT_AREA_LAYOUT.gap,
-  justify: layout.justify ?? DEFAULT_AREA_LAYOUT.justify,
+  align: isAreaAlign(layout.align) ? layout.align : DEFAULT_AREA_LAYOUT.align,
+  columns: isAreaColumns(layout.columns)
+    ? layout.columns
+    : DEFAULT_AREA_LAYOUT.columns,
+  gap: isAreaGap(layout.gap) ? layout.gap : DEFAULT_AREA_LAYOUT.gap,
+  justify: isAreaJustify(layout.justify)
+    ? layout.justify
+    : DEFAULT_AREA_LAYOUT.justify,
 });
 
 export const createAreaInstance = ({
@@ -95,10 +106,70 @@ export const createAreaInstance = ({
   children: [...children],
   id: createBlockInstanceId(),
   kind: CONTENT_AREA_KIND,
-  layout: { ...DEFAULT_AREA_LAYOUT, ...layout },
+  layout: areaLayoutWithDefaults({ ...DEFAULT_AREA_LAYOUT, ...layout }),
 });
 
+export const AREA_GRID_CLASS = "grid";
+
+export const AREA_COLUMN_CLASSES = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 md:grid-cols-2",
+  3: "grid-cols-1 md:grid-cols-3",
+  4: "grid-cols-1 md:grid-cols-4",
+} as const satisfies Record<BlockAreaColumns, string>;
+
+export const AREA_GAP_CLASSES = {
+  lg: "gap-8",
+  md: "gap-4",
+  none: "gap-0",
+  sm: "gap-2",
+} as const satisfies Record<BlockAreaGap, string>;
+
+export const AREA_ALIGN_CLASSES = {
+  center: "items-center",
+  start: "items-start",
+  stretch: "items-stretch",
+} as const satisfies Record<BlockAreaAlign, string>;
+
+export const AREA_JUSTIFY_CLASSES = {
+  between: "justify-between justify-items-stretch",
+  center: "justify-center justify-items-center",
+  start: "justify-start justify-items-start",
+} as const satisfies Record<BlockAreaJustify, string>;
+
+export const areaLayoutClassNames = (layout: BlockAreaLayout): string => {
+  const resolved = areaLayoutWithDefaults(layout);
+
+  return [
+    AREA_GRID_CLASS,
+    AREA_COLUMN_CLASSES[resolved.columns],
+    AREA_GAP_CLASSES[resolved.gap],
+    AREA_ALIGN_CLASSES[resolved.align],
+    AREA_JUSTIFY_CLASSES[resolved.justify],
+  ].join(" ");
+};
+
 export const contentNodeId = (node: ContentNode): string => node.id;
+
+export const areaLikeId = (value: unknown): string | undefined => {
+  if (!isAreaLike(value)) return undefined;
+
+  const id = (value as Record<string, unknown>).id;
+
+  return typeof id === "string" && id.length > 0 ? id : undefined;
+};
+
+export const contentNodeKey = (node: unknown, index: number): string => {
+  const at = `at:${String(index)}`;
+
+  if (typeof node !== "object" || node === null || Array.isArray(node)) {
+    return at;
+  }
+
+  const id = (node as Record<string, unknown>).id;
+
+  return typeof id === "string" && id.length > 0 ? id : at;
+};
 
 export const areaChildren = (node: ContentNode): readonly AnyBlockInstance[] =>
   isBlockAreaInstance(node) ? node.children : [];

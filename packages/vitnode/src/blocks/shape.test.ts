@@ -56,6 +56,12 @@ describe("blockDataShapeIssue", () => {
     );
   });
 
+  it("refuses a variant smuggled into the data, which is never a field", () => {
+    expect(issue({ title: "Hi", variant: "featured" })).toMatch(
+      /"variant" is not a field/,
+    );
+  });
+
   it("reports a value of the wrong kind", () => {
     expect(issue({ title: 7 })).toMatch(/number where the field is a text/);
     expect(issue({ count: "3", title: "Hi" })).toMatch(

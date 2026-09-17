@@ -4,6 +4,8 @@ import type {
   BlockVariantDefinition,
 } from "./types";
 
+import { humanizeFieldName } from "../content/admin/labels";
+
 export type BlockVariantResolution =
   | { kind: "resolved"; variant: string | undefined }
   | { kind: "unknown"; variant: string };
@@ -35,4 +37,4 @@ export const resolveBlockVariant = (
 };
 
 export const blockVariantLabel = (variant: BlockVariantDefinition): string =>
-  variant.label ?? variant.id;
+  variant.label ?? humanizeFieldName(variant.id);

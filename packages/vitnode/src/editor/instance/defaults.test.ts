@@ -39,6 +39,21 @@ const sampleBlock = defineBlock({
   id: "sample",
 });
 
+const variantBlock = defineBlock({
+  component: () => null,
+  defaultVariant: "grid",
+  fields: { title: field.text({ required: true }) },
+  id: "cards",
+  variants: [{ id: "grid" }, { id: "featured" }],
+});
+
+const defaultlessBlock = defineBlock({
+  component: () => null,
+  fields: { title: field.text({ required: true }) },
+  id: "quote",
+  variants: [{ id: "plain" }, { id: "pulled" }],
+});
+
 const entryFor = (definition: AnyBlockDefinition): RegisteredBlock => ({
   definition,
   namespace: "sample",
@@ -104,6 +119,24 @@ describe("createBlockInstanceFor", () => {
     expect(data.description).toBeNull();
   });
 
+  it("starts a block on the layout it declares as its default", () => {
+    const instance = createBlockInstanceFor(entryFor(variantBlock));
+
+    expect(instance.variant).toBe("grid");
+  });
+
+  it("leaves the variant absent for a block that offers one layout", () => {
+    const instance = createBlockInstanceFor(entryFor(sampleBlock));
+
+    expect(instance).not.toHaveProperty("variant");
+  });
+
+  it("leaves the variant absent for variants with no declared default", () => {
+    const instance = createBlockInstanceFor(entryFor(defaultlessBlock));
+
+    expect(instance).not.toHaveProperty("variant");
+  });
+
   it("writes an ISO instant for a date a block cannot be saved without", () => {
     const { data } = createBlockInstanceFor(entryFor(sampleBlock));
 
@@ -140,6 +173,32 @@ describe("blockInstanceIssue", () => {
         data: { ...instance.data, title: 4 },
       }),
     ).toContain("title");
+  });
+
+  it("names a layout the block does not offer", () => {
+    const variantRegistry = createBlockRegistry([
+      {
+        pluginId: "@vitnode/sample",
+        namespace: "sample",
+        blocks: [variantBlock],
+      },
+    ]);
+
+    const instance = createBlockInstanceFor(entryFor(variantBlock));
+
+    expect(
+      blockInstanceIssue(variantRegistry, { ...instance, variant: "carousel" }),
+    ).toMatch(
+      /"carousel" is not a layout this block offers\. It offers "grid"/,
+    );
+  });
+
+  it("says a block offers no layouts at all when it does not", () => {
+    const instance = createBlockInstanceFor(builtIn("core:text"));
+
+    expect(
+      blockInstanceIssue(registry, { ...instance, variant: "grid" }),
+    ).toMatch(/it has none/);
   });
 
   it("falls back to the process registry, and stays quiet without one", () => {

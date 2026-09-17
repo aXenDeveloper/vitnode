@@ -2,7 +2,10 @@
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import type { AnyBlockInstance, ContentNode } from "@/blocks/types";
+
 import { defineBlock } from "@/blocks/define";
+import { isBlockInstance } from "@/blocks/instance";
 import {
   createBlockRegistry,
   setDefaultBlockRegistry,
@@ -15,6 +18,9 @@ import { createContentTable } from "./server/table";
 import { createContentTranslationTable } from "./server/translation-table";
 
 const Noop = () => null;
+
+const blocksOf = (nodes: readonly ContentNode[]): AnyBlockInstance[] =>
+  nodes.filter((node): node is AnyBlockInstance => isBlockInstance(node));
 
 const heroBlock = defineBlock({
   component: Noop,
@@ -178,7 +184,7 @@ describe("create schema", () => {
       }).content ?? [];
 
     expect(content.map(block => block.id)).toStrictEqual(["02", "01"]);
-    expect(content.map(block => block.type)).toStrictEqual([
+    expect(blocksOf(content).map(block => block.type)).toStrictEqual([
       "blog:latest-posts",
       "core:hero",
     ]);
@@ -191,7 +197,7 @@ describe("create schema", () => {
         content: [instance("core:hero", { title: "Build" }, "01")],
       }).content ?? [];
 
-    expect(content[0]?.data).toStrictEqual({
+    expect(blocksOf(content)[0]?.data).toStrictEqual({
       title: "Build",
       variant: "default",
     });
