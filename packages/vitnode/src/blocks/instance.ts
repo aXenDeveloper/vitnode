@@ -1,6 +1,10 @@
 import type { AnyBlockInstance, BlockInstance } from "./types";
 
-import { BLOCK_INSTANCE_ID_LENGTH, BLOCK_INSTANCE_ID_PATTERN } from "./const";
+import {
+  BLOCK_INSTANCE_ID_LENGTH,
+  BLOCK_INSTANCE_ID_PATTERN,
+  CONTENT_AREA_KIND,
+} from "./const";
 import { BlockError } from "./errors";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -48,10 +52,12 @@ export const isBlockInstanceId = (value: unknown): value is string =>
 export const createBlockInstance = <TType extends string, TData>(
   type: TType,
   data: TData,
+  variant?: string,
 ): BlockInstance<TType, TData> => ({
   data,
   id: createBlockInstanceId(),
   type,
+  ...(variant === undefined ? {} : { variant }),
 });
 
 export const isBlockInstance = (value: unknown): value is AnyBlockInstance => {
@@ -61,9 +67,12 @@ export const isBlockInstance = (value: unknown): value is AnyBlockInstance => {
 
   const instance = value as Record<string, unknown>;
 
+  if (instance.kind === CONTENT_AREA_KIND) return false;
+
   return (
     isBlockInstanceId(instance.id) &&
     typeof instance.type === "string" &&
+    (instance.variant === undefined || typeof instance.variant === "string") &&
     typeof instance.data === "object" &&
     instance.data !== null &&
     !Array.isArray(instance.data)

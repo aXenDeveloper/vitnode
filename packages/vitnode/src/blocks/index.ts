@@ -1,4 +1,19 @@
 export {
+  areaChildren,
+  areaLayoutWithDefaults,
+  contentNodeBlocks,
+  contentNodeId,
+  createAreaInstance,
+  DEFAULT_AREA_LAYOUT,
+  isAreaAlign,
+  isAreaColumns,
+  isAreaGap,
+  isAreaJustify,
+  isAreaLayout,
+  isAreaLike,
+  isBlockAreaInstance,
+} from "./area";
+export {
   assertBlockFields,
   BLOCK_FIELD_KINDS,
   blockFieldKindRefusal,
@@ -6,13 +21,25 @@ export {
 } from "./capabilities";
 export type { BlockFieldKind } from "./capabilities";
 export {
+  AREA_ALIGNS,
+  AREA_CHILDREN_DEFAULT_MAX,
+  AREA_COLUMNS,
+  AREA_DEFAULT_ALIGN,
+  AREA_DEFAULT_COLUMNS,
+  AREA_DEFAULT_GAP,
+  AREA_DEFAULT_JUSTIFY,
+  AREA_GAPS,
+  AREA_JUSTIFIES,
   BLOCK_ID_MAX_LENGTH,
   BLOCK_INSTANCE_ID_MAX_LENGTH,
   BLOCK_INSTANCE_ID_PATTERN,
   BLOCK_NAME_PATTERN,
   BLOCK_NAMESPACE_PATTERN,
   BLOCK_NAMESPACE_SEPARATOR,
+  BLOCK_VARIANT_ID_MAX_LENGTH,
+  BLOCK_VARIANT_PATTERN,
   BLOCK_WILDCARD,
+  CONTENT_AREA_KIND,
   CONTENT_BLOCKS_ABSOLUTE_MAX,
   CONTENT_BLOCKS_DEFAULT_MAX,
   CONTENT_ZONE_ALLOWED_ATTRIBUTE,
@@ -61,8 +88,15 @@ export { blockDataShapeIssue } from "./shape";
 export type {
   AnyBlockDefinition,
   AnyBlockInstance,
+  AnyBlockVariantDefinition,
   BlockAllowedEntry,
   BlockAllowedSpec,
+  BlockAreaAlign,
+  BlockAreaColumns,
+  BlockAreaGap,
+  BlockAreaInstance,
+  BlockAreaJustify,
+  BlockAreaLayout,
   BlockComponent,
   BlockComponentProps,
   BlockData,
@@ -73,12 +107,23 @@ export type {
   BlockRegistry,
   BlockRenderFallback,
   BlockRenderFallbackProps,
+  BlockRenderFallbackReason,
   BlockUnknownData,
   BlockValidationMode,
+  BlockVariantDefinition,
+  ContentNode,
   ContentZoneDefinition,
   ParsedContentZoneId,
   RegisteredBlock,
 } from "./types";
+export {
+  blockVariantLabel,
+  blockVariants,
+  findBlockVariant,
+  hasBlockVariants,
+  resolveBlockVariant,
+} from "./variant";
+export type { BlockVariantResolution } from "./variant";
 export { parseBlockInstances, zodBlockInstances } from "./validate";
 export type {
   BlockEnvelope,
