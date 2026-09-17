@@ -21,6 +21,12 @@ export interface EditorContainerRef {
   zoneId: string;
 }
 
+export interface EditorNodeFound {
+  container: EditorContainerRef;
+  index: number;
+  node: ContentNode;
+}
+
 export interface EditorZoneInvalidEntry {
   index: number;
   value: unknown;
@@ -90,9 +96,9 @@ export type VisualEditorAction =
   | { layout: BlockAreaLayout; ref: EditorNodeRef; type: "update-area-layout" }
   | { ref: EditorNodeRef; type: "duplicate" }
   | { ref: EditorNodeRef; type: "remove" }
+  | { ref: EditorNodeRef; type: "set-variant"; variant: string | undefined }
   | { ref: EditorNodeRef; type: "unwrap-area" }
   | { ref: EditorNodeRef | null; type: "select" }
-  | { ref: EditorNodeRef; type: "set-variant"; variant: string | undefined }
   | { type: "discard" }
   | { type: "dismiss-dropped" }
   | { type: "mount"; zone: EditorZoneMount }

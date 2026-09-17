@@ -132,9 +132,9 @@ export const AREA_ALIGN_CLASSES = {
 } as const satisfies Record<BlockAreaAlign, string>;
 
 export const AREA_JUSTIFY_CLASSES = {
-  between: "justify-between justify-items-stretch",
-  center: "justify-center justify-items-center",
-  start: "justify-start justify-items-start",
+  center: "justify-items-center",
+  start: "justify-items-start",
+  stretch: "justify-items-stretch",
 } as const satisfies Record<BlockAreaJustify, string>;
 
 export const areaLayoutClassNames = (layout: BlockAreaLayout): string => {

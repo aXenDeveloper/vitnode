@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { AnyBlockInstance } from "../../blocks/types";
+import type { AnyBlockInstance, ContentNode } from "../../blocks/types";
 import type { EditorZoneMount, VisualEditorState } from "../state/types";
 
+import { createAreaInstance } from "../../blocks/area";
 import { createBlockInstance } from "../../blocks/instance";
 import {
   initialVisualEditorState,
@@ -15,14 +16,11 @@ import { buildInvalidSnapshot, buildSaveInput } from "./save-input";
 const block = (text: string): AnyBlockInstance =>
   createBlockInstance("core:text", { body: text });
 
-const mount = (
-  id: string,
-  blocks: readonly AnyBlockInstance[],
-): EditorZoneMount => ({
+const mount = (id: string, nodes: readonly ContentNode[]): EditorZoneMount => ({
   allowedBlocks: undefined,
-  blocks,
   id,
   invalid: [],
+  nodes,
   registry: undefined,
 });
 
@@ -37,7 +35,10 @@ describe("buildSaveInput", () => {
     const [a, b, c] = [block("a"), block("b"), block("c")];
     const state = visualEditorReducer(
       mounted(mount("main", [a, b]), mount("aside", [c])),
-      { ref: { blockId: b.id, zoneId: "main" }, type: "remove" },
+      {
+        ref: { areaId: null, kind: "block", nodeId: b.id, zoneId: "main" },
+        type: "remove",
+      },
     );
 
     const input = buildSaveInput(state);
@@ -46,6 +47,18 @@ describe("buildSaveInput", () => {
     expect(Object.keys(input.zones)).toStrictEqual(["main", "aside"]);
     expect(input.zones.main).toStrictEqual([a]);
     expect(input.zones.aside).toStrictEqual([c]);
+  });
+
+  it("snapshots an area with the blocks that sit inside it", () => {
+    const child = createBlockInstance("core:hero", { title: "a" }, "wide");
+    const holder = createAreaInstance({ children: [child] });
+    const root = block("a");
+    const state = mounted(mount("main", [root, holder]));
+
+    const input = buildSaveInput(state);
+
+    expect(input.zones.main).toStrictEqual([root, holder]);
+    expect(input.changedZoneIds).toStrictEqual([]);
   });
 
   it("changes nothing to report on a page nobody edited", () => {
@@ -60,8 +73,8 @@ describe("buildSaveInput", () => {
 
     const input = buildSaveInput(state);
 
-    expect(input.zones.main).toBe(state.zones.main.blocks);
-    expect(input.zones.aside).toBe(state.zones.aside.blocks);
+    expect(input.zones.main).toBe(state.zones.main.nodes);
+    expect(input.zones.aside).toBe(state.zones.aside.nodes);
   });
 
   it("is empty before any zone mounts", () => {
@@ -81,10 +94,10 @@ describe("createMemoryAdapter", () => {
       },
     });
     const state = visualEditorReducer(mounted(mount("main", [])), {
+      container: { areaId: null, zoneId: "main" },
       index: 0,
       instance: block("a"),
       type: "insert",
-      zoneId: "main",
     });
 
     await adapter.save(buildSaveInput(state));

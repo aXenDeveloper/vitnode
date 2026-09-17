@@ -12,14 +12,14 @@ import { useTranslations } from "use-intl";
 import { buttonVariants } from "@/components/ui/button";
 
 import type { AnyBlockInstance } from "../../blocks/types";
-import type { EditorBlockRef } from "../state/types";
+import type { EditorNodeRef } from "../state/types";
 import type { EditableBlockIssue } from "./issue";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
-import { useSortableBlock } from "../dnd/use-sortable-block";
-import { sameBlockRef } from "../state/reducer";
+import { useSortableNode } from "../dnd/use-sortable-node";
+import { sameNodeRef } from "../state/reducer";
 import { editableBlockIssue } from "./issue";
 
 const ISSUE_LABELS = {
@@ -34,6 +34,7 @@ const actionClassName = cn(
 );
 
 export interface EditableBlockShellProps {
+  areaId: null | string;
   children: ReactNode;
   index: number;
   instance: AnyBlockInstance;
@@ -41,6 +42,7 @@ export interface EditableBlockShellProps {
 }
 
 export const EditableBlockShell = ({
+  areaId,
   children,
   index,
   instance,
@@ -49,10 +51,16 @@ export const EditableBlockShell = ({
   const t = useTranslations("core.editor");
   const { dispatch, preview, state } = useVisualEditor();
   const { dropIndicator } = useEditorDnd();
-  const ref: EditorBlockRef = { blockId: instance.id, zoneId };
-  const { dragging, handleProps, setNodeRef, style } = useSortableBlock({
+  const nodeRef: EditorNodeRef = {
+    areaId,
+    kind: "block",
+    nodeId: instance.id,
+    zoneId,
+  };
+  const { dragging, handleProps, setNodeRef, style } = useSortableNode({
     index,
-    ref,
+    nodeRef,
+    type: instance.type,
   });
 
   if (preview) return <>{children}</>;
@@ -62,14 +70,16 @@ export const EditableBlockShell = ({
     instance.type,
   );
   const name = entry?.definition.name ?? instance.type;
-  const selected = sameBlockRef(state.selected, ref);
+  const selected = sameNodeRef(state.selected, nodeRef);
   const issue = editableBlockIssue({
     allowedBlocks: zone?.allowedBlocks,
     entry,
     instance,
   });
   const edge =
-    dropIndicator?.blockId === instance.id && dropIndicator.zoneId === zoneId
+    dropIndicator?.nodeId === instance.id &&
+    dropIndicator.zoneId === zoneId &&
+    dropIndicator.areaId === areaId
       ? dropIndicator.edge
       : null;
 
@@ -93,7 +103,7 @@ export const EditableBlockShell = ({
         aria-current={selected}
         className="focus-visible:ring-ring absolute inset-0 rounded-md focus-visible:ring-2 focus-visible:outline-none"
         onClick={() => {
-          dispatch({ ref, type: "select" });
+          dispatch({ ref: nodeRef, type: "select" });
         }}
         type="button"
       >
@@ -124,7 +134,7 @@ export const EditableBlockShell = ({
           aria-label={t("block.duplicate", { name })}
           className={actionClassName}
           onClick={() => {
-            dispatch({ ref, type: "duplicate" });
+            dispatch({ ref: nodeRef, type: "duplicate" });
           }}
           type="button"
         >
@@ -138,7 +148,7 @@ export const EditableBlockShell = ({
             "shadow-sm",
           )}
           onClick={() => {
-            dispatch({ ref, type: "remove" });
+            dispatch({ ref: nodeRef, type: "remove" });
           }}
           type="button"
         >

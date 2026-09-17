@@ -6,13 +6,11 @@ export type { EditorDropIndicator } from "./resolve-drop";
 
 export interface EditorDndContextValue {
   dragging: EditorDragSource | null;
-  draggingType: null | string;
   dropIndicator: EditorDropIndicator | null;
 }
 
 const IDLE: EditorDndContextValue = {
   dragging: null,
-  draggingType: null,
   dropIndicator: null,
 };
 

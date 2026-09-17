@@ -1,23 +1,59 @@
-import type { AnyBlockInstance } from "../../blocks/types";
+import type { BlockAreaInstance, ContentNode } from "../../blocks/types";
 import type { EditorZoneInvalidEntry } from "../state/types";
 
+import { isAreaLike, isBlockAreaInstance } from "../../blocks/area";
 import { isBlockInstance } from "../../blocks/instance";
 
 export interface ClassifiedZoneEntries {
-  blocks: AnyBlockInstance[];
   invalid: EditorZoneInvalidEntry[];
+  nodes: ContentNode[];
 }
 
 const DESCRIPTION_MAX_LENGTH = 120;
 
+const readableArea = (
+  value: unknown,
+  seen: ReadonlySet<string>,
+): BlockAreaInstance | null => {
+  if (!isBlockAreaInstance(value) || seen.has(value.id)) return null;
+
+  const ids = new Set([value.id]);
+
+  for (const child of value.children) {
+    if (!isBlockInstance(child) || seen.has(child.id) || ids.has(child.id)) {
+      return null;
+    }
+
+    ids.add(child.id);
+  }
+
+  return value;
+};
+
 export const classifyZoneEntries = (
   values: null | readonly unknown[] | undefined,
 ): ClassifiedZoneEntries => {
-  const blocks: AnyBlockInstance[] = [];
+  const nodes: ContentNode[] = [];
   const invalid: EditorZoneInvalidEntry[] = [];
   const seen = new Set<string>();
 
   (values ?? []).forEach((value, index) => {
+    if (isAreaLike(value)) {
+      const area = readableArea(value, seen);
+
+      if (!area) {
+        invalid.push({ index, value });
+
+        return;
+      }
+
+      seen.add(area.id);
+      for (const child of area.children) seen.add(child.id);
+      nodes.push(area);
+
+      return;
+    }
+
     if (!isBlockInstance(value) || seen.has(value.id)) {
       invalid.push({ index, value });
 
@@ -25,10 +61,10 @@ export const classifyZoneEntries = (
     }
 
     seen.add(value.id);
-    blocks.push(value);
+    nodes.push(value);
   });
 
-  return { blocks, invalid };
+  return { invalid, nodes };
 };
 
 const describeObject = (value: object): string => {

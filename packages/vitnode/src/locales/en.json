@@ -882,6 +882,7 @@
       "finish": "Finish editing",
       "back_to_editing": "Back to editing",
       "insert_for": "For: {zone}",
+      "insert_for_area": "For: an area in {zone}",
       "insert_clear": "Clear the target zone",
       "edit": "Edit",
       "preview": "Preview",
@@ -906,7 +907,7 @@
         "rejected": "This zone does not accept the block you are dragging.",
         "invalid": {
           "title": "This zone holds content the editor cannot read",
-          "description": "These entries are stored here but are not blocks the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
+          "description": "These entries are stored here but are not content the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
           "remove": "Remove invalid entry"
         }
       },
@@ -983,25 +984,19 @@
         "desc": "These zones left the page while you were editing, so what you changed in them is gone and was never saved: {zones}.",
         "dismiss": "Got it"
       },
-      "layout": "Layout",
       "variant": {
         "label": "Variant",
         "hint": "How this block is presented. It changes the look, never the content.",
-        "unknown": "The stored variant “{variant}” is not one this block offers any more, so it cannot be rendered. Pick a variant below, or remove the block.",
-        "issue": "This block is stored with a variant it no longer offers.",
-        "quick": "Variant: {name}"
+        "unknown": "The stored variant “{variant}” is not one this block offers any more, so it cannot be rendered. Pick a variant below, or remove the block."
       },
       "area": {
-        "label": "Area",
         "name": "Area",
         "description": "Lay blocks out side by side in up to four columns.",
         "summary": "Area · {columns, plural, one {# column} other {# columns}}",
         "select": "Select this area",
         "drag": "Drag this area to reorder it",
         "properties": "Area properties",
-        "add": "Add an area",
         "drop_here": "Drop blocks here",
-        "empty": "This area is empty. Drag blocks into it, or use Add block.",
         "add_block": "Add block",
         "rejected": "This area does not accept the block you are dragging.",
         "nested_rejected": "An area cannot hold another area.",
@@ -1028,7 +1023,7 @@
         "justify_option": {
           "start": "Start",
           "center": "Centre",
-          "between": "Space between"
+          "stretch": "Fill the column"
         },
         "delete": {
           "title": "Delete this area?",
@@ -1036,11 +1031,6 @@
           "desc": "{count, plural, one {# block sits inside this area} other {# blocks sit inside this area}}. Deleting the area deletes them with it. Ungroup instead to keep them on the page.",
           "confirm": "Delete area and blocks",
           "ungroup": "Ungroup, keep blocks"
-        },
-        "invalid": {
-          "title": "This area cannot be read",
-          "description": "The stored layout for this area is not one the editor recognises, so it is shown as-is and cannot be edited. Nothing has been removed.",
-          "nested": "An area is stored inside this area. Areas cannot hold areas, so it cannot be edited here."
         }
       }
     }

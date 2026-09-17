@@ -22,6 +22,7 @@ export type { EditorRootProps } from "./root";
 export { EDITOR_NAMESPACES } from "./runtime/namespaces";
 export type {
   EditorContainerRef,
+  EditorNodeFound,
   EditorNodeKind,
   EditorNodeRef,
   EditorZoneInvalidEntry,

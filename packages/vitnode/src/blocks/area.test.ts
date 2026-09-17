@@ -63,7 +63,7 @@ describe("area layout tokens", () => {
     expect(isAreaAlign("end")).toBe(false);
     expect(isAreaAlign("baseline")).toBe(false);
     expect(isAreaJustify("around")).toBe(false);
-    expect(isAreaJustify("stretch")).toBe(false);
+    expect(isAreaJustify("between")).toBe(false);
   });
 });
 
@@ -284,7 +284,7 @@ describe("the layout class table", () => {
 
   it("uses only the tokens it was given, with the defaults filled in", () => {
     expect(areaLayoutClassNames({ columns: 2 })).toBe(
-      "grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch justify-start justify-items-start",
+      "grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch justify-items-stretch",
     );
   });
 });

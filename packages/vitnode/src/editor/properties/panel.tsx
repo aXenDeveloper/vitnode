@@ -9,7 +9,7 @@ import type {
   BlockUnknownData,
   RegisteredBlock,
 } from "../../blocks/types";
-import type { EditorBlockRef } from "../state/types";
+import type { EditorNodeRef } from "../state/types";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { AutoForm } from "../../components/form/auto-form";
@@ -18,14 +18,16 @@ import { useFormApi } from "../../components/ui/form";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
 import { useVisualEditor } from "../context";
 import { blockInstanceIssue } from "../instance/defaults";
-import { findBlock } from "../state/reducer";
+import { AreaPropertiesPanelContent } from "./area-panel";
 import { BlockPropertyField } from "./field";
+import { selectedNode } from "./selection";
 import {
   blockDataFromFormValues,
   blockDisplayName,
   blockFieldSpecs,
   blockFormSpec,
 } from "./spec";
+import { BlockVariantControl } from "./variant";
 
 const BlockDataSync = ({
   base,
@@ -34,7 +36,7 @@ const BlockDataSync = ({
 }: {
   base: BlockUnknownData;
   formSchema: z.ZodObject<z.ZodRawShape>;
-  target: EditorBlockRef;
+  target: EditorNodeRef;
 }) => {
   const { dispatch } = useVisualEditor();
   const { form } = useFormApi();
@@ -72,7 +74,7 @@ const BlockPropertiesForm = ({
 }: {
   entry: RegisteredBlock;
   instance: AnyBlockInstance;
-  target: EditorBlockRef;
+  target: EditorNodeRef;
 }) => {
   const [base] = useState<BlockUnknownData>(() => instance.data);
   const [specs] = useState(() => blockFieldSpecs(entry.definition));
@@ -101,28 +103,21 @@ const BlockPropertiesForm = ({
   );
 };
 
-export const BlockPropertiesPanelContent = (): ReactElement => {
+const BlockPropertiesPanelContent = ({
+  instance,
+  target,
+}: {
+  instance: AnyBlockInstance;
+  target: EditorNodeRef;
+}): ReactElement => {
   const { dispatch, setPanel, state } = useVisualEditor();
   const t = useTranslations("core.editor");
   const tGlobal = useTranslations("core.global");
 
-  const selected = state.selected;
-  const found = selected === null ? null : findBlock(state, selected);
-
-  if (selected === null || found === null) {
-    return (
-      <section aria-label={t("properties")} className="p-4">
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {t("no_selection")}
-        </p>
-      </section>
-    );
-  }
-
   const registry =
-    state.zones[selected.zoneId].registry ?? getDefaultBlockRegistry();
-  const entry = registry?.get(found.instance.type);
-  const issue = blockInstanceIssue(registry, found.instance);
+    state.zones[target.zoneId].registry ?? getDefaultBlockRegistry();
+  const entry = registry?.get(instance.type);
+  const issue = blockInstanceIssue(registry, instance);
   const name = entry ? blockDisplayName(entry) : t("block.unknown.title");
 
   return (
@@ -132,7 +127,7 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
           {name}
         </h2>
         <p className="text-muted-foreground truncate text-xs">
-          {found.instance.type}
+          {instance.type}
         </p>
       </div>
 
@@ -149,11 +144,19 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
       )}
 
       {entry ? (
+        <BlockVariantControl
+          definition={entry.definition}
+          target={target}
+          variant={instance.variant}
+        />
+      ) : null}
+
+      {entry ? (
         <BlockPropertiesForm
           entry={entry}
-          instance={found.instance}
-          key={`${selected.zoneId}/${selected.blockId}`}
-          target={selected}
+          instance={instance}
+          key={`${target.zoneId}/${target.nodeId}`}
+          target={target}
         />
       ) : null}
 
@@ -162,7 +165,7 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
           aria-label={t("block.duplicate", { name })}
           className="flex-1"
           onClick={() => {
-            dispatch({ ref: selected, type: "duplicate" });
+            dispatch({ ref: target, type: "duplicate" });
           }}
           size="sm"
           variant="secondary"
@@ -175,7 +178,7 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
           aria-label={t("block.remove", { name })}
           className="flex-1"
           onClick={() => {
-            dispatch({ ref: selected, type: "remove" });
+            dispatch({ ref: target, type: "remove" });
             setPanel("blocks");
           }}
           size="sm"
@@ -186,5 +189,29 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
         </Button>
       </div>
     </section>
+  );
+};
+
+export const EditorPropertiesPanel = (): ReactElement => {
+  const { state } = useVisualEditor();
+  const t = useTranslations("core.editor");
+
+  const selected = state.selected;
+  const view = selectedNode(state, selected);
+
+  if (selected === null || view === null) {
+    return (
+      <section aria-label={t("properties")} className="p-4">
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {t("no_selection")}
+        </p>
+      </section>
+    );
+  }
+
+  return view.kind === "area" ? (
+    <AreaPropertiesPanelContent area={view.area} target={selected} />
+  ) : (
+    <BlockPropertiesPanelContent instance={view.instance} target={selected} />
   );
 };

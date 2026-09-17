@@ -23,34 +23,36 @@ import {
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { GripVerticalIcon, PlusIcon } from "lucide-react";
+import { GripVerticalIcon, LayoutGridIcon, PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { BlockRegistry, RegisteredBlock } from "../../blocks/types";
 import type { BlockCatalogEntry } from "../block-picker/catalog";
-import type { EditorZoneState } from "../state/types";
+import type { EditorContainerRef, EditorZoneState } from "../state/types";
 import type { EditorDndContextValue } from "./context";
 import type {
   DropPlacement,
   EditorDragSource,
   EditorDropEdge,
   EditorDropIndicator,
+  EditorDropRejection,
   ResolvedDrop,
 } from "./resolve-drop";
 
-import { BLOCK_WILDCARD } from "../../blocks/const";
 import { parseBlockId } from "../../blocks/namespace";
-import { getDefaultBlockRegistry, isBlockAllowed } from "../../blocks/registry";
+import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { toBlockCatalogEntry } from "../block-picker/catalog";
 import { BlockCatalogEntryCard } from "../block-picker/entry-card";
 import { useVisualEditor } from "../context";
+import { containerNodes } from "../state/reducer";
 import { EditorDndContext } from "./context";
 import {
   dropEdgeFor,
   dropPlacement,
-  isZoneDroppableId,
-  preferBlockCollisions,
+  dropRejection,
+  isContainerDroppableId,
+  preferInnerCollisions,
   readDragSource,
   readDropTarget,
   resolveDrop,
@@ -58,14 +60,15 @@ import {
 
 type DragOverlayPreview =
   | { entry: BlockCatalogEntry; kind: "catalog-block" }
+  | { kind: "existing-area"; name: string }
   | { kind: "existing-block"; name: string; namespace: null | string };
 
 interface EditorDragPlan {
+  container: EditorContainerRef | null;
   placement: DropPlacement | null;
-  rejected: boolean;
+  rejection: EditorDropRejection | null;
   resolved: null | ResolvedDrop;
   source: EditorDragSource;
-  zoneId: null | string;
 }
 
 const findRegisteredBlock = (
@@ -89,8 +92,9 @@ const sameIndicator = (
   left === right ||
   (left !== null &&
     right !== null &&
-    left.blockId === right.blockId &&
+    left.nodeId === right.nodeId &&
     left.edge === right.edge &&
+    left.areaId === right.areaId &&
     left.zoneId === right.zoneId);
 
 export const EditorDndProvider = ({
@@ -120,7 +124,7 @@ export const EditorDndProvider = ({
 
     const pointer = pointerWithin(args);
 
-    return preferBlockCollisions(
+    return preferInnerCollisions(
       pointer.length > 0 ? pointer : rectIntersection(args),
     );
   }, []);
@@ -128,7 +132,6 @@ export const EditorDndProvider = ({
   const dnd = useMemo<EditorDndContextValue>(
     () => ({
       dragging,
-      draggingType: dragging?.type ?? null,
       dropIndicator,
     }),
     [dragging, dropIndicator],
@@ -136,6 +139,10 @@ export const EditorDndProvider = ({
 
   const overlay = useMemo<DragOverlayPreview | null>(() => {
     if (!dragging) return null;
+
+    if (dragging.kind === "existing-area") {
+      return { kind: "existing-area", name: t("area.name") };
+    }
 
     if (dragging.kind === "catalog-block") {
       const found = findRegisteredBlock(state.zones, dragging.type);
@@ -153,22 +160,26 @@ export const EditorDndProvider = ({
       };
     }
 
-    const entry = state.zones[dragging.zoneId]?.registry?.get(dragging.type);
+    const entry = state.zones[dragging.container.zoneId]?.registry?.get(
+      dragging.type,
+    );
 
     return {
       kind: "existing-block",
       name: entry?.definition.name ?? entry?.definition.id ?? dragging.type,
       namespace: parseBlockId(dragging.type)?.namespace ?? null,
     };
-  }, [dragging, state.zones]);
+  }, [dragging, state.zones, t]);
 
-  const blockName = useCallback(
+  const dragName = useCallback(
     (source: EditorDragSource): string => {
+      if (source.kind === "existing-area") return t("area.name");
+
       const found = findRegisteredBlock(state.zones, source.type);
 
       return found?.definition.name ?? found?.definition.id ?? source.type;
     },
-    [state.zones],
+    [state.zones, t],
   );
 
   const planDrop = useCallback(
@@ -177,11 +188,11 @@ export const EditorDndProvider = ({
       if (!source) return null;
 
       const outside: EditorDragPlan = {
+        container: null,
         placement: null,
-        rejected: false,
+        rejection: null,
         resolved: null,
         source,
-        zoneId: null,
       };
       if (!over) return outside;
 
@@ -189,42 +200,41 @@ export const EditorDndProvider = ({
         const pointerY = pointerYRef.current;
 
         if (pointerY === null) return null;
-        if (isZoneDroppableId(String(over.id))) return null;
+        if (isContainerDroppableId(String(over.id))) return null;
 
         return dropEdgeFor({ pointerY, rect: over.rect });
       };
 
       const target = readDropTarget(over.data.current, edgeFor());
-      const zone = target === null ? undefined : state.zones[target.zoneId];
-      if (!target || !zone) return outside;
+      const nodes =
+        target === null ? null : containerNodes(state, target.container);
+      if (!target || !nodes) return outside;
 
+      const allowedBlocks = state.zones[target.container.zoneId]?.allowedBlocks;
       const resolved = resolveDrop({
-        allowedBlocks: zone.allowedBlocks,
+        allowedBlocks,
         source,
         target,
-        targetBlockCount: zone.blocks.length,
+        targetNodeCount: nodes.length,
       });
 
       return {
+        container: target.container,
         placement:
           resolved === null
             ? null
             : dropPlacement({
-                blockIds: zone.blocks.map(block => block.id),
-                overBlockId: target.blockId,
+                container: target.container,
+                nodeIds: nodes.map(node => node.id),
+                overNodeId: target.nodeId,
                 resolved,
-                zoneId: target.zoneId,
               }),
-        rejected: !isBlockAllowed(
-          zone.allowedBlocks ?? BLOCK_WILDCARD,
-          source.type,
-        ),
+        rejection: dropRejection({ allowedBlocks, source, target }),
         resolved,
         source,
-        zoneId: target.zoneId,
       };
     },
-    [state.zones],
+    [state],
   );
 
   const announcements = useMemo<Announcements>(() => {
@@ -235,17 +245,19 @@ export const EditorDndProvider = ({
       const plan = planDrop(active, over);
       if (!plan) return undefined;
 
-      const name = blockName(plan.source);
-      if (plan.zoneId === null) return t("dnd.outside", { name });
-      if (plan.rejected) return t("dnd.rejected", { name, zone: plan.zoneId });
-      if (!plan.placement)
-        return t("dnd.unchanged", { name, zone: plan.zoneId });
+      const name = dragName(plan.source);
+      if (plan.container === null) return t("dnd.outside", { name });
+      if (plan.rejection === "nested-area") return t("dnd.area_rejected");
 
-      return t("dnd.over", {
+      const zone = plan.container.zoneId;
+      if (plan.rejection !== null) return t("dnd.rejected", { name, zone });
+      if (!plan.placement) return t("dnd.unchanged", { name, zone });
+
+      return t(plan.container.areaId === null ? "dnd.over" : "dnd.area_over", {
         name,
         position: plan.placement.position,
         total: plan.placement.total,
-        zone: plan.zoneId,
+        zone,
       });
     };
 
@@ -254,34 +266,39 @@ export const EditorDndProvider = ({
         const source = readDragSource(active.data.current);
 
         return t("dnd.cancelled", {
-          name: source === null ? String(active.id) : blockName(source),
+          name: source === null ? String(active.id) : dragName(source),
         });
       },
       onDragEnd: ({ active, over }) => {
         const plan = planDrop(active, over);
         if (!plan) return undefined;
 
-        const name = blockName(plan.source);
+        const name = dragName(plan.source);
 
-        return plan.placement === null || plan.zoneId === null
+        return plan.placement === null || plan.container === null
           ? t("dnd.not_dropped", { name })
-          : t("dnd.dropped", {
-              name,
-              position: plan.placement.position,
-              total: plan.placement.total,
-              zone: plan.zoneId,
-            });
+          : t(
+              plan.container.areaId === null
+                ? "dnd.dropped"
+                : "dnd.area_dropped",
+              {
+                name,
+                position: plan.placement.position,
+                total: plan.placement.total,
+                zone: plan.container.zoneId,
+              },
+            );
       },
       onDragOver: ({ active, over }) => landing(active, over),
       onDragStart: ({ active }) => {
         const source = readDragSource(active.data.current);
 
         return t("dnd.picked_up", {
-          name: source === null ? String(active.id) : blockName(source),
+          name: source === null ? String(active.id) : dragName(source),
         });
       },
     };
-  }, [blockName, planDrop, t]);
+  }, [dragName, planDrop, t]);
 
   const accessibility = useMemo(
     () => ({
@@ -325,19 +342,20 @@ export const EditorDndProvider = ({
 
     if (resolved.kind === "insert") {
       insertBlock({
+        areaId: resolved.to.areaId,
         index: resolved.toIndex,
         type: resolved.type,
-        zoneId: resolved.toZoneId,
+        zoneId: resolved.to.zoneId,
       });
 
       return;
     }
 
     dispatch({
-      blockId: resolved.blockId,
-      fromZoneId: resolved.fromZoneId,
+      from: resolved.from,
+      nodeId: resolved.nodeId,
+      to: resolved.to,
       toIndex: resolved.toIndex,
-      toZoneId: resolved.toZoneId,
       type: "move",
     });
   };
@@ -371,19 +389,27 @@ export const EditorDndProvider = ({
                 </>
               ) : (
                 <>
-                  <GripVerticalIcon
-                    aria-hidden="true"
-                    className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                  />
+                  {overlay.kind === "existing-area" ? (
+                    <LayoutGridIcon
+                      aria-hidden="true"
+                      className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                    />
+                  ) : (
+                    <GripVerticalIcon
+                      aria-hidden="true"
+                      className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                    />
+                  )}
                   <span className="flex min-w-0 flex-col">
                     <span className="truncate text-sm leading-relaxed font-medium">
                       {overlay.name}
                     </span>
-                    {overlay.namespace === null ? null : (
+                    {overlay.kind === "existing-block" &&
+                    overlay.namespace !== null ? (
                       <span className="text-muted-foreground truncate text-xs leading-relaxed">
                         {overlay.namespace}
                       </span>
-                    )}
+                    ) : null}
                   </span>
                 </>
               )}

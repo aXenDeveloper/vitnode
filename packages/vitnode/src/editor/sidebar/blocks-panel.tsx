@@ -1,19 +1,29 @@
 import type { ReactElement } from "react";
 
 import { cn } from "cn";
-import { PlusIcon } from "lucide-react";
+import { Columns2Icon, PlusIcon } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Input } from "@/components/ui/input";
 
-import type { BlockCatalogEntry } from "../block-picker/catalog";
+import type {
+  AreaCatalogEntry,
+  BlockCatalogEntry,
+} from "../block-picker/catalog";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
-import { groupBlockCatalog, mergeBlockCatalogs } from "../block-picker/catalog";
+import {
+  blockCatalogNotice,
+  groupBlockCatalog,
+  mergeBlockCatalogs,
+} from "../block-picker/catalog";
 import { BlockCatalogEntryCard } from "../block-picker/entry-card";
 import { useVisualEditor } from "../context";
 import { useCatalogDraggable } from "../dnd/use-catalog-draggable";
+
+const CARD_CLASS =
+  "border-border bg-card text-card-foreground hover:border-primary/60 hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring flex w-full items-start gap-2 rounded-md border p-2 text-start transition-colors focus-visible:ring-2 focus-visible:outline-none";
 
 const BlockCatalogItem = ({
   entry,
@@ -31,7 +41,8 @@ const BlockCatalogItem = ({
       {...handleProps}
       aria-label={t("picker.add", { name: entry.name })}
       className={cn(
-        "border-border bg-card text-card-foreground hover:border-primary/60 hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring flex w-full cursor-grab touch-none items-start gap-2 rounded-md border p-2 text-start transition-colors focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing",
+        CARD_CLASS,
+        "cursor-grab touch-none active:cursor-grabbing",
         dragging ? "opacity-50" : "opacity-100",
       )}
       onClick={() => {
@@ -45,6 +56,32 @@ const BlockCatalogItem = ({
         className="text-muted-foreground mt-0.5 size-4 shrink-0"
       />
       <BlockCatalogEntryCard entry={entry} />
+    </button>
+  );
+};
+
+const AreaCatalogItem = ({
+  area,
+}: {
+  area: AreaCatalogEntry;
+}): ReactElement => {
+  const t = useTranslations("core.editor");
+  const { insertArea } = useVisualEditor();
+
+  return (
+    <button
+      aria-label={t("picker.add_area")}
+      className={cn(CARD_CLASS, "cursor-pointer")}
+      onClick={() => {
+        insertArea({});
+      }}
+      type="button"
+    >
+      <Columns2Icon
+        aria-hidden="true"
+        className="text-muted-foreground mt-0.5 size-4 shrink-0"
+      />
+      <BlockCatalogEntryCard entry={area} />
     </button>
   );
 };
@@ -70,20 +107,30 @@ export const AvailableBlocksPanel = (): ReactElement => {
     });
   }, [insertTarget, state.zones]);
 
-  const groups = groupBlockCatalog({ entries: catalog.entries, query });
+  const groups = groupBlockCatalog({
+    entries: catalog.entries,
+    layout:
+      insertTarget?.areaId === undefined || insertTarget.areaId === null
+        ? {
+            area: { description: t("area.description"), name: t("area.name") },
+            label: t("picker.layout_group"),
+          }
+        : undefined,
+    query,
+  });
 
-  const emptyMessage = (): null | string => {
-    if (catalog.installed === 0) return t("picker.none_installed");
-    if (catalog.entries.length === 0) return t("picker.empty");
-    if (groups.length === 0) return t("picker.no_results");
-
-    return null;
-  };
-
-  const empty = emptyMessage();
+  const notice = blockCatalogNotice({
+    installed: catalog.installed,
+    matched: groups.reduce(
+      (total, group) =>
+        group.kind === "namespace" ? total + group.entries.length : total,
+      0,
+    ),
+    offered: catalog.entries.length,
+  });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-2">
         <label className="sr-only" htmlFor={searchId}>
           {t("picker.search")}
@@ -104,30 +151,38 @@ export const AvailableBlocksPanel = (): ReactElement => {
         </p>
       </div>
 
-      {empty === null ? (
+      {groups.length > 0 ? (
         <div className="flex flex-col gap-4">
           {groups.map(group => (
-            <section className="flex flex-col gap-2" key={group.namespace}>
+            <section className="flex flex-col gap-2" key={group.id}>
               <h3 className="text-muted-foreground text-xs leading-relaxed font-medium">
-                {group.namespace}
+                {group.label}
               </h3>
 
               <ul className="flex flex-col gap-2">
-                {group.entries.map(entry => (
-                  <li key={entry.type}>
-                    <BlockCatalogItem entry={entry} />
+                {group.kind === "layout" ? (
+                  <li>
+                    <AreaCatalogItem area={group.area} />
                   </li>
-                ))}
+                ) : (
+                  group.entries.map(entry => (
+                    <li key={entry.type}>
+                      <BlockCatalogItem entry={entry} />
+                    </li>
+                  ))
+                )}
               </ul>
             </section>
           ))}
         </div>
-      ) : (
+      ) : null}
+
+      {notice === null ? null : (
         <p
           className="text-muted-foreground py-6 text-center text-sm leading-relaxed text-balance"
           role="status"
         >
-          {empty}
+          {t(`picker.${notice}`)}
         </p>
       )}
     </div>

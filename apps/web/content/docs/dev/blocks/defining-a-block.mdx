@@ -50,10 +50,27 @@ interface BlockComponentProps<TData> {
   data: TData
   index: number
   type: string
+  variant?: string
 }
 ```
 
-`data` has already been through the block's schema when the component runs, so a component never checks for missing fields.
+`data` has already been through the block's schema when the component runs, so a component never checks for missing fields. `variant` is the look this instance picked, and is `undefined` for a block that offers none.
+
+## Two looks, one block
+
+A block that should render the same content in more than one shape declares its shapes instead of growing a `style` field:
+
+```tsx
+export const featuresBlock = defineBlock({
+  component: Features,
+  defaultVariant: "grid",
+  fields: featuresFields,
+  id: "features",
+  variants: [{ id: "grid" }, { id: "list" }, { id: "compact" }],
+})
+```
+
+The chosen variant is stored **beside** the instance's data, never inside it, and the editor grows a picker for it with no further work. See [Block Variants](/docs/dev/blocks/block-variants) for the resolution rules and what happens to a stored variant a block stops offering.
 
 ## Ids are namespaced for you
 
@@ -123,5 +140,7 @@ blockDataSchema(calloutBlock).safeParse(input)
 ```
 
 `parseBlockData` applies defaults and throws a `BlockError` naming the field when the value does not fit; its return type is inferred from the definition's field map. `blockDataSchema` is the underlying Zod object, built once per definition and cached.
+
+A variant is not part of that schema, and neither is the arrangement of the blocks around this one - those are the instance's `variant` and its [Area's layout](/docs/dev/blocks/layout-areas). The rule of thumb: **`data` is what the block says, `variant` is how this instance says it, `Area.layout` is how blocks sit together.**
 
 The Content Engine calls these for you on every write. You need them only when you are producing block data outside the API - a seed, a migration, an importer.

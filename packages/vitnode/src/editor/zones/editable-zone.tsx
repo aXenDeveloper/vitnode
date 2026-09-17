@@ -8,16 +8,23 @@ import { useTranslations } from "use-intl";
 import { Button } from "@/components/ui/button";
 
 import type { ContentZoneMount } from "../../blocks/edit-context";
-import type { AnyBlockInstance, RegisteredBlock } from "../../blocks/types";
+import type {
+  AnyBlockInstance,
+  BlockRegistry,
+  ContentNode,
+  RegisteredBlock,
+} from "../../blocks/types";
 import type { EditorZoneMount } from "../state/types";
 import type { ZoneDropState } from "./drop-state";
 
+import { isBlockAreaInstance } from "../../blocks/area";
 import { resolveBlockRegistry } from "../../blocks/registry";
 import { ContentRenderer } from "../../blocks/renderer";
 import { EditableBlockShell } from "../block-shell/block-shell";
 import { useVisualEditor } from "../context";
-import { useZoneDroppable } from "../dnd/use-zone-droppable";
-import { ZoneSortable } from "../dnd/zone-sortable";
+import { ContainerSortable } from "../dnd/container-sortable";
+import { useZoneDroppable } from "../dnd/use-container-droppable";
+import { EditableAreaFrame } from "./area-frame";
 import { InvalidBlock, UnknownBlock } from "./block-placeholder";
 import { editableBlockRender } from "./block-render";
 import { classifyZoneEntries } from "./classify";
@@ -71,8 +78,36 @@ const EditableBlockBody = ({
     data: instance.data,
     index,
     type: instance.type,
+    variant: instance.variant,
   });
 };
+
+const EditableBlock = ({
+  areaId,
+  index,
+  instance,
+  registry,
+  zoneId,
+}: {
+  areaId: null | string;
+  index: number;
+  instance: AnyBlockInstance;
+  registry: BlockRegistry | undefined;
+  zoneId: string;
+}): ReactElement => (
+  <EditableBlockShell
+    areaId={areaId}
+    index={index}
+    instance={instance}
+    zoneId={zoneId}
+  >
+    <EditableBlockBody
+      entry={registry?.get(instance.type)}
+      index={index}
+      instance={instance}
+    />
+  </EditableBlockShell>
+);
 
 export const EditableZone = ({
   mount,
@@ -82,19 +117,19 @@ export const EditableZone = ({
   const t = useTranslations("core.editor");
   const { dispatch, insertTarget, preview, setInsertTarget, setPanel, state } =
     useVisualEditor();
-  const { active, over, rejected, setNodeRef } = useZoneDroppable({
+  const { active, over, rejection, setNodeRef } = useZoneDroppable({
     zoneId: mount.id,
   });
   const { id } = mount;
 
   const incoming = useMemo((): EditorZoneMount => {
-    const { blocks, invalid } = classifyZoneEntries(mount.blocks);
+    const { invalid, nodes } = classifyZoneEntries(mount.blocks);
 
     return {
       allowedBlocks: mount.allowedBlocks,
-      blocks,
       id: mount.id,
       invalid,
+      nodes,
       registry: mount.registry,
     };
   }, [mount.allowedBlocks, mount.blocks, mount.id, mount.registry]);
@@ -111,13 +146,13 @@ export const EditableZone = ({
   );
 
   const zone = state.zones[mount.id];
-  const blocks = zone?.blocks ?? incoming.blocks;
+  const nodes: readonly ContentNode[] = zone?.nodes ?? incoming.nodes;
   const invalid = zone?.invalid ?? incoming.invalid;
 
   if (preview) {
     return createElement(ContentRenderer, {
       allowed: mount.allowedBlocks,
-      blocks,
+      blocks: nodes,
       fallback: mount.fallback,
       registry: mount.registry,
       validate: mount.validate,
@@ -125,16 +160,21 @@ export const EditableZone = ({
   }
 
   const registry =
-    blocks.length === 0
+    nodes.length === 0
       ? undefined
       : resolveBlockRegistry(zone?.registry ?? mount.registry);
+  const rejected = rejection !== null;
   const inserting = insertTarget?.zoneId === mount.id;
   const dropping = zoneDropState({ active, inserting, over, rejected });
 
   const addBlock = (
     <Button
       onClick={() => {
-        setInsertTarget({ index: blocks.length, zoneId: mount.id });
+        setInsertTarget({
+          areaId: null,
+          index: nodes.length,
+          zoneId: mount.id,
+        });
         setPanel("blocks");
       }}
       size="sm"
@@ -179,7 +219,7 @@ export const EditableZone = ({
         <InvalidZoneEntries entries={invalid} zoneId={mount.id} />
       )}
 
-      {blocks.length === 0 ? (
+      {nodes.length === 0 ? (
         <div
           className={cn(
             "flex min-h-32 flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center transition-colors md:min-h-40",
@@ -209,25 +249,46 @@ export const EditableZone = ({
         </div>
       ) : (
         <>
-          <ZoneSortable
-            blockIds={blocks.map(instance => instance.id)}
-            zoneId={mount.id}
+          <ContainerSortable
+            container={{ areaId: null, zoneId: mount.id }}
+            nodes={nodes}
           >
-            {blocks.map((instance, index) => (
-              <EditableBlockShell
-                index={index}
-                instance={instance}
-                key={instance.id}
-                zoneId={mount.id}
-              >
-                <EditableBlockBody
-                  entry={registry?.get(instance.type)}
+            {nodes.map((node, index) =>
+              isBlockAreaInstance(node) ? (
+                <EditableAreaFrame
+                  area={node}
                   index={index}
-                  instance={instance}
+                  key={node.id}
+                  zoneId={mount.id}
+                >
+                  <ContainerSortable
+                    container={{ areaId: node.id, zoneId: mount.id }}
+                    nodes={node.children}
+                  >
+                    {node.children.map((child, childIndex) => (
+                      <EditableBlock
+                        areaId={node.id}
+                        index={childIndex}
+                        instance={child}
+                        key={child.id}
+                        registry={registry}
+                        zoneId={mount.id}
+                      />
+                    ))}
+                  </ContainerSortable>
+                </EditableAreaFrame>
+              ) : (
+                <EditableBlock
+                  areaId={null}
+                  index={index}
+                  instance={node}
+                  key={node.id}
+                  registry={registry}
+                  zoneId={mount.id}
                 />
-              </EditableBlockShell>
-            ))}
-          </ZoneSortable>
+              ),
+            )}
+          </ContainerSortable>
 
           <div className="flex justify-center pt-2">
             {rejected ? notAllowed : addBlock}

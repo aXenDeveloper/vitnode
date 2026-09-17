@@ -8,14 +8,16 @@ import { useTranslations } from "use-intl";
 import type { ContentZoneOutletEntry } from "../blocks/edit-context";
 import type { VisualEditorAdapter } from "./adapter/types";
 import type {
+  EditorInsertAreaRequest,
   EditorInsertRequest,
   EditorInsertTarget,
   EditorPanelMode,
   VisualEditorContextValue,
   VisualEditorSaveStatus,
 } from "./context";
-import type { VisualEditorSnapshot } from "./state/types";
+import type { EditorContainerRef, VisualEditorSnapshot } from "./state/types";
 
+import { createAreaInstance } from "../blocks/area";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
 import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
 import { VisualEditorContext } from "./context";
@@ -26,7 +28,8 @@ import { LeaveConfirmDialog } from "./runtime/leave-confirm-dialog";
 import { UnsavedChangesGuard } from "./runtime/unsaved-guard";
 import { EditorSidebar } from "./sidebar/sidebar";
 import {
-  findBlock,
+  containerNodes,
+  findNode,
   initialVisualEditorState,
   isVisualEditorDirty,
   unsafeZoneIds,
@@ -60,22 +63,49 @@ const EditorShell = ({
   const [saveStatus, setSaveStatus] = useState<VisualEditorSaveStatus>("idle");
   const [leaving, setLeaving] = useState(false);
 
-  if (insertTarget !== null && !(insertTarget.zoneId in state.zones)) {
+  if (
+    insertTarget !== null &&
+    (!(insertTarget.zoneId in state.zones) ||
+      containerNodes(state, insertTarget) === null)
+  ) {
     setInsertTarget(null);
   }
 
+  const selected = state.selected;
   const panel: EditorPanelMode =
-    state.selected !== null && findBlock(state, state.selected) !== null
-      ? "properties"
-      : "blocks";
+    selected === null || findNode(state, selected) === null
+      ? "blocks"
+      : selected.kind === "area"
+        ? "area"
+        : "properties";
   const dirty = isVisualEditorDirty(state);
   const unsafe = useMemo(() => unsafeZoneIds(state), [state]);
 
-  const setPanel = useCallback((mode: EditorPanelMode) => {
-    if (mode === "blocks") {
-      dispatch({ ref: null, type: "select" });
-    }
-  }, []);
+  const setPanel = useCallback(
+    (mode: EditorPanelMode) => {
+      if (mode === "blocks") {
+        dispatch({ ref: null, type: "select" });
+
+        return;
+      }
+
+      if (mode !== "area" || selected === null) return;
+
+      const parentAreaId = selected.areaId;
+      if (parentAreaId === null) return;
+
+      dispatch({
+        ref: {
+          areaId: null,
+          kind: "area",
+          nodeId: parentAreaId,
+          zoneId: selected.zoneId,
+        },
+        type: "select",
+      });
+    },
+    [selected],
+  );
 
   const persist = useCallback(async (): Promise<boolean> => {
     if (!adapter) {
@@ -164,15 +194,52 @@ const EditorShell = ({
       if (!entry) return;
 
       const pending = insertTarget?.zoneId === zoneId ? insertTarget : null;
+      const areaId =
+        request.areaId === undefined
+          ? (pending?.areaId ?? null)
+          : request.areaId;
+      const container: EditorContainerRef = { areaId, zoneId };
+      const nodes = containerNodes(state, container);
+      if (nodes === null) return;
+
       const instance = createBlockInstanceFor(entry);
 
       dispatch({
-        index: request.index ?? pending?.index ?? zone.blocks.length,
+        container,
+        index: request.index ?? pending?.index ?? nodes.length,
         instance,
         type: "insert",
+      });
+      dispatch({
+        ref: { areaId, kind: "block", nodeId: instance.id, zoneId },
+        type: "select",
+      });
+      setInsertTarget(null);
+    },
+    [insertTarget, state],
+  );
+
+  const insertArea = useCallback(
+    (request: EditorInsertAreaRequest = {}) => {
+      const zoneId = request.zoneId ?? insertTarget?.zoneId ?? state.order[0];
+      const zone = zoneId === undefined ? undefined : state.zones[zoneId];
+      if (zoneId === undefined || !zone) return;
+
+      const pending = insertTarget?.zoneId === zoneId ? insertTarget : null;
+      if (pending !== null && pending.areaId !== null) return;
+
+      const area = createAreaInstance();
+
+      dispatch({
+        area,
+        index: request.index ?? pending?.index ?? zone.nodes.length,
+        type: "insert-area",
         zoneId,
       });
-      dispatch({ ref: { blockId: instance.id, zoneId }, type: "select" });
+      dispatch({
+        ref: { areaId: null, kind: "area", nodeId: area.id, zoneId },
+        type: "select",
+      });
       setInsertTarget(null);
     },
     [insertTarget, state.order, state.zones],
@@ -184,6 +251,7 @@ const EditorShell = ({
       discard,
       dispatch,
       exit,
+      insertArea,
       insertBlock,
       insertTarget,
       panel,
@@ -200,6 +268,7 @@ const EditorShell = ({
       dirty,
       discard,
       exit,
+      insertArea,
       insertBlock,
       insertTarget,
       panel,

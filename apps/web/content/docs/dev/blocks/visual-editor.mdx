@@ -220,14 +220,15 @@ Everything the editor asks of you lives in one panel down the right-hand side: t
 
 The canvas is _padded_, not covered. The shell reserves the sidebar's width, so the page never slides underneath it and nothing you are arranging ends up hidden. Below `md` the same sidebar becomes a bottom sheet, because 360px of a phone is not a sidebar.
 
-### One panel, two modes
+### One panel, three modes
 
-|                      |                                                                                                  |
-| :------------------- | :----------------------------------------------------------------------------------------------- |
-| **Available Blocks** | A search field and every block this location accepts, grouped by the namespace that provides it. |
-| **Properties**       | The selected block's fields, with Duplicate and Delete under them.                               |
+|                      |                                                                                                                                    |
+| :------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Available Blocks** | A search field, a **Layout** section holding the [Area](/docs/dev/blocks/layout-areas) entry, and every block this location accepts, grouped by the namespace that provides it. |
+| **Properties**       | The selected block's [variant](/docs/dev/blocks/block-variants) picker and its fields, with Duplicate and Delete under them.       |
+| **Area properties**  | The selected Area's Columns, Gap, Alignment and Distribution, with Duplicate, Ungroup and Delete area under them.                  |
 
-Selecting a block switches to **Properties**. The **← Available Blocks** action at the top switches back _and_ clears the selection, so the page stops ringing a block you are no longer editing. Deleting the selected block does the same thing on its own.
+Selecting a block switches to **Properties**; selecting an Area switches to **Area properties**. The **← Available Blocks** action at the top switches back from either _and_ clears the selection, so the page stops ringing something you are no longer editing. Deleting the selection does the same thing on its own.
 
 In **Preview** the sidebar collapses to a slim bar holding **Back to editing** and **Finish editing**. It never collapses to nothing - a preview you cannot leave is a trap - and the editor stays mounted behind it with every unsaved change intact.
 
@@ -240,7 +241,9 @@ A catalogue entry is a drag source _and_ a button, because those answer two diff
 | **Drag it**  | You care where it goes. An insertion line shows the exact position while you are still holding it.                               |
 | **Click it** | You do not, or you already said where. It goes to the targeted zone - or, with nothing targeted, the first zone that accepts it. |
 
-**Add block** on a zone is what sets that target: the sidebar switches to **Available Blocks**, its header reads _For: settings:sidebar_, and the zone stays lit until a block lands or you clear it.
+**Add block** on a zone is what sets that target: the sidebar switches to **Available Blocks**, its header reads _For: settings:sidebar_, and the zone stays lit until a block lands or you clear it. **Add block** on an Area targets the Area instead, and the header says so - _For: an area in settings:after-profile_ - because naming the zone alone would be a lie about where the block is going.
+
+The catalogue's own **Layout** section sits above the plugin groups and holds one entry: **Area**. Clicking it drops an empty Area into the target. It is a button rather than a drag source, and it does not pretend otherwise - no grab cursor, no drag handle - because an Area is not a registered block and has no type to drag. While an Area is the insertion target the Layout section disappears, since [an Area cannot hold another Area](/docs/dev/blocks/layout-areas#areas-cannot-contain-areas).
 
 Either gesture inserts the block, selects it and opens **Properties** in one step, so the next thing you do is fill it in.
 
@@ -277,11 +280,11 @@ Grab a block by its handle, or a catalogue entry anywhere on its card, and move 
 
 Identity is the block instance id throughout - never an array index - so a block that crosses a zone keeps being the same block, with the same data, and the properties panel does not blink.
 
-### Before or after, never into
+### Before or after, never into a block
 
 Dropping onto a block inserts **before** it or **after** it, decided by which half of it the pointer is over. That blue line is the answer, shown before you let go.
 
-Nothing ever lands _inside_ a block, and that is a reservation rather than a shortcut. "Drop into this block" is the natural gesture for a nested area - a columns block with sub-zones, a widget area - and spending it on something else now would leave that feature with no gesture left to claim. See [Extension points](#extension-points).
+Nothing ever lands _inside a block_. Dropping **into** something is the Area's gesture: drag a block onto an [Area](/docs/dev/blocks/layout-areas) and it becomes one of that Area's children, at the position the line shows. Drag a child back out and the Area keeps the rest. An Area dropped onto another Area is refused out loud - _An area cannot hold another area_ - rather than silently landing beside it.
 
 ### The keyboard does all of it too
 
@@ -317,6 +320,14 @@ Select a block and its fields appear in the sidebar: text, textarea, number, boo
 
 Typing updates the block on the page **as you type**. There is no Apply button, and no preview pane to compare against, because the page _is_ the preview.
 
+A block that declares more than one [variant](/docs/dev/blocks/block-variants) gets a **Variant** picker above those fields. Picking one is a separate action from editing content: it keeps the instance's id, leaves `data` untouched, and does not reset a field you were halfway through. A block with one variant, or none, shows no picker - there is nothing to decide. A stored variant the block no longer offers is named in the panel, with the declared ones still offered beside it.
+
+### Area properties
+
+Select an [Area](/docs/dev/blocks/layout-areas) rather than one of its children and the same sidebar shows its four layout tokens - **Columns**, **Gap**, **Alignment**, **Distribution** - and re-lays the page out as you pick them. Under them: **Duplicate area**, **Ungroup**, and **Delete area**.
+
+Ungroup and Delete are deliberately different buttons. Ungroup removes the container and leaves the blocks where the Area was; Delete takes them with it, and asks first, offering _Ungroup, keep blocks_ in the same dialog. An Area holding nothing is deleted without the interrogation, because there is nothing to lose.
+
 A block whose stored data does not match what its definition declares is not editable here - it is flagged on the page instead. Editing it would mean guessing which half is wrong, and guessing is how content gets quietly destroyed.
 
 ## Content the editor cannot read
@@ -332,15 +343,17 @@ Every value a zone mounts with is sorted into one of two piles:
 
 The first pile keeps working exactly as before - the block renders an [`InvalidBlock`](#the-properties-panel) placeholder in place of its component, and its own shell keeps the drag handle, the duplicate and the delete button. Its data is bad; its identity is not.
 
-The second pile never becomes an `AnyBlockInstance`. It is kept beside the blocks, not among them:
+The second pile never becomes a content node. It is kept beside them, not among them:
 
 ```ts
 interface EditorZoneState {
-  blocks: readonly AnyBlockInstance[]
+  nodes: readonly ContentNode[]
   invalid: readonly { index: number; value: unknown }[]
   // …
 }
 ```
+
+A `ContentNode` is a block instance or an [Area](/docs/dev/blocks/layout-areas). An Area whose stored `layout` is not one the editor recognises, or which holds an Area of its own, lands in the second pile with everything else: shown as-is, never rewritten.
 
 Nothing in the editor - no reducer action, no drop resolver, no block component - is ever handed one of those values. The zone shows them at the top, prints what each one looks like, and offers exactly one action per entry: **Remove invalid entry**.
 
@@ -382,7 +395,7 @@ What happens to unsaved work in it depends on whether there was any:
 | **No unsaved changes**   | It is dropped silently. There was nothing to lose.                                                                                     |
 | **Unsaved changes**      | It is still dropped - the zone is gone, there is nowhere to put them back - but the sidebar footer names it, so it is never *quiet*.  |
 
-That is the Stage 3 rule: an unmounted zone is out of the editable document, and losing work to it is reported rather than blocked. Blocking **Save** would trap you on a page whose zone no longer exists, and keeping the zone would mean writing content the page has stopped showing. Bring the zone back and it re-mounts from whatever the page hands it, with a fresh baseline.
+That is the rule: an unmounted zone is out of the editable document, and losing work to it is reported rather than blocked. Blocking **Save** would trap you on a page whose zone no longer exists, and keeping the zone would mean writing content the page has stopped showing. Bring the zone back and it re-mounts from whatever the page hands it, with a fresh baseline.
 
 What the *host* does with the gap is the host's call, and it matters. Because the save payload only carries zones the editor currently holds, compose the stored field set on top of your canonical layout rather than on top of defaults - `zonesToFields(input.zones, zonesToFields(layout.zones, SHIPPED_DEFAULTS))` in the playground - so a zone that is off the page keeps whatever was last stored for it instead of being reset.
 
@@ -392,7 +405,7 @@ The editor never fetches. Not once. The only way anything leaves it is the adapt
 
 ```ts
 type VisualEditorSnapshot = Readonly<
-  Record<string, readonly AnyBlockInstance[]>
+  Record<string, readonly ContentNode[]>
 >
 
 interface VisualEditorSaveInput {
@@ -524,14 +537,13 @@ Block content already lives somewhere: in a [`blocks()` field](/docs/dev/blocks/
 
 The adapter is the alternative: the page that knew how to _load_ its zones is the page that knows how to _save_ them. It writes to its own column, through its own API, behind its own permission check.
 
-## What Stage 3 deliberately does not do
+## What the editor deliberately does not do
 
 Being clear about the edges is more useful than a roadmap.
 
 |                                   |                                                                                                                                                                                                         |
 | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Nested blocks**                 | A zone holds a flat, ordered list. No columns-inside-columns, no block containing a zone - and the drop-onto-a-block gesture stays unspent, waiting for one.                                            |
-| **Presentation variants**         | An instance is `{ id, type, data }`. A block that should look different has to say so in its own data.                                                                                                  |
+| **Nested areas**                  | An [Area](/docs/dev/blocks/layout-areas) holds blocks, one level deep. No areas inside areas, and no block that contains a zone of its own.                                                             |
 | **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                      |
 | **Permission UI**                 | No roles screen, no per-zone locking. `canEditPage` and your API are the whole story.                                                                                                                   |
 | **Conflict detection**            | Two people editing one page overwrite each other. `/example/zones` serialises its own writes with a Postgres advisory lock so a row cannot be half-written, but nothing compares revisions - real page editing will want a `revision`, `version` or `updatedAt` check on the way in.                                                                                                                                 |
@@ -539,7 +551,7 @@ Being clear about the edges is more useful than a roadmap.
 | **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                             |
 | **Inline rich text**              | Text is edited in the properties panel, not by clicking into the rendered paragraph.                                                                                                                    |
 
-Everything in that table is a _later_ decision rather than a closed door - but none of it is in this stage, and none of it is implied by the APIs above.
+Everything in that table is a _later_ decision rather than a closed door - but none of it is built, and none of it is implied by the APIs above.
 
 ## Known limitations
 
@@ -549,7 +561,7 @@ The section above is about scope. This one is about rough edges in the part that
 
 **Locked application UI is not dimmed.** In edit mode the zones are outlined and labelled, and everything else on the page - your forms, your navigation, your buttons - looks exactly as it did. Nothing says "this part is not editable" except the absence of an outline.
 
-Dimming it would mean fading the page and un-fading the zones, and a descendant cannot undo an ancestor's `opacity` or `filter`: those create a new compositing context that the zone inside it is stuck in. The only other route is selector-based - "dim everything that does not contain a zone" - which would have to make assumptions about a page's DOM that VitNode does not get to make, since the page is yours. So Stage 3 emphasises the zones rather than de-emphasising the page, and a host that wants more can style `[data-vitnode-zone]` and its surroundings itself.
+Dimming it would mean fading the page and un-fading the zones, and a descendant cannot undo an ancestor's `opacity` or `filter`: those create a new compositing context that the zone inside it is stuck in. The only other route is selector-based - "dim everything that does not contain a zone" - which would have to make assumptions about a page's DOM that VitNode does not get to make, since the page is yours. So the editor emphasises the zones rather than de-emphasising the page, and a host that wants more can style `[data-vitnode-zone]` and its surroundings itself.
 
 **Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen. The page reserves room for it - `--editor-sheet-height` is padding on the canvas below `md` and the width of the sidebar above it, so the last zone always scrolls clear of the sheet and Preview takes both away - but nothing is _tuned_ for touch: a drag competes with page scrolling, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
 
@@ -559,19 +571,13 @@ Dimming it would mean fading the page and un-fading the zones, and a descendant 
 
 **There is no end-to-end test harness.** The pure logic is covered by vitest - the reducer, the drop resolver and its insertion placement, zone drop states, the save input, the catalogue, and the module-graph boundary test that keeps the editor out of public bundles. What no test covers is a real browser actually dragging something, so the [manual checklist](#verifying-it-yourself) is the regression suite for gestures. `apps/web` has no test runner configured at all, which is why the checklist lives in this page rather than in a spec file.
 
-## Extension points
+## What used to be an extension point
 
-Two of those rows were designed _around_ rather than merely skipped, and it is worth knowing the shape they are expected to take before you build on top of the editor. Neither exists today. Neither has a migration. Nothing below is an API yet.
-
-### Nested areas
-
-The insertion model resolves a drop on a block to _before it_ or _after it_, on purpose, so the third possibility stays free. A future columns block or widget area would claim it: the block declares areas of its own, each area behaves like a zone, and dropping onto the block means dropping into the area under the pointer.
-
-What that still needs: a nested shape for stored content - a zone's blocks are a flat array today - a recursive renderer, and an answer for what `allowedBlocks` means two levels down. Nothing stored now would have to change, since a flat list is a nested list that never nests, but nothing is promised either.
+Two rows of that table were designed _around_ rather than merely skipped, and both have since landed. They are worth knowing as a pair, because they answer two halves of one question - and because keeping them apart is what stops a block definition turning into a settings screen.
 
 ### Presentation variants
 
-The other half of the same question is how a block looks, as opposed to what it says. Today a wide hero and a narrow hero are either two block types or a `width` field sitting in the middle of the copy. A variant would pull them apart:
+How a block looks, as opposed to what it says. A wide hero and a narrow hero used to be either two block types or a `width` field sitting in the middle of the copy. A [variant](/docs/dev/blocks/block-variants) pulls them apart:
 
 ```ts
 interface BlockInstance {
@@ -582,15 +588,28 @@ interface BlockInstance {
 }
 ```
 
-Three concerns, kept separate: **data** is what the block says, **variant** is how this instance presents it, and an **area layout** would be how a container arranges its children. Mixing them is what turns a block definition into a settings screen.
+`variant` is optional, and nothing was migrated: an instance stored without one takes the block's `defaultVariant`, exactly as it rendered before. The workaround this replaces - a `variant`, `style` or `size` field declared on the block and stored in `data` - now has a real home, and moving one there is a data migration you write once and never again.
 
-It was scoped out of Stage 3 for a boring reason: `variant` is not one optional property, it is a change to `blocks/validate.ts`, `isBlockInstance`, `blockDataShapeIssue` and every API path that writes an instance - a wide change whose risk is Stage 1 and Stage 2 regressions, for something no block asks for yet.
+### Layout areas
 
-So `variant` is **not** on `BlockInstance` today, and that is a decision rather than an oversight. Until it is, resist the obvious workaround: a `variant`, `style` or `size` field declared on the block and stored in `data` reads as content to every part of VitNode that touches an instance - validation, the properties panel, search indexing, whatever comes next - and the day a real `variant` arrives, every one of those smuggled fields is a migration. If a block genuinely needs two looks now, two block types is the cheaper mistake.
+How blocks sit next to each other, which was never one block's business. An [Area](/docs/dev/blocks/layout-areas) is a node in the zone's own list:
+
+```ts
+interface BlockAreaInstance {
+  children: readonly BlockInstance[]
+  id: string
+  kind: "area"
+  layout: { columns: 1 | 2 | 3 | 4; gap?: string; align?: string; justify?: string }
+}
+```
+
+It is not a block: no registry entry, no `allowedBlocks` entry, no fields of its own. It claims the drop-into gesture that was held back for exactly this, and it stops at one level - **an Area cannot contain an Area** - because nesting needs depth limits, cycle detection and an allowlist story that one level does not.
+
+Three concerns, kept separate: **data** is what the block says, **variant** is how this instance presents it, and **an Area's layout** is how a container arranges its children. Mixing them is what turns a block definition into a settings screen.
 
 ## Verifying it yourself
 
-`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, an **Edit page** button, and a real adapter: it maps each zone id onto a field of an `example.zones-layout` record and saves it through a staff-guarded API route, so your changes survive a reload. Until something is saved the page serves the shipped defaults and says so.
+`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, a block stored with a variant, an Area holding two blocks, a second Area left empty, an **Edit page** button, and a real adapter: it maps each zone id onto a field of an `example.zones-layout` record and saves it through a staff-guarded API route, so your changes survive a reload. Until something is saved the page serves the shipped defaults and says so.
 
 <Steps>
 <Step>
@@ -732,6 +751,33 @@ Press **← Available Blocks**. The catalogue returns and the ring on the page d
 </Step>
 <Step>
 
+**Switch a variant**
+
+Select the `example:features` block in `settings:before-profile`. Above its fields sits a **Variant** picker holding _Grid_, _List_ and _Compact_.
+
+Move through all three. The block re-renders each time, and every word in the fields underneath stays exactly as it was - the variant is not content, so nothing about the content is touched. The footer says _Unsaved changes_, because the page did change.
+
+</Step>
+<Step>
+
+**Add an Area, and move blocks in and out of it**
+
+Go **← Available Blocks**. Above the plugin groups is a **Layout** section holding one entry: **Area**. Click it - an empty two-column Area lands in the page.
+
+Now drag a root block onto it: it becomes a child, and the Area re-flows around it. Drag it back out to the zone and the Area keeps the rest. Reorder two children inside one Area and only their order changes. Try to drag an Area onto another Area: it is refused, out loud.
+
+</Step>
+<Step>
+
+**Area properties**
+
+Click the Area's own shell rather than one of its children. The sidebar shows **Area properties**: Columns, Gap, Alignment, Distribution - each re-laying the page out as you pick it - with **Duplicate area**, **Ungroup** and **Delete area** under them.
+
+Press **Ungroup**: the container goes and its blocks stay, at the position the Area held. Undo that by adding an Area back and filling it, then press **Delete area**: it asks first, and offers _Ungroup, keep blocks_ in the same dialog. Delete the empty Area the page ships with and it does not interrogate you - there is nothing inside to lose.
+
+</Step>
+<Step>
+
 **Preview**
 
 Press **Preview**. Outlines, handles and overlays go; the sidebar collapses to a slim bar with **Back to editing** and **Finish editing**. Click a link inside a block - it works now, because the `inert` wrapper is gone.
@@ -773,6 +819,8 @@ Now do it the other way round: click **Edit page**, change something, and press 
 - **Nothing on the page restarts.** Type a name into the profile form, press the **Local state** counter a few times, then **Edit page** and **Finish editing**. Both survive, both directions, because the editor mounts beside your page rather than around it.
 - **Take the sidebar zone off the page** with the button above the zones, while the editor is open. It leaves the editor with it: the outline goes, an **Add block** target pointing at it clears, and a selected block inside it returns the sidebar to _Available Blocks_. Save afterwards and the stored sidebar keeps what it had - the editor's copy is not written back, and it is not reset to defaults either. Edit it first and the footer names it rather than losing the change quietly. Put it back and it returns with a fresh baseline.
 - **Discard** puts every zone back to what loaded, and the footer stops saying _Unsaved changes_.
+- **An empty Area is edit-mode only.** The page ships one. In edit mode it is a two-column drop target; press **Finish editing** and it leaves no markup behind at all, exactly like an empty zone.
+- **Add block inside an Area** targets the Area, not the zone: the sidebar header reads _For: an area in settings:after-profile_, and the **Layout** section disappears while it does, because an Area cannot hold another Area.
 - **Duplicate** drops a copy directly below the original with its own instance id; **Delete** takes it away and returns the sidebar to the catalogue.
 - The profile form in the middle must have **no** outline, **no** handle and **no** overlay, and its input must still take focus and type. It is application code.
 - Navigating away with unsaved changes - a header link, or the back button - prompts, with **Keep editing** and **Leave without saving**.

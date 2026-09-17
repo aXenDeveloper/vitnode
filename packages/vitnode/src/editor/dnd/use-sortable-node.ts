@@ -3,29 +3,28 @@ import type { CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import type { EditorBlockRef } from "../state/types";
+import type { EditorNodeRef } from "../state/types";
 
 import { useVisualEditor } from "../context";
-import { blockDraggableId } from "./resolve-drop";
+import { nodeDraggableId } from "./resolve-drop";
 
-export interface SortableBlock {
+export interface SortableNode {
   dragging: boolean;
   handleProps: Record<string, unknown>;
   setNodeRef: (node: HTMLElement | null) => void;
   style: CSSProperties;
 }
 
-export const useSortableBlock = ({
+export const useSortableNode = ({
   index,
-  ref,
+  nodeRef,
+  type,
 }: {
   index: number;
-  ref: EditorBlockRef;
-}): SortableBlock => {
-  const { preview, state } = useVisualEditor();
-  const type =
-    state.zones[ref.zoneId]?.blocks.find(block => block.id === ref.blockId)
-      ?.type ?? "";
+  nodeRef: EditorNodeRef;
+  type: string | undefined;
+}): SortableNode => {
+  const { preview } = useVisualEditor();
 
   const {
     attributes,
@@ -37,14 +36,15 @@ export const useSortableBlock = ({
     transition,
   } = useSortable({
     data: {
-      blockId: ref.blockId,
+      areaId: nodeRef.areaId,
       index,
-      kind: "existing-block",
+      kind: nodeRef.kind === "area" ? "existing-area" : "existing-block",
+      nodeId: nodeRef.nodeId,
       type,
-      zoneId: ref.zoneId,
+      zoneId: nodeRef.zoneId,
     },
     disabled: preview,
-    id: blockDraggableId(ref),
+    id: nodeDraggableId(nodeRef),
   });
 
   return {

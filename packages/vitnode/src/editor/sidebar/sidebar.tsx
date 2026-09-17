@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 
 import { EDITOR_SHELL_STYLE } from "../../blocks/editor-shell";
 import { useVisualEditor } from "../context";
-import { BlockPropertiesPanelContent } from "../properties/panel";
+import { EditorPropertiesPanel } from "../properties/panel";
 import { AvailableBlocksPanel } from "./blocks-panel";
 import { EditorSidebarFooter } from "./footer";
+import { insertTargetScope } from "./insert-target";
 import { EditorPreviewBar } from "./preview-bar";
 
 export const EditorSidebar = (): ReactElement => {
@@ -19,6 +20,8 @@ export const EditorSidebar = (): ReactElement => {
 
   if (preview) return <EditorPreviewBar />;
 
+  const scope = insertTargetScope(insertTarget);
+
   return (
     <aside
       aria-label={t("title")}
@@ -26,7 +29,11 @@ export const EditorSidebar = (): ReactElement => {
       style={EDITOR_SHELL_STYLE}
     >
       <header className="border-border flex flex-col gap-2 border-b p-4">
-        {panel === "properties" ? (
+        {panel === "blocks" ? (
+          <h2 className="text-sm leading-none font-semibold text-balance">
+            {t("available_blocks")}
+          </h2>
+        ) : (
           <Button
             className="self-start"
             onClick={() => {
@@ -38,16 +45,14 @@ export const EditorSidebar = (): ReactElement => {
             <ChevronLeftIcon className="rtl:rotate-180" />
             {t("available_blocks")}
           </Button>
-        ) : (
-          <h2 className="text-sm leading-none font-semibold text-balance">
-            {t("available_blocks")}
-          </h2>
         )}
 
-        {panel === "blocks" && insertTarget !== null ? (
+        {panel === "blocks" && insertTarget !== null && scope !== null ? (
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground min-w-0 truncate text-xs leading-relaxed">
-              {t("insert_for", { zone: insertTarget.zoneId })}
+              {scope === "area"
+                ? t("insert_for_area", { zone: insertTarget.zoneId })
+                : t("insert_for", { zone: insertTarget.zoneId })}
             </span>
 
             <Button
@@ -68,7 +73,7 @@ export const EditorSidebar = (): ReactElement => {
         {panel === "blocks" ? (
           <AvailableBlocksPanel />
         ) : (
-          <BlockPropertiesPanelContent />
+          <EditorPropertiesPanel />
         )}
       </div>
 

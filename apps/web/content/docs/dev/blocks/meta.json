@@ -9,6 +9,8 @@
     "rendering",
     "content-zones",
     "visual-editor",
+    "block-variants",
+    "layout-areas",
     "end-to-end"
   ]
 }

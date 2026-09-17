@@ -15,10 +15,29 @@ export interface BlockCatalogEntry {
   type: string;
 }
 
-export interface BlockCatalogGroup {
-  entries: readonly BlockCatalogEntry[];
-  namespace: string;
+export interface AreaCatalogEntry {
+  description: string;
+  name: string;
 }
+
+export interface BlockCatalogLayoutSection {
+  area: AreaCatalogEntry;
+  label: string;
+}
+
+export type BlockCatalogGroup =
+  | {
+      area: AreaCatalogEntry;
+      id: "layout";
+      kind: "layout";
+      label: string;
+    }
+  | {
+      entries: readonly BlockCatalogEntry[];
+      id: string;
+      kind: "namespace";
+      label: string;
+    };
 
 export interface BlockCatalogSource {
   allowedBlocks: BlockAllowedSpec | undefined;
@@ -29,6 +48,11 @@ export interface MergedBlockCatalog {
   entries: BlockCatalogEntry[];
   installed: number;
 }
+
+export type BlockCatalogNotice =
+  "empty" | "no_results" | "none_installed" | null;
+
+export const LAYOUT_CATALOG_GROUP_ID = "layout";
 
 export const toBlockCatalogEntry = (
   entry: RegisteredBlock,
@@ -74,11 +98,14 @@ export const mergeBlockCatalogs = ({
   };
 };
 
+const normalizeQuery = (query: string): string =>
+  query.trim().toLocaleLowerCase();
+
 export const matchesBlockQuery = (
   entry: BlockCatalogEntry,
   query: string,
 ): boolean => {
-  const needle = query.trim().toLocaleLowerCase();
+  const needle = normalizeQuery(query);
   if (!needle) return true;
 
   return [entry.description, entry.name, entry.namespace, entry.type].some(
@@ -86,11 +113,25 @@ export const matchesBlockQuery = (
   );
 };
 
+export const matchesLayoutQuery = (
+  layout: BlockCatalogLayoutSection,
+  query: string,
+): boolean => {
+  const needle = normalizeQuery(query);
+  if (!needle) return true;
+
+  return [layout.area.description, layout.area.name, layout.label].some(field =>
+    field.toLocaleLowerCase().includes(needle),
+  );
+};
+
 export const groupBlockCatalog = ({
   entries,
+  layout,
   query = "",
 }: {
   entries: readonly BlockCatalogEntry[];
+  layout?: BlockCatalogLayoutSection | undefined;
   query?: string;
 }): BlockCatalogGroup[] => {
   const groups = new Map<string, BlockCatalogEntry[]>();
@@ -103,10 +144,40 @@ export const groupBlockCatalog = ({
     else groups.set(entry.namespace, [entry]);
   }
 
-  return [...groups.entries()]
+  const namespaces: BlockCatalogGroup[] = [...groups.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([namespace, group]) => ({
       entries: group.sort((left, right) => left.name.localeCompare(right.name)),
-      namespace,
+      id: namespace,
+      kind: "namespace",
+      label: namespace,
     }));
+
+  if (!layout || !matchesLayoutQuery(layout, query)) return namespaces;
+
+  return [
+    {
+      area: layout.area,
+      id: LAYOUT_CATALOG_GROUP_ID,
+      kind: "layout",
+      label: layout.label,
+    },
+    ...namespaces,
+  ];
+};
+
+export const blockCatalogNotice = ({
+  installed,
+  matched,
+  offered,
+}: {
+  installed: number;
+  matched: number;
+  offered: number;
+}): BlockCatalogNotice => {
+  if (installed === 0) return "none_installed";
+  if (offered === 0) return "empty";
+  if (matched === 0) return "no_results";
+
+  return null;
 };

@@ -3,6 +3,13 @@ import type { ContentDatabase } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
+import {
+  AREA_ALIGNS,
+  AREA_COLUMNS,
+  AREA_GAPS,
+  AREA_JUSTIFIES,
+  CONTENT_AREA_KIND,
+} from "@vitnode/core/blocks";
 import { withHttpErrors } from "@vitnode/core/content/server";
 import { eq, sql } from "drizzle-orm";
 
@@ -18,19 +25,32 @@ import {
   zonesLayoutContent,
 } from "@/database/zones-layouts";
 
-const zodZoneBlocks = z.array(
-  z.object({
-    data: z.record(z.string(), z.unknown()),
-    id: z.string(),
-    type: z.string(),
+const zodBlockNode = z.object({
+  data: z.record(z.string(), z.unknown()),
+  id: z.string(),
+  type: z.string(),
+  variant: z.string().optional(),
+});
+
+const zodAreaNode = z.object({
+  children: z.array(zodBlockNode).readonly(),
+  id: z.string(),
+  kind: z.literal(CONTENT_AREA_KIND),
+  layout: z.object({
+    align: z.enum(AREA_ALIGNS).optional(),
+    columns: z.literal(AREA_COLUMNS),
+    gap: z.enum(AREA_GAPS).optional(),
+    justify: z.enum(AREA_JUSTIFIES).optional(),
   }),
-);
+});
+
+const zodZoneNodes = z.array(z.union([zodAreaNode, zodBlockNode]));
 
 export const zodExampleZonesFields = z.object({
-  afterProfile: zodZoneBlocks,
-  beforeFooter: zodZoneBlocks,
-  beforeProfile: zodZoneBlocks,
-  sidebar: zodZoneBlocks,
+  afterProfile: zodZoneNodes,
+  beforeFooter: zodZoneNodes,
+  beforeProfile: zodZoneNodes,
+  sidebar: zodZoneNodes,
 });
 
 export const zodExampleZonesLayout = z.object({

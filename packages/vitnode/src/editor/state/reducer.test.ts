@@ -1,20 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import type { AnyBlockInstance } from "../../blocks/types";
 import type {
-  EditorBlockRef,
+  AnyBlockInstance,
+  BlockAreaInstance,
+  BlockAreaLayout,
+} from "../../blocks/types";
+import type {
+  EditorContainerRef,
+  EditorNodeRef,
   EditorZoneMount,
   VisualEditorSnapshot,
   VisualEditorState,
 } from "./types";
 
+import { createAreaInstance, isBlockAreaInstance } from "../../blocks/area";
 import { createBlockInstance } from "../../blocks/instance";
 import { createBlockRegistry } from "../../blocks/registry";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
+  containerNodes,
+  findArea,
   findBlock,
-  findBlockInZone,
+  findNode,
   initialVisualEditorState,
   isVisualEditorDirty,
   unsafeZoneIds,
@@ -24,20 +32,38 @@ import {
 const block = (text: string): AnyBlockInstance =>
   createBlockInstance("core:text", { body: text });
 
-const ref = (zoneId: string, blockId: string): EditorBlockRef => ({
-  blockId,
+const area = (
+  children: readonly AnyBlockInstance[] = [],
+  layout?: Partial<BlockAreaLayout>,
+): BlockAreaInstance => createAreaInstance({ children, layout });
+
+const ref = (
+  zoneId: string,
+  nodeId: string,
+  areaId: null | string = null,
+): EditorNodeRef => ({ areaId, kind: "block", nodeId, zoneId });
+
+const areaRef = (zoneId: string, nodeId: string): EditorNodeRef => ({
+  areaId: null,
+  kind: "area",
+  nodeId,
   zoneId,
 });
 
+const into = (
+  zoneId: string,
+  areaId: null | string = null,
+): EditorContainerRef => ({ areaId, zoneId });
+
 const mount = (
   id: string,
-  blocks: readonly AnyBlockInstance[],
+  nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
   allowedBlocks?: EditorZoneMount["allowedBlocks"],
 ): EditorZoneMount => ({
   allowedBlocks,
-  blocks,
   id,
   invalid: [],
+  nodes,
   registry: undefined,
 });
 
@@ -48,7 +74,14 @@ const mounted = (...zones: readonly EditorZoneMount[]): VisualEditorState =>
   );
 
 const ids = (state: VisualEditorState, zoneId: string): string[] =>
-  state.zones[zoneId].blocks.map(instance => instance.id);
+  state.zones[zoneId].nodes.map(node => node.id);
+
+const childIds = (
+  state: VisualEditorState,
+  zoneId: string,
+  areaId: string,
+): string[] =>
+  (containerNodes(state, into(zoneId, areaId)) ?? []).map(node => node.id);
 
 const inFlight = (state: VisualEditorState, canonical?: VisualEditorSnapshot) =>
   ({
@@ -59,12 +92,12 @@ const inFlight = (state: VisualEditorState, canonical?: VisualEditorSnapshot) =>
   }) as const;
 
 describe("visualEditorReducer", () => {
-  it("captures the incoming blocks as the baseline on the first mount", () => {
+  it("captures the incoming nodes as the baseline on the first mount", () => {
     const first = block("a");
     const state = mounted(mount("main", [first]));
 
     expect(state.order).toStrictEqual(["main"]);
-    expect(state.zones.main.blocks).toStrictEqual([first]);
+    expect(state.zones.main.nodes).toStrictEqual([first]);
     expect(state.zones.main.initial).toStrictEqual([first]);
     expect(isVisualEditorDirty(state)).toBe(false);
   });
@@ -77,14 +110,14 @@ describe("visualEditorReducer", () => {
     });
 
     const next = visualEditorReducer(state, {
+      container: into("main"),
       index: 1,
       instance: block("b"),
       type: "insert",
-      zoneId: "main",
     });
 
     expect(loaded).toHaveLength(1);
-    expect(next.zones.main.blocks).toHaveLength(2);
+    expect(next.zones.main.nodes).toHaveLength(2);
     expect(next.zones.main.initial).toHaveLength(1);
   });
 
@@ -92,10 +125,10 @@ describe("visualEditorReducer", () => {
     const first = block("a");
     const added = block("b");
     const state = visualEditorReducer(mounted(mount("main", [first])), {
+      container: into("main"),
       index: 1,
       instance: added,
       type: "insert",
-      zoneId: "main",
     });
 
     const remounted = visualEditorReducer(state, {
@@ -124,7 +157,7 @@ describe("visualEditorReducer", () => {
     });
 
     expect(widened.zones.main.allowedBlocks).toBe("*");
-    expect(widened.zones.main.blocks).toStrictEqual(state.zones.main.blocks);
+    expect(widened.zones.main.nodes).toStrictEqual(state.zones.main.nodes);
   });
 
   it("widens the allowlist without adopting content the editor is still editing", () => {
@@ -141,7 +174,7 @@ describe("visualEditorReducer", () => {
     });
 
     expect(widened.zones.main.allowedBlocks).toBe("*");
-    expect(widened.zones.main.blocks).toStrictEqual(edited.zones.main.blocks);
+    expect(widened.zones.main.nodes).toStrictEqual(edited.zones.main.nodes);
     expect(widened.zones.main.initial).toBe(edited.zones.main.initial);
   });
 
@@ -150,30 +183,38 @@ describe("visualEditorReducer", () => {
     const late = block("b");
     const early = block("c");
     const state = visualEditorReducer(mounted(mount("main", [first])), {
+      container: into("main"),
       index: 99,
       instance: late,
       type: "insert",
-      zoneId: "main",
     });
     const next = visualEditorReducer(state, {
+      container: into("main"),
       index: -4,
       instance: early,
       type: "insert",
-      zoneId: "main",
     });
 
     expect(ids(next, "main")).toStrictEqual([early.id, first.id, late.id]);
   });
 
-  it("ignores an insert into a zone that never mounted", () => {
+  it("ignores an insert into a zone or an area that never mounted", () => {
     const state = mounted(mount("main", []));
 
     expect(
       visualEditorReducer(state, {
+        container: into("aside"),
         index: 0,
         instance: block("a"),
         type: "insert",
-        zoneId: "aside",
+      }),
+    ).toBe(state);
+    expect(
+      visualEditorReducer(state, {
+        container: into("main", "GHOST"),
+        index: 0,
+        instance: block("a"),
+        type: "insert",
       }),
     ).toBe(state);
   });
@@ -199,74 +240,59 @@ describe("visualEditorReducer", () => {
       type: "remove",
     });
 
-    expect(other.selected).toStrictEqual({
-      blockId: second.id,
-      zoneId: "main",
-    });
+    expect(other.selected).toStrictEqual(ref("main", second.id));
   });
 
   it("duplicates a block with a fresh id, deeply copied, and selects the copy", () => {
-    const original = createBlockInstance("core:hero", {
-      seo: { title: "a" },
-      title: "Hello",
-    });
+    const original = createBlockInstance(
+      "core:hero",
+      { seo: { title: "a" }, title: "Hello" },
+      "wide",
+    );
     const state = visualEditorReducer(mounted(mount("main", [original])), {
       ref: ref("main", original.id),
       type: "duplicate",
     });
 
-    const [, copy] = state.zones.main.blocks;
+    const [, copy] = state.zones.main.nodes;
 
-    expect(state.zones.main.blocks).toHaveLength(2);
+    expect(state.zones.main.nodes).toHaveLength(2);
     expect(copy.id).not.toBe(original.id);
-    expect(copy.type).toBe(original.type);
-    expect(copy.data).toStrictEqual(original.data);
-    expect(copy.data.seo).not.toBe(original.data.seo);
-    expect(state.selected).toStrictEqual({ blockId: copy.id, zoneId: "main" });
+    expect(isBlockAreaInstance(copy)).toBe(false);
+    expect(findBlock(state, ref("main", copy.id))?.instance.type).toBe(
+      original.type,
+    );
+    expect(findBlock(state, ref("main", copy.id))?.instance.variant).toBe(
+      "wide",
+    );
+    expect(findBlock(state, ref("main", copy.id))?.instance.data).toStrictEqual(
+      original.data,
+    );
+    expect(findBlock(state, ref("main", copy.id))?.instance.data.seo).not.toBe(
+      original.data.seo,
+    );
+    expect(state.selected).toStrictEqual(ref("main", copy.id));
   });
 
   it("reorders inside one zone against the list without the moved block", () => {
     const [a, b, c] = [block("a"), block("b"), block("c")];
     const state = mounted(mount("main", [a, b, c]));
 
-    expect(
+    const reorder = (nodeId: string, toIndex: number): string[] =>
       ids(
         visualEditorReducer(state, {
-          blockId: a.id,
-          fromZoneId: "main",
-          toIndex: 2,
-          toZoneId: "main",
+          from: into("main"),
+          nodeId,
+          to: into("main"),
+          toIndex,
           type: "move",
         }),
         "main",
-      ),
-    ).toStrictEqual([b.id, c.id, a.id]);
+      );
 
-    expect(
-      ids(
-        visualEditorReducer(state, {
-          blockId: c.id,
-          fromZoneId: "main",
-          toIndex: 0,
-          toZoneId: "main",
-          type: "move",
-        }),
-        "main",
-      ),
-    ).toStrictEqual([c.id, a.id, b.id]);
-
-    expect(
-      ids(
-        visualEditorReducer(state, {
-          blockId: b.id,
-          fromZoneId: "main",
-          toIndex: 1,
-          toZoneId: "main",
-          type: "move",
-        }),
-        "main",
-      ),
-    ).toStrictEqual([a.id, b.id, c.id]);
+    expect(reorder(a.id, 2)).toStrictEqual([b.id, c.id, a.id]);
+    expect(reorder(c.id, 0)).toStrictEqual([c.id, a.id, b.id]);
+    expect(reorder(b.id, 1)).toStrictEqual([a.id, b.id, c.id]);
   });
 
   it("moves a block across zones and follows it with the selection", () => {
@@ -277,16 +303,16 @@ describe("visualEditorReducer", () => {
     );
 
     const moved = visualEditorReducer(state, {
-      blockId: a.id,
-      fromZoneId: "main",
+      from: into("main"),
+      nodeId: a.id,
+      to: into("aside"),
       toIndex: 0,
-      toZoneId: "aside",
       type: "move",
     });
 
     expect(ids(moved, "main")).toStrictEqual([b.id]);
     expect(ids(moved, "aside")).toStrictEqual([a.id, c.id]);
-    expect(moved.selected).toStrictEqual({ blockId: a.id, zoneId: "aside" });
+    expect(moved.selected).toStrictEqual(ref("aside", a.id));
     expect(findBlock(moved, ref("aside", a.id))).toStrictEqual({
       index: 0,
       instance: a,
@@ -304,7 +330,9 @@ describe("visualEditorReducer", () => {
       type: "update",
     });
 
-    expect(state.zones.main.blocks[0].data).toStrictEqual({ body: "b" });
+    expect(
+      findBlock(state, ref("main", instance.id))?.instance.data,
+    ).toStrictEqual({ body: "b" });
     expect(isVisualEditorDirty(state)).toBe(true);
   });
 
@@ -331,10 +359,7 @@ describe("visualEditorReducer", () => {
       type: "select",
     });
 
-    expect(state.selected).toStrictEqual({
-      blockId: instance.id,
-      zoneId: "main",
-    });
+    expect(state.selected).toStrictEqual(ref("main", instance.id));
 
     const cleared = visualEditorReducer(state, { ref: null, type: "select" });
 
@@ -346,7 +371,12 @@ describe("visualEditorReducer", () => {
     const state = mounted(mount("main", [a, b]), mount("aside", [c]));
     const edited = visualEditorReducer(
       visualEditorReducer(state, { ref: ref("main", b.id), type: "remove" }),
-      { index: 0, instance: block("d"), type: "insert", zoneId: "aside" },
+      {
+        container: into("aside"),
+        index: 0,
+        instance: block("d"),
+        type: "insert",
+      },
     );
     const selected = visualEditorReducer(edited, {
       ref: ref("main", a.id),
@@ -366,10 +396,10 @@ describe("visualEditorReducer", () => {
   it("rebaselines every zone once it is saved", () => {
     const [a, b] = [block("a"), block("b")];
     const state = visualEditorReducer(mounted(mount("main", [a])), {
+      container: into("main"),
       index: 1,
       instance: b,
       type: "insert",
-      zoneId: "main",
     });
 
     expect(changedZoneIds(state)).toStrictEqual(["main"]);
@@ -409,20 +439,20 @@ describe("visualEditorReducer", () => {
     const [a, b] = [block("a"), block("b")];
     const state = mounted(mount("main", [a, b]));
     const moved = visualEditorReducer(state, {
-      blockId: a.id,
-      fromZoneId: "main",
+      from: into("main"),
+      nodeId: a.id,
+      to: into("main"),
       toIndex: 1,
-      toZoneId: "main",
       type: "move",
     });
 
     expect(isVisualEditorDirty(moved)).toBe(true);
 
     const back = visualEditorReducer(moved, {
-      blockId: a.id,
-      fromZoneId: "main",
+      from: into("main"),
+      nodeId: a.id,
+      to: into("main"),
       toIndex: 0,
-      toZoneId: "main",
       type: "move",
     });
 
@@ -432,7 +462,7 @@ describe("visualEditorReducer", () => {
   it("finds nothing for an unknown block", () => {
     const state = mounted(mount("main", [block("a")]));
 
-    expect(findBlock(state, ref("main", "MISSING"))).toBeNull();
+    expect(findNode(state, ref("main", "MISSING"))).toBeNull();
     expect(
       visualEditorReducer(state, {
         ref: ref("main", "MISSING"),
@@ -442,18 +472,593 @@ describe("visualEditorReducer", () => {
   });
 });
 
+describe("a node's identity, which is its container and not its raw id", () => {
+  const child = block("inside");
+  const loose = block("outside");
+  const holder = area([child]);
+
+  const page = (): VisualEditorState => mounted(mount("main", [loose, holder]));
+
+  it("never falls back to a global lookup when the container is wrong", () => {
+    const state = page();
+
+    expect(findNode(state, ref("main", child.id))).toBeNull();
+    expect(findNode(state, ref("main", loose.id, holder.id))).toBeNull();
+    expect(findNode(state, ref("main", child.id, holder.id))).not.toBeNull();
+  });
+
+  it("refuses a ref whose kind does not match the node it names", () => {
+    const state = page();
+
+    expect(findNode(state, ref("main", holder.id))).toBeNull();
+    expect(findNode(state, areaRef("main", loose.id))).toBeNull();
+    expect(findArea(state, areaRef("main", holder.id))?.index).toBe(1);
+    expect(findBlock(state, areaRef("main", holder.id))).toBeNull();
+  });
+
+  it("reads a container's nodes, and nothing for one that is not there", () => {
+    const state = page();
+
+    expect(containerNodes(state, into("main"))).toHaveLength(2);
+    expect(containerNodes(state, into("main", holder.id))).toStrictEqual([
+      child,
+    ]);
+    expect(containerNodes(state, into("main", loose.id))).toBeNull();
+    expect(containerNodes(state, into("ghost"))).toBeNull();
+  });
+
+  it("selects an area and a block inside it independently", () => {
+    const onArea = visualEditorReducer(page(), {
+      ref: areaRef("main", holder.id),
+      type: "select",
+    });
+
+    expect(onArea.selected).toStrictEqual(areaRef("main", holder.id));
+
+    const onChild = visualEditorReducer(onArea, {
+      ref: ref("main", child.id, holder.id),
+      type: "select",
+    });
+
+    expect(onChild.selected).toStrictEqual(ref("main", child.id, holder.id));
+  });
+});
+
+describe("areas on the canvas", () => {
+  it("inserts an area at a zone root and leaves the blocks around it", () => {
+    const [a, b] = [block("a"), block("b")];
+    const holder = area();
+    const state = visualEditorReducer(mounted(mount("main", [a, b])), {
+      area: holder,
+      index: 1,
+      type: "insert-area",
+      zoneId: "main",
+    });
+
+    expect(ids(state, "main")).toStrictEqual([a.id, holder.id, b.id]);
+    expect(childIds(state, "main", holder.id)).toStrictEqual([]);
+    expect(isVisualEditorDirty(state)).toBe(true);
+  });
+
+  it("ignores an area aimed at a zone that never mounted", () => {
+    const state = mounted(mount("main", []));
+
+    expect(
+      visualEditorReducer(state, {
+        area: area(),
+        index: 0,
+        type: "insert-area",
+        zoneId: "aside",
+      }),
+    ).toBe(state);
+  });
+
+  it("inserts a block into an area", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const added = block("added");
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      container: into("main", holder.id),
+      index: 0,
+      instance: added,
+      type: "insert",
+    });
+
+    expect(childIds(state, "main", holder.id)).toStrictEqual([
+      added.id,
+      child.id,
+    ]);
+    expect(ids(state, "main")).toStrictEqual([holder.id]);
+  });
+
+  it("reorders an area among the blocks at the zone root", () => {
+    const [a, b] = [block("a"), block("b")];
+    const holder = area([block("inside")]);
+    const state = mounted(mount("main", [a, b, holder]));
+
+    const moved = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: holder.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(moved, "main")).toStrictEqual([holder.id, a.id, b.id]);
+    expect(childIds(moved, "main", holder.id)).toHaveLength(1);
+  });
+
+  it("moves a root block into an area", () => {
+    const [a, b] = [block("a"), block("b")];
+    const holder = area([block("inside")]);
+    const state = mounted(mount("main", [a, b, holder]));
+
+    const moved = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: a.id,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(moved, "main")).toStrictEqual([b.id, holder.id]);
+    expect(childIds(moved, "main", holder.id)[0]).toBe(a.id);
+    expect(childIds(moved, "main", holder.id)).toHaveLength(2);
+  });
+
+  it("moves an area's child back out to the zone root", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const root = block("a");
+    const state = mounted(mount("main", [root, holder]));
+
+    const moved = visualEditorReducer(state, {
+      from: into("main", holder.id),
+      nodeId: child.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(moved, "main")).toStrictEqual([child.id, root.id, holder.id]);
+    expect(childIds(moved, "main", holder.id)).toStrictEqual([]);
+  });
+
+  it("moves an area's child straight into another area", () => {
+    const child = block("inside");
+    const left = area([child]);
+    const right = area([block("other")]);
+    const state = mounted(mount("main", [left, right]));
+
+    const moved = visualEditorReducer(state, {
+      from: into("main", left.id),
+      nodeId: child.id,
+      to: into("main", right.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(childIds(moved, "main", left.id)).toStrictEqual([]);
+    expect(childIds(moved, "main", right.id)[0]).toBe(child.id);
+    expect(ids(moved, "main")).toStrictEqual([left.id, right.id]);
+  });
+
+  it("reorders inside an area against the list without the moved block", () => {
+    const [a, b, c] = [block("a"), block("b"), block("c")];
+    const holder = area([a, b, c]);
+    const state = mounted(mount("main", [holder]));
+
+    const moved = visualEditorReducer(state, {
+      from: into("main", holder.id),
+      nodeId: a.id,
+      to: into("main", holder.id),
+      toIndex: 2,
+      type: "move",
+    });
+
+    expect(childIds(moved, "main", holder.id)).toStrictEqual([
+      b.id,
+      c.id,
+      a.id,
+    ]);
+  });
+
+  it("refuses an area dropped inside another area", () => {
+    const left = area([block("a")]);
+    const right = area();
+    const state = mounted(mount("main", [left, right]));
+
+    expect(
+      visualEditorReducer(state, {
+        from: into("main"),
+        nodeId: left.id,
+        to: into("main", right.id),
+        toIndex: 0,
+        type: "move",
+      }),
+    ).toBe(state);
+  });
+
+  it("refuses a move into an area that is not there", () => {
+    const a = block("a");
+    const state = mounted(mount("main", [a]));
+
+    expect(
+      visualEditorReducer(state, {
+        from: into("main"),
+        nodeId: a.id,
+        to: into("main", "GHOST"),
+        toIndex: 0,
+        type: "move",
+      }),
+    ).toBe(state);
+  });
+
+  it("deletes an area together with every block inside it", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const root = block("a");
+    const state = visualEditorReducer(mounted(mount("main", [root, holder])), {
+      ref: ref("main", child.id, holder.id),
+      type: "select",
+    });
+
+    const removed = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "remove",
+    });
+
+    expect(ids(removed, "main")).toStrictEqual([root.id]);
+    expect(removed.selected).toBeNull();
+  });
+
+  it("unwraps an area back into the zone root, in order and in place", () => {
+    const [a, b] = [block("a"), block("b")];
+    const [first, second] = [block("first"), block("second")];
+    const holder = area([first, second]);
+    const state = mounted(mount("main", [a, holder, b]));
+
+    const unwrapped = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "unwrap-area",
+    });
+
+    expect(ids(unwrapped, "main")).toStrictEqual([
+      a.id,
+      first.id,
+      second.id,
+      b.id,
+    ]);
+  });
+
+  it("keeps a selected child on the page when its area is unwrapped", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      ref: ref("main", child.id, holder.id),
+      type: "select",
+    });
+
+    const unwrapped = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "unwrap-area",
+    });
+
+    expect(unwrapped.selected).toStrictEqual(ref("main", child.id));
+    expect(
+      visualEditorReducer(
+        visualEditorReducer(mounted(mount("main", [holder])), {
+          ref: areaRef("main", holder.id),
+          type: "select",
+        }),
+        { ref: areaRef("main", holder.id), type: "unwrap-area" },
+      ).selected,
+    ).toBeNull();
+  });
+
+  it("ignores an unwrap aimed at a block", () => {
+    const a = block("a");
+    const state = mounted(mount("main", [a]));
+
+    expect(
+      visualEditorReducer(state, {
+        ref: areaRef("main", a.id),
+        type: "unwrap-area",
+      }),
+    ).toBe(state);
+  });
+
+  it("duplicates an area with a fresh id for it and for every child", () => {
+    const child = createBlockInstance(
+      "core:hero",
+      { seo: { title: "a" } },
+      "wide",
+    );
+    const holder = area([child], { columns: 3 });
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      ref: areaRef("main", holder.id),
+      type: "duplicate",
+    });
+
+    const copy = state.zones.main.nodes[1];
+
+    expect(ids(state, "main")[0]).toBe(holder.id);
+    expect(copy.id).not.toBe(holder.id);
+    expect(findArea(state, areaRef("main", copy.id))?.area.layout.columns).toBe(
+      3,
+    );
+
+    const copied = childIds(state, "main", copy.id);
+
+    expect(copied).toHaveLength(1);
+    expect(copied[0]).not.toBe(child.id);
+
+    const copiedChild = findBlock(
+      state,
+      ref("main", copied[0], copy.id),
+    )?.instance;
+
+    expect(copiedChild?.variant).toBe("wide");
+    expect(copiedChild?.data).toStrictEqual(child.data);
+    expect(copiedChild?.data.seo).not.toBe(child.data.seo);
+    expect(state.selected).toStrictEqual(areaRef("main", copy.id));
+
+    const everyId = [
+      ...ids(state, "main"),
+      ...childIds(state, "main", holder.id),
+      ...copied,
+    ];
+
+    expect(new Set(everyId).size).toBe(everyId.length);
+  });
+
+  it("replaces an area's layout and ignores one that changes nothing", () => {
+    const holder = area([], { columns: 2 });
+    const state = mounted(mount("main", [holder]));
+
+    const widened = visualEditorReducer(state, {
+      layout: { columns: 4, gap: "lg" },
+      ref: areaRef("main", holder.id),
+      type: "update-area-layout",
+    });
+
+    expect(
+      findArea(widened, areaRef("main", holder.id))?.area.layout,
+    ).toStrictEqual({ columns: 4, gap: "lg" });
+    expect(isVisualEditorDirty(widened)).toBe(true);
+
+    expect(
+      visualEditorReducer(widened, {
+        layout: { columns: 4, gap: "lg" },
+        ref: areaRef("main", holder.id),
+        type: "update-area-layout",
+      }),
+    ).toBe(widened);
+  });
+
+  it("edits and removes a block by the area it sits in", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      data: { body: "edited" },
+      ref: ref("main", child.id, holder.id),
+      type: "update",
+    });
+
+    expect(
+      findBlock(state, ref("main", child.id, holder.id))?.instance.data,
+    ).toStrictEqual({ body: "edited" });
+    expect(isVisualEditorDirty(state)).toBe(true);
+
+    const removed = visualEditorReducer(state, {
+      ref: ref("main", child.id, holder.id),
+      type: "remove",
+    });
+
+    expect(childIds(removed, "main", holder.id)).toStrictEqual([]);
+    expect(ids(removed, "main")).toStrictEqual([holder.id]);
+  });
+
+  it("duplicates a block inside the area it already sits in", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      ref: ref("main", child.id, holder.id),
+      type: "duplicate",
+    });
+
+    const inside = childIds(state, "main", holder.id);
+
+    expect(inside).toHaveLength(2);
+    expect(inside[0]).toBe(child.id);
+    expect(state.selected).toStrictEqual(ref("main", inside[1], holder.id));
+    expect(ids(state, "main")).toStrictEqual([holder.id]);
+  });
+});
+
+describe("a block's variant", () => {
+  it("sets a variant in place, keeping the id and the data it had", () => {
+    const instance = createBlockInstance("core:hero", { title: "a" });
+    const state = visualEditorReducer(mounted(mount("main", [instance])), {
+      ref: ref("main", instance.id),
+      type: "set-variant",
+      variant: "wide",
+    });
+
+    const found = findBlock(state, ref("main", instance.id))?.instance;
+
+    expect(found?.id).toBe(instance.id);
+    expect(found?.variant).toBe("wide");
+    expect(found?.data).toBe(instance.data);
+    expect(isVisualEditorDirty(state)).toBe(true);
+  });
+
+  it("removes the key when the variant goes back to none", () => {
+    const instance = createBlockInstance("core:hero", { title: "a" }, "wide");
+    const state = visualEditorReducer(mounted(mount("main", [instance])), {
+      ref: ref("main", instance.id),
+      type: "set-variant",
+      variant: undefined,
+    });
+
+    const found = findBlock(state, ref("main", instance.id))?.instance;
+
+    expect(found).toBeDefined();
+    expect(found && "variant" in found).toBe(false);
+    expect(isVisualEditorDirty(state)).toBe(true);
+  });
+
+  it("changes nothing when the variant is the one already stored", () => {
+    const instance = createBlockInstance("core:hero", { title: "a" }, "wide");
+    const state = mounted(mount("main", [instance]));
+
+    expect(
+      visualEditorReducer(state, {
+        ref: ref("main", instance.id),
+        type: "set-variant",
+        variant: "wide",
+      }),
+    ).toBe(state);
+  });
+
+  it("sets the variant of a block inside an area, and never of the area", () => {
+    const child = createBlockInstance("core:hero", { title: "a" });
+    const holder = area([child]);
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      ref: ref("main", child.id, holder.id),
+      type: "set-variant",
+      variant: "wide",
+    });
+
+    expect(
+      findBlock(state, ref("main", child.id, holder.id))?.instance.variant,
+    ).toBe("wide");
+    expect(
+      visualEditorReducer(state, {
+        ref: areaRef("main", holder.id),
+        type: "set-variant",
+        variant: "wide",
+      }),
+    ).toBe(state);
+  });
+
+  it("counts a variant change as a change the save has to send", () => {
+    const instance = createBlockInstance("core:hero", { title: "a" });
+    const state = visualEditorReducer(mounted(mount("main", [instance])), {
+      ref: ref("main", instance.id),
+      type: "set-variant",
+      variant: "wide",
+    });
+
+    expect(changedZoneIds(state)).toStrictEqual(["main"]);
+
+    const saved = visualEditorReducer(state, inFlight(state));
+
+    expect(isVisualEditorDirty(saved)).toBe(false);
+  });
+});
+
+describe("the selection, as the page under it changes", () => {
+  it("follows a block that moves into an area and out again", () => {
+    const a = block("a");
+    const holder = area();
+    const state = visualEditorReducer(mounted(mount("main", [a, holder])), {
+      ref: ref("main", a.id),
+      type: "select",
+    });
+
+    const inside = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: a.id,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(inside.selected).toStrictEqual(ref("main", a.id, holder.id));
+
+    const back = visualEditorReducer(inside, {
+      from: into("main", holder.id),
+      nodeId: a.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(back.selected).toStrictEqual(ref("main", a.id));
+  });
+
+  it("follows an area, and the block selected inside it, across zones", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = visualEditorReducer(
+      mounted(mount("main", [holder]), mount("aside", [])),
+      { ref: ref("main", child.id, holder.id), type: "select" },
+    );
+
+    const moved = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: holder.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(moved.selected).toStrictEqual(ref("aside", child.id, holder.id));
+    expect(findNode(moved, ref("aside", child.id, holder.id))).not.toBeNull();
+  });
+
+  it("clears when the node it names stops existing", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      ref: ref("main", child.id, holder.id),
+      type: "select",
+    });
+
+    expect(
+      visualEditorReducer(state, {
+        ref: ref("main", child.id, holder.id),
+        type: "remove",
+      }).selected,
+    ).toBeNull();
+  });
+
+  it("clears when the page remounts a zone without the area it was in", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      ref: ref("main", child.id, holder.id),
+      type: "select",
+    });
+
+    expect(
+      visualEditorReducer(state, {
+        type: "mount",
+        zone: mount("main", [block("other")]),
+      }).selected,
+    ).toBeNull();
+    expect(
+      visualEditorReducer(state, {
+        type: "mount",
+        zone: mount("main", [holder]),
+      }).selected,
+    ).toStrictEqual(ref("main", child.id, holder.id));
+  });
+});
+
 describe("the baseline a saved snapshot writes", () => {
   it("no edit during save: goes clean against the snapshot it sent", () => {
     const [a, b] = [block("a"), block("b")];
     const edited = visualEditorReducer(mounted(mount("main", [a])), {
+      container: into("main"),
       index: 1,
       instance: b,
       type: "insert",
-      zoneId: "main",
     });
     const saved = visualEditorReducer(edited, inFlight(edited));
 
-    expect(saved.zones.main.initial).toBe(edited.zones.main.blocks);
+    expect(saved.zones.main.initial).toBe(edited.zones.main.nodes);
     expect(ids(saved, "main")).toStrictEqual([a.id, b.id]);
     expect(isVisualEditorDirty(saved)).toBe(false);
     expect(changedZoneIds(saved)).toStrictEqual([]);
@@ -462,17 +1067,17 @@ describe("the baseline a saved snapshot writes", () => {
   it("edit during save: stays dirty, because the server never saw the late block", () => {
     const [a, b, late] = [block("a"), block("b"), block("c")];
     const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      container: into("main"),
       index: 1,
       instance: b,
       type: "insert",
-      zoneId: "main",
     });
     const sending = inFlight(sent);
     const current = visualEditorReducer(sent, {
+      container: into("main"),
       index: 2,
       instance: late,
       type: "insert",
-      zoneId: "main",
     });
 
     const saved = visualEditorReducer(current, sending);
@@ -487,18 +1092,38 @@ describe("the baseline a saved snapshot writes", () => {
     expect(isVisualEditorDirty(settled)).toBe(false);
   });
 
+  it("edit during save, inside an area: the later change stays dirty", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const sent = mounted(mount("main", [holder]));
+    const sending = inFlight(sent);
+    const current = visualEditorReducer(sent, {
+      container: into("main", holder.id),
+      index: 1,
+      instance: block("late"),
+      type: "insert",
+    });
+
+    const saved = visualEditorReducer(current, sending);
+
+    expect(saved.zones.main.initial).toStrictEqual([holder]);
+    expect(childIds(saved, "main", holder.id)).toHaveLength(2);
+    expect(isVisualEditorDirty(saved)).toBe(true);
+    expect(changedZoneIds(saved)).toStrictEqual(["main"]);
+  });
+
   it("names only the zones that still differ after a partial save", () => {
     const [a, b, c, d] = [block("a"), block("b"), block("c"), block("d")];
     const sent = visualEditorReducer(
       mounted(mount("main", [a]), mount("aside", [c])),
-      { index: 1, instance: b, type: "insert", zoneId: "main" },
+      { container: into("main"), index: 1, instance: b, type: "insert" },
     );
     const sending = inFlight(sent);
     const current = visualEditorReducer(sent, {
+      container: into("aside"),
       index: 1,
       instance: d,
       type: "insert",
-      zoneId: "aside",
     });
 
     const saved = visualEditorReducer(current, sending);
@@ -514,7 +1139,7 @@ describe("the baseline a saved snapshot writes", () => {
     const sending = inFlight(sent);
     const current = visualEditorReducer(
       visualEditorReducer(sent, { type: "mount", zone: mount("aside", [c]) }),
-      { index: 1, instance: d, type: "insert", zoneId: "aside" },
+      { container: into("aside"), index: 1, instance: d, type: "insert" },
     );
 
     const saved = visualEditorReducer(current, sending);
@@ -532,7 +1157,7 @@ describe("the baseline a saved snapshot writes", () => {
     const saved = visualEditorReducer(current, sending);
 
     expect(Object.keys(saved.zones)).toStrictEqual(["main", "sidebar"]);
-    expect(saved.zones.sidebar.blocks).toStrictEqual([]);
+    expect(saved.zones.sidebar.nodes).toStrictEqual([]);
     expect(saved.zones.sidebar.initial).toStrictEqual([]);
     expect(isVisualEditorDirty(saved)).toBe(false);
   });
@@ -540,10 +1165,10 @@ describe("the baseline a saved snapshot writes", () => {
   it("keeps a page dirty when a discard lands before the save it raced", () => {
     const [a, b] = [block("a"), block("b")];
     const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      container: into("main"),
       index: 1,
       instance: b,
       type: "insert",
-      zoneId: "main",
     });
     const sending = inFlight(sent);
     const discarded = visualEditorReducer(sent, { type: "discard" });
@@ -561,9 +1186,9 @@ describe("persisted content the editor cannot read", () => {
 
   const withMalformed = (
     id: string,
-    blocks: readonly AnyBlockInstance[],
+    nodes: readonly AnyBlockInstance[],
   ): EditorZoneMount => ({
-    ...mount(id, blocks),
+    ...mount(id, nodes),
     invalid: [{ index: 1, value: malformed }],
   });
 
@@ -571,7 +1196,7 @@ describe("persisted content the editor cannot read", () => {
     const [a, b] = [block("a"), block("b")];
     const state = mounted(withMalformed("main", [a, b]));
 
-    expect(state.zones.main.blocks).toStrictEqual([a, b]);
+    expect(state.zones.main.nodes).toStrictEqual([a, b]);
     expect(state.zones.main.invalid).toStrictEqual([
       { index: 1, value: malformed },
     ]);
@@ -618,7 +1243,7 @@ describe("persisted content the editor cannot read", () => {
     expect(unsafeZoneIds(removed)).toStrictEqual([]);
     expect(isVisualEditorDirty(removed)).toBe(true);
     expect(changedZoneIds(removed)).toStrictEqual(["main"]);
-    expect(removed.zones.main.blocks).toStrictEqual([a, b]);
+    expect(removed.zones.main.nodes).toStrictEqual([a, b]);
   });
 
   it("ignores a removal aimed at an index or a zone that holds nothing", () => {
@@ -694,7 +1319,7 @@ describe("persisted content the editor cannot read", () => {
   });
 });
 
-describe("one block id living in two zones", () => {
+describe("one block id living in two containers", () => {
   const withId = (id: string, text: string): AnyBlockInstance => ({
     data: { body: text },
     id,
@@ -709,22 +1334,46 @@ describe("one block id living in two zones", () => {
 
   it("gives the block a fresh id when it moves into a zone already holding that id", () => {
     const moved = visualEditorReducer(twins(), {
-      blockId: "X",
-      fromZoneId: "B",
+      from: into("B"),
+      nodeId: "X",
+      to: into("A"),
       toIndex: 2,
-      toZoneId: "A",
       type: "move",
     });
 
-    const ids = moved.zones.A.blocks.map(instance => instance.id);
+    const landed = ids(moved, "A");
 
-    expect(ids).toHaveLength(3);
-    expect(new Set(ids).size).toBe(3);
-    expect(ids.slice(0, 2)).toStrictEqual(["A1", "X"]);
-    expect(moved.zones.A.blocks[2].data).toStrictEqual({ body: "in b" });
-    expect(moved.zones.B.blocks.map(instance => instance.id)).toStrictEqual([
-      "B1",
-    ]);
+    expect(landed).toHaveLength(3);
+    expect(new Set(landed).size).toBe(3);
+    expect(landed.slice(0, 2)).toStrictEqual(["A1", "X"]);
+    expect(findBlock(moved, ref("A", landed[2]))?.instance.data).toStrictEqual({
+      body: "in b",
+    });
+    expect(ids(moved, "B")).toStrictEqual(["B1"]);
+  });
+
+  it("gives it a fresh id even when the twin sits inside an area of that zone", () => {
+    const holder = area([withId("X", "in an area")]);
+    const state = mounted(
+      mount("A", [withId("A1", "a1"), holder]),
+      mount("B", [withId("X", "in b")]),
+    );
+
+    const moved = visualEditorReducer(state, {
+      from: into("B"),
+      nodeId: "X",
+      to: into("A"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    const landed = ids(moved, "A");
+
+    expect(landed[0]).not.toBe("X");
+    expect(childIds(moved, "A", holder.id)).toStrictEqual(["X"]);
+    expect(findBlock(moved, ref("A", landed[0]))?.instance.data).toStrictEqual({
+      body: "in b",
+    });
   });
 
   it("keeps the id when the zone it moves into has no such block", () => {
@@ -735,17 +1384,56 @@ describe("one block id living in two zones", () => {
         mount("C", []),
       ),
       {
-        blockId: "X",
-        fromZoneId: "B",
+        from: into("B"),
+        nodeId: "X",
+        to: into("C"),
         toIndex: 0,
-        toZoneId: "C",
         type: "move",
       },
     );
 
-    expect(moved.zones.C.blocks.map(instance => instance.id)).toStrictEqual([
-      "X",
-    ]);
+    expect(ids(moved, "C")).toStrictEqual(["X"]);
+  });
+
+  it("keeps the id when it only moves between containers of one zone", () => {
+    const holder = area();
+    const state = mounted(mount("A", [withId("X", "x"), holder]));
+
+    const moved = visualEditorReducer(state, {
+      from: into("A"),
+      nodeId: "X",
+      to: into("A", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(moved, "A")).toStrictEqual([holder.id]);
+    expect(childIds(moved, "A", holder.id)).toStrictEqual(["X"]);
+  });
+
+  it("re-identifies an area's children when they collide in the new zone", () => {
+    const holder = area([withId("X", "inside")]);
+    const state = mounted(
+      mount("A", [holder]),
+      mount("B", [withId("X", "in b")]),
+    );
+
+    const moved = visualEditorReducer(state, {
+      from: into("A"),
+      nodeId: holder.id,
+      to: into("B"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    const inside = childIds(moved, "B", holder.id);
+
+    expect(ids(moved, "B")).toStrictEqual([holder.id, "X"]);
+    expect(inside).toHaveLength(1);
+    expect(inside[0]).not.toBe("X");
+    expect(
+      findBlock(moved, ref("B", inside[0], holder.id))?.instance.data,
+    ).toStrictEqual({ body: "inside" });
   });
 
   it("follows the re-identified block with the selection that was on it", () => {
@@ -755,20 +1443,18 @@ describe("one block id living in two zones", () => {
     });
 
     const moved = visualEditorReducer(selected, {
-      blockId: "X",
-      fromZoneId: "B",
+      from: into("B"),
+      nodeId: "X",
+      to: into("A"),
       toIndex: 0,
-      toZoneId: "A",
       type: "move",
     });
 
     expect(moved.selected?.zoneId).toBe("A");
-    expect(moved.selected?.blockId).not.toBe("X");
-    const landed = moved.zones.A.blocks.find(
-      instance => instance.id === moved.selected?.blockId,
-    );
-
-    expect(landed?.data).toStrictEqual({ body: "in b" });
+    expect(moved.selected?.nodeId).not.toBe("X");
+    expect(
+      findBlock(moved, ref("A", moved.selected?.nodeId ?? ""))?.instance.data,
+    ).toStrictEqual({ body: "in b" });
   });
 
   it("leaves a selection in the other zone alone when a twin moves", () => {
@@ -778,14 +1464,14 @@ describe("one block id living in two zones", () => {
     });
 
     const moved = visualEditorReducer(selected, {
-      blockId: "X",
-      fromZoneId: "B",
+      from: into("B"),
+      nodeId: "X",
+      to: into("A"),
       toIndex: 0,
-      toZoneId: "A",
       type: "move",
     });
 
-    expect(moved.selected).toStrictEqual({ blockId: "X", zoneId: "A" });
+    expect(moved.selected).toStrictEqual(ref("A", "X"));
   });
 
   it("selects the copy in the zone the ref names, never the other one", () => {
@@ -794,11 +1480,11 @@ describe("one block id living in two zones", () => {
     expect(
       visualEditorReducer(state, { ref: ref("A", "X"), type: "select" })
         .selected,
-    ).toStrictEqual({ blockId: "X", zoneId: "A" });
+    ).toStrictEqual(ref("A", "X"));
     expect(
       visualEditorReducer(state, { ref: ref("B", "X"), type: "select" })
         .selected,
-    ).toStrictEqual({ blockId: "X", zoneId: "B" });
+    ).toStrictEqual(ref("B", "X"));
   });
 
   it("updates only the copy the ref names and leaves the twin's data alone", () => {
@@ -831,23 +1517,25 @@ describe("one block id living in two zones", () => {
       ref: ref("A", "X"),
       type: "duplicate",
     });
-    const copy = state.zones.A.blocks[2];
+    const copy = state.zones.A.nodes[2];
 
     expect(ids(state, "A")).toStrictEqual(["A1", "X", copy.id]);
     expect(copy.id).not.toBe("X");
-    expect(copy.data).toStrictEqual({ body: "in a" });
+    expect(findBlock(state, ref("A", copy.id))?.instance.data).toStrictEqual({
+      body: "in a",
+    });
     expect(ids(state, "B")).toStrictEqual(["X", "B1"]);
-    expect(state.selected).toStrictEqual({ blockId: copy.id, zoneId: "A" });
+    expect(state.selected).toStrictEqual(ref("A", copy.id));
   });
 
   it("moves the copy the source zone owns and leaves the twin where it was", () => {
     const moved = visualEditorReducer(
       visualEditorReducer(twins(), { type: "mount", zone: mount("C", []) }),
       {
-        blockId: "X",
-        fromZoneId: "B",
+        from: into("B"),
+        nodeId: "X",
+        to: into("C"),
         toIndex: 0,
-        toZoneId: "C",
         type: "move",
       },
     );
@@ -860,7 +1548,7 @@ describe("one block id living in two zones", () => {
     });
   });
 
-  it("looks a block up per zone, by ref and by zone alike", () => {
+  it("looks a block up per zone, by the ref that names its container", () => {
     const state = twins();
 
     expect(findBlock(state, ref("A", "X"))).toStrictEqual({
@@ -871,15 +1559,7 @@ describe("one block id living in two zones", () => {
       index: 0,
       instance: withId("X", "in b"),
     });
-    expect(findBlockInZone(state.zones.A, "X")).toStrictEqual({
-      index: 1,
-      instance: withId("X", "in a"),
-    });
-    expect(findBlockInZone(state.zones.B, "X")).toStrictEqual({
-      index: 0,
-      instance: withId("X", "in b"),
-    });
-    expect(findBlockInZone(state.zones.A, "B1")).toBeNull();
+    expect(findBlock(state, ref("A", "B1"))).toBeNull();
   });
 
   it("keeps the selection when the twin in the other zone is removed", () => {
@@ -893,7 +1573,7 @@ describe("one block id living in two zones", () => {
       type: "remove",
     });
 
-    expect(removed.selected).toStrictEqual({ blockId: "X", zoneId: "A" });
+    expect(removed.selected).toStrictEqual(ref("A", "X"));
     expect(ids(removed, "A")).toStrictEqual(["A1", "X"]);
   });
 });
@@ -902,7 +1582,12 @@ describe("a zone that leaves the page", () => {
   const edited = (): VisualEditorState =>
     visualEditorReducer(
       mounted(mount("main", [block("a")]), mount("aside", [block("c")])),
-      { index: 1, instance: block("d"), type: "insert", zoneId: "aside" },
+      {
+        container: into("aside"),
+        index: 1,
+        instance: block("d"),
+        type: "insert",
+      },
     );
 
   it("takes a clean zone off the page without recording it as dropped", () => {
@@ -946,7 +1631,7 @@ describe("a zone that leaves the page", () => {
     ).toBeNull();
     expect(
       visualEditorReducer(state, { type: "unmount", zoneId: "aside" }).selected,
-    ).toStrictEqual({ blockId: instance.id, zoneId: "main" });
+    ).toStrictEqual(ref("main", instance.id));
   });
 
   it("records a zone that leaves with unsaved edits, and still removes it", () => {
@@ -999,11 +1684,11 @@ describe("a zone that leaves the page", () => {
     );
   });
 
-  it("rebaselines a zone that comes back from the blocks it mounts with", () => {
+  it("rebaselines a zone that comes back from the nodes it mounts with", () => {
     const [c, d] = [block("c"), block("d")];
     const state = visualEditorReducer(
       mounted(mount("main", [block("a")]), mount("aside", [c])),
-      { index: 1, instance: d, type: "insert", zoneId: "aside" },
+      { container: into("aside"), index: 1, instance: d, type: "insert" },
     );
     const dropped = visualEditorReducer(state, {
       type: "unmount",
@@ -1088,7 +1773,9 @@ describe("canonical content arriving from the page owner", () => {
     });
 
     expect(ids(remounted, "main")).toStrictEqual([a.id, b.id]);
-    expect(remounted.zones.main.blocks[0].data).toStrictEqual({ body: "a2" });
+    expect(
+      findBlock(remounted, ref("main", a.id))?.instance.data,
+    ).toStrictEqual({ body: "a2" });
     expect(remounted.zones.main.initial).toBe(edited.zones.main.initial);
     expect(remounted.zones.main.invalid).toBe(edited.zones.main.invalid);
     expect(isVisualEditorDirty(remounted)).toBe(true);
@@ -1110,27 +1797,64 @@ describe("canonical content arriving from the page owner", () => {
 
     expect(remounted.zones.main.allowedBlocks).toBe("*");
     expect(remounted.zones.main.registry).toBe(registry);
-    expect(remounted.zones.main.blocks).toBe(edited.zones.main.blocks);
+    expect(remounted.zones.main.nodes).toBe(edited.zones.main.nodes);
     expect(remounted.zones.main.initial).toBe(edited.zones.main.initial);
     expect(isVisualEditorDirty(remounted)).toBe(true);
   });
 
   it("changes nothing when the content it mounts with is the baseline it already has", () => {
     const [a, b] = [block("a"), block("b")];
-    const state = mounted(mount("main", [a, b]));
+    const holder = area([block("inside")], { columns: 2 });
+    const state = mounted(mount("main", [a, holder, b]));
 
     expect(
       visualEditorReducer(state, {
         type: "mount",
-        zone: mount("main", [a, b]),
+        zone: mount("main", [a, holder, b]),
       }),
     ).toBe(state);
     expect(
       visualEditorReducer(state, {
         type: "mount",
-        zone: mount("main", [{ ...a, data: { ...a.data } }, b]),
+        zone: mount("main", [
+          { ...a, data: { ...a.data } },
+          {
+            ...holder,
+            children: [...holder.children],
+            layout: { ...holder.layout },
+          },
+          b,
+        ]),
       }),
     ).toBe(state);
+  });
+
+  it("notices an area whose layout, children or variants moved on", () => {
+    const child = createBlockInstance("core:hero", { title: "a" });
+    const holder = area([child], { columns: 2 });
+    const state = mounted(mount("main", [holder]));
+
+    const relaidOut = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount("main", [{ ...holder, layout: { columns: 3 } }]),
+    });
+
+    expect(relaidOut).not.toBe(state);
+    expect(
+      findArea(relaidOut, areaRef("main", holder.id))?.area.layout.columns,
+    ).toBe(3);
+
+    const restyled = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount("main", [
+        { ...holder, children: [{ ...child, variant: "wide" }] },
+      ]),
+    });
+
+    expect(restyled).not.toBe(state);
+    expect(
+      findBlock(restyled, ref("main", child.id, holder.id))?.instance.variant,
+    ).toBe("wide");
   });
 
   it("clears a selection the adopted content dropped, and no other", () => {
@@ -1156,22 +1880,22 @@ describe("canonical content arriving from the page owner", () => {
         type: "mount",
         zone: mount("main", [b, a]),
       }).selected,
-    ).toStrictEqual({ blockId: a.id, zoneId: "main" });
+    ).toStrictEqual(ref("main", a.id));
     expect(
       visualEditorReducer(onOtherZone, {
         type: "mount",
         zone: mount("main", [b]),
       }).selected,
-    ).toStrictEqual({ blockId: c.id, zoneId: "aside" });
+    ).toStrictEqual(ref("aside", c.id));
   });
 
   it("takes the order the server answered with, so the next save sends that one", () => {
     const [a, b] = [block("a"), block("b")];
     const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      container: into("main"),
       index: 1,
       instance: b,
       type: "insert",
-      zoneId: "main",
     });
 
     const saved = visualEditorReducer(sent, inFlight(sent, { main: [b, a] }));
@@ -1183,6 +1907,35 @@ describe("canonical content arriving from the page owner", () => {
     expect(buildSaveInput(saved).changedZoneIds).toStrictEqual([]);
   });
 
+  it("adopts canonical areas and variants a save answered with", () => {
+    const child = createBlockInstance("core:hero", { title: "a" });
+    const holder = area([child], { columns: 2 });
+    const sent = visualEditorReducer(mounted(mount("main", [])), {
+      area: holder,
+      index: 0,
+      type: "insert-area",
+      zoneId: "main",
+    });
+    const canonical: BlockAreaInstance = {
+      ...holder,
+      children: [{ ...child, variant: "wide" }],
+      layout: { columns: 3 },
+    };
+
+    const saved = visualEditorReducer(
+      sent,
+      inFlight(sent, { main: [canonical] }),
+    );
+
+    expect(isVisualEditorDirty(saved)).toBe(false);
+    expect(
+      findArea(saved, areaRef("main", holder.id))?.area.layout.columns,
+    ).toBe(3);
+    expect(
+      findBlock(saved, ref("main", child.id, holder.id))?.instance.variant,
+    ).toBe("wide");
+  });
+
   it("keeps an edit made while the save was in flight, dirty against the canonical baseline", () => {
     const [a, b] = [block("a"), block("b")];
     const canonical = { ...a, data: { body: "a from the server" } };
@@ -1190,10 +1943,10 @@ describe("canonical content arriving from the page owner", () => {
     const sending = inFlight(sent, { main: [canonical] });
     const current = visualEditorReducer(
       visualEditorReducer(sent, {
+        container: into("main"),
         index: 1,
         instance: b,
         type: "insert",
-        zoneId: "main",
       }),
       { ref: ref("main", a.id), type: "remove" },
     );
@@ -1213,10 +1966,10 @@ describe("canonical content arriving from the page owner", () => {
   it("falls back to the snapshot it sent when the answer carries no canonical content", () => {
     const [a, b] = [block("a"), block("b")];
     const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      container: into("main"),
       index: 1,
       instance: b,
       type: "insert",
-      zoneId: "main",
     });
     const sending = inFlight(sent, undefined);
 

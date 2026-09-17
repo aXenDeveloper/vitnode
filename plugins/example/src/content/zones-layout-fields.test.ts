@@ -1,6 +1,10 @@
 import type { AnyBlockInstance } from "@vitnode/core/blocks";
 
-import { isBlockAllowed } from "@vitnode/core/blocks";
+import {
+  contentNodeBlocks,
+  isBlockAllowed,
+  isBlockAreaInstance,
+} from "@vitnode/core/blocks";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -93,27 +97,69 @@ describe("the zone ids", () => {
 });
 
 describe("DEFAULT_EXAMPLE_ZONES_LAYOUT", () => {
-  it("only ships blocks each field's own allowlist accepts", () => {
-    const allowed = {
-      afterProfile: PAGE_BLOCKS_ALLOWED,
-      beforeFooter: PAGE_BLOCKS_ALLOWED,
-      beforeProfile: PAGE_BLOCKS_ALLOWED,
-      sidebar: PAGE_SIDEBAR_BLOCKS_ALLOWED,
-    };
+  const allowed = {
+    afterProfile: PAGE_BLOCKS_ALLOWED,
+    beforeFooter: PAGE_BLOCKS_ALLOWED,
+    beforeProfile: PAGE_BLOCKS_ALLOWED,
+    sidebar: PAGE_SIDEBAR_BLOCKS_ALLOWED,
+  };
 
+  it("only ships blocks each field's own allowlist accepts, inside an area as well as beside one", () => {
     for (const field of EXAMPLE_ZONE_FIELDS) {
-      for (const instance of DEFAULT_EXAMPLE_ZONES_LAYOUT[field]) {
+      for (const instance of contentNodeBlocks(
+        DEFAULT_EXAMPLE_ZONES_LAYOUT[field],
+      )) {
         expect(isBlockAllowed(allowed[field], instance.type)).toBe(true);
       }
     }
   });
 
-  it("gives every block a unique instance id", () => {
+  it("gives every block and every area its own instance id", () => {
     const ids = EXAMPLE_ZONE_FIELDS.flatMap(field =>
-      DEFAULT_EXAMPLE_ZONES_LAYOUT[field].map(instance => instance.id),
+      DEFAULT_EXAMPLE_ZONES_LAYOUT[field].flatMap(node => [
+        node.id,
+        ...(isBlockAreaInstance(node)
+          ? node.children.map(child => child.id)
+          : []),
+      ]),
     );
 
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("ships a block that picked a variant, so the playground opens on one", () => {
+    const withVariant = contentNodeBlocks(
+      DEFAULT_EXAMPLE_ZONES_LAYOUT.beforeProfile,
+    ).filter(instance => instance.variant !== undefined);
+
+    expect(withVariant).toHaveLength(1);
+    expect(withVariant[0]).toMatchObject({
+      type: "example:features",
+      variant: "list",
+    });
+  });
+
+  it("ships a filled area, an empty one and blocks beside them in the same zone", () => {
+    const nodes = DEFAULT_EXAMPLE_ZONES_LAYOUT.afterProfile;
+    const areas = nodes.filter(node => isBlockAreaInstance(node));
+
+    expect(areas).toHaveLength(2);
+    expect(areas[0]).toMatchObject({ layout: { columns: 2 } });
+    expect(areas[0].children).toHaveLength(2);
+    expect(areas[1].children).toStrictEqual([]);
+    expect(nodes.filter(node => !isBlockAreaInstance(node))).toHaveLength(1);
+  });
+
+  it("never nests an area inside an area, because Stage 4 cannot render one", () => {
+    for (const field of EXAMPLE_ZONE_FIELDS) {
+      for (const node of DEFAULT_EXAMPLE_ZONES_LAYOUT[field]) {
+        if (!isBlockAreaInstance(node)) continue;
+
+        expect(node.children.some(child => isBlockAreaInstance(child))).toBe(
+          false,
+        );
+      }
+    }
   });
 });
 

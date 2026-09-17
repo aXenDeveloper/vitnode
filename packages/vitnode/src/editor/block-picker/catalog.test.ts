@@ -8,8 +8,10 @@ import { createBlockRegistry } from "../../blocks/registry";
 import { field } from "../../content/fields";
 import {
   blockCatalogFor,
+  blockCatalogNotice,
   groupBlockCatalog,
   matchesBlockQuery,
+  matchesLayoutQuery,
   mergeBlockCatalogs,
   toBlockCatalogEntry,
 } from "./catalog";
@@ -49,6 +51,14 @@ const entry = (
   type: "core:hero",
   ...partial,
 });
+
+const layout = {
+  area: {
+    description: "Lay blocks out side by side in up to four columns.",
+    name: "Area",
+  },
+  label: "Layout",
+};
 
 describe("toBlockCatalogEntry", () => {
   it("falls back to the block id when it has no display name", () => {
@@ -121,7 +131,9 @@ describe("groupBlockCatalog", () => {
             type: "core:text",
           }),
         ],
-        namespace: "core",
+        id: "core",
+        kind: "namespace",
+        label: "core",
       },
       {
         entries: [
@@ -132,7 +144,9 @@ describe("groupBlockCatalog", () => {
             type: "example:callout",
           }),
         ],
-        namespace: "example",
+        id: "example",
+        kind: "namespace",
+        label: "example",
       },
     ]);
   });
@@ -142,7 +156,7 @@ describe("groupBlockCatalog", () => {
       groupBlockCatalog({
         entries: blockCatalogFor(registry, undefined),
         query: "callout",
-      }).map(group => group.namespace),
+      }).map(group => group.id),
     ).toEqual(["example"]);
   });
 
@@ -153,6 +167,91 @@ describe("groupBlockCatalog", () => {
         query: "carousel",
       }),
     ).toEqual([]);
+  });
+
+  it("offers Layout above the plugins, because an area belongs to no plugin", () => {
+    const groups = groupBlockCatalog({
+      entries: blockCatalogFor(registry, undefined),
+      layout,
+    });
+
+    expect(groups.map(group => group.id)).toEqual([
+      "layout",
+      "core",
+      "example",
+    ]);
+    expect(groups[0]).toEqual({
+      area: layout.area,
+      id: "layout",
+      kind: "layout",
+      label: "Layout",
+    });
+  });
+
+  it("offers Layout even where no block is allowed, because an area needs no registry entry", () => {
+    expect(
+      groupBlockCatalog({ entries: [], layout }).map(group => group.id),
+    ).toEqual(["layout"]);
+  });
+
+  it("keeps Layout for a query that names it and drops it for one that does not", () => {
+    expect(
+      groupBlockCatalog({
+        entries: blockCatalogFor(registry, undefined),
+        layout,
+        query: "column",
+      }).map(group => group.id),
+    ).toEqual(["layout"]);
+
+    expect(
+      groupBlockCatalog({
+        entries: blockCatalogFor(registry, undefined),
+        layout,
+        query: "callout",
+      }).map(group => group.id),
+    ).toEqual(["example"]);
+  });
+});
+
+describe("matchesLayoutQuery", () => {
+  it("keeps the section for a blank query", () => {
+    expect(matchesLayoutQuery(layout, "  ")).toBe(true);
+  });
+
+  it("matches the heading, the name and the description, case-insensitively", () => {
+    expect(matchesLayoutQuery(layout, "LAY")).toBe(true);
+    expect(matchesLayoutQuery(layout, "area")).toBe(true);
+    expect(matchesLayoutQuery(layout, "four columns")).toBe(true);
+  });
+
+  it("drops it when nothing about it matches", () => {
+    expect(matchesLayoutQuery(layout, "hero")).toBe(false);
+  });
+});
+
+describe("blockCatalogNotice", () => {
+  it("says nothing is installed before it blames the allowlist", () => {
+    expect(blockCatalogNotice({ installed: 0, matched: 0, offered: 0 })).toBe(
+      "none_installed",
+    );
+  });
+
+  it("blames the zone when blocks are installed but none is offered here", () => {
+    expect(blockCatalogNotice({ installed: 4, matched: 0, offered: 0 })).toBe(
+      "empty",
+    );
+  });
+
+  it("blames the search when the zone offers blocks the query hides", () => {
+    expect(blockCatalogNotice({ installed: 4, matched: 0, offered: 4 })).toBe(
+      "no_results",
+    );
+  });
+
+  it("says nothing when there is something to show", () => {
+    expect(blockCatalogNotice({ installed: 4, matched: 2, offered: 4 })).toBe(
+      null,
+    );
   });
 });
 

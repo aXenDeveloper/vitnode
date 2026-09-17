@@ -1,4 +1,4 @@
-import type { AnyBlockInstance } from "../../blocks/types";
+import type { ContentNode } from "../../blocks/types";
 import type {
   VisualEditorInvalidSnapshot,
   VisualEditorState,
@@ -13,9 +13,9 @@ export const buildSaveInput = (
   changedZoneIds: changedZoneIds(state),
   zones: Object.fromEntries(
     state.order
-      .map(zoneId => [zoneId, state.zones[zoneId]?.blocks] as const)
+      .map(zoneId => [zoneId, state.zones[zoneId]?.nodes] as const)
       .filter(
-        (entry): entry is readonly [string, readonly AnyBlockInstance[]] =>
+        (entry): entry is readonly [string, readonly ContentNode[]] =>
           entry[1] !== undefined,
       ),
   ),

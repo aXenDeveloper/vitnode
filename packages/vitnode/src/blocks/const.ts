@@ -37,7 +37,7 @@ export const AREA_GAPS = ["none", "sm", "md", "lg"] as const;
 
 export const AREA_ALIGNS = ["start", "center", "stretch"] as const;
 
-export const AREA_JUSTIFIES = ["start", "center", "between"] as const;
+export const AREA_JUSTIFIES = ["start", "center", "stretch"] as const;
 
 export const AREA_DEFAULT_COLUMNS = 2;
 
@@ -45,7 +45,7 @@ export const AREA_DEFAULT_GAP = "md";
 
 export const AREA_DEFAULT_ALIGN = "stretch";
 
-export const AREA_DEFAULT_JUSTIFY = "start";
+export const AREA_DEFAULT_JUSTIFY = "stretch";
 
 export const AREA_CHILDREN_DEFAULT_MAX = 50;
 

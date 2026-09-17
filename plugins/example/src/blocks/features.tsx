@@ -1,0 +1,130 @@
+import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks";
+
+import { defineBlock } from "@vitnode/core/blocks";
+import { field } from "@vitnode/core/content";
+
+const featureItem = {
+  body: field.textarea({ maxLength: 240, nullable: true }),
+  title: field.text({ maxLength: 80, minLength: 1, required: true }),
+};
+
+const featuresFields = {
+  heading: field.text({ maxLength: 120, minLength: 1, required: true }),
+  intro: field.textarea({ maxLength: 300, nullable: true }),
+  primary: field.group({ fields: featureItem }),
+  secondary: field.group({ fields: featureItem, nullable: true }),
+  tertiary: field.group({ fields: featureItem, nullable: true }),
+};
+
+type FeaturesData = BlockData<typeof featuresFields>;
+
+type FeatureItem = NonNullable<FeaturesData["primary"]>;
+
+const filledItems = (data: FeaturesData): FeatureItem[] =>
+  [data.primary, data.secondary, data.tertiary].filter(
+    (item): item is FeatureItem => !!item?.title,
+  );
+
+const GridItem = ({ item }: { item: FeatureItem }) => (
+  <li className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4">
+    <h3 className="text-base leading-relaxed font-semibold text-balance">
+      {item.title}
+    </h3>
+    {item.body ? (
+      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+        {item.body}
+      </p>
+    ) : null}
+  </li>
+);
+
+const ListItem = ({ item }: { item: FeatureItem }) => (
+  <li className="border-border flex flex-col gap-1 border-b pb-4 last:border-b-0 last:pb-0 md:flex-row md:items-baseline md:gap-6">
+    <h3 className="text-base leading-relaxed font-semibold text-balance md:w-48 md:shrink-0">
+      {item.title}
+    </h3>
+    {item.body ? (
+      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+        {item.body}
+      </p>
+    ) : null}
+  </li>
+);
+
+const CompactItem = ({ item }: { item: FeatureItem }) => (
+  <li className="text-sm leading-relaxed">
+    <span className="font-medium">{item.title}</span>
+    {item.body ? (
+      <span className="text-muted-foreground"> — {item.body}</span>
+    ) : null}
+  </li>
+);
+
+const Features = ({ data, variant }: BlockComponentProps<FeaturesData>) => {
+  const items = filledItems(data);
+  const compact = variant === "compact";
+
+  return (
+    <section className={`flex flex-col ${compact ? "gap-2" : "gap-4"}`}>
+      <div className="flex flex-col gap-1">
+        <h2
+          className={
+            compact
+              ? "text-base font-semibold text-balance"
+              : "text-xl font-semibold text-balance md:text-2xl"
+          }
+        >
+          {data.heading}
+        </h2>
+        {data.intro ? (
+          <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+            {data.intro}
+          </p>
+        ) : null}
+      </div>
+
+      {variant === "list" ? (
+        <ul className="flex flex-col gap-4">
+          {items.map(item => (
+            <ListItem item={item} key={item.title} />
+          ))}
+        </ul>
+      ) : null}
+
+      {compact ? (
+        <ul className="flex flex-col gap-1">
+          {items.map(item => (
+            <CompactItem item={item} key={item.title} />
+          ))}
+        </ul>
+      ) : null}
+
+      {variant === "list" || compact ? null : (
+        <ul className="grid gap-4 md:grid-cols-3">
+          {items.map(item => (
+            <GridItem item={item} key={item.title} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+};
+
+export const featuresBlock = defineBlock({
+  component: Features,
+  defaultVariant: "grid",
+  description:
+    "Up to three features, told the same way in three different shapes.",
+  fields: featuresFields,
+  id: "features",
+  name: "Features",
+  variants: [
+    { description: "Cards side by side.", id: "grid", label: "Grid" },
+    {
+      description: "One per row, with room to explain.",
+      id: "list",
+      label: "List",
+    },
+    { description: "A dense summary.", id: "compact", label: "Compact" },
+  ],
+});

@@ -80,7 +80,7 @@ describe("an area on a public page", () => {
 
     expect(grid?.getAttribute("data-area-id")).toBe("AREA1");
     expect(grid?.className).toBe(
-      "grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch justify-start justify-items-start",
+      "grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch justify-items-stretch",
     );
     expect(
       screen.getAllByRole("heading").map(node => node.textContent),
@@ -103,7 +103,7 @@ describe("an area on a public page", () => {
     );
 
     expect(container.querySelector("[data-area-id]")?.className).toBe(
-      "grid grid-cols-1 md:grid-cols-3 gap-8 items-center justify-center justify-items-center",
+      "grid grid-cols-1 md:grid-cols-3 gap-8 items-center justify-items-center",
     );
   });
 

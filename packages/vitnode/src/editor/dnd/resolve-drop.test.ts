@@ -1,18 +1,24 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import type { EditorDropTarget } from "./resolve-drop";
+import type { EditorContainerRef } from "../state/types";
+import type { EditorDragSource, EditorDropTarget } from "./resolve-drop";
 
 import {
-  BLOCK_DRAGGABLE_PREFIX,
-  blockDraggableId,
-  blockRefFromDraggableId,
+  AREA_DROPPABLE_PREFIX,
+  areaDroppableId,
   CATALOG_DRAGGABLE_PREFIX,
   catalogDraggableId,
   dropEdgeFor,
   dropPlacement,
+  dropRejection,
+  isAreaDroppableId,
+  isContainerDroppableId,
   isZoneDroppableId,
-  preferBlockCollisions,
+  NODE_DRAGGABLE_PREFIX,
+  nodeDraggableId,
+  nodeRefFromDraggableId,
+  preferInnerCollisions,
   readDragSource,
   readDropTarget,
   resolveDrop,
@@ -20,42 +26,74 @@ import {
   zoneDroppableId,
 } from "./resolve-drop";
 
+const into = (
+  zoneId: string,
+  areaId: null | string = null,
+): EditorContainerRef => ({ areaId, zoneId });
+
 const source = (
   partial: Partial<{
-    blockId: string;
+    container: EditorContainerRef;
     index: number;
+    nodeId: string;
     type: string;
-    zoneId: string;
   }> = {},
-) =>
-  ({
-    blockId: "block-a",
-    index: 0,
-    kind: "existing-block",
-    type: "core:hero",
-    zoneId: "page:main",
-    ...partial,
-  }) as const;
-
-const fromCatalog = (type = "core:hero") =>
-  ({ kind: "catalog-block", type }) as const;
-
-const onBlock = (
-  partial: Partial<EditorDropTarget> = {},
-): EditorDropTarget => ({
-  blockId: "block-b",
-  edge: null,
-  index: 1,
-  zoneId: "page:main",
+): EditorDragSource => ({
+  container: into("page:main"),
+  index: 0,
+  kind: "existing-block",
+  nodeId: "block-a",
+  type: "core:hero",
   ...partial,
 });
 
-const onZone = (zoneId: string): EditorDropTarget => ({
-  blockId: null,
+const areaSource = (
+  partial: Partial<{
+    container: EditorContainerRef;
+    index: number;
+    nodeId: string;
+  }> = {},
+): EditorDragSource => ({
+  container: into("page:main"),
+  index: 0,
+  kind: "existing-area",
+  nodeId: "area-a",
+  ...partial,
+});
+
+const fromCatalog = (type = "core:hero"): EditorDragSource => ({
+  kind: "catalog-block",
+  type,
+});
+
+const onNode = (partial: Partial<EditorDropTarget> = {}): EditorDropTarget => ({
+  container: into("page:main"),
+  edge: null,
+  index: 1,
+  kind: "block",
+  nodeId: "block-b",
+  ...partial,
+});
+
+const onContainer = (
+  zoneId: string,
+  areaId: null | string = null,
+): EditorDropTarget => ({
+  container: into(zoneId, areaId),
   edge: null,
   index: null,
-  zoneId,
+  kind: null,
+  nodeId: null,
 });
+
+const blockRef = (
+  zoneId: string,
+  nodeId: string,
+  areaId: null | string = null,
+) => ({ areaId, kind: "block", nodeId, zoneId }) as const;
+
+const areaNodeRef = (zoneId: string, nodeId: string) =>
+  ({ areaId: null, kind: "area", nodeId, zoneId }) as const;
 
 const decodedSuffix = (id: string, prefix: string): string =>
   decodeURIComponent(id.slice(prefix.length));
@@ -72,6 +110,44 @@ describe("zone droppable ids", () => {
   });
 });
 
+describe("area droppable ids", () => {
+  it("names the zone and the area it belongs to", () => {
+    expect(
+      decodedSuffix(
+        areaDroppableId({ areaId: "area-1", zoneId: "page:main" }),
+        AREA_DROPPABLE_PREFIX,
+      ),
+    ).toBe("page:main/area-1");
+  });
+
+  it("gives the same area id a different droppable in each zone", () => {
+    expect(areaDroppableId({ areaId: "area-1", zoneId: "page:main" })).not.toBe(
+      areaDroppableId({ areaId: "area-1", zoneId: "page:aside" }),
+    );
+  });
+
+  it("is never mistaken for the zone that contains it", () => {
+    const area = areaDroppableId({ areaId: "area-1", zoneId: "page:main" });
+
+    expect(isAreaDroppableId(area)).toBe(true);
+    expect(isZoneDroppableId(area)).toBe(false);
+    expect(isAreaDroppableId(zoneDroppableId("page:main"))).toBe(false);
+    expect(nodeRefFromDraggableId(area)).toBeNull();
+  });
+
+  it("counts both a zone and an area as somewhere a drop lands in bulk", () => {
+    expect(isContainerDroppableId(zoneDroppableId("page:main"))).toBe(true);
+    expect(
+      isContainerDroppableId(
+        areaDroppableId({ areaId: "area-1", zoneId: "page:main" }),
+      ),
+    ).toBe(true);
+    expect(
+      isContainerDroppableId(nodeDraggableId(blockRef("page:main", "block-a"))),
+    ).toBe(false);
+  });
+});
+
 describe("catalog draggable ids", () => {
   it("round-trips a block type", () => {
     expect(
@@ -79,41 +155,54 @@ describe("catalog draggable ids", () => {
     ).toBe("core:hero");
   });
 
-  it("cannot be mistaken for a block instance or a zone", () => {
-    expect(blockRefFromDraggableId(catalogDraggableId("core:hero"))).toBeNull();
+  it("cannot be mistaken for a node, an area or a zone", () => {
+    expect(nodeRefFromDraggableId(catalogDraggableId("core:hero"))).toBeNull();
     expect(isZoneDroppableId(catalogDraggableId("core:hero"))).toBe(false);
-    expect(blockRefFromDraggableId(zoneDroppableId("page:main"))).toBeNull();
+    expect(isAreaDroppableId(catalogDraggableId("core:hero"))).toBe(false);
+    expect(nodeRefFromDraggableId(zoneDroppableId("page:main"))).toBeNull();
   });
 });
 
-describe("zone-aware identity", () => {
+describe("container-aware identity", () => {
   it("gives the same block a different draggable id in each zone", () => {
-    expect(
-      blockDraggableId({ blockId: "block-x", zoneId: "page:main" }),
-    ).not.toBe(blockDraggableId({ blockId: "block-x", zoneId: "page:aside" }));
+    expect(nodeDraggableId(blockRef("page:main", "block-x"))).not.toBe(
+      nodeDraggableId(blockRef("page:aside", "block-x")),
+    );
   });
 
-  it("round-trips a block back to the zone it was dragged from", () => {
-    expect(
-      blockRefFromDraggableId(
-        blockDraggableId({ blockId: "block-x", zoneId: "page:main" }),
-      ),
-    ).toEqual({ blockId: "block-x", zoneId: "page:main" });
+  it("gives the same block a different draggable id inside an area", () => {
+    expect(nodeDraggableId(blockRef("page:main", "block-x"))).not.toBe(
+      nodeDraggableId(blockRef("page:main", "block-x", "area-1")),
+    );
+  });
 
-    expect(
-      blockRefFromDraggableId(
-        blockDraggableId({ blockId: "block-x", zoneId: "page:aside" }),
-      ),
-    ).toEqual({ blockId: "block-x", zoneId: "page:aside" });
+  it("gives an area and a block of one id different draggables", () => {
+    expect(nodeDraggableId(areaNodeRef("page:main", "x"))).not.toBe(
+      nodeDraggableId(blockRef("page:main", "x")),
+    );
+  });
+
+  it("round-trips a node back to the container it was dragged from", () => {
+    const refs = [
+      blockRef("page:main", "block-x"),
+      blockRef("page:aside", "block-x"),
+      blockRef("page:main", "block-x", "area-1"),
+      areaNodeRef("page:main", "area-1"),
+    ];
+
+    for (const ref of refs) {
+      expect(nodeRefFromDraggableId(nodeDraggableId(ref))).toEqual(ref);
+    }
   });
 
   it("round-trips ids that carry separators, escapes and spaces", () => {
-    const ref = {
-      blockId: "block/one:two%three four",
-      zoneId: "page:main/left 50%",
-    };
+    const ref = blockRef(
+      "page:main/left 50%",
+      "block/one:two%three four",
+      "area/one two",
+    );
 
-    expect(blockRefFromDraggableId(blockDraggableId(ref))).toEqual(ref);
+    expect(nodeRefFromDraggableId(nodeDraggableId(ref))).toEqual(ref);
     expect(
       decodedSuffix(zoneDroppableId(ref.zoneId), ZONE_DROPPABLE_PREFIX),
     ).toBe(ref.zoneId);
@@ -125,157 +214,148 @@ describe("zone-aware identity", () => {
     ).toBe("core:hero/fancy 100%");
   });
 
-  it("reads a block ref out of nothing else", () => {
-    expect(blockRefFromDraggableId(zoneDroppableId("page:main"))).toBeNull();
-    expect(blockRefFromDraggableId(catalogDraggableId("core:hero"))).toBeNull();
+  it("reads a node ref out of nothing else", () => {
+    expect(nodeRefFromDraggableId(zoneDroppableId("page:main"))).toBeNull();
+    expect(nodeRefFromDraggableId(catalogDraggableId("core:hero"))).toBeNull();
     expect(
-      blockRefFromDraggableId(`${BLOCK_DRAGGABLE_PREFIX}block-x`),
+      nodeRefFromDraggableId(`${NODE_DRAGGABLE_PREFIX}block-x`),
     ).toBeNull();
-  });
-
-  it("knows a zone droppable from everything else it might collide with", () => {
-    expect(isZoneDroppableId(zoneDroppableId("page:main"))).toBe(true);
     expect(
-      isZoneDroppableId(
-        blockDraggableId({ blockId: "block-x", zoneId: "page:main" }),
-      ),
-    ).toBe(false);
-    expect(isZoneDroppableId(catalogDraggableId("core:hero"))).toBe(false);
-  });
-
-  it("still prefers block collisions over the zone that contains them", () => {
-    const block = {
-      id: blockDraggableId({ blockId: "block-b", zoneId: "page:main" }),
-    };
-
+      nodeRefFromDraggableId(`${NODE_DRAGGABLE_PREFIX}widget/z//block-x`),
+    ).toBeNull();
     expect(
-      preferBlockCollisions([{ id: zoneDroppableId("page:main") }, block]),
-    ).toEqual([block]);
+      nodeRefFromDraggableId(`${NODE_DRAGGABLE_PREFIX}block/z//`),
+    ).toBeNull();
   });
 
   it("takes a drag source's identity from the payload, not the element id", () => {
     const payload = {
-      blockId: "block-x",
+      areaId: null,
       index: 0,
       kind: "existing-block",
+      nodeId: "block-x",
       type: "core:hero",
     };
 
-    expect(readDragSource({ ...payload, zoneId: "page:main" })).toEqual({
-      ...payload,
-      zoneId: "page:main",
-    });
-    expect(readDragSource({ ...payload, zoneId: "page:aside" })).toEqual({
-      ...payload,
-      zoneId: "page:aside",
-    });
-    expect(readDragSource({ ...payload, zoneId: "page:main" })).not.toEqual(
-      readDragSource({ ...payload, zoneId: "page:aside" }),
+    expect(readDragSource({ ...payload, zoneId: "page:main" })).toEqual(
+      source({ nodeId: "block-x" }),
+    );
+    expect(readDragSource({ ...payload, zoneId: "page:aside" })).toEqual(
+      source({ container: into("page:aside"), nodeId: "block-x" }),
+    );
+    expect(
+      readDragSource({ ...payload, areaId: "area-1", zoneId: "page:main" }),
+    ).toEqual(
+      source({ container: into("page:main", "area-1"), nodeId: "block-x" }),
     );
   });
 
   it("refuses a block payload missing any part of its identity", () => {
-    expect(
-      readDragSource({
-        index: 0,
-        kind: "existing-block",
-        type: "core:hero",
-        zoneId: "page:main",
-      }),
-    ).toBeNull();
-    expect(
-      readDragSource({
-        blockId: "block-x",
-        index: 0,
-        kind: "existing-block",
-        type: "core:hero",
-      }),
-    ).toBeNull();
-    expect(
-      readDragSource({
-        blockId: "block-x",
-        kind: "existing-block",
-        type: "core:hero",
-        zoneId: "page:main",
-      }),
-    ).toBeNull();
-    expect(
-      readDragSource({
-        blockId: "block-x",
-        index: 0,
-        kind: "existing-block",
-        zoneId: "page:main",
-      }),
-    ).toBeNull();
+    const whole: Record<string, unknown> = {
+      areaId: null,
+      index: 0,
+      kind: "existing-block",
+      nodeId: "block-x",
+      type: "core:hero",
+      zoneId: "page:main",
+    };
+
+    for (const missing of ["nodeId", "zoneId", "index", "type"]) {
+      const { [missing]: _dropped, ...rest } = whole;
+
+      expect(readDragSource(rest)).toBeNull();
+    }
   });
 
-  it("takes a drop target from the payload a zone or a block carries", () => {
+  it("reads an area payload, which carries no block type at all", () => {
+    expect(
+      readDragSource({
+        areaId: null,
+        index: 2,
+        kind: "existing-area",
+        nodeId: "area-1",
+        zoneId: "page:main",
+      }),
+    ).toEqual(areaSource({ index: 2, nodeId: "area-1" }));
+  });
+
+  it("takes a drop target from the payload a zone, an area or a node carries", () => {
     expect(
       readDropTarget({ kind: "zone", zoneId: "page:aside" }, null),
-    ).toEqual({
-      blockId: null,
-      edge: null,
-      index: null,
-      zoneId: "page:aside",
-    });
+    ).toEqual(onContainer("page:aside"));
+    expect(
+      readDropTarget(
+        { areaId: "area-1", kind: "area-container", zoneId: "page:main" },
+        "after",
+      ),
+    ).toEqual(onContainer("page:main", "area-1"));
     expect(
       readDropTarget(
         {
-          blockId: "block-x",
+          areaId: "area-1",
           index: 2,
           kind: "existing-block",
+          nodeId: "block-x",
           type: "core:hero",
           zoneId: "page:aside",
         },
         "after",
       ),
-    ).toEqual({
-      blockId: "block-x",
-      edge: "after",
-      index: 2,
-      zoneId: "page:aside",
-    });
+    ).toEqual(
+      onNode({
+        container: into("page:aside", "area-1"),
+        edge: "after",
+        index: 2,
+        nodeId: "block-x",
+      }),
+    );
     expect(
       readDropTarget({ kind: "catalog-block", type: "core:hero" }, "after"),
     ).toBeNull();
     expect(readDropTarget("page:aside", "after")).toBeNull();
   });
+
+  it("refuses a zone payload that claims to be an area", () => {
+    expect(
+      readDropTarget({ areaId: "area-1", kind: "zone", zoneId: "z" }, null),
+    ).toBeNull();
+  });
+
+  it("reads an area node as a target of its own, at the zone root", () => {
+    expect(
+      readDropTarget(
+        {
+          areaId: null,
+          index: 1,
+          kind: "existing-area",
+          nodeId: "area-1",
+          zoneId: "page:main",
+        },
+        "before",
+      ),
+    ).toEqual(
+      onNode({ edge: "before", kind: "area", index: 1, nodeId: "area-1" }),
+    );
+  });
 });
 
 describe("readDragSource", () => {
-  it("reads the payload a sortable block carries", () => {
-    expect(
-      readDragSource({
-        blockId: "block-a",
-        index: 2,
-        kind: "existing-block",
-        type: "core:text",
-        zoneId: "page:main",
-      }),
-    ).toEqual({
-      blockId: "block-a",
-      index: 2,
-      kind: "existing-block",
-      type: "core:text",
-      zoneId: "page:main",
-    });
-  });
-
   it("reads the payload a catalog entry carries", () => {
     expect(
       readDragSource({ kind: "catalog-block", type: "core:text" }),
     ).toEqual({ kind: "catalog-block", type: "core:text" });
   });
 
-  it("refuses a payload that is not a block", () => {
+  it("refuses a payload that is not a node", () => {
     expect(readDragSource(undefined)).toBeNull();
     expect(readDragSource([1, 2])).toBeNull();
     expect(readDragSource({ zoneId: "page:main" })).toBeNull();
     expect(
       readDragSource({
-        blockId: "block-a",
+        areaId: null,
         index: "2",
         kind: "existing-block",
+        nodeId: "block-a",
         type: "core:text",
         zoneId: "z",
       }),
@@ -285,17 +365,19 @@ describe("readDragSource", () => {
   it("refuses a payload whose kind it does not know", () => {
     expect(
       readDragSource({
-        blockId: "block-a",
+        areaId: null,
         index: 2,
+        nodeId: "block-a",
         type: "core:text",
         zoneId: "page:main",
       }),
     ).toBeNull();
     expect(
       readDragSource({
-        blockId: "block-a",
+        areaId: null,
         index: 2,
         kind: "block",
+        nodeId: "block-a",
         type: "core:text",
         zoneId: "page:main",
       }),
@@ -303,38 +385,35 @@ describe("readDragSource", () => {
     expect(readDragSource({ kind: "catalog-block" })).toBeNull();
     expect(readDragSource({ kind: "catalog-block", type: "" })).toBeNull();
   });
+
+  it("refuses a payload whose area is neither a name nor nothing", () => {
+    expect(
+      readDragSource({
+        areaId: 7,
+        index: 0,
+        kind: "existing-block",
+        nodeId: "block-a",
+        type: "core:text",
+        zoneId: "page:main",
+      }),
+    ).toBeNull();
+  });
 });
 
 describe("readDropTarget", () => {
   it("reads a zone droppable as an append target with no edge", () => {
     expect(
       readDropTarget({ kind: "zone", zoneId: "page:aside" }, "after"),
-    ).toEqual({
-      blockId: null,
-      edge: null,
-      index: null,
-      zoneId: "page:aside",
-    });
+    ).toEqual(onContainer("page:aside"));
   });
 
-  it("reads a sortable block as an insert-at-index target", () => {
+  it("reads an area droppable as an append target inside that area", () => {
     expect(
       readDropTarget(
-        {
-          blockId: "block-b",
-          index: 3,
-          kind: "existing-block",
-          type: "core:cta",
-          zoneId: "page:main",
-        },
+        { areaId: "area-1", kind: "area-container", zoneId: "page:main" },
         "before",
       ),
-    ).toEqual({
-      blockId: "block-b",
-      edge: "before",
-      index: 3,
-      zoneId: "page:main",
-    });
+    ).toEqual(onContainer("page:main", "area-1"));
   });
 
   it("never treats a catalog entry as somewhere to drop", () => {
@@ -346,6 +425,7 @@ describe("readDropTarget", () => {
   it("refuses anything else", () => {
     expect(readDropTarget(null, null)).toBeNull();
     expect(readDropTarget({ kind: "zone" }, null)).toBeNull();
+    expect(readDropTarget({ kind: "area-container" }, null)).toBeNull();
   });
 });
 
@@ -359,33 +439,117 @@ describe("dropEdgeFor", () => {
   });
 });
 
-describe("preferBlockCollisions", () => {
-  it("prefers block collisions over the zone that contains them", () => {
-    const b = { id: blockDraggableId({ blockId: "b", zoneId: "page:main" }) };
-    const c = { id: blockDraggableId({ blockId: "c", zoneId: "page:main" }) };
+describe("preferInnerCollisions", () => {
+  const zone = { id: zoneDroppableId("page:main") };
+  const areaBody = {
+    id: areaDroppableId({ areaId: "area-1", zoneId: "page:main" }),
+  };
+  const areaNode = { id: nodeDraggableId(areaNodeRef("page:main", "area-1")) };
+  const rootBlock = { id: nodeDraggableId(blockRef("page:main", "block-a")) };
+  const insideBlock = {
+    id: nodeDraggableId(blockRef("page:main", "block-b", "area-1")),
+  };
 
+  it("prefers a block inside an area over the area, and over the zone", () => {
     expect(
-      preferBlockCollisions([{ id: zoneDroppableId("page:main") }, b, c]),
-    ).toEqual([b, c]);
+      preferInnerCollisions([zone, areaNode, areaBody, insideBlock]),
+    ).toEqual([insideBlock]);
   });
 
-  it("falls back to the zone when no block is hit", () => {
-    const collisions = [{ id: zoneDroppableId("page:main") }];
-
-    expect(preferBlockCollisions(collisions)).toEqual(collisions);
+  it("prefers the area's body over the area's own edges, so an empty area can be filled", () => {
+    expect(preferInnerCollisions([zone, areaNode, areaBody])).toEqual([
+      areaBody,
+    ]);
   });
 
-  it("falls back rather than ranking an id it cannot read as a block", () => {
-    const collisions = [
-      { id: zoneDroppableId("page:main") },
-      { id: "something-else" },
-    ];
+  it("prefers a root node over the zone when no area is under the pointer", () => {
+    expect(preferInnerCollisions([zone, rootBlock, areaNode])).toEqual([
+      rootBlock,
+      areaNode,
+    ]);
+  });
 
-    expect(preferBlockCollisions(collisions)).toEqual(collisions);
+  it("leaves the area's own edges reachable where its body is not hit", () => {
+    expect(preferInnerCollisions([zone, areaNode])).toEqual([areaNode]);
+  });
+
+  it("falls back to the zone when nothing nearer is hit", () => {
+    expect(preferInnerCollisions([zone])).toEqual([zone]);
+  });
+
+  it("falls back rather than ranking an id it cannot read", () => {
+    const collisions = [zone, { id: "something-else" }];
+
+    expect(preferInnerCollisions(collisions)).toEqual(collisions);
   });
 
   it("stays empty when nothing collides", () => {
-    expect(preferBlockCollisions([])).toEqual([]);
+    expect(preferInnerCollisions([])).toEqual([]);
+  });
+});
+
+describe("dropRejection", () => {
+  it("refuses an area dropped into an area, and nowhere else", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: "*",
+        source: areaSource(),
+        target: onContainer("page:main", "area-2"),
+      }),
+    ).toBe("nested-area");
+    expect(
+      dropRejection({
+        allowedBlocks: "*",
+        source: areaSource(),
+        target: onContainer("page:aside"),
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses an area landing on a block that lives inside an area", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: "*",
+        source: areaSource(),
+        target: onNode({
+          container: into("page:main", "area-2"),
+          edge: "before",
+        }),
+      }),
+    ).toBe("nested-area");
+  });
+
+  it("never asks the block allowlist about an area", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:*"],
+        source: areaSource(),
+        target: onContainer("page:aside"),
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a block the target zone does not allow, inside an area too", () => {
+    expect(
+      dropRejection({
+        allowedBlocks: ["core:*"],
+        source: source({ type: "example:callout" }),
+        target: onContainer("page:main", "area-1"),
+      }),
+    ).toBe("not-allowed");
+    expect(
+      dropRejection({
+        allowedBlocks: ["example:*"],
+        source: source({ type: "example:callout" }),
+        target: onContainer("page:main", "area-1"),
+      }),
+    ).toBeNull();
+  });
+
+  it("says nothing at all with nowhere to drop", () => {
+    expect(
+      dropRejection({ allowedBlocks: "*", source: source(), target: null }),
+    ).toBeNull();
   });
 });
 
@@ -396,81 +560,81 @@ describe("resolveDrop", () => {
         allowedBlocks: "*",
         source: source(),
         target: null,
-        targetBlockCount: 3,
+        targetNodeCount: 3,
       }),
     ).toBeNull();
   });
 
-  it("drops nothing on the dragged block itself", () => {
+  it("drops nothing on the dragged node itself", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 1 }),
-        target: onBlock({ blockId: "block-a", index: 1 }),
-        targetBlockCount: 3,
+        target: onNode({ index: 1, nodeId: "block-a" }),
+        targetNodeCount: 3,
       }),
     ).toBeNull();
   });
 
-  it("moves to the index of the block it was dropped on", () => {
+  it("moves to the index of the node it was dropped on", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 0 }),
-        target: onBlock({ blockId: "block-c", index: 2 }),
-        targetBlockCount: 3,
+        target: onNode({ index: 2, nodeId: "block-c" }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
     });
   });
 
-  it("appends to the end of its own zone, accounting for its own removal", () => {
+  it("appends to the end of its own container, accounting for its own removal", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 0 }),
-        target: onZone("page:main"),
-        targetBlockCount: 3,
+        target: onContainer("page:main"),
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
     });
   });
 
-  it("drops nothing when the block is already where it would land", () => {
+  it("drops nothing when the node is already where it would land", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 2 }),
-        target: onZone("page:main"),
-        targetBlockCount: 3,
+        target: onContainer("page:main"),
+        targetNodeCount: 3,
       }),
     ).toBeNull();
   });
 
-  it("appends past the last block of another zone", () => {
+  it("appends past the last node of another zone", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 0 }),
-        target: onZone("page:aside"),
-        targetBlockCount: 2,
+        target: onContainer("page:aside"),
+        targetNodeCount: 2,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:aside"),
       toIndex: 2,
-      toZoneId: "page:aside",
     });
   });
 
@@ -479,32 +643,36 @@ describe("resolveDrop", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 1 }),
-        target: onZone("page:aside"),
-        targetBlockCount: 0,
+        target: onContainer("page:aside"),
+        targetNodeCount: 0,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:aside"),
       toIndex: 0,
-      toZoneId: "page:aside",
     });
   });
 
-  it("clamps an index the target zone cannot hold", () => {
+  it("clamps an index the target container cannot hold", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source(),
-        target: onBlock({ blockId: "block-z", index: 9, zoneId: "page:aside" }),
-        targetBlockCount: 2,
+        target: onNode({
+          container: into("page:aside"),
+          index: 9,
+          nodeId: "block-z",
+        }),
+        targetNodeCount: 2,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:aside"),
       toIndex: 2,
-      toZoneId: "page:aside",
     });
   });
 
@@ -513,15 +681,15 @@ describe("resolveDrop", () => {
       resolveDrop({
         allowedBlocks: ["core:*"],
         source: source({ type: "core:hero" }),
-        target: onZone("page:aside"),
-        targetBlockCount: 0,
+        target: onContainer("page:aside"),
+        targetNodeCount: 0,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:aside"),
       toIndex: 0,
-      toZoneId: "page:aside",
     });
   });
 
@@ -530,8 +698,8 @@ describe("resolveDrop", () => {
       resolveDrop({
         allowedBlocks: ["core:*"],
         source: source({ type: "example:callout" }),
-        target: onZone("page:aside"),
-        targetBlockCount: 0,
+        target: onContainer("page:aside"),
+        targetNodeCount: 0,
       }),
     ).toBeNull();
   });
@@ -541,16 +709,209 @@ describe("resolveDrop", () => {
       resolveDrop({
         allowedBlocks: undefined,
         source: source({ type: "example:callout" }),
-        target: onZone("page:aside"),
-        targetBlockCount: 0,
+        target: onContainer("page:aside"),
+        targetNodeCount: 0,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:aside"),
       toIndex: 0,
-      toZoneId: "page:aside",
     });
+  });
+});
+
+describe("resolveDrop, in and out of an area", () => {
+  it("takes a block from the zone root into an area", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: source({ index: 0 }),
+        target: onContainer("page:main", "area-1"),
+        targetNodeCount: 2,
+      }),
+    ).toEqual({
+      from: into("page:main"),
+      kind: "move",
+      nodeId: "block-a",
+      to: into("page:main", "area-1"),
+      toIndex: 2,
+    });
+  });
+
+  it("takes an area's child back out to the zone root", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: source({ container: into("page:main", "area-1"), index: 0 }),
+        target: onNode({ edge: "before", index: 1, nodeId: "block-b" }),
+        targetNodeCount: 3,
+      }),
+    ).toEqual({
+      from: into("page:main", "area-1"),
+      kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
+      toIndex: 1,
+    });
+  });
+
+  it("takes an area's child straight into another area", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: source({ container: into("page:main", "area-1"), index: 0 }),
+        target: onContainer("page:main", "area-2"),
+        targetNodeCount: 1,
+      }),
+    ).toEqual({
+      from: into("page:main", "area-1"),
+      kind: "move",
+      nodeId: "block-a",
+      to: into("page:main", "area-2"),
+      toIndex: 1,
+    });
+  });
+
+  it("reorders inside an area exactly as it does at a zone root", () => {
+    const inside = into("page:main", "area-1");
+
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: source({ container: inside, index: 0 }),
+        target: onNode({
+          container: inside,
+          edge: "after",
+          index: 2,
+          nodeId: "block-c",
+        }),
+        targetNodeCount: 3,
+      }),
+    ).toEqual({
+      from: inside,
+      kind: "move",
+      nodeId: "block-a",
+      to: inside,
+      toIndex: 2,
+    });
+
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: source({ container: inside, index: 1 }),
+        target: onNode({
+          container: inside,
+          edge: "after",
+          index: 0,
+          nodeId: "block-b",
+        }),
+        targetNodeCount: 3,
+      }),
+    ).toBeNull();
+  });
+
+  it("treats the same id in the root and in an area as two different nodes", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: source({ index: 0, nodeId: "block-x" }),
+        target: onNode({
+          container: into("page:main", "area-1"),
+          edge: "after",
+          index: 0,
+          nodeId: "block-x",
+        }),
+        targetNodeCount: 1,
+      }),
+    ).toEqual({
+      from: into("page:main"),
+      kind: "move",
+      nodeId: "block-x",
+      to: into("page:main", "area-1"),
+      toIndex: 1,
+    });
+  });
+
+  it("reorders an area among the blocks at the zone root", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: areaSource({ index: 2 }),
+        target: onNode({ edge: "before", index: 0, nodeId: "block-a" }),
+        targetNodeCount: 3,
+      }),
+    ).toEqual({
+      from: into("page:main"),
+      kind: "move",
+      nodeId: "area-a",
+      to: into("page:main"),
+      toIndex: 0,
+    });
+  });
+
+  it("carries an area into another zone's root", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: ["core:*"],
+        source: areaSource({ index: 0 }),
+        target: onContainer("page:aside"),
+        targetNodeCount: 1,
+      }),
+    ).toEqual({
+      from: into("page:main"),
+      kind: "move",
+      nodeId: "area-a",
+      to: into("page:aside"),
+      toIndex: 1,
+    });
+  });
+
+  it("refuses an area dropped into an area, wherever inside it lands", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: areaSource(),
+        target: onContainer("page:main", "area-2"),
+        targetNodeCount: 0,
+      }),
+    ).toBeNull();
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: areaSource(),
+        target: onNode({
+          container: into("page:main", "area-2"),
+          edge: "after",
+          index: 0,
+        }),
+        targetNodeCount: 1,
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a block the zone's allowlist rejects, inside one of its areas", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: ["core:*"],
+        source: fromCatalog("example:callout"),
+        target: onContainer("page:main", "area-1"),
+        targetNodeCount: 0,
+      }),
+    ).toBeNull();
+    expect(
+      resolveDrop({
+        allowedBlocks: ["core:*"],
+        source: source({ type: "example:callout" }),
+        target: onNode({
+          container: into("page:main", "area-1"),
+          edge: "before",
+          index: 0,
+        }),
+        targetNodeCount: 1,
+      }),
+    ).toBeNull();
   });
 });
 
@@ -560,15 +921,15 @@ describe("resolveDrop, by pointer edge", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 0 }),
-        target: onBlock({ blockId: "block-c", edge: "before", index: 2 }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "before", index: 2, nodeId: "block-c" }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
       toIndex: 1,
-      toZoneId: "page:main",
     });
   });
 
@@ -577,15 +938,15 @@ describe("resolveDrop, by pointer edge", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 0 }),
-        target: onBlock({ blockId: "block-c", edge: "after", index: 2 }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "after", index: 2, nodeId: "block-c" }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
     });
   });
 
@@ -594,30 +955,30 @@ describe("resolveDrop, by pointer edge", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 3 }),
-        target: onBlock({ blockId: "block-b", edge: "before", index: 1 }),
-        targetBlockCount: 4,
+        target: onNode({ edge: "before", index: 1 }),
+        targetNodeCount: 4,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
       toIndex: 1,
-      toZoneId: "page:main",
     });
 
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 3 }),
-        target: onBlock({ blockId: "block-b", edge: "after", index: 1 }),
-        targetBlockCount: 4,
+        target: onNode({ edge: "after", index: 1 }),
+        targetNodeCount: 4,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
     });
   });
 
@@ -626,8 +987,8 @@ describe("resolveDrop, by pointer edge", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 1 }),
-        target: onBlock({ blockId: "block-b", edge: "after", index: 0 }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "after", index: 0 }),
+        targetNodeCount: 3,
       }),
     ).toBeNull();
   });
@@ -637,20 +998,20 @@ describe("resolveDrop, by pointer edge", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: source({ index: 0 }),
-        target: onBlock({
-          blockId: "block-z",
+        target: onNode({
+          container: into("page:aside"),
           edge: "after",
           index: 1,
-          zoneId: "page:aside",
+          nodeId: "block-z",
         }),
-        targetBlockCount: 3,
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-a",
-      fromZoneId: "page:main",
+      from: into("page:main"),
       kind: "move",
+      nodeId: "block-a",
+      to: into("page:aside"),
       toIndex: 2,
-      toZoneId: "page:aside",
     });
   });
 });
@@ -660,21 +1021,20 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
-        source: source({ blockId: "block-x", index: 0, zoneId: "page:aside" }),
-        target: onBlock({
-          blockId: "block-b",
-          edge: "before",
-          index: 1,
-          zoneId: "page:main",
+        source: source({
+          container: into("page:aside"),
+          index: 0,
+          nodeId: "block-x",
         }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "before", index: 1 }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-x",
-      fromZoneId: "page:aside",
+      from: into("page:aside"),
       kind: "move",
+      nodeId: "block-x",
+      to: into("page:main"),
       toIndex: 1,
-      toZoneId: "page:main",
     });
   });
 
@@ -682,36 +1042,30 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
-        source: source({ blockId: "block-x", index: 0, zoneId: "page:aside" }),
-        target: onBlock({
-          blockId: "block-x",
-          edge: "after",
-          index: 2,
-          zoneId: "page:main",
+        source: source({
+          container: into("page:aside"),
+          index: 0,
+          nodeId: "block-x",
         }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "after", index: 2, nodeId: "block-x" }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
-      blockId: "block-x",
-      fromZoneId: "page:aside",
+      from: into("page:aside"),
       kind: "move",
+      nodeId: "block-x",
+      to: into("page:main"),
       toIndex: 3,
-      toZoneId: "page:main",
     });
   });
 
-  it("still drops nothing onto itself within its own zone", () => {
+  it("still drops nothing onto itself within its own container", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
-        source: source({ blockId: "block-x", index: 2, zoneId: "page:main" }),
-        target: onBlock({
-          blockId: "block-x",
-          edge: "after",
-          index: 2,
-          zoneId: "page:main",
-        }),
-        targetBlockCount: 3,
+        source: source({ index: 2, nodeId: "block-x" }),
+        target: onNode({ edge: "after", index: 2, nodeId: "block-x" }),
+        targetNodeCount: 3,
       }),
     ).toBeNull();
   });
@@ -719,38 +1073,74 @@ describe("resolveDrop, when the same block id lives in two zones", () => {
   it("leaves the target zone's namesake in the list it is landing among", () => {
     expect(
       dropPlacement({
-        blockIds: ["block-w", "block-x", "block-y"],
-        overBlockId: "block-x",
+        container: into("page:main"),
+        nodeIds: ["block-w", "block-x", "block-y"],
+        overNodeId: "block-x",
         resolved: {
-          blockId: "block-x",
-          fromZoneId: "page:aside",
+          from: into("page:aside"),
           kind: "move",
+          nodeId: "block-x",
+          to: into("page:main"),
           toIndex: 1,
-          toZoneId: "page:main",
         },
-        zoneId: "page:main",
       }),
     ).toEqual({
-      indicator: { blockId: "block-x", edge: "before", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "before",
+        nodeId: "block-x",
+        zoneId: "page:main",
+      },
       position: 2,
       total: 4,
     });
 
     expect(
       dropPlacement({
-        blockIds: ["block-w", "block-x", "block-y"],
-        overBlockId: "block-y",
+        container: into("page:main"),
+        nodeIds: ["block-w", "block-x", "block-y"],
+        overNodeId: "block-y",
         resolved: {
-          blockId: "block-x",
-          fromZoneId: "page:main",
+          from: into("page:main"),
           kind: "move",
+          nodeId: "block-x",
+          to: into("page:main"),
           toIndex: 1,
-          toZoneId: "page:main",
         },
-        zoneId: "page:main",
       }),
     ).toEqual({
-      indicator: { blockId: "block-y", edge: "before", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "before",
+        nodeId: "block-y",
+        zoneId: "page:main",
+      },
+      position: 2,
+      total: 3,
+    });
+  });
+
+  it("keeps a block that left an area in the list it is landing among", () => {
+    expect(
+      dropPlacement({
+        container: into("page:main"),
+        nodeIds: ["block-w", "block-x"],
+        overNodeId: "block-x",
+        resolved: {
+          from: into("page:main", "area-1"),
+          kind: "move",
+          nodeId: "block-x",
+          to: into("page:main"),
+          toIndex: 1,
+        },
+      }),
+    ).toEqual({
+      indicator: {
+        areaId: null,
+        edge: "before",
+        nodeId: "block-x",
+        zoneId: "page:main",
+      },
       position: 2,
       total: 3,
     });
@@ -763,13 +1153,13 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: fromCatalog("core:text"),
-        target: onBlock({ edge: "before", index: 1 }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "before", index: 1 }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:main"),
       toIndex: 1,
-      toZoneId: "page:main",
       type: "core:text",
     });
   });
@@ -779,13 +1169,47 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: fromCatalog("core:text"),
-        target: onBlock({ edge: "after", index: 1 }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "after", index: 1 }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
+      type: "core:text",
+    });
+  });
+
+  it("inserts straight into an area", () => {
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: fromCatalog("core:text"),
+        target: onContainer("page:main", "area-1"),
+        targetNodeCount: 2,
+      }),
+    ).toEqual({
+      kind: "insert",
+      to: into("page:main", "area-1"),
+      toIndex: 2,
+      type: "core:text",
+    });
+
+    expect(
+      resolveDrop({
+        allowedBlocks: "*",
+        source: fromCatalog("core:text"),
+        target: onNode({
+          container: into("page:main", "area-1"),
+          edge: "before",
+          index: 1,
+        }),
+        targetNodeCount: 2,
+      }),
+    ).toEqual({
+      kind: "insert",
+      to: into("page:main", "area-1"),
+      toIndex: 1,
       type: "core:text",
     });
   });
@@ -795,13 +1219,13 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: fromCatalog(),
-        target: onBlock({ edge: "before", index: 2 }),
-        targetBlockCount: 3,
+        target: onNode({ edge: "before", index: 2 }),
+        targetNodeCount: 3,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
       type: "core:hero",
     });
   });
@@ -811,13 +1235,13 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: fromCatalog(),
-        target: onZone("page:main"),
-        targetBlockCount: 3,
+        target: onContainer("page:main"),
+        targetNodeCount: 3,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:main"),
       toIndex: 3,
-      toZoneId: "page:main",
       type: "core:hero",
     });
   });
@@ -827,29 +1251,29 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: "*",
         source: fromCatalog(),
-        target: onZone("page:aside"),
-        targetBlockCount: 0,
+        target: onContainer("page:aside"),
+        targetNodeCount: 0,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:aside"),
       toIndex: 0,
-      toZoneId: "page:aside",
       type: "core:hero",
     });
   });
 
-  it("clamps an index past the end of the zone", () => {
+  it("clamps an index past the end of the container", () => {
     expect(
       resolveDrop({
         allowedBlocks: "*",
         source: fromCatalog(),
-        target: onBlock({ edge: "after", index: 9 }),
-        targetBlockCount: 2,
+        target: onNode({ edge: "after", index: 9 }),
+        targetNodeCount: 2,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:main"),
       toIndex: 2,
-      toZoneId: "page:main",
       type: "core:hero",
     });
   });
@@ -859,8 +1283,8 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: ["core:*"],
         source: fromCatalog("example:callout"),
-        target: onZone("page:main"),
-        targetBlockCount: 0,
+        target: onContainer("page:main"),
+        targetNodeCount: 0,
       }),
     ).toBeNull();
   });
@@ -870,13 +1294,13 @@ describe("resolveDrop, from the catalog", () => {
       resolveDrop({
         allowedBlocks: ["example:*"],
         source: fromCatalog("example:callout"),
-        target: onZone("page:main"),
-        targetBlockCount: 1,
+        target: onContainer("page:main"),
+        targetNodeCount: 1,
       }),
     ).toEqual({
       kind: "insert",
+      to: into("page:main"),
       toIndex: 1,
-      toZoneId: "page:main",
       type: "example:callout",
     });
   });
@@ -886,30 +1310,30 @@ const ids = ["block-a", "block-b", "block-c"];
 
 const placeFor = ({
   allowedBlocks = "*",
-  blockIds = ids,
+  nodeIds = ids,
   source: dragged,
   target,
-  targetBlockCount = blockIds.length,
+  targetNodeCount = nodeIds.length,
 }: {
   allowedBlocks?: "*" | readonly string[];
-  blockIds?: readonly string[];
-  source: Parameters<typeof resolveDrop>[0]["source"];
+  nodeIds?: readonly string[];
+  source: EditorDragSource;
   target: EditorDropTarget;
-  targetBlockCount?: number;
+  targetNodeCount?: number;
 }) => {
   const resolved = resolveDrop({
     allowedBlocks,
     source: dragged,
     target,
-    targetBlockCount,
+    targetNodeCount,
   });
   if (resolved === null) return null;
 
   return dropPlacement({
-    blockIds,
-    overBlockId: target.blockId,
+    container: target.container,
+    nodeIds,
+    overNodeId: target.nodeId,
     resolved,
-    zoneId: target.zoneId,
   });
 };
 
@@ -918,10 +1342,15 @@ describe("dropPlacement, from the catalog", () => {
     expect(
       placeFor({
         source: fromCatalog("core:text"),
-        target: onBlock({ edge: "before", index: 1 }),
+        target: onNode({ edge: "before", index: 1 }),
       }),
     ).toEqual({
-      indicator: { blockId: "block-b", edge: "before", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "before",
+        nodeId: "block-b",
+        zoneId: "page:main",
+      },
       position: 2,
       total: 4,
     });
@@ -929,60 +1358,109 @@ describe("dropPlacement, from the catalog", () => {
     expect(
       placeFor({
         source: fromCatalog("core:text"),
-        target: onBlock({ edge: "after", index: 1 }),
+        target: onNode({ edge: "after", index: 1 }),
       }),
     ).toEqual({
-      indicator: { blockId: "block-b", edge: "after", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "after",
+        nodeId: "block-b",
+        zoneId: "page:main",
+      },
       position: 3,
       total: 4,
     });
   });
 
-  it("points after the last block when the zone itself is the target", () => {
+  it("points after the last node when the zone itself is the target", () => {
     expect(
-      placeFor({ source: fromCatalog(), target: onZone("page:main") }),
+      placeFor({ source: fromCatalog(), target: onContainer("page:main") }),
     ).toEqual({
-      indicator: { blockId: "block-c", edge: "after", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "after",
+        nodeId: "block-c",
+        zoneId: "page:main",
+      },
       position: 4,
       total: 4,
     });
   });
 
-  it("shows no line in an empty zone, because there is nothing to draw it against", () => {
+  it("shows no line in an empty container, because there is nothing to draw it against", () => {
     expect(
       placeFor({
-        blockIds: [],
+        nodeIds: [],
         source: fromCatalog(),
-        target: onZone("page:aside"),
-        targetBlockCount: 0,
+        target: onContainer("page:aside"),
+        targetNodeCount: 0,
+      }),
+    ).toEqual({ indicator: null, position: 1, total: 1 });
+    expect(
+      placeFor({
+        nodeIds: [],
+        source: fromCatalog(),
+        target: onContainer("page:main", "area-1"),
+        targetNodeCount: 0,
       }),
     ).toEqual({ indicator: null, position: 1, total: 1 });
   });
+
+  it("draws the line inside the area it is dropping into", () => {
+    expect(
+      placeFor({
+        nodeIds: ["block-x", "block-y"],
+        source: fromCatalog("core:text"),
+        target: onNode({
+          container: into("page:main", "area-1"),
+          edge: "after",
+          index: 0,
+          nodeId: "block-x",
+        }),
+        targetNodeCount: 2,
+      }),
+    ).toEqual({
+      indicator: {
+        areaId: "area-1",
+        edge: "after",
+        nodeId: "block-x",
+        zoneId: "page:main",
+      },
+      position: 2,
+      total: 3,
+    });
+  });
 });
 
-describe("dropPlacement, moving a block", () => {
-  it("counts the landing against the list the block was removed from", () => {
+describe("dropPlacement, moving a node", () => {
+  it("counts the landing against the list the node was removed from", () => {
     expect(
       placeFor({
         source: source({ index: 0 }),
-        target: onBlock({ blockId: "block-c", edge: "after", index: 2 }),
+        target: onNode({ edge: "after", index: 2, nodeId: "block-c" }),
       }),
     ).toEqual({
-      indicator: { blockId: "block-c", edge: "after", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "after",
+        nodeId: "block-c",
+        zoneId: "page:main",
+      },
       position: 3,
       total: 3,
     });
   });
 
-  it("never draws the line against the block being dragged", () => {
+  it("never draws the line against the node being dragged", () => {
     const placement = placeFor({
-      source: source({ blockId: "block-b", index: 1 }),
-      target: onBlock({ blockId: "block-c", edge: "after", index: 2 }),
+      source: source({ index: 1, nodeId: "block-b" }),
+      target: onNode({ edge: "after", index: 2, nodeId: "block-c" }),
     });
 
     expect(placement?.indicator).toEqual({
-      blockId: "block-c",
+      areaId: null,
       edge: "after",
+      nodeId: "block-c",
       zoneId: "page:main",
     });
   });
@@ -991,21 +1469,31 @@ describe("dropPlacement, moving a block", () => {
     expect(
       placeFor({
         source: source({ index: 0 }),
-        target: onBlock({ blockId: "block-c", edge: null, index: 2 }),
+        target: onNode({ edge: null, index: 2, nodeId: "block-c" }),
       }),
     ).toEqual({
-      indicator: { blockId: "block-c", edge: "after", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "after",
+        nodeId: "block-c",
+        zoneId: "page:main",
+      },
       position: 3,
       total: 3,
     });
 
     expect(
       placeFor({
-        source: source({ blockId: "block-c", index: 2 }),
-        target: onBlock({ blockId: "block-a", edge: null, index: 0 }),
+        source: source({ index: 2, nodeId: "block-c" }),
+        target: onNode({ edge: null, index: 0, nodeId: "block-a" }),
       }),
     ).toEqual({
-      indicator: { blockId: "block-a", edge: "before", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "before",
+        nodeId: "block-a",
+        zoneId: "page:main",
+      },
       position: 1,
       total: 3,
     });
@@ -1015,7 +1503,7 @@ describe("dropPlacement, moving a block", () => {
     expect(
       placeFor({
         source: source({ index: 1 }),
-        target: onBlock({ blockId: "block-b", edge: "after", index: 0 }),
+        target: onNode({ edge: "after", index: 0 }),
       }),
     ).toBeNull();
   });
@@ -1025,7 +1513,18 @@ describe("dropPlacement, moving a block", () => {
       placeFor({
         allowedBlocks: ["core:*"],
         source: source({ type: "example:callout" }),
-        target: onBlock({ blockId: "block-b", edge: "before", index: 1 }),
+        target: onNode({ edge: "before", index: 1 }),
+      }),
+    ).toBeNull();
+  });
+
+  it("shows nothing at all for an area over another area", () => {
+    expect(
+      placeFor({
+        nodeIds: ["block-x"],
+        source: areaSource(),
+        target: onContainer("page:main", "area-2"),
+        targetNodeCount: 1,
       }),
     ).toBeNull();
   });
@@ -1033,18 +1532,50 @@ describe("dropPlacement, moving a block", () => {
   it("makes room for a block arriving from another zone", () => {
     expect(
       placeFor({
-        blockIds: ["block-x", "block-y"],
+        nodeIds: ["block-x", "block-y"],
         source: source({ index: 0 }),
-        target: onBlock({
-          blockId: "block-y",
+        target: onNode({
+          container: into("page:aside"),
           edge: "after",
           index: 1,
-          zoneId: "page:aside",
+          nodeId: "block-y",
         }),
-        targetBlockCount: 2,
+        targetNodeCount: 2,
       }),
     ).toEqual({
-      indicator: { blockId: "block-y", edge: "after", zoneId: "page:aside" },
+      indicator: {
+        areaId: null,
+        edge: "after",
+        nodeId: "block-y",
+        zoneId: "page:aside",
+      },
+      position: 3,
+      total: 3,
+    });
+  });
+
+  it("reorders inside an area with the very same indicator it draws at a root", () => {
+    const inside = into("page:main", "area-1");
+
+    expect(
+      placeFor({
+        nodeIds: ["block-a", "block-b", "block-c"],
+        source: source({ container: inside, index: 0 }),
+        target: onNode({
+          container: inside,
+          edge: "after",
+          index: 2,
+          nodeId: "block-c",
+        }),
+        targetNodeCount: 3,
+      }),
+    ).toEqual({
+      indicator: {
+        areaId: "area-1",
+        edge: "after",
+        nodeId: "block-c",
+        zoneId: "page:main",
+      },
       position: 3,
       total: 3,
     });
@@ -1052,21 +1583,26 @@ describe("dropPlacement, moving a block", () => {
 });
 
 describe("dropPlacement, on its own", () => {
-  it("falls back to the gap when the block it is over is not in the list", () => {
+  it("falls back to the gap when the node it is over is not in the list", () => {
     expect(
       dropPlacement({
-        blockIds: ids,
-        overBlockId: "block-gone",
+        container: into("page:main"),
+        nodeIds: ids,
+        overNodeId: "block-gone",
         resolved: {
           kind: "insert",
+          to: into("page:main"),
           toIndex: 1,
-          toZoneId: "page:main",
           type: "core:text",
         },
-        zoneId: "page:main",
       }),
     ).toEqual({
-      indicator: { blockId: "block-b", edge: "before", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "before",
+        nodeId: "block-b",
+        zoneId: "page:main",
+      },
       position: 2,
       total: 4,
     });
@@ -1075,18 +1611,23 @@ describe("dropPlacement, on its own", () => {
   it("clamps a landing index the list cannot hold", () => {
     expect(
       dropPlacement({
-        blockIds: ids,
-        overBlockId: null,
+        container: into("page:main"),
+        nodeIds: ids,
+        overNodeId: null,
         resolved: {
           kind: "insert",
+          to: into("page:main"),
           toIndex: 9,
-          toZoneId: "page:main",
           type: "core:text",
         },
-        zoneId: "page:main",
       }),
     ).toEqual({
-      indicator: { blockId: "block-c", edge: "after", zoneId: "page:main" },
+      indicator: {
+        areaId: null,
+        edge: "after",
+        nodeId: "block-c",
+        zoneId: "page:main",
+      },
       position: 4,
       total: 4,
     });

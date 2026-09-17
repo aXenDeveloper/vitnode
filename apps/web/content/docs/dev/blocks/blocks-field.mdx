@@ -80,8 +80,24 @@ holding an ordered list of instances:
 | `id` | Stable and unique **within the zone**. Never the array index - a reorder must not change what a block is. |
 | `type` | The globally unique block id. |
 | `data` | Validated against that block's own field schema. |
+| `variant` | Optional. The look this instance picked, from the ones its block [declares](/docs/dev/blocks/block-variants). Absent means "the block's default". |
 
 Array order **is** the rendered order. Nothing sorts it.
+
+### Areas in the same list
+
+A zone holds **content nodes**, and a node is either a block instance or an [Area](/docs/dev/blocks/layout-areas) - a small layout container with its own id, a `layout` of four tokens, and `children` that are blocks:
+
+```json
+{
+  "id": "01JC4Z8N9X3R7T2M5Q6K8V4B9F",
+  "kind": "area",
+  "layout": { "columns": 2, "gap": "md" },
+  "children": [{ "id": "01JC…", "type": "core:text", "data": { "heading": "Left" } }]
+}
+```
+
+An Area is told apart by `kind: "area"`, needs no entry in `allowed` - its children are checked against the same list the zone's own blocks are - and cannot contain another Area. A zone stored before Areas existed is a list of blocks, which is a list of nodes that never nests, so nothing was migrated.
 
 ### Why one column
 

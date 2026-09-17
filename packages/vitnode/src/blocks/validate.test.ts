@@ -197,7 +197,7 @@ describe("an area", () => {
               variant: "featured",
             },
           ],
-          { align: "center", columns: 2, gap: "lg", justify: "between" },
+          { align: "center", columns: 2, gap: "lg", justify: "stretch" },
         ),
       ],
       registry,
@@ -220,7 +220,7 @@ describe("an area", () => {
       ],
       id: "a1",
       kind: "area",
-      layout: { align: "center", columns: 2, gap: "lg", justify: "between" },
+      layout: { align: "center", columns: 2, gap: "lg", justify: "stretch" },
     });
   });
 
