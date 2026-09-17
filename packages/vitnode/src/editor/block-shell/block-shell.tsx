@@ -12,12 +12,14 @@ import { useTranslations } from "use-intl";
 import { buttonVariants } from "@/components/ui/button";
 
 import type { AnyBlockInstance } from "../../blocks/types";
+import type { EditorBlockRef } from "../state/types";
 import type { EditableBlockIssue } from "./issue";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useSortableBlock } from "../dnd/use-sortable-block";
+import { sameBlockRef } from "../state/reducer";
 import { editableBlockIssue } from "./issue";
 
 const ISSUE_LABELS = {
@@ -47,10 +49,10 @@ export const EditableBlockShell = ({
   const t = useTranslations("core.editor");
   const { dispatch, preview, state } = useVisualEditor();
   const { dropIndicator } = useEditorDnd();
+  const ref: EditorBlockRef = { blockId: instance.id, zoneId };
   const { dragging, handleProps, setNodeRef, style } = useSortableBlock({
-    blockId: instance.id,
     index,
-    zoneId,
+    ref,
   });
 
   if (preview) return <>{children}</>;
@@ -60,14 +62,16 @@ export const EditableBlockShell = ({
     instance.type,
   );
   const name = entry?.definition.name ?? instance.type;
-  const selected = state.selectedBlockId === instance.id;
+  const selected = sameBlockRef(state.selected, ref);
   const issue = editableBlockIssue({
     allowedBlocks: zone?.allowedBlocks,
     entry,
     instance,
   });
   const edge =
-    dropIndicator?.blockId === instance.id ? dropIndicator.edge : null;
+    dropIndicator?.blockId === instance.id && dropIndicator.zoneId === zoneId
+      ? dropIndicator.edge
+      : null;
 
   return (
     <div
@@ -89,7 +93,7 @@ export const EditableBlockShell = ({
         aria-current={selected}
         className="focus-visible:ring-ring absolute inset-0 rounded-md focus-visible:ring-2 focus-visible:outline-none"
         onClick={() => {
-          dispatch({ blockId: instance.id, type: "select" });
+          dispatch({ ref, type: "select" });
         }}
         type="button"
       >
@@ -120,7 +124,7 @@ export const EditableBlockShell = ({
           aria-label={t("block.duplicate", { name })}
           className={actionClassName}
           onClick={() => {
-            dispatch({ blockId: instance.id, type: "duplicate" });
+            dispatch({ ref, type: "duplicate" });
           }}
           type="button"
         >
@@ -134,7 +138,7 @@ export const EditableBlockShell = ({
             "shadow-sm",
           )}
           onClick={() => {
-            dispatch({ blockId: instance.id, type: "remove" });
+            dispatch({ ref, type: "remove" });
           }}
           type="button"
         >

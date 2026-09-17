@@ -16,11 +16,13 @@ export const EditorSidebarFooter = (): ReactElement => {
   const {
     dirty,
     discard,
+    dispatch,
     exit,
     preview,
     save,
     saveStatus,
     setPreview,
+    state,
     unsafeZoneIds,
   } = useVisualEditor();
   const t = useTranslations("core.editor");
@@ -33,9 +35,31 @@ export const EditorSidebarFooter = (): ReactElement => {
   };
   const saving = saveStatus === "saving";
   const blocked = unsafeZoneIds.length > 0;
+  const dropped = state.droppedZoneIds;
 
   return (
     <footer className="border-border flex flex-col gap-3 border-t p-4">
+      {dropped.length === 0 ? null : (
+        <div
+          className="border-destructive/40 bg-destructive/10 text-destructive flex flex-col items-start gap-2 rounded-md border p-3"
+          role="alert"
+        >
+          <p className="text-sm leading-relaxed text-pretty">
+            {t("dropped.desc", { zones: dropped.join(", ") })}
+          </p>
+
+          <Button
+            onClick={() => {
+              dispatch({ type: "dismiss-dropped" });
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            {t("dropped.dismiss")}
+          </Button>
+        </div>
+      )}
+
       {blocked ? (
         <p
           className="text-destructive text-sm leading-relaxed text-pretty"

@@ -60,6 +60,9 @@ const callArguments = (source: string, call: RegExp): string[] => {
 const zoneSource = read("blocks", "zone.tsx");
 const mountSource = read("blocks", "edit-context.ts");
 const rendererSource = read("blocks", "renderer.tsx");
+const outletSource = read("blocks", "zone-outlet.tsx");
+const hostSource = read("blocks", "edit.tsx");
+const shellSource = read("blocks", "editor-shell.ts");
 const editableZoneSource = read("editor", "zones", "editable-zone.tsx");
 const rootSource = read("editor", "root.tsx");
 const sidebarSource = read("editor", "sidebar", "sidebar.tsx");
@@ -85,10 +88,14 @@ describe("what edit mode is handed when it takes a content zone over", () => {
     expect(mountBody).not.toMatch(/\w\s*\?\s*:/);
   });
 
-  it("hands every one of them to the edit runtime", () => {
+  it("hands every one of them to the outlet the editor portals into", () => {
     expect(
-      callArguments(zoneSource, /renderZone\(\{([\s\S]*?)\}\)/),
+      callArguments(zoneSource, /mount:\s*\{([\s\S]*?)\},\s*\n\s*runtime:/),
     ).toStrictEqual(zoneProps);
+  });
+
+  it("gives the outlet the very runtime the zone read from context", () => {
+    expect(zoneSource).toContain("runtime: editRuntime");
   });
 });
 
@@ -110,6 +117,39 @@ describe("preview, which has to look like the page really does", () => {
   it("takes each of them off the mount rather than inventing a value", () => {
     expect(editableZoneSource).toContain("fallback: mount.fallback");
     expect(editableZoneSource).toContain("validate: mount.validate");
+  });
+
+  it("drops the outlet out of the layout when the public zone would wrap nothing", () => {
+    expect(outletSource).toContain("runtime.preview");
+    expect(outletSource).toContain('display: "contents"');
+  });
+});
+
+describe("the page subtree, which edit mode must never remount", () => {
+  it("renders the children in one fixed slot rather than behind the toggle", () => {
+    expect(hostSource).toMatch(/<div[\s\S]*?>\s*\{children\}\s*<\/div>/);
+    expect(hostSource).not.toMatch(/\{enabled[\s\S]{0,400}\{children\}/);
+  });
+
+  it("keeps the edit context mounted in both modes, and only swaps its value", () => {
+    expect(hostSource).toContain("<ContentEditContext value={runtime}>");
+    expect(hostSource).toMatch(/enabled\s*\?[\s\S]{0,120}:\s*null/);
+  });
+
+  it("loads the editor as a sibling of the page, never as a wrapper around it", () => {
+    expect(hostSource).not.toMatch(/<EditorRoot[^>]*>[\s\S]*?\{children\}/);
+    expect(hostSource).toContain("<Suspense fallback={null}>");
+  });
+
+  it("gives the editor no children prop at all to wrap", () => {
+    expect(
+      memberNames(interfaceBody(rootSource, "EditorRootProps")),
+    ).toStrictEqual(["adapter", "onExit", "outlets", "preview", "setPreview"]);
+  });
+
+  it("puts each zone back in its place with a portal instead", () => {
+    expect(rootSource).toContain("createPortal(");
+    expect(rootSource).toContain("outlet.node");
   });
 });
 
@@ -137,15 +177,46 @@ describe("persisted values the editor cannot read", () => {
   });
 });
 
+describe("zones that leave the page while the editor is still open", () => {
+  it("unregisters the outlet the page no longer renders", () => {
+    expect(outletSource).toContain("runtime.releaseZone(id)");
+  });
+
+  it("keeps that lifetime separate from syncing the mount's content", () => {
+    expect(outletSource).toMatch(
+      /useEffect\(\s*\(\) => \(\) => \{\s*runtime\.releaseZone\(id\);\s*\},\s*\[id, runtime\],\s*\)/,
+    );
+  });
+
+  it("tells the reducer the zone is gone when the portal unmounts", () => {
+    expect(editableZoneSource).toMatch(
+      /useEffect\(\s*\(\) => \(\) => \{\s*dispatch\(\{ type: "unmount", zoneId: id \}\);\s*\},\s*\[dispatch, id\],\s*\)/,
+    );
+  });
+
+  it("clears an insert target left pointing at a zone that has gone", () => {
+    expect(rootSource).toContain("!(insertTarget.zoneId in state.zones)");
+  });
+});
+
 describe("the room the editor leaves the page it is editing", () => {
   it("reserves the bottom sheet on small screens and the sidebar on wide ones", () => {
-    expect(rootSource).toContain(
+    expect(shellSource).toContain(
       "pb-(--editor-sheet-height) md:pe-(--editor-sidebar-width) md:pb-0",
     );
   });
 
-  it("reserves neither in preview, which is the page as visitors see it", () => {
-    expect(rootSource).toMatch(/!preview &&\s*"pb-\(--editor-sheet-height\)/);
+  it("reserves neither until the editor says which mode it is in", () => {
+    expect(hostSource).toMatch(/mode === "editing"[\s\S]{0,200}EDITING_CLASS/);
+    expect(hostSource).toContain(
+      "style={mode === null ? EDITOR_SHELL_IDLE_STYLE : EDITOR_SHELL_STYLE}",
+    );
+  });
+
+  it("leaves the page's own layout alone while nobody is editing", () => {
+    expect(shellSource).toContain(
+      'EDITOR_SHELL_IDLE_STYLE: CSSProperties = { display: "contents" }',
+    );
   });
 
   it("caps the sheet at exactly the height the page made room for", () => {
@@ -153,8 +224,9 @@ describe("the room the editor leaves the page it is editing", () => {
     expect(sidebarSource).toContain("md:max-h-none");
   });
 
-  it("declares both measurements in one place", () => {
-    expect(rootSource).toContain('"--editor-sheet-height"');
-    expect(rootSource).toContain('"--editor-sidebar-width"');
+  it("declares both measurements in one place the sidebar reads too", () => {
+    expect(shellSource).toContain('"--editor-sheet-height"');
+    expect(shellSource).toContain('"--editor-sidebar-width"');
+    expect(sidebarSource).toContain("EDITOR_SHELL_STYLE");
   });
 });

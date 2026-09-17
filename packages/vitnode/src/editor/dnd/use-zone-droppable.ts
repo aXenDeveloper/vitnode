@@ -21,7 +21,7 @@ export const useZoneDroppable = ({
   const { state } = useVisualEditor();
   const { dragging, draggingType } = useEditorDnd();
   const { isOver, setNodeRef } = useDroppable({
-    data: { zoneId },
+    data: { kind: "zone", zoneId },
     id: zoneDroppableId(zoneId),
   });
 

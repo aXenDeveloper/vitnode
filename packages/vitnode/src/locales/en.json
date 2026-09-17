@@ -973,6 +973,10 @@
       "unsafe": {
         "title": "This page cannot be saved yet",
         "desc": "This zone contains invalid or legacy content that the Visual Editor cannot safely save. Resolve or explicitly remove the invalid content before saving."
+      },
+      "dropped": {
+        "desc": "These zones left the page while you were editing, so what you changed in them is gone and was never saved: {zones}.",
+        "dismiss": "Got it"
       }
     }
   },

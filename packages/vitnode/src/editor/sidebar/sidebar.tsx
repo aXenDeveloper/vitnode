@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 
+import { EDITOR_SHELL_STYLE } from "../../blocks/editor-shell";
 import { useVisualEditor } from "../context";
 import { BlockPropertiesPanelContent } from "../properties/panel";
 import { AvailableBlocksPanel } from "./blocks-panel";
@@ -22,13 +23,14 @@ export const EditorSidebar = (): ReactElement => {
     <aside
       aria-label={t("title")}
       className="border-border bg-background fixed start-0 end-0 bottom-0 z-40 flex max-h-(--editor-sheet-height) flex-col border-t shadow-lg md:start-auto md:top-0 md:max-h-none md:w-(--editor-sidebar-width) md:border-s md:border-t-0 md:shadow-none"
+      style={EDITOR_SHELL_STYLE}
     >
       <header className="border-border flex flex-col gap-2 border-b p-4">
         {panel === "properties" ? (
           <Button
             className="self-start"
             onClick={() => {
-              dispatch({ blockId: null, type: "select" });
+              dispatch({ ref: null, type: "select" });
             }}
             size="sm"
             variant="ghost"

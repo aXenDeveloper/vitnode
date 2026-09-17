@@ -37,7 +37,7 @@ describe("buildSaveInput", () => {
     const [a, b, c] = [block("a"), block("b"), block("c")];
     const state = visualEditorReducer(
       mounted(mount("main", [a, b]), mount("aside", [c])),
-      { blockId: b.id, type: "remove" },
+      { ref: { blockId: b.id, zoneId: "main" }, type: "remove" },
     );
 
     const input = buildSaveInput(state);

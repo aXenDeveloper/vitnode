@@ -74,44 +74,61 @@ const profileSchema = z.object({
   displayName: z.string().min(1).max(60).default("Ada"),
 });
 
-const ProfileForm = () => (
-  <section
-    aria-labelledby="profile-heading"
-    className="border-border flex flex-col gap-4 rounded-lg border p-4 md:p-6"
-  >
-    <div className="flex flex-col gap-1">
-      <h2 className="text-lg font-semibold text-balance" id="profile-heading">
-        Profile
-      </h2>
-      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-        Locked application UI. A zone can sit around it, never inside it.
-      </p>
-    </div>
+const ProfileForm = () => {
+  const [clicks, setClicks] = useState(0);
 
-    <AutoForm
-      fields={[
-        {
-          component: props => (
-            <AutoFormInput
-              {...props}
-              autoComplete="nickname"
-              label="Display name"
-            />
-          ),
-          id: "displayName",
-        },
-      ]}
-      formSchema={profileSchema}
-      onSubmit={values => {
-        toast.success("Profile saved", {
-          description: `Nothing was stored - "${values.displayName}" is only here to show application UI between two zones.`,
-        });
-      }}
+  return (
+    <section
+      aria-labelledby="profile-heading"
+      className="border-border flex flex-col gap-4 rounded-lg border p-4 md:p-6"
     >
-      <AutoFormSubmitButton>Save</AutoFormSubmitButton>
-    </AutoForm>
-  </section>
-);
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold text-balance" id="profile-heading">
+          Profile
+        </h2>
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          Locked application UI. A zone can sit around it, never inside it. Type
+          below, press the counter, then enter and leave edit mode: neither
+          resets, because the editor never remounts the page.
+        </p>
+      </div>
+
+      <Button
+        className="self-start"
+        onClick={() => {
+          setClicks(count => count + 1);
+        }}
+        size="sm"
+        variant="secondary"
+      >
+        Local state: {clicks}
+      </Button>
+
+      <AutoForm
+        fields={[
+          {
+            component: props => (
+              <AutoFormInput
+                {...props}
+                autoComplete="nickname"
+                label="Display name"
+              />
+            ),
+            id: "displayName",
+          },
+        ]}
+        formSchema={profileSchema}
+        onSubmit={values => {
+          toast.success("Profile saved", {
+            description: `Nothing was stored - "${values.displayName}" is only here to show application UI between two zones.`,
+          });
+        }}
+      >
+        <AutoFormSubmitButton>Save</AutoFormSubmitButton>
+      </AutoForm>
+    </section>
+  );
+};
 
 const VIEW_MODE_CHECKS = [
   "settings:before-profile - two blocks, no wrapper: no element around them in the DOM.",
@@ -135,6 +152,8 @@ const EDIT_MODE_CHECKS = [
   "The profile form is application code: no overlay, no drag handle, and its input still takes focus while edit mode is on.",
   "Save runs this page's adapter from the sidebar footer, which writes the layout to the API and answers with the layout it stored. Finish editing and view mode already shows it - no reload. Reload anyway and the zones come back exactly the same.",
   "A zone holding a value that is not a block shows it as an unreadable entry it refuses to drop, and Save stays disabled until you remove that entry yourself.",
+  "Take the sidebar zone off the page while the editor is open: it leaves the editor too, its Add block target and selection clear, and a Save afterwards keeps whatever was stored for it rather than writing the copy the editor was holding. If you had edited it first, the footer says so instead of dropping the change quietly.",
+  "Nothing on the page remounts when edit mode turns on: the local counter and the display name you typed both survive Edit page and Finish editing.",
 ];
 
 const canEditPage = (): boolean => process.env.NODE_ENV !== "production";
@@ -206,6 +225,7 @@ const SavedPayload = ({ input }: { input: VisualEditorSaveInput }) => (
 
 const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
   const [editing, setEditing] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [lastSave, setLastSave] = useState<null | VisualEditorSaveInput>(null);
   const [layout, setLayout] = useState<ZonesLayout>(loaderData);
   const [loaded, setLoaded] = useState<ZonesLayout>(loaderData);
@@ -290,6 +310,19 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
           items={EDIT_MODE_CHECKS}
         />
 
+        <Button
+          className="self-start"
+          onClick={() => {
+            setShowSidebar(shown => !shown);
+          }}
+          size="sm"
+          variant="outline"
+        >
+          {showSidebar
+            ? "Take the sidebar zone off the page"
+            : "Put the sidebar zone back"}
+        </Button>
+
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex flex-1 flex-col gap-6">
             <ContentZone
@@ -309,14 +342,16 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
             />
           </div>
 
-          <ContentZone
-            allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
-            as="aside"
-            blocks={layout.zones[EXAMPLE_ZONE_IDS.sidebar]}
-            className="border-border w-full rounded-lg border p-4 lg:w-64"
-            id={EXAMPLE_ZONE_IDS.sidebar}
-            registry={blocksRegistry}
-          />
+          {showSidebar ? (
+            <ContentZone
+              allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
+              as="aside"
+              blocks={layout.zones[EXAMPLE_ZONE_IDS.sidebar]}
+              className="border-border w-full rounded-lg border p-4 lg:w-64"
+              id={EXAMPLE_ZONE_IDS.sidebar}
+              registry={blocksRegistry}
+            />
+          ) : null}
         </div>
 
         <ContentZone

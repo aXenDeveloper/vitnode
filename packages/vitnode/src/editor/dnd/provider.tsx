@@ -49,11 +49,11 @@ import { EditorDndContext } from "./context";
 import {
   dropEdgeFor,
   dropPlacement,
+  isZoneDroppableId,
   preferBlockCollisions,
   readDragSource,
   readDropTarget,
   resolveDrop,
-  zoneIdFromDroppableId,
 } from "./resolve-drop";
 
 type DragOverlayPreview =
@@ -90,7 +90,8 @@ const sameIndicator = (
   (left !== null &&
     right !== null &&
     left.blockId === right.blockId &&
-    left.edge === right.edge);
+    left.edge === right.edge &&
+    left.zoneId === right.zoneId);
 
 export const EditorDndProvider = ({
   children,
@@ -172,7 +173,7 @@ export const EditorDndProvider = ({
 
   const planDrop = useCallback(
     (active: Active, over: null | Over): EditorDragPlan | null => {
-      const source = readDragSource(String(active.id), active.data.current);
+      const source = readDragSource(active.data.current);
       if (!source) return null;
 
       const outside: EditorDragPlan = {
@@ -188,16 +189,12 @@ export const EditorDndProvider = ({
         const pointerY = pointerYRef.current;
 
         if (pointerY === null) return null;
-        if (zoneIdFromDroppableId(String(over.id)) !== null) return null;
+        if (isZoneDroppableId(String(over.id))) return null;
 
         return dropEdgeFor({ pointerY, rect: over.rect });
       };
 
-      const target = readDropTarget(
-        String(over.id),
-        over.data.current,
-        edgeFor(),
-      );
+      const target = readDropTarget(over.data.current, edgeFor());
       const zone = target === null ? undefined : state.zones[target.zoneId];
       if (!target || !zone) return outside;
 
@@ -216,6 +213,7 @@ export const EditorDndProvider = ({
                 blockIds: zone.blocks.map(block => block.id),
                 overBlockId: target.blockId,
                 resolved,
+                zoneId: target.zoneId,
               }),
         rejected: !isBlockAllowed(
           zone.allowedBlocks ?? BLOCK_WILDCARD,
@@ -253,7 +251,7 @@ export const EditorDndProvider = ({
 
     return {
       onDragCancel: ({ active }) => {
-        const source = readDragSource(String(active.id), active.data.current);
+        const source = readDragSource(active.data.current);
 
         return t("dnd.cancelled", {
           name: source === null ? String(active.id) : blockName(source),
@@ -276,7 +274,7 @@ export const EditorDndProvider = ({
       },
       onDragOver: ({ active, over }) => landing(active, over),
       onDragStart: ({ active }) => {
-        const source = readDragSource(String(active.id), active.data.current);
+        const source = readDragSource(active.data.current);
 
         return t("dnd.picked_up", {
           name: source === null ? String(active.id) : blockName(source),
@@ -308,7 +306,7 @@ export const EditorDndProvider = ({
   };
 
   const onDragStart = ({ active }: DragStartEvent) => {
-    setDragging(readDragSource(String(active.id), active.data.current));
+    setDragging(readDragSource(active.data.current));
   };
 
   const onDragMove = ({ active, over }: DragMoveEvent) => {
@@ -337,6 +335,7 @@ export const EditorDndProvider = ({
 
     dispatch({
       blockId: resolved.blockId,
+      fromZoneId: resolved.fromZoneId,
       toIndex: resolved.toIndex,
       toZoneId: resolved.toZoneId,
       type: "move",

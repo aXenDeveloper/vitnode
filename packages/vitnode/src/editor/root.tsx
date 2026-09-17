@@ -1,17 +1,11 @@
-import type { CSSProperties, ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 
-import { cn } from "cn";
-import {
-  createElement,
-  useCallback,
-  useMemo,
-  useReducer,
-  useState,
-} from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { ContentEditRuntime } from "../blocks/edit-context";
+import type { ContentZoneOutletEntry } from "../blocks/edit-context";
 import type { VisualEditorAdapter } from "./adapter/types";
 import type {
   EditorInsertRequest,
@@ -21,7 +15,6 @@ import type {
   VisualEditorSaveStatus,
 } from "./context";
 
-import { ContentEditContext } from "../blocks/edit-context";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
 import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
 import { VisualEditorContext } from "./context";
@@ -32,6 +25,7 @@ import { LeaveConfirmDialog } from "./runtime/leave-confirm-dialog";
 import { UnsavedChangesGuard } from "./runtime/unsaved-guard";
 import { EditorSidebar } from "./sidebar/sidebar";
 import {
+  findBlock,
   initialVisualEditorState,
   isVisualEditorDirty,
   unsafeZoneIds,
@@ -41,44 +35,44 @@ import { EditableZone } from "./zones/editable-zone";
 
 export interface EditorRootProps {
   adapter?: VisualEditorAdapter;
-  children: ReactNode;
   onExit?: () => void;
+  outlets: readonly ContentZoneOutletEntry[];
+  preview: boolean;
+  setPreview: (preview: boolean) => void;
 }
-
-const contentEditRuntime: ContentEditRuntime = {
-  renderZone: mount => createElement(EditableZone, mount),
-};
-
-const EDITOR_SHELL_STYLE = {
-  "--editor-sheet-height": "24rem",
-  "--editor-sidebar-width": "clamp(20rem, 24vw, 22.5rem)",
-} as CSSProperties;
 
 const EditorShell = ({
   adapter,
-  children,
   onExit,
+  outlets,
+  preview,
+  setPreview,
 }: EditorRootProps): ReactElement => {
   const t = useTranslations("core.editor");
   const [state, dispatch] = useReducer(
     visualEditorReducer,
     initialVisualEditorState,
   );
-  const [preview, setPreview] = useState(false);
   const [insertTarget, setInsertTarget] = useState<EditorInsertTarget | null>(
     null,
   );
   const [saveStatus, setSaveStatus] = useState<VisualEditorSaveStatus>("idle");
   const [leaving, setLeaving] = useState(false);
 
+  if (insertTarget !== null && !(insertTarget.zoneId in state.zones)) {
+    setInsertTarget(null);
+  }
+
   const panel: EditorPanelMode =
-    state.selectedBlockId === null ? "blocks" : "properties";
+    state.selected !== null && findBlock(state, state.selected) !== null
+      ? "properties"
+      : "blocks";
   const dirty = isVisualEditorDirty(state);
   const unsafe = useMemo(() => unsafeZoneIds(state), [state]);
 
   const setPanel = useCallback((mode: EditorPanelMode) => {
     if (mode === "blocks") {
-      dispatch({ blockId: null, type: "select" });
+      dispatch({ ref: null, type: "select" });
     }
   }, []);
 
@@ -175,7 +169,7 @@ const EditorShell = ({
         type: "insert",
         zoneId,
       });
-      dispatch({ blockId: instance.id, type: "select" });
+      dispatch({ ref: { blockId: instance.id, zoneId }, type: "select" });
       setInsertTarget(null);
     },
     [insertTarget, state.order, state.zones],
@@ -210,6 +204,7 @@ const EditorShell = ({
       save,
       saveStatus,
       setPanel,
+      setPreview,
       state,
       unsafe,
     ],
@@ -217,22 +212,17 @@ const EditorShell = ({
 
   return (
     <VisualEditorContext value={editor}>
-      <ContentEditContext value={contentEditRuntime}>
-        <EditorDndProvider>
-          <div
-            className={cn(
-              "transition-[padding] duration-200 ease-linear",
-              !preview &&
-                "pb-(--editor-sheet-height) md:pe-(--editor-sidebar-width) md:pb-0",
-            )}
-            style={EDITOR_SHELL_STYLE}
-          >
-            {children}
+      <EditorDndProvider>
+        {outlets.map(outlet =>
+          createPortal(
+            <EditableZone mount={outlet.mount} />,
+            outlet.node,
+            outlet.mount.id,
+          ),
+        )}
 
-            <EditorSidebar />
-          </div>
-        </EditorDndProvider>
-      </ContentEditContext>
+        <EditorSidebar />
+      </EditorDndProvider>
 
       <UnsavedChangesGuard />
       <LeaveConfirmDialog
@@ -256,15 +246,9 @@ const EditorShell = ({
   );
 };
 
-const EditorRoot = ({
-  adapter,
-  children,
-  onExit,
-}: EditorRootProps): ReactElement => (
+const EditorRoot = (props: EditorRootProps): ReactElement => (
   <EditorMessages>
-    <EditorShell adapter={adapter} onExit={onExit}>
-      {children}
-    </EditorShell>
+    <EditorShell {...props} />
   </EditorMessages>
 );
 

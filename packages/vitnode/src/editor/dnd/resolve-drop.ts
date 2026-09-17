@@ -1,4 +1,5 @@
 import type { BlockAllowedSpec } from "../../blocks/types";
+import type { EditorBlockRef } from "../state/types";
 
 import { BLOCK_WILDCARD } from "../../blocks/const";
 import { isBlockAllowed } from "../../blocks/registry";
@@ -6,6 +7,8 @@ import { isBlockAllowed } from "../../blocks/registry";
 export const ZONE_DROPPABLE_PREFIX = "vitnode-editor-zone:";
 
 export const CATALOG_DRAGGABLE_PREFIX = "vitnode-editor-catalog:";
+
+export const BLOCK_DRAGGABLE_PREFIX = "vitnode-editor-block:";
 
 export type EditorDragSource =
   | {
@@ -22,6 +25,7 @@ export type EditorDropEdge = "after" | "before";
 export interface EditorDropIndicator {
   blockId: string;
   edge: EditorDropEdge;
+  zoneId: string;
 }
 
 export interface DropPlacement {
@@ -45,67 +49,82 @@ export interface ResolveDropArgs {
 }
 
 export type ResolvedDrop =
-  | { blockId: string; kind: "move"; toIndex: number; toZoneId: string }
+  | {
+      blockId: string;
+      fromZoneId: string;
+      kind: "move";
+      toIndex: number;
+      toZoneId: string;
+    }
   | { kind: "insert"; toIndex: number; toZoneId: string; type: string };
 
 export const zoneDroppableId = (zoneId: string): string =>
-  `${ZONE_DROPPABLE_PREFIX}${zoneId}`;
+  `${ZONE_DROPPABLE_PREFIX}${encodeURIComponent(zoneId)}`;
 
-export const zoneIdFromDroppableId = (droppableId: string): null | string =>
-  droppableId.startsWith(ZONE_DROPPABLE_PREFIX)
-    ? droppableId.slice(ZONE_DROPPABLE_PREFIX.length)
-    : null;
+export const isZoneDroppableId = (droppableId: string): boolean =>
+  droppableId.startsWith(ZONE_DROPPABLE_PREFIX);
 
 export const catalogDraggableId = (type: string): string =>
-  `${CATALOG_DRAGGABLE_PREFIX}${type}`;
+  `${CATALOG_DRAGGABLE_PREFIX}${encodeURIComponent(type)}`;
 
-export const catalogTypeFromDraggableId = (
+export const blockDraggableId = ({ blockId, zoneId }: EditorBlockRef): string =>
+  `${BLOCK_DRAGGABLE_PREFIX}${encodeURIComponent(zoneId)}/${encodeURIComponent(blockId)}`;
+
+export const blockRefFromDraggableId = (
   draggableId: string,
-): null | string =>
-  draggableId.startsWith(CATALOG_DRAGGABLE_PREFIX)
-    ? draggableId.slice(CATALOG_DRAGGABLE_PREFIX.length)
-    : null;
+): EditorBlockRef | null => {
+  if (!draggableId.startsWith(BLOCK_DRAGGABLE_PREFIX)) return null;
+
+  const rest = draggableId.slice(BLOCK_DRAGGABLE_PREFIX.length);
+  const separator = rest.indexOf("/");
+  if (separator === -1) return null;
+
+  return {
+    blockId: decodeURIComponent(rest.slice(separator + 1)),
+    zoneId: decodeURIComponent(rest.slice(0, separator)),
+  };
+};
 
 const asRecord = (value: unknown): null | Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 
-export const readDragSource = (
-  draggableId: string,
-  data: unknown,
-): EditorDragSource | null => {
+export const readDragSource = (data: unknown): EditorDragSource | null => {
   const record = asRecord(data);
   if (!record) return null;
 
-  const { index, kind, type, zoneId } = record;
+  const { blockId, index, kind, type, zoneId } = record;
   if (typeof type !== "string" || type === "") return null;
 
   if (kind === "catalog-block") return { kind: "catalog-block", type };
 
   if (
     kind !== "existing-block" ||
+    typeof blockId !== "string" ||
     typeof index !== "number" ||
     typeof zoneId !== "string"
   ) {
     return null;
   }
 
-  return { blockId: draggableId, index, kind: "existing-block", type, zoneId };
+  return { blockId, index, kind: "existing-block", type, zoneId };
 };
 
 export const readDropTarget = (
-  droppableId: string,
   data: unknown,
   edge: EditorDropEdge | null,
 ): EditorDropTarget | null => {
-  const zoneId = zoneIdFromDroppableId(droppableId);
-  if (zoneId !== null)
-    return { blockId: null, edge: null, index: null, zoneId };
+  const record = asRecord(data);
+  if (!record) return null;
 
-  if (catalogTypeFromDraggableId(droppableId) !== null) return null;
+  if (record.kind === "zone") {
+    return typeof record.zoneId === "string"
+      ? { blockId: null, edge: null, index: null, zoneId: record.zoneId }
+      : null;
+  }
 
-  const source = readDragSource(droppableId, data);
+  const source = readDragSource(record);
   if (source?.kind !== "existing-block") return null;
 
   return {
@@ -131,7 +150,7 @@ export const preferBlockCollisions = <
   collisions: readonly TCollision[],
 ): TCollision[] => {
   const blocks = collisions.filter(
-    collision => zoneIdFromDroppableId(String(collision.id)) === null,
+    collision => blockRefFromDraggableId(String(collision.id)) !== null,
   );
 
   return blocks.length > 0 ? blocks : [...collisions];
@@ -168,9 +187,10 @@ export const resolveDrop = ({
     };
   }
 
-  if (target.blockId !== null && target.blockId === source.blockId) return null;
-
   const sameZone = target.zoneId === source.zoneId;
+
+  if (sameZone && target.blockId === source.blockId) return null;
+
   const lastIndex = Math.max(
     sameZone ? targetBlockCount - 1 : targetBlockCount,
     0,
@@ -191,6 +211,7 @@ export const resolveDrop = ({
 
   return {
     blockId: source.blockId,
+    fromZoneId: source.zoneId,
     kind: "move",
     toIndex,
     toZoneId: target.zoneId,
@@ -201,13 +222,15 @@ export const dropPlacement = ({
   blockIds,
   overBlockId,
   resolved,
+  zoneId,
 }: {
   blockIds: readonly string[];
   overBlockId: null | string;
   resolved: ResolvedDrop;
+  zoneId: string;
 }): DropPlacement => {
   const remaining =
-    resolved.kind === "move"
+    resolved.kind === "move" && resolved.fromZoneId === zoneId
       ? blockIds.filter(blockId => blockId !== resolved.blockId)
       : blockIds;
   const gap = clamp(resolved.toIndex, remaining.length);
@@ -218,13 +241,16 @@ export const dropPlacement = ({
     const overIndex =
       overBlockId === null ? -1 : remaining.indexOf(overBlockId);
 
-    if (overIndex === gap) return { blockId: remaining[gap], edge: "before" };
-    if (overIndex === gap - 1)
-      return { blockId: remaining[overIndex], edge: "after" };
+    if (overIndex === gap) {
+      return { blockId: remaining[gap], edge: "before", zoneId };
+    }
+    if (overIndex === gap - 1) {
+      return { blockId: remaining[overIndex], edge: "after", zoneId };
+    }
 
     return gap === remaining.length
-      ? { blockId: remaining[gap - 1], edge: "after" }
-      : { blockId: remaining[gap], edge: "before" };
+      ? { blockId: remaining[gap - 1], edge: "after", zoneId }
+      : { blockId: remaining[gap], edge: "before", zoneId };
   };
 
   return {

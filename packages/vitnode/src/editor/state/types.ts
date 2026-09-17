@@ -4,6 +4,11 @@ import type {
   BlockRegistry,
 } from "../../blocks/types";
 
+export interface EditorBlockRef {
+  blockId: string;
+  zoneId: string;
+}
+
 export interface EditorZoneInvalidEntry {
   index: number;
   value: unknown;
@@ -28,9 +33,9 @@ export interface EditorZoneState {
 }
 
 export interface VisualEditorState {
+  droppedZoneIds: readonly string[];
   order: readonly string[];
-  selectedBlockId: null | string;
-  selectedZoneId: null | string;
+  selected: EditorBlockRef | null;
   zones: Readonly<Record<string, EditorZoneState>>;
 }
 
@@ -43,11 +48,14 @@ export type VisualEditorInvalidSnapshot = Readonly<
 >;
 
 export type VisualEditorAction =
-  | { blockId: null | string; type: "select" }
-  | { blockId: string; data: Record<string, unknown>; type: "update" }
-  | { blockId: string; toIndex: number; toZoneId: string; type: "move" }
-  | { blockId: string; type: "duplicate" }
-  | { blockId: string; type: "remove" }
+  | {
+      blockId: string;
+      fromZoneId: string;
+      toIndex: number;
+      toZoneId: string;
+      type: "move";
+    }
+  | { data: Record<string, unknown>; ref: EditorBlockRef; type: "update" }
   | {
       index: number;
       instance: AnyBlockInstance;
@@ -60,5 +68,10 @@ export type VisualEditorAction =
       snapshot: VisualEditorSnapshot;
       type: "saved";
     }
+  | { ref: EditorBlockRef; type: "duplicate" }
+  | { ref: EditorBlockRef; type: "remove" }
+  | { ref: EditorBlockRef | null; type: "select" }
   | { type: "discard" }
-  | { type: "mount"; zone: EditorZoneMount };
+  | { type: "dismiss-dropped" }
+  | { type: "mount"; zone: EditorZoneMount }
+  | { type: "unmount"; zoneId: string };

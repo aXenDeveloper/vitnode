@@ -12,6 +12,7 @@ import type {
 import { useContentEditRuntime } from "./edit-context";
 import { ContentRenderer } from "./renderer";
 import { assertContentZoneId, contentZoneAttributes } from "./zone-meta";
+import { ContentZoneOutlet } from "./zone-outlet";
 
 export interface ContentZoneProps {
   allowedBlocks?: BlockAllowedSpec;
@@ -39,15 +40,18 @@ export const ContentZone = ({
   assertContentZoneId(id);
 
   if (editRuntime) {
-    return editRuntime.renderZone({
-      allowedBlocks,
-      as,
-      blocks,
-      className,
-      fallback,
-      id,
-      registry,
-      validate,
+    return createElement(ContentZoneOutlet, {
+      mount: {
+        allowedBlocks,
+        as,
+        blocks,
+        className,
+        fallback,
+        id,
+        registry,
+        validate,
+      },
+      runtime: editRuntime,
     });
   }
 

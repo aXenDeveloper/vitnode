@@ -138,6 +138,50 @@ This is enforced, not merely intended. `packages/vitnode/src/editor/boundaries.t
 
 Turning that static `import` back on would be a one-line change and a silently 200 kB heavier home page. The test is the thing that notices.
 
+## Turning it on does not restart your page
+
+Lazy loading is easy to get right in a way that quietly breaks the page underneath. The obvious shape is this one:
+
+```tsx
+if (!enabled) return <>{children}</>
+
+return (
+  <Suspense fallback={children}>
+    <EditorRoot>{children}</EditorRoot>
+  </Suspense>
+)
+```
+
+It looks like a toggle. It is a **remount**. React reconciles by position in the element tree, so the moment a wrapper appears above `children`, everything in them is torn down and built again: `useState` resets, uncontrolled inputs empty themselves, focus is lost, a playing video restarts. Reusing the identical `children` element object does not help - position is what counts, and `<Suspense>` alone is enough to do it.
+
+That is not acceptable on a page somebody is already using. So the runtime is built the other way round:
+
+```text
+ContentEditorRuntime            ← public, always mounted
+  ContentEditContext.Provider   ← always mounted, value is null in view mode
+    <div>                       ← always mounted, display:contents until editing
+      {children}                ← one fixed slot, never moves
+    </div>
+    {enabled && <Suspense><EditorRoot/></Suspense>}   ← a SIBLING
+```
+
+The editor is never an ancestor of your page. Turning edit mode on changes one context value and mounts a sibling; nothing above `children` changes, so nothing in them remounts. The wrapper `<div>` is `display: contents` while nobody is editing, so it does not take part in layout either - your page's grid or flex parent sees exactly what it saw before.
+
+### Then how do zones become editable?
+
+`@dnd-kit` needs its `DndContext` above every droppable, and the zones are inside your page. Since the editor may not wrap your page, the zones come **out** to it instead.
+
+In edit mode `ContentZone` renders a bare host element - your `as`, your `className`, the usual `data-vitnode-zone` attributes - and registers that DOM node with the runtime. The editor, which owns the `DndContext`, renders the real `EditableZone` into each registered node with `createPortal`:
+
+```text
+page             editor
+────             ──────
+<aside ref>  ←   createPortal(<EditableZone/>, node)
+                   inside <DndContext>, inside the editor's own providers
+```
+
+The markup lands where you put the zone; the React tree it belongs to is the editor's. One consequence is worth knowing: a block rendered in a zone reads React context from the **editor**, not from inside your page subtree. Context from your app root reaches it as usual - the router, the theme, the intl provider - but a provider you render *between* your page and a `ContentZone` will not. No built-in or plugin block relies on that today, and if yours does, pass the value through the block's own data instead.
+
 ## The interaction model
 
 A block is a real component. It contains links, buttons, forms, embedded video - things that do something when you click them. In edit mode, clicking one has to mean _select this block_, not _follow this link_.
@@ -284,7 +328,7 @@ Every value a zone mounts with is sorted into one of two piles:
 |                                 |                                                                                                                                                         |
 | :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **A block with bad data**       | `{ id, type, data }` is intact and `type` is registered, but `data` does not match the fields. It stays a block: selectable, movable, deletable.        |
-| **Something that is not a block** | No usable `id`, no `type`, a duplicate instance id, or not an object at all. Nothing can be inferred from it, so nothing pretends to.                 |
+| **Something that is not a block** | No usable `id`, no `type`, an id already used **by an earlier block in the same zone**, or not an object at all. Nothing can be inferred from it, so nothing pretends to. |
 
 The first pile keeps working exactly as before - the block renders an [`InvalidBlock`](#the-properties-panel) placeholder in place of its component, and its own shell keeps the drag handle, the duplicate and the delete button. Its data is bad; its identity is not.
 
@@ -300,6 +344,21 @@ interface EditorZoneState {
 
 Nothing in the editor - no reducer action, no drop resolver, no block component - is ever handed one of those values. The zone shows them at the top, prints what each one looks like, and offers exactly one action per entry: **Remove invalid entry**.
 
+### One id per zone, not one id per page
+
+An instance id has to be unique **within its zone**, and only within its zone. Two blocks sharing an id in one zone are indistinguishable there, so the second one goes in the opaque pile above. Two blocks sharing an id in two *different* zones are perfectly valid - the Content Engine validates a blocks field on its own, so nothing has ever promised otherwise, and a zone copied from one field into another would trip over any rule that did.
+
+The editor therefore never identifies a block by its id alone. Selection, updates, deletion, duplication, moves and drag-and-drop all carry the zone:
+
+```ts
+interface EditorBlockRef {
+  blockId: string
+  zoneId: string
+}
+```
+
+Drag-and-drop ids are built the same way - `blockDraggableId({ zoneId, blockId })` percent-encodes both halves, so an id survives a round trip whatever characters it contains - and the drag payload carries the ref structurally rather than being parsed back out of a string. Selecting the copy of `X` in the sidebar zone can never edit the copy of `X` above the profile form.
+
 ### Saving is blocked until you decide
 
 While a zone still holds one, the whole editor refuses to save. The **Save** button is disabled, the sidebar footer explains why, and the adapter is not called even from **Save and finish**:
@@ -309,6 +368,23 @@ While a zone still holds one, the whole editor refuses to save. The **Save** but
 That is deliberate, and it is the whole point of the pile. The save payload is a **replacement** array per zone - the editor hands over the blocks it understands, and the API stores exactly that. If a value the editor could not read were quietly left out of that array, editing an unrelated block in the same zone would delete it. Storing `[A, malformed, B]` and saving after a change to `A` would write `[A2, B]`, and nobody would ever be told.
 
 So removal is a decision you make, one entry at a time, and it is an edit like any other: **Discard** brings the entries back, and the page is dirty until you save.
+
+## Zones that leave the page
+
+A page is allowed to change its mind. A tab, a feature flag, a route transition - any of them can stop rendering a `ContentZone` while edit mode is still on, and the editor has to have an answer that is not "persist it anyway".
+
+When a zone's outlet unmounts it is **removed from the document**: out of `zones`, out of `order`, and therefore out of the next save payload entirely. A stale zone can never be written back. If it owned the selection, the selection clears and the sidebar returns to **Available Blocks**; if it was the target of **Add block**, that target clears too.
+
+What happens to unsaved work in it depends on whether there was any:
+
+|                          |                                                                                                                                       |
+| :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| **No unsaved changes**   | It is dropped silently. There was nothing to lose.                                                                                     |
+| **Unsaved changes**      | It is still dropped - the zone is gone, there is nowhere to put them back - but the sidebar footer names it, so it is never *quiet*.  |
+
+That is the Stage 3 rule: an unmounted zone is out of the editable document, and losing work to it is reported rather than blocked. Blocking **Save** would trap you on a page whose zone no longer exists, and keeping the zone would mean writing content the page has stopped showing. Bring the zone back and it re-mounts from whatever the page hands it, with a fresh baseline.
+
+What the *host* does with the gap is the host's call, and it matters. Because the save payload only carries zones the editor currently holds, compose the stored field set on top of your canonical layout rather than on top of defaults - `zonesToFields(input.zones, zonesToFields(layout.zones, SHIPPED_DEFAULTS))` in the playground - so a zone that is off the page keeps whatever was last stored for it instead of being reset.
 
 ## Saving is the host's job
 
@@ -426,6 +502,8 @@ Dimming it would mean fading the page and un-fading the zones, and a descendant 
 
 **Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen. The page reserves room for it - `--editor-sheet-height` is padding on the canvas below `md` and the width of the sidebar above it, so the last zone always scrolls clear of the sheet and Preview takes both away - but nothing is _tuned_ for touch: a drag competes with page scrolling, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
 
+**A zone's blocks render in the editor's React tree, not your page's.** The consequence of the portal described [above](#then-how-do-zones-become-editable): context from your app root reaches a block as usual, context you provide between your page and a `ContentZone` does not. Nothing ships today that needs it, and the fix if you do is to put the value in the block's data.
+
 **There is no end-to-end test harness.** The pure logic is covered by vitest - the reducer, the drop resolver and its insertion placement, zone drop states, the save input, the catalogue, and the module-graph boundary test that keeps the editor out of public bundles. What no test covers is a real browser actually dragging something, so the [manual checklist](#verifying-it-yourself) is the regression suite for gestures. `apps/web` has no test runner configured at all, which is why the checklist lives in this page rather than in a spec file.
 
 ## Extension points
@@ -492,11 +570,12 @@ Reload and filter the request list to `/src/editor/`. **Nothing.** Not one edito
 
 **Click Edit page**
 
-|         | Expected                                                    |
-| :------ | :---------------------------------------------------------- |
-| Network | Exactly one new chunk, on this click and not before.        |
-| Zones   | Dashed outlines with the zone id in the corner.             |
-| Layout  | Nothing jumped, except the canvas making room on the right. |
+|            | Expected                                                                          |
+| :--------- | :--------------------------------------------------------------------------------- |
+| Network    | Exactly one new chunk, on this click and not before.                              |
+| Zones      | Dashed outlines with the zone id in the corner.                                   |
+| Layout     | Nothing jumped, except the canvas making room on the right.                       |
+| Page state | The profile form still holds what you typed, and the counter still holds its count. |
 
 Click **Finish editing**, then **Edit page** again: the second time, **no** request is made. The chunk is already in memory.
 
@@ -638,6 +717,8 @@ Now do it the other way round: click **Edit page**, change something, and press 
 
 ### While you are in there
 
+- **Nothing on the page restarts.** Type a name into the profile form, press the **Local state** counter a few times, then **Edit page** and **Finish editing**. Both survive, both directions, because the editor mounts beside your page rather than around it.
+- **Take the sidebar zone off the page** with the button above the zones, while the editor is open. It leaves the editor with it: the outline goes, an **Add block** target pointing at it clears, and a selected block inside it returns the sidebar to _Available Blocks_. Save afterwards and the stored sidebar keeps what it had - the editor's copy is not written back, and it is not reset to defaults either. Edit it first and the footer names it rather than losing the change quietly. Put it back and it returns with a fresh baseline.
 - **Discard** puts every zone back to what loaded, and the footer stops saying _Unsaved changes_.
 - **Duplicate** drops a copy directly below the original with its own instance id; **Delete** takes it away and returns the sidebar to the catalogue.
 - The profile form in the middle must have **no** outline, **no** handle and **no** overlay, and its input must still take focus and type. It is application code.

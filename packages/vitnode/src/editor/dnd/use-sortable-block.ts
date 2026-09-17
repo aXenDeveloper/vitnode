@@ -3,7 +3,10 @@ import type { CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import type { EditorBlockRef } from "../state/types";
+
 import { useVisualEditor } from "../context";
+import { blockDraggableId } from "./resolve-drop";
 
 export interface SortableBlock {
   dragging: boolean;
@@ -13,17 +16,16 @@ export interface SortableBlock {
 }
 
 export const useSortableBlock = ({
-  blockId,
   index,
-  zoneId,
+  ref,
 }: {
-  blockId: string;
   index: number;
-  zoneId: string;
+  ref: EditorBlockRef;
 }): SortableBlock => {
   const { preview, state } = useVisualEditor();
   const type =
-    state.zones[zoneId]?.blocks.find(block => block.id === blockId)?.type ?? "";
+    state.zones[ref.zoneId]?.blocks.find(block => block.id === ref.blockId)
+      ?.type ?? "";
 
   const {
     attributes,
@@ -34,9 +36,15 @@ export const useSortableBlock = ({
     transform,
     transition,
   } = useSortable({
-    data: { index, kind: "existing-block", type, zoneId },
+    data: {
+      blockId: ref.blockId,
+      index,
+      kind: "existing-block",
+      type,
+      zoneId: ref.zoneId,
+    },
     disabled: preview,
-    id: blockId,
+    id: blockDraggableId(ref),
   });
 
   return {

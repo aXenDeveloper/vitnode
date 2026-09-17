@@ -1,7 +1,9 @@
 export type {
   ContentEditRuntime,
   ContentZoneMount,
+  ContentZoneOutletEntry,
 } from "../blocks/edit-context";
+export type { ContentEditorShellMode } from "../blocks/editor-shell";
 export type {
   VisualEditorAdapter,
   VisualEditorSaveInput,
@@ -18,10 +20,12 @@ export { default as EditorRoot } from "./root";
 export type { EditorRootProps } from "./root";
 export { EDITOR_NAMESPACES } from "./runtime/namespaces";
 export type {
+  EditorBlockRef,
   EditorZoneInvalidEntry,
   EditorZoneMount,
   EditorZoneState,
   VisualEditorAction,
+  VisualEditorInvalidSnapshot,
   VisualEditorSnapshot,
   VisualEditorState,
 } from "./state/types";

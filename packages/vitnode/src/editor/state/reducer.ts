@@ -4,6 +4,7 @@ import type {
   BlockUnknownData,
 } from "../../blocks/types";
 import type {
+  EditorBlockRef,
   EditorZoneInvalidEntry,
   EditorZoneMount,
   EditorZoneState,
@@ -14,9 +15,9 @@ import type {
 import { createBlockInstanceId } from "../../blocks/instance";
 
 export const initialVisualEditorState: VisualEditorState = {
+  droppedZoneIds: [],
   order: [],
-  selectedBlockId: null,
-  selectedZoneId: null,
+  selected: null,
   zones: {},
 };
 
@@ -73,6 +74,16 @@ export const sameInvalidEntries = (
   (left.length === right.length &&
     left.every((entry, at) => entry === right[at]));
 
+export const sameBlockRef = (
+  left: EditorBlockRef | null,
+  right: EditorBlockRef | null,
+): boolean =>
+  left === right ||
+  (left !== null &&
+    right !== null &&
+    left.blockId === right.blockId &&
+    left.zoneId === right.zoneId);
+
 const sameAllowed = (
   left: BlockAllowedSpec | undefined,
   right: BlockAllowedSpec | undefined,
@@ -99,22 +110,22 @@ const cloneValue = (value: unknown): unknown => {
   );
 };
 
+export const findBlockInZone = (
+  zone: EditorZoneState | undefined,
+  blockId: string,
+): null | { index: number; instance: AnyBlockInstance } => {
+  if (!zone) return null;
+
+  const index = zone.blocks.findIndex(instance => instance.id === blockId);
+
+  return index === -1 ? null : { index, instance: zone.blocks[index] };
+};
+
 export const findBlock = (
   state: VisualEditorState,
-  blockId: string,
-): null | { index: number; instance: AnyBlockInstance; zoneId: string } => {
-  for (const zoneId of state.order) {
-    const zone = state.zones[zoneId];
-    if (!zone) continue;
-
-    const index = zone.blocks.findIndex(instance => instance.id === blockId);
-    if (index !== -1) {
-      return { index, instance: zone.blocks[index], zoneId };
-    }
-  }
-
-  return null;
-};
+  ref: EditorBlockRef,
+): null | { index: number; instance: AnyBlockInstance } =>
+  findBlockInZone(state.zones[ref.zoneId], ref.blockId);
 
 const zoneChanged = (zone: EditorZoneState): boolean =>
   !sameBlocks(zone.blocks, zone.initial) ||
@@ -162,6 +173,12 @@ const withZones = (
   zones: Record<string, EditorZoneState>,
 ): VisualEditorState => ({ ...state, zones: { ...state.zones, ...zones } });
 
+const withoutSelectionIn = (
+  state: VisualEditorState,
+  zoneId: string,
+): VisualEditorState =>
+  state.selected?.zoneId === zoneId ? { ...state, selected: null } : state;
+
 const mountZone = (
   state: VisualEditorState,
   next: EditorZoneMount,
@@ -189,7 +206,11 @@ const mountZone = (
   const invalid = [...next.invalid];
 
   return withZones(
-    { ...state, order: [...state.order, next.id] },
+    {
+      ...state,
+      droppedZoneIds: state.droppedZoneIds.filter(id => id !== next.id),
+      order: [...state.order, next.id],
+    },
     {
       [next.id]: {
         allowedBlocks: next.allowedBlocks,
@@ -204,6 +225,27 @@ const mountZone = (
   );
 };
 
+const unmountZone = (
+  state: VisualEditorState,
+  zoneId: string,
+): VisualEditorState => {
+  const zone = state.zones[zoneId];
+  if (!zone) return state;
+
+  const { [zoneId]: removed, ...zones } = state.zones;
+  const dropped =
+    zoneChanged(removed) && !state.droppedZoneIds.includes(zoneId);
+
+  return {
+    ...withoutSelectionIn(state, zoneId),
+    droppedZoneIds: dropped
+      ? [...state.droppedZoneIds, zoneId]
+      : state.droppedZoneIds,
+    order: state.order.filter(id => id !== zoneId),
+    zones,
+  };
+};
+
 export const visualEditorReducer = (
   state: VisualEditorState,
   action: VisualEditorAction,
@@ -212,8 +254,8 @@ export const visualEditorReducer = (
     case "discard":
       return {
         ...state,
-        selectedBlockId: null,
-        selectedZoneId: null,
+        droppedZoneIds: [],
+        selected: null,
         zones: Object.fromEntries(
           Object.entries(state.zones).map(([id, zone]) => [
             id,
@@ -228,11 +270,16 @@ export const visualEditorReducer = (
         ),
       };
 
-    case "duplicate": {
-      const found = findBlock(state, action.blockId);
-      if (!found) return state;
+    case "dismiss-dropped":
+      return state.droppedZoneIds.length === 0
+        ? state
+        : { ...state, droppedZoneIds: [] };
 
-      const zone = state.zones[found.zoneId];
+    case "duplicate": {
+      const zone = state.zones[action.ref.zoneId];
+      const found = findBlockInZone(zone, action.ref.blockId);
+      if (!zone || !found) return state;
+
       const copy: AnyBlockInstance = {
         data: cloneValue(found.instance.data) as BlockUnknownData,
         id: createBlockInstanceId(),
@@ -240,13 +287,9 @@ export const visualEditorReducer = (
       };
 
       return withZones(
+        { ...state, selected: { blockId: copy.id, zoneId: zone.id } },
         {
-          ...state,
-          selectedBlockId: copy.id,
-          selectedZoneId: found.zoneId,
-        },
-        {
-          [found.zoneId]: {
+          [zone.id]: {
             ...zone,
             blocks: insertAt(zone.blocks, found.index + 1, copy),
           },
@@ -270,54 +313,61 @@ export const visualEditorReducer = (
       return mountZone(state, action.zone);
 
     case "move": {
-      const found = findBlock(state, action.blockId);
+      const source = state.zones[action.fromZoneId];
       const target = state.zones[action.toZoneId];
-      if (!found || !target) return state;
+      const found = findBlockInZone(source, action.blockId);
+      if (!source || !target || !found) return state;
 
-      const source = state.zones[found.zoneId];
-      const remaining = source.blocks.filter(
-        instance => instance.id !== action.blockId,
-      );
-      const selected = state.selectedBlockId === action.blockId;
-      const next = selected
-        ? { ...state, selectedZoneId: action.toZoneId }
-        : state;
+      const remaining = source.blocks.filter((_, at) => at !== found.index);
+      const selected = sameBlockRef(state.selected, {
+        blockId: action.blockId,
+        zoneId: action.fromZoneId,
+      });
 
-      if (found.zoneId === action.toZoneId) {
-        return withZones(next, {
-          [found.zoneId]: {
+      if (action.fromZoneId === action.toZoneId) {
+        return withZones(state, {
+          [action.fromZoneId]: {
             ...source,
             blocks: insertAt(remaining, action.toIndex, found.instance),
           },
         });
       }
 
-      return withZones(next, {
-        [action.toZoneId]: {
-          ...target,
-          blocks: insertAt(target.blocks, action.toIndex, found.instance),
-        },
-        [found.zoneId]: { ...source, blocks: remaining },
-      });
-    }
-
-    case "remove": {
-      const found = findBlock(state, action.blockId);
-      if (!found) return state;
-
-      const zone = state.zones[found.zoneId];
-      const selected = state.selectedBlockId === action.blockId;
+      const collides = findBlockInZone(target, action.blockId) !== null;
+      const moved = collides
+        ? { ...found.instance, id: createBlockInstanceId() }
+        : found.instance;
 
       return withZones(
         selected
-          ? { ...state, selectedBlockId: null, selectedZoneId: null }
+          ? {
+              ...state,
+              selected: { blockId: moved.id, zoneId: action.toZoneId },
+            }
           : state,
         {
-          [found.zoneId]: {
+          [action.toZoneId]: {
+            ...target,
+            blocks: insertAt(target.blocks, action.toIndex, moved),
+          },
+          [action.fromZoneId]: { ...source, blocks: remaining },
+        },
+      );
+    }
+
+    case "remove": {
+      const zone = state.zones[action.ref.zoneId];
+      const found = findBlockInZone(zone, action.ref.blockId);
+      if (!zone || !found) return state;
+
+      return withZones(
+        sameBlockRef(state.selected, action.ref)
+          ? { ...state, selected: null }
+          : state,
+        {
+          [zone.id]: {
             ...zone,
-            blocks: zone.blocks.filter(
-              instance => instance.id !== action.blockId,
-            ),
+            blocks: zone.blocks.filter((_, at) => at !== found.index),
           },
         },
       );
@@ -338,6 +388,7 @@ export const visualEditorReducer = (
     case "saved":
       return {
         ...state,
+        droppedZoneIds: [],
         zones: Object.fromEntries(
           Object.entries(state.zones).map(([id, zone]) => {
             const persisted = Object.hasOwn(action.snapshot, id)
@@ -363,38 +414,32 @@ export const visualEditorReducer = (
       };
 
     case "select": {
-      if (action.blockId === null) {
-        return state.selectedBlockId === null && state.selectedZoneId === null
-          ? state
-          : { ...state, selectedBlockId: null, selectedZoneId: null };
+      if (action.ref === null) {
+        return state.selected === null ? state : { ...state, selected: null };
       }
 
-      const found = findBlock(state, action.blockId);
-      if (!found) return state;
+      if (findBlock(state, action.ref) === null) return state;
 
-      return state.selectedBlockId === action.blockId &&
-        state.selectedZoneId === found.zoneId
+      return sameBlockRef(state.selected, action.ref)
         ? state
-        : {
-            ...state,
-            selectedBlockId: action.blockId,
-            selectedZoneId: found.zoneId,
-          };
+        : { ...state, selected: action.ref };
     }
 
-    case "update": {
-      const found = findBlock(state, action.blockId);
-      if (!found || sameValue(found.instance.data, action.data)) return state;
+    case "unmount":
+      return unmountZone(state, action.zoneId);
 
-      const zone = state.zones[found.zoneId];
+    case "update": {
+      const zone = state.zones[action.ref.zoneId];
+      const found = findBlockInZone(zone, action.ref.blockId);
+      if (!zone || !found || sameValue(found.instance.data, action.data)) {
+        return state;
+      }
 
       return withZones(state, {
-        [found.zoneId]: {
+        [zone.id]: {
           ...zone,
-          blocks: zone.blocks.map(instance =>
-            instance.id === action.blockId
-              ? { ...instance, data: action.data }
-              : instance,
+          blocks: zone.blocks.map((instance, at) =>
+            at === found.index ? { ...instance, data: action.data } : instance,
           ),
         },
       });

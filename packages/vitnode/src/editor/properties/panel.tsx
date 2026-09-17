@@ -9,6 +9,7 @@ import type {
   BlockUnknownData,
   RegisteredBlock,
 } from "../../blocks/types";
+import type { EditorBlockRef } from "../state/types";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { AutoForm } from "../../components/form/auto-form";
@@ -28,12 +29,12 @@ import {
 
 const BlockDataSync = ({
   base,
-  blockId,
   formSchema,
+  target,
 }: {
   base: BlockUnknownData;
-  blockId: string;
   formSchema: z.ZodObject<z.ZodRawShape>;
+  target: EditorBlockRef;
 }) => {
   const { dispatch } = useVisualEditor();
   const { form } = useFormApi();
@@ -50,8 +51,8 @@ const BlockDataSync = ({
       if (!parsed.success) return;
 
       dispatch({
-        blockId,
         data: blockDataFromFormValues(base, parsed.data),
+        ref: target,
         type: "update",
       });
     });
@@ -59,7 +60,7 @@ const BlockDataSync = ({
     return () => {
       subscription.unsubscribe();
     };
-  }, [base, blockId, dispatch, form, formSchema]);
+  }, [base, dispatch, form, formSchema, target]);
 
   return null;
 };
@@ -67,9 +68,11 @@ const BlockDataSync = ({
 const BlockPropertiesForm = ({
   entry,
   instance,
+  target,
 }: {
   entry: RegisteredBlock;
   instance: AnyBlockInstance;
+  target: EditorBlockRef;
 }) => {
   const [base] = useState<BlockUnknownData>(() => instance.data);
   const [specs] = useState(() => blockFieldSpecs(entry.definition));
@@ -93,11 +96,7 @@ const BlockPropertiesForm = ({
       )}
       mode="onChange"
     >
-      <BlockDataSync
-        base={base}
-        blockId={instance.id}
-        formSchema={formSchema}
-      />
+      <BlockDataSync base={base} formSchema={formSchema} target={target} />
     </AutoForm>
   );
 };
@@ -107,12 +106,10 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
   const t = useTranslations("core.editor");
   const tGlobal = useTranslations("core.global");
 
-  const found =
-    state.selectedBlockId === null
-      ? null
-      : findBlock(state, state.selectedBlockId);
+  const selected = state.selected;
+  const found = selected === null ? null : findBlock(state, selected);
 
-  if (found === null) {
+  if (selected === null || found === null) {
     return (
       <section aria-label={t("properties")} className="p-4">
         <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
@@ -123,7 +120,7 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
   }
 
   const registry =
-    state.zones[found.zoneId].registry ?? getDefaultBlockRegistry();
+    state.zones[selected.zoneId].registry ?? getDefaultBlockRegistry();
   const entry = registry?.get(found.instance.type);
   const issue = blockInstanceIssue(registry, found.instance);
   const name = entry ? blockDisplayName(entry) : t("block.unknown.title");
@@ -155,7 +152,8 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
         <BlockPropertiesForm
           entry={entry}
           instance={found.instance}
-          key={found.instance.id}
+          key={`${selected.zoneId}/${selected.blockId}`}
+          target={selected}
         />
       ) : null}
 
@@ -164,7 +162,7 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
           aria-label={t("block.duplicate", { name })}
           className="flex-1"
           onClick={() => {
-            dispatch({ blockId: found.instance.id, type: "duplicate" });
+            dispatch({ ref: selected, type: "duplicate" });
           }}
           size="sm"
           variant="secondary"
@@ -177,7 +175,7 @@ export const BlockPropertiesPanelContent = (): ReactElement => {
           aria-label={t("block.remove", { name })}
           className="flex-1"
           onClick={() => {
-            dispatch({ blockId: found.instance.id, type: "remove" });
+            dispatch({ ref: selected, type: "remove" });
             setPanel("blocks");
           }}
           size="sm"

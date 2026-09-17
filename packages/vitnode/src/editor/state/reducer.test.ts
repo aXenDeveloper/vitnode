@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import type { AnyBlockInstance } from "../../blocks/types";
-import type { EditorZoneMount, VisualEditorState } from "./types";
+import type {
+  EditorBlockRef,
+  EditorZoneMount,
+  VisualEditorState,
+} from "./types";
 
 import { createBlockInstance } from "../../blocks/instance";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
   findBlock,
+  findBlockInZone,
   initialVisualEditorState,
   isVisualEditorDirty,
   unsafeZoneIds,
@@ -16,6 +21,11 @@ import {
 
 const block = (text: string): AnyBlockInstance =>
   createBlockInstance("core:text", { body: text });
+
+const ref = (zoneId: string, blockId: string): EditorBlockRef => ({
+  blockId,
+  zoneId,
+});
 
 const mount = (
   id: string,
@@ -150,25 +160,27 @@ describe("visualEditorReducer", () => {
     const first = block("a");
     const second = block("b");
     const state = visualEditorReducer(mounted(mount("main", [first, second])), {
-      blockId: second.id,
+      ref: ref("main", second.id),
       type: "select",
     });
 
     const removed = visualEditorReducer(state, {
-      blockId: second.id,
+      ref: ref("main", second.id),
       type: "remove",
     });
 
     expect(ids(removed, "main")).toStrictEqual([first.id]);
-    expect(removed.selectedBlockId).toBeNull();
-    expect(removed.selectedZoneId).toBeNull();
+    expect(removed.selected).toBeNull();
 
     const other = visualEditorReducer(state, {
-      blockId: first.id,
+      ref: ref("main", first.id),
       type: "remove",
     });
 
-    expect(other.selectedBlockId).toBe(second.id);
+    expect(other.selected).toStrictEqual({
+      blockId: second.id,
+      zoneId: "main",
+    });
   });
 
   it("duplicates a block with a fresh id, deeply copied, and selects the copy", () => {
@@ -177,7 +189,7 @@ describe("visualEditorReducer", () => {
       title: "Hello",
     });
     const state = visualEditorReducer(mounted(mount("main", [original])), {
-      blockId: original.id,
+      ref: ref("main", original.id),
       type: "duplicate",
     });
 
@@ -188,8 +200,7 @@ describe("visualEditorReducer", () => {
     expect(copy.type).toBe(original.type);
     expect(copy.data).toStrictEqual(original.data);
     expect(copy.data.seo).not.toBe(original.data.seo);
-    expect(state.selectedBlockId).toBe(copy.id);
-    expect(state.selectedZoneId).toBe("main");
+    expect(state.selected).toStrictEqual({ blockId: copy.id, zoneId: "main" });
   });
 
   it("reorders inside one zone against the list without the moved block", () => {
@@ -200,6 +211,7 @@ describe("visualEditorReducer", () => {
       ids(
         visualEditorReducer(state, {
           blockId: a.id,
+          fromZoneId: "main",
           toIndex: 2,
           toZoneId: "main",
           type: "move",
@@ -212,6 +224,7 @@ describe("visualEditorReducer", () => {
       ids(
         visualEditorReducer(state, {
           blockId: c.id,
+          fromZoneId: "main",
           toIndex: 0,
           toZoneId: "main",
           type: "move",
@@ -224,6 +237,7 @@ describe("visualEditorReducer", () => {
       ids(
         visualEditorReducer(state, {
           blockId: b.id,
+          fromZoneId: "main",
           toIndex: 1,
           toZoneId: "main",
           type: "move",
@@ -237,11 +251,12 @@ describe("visualEditorReducer", () => {
     const [a, b, c] = [block("a"), block("b"), block("c")];
     const state = visualEditorReducer(
       mounted(mount("main", [a, b]), mount("aside", [c])),
-      { blockId: a.id, type: "select" },
+      { ref: ref("main", a.id), type: "select" },
     );
 
     const moved = visualEditorReducer(state, {
       blockId: a.id,
+      fromZoneId: "main",
       toIndex: 0,
       toZoneId: "aside",
       type: "move",
@@ -249,11 +264,10 @@ describe("visualEditorReducer", () => {
 
     expect(ids(moved, "main")).toStrictEqual([b.id]);
     expect(ids(moved, "aside")).toStrictEqual([a.id, c.id]);
-    expect(moved.selectedZoneId).toBe("aside");
-    expect(findBlock(moved, a.id)).toStrictEqual({
+    expect(moved.selected).toStrictEqual({ blockId: a.id, zoneId: "aside" });
+    expect(findBlock(moved, ref("aside", a.id))).toStrictEqual({
       index: 0,
       instance: a,
-      zoneId: "aside",
     });
   });
 
@@ -263,8 +277,8 @@ describe("visualEditorReducer", () => {
       heading: "h",
     });
     const state = visualEditorReducer(mounted(mount("main", [instance])), {
-      blockId: instance.id,
       data: { body: "b" },
+      ref: ref("main", instance.id),
       type: "update",
     });
 
@@ -281,40 +295,39 @@ describe("visualEditorReducer", () => {
 
     expect(
       visualEditorReducer(state, {
-        blockId: instance.id,
         data: { body: "a", seo: { title: "t" } },
+        ref: ref("main", instance.id),
         type: "update",
       }),
     ).toBe(state);
   });
 
-  it("derives the selected zone and clears both on null", () => {
+  it("carries the zone alongside the selected block and clears both on null", () => {
     const instance = block("a");
     const state = visualEditorReducer(mounted(mount("main", [instance])), {
+      ref: ref("main", instance.id),
+      type: "select",
+    });
+
+    expect(state.selected).toStrictEqual({
       blockId: instance.id,
-      type: "select",
+      zoneId: "main",
     });
 
-    expect(state.selectedZoneId).toBe("main");
+    const cleared = visualEditorReducer(state, { ref: null, type: "select" });
 
-    const cleared = visualEditorReducer(state, {
-      blockId: null,
-      type: "select",
-    });
-
-    expect(cleared.selectedBlockId).toBeNull();
-    expect(cleared.selectedZoneId).toBeNull();
+    expect(cleared.selected).toBeNull();
   });
 
   it("restores every zone on discard and clears the selection", () => {
     const [a, b, c] = [block("a"), block("b"), block("c")];
     const state = mounted(mount("main", [a, b]), mount("aside", [c]));
     const edited = visualEditorReducer(
-      visualEditorReducer(state, { blockId: b.id, type: "remove" }),
+      visualEditorReducer(state, { ref: ref("main", b.id), type: "remove" }),
       { index: 0, instance: block("d"), type: "insert", zoneId: "aside" },
     );
     const selected = visualEditorReducer(edited, {
-      blockId: a.id,
+      ref: ref("main", a.id),
       type: "select",
     });
 
@@ -324,7 +337,7 @@ describe("visualEditorReducer", () => {
 
     expect(ids(discarded, "main")).toStrictEqual([a.id, b.id]);
     expect(ids(discarded, "aside")).toStrictEqual([c.id]);
-    expect(discarded.selectedBlockId).toBeNull();
+    expect(discarded.selected).toBeNull();
     expect(isVisualEditorDirty(discarded)).toBe(false);
   });
 
@@ -353,16 +366,16 @@ describe("visualEditorReducer", () => {
     const instance = createBlockInstance("core:text", { body: "a" });
     const state = mounted(mount("main", [instance]));
     const edited = visualEditorReducer(state, {
-      blockId: instance.id,
       data: { body: "b" },
+      ref: ref("main", instance.id),
       type: "update",
     });
 
     expect(isVisualEditorDirty(edited)).toBe(true);
 
     const undone = visualEditorReducer(edited, {
-      blockId: instance.id,
       data: { body: "a" },
+      ref: ref("main", instance.id),
       type: "update",
     });
 
@@ -375,6 +388,7 @@ describe("visualEditorReducer", () => {
     const state = mounted(mount("main", [a, b]));
     const moved = visualEditorReducer(state, {
       blockId: a.id,
+      fromZoneId: "main",
       toIndex: 1,
       toZoneId: "main",
       type: "move",
@@ -384,6 +398,7 @@ describe("visualEditorReducer", () => {
 
     const back = visualEditorReducer(moved, {
       blockId: a.id,
+      fromZoneId: "main",
       toIndex: 0,
       toZoneId: "main",
       type: "move",
@@ -395,9 +410,12 @@ describe("visualEditorReducer", () => {
   it("finds nothing for an unknown block", () => {
     const state = mounted(mount("main", [block("a")]));
 
-    expect(findBlock(state, "MISSING")).toBeNull();
+    expect(findBlock(state, ref("main", "MISSING"))).toBeNull();
     expect(
-      visualEditorReducer(state, { blockId: "MISSING", type: "select" }),
+      visualEditorReducer(state, {
+        ref: ref("main", "MISSING"),
+        type: "select",
+      }),
     ).toBe(state);
   });
 });
@@ -556,8 +574,8 @@ describe("persisted content the editor cannot read", () => {
   it("stays unsafe while a sibling block is edited, so the save cannot drop it", () => {
     const [a, b] = [block("a"), block("b")];
     const edited = visualEditorReducer(mounted(withMalformed("main", [a, b])), {
-      blockId: a.id,
       data: { body: "a2" },
+      ref: ref("main", a.id),
       type: "update",
     });
 
@@ -651,5 +669,342 @@ describe("persisted content the editor cannot read", () => {
 
     expect(isVisualEditorDirty(saved)).toBe(true);
     expect(unsafeZoneIds(saved)).toStrictEqual(["main"]);
+  });
+});
+
+describe("one block id living in two zones", () => {
+  const withId = (id: string, text: string): AnyBlockInstance => ({
+    data: { body: text },
+    id,
+    type: "core:text",
+  });
+
+  const twins = (): VisualEditorState =>
+    mounted(
+      mount("A", [withId("A1", "a1"), withId("X", "in a")]),
+      mount("B", [withId("X", "in b"), withId("B1", "b1")]),
+    );
+
+  it("gives the block a fresh id when it moves into a zone already holding that id", () => {
+    const moved = visualEditorReducer(twins(), {
+      blockId: "X",
+      fromZoneId: "B",
+      toIndex: 2,
+      toZoneId: "A",
+      type: "move",
+    });
+
+    const ids = moved.zones.A.blocks.map(instance => instance.id);
+
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
+    expect(ids.slice(0, 2)).toStrictEqual(["A1", "X"]);
+    expect(moved.zones.A.blocks[2].data).toStrictEqual({ body: "in b" });
+    expect(moved.zones.B.blocks.map(instance => instance.id)).toStrictEqual([
+      "B1",
+    ]);
+  });
+
+  it("keeps the id when the zone it moves into has no such block", () => {
+    const moved = visualEditorReducer(
+      mounted(
+        mount("A", [withId("A1", "a1"), withId("X", "in a")]),
+        mount("B", [withId("X", "in b")]),
+        mount("C", []),
+      ),
+      {
+        blockId: "X",
+        fromZoneId: "B",
+        toIndex: 0,
+        toZoneId: "C",
+        type: "move",
+      },
+    );
+
+    expect(moved.zones.C.blocks.map(instance => instance.id)).toStrictEqual([
+      "X",
+    ]);
+  });
+
+  it("follows the re-identified block with the selection that was on it", () => {
+    const selected = visualEditorReducer(twins(), {
+      ref: ref("B", "X"),
+      type: "select",
+    });
+
+    const moved = visualEditorReducer(selected, {
+      blockId: "X",
+      fromZoneId: "B",
+      toIndex: 0,
+      toZoneId: "A",
+      type: "move",
+    });
+
+    expect(moved.selected?.zoneId).toBe("A");
+    expect(moved.selected?.blockId).not.toBe("X");
+    const landed = moved.zones.A.blocks.find(
+      instance => instance.id === moved.selected?.blockId,
+    );
+
+    expect(landed?.data).toStrictEqual({ body: "in b" });
+  });
+
+  it("leaves a selection in the other zone alone when a twin moves", () => {
+    const selected = visualEditorReducer(twins(), {
+      ref: ref("A", "X"),
+      type: "select",
+    });
+
+    const moved = visualEditorReducer(selected, {
+      blockId: "X",
+      fromZoneId: "B",
+      toIndex: 0,
+      toZoneId: "A",
+      type: "move",
+    });
+
+    expect(moved.selected).toStrictEqual({ blockId: "X", zoneId: "A" });
+  });
+
+  it("selects the copy in the zone the ref names, never the other one", () => {
+    const state = twins();
+
+    expect(
+      visualEditorReducer(state, { ref: ref("A", "X"), type: "select" })
+        .selected,
+    ).toStrictEqual({ blockId: "X", zoneId: "A" });
+    expect(
+      visualEditorReducer(state, { ref: ref("B", "X"), type: "select" })
+        .selected,
+    ).toStrictEqual({ blockId: "X", zoneId: "B" });
+  });
+
+  it("updates only the copy the ref names and leaves the twin's data alone", () => {
+    const updated = visualEditorReducer(twins(), {
+      data: { body: "edited" },
+      ref: ref("B", "X"),
+      type: "update",
+    });
+
+    expect(findBlock(updated, ref("B", "X"))?.instance.data).toStrictEqual({
+      body: "edited",
+    });
+    expect(findBlock(updated, ref("A", "X"))?.instance.data).toStrictEqual({
+      body: "in a",
+    });
+  });
+
+  it("removes only the copy the ref names and keeps the twin on the page", () => {
+    const removed = visualEditorReducer(twins(), {
+      ref: ref("B", "X"),
+      type: "remove",
+    });
+
+    expect(ids(removed, "B")).toStrictEqual(["B1"]);
+    expect(ids(removed, "A")).toStrictEqual(["A1", "X"]);
+  });
+
+  it("duplicates into the ref's own zone, right after the block it copied", () => {
+    const state = visualEditorReducer(twins(), {
+      ref: ref("A", "X"),
+      type: "duplicate",
+    });
+    const copy = state.zones.A.blocks[2];
+
+    expect(ids(state, "A")).toStrictEqual(["A1", "X", copy.id]);
+    expect(copy.id).not.toBe("X");
+    expect(copy.data).toStrictEqual({ body: "in a" });
+    expect(ids(state, "B")).toStrictEqual(["X", "B1"]);
+    expect(state.selected).toStrictEqual({ blockId: copy.id, zoneId: "A" });
+  });
+
+  it("moves the copy the source zone owns and leaves the twin where it was", () => {
+    const moved = visualEditorReducer(
+      visualEditorReducer(twins(), { type: "mount", zone: mount("C", []) }),
+      {
+        blockId: "X",
+        fromZoneId: "B",
+        toIndex: 0,
+        toZoneId: "C",
+        type: "move",
+      },
+    );
+
+    expect(ids(moved, "C")).toStrictEqual(["X"]);
+    expect(ids(moved, "B")).toStrictEqual(["B1"]);
+    expect(ids(moved, "A")).toStrictEqual(["A1", "X"]);
+    expect(findBlock(moved, ref("C", "X"))?.instance.data).toStrictEqual({
+      body: "in b",
+    });
+  });
+
+  it("looks a block up per zone, by ref and by zone alike", () => {
+    const state = twins();
+
+    expect(findBlock(state, ref("A", "X"))).toStrictEqual({
+      index: 1,
+      instance: withId("X", "in a"),
+    });
+    expect(findBlock(state, ref("B", "X"))).toStrictEqual({
+      index: 0,
+      instance: withId("X", "in b"),
+    });
+    expect(findBlockInZone(state.zones.A, "X")).toStrictEqual({
+      index: 1,
+      instance: withId("X", "in a"),
+    });
+    expect(findBlockInZone(state.zones.B, "X")).toStrictEqual({
+      index: 0,
+      instance: withId("X", "in b"),
+    });
+    expect(findBlockInZone(state.zones.A, "B1")).toBeNull();
+  });
+
+  it("keeps the selection when the twin in the other zone is removed", () => {
+    const selected = visualEditorReducer(twins(), {
+      ref: ref("A", "X"),
+      type: "select",
+    });
+
+    const removed = visualEditorReducer(selected, {
+      ref: ref("B", "X"),
+      type: "remove",
+    });
+
+    expect(removed.selected).toStrictEqual({ blockId: "X", zoneId: "A" });
+    expect(ids(removed, "A")).toStrictEqual(["A1", "X"]);
+  });
+});
+
+describe("a zone that leaves the page", () => {
+  const edited = (): VisualEditorState =>
+    visualEditorReducer(
+      mounted(mount("main", [block("a")]), mount("aside", [block("c")])),
+      { index: 1, instance: block("d"), type: "insert", zoneId: "aside" },
+    );
+
+  it("takes a clean zone off the page without recording it as dropped", () => {
+    const state = mounted(
+      mount("main", [block("a")]),
+      mount("aside", [block("c")]),
+    );
+
+    const next = visualEditorReducer(state, {
+      type: "unmount",
+      zoneId: "aside",
+    });
+
+    expect(next.order).toStrictEqual(["main"]);
+    expect(Object.keys(next.zones)).toStrictEqual(["main"]);
+    expect(next.droppedZoneIds).toStrictEqual([]);
+  });
+
+  it("keeps a zone that left out of the payload a save would send", () => {
+    const state = edited();
+
+    expect(buildSaveInput(state).changedZoneIds).toStrictEqual(["aside"]);
+
+    const input = buildSaveInput(
+      visualEditorReducer(state, { type: "unmount", zoneId: "aside" }),
+    );
+
+    expect(input.changedZoneIds).toStrictEqual([]);
+    expect(Object.keys(input.zones)).toStrictEqual(["main"]);
+  });
+
+  it("clears a selection the leaving zone owned, and only that one", () => {
+    const instance = block("a");
+    const state = visualEditorReducer(
+      mounted(mount("main", [instance]), mount("aside", [block("c")])),
+      { ref: ref("main", instance.id), type: "select" },
+    );
+
+    expect(
+      visualEditorReducer(state, { type: "unmount", zoneId: "main" }).selected,
+    ).toBeNull();
+    expect(
+      visualEditorReducer(state, { type: "unmount", zoneId: "aside" }).selected,
+    ).toStrictEqual({ blockId: instance.id, zoneId: "main" });
+  });
+
+  it("records a zone that leaves with unsaved edits, and still removes it", () => {
+    const dropped = visualEditorReducer(edited(), {
+      type: "unmount",
+      zoneId: "aside",
+    });
+
+    expect(dropped.droppedZoneIds).toStrictEqual(["aside"]);
+    expect(dropped.order).toStrictEqual(["main"]);
+    expect(Object.keys(dropped.zones)).toStrictEqual(["main"]);
+    expect(isVisualEditorDirty(dropped)).toBe(false);
+  });
+
+  it("forgets what it recorded once the page is discarded", () => {
+    const dropped = visualEditorReducer(edited(), {
+      type: "unmount",
+      zoneId: "aside",
+    });
+
+    expect(
+      visualEditorReducer(dropped, { type: "discard" }).droppedZoneIds,
+    ).toStrictEqual([]);
+  });
+
+  it("forgets what it recorded once a save lands", () => {
+    const dropped = visualEditorReducer(edited(), {
+      type: "unmount",
+      zoneId: "aside",
+    });
+
+    expect(
+      visualEditorReducer(dropped, inFlight(dropped)).droppedZoneIds,
+    ).toStrictEqual([]);
+  });
+
+  it("dismisses what it recorded, and changes nothing when there is none", () => {
+    const dropped = visualEditorReducer(edited(), {
+      type: "unmount",
+      zoneId: "aside",
+    });
+    const dismissed = visualEditorReducer(dropped, {
+      type: "dismiss-dropped",
+    });
+
+    expect(dismissed.droppedZoneIds).toStrictEqual([]);
+    expect(dismissed.order).toStrictEqual(["main"]);
+    expect(visualEditorReducer(dismissed, { type: "dismiss-dropped" })).toBe(
+      dismissed,
+    );
+  });
+
+  it("rebaselines a zone that comes back from the blocks it mounts with", () => {
+    const [c, d] = [block("c"), block("d")];
+    const state = visualEditorReducer(
+      mounted(mount("main", [block("a")]), mount("aside", [c])),
+      { index: 1, instance: d, type: "insert", zoneId: "aside" },
+    );
+    const dropped = visualEditorReducer(state, {
+      type: "unmount",
+      zoneId: "aside",
+    });
+
+    const back = visualEditorReducer(dropped, {
+      type: "mount",
+      zone: mount("aside", [c, d]),
+    });
+
+    expect(back.droppedZoneIds).toStrictEqual([]);
+    expect(back.order).toStrictEqual(["main", "aside"]);
+    expect(ids(back, "aside")).toStrictEqual([c.id, d.id]);
+    expect(back.zones.aside.initial).toStrictEqual([c, d]);
+    expect(isVisualEditorDirty(back)).toBe(false);
+  });
+
+  it("ignores an unmount aimed at a zone that never mounted", () => {
+    const state = mounted(mount("main", [block("a")]));
+
+    expect(
+      visualEditorReducer(state, { type: "unmount", zoneId: "ghost" }),
+    ).toBe(state);
   });
 });
