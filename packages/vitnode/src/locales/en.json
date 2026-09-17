@@ -939,7 +939,10 @@
         "over": "{name} is over the {zone} zone, position {position} of {total}.",
         "dropped": "{name} was dropped into the {zone} zone, position {position} of {total}.",
         "not_dropped": "{name} was not dropped anywhere. Nothing changed.",
-        "cancelled": "Dragging {name} was cancelled. Nothing changed."
+        "cancelled": "Dragging {name} was cancelled. Nothing changed.",
+        "area_over": "{name} is over an area in the {zone} zone, position {position} of {total}.",
+        "area_dropped": "{name} was dropped into an area in the {zone} zone, position {position} of {total}.",
+        "area_rejected": "An area cannot hold another area."
       },
       "picker": {
         "search": "Search blocks…",
@@ -947,7 +950,9 @@
         "no_results": "No blocks match your search.",
         "add": "Add the {name} block",
         "hint": "Drag a block into a zone to choose exactly where it goes, or click it to add it to the first zone that accepts it.",
-        "none_installed": "No blocks are installed on this site yet."
+        "none_installed": "No blocks are installed on this site yet.",
+        "layout_group": "Layout",
+        "add_area": "Add an area"
       },
       "leave": {
         "title": "Leave without saving?",
@@ -977,6 +982,66 @@
       "dropped": {
         "desc": "These zones left the page while you were editing, so what you changed in them is gone and was never saved: {zones}.",
         "dismiss": "Got it"
+      },
+      "layout": "Layout",
+      "variant": {
+        "label": "Variant",
+        "hint": "How this block is presented. It changes the look, never the content.",
+        "unknown": "The stored variant “{variant}” is not one this block offers any more, so it cannot be rendered. Pick a variant below, or remove the block.",
+        "issue": "This block is stored with a variant it no longer offers.",
+        "quick": "Variant: {name}"
+      },
+      "area": {
+        "label": "Area",
+        "name": "Area",
+        "description": "Lay blocks out side by side in up to four columns.",
+        "summary": "Area · {columns, plural, one {# column} other {# columns}}",
+        "select": "Select this area",
+        "drag": "Drag this area to reorder it",
+        "properties": "Area properties",
+        "add": "Add an area",
+        "drop_here": "Drop blocks here",
+        "empty": "This area is empty. Drag blocks into it, or use Add block.",
+        "add_block": "Add block",
+        "rejected": "This area does not accept the block you are dragging.",
+        "nested_rejected": "An area cannot hold another area.",
+        "columns": "Columns",
+        "columns_value": "{columns, plural, one {# column} other {# columns}}",
+        "gap": "Gap",
+        "align": "Alignment",
+        "justify": "Distribution",
+        "settings": "Settings",
+        "ungroup": "Ungroup",
+        "duplicate": "Duplicate area",
+        "remove": "Delete area",
+        "gap_option": {
+          "none": "None",
+          "sm": "Small",
+          "md": "Medium",
+          "lg": "Large"
+        },
+        "align_option": {
+          "start": "Top",
+          "center": "Centre",
+          "stretch": "Stretch"
+        },
+        "justify_option": {
+          "start": "Start",
+          "center": "Centre",
+          "between": "Space between"
+        },
+        "delete": {
+          "title": "Delete this area?",
+          "empty": "This area holds no blocks, so deleting it removes the layout and nothing else.",
+          "desc": "{count, plural, one {# block sits inside this area} other {# blocks sit inside this area}}. Deleting the area deletes them with it. Ungroup instead to keep them on the page.",
+          "confirm": "Delete area and blocks",
+          "ungroup": "Ungroup, keep blocks"
+        },
+        "invalid": {
+          "title": "This area cannot be read",
+          "description": "The stored layout for this area is not one the editor recognises, so it is shown as-is and cannot be edited. Nothing has been removed.",
+          "nested": "An area is stored inside this area. Areas cannot hold areas, so it cannot be edited here."
+        }
       }
     }
   },
