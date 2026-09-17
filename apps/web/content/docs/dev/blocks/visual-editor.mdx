@@ -400,8 +400,15 @@ interface VisualEditorSaveInput {
   zones: VisualEditorSnapshot
 }
 
+interface VisualEditorSaveResult {
+  revision?: string
+  zones?: VisualEditorSnapshot
+}
+
 interface VisualEditorAdapter {
-  save: (input: VisualEditorSaveInput) => Promise<void> | void
+  save: (
+    input: VisualEditorSaveInput,
+  ) => Promise<VisualEditorSaveResult | void> | VisualEditorSaveResult | void
 }
 ```
 
@@ -434,22 +441,66 @@ const adapter = useMemo<VisualEditorAdapter>(
 
 ### Answer with what you stored
 
-`save` may resolve with nothing, and the editor is happy either way - but the page around it usually should not be. The example page renders its zones from its own state rather than straight from `loaderData`, and replaces that state with the layout the API answers with:
+`save` may resolve with nothing, and the editor is happy either way - but it is better if it does not. What the client sent and what the server kept are not always the same thing: an API is allowed to reorder, normalise, drop or rewrite what it is given. If the editor rebases onto its own input, it goes clean against a version that never existed, and the next save pushes the stale copy back.
+
+So return what you stored:
 
 ```tsx
 const [layout, setLayout] = useState(loaderData)
 
 const save = async (input: VisualEditorSaveInput) => {
   const response = await fetcher({ /* … */ args: { body: fields } })
-  const { fields, source, updatedAt } = await response.json()
+  const stored = toZonesLayout(await response.json())
 
-  setLayout({ source, updatedAt, zones: fieldsToZones(fields) })
+  setLayout(stored)
+
+  return { zones: stored.zones }
 }
 ```
 
-Two things fall out of that. **Finish editing** shows the saved page immediately, with no reload - the editor unmounts and the page underneath is already the new one. And because the layout comes back from the route that persisted it rather than from the input that was sent, whatever the API normalised, reordered or rejected is what you end up looking at. If the two ever disagree, you see it on the spot instead of on the next refresh.
+The editor then adopts that snapshot as its baseline **and** as what you are looking at - unless you edited during the request, in which case your edit stays and the zone remains dirty against the new baseline. Both halves matter: the first stops the stale re-send, the second is the [save race](#save-stays-finish-editing-leaves) rule that has always applied.
+
+Updating the page's own state does the other half of the job: **Finish editing** shows the saved page immediately, with no reload, because the page underneath is already the new one.
 
 This belongs to the page, not to the editor. The editor owns no layout state and never will: it is handed blocks, it hands back blocks, and the content's owner decides what is true.
+
+### Content that changes underneath the editor
+
+The same problem arrives from the other direction. A router invalidation, a refetch, or the `setLayout` above all re-render your page with different `blocks`, and a zone that is already mounted has to decide what to do with them.
+
+The rule is the one you would write yourself:
+
+|                      |                                                                                                                                          |
+| :------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zone is clean**    | The incoming content replaces both the working copy and the baseline. The zone adopts it and stays clean. A selection whose block is gone clears. |
+| **Zone is dirty**    | Nothing about its content moves. Local edits win until **Save** or **Discard** resolves them. Only the allowlist and registry still refresh. |
+
+There is deliberately no merge. Two block arrays cannot be reconciled without inventing an answer, and inventing one is how an editor loses a paragraph somebody typed.
+
+### A failed load is not an empty page
+
+Loading has a trap that is easy to walk into and expensive to walk out of. A layout route answers two different "there is nothing here" shapes, and they mean opposite things:
+
+|                                        |                                                                                                     |
+| :------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| **200, `source: "defaults"`**          | Nothing has been saved yet. The shipped defaults are the truth. Editing and **Save** are fine.        |
+| **Anything non-2xx**                   | What is stored is **unknown** - an auth failure, a database error, a dropped connection.             |
+
+Treating the second as the first is how a page overwrites content nobody meant to touch: the load fails, the defaults render as if they were the record, somebody tidies a heading, presses **Save**, and the real stored layout is gone. The editor cannot catch this, because by then it was handed a perfectly valid set of blocks.
+
+So the playground loader refuses:
+
+```ts
+if (!response.ok) {
+  throw new Error(`The zones layout route answered ${response.status}…`)
+}
+
+return toZonesLayout(await response.json())
+```
+
+The router's `defaultErrorComponent` takes it from there, and **Edit page** is never reached. The API holds the same line from the other side: a missing row is `200` with `source: "defaults"`, a row that exists but cannot be read throws rather than answering with defaults.
+
+If throwing does not suit your route, return an explicit error state and disable editing on it. What you must not do is hand the editor a writable copy of something you did not actually read.
 
 ### Save stays, Finish editing leaves
 
@@ -501,6 +552,8 @@ The section above is about scope. This one is about rough edges in the part that
 Dimming it would mean fading the page and un-fading the zones, and a descendant cannot undo an ancestor's `opacity` or `filter`: those create a new compositing context that the zone inside it is stuck in. The only other route is selector-based - "dim everything that does not contain a zone" - which would have to make assumptions about a page's DOM that VitNode does not get to make, since the page is yours. So Stage 3 emphasises the zones rather than de-emphasising the page, and a host that wants more can style `[data-vitnode-zone]` and its surroundings itself.
 
 **Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen. The page reserves room for it - `--editor-sheet-height` is padding on the canvas below `md` and the width of the sidebar above it, so the last zone always scrolls clear of the sheet and Preview takes both away - but nothing is _tuned_ for touch: a drag competes with page scrolling, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
+
+**Blocks themselves do remount when you enter edit mode.** The page around them does not - that is the whole point of the [stable boundary](#turning-it-on-does-not-restart-your-page) - but a `ContentZone` genuinely swaps what it renders, from `ContentRenderer` output to the editor's portal, so each block component is built again. A block holding transient state of its own restarts with it: a playing video, an open accordion, a carousel's position, a `useState` counter. Content survives, because content lives in the block's data; ephemeral UI state does not. Closing that gap means hoisting block instances above the view/edit split, which is a bigger change than this stage is willing to make.
 
 **A zone's blocks render in the editor's React tree, not your page's.** The consequence of the portal described [above](#then-how-do-zones-become-editable): context from your app root reaches a block as usual, context you provide between your page and a `ContentZone` does not. Nothing ships today that needs it, and the fix if you do is to put the value in the block's data.
 

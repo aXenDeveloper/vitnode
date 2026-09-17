@@ -23,6 +23,12 @@ export const EXAMPLE_ZONE_FIELDS = Object.keys(
   EXAMPLE_ZONE_IDS,
 ) as ExampleZoneField[];
 
+export interface ZonesLayout {
+  source: "defaults" | "stored";
+  updatedAt: null | string;
+  zones: ExampleZonesRecord;
+}
+
 export const fieldsToZones = (fields: ExampleZonesFields): ExampleZonesRecord =>
   EXAMPLE_ZONE_FIELDS.reduce<ExampleZonesRecord>(
     (zones, field) => ({ ...zones, [EXAMPLE_ZONE_IDS[field]]: fields[field] }),
@@ -90,3 +96,13 @@ export const DEFAULT_EXAMPLE_ZONES_LAYOUT: ExampleZonesFields = {
     },
   ],
 };
+
+export const toZonesLayout = (payload: {
+  fields: ExampleZonesFields;
+  source: "defaults" | "stored";
+  updatedAt: null | string;
+}): ZonesLayout => ({
+  source: payload.source,
+  updatedAt: payload.updatedAt,
+  zones: fieldsToZones(payload.fields),
+});

@@ -88,7 +88,13 @@ export const readExampleZonesLayout = async (
 
   const row = await zonesLayoutContent.service(c).findById(id);
 
-  return row ? toResponse(row) : defaultsResponse();
+  if (!row) {
+    throw new Error(
+      `The example zones layout row ${id} was found by slug but could not be read. Answering with the shipped defaults here would let the next save overwrite whatever that row actually holds, so this is reported as a failure instead.`,
+    );
+  }
+
+  return toResponse(row);
 };
 
 export const writeExampleZonesLayout = async (

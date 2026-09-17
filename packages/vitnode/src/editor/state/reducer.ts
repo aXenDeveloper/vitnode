@@ -72,7 +72,12 @@ export const sameInvalidEntries = (
 ): boolean =>
   left === right ||
   (left.length === right.length &&
-    left.every((entry, at) => entry === right[at]));
+    left.every(
+      (entry, at) =>
+        entry === right[at] ||
+        (entry.index === right[at].index &&
+          sameValue(entry.value, right[at].value)),
+    ));
 
 export const sameBlockRef = (
   left: EditorBlockRef | null,
@@ -179,28 +184,63 @@ const withoutSelectionIn = (
 ): VisualEditorState =>
   state.selected?.zoneId === zoneId ? { ...state, selected: null } : state;
 
+const withResolvableSelection = (
+  state: VisualEditorState,
+  zoneId: string,
+  blocks: readonly AnyBlockInstance[],
+): VisualEditorState => {
+  const selected = state.selected;
+
+  return selected !== null &&
+    selected.zoneId === zoneId &&
+    !blocks.some(instance => instance.id === selected.blockId)
+    ? { ...state, selected: null }
+    : state;
+};
+
+const syncMountedZone = (
+  state: VisualEditorState,
+  zone: EditorZoneState,
+  next: EditorZoneMount,
+): VisualEditorState => {
+  const metadataChanged =
+    !sameAllowed(zone.allowedBlocks, next.allowedBlocks) ||
+    zone.registry !== next.registry;
+  const incomingChanged =
+    !sameBlocks(zone.initial, next.blocks) ||
+    !sameInvalidEntries(zone.initialInvalid, next.invalid);
+
+  if (!metadataChanged && !incomingChanged) return state;
+
+  const synced: EditorZoneState = metadataChanged
+    ? { ...zone, allowedBlocks: next.allowedBlocks, registry: next.registry }
+    : zone;
+
+  if (!incomingChanged || zoneChanged(zone)) {
+    return synced === zone ? state : withZones(state, { [next.id]: synced });
+  }
+
+  const blocks = [...next.blocks];
+  const invalid = [...next.invalid];
+
+  return withZones(withResolvableSelection(state, next.id, blocks), {
+    [next.id]: {
+      ...synced,
+      blocks,
+      initial: blocks,
+      initialInvalid: invalid,
+      invalid,
+    },
+  });
+};
+
 const mountZone = (
   state: VisualEditorState,
   next: EditorZoneMount,
 ): VisualEditorState => {
   const zone = state.zones[next.id];
 
-  if (zone) {
-    if (
-      sameAllowed(zone.allowedBlocks, next.allowedBlocks) &&
-      zone.registry === next.registry
-    ) {
-      return state;
-    }
-
-    return withZones(state, {
-      [next.id]: {
-        ...zone,
-        allowedBlocks: next.allowedBlocks,
-        registry: next.registry,
-      },
-    });
-  }
+  if (zone) return syncMountedZone(state, zone, next);
 
   const blocks = [...next.blocks];
   const invalid = [...next.invalid];
@@ -385,33 +425,43 @@ export const visualEditorReducer = (
       return withZones(state, { [action.zoneId]: { ...zone, invalid } });
     }
 
-    case "saved":
+    case "saved": {
+      const canonical = action.canonical;
+
       return {
         ...state,
         droppedZoneIds: [],
         zones: Object.fromEntries(
           Object.entries(state.zones).map(([id, zone]) => {
-            const persisted = Object.hasOwn(action.snapshot, id)
-              ? action.snapshot[id]
-              : zone.initial;
-            const persistedInvalid = Object.hasOwn(action.invalid, id)
+            if (!Object.hasOwn(action.snapshot, id)) return [id, zone];
+
+            const sent = action.snapshot[id];
+            const stored =
+              canonical !== undefined && Object.hasOwn(canonical, id)
+                ? canonical[id]
+                : sent;
+            const storedInvalid = Object.hasOwn(action.invalid, id)
               ? action.invalid[id]
               : zone.initialInvalid;
+            const blocks = sameBlocks(zone.blocks, sent) ? stored : zone.blocks;
 
             return [
               id,
-              persisted === zone.initial &&
-              persistedInvalid === zone.initialInvalid
+              blocks === zone.blocks &&
+              stored === zone.initial &&
+              storedInvalid === zone.initialInvalid
                 ? zone
                 : {
                     ...zone,
-                    initial: persisted,
-                    initialInvalid: persistedInvalid,
+                    blocks,
+                    initial: stored,
+                    initialInvalid: storedInvalid,
                   },
             ];
           }),
         ),
       };
+    }
 
     case "select": {
       if (action.ref === null) {

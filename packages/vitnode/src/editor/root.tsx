@@ -14,6 +14,7 @@ import type {
   VisualEditorContextValue,
   VisualEditorSaveStatus,
 } from "./context";
+import type { VisualEditorSnapshot } from "./state/types";
 
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
 import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
@@ -95,8 +96,10 @@ const EditorShell = ({
     const invalid = buildInvalidSnapshot(state);
     setSaveStatus("saving");
 
+    let canonical: undefined | VisualEditorSnapshot;
+
     try {
-      await adapter.save(input);
+      canonical = (await adapter.save(input))?.zones;
     } catch {
       setSaveStatus("error");
       toast.error(t("save_error.title"), {
@@ -106,7 +109,7 @@ const EditorShell = ({
       return false;
     }
 
-    dispatch({ invalid, snapshot: input.zones, type: "saved" });
+    dispatch({ canonical, invalid, snapshot: input.zones, type: "saved" });
     setSaveStatus("saved");
     toast.success(t("saved_toast.title"), {
       description: t("saved_toast.desc"),

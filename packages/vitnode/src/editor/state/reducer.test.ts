@@ -4,10 +4,12 @@ import type { AnyBlockInstance } from "../../blocks/types";
 import type {
   EditorBlockRef,
   EditorZoneMount,
+  VisualEditorSnapshot,
   VisualEditorState,
 } from "./types";
 
 import { createBlockInstance } from "../../blocks/instance";
+import { createBlockRegistry } from "../../blocks/registry";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
@@ -48,8 +50,9 @@ const mounted = (...zones: readonly EditorZoneMount[]): VisualEditorState =>
 const ids = (state: VisualEditorState, zoneId: string): string[] =>
   state.zones[zoneId].blocks.map(instance => instance.id);
 
-const inFlight = (state: VisualEditorState) =>
+const inFlight = (state: VisualEditorState, canonical?: VisualEditorSnapshot) =>
   ({
+    canonical,
     invalid: buildInvalidSnapshot(state),
     snapshot: buildSaveInput(state).zones,
     type: "saved",
@@ -106,21 +109,40 @@ describe("visualEditorReducer", () => {
   });
 
   it("refreshes the allowlist and registry on a later mount", () => {
-    const state = mounted(mount("main", [block("a")], ["core:text"]));
+    const only = block("a");
+    const state = mounted(mount("main", [only], ["core:text"]));
     const same = visualEditorReducer(state, {
       type: "mount",
-      zone: mount("main", [], ["core:text"]),
+      zone: mount("main", [only], ["core:text"]),
     });
 
     expect(same).toBe(state);
 
     const widened = visualEditorReducer(state, {
       type: "mount",
-      zone: mount("main", [], "*"),
+      zone: mount("main", [only], "*"),
     });
 
     expect(widened.zones.main.allowedBlocks).toBe("*");
     expect(widened.zones.main.blocks).toStrictEqual(state.zones.main.blocks);
+  });
+
+  it("widens the allowlist without adopting content the editor is still editing", () => {
+    const only = block("a");
+    const edited = visualEditorReducer(mounted(mount("main", [only])), {
+      data: { body: "edited" },
+      ref: ref("main", only.id),
+      type: "update",
+    });
+
+    const widened = visualEditorReducer(edited, {
+      type: "mount",
+      zone: mount("main", [block("elsewhere")], "*"),
+    });
+
+    expect(widened.zones.main.allowedBlocks).toBe("*");
+    expect(widened.zones.main.blocks).toStrictEqual(edited.zones.main.blocks);
+    expect(widened.zones.main.initial).toBe(edited.zones.main.initial);
   });
 
   it("clamps the insert index into the zone", () => {
@@ -1006,5 +1028,220 @@ describe("a zone that leaves the page", () => {
     expect(
       visualEditorReducer(state, { type: "unmount", zoneId: "ghost" }),
     ).toBe(state);
+  });
+});
+
+describe("canonical content arriving from the page owner", () => {
+  const invalidEntry = { index: 1, value: { foo: "bar" } };
+
+  it("adopts a reordered array the page hands a clean zone", () => {
+    const [a, b] = [block("a"), block("b")];
+    const state = mounted(mount("main", [a, b]));
+
+    const adopted = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount("main", [b, a]),
+    });
+
+    expect(ids(adopted, "main")).toStrictEqual([b.id, a.id]);
+    expect(adopted.zones.main.initial).toStrictEqual([b, a]);
+    expect(isVisualEditorDirty(adopted)).toBe(false);
+    expect(changedZoneIds(adopted)).toStrictEqual([]);
+  });
+
+  it("adopts the invalid entries a clean zone is remounted with, in both directions", () => {
+    const a = block("a");
+    const state = mounted(mount("main", [a]));
+
+    const gained = visualEditorReducer(state, {
+      type: "mount",
+      zone: { ...mount("main", [a]), invalid: [invalidEntry] },
+    });
+
+    expect(gained.zones.main.invalid).toStrictEqual([invalidEntry]);
+    expect(gained.zones.main.initialInvalid).toStrictEqual([invalidEntry]);
+    expect(unsafeZoneIds(gained)).toStrictEqual(["main"]);
+    expect(isVisualEditorDirty(gained)).toBe(false);
+
+    const lost = visualEditorReducer(gained, {
+      type: "mount",
+      zone: mount("main", [a]),
+    });
+
+    expect(lost.zones.main.invalid).toStrictEqual([]);
+    expect(lost.zones.main.initialInvalid).toStrictEqual([]);
+    expect(unsafeZoneIds(lost)).toStrictEqual([]);
+    expect(isVisualEditorDirty(lost)).toBe(false);
+  });
+
+  it("leaves a dirty zone on its own content when the page hands it another order", () => {
+    const [a, b] = [block("a"), block("b")];
+    const edited = visualEditorReducer(mounted(mount("main", [a, b])), {
+      data: { body: "a2" },
+      ref: ref("main", a.id),
+      type: "update",
+    });
+
+    const remounted = visualEditorReducer(edited, {
+      type: "mount",
+      zone: mount("main", [b, a]),
+    });
+
+    expect(ids(remounted, "main")).toStrictEqual([a.id, b.id]);
+    expect(remounted.zones.main.blocks[0].data).toStrictEqual({ body: "a2" });
+    expect(remounted.zones.main.initial).toBe(edited.zones.main.initial);
+    expect(remounted.zones.main.invalid).toBe(edited.zones.main.invalid);
+    expect(isVisualEditorDirty(remounted)).toBe(true);
+  });
+
+  it("still refreshes a dirty zone's allowlist and registry from the same mount", () => {
+    const registry = createBlockRegistry([]);
+    const [a, b] = [block("a"), block("b")];
+    const edited = visualEditorReducer(mounted(mount("main", [a, b])), {
+      data: { body: "a2" },
+      ref: ref("main", a.id),
+      type: "update",
+    });
+
+    const remounted = visualEditorReducer(edited, {
+      type: "mount",
+      zone: { ...mount("main", [b, a], "*"), registry },
+    });
+
+    expect(remounted.zones.main.allowedBlocks).toBe("*");
+    expect(remounted.zones.main.registry).toBe(registry);
+    expect(remounted.zones.main.blocks).toBe(edited.zones.main.blocks);
+    expect(remounted.zones.main.initial).toBe(edited.zones.main.initial);
+    expect(isVisualEditorDirty(remounted)).toBe(true);
+  });
+
+  it("changes nothing when the content it mounts with is the baseline it already has", () => {
+    const [a, b] = [block("a"), block("b")];
+    const state = mounted(mount("main", [a, b]));
+
+    expect(
+      visualEditorReducer(state, {
+        type: "mount",
+        zone: mount("main", [a, b]),
+      }),
+    ).toBe(state);
+    expect(
+      visualEditorReducer(state, {
+        type: "mount",
+        zone: mount("main", [{ ...a, data: { ...a.data } }, b]),
+      }),
+    ).toBe(state);
+  });
+
+  it("clears a selection the adopted content dropped, and no other", () => {
+    const [a, b, c] = [block("a"), block("b"), block("c")];
+    const state = mounted(mount("main", [a, b]), mount("aside", [c]));
+    const onGoneBlock = visualEditorReducer(state, {
+      ref: ref("main", a.id),
+      type: "select",
+    });
+    const onOtherZone = visualEditorReducer(state, {
+      ref: ref("aside", c.id),
+      type: "select",
+    });
+
+    expect(
+      visualEditorReducer(onGoneBlock, {
+        type: "mount",
+        zone: mount("main", [b]),
+      }).selected,
+    ).toBeNull();
+    expect(
+      visualEditorReducer(onGoneBlock, {
+        type: "mount",
+        zone: mount("main", [b, a]),
+      }).selected,
+    ).toStrictEqual({ blockId: a.id, zoneId: "main" });
+    expect(
+      visualEditorReducer(onOtherZone, {
+        type: "mount",
+        zone: mount("main", [b]),
+      }).selected,
+    ).toStrictEqual({ blockId: c.id, zoneId: "aside" });
+  });
+
+  it("takes the order the server answered with, so the next save sends that one", () => {
+    const [a, b] = [block("a"), block("b")];
+    const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      index: 1,
+      instance: b,
+      type: "insert",
+      zoneId: "main",
+    });
+
+    const saved = visualEditorReducer(sent, inFlight(sent, { main: [b, a] }));
+
+    expect(ids(saved, "main")).toStrictEqual([b.id, a.id]);
+    expect(saved.zones.main.initial).toStrictEqual([b, a]);
+    expect(isVisualEditorDirty(saved)).toBe(false);
+    expect(buildSaveInput(saved).zones.main).toStrictEqual([b, a]);
+    expect(buildSaveInput(saved).changedZoneIds).toStrictEqual([]);
+  });
+
+  it("keeps an edit made while the save was in flight, dirty against the canonical baseline", () => {
+    const [a, b] = [block("a"), block("b")];
+    const canonical = { ...a, data: { body: "a from the server" } };
+    const sent = mounted(mount("main", [a]));
+    const sending = inFlight(sent, { main: [canonical] });
+    const current = visualEditorReducer(
+      visualEditorReducer(sent, {
+        index: 1,
+        instance: b,
+        type: "insert",
+        zoneId: "main",
+      }),
+      { ref: ref("main", a.id), type: "remove" },
+    );
+
+    const saved = visualEditorReducer(current, sending);
+
+    expect(saved.zones.main.initial).toStrictEqual([canonical]);
+    expect(ids(saved, "main")).toStrictEqual([b.id]);
+    expect(isVisualEditorDirty(saved)).toBe(true);
+
+    const settled = visualEditorReducer(saved, inFlight(saved));
+
+    expect(settled.zones.main.initial).toStrictEqual([b]);
+    expect(isVisualEditorDirty(settled)).toBe(false);
+  });
+
+  it("falls back to the snapshot it sent when the answer carries no canonical content", () => {
+    const [a, b] = [block("a"), block("b")];
+    const sent = visualEditorReducer(mounted(mount("main", [a])), {
+      index: 1,
+      instance: b,
+      type: "insert",
+      zoneId: "main",
+    });
+    const sending = inFlight(sent, undefined);
+
+    const saved = visualEditorReducer(sent, sending);
+
+    expect(sending.canonical).toBeUndefined();
+    expect(saved.zones.main.initial).toBe(sending.snapshot.main);
+    expect(ids(saved, "main")).toStrictEqual([a.id, b.id]);
+    expect(isVisualEditorDirty(saved)).toBe(false);
+  });
+
+  it("ignores canonical content for a zone the save never sent", () => {
+    const [a, c, d] = [block("a"), block("c"), block("d")];
+    const sent = mounted(mount("main", [a]));
+    const sending = inFlight(sent, { aside: [d], main: [a] });
+    const current = visualEditorReducer(sent, {
+      type: "mount",
+      zone: mount("aside", [c]),
+    });
+
+    const saved = visualEditorReducer(current, sending);
+
+    expect(Object.keys(sending.snapshot)).toStrictEqual(["main"]);
+    expect(ids(saved, "aside")).toStrictEqual([c.id]);
+    expect(saved.zones.aside.initial).toStrictEqual([c]);
+    expect(isVisualEditorDirty(saved)).toBe(false);
   });
 });

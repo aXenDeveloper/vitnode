@@ -8,6 +8,7 @@ export interface VisualEditorSaveInput {
 
 export interface VisualEditorSaveResult {
   revision?: string;
+  zones?: VisualEditorSnapshot;
 }
 
 export interface VisualEditorAdapter {

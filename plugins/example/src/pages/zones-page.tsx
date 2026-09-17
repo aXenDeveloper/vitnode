@@ -22,8 +22,6 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import type { ExampleZonesRecord } from "@/content/zones-layout-fields";
-
 import { blocks as exampleBlocks } from "@/blocks";
 import { CONFIG_PLUGIN } from "@/const";
 import {
@@ -33,23 +31,12 @@ import {
 import {
   DEFAULT_EXAMPLE_ZONES_LAYOUT,
   EXAMPLE_ZONE_IDS,
-  fieldsToZones,
+  toZonesLayout,
+  type ZonesLayout,
   zonesToFields,
 } from "@/content/zones-layout-fields";
 
 const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks]);
-
-interface ZonesLayout {
-  source: "defaults" | "stored";
-  updatedAt: null | string;
-  zones: ExampleZonesRecord;
-}
-
-const shippedDefaults = (): ZonesLayout => ({
-  source: "defaults",
-  updatedAt: null,
-  zones: fieldsToZones(DEFAULT_EXAMPLE_ZONES_LAYOUT),
-});
 
 export const route = definePluginRoute<ZonesLayout>({
   load: async (): Promise<ZonesLayout> => {
@@ -60,11 +47,13 @@ export const route = definePluginRoute<ZonesLayout>({
       path: "/layout",
     });
 
-    if (!response.ok) return shippedDefaults();
+    if (!response.ok) {
+      throw new Error(
+        `The zones layout route answered ${response.status}, so what is stored is unknown. The shipped defaults are deliberately not offered as editable content here: saving them would overwrite whatever the record really holds.`,
+      );
+    }
 
-    const { fields, source, updatedAt } = await response.json();
-
-    return { source, updatedAt, zones: fieldsToZones(fields) };
+    return toZonesLayout(await response.json());
   },
 
   head: () => ({ title: "Content zones" }),
@@ -254,10 +243,12 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
         throw new Error(`The zones layout route answered ${response.status}.`);
       }
 
-      const { fields, source, updatedAt } = await response.json();
+      const stored = toZonesLayout(await response.json());
 
-      setLayout({ source, updatedAt, zones: fieldsToZones(fields) });
+      setLayout(stored);
       setLastSave(input);
+
+      return { zones: stored.zones };
     },
     [layout.zones],
   );

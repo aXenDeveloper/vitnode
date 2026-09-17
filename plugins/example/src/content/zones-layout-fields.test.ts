@@ -1,6 +1,8 @@
 import type { AnyBlockInstance } from "@vitnode/core/blocks";
 
 import { isBlockAllowed } from "@vitnode/core/blocks";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -12,6 +14,7 @@ import {
   EXAMPLE_ZONE_FIELDS,
   EXAMPLE_ZONE_IDS,
   fieldsToZones,
+  toZonesLayout,
   zonesToFields,
 } from "./zones-layout-fields";
 
@@ -136,5 +139,55 @@ describe("the field set a save actually sends", () => {
         zonesToFields(canonical, DEFAULT_EXAMPLE_ZONES_LAYOUT),
       ),
     ).toEqual({ ...layout, sidebar: [] });
+  });
+});
+
+describe("toZonesLayout", () => {
+  it("keeps a shipped-defaults answer editable, because nothing is stored yet", () => {
+    expect(
+      toZonesLayout({
+        fields: DEFAULT_EXAMPLE_ZONES_LAYOUT,
+        source: "defaults",
+        updatedAt: null,
+      }),
+    ).toEqual({
+      source: "defaults",
+      updatedAt: null,
+      zones: fieldsToZones(DEFAULT_EXAMPLE_ZONES_LAYOUT),
+    });
+  });
+
+  it("carries a stored answer through with the time it was saved", () => {
+    expect(
+      toZonesLayout({
+        fields: layout,
+        source: "stored",
+        updatedAt: "2026-09-17T12:00:00.000Z",
+      }),
+    ).toEqual({
+      source: "stored",
+      updatedAt: "2026-09-17T12:00:00.000Z",
+      zones: fieldsToZones(layout),
+    });
+  });
+});
+
+describe("the layout the page is allowed to edit", () => {
+  const loader = readFileSync(
+    join(import.meta.dirname, "..", "pages", "zones-page.tsx"),
+    "utf8",
+  );
+
+  it("refuses to answer a failed read with the shipped defaults", () => {
+    expect(loader).toMatch(/if \(!response\.ok\) \{\s*throw new Error\(/);
+    expect(loader).not.toContain("shippedDefaults");
+  });
+
+  it("builds what it renders from the payload alone", () => {
+    expect(loader).toContain("toZonesLayout(await response.json())");
+  });
+
+  it("hands the server's own answer back to the editor after a save", () => {
+    expect(loader).toContain("return { zones: stored.zones };");
   });
 });

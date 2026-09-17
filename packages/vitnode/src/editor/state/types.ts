@@ -55,6 +55,12 @@ export type VisualEditorAction =
       toZoneId: string;
       type: "move";
     }
+  | {
+      canonical: undefined | VisualEditorSnapshot;
+      invalid: VisualEditorInvalidSnapshot;
+      snapshot: VisualEditorSnapshot;
+      type: "saved";
+    }
   | { data: Record<string, unknown>; ref: EditorBlockRef; type: "update" }
   | {
       index: number;
@@ -63,11 +69,6 @@ export type VisualEditorAction =
       zoneId: string;
     }
   | { index: number; type: "remove-invalid"; zoneId: string }
-  | {
-      invalid: VisualEditorInvalidSnapshot;
-      snapshot: VisualEditorSnapshot;
-      type: "saved";
-    }
   | { ref: EditorBlockRef; type: "duplicate" }
   | { ref: EditorBlockRef; type: "remove" }
   | { ref: EditorBlockRef | null; type: "select" }
