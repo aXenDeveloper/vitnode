@@ -4,12 +4,13 @@ import type { AnyBlockInstance } from "../../blocks/types";
 import type { EditorZoneMount, VisualEditorState } from "./types";
 
 import { createBlockInstance } from "../../blocks/instance";
-import { buildSaveInput } from "../adapter/save-input";
+import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
   findBlock,
   initialVisualEditorState,
   isVisualEditorDirty,
+  unsafeZoneIds,
   visualEditorReducer,
 } from "./reducer";
 
@@ -24,6 +25,7 @@ const mount = (
   allowedBlocks,
   blocks,
   id,
+  invalid: [],
   registry: undefined,
 });
 
@@ -35,6 +37,13 @@ const mounted = (...zones: readonly EditorZoneMount[]): VisualEditorState =>
 
 const ids = (state: VisualEditorState, zoneId: string): string[] =>
   state.zones[zoneId].blocks.map(instance => instance.id);
+
+const inFlight = (state: VisualEditorState) =>
+  ({
+    invalid: buildInvalidSnapshot(state),
+    snapshot: buildSaveInput(state).zones,
+    type: "saved",
+  }) as const;
 
 describe("visualEditorReducer", () => {
   it("captures the incoming blocks as the baseline on the first mount", () => {
@@ -330,10 +339,7 @@ describe("visualEditorReducer", () => {
 
     expect(changedZoneIds(state)).toStrictEqual(["main"]);
 
-    const saved = visualEditorReducer(state, {
-      snapshot: buildSaveInput(state).zones,
-      type: "saved",
-    });
+    const saved = visualEditorReducer(state, inFlight(state));
 
     expect(isVisualEditorDirty(saved)).toBe(false);
     expect(saved.zones.main.initial).toStrictEqual([a, b]);
@@ -405,9 +411,7 @@ describe("the baseline a saved snapshot writes", () => {
       type: "insert",
       zoneId: "main",
     });
-    const snapshot = buildSaveInput(edited).zones;
-
-    const saved = visualEditorReducer(edited, { snapshot, type: "saved" });
+    const saved = visualEditorReducer(edited, inFlight(edited));
 
     expect(saved.zones.main.initial).toBe(edited.zones.main.blocks);
     expect(ids(saved, "main")).toStrictEqual([a.id, b.id]);
@@ -423,7 +427,7 @@ describe("the baseline a saved snapshot writes", () => {
       type: "insert",
       zoneId: "main",
     });
-    const snapshot = buildSaveInput(sent).zones;
+    const sending = inFlight(sent);
     const current = visualEditorReducer(sent, {
       index: 2,
       instance: late,
@@ -431,17 +435,14 @@ describe("the baseline a saved snapshot writes", () => {
       zoneId: "main",
     });
 
-    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+    const saved = visualEditorReducer(current, sending);
 
     expect(saved.zones.main.initial).toStrictEqual([a, b]);
     expect(ids(saved, "main")).toStrictEqual([a.id, b.id, late.id]);
     expect(isVisualEditorDirty(saved)).toBe(true);
     expect(changedZoneIds(saved)).toStrictEqual(["main"]);
 
-    const settled = visualEditorReducer(saved, {
-      snapshot: buildSaveInput(saved).zones,
-      type: "saved",
-    });
+    const settled = visualEditorReducer(saved, inFlight(saved));
 
     expect(isVisualEditorDirty(settled)).toBe(false);
   });
@@ -452,7 +453,7 @@ describe("the baseline a saved snapshot writes", () => {
       mounted(mount("main", [a]), mount("aside", [c])),
       { index: 1, instance: b, type: "insert", zoneId: "main" },
     );
-    const snapshot = buildSaveInput(sent).zones;
+    const sending = inFlight(sent);
     const current = visualEditorReducer(sent, {
       index: 1,
       instance: d,
@@ -460,7 +461,7 @@ describe("the baseline a saved snapshot writes", () => {
       zoneId: "aside",
     });
 
-    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+    const saved = visualEditorReducer(current, sending);
 
     expect(changedZoneIds(saved)).toStrictEqual(["aside"]);
     expect(saved.zones.main.initial).toStrictEqual([a, b]);
@@ -470,27 +471,25 @@ describe("the baseline a saved snapshot writes", () => {
   it("leaves a zone that mounted after the save started on its own baseline", () => {
     const [a, c, d] = [block("a"), block("c"), block("d")];
     const sent = mounted(mount("main", [a]));
-    const snapshot = buildSaveInput(sent).zones;
+    const sending = inFlight(sent);
     const current = visualEditorReducer(
       visualEditorReducer(sent, { type: "mount", zone: mount("aside", [c]) }),
       { index: 1, instance: d, type: "insert", zoneId: "aside" },
     );
 
-    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+    const saved = visualEditorReducer(current, sending);
 
-    expect(Object.keys(snapshot)).toStrictEqual(["main"]);
+    expect(Object.keys(sending.snapshot)).toStrictEqual(["main"]);
     expect(saved.zones.aside.initial).toStrictEqual([c]);
     expect(changedZoneIds(saved)).toStrictEqual(["aside"]);
   });
 
   it("resurrects nothing for a zone the snapshot has and the page no longer does", () => {
     const [a, c] = [block("a"), block("c")];
-    const snapshot = buildSaveInput(
-      mounted(mount("main", [a]), mount("aside", [c])),
-    ).zones;
+    const sending = inFlight(mounted(mount("main", [a]), mount("aside", [c])));
     const current = mounted(mount("main", [a]), mount("sidebar", []));
 
-    const saved = visualEditorReducer(current, { snapshot, type: "saved" });
+    const saved = visualEditorReducer(current, sending);
 
     expect(Object.keys(saved.zones)).toStrictEqual(["main", "sidebar"]);
     expect(saved.zones.sidebar.blocks).toStrictEqual([]);
@@ -506,13 +505,151 @@ describe("the baseline a saved snapshot writes", () => {
       type: "insert",
       zoneId: "main",
     });
-    const snapshot = buildSaveInput(sent).zones;
+    const sending = inFlight(sent);
     const discarded = visualEditorReducer(sent, { type: "discard" });
 
-    const saved = visualEditorReducer(discarded, { snapshot, type: "saved" });
+    const saved = visualEditorReducer(discarded, sending);
 
     expect(ids(saved, "main")).toStrictEqual([a.id]);
     expect(saved.zones.main.initial).toStrictEqual([a, b]);
     expect(isVisualEditorDirty(saved)).toBe(true);
+  });
+});
+
+describe("persisted content the editor cannot read", () => {
+  const malformed = { foo: "bar" };
+
+  const withMalformed = (
+    id: string,
+    blocks: readonly AnyBlockInstance[],
+  ): EditorZoneMount => ({
+    ...mount(id, blocks),
+    invalid: [{ index: 1, value: malformed }],
+  });
+
+  it("carries the malformed entry into the zone instead of forgetting it", () => {
+    const [a, b] = [block("a"), block("b")];
+    const state = mounted(withMalformed("main", [a, b]));
+
+    expect(state.zones.main.blocks).toStrictEqual([a, b]);
+    expect(state.zones.main.invalid).toStrictEqual([
+      { index: 1, value: malformed },
+    ]);
+    expect(isVisualEditorDirty(state)).toBe(false);
+  });
+
+  it("names the zone as unsafe to save while the entry is still there", () => {
+    const state = mounted(
+      withMalformed("main", [block("a"), block("b")]),
+      mount("aside", [block("c")]),
+    );
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+  });
+
+  it("still reports nothing unsafe on a page whose zones all parsed", () => {
+    expect(unsafeZoneIds(mounted(mount("main", [block("a")])))).toStrictEqual(
+      [],
+    );
+  });
+
+  it("stays unsafe while a sibling block is edited, so the save cannot drop it", () => {
+    const [a, b] = [block("a"), block("b")];
+    const edited = visualEditorReducer(mounted(withMalformed("main", [a, b])), {
+      blockId: a.id,
+      data: { body: "a2" },
+      type: "update",
+    });
+
+    expect(isVisualEditorDirty(edited)).toBe(true);
+    expect(unsafeZoneIds(edited)).toStrictEqual(["main"]);
+    expect(edited.zones.main.invalid).toStrictEqual([
+      { index: 1, value: malformed },
+    ]);
+  });
+
+  it("clears the block once it is removed on purpose, and that alone is an edit", () => {
+    const [a, b] = [block("a"), block("b")];
+    const removed = visualEditorReducer(
+      mounted(withMalformed("main", [a, b])),
+      { index: 1, type: "remove-invalid", zoneId: "main" },
+    );
+
+    expect(unsafeZoneIds(removed)).toStrictEqual([]);
+    expect(isVisualEditorDirty(removed)).toBe(true);
+    expect(changedZoneIds(removed)).toStrictEqual(["main"]);
+    expect(removed.zones.main.blocks).toStrictEqual([a, b]);
+  });
+
+  it("ignores a removal aimed at an index or a zone that holds nothing", () => {
+    const state = mounted(withMalformed("main", [block("a"), block("b")]));
+
+    expect(
+      visualEditorReducer(state, {
+        index: 7,
+        type: "remove-invalid",
+        zoneId: "main",
+      }),
+    ).toBe(state);
+    expect(
+      visualEditorReducer(state, {
+        index: 1,
+        type: "remove-invalid",
+        zoneId: "ghost",
+      }),
+    ).toBe(state);
+  });
+
+  it("puts the entry back on discard, because discard undoes everything", () => {
+    const [a, b] = [block("a"), block("b")];
+    const state = mounted(withMalformed("main", [a, b]));
+    const removed = visualEditorReducer(state, {
+      index: 1,
+      type: "remove-invalid",
+      zoneId: "main",
+    });
+
+    const back = visualEditorReducer(removed, { type: "discard" });
+
+    expect(back.zones.main.invalid).toStrictEqual([
+      { index: 1, value: malformed },
+    ]);
+    expect(unsafeZoneIds(back)).toStrictEqual(["main"]);
+    expect(isVisualEditorDirty(back)).toBe(false);
+  });
+
+  it("goes clean once a save that dropped the entry on purpose lands", () => {
+    const [a, b] = [block("a"), block("b")];
+    const removed = visualEditorReducer(
+      mounted(withMalformed("main", [a, b])),
+      { index: 1, type: "remove-invalid", zoneId: "main" },
+    );
+
+    const input = buildSaveInput(removed);
+    const saved = visualEditorReducer(removed, inFlight(removed));
+
+    expect(input.changedZoneIds).toStrictEqual(["main"]);
+    expect(input.zones.main).toStrictEqual([a, b]);
+    expect(isVisualEditorDirty(saved)).toBe(false);
+    expect(
+      visualEditorReducer(saved, { type: "discard" }).zones.main.invalid,
+    ).toStrictEqual([]);
+  });
+
+  it("is dirty again if the entry comes back before a save in flight lands", () => {
+    const [a, b] = [block("a"), block("b")];
+    const state = mounted(withMalformed("main", [a, b]));
+    const removed = visualEditorReducer(state, {
+      index: 1,
+      type: "remove-invalid",
+      zoneId: "main",
+    });
+    const sending = inFlight(removed);
+    const restored = visualEditorReducer(removed, { type: "discard" });
+
+    const saved = visualEditorReducer(restored, sending);
+
+    expect(isVisualEditorDirty(saved)).toBe(true);
+    expect(unsafeZoneIds(saved)).toStrictEqual(["main"]);
   });
 });

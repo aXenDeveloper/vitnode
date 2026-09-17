@@ -4,6 +4,7 @@ import type {
   BlockUnknownData,
 } from "../../blocks/types";
 import type {
+  EditorZoneInvalidEntry,
   EditorZoneMount,
   EditorZoneState,
   VisualEditorAction,
@@ -64,6 +65,14 @@ export const sameBlocks = (
         sameValue(instance.data, right[at].data),
     ));
 
+export const sameInvalidEntries = (
+  left: readonly EditorZoneInvalidEntry[],
+  right: readonly EditorZoneInvalidEntry[],
+): boolean =>
+  left === right ||
+  (left.length === right.length &&
+    left.every((entry, at) => entry === right[at]));
+
 const sameAllowed = (
   left: BlockAllowedSpec | undefined,
   right: BlockAllowedSpec | undefined,
@@ -107,18 +116,29 @@ export const findBlock = (
   return null;
 };
 
+const zoneChanged = (zone: EditorZoneState): boolean =>
+  !sameBlocks(zone.blocks, zone.initial) ||
+  !sameInvalidEntries(zone.invalid, zone.initialInvalid);
+
 export const changedZoneIds = (state: VisualEditorState): string[] =>
   state.order.filter(zoneId => {
     const zone = state.zones[zoneId];
 
-    return zone !== undefined && !sameBlocks(zone.blocks, zone.initial);
+    return zone !== undefined && zoneChanged(zone);
   });
 
 export const isVisualEditorDirty = (state: VisualEditorState): boolean =>
   state.order.some(zoneId => {
     const zone = state.zones[zoneId];
 
-    return zone !== undefined && !sameBlocks(zone.blocks, zone.initial);
+    return zone !== undefined && zoneChanged(zone);
+  });
+
+export const unsafeZoneIds = (state: VisualEditorState): string[] =>
+  state.order.filter(zoneId => {
+    const zone = state.zones[zoneId];
+
+    return zone !== undefined && zone.invalid.length > 0;
   });
 
 const clampIndex = (index: number, length: number): number => {
@@ -166,6 +186,7 @@ const mountZone = (
   }
 
   const blocks = [...next.blocks];
+  const invalid = [...next.invalid];
 
   return withZones(
     { ...state, order: [...state.order, next.id] },
@@ -175,6 +196,8 @@ const mountZone = (
         blocks,
         id: next.id,
         initial: blocks,
+        initialInvalid: invalid,
+        invalid,
         registry: next.registry,
       },
     },
@@ -194,9 +217,13 @@ export const visualEditorReducer = (
         zones: Object.fromEntries(
           Object.entries(state.zones).map(([id, zone]) => [
             id,
-            zone.blocks === zone.initial
+            zone.blocks === zone.initial && zone.invalid === zone.initialInvalid
               ? zone
-              : { ...zone, blocks: zone.initial },
+              : {
+                  ...zone,
+                  blocks: zone.initial,
+                  invalid: zone.initialInvalid,
+                },
           ]),
         ),
       };
@@ -296,6 +323,18 @@ export const visualEditorReducer = (
       );
     }
 
+    case "remove-invalid": {
+      const zone = state.zones[action.zoneId];
+      if (!zone) return state;
+
+      const invalid = zone.invalid.filter(
+        entry => entry.index !== action.index,
+      );
+      if (invalid.length === zone.invalid.length) return state;
+
+      return withZones(state, { [action.zoneId]: { ...zone, invalid } });
+    }
+
     case "saved":
       return {
         ...state,
@@ -304,12 +343,20 @@ export const visualEditorReducer = (
             const persisted = Object.hasOwn(action.snapshot, id)
               ? action.snapshot[id]
               : zone.initial;
+            const persistedInvalid = Object.hasOwn(action.invalid, id)
+              ? action.invalid[id]
+              : zone.initialInvalid;
 
             return [
               id,
-              persisted === zone.initial
+              persisted === zone.initial &&
+              persistedInvalid === zone.initialInvalid
                 ? zone
-                : { ...zone, initial: persisted },
+                : {
+                    ...zone,
+                    initial: persisted,
+                    initialInvalid: persistedInvalid,
+                  },
             ];
           }),
         ),

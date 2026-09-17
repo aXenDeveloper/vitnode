@@ -113,3 +113,28 @@ describe("DEFAULT_EXAMPLE_ZONES_LAYOUT", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe("the field set a save actually sends", () => {
+  it("fills a zone the editor never mounted from the page's own layout, not the shipped defaults", () => {
+    const canonical = fieldsToZones(layout);
+    const snapshot = { "settings:before-profile": [block("edited")] };
+
+    expect(
+      zonesToFields(
+        snapshot,
+        zonesToFields(canonical, DEFAULT_EXAMPLE_ZONES_LAYOUT),
+      ),
+    ).toEqual({ ...layout, beforeProfile: [block("edited")] });
+  });
+
+  it("stores a zone the editor emptied as empty, rather than resurrecting it", () => {
+    const canonical = fieldsToZones(layout);
+
+    expect(
+      zonesToFields(
+        { ...canonical, "settings:sidebar": [] },
+        zonesToFields(canonical, DEFAULT_EXAMPLE_ZONES_LAYOUT),
+      ),
+    ).toEqual({ ...layout, sidebar: [] });
+  });
+});

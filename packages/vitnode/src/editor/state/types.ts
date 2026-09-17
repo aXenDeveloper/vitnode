@@ -4,10 +4,16 @@ import type {
   BlockRegistry,
 } from "../../blocks/types";
 
+export interface EditorZoneInvalidEntry {
+  index: number;
+  value: unknown;
+}
+
 export interface EditorZoneMount {
   allowedBlocks: BlockAllowedSpec | undefined;
   blocks: readonly AnyBlockInstance[];
   id: string;
+  invalid: readonly EditorZoneInvalidEntry[];
   registry: BlockRegistry | undefined;
 }
 
@@ -16,6 +22,8 @@ export interface EditorZoneState {
   blocks: readonly AnyBlockInstance[];
   id: string;
   initial: readonly AnyBlockInstance[];
+  initialInvalid: readonly EditorZoneInvalidEntry[];
+  invalid: readonly EditorZoneInvalidEntry[];
   registry: BlockRegistry | undefined;
 }
 
@@ -30,6 +38,10 @@ export type VisualEditorSnapshot = Readonly<
   Record<string, readonly AnyBlockInstance[]>
 >;
 
+export type VisualEditorInvalidSnapshot = Readonly<
+  Record<string, readonly EditorZoneInvalidEntry[]>
+>;
+
 export type VisualEditorAction =
   | { blockId: null | string; type: "select" }
   | { blockId: string; data: Record<string, unknown>; type: "update" }
@@ -42,6 +54,11 @@ export type VisualEditorAction =
       type: "insert";
       zoneId: string;
     }
-  | { snapshot: VisualEditorSnapshot; type: "saved" }
+  | { index: number; type: "remove-invalid"; zoneId: string }
+  | {
+      invalid: VisualEditorInvalidSnapshot;
+      snapshot: VisualEditorSnapshot;
+      type: "saved";
+    }
   | { type: "discard" }
   | { type: "mount"; zone: EditorZoneMount };

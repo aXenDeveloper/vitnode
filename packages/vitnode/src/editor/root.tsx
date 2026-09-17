@@ -23,7 +23,7 @@ import type {
 
 import { ContentEditContext } from "../blocks/edit-context";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
-import { buildSaveInput } from "./adapter/save-input";
+import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
 import { VisualEditorContext } from "./context";
 import { EditorDndProvider } from "./dnd/provider";
 import { createBlockInstanceFor } from "./instance/defaults";
@@ -34,6 +34,7 @@ import { EditorSidebar } from "./sidebar/sidebar";
 import {
   initialVisualEditorState,
   isVisualEditorDirty,
+  unsafeZoneIds,
   visualEditorReducer,
 } from "./state/reducer";
 import { EditableZone } from "./zones/editable-zone";
@@ -49,6 +50,7 @@ const contentEditRuntime: ContentEditRuntime = {
 };
 
 const EDITOR_SHELL_STYLE = {
+  "--editor-sheet-height": "24rem",
   "--editor-sidebar-width": "clamp(20rem, 24vw, 22.5rem)",
 } as CSSProperties;
 
@@ -72,6 +74,7 @@ const EditorShell = ({
   const panel: EditorPanelMode =
     state.selectedBlockId === null ? "blocks" : "properties";
   const dirty = isVisualEditorDirty(state);
+  const unsafe = useMemo(() => unsafeZoneIds(state), [state]);
 
   const setPanel = useCallback((mode: EditorPanelMode) => {
     if (mode === "blocks") {
@@ -88,7 +91,14 @@ const EditorShell = ({
       return false;
     }
 
+    if (unsafe.length > 0) {
+      toast.error(t("unsafe.title"), { description: t("unsafe.desc") });
+
+      return false;
+    }
+
     const input = buildSaveInput(state);
+    const invalid = buildInvalidSnapshot(state);
     setSaveStatus("saving");
 
     try {
@@ -102,14 +112,14 @@ const EditorShell = ({
       return false;
     }
 
-    dispatch({ snapshot: input.zones, type: "saved" });
+    dispatch({ invalid, snapshot: input.zones, type: "saved" });
     setSaveStatus("saved");
     toast.success(t("saved_toast.title"), {
       description: t("saved_toast.desc"),
     });
 
     return true;
-  }, [adapter, state, t]);
+  }, [adapter, state, t, unsafe]);
 
   const save = useCallback(() => {
     void persist();
@@ -187,6 +197,7 @@ const EditorShell = ({
       setPanel,
       setPreview,
       state,
+      unsafeZoneIds: unsafe,
     }),
     [
       dirty,
@@ -200,6 +211,7 @@ const EditorShell = ({
       saveStatus,
       setPanel,
       state,
+      unsafe,
     ],
   );
 
@@ -210,7 +222,8 @@ const EditorShell = ({
           <div
             className={cn(
               "transition-[padding] duration-200 ease-linear",
-              !preview && "md:pe-(--editor-sidebar-width)",
+              !preview &&
+                "pb-(--editor-sheet-height) md:pe-(--editor-sidebar-width) md:pb-0",
             )}
             style={EDITOR_SHELL_STYLE}
           >

@@ -123,7 +123,7 @@ const VIEW_MODE_CHECKS = [
 
 const EDIT_MODE_CHECKS = [
   "The editor chunk is fetched on the first Edit page click and never before it. Use Finish editing and click Edit page again: the second click fetches nothing.",
-  "One sidebar opens on the right and the page is padded, never covered - the zones keep their full width under it. Narrow the window below md and the same sidebar becomes a bottom sheet.",
+  "One sidebar opens on the right and the page is padded, never covered - the zones keep their full width under it. Narrow the window below md and the same sidebar becomes a bottom sheet, with the padding moving underneath the page so the last zone still scrolls clear of it.",
   "settings:before-footer becomes visible only in edit mode, as a large dashed placeholder with its own Add block button. Finish editing and it disappears again.",
   "Add block on a zone targets it: the sidebar switches to Available Blocks, its header reads For: that zone id, and the zone stays outlined until you clear the target.",
   "A catalog entry is both draggable and clickable. Drag one between two blocks and an insertion line shows exactly where it will land; click one instead and it goes to the targeted zone, or to the first zone that accepts it.",
@@ -133,7 +133,8 @@ const EDIT_MODE_CHECKS = [
   "Select a block and the same sidebar switches to Properties. Back to Available Blocks clears the selection and returns to the catalog.",
   "Every block sits in an inert container, so a block's own links and buttons cannot be clicked or tabbed to. Preview gives them back and collapses the sidebar to a slim bar with Back to editing and Finish editing.",
   "The profile form is application code: no overlay, no drag handle, and its input still takes focus while edit mode is on.",
-  "Save runs this page's adapter from the sidebar footer, which writes the layout to the API. Reload the page and the zones come back exactly as you left them.",
+  "Save runs this page's adapter from the sidebar footer, which writes the layout to the API and answers with the layout it stored. Finish editing and view mode already shows it - no reload. Reload anyway and the zones come back exactly the same.",
+  "A zone holding a value that is not a block shows it as an unreadable entry it refuses to drop, and Save stays disabled until you remove that entry yourself.",
 ];
 
 const canEditPage = (): boolean => process.env.NODE_ENV !== "production";
@@ -206,10 +207,13 @@ const SavedPayload = ({ input }: { input: VisualEditorSaveInput }) => (
 const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
   const [editing, setEditing] = useState(false);
   const [lastSave, setLastSave] = useState<null | VisualEditorSaveInput>(null);
-  const [stored, setStored] = useState<Omit<ZonesLayout, "zones">>({
-    source: loaderData.source,
-    updatedAt: loaderData.updatedAt,
-  });
+  const [layout, setLayout] = useState<ZonesLayout>(loaderData);
+  const [loaded, setLoaded] = useState<ZonesLayout>(loaderData);
+
+  if (loaded !== loaderData) {
+    setLoaded(loaderData);
+    setLayout(loaderData);
+  }
 
   const save = useCallback(
     async (input: VisualEditorSaveInput) => {
@@ -218,7 +222,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
         args: {
           body: zonesToFields(
             input.zones,
-            zonesToFields(loaderData.zones, DEFAULT_EXAMPLE_ZONES_LAYOUT),
+            zonesToFields(layout.zones, DEFAULT_EXAMPLE_ZONES_LAYOUT),
           ),
         },
         method: "put",
@@ -230,12 +234,12 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
         throw new Error(`The zones layout route answered ${response.status}.`);
       }
 
-      const { source, updatedAt } = await response.json();
+      const { fields, source, updatedAt } = await response.json();
 
-      setStored({ source, updatedAt });
+      setLayout({ source, updatedAt, zones: fieldsToZones(fields) });
       setLastSave(input);
     },
-    [loaderData.zones],
+    [layout.zones],
   );
 
   const adapter = useMemo<VisualEditorAdapter>(() => ({ save }), [save]);
@@ -258,7 +262,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
               A system page with four content zones. Blocks come from the route
               loader, so the zones themselves make no request.
             </p>
-            <LayoutSource {...stored} />
+            <LayoutSource source={layout.source} updatedAt={layout.updatedAt} />
           </div>
 
           {canEditPage() && !editing ? (
@@ -290,7 +294,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
           <div className="flex flex-1 flex-col gap-6">
             <ContentZone
               allowedBlocks={PAGE_BLOCKS_ALLOWED}
-              blocks={loaderData.zones[EXAMPLE_ZONE_IDS.beforeProfile]}
+              blocks={layout.zones[EXAMPLE_ZONE_IDS.beforeProfile]}
               id={EXAMPLE_ZONE_IDS.beforeProfile}
               registry={blocksRegistry}
             />
@@ -299,7 +303,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
 
             <ContentZone
               allowedBlocks={PAGE_BLOCKS_ALLOWED}
-              blocks={loaderData.zones[EXAMPLE_ZONE_IDS.afterProfile]}
+              blocks={layout.zones[EXAMPLE_ZONE_IDS.afterProfile]}
               id={EXAMPLE_ZONE_IDS.afterProfile}
               registry={blocksRegistry}
             />
@@ -308,7 +312,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
           <ContentZone
             allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
             as="aside"
-            blocks={loaderData.zones[EXAMPLE_ZONE_IDS.sidebar]}
+            blocks={layout.zones[EXAMPLE_ZONE_IDS.sidebar]}
             className="border-border w-full rounded-lg border p-4 lg:w-64"
             id={EXAMPLE_ZONE_IDS.sidebar}
             registry={blocksRegistry}
@@ -317,7 +321,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
 
         <ContentZone
           allowedBlocks={PAGE_BLOCKS_ALLOWED}
-          blocks={loaderData.zones[EXAMPLE_ZONE_IDS.beforeFooter]}
+          blocks={layout.zones[EXAMPLE_ZONE_IDS.beforeFooter]}
           id={EXAMPLE_ZONE_IDS.beforeFooter}
           registry={blocksRegistry}
         />

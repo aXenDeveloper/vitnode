@@ -61,6 +61,8 @@ const zoneSource = read("blocks", "zone.tsx");
 const mountSource = read("blocks", "edit-context.ts");
 const rendererSource = read("blocks", "renderer.tsx");
 const editableZoneSource = read("editor", "zones", "editable-zone.tsx");
+const rootSource = read("editor", "root.tsx");
+const sidebarSource = read("editor", "sidebar", "sidebar.tsx");
 
 const zoneProps = memberNames(interfaceBody(zoneSource, "ContentZoneProps"));
 const mountBody = interfaceBody(mountSource, "ContentZoneMount");
@@ -108,5 +110,51 @@ describe("preview, which has to look like the page really does", () => {
   it("takes each of them off the mount rather than inventing a value", () => {
     expect(editableZoneSource).toContain("fallback: mount.fallback");
     expect(editableZoneSource).toContain("validate: mount.validate");
+  });
+});
+
+describe("persisted values the editor cannot read", () => {
+  it("classifies what it was mounted with rather than filtering it away", () => {
+    expect(editableZoneSource).toContain("classifyZoneEntries(mount.blocks)");
+    expect(editableZoneSource).not.toContain("filter(isBlockInstance)");
+  });
+
+  it("offers them back as an explicit removal instead of dropping them", () => {
+    expect(editableZoneSource).toContain("<InvalidZoneEntries");
+  });
+
+  it("refuses to run the adapter while a zone still holds one", () => {
+    expect(rootSource).toContain("unsafeZoneIds(state)");
+    expect(rootSource).toMatch(
+      /if \(unsafe\.length > 0\) \{[\s\S]*?return false;\n {4}\}/,
+    );
+  });
+
+  it("makes that refusal the gate the save input is built behind", () => {
+    expect(rootSource.indexOf("unsafe.length > 0")).toBeLessThan(
+      rootSource.indexOf("buildSaveInput(state)"),
+    );
+  });
+});
+
+describe("the room the editor leaves the page it is editing", () => {
+  it("reserves the bottom sheet on small screens and the sidebar on wide ones", () => {
+    expect(rootSource).toContain(
+      "pb-(--editor-sheet-height) md:pe-(--editor-sidebar-width) md:pb-0",
+    );
+  });
+
+  it("reserves neither in preview, which is the page as visitors see it", () => {
+    expect(rootSource).toMatch(/!preview &&\s*"pb-\(--editor-sheet-height\)/);
+  });
+
+  it("caps the sheet at exactly the height the page made room for", () => {
+    expect(sidebarSource).toContain("max-h-(--editor-sheet-height)");
+    expect(sidebarSource).toContain("md:max-h-none");
+  });
+
+  it("declares both measurements in one place", () => {
+    expect(rootSource).toContain('"--editor-sheet-height"');
+    expect(rootSource).toContain('"--editor-sidebar-width"');
   });
 });

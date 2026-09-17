@@ -275,6 +275,41 @@ Typing updates the block on the page **as you type**. There is no Apply button, 
 
 A block whose stored data does not match what its definition declares is not editable here - it is flagged on the page instead. Editing it would mean guessing which half is wrong, and guessing is how content gets quietly destroyed.
 
+## Content the editor cannot read
+
+A zone is handed whatever is stored in it, and storage is older than any editor. A field can hold a value from a migration that never finished, from a plugin that wrote its own shape, or from a hand-edited row. The editor has to have an answer for that, and the answer is **never delete it**.
+
+Every value a zone mounts with is sorted into one of two piles:
+
+|                                 |                                                                                                                                                         |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A block with bad data**       | `{ id, type, data }` is intact and `type` is registered, but `data` does not match the fields. It stays a block: selectable, movable, deletable.        |
+| **Something that is not a block** | No usable `id`, no `type`, a duplicate instance id, or not an object at all. Nothing can be inferred from it, so nothing pretends to.                 |
+
+The first pile keeps working exactly as before - the block renders an [`InvalidBlock`](#the-properties-panel) placeholder in place of its component, and its own shell keeps the drag handle, the duplicate and the delete button. Its data is bad; its identity is not.
+
+The second pile never becomes an `AnyBlockInstance`. It is kept beside the blocks, not among them:
+
+```ts
+interface EditorZoneState {
+  blocks: readonly AnyBlockInstance[]
+  invalid: readonly { index: number; value: unknown }[]
+  // …
+}
+```
+
+Nothing in the editor - no reducer action, no drop resolver, no block component - is ever handed one of those values. The zone shows them at the top, prints what each one looks like, and offers exactly one action per entry: **Remove invalid entry**.
+
+### Saving is blocked until you decide
+
+While a zone still holds one, the whole editor refuses to save. The **Save** button is disabled, the sidebar footer explains why, and the adapter is not called even from **Save and finish**:
+
+> This zone contains invalid or legacy content that the Visual Editor cannot safely save. Resolve or explicitly remove the invalid content before saving.
+
+That is deliberate, and it is the whole point of the pile. The save payload is a **replacement** array per zone - the editor hands over the blocks it understands, and the API stores exactly that. If a value the editor could not read were quietly left out of that array, editing an unrelated block in the same zone would delete it. Storing `[A, malformed, B]` and saving after a change to `A` would write `[A2, B]`, and nobody would ever be told.
+
+So removal is a decision you make, one entry at a time, and it is an edit like any other: **Discard** brings the entries back, and the page is dirty until you save.
+
 ## Saving is the host's job
 
 The editor never fetches. Not once. The only way anything leaves it is the adapter you passed:
@@ -298,6 +333,12 @@ interface VisualEditorAdapter {
 
 The one rule the contract asks of you: **save what you were handed**. The editor rebases its idea of "unchanged" onto the snapshot it sent, not onto the state it is in when the promise resolves - so a word typed while the request was in flight is still unsaved afterwards, exactly as it should be.
 
+`zones` is a **complete** picture of the page, not a patch: every zone the editor mounted is in it, emptied ones included. `changedZoneIds` is there so you can log, audit or short-circuit - not so you can send a partial write and let the rest fall back to defaults. Compose the field set you store from the snapshot **on top of the layout you are currently showing**, so a zone that is not on this page keeps whatever it already held:
+
+```ts
+const fields = zonesToFields(input.zones, zonesToFields(layout.zones, SHIPPED_DEFAULTS))
+```
+
 ```tsx
 const adapter = useMemo<VisualEditorAdapter>(
   () => ({
@@ -314,6 +355,25 @@ const adapter = useMemo<VisualEditorAdapter>(
   [page.id],
 )
 ```
+
+### Answer with what you stored
+
+`save` may resolve with nothing, and the editor is happy either way - but the page around it usually should not be. The example page renders its zones from its own state rather than straight from `loaderData`, and replaces that state with the layout the API answers with:
+
+```tsx
+const [layout, setLayout] = useState(loaderData)
+
+const save = async (input: VisualEditorSaveInput) => {
+  const response = await fetcher({ /* … */ args: { body: fields } })
+  const { fields, source, updatedAt } = await response.json()
+
+  setLayout({ source, updatedAt, zones: fieldsToZones(fields) })
+}
+```
+
+Two things fall out of that. **Finish editing** shows the saved page immediately, with no reload - the editor unmounts and the page underneath is already the new one. And because the layout comes back from the route that persisted it rather than from the input that was sent, whatever the API normalised, reordered or rejected is what you end up looking at. If the two ever disagree, you see it on the spot instead of on the next refresh.
+
+This belongs to the page, not to the editor. The editor owns no layout state and never will: it is handed blocks, it hands back blocks, and the content's owner decides what is true.
 
 ### Save stays, Finish editing leaves
 
@@ -347,7 +407,7 @@ Being clear about the edges is more useful than a roadmap.
 | **Presentation variants**         | An instance is `{ id, type, data }`. A block that should look different has to say so in its own data.                                                                                                  |
 | **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                      |
 | **Permission UI**                 | No roles screen, no per-zone locking. `canEditPage` and your API are the whole story.                                                                                                                   |
-| **Collaborative editing**         | One editor at a time. Two people on one page will overwrite each other.                                                                                                                                 |
+| **Conflict detection**            | Two people editing one page overwrite each other. `/example/zones` serialises its own writes with a Postgres advisory lock so a row cannot be half-written, but nothing compares revisions - real page editing will want a `revision`, `version` or `updatedAt` check on the way in.                                                                                                                                 |
 | **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel. |
 | **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                             |
 | **Inline rich text**              | Text is edited in the properties panel, not by clicking into the rendered paragraph.                                                                                                                    |
@@ -364,7 +424,7 @@ The section above is about scope. This one is about rough edges in the part that
 
 Dimming it would mean fading the page and un-fading the zones, and a descendant cannot undo an ancestor's `opacity` or `filter`: those create a new compositing context that the zone inside it is stuck in. The only other route is selector-based - "dim everything that does not contain a zone" - which would have to make assumptions about a page's DOM that VitNode does not get to make, since the page is yours. So Stage 3 emphasises the zones rather than de-emphasising the page, and a host that wants more can style `[data-vitnode-zone]` and its surroundings itself.
 
-**Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen, and everything works - but nothing is _tuned_ for touch: a drag competes with page scrolling, the sheet covers the page it is editing, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
+**Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen. The page reserves room for it - `--editor-sheet-height` is padding on the canvas below `md` and the width of the sidebar above it, so the last zone always scrolls clear of the sheet and Preview takes both away - but nothing is _tuned_ for touch: a drag competes with page scrolling, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
 
 **There is no end-to-end test harness.** The pure logic is covered by vitest - the reducer, the drop resolver and its insertion placement, zone drop states, the save input, the catalogue, and the module-graph boundary test that keeps the editor out of public bundles. What no test covers is a real browser actually dragging something, so the [manual checklist](#verifying-it-yourself) is the regression suite for gestures. `apps/web` has no test runner configured at all, which is why the checklist lives in this page rather than in a spec file.
 
@@ -555,8 +615,9 @@ Press **Save** in the sidebar footer - not the profile form's own Save button, w
 
 |         | Expected                                                                                                          |
 | :------ | :---------------------------------------------------------------------------------------------------------------- |
-| Toast   | The page's mock adapter fires first, naming the changed zones and saying nothing was persisted.                   |
+| Toast   | _Page saved_.                                                                                                     |
 | Footer  | Switches from _Unsaved changes_ to _Saved_.                                                                       |
+| Header  | The line under the title now reads _Showing the layout stored on the server_, with the time it was saved.        |
 | Payload | A **Last save payload** block appears at the bottom of the page - open it and read the JSON the adapter received. |
 
 Check that `changedZoneIds` lists only the zones you actually touched.
@@ -564,9 +625,11 @@ Check that `changedZoneIds` lists only the zones you actually touched.
 </Step>
 <Step>
 
-**Finish editing**
+**Finish editing, without reloading**
 
-Press **Finish editing**. The public page is back: no outlines, no sidebar, and `settings:before-footer` is invisible again because it is still empty.
+Press **Finish editing**. The public page is back: no outlines, no sidebar, and `settings:before-footer` is invisible again if you left it empty.
+
+The part worth checking is that **the page you are looking at is the page you saved** - the block you added, the one you moved and the text you typed, all in view mode, with no refresh anywhere. Then reload, and confirm you get the same thing a second time. The first comes from the API's answer to the save; the second from the route loader.
 
 Now do it the other way round: click **Edit page**, change something, and press **Finish editing** without saving. The dialog offers **Save and finish**, **Leave without saving** and **Keep editing** - and note that **Save** on its own, back in the footer, would have kept you in edit mode instead.
 
@@ -579,7 +642,14 @@ Now do it the other way round: click **Edit page**, change something, and press 
 - **Duplicate** drops a copy directly below the original with its own instance id; **Delete** takes it away and returns the sidebar to the catalogue.
 - The profile form in the middle must have **no** outline, **no** handle and **no** overlay, and its input must still take focus and type. It is application code.
 - Navigating away with unsaved changes - a header link, or the back button - prompts, with **Keep editing** and **Leave without saving**.
-- Reloading starts over, because the playground adapter stores nothing. That is the adapter's doing, not the editor's.
+- **Below `md`** the sidebar becomes a bottom sheet and the canvas gains padding to match: scroll to the end and the last zone, its **Add block** button included, clears the sheet completely. **Preview** takes the padding away with the sheet, so the page is exactly as a visitor sees it.
+- **Seed something unreadable** and the refusal is easy to see:
+
+  ```bash
+  psql "$POSTGRES_URL" -c 'update example_zones_layouts set "beforeProfile" = \'[{"foo":"bar"}]\' where slug = \'settings-playground\';'
+  ```
+
+  Reload, press **Edit page**: `settings:before-profile` shows _This zone holds content the editor cannot read_ with `{"foo":"bar"}` printed under it, **Save** is disabled whatever else you change, and the footer says why. Press **Remove invalid entry**, and Save comes back. **Discard** puts it straight back.
 
 ### Against a production build
 

@@ -6,10 +6,11 @@ import type { EditorZoneMount, VisualEditorState } from "../state/types";
 import { createBlockInstance } from "../../blocks/instance";
 import {
   initialVisualEditorState,
+  unsafeZoneIds,
   visualEditorReducer,
 } from "../state/reducer";
 import { createMemoryAdapter } from "./memory";
-import { buildSaveInput } from "./save-input";
+import { buildInvalidSnapshot, buildSaveInput } from "./save-input";
 
 const block = (text: string): AnyBlockInstance =>
   createBlockInstance("core:text", { body: text });
@@ -21,6 +22,7 @@ const mount = (
   allowedBlocks: undefined,
   blocks,
   id,
+  invalid: [],
   registry: undefined,
 });
 
@@ -90,5 +92,33 @@ describe("createMemoryAdapter", () => {
     expect(adapter.saves).toHaveLength(1);
     expect(adapter.saves[0].zones.main).toHaveLength(1);
     expect(seen).toStrictEqual([["main"]]);
+  });
+});
+
+describe("a zone holding a value the editor could not read", () => {
+  const malformed = { foo: "bar" };
+
+  it("names the zone unsafe, because the payload it would send drops the value", () => {
+    const [a, b] = [block("a"), block("b")];
+    const state = mounted({
+      ...mount("main", [a, b]),
+      invalid: [{ index: 1, value: malformed }],
+    });
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+    expect(buildSaveInput(state).zones.main).toStrictEqual([a, b]);
+  });
+
+  it("baselines every mounted zone, so a save cannot rebase onto a later value", () => {
+    const entries = [{ index: 0, value: malformed }];
+    const state = mounted(
+      { ...mount("main", []), invalid: entries },
+      mount("aside", [block("c")]),
+    );
+
+    expect(buildInvalidSnapshot(state)).toStrictEqual({
+      aside: [],
+      main: entries,
+    });
   });
 });

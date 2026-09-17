@@ -903,7 +903,12 @@
         "drop_here": "Drag and drop blocks here",
         "targeted": "Waiting for the block you pick next",
         "add_block": "Add block",
-        "rejected": "This zone does not accept the block you are dragging."
+        "rejected": "This zone does not accept the block you are dragging.",
+        "invalid": {
+          "title": "This zone holds content the editor cannot read",
+          "description": "These entries are stored here but are not blocks the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
+          "remove": "Remove invalid entry"
+        }
       },
       "block": {
         "select": "Select the {name} block",
@@ -964,6 +969,10 @@
       "no_adapter": {
         "title": "Nowhere to save to",
         "desc": "This page opened the editor without a save adapter, so there is nothing to store your changes in."
+      },
+      "unsafe": {
+        "title": "This page cannot be saved yet",
+        "desc": "This zone contains invalid or legacy content that the Visual Editor cannot safely save. Resolve or explicitly remove the invalid content before saving."
       }
     }
   },

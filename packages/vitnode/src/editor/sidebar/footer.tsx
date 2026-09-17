@@ -13,8 +13,16 @@ import { useVisualEditor } from "../context";
 import { editorStatus } from "./status";
 
 export const EditorSidebarFooter = (): ReactElement => {
-  const { dirty, discard, exit, preview, save, saveStatus, setPreview } =
-    useVisualEditor();
+  const {
+    dirty,
+    discard,
+    exit,
+    preview,
+    save,
+    saveStatus,
+    setPreview,
+    unsafeZoneIds,
+  } = useVisualEditor();
   const t = useTranslations("core.editor");
   const status = editorStatus(dirty, saveStatus);
   const statusLabels: Record<EditorStatus, string> = {
@@ -24,9 +32,19 @@ export const EditorSidebarFooter = (): ReactElement => {
     unsaved: t("unsaved"),
   };
   const saving = saveStatus === "saving";
+  const blocked = unsafeZoneIds.length > 0;
 
   return (
     <footer className="border-border flex flex-col gap-3 border-t p-4">
+      {blocked ? (
+        <p
+          className="text-destructive text-sm leading-relaxed text-pretty"
+          role="alert"
+        >
+          {t("unsafe.desc")}
+        </p>
+      ) : null}
+
       <p
         className={cn(
           "text-sm leading-relaxed",
@@ -69,7 +87,7 @@ export const EditorSidebarFooter = (): ReactElement => {
 
       <div className="grid grid-cols-2 gap-2">
         <Button
-          disabled={!dirty || saving}
+          disabled={!dirty || saving || blocked}
           isLoading={saving}
           onClick={save}
           variant="secondary"

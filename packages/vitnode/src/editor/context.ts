@@ -32,6 +32,7 @@ export interface VisualEditorContextValue {
   setPanel: (panel: EditorPanelMode) => void;
   setPreview: (preview: boolean) => void;
   state: VisualEditorState;
+  unsafeZoneIds: readonly string[];
 }
 
 export const VisualEditorContext =

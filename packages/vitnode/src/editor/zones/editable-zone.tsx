@@ -12,7 +12,6 @@ import type { AnyBlockInstance, RegisteredBlock } from "../../blocks/types";
 import type { EditorZoneMount } from "../state/types";
 import type { ZoneDropState } from "./drop-state";
 
-import { isBlockInstance } from "../../blocks/instance";
 import { resolveBlockRegistry } from "../../blocks/registry";
 import { ContentRenderer } from "../../blocks/renderer";
 import { contentZoneAttributes } from "../../blocks/zone-meta";
@@ -22,7 +21,9 @@ import { useZoneDroppable } from "../dnd/use-zone-droppable";
 import { ZoneSortable } from "../dnd/zone-sortable";
 import { InvalidBlock, UnknownBlock } from "./block-placeholder";
 import { editableBlockRender } from "./block-render";
+import { classifyZoneEntries } from "./classify";
 import { zoneDropState } from "./drop-state";
+import { InvalidZoneEntries } from "./invalid-entries";
 
 const ZONE_CLASSES = {
   idle: "bg-muted/20 outline-border/60 hover:outline-border",
@@ -89,17 +90,19 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
   const registeredRef = useRef<IncomingZone | null>(null);
 
   const incoming = useMemo((): IncomingZone => {
-    const blocks = (mount.blocks ?? []).filter(isBlockInstance);
+    const { blocks, invalid } = classifyZoneEntries(mount.blocks);
 
     return {
       signature: JSON.stringify({
         allowedBlocks: mount.allowedBlocks ?? null,
         blocks,
+        invalid: invalid.map(entry => entry.index),
       }),
       zone: {
         allowedBlocks: mount.allowedBlocks,
         blocks,
         id: mount.id,
+        invalid,
         registry: mount.registry,
       },
     };
@@ -121,6 +124,7 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
 
   const zone = state.zones[mount.id];
   const blocks = zone?.blocks ?? incoming.zone.blocks;
+  const invalid = zone?.invalid ?? incoming.zone.invalid;
 
   if (preview) {
     if (blocks.length === 0) return null;
@@ -194,6 +198,11 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
     </span>
   );
 
+  const unreadable =
+    invalid.length === 0 ? null : (
+      <InvalidZoneEntries entries={invalid} zoneId={mount.id} />
+    );
+
   const body =
     blocks.length === 0 ? (
       <div
@@ -265,6 +274,7 @@ export const EditableZone = (mount: ContentZoneMount): null | ReactElement => {
       ref: setNodeRef,
     },
     label,
+    unreadable,
     body,
     footer,
   );

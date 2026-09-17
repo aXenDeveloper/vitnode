@@ -1,5 +1,8 @@
 import type { AnyBlockInstance } from "../../blocks/types";
-import type { VisualEditorState } from "../state/types";
+import type {
+  VisualEditorInvalidSnapshot,
+  VisualEditorState,
+} from "../state/types";
 import type { VisualEditorSaveInput } from "./types";
 
 import { changedZoneIds } from "../state/reducer";
@@ -17,3 +20,14 @@ export const buildSaveInput = (
       ),
   ),
 });
+
+export const buildInvalidSnapshot = (
+  state: VisualEditorState,
+): VisualEditorInvalidSnapshot =>
+  Object.fromEntries(
+    state.order.flatMap(zoneId => {
+      const zone = state.zones[zoneId];
+
+      return zone ? [[zoneId, zone.invalid] as const] : [];
+    }),
+  );
