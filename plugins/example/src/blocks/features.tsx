@@ -20,10 +20,19 @@ type FeaturesData = BlockData<typeof featuresFields>;
 
 type FeatureItem = NonNullable<FeaturesData["primary"]>;
 
-const filledItems = (data: FeaturesData): FeatureItem[] =>
-  [data.primary, data.secondary, data.tertiary].filter(
-    (item): item is FeatureItem => !!item?.title,
-  );
+interface FeatureSlot {
+  item: FeatureItem;
+  slot: string;
+}
+
+const filledItems = (data: FeaturesData): FeatureSlot[] =>
+  (
+    [
+      { item: data.primary, slot: "primary" },
+      { item: data.secondary, slot: "secondary" },
+      { item: data.tertiary, slot: "tertiary" },
+    ] as const
+  ).flatMap(({ item, slot }) => (item?.title ? [{ item, slot }] : []));
 
 const GridItem = ({ item }: { item: FeatureItem }) => (
   <li className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4">
@@ -85,24 +94,24 @@ const Features = ({ data, variant }: BlockComponentProps<FeaturesData>) => {
 
       {variant === "list" ? (
         <ul className="flex flex-col gap-4">
-          {items.map(item => (
-            <ListItem item={item} key={item.title} />
+          {items.map(({ item, slot }) => (
+            <ListItem item={item} key={slot} />
           ))}
         </ul>
       ) : null}
 
       {compact ? (
         <ul className="flex flex-col gap-1">
-          {items.map(item => (
-            <CompactItem item={item} key={item.title} />
+          {items.map(({ item, slot }) => (
+            <CompactItem item={item} key={slot} />
           ))}
         </ul>
       ) : null}
 
       {variant === "list" || compact ? null : (
         <ul className="grid gap-4 md:grid-cols-3">
-          {items.map(item => (
-            <GridItem item={item} key={item.title} />
+          {items.map(({ item, slot }) => (
+            <GridItem item={item} key={slot} />
           ))}
         </ul>
       )}

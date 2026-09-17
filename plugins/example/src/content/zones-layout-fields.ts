@@ -73,13 +73,13 @@ export const DEFAULT_EXAMPLE_ZONES_LAYOUT: ExampleZonesFields = {
       ],
       id: "01JEXAMPLEZONESAREA0000001",
       kind: "area",
-      layout: { align: "stretch", columns: 2, gap: "md", justify: "start" },
+      layout: { align: "stretch", columns: 2, gap: "md" },
     },
     {
       children: [],
       id: "01JEXAMPLEZONESAREA0000002",
       kind: "area",
-      layout: { align: "stretch", columns: 2, gap: "md", justify: "start" },
+      layout: { align: "stretch", columns: 2, gap: "md" },
     },
     {
       data: {

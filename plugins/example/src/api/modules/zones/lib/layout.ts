@@ -5,6 +5,7 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import {
   AREA_ALIGNS,
+  AREA_CHILDREN_DEFAULT_MAX,
   AREA_COLUMNS,
   AREA_GAPS,
   AREA_JUSTIFIES,
@@ -25,18 +26,18 @@ import {
   zonesLayoutContent,
 } from "@/database/zones-layouts";
 
-const zodBlockNode = z.object({
+const zodBlockNode = z.strictObject({
   data: z.record(z.string(), z.unknown()),
   id: z.string(),
   type: z.string(),
   variant: z.string().optional(),
 });
 
-const zodAreaNode = z.object({
-  children: z.array(zodBlockNode).readonly(),
+const zodAreaNode = z.strictObject({
+  children: z.array(zodBlockNode).max(AREA_CHILDREN_DEFAULT_MAX).readonly(),
   id: z.string(),
   kind: z.literal(CONTENT_AREA_KIND),
-  layout: z.object({
+  layout: z.strictObject({
     align: z.enum(AREA_ALIGNS).optional(),
     columns: z.literal(AREA_COLUMNS),
     gap: z.enum(AREA_GAPS).optional(),

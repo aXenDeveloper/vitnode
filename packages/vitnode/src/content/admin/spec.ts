@@ -6,6 +6,7 @@ import type {
   ContentFieldKind,
 } from "../types";
 
+import { zodContentNode } from "../../blocks/validate";
 import {
   getLangValue,
   type MultiLangValue,
@@ -369,13 +370,7 @@ const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   switch (spec.kind) {
     case "blocks":
-      return z.array(
-        z.object({
-          data: z.record(z.string(), z.unknown()),
-          id: z.string(),
-          type: z.string(),
-        }),
-      );
+      return z.array(zodContentNode);
     case "boolean":
       return z.boolean();
     case "dateTime":
