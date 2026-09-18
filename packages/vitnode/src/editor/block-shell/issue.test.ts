@@ -20,6 +20,15 @@ const entry: RegisteredBlock = {
   type: "core:text",
 };
 
+const variantEntry: RegisteredBlock = {
+  ...entry,
+  definition: {
+    ...entry.definition,
+    defaultVariant: "grid",
+    variants: [{ id: "grid" }, { id: "featured" }],
+  },
+};
+
 const instance = (
   type: string,
   data: Record<string, unknown>,
@@ -37,7 +46,7 @@ describe("editableBlockIssue", () => {
         entry: undefined,
         instance: instance("core:ghost", {}),
       }),
-    ).toBe("unknown-type");
+    ).toStrictEqual({ kind: "unknown-type" });
   });
 
   it("reports a block the zone allowlist refuses", () => {
@@ -47,7 +56,7 @@ describe("editableBlockIssue", () => {
         entry,
         instance: instance("core:text", { heading: "Hello", width: "prose" }),
       }),
-    ).toBe("not-allowed");
+    ).toStrictEqual({ kind: "not-allowed" });
   });
 
   it("reports data that does not match the block fields", () => {
@@ -57,7 +66,23 @@ describe("editableBlockIssue", () => {
         entry,
         instance: instance("core:text", { heading: 12, width: "prose" }),
       }),
-    ).toBe("invalid-data");
+    ).toStrictEqual({
+      detail: '"heading" holds a number where the field is a text',
+      kind: "invalid-data",
+    });
+  });
+
+  it("carries the variant it refuses, so a panel can name it without asking again", () => {
+    expect(
+      editableBlockIssue({
+        allowedBlocks: "*",
+        entry: variantEntry,
+        instance: {
+          ...instance("core:text", { heading: "Hello", width: "prose" }),
+          variant: "gone",
+        },
+      }),
+    ).toStrictEqual({ kind: "unknown-variant", variant: "gone" });
   });
 
   it("reports nothing for an allowed block with matching data", () => {
@@ -78,5 +103,77 @@ describe("editableBlockIssue", () => {
         instance: instance("core:text", { heading: "Hello", width: "prose" }),
       }),
     ).toBeNull();
+  });
+});
+
+describe("the save gate looks as deep as the server does", () => {
+  const strict: RegisteredBlock = {
+    ...entry,
+    definition: {
+      ...entry.definition,
+      fields: {
+        heading: field.text({ minLength: 3, required: true }),
+        width: field.enum({ defaultValue: "prose", values: ["prose", "full"] }),
+      },
+    },
+  };
+
+  const gate = (data: Record<string, unknown>) =>
+    editableBlockIssue({
+      allowedBlocks: "*",
+      dataCheck: "schema",
+      entry: strict,
+      instance: instance("core:text", data),
+    });
+
+  const canvas = (data: Record<string, unknown>) =>
+    editableBlockIssue({
+      allowedBlocks: "*",
+      entry: strict,
+      instance: instance("core:text", data),
+    });
+
+  it("refuses a value the block's own field constraints reject", () => {
+    expect(gate({ heading: "Hi", width: "prose" })?.kind).toBe("invalid-data");
+  });
+
+  it("refuses an enum value the block no longer declares", () => {
+    expect(gate({ heading: "Hello", width: "narrow" })?.kind).toBe(
+      "invalid-data",
+    );
+  });
+
+  it("still draws such a block on the canvas rather than hiding it", () => {
+    expect(canvas({ heading: "Hi", width: "prose" })).toBeNull();
+    expect(canvas({ heading: "Hello", width: "narrow" })).toBeNull();
+  });
+
+  it("carries the reason, so the panel can say what is wrong", () => {
+    const issue = gate({ heading: "Hi", width: "prose" });
+
+    expect(issue).toStrictEqual({
+      detail: expect.stringContaining("heading") as string,
+      kind: "invalid-data",
+    });
+  });
+
+  it("lets sound data through at both depths", () => {
+    const sound = { heading: "Hello", width: "full" };
+
+    expect(gate(sound)).toBeNull();
+    expect(canvas(sound)).toBeNull();
+  });
+
+  it("never lets through what the shallower check already refuses", () => {
+    const broken = [
+      { heading: 12, width: "prose" },
+      { heading: null, width: "prose" },
+      { heading: "Hello", stray: true, width: "prose" },
+    ];
+
+    for (const data of broken) {
+      expect(canvas(data)).not.toBeNull();
+      expect(gate(data)).not.toBeNull();
+    }
   });
 });

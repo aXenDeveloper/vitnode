@@ -15,7 +15,10 @@ import type {
 
 import { createAreaInstance, isBlockAreaInstance } from "../../blocks/area";
 import { createBlockInstance } from "../../blocks/instance";
-import { createBlockRegistry } from "../../blocks/registry";
+import {
+  createBlockRegistry,
+  setDefaultBlockRegistry,
+} from "../../blocks/registry";
 import { field } from "../../content/fields";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
@@ -1280,10 +1283,22 @@ describe("persisted content the editor cannot read", () => {
       expect(unsafeZoneIds(fixed)).toStrictEqual([]);
     });
 
-    it("says nothing about a type the registry does not know, as before", () => {
+    it("clears once the block is told to use its own default instead", () => {
+      const stored = { ...block("a"), variant: "gone" };
+      const cleared = visualEditorReducer(zoneWith([stored]), {
+        ref: ref("main", stored.id),
+        type: "set-variant",
+        variant: undefined,
+      });
+
+      expect(cleared.zones.main.nodes[0]).not.toHaveProperty("variant");
+      expect(unsafeZoneIds(cleared)).toStrictEqual([]);
+    });
+
+    it("blocks the save for a type the registry does not register either", () => {
       const stored = { ...createBlockInstance("core:gone", {}), variant: "x" };
 
-      expect(unsafeZoneIds(zoneWith([stored]))).toStrictEqual([]);
+      expect(unsafeZoneIds(zoneWith([stored]))).toStrictEqual(["main"]);
     });
   });
 
@@ -1385,6 +1400,174 @@ describe("persisted content the editor cannot read", () => {
 
     expect(isVisualEditorDirty(saved)).toBe(true);
     expect(unsafeZoneIds(saved)).toStrictEqual(["main"]);
+  });
+});
+
+describe("stored content the server would refuse", () => {
+  const registry = createBlockRegistry([
+    {
+      pluginId: "@vitnode/core",
+      blocks: [
+        { component: () => null, fields: { body: field.text({}) }, id: "text" },
+        {
+          component: () => null,
+          fields: { label: field.text({ required: true }) },
+          id: "cta",
+        },
+      ],
+      namespace: "core",
+    },
+  ]);
+
+  const zoneWith = (
+    nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
+    allowedBlocks?: EditorZoneMount["allowedBlocks"],
+  ): VisualEditorState =>
+    mounted({ allowedBlocks, id: "main", invalid: [], nodes, registry });
+
+  const misshapen = (): AnyBlockInstance => ({
+    ...block("a"),
+    data: { body: 12 },
+  });
+
+  it("blocks the save for data only the field's own constraints refuse", () => {
+    const constrained = createBlockRegistry([
+      {
+        pluginId: "@vitnode/core",
+        blocks: [
+          {
+            component: () => null,
+            fields: {
+              body: field.text({ minLength: 3 }),
+              tone: field.enum({ values: ["info", "warning"] }),
+            },
+            id: "text",
+          },
+        ],
+        namespace: "core",
+      },
+    ]);
+
+    const zone = (data: Record<string, unknown>): VisualEditorState =>
+      mounted({
+        allowedBlocks: undefined,
+        id: "main",
+        invalid: [],
+        nodes: [{ ...block("a"), data }],
+        registry: constrained,
+      });
+
+    expect(unsafeZoneIds(zone({ body: "Hi", tone: "info" }))).toStrictEqual([
+      "main",
+    ]);
+    expect(unsafeZoneIds(zone({ body: "Hello", tone: "gone" }))).toStrictEqual([
+      "main",
+    ]);
+    expect(unsafeZoneIds(zone({ body: "Hello", tone: "info" }))).toStrictEqual(
+      [],
+    );
+  });
+
+  it("blocks the save for a type the registry does not register", () => {
+    expect(
+      unsafeZoneIds(zoneWith([createBlockInstance("core:gone", {})])),
+    ).toStrictEqual(["main"]);
+  });
+
+  it("blocks the save for a block the zone allowlist no longer permits", () => {
+    expect(unsafeZoneIds(zoneWith([block("a")], ["core:cta"]))).toStrictEqual([
+      "main",
+    ]);
+    expect(unsafeZoneIds(zoneWith([block("a")], ["core:text"]))).toStrictEqual(
+      [],
+    );
+  });
+
+  it("blocks the save for data that no longer matches the block fields", () => {
+    expect(unsafeZoneIds(zoneWith([misshapen()]))).toStrictEqual(["main"]);
+    expect(
+      unsafeZoneIds(zoneWith([{ ...block("a"), data: { gone: "a" } }])),
+    ).toStrictEqual(["main"]);
+  });
+
+  it("blocks the save for an offending block inside an area", () => {
+    expect(unsafeZoneIds(zoneWith([area([misshapen()])]))).toStrictEqual([
+      "main",
+    ]);
+    expect(
+      unsafeZoneIds(zoneWith([area([createBlockInstance("core:gone", {})])])),
+    ).toStrictEqual(["main"]);
+  });
+
+  it("says nothing when no registry can be consulted at all", () => {
+    expect(
+      unsafeZoneIds(
+        mounted(mount("main", [createBlockInstance("core:gone", {})])),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("consults the process registry when the zone carries none", () => {
+    const state = mounted(
+      mount("main", [createBlockInstance("core:gone", {})]),
+    );
+    const restore = setDefaultBlockRegistry(registry);
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+
+    restore();
+
+    expect(unsafeZoneIds(state)).toStrictEqual([]);
+  });
+
+  it("clears the moment the offending block is removed", () => {
+    const stored = misshapen();
+    const removed = visualEditorReducer(zoneWith([block("a"), stored]), {
+      ref: ref("main", stored.id),
+      type: "remove",
+    });
+
+    expect(unsafeZoneIds(removed)).toStrictEqual([]);
+    expect(isVisualEditorDirty(removed)).toBe(true);
+  });
+
+  it("clears the moment an offending child of an area is removed", () => {
+    const stored = misshapen();
+    const holder = area([stored]);
+    const removed = visualEditorReducer(zoneWith([holder]), {
+      ref: ref("main", stored.id, holder.id),
+      type: "remove",
+    });
+
+    expect(unsafeZoneIds(removed)).toStrictEqual([]);
+  });
+
+  it("keeps an offending block selectable, so the panel can still repair it", () => {
+    const stored = misshapen();
+    const selected = visualEditorReducer(zoneWith([stored]), {
+      ref: ref("main", stored.id),
+      type: "select",
+    });
+
+    expect(selected.selected).toStrictEqual(ref("main", stored.id));
+    expect(unsafeZoneIds(selected)).toStrictEqual(["main"]);
+
+    const repaired = visualEditorReducer(selected, {
+      data: { body: "a" },
+      ref: ref("main", stored.id),
+      type: "update",
+    });
+
+    expect(unsafeZoneIds(repaired)).toStrictEqual([]);
+    expect(repaired.selected).toStrictEqual(ref("main", stored.id));
+  });
+
+  it("says nothing about a zone of blocks and areas that all hold up", () => {
+    expect(
+      unsafeZoneIds(
+        zoneWith([block("a"), area([block("b"), block("c")])], ["core:*"]),
+      ),
+    ).toStrictEqual([]);
   });
 });
 

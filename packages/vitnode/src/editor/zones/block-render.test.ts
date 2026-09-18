@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { AnyBlockInstance, RegisteredBlock } from "../../blocks/types";
+import type {
+  AnyBlockInstance,
+  BlockAllowedSpec,
+  RegisteredBlock,
+} from "../../blocks/types";
 
 import { field } from "../../content/fields";
 import { editableBlockIssue } from "../block-shell/issue";
@@ -125,7 +129,7 @@ describe("editableBlockRender", () => {
         entry,
         instance: valid,
       }),
-    ).toBe("not-allowed");
+    ).toStrictEqual({ kind: "not-allowed" });
   });
 
   it("refuses a block that is both outside the allowlist and malformed, which the badge alone reports as not-allowed", () => {
@@ -137,7 +141,7 @@ describe("editableBlockRender", () => {
         entry,
         instance: broken,
       }),
-    ).toBe("not-allowed");
+    ).toStrictEqual({ kind: "not-allowed" });
     expect(editableBlockRender({ entry, instance: broken }).kind).toBe(
       "invalid-data",
     );
@@ -150,7 +154,7 @@ describe("editableBlockRender", () => {
         entry: variantEntry,
         instance: { ...valid, variant: "gone" },
       }),
-    ).toBe("unknown-variant");
+    ).toStrictEqual({ kind: "unknown-variant", variant: "gone" });
   });
 
   it("badges nothing once a declared variant is picked again", () => {
@@ -173,5 +177,53 @@ describe("editableBlockRender", () => {
     expect(editableBlockRender({ entry, instance: fixed }).kind).toBe(
       "component",
     );
+  });
+});
+
+describe("the canvas and the save gate read one set of rules", () => {
+  const samples: readonly AnyBlockInstance[] = [
+    valid,
+    { ...valid, variant: "featured" },
+    { ...valid, variant: "gone" },
+    instance({ heading: 12, width: "prose" }),
+    instance({ width: "prose" }),
+    { ...valid, type: "core:gone" },
+  ];
+
+  const verdicts = (
+    allowedBlocks: BlockAllowedSpec | undefined,
+  ): readonly { blocked: boolean; drawn: boolean }[] =>
+    samples.map(candidate => {
+      const found =
+        candidate.type === variantEntry.type ? variantEntry : undefined;
+
+      return {
+        blocked:
+          editableBlockIssue({
+            allowedBlocks,
+            entry: found,
+            instance: candidate,
+          }) !== null,
+        drawn:
+          editableBlockRender({ entry: found, instance: candidate }).kind ===
+          "component",
+      };
+    });
+
+  it("draws the block's own component for everything the save gate lets through", () => {
+    const allowing = verdicts(["core:*"]);
+
+    expect(
+      allowing.filter(verdict => !verdict.blocked && !verdict.drawn),
+    ).toStrictEqual([]);
+    expect(allowing.filter(verdict => verdict.blocked)).toHaveLength(4);
+    expect(allowing.filter(verdict => verdict.drawn)).toHaveLength(2);
+  });
+
+  it("blocks every type the allowlist refuses while still drawing the sound ones", () => {
+    const refusing = verdicts(["core:cta"]);
+
+    expect(refusing.every(verdict => verdict.blocked)).toBe(true);
+    expect(refusing.filter(verdict => verdict.drawn)).toHaveLength(2);
   });
 });

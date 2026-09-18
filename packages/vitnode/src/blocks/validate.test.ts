@@ -5,6 +5,7 @@ import type { AnyBlockInstance, BlockAreaInstance } from "./types";
 
 import { field } from "../content/fields";
 import { isBlockAreaInstance } from "./area";
+import { CONTENT_BLOCKS_ABSOLUTE_MAX } from "./const";
 import { defineBlock } from "./define";
 import { BlockRegistryMissingError } from "./errors";
 import { createBlockRegistry } from "./registry";
@@ -311,6 +312,14 @@ describe("an area", () => {
   });
 });
 
+const heroes = (count: number) =>
+  Array.from({ length: count }, (_, at) =>
+    envelope(`b${at}`, "core:hero", { title: "One" }),
+  );
+
+const limited = (limits: { max?: number; min?: number }) =>
+  zodBlockInstances({ allowed: "*", ...limits, registry: () => registry });
+
 describe("zodBlockInstances", () => {
   it("bounds how many nodes one zone may hold", () => {
     const schema = zodBlockInstances({
@@ -372,5 +381,87 @@ describe("zodBlockInstances", () => {
         envelope("01", "core:hero", { title: "One" }),
       ]),
     ).toThrow(BlockRegistryMissingError);
+  });
+});
+
+describe("min and max count block instances, not nodes", () => {
+  it("counts the blocks an area holds, not the one node it is", () => {
+    const parsed = limited({ max: 1 }).safeParse([area("a1", heroes(2))]);
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0].message).toMatch(
+      /accepts at most 1 block and was given 2 blocks/,
+    );
+    expect(parsed.error?.issues[0].message).toMatch(/inside an area counts/);
+  });
+
+  it("adds a root block and an area's child up to the same total", () => {
+    const within = limited({ max: 2 }).safeParse([
+      envelope("01", "core:hero", { title: "Root" }),
+      area("a1", [envelope("02", "core:hero", { title: "In a column" })]),
+    ]);
+
+    expect(within.success).toBe(true);
+
+    const over = limited({ max: 2 }).safeParse([
+      envelope("01", "core:hero", { title: "Root" }),
+      area("a1", [
+        envelope("02", "core:hero", { title: "In a column" }),
+        envelope("03", "core:hero", { title: "Beside it" }),
+      ]),
+    ]);
+
+    expect(over.success).toBe(false);
+    expect(over.error?.issues[0].message).toMatch(
+      /accepts at most 2 blocks and was given 3 blocks/,
+    );
+  });
+
+  it("gives an empty area no credit towards min", () => {
+    const parsed = limited({ min: 1 }).safeParse([area("a1", [])]);
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0].message).toMatch(
+      /needs at least 1 block and was given 0 blocks/,
+    );
+  });
+
+  it("is satisfied by that same area once it holds a block", () => {
+    const parsed = limited({ min: 1 }).safeParse([
+      area("a1", [envelope("01", "core:hero", { title: "One" })]),
+    ]);
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("reads a legacy block-only array exactly as it did before areas", () => {
+    expect(limited({ max: 2 }).safeParse(heroes(2)).success).toBe(true);
+    expect(limited({ max: 2 }).safeParse(heroes(3)).success).toBe(false);
+    expect(limited({ min: 2 }).safeParse(heroes(1)).success).toBe(false);
+    expect(limited({ min: 2 }).safeParse(heroes(2)).success).toBe(true);
+  });
+
+  it("caps the outer array on its own, whatever the field's max is", () => {
+    const parsed = limited({ max: 1 }).safeParse(
+      Array.from({ length: CONTENT_BLOCKS_ABSOLUTE_MAX + 1 }, (_, at) =>
+        area(`a${at}`, []),
+      ),
+    );
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues).toHaveLength(1);
+    expect(parsed.error?.issues[0].message).toMatch(
+      new RegExp(`at most ${String(CONTENT_BLOCKS_ABSOLUTE_MAX)} nodes`),
+    );
+  });
+
+  it("leaves the outer array alone up to that cap", () => {
+    const parsed = limited({ max: 1 }).safeParse(
+      Array.from({ length: CONTENT_BLOCKS_ABSOLUTE_MAX }, (_, at) =>
+        area(`a${at}`, []),
+      ),
+    );
+
+    expect(parsed.success).toBe(true);
   });
 });

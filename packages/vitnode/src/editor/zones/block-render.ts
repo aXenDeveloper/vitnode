@@ -1,13 +1,11 @@
 import type { AnyBlockInstance, RegisteredBlock } from "../../blocks/types";
+import type { StoredBlockIssue } from "../block-shell/issue";
 
-import { blockDataShapeIssue } from "../../blocks/shape";
-import { resolveBlockVariant } from "../../blocks/variant";
+import { checkStoredBlock } from "../block-shell/issue";
 
 export type EditableBlockRender =
-  | { detail: string; kind: "invalid-data" }
-  | { entry: RegisteredBlock; kind: "component"; variant: string | undefined }
-  | { kind: "unknown-type" }
-  | { kind: "unknown-variant"; variant: string };
+  | StoredBlockIssue
+  | { entry: RegisteredBlock; kind: "component"; variant: string | undefined };
 
 export interface EditableBlockRenderArgs {
   entry: RegisteredBlock | undefined;
@@ -18,16 +16,9 @@ export const editableBlockRender = ({
   entry,
   instance,
 }: EditableBlockRenderArgs): EditableBlockRender => {
-  if (!entry) return { kind: "unknown-type" };
+  const checked = checkStoredBlock(entry, instance);
 
-  const resolution = resolveBlockVariant(entry.definition, instance.variant);
-  if (resolution.kind === "unknown") {
-    return { kind: "unknown-variant", variant: resolution.variant };
-  }
-
-  const detail = blockDataShapeIssue(entry.definition, instance.data);
-
-  return detail === null
-    ? { entry, kind: "component", variant: resolution.variant }
-    : { detail, kind: "invalid-data" };
+  return checked.kind === "ready"
+    ? { entry: checked.entry, kind: "component", variant: checked.variant }
+    : checked.issue;
 };

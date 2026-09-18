@@ -18,9 +18,12 @@ import type {
 
 import { contentNodeBlocks, isBlockAreaInstance } from "../../blocks/area";
 import { createBlockInstanceId } from "../../blocks/instance";
-import { getDefaultBlockRegistry } from "../../blocks/registry";
-import { resolveBlockVariant } from "../../blocks/variant";
-import { refusesAnyType, targetCapabilities } from "./capabilities";
+import { editableBlockIssue } from "../block-shell/issue";
+import {
+  refusesAnyType,
+  targetCapabilities,
+  zoneRegistry,
+} from "./capabilities";
 
 export const initialVisualEditorState: VisualEditorState = {
   droppedZoneIds: [],
@@ -260,18 +263,19 @@ export const isVisualEditorDirty = (state: VisualEditorState): boolean =>
     return zone !== undefined && zoneChanged(zone);
   });
 
-const hasUnresolvableVariant = (zone: EditorZoneState): boolean => {
-  const registry = zone.registry ?? getDefaultBlockRegistry();
+const holdsRejectedBlock = (zone: EditorZoneState): boolean => {
+  const registry = zoneRegistry(zone);
   if (!registry) return false;
 
-  return contentNodeBlocks(zone.nodes).some(block => {
-    const entry = registry.get(block.type);
-
-    return (
-      entry !== undefined &&
-      resolveBlockVariant(entry.definition, block.variant).kind === "unknown"
-    );
-  });
+  return contentNodeBlocks(zone.nodes).some(
+    block =>
+      editableBlockIssue({
+        allowedBlocks: zone.allowedBlocks,
+        dataCheck: "schema",
+        entry: registry.get(block.type),
+        instance: block,
+      }) !== null,
+  );
 };
 
 export const unsafeZoneIds = (state: VisualEditorState): string[] =>
@@ -280,7 +284,7 @@ export const unsafeZoneIds = (state: VisualEditorState): string[] =>
 
     return (
       zone !== undefined &&
-      (zone.invalid.length > 0 || hasUnresolvableVariant(zone))
+      (zone.invalid.length > 0 || holdsRejectedBlock(zone))
     );
   });
 

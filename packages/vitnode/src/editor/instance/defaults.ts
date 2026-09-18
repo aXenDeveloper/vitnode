@@ -11,13 +11,14 @@ import type {
   ContentTextareaField,
   ContentTextField,
 } from "../../content/types";
+import type { StoredBlockIssue } from "../block-shell/issue";
 
 import { createBlockInstance } from "../../blocks/instance";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
-import { blockDataShapeIssue } from "../../blocks/shape";
-import { blockVariants, resolveBlockVariant } from "../../blocks/variant";
+import { blockVariants } from "../../blocks/variant";
 import { humanizeFieldName } from "../../content/admin/labels";
 import { contentInnerFields } from "../../content/paths";
+import { checkStoredBlock } from "../block-shell/issue";
 
 const ABSENT = Symbol("absent");
 
@@ -103,6 +104,24 @@ export const createBlockInstanceFor = (
     entry.definition.defaultVariant,
   );
 
+const storedBlockIssueDetail = (
+  entry: RegisteredBlock | undefined,
+  instance: AnyBlockInstance,
+  issue: StoredBlockIssue,
+): string => {
+  if (issue.kind === "invalid-data") return issue.detail;
+
+  if (issue.kind === "unknown-type") {
+    return `"${instance.type}" is not a registered block type. The plugin that owns it is either not installed or no longer registers it.`;
+  }
+
+  const declared = entry === undefined ? [] : blockVariants(entry.definition);
+
+  return declared.length === 0
+    ? `"${issue.variant}" is not a layout this block offers - it has none, so it always renders the one way.`
+    : `"${issue.variant}" is not a layout this block offers. It offers ${declared.map(variant => `"${variant.id}"`).join(", ")}.`;
+};
+
 export const blockInstanceIssue = (
   registry: BlockRegistry | undefined,
   instance: AnyBlockInstance,
@@ -111,18 +130,9 @@ export const blockInstanceIssue = (
   if (!resolved) return null;
 
   const entry = resolved.get(instance.type);
-  if (!entry) {
-    return `"${instance.type}" is not a registered block type. The plugin that owns it is either not installed or no longer registers it.`;
-  }
+  const checked = checkStoredBlock(entry, instance);
 
-  const resolution = resolveBlockVariant(entry.definition, instance.variant);
-  if (resolution.kind === "unknown") {
-    const declared = blockVariants(entry.definition);
-
-    return declared.length === 0
-      ? `"${resolution.variant}" is not a layout this block offers - it has none, so it always renders the one way.`
-      : `"${resolution.variant}" is not a layout this block offers. It offers ${declared.map(variant => `"${variant.id}"`).join(", ")}.`;
-  }
-
-  return blockDataShapeIssue(entry.definition, instance.data);
+  return checked.kind === "ready"
+    ? null
+    : storedBlockIssueDetail(entry, instance, checked.issue);
 };

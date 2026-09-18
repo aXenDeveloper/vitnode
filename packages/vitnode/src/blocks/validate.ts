@@ -7,7 +7,7 @@ import type {
   ContentNode,
 } from "./types";
 
-import { isAreaLike } from "./area";
+import { contentNodeBlocks, isAreaLike } from "./area";
 import {
   AREA_ALIGNS,
   AREA_CHILDREN_DEFAULT_MAX,
@@ -18,6 +18,7 @@ import {
   BLOCK_INSTANCE_ID_PATTERN,
   BLOCK_VARIANT_ID_MAX_LENGTH,
   CONTENT_AREA_KIND,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
   CONTENT_BLOCKS_DEFAULT_MAX,
 } from "./const";
 import { isBlockAllowed, resolveBlockRegistry } from "./registry";
@@ -241,6 +242,14 @@ export const parseContentNodes = ({
   return { instances, issues };
 };
 
+const OUTER_CAP = `A stored zone holds at most ${CONTENT_BLOCKS_ABSOLUTE_MAX} nodes at its top level. That ceiling is what the column can be read back through, not the field's own limit - lower the field's "max" if you want a smaller one.`;
+
+const COUNTED_IN_AREAS =
+  "A block inside an area counts towards that limit; the area holding it does not.";
+
+const blockCount = (count: number): string =>
+  `${count} ${count === 1 ? "block" : "blocks"}`;
+
 export const zodContentNodes = ({
   allowed,
   max = CONTENT_BLOCKS_DEFAULT_MAX,
@@ -254,8 +263,7 @@ export const zodContentNodes = ({
 }): z.ZodType<ContentNode[]> =>
   z
     .array(z.unknown())
-    .min(min)
-    .max(max)
+    .max(CONTENT_BLOCKS_ABSOLUTE_MAX, OUTER_CAP)
     .transform((value, ctx) => {
       const { instances, issues } = parseContentNodes({
         allowed,
@@ -270,6 +278,24 @@ export const zodContentNodes = ({
           code: "custom",
           message: issue.message,
           path: issue.path,
+        });
+      }
+
+      const blocks = contentNodeBlocks(instances).length;
+
+      if (blocks < min) {
+        ctx.addIssue({
+          code: "custom",
+          message: `This zone needs at least ${blockCount(min)} and was given ${blockCount(blocks)}. ${COUNTED_IN_AREAS}`,
+          path: [],
+        });
+      }
+
+      if (blocks > max) {
+        ctx.addIssue({
+          code: "custom",
+          message: `This zone accepts at most ${blockCount(max)} and was given ${blockCount(blocks)}. ${COUNTED_IN_AREAS}`,
+          path: [],
         });
       }
 

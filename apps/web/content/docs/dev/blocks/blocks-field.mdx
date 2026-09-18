@@ -30,11 +30,16 @@ export const pageContentType = defineContentType({
 | Option | Default | What it does |
 | :--- | :--- | :--- |
 | `allowed` | `"*"` | Which blocks may be placed here. |
-| `max` | `200` | Most instances one record may hold. |
-| `min` | none | Fewest instances. |
+| `max` | `200` | Most block instances one record may hold. |
+| `min` | none | Fewest block instances. |
 | `localized` | `false` | Give every language its own blocks and order. |
 
-A `blocks()` field is never `required` and never `nullable` - the empty list is what "no blocks" is, so a create that says nothing about the zone gets `[]`.
+`min` and `max` count **block instances**, wherever they sit. A block inside a
+[layout area](/docs/dev/blocks/layout-areas) counts towards the limit; the area
+holding it does not, so an empty area counts as nothing. Two blocks are two
+blocks whether they sit side by side in an area or one under the other.
+
+A `blocks()` field is never `required` and never `nullable` - the empty list is what "no blocks" is, so a create that says nothing about the zone gets `[]`. That empty list is still checked against `min`, so a zone that declares `min: 1` refuses a create that leaves it out.
 
 ## Restricting what may go in
 

@@ -68,6 +68,16 @@ const openContentType = defineContentType({
   },
 });
 
+const atLeastOneContentType = defineContentType({
+  id: "test.required-zone",
+  tableName: "test_blocks_required",
+  fields: {
+    content: field.blocks({ allowed: ["core:hero"], min: 1 }),
+    optional: field.blocks({ allowed: ["core:hero"], min: 0 }),
+    title: field.text({ required: true }),
+  },
+});
+
 const instance = (type: string, data: Record<string, unknown>, id: string) => ({
   data,
   id,
@@ -283,5 +293,57 @@ describe("AdminCP surfaces", () => {
 
   it("keeps the zone out of the generated form", () => {
     expect(pageContentType.admin.form.fields).not.toContain("content");
+  });
+});
+
+describe("a zone with a min", () => {
+  const create = atLeastOneContentType.schemas.create;
+  const update = atLeastOneContentType.schemas.update;
+  const hero = instance("core:hero", { title: "Build" }, "01");
+
+  it("rejects a create that leaves the zone out", () => {
+    const parsed = create.safeParse({ title: "Home" });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0].path).toStrictEqual(["content"]);
+    expect(parsed.error?.issues[0].message).toMatch(/needs at least 1 block/);
+  });
+
+  it("rejects a create that sends an empty zone", () => {
+    const parsed = create.safeParse({ content: [], title: "Home" });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0].message).toMatch(/needs at least 1 block/);
+  });
+
+  it("accepts a create that sends a block", () => {
+    expect(
+      create.parse({ content: [hero], title: "Home" }).content,
+    ).toStrictEqual([
+      {
+        data: { title: "Build", variant: "default" },
+        id: "01",
+        type: "core:hero",
+      },
+    ]);
+  });
+
+  it("still defaults a zone whose min is zero to no blocks", () => {
+    expect(
+      create.parse({ content: [hero], title: "Home" }).optional,
+    ).toStrictEqual([]);
+  });
+
+  it("leaves the zone untouched when a patch says nothing about it", () => {
+    expect(update.parse({ title: "Renamed" })).toStrictEqual({
+      title: "Renamed",
+    });
+  });
+
+  it("rejects a patch that explicitly empties the zone", () => {
+    const parsed = update.safeParse({ content: [] });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0].message).toMatch(/needs at least 1 block/);
   });
 });

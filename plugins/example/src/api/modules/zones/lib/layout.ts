@@ -11,11 +11,12 @@ import {
   AREA_JUSTIFIES,
   CONTENT_AREA_KIND,
 } from "@vitnode/core/blocks";
-import { withHttpErrors } from "@vitnode/core/content/server";
+import { emitContentEvent, withHttpErrors } from "@vitnode/core/content/server";
 import { eq, sql } from "drizzle-orm";
 
 import type { ExampleZonesFields } from "@/content/zones-layout-fields";
 
+import { CONFIG_PLUGIN } from "@/const";
 import {
   DEFAULT_EXAMPLE_ZONES_LAYOUT,
   EXAMPLE_ZONES_LAYOUT_SLUG,
@@ -118,42 +119,110 @@ export const readExampleZonesLayout = async (
   return toResponse(row);
 };
 
-export const writeExampleZonesLayout = async (
+type ExampleZonesLayoutWrite =
+  | {
+      action: "created";
+      contentId: number;
+      layout: ExampleZonesLayoutResponse;
+    }
+  | {
+      action: "updated";
+      changedFields: readonly string[];
+      contentId: number;
+      layout: ExampleZonesLayoutResponse;
+    };
+
+const emitExampleZonesLayoutEvent = async (
+  c: Context<EnvVitNode>,
+  write: ExampleZonesLayoutWrite,
+): Promise<void> => {
+  const { definition } = zonesLayoutContent;
+  const { pluginId } = CONFIG_PLUGIN;
+
+  if (write.action === "created") {
+    await emitContentEvent(
+      c,
+      definition,
+      "created",
+      { contentId: write.contentId },
+      { pluginId },
+    );
+
+    return;
+  }
+
+  if (write.changedFields.length === 0) return;
+
+  await emitContentEvent(
+    c,
+    definition,
+    "updated",
+    {
+      changedFields: [...write.changedFields],
+      contentId: write.contentId,
+    },
+    { pluginId },
+  );
+};
+
+const storeExampleZonesLayout = async (
   c: Context<EnvVitNode>,
   fields: ExampleZonesFields,
-): Promise<ExampleZonesLayoutResponse> =>
+): Promise<ExampleZonesLayoutWrite> =>
   await withHttpErrors(
     "update",
     async () =>
-      await c.get("db").transaction(async tx => {
-        await tx.execute(
-          sql`select pg_advisory_xact_lock(${EXAMPLE_ZONES_LAYOUT_ADVISORY_LOCK})`,
-        );
+      await c
+        .get("db")
+        .transaction(async (tx): Promise<ExampleZonesLayoutWrite> => {
+          await tx.execute(
+            sql`select pg_advisory_xact_lock(${EXAMPLE_ZONES_LAYOUT_ADVISORY_LOCK})`,
+          );
 
-        const service = zonesLayoutContent.service(c);
-        const id = await findLayoutId(tx);
+          const service = zonesLayoutContent.service(c);
+          const id = await findLayoutId(tx);
 
-        if (id === null) {
-          return toResponse(
-            await service.create(
+          if (id === null) {
+            const row = await service.create(
               {
                 ...fields,
                 slug: EXAMPLE_ZONES_LAYOUT_SLUG,
                 title: EXAMPLE_ZONES_LAYOUT_TITLE,
               },
               { tx },
-            ),
-          );
-        }
+            );
 
-        const result = await service.update(id, fields, { tx });
-        if (!result) {
-          throw new Error(
-            "The example zones layout row disappeared while it was being saved.",
-          );
-        }
+            return {
+              action: "created",
+              contentId: row.id,
+              layout: toResponse(row),
+            };
+          }
 
-        return toResponse(result.row);
-      }),
+          const result = await service.update(id, fields, { tx });
+          if (!result) {
+            throw new Error(
+              "The example zones layout row disappeared while it was being saved.",
+            );
+          }
+
+          return {
+            action: "updated",
+            changedFields: result.changedFields,
+            contentId: result.row.id,
+            layout: toResponse(result.row),
+          };
+        }),
     { contentTypeId: zonesLayoutContent.definition.id },
   );
+
+export const writeExampleZonesLayout = async (
+  c: Context<EnvVitNode>,
+  fields: ExampleZonesFields,
+): Promise<ExampleZonesLayoutResponse> => {
+  const write = await storeExampleZonesLayout(c, fields);
+
+  await emitExampleZonesLayoutEvent(c, write);
+
+  return write.layout;
+};

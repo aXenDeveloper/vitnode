@@ -27,7 +27,7 @@ const ISSUE_LABELS = {
   "not-allowed": "block.issue.not_allowed",
   "unknown-type": "block.issue.unknown_type",
   "unknown-variant": "block.issue.unknown_variant",
-} as const satisfies Record<EditableBlockIssue, string>;
+} as const satisfies Record<EditableBlockIssue["kind"], string>;
 
 const actionClassName = cn(
   buttonVariants({ size: "icon-xs", variant: "secondary" }),
@@ -161,7 +161,7 @@ export const EditableBlockShell = ({
       {issue === null ? null : (
         <p className="border-destructive/60 bg-background text-destructive pointer-events-none absolute start-2 top-2 z-10 flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs leading-relaxed">
           <TriangleAlertIcon aria-hidden="true" className="size-3" />
-          {t(ISSUE_LABELS[issue])}
+          {t(ISSUE_LABELS[issue.kind])}
         </p>
       )}
 

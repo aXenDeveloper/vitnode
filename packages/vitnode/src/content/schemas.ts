@@ -374,7 +374,7 @@ const inputShape = (
       const fieldValue = fields[name];
 
       if (fieldValue.kind === "blocks") {
-        return [name, blocksInputSchema(fieldValue).default([])];
+        return [name, blocksInputSchema(fieldValue).prefault([])];
       }
       if (fieldValue.kind === "group") {
         return [name, groupInputSchema(fieldValue)];
