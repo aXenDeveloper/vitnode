@@ -1,7 +1,7 @@
 import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks";
 
 import { defineBlock } from "@vitnode/core/blocks";
-import { field } from "@vitnode/core/content";
+import { field } from "@vitnode/core/content/fields";
 
 const featureItem = {
   body: field.textarea({ maxLength: 240, nullable: true }),

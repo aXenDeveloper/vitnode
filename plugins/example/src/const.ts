@@ -44,5 +44,4 @@ export const EXAMPLE_MIGRATIONS = [
   // so the shared table has to exist before anything can reference it.
   "add_content_file_fields",
   "add_example_block_pages",
-  "add_example_zones_layouts",
 ];

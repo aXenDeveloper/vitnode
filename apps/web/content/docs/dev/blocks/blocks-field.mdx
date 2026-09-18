@@ -156,6 +156,12 @@ That is deliberate. A translated landing page is rarely the same page with diffe
 
 The cost is the other side of the same coin: adding a block to one language does not add it to the others, and there is no "this paragraph is the translation of that paragraph" link between two locales. A field inside a block is therefore never `localized: true`; see [Defining a block](/docs/dev/blocks/defining-a-block#localization).
 
+## Editing one
+
+A `blocks()` field is the storage half, and the [Visual Editor](/docs/dev/blocks/visual-editor) is how somebody arranges what goes in it. The two are joined by whatever your page hands the editor and whatever your API does with the payload that comes back - the field's own `allowed`, `min` and `max` are re-checked on the way in either way.
+
+For a zone that is not a column on a record at all - a settings screen, a forum index, anything a page simply *has* - the storage half is core's, and you declare the zone rather than a field. See [Editable Pages](/docs/dev/blocks/editable-pages).
+
 ## Exposing the zone publicly
 
 `blocks` is publicly exposable, and crosses whole:
@@ -177,4 +183,4 @@ The public read returns the instances in stored order, each one's `data` already
 | **Not indexable** | A btree index over a JSONB document orders pages by their serialised bytes. `indexes` refuses it. |
 | **Not filterable or orderable** | For the same reason. |
 | **Not searchable** | Indexing block prose into search is its own stage. |
-| **Not an AdminCP form field** | The generated form and the DataTable both leave it out - a zone is arranged on the page by the Visual Editor, not typed into a control. Write it through the API until then. |
+| **Not an AdminCP form field** | The generated form and the DataTable both leave it out - a zone is arranged on the page by the [Visual Editor](/docs/dev/blocks/visual-editor), not typed into a control. |

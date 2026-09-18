@@ -9,6 +9,7 @@
     "rendering",
     "content-zones",
     "visual-editor",
+    "editable-pages",
     "block-variants",
     "layout-areas",
     "end-to-end"

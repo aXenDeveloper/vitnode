@@ -191,7 +191,19 @@ In development the block is skipped, a dashed notice names it, and one `console.
 
 ### Declaring the allowlist once
 
-The zone's allowlist and the field's `allowed` are usually the same value, and writing it twice is a typo waiting to happen. Put it in a module of its own and import it from both:
+The zone's allowlist and the field's `allowed` are usually the same value, and writing it twice is a typo waiting to happen.
+
+If the page is an [editable page](/docs/dev/blocks/editable-pages), do not write it on the page at all. `defineEditablePage` declares each zone's allowlist once, and `<EditablePage>` hands every zone under it both the allowlist and the blocks:
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
+<EditablePage layout={layout} page={settingsPage}>
+  <ContentZone id="before-profile" registry={blocksRegistry} />
+</EditablePage>
+```
+
+An `id` is the whole zone. There is no second copy to drift, and asking for a zone the page does not declare throws rather than rendering one no save will ever reach. An explicitly passed `blocks` or `allowedBlocks` still wins, for a zone whose content genuinely comes from somewhere else.
+
+For a zone outside an editable page, put the array in a module of its own and import it from both ends:
 
 ```ts title="plugins/example/src/content/page-blocks.ts"
 export const PAGE_BLOCKS_ALLOWED = ["core:*", "example:callout"] as const
@@ -201,7 +213,7 @@ export const PAGE_BLOCKS_ALLOWED = ["core:*", "example:callout"] as const
 content: field.blocks({ allowed: PAGE_BLOCKS_ALLOWED, max: 50 })
 ```
 
-```tsx title="plugins/example/src/pages/zones-page.tsx"
+```tsx
 <ContentZone
   id="settings:before-profile"
   allowedBlocks={PAGE_BLOCKS_ALLOWED}

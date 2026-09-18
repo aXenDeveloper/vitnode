@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { BlockPluginSource } from "@/blocks/types";
+import type { AnyEditablePageDefinition } from "@/content/editor/types";
 import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
@@ -15,6 +16,7 @@ import {
 
 import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
+import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventListenerConfig } from "./events";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
@@ -23,6 +25,7 @@ import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
+import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { applyModuleTags } from "./openapi-tags";
 
 export type { ApiPluginContract };
@@ -36,6 +39,7 @@ export interface BuildPluginApiReturn<
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
+  editablePages?: AnyEditablePageDefinition[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
   messages?: LocaleMessagesMap;
@@ -58,6 +62,7 @@ export function buildApiPlugin<
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
 >({
   blocks,
+  editablePages,
   pluginId,
   messages,
   modules = [] as unknown as Modules,
@@ -65,6 +70,7 @@ export function buildApiPlugin<
   searchIndexers,
 }: {
   blocks?: BlockPluginSource;
+  editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
   modules?: Modules;
   permissionStaff?: PermissionStaffConfig;
@@ -79,6 +85,13 @@ export function buildApiPlugin<
       `Plugin "${pluginId}" registers the blocks module of "${blocks.pluginId}". Pass the object the plugin's own \`blocks\` module exports, so the API and the browser namespace them identically.`,
     );
   }
+
+  // Refused here as well as across every plugin: one plugin declaring a page id
+  // twice is its own mistake, and it reads better named by the plugin that made
+  // it than as an installation-wide collision.
+  const registeredPages: RegisteredEditablePage[] = validateEditablePages(
+    (editablePages ?? []).map(page => registerEditablePage(page, pluginId)),
+  );
 
   const hono = new OpenAPIHono();
   const contentModels: AnyContentModel[] = [];
@@ -124,6 +137,7 @@ export function buildApiPlugin<
   return {
     pluginId,
     blocks,
+    editablePages: registeredPages.map(entry => entry.page),
     messages,
     modules,
     hono,

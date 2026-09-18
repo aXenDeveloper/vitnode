@@ -977,6 +977,9 @@
         "title": "Your changes were not saved",
         "desc": "Something went wrong on the way to the server. Nothing you arranged has been lost - try again."
       },
+      "save_refused": {
+        "title": "This save was refused"
+      },
       "no_adapter": {
         "title": "Nowhere to save to",
         "desc": "This page opened the editor without a save adapter, so there is nothing to store your changes in."

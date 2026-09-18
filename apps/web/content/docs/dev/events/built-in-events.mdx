@@ -279,6 +279,58 @@ export const roleCleanupListener = buildEventListener({
 </Accordion>
 </Accordions>
 
+## Page layout events
+
+One name, declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts`. It fires **after** the layout row
+has been written, and not at all when a save changed nothing.
+
+| Event                      | Payload                    | Fires when                                                              |
+| -------------------------- | -------------------------- | ----------------------------------------------------------------------- |
+| `core.page-layout.updated` | `{ pageId, changedZones }` | Somebody saves widget changes on an [editable page](/docs/dev/blocks/editable-pages) |
+
+<Accordions>
+<Accordion title="core.page-layout.updated">
+
+Emitted by `PUT /pages/layout` once the one `core_page_layouts` row for that
+page has been written. A page's layout is stored as overrides only, so
+`changedZones` names the zones whose override actually moved - not every zone
+the editor happened to send, and not the zones still sitting on the defaults
+their `defineEditablePage` declaration ships.
+
+A save that changes nothing writes nothing and emits nothing, so a listener
+never fires for a no-op. Saving a zone back to its shipped default removes that
+override, which counts as a change and is reported here.
+
+<TypeTable
+  type={{
+    pageId: {
+      description: 'Id of the editable page, as `defineEditablePage` declared it.',
+      type: 'string',
+    },
+    changedZones: {
+      description: 'Zone ids whose stored override changed, added or was removed.',
+      type: 'string[]',
+    },
+  }}
+/>
+
+**A listener would** purge whatever the front end caches for that page. The
+layout is read by page id, so the id in the payload is the whole cache key:
+
+```ts title="Example: expire a cached page after a layout change"
+export const pageLayoutCacheListener = buildEventListener({
+  event: 'core.page-layout.updated',
+  name: 'expire-page-cache',
+  handler: async (c, payload) => {
+    await c.get('cache')?.delete(`page:${payload.pageId}`)
+  },
+})
+```
+
+</Accordion>
+</Accordions>
+
 ## Content Engine events
 
 Every content type declared with the

@@ -1,11 +1,11 @@
 import type {
-  VisualEditorAdapter,
-  VisualEditorSaveInput,
-} from "@vitnode/core/editor";
+  EditablePageLayoutPayload,
+  EditablePageSavePayload,
+} from "@vitnode/core/content/editor";
 
-import { createBlockRegistry } from "@vitnode/core/blocks";
+import { createBlockRegistry, zodContentNode } from "@vitnode/core/blocks";
 import { blocks as coreBlocks } from "@vitnode/core/blocks/built-in";
-import { ContentEditorRuntime } from "@vitnode/core/blocks/edit";
+import { EditablePage } from "@vitnode/core/blocks/page";
 import { ContentZone } from "@vitnode/core/blocks/zone";
 import {
   AutoForm,
@@ -14,49 +14,89 @@ import {
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { Button } from "@vitnode/core/components/ui/button";
 import {
+  createContentEditorAdapter,
+  EditablePageSaveRefused,
+} from "@vitnode/core/content/editor";
+import {
   definePluginRoute,
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { blocks as exampleBlocks } from "@/blocks";
-import { CONFIG_PLUGIN } from "@/const";
 import {
-  PAGE_BLOCKS_ALLOWED,
-  PAGE_SIDEBAR_BLOCKS_ALLOWED,
-} from "@/content/page-blocks";
-import {
-  DEFAULT_EXAMPLE_ZONES_LAYOUT,
   EXAMPLE_ZONE_IDS,
-  toZonesLayout,
-  type ZonesLayout,
-  zonesToFields,
-} from "@/content/zones-layout-fields";
+  mayEditSettingsPage,
+  settingsPage,
+} from "@/content/settings-page";
+
+import type { ZonesSearch } from "./zones-search";
+
+const serverRefusal = async (response: Response): Promise<string> => {
+  const fallback = `Saving these widgets answered ${response.status}. Nothing was stored, and the editor keeps your changes.`;
+
+  try {
+    const body: unknown = await response.json();
+    const message =
+      typeof body === "object" && body !== null && "message" in body
+        ? body.message
+        : undefined;
+
+    return typeof message === "string" && message.length > 0
+      ? message
+      : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks]);
 
-export const route = definePluginRoute<ZonesLayout>({
-  load: async (): Promise<ZonesLayout> => {
-    const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
-      method: "get",
-      module: "zones",
-      path: "/layout",
-    });
+const zodLayout = z.object({
+  pageId: z.string(),
+  updatedAt: z.string().nullable(),
+  zones: z.record(z.string(), z.array(zodContentNode)),
+});
 
-    if (!response.ok) {
+interface ZonesPageData {
+  canEdit: boolean;
+  layout: EditablePageLayoutPayload;
+}
+
+export const route = definePluginRoute<ZonesPageData, ZonesSearch>({
+  load: async (): Promise<ZonesPageData> => {
+    const [stored, staff] = await Promise.all([
+      fetcher({
+        plugin: "@vitnode/core",
+        method: "get",
+        module: "pages",
+        path: "/layout",
+        args: { query: { pageId: settingsPage.id } },
+      }),
+      fetcher({
+        plugin: "@vitnode/core",
+        method: "get",
+        module: "users",
+        path: "/permissions",
+      }),
+    ]);
+
+    if (!stored.ok) {
       throw new Error(
-        `The zones layout route answered ${response.status}, so what is stored is unknown. The shipped defaults are deliberately not offered as editable content here: saving them would overwrite whatever the record really holds.`,
+        `Reading this page's layout answered ${stored.status}, so what is stored is unknown. Nothing is rendered in its place: a layout invented here is the layout the next Save would write over.`,
       );
     }
 
-    return toZonesLayout(await response.json());
+    return {
+      canEdit: staff.ok ? mayEditSettingsPage(await staff.json()) : false,
+      layout: zodLayout.parse(await stored.json()),
+    };
   },
 
-  head: () => ({ title: "Content zones" }),
+  head: () => ({ title: "Settings" }),
 });
 
 const profileSchema = z.object({
@@ -120,40 +160,44 @@ const ProfileForm = () => {
 };
 
 const VIEW_MODE_CHECKS = [
-  "settings:before-profile - three blocks, no wrapper: no element around them in the DOM.",
-  "settings:after-profile - one area with two blocks in it, one empty area, and one block beside them. The filled area renders a two-column grid; the empty one renders nothing at all, not even a gap.",
-  'example:features is stored with variant: "list", so it renders one item per row. Nothing in its data says "list".',
-  "settings:sidebar - wrapped in <aside>, so it carries data-vitnode-zone and a narrower data-vitnode-zone-allowed.",
-  "settings:before-footer - empty: no markup at all, and no gap below the sidebar.",
+  "before-profile - three blocks, no wrapper: no element around them in the DOM.",
+  "after-profile - one area with two blocks in it, one empty area, and one block beside them. The filled area renders a two-column grid; the empty one renders nothing at all, not even a gap.",
+  'example:features stored with variant: "list" renders one item per row. Nothing in its data says "list".',
+  'sidebar - wrapped in <aside>, so it carries data-vitnode-zone and a narrower data-vitnode-zone-allowed. The page writes neither: <ContentZone id="sidebar" /> takes both from the page definition around it.',
+  "before-footer - empty: no markup at all, and no gap below the sidebar.",
+  "Network: one GET /api/vitnode/core/pages/layout?pageId=example:settings, made by the route loader. The zones themselves request nothing.",
+  "Until somebody saves, that read answers with the blocks defineEditablePage ships and updatedAt: null. They are real content, not a placeholder - which is why the first Save is allowed to write over them.",
   "Network, JS filter: nothing under /src/editor/ is requested. The @dnd-kit deps you may also see come from the AdminCP dashboard grid on every development route, not from this page.",
 ];
 
 const EDIT_MODE_CHECKS = [
-  "The editor chunk is fetched on the first Edit page click and never before it. Use Finish editing and click Edit page again: the second click fetches nothing.",
+  "Edit widgets is shown only to a member holding the moderator permission example.widgets/can_edit - or to a root role. Sign out and it is gone, and nothing on the page changes otherwise.",
+  "Arrive at /example/zones?edit=true and the page opens in edit mode already - but only if that same permission says so. The URL asks; it never authorizes, and PUT /pages/layout asks the permission again on every save.",
+  "The editor chunk is fetched on the first Edit widgets click and never before it. Use Finish editing and click Edit widgets again: the second click fetches nothing.",
+  "createContentEditorAdapter is imported normally, not lazily: it belongs to the page definition, not to the editor, and its whole graph is two files with no third-party package in it. A boundary test in this plugin asserts nothing under core's src/editor/ is in this page's eager graph even so.",
   "One sidebar opens on the right and the page is padded, never covered - the zones keep their full width under it. Narrow the window below md and the same sidebar becomes a bottom sheet, with the padding moving underneath the page so the last zone still scrolls clear of it.",
-  "settings:before-footer becomes visible only in edit mode, as a large dashed placeholder with its own Add block button. Finish editing and it disappears again.",
-  "The empty area in settings:after-profile becomes visible only in edit mode too, as a two-column drop target. Finish editing and it leaves no trace.",
+  "before-footer becomes visible only in edit mode, as a large dashed placeholder with its own Add block button. Finish editing and it disappears again.",
+  "The empty area in after-profile becomes visible only in edit mode too, as a two-column drop target. Finish editing and it leaves no trace.",
   "Add block on a zone targets it: the sidebar switches to Available Blocks, its header reads For: that zone id, and the zone stays outlined until you clear the target.",
   "A catalog entry is both draggable and clickable. Drag one between two blocks and an insertion line shows exactly where it will land; click one instead and it goes to the targeted zone, or to the first zone that accepts it.",
   "Available Blocks opens with a Layout section above the plugin groups, holding a single Area entry. Click it and an empty area lands in the targeted zone. It is a button, not a drag source - no grab cursor, because an area is not a registered block.",
   "Target a zone from inside an area (Add block on the area) and the header reads For: an area in that zone - and the Layout section disappears, because an area cannot hold another area.",
-  "Target settings:sidebar and the catalog offers core:text alone; clear the target and core:cta, core:hero, example:callout and example:features come back.",
+  "Target the sidebar and the catalog offers core:text alone; clear the target and core:cta, core:hero, example:callout and example:features come back.",
   "Dropping onto a block inserts before or after it, by which half of it the pointer is over. Nothing ever lands inside a block.",
   "Drag a root block into the filled area: it becomes a child of it and the area re-flows. Drag a child back out to the zone root and the area keeps the rest. Reorder two children inside one area and only their order changes.",
-  "Drag example:callout over settings:sidebar: the zone turns red and the drop is refused, from the same allowlist the catalog filters by - and the API refuses it again from the field's own allowlist.",
+  "Drag example:callout over the sidebar: the zone turns red and the drop is refused, from the same allowlist the catalog filters by - and the API refuses it again from the zone's own allowlist, which it reads off the registered page rather than off the request.",
   "Select a block and the same sidebar switches to Properties. Back to Available Blocks clears the selection and returns to the catalog.",
   "Select the example:features block: a Variant control sits above its fields. Switch grid, list and compact and the page re-renders instantly while every word in the fields stays exactly as it was, and the block keeps its id.",
   "Select an area and the sidebar shows Area properties instead: Columns, Gap, Alignment and Distribution, then Duplicate area, Ungroup and Delete area. Each control re-lays the area out as you pick it.",
   "Ungroup keeps the children and drops them into the zone at the area's own position. Delete area on a non-empty area asks first, and the same dialog offers Ungroup, keep blocks. Delete an empty area and it says so instead of counting blocks.",
   "Every block sits in an inert container, so a block's own links and buttons cannot be clicked or tabbed to. Preview gives them back and collapses the sidebar to a slim bar with Back to editing and Finish editing.",
   "The profile form is application code: no overlay, no drag handle, and its input still takes focus while edit mode is on.",
-  "Save runs this page's adapter from the sidebar footer, which writes the layout to the API and answers with the layout it stored. Finish editing and view mode already shows it - no reload. Reload anyway and the areas, their children and the variant you picked all come back exactly as you left them.",
+  "Save sends { pageId, zones } to PUT /api/vitnode/core/pages/layout with only the zones that changed, and answers with the blocks those zones now hold. Open Last save payload and read it. Finish editing and view mode already shows the result - no reload. Reload anyway and the areas, their children and the variant you picked all come back exactly as you left them.",
+  "Network, on Save: one request. Edit one zone and the body carries that zone alone - the three zones you did not touch are not in it, and the API merges it into this page's one stored row, so they keep whatever they had.",
   "A zone holding a value that is not a block shows it as an unreadable entry it refuses to drop, and Save stays disabled until you remove that entry yourself.",
-  "Take the sidebar zone off the page while the editor is open: it leaves the editor too, its Add block target and selection clear, and a Save afterwards keeps whatever was stored for it rather than writing the copy the editor was holding. If you had edited it first, the footer says so instead of dropping the change quietly.",
-  "Nothing on the page remounts when edit mode turns on: the local counter and the display name you typed both survive Edit page and Finish editing.",
+  "Take the sidebar zone off the page while the editor is open: it leaves the editor too, and its Add block target and selection clear. A Save afterwards never mentions it, so whatever was stored for it stays stored - a zone the page no longer declares is ignored when rendering, never deleted. If you had edited it first, the footer says so instead of dropping the change quietly.",
+  "Nothing on the page remounts when edit mode turns on: the local counter and the display name you typed both survive Edit widgets and Finish editing.",
 ];
-
-const canEditPage = (): boolean => process.env.NODE_ENV !== "production";
 
 const Checklist = ({
   heading,
@@ -181,110 +225,104 @@ const Checklist = ({
   </section>
 );
 
-const LayoutSource = ({ source, updatedAt }: Omit<ZonesLayout, "zones">) => (
-  <p
-    className="text-muted-foreground text-sm leading-relaxed text-pretty"
-    data-testid="zones-layout-source"
-    data-zones-source={source}
-  >
-    {source === "stored"
-      ? `Showing the layout stored on the server${
-          updatedAt
-            ? `, last saved ${new Date(updatedAt).toLocaleString()}`
-            : ""
-        }.`
-      : "Showing the shipped defaults - nothing has been saved to the server yet."}
-  </p>
-);
-
-const SavedPayload = ({ input }: { input: VisualEditorSaveInput }) => (
-  <details className="border-border rounded-lg border p-4 text-sm">
-    <summary className="cursor-pointer font-semibold">
-      {input.changedZoneIds.length === 1
-        ? "Last save payload - 1 changed zone"
-        : `Last save payload - ${input.changedZoneIds.length} changed zones`}
-    </summary>
-
-    <div className="flex flex-col gap-2 pt-3">
-      <p className="text-muted-foreground leading-relaxed text-pretty">
-        Exactly what this page&apos;s <code>VisualEditorAdapter.save</code> was
-        handed. The adapter maps each zone id onto the matching field of the{" "}
-        <code>example.zones-layout</code> record and sends it to the API, which
-        re-validates every block against that field&apos;s own allowlist before
-        storing it.
-      </p>
-      <pre className="bg-muted/40 overflow-x-auto rounded-md p-3 text-xs leading-relaxed">
-        {JSON.stringify(input, null, 2)}
-      </pre>
-    </div>
-  </details>
-);
-
-const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
-  const [editing, setEditing] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [lastSave, setLastSave] = useState<null | VisualEditorSaveInput>(null);
-  const [layout, setLayout] = useState<ZonesLayout>(loaderData);
-  const [loaded, setLoaded] = useState<ZonesLayout>(loaderData);
-
-  if (loaded !== loaderData) {
-    setLoaded(loaderData);
-    setLayout(loaderData);
-  }
-
-  const save = useCallback(
-    async (input: VisualEditorSaveInput) => {
-      const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
-        args: {
-          body: zonesToFields(
-            input.zones,
-            zonesToFields(layout.zones, DEFAULT_EXAMPLE_ZONES_LAYOUT),
-          ),
-        },
-        method: "put",
-        module: "admin/zones",
-        path: "/layout",
-      });
-
-      if (!response.ok) {
-        throw new Error(`The zones layout route answered ${response.status}.`);
-      }
-
-      const stored = toZonesLayout(await response.json());
-
-      setLayout(stored);
-      setLastSave(input);
-
-      return { zones: stored.zones };
-    },
-    [layout.zones],
-  );
-
-  const adapter = useMemo<VisualEditorAdapter>(() => ({ save }), [save]);
+const SavedPayload = ({ body }: { body: EditablePageSavePayload }) => {
+  const changed = Object.keys(body.zones);
 
   return (
-    <ContentEditorRuntime
+    <details className="border-border rounded-lg border p-4 text-sm">
+      <summary className="cursor-pointer font-semibold">
+        {changed.length === 1
+          ? "Last save payload - 1 changed zone"
+          : `Last save payload - ${changed.length} changed zones`}
+      </summary>
+
+      <div className="flex flex-col gap-2 pt-3">
+        <p className="text-muted-foreground leading-relaxed text-pretty">
+          Exactly what went to <code>PUT /pages/layout</code>. The page maps
+          nothing: it names its own page id, the server looks that id up in the
+          pages it has registered, and every block is re-validated against the
+          zone&apos;s own allowlist before anything is stored.
+        </p>
+        <pre className="bg-muted/40 overflow-x-auto rounded-md p-3 text-xs leading-relaxed">
+          {JSON.stringify(body, null, 2)}
+        </pre>
+      </div>
+    </details>
+  );
+};
+
+const SettingsScreen = ({
+  canEdit,
+  layout,
+  openEditing,
+}: {
+  canEdit: boolean;
+  layout: EditablePageLayoutPayload;
+  openEditing: boolean;
+}) => {
+  const [editing, setEditing] = useState(canEdit && openEditing);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [lastSave, setLastSave] = useState<EditablePageSavePayload | null>(
+    null,
+  );
+
+  const adapter = useMemo(
+    () =>
+      createContentEditorAdapter({
+        page: settingsPage,
+        save: async payload => {
+          const response = await fetcher({
+            plugin: "@vitnode/core",
+            method: "put",
+            module: "pages",
+            path: "/layout",
+            args: { body: payload },
+          });
+
+          if (!response.ok) {
+            throw new EditablePageSaveRefused(await serverRefusal(response), {
+              pageId: settingsPage.id,
+            });
+          }
+
+          setLastSave(payload);
+
+          return zodLayout.parse(await response.json());
+        },
+      }),
+    [],
+  );
+
+  return (
+    <EditablePage
       adapter={adapter}
-      enabled={editing}
+      canEdit={canEdit}
+      editing={editing}
+      layout={layout}
       onExit={() => {
         setEditing(false);
       }}
+      page={settingsPage}
     >
-      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
+      <main className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
         <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-semibold tracking-tight text-balance">
               Settings
             </h1>
             <p className="text-muted-foreground leading-relaxed text-pretty">
-              A system page with four content zones. Blocks come from the route
-              loader, so the zones themselves make no request.
+              An ordinary application page that happens to be editable. Four
+              zones sit around a locked profile form, and their blocks come from
+              the route loader, so the zones themselves make no request.
             </p>
-            <LayoutSource source={layout.source} updatedAt={layout.updatedAt} />
+            <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+              {layout.updatedAt === null
+                ? "Nobody has rearranged this page yet, so these are the widgets it ships with."
+                : `Last rearranged ${new Date(layout.updatedAt).toLocaleString()}.`}
+            </p>
           </div>
 
-          {canEditPage() && !editing ? (
+          {canEdit && !editing ? (
             <Button
               className="md:shrink-0"
               onClick={() => {
@@ -292,7 +330,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
               }}
               variant="outline"
             >
-              Edit page
+              Edit widgets
             </Button>
           ) : null}
         </header>
@@ -304,7 +342,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
         />
 
         <Checklist
-          heading="What to look for once you click Edit page"
+          heading="What to look for once you click Edit widgets"
           id="edit-checks-heading"
           items={EDIT_MODE_CHECKS}
         />
@@ -325,8 +363,6 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex flex-1 flex-col gap-6">
             <ContentZone
-              allowedBlocks={PAGE_BLOCKS_ALLOWED}
-              blocks={layout.zones[EXAMPLE_ZONE_IDS.beforeProfile]}
               id={EXAMPLE_ZONE_IDS.beforeProfile}
               registry={blocksRegistry}
             />
@@ -334,8 +370,6 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
             <ProfileForm />
 
             <ContentZone
-              allowedBlocks={PAGE_BLOCKS_ALLOWED}
-              blocks={layout.zones[EXAMPLE_ZONE_IDS.afterProfile]}
               id={EXAMPLE_ZONE_IDS.afterProfile}
               registry={blocksRegistry}
             />
@@ -343,9 +377,7 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
 
           {showSidebar ? (
             <ContentZone
-              allowedBlocks={PAGE_SIDEBAR_BLOCKS_ALLOWED}
               as="aside"
-              blocks={layout.zones[EXAMPLE_ZONE_IDS.sidebar]}
               className="border-border w-full rounded-lg border p-4 lg:w-64"
               id={EXAMPLE_ZONE_IDS.sidebar}
               registry={blocksRegistry}
@@ -354,16 +386,25 @@ const ZonesPage = ({ loaderData }: PluginRoutePageProps<ZonesLayout>) => {
         </div>
 
         <ContentZone
-          allowedBlocks={PAGE_BLOCKS_ALLOWED}
-          blocks={layout.zones[EXAMPLE_ZONE_IDS.beforeFooter]}
           id={EXAMPLE_ZONE_IDS.beforeFooter}
           registry={blocksRegistry}
         />
 
-        {lastSave ? <SavedPayload input={lastSave} /> : null}
-      </div>
-    </ContentEditorRuntime>
+        {lastSave ? <SavedPayload body={lastSave} /> : null}
+      </main>
+    </EditablePage>
   );
 };
+
+const ZonesPage = ({
+  loaderData,
+  search,
+}: PluginRoutePageProps<ZonesPageData, ZonesSearch>) => (
+  <SettingsScreen
+    canEdit={loaderData.canEdit}
+    layout={loaderData.layout}
+    openEditing={search.edit === true}
+  />
+);
 
 export default ZonesPage;

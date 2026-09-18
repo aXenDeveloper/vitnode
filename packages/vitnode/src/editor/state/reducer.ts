@@ -32,7 +32,7 @@ export const initialVisualEditorState: VisualEditorState = {
   zones: {},
 };
 
-const sameValue = (left: unknown, right: unknown): boolean => {
+export const sameValue = (left: unknown, right: unknown): boolean => {
   if (left === right) return true;
 
   if (Array.isArray(left) || Array.isArray(right)) {
@@ -445,6 +445,11 @@ const withResolvableSelection = (
     : state;
 };
 
+const wasSuperseded = (
+  zone: EditorZoneState,
+  nodes: readonly ContentNode[],
+): boolean => zone.superseded.some(older => sameNodes(older, nodes));
+
 const syncMountedZone = (
   state: VisualEditorState,
   zone: EditorZoneState,
@@ -457,13 +462,26 @@ const syncMountedZone = (
     !sameNodes(zone.initial, next.nodes) ||
     !sameInvalidEntries(zone.initialInvalid, next.invalid);
 
-  if (!metadataChanged && !incomingChanged) return state;
+  const caughtUp = zone.superseded.length > 0 && !incomingChanged;
 
-  const synced: EditorZoneState = metadataChanged
-    ? { ...zone, allowedBlocks: next.allowedBlocks, registry: next.registry }
+  if (!metadataChanged && !incomingChanged && !caughtUp) return state;
+
+  const settled: EditorZoneState = caughtUp
+    ? { ...zone, superseded: [] }
     : zone;
+  const synced: EditorZoneState = metadataChanged
+    ? {
+        ...settled,
+        allowedBlocks: next.allowedBlocks,
+        registry: next.registry,
+      }
+    : settled;
 
-  if (!incomingChanged || zoneChanged(zone)) {
+  if (
+    !incomingChanged ||
+    zoneChanged(zone) ||
+    wasSuperseded(zone, next.nodes)
+  ) {
     return synced === zone ? state : withZones(state, { [next.id]: synced });
   }
 
@@ -507,6 +525,7 @@ const mountZone = (
         invalid,
         nodes,
         registry: next.registry,
+        superseded: [],
       },
     },
   );
@@ -649,13 +668,14 @@ export const visualEditorReducer = (
         zones: Object.fromEntries(
           Object.entries(state.zones).map(([id, zone]) => [
             id,
-            zone.nodes === zone.initial && zone.invalid === zone.initialInvalid
-              ? zone
-              : {
+            zoneChanged(zone)
+              ? {
                   ...zone,
                   invalid: zone.initialInvalid,
                   nodes: zone.initial,
-                },
+                  superseded: [],
+                }
+              : zone,
           ]),
         ),
       };
@@ -765,18 +785,23 @@ export const visualEditorReducer = (
               ? action.invalid[id]
               : zone.initialInvalid;
             const nodes = sameNodes(zone.nodes, sent) ? stored : zone.nodes;
+            const superseded = sameNodes(zone.initial, stored)
+              ? zone.superseded
+              : [...zone.superseded, zone.initial];
 
             return [
               id,
               nodes === zone.nodes &&
               stored === zone.initial &&
-              storedInvalid === zone.initialInvalid
+              storedInvalid === zone.initialInvalid &&
+              superseded === zone.superseded
                 ? zone
                 : {
                     ...zone,
                     initial: stored,
                     initialInvalid: storedInvalid,
                     nodes,
+                    superseded,
                   },
             ];
           }),
@@ -849,13 +874,14 @@ export const visualEditorReducer = (
     case "update": {
       const zone = state.zones[action.ref.zoneId];
       const found = findBlock(state, action.ref);
-      if (!zone || !found || sameValue(found.instance.data, action.data)) {
-        return state;
-      }
+      if (!zone || !found) return state;
+
+      const data = { ...found.instance.data, ...action.data };
+      if (sameValue(found.instance.data, data)) return state;
 
       const next = updateContainer(zone, containerOf(action.ref), nodes =>
         nodes.map((node, at) =>
-          at === found.index ? { ...found.instance, data: action.data } : node,
+          at === found.index ? { ...found.instance, data } : node,
         ),
       );
 

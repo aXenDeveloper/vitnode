@@ -1,0 +1,323 @@
+---
+title: Editable Pages
+description: Declare a page's zones once, and the people who run the site rearrange them on the page itself - Edit widgets, drag, Save, done. No admin screen, no zone-to-column mapping, no hand-written save route.
+icon: PanelsTopLeft
+---
+
+A settings page is edited on the settings page. A forum index is edited on the forum index. Nobody opens an admin screen to arrange a page they cannot see.
+
+```text
+the real page
+   ↓  Edit widgets        ← only if you hold the page's permission
+the same page, editable
+   ↓  Save
+   ↓  Finish editing
+the real page again
+```
+
+That is the whole feature. What you write to get it is one page declaration, one line of registration, and `<EditablePage>` around the zones you already had.
+
+{/* Image prompt: A clean left-to-right technical diagram on a dark background. Three labelled boxes joined by arrows. First: "defineEditablePage" showing a small list of zone names (before-profile, sidebar, after-profile) each with a tiny allowlist pill beside it. Second: a miniature browser window titled "/example/zones" with two dashed zone outlines around a solid form, and a small outlined button in the corner reading "Edit widgets". Third: a database icon labelled "core_page_layouts" with one row shape beside it, split into a "pageId" cell and a wider "zones JSONB" cell holding two small zone chips. A thin annotation under the middle box reads "one declaration, three readers". Blue accent on the arrows, neutral grey boxes, 1600x600. */}
+
+## The whole thing, in three files
+
+### 1. Declare the page
+
+```ts title="plugins/example/src/content/settings-page.ts"
+import { defineEditablePage } from "@vitnode/core/content/editor"
+
+import { PAGE_BLOCKS_ALLOWED, PAGE_SIDEBAR_BLOCKS_ALLOWED } from "./page-blocks"
+
+export const settingsPage = defineEditablePage({
+  id: "example:settings",
+
+  permission: { module: "widgets", permission: "can_edit" },
+
+  zones: {
+    "before-profile": {
+      allowed: PAGE_BLOCKS_ALLOWED,
+      max: 20,
+      default: [
+        { id: "01JEXAMPLEZONESBEFORE00001", type: "example:callout", data: { /* … */ } },
+      ],
+    },
+    "after-profile": { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
+    sidebar: { allowed: PAGE_SIDEBAR_BLOCKS_ALLOWED, max: 20 },
+    "before-footer": { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
+  },
+})
+```
+
+| | | |
+| :--- | :--- | :--- |
+| `id` | required | The page's stable identity, `plugin:page`. The stored layout is keyed by it, so it is written once by hand and never generated. |
+| `permission` | required | The **moderator** permission somebody needs before the editor will offer to open. `plugin` defaults to whoever registered the page. |
+| `zones` | required | One entry per place on the page blocks may go. At least one. |
+
+And per zone:
+
+| | |
+| :--- | :--- |
+| `allowed` | The block allowlist, or `"*"`. Declared **here**, so the page never repeats it. |
+| `max` / `min` | How many **blocks** the zone accepts. An area counts nothing itself; the blocks inside it each count one. |
+| `default` | The layout the zone ships with, as real stored nodes. |
+
+Zone ids are **page-local**: `"sidebar"`, not `"settings:sidebar"`. The page id already namespaces them - it is what the stored layout is keyed by, and the zone ids are the keys inside it.
+
+<Callout title="The defaults are content, not a placeholder">
+  A zone nobody has customised renders its `default`, and the read that serves it says
+  so with `updatedAt: null`. That is the layout you shipped - it is what a visitor
+  sees before anybody has touched the page, and what a future *reset* will restore
+  to. So it lives in code rather than being seeded into the database, and the first
+  **Save** is entitled to write over it.
+</Callout>
+
+The definition module is a plain value with **no third-party import anywhere in its graph**, which is what lets the API and a public page import the same file. Ask for a zone it does not declare - on the page, in a save, anywhere - and it throws with the zone ids it does declare.
+
+### 2. Register it
+
+```ts title="plugins/example/src/config.api.ts"
+buildApiPlugin({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  editablePages: [settingsPage], // [!code ++]
+  permissionStaff: {             // [!code ++]
+    moderator: { widgets: ["can_edit"] }, // [!code ++]
+  },                             // [!code ++]
+  modules: [adminModule, /* … */],
+})
+```
+
+Two lines, and both are needed for different reasons. `editablePages` is what makes the page id resolvable on the server: without it, a read is a `404` and a save is a `400`. `permissionStaff.moderator` is what puts **Widgets → can edit** in front of somebody granting it - a permission nobody can grant is a permission nobody holds.
+
+Registering one page id twice, or two plugins claiming the same id, is a startup error rather than a race about which loaded last. So is declaring a page whose permission is missing from that plugin's `permissionStaff.moderator` catalogue: the server would boot, the page would read fine, and nobody outside a root role could ever edit it - which is a thing you want to hear at boot rather than from somebody who cannot find the button.
+
+### 3. Render it
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
+<EditablePage
+  adapter={adapter}
+  canEdit={canEdit}
+  editing={editing}
+  layout={layout}
+  onExit={() => {
+    setEditing(false)
+  }}
+  page={settingsPage}
+>
+  <ContentZone id="before-profile" registry={blocksRegistry} />
+  <ProfileForm />
+  <ContentZone
+    as="aside"
+    className="w-full lg:w-64"
+    id="sidebar"
+    registry={blocksRegistry}
+  />
+</EditablePage>
+```
+
+`<ContentZone id="sidebar" />`. That is the entire zone. No `blocks`, because the provider holds the layout. No `allowedBlocks`, because the provider holds the allowlist. Both still work if you pass them - an explicit prop always wins - but on a page that declared its zones there is nothing left to pass.
+
+| Prop | | |
+| :--- | :--- | :--- |
+| `page` | required | The definition. It is what resolves each zone's blocks and allowlist. |
+| `layout` | optional | What the loader read. `null` renders every zone's shipped default. |
+| `canEdit` | optional | `true` mounts the editor runtime. `false` renders the children and nothing else. |
+| `editing` | optional | Whether edit mode is *on*. Ignored unless `canEdit`. |
+| `adapter` | optional | Where **Save** goes. `createContentEditorAdapter` builds one. |
+| `onExit` | optional | Called by **Finish editing**, after the unsaved-changes prompt. |
+
+`EditablePage` also adopts the canonical answer a save comes back with, so view mode shows the stored result the moment you press **Finish editing** - no reload, and no second request. Hand it a layout belonging to a different page id and it throws, because rendering one page's blocks under another page's zones is how a save writes them onto the wrong page.
+
+## Loading it
+
+```ts title="plugins/example/src/pages/zones-page.tsx"
+const [stored, staff] = await Promise.all([
+  fetcher({
+    plugin: "@vitnode/core",
+    method: "get",
+    module: "pages",
+    path: "/layout",
+    args: { query: { pageId: settingsPage.id } },
+  }),
+  fetcher({
+    plugin: "@vitnode/core",
+    method: "get",
+    module: "users",
+    path: "/permissions",
+  }),
+])
+
+if (!stored.ok) {
+  throw new Error(`Reading this page's layout answered ${stored.status}…`)
+}
+```
+
+Two public reads, one round trip. The first is the layout; the second is who is looking.
+
+The `if` is the important line. "Nothing is stored" and "I could not read what is stored" are two different answers and must never look alike: the first is a `200` full of shipped defaults, the second is a throw. Render something plausible in place of a failed read and the next **Save** writes it over whatever the page really held.
+
+## Saving it
+
+```tsx
+const adapter = useMemo(
+  () =>
+    createContentEditorAdapter({
+      page: settingsPage,
+      save: async payload => {
+        const response = await fetcher({
+          plugin: "@vitnode/core",
+          method: "put",
+          module: "pages",
+          path: "/layout",
+          args: { body: payload },
+        })
+
+        if (!response.ok) throw new Error(`Saving answered ${response.status}.`)
+
+        return zodLayout.parse(await response.json())
+      },
+    }),
+  [],
+)
+```
+
+The adapter turns the editor's snapshot into `{ pageId, zones }` carrying **only the zones that changed**, refuses up front to send a zone the page does not declare, and hands the server's canonical answer back so the editor rebases onto what was *stored* rather than onto what it sent.
+
+<Callout title="Two files, and neither of them the editor">
+  `createContentEditorAdapter` produces a `VisualEditorAdapter`, but it needs nothing
+  from the editor to do it. So it ships beside the page definition, its whole graph
+  is two modules with no third-party package in it, and a plain `import` keeps the
+  example plugin's boundary test green: nothing under core's `src/editor/` is in the
+  page's eager graph. The `@vitnode/core/editor/adapter` barrel, by contrast, is
+  thirty-three modules and Zod.
+</Callout>
+
+## The two routes
+
+They are core's, not your plugin's, and they are addressed by page id.
+
+```http
+GET  /api/vitnode/core/pages/layout?pageId=example:settings     public
+PUT  /api/vitnode/core/pages/layout                             that page's permission
+```
+
+```ts
+interface EditablePageLayoutPayload {
+  pageId: string
+  updatedAt: string | null          // null: nothing stored, these are the defaults
+  zones: Record<string, ContentNode[]>
+}
+```
+
+`GET` is public, because a visitor renders the page from it. It answers with the **effective** layout - the shipped defaults with whatever has been customised laid over them - so the page renders what it is handed and resolves nothing itself. The defaults it sends have been through the same block schemas a saved zone goes through, so a zone still on its default arrives in the same shape as one somebody has edited, fields the block fills in and all. Hand `EditablePage` the layout from this route and it never has to guess: the `default` you declared is a fallback for a zone the server did not send, and it has not been through those schemas. A page id nobody registered is a `404`; a registered page nobody has rearranged is a `200` holding the declared defaults and `updatedAt: null`.
+
+`PUT` takes `{ pageId, zones }` with only the zones that changed, and answers with the canonical stored value of **those zones only**. The mapping from a zone id to somewhere to store it comes from the registered page, never from the body, so there is no shape of request that reaches a zone the page did not declare.
+
+After validation the write is one read, one merge and one upsert, whatever number of zones the save named. The block validator is the engine's own; the event - `core.page-layout.updated`, carrying the page id and the zones that changed - is emitted after the commit rather than inside it; and a save that changed nothing stores nothing, bumps no `updatedAt` and emits nothing, while still answering canonically.
+
+## "Can I edit this?"
+
+The page asks the existing public route:
+
+```http
+GET /api/vitnode/core/users/permissions   →   { root, permissions[] }
+```
+
+`root` is a role that holds everything and lists nothing, so it counts as yes on its own. Otherwise the page looks for its own `{ plugin, module, permission }` in the list.
+
+<Callout title="Why a moderator permission and not an admin one" type="warn">
+  An admin-type check reads `c.get("admin")`, and only `globalAdminMiddleware`
+  populates it. On a public page that middleware never ran, so
+  `checkStaffPermission(c, { type: "admin", … })` does not merely answer *no* - it
+  answers no **structurally**, for everybody, including the person who genuinely
+  administers the site. A moderator permission reads `c.get("user")`, which a public
+  request does have. That is why `permission` on a page definition is a
+  `permissionStaff.moderator` entry, and why `PUT /pages/layout` asserts it as one.
+</Callout>
+
+`?edit=true` may **request** edit mode - it is what a link hands you - and it never authorizes it. The page only opens in edit mode when the permission agrees, the **Edit widgets** action is absent otherwise, and the save asserts the permission again server-side whatever the URL said.
+
+## Where a layout is stored
+
+In core, in one ordinary table:
+
+```ts
+core_page_layouts
+  pageId     varchar    primary key
+  zones      jsonb      not null default '{}'
+  createdAt  timestamp
+  updatedAt  timestamp
+```
+
+**One row per page, holding overrides only.** `zones` is a `Record<zoneId, ContentNode[]>` carrying just the zones somebody has actually rearranged. What the page renders is the two halves put together:
+
+```ts
+effective[zoneId] = Object.hasOwn(stored.zones, zoneId)
+  ? stored.zones[zoneId]
+  : zone.default
+```
+
+Defaults live in code; the database stores the custom ones. A page nobody has touched has **no row at all** - which is exactly what `updatedAt: null` means. Save a zone back to precisely what it ships with and its key is dropped again; empty the object and the row goes with it. A reset is therefore a delete rather than a re-seed, and the shipped layout is written down in exactly one place.
+
+A stored zone the page no longer declares is **ignored for rendering but not deleted**. Only declared zones are read, so nothing renders it, and no ordinary save touches it: take a zone off a page for one release, put it back in the next, and what was stored for it is still there.
+
+None of this is a Content Engine content type. No publication, no search indexing, no generated CRUD, no AdminCP screens. Layout persistence is **internal infrastructure** - you do not browse it, any more than you browse the sessions table.
+
+<Callout title="There is no AdminCP → Layouts screen in V1, on purpose">
+  Central layout administration - listing the pages somebody has customised,
+  resetting one to its shipped defaults, exporting a layout as JSON, copying one
+  page's layout onto another - is deliberately left to a possible **V2**. Each of
+  them is a query on one table keyed by `pageId`: list is `select "pageId"`, reset
+  is a `delete`, export is a single row. The shape makes them easy later; none of
+  them is built now, and none of them is needed to arrange a page.
+</Callout>
+
+Every submitted zone is re-validated against that zone's own `allowed`, `min` and `max`, read off the **registered page** rather than off the request, before anything is stored.
+
+## When a save is refused
+
+Every refusal is named, and none of them falls back to a default or silently drops content.
+
+| | |
+| :--- | :--- |
+| A page id nobody registered | `400`, saying there is nothing this save could be writing. |
+| A zone the page does not declare | `400`, listing the zones it does. |
+| No zones at all | `400`. A save names what it changed, and this one named none. |
+| A block the zone does not allow | `400`, from the zone's own `allowed` - nested inside an area too. |
+| Too many or too few blocks | `400`, from the zone's own `max` and `min`, counting an area's children. |
+| The permission is not held | `403`. |
+| The stored layout cannot be read | `500`. A read that fails is never answered with defaults: the next **Save** would write them over whatever is really there. |
+
+The client has its own guard before any of this: a zone holding a value the editor cannot read keeps **Save** disabled until somebody removes it deliberately. See [unreadable content](/docs/dev/blocks/visual-editor#content-the-editor-cannot-read).
+
+## What this costs a public page
+
+The page definition is a module a public page imports, so it was measured rather than asserted. Every number is the import graph of a real file in this repository.
+
+| Entry | Source files | Third-party |
+| :--- | ---: | :--- |
+| `@vitnode/core/content/editor` | 12 | none |
+| `createContentEditorAdapter` alone | 2 | none |
+| `EditablePage` (`blocks/page.tsx`), eagerly | 15 | `react` |
+| `ContentZone` (`blocks/zone.tsx`) | 19 | `react` |
+| **The example's page definition, end to end** | **15** | **none** |
+| `@vitnode/core/content/define` | 34 | `zod` |
+| `@vitnode/core/content` (the barrel) | 54 | `zod` |
+| `@vitnode/core/editor/adapter` (the barrel) | 33 | `zod` |
+
+A module whose whole graph has no external specifier cannot add a package to anything that imports it. That is the entire argument for keeping the declaration off the content type: a page gets its zone ids, allowlists and defaults without the schema builder that turns field descriptors into Zod.
+
+The same rule applies to blocks. `plugins/example/src/blocks/callout.tsx` used to import `field` from `@vitnode/core/content`; switching two import paths to `@vitnode/core/content/fields` took the playground's eager graph from **132 modules to 107**, and the Content Engine modules it reaches from **41 to 16**. The rendered page was byte-for-byte identical.
+
+```ts
+import { field } from "@vitnode/core/content"          // [!code --]
+import { field } from "@vitnode/core/content/fields"   // [!code ++]
+```
+
+Two boundary tests keep it that way. Core's own names every module `@vitnode/core/content/editor` reaches and asserts it reaches no third-party one; the example plugin's walks the **real page** and asserts nothing under core's `src/editor/` - and no drag-and-drop, command palette or database package - is in its eager graph, while following its dynamic imports does reach `@dnd-kit/core`, so the guarantee is not vacuous.
+
+## The playground
+
+`/example/zones` is the reference integration and the manual test page: four zones around a locked profile form, blocks from two plugins, a block stored with a variant, an area holding two blocks, a second area left empty, and an **Edit widgets** action that only appears for somebody holding `example.widgets/can_edit`.
+
+Visit it signed out and it is an ordinary page - shipped defaults, no button, no editor chunk. Two checklists on the page say exactly what to look for in DevTools, including the two that matter here: that a save carries one zone rather than the whole page, and that nothing under `src/editor/` is requested until somebody clicks **Edit widgets**.

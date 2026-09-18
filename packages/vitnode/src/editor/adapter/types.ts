@@ -11,6 +11,10 @@ export interface VisualEditorSaveResult {
   zones?: VisualEditorSnapshot;
 }
 
+export interface VisualEditorSaveRefusal {
+  refusal: string;
+}
+
 export interface VisualEditorAdapter {
   save: (
     input: VisualEditorSaveInput,

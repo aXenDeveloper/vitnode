@@ -323,7 +323,7 @@ describe("visualEditorReducer", () => {
     });
   });
 
-  it("replaces a block's data instead of merging it", () => {
+  it("merges an update into the data the block already holds", () => {
     const instance = createBlockInstance("core:text", {
       body: "a",
       heading: "h",
@@ -336,7 +336,7 @@ describe("visualEditorReducer", () => {
 
     expect(
       findBlock(state, ref("main", instance.id))?.instance.data,
-    ).toStrictEqual({ body: "b" });
+    ).toStrictEqual({ body: "b", heading: "h" });
     expect(isVisualEditorDirty(state)).toBe(true);
   });
 

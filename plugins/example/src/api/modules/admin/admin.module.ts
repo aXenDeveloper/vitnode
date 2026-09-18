@@ -7,16 +7,12 @@ import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
-import { zonesLayoutContent } from "@/database/zones-layouts";
-
-import { zonesAdminModule } from "./zones/zones.admin.module";
 
 export const adminModule = buildModule({
   pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [],
   modules: [
-    zonesAdminModule,
     buildContentAdminModule({
       pluginId: CONFIG_PLUGIN.pluginId,
       // The localized article is registered on the API side only, so its
@@ -31,7 +27,6 @@ export const adminModule = buildModule({
         categoryContent,
         localizedArticleContent,
         pageContent,
-        zonesLayoutContent,
       ],
     }),
   ],

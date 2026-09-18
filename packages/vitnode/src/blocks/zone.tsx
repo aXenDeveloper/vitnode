@@ -10,6 +10,7 @@ import type {
 } from "./types";
 
 import { useContentEditRuntime } from "./edit-context";
+import { useEditablePage } from "./page-context";
 import { ContentRenderer } from "./renderer";
 import { assertContentZoneId, contentZoneAttributes } from "./zone-meta";
 import { ContentZoneOutlet } from "./zone-outlet";
@@ -17,7 +18,7 @@ import { ContentZoneOutlet } from "./zone-outlet";
 export interface ContentZoneProps {
   allowedBlocks?: BlockAllowedSpec;
   as?: keyof JSX.IntrinsicElements;
-  blocks: null | readonly unknown[] | undefined;
+  blocks?: null | readonly unknown[];
   className?: string;
   fallback?: BlockRenderFallback;
   id: string;
@@ -36,15 +37,20 @@ export const ContentZone = ({
   validate,
 }: ContentZoneProps): null | ReactElement => {
   const editRuntime = useContentEditRuntime();
+  const page = useEditablePage();
 
   assertContentZoneId(id);
+
+  const declared = blocks === undefined ? page?.resolveZone(id) : undefined;
+  const nodes = blocks === undefined ? declared?.blocks : blocks;
+  const allowed = allowedBlocks ?? declared?.allowedBlocks;
 
   if (editRuntime) {
     return createElement(ContentZoneOutlet, {
       mount: {
-        allowedBlocks,
+        allowedBlocks: allowed,
         as,
-        blocks,
+        blocks: nodes,
         className,
         fallback,
         id,
@@ -55,11 +61,11 @@ export const ContentZone = ({
     });
   }
 
-  if (!blocks || blocks.length === 0) return null;
+  if (!nodes || nodes.length === 0) return null;
 
   const rendered = createElement(ContentRenderer, {
-    allowed: allowedBlocks,
-    blocks,
+    allowed,
+    blocks: nodes,
     fallback,
     registry,
     validate,
@@ -71,7 +77,7 @@ export const ContentZone = ({
     as ?? "div",
     {
       className,
-      ...contentZoneAttributes({ allowedBlocks, id }),
+      ...contentZoneAttributes({ allowedBlocks: allowed, id }),
     },
     rendered,
   );

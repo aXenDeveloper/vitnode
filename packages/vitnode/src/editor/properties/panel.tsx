@@ -18,6 +18,7 @@ import { useFormApi } from "../../components/ui/form";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
 import { useVisualEditor } from "../context";
 import { blockInstanceIssue } from "../instance/defaults";
+import { sameValue } from "../state/reducer";
 import { AreaPropertiesPanelContent } from "./area-panel";
 import { BlockPropertyField } from "./field";
 import { selectedNode } from "./selection";
@@ -30,39 +31,51 @@ import {
 import { BlockVariantControl } from "./variant";
 
 const BlockDataSync = ({
-  base,
   formSchema,
+  onSent,
   target,
 }: {
-  base: BlockUnknownData;
   formSchema: z.ZodObject<z.ZodRawShape>;
+  onSent: (patch: BlockUnknownData) => void;
   target: EditorNodeRef;
 }) => {
   const { dispatch } = useVisualEditor();
   const { form } = useFormApi();
 
   useEffect(() => {
-    let edited = JSON.stringify(form.store.state.values);
+    let edited: Record<string, unknown> = { ...form.store.state.values };
 
     const subscription = form.store.subscribe(() => {
-      const values = JSON.stringify(form.store.state.values);
-      if (values === edited) return;
+      const values: Record<string, unknown> = { ...form.store.state.values };
+      const changed = Object.keys(values).filter(
+        name => !sameValue(values[name], edited[name]),
+      );
+
       edited = values;
+      if (changed.length === 0) return;
 
-      const parsed = formSchema.safeParse(form.store.state.values);
-      if (!parsed.success) return;
+      const patch = blockDataFromFormValues(
+        {},
+        Object.fromEntries(
+          changed.flatMap(name => {
+            const field = formSchema.shape[name] as undefined | z.ZodType;
+            const parsed = field?.safeParse(values[name]);
 
-      dispatch({
-        data: blockDataFromFormValues(base, parsed.data),
-        ref: target,
-        type: "update",
-      });
+            return parsed?.success ? [[name, parsed.data] as const] : [];
+          }),
+        ),
+      );
+
+      if (Object.keys(patch).length === 0) return;
+
+      onSent(patch);
+      dispatch({ data: patch, ref: target, type: "update" });
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [base, dispatch, form, formSchema, target]);
+  }, [dispatch, form, formSchema, onSent, target]);
 
   return null;
 };
@@ -70,10 +83,12 @@ const BlockDataSync = ({
 const BlockPropertiesForm = ({
   entry,
   instance,
+  onSent,
   target,
 }: {
   entry: RegisteredBlock;
   instance: AnyBlockInstance;
+  onSent: (patch: BlockUnknownData) => void;
   target: EditorNodeRef;
 }) => {
   const [base] = useState<BlockUnknownData>(() => instance.data);
@@ -98,7 +113,7 @@ const BlockPropertiesForm = ({
       )}
       mode="onChange"
     >
-      <BlockDataSync base={base} formSchema={formSchema} target={target} />
+      <BlockDataSync formSchema={formSchema} onSent={onSent} target={target} />
     </AutoForm>
   );
 };
@@ -113,6 +128,14 @@ const BlockPropertiesPanelContent = ({
   const { dispatch, setPanel, state } = useVisualEditor();
   const t = useTranslations("core.editor");
   const tGlobal = useTranslations("core.global");
+
+  const [sent, setSent] = useState<BlockUnknownData>(instance.data);
+  const [baseline, setBaseline] = useState(0);
+
+  if (!sameValue(sent, instance.data)) {
+    setSent(instance.data);
+    setBaseline(generation => generation + 1);
+  }
 
   const registry =
     state.zones[target.zoneId].registry ?? getDefaultBlockRegistry();
@@ -155,7 +178,10 @@ const BlockPropertiesPanelContent = ({
         <BlockPropertiesForm
           entry={entry}
           instance={instance}
-          key={`${target.zoneId}/${target.nodeId}`}
+          key={`${target.zoneId}/${target.nodeId}/${baseline}`}
+          onSent={patch => {
+            setSent(current => ({ ...current, ...patch }));
+          }}
           target={target}
         />
       ) : null}

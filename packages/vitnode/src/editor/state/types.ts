@@ -54,6 +54,7 @@ export interface EditorZoneState {
   invalid: readonly EditorZoneInvalidEntry[];
   nodes: readonly ContentNode[];
   registry: BlockRegistry | undefined;
+  superseded: readonly (readonly ContentNode[])[];
 }
 
 export interface VisualEditorState {

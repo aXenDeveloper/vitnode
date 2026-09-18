@@ -19,6 +19,7 @@ import type { EditorContainerRef, VisualEditorSnapshot } from "./state/types";
 
 import { createAreaInstance } from "../blocks/area";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
+import { saveRefusalOf } from "./adapter/refusal";
 import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
 import { VisualEditorContext } from "./context";
 import { EditorDndProvider } from "./dnd/provider";
@@ -108,11 +109,16 @@ const EditorShell = ({
 
     try {
       canonical = (await adapter.save(input))?.zones;
-    } catch {
+    } catch (cause) {
+      const refusal = saveRefusalOf(cause);
+
       setSaveStatus("error");
-      toast.error(t("save_error.title"), {
-        description: t("save_error.desc"),
-      });
+      toast.error(
+        refusal === undefined ? t("save_error.title") : t("save_refused.title"),
+        {
+          description: refusal ?? t("save_error.desc"),
+        },
+      );
 
       return false;
     }

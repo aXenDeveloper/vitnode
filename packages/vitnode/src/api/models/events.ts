@@ -5,6 +5,10 @@ import { randomUUID } from "node:crypto";
 import type { EventListenerConfig } from "../lib/events";
 
 export interface VitNodeEvents {
+  "core.page-layout.updated": {
+    changedZones: string[];
+    pageId: string;
+  };
   "role.created": {
     roleId: number;
   };

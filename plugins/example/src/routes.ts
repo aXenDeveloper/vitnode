@@ -9,6 +9,7 @@ import {
 import type { ExampleSearch } from "./pages/example-page";
 
 import { browseSearch } from "./pages/browse-search";
+import { zonesSearch } from "./pages/zones-search";
 
 export const routes = definePluginRoutes([
   page("/example/:slug", {
@@ -26,6 +27,7 @@ export const routes = definePluginRoutes([
 
   page("/example/zones", {
     component: lazy(() => import("./pages/zones-page")),
+    search: zonesSearch,
   }),
 
   page("/example/embed", {
