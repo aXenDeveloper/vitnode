@@ -5,7 +5,11 @@ import type {
   ContentFileField,
 } from "./types";
 
-import { BLOCK_WILDCARD, CONTENT_BLOCKS_ABSOLUTE_MAX } from "../blocks/const";
+import {
+  BLOCK_WILDCARD,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+  CONTENT_BLOCKS_DEFAULT_MAX,
+} from "../blocks/const";
 import { parseBlockId } from "../blocks/namespace";
 import {
   CONTENT_ENUM_DEFAULT_LENGTH,
@@ -273,9 +277,13 @@ export const assertField = (
         { contentTypeId: id },
       );
     }
-    if (min !== undefined && max !== undefined && min > max) {
+    const effectiveMax = max ?? CONTENT_BLOCKS_DEFAULT_MAX;
+
+    if (min !== undefined && min > effectiveMax) {
       throw new ContentEngineError(
-        `Field "${name}" has min ${min} greater than max ${max}.`,
+        max === undefined
+          ? `Field "${name}" has a min of ${min}, and a blocks field stores at most ${CONTENT_BLOCKS_DEFAULT_MAX} blocks unless it raises \`max\` itself. No value could ever satisfy both, so every write to this field would be refused.`
+          : `Field "${name}" has min ${min} greater than max ${max}.`,
         { contentTypeId: id },
       );
     }

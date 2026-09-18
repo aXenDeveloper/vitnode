@@ -6,6 +6,7 @@ import type { AnyBlockInstance, ContentNode } from "@/blocks/types";
 
 import { defineBlock } from "@/blocks/define";
 import { isBlockInstance } from "@/blocks/instance";
+import { CONTENT_BLOCKS_DEFAULT_MAX } from "@/blocks/const";
 import {
   createBlockRegistry,
   setDefaultBlockRegistry,
@@ -112,6 +113,44 @@ describe("field.blocks", () => {
         fields: { content: field.blocks({ allowed: ["hero"] }) },
       }),
     ).toThrow(/not a block id/);
+  });
+
+  it("refuses a min no value could satisfy", () => {
+    expect(() =>
+      defineContentType({
+        id: "test.min-over-max",
+        tableName: "test_blocks_min_over_max",
+        fields: { content: field.blocks({ max: 5, min: 10 }) },
+      }),
+    ).toThrow(/min 10 greater than max 5/);
+
+    expect(() =>
+      defineContentType({
+        id: "test.min-over-default",
+        tableName: "test_blocks_min_over_default",
+        fields: {
+          content: field.blocks({ min: CONTENT_BLOCKS_DEFAULT_MAX + 1 }),
+        },
+      }),
+    ).toThrow(/stores at most 200 blocks unless it raises/);
+  });
+
+  it("accepts a min the field can actually reach", () => {
+    expect(() =>
+      defineContentType({
+        id: "test.min-at-default",
+        tableName: "test_blocks_min_at_default",
+        fields: { content: field.blocks({ min: CONTENT_BLOCKS_DEFAULT_MAX }) },
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      defineContentType({
+        id: "test.min-equals-max",
+        tableName: "test_blocks_min_equals_max",
+        fields: { content: field.blocks({ max: 5, min: 5 }) },
+      }),
+    ).not.toThrow();
   });
 
   it("refuses to be indexed", () => {
