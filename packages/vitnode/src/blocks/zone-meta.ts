@@ -1,4 +1,5 @@
 import type {
+  BlockAllowedEntry,
   BlockAllowedSpec,
   ContentZoneDefinition,
   ParsedContentZoneId,
@@ -13,6 +14,7 @@ import {
   CONTENT_ZONE_SEPARATOR,
 } from "./const";
 import { BlockError } from "./errors";
+import { parseBlockId } from "./namespace";
 
 export const isContentZoneId = (value: unknown): value is string =>
   typeof value === "string" &&
@@ -93,4 +95,56 @@ export const contentZoneBounds = ({
   }
 
   return { max, min };
+};
+
+const narrowedEntry = (
+  declared: BlockAllowedEntry,
+  explicit: BlockAllowedEntry,
+): BlockAllowedEntry | null => {
+  if (declared === explicit) return declared;
+  if (declared === BLOCK_WILDCARD) return explicit;
+  if (explicit === BLOCK_WILDCARD) return declared;
+
+  const left = parseBlockId(declared);
+  const right = parseBlockId(explicit);
+
+  if (left === null || left.namespace !== right?.namespace) return null;
+  if (left.name === BLOCK_WILDCARD) return explicit;
+  if (right.name === BLOCK_WILDCARD) return declared;
+
+  return null;
+};
+
+export const contentZoneAllowed = ({
+  declared,
+  explicit,
+  id,
+}: {
+  declared: BlockAllowedSpec | undefined;
+  explicit: BlockAllowedSpec | undefined;
+  id: string;
+}): BlockAllowedSpec | undefined => {
+  if (declared === undefined) return explicit;
+  if (explicit === undefined || explicit === BLOCK_WILDCARD) return declared;
+  if (declared === BLOCK_WILDCARD) return explicit;
+
+  const entries: BlockAllowedEntry[] = [];
+
+  for (const wanted of explicit) {
+    for (const permitted of declared) {
+      const narrowed = narrowedEntry(permitted, wanted);
+
+      if (narrowed !== null && !entries.includes(narrowed)) {
+        entries.push(narrowed);
+      }
+    }
+  }
+
+  if (entries.length === 0) {
+    throw new BlockError(
+      `Content zone ${JSON.stringify(id)} would be edited with no allowed blocks at all. The page allows ${formatBlockAllowed(declared)} and the \`<ContentZone>\` asks for ${formatBlockAllowed(explicit)}, which have nothing in common - a call site may narrow the page's allowlist but never widen it, so the two are intersected. Name a block the page already allows, or widen the page's own \`allowed\`.`,
+    );
+  }
+
+  return entries;
 };

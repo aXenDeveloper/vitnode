@@ -14,6 +14,7 @@ import { useEditablePage } from "./page-context";
 import { ContentRenderer } from "./renderer";
 import {
   assertContentZoneId,
+  contentZoneAllowed,
   contentZoneAttributes,
   contentZoneBounds,
 } from "./zone-meta";
@@ -53,7 +54,11 @@ export const ContentZone = ({
     page?.lookupZone(id) ??
     (page && blocks === undefined ? page.resolveZone(id) : undefined);
   const nodes = blocks === undefined ? declared?.blocks : blocks;
-  const allowed = allowedBlocks ?? declared?.allowedBlocks;
+  const allowed = contentZoneAllowed({
+    declared: declared?.allowedBlocks,
+    explicit: allowedBlocks,
+    id,
+  });
   const bounds = contentZoneBounds({
     declared,
     explicit: { max, min },

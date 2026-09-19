@@ -11,7 +11,7 @@ import { field } from "../content/fields";
 import { defineBlock } from "./define";
 import { ContentEditContext } from "./edit-context";
 import { EditablePage } from "./page";
-import { createBlockRegistry } from "./registry";
+import { createBlockRegistry, isBlockAllowed } from "./registry";
 import { ContentZone } from "./zone";
 
 const seam = vi.hoisted(() => ({
@@ -146,7 +146,7 @@ describe("a zone inside an editable page", () => {
     ).toBe("core:text");
   });
 
-  it("lets an explicit allowlist win even when the blocks are passed too", () => {
+  it("refuses to let a wider explicit allowlist through, blocks or not", () => {
     const { container } = render(
       <EditablePage layout={layout} page={page}>
         <ContentZone
@@ -163,7 +163,7 @@ describe("a zone inside an editable page", () => {
       container
         .querySelector("aside")
         ?.getAttribute("data-vitnode-zone-allowed"),
-    ).toBe("*");
+    ).toBe("core:text");
   });
 
   it("renders a zone the page does not declare when its blocks are passed", () => {
@@ -199,7 +199,7 @@ describe("a zone inside an editable page", () => {
     ).toBe(false);
   });
 
-  it("lets an explicitly passed allowlist win too", () => {
+  it("keeps the page's allowlist when the call site asks for a wider one", () => {
     const { container } = render(
       <EditablePage layout={layout} page={page}>
         <ContentZone
@@ -215,7 +215,7 @@ describe("a zone inside an editable page", () => {
       container
         .querySelector("aside")
         ?.getAttribute("data-vitnode-zone-allowed"),
-    ).toBe("*");
+    ).toBe("core:text");
   });
 
   it("renders an empty zone as no markup at all", () => {
@@ -551,5 +551,147 @@ describe("the bounds a call site may and may not ask for", () => {
     expect(mount.allowedBlocks).toStrictEqual(["core:text"]);
     expect(mount.max).toBe(10);
     expect(mount.min).toBe(2);
+  });
+});
+
+describe("the allowlist a call site may and may not ask for", () => {
+  const gated = defineEditablePage({
+    id: "example:gated",
+    permission: { module: "widgets", permission: "can_edit" },
+    zones: {
+      anything: {},
+      core: { allowed: ["core:*"] },
+      text: { allowed: ["core:text"] },
+    },
+  });
+
+  const registered = (zone: ReactNode, inPage = true): ContentZoneMount => {
+    const mounts: ContentZoneMount[] = [];
+    const runtime: ContentEditRuntime = {
+      preview: false,
+      registerZone: entry => {
+        mounts.push(entry.mount);
+      },
+      releaseZone: () => undefined,
+    };
+    const edited = (
+      <ContentEditContext value={runtime}>{zone}</ContentEditContext>
+    );
+
+    render(
+      inPage ? <EditablePage page={gated}>{edited}</EditablePage> : edited,
+    );
+
+    const last = mounts.at(-1);
+
+    if (!last) throw new Error("the zone registered no mount with the editor");
+
+    return last;
+  };
+
+  it("cannot be widened to everything by the call site", () => {
+    expect(
+      registered(
+        <ContentZone allowedBlocks="*" id="text" registry={registry} />,
+      ).allowedBlocks,
+    ).toStrictEqual(["core:text"]);
+  });
+
+  it("narrows a page that allows everything", () => {
+    expect(
+      registered(
+        <ContentZone
+          allowedBlocks={["core:text"]}
+          id="anything"
+          registry={registry}
+        />,
+      ).allowedBlocks,
+    ).toStrictEqual(["core:text"]);
+  });
+
+  it("keeps only the namespace the page opened", () => {
+    const mount = registered(
+      <ContentZone
+        allowedBlocks={["core:text", "example:callout"]}
+        id="core"
+        registry={registry}
+      />,
+    );
+
+    if (!mount.allowedBlocks) throw new Error("the mount carried no allowlist");
+
+    expect(isBlockAllowed(mount.allowedBlocks, "core:text")).toBe(true);
+    expect(isBlockAllowed(mount.allowedBlocks, "example:callout")).toBe(false);
+  });
+
+  it("inherits the page's allowlist behind explicit blocks", () => {
+    const mount = registered(
+      <ContentZone
+        allowedBlocks="*"
+        blocks={[block("Passed", "p1")]}
+        id="text"
+        registry={registry}
+      />,
+    );
+
+    expect(mount.blocks).toStrictEqual([block("Passed", "p1")]);
+    expect(mount.allowedBlocks).toStrictEqual(["core:text"]);
+  });
+
+  it("leaves a zone the page never declared with its own allowlist", () => {
+    const mount = registered(
+      <ContentZone
+        allowedBlocks="*"
+        blocks={[block("Record", "r1")]}
+        id="article-body"
+        registry={registry}
+      />,
+    );
+
+    expect(mount.allowedBlocks).toBe("*");
+  });
+
+  it("keeps a standalone zone outside any page exactly as it was written", () => {
+    const mount = registered(
+      <ContentZone
+        allowedBlocks={["core:text"]}
+        blocks={[block("Alone", "a1")]}
+        id="article-body"
+        registry={registry}
+      />,
+      false,
+    );
+
+    expect(mount.allowedBlocks).toStrictEqual(["core:text"]);
+  });
+
+  it("refuses a call site that leaves the zone with no block at all", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(() =>
+      registered(
+        <ContentZone
+          allowedBlocks={["example:callout"]}
+          id="text"
+          registry={registry}
+        />,
+      ),
+    ).toThrow(/no allowed blocks at all/);
+  });
+
+  it("refuses it on a public page too, not only under the editor", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(() =>
+      render(
+        <EditablePage page={gated}>
+          <ContentZone
+            allowedBlocks={["example:callout"]}
+            id="text"
+            registry={registry}
+          />
+        </EditablePage>,
+      ),
+    ).toThrow(/no allowed blocks at all/);
   });
 });

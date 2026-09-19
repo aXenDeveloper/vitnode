@@ -370,6 +370,11 @@ const leafObjectSchema = (
     ),
   );
 
+/** The shape a group's leaves hold in a form, before the form parses them. */
+export const buildGroupFormSchema = (
+  spec: ContentFormFieldSpec,
+): z.ZodObject<z.ZodRawShape> => leafObjectSchema(spec);
+
 const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   const schema = z.array(z.number());
 
@@ -680,8 +685,12 @@ export const buildFormSchemaFromSpec = (
           return [
             fieldSpec.name,
             // `seo: null` is a real state a nullable group can be in, and the
-            // editor has to open on it rather than on an empty object.
-            current === null ? nullable.default(null) : nullable.optional(),
+            // form has to open on it rather than on an empty object. A nullable
+            // group is `anyOf` in JSON Schema, which `getDefaults` cannot
+            // recurse into, so the whole stored object is the default.
+            current === undefined
+              ? nullable.optional()
+              : nullable.default(current),
           ];
         }
 

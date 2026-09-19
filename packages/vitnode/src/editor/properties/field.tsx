@@ -1,8 +1,10 @@
+import { useRef } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "../../components/form/auto-form";
 import type { AnyFormFieldApi } from "../../components/ui/form";
 import type { ContentFormFieldSpec } from "../../content/admin/spec";
+import type { ContentFieldDescriptor } from "../../content/types";
 
 import { AutoFormDateTime } from "../../components/form/fields/date-time";
 import { AutoFormInput } from "../../components/form/fields/input";
@@ -12,8 +14,12 @@ import { AutoFormSelect } from "../../components/form/fields/select";
 import { AutoFormSwitch } from "../../components/form/fields/switch";
 import { AutoFormTextarea } from "../../components/form/fields/textarea";
 import { Switch } from "../../components/ui/switch";
+import { buildGroupFormSchema } from "../../content/admin/spec";
+import { contentInnerFields } from "../../content/paths";
+import { groupDefaults } from "../instance/defaults";
 
 export interface BlockPropertyFieldProps extends ItemAutoFormComponentProps {
+  descriptor: ContentFieldDescriptor;
   nested?: boolean;
   spec: ContentFormFieldSpec;
 }
@@ -48,11 +54,17 @@ const leafField = (
   value,
 });
 
-const BlockPropertyGroup = ({ field, spec }: BlockPropertyFieldProps) => {
+const BlockPropertyGroup = ({
+  descriptor,
+  field,
+  spec,
+}: BlockPropertyFieldProps) => {
   const t = useTranslations("core.editor");
   const leaves = spec.fields ?? [];
+  const inner = contentInnerFields(descriptor);
   const value = field.value as null | Record<string, unknown> | undefined;
   const disabled = spec.nullable && value === null;
+  const restorableRef = useRef<unknown>(undefined);
 
   return (
     <fieldset className="border-border rounded-lg border p-4">
@@ -68,10 +80,19 @@ const BlockPropertyGroup = ({ field, spec }: BlockPropertyFieldProps) => {
               aria-label={t("group_enabled")}
               checked={!disabled}
               onCheckedChange={checked => {
+                if (!checked) {
+                  restorableRef.current = value;
+                  field.onChange(null);
+
+                  return;
+                }
+
+                const held = restorableRef.current;
+
                 field.onChange(
-                  checked
-                    ? Object.fromEntries(leaves.map(leaf => [leaf.name, null]))
-                    : null,
+                  buildGroupFormSchema(spec).safeParse(held).success
+                    ? held
+                    : groupDefaults(descriptor),
                 );
               }}
             />
@@ -82,6 +103,7 @@ const BlockPropertyGroup = ({ field, spec }: BlockPropertyFieldProps) => {
           ? null
           : leaves.map(leaf => (
               <BlockPropertyField
+                descriptor={inner[leaf.name]}
                 field={leafField(
                   `${field.name}.${leaf.name}`,
                   value?.[leaf.name],
@@ -101,6 +123,7 @@ const BlockPropertyGroup = ({ field, spec }: BlockPropertyFieldProps) => {
 };
 
 export const BlockPropertyField = ({
+  descriptor,
   nested = false,
   spec,
   ...props
@@ -136,7 +159,9 @@ export const BlockPropertyField = ({
       );
 
     case "group":
-      return <BlockPropertyGroup spec={spec} {...props} />;
+      return (
+        <BlockPropertyGroup descriptor={descriptor} spec={spec} {...props} />
+      );
 
     case "number":
       return spec.nullable ? (

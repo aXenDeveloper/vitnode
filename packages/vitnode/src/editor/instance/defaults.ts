@@ -95,6 +95,10 @@ const blockDataDefaults = (fields: ContentFieldMap): BlockUnknownData =>
       .filter(([, value]) => value !== ABSENT),
   );
 
+export const groupDefaults = (
+  fieldValue: ContentFieldDescriptor,
+): BlockUnknownData => blockDataDefaults(contentInnerFields(fieldValue));
+
 export const createBlockInstanceFor = (
   entry: RegisteredBlock,
 ): AnyBlockInstance =>

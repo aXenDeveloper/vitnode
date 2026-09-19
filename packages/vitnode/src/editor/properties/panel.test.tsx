@@ -9,6 +9,7 @@ import type { VisualEditorAction } from "../state/types";
 import { contentNodeBlocks } from "../../blocks/area";
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
+import { safeParseBlockData } from "../../blocks/schema";
 import { field } from "../../content/fields";
 import { VisualEditorContext } from "../context";
 import {
@@ -55,6 +56,32 @@ const Schedule = ({
   data,
 }: BlockComponentProps<BlockData<typeof dateFields>>) => <p>{data.startsAt}</p>;
 
+const groupFields = {
+  headline: field.text({ required: true }),
+  seo: field.group({
+    fields: {
+      count: field.number({ integer: true, min: 1, required: true }),
+      note: field.text({}),
+      subtitle: field.text({ nullable: true }),
+      title: field.text({ defaultValue: "Hello", required: true }),
+      tone: field.enum({
+        defaultValue: "info",
+        required: true,
+        values: ["info", "warning"],
+      }),
+    },
+    nullable: true,
+  }),
+};
+
+const Seo = defineBlock({
+  component: ({ data }: BlockComponentProps<BlockData<typeof groupFields>>) => (
+    <p>{data.headline}</p>
+  ),
+  fields: groupFields,
+  id: "seo",
+});
+
 const copyFields = {
   blurb: field.textarea({ minLength: 3 }),
   headline: field.text({ minLength: 3, required: true }),
@@ -75,6 +102,7 @@ const registry = createBlockRegistry([
       defineBlock({ component: Card, fields, id: "card" }),
       defineBlock({ component: Schedule, fields: dateFields, id: "schedule" }),
       defineBlock({ component: Copy, fields: copyFields, id: "copy" }),
+      Seo,
     ],
   },
 ]);
@@ -99,6 +127,12 @@ const scheduled = (data: Record<string, unknown>): HarnessNode => ({
   data,
   id: NODE_ID,
   type: "core:schedule",
+});
+
+const grouped = (seo: unknown): HarnessNode => ({
+  data: { headline: "Headline", seo },
+  id: NODE_ID,
+  type: "core:seo",
 });
 
 const written = (data: Record<string, unknown>): HarnessNode => ({
@@ -389,5 +423,156 @@ describe("text the block does not have to hold, cleared", () => {
       headline: "Headline",
       note: "kept",
     });
+  });
+});
+
+describe("a group the block does not have to hold, switched on and off", () => {
+  const toggle = (): void => {
+    act(() => {
+      fireEvent.click(screen.getByRole("switch", { name: "group_enabled" }));
+    });
+  };
+
+  const storedGroup = (): Record<string, unknown> =>
+    storedData().seo as Record<string, unknown>;
+
+  it("opens on the group the block already holds, leaves and all", () => {
+    render(
+      <Harness node={grouped({ count: 2, title: "Kept", tone: "warning" })} />,
+    );
+
+    expect(screen.getByDisplayValue("Kept")).toBeDefined();
+    expect(screen.getByDisplayValue("2")).toBeDefined();
+  });
+
+  it("edits one leaf of a stored group without dropping its siblings", () => {
+    render(
+      <Harness node={grouped({ count: 2, title: "Kept", tone: "warning" })} />,
+    );
+
+    typeInto(screen.getByDisplayValue("Kept"), "Edited");
+
+    expect(storedGroup()).toStrictEqual({
+      count: 2,
+      title: "Edited",
+      tone: "warning",
+    });
+  });
+
+  it("enables it with values the block's own schema accepts", () => {
+    render(<Harness node={grouped(null)} />);
+
+    toggle();
+
+    expect(storedData().seo).not.toBeNull();
+    expect(safeParseBlockData(Seo, storedData()).success).toBe(true);
+  });
+
+  it("takes each required leaf's declared default rather than null", () => {
+    render(<Harness node={grouped(null)} />);
+
+    toggle();
+
+    expect(storedGroup().title).toBe("Hello");
+    expect(storedGroup().tone).toBe("info");
+  });
+
+  it("invents a usable value for a required leaf that declares no default", () => {
+    render(<Harness node={grouped(null)} />);
+
+    toggle();
+
+    expect(storedGroup().count).toBe(1);
+  });
+
+  it("writes null for a nullable leaf, which is what nullable means", () => {
+    render(<Harness node={grouped(null)} />);
+
+    toggle();
+
+    expect(storedGroup().subtitle).toBeNull();
+  });
+
+  it("leaves an optional leaf out instead of storing a placeholder", () => {
+    render(<Harness node={grouped(null)} />);
+
+    toggle();
+
+    expect(Object.hasOwn(storedGroup(), "note")).toBe(false);
+  });
+
+  it("writes the whole group at once, with nothing left null", () => {
+    render(<Harness node={grouped(null)} />);
+
+    toggle();
+
+    expect(storedGroup()).toStrictEqual({
+      count: 1,
+      subtitle: null,
+      title: "Hello",
+      tone: "info",
+    });
+  });
+
+  it("stores null when the group is switched off", () => {
+    render(
+      <Harness node={grouped({ count: 2, title: "Kept", tone: "warning" })} />,
+    );
+
+    toggle();
+
+    expect(storedData()).toStrictEqual({ headline: "Headline", seo: null });
+  });
+
+  it("gives the group back as it was when it is switched on again", () => {
+    render(
+      <Harness node={grouped({ count: 2, title: "Kept", tone: "warning" })} />,
+    );
+
+    toggle();
+    toggle();
+
+    expect(storedGroup()).toStrictEqual({
+      count: 2,
+      title: "Kept",
+      tone: "warning",
+    });
+    expect(safeParseBlockData(Seo, storedData()).success).toBe(true);
+  });
+
+  it("gives back a number leaf the user typed, not a fresh default", () => {
+    render(
+      <Harness node={grouped({ count: 2, title: "Kept", tone: "warning" })} />,
+    );
+
+    typeInto(screen.getByDisplayValue("2"), "5");
+    expect(storedGroup().count).toBe(5);
+
+    toggle();
+    toggle();
+
+    expect(storedGroup()).toStrictEqual({
+      count: 5,
+      title: "Kept",
+      tone: "warning",
+    });
+  });
+
+  it("falls back to defaults when what it held could not be stored", () => {
+    render(
+      <Harness node={grouped({ count: 2, title: "Kept", tone: "warning" })} />,
+    );
+
+    typeInto(screen.getByDisplayValue("2"), "");
+    toggle();
+    toggle();
+
+    expect(storedGroup()).toStrictEqual({
+      count: 1,
+      subtitle: null,
+      title: "Hello",
+      tone: "info",
+    });
+    expect(safeParseBlockData(Seo, storedData()).success).toBe(true);
   });
 });

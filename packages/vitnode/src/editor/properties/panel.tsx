@@ -115,7 +115,13 @@ const BlockPropertiesForm = ({
     <AutoForm
       fields={specs.map(spec => ({
         id: spec.name,
-        component: props => <BlockPropertyField spec={spec} {...props} />,
+        component: props => (
+          <BlockPropertyField
+            descriptor={entry.definition.fields[spec.name]}
+            spec={spec}
+            {...props}
+          />
+        ),
       }))}
       formSchema={formSchema}
       layout={rendered => (
