@@ -63,10 +63,10 @@ Import `src/blocks.gen.ts` **only from a route that renders blocks** - it static
 ```text
 write (untrusted)   →  full schema check, defaults applied  →  JSONB
 read                →  nothing
-render (trusted)    →  nothing in production
+render              →  structural check, every mode
 ```
 
-Block data is validated once, where it arrives: every create and update runs each instance through its block's own schema before a row is written. What is stored has therefore already crossed a trusted boundary, and `ContentRenderer` does not check it again in production. In development it runs a cheap structural check so schema drift shows up while you work. [Rendering](/docs/dev/blocks/rendering#validation) has the detail and the escape hatch.
+Block data is checked in full once, where it arrives: every create and update runs each instance through its block's own schema before a row is written, and `ContentRenderer` never repeats that parse. What it does repeat, in every mode, is a cheap structural comparison of the stored object against the block's current fields - because the write was validated against the definition the block had *then*, and a plugin can rename a field afterwards. A block whose stored shape no longer matches is skipped rather than handed to a component that would reach for a key that is gone. [Rendering](/docs/dev/blocks/rendering#validation) has the detail.
 
 ## Blocks that ship with core
 

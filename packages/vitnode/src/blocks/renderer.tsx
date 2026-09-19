@@ -25,7 +25,7 @@ import { resolveBlockVariant } from "./variant";
 
 const isDevelopment = (): boolean => process.env.NODE_ENV !== "production";
 
-const shouldValidate = (mode: BlockValidationMode): boolean =>
+const shouldDiagnose = (mode: BlockValidationMode): boolean =>
   mode === "always" || (mode === "development" && isDevelopment());
 
 const warn = (seen: null | Set<string>, key: string, message: string): void => {
@@ -106,10 +106,10 @@ const AreaDevNotice = ({ areaId, reason }: AreaDevNoticeProps) => {
 
 interface RenderContext {
   allowed: BlockAllowedSpec | undefined;
+  diagnose: boolean;
   fallback: BlockRenderFallback;
   registry: BlockRegistry;
   seen: null | Set<string>;
-  validate: boolean;
 }
 
 interface RenderInstanceArgs extends RenderContext {
@@ -125,15 +125,15 @@ interface RenderNodeArgs extends RenderContext {
 
 const renderInstance = ({
   allowed,
+  diagnose,
   fallback,
   index,
   instance,
   registry,
   seen,
-  validate,
 }: RenderInstanceArgs): null | ReactElement => {
   if (
-    validate &&
+    diagnose &&
     allowed !== undefined &&
     !isBlockAllowed(allowed, instance.type)
   ) {
@@ -158,16 +158,16 @@ const renderInstance = ({
     return fallback({ instance, reason: "unknown-type" });
   }
 
-  const issue = validate
-    ? blockDataShapeIssue(entry.definition, instance.data)
-    : null;
+  const issue = blockDataShapeIssue(entry.definition, instance.data);
 
   if (issue !== null) {
-    warn(
-      seen,
-      `invalid:${instance.type}`,
-      `Block "${instance.type}" is stored with data that does not match its fields - ${issue}. It is skipped.`,
-    );
+    if (diagnose) {
+      warn(
+        seen,
+        `invalid:${instance.type}`,
+        `Block "${instance.type}" is stored with data that does not match its fields - ${issue}. It is skipped.`,
+      );
+    }
 
     return fallback({ instance, reason: "invalid-data" });
   }
@@ -262,10 +262,10 @@ export const ContentRenderer = ({
 
   const context: RenderContext = {
     allowed,
+    diagnose: shouldDiagnose(validate),
     fallback,
     registry: resolveBlockRegistry(registry),
     seen: isDevelopment() ? new Set<string>() : null,
-    validate: shouldValidate(validate),
   };
 
   return (

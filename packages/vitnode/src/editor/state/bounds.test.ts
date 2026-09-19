@@ -181,3 +181,15 @@ describe("refusesUnwrap", () => {
     expect(refusesUnwrap(null, 50)).toBe(false);
   });
 });
+
+describe("refusesRemoval, for a block the editor has already rejected", () => {
+  it("lets a rejected block out of a zone that is at its min", () => {
+    expect(refusesRemoval(capacity(1, { min: 1 }), 1, true)).toBe(false);
+    expect(refusesRemoval(capacity(3, { min: 3 }), 1, true)).toBe(false);
+  });
+
+  it("keeps refusing the healthy block sitting next to it", () => {
+    expect(refusesRemoval(capacity(1, { min: 1 }), 1, false)).toBe(true);
+    expect(refusesRemoval(capacity(1, { min: 1 }), 1)).toBe(true);
+  });
+});

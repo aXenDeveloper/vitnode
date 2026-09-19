@@ -127,6 +127,29 @@ describe("constraints a block's data could actually satisfy", () => {
     ).toThrow(/min 10 greater than max 1/);
   });
 
+  it("refuses a whole-number range no whole number falls inside", () => {
+    expect(() =>
+      holding({ weight: field.number({ integer: true, max: 0.9, min: 0.1 }) }),
+    ).toThrow(BlockError);
+    expect(() =>
+      holding({ weight: field.number({ integer: true, max: 0.9, min: 0.1 }) }),
+    ).toThrow(/no whole number lies between them/);
+    expect(() =>
+      holding({
+        weight: field.number({ integer: true, max: -0.1, min: -0.9 }),
+      }),
+    ).toThrow(/no whole number lies between them/);
+  });
+
+  it("accepts fractional bounds that still take a whole number in", () => {
+    expect(() =>
+      holding({ weight: field.number({ integer: true, max: 3.2, min: 2.4 }) }),
+    ).not.toThrow();
+    expect(() =>
+      holding({ ratio: field.number({ integer: false, max: 0.9, min: 0.1 }) }),
+    ).not.toThrow();
+  });
+
   it("refuses a bound nothing could be compared against", () => {
     expect(() =>
       holding({ weight: field.number({ integer: true, min: Number.NaN }) }),

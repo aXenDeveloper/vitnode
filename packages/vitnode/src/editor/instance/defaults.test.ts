@@ -39,6 +39,15 @@ const sampleBlock = defineBlock({
   id: "sample",
 });
 
+const boundedBlock = defineBlock({
+  component: () => null,
+  fields: {
+    offset: field.number({ integer: true, max: -0.8 }),
+    span: field.number({ integer: true, max: 3.2, min: 2.4 }),
+  },
+  id: "bounded",
+});
+
 const variantBlock = defineBlock({
   component: () => null,
   defaultVariant: "grid",
@@ -102,6 +111,39 @@ describe("createBlockInstanceFor", () => {
     expect(data.note).toBeNull();
     expect(data.seo).toStrictEqual({ description: null, title: "Titl" });
     expect(data).not.toHaveProperty("subtitle");
+  });
+
+  it("lands a whole-number field inside bounds no whole number sits on", () => {
+    const { data } = createBlockInstanceFor(entryFor(boundedBlock));
+
+    expect(blockDataShapeIssue(boundedBlock, data)).toBeNull();
+    expect(data.span).toBe(3);
+    expect(Number.isInteger(data.offset)).toBe(true);
+    expect(data.offset as number).toBeLessThanOrEqual(-1);
+  });
+
+  it("keeps every number it derives inside the bounds its field declares", () => {
+    const definitions: AnyBlockDefinition[] = [sampleBlock, boundedBlock];
+
+    for (const definition of definitions) {
+      const { data } = createBlockInstanceFor(entryFor(definition));
+
+      for (const [name, fieldValue] of Object.entries(definition.fields)) {
+        if (fieldValue.kind !== "number") continue;
+
+        const value = data[name] as number;
+
+        expect(typeof value).toBe("number");
+        expect(value).toBeGreaterThanOrEqual(
+          fieldValue.min ?? Number.NEGATIVE_INFINITY,
+        );
+        expect(value).toBeLessThanOrEqual(
+          fieldValue.max ?? Number.POSITIVE_INFINITY,
+        );
+
+        if (fieldValue.integer) expect(Number.isInteger(value)).toBe(true);
+      }
+    }
   });
 
   it("stands a required text field up with a humanised placeholder", () => {

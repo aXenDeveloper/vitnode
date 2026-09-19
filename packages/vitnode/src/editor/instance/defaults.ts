@@ -22,16 +22,11 @@ import { checkStoredBlock } from "../block-shell/issue";
 
 const ABSENT = Symbol("absent");
 
-const numberDefault = (fieldValue: ContentNumberField): number => {
-  if (fieldValue.min !== undefined) {
-    return fieldValue.integer ? Math.ceil(fieldValue.min) : fieldValue.min;
-  }
+const numberDefault = ({ integer, max, min }: ContentNumberField): number => {
+  if (min !== undefined) return integer ? Math.ceil(min) : min;
+  if (max === undefined) return 0;
 
-  if (fieldValue.max !== undefined && fieldValue.max < 0) {
-    return fieldValue.integer ? Math.floor(fieldValue.max) : fieldValue.max;
-  }
-
-  return 0;
+  return Math.min(0, integer ? Math.floor(max) : max);
 };
 
 const placeholderText = (

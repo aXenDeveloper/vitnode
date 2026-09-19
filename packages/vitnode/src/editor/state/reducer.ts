@@ -19,7 +19,6 @@ import type {
 import { contentNodeBlocks, isBlockAreaInstance } from "../../blocks/area";
 import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
 import { createBlockInstanceId } from "../../blocks/instance";
-import { editableBlockIssue } from "../block-shell/issue";
 import {
   areaHasRoom,
   fitsRootNodeCap,
@@ -28,17 +27,26 @@ import {
   zoneBlockCount,
   zoneRootNodeCount,
 } from "./bounds";
-import {
-  refusesAnyType,
-  targetCapabilities,
-  zoneRegistry,
-} from "./capabilities";
+import { refusesAnyType, targetCapabilities } from "./capabilities";
+import { isRepairRemoval } from "./repair";
+
+const emptyZones = (): Record<string, EditorZoneState> => Object.create(null);
+
+const zonesFrom = (
+  entries: Iterable<readonly [string, EditorZoneState]>,
+): Record<string, EditorZoneState> => {
+  const zones = emptyZones();
+
+  for (const [id, zone] of entries) zones[id] = zone;
+
+  return zones;
+};
 
 export const initialVisualEditorState: VisualEditorState = {
   droppedZoneIds: [],
   order: [],
   selected: null,
-  zones: {},
+  zones: emptyZones(),
 };
 
 export const sameValue = (left: unknown, right: unknown): boolean => {
@@ -272,20 +280,8 @@ export const isVisualEditorDirty = (state: VisualEditorState): boolean =>
     return zone !== undefined && zoneChanged(zone);
   });
 
-const holdsRejectedBlock = (zone: EditorZoneState): boolean => {
-  const registry = zoneRegistry(zone);
-  if (!registry) return false;
-
-  return contentNodeBlocks(zone.nodes).some(
-    block =>
-      editableBlockIssue({
-        allowedBlocks: zone.allowedBlocks,
-        dataCheck: "schema",
-        entry: registry.get(block.type),
-        instance: block,
-      }) !== null,
-  );
-};
+const holdsRejectedBlock = (zone: EditorZoneState): boolean =>
+  contentNodeBlocks(zone.nodes).some(block => isRepairRemoval(zone, block));
 
 const breaksZoneBounds = (zone: EditorZoneState): boolean => {
   const blocks = zoneBlockCount(zone.nodes);
@@ -328,7 +324,10 @@ const insertAt = (
 const withZones = (
   state: VisualEditorState,
   zones: Record<string, EditorZoneState>,
-): VisualEditorState => ({ ...state, zones: { ...state.zones, ...zones } });
+): VisualEditorState => ({
+  ...state,
+  zones: Object.assign(emptyZones(), state.zones, zones),
+});
 
 const zoneKeepsRootNodeCap = (
   zone: EditorZoneState,
@@ -529,6 +528,27 @@ const wasSuperseded = (
   nodes: readonly ContentNode[],
 ): boolean => zone.superseded.some(older => sameNodes(older, nodes));
 
+const withoutPendingIncoming = (zone: EditorZoneState): EditorZoneState => {
+  if (zone.pendingIncoming === undefined) return zone;
+
+  const { pendingIncoming: _dropped, ...rest } = zone;
+
+  return rest;
+};
+
+const holdsIncoming = (
+  zone: EditorZoneState,
+  next: EditorZoneMount,
+): boolean => {
+  const held = zone.pendingIncoming;
+
+  return (
+    held !== undefined &&
+    sameNodes(held.nodes, next.nodes) &&
+    sameInvalidEntries(held.invalid, next.invalid)
+  );
+};
+
 const syncMountedZone = (
   state: VisualEditorState,
   zone: EditorZoneState,
@@ -545,8 +565,6 @@ const syncMountedZone = (
 
   const caughtUp = zone.superseded.length > 0 && !incomingChanged;
 
-  if (!metadataChanged && !incomingChanged && !caughtUp) return state;
-
   const settled: EditorZoneState = caughtUp
     ? { ...zone, superseded: [] }
     : zone;
@@ -560,12 +578,23 @@ const syncMountedZone = (
       }
     : settled;
 
-  if (
-    !incomingChanged ||
-    zoneChanged(zone) ||
-    wasSuperseded(zone, next.nodes)
-  ) {
-    return synced === zone ? state : withZones(state, { [next.id]: synced });
+  const kept = (updated: EditorZoneState): VisualEditorState =>
+    updated === zone ? state : withZones(state, { [next.id]: updated });
+
+  if (!incomingChanged) return kept(withoutPendingIncoming(synced));
+
+  if (wasSuperseded(zone, next.nodes)) return kept(synced);
+
+  if (zoneChanged(zone)) {
+    return holdsIncoming(zone, next)
+      ? kept(synced)
+      : kept({
+          ...synced,
+          pendingIncoming: {
+            invalid: [...next.invalid],
+            nodes: [...next.nodes],
+          },
+        });
   }
 
   const nodes = [...next.nodes];
@@ -573,7 +602,7 @@ const syncMountedZone = (
 
   return withZones(withResolvableSelection(state, next.id, nodes), {
     [next.id]: {
-      ...synced,
+      ...withoutPendingIncoming(synced),
       initial: nodes,
       initialInvalid: invalid,
       invalid,
@@ -586,9 +615,11 @@ const mountZone = (
   state: VisualEditorState,
   next: EditorZoneMount,
 ): VisualEditorState => {
-  const zone = state.zones[next.id];
+  const zone = Object.hasOwn(state.zones, next.id)
+    ? state.zones[next.id]
+    : undefined;
 
-  if (zone) return syncMountedZone(state, zone, next);
+  if (zone !== undefined) return syncMountedZone(state, zone, next);
 
   const nodes = [...next.nodes];
   const invalid = [...next.invalid];
@@ -620,12 +651,12 @@ const unmountZone = (
   state: VisualEditorState,
   zoneId: string,
 ): VisualEditorState => {
-  const zone = state.zones[zoneId];
-  if (!zone) return state;
+  const zone = Object.hasOwn(state.zones, zoneId)
+    ? state.zones[zoneId]
+    : undefined;
+  if (zone === undefined) return state;
 
-  const { [zoneId]: removed, ...zones } = state.zones;
-  const dropped =
-    zoneChanged(removed) && !state.droppedZoneIds.includes(zoneId);
+  const dropped = zoneChanged(zone) && !state.droppedZoneIds.includes(zoneId);
 
   return {
     ...withoutSelectionIn(state, zoneId),
@@ -633,8 +664,34 @@ const unmountZone = (
       ? [...state.droppedZoneIds, zoneId]
       : state.droppedZoneIds,
     order: state.order.filter(id => id !== zoneId),
-    zones,
+    zones: zonesFrom(
+      Object.entries(state.zones).filter(([id]) => id !== zoneId),
+    ),
   };
+};
+
+const discardedZone = (zone: EditorZoneState): EditorZoneState => {
+  const pending = zone.pendingIncoming;
+
+  if (pending !== undefined) {
+    return {
+      ...withoutPendingIncoming(zone),
+      initial: pending.nodes,
+      initialInvalid: pending.invalid,
+      invalid: pending.invalid,
+      nodes: pending.nodes,
+      superseded: [],
+    };
+  }
+
+  return zoneChanged(zone)
+    ? {
+        ...zone,
+        invalid: zone.initialInvalid,
+        nodes: zone.initial,
+        superseded: [],
+      }
+    : zone;
 };
 
 const movedSelection = (
@@ -759,17 +816,10 @@ export const visualEditorReducer = (
         ...state,
         droppedZoneIds: [],
         selected: null,
-        zones: Object.fromEntries(
+        zones: zonesFrom(
           Object.entries(state.zones).map(([id, zone]) => [
             id,
-            zoneChanged(zone)
-              ? {
-                  ...zone,
-                  invalid: zone.initialInvalid,
-                  nodes: zone.initial,
-                  superseded: [],
-                }
-              : zone,
+            discardedZone(zone),
           ]),
         ),
       };
@@ -838,9 +888,11 @@ export const visualEditorReducer = (
       const found = findNode(state, action.ref);
       if (!zone || !found) return state;
 
-      const next = boundedUpdate(zone, found.container, nodes =>
-        nodes.filter((_, at) => at !== found.index),
-      );
+      const shrink = (nodes: readonly ContentNode[]): readonly ContentNode[] =>
+        nodes.filter((_, at) => at !== found.index);
+      const next = isRepairRemoval(zone, found.node)
+        ? updateContainer(zone, found.container, shrink)
+        : boundedUpdate(zone, found.container, shrink);
       if (!next) return state;
 
       return withZones(withoutSelectionOn(state, action.ref), {
@@ -866,7 +918,7 @@ export const visualEditorReducer = (
       return {
         ...state,
         droppedZoneIds: [],
-        zones: Object.fromEntries(
+        zones: zonesFrom(
           Object.entries(state.zones).map(([id, zone]) => {
             if (!Object.hasOwn(action.snapshot, id)) return [id, zone];
 
@@ -882,16 +934,18 @@ export const visualEditorReducer = (
             const superseded = sameNodes(zone.initial, stored)
               ? zone.superseded
               : [...zone.superseded, zone.initial];
+            const written = withoutPendingIncoming(zone);
 
             return [
               id,
+              written === zone &&
               nodes === zone.nodes &&
               stored === zone.initial &&
               storedInvalid === zone.initialInvalid &&
               superseded === zone.superseded
                 ? zone
                 : {
-                    ...zone,
+                    ...written,
                     initial: stored,
                     initialInvalid: storedInvalid,
                     nodes,

@@ -98,6 +98,30 @@ describe("defineBlock", () => {
     ).toThrow(/min 10 greater than max 1/);
   });
 
+  it("refuses a whole-number field whose bounds hold no whole number", () => {
+    expect(() =>
+      defineBlock({
+        component: Noop,
+        fields: { weight: field.number({ integer: true, max: 0.9, min: 0.1 }) },
+        id: "hero",
+      }),
+    ).toThrow(BlockError);
+    expect(() =>
+      defineBlock({
+        component: Noop,
+        fields: { weight: field.number({ integer: true, max: 0.9, min: 0.1 }) },
+        id: "hero",
+      }),
+    ).toThrow(/no whole number lies between them/);
+    expect(() =>
+      defineBlock({
+        component: Noop,
+        fields: { weight: field.number({ integer: true, max: 3.2, min: 2.4 }) },
+        id: "hero",
+      }),
+    ).not.toThrow();
+  });
+
   it("refuses a default the field's own bounds would reject", () => {
     expect(() =>
       defineBlock({

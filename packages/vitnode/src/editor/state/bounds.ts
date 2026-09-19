@@ -60,7 +60,9 @@ export const dropCapacity = (
 export const refusesRemoval = (
   capacity: null | ZoneCapacity,
   blocks: number,
+  repairs = false,
 ): boolean =>
+  !repairs &&
   capacity !== null &&
   blocks > 0 &&
   !fitsZoneMin(capacity.min, capacity.blocks - blocks);

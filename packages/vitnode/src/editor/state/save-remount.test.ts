@@ -178,3 +178,39 @@ describe("a host re-render after a save", () => {
     expect(headingIn(remounted)).toBe("one");
   });
 });
+
+describe("a page the host reloads under an unsaved edit", () => {
+  const headingFor = (state: VisualEditorState): string => {
+    const restored = visualEditorReducer(state, { type: "discard" });
+
+    return headingIn(restored);
+  };
+
+  it("keeps what was typed and discards back to the newest page", () => {
+    const opened = visualEditorReducer(initialVisualEditorState, {
+      type: "mount",
+      zone: mount([node("Hello")]),
+    });
+    const typing = visualEditorReducer(opened, {
+      data: { heading: "Edited" },
+      ref: { areaId: null, kind: "block", nodeId: NODE_ID, zoneId: ZONE },
+      type: "update",
+    });
+
+    const translated = visualEditorReducer(typing, {
+      type: "mount",
+      zone: mount([node("Cześć")]),
+    });
+
+    expect(headingIn(translated)).toBe("Edited");
+    expect(isVisualEditorDirty(translated)).toBe(true);
+    expect(headingFor(translated)).toBe("Cześć");
+  });
+
+  it("restores the page it opened with when nothing else arrived", () => {
+    const typing = edited();
+
+    expect(headingIn(typing)).toBe("two");
+    expect(headingFor(typing)).toBe("one");
+  });
+});

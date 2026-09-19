@@ -192,7 +192,7 @@ The same value means two different things in two places, and the difference matt
 
 The field is the thing that *enforces*. A stored instance has already crossed it, so a page re-checking the same list on every render would be paying twice for one answer. The zone's copy exists to say what a location is for - which is what a block picker will need, and what a reader of the JSX needs.
 
-Public rendering is therefore **not** a second validation boundary. What the zone does with its allowlist follows the same `validate` modes the [renderer](/docs/dev/blocks/rendering#validation) already uses, and it *skips*, never rejects:
+Public rendering is therefore **not** a second *schema* validation boundary - it re-parses nothing, though it does always check that a stored block still structurally matches its block's fields. What the zone does with its allowlist follows the same `validate` modes the [renderer](/docs/dev/blocks/rendering#validation) already uses, and it *skips*, never rejects:
 
 | `validate` | A block the zone does not allow |
 | :--- | :--- |

@@ -30,6 +30,7 @@ import {
   zoneCapacity,
 } from "../state/bounds";
 import { containerNodes, sameNodeRef } from "../state/reducer";
+import { isRepairRemoval } from "../state/repair";
 import { editableBlockIssue } from "./issue";
 
 const ISSUE_LABELS = {
@@ -121,7 +122,11 @@ export const EditableBlockShell = ({
     1,
     areaId === null ? null : siblings,
   );
-  const removeRefused = refusesRemoval(capacity, 1);
+  const removeRefused = refusesRemoval(
+    capacity,
+    1,
+    zone !== undefined && isRepairRemoval(zone, instance),
+  );
   const placed =
     dropIndicator?.nodeId === instance.id &&
     dropIndicator.zoneId === zoneId &&

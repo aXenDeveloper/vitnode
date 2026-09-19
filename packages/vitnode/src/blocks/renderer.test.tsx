@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BlockComponentProps, BlockData } from "./types";
+import type {
+  BlockComponentProps,
+  BlockData,
+  BlockValidationMode,
+} from "./types";
 
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
@@ -205,11 +209,13 @@ describe("ContentRenderer", () => {
       instance("Fine", "02"),
     ];
 
-    it("trusts what is stored in production, where the write boundary validated it", () => {
+    it("skips it in production too, where a stale object would otherwise reach a component", () => {
       vi.stubEnv("NODE_ENV", "production");
       render(<ContentRenderer blocks={drifted} registry={registry} />);
 
-      expect(screen.getAllByRole("heading")).toHaveLength(2);
+      expect(
+        screen.getAllByRole("heading").map(node => node.textContent),
+      ).toStrictEqual(["Fine"]);
     });
 
     it("checks the shape of the data, never the value constraints on it", () => {
@@ -283,7 +289,7 @@ describe("ContentRenderer", () => {
       ).toStrictEqual(["Fine"]);
     });
 
-    it("renders it in development when the caller opts out", () => {
+    it("skips it even where the caller opts out, because the check is not a diagnostic", () => {
       vi.stubEnv("NODE_ENV", "development");
       render(
         <ContentRenderer
@@ -293,10 +299,12 @@ describe("ContentRenderer", () => {
         />,
       );
 
-      expect(screen.getAllByRole("heading")).toHaveLength(2);
+      expect(
+        screen.getAllByRole("heading").map(node => node.textContent),
+      ).toStrictEqual(["Fine"]);
     });
 
-    it("never reads a block's fields at all on a trusted render", () => {
+    it("reads a block's fields on every render, in every mode", () => {
       vi.stubEnv("NODE_ENV", "production");
       const reads = vi.fn();
       const counted = createBlockRegistry([
@@ -324,7 +332,7 @@ describe("ContentRenderer", () => {
       );
 
       expect(screen.getAllByRole("heading")).toHaveLength(2);
-      expect(reads).not.toHaveBeenCalled();
+      expect(reads).toHaveBeenCalled();
     });
 
     it("passes the stored data through untouched, so a render never differs from what was written", () => {
@@ -364,6 +372,229 @@ describe("ContentRenderer", () => {
     );
 
     expect(screen.getAllByRole("heading")[1]).toBe(first);
+  });
+});
+
+describe("structural safety on a public page", () => {
+  const strictFields = {
+    count: field.number({ integer: true }),
+    seo: field.group({ fields: { title: field.text({ nullable: true }) } }),
+    title: field.text({ maxLength: 20, required: true }),
+  };
+
+  const rendered = vi.fn();
+
+  const Strict = ({
+    data,
+  }: BlockComponentProps<BlockData<typeof strictFields>>) => {
+    rendered(data);
+
+    return <h1>{data.title.toUpperCase()}</h1>;
+  };
+
+  const strictRegistry = createBlockRegistry([
+    {
+      pluginId: "@vitnode/core",
+      namespace: "core",
+      blocks: [
+        defineBlock({ component: Strict, fields: strictFields, id: "strict" }),
+      ],
+    },
+  ]);
+
+  const stored = (data: Record<string, unknown>, id = "01") => ({
+    data,
+    id,
+    type: "core:strict",
+  });
+
+  const inProduction = (
+    data: Record<string, unknown>,
+    validate?: BlockValidationMode,
+  ) => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    return render(
+      <ContentRenderer
+        blocks={[stored(data)]}
+        registry={strictRegistry}
+        validate={validate}
+      />,
+    );
+  };
+
+  beforeEach(() => {
+    rendered.mockClear();
+  });
+
+  it("never calls a component for a required field that was renamed away", () => {
+    const { container } = inProduction({ headline: "Hello" });
+
+    expect(rendered).not.toHaveBeenCalled();
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("never calls a component for a value of the wrong kind", () => {
+    inProduction({ title: 7 });
+
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("never calls a component for a null in a field that is not nullable", () => {
+    inProduction({ count: null, title: "Fine" });
+
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("never calls a component for a group whose shape no longer matches", () => {
+    inProduction({ seo: { headline: "gone" }, title: "Fine" });
+    expect(rendered).not.toHaveBeenCalled();
+
+    inProduction({ seo: [], title: "Fine" });
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("holds even where the caller turned validation off", () => {
+    inProduction({ headline: "Hello" }, "never");
+
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("renders a value that only breaks a write-time rule, rather than blanking the section", () => {
+    inProduction({ title: "a title far longer than the field allows" });
+
+    expect(rendered).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading").textContent).toBe(
+      "A TITLE FAR LONGER THAN THE FIELD ALLOWS",
+    );
+  });
+
+  it("renders a healthy block in production with nothing in its place", () => {
+    const { container } = inProduction({
+      count: 3,
+      seo: { title: "Hi" },
+      title: "Fine",
+    });
+
+    expect(rendered).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading").textContent).toBe("FINE");
+    expect(container.querySelector('[role="note"]')).toBeNull();
+  });
+
+  it("holds for a block stored inside an area as well", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    render(
+      <ContentRenderer
+        blocks={[
+          {
+            children: [
+              stored({ headline: "Hello" }, "01"),
+              stored({ title: "Fine" }, "02"),
+            ],
+            id: "AREA1",
+            kind: "area",
+            layout: { columns: 2 },
+          },
+        ]}
+        registry={strictRegistry}
+      />,
+    );
+
+    expect(rendered).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading").textContent).toBe("FINE");
+  });
+
+  it("hands the fallback the reason, so an application can render its own", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    render(
+      <ContentRenderer
+        blocks={[stored({ headline: "Hello" })]}
+        fallback={({ reason }) => <p>{reason}</p>}
+        registry={strictRegistry}
+      />,
+    );
+
+    expect(screen.getByText("invalid-data")).toBeTruthy();
+  });
+
+  describe("what a developer sees", () => {
+    it("still gets the notice and one warning", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const warned = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      render(
+        <ContentRenderer
+          blocks={[stored({ headline: "Hello" })]}
+          registry={strictRegistry}
+        />,
+      );
+
+      expect(rendered).not.toHaveBeenCalled();
+      expect(screen.getByRole("note").textContent).toContain("core:strict");
+      expect(warned).toHaveBeenCalledTimes(1);
+    });
+
+    it("is not warned in the mode that asks for no diagnostics", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const warned = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      render(
+        <ContentRenderer
+          blocks={[stored({ headline: "Hello" })]}
+          registry={strictRegistry}
+          validate="never"
+        />,
+      );
+
+      expect(rendered).not.toHaveBeenCalled();
+      expect(warned).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("who a warning is actually for", () => {
+    const missing = () => ({
+      data: {},
+      id: "01JWARNRENDERERMISSING001",
+      type: "core:not-installed",
+    });
+
+    it("says nothing to a visitor, whatever the caller asked to validate", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const warned = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      render(
+        <ContentRenderer
+          blocks={[missing()]}
+          registry={registry}
+          validate="always"
+        />,
+      );
+
+      expect(warned).not.toHaveBeenCalled();
+    });
+
+    it("still tells a developer a block is missing, even with diagnostics off", () => {
+      vi.stubEnv("NODE_ENV", "development");
+      const warned = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      render(
+        <ContentRenderer
+          blocks={[missing()]}
+          registry={registry}
+          validate="never"
+        />,
+      );
+
+      expect(warned).toHaveBeenCalledTimes(1);
+    });
   });
 });
 

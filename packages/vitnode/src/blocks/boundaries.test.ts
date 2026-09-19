@@ -140,6 +140,45 @@ describe("the public renderer", () => {
   });
 });
 
+describe("the structural check the public renderer always makes", () => {
+  const entry = join(here, "renderer.tsx");
+
+  it("leaves it reaching React and nothing else, eagerly and dynamically", () => {
+    expect(reachedSpecifiers(entry).sort()).toStrictEqual(["react"]);
+    expect(eagerSpecifiers(entry)).toStrictEqual(["react"]);
+  });
+
+  it("costs no validation library and reaches no file under the editor", () => {
+    expect(offenders(entry, ["zod"])).toStrictEqual([]);
+    expect(editorFiles(entry)).toStrictEqual([]);
+  });
+
+  it("is the shape pass, never the write-time validator", () => {
+    const source = readFileSync(entry, "utf8");
+
+    expect(source).toContain('from "./shape"');
+    expect(source).not.toContain('from "./validate"');
+    expect(source).not.toContain('from "./schema"');
+    expect(reachedFiles(entry)).toContain("blocks/shape.ts");
+    expect(reachedFiles(entry)).not.toContain("blocks/validate.ts");
+  });
+
+  it("reaches that pass through a module with no third-party import at all", () => {
+    expect(reachedSpecifiers(join(here, "shape.ts"))).toStrictEqual([]);
+  });
+
+  it("is not gated behind a mode, and runs before a component is created", () => {
+    const source = readFileSync(entry, "utf8");
+
+    expect(source).toContain(
+      "const issue = blockDataShapeIssue(entry.definition, instance.data);",
+    );
+    expect(source.indexOf("blockDataShapeIssue")).toBeLessThan(
+      source.indexOf("createElement(entry.definition.component"),
+    );
+  });
+});
+
 describe("the public area renderer", () => {
   const entry = join(here, "area-renderer.tsx");
 

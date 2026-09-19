@@ -86,6 +86,15 @@ const numberIssue = (
     return `Field "${name}" has min ${min} greater than max ${max}.`;
   }
 
+  if (
+    integer &&
+    min !== undefined &&
+    max !== undefined &&
+    Math.ceil(min) > Math.floor(max)
+  ) {
+    return `Field "${name}" is \`integer: true\` with a min of ${min} and a max of ${max}, and no whole number lies between them. A fractional bound on its own is fine - the field rounds into range - but here there is nothing to round to, so every value the field could hold would fail its own check. Widen the range until it takes in a whole number.`;
+  }
+
   if (defaultValue === undefined) return null;
 
   if (integer && !Number.isInteger(defaultValue)) {

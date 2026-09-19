@@ -123,7 +123,7 @@ Storage accepts any stable id of 1-64 URL-safe characters, so an imported docume
 
 ## What the API checks on a write
 
-Every create and update runs the zone through the registry, once, before anything is stored - so a row that exists has already been validated. Nothing re-checks it on read, and [the renderer trusts it](/docs/dev/blocks/rendering#validation).
+Every create and update runs the zone through the registry, once, before anything is stored - so a row that exists has already been validated. Nothing re-checks it on read, and [the renderer never repeats that schema parse](/docs/dev/blocks/rendering#validation) - it only compares the stored shape against the block's current fields, so a definition that moved on since the write cannot reach a component.
 
 
 The whole request is refused if any instance fails:

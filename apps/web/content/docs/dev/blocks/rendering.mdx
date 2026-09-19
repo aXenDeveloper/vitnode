@@ -26,7 +26,7 @@ For each stored instance it resolves the definition in the registry and renders 
 | :--- | :--- | :--- |
 | `blocks` | — | The stored list. `null`, `undefined` and `[]` all render nothing. |
 | `registry` | the process default | The registry to resolve against. Passing it is the normal way. |
-| `validate` | `"development"` | `"never"`, `"development"` or `"always"` - see below. |
+| `validate` | `"development"` | `"never"`, `"development"` or `"always"`. It governs the allowlist and the developer warnings, never the structural check - see below. |
 | `fallback` | a development-only notice | What to render for a block that cannot be resolved or fails a check. |
 | `allowed` | none | An allowlist to hold the instances to, under the same `validate` gate. [Content Zones](/docs/dev/blocks/content-zones#restricting-what-may-go-in-a-zone) pass theirs here. |
 
@@ -57,15 +57,11 @@ try {
 
 Block data is validated **once, on write**. Every create and update runs each instance through its block's schema before the row is written, applying defaults and rejecting anything the fields refuse. What is in the column has therefore already crossed a trusted boundary.
 
-So the renderer does not re-check it in production. A full Zod parse per block per render is real work on the hot path, and repeating a check the write boundary already made buys nothing.
+So the renderer never repeats that parse. A full Zod parse per block per render is real work on the hot path, and re-running a check the write boundary already made buys nothing.
 
-| `validate` | What happens |
-| :--- | :--- |
-| `"never"` | Resolve the block in the registry and render. Nothing else. |
-| `"development"` *(default)* | A structural check in development; `"never"` in production. |
-| `"always"` | The structural check everywhere. |
+What it does run, on every render and in every mode, is far cheaper: before a block's component is called, the renderer compares the stored object against the block's fields. Stored data and a block definition drift apart - a field is renamed, a plugin ships a new version, a row is edited by hand - and a component written for today's fields is handed yesterday's object. `data.headline.toUpperCase()` on an object that has no `headline` is a crashed public page, so this one check is not something a mode can switch off.
 
-The check is **structural, not a schema parse**: it reports a field the block no longer declares, a required field that is gone, a `null` in a field that is not nullable, and a value of the wrong kind. It deliberately does not police `minLength`, `max` or enum membership - those are the write boundary's job, and a too-long string is not a reason to blank a section of a live page.
+The check is **structural, not a schema parse**: it reports a field the block no longer declares, a required field that is gone, a `null` in a field that is not nullable, a value of the wrong kind, and a group whose shape no longer matches. It deliberately does not police `minLength`, `max` or enum membership - those are the write boundary's job, and a too-long string is not a reason to blank a section of a live page.
 
 That is what catches the cases where stored data and a block definition have drifted apart:
 
@@ -73,9 +69,21 @@ That is what catches the cases where stored data and a block definition have dri
 - a row edited by hand in the database
 - content imported around the API
 
-None of them can take a page down: the instance is skipped and everything else renders.
+None of them can take a page down: the instance is skipped, its component is never called, and everything else renders.
 
-Set `validate="always"` on a page that renders block data the API never validated - a live import, a third-party feed. It costs one structural pass per block, not a schema parse.
+`validate` decides what happens around that check - the allowlist a zone passes in, and what a developer is told:
+
+| `validate` | What happens |
+| :--- | :--- |
+| `"never"` | The structural check, and no allowlist. |
+| `"development"` *(default)* | The structural check, plus the allowlist in development. |
+| `"always"` | The structural check, plus the allowlist in every environment. |
+
+`validate="never"` is not a way to render data that no longer matches its block. There isn't one, and that is the point - it says "hold nothing to an allowlist", on a page that already trusts what it renders.
+
+Set `validate="always"` on a page rendering block data the API never placed - a live import, a third-party feed - so a zone's allowlist is enforced there as well. It costs a `Map` lookup per block, not a schema parse.
+
+Warnings follow a separate rule, and it is not this one: **nothing is ever logged in production**, whatever `validate` says, because a visitor's console is not a place to report a developer's problem. In development, a block that is not registered, one stored with a variant it does not declare, and an area stored somewhere an area cannot go each warn regardless of `validate` - they say a page is broken, not that a check was asked for. `validate` gates only the allowlist refusal and the drift warning, so `"never"` silences those two and nothing else.
 
 <Callout title="The renderer never transforms">
   Whatever is stored is what the component receives, in every mode. Validation decides whether to render an instance; it never fills in defaults or coerces a value, so a page cannot look different in development from how it looks in production.

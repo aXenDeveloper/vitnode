@@ -25,6 +25,7 @@ import {
   zoneCapacity,
 } from "../state/bounds";
 import { containerNodes, sameValue } from "../state/reducer";
+import { isRepairRemoval } from "../state/repair";
 import { AreaPropertiesPanelContent } from "./area-panel";
 import { BlockPropertyField } from "./field";
 import { selectedNode } from "./selection";
@@ -165,7 +166,8 @@ const BlockPropertiesPanelContent = ({
     setBaseline(generation => generation + 1);
   }
 
-  const capacity = zoneCapacity(state.zones[target.zoneId]);
+  const zone = state.zones[target.zoneId];
+  const capacity = zoneCapacity(zone);
   const siblings =
     containerNodes(state, {
       areaId: target.areaId,
@@ -176,10 +178,13 @@ const BlockPropertiesPanelContent = ({
     1,
     target.areaId === null ? null : siblings,
   );
-  const removeRefused = refusesRemoval(capacity, 1);
+  const removeRefused = refusesRemoval(
+    capacity,
+    1,
+    zone !== undefined && isRepairRemoval(zone, instance),
+  );
 
-  const registry =
-    state.zones[target.zoneId].registry ?? getDefaultBlockRegistry();
+  const registry = zone.registry ?? getDefaultBlockRegistry();
   const entry = registry?.get(instance.type);
   const issue = blockInstanceIssue(registry, instance);
   const name = entry ? blockDisplayName(entry) : t("block.unknown.title");

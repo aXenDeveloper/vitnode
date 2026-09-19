@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BlockComponentProps, BlockData } from "../../blocks/types";
 import type { VisualEditorContextValue } from "../context";
-import type { VisualEditorAction } from "../state/types";
+import type { VisualEditorAction, VisualEditorState } from "../state/types";
 
 import { contentNodeBlocks } from "../../blocks/area";
 import { defineBlock } from "../../blocks/define";
@@ -182,28 +182,35 @@ const harness = {
   state: initialVisualEditorState,
 };
 
+interface ZoneBounds {
+  max?: number;
+  min?: number;
+}
+
+const seeded = (node: HarnessNode, bounds: ZoneBounds): VisualEditorState =>
+  visualEditorReducer(initialVisualEditorState, {
+    type: "mount",
+    zone: {
+      allowedBlocks: undefined,
+      id: "main",
+      invalid: [],
+      max: bounds.max,
+      min: bounds.min,
+      nodes: [node],
+      registry,
+    },
+  });
+
 const Harness = ({
+  bounds = {},
   node = instance("AAA", "body"),
 }: {
+  bounds?: ZoneBounds;
   node?: HarnessNode;
 }): ReactElement => {
-  const [state, dispatch] = useReducer(visualEditorReducer, undefined, () => {
-    let seeded = visualEditorReducer(initialVisualEditorState, {
-      type: "mount",
-      zone: {
-        allowedBlocks: undefined,
-        id: "main",
-        invalid: [],
-        max: undefined,
-        min: undefined,
-        nodes: [node],
-        registry,
-      },
-    });
-    seeded = visualEditorReducer(seeded, { ref, type: "select" });
-
-    return seeded;
-  });
+  const [state, dispatch] = useReducer(visualEditorReducer, undefined, () =>
+    visualEditorReducer(seeded(node, bounds), { ref, type: "select" }),
+  );
 
   useEffect(() => {
     harness.dispatch = dispatch;
@@ -681,5 +688,56 @@ describe("a leaf of a group the block does have to hold, cleared", () => {
     clear('[name="seo.subtitle"]');
 
     expect(storedData().headline).toBe("Headline");
+  });
+});
+
+describe("the remove button the properties panel offers", () => {
+  const SOLE_BLOCK: ZoneBounds = { max: 1, min: 1 };
+
+  const removeDisabled = (): boolean =>
+    screen
+      .getByRole("button", { name: "block.remove" })
+      .hasAttribute("disabled");
+
+  const reducerRemoves = (node: HarnessNode, bounds: ZoneBounds): boolean => {
+    const state = seeded(node, bounds);
+
+    return visualEditorReducer(state, { ref, type: "remove" }) !== state;
+  };
+
+  it("refuses the sound block a zone of exactly one has to keep", () => {
+    const node = instance("AAA", "body");
+
+    render(<Harness bounds={SOLE_BLOCK} node={node} />);
+
+    expect(removeDisabled()).toBe(true);
+    expect(reducerRemoves(node, SOLE_BLOCK)).toBe(false);
+  });
+
+  it("offers the rejected block that has the zone stuck", () => {
+    const node = instance("AA", "body");
+
+    render(<Harness bounds={SOLE_BLOCK} node={node} />);
+
+    expect(removeDisabled()).toBe(false);
+    expect(reducerRemoves(node, SOLE_BLOCK)).toBe(true);
+  });
+
+  it("offers a block of a type nothing registers at all", () => {
+    const node: HarnessNode = { data: {}, id: NODE_ID, type: "core:gone" };
+
+    render(<Harness bounds={SOLE_BLOCK} node={node} />);
+
+    expect(removeDisabled()).toBe(false);
+    expect(reducerRemoves(node, SOLE_BLOCK)).toBe(true);
+  });
+
+  it("offers a sound block the zone has no minimum for", () => {
+    const node = instance("AAA", "body");
+
+    render(<Harness node={node} />);
+
+    expect(removeDisabled()).toBe(false);
+    expect(reducerRemoves(node, {})).toBe(true);
   });
 });

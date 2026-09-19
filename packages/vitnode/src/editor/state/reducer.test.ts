@@ -3463,3 +3463,424 @@ describe("a root the stored content has already overfilled", () => {
     ).toBe(state);
   });
 });
+
+describe("a zone id that is also a property of Object.prototype", () => {
+  const PROTO_ZONE = "constructor";
+
+  const protoMount = (
+    nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
+    bounds: { max?: number; min?: number } = {},
+  ): EditorZoneMount => mount(PROTO_ZONE, nodes, undefined, bounds);
+
+  it("reads as nothing at all before the zone is mounted", () => {
+    expect(initialVisualEditorState.zones[PROTO_ZONE]).toBeUndefined();
+    expect(Object.getPrototypeOf(initialVisualEditorState.zones)).toBeNull();
+  });
+
+  it("mounts as a zone and never as the inherited property", () => {
+    const first = block("a");
+    const state = mounted(protoMount([first]));
+
+    expect(typeof state.zones[PROTO_ZONE]).toBe("object");
+    expect(state.zones[PROTO_ZONE].nodes).toStrictEqual([first]);
+    expect(state.order).toStrictEqual([PROTO_ZONE]);
+    expect(Object.getPrototypeOf(state.zones)).toBeNull();
+  });
+
+  it("takes a block, an edit and a copy like any other zone", () => {
+    const first = block("a");
+    const added = block("b");
+    const state = visualEditorReducer(mounted(protoMount([first])), {
+      container: into(PROTO_ZONE),
+      index: 1,
+      instance: added,
+      type: "insert",
+    });
+
+    expect(ids(state, PROTO_ZONE)).toStrictEqual([first.id, added.id]);
+
+    const updated = visualEditorReducer(state, {
+      data: { body: "edited" },
+      ref: ref(PROTO_ZONE, first.id),
+      type: "update",
+    });
+
+    expect(
+      (updated.zones[PROTO_ZONE].nodes[0] as AnyBlockInstance).data.body,
+    ).toBe("edited");
+
+    const copied = visualEditorReducer(updated, {
+      ref: ref(PROTO_ZONE, added.id),
+      type: "duplicate",
+    });
+
+    expect(ids(copied, PROTO_ZONE)).toHaveLength(3);
+    expect(Object.getPrototypeOf(copied.zones)).toBeNull();
+  });
+
+  it("gives a block up and hands one to another zone", () => {
+    const leaving = block("leaving");
+    const state = mounted(
+      protoMount([block("staying"), leaving]),
+      mount("aside", []),
+    );
+
+    const removed = visualEditorReducer(state, {
+      ref: ref(PROTO_ZONE, leaving.id),
+      type: "remove",
+    });
+
+    expect(ids(removed, PROTO_ZONE)).toHaveLength(1);
+
+    const moved = visualEditorReducer(state, {
+      from: into(PROTO_ZONE),
+      nodeId: leaving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(moved, PROTO_ZONE)).toHaveLength(1);
+    expect(ids(moved, "aside")).toStrictEqual([leaving.id]);
+  });
+
+  it("keeps its baseline through a save and a discard", () => {
+    const only = block("a");
+    const edited = visualEditorReducer(mounted(protoMount([only])), {
+      data: { body: "edited" },
+      ref: ref(PROTO_ZONE, only.id),
+      type: "update",
+    });
+
+    expect(changedZoneIds(edited)).toStrictEqual([PROTO_ZONE]);
+
+    const stored = visualEditorReducer(edited, inFlight(edited));
+
+    expect(isVisualEditorDirty(stored)).toBe(false);
+    expect(Object.getPrototypeOf(stored.zones)).toBeNull();
+
+    const thrownAway = visualEditorReducer(
+      visualEditorReducer(stored, {
+        data: { body: "again" },
+        ref: ref(PROTO_ZONE, only.id),
+        type: "update",
+      }),
+      { type: "discard" },
+    );
+
+    expect(
+      (thrownAway.zones[PROTO_ZONE].nodes[0] as AnyBlockInstance).data.body,
+    ).toBe("edited");
+    expect(Object.getPrototypeOf(thrownAway.zones)).toBeNull();
+  });
+
+  it("leaves nothing behind when it unmounts", () => {
+    const state = mounted(protoMount([block("a")]));
+    const gone = visualEditorReducer(state, {
+      type: "unmount",
+      zoneId: PROTO_ZONE,
+    });
+
+    expect(gone.order).toStrictEqual([]);
+    expect(gone.zones[PROTO_ZONE]).toBeUndefined();
+    expect(Object.hasOwn(gone.zones, PROTO_ZONE)).toBe(false);
+    expect(Object.getPrototypeOf(gone.zones)).toBeNull();
+  });
+});
+
+describe("a host snapshot that lands while the editor is dirty", () => {
+  const NODE = "01JPENDINGINCOMING0000001";
+
+  const stored = (body: string): AnyBlockInstance => ({
+    data: { body },
+    id: NODE,
+    type: "core:text",
+  });
+
+  const mountWith = (
+    body: string,
+    invalid: readonly { index: number; value: unknown }[] = [],
+  ): EditorZoneMount => ({
+    allowedBlocks: undefined,
+    id: "main",
+    invalid,
+    max: undefined,
+    min: undefined,
+    nodes: [stored(body)],
+    registry: undefined,
+  });
+
+  const opened = (): VisualEditorState => mounted(mountWith("A"));
+
+  const edit = (state: VisualEditorState, body: string): VisualEditorState =>
+    visualEditorReducer(state, {
+      data: { body },
+      ref: ref("main", NODE),
+      type: "update",
+    });
+
+  const push = (
+    state: VisualEditorState,
+    body: string,
+    invalid: readonly { index: number; value: unknown }[] = [],
+  ): VisualEditorState =>
+    visualEditorReducer(state, {
+      type: "mount",
+      zone: mountWith(body, invalid),
+    });
+
+  const bodyIn = (state: VisualEditorState): unknown =>
+    (state.zones.main.nodes[0] as AnyBlockInstance).data.body;
+
+  const discarded = (state: VisualEditorState): VisualEditorState =>
+    visualEditorReducer(state, { type: "discard" });
+
+  it("remembers the snapshot instead of dropping it on the floor", () => {
+    const state = push(edit(opened(), "B"), "C");
+
+    expect(bodyIn(state)).toBe("B");
+    expect(state.zones.main.initial).toStrictEqual([stored("A")]);
+    expect(state.zones.main.pendingIncoming?.nodes).toStrictEqual([
+      stored("C"),
+    ]);
+    expect(isVisualEditorDirty(state)).toBe(true);
+    expect(changedZoneIds(state)).toStrictEqual(["main"]);
+  });
+
+  it("keeps the newest snapshot the host sent, not the first", () => {
+    const state = push(push(edit(opened(), "B"), "C"), "D");
+
+    expect(state.zones.main.pendingIncoming?.nodes).toStrictEqual([
+      stored("D"),
+    ]);
+    expect(bodyIn(state)).toBe("B");
+    expect(bodyIn(discarded(state))).toBe("D");
+  });
+
+  it("hands the remembered snapshot over when the edit is thrown away", () => {
+    const thrownAway = discarded(push(edit(opened(), "B"), "C"));
+
+    expect(bodyIn(thrownAway)).toBe("C");
+    expect(thrownAway.zones.main.initial).toStrictEqual([stored("C")]);
+    expect(thrownAway.zones.main.pendingIncoming).toBeUndefined();
+    expect(isVisualEditorDirty(thrownAway)).toBe(false);
+  });
+
+  it("carries the entries the host could not read along with it", () => {
+    const unreadable = [{ index: 1, value: { type: "core:gone" } }];
+    const state = push(edit(opened(), "B"), "C", unreadable);
+
+    expect(state.zones.main.pendingIncoming?.invalid).toStrictEqual(unreadable);
+    expect(state.zones.main.invalid).toStrictEqual([]);
+
+    const thrownAway = discarded(state);
+
+    expect(thrownAway.zones.main.invalid).toStrictEqual(unreadable);
+    expect(thrownAway.zones.main.initialInvalid).toStrictEqual(unreadable);
+  });
+
+  it("returns the very same state when the host repeats itself", () => {
+    const state = push(edit(opened(), "B"), "C");
+
+    expect(push(state, "C")).toBe(state);
+  });
+
+  it("forgets the snapshot once the host agrees with the baseline again", () => {
+    const state = push(push(edit(opened(), "B"), "C"), "A");
+
+    expect(state.zones.main.pendingIncoming).toBeUndefined();
+    expect(bodyIn(state)).toBe("B");
+    expect(bodyIn(discarded(state))).toBe("A");
+  });
+
+  it("adopts a snapshot outright while the zone is clean", () => {
+    const state = push(opened(), "C");
+
+    expect(bodyIn(state)).toBe("C");
+    expect(state.zones.main.initial).toStrictEqual([stored("C")]);
+    expect(state.zones.main.pendingIncoming).toBeUndefined();
+  });
+
+  it("clears what it was holding the moment it adopts one", () => {
+    const held = push(edit(opened(), "B"), "C");
+    const reverted = edit(held, "A");
+
+    expect(isVisualEditorDirty(reverted)).toBe(false);
+
+    const adopted = push(reverted, "D");
+
+    expect(bodyIn(adopted)).toBe("D");
+    expect(adopted.zones.main.pendingIncoming).toBeUndefined();
+  });
+
+  it("refuses to hold a snapshot its own save already replaced", () => {
+    const sending = edit(opened(), "B");
+    const written = visualEditorReducer(sending, inFlight(sending));
+    const dirty = edit(written, "C");
+    const echoed = push(dirty, "A");
+
+    expect(echoed.zones.main.pendingIncoming).toBeUndefined();
+    expect(bodyIn(discarded(echoed))).toBe("B");
+  });
+
+  it("lets a save overrule the snapshot it was still holding", () => {
+    const held = push(edit(opened(), "B"), "C");
+    const written = visualEditorReducer(held, {
+      canonical: { main: [stored("B!")] },
+      invalid: { main: [] },
+      snapshot: { main: [stored("B")] },
+      type: "saved",
+    });
+
+    expect(written.zones.main.pendingIncoming).toBeUndefined();
+    expect(bodyIn(written)).toBe("B!");
+    expect(isVisualEditorDirty(written)).toBe(false);
+    expect(bodyIn(discarded(written))).toBe("B!");
+  });
+
+  it("leaves an edit made during a save exactly where it was", () => {
+    const sending = edit(opened(), "B");
+    const later = edit(sending, "C");
+    const written = visualEditorReducer(later, {
+      canonical: { main: [stored("B!")] },
+      invalid: { main: [] },
+      snapshot: { main: [stored("B")] },
+      type: "saved",
+    });
+
+    expect(bodyIn(written)).toBe("C");
+    expect(written.zones.main.initial).toStrictEqual([stored("B!")]);
+    expect(isVisualEditorDirty(written)).toBe(true);
+  });
+});
+
+describe("a block the editor has already rejected, in a zone that must keep one", () => {
+  const registry = createBlockRegistry([
+    {
+      pluginId: "@vitnode/core",
+      blocks: [
+        { component: () => null, fields: { body: field.text({}) }, id: "text" },
+        {
+          component: () => null,
+          fields: { label: field.text({}) },
+          id: "cta",
+        },
+      ],
+      namespace: "core",
+    },
+  ]);
+
+  const zoneOf = (
+    nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
+    bounds: { max?: number; min?: number },
+    allowedBlocks?: EditorZoneMount["allowedBlocks"],
+  ): VisualEditorState =>
+    mounted({
+      allowedBlocks,
+      id: "main",
+      invalid: [],
+      max: bounds.max,
+      min: bounds.min,
+      nodes,
+      registry,
+    });
+
+  const sole = (
+    nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
+    allowedBlocks?: EditorZoneMount["allowedBlocks"],
+  ): VisualEditorState => zoneOf(nodes, { max: 1, min: 1 }, allowedBlocks);
+
+  const misshapen = (): AnyBlockInstance => ({
+    ...block("a"),
+    data: { body: 12 },
+  });
+
+  const remove = (
+    state: VisualEditorState,
+    nodeRef: EditorNodeRef,
+  ): VisualEditorState =>
+    visualEditorReducer(state, { ref: nodeRef, type: "remove" });
+
+  it("still refuses to remove the healthy block the zone has to keep", () => {
+    const only = block("a");
+    const state = sole([only]);
+
+    expect(unsafeZoneIds(state)).toStrictEqual([]);
+    expect(remove(state, ref("main", only.id))).toBe(state);
+  });
+
+  it("lets a block of a type nothing registers out of a full zone", () => {
+    const gone = createBlockInstance("core:gone", {});
+    const state = sole([gone]);
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+
+    const emptied = remove(state, ref("main", gone.id));
+
+    expect(ids(emptied, "main")).toStrictEqual([]);
+    expect(unsafeZoneIds(emptied)).toStrictEqual(["main"]);
+  });
+
+  it("takes the replacement that makes the emptied zone whole again", () => {
+    const gone = createBlockInstance("core:gone", {});
+    const emptied = remove(sole([gone]), ref("main", gone.id));
+    const replacement = block("fresh");
+
+    const repaired = visualEditorReducer(emptied, {
+      container: into("main"),
+      index: 0,
+      instance: replacement,
+      type: "insert",
+    });
+
+    expect(ids(repaired, "main")).toStrictEqual([replacement.id]);
+    expect(unsafeZoneIds(repaired)).toStrictEqual([]);
+  });
+
+  it("lets a block the zone allowlist no longer permits out", () => {
+    const only = block("a");
+    const state = sole([only], ["core:cta"]);
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+    expect(ids(remove(state, ref("main", only.id)), "main")).toStrictEqual([]);
+  });
+
+  it("lets a block whose stored data no longer fits its fields out", () => {
+    const broken = misshapen();
+    const state = sole([broken]);
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+    expect(ids(remove(state, ref("main", broken.id)), "main")).toStrictEqual(
+      [],
+    );
+  });
+
+  it("weighs each block on its own where one of two is rejected", () => {
+    const healthy = block("a");
+    const broken = misshapen();
+    const state = zoneOf([healthy, broken], { min: 2 });
+
+    expect(remove(state, ref("main", healthy.id))).toBe(state);
+    expect(ids(remove(state, ref("main", broken.id)), "main")).toStrictEqual([
+      healthy.id,
+    ]);
+  });
+
+  it("never lets a sound area go just because a child is rejected", () => {
+    const broken = misshapen();
+    const holder = area([broken]);
+    const state = sole([holder]);
+
+    expect(remove(state, areaRef("main", holder.id))).toBe(state);
+  });
+
+  it("lets the rejected child out of the area instead", () => {
+    const broken = misshapen();
+    const holder = area([broken]);
+    const emptied = remove(sole([holder]), ref("main", broken.id, holder.id));
+
+    expect(childIds(emptied, "main", holder.id)).toStrictEqual([]);
+    expect(ids(emptied, "main")).toStrictEqual([holder.id]);
+    expect(unsafeZoneIds(emptied)).toStrictEqual(["main"]);
+  });
+});

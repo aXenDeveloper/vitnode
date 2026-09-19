@@ -146,6 +146,36 @@ describe("a number range", () => {
     ).toBeNull();
   });
 
+  it("refuses a whole-number field whose bounds hold no whole number", () => {
+    expect(
+      issue("views", field.number({ integer: true, max: 0.9, min: 0.1 })),
+    ).toMatch(/no whole number lies between them/);
+    expect(
+      issue("views", field.number({ integer: true, max: 0.9, min: 0.1 })),
+    ).toMatch(/Field "views" .* min of 0\.1 and a max of 0\.9/);
+    expect(
+      issue("offset", field.number({ integer: true, max: -0.1, min: -0.9 })),
+    ).toMatch(/no whole number lies between them/);
+  });
+
+  it("allows fractional bounds that still take a whole number in", () => {
+    expect(
+      issue("views", field.number({ integer: true, max: 3.2, min: 2.4 })),
+    ).toBeNull();
+    expect(
+      issue("offset", field.number({ integer: true, max: -0.8, min: -1.2 })),
+    ).toBeNull();
+    expect(
+      issue("views", field.number({ integer: true, max: 1, min: 1 })),
+    ).toBeNull();
+  });
+
+  it("leaves a field that stores fractions out of the whole-number rule", () => {
+    expect(
+      issue("ratio", field.number({ integer: false, max: 0.9, min: 0.1 })),
+    ).toBeNull();
+  });
+
   it("allows a fractional bound on a field that stores fractions", () => {
     expect(
       issue("ratio", field.number({ integer: false, max: 1.5, min: 0.5 })),

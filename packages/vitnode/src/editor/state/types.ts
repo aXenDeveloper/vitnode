@@ -57,6 +57,10 @@ export interface EditorZoneState {
   max: number | undefined;
   min: number | undefined;
   nodes: readonly ContentNode[];
+  pendingIncoming?: {
+    invalid: readonly EditorZoneInvalidEntry[];
+    nodes: readonly ContentNode[];
+  };
   registry: BlockRegistry | undefined;
   superseded: readonly (readonly ContentNode[])[];
 }
