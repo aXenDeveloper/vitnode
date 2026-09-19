@@ -41,7 +41,10 @@ const payload = (
 const input = (
   changedZoneIds: string[],
   zones: Record<string, AnyBlockInstance[]>,
-): VisualEditorSaveInput => ({ changedZoneIds, zones });
+  expectedZones: Record<string, AnyBlockInstance[]> = Object.fromEntries(
+    changedZoneIds.map(zoneId => [zoneId, [block(`${zoneId}-baseline`)]]),
+  ),
+): VisualEditorSaveInput => ({ changedZoneIds, expectedZones, zones });
 
 describe("createContentEditorAdapter", () => {
   it("sends the page id and only the zones that changed", async () => {
@@ -56,9 +59,54 @@ describe("createContentEditorAdapter", () => {
 
     expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0]).toStrictEqual({
+      expectedZones: { main: [block("main-baseline")] },
       pageId: "example:settings",
       zones: { main: [block("a")] },
     });
+  });
+
+  it("carries the baseline of the zones it sends, and only of those", async () => {
+    const save = vi
+      .fn<Transport>()
+      .mockResolvedValue(payload({ main: [block("a")] }));
+    const adapter = createContentEditorAdapter({ page, save });
+
+    await adapter.save(
+      input(
+        ["main"],
+        { main: [block("a")], sidebar: [block("b")] },
+        { main: [block("was")], sidebar: [block("untouched")] },
+      ),
+    );
+
+    expect(save.mock.calls[0][0].expectedZones).toStrictEqual({
+      main: [block("was")],
+    });
+  });
+
+  it("copies the baseline too, so a later edit cannot rewrite it in flight", async () => {
+    const save = vi.fn<Transport>().mockResolvedValue(payload({ main: [] }));
+    const adapter = createContentEditorAdapter({ page, save });
+    const baseline = [block("was")];
+
+    await adapter.save(
+      input(["main"], { main: [block("a")] }, { main: baseline }),
+    );
+
+    expect(save.mock.calls[0][0].expectedZones.main).not.toBe(baseline);
+    expect(save.mock.calls[0][0].expectedZones.main).toStrictEqual(baseline);
+  });
+
+  it("leaves out a changed zone the editor sent no baseline for, rather than inventing one", async () => {
+    const save = vi.fn<Transport>().mockResolvedValue(payload({}));
+    const adapter = createContentEditorAdapter({ page, save });
+
+    expect(
+      await adapter.save(
+        input(["main"], { main: [block("a")] }, { sidebar: [block("b")] }),
+      ),
+    ).toStrictEqual({});
+    expect(save).not.toHaveBeenCalled();
   });
 
   it("returns the server's canonical zones so the reducer re-baselines on them", async () => {

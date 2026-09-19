@@ -6,7 +6,12 @@ import type {
   TargetCapabilities,
 } from "../state/types";
 
-import { areaHasRoom, fitsZoneMax, fitsZoneMin } from "../state/bounds";
+import {
+  areaHasRoom,
+  fitsRootNodeCap,
+  fitsZoneMax,
+  fitsZoneMin,
+} from "../state/bounds";
 
 export const ZONE_DROPPABLE_PREFIX = "vitnode-editor-zone:";
 
@@ -351,6 +356,19 @@ const fillsTargetArea = (
 const movedBlocks = (source: EditorDragSource): number =>
   source.kind === "existing-area" ? source.childTypes.length : 1;
 
+const growsTargetRoot = (
+  source: EditorDragSource,
+  target: EditorDropTarget,
+): boolean => {
+  if (target.container.areaId !== null) return false;
+  if (source.kind === "catalog-block") return true;
+
+  return (
+    source.container.zoneId !== target.container.zoneId ||
+    source.container.areaId !== null
+  );
+};
+
 const capacityRejection = ({
   capacity,
   source,
@@ -364,6 +382,16 @@ const capacityRejection = ({
 }): EditorDropRejection | null => {
   if (fillsTargetArea(source, target, targetNodeCount)) return "area-full";
 
+  const { source: leaving, target: landing } = capacity;
+
+  if (
+    growsTargetRoot(source, target) &&
+    landing !== null &&
+    !fitsRootNodeCap(landing.roots + 1)
+  ) {
+    return "zone-full";
+  }
+
   if (
     source.kind !== "catalog-block" &&
     source.container.zoneId === target.container.zoneId
@@ -373,8 +401,6 @@ const capacityRejection = ({
 
   const moved = movedBlocks(source);
   if (moved === 0) return null;
-
-  const { source: leaving, target: landing } = capacity;
 
   if (landing !== null && !fitsZoneMax(landing.max, landing.blocks + moved)) {
     return "zone-full";

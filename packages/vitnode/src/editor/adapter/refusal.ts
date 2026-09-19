@@ -9,3 +9,7 @@ export const saveRefusalOf = (cause: unknown): string | undefined => {
     ? refusal
     : undefined;
 };
+
+export const isSaveConflict = (cause: unknown): boolean =>
+  saveRefusalOf(cause) !== undefined &&
+  (cause as Partial<VisualEditorSaveRefusal>).conflict === true;

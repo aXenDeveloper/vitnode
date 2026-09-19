@@ -19,7 +19,7 @@ import type { EditorContainerRef, VisualEditorSnapshot } from "./state/types";
 
 import { createAreaInstance } from "../blocks/area";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
-import { saveRefusalOf } from "./adapter/refusal";
+import { isSaveConflict, saveRefusalOf } from "./adapter/refusal";
 import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
 import { VisualEditorContext } from "./context";
 import { EditorDndProvider } from "./dnd/provider";
@@ -28,6 +28,7 @@ import { EditorMessages } from "./runtime/editor-messages";
 import { LeaveConfirmDialog } from "./runtime/leave-confirm-dialog";
 import { UnsavedChangesGuard } from "./runtime/unsaved-guard";
 import { EditorSidebar } from "./sidebar/sidebar";
+import { refusesRootNode } from "./state/bounds";
 import {
   containerAcceptsBlock,
   containerNodes,
@@ -113,12 +114,19 @@ const EditorShell = ({
       canonical = (await adapter.save(input))?.zones;
     } catch (cause) {
       const refusal = saveRefusalOf(cause);
+      const conflict = isSaveConflict(cause);
 
       setSaveStatus("error");
       toast.error(
-        refusal === undefined ? t("save_error.title") : t("save_refused.title"),
+        conflict
+          ? t("save_conflict.title")
+          : refusal === undefined
+            ? t("save_error.title")
+            : t("save_refused.title"),
         {
-          description: refusal ?? t("save_error.desc"),
+          description: conflict
+            ? t("save_conflict.desc")
+            : (refusal ?? t("save_error.desc")),
         },
       );
 
@@ -231,6 +239,7 @@ const EditorShell = ({
 
       const pending = insertTarget?.zoneId === zoneId ? insertTarget : null;
       if (pending !== null && pending.areaId !== null) return;
+      if (refusesRootNode(zone)) return;
 
       const area = createAreaInstance();
 

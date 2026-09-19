@@ -3,6 +3,7 @@ import type { VisualEditorSnapshot } from "../state/types";
 
 export interface VisualEditorSaveInput {
   changedZoneIds: readonly string[];
+  expectedZones: VisualEditorSnapshot;
   zones: VisualEditorSnapshot;
 }
 
@@ -12,6 +13,7 @@ export interface VisualEditorSaveResult {
 }
 
 export interface VisualEditorSaveRefusal {
+  conflict?: boolean;
   refusal: string;
 }
 

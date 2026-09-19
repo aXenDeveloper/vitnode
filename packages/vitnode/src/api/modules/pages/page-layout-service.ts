@@ -12,7 +12,8 @@ import type {
 } from "@/content/editor/types";
 import type { PageLayoutZones } from "@/database/page-layouts";
 
-import { zodBlockInstances } from "@/blocks/validate";
+import { isBlockAreaInstance } from "@/blocks/area";
+import { zodBlockInstances, zodContentNode } from "@/blocks/validate";
 import { core_page_layouts } from "@/database/page-layouts";
 
 export interface PageLayoutRow {
@@ -101,6 +102,13 @@ export const requireEditablePageZone = (
 
 const canonicalDefaults = new WeakMap<EditablePageZone, ContentNode[]>();
 
+const zoneSchema = (zone: EditablePageZone) =>
+  zodBlockInstances({
+    allowed: zone.allowed,
+    max: zone.max,
+    min: zone.min,
+  });
+
 const canonicalZoneDefault = (
   page: AnyEditablePageDefinition,
   zone: EditablePageZone,
@@ -108,11 +116,7 @@ const canonicalZoneDefault = (
   const memoized = canonicalDefaults.get(zone);
   if (memoized) return memoized;
 
-  const result = zodBlockInstances({
-    allowed: zone.allowed,
-    max: zone.max,
-    min: zone.min,
-  }).safeParse(zone.default);
+  const result = zoneSchema(zone).safeParse(zone.default);
 
   if (!result.success) {
     throw new HTTPException(500, {
@@ -136,11 +140,7 @@ export const parsePageLayoutZones = ({
 
   for (const zoneId of Object.keys(zones)) {
     const zone = requireEditablePageZone(page, zoneId);
-    const result = zodBlockInstances({
-      allowed: zone.allowed,
-      max: zone.max,
-      min: zone.min,
-    }).safeParse(zones[zoneId]);
+    const result = zoneSchema(zone).safeParse(zones[zoneId]);
 
     if (!result.success) {
       throw new HTTPException(400, {
@@ -152,6 +152,63 @@ export const parsePageLayoutZones = ({
   }
 
   return parsed;
+};
+
+const canonicalZoneValue = (
+  zone: EditablePageZone,
+  blocks: ContentNode[],
+): ContentNode[] => {
+  const result = zoneSchema(zone).safeParse(blocks);
+
+  return result.success ? result.data : blocks;
+};
+
+const readsBackAsStored = (blocks: readonly ContentNode[]): boolean => {
+  if (!blocks.every(node => zodContentNode.safeParse(node).success)) {
+    return false;
+  }
+
+  const ids = blocks.flatMap(node =>
+    isBlockAreaInstance(node)
+      ? [node.id, ...node.children.map(child => child.id)]
+      : [node.id],
+  );
+
+  return new Set(ids).size === ids.length;
+};
+
+const effectiveZone = ({
+  page,
+  stored,
+  zone,
+  zoneId,
+}: {
+  page: AnyEditablePageDefinition;
+  stored: PageLayoutZones;
+  zone: EditablePageZone;
+  zoneId: string;
+}): ContentNode[] =>
+  Object.hasOwn(stored, zoneId)
+    ? canonicalZoneValue(zone, stored[zoneId])
+    : canonicalZoneDefault(page, zone);
+
+export const canonicalPageLayoutZones = ({
+  page,
+  zones,
+}: {
+  page: AnyEditablePageDefinition;
+  zones: Record<string, ContentNode[]>;
+}): PageLayoutZones => {
+  const canonical: PageLayoutZones = {};
+
+  for (const zoneId of Object.keys(zones)) {
+    canonical[zoneId] = canonicalZoneValue(
+      requireEditablePageZone(page, zoneId),
+      zones[zoneId],
+    );
+  }
+
+  return canonical;
 };
 
 export const pageLayoutPayload = ({
@@ -223,7 +280,15 @@ export const readPageLayout = async (
 
 export const savePageLayout = async (
   c: Context,
-  { page, zones }: { page: AnyEditablePageDefinition; zones: PageLayoutZones },
+  {
+    expectedZones,
+    page,
+    zones,
+  }: {
+    expectedZones: PageLayoutZones;
+    page: AnyEditablePageDefinition;
+    zones: PageLayoutZones;
+  },
 ): Promise<PageLayoutSave> =>
   await c.get("db").transaction(async (tx): Promise<PageLayoutSave> => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${page.id}))`);
@@ -232,23 +297,37 @@ export const savePageLayout = async (
     const stored = current?.zones ?? {};
     const next: PageLayoutZones = { ...stored };
     const changed: string[] = [];
+    const stale: string[] = [];
 
     for (const [zoneId, blocks] of Object.entries(zones)) {
       const zone = requireEditablePageZone(page, zoneId);
-      const overridden = Object.hasOwn(stored, zoneId);
+      const effective = effectiveZone({ page, stored, zone, zoneId });
+
+      if (sameJson(blocks, effective)) continue;
+
+      if (
+        readsBackAsStored(effective) &&
+        (!Object.hasOwn(expectedZones, zoneId) ||
+          !sameJson(expectedZones[zoneId], effective))
+      ) {
+        stale.push(zoneId);
+        continue;
+      }
 
       if (sameJson(blocks, canonicalZoneDefault(page, zone))) {
-        if (!overridden) continue;
-
         delete next[zoneId];
         changed.push(zoneId);
         continue;
       }
 
-      if (overridden && sameJson(stored[zoneId], blocks)) continue;
-
       next[zoneId] = blocks;
       changed.push(zoneId);
+    }
+
+    if (stale.length > 0) {
+      throw new HTTPException(409, {
+        message: `The ${quoted(stale)} ${stale.length === 1 ? "zone" : "zones"} of ${JSON.stringify(page.id)} moved after this editor read ${stale.length === 1 ? "it" : "them"}, so saving would have written over somebody else's work. Nothing was stored and nothing you arranged was lost: reload the page to pick up what is there now, then make your change again.`,
+      });
     }
 
     if (changed.length === 0) return { changed, row: current };

@@ -10,7 +10,11 @@ import type {
   TargetCapabilities,
 } from "./resolve-drop";
 
-import { AREA_CHILDREN_DEFAULT_MAX, BLOCK_WILDCARD } from "../../blocks/const";
+import {
+  AREA_CHILDREN_DEFAULT_MAX,
+  BLOCK_WILDCARD,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+} from "../../blocks/const";
 import { isBlockAllowed } from "../../blocks/registry";
 import {
   AREA_DROPPABLE_PREFIX,
@@ -2039,8 +2043,13 @@ describe("a drop aimed at an area that is already full", () => {
 describe("the room a drop needs on either side of it", () => {
   const holds = (
     blocks: number,
-    bounds: { max?: number; min?: number } = {},
-  ) => ({ blocks, max: bounds.max, min: bounds.min });
+    bounds: { max?: number; min?: number; roots?: number } = {},
+  ) => ({
+    blocks,
+    max: bounds.max,
+    min: bounds.min,
+    roots: bounds.roots ?? blocks,
+  });
 
   const unbounded: DropCapacity = { source: null, target: null };
 
@@ -2241,5 +2250,141 @@ describe("the room a drop needs on either side of it", () => {
       expect(decision.rejection).not.toBeNull();
       expect(decision.resolved).toBeNull();
     }
+  });
+});
+
+describe("the absolute cap on the nodes a drop target keeps at its root", () => {
+  const holds = (
+    roots: number,
+    bounds: { blocks?: number; max?: number; min?: number } = {},
+  ) => ({
+    blocks: bounds.blocks ?? roots,
+    max: bounds.max,
+    min: bounds.min,
+    roots,
+  });
+
+  const decide = ({
+    capacity,
+    source: dragged,
+    target,
+    targetNodeCount = 2,
+  }: {
+    capacity: DropCapacity;
+    source: EditorDragSource;
+    target: EditorDropTarget;
+    targetNodeCount?: number;
+  }) =>
+    decideDrop({
+      capabilities: accepting(undefined),
+      capacity,
+      source: dragged,
+      target,
+      targetNodeCount,
+    });
+
+  const full = holds(CONTENT_BLOCKS_ABSOLUTE_MAX);
+  const nearlyFull = holds(CONTENT_BLOCKS_ABSOLUTE_MAX - 1);
+
+  it("refuses a catalog block dropped on a root that is at the cap", () => {
+    const decision = decide({
+      capacity: { source: null, target: full },
+      source: fromCatalog(),
+      target: onContainer("page:main"),
+      targetNodeCount: CONTENT_BLOCKS_ABSOLUTE_MAX,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("takes that same block on a root one node short of the cap", () => {
+    const decision = decide({
+      capacity: { source: null, target: nearlyFull },
+      source: fromCatalog(),
+      target: onContainer("page:main"),
+      targetNodeCount: CONTENT_BLOCKS_ABSOLUTE_MAX - 1,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved?.kind).toBe("insert");
+  });
+
+  it("refuses a node dragged in from another zone onto a root at the cap", () => {
+    const decision = decide({
+      capacity: { source: holds(4), target: full },
+      source: source({ container: into("page:aside") }),
+      target: onContainer("page:main"),
+      targetNodeCount: CONTENT_BLOCKS_ABSOLUTE_MAX,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("refuses an empty area dragged in from another zone onto a full root", () => {
+    const decision = decide({
+      capacity: { source: holds(4), target: full },
+      source: areaSource({ container: into("page:aside") }),
+      target: onContainer("page:main"),
+      targetNodeCount: CONTENT_BLOCKS_ABSOLUTE_MAX,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("refuses a block lifted out of an area onto its own zone's full root", () => {
+    const decision = decide({
+      capacity: { source: full, target: full },
+      source: source({ container: into("page:main", "area-a") }),
+      target: onContainer("page:main"),
+      targetNodeCount: CONTENT_BLOCKS_ABSOLUTE_MAX,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("still reorders a root that is at the cap", () => {
+    const decision = decide({
+      capacity: { source: full, target: full },
+      source: source({ index: 0 }),
+      target: onNode({ index: 1 }),
+      targetNodeCount: CONTENT_BLOCKS_ABSOLUTE_MAX,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved?.kind).toBe("move");
+  });
+
+  it("still takes a root block into an area of a zone at the cap", () => {
+    const decision = decide({
+      capacity: { source: full, target: full },
+      source: source({ container: into("page:main") }),
+      target: onContainer("page:main", "area-a"),
+      targetNodeCount: 1,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved?.kind).toBe("move");
+  });
+
+  it("still takes a block from another zone into an area of a full root", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(4),
+        target: holds(CONTENT_BLOCKS_ABSOLUTE_MAX, {
+          blocks: CONTENT_BLOCKS_ABSOLUTE_MAX,
+          max: CONTENT_BLOCKS_ABSOLUTE_MAX + 1,
+        }),
+      },
+      source: source({ container: into("page:aside") }),
+      target: onContainer("page:main", "area-a"),
+      targetNodeCount: 1,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved?.kind).toBe("move");
   });
 });

@@ -234,8 +234,8 @@ const harness = ({
   app.use("*", context);
 
   const [read, write] = buildPageLayoutRoutes({ pluginId: PLUGIN_ID });
-  app.openapi(read.route, read.handler as never);
-  app.openapi(write.route, write.handler as never);
+  app.openapi(read.route, read.handler);
+  app.openapi(write.route, write.handler);
 
   return { app, events, statements, store, writes };
 };
@@ -315,6 +315,7 @@ describe("PUT /layout", () => {
     });
 
     const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "Old")] },
       pageId: "example:settings",
       zones: { sidebar: [quote("s1", "New")] },
     });
@@ -342,6 +343,7 @@ describe("PUT /layout", () => {
     });
 
     const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "Same")] },
       pageId: "example:settings",
       zones: { sidebar: [quote("s1", "Same")] },
     });
@@ -363,6 +365,7 @@ describe("PUT /layout", () => {
     expect(
       (
         await save(app, {
+          expectedZones: { sidebar: [quote("s1", "Old")] },
           pageId: "example:settings",
           zones: { sidebar: [quote("s1", "New")] },
         })
@@ -375,6 +378,7 @@ describe("PUT /layout", () => {
     const { app, events, writes } = harness();
 
     const response = await save(app, {
+      expectedZones: { intro: [text("intro-shipped", "Shipped intro")] },
       pageId: "example:settings",
       zones: { intro: [text("intro-shipped", "Shipped intro")] },
     });
@@ -392,6 +396,7 @@ describe("PUT /layout", () => {
     const { app, store } = harness();
 
     const response = await save(app, {
+      expectedZones: { "before-profile": [hero("shipped", "Shipped default")] },
       pageId: "example:settings",
       zones: {
         "before-profile": [
@@ -412,6 +417,7 @@ describe("PUT /layout", () => {
     const { app, store } = harness();
 
     const response = await save(app, {
+      expectedZones: { "before-profile": [hero("shipped", "Shipped default")] },
       pageId: "example:settings",
       zones: { "before-profile": [hero("h1", "Wide", "wide")] },
     });
@@ -423,8 +429,124 @@ describe("PUT /layout", () => {
   });
 });
 
+describe("a save built on a zone somebody else already moved", () => {
+  it("is a 409, and writes and emits nothing", async () => {
+    const { app, events, store, writes } = harness({
+      rows: { "example:settings": { sidebar: [quote("s1", "Two")] } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Three")] },
+    });
+
+    expect(response.status).toBe(409);
+    expect(writes).toEqual([]);
+    expect(events).toEqual([]);
+    expect(store.get("example:settings")?.zones).toEqual({
+      sidebar: [quote("s1", "Two")],
+    });
+    expect(store.get("example:settings")?.updatedAt).toBe(STORED_AT);
+  });
+
+  it("is a 200 that writes nothing when it asks for what is already stored", async () => {
+    const { app, events, writes } = harness({
+      rows: { "example:settings": { sidebar: [quote("s1", "Two")] } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Two")] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(writes).toEqual([]);
+    expect(events).toEqual([]);
+  });
+
+  it("does not stand in the way of two people editing different zones", async () => {
+    const { app, store } = harness({
+      rows: {
+        "example:settings": {
+          "after-profile": [quote("a1", "After one")],
+          sidebar: [quote("s1", "Sidebar one")],
+        },
+      },
+    });
+
+    const first = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "Sidebar one")] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Sidebar two")] },
+    });
+    const second = await save(app, {
+      expectedZones: { "after-profile": [quote("a1", "After one")] },
+      pageId: "example:settings",
+      zones: { "after-profile": [quote("a1", "After two")] },
+    });
+
+    expect([first.status, second.status]).toEqual([200, 200]);
+    expect(store.get("example:settings")?.zones).toEqual({
+      "after-profile": [quote("a1", "After two")],
+      sidebar: [quote("s1", "Sidebar two")],
+    });
+  });
+
+  it("does not refuse the very save that brings a zone back inside its bounds", async () => {
+    const overfull = [
+      hero("h1", "One"),
+      hero("h2", "Two"),
+      hero("h3", "Three"),
+      hero("h4", "Four"),
+    ];
+    const { app, store } = harness({
+      rows: { "example:settings": { "before-profile": overfull } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { "before-profile": overfull },
+      pageId: "example:settings",
+      zones: { "before-profile": [hero("h1", "One")] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(store.get("example:settings")?.zones["before-profile"]).toEqual([
+      hero("h1", "One"),
+    ]);
+  });
+
+  it("is a 400 when the baselines do not name the very zones being written", async () => {
+    const { app, writes } = harness();
+
+    const mismatched = [
+      { expectedZones: {}, zones: { sidebar: [quote("s1", "Mine")] } },
+      {
+        expectedZones: { "before-profile": [], sidebar: [] },
+        zones: { sidebar: [quote("s1", "Mine")] },
+      },
+      {
+        expectedZones: { "before-profile": [] },
+        zones: { sidebar: [quote("s1", "Mine")] },
+      },
+    ];
+
+    for (const body of mismatched) {
+      expect(
+        (await save(app, { ...body, pageId: "example:settings" })).status,
+      ).toBe(400);
+    }
+
+    expect(writes).toEqual([]);
+  });
+});
+
 describe("a refused save", () => {
-  const refusals: [string, unknown][] = [
+  const refusals: [
+    string,
+    { pageId: string; zones: Record<string, unknown[]> },
+  ][] = [
     [
       "an unknown page id",
       { pageId: "example:nowhere", zones: { sidebar: [] } },
@@ -511,7 +633,16 @@ describe("a refused save", () => {
   it.each(refusals)("is a 400 for %s, and writes nothing", async (_, body) => {
     const { app, events, writes } = harness();
 
-    expect((await save(app, body)).status).toBe(400);
+    expect(
+      (
+        await save(app, {
+          ...body,
+          expectedZones: Object.fromEntries(
+            Object.keys(body.zones).map(zoneId => [zoneId, []]),
+          ),
+        })
+      ).status,
+    ).toBe(400);
     expect(writes).toEqual([]);
     expect(events).toEqual([]);
   });
@@ -520,7 +651,7 @@ describe("a refused save", () => {
     const { app, writes } = harness();
 
     const response = await app.request("/layout", {
-      body: '{"pageId":"example:settings","zones":{"__proto__":[]}}',
+      body: '{"pageId":"example:settings","zones":{"__proto__":[]},"expectedZones":{"__proto__":[]}}',
       headers: { "Content-Type": "application/json" },
       method: "PUT",
     });
@@ -537,6 +668,7 @@ describe("permissions", () => {
     granted = new Set(["can_view"]);
 
     const response = await save(app, {
+      expectedZones: { sidebar: [] },
       pageId: "example:settings",
       zones: { sidebar: [quote("s1", "New")] },
     });
@@ -550,6 +682,7 @@ describe("permissions", () => {
     granted = new Set();
 
     const response = await save(app, {
+      expectedZones: { footer: [] },
       pageId: "example:settings",
       zones: { footer: [quote("f1", "Unknown zone")] },
     });
@@ -562,6 +695,7 @@ describe("permissions", () => {
     grantedPlugin = "@vitnode/blog";
 
     const response = await save(app, {
+      expectedZones: { sidebar: [] },
       pageId: "example:settings",
       zones: { sidebar: [quote("s1", "New")] },
     });
@@ -575,6 +709,7 @@ describe("permissions", () => {
     expect(
       (
         await save(app, {
+          expectedZones: { header: [] },
           pageId: "example:forum",
           zones: { header: [quote("h1", "New")] },
         })
@@ -586,6 +721,7 @@ describe("permissions", () => {
     expect(
       (
         await save(app, {
+          expectedZones: { header: [quote("h1", "New")] },
           pageId: "example:forum",
           zones: { header: [quote("h1", "Newer")] },
         })

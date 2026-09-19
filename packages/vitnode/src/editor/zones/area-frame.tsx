@@ -26,7 +26,12 @@ import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useAreaDroppable } from "../dnd/use-container-droppable";
 import { useSortableNode } from "../dnd/use-sortable-node";
-import { fitsZoneMax, refusesRemoval, zoneCapacity } from "../state/bounds";
+import {
+  fitsZoneMax,
+  refusesRemoval,
+  refusesUnwrap,
+  zoneCapacity,
+} from "../state/bounds";
 import { sameNodeRef } from "../state/reducer";
 import { zoneDropState } from "./drop-state";
 import { AREA_REJECTION_LABELS } from "./rejection-labels";
@@ -90,6 +95,7 @@ export const EditableAreaFrame = ({
   const full =
     capacity !== null && !fitsZoneMax(capacity.max, capacity.blocks + 1);
   const removeRefused = refusesRemoval(capacity, area.children.length);
+  const ungroupRefused = refusesUnwrap(capacity, area.children.length);
   const layout = areaLayoutWithDefaults(area.layout);
   const selected = sameNodeRef(state.selected, nodeRef);
   const inserting =
@@ -186,6 +192,7 @@ export const EditableAreaFrame = ({
           <button
             aria-label={t("area.ungroup")}
             className={actionClassName}
+            disabled={ungroupRefused}
             onClick={unwrap}
             type="button"
           >
@@ -214,6 +221,7 @@ export const EditableAreaFrame = ({
                   </span>
 
                   <Button
+                    disabled={ungroupRefused}
                     onClick={() => {
                       setConfirming(false);
                       unwrap();

@@ -31,6 +31,7 @@ import { selectedNode } from "./selection";
 import {
   blockDataFromFormValues,
   blockDisplayName,
+  blockFieldPatchEntries,
   blockFieldSpecs,
   blockFormSpec,
   clearsBlockField,
@@ -71,12 +72,14 @@ const BlockDataSync = ({
         Object.fromEntries(
           changed
             .filter(name => !removed.includes(name))
-            .flatMap(name => {
-              const field = formSchema.shape[name] as undefined | z.ZodType;
-              const parsed = field?.safeParse(values[name]);
-
-              return parsed?.success ? [[name, parsed.data] as const] : [];
-            }),
+            .flatMap(name =>
+              blockFieldPatchEntries(
+                definition,
+                formSchema,
+                name,
+                values[name],
+              ),
+            ),
         ),
       );
 
@@ -200,7 +203,7 @@ const BlockPropertiesPanelContent = ({
           <p className="text-sm leading-relaxed text-pretty">
             {entry ? t("invalid_block") : t("block.issue.unknown_type")}
           </p>
-          <p className="text-xs leading-relaxed opacity-80">{issue}</p>
+          <p className="text-sm leading-relaxed opacity-80">{issue}</p>
         </div>
       )}
 

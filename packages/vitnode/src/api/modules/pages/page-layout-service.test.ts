@@ -294,6 +294,7 @@ describe("saving", () => {
     const { c, stored, written } = harness();
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: { sidebar: [] },
       page,
       zones: { sidebar: [quote("s1", "First")] },
     });
@@ -311,7 +312,11 @@ describe("saving", () => {
   it("takes the page's lock and reads inside the same transaction", async () => {
     const { c, written } = harness();
 
-    await savePageLayout(c, { page, zones: { sidebar: [quote("s1", "One")] } });
+    await savePageLayout(c, {
+      expectedZones: { sidebar: [] },
+      page,
+      zones: { sidebar: [quote("s1", "One")] },
+    });
 
     expect(written.log).toEqual(["begin", "lock", "select", "upsert"]);
   });
@@ -323,6 +328,7 @@ describe("saving", () => {
     });
 
     const { changed } = await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "First")] },
       page,
       zones: { sidebar: [quote("s2", "Second")] },
     });
@@ -339,7 +345,11 @@ describe("saving", () => {
   it("keeps a stored zone the page no longer declares", async () => {
     const { c, written } = harness({ retired: [quote("r1", "Orphan")] });
 
-    await savePageLayout(c, { page, zones: { sidebar: [quote("s1", "New")] } });
+    await savePageLayout(c, {
+      expectedZones: { sidebar: [] },
+      page,
+      zones: { sidebar: [quote("s1", "New")] },
+    });
 
     expect(written.upserts).toEqual([
       { retired: [quote("r1", "Orphan")], sidebar: [quote("s1", "New")] },
@@ -354,6 +364,7 @@ describe("saving", () => {
     });
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: { "before-profile": [quote("b1", "Custom")] },
       page,
       zones: { "before-profile": [{ ...SHIPPED }] },
     });
@@ -367,6 +378,7 @@ describe("saving", () => {
     const { c, written } = harness();
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: { "before-profile": [{ ...SHIPPED }] },
       page,
       zones: { "before-profile": [{ ...SHIPPED }] },
     });
@@ -383,6 +395,7 @@ describe("saving", () => {
     });
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: { "before-profile": [quote("b1", "Custom")] },
       page,
       zones: { "before-profile": [{ ...SHIPPED }] },
     });
@@ -399,6 +412,7 @@ describe("saving", () => {
     const { c, written } = harness({ sidebar: [quote("s1", "Same")] });
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "Same")] },
       page,
       zones: { sidebar: [quote("s1", "Same")] },
     });
@@ -413,7 +427,11 @@ describe("saving", () => {
     const { c, written } = harness();
 
     await expect(
-      savePageLayout(c, { page, zones: { retired: [quote("r1", "No")] } }),
+      savePageLayout(c, {
+        expectedZones: { retired: [] },
+        page,
+        zones: { retired: [quote("r1", "No")] },
+      }),
     ).rejects.toThrow(/has no zone "retired"/);
     expect(written).toEqual({
       deletes: 0,
@@ -440,6 +458,7 @@ describe("a zone saved back to a default its blocks fill in", () => {
     const { c, written } = harness(undefined, defaultsPage.id);
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: submitted(),
       page: defaultsPage,
       zones: submitted(),
     });
@@ -456,6 +475,7 @@ describe("a zone saved back to a default its blocks fill in", () => {
     );
 
     const { changed, row } = await savePageLayout(c, {
+      expectedZones: { intro: [text("custom", "Custom", "wide")] },
       page: defaultsPage,
       zones: submitted(),
     });
@@ -473,8 +493,13 @@ describe("two moderators saving one page at once", () => {
     const { c, stored } = harness();
 
     await Promise.all([
-      savePageLayout(c, { page, zones: { sidebar: [quote("s1", "Sidebar")] } }),
       savePageLayout(c, {
+        expectedZones: { sidebar: [] },
+        page,
+        zones: { sidebar: [quote("s1", "Sidebar")] },
+      }),
+      savePageLayout(c, {
+        expectedZones: { "after-profile": [] },
         page,
         zones: { "after-profile": [quote("a1", "After")] },
       }),
@@ -490,8 +515,13 @@ describe("two moderators saving one page at once", () => {
     const { c, stored } = harness({ retired: [quote("r1", "Orphan")] });
 
     await Promise.all([
-      savePageLayout(c, { page, zones: { sidebar: [quote("s1", "Sidebar")] } }),
       savePageLayout(c, {
+        expectedZones: { sidebar: [] },
+        page,
+        zones: { sidebar: [quote("s1", "Sidebar")] },
+      }),
+      savePageLayout(c, {
+        expectedZones: { "after-profile": [] },
         page,
         zones: { "after-profile": [quote("a1", "After")] },
       }),
@@ -512,12 +542,204 @@ describe("two moderators saving one page at once", () => {
 
     await Promise.all([
       savePageLayout(c, {
+        expectedZones: { "before-profile": [quote("b1", "Custom")] },
         page,
         zones: { "before-profile": [{ ...SHIPPED }] },
       }),
-      savePageLayout(c, { page, zones: { sidebar: [quote("s2", "Newer")] } }),
+      savePageLayout(c, {
+        expectedZones: { sidebar: [quote("s1", "Stored")] },
+        page,
+        zones: { sidebar: [quote("s2", "Newer")] },
+      }),
     ]);
 
     expect(stored()?.zones).toEqual({ sidebar: [quote("s2", "Newer")] });
+  });
+
+  it("merges two saves that each carry their own zone's baseline", async () => {
+    const { c, stored } = harness({
+      "after-profile": [quote("a1", "After one")],
+      sidebar: [quote("s1", "Sidebar one")],
+    });
+
+    const first = await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "Sidebar one")] },
+      page,
+      zones: { sidebar: [quote("s1", "Sidebar two")] },
+    });
+    const second = await savePageLayout(c, {
+      expectedZones: { "after-profile": [quote("a1", "After one")] },
+      page,
+      zones: { "after-profile": [quote("a1", "After two")] },
+    });
+
+    expect(first.changed).toEqual(["sidebar"]);
+    expect(second.changed).toEqual(["after-profile"]);
+    expect(stored()?.zones).toEqual({
+      "after-profile": [quote("a1", "After two")],
+      sidebar: [quote("s1", "Sidebar two")],
+    });
+  });
+});
+
+describe("two moderators saving the same zone", () => {
+  it("refuses the one built on a value that has already moved", async () => {
+    const { c, stored, written } = harness({ sidebar: [quote("s1", "One")] });
+
+    await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      page,
+      zones: { sidebar: [quote("s1", "Two")] },
+    });
+
+    await expect(
+      savePageLayout(c, {
+        expectedZones: { sidebar: [quote("s1", "One")] },
+        page,
+        zones: { sidebar: [quote("s1", "Three")] },
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(stored()?.zones).toEqual({ sidebar: [quote("s1", "Two")] });
+    expect(written.upserts).toEqual([{ sidebar: [quote("s1", "Two")] }]);
+  });
+
+  it("says which zone moved, and leaves the rest of the request alone", async () => {
+    const { c, stored, written } = harness({
+      "after-profile": [quote("a1", "Untouched")],
+      sidebar: [quote("s1", "Newer")],
+    });
+
+    await expect(
+      savePageLayout(c, {
+        expectedZones: {
+          "after-profile": [quote("a1", "Untouched")],
+          sidebar: [quote("s1", "Older")],
+        },
+        page,
+        zones: {
+          "after-profile": [quote("a1", "Mine")],
+          sidebar: [quote("s1", "Mine")],
+        },
+      }),
+    ).rejects.toThrow(/"sidebar" zone .* moved after this editor read it/);
+
+    expect(written.upserts).toEqual([]);
+    expect(stored()?.zones).toEqual({
+      "after-profile": [quote("a1", "Untouched")],
+      sidebar: [quote("s1", "Newer")],
+    });
+    expect(stored()?.updatedAt).toBe(STORED_AT);
+  });
+
+  it("lets the loser through when it happens to be asking for what is already there", async () => {
+    const { c, stored, written } = harness({ sidebar: [quote("s1", "One")] });
+
+    await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      page,
+      zones: { sidebar: [quote("s1", "Two")] },
+    });
+
+    const { changed } = await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      page,
+      zones: { sidebar: [quote("s1", "Two")] },
+    });
+
+    expect(changed).toEqual([]);
+    expect(written.upserts).toEqual([{ sidebar: [quote("s1", "Two")] }]);
+    expect(stored()?.zones).toEqual({ sidebar: [quote("s1", "Two")] });
+  });
+
+  it("lets a moderator repair a zone holding a value the editor cannot read", async () => {
+    const { c, stored, written } = harness({
+      sidebar: ["oops", quote("s1", "One")] as unknown as ContentNode[],
+    });
+
+    const { changed } = await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      page,
+      zones: { sidebar: [quote("s1", "One")] },
+    });
+
+    expect(changed).toEqual(["sidebar"]);
+    expect(written.upserts).toEqual([{ sidebar: [quote("s1", "One")] }]);
+    expect(stored()?.zones).toEqual({ sidebar: [quote("s1", "One")] });
+  });
+
+  it("still guards a zone the editor reads whole but the zone no longer allows", async () => {
+    const { c, stored, written } = harness({
+      sidebar: [hero("h1", "Not allowed here"), quote("s1", "One")],
+    });
+
+    await expect(
+      savePageLayout(c, {
+        expectedZones: { sidebar: [quote("s1", "One")] },
+        page,
+        zones: { sidebar: [quote("s1", "Mine")] },
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(written.upserts).toEqual([]);
+    expect(stored()?.zones).toEqual({
+      sidebar: [hero("h1", "Not allowed here"), quote("s1", "One")],
+    });
+  });
+
+  it("compares a zone nobody has overridden against its shipped default", async () => {
+    const { c, written } = harness();
+
+    const { changed } = await savePageLayout(c, {
+      expectedZones: { "before-profile": [{ ...SHIPPED }] },
+      page,
+      zones: { "before-profile": [quote("b1", "Mine")] },
+    });
+
+    expect(changed).toEqual(["before-profile"]);
+
+    await expect(
+      savePageLayout(c, {
+        expectedZones: { "after-profile": [quote("ghost", "Never stored")] },
+        page,
+        zones: { "after-profile": [quote("a1", "Mine")] },
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(written.upserts).toEqual([
+      { "before-profile": [quote("b1", "Mine")] },
+    ]);
+  });
+
+  it("refuses a zone it was handed no baseline for", async () => {
+    const { c, written } = harness();
+
+    await expect(
+      savePageLayout(c, {
+        expectedZones: {},
+        page,
+        zones: { sidebar: [quote("s1", "Mine")] },
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(written.upserts).toEqual([]);
+  });
+
+  it("reads the stored zone through the zone's own schema, so a default nobody stored is not a conflict", async () => {
+    const { c, written } = harness(
+      { intro: [text("custom", "Custom")] },
+      defaultsPage.id,
+    );
+
+    const { changed } = await savePageLayout(c, {
+      expectedZones: { intro: [text("custom", "Custom", "prose")] },
+      page: defaultsPage,
+      zones: { intro: [text("custom", "Rewritten", "prose")] },
+    });
+
+    expect(changed).toEqual(["intro"]);
+    expect(written.upserts).toEqual([
+      { intro: [text("custom", "Rewritten", "prose")] },
+    ]);
   });
 });

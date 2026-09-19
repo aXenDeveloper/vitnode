@@ -94,6 +94,28 @@ const Copy = ({ data }: BlockComponentProps<BlockData<typeof copyFields>>) => (
   <p>{data.headline}</p>
 );
 
+const detailFields = {
+  headline: field.text({ required: true }),
+  seo: field.group({
+    fields: {
+      caption: field.text({ required: true }),
+      note: field.text({ minLength: 0 }),
+      publishedAt: field.dateTime(),
+      subtitle: field.text({ minLength: 3 }),
+    },
+  }),
+};
+
+const Detail = defineBlock({
+  component: ({
+    data,
+  }: BlockComponentProps<BlockData<typeof detailFields>>) => (
+    <p>{data.headline}</p>
+  ),
+  fields: detailFields,
+  id: "detail",
+});
+
 const registry = createBlockRegistry([
   {
     pluginId: "@vitnode/core",
@@ -102,6 +124,7 @@ const registry = createBlockRegistry([
       defineBlock({ component: Card, fields, id: "card" }),
       defineBlock({ component: Schedule, fields: dateFields, id: "schedule" }),
       defineBlock({ component: Copy, fields: copyFields, id: "copy" }),
+      Detail,
       Seo,
     ],
   },
@@ -139,6 +162,12 @@ const written = (data: Record<string, unknown>): HarnessNode => ({
   data: { headline: "Headline", ...data },
   id: NODE_ID,
   type: "core:copy",
+});
+
+const detailed = (seo: Record<string, unknown>): HarnessNode => ({
+  data: { headline: "Headline", seo },
+  id: NODE_ID,
+  type: "core:detail",
 });
 
 const ref = {
@@ -574,5 +603,83 @@ describe("a group the block does not have to hold, switched on and off", () => {
       tone: "info",
     });
     expect(safeParseBlockData(Seo, storedData()).success).toBe(true);
+  });
+});
+
+describe("a leaf of a group the block does have to hold, cleared", () => {
+  const seo = {
+    caption: "Caption",
+    note: "Kept",
+    publishedAt: ISO,
+    subtitle: "Hello",
+  };
+
+  const storedGroup = (): Record<string, unknown> =>
+    storedData().seo as Record<string, unknown>;
+
+  const clear = (selector: string): void => {
+    const input = document.querySelector(selector);
+    if (!input) throw new Error(`no control matching ${selector}`);
+
+    typeInto(input, "");
+  };
+
+  const DATE_LEAF = 'input[type="datetime-local"]';
+
+  it("drops the nested key an optional date was stored under", () => {
+    render(<Harness node={detailed(seo)} />);
+
+    clear(DATE_LEAF);
+
+    expect(storedGroup()).toStrictEqual({
+      caption: "Caption",
+      note: "Kept",
+      subtitle: "Hello",
+    });
+  });
+
+  it("drops the nested key an optional text field that refuses empty held", () => {
+    render(<Harness node={detailed(seo)} />);
+
+    clear('[name="seo.subtitle"]');
+
+    expect(storedGroup()).toStrictEqual({
+      caption: "Caption",
+      note: "Kept",
+      publishedAt: ISO,
+    });
+  });
+
+  it("stores the empty string a nested optional text field accepts", () => {
+    render(<Harness node={detailed(seo)} />);
+
+    clear('[name="seo.note"]');
+
+    expect(storedGroup()).toStrictEqual({ ...seo, note: "" });
+  });
+
+  it("never drops a required leaf the control cannot express as empty", () => {
+    render(<Harness node={detailed(seo)} />);
+
+    clear('[name="seo.caption"]');
+
+    expect(Object.hasOwn(storedGroup(), "caption")).toBe(true);
+    expect(storedGroup()).toStrictEqual({ ...seo, caption: "" });
+  });
+
+  it("leaves the block storable by its own schema after a nested clear", () => {
+    render(<Harness node={detailed(seo)} />);
+
+    clear(DATE_LEAF);
+
+    expect(safeParseBlockData(Detail, storedData()).success).toBe(true);
+  });
+
+  it("clears one leaf without disturbing the block's other fields", () => {
+    render(<Harness node={detailed(seo)} />);
+
+    clear('[name="seo.subtitle"]');
+
+    expect(storedData().headline).toBe("Headline");
   });
 });

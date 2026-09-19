@@ -27,10 +27,15 @@ export interface ContentZoneOutletEntry {
   node: HTMLElement;
 }
 
+export interface ContentZoneRelease {
+  id: string;
+  node: HTMLElement;
+}
+
 export interface ContentEditRuntime {
   preview: boolean;
   registerZone: (entry: ContentZoneOutletEntry) => void;
-  releaseZone: (id: string) => void;
+  releaseZone: (outlet: ContentZoneRelease) => void;
 }
 
 export const ContentEditContext = createContext<ContentEditRuntime | null>(

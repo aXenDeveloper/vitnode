@@ -27,6 +27,7 @@ import { useVisualEditor } from "../context";
 import {
   refusesDuplicate,
   refusesRemoval,
+  refusesUnwrap,
   zoneCapacity,
 } from "../state/bounds";
 import {
@@ -98,6 +99,7 @@ export const AreaPropertiesPanelContent = ({
     null,
   );
   const removeRefused = refusesRemoval(capacity, area.children.length);
+  const ungroupRefused = refusesUnwrap(capacity, area.children.length);
 
   const layout = areaLayoutWithDefaults(area.layout);
   const columns = layout.columns;
@@ -198,6 +200,7 @@ export const AreaPropertiesPanelContent = ({
 
           <Button
             className="flex-1"
+            disabled={ungroupRefused}
             onClick={ungroup}
             size="sm"
             variant="secondary"
@@ -229,6 +232,7 @@ export const AreaPropertiesPanelContent = ({
               {t("area.delete.desc", { count: area.children.length })}{" "}
               <Button
                 className="mt-3 w-full"
+                disabled={ungroupRefused}
                 onClick={() => {
                   setConfirming(false);
                   ungroup();

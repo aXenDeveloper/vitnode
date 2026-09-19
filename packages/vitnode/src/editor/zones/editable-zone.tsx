@@ -24,7 +24,12 @@ import { EditableBlockShell } from "../block-shell/block-shell";
 import { useVisualEditor } from "../context";
 import { ContainerSortable } from "../dnd/container-sortable";
 import { useZoneDroppable } from "../dnd/use-container-droppable";
-import { fitsZoneMax, zoneBlockCount } from "../state/bounds";
+import {
+  fitsRootNodeCap,
+  fitsZoneMax,
+  zoneBlockCount,
+  zoneRootNodeCount,
+} from "../state/bounds";
 import { EditableAreaFrame } from "./area-frame";
 import {
   InvalidBlock,
@@ -185,7 +190,9 @@ export const EditableZone = ({
   const rejected = rejection !== null;
   const inserting = insertTarget?.zoneId === mount.id;
   const dropping = zoneDropState({ active, inserting, over, rejected });
-  const full = !fitsZoneMax(mount.max, zoneBlockCount(nodes) + 1);
+  const full =
+    !fitsZoneMax(mount.max, zoneBlockCount(nodes) + 1) ||
+    !fitsRootNodeCap(zoneRootNodeCount(nodes) + 1);
 
   const addBlock = (
     <Button

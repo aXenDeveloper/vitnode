@@ -1,6 +1,6 @@
 export { createMemoryAdapter } from "./memory";
 export type { MemoryVisualEditorAdapter } from "./memory";
-export { saveRefusalOf } from "./refusal";
+export { isSaveConflict, saveRefusalOf } from "./refusal";
 export { buildSaveInput } from "./save-input";
 export type {
   VisualEditorAdapter,

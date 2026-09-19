@@ -14,7 +14,10 @@ import type {
 } from "./types";
 
 import { createAreaInstance, isBlockAreaInstance } from "../../blocks/area";
-import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
+import {
+  AREA_CHILDREN_DEFAULT_MAX,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+} from "../../blocks/const";
 import { createBlockInstance } from "../../blocks/instance";
 import {
   createBlockRegistry,
@@ -3195,5 +3198,268 @@ describe("an area stored with more children than an area may hold", () => {
       { index: 1, value: oversized },
     ]);
     expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+  });
+});
+
+describe("the absolute cap on the nodes a zone stores at its top level", () => {
+  const roots = (count: number): AnyBlockInstance[] =>
+    Array.from({ length: count }, (_, at) => block(`root-${at}`));
+
+  const atCap = (): VisualEditorState =>
+    mounted(mount("main", roots(CONTENT_BLOCKS_ABSOLUTE_MAX)));
+
+  it("refuses a block inserted at a root that is already at the cap", () => {
+    const state = atCap();
+
+    const next = visualEditorReducer(state, {
+      container: into("main"),
+      index: CONTENT_BLOCKS_ABSOLUTE_MAX,
+      instance: block("one too many"),
+      type: "insert",
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it("refuses an empty area at a root that is already at the cap", () => {
+    const state = atCap();
+
+    const next = visualEditorReducer(state, {
+      area: area(),
+      index: CONTENT_BLOCKS_ABSOLUTE_MAX,
+      type: "insert-area",
+      zoneId: "main",
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it("refuses a copy of a root node once the root is at the cap", () => {
+    const state = atCap();
+
+    const next = visualEditorReducer(state, {
+      ref: ref("main", state.zones.main.nodes[0].id),
+      type: "duplicate",
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it("still reorders a root that is at the cap", () => {
+    const state = atCap();
+    const [first, second] = ids(state, "main");
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: first,
+      to: into("main"),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(ids(next, "main").slice(0, 2)).toStrictEqual([second, first]);
+    expect(next.zones.main.nodes).toHaveLength(CONTENT_BLOCKS_ABSOLUTE_MAX);
+  });
+
+  it("still moves a root block into an area while the root is at the cap", () => {
+    const holder = area();
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX - 1)]),
+    );
+    const loose = state.zones.main.nodes[1].id;
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: loose,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next.zones.main.nodes).toHaveLength(CONTENT_BLOCKS_ABSOLUTE_MAX - 1);
+    expect(childIds(next, "main", holder.id)).toStrictEqual([loose]);
+  });
+
+  it("lets an area's child out to a root one node short of the cap", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX - 2)]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main", holder.id),
+      nodeId: child.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next.zones.main.nodes).toHaveLength(CONTENT_BLOCKS_ABSOLUTE_MAX);
+    expect(childIds(next, "main", holder.id)).toStrictEqual([]);
+  });
+
+  it("keeps an area's child in once the root is at the cap", () => {
+    const child = block("inside");
+    const holder = area([child]);
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX - 1)]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main", holder.id),
+      nodeId: child.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(childIds(next, "main", holder.id)).toStrictEqual([child.id]);
+  });
+
+  it("refuses a node moved in from another zone onto a root at the cap", () => {
+    const moving = block("incoming");
+    const state = mounted(
+      mount("main", roots(CONTENT_BLOCKS_ABSOLUTE_MAX)),
+      mount("aside", [moving]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: moving.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "aside")).toStrictEqual([moving.id]);
+  });
+
+  it("refuses an area moved in from another zone onto a root at the cap", () => {
+    const holder = area();
+    const state = mounted(
+      mount("main", roots(CONTENT_BLOCKS_ABSOLUTE_MAX)),
+      mount("aside", [holder]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: holder.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "aside")).toStrictEqual([holder.id]);
+  });
+
+  it("unwraps an area whose children land on exactly the cap", () => {
+    const holder = area(roots(3));
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX - 3)]),
+    );
+
+    const next = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "unwrap-area",
+    });
+
+    expect(next.zones.main.nodes).toHaveLength(CONTENT_BLOCKS_ABSOLUTE_MAX);
+    expect(next.zones.main.nodes.some(isBlockAreaInstance)).toBe(false);
+  });
+
+  it("refuses the unwrap that would put one node past the cap", () => {
+    const holder = area(roots(3));
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX - 2)]),
+    );
+
+    const next = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "unwrap-area",
+    });
+
+    expect(next).toBe(state);
+    expect(
+      findArea(next, areaRef("main", holder.id))?.area.children,
+    ).toHaveLength(3);
+  });
+
+  it("still unwraps an empty area out of a root already past the cap", () => {
+    const holder = area();
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX + 1)]),
+    );
+
+    const next = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "unwrap-area",
+    });
+
+    expect(next.zones.main.nodes).toHaveLength(CONTENT_BLOCKS_ABSOLUTE_MAX + 1);
+  });
+
+  it("offers a root at the cap to nothing the sidebar could insert", () => {
+    const state = atCap();
+
+    expect(containerAcceptsBlock(state, into("main"))).toBe(false);
+  });
+
+  it("still offers an area inside a zone whose root is at the cap", () => {
+    const holder = area();
+    const state = mounted(
+      mount("main", [holder, ...roots(CONTENT_BLOCKS_ABSOLUTE_MAX - 1)]),
+    );
+
+    expect(containerAcceptsBlock(state, into("main", holder.id))).toBe(true);
+  });
+});
+
+describe("a root the stored content has already overfilled", () => {
+  const roots = (count: number): AnyBlockInstance[] =>
+    Array.from({ length: count }, (_, at) => block(`stored-${at}`));
+
+  const removeFirst = (state: VisualEditorState): VisualEditorState =>
+    visualEditorReducer(state, {
+      ref: ref("main", state.zones.main.nodes[0].id),
+      type: "remove",
+    });
+
+  it("stays unsafe until the last node over the cap is gone", () => {
+    const state = mounted(
+      mount("main", roots(CONTENT_BLOCKS_ABSOLUTE_MAX + 2)),
+    );
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+
+    const overByOne = removeFirst(state);
+
+    expect(overByOne.zones.main.nodes).toHaveLength(
+      CONTENT_BLOCKS_ABSOLUTE_MAX + 1,
+    );
+    expect(unsafeZoneIds(overByOne)).toStrictEqual(["main"]);
+
+    const repaired = removeFirst(overByOne);
+
+    expect(repaired.zones.main.nodes).toHaveLength(CONTENT_BLOCKS_ABSOLUTE_MAX);
+    expect(unsafeZoneIds(repaired)).toStrictEqual([]);
+  });
+
+  it("refuses anything that would grow a root already past the cap", () => {
+    const state = mounted(
+      mount("main", roots(CONTENT_BLOCKS_ABSOLUTE_MAX + 2)),
+    );
+
+    expect(
+      visualEditorReducer(state, {
+        container: into("main"),
+        index: 0,
+        instance: block("worse"),
+        type: "insert",
+      }),
+    ).toBe(state);
   });
 });

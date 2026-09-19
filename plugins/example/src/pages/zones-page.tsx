@@ -192,7 +192,10 @@ const EDIT_MODE_CHECKS = [
   "Ungroup keeps the children and drops them into the zone at the area's own position. Delete area on a non-empty area asks first, and the same dialog offers Ungroup, keep blocks. Delete an empty area and it says so instead of counting blocks.",
   "Every block sits in an inert container, so a block's own links and buttons cannot be clicked or tabbed to. Preview gives them back and collapses the sidebar to a slim bar with Back to editing and Finish editing.",
   "The profile form is application code: no overlay, no drag handle, and its input still takes focus while edit mode is on.",
-  "Save sends { pageId, zones } to PUT /api/vitnode/core/pages/layout with only the zones that changed, and answers with the blocks those zones now hold. Open Last save payload and read it. Finish editing and view mode already shows the result - no reload. Reload anyway and the areas, their children and the variant you picked all come back exactly as you left them.",
+  "Save sends { pageId, zones, expectedZones } to PUT /api/vitnode/core/pages/layout with only the zones that changed, and answers with the blocks those zones now hold. Open Last save payload and read it. Finish editing and view mode already shows the result - no reload. Reload anyway and the areas, their children and the variant you picked all come back exactly as you left them.",
+  "expectedZones is what each of those zones held when the editor opened. The API compares it with what is stored right now, under the same lock it writes in: equal and the save lands, different and it answers 409 and writes nothing, so a stale tab cannot wipe out somebody else's rearrangement. Two people editing different zones of this page both still succeed.",
+  "Open this page in two tabs, rearrange the same zone in both, and save the second one: it is refused, the toast says the page moved, and the editor keeps every block you arranged so you can reload and redo it. Change different zones in the two tabs instead and both saves land.",
+  'The "Last rearranged" line under the title reads the updatedAt the save answered with, so it moves the moment a save lands - no reload.',
   "Network, on Save: one request. Edit one zone and the body carries that zone alone - the three zones you did not touch are not in it, and the API merges it into this page's one stored row, so they keep whatever they had.",
   "A zone holding a value that is not a block shows it as an unreadable entry it refuses to drop, and Save stays disabled until you remove that entry yourself.",
   "Take the sidebar zone off the page while the editor is open: it leaves the editor too, and its Add block target and selection clear. A Save afterwards never mentions it, so whatever was stored for it stays stored - a zone the page no longer declares is ignored when rendering, never deleted. If you had edited it first, the footer says so instead of dropping the change quietly.",
@@ -241,7 +244,10 @@ const SavedPayload = ({ body }: { body: EditablePageSavePayload }) => {
           Exactly what went to <code>PUT /pages/layout</code>. The page maps
           nothing: it names its own page id, the server looks that id up in the
           pages it has registered, and every block is re-validated against the
-          zone&apos;s own allowlist before anything is stored.
+          zone&apos;s own allowlist before anything is stored.{" "}
+          <code>expectedZones</code> holds the same zones as they were when the
+          editor opened, so the server can refuse a save that would write over
+          somebody else&apos;s.
         </p>
         <pre className="bg-muted/40 overflow-x-auto rounded-md p-3 text-xs leading-relaxed">
           {JSON.stringify(body, null, 2)}
@@ -253,15 +259,16 @@ const SavedPayload = ({ body }: { body: EditablePageSavePayload }) => {
 
 const SettingsScreen = ({
   canEdit,
-  layout,
+  loadedLayout,
   openEditing,
 }: {
   canEdit: boolean;
-  layout: EditablePageLayoutPayload;
+  loadedLayout: EditablePageLayoutPayload;
   openEditing: boolean;
 }) => {
   const [editing, setEditing] = useState(canEdit && openEditing);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [layout, setLayout] = useState(loadedLayout);
   const [lastSave, setLastSave] = useState<EditablePageSavePayload | null>(
     null,
   );
@@ -281,13 +288,20 @@ const SettingsScreen = ({
 
           if (!response.ok) {
             throw new EditablePageSaveRefused(await serverRefusal(response), {
+              conflict: response.status === 409,
               pageId: settingsPage.id,
             });
           }
 
-          setLastSave(payload);
+          const stored = zodLayout.parse(await response.json());
 
-          return zodLayout.parse(await response.json());
+          setLastSave(payload);
+          setLayout(current => ({
+            ...stored,
+            zones: { ...current.zones, ...stored.zones },
+          }));
+
+          return stored;
         },
       }),
     [],
@@ -402,7 +416,7 @@ const ZonesPage = ({
 }: PluginRoutePageProps<ZonesPageData, ZonesSearch>) => (
   <SettingsScreen
     canEdit={loaderData.canEdit}
-    layout={loaderData.layout}
+    loadedLayout={loaderData.layout}
     openEditing={search.edit === true}
   />
 );

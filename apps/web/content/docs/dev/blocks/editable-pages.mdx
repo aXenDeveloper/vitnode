@@ -59,8 +59,20 @@ And per zone:
 | | |
 | :--- | :--- |
 | `allowed` | The block allowlist, or `"*"`. Declared **here**, so the page never repeats it. |
-| `max` / `min` | How many **blocks** the zone accepts. An area counts nothing itself; the blocks inside it each count one. |
+| `max` / `min` | How many **blocks** the zone accepts. An area counts nothing itself; the blocks inside it each count one. Leaving `max` out is not "unlimited" - see below. |
 | `default` | The layout the zone ships with, as real stored nodes. |
+
+#### Three limits, and they count different things
+
+Leave `max` out and the zone still has one: **200**, the `CONTENT_BLOCKS_DEFAULT_MAX` a [`blocks()` field](/docs/dev/blocks/blocks-field) already defaults to, because a zone and a field are stored and validated by the same code. Omitted means "the usual ceiling", never "as many as you like".
+
+| Limit | Value | Counts |
+| :--- | :--- | :--- |
+| A zone's `max` / `min` | `200` when `max` is omitted, `0` when `min` is | **Block instances.** A block inside an [area](/docs/dev/blocks/layout-areas) counts one; the area holding it counts nothing, so an empty area counts as nothing at all. |
+| `CONTENT_BLOCKS_ABSOLUTE_MAX` | `1000` | **Nodes in the zone's root list** - blocks and areas alike, children not included. It is the ceiling the stored column can be read back through, so a zone's own `max` may lower it and nothing may raise it. |
+| `AREA_CHILDREN_DEFAULT_MAX` | `50` | **One area's children.** A third limit, checked per area, unrelated to the two above. |
+
+All three are exported from `@vitnode/core/blocks`, and a zone that declares a `min` above its effective `max` is refused where it is declared rather than the first time somebody saves.
 
 Zone ids are **page-local**: `"sidebar"`, not `"settings:sidebar"`. The page id already namespaces them - it is what the stored layout is keyed by, and the zone ids are the keys inside it.
 
@@ -115,7 +127,21 @@ Registering one page id twice, or two plugins claiming the same id, is a startup
 </EditablePage>
 ```
 
-`<ContentZone id="sidebar" />`. That is the entire zone. No `blocks`, because the provider holds the layout. No `allowedBlocks`, because the provider holds the allowlist. Both still work if you pass them - an explicit prop always wins - but on a page that declared its zones there is nothing left to pass.
+`<ContentZone id="sidebar" />`. That is the entire zone. No `blocks`, because the provider holds the layout. No `allowedBlocks`, because the provider holds the allowlist. On a page that declared its zones there is nothing left to pass.
+
+#### What a call site may still say
+
+You can pass those props anyway, and they still do something - just not *anything*. The page declaration is what the server checks a save against, so a zone on that page can be narrowed at the call site and never widened.
+
+| At the call site | |
+| :--- | :--- |
+| `blocks` | **Overrides the source.** For a zone whose content genuinely comes from somewhere else, the array you pass is what renders. |
+| `allowedBlocks` | **Only narrows.** It is intersected with the page's allowlist, so `"*"` here cannot open a zone the page restricted, and asking for blocks the page does not allow is a developer error rather than a quietly wider zone. |
+| `min` / `max` | **Only tighten.** The higher `min` and the lower `max` win. Ask for a combination no list of blocks could satisfy - a `min` above the `max` - and it throws where you wrote it. |
+
+The page stays the ceiling and the floor. That is what makes "the zone as declared" the one thing both the editor and the save route have to agree on, and it is why an intersection is refused rather than silently emptied: a zone allowing nothing at all is a page nobody could edit.
+
+A **standalone** `<ContentZone>` - one no editable page declares - is unaffected. There is nothing to intersect with, so its own `allowedBlocks`, `min` and `max` are simply its own.
 
 | Prop | | |
 | :--- | :--- | :--- |
@@ -126,7 +152,7 @@ Registering one page id twice, or two plugins claiming the same id, is a startup
 | `adapter` | optional | Where **Save** goes. `createContentEditorAdapter` builds one. |
 | `onExit` | optional | Called by **Finish editing**, after the unsaved-changes prompt. |
 
-`EditablePage` also adopts the canonical answer a save comes back with, so view mode shows the stored result the moment you press **Finish editing** - no reload, and no second request. Hand it a layout belonging to a different page id and it throws, because rendering one page's blocks under another page's zones is how a save writes them onto the wrong page.
+`EditablePage` also adopts the canonical answer a save comes back with - the stored zones **and** the layout metadata around them, `updatedAt` included. View mode shows the stored result the moment you press **Finish editing**, with no reload and no second request, and a "Last rearranged 2 minutes ago" line on the page moves with it instead of sitting on the timestamp the loader happened to read. Hand it a layout belonging to a different page id and it throws, because rendering one page's blocks under another page's zones is how a save writes them onto the wrong page.
 
 ## Loading it
 
@@ -181,7 +207,17 @@ const adapter = useMemo(
 )
 ```
 
-The adapter turns the editor's snapshot into `{ pageId, zones }` carrying **only the zones that changed**, refuses up front to send a zone the page does not declare, and hands the server's canonical answer back so the editor rebases onto what was *stored* rather than onto what it sent.
+The adapter turns the editor's snapshot into a payload carrying **only the zones that changed**, refuses up front to send a zone the page does not declare, and hands the server's canonical answer back so the editor rebases onto what was *stored* rather than onto what it sent.
+
+```ts
+interface EditablePageSavePayload {
+  pageId: string
+  zones: Record<string, ContentNode[]>          // what you want stored
+  expectedZones: Record<string, ContentNode[]>  // what you were editing
+}
+```
+
+`expectedZones` is the second half of every save: for each zone being written, the value the editor started from. The server compares it with what is actually stored before touching anything, which is what turns "last save wins" into "the save that knew what it was replacing wins". The adapter fills it in from the editor's own baseline - you do not assemble it.
 
 <Callout title="Two files, and neither of them the editor">
   `createContentEditorAdapter` produces a `VisualEditorAdapter`, but it needs nothing
@@ -211,9 +247,20 @@ interface EditablePageLayoutPayload {
 
 `GET` is public, because a visitor renders the page from it. It answers with the **effective** layout - the shipped defaults with whatever has been customised laid over them - so the page renders what it is handed and resolves nothing itself. The defaults it sends have been through the same block schemas a saved zone goes through, so a zone still on its default arrives in the same shape as one somebody has edited, fields the block fills in and all. Hand `EditablePage` the layout from this route and it never has to guess: the `default` you declared is a fallback for a zone the server did not send, and it has not been through those schemas. A page id nobody registered is a `404`; a registered page nobody has rearranged is a `200` holding the declared defaults and `updatedAt: null`.
 
-`PUT` takes `{ pageId, zones }` with only the zones that changed, and answers with the canonical stored value of **those zones only**. The mapping from a zone id to somewhere to store it comes from the registered page, never from the body, so there is no shape of request that reaches a zone the page did not declare.
+`PUT` takes `{ pageId, zones, expectedZones }` with only the zones that changed, and answers with the canonical stored value of **those zones only** - the same `EditablePageLayoutPayload`, `updatedAt` and all, which is what the page adopts so its own layout metadata stays current. The mapping from a zone id to somewhere to store it comes from the registered page, never from the body, so there is no shape of request that reaches a zone the page did not declare. A body that writes a zone without a baseline for it is a `400`: without one the server cannot tell an edit from an overwrite.
 
-After validation the write is one read, one merge and one upsert, whatever number of zones the save named. The block validator is the engine's own; the event - `core.page-layout.updated`, carrying the page id and the zones that changed - is emitted after the commit rather than inside it; and a save that changed nothing stores nothing, bumps no `updatedAt` and emits nothing, while still answering canonically.
+After validation the write is one read, one comparison, one merge and one upsert, whatever number of zones the save named. The block validator is the engine's own; the event - `core.page-layout.updated`, carrying the page id and the zones that changed - is emitted after the commit rather than inside it; and a save that changed nothing stores nothing, bumps no `updatedAt` and emits nothing, while still answering canonically.
+
+### Two moderators, one page
+
+The comparison is **per zone**, inside the same transaction that writes, which is what lets an ordinary afternoon work out:
+
+| | |
+| :--- | :--- |
+| Two people, **different zones** | Both saves land. One writes the sidebar, the other the footer, and each leaves the other's zone exactly as it found it. Zones merge because a save only ever writes what it names. |
+| Two people, **the same zone** | The second one gets a `409` and **nothing is written**. The zone moved after their editor read it, so storing their copy would delete a change they never saw. |
+
+A `409` is not a lost afternoon: the refusal says which zones moved, nothing that was arranged is thrown away, and reloading the page picks up what is really there to redo the change on top of it. Nothing polls and nothing locks - the baseline travels with the save, so the only thing that can ever be overwritten is a zone whose stored value is still the one being edited.
 
 ## "Can I edit this?"
 
@@ -283,6 +330,8 @@ Every refusal is named, and none of them falls back to a default or silently dro
 | A page id nobody registered | `400`, saying there is nothing this save could be writing. |
 | A zone the page does not declare | `400`, listing the zones it does. |
 | No zones at all | `400`. A save names what it changed, and this one named none. |
+| A zone written without a baseline | `400`. Every zone in `zones` needs its counterpart in `expectedZones`. |
+| A zone somebody else changed first | `409`, naming the zones that moved. Nothing is written - not even the zones that would have been fine. |
 | A block the zone does not allow | `400`, from the zone's own `allowed` - nested inside an area too. |
 | Too many or too few blocks | `400`, from the zone's own `max` and `min`, counting an area's children. |
 | The permission is not held | `403`. |

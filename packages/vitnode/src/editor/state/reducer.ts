@@ -22,9 +22,11 @@ import { createBlockInstanceId } from "../../blocks/instance";
 import { editableBlockIssue } from "../block-shell/issue";
 import {
   areaHasRoom,
+  fitsRootNodeCap,
   fitsZoneMax,
   fitsZoneMin,
   zoneBlockCount,
+  zoneRootNodeCount,
 } from "./bounds";
 import {
   refusesAnyType,
@@ -288,7 +290,11 @@ const holdsRejectedBlock = (zone: EditorZoneState): boolean => {
 const breaksZoneBounds = (zone: EditorZoneState): boolean => {
   const blocks = zoneBlockCount(zone.nodes);
 
-  return !fitsZoneMin(zone.min, blocks) || !fitsZoneMax(zone.max, blocks);
+  return (
+    !fitsZoneMin(zone.min, blocks) ||
+    !fitsZoneMax(zone.max, blocks) ||
+    !fitsRootNodeCap(zoneRootNodeCount(zone.nodes))
+  );
 };
 
 export const unsafeZoneIds = (state: VisualEditorState): string[] =>
@@ -324,10 +330,21 @@ const withZones = (
   zones: Record<string, EditorZoneState>,
 ): VisualEditorState => ({ ...state, zones: { ...state.zones, ...zones } });
 
+const zoneKeepsRootNodeCap = (
+  zone: EditorZoneState,
+  nodes: readonly ContentNode[],
+): boolean => {
+  const after = zoneRootNodeCount(nodes);
+
+  return after <= zoneRootNodeCount(zone.nodes) || fitsRootNodeCap(after);
+};
+
 const zoneKeepsBounds = (
   zone: EditorZoneState,
   nodes: readonly ContentNode[],
 ): boolean => {
+  if (!zoneKeepsRootNodeCap(zone, nodes)) return false;
+
   const before = zoneBlockCount(zone.nodes);
   const after = zoneBlockCount(nodes);
 
@@ -385,7 +402,12 @@ export const containerAcceptsBlock = (
   const zone = state.zones[container.zoneId];
   const nodes = containerNodes(state, container);
   if (!zone || nodes === null) return false;
-  if (container.areaId !== null && !areaHasRoom(nodes.length)) return false;
+
+  if (container.areaId === null) {
+    if (!fitsRootNodeCap(zoneRootNodeCount(zone.nodes) + 1)) return false;
+  } else if (!areaHasRoom(nodes.length)) {
+    return false;
+  }
 
   return fitsZoneMax(zone.max, zoneBlockCount(zone.nodes) + 1);
 };
@@ -926,6 +948,8 @@ export const visualEditorReducer = (
         ...found.area.children,
         ...zone.nodes.slice(found.index + 1),
       ];
+      if (!zoneKeepsBounds(zone, nodes)) return state;
+
       const selected = state.selected;
       const unwrapped =
         selected !== null && selectionInside(selected, action.ref)

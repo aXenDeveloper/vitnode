@@ -37,6 +37,7 @@ export interface EditablePageDefinition<TZoneId extends string = string> {
 export type AnyEditablePageDefinition = EditablePageDefinition<never>;
 
 export interface EditablePageSavePayload {
+  expectedZones: Record<string, ContentNode[]>;
   pageId: string;
   zones: Record<string, ContentNode[]>;
 }

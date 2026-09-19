@@ -6,6 +6,7 @@ import type { RegisteredBlock } from "../../blocks/types";
 import { blocks as builtInBlocks } from "../../blocks/built-in";
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
+import { safeParseBlockData } from "../../blocks/schema";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
 import { field } from "../../content/fields";
 import { getDefaults } from "../../lib/helpers/auto-form";
@@ -13,8 +14,10 @@ import { createBlockInstanceFor } from "../instance/defaults";
 import {
   blockDataFromFormValues,
   blockDisplayName,
+  blockFieldPatchEntries,
   blockFieldSpecs,
   blockFormSpec,
+  normalizeBlockFieldValue,
 } from "./spec";
 
 const sampleBlock = defineBlock({
@@ -199,5 +202,170 @@ describe("blockDataFromFormValues", () => {
 
     expect(data.seo).toStrictEqual({ title: null });
     expect(openedInEditor(entry, data)).toStrictEqual(data);
+  });
+});
+
+const ISO = "2026-09-19T10:00:00.000Z";
+
+const seoGroup = field.group({
+  fields: {
+    caption: field.text({ required: true }),
+    note: field.text({ minLength: 0 }),
+    publishedAt: field.dateTime(),
+    retiredAt: field.dateTime({ nullable: true }),
+    subtitle: field.text({ minLength: 3 }),
+    weight: field.number({ integer: true, min: 1 }),
+  },
+});
+
+const detailBlock = defineBlock({
+  component: () => null,
+  fields: { headline: field.text({ required: true }), seo: seoGroup },
+  id: "detail",
+});
+
+const detailEntry: RegisteredBlock = {
+  definition: detailBlock,
+  namespace: "sample",
+  pluginId: "@vitnode/sample",
+  type: "sample:detail",
+};
+
+describe("normalizeBlockFieldValue", () => {
+  it("drops an optional leaf the group's own schema cannot store", () => {
+    expect(
+      normalizeBlockFieldValue(seoGroup, {
+        publishedAt: null,
+        subtitle: "Hi there",
+      }),
+    ).toStrictEqual({ subtitle: "Hi there" });
+  });
+
+  it("drops an optional text leaf that refuses the empty string", () => {
+    expect(normalizeBlockFieldValue(seoGroup, { subtitle: "" })).toStrictEqual(
+      {},
+    );
+  });
+
+  it("keeps the empty string a leaf declares as valid", () => {
+    expect(normalizeBlockFieldValue(seoGroup, { note: "" })).toStrictEqual({
+      note: "",
+    });
+  });
+
+  it("keeps null where the leaf is nullable", () => {
+    expect(
+      normalizeBlockFieldValue(seoGroup, { retiredAt: null }),
+    ).toStrictEqual({ retiredAt: null });
+  });
+
+  it("never deletes a required leaf", () => {
+    expect(normalizeBlockFieldValue(seoGroup, { caption: "" })).toStrictEqual({
+      caption: "",
+    });
+  });
+
+  it("leaves a scalar field and a key the group never declared alone", () => {
+    expect(normalizeBlockFieldValue(field.text({ minLength: 3 }), "")).toBe("");
+    expect(normalizeBlockFieldValue(seoGroup, { stray: null })).toStrictEqual({
+      stray: null,
+    });
+  });
+
+  it("leaves a group that holds nothing exactly as it is", () => {
+    expect(normalizeBlockFieldValue(seoGroup, null)).toBeNull();
+    expect(normalizeBlockFieldValue(undefined, "")).toBe("");
+  });
+
+  it("does not touch the object it was handed", () => {
+    const value = { publishedAt: null, subtitle: "Hi there" };
+
+    normalizeBlockFieldValue(seoGroup, value);
+
+    expect(value).toStrictEqual({ publishedAt: null, subtitle: "Hi there" });
+  });
+
+  it("descends into every row of a repeatable", () => {
+    const rows = field.repeatable({
+      fields: {
+        publishedAt: field.dateTime(),
+        subtitle: field.text({ minLength: 3 }),
+      },
+    });
+
+    expect(
+      normalizeBlockFieldValue(rows, [
+        { publishedAt: null, subtitle: "Hi there" },
+        { publishedAt: ISO, subtitle: "" },
+      ]),
+    ).toStrictEqual([{ subtitle: "Hi there" }, { publishedAt: ISO }]);
+  });
+});
+
+describe("blockFieldPatchEntries", () => {
+  const stored = {
+    headline: "Headline",
+    seo: { caption: "Caption", publishedAt: ISO, subtitle: "Hi there" },
+  };
+  const formSchema = buildFormSchemaFromSpec(
+    blockFormSpec(detailEntry),
+    stored,
+  );
+  const cleared = {
+    caption: "Caption",
+    publishedAt: null,
+    subtitle: "Hi there",
+  };
+
+  it("lets a group through once its cleared leaf is gone", () => {
+    expect(
+      blockFieldPatchEntries(detailBlock, formSchema, "seo", cleared),
+    ).toStrictEqual([["seo", { caption: "Caption", subtitle: "Hi there" }]]);
+  });
+
+  it("does not let the value the form opened on back in as a default", () => {
+    const [entry] = blockFieldPatchEntries(
+      detailBlock,
+      formSchema,
+      "seo",
+      cleared,
+    );
+
+    expect(Object.hasOwn(entry[1] as object, "publishedAt")).toBe(false);
+  });
+
+  it("produces a group the block's own schema accepts", () => {
+    const [entry] = blockFieldPatchEntries(
+      detailBlock,
+      formSchema,
+      "seo",
+      cleared,
+    );
+
+    expect(
+      safeParseBlockData(detailBlock, { headline: "Headline", seo: entry[1] })
+        .success,
+    ).toBe(true);
+  });
+
+  it("holds a group back while one of its leaves is genuinely invalid", () => {
+    expect(
+      blockFieldPatchEntries(detailBlock, formSchema, "seo", {
+        ...cleared,
+        subtitle: "no",
+      }),
+    ).toStrictEqual([]);
+  });
+
+  it("keeps the coercion the form schema does on what the DOM produced", () => {
+    expect(
+      blockFieldPatchEntries(detailBlock, formSchema, "seo", {
+        caption: "Caption",
+        subtitle: "Hi there",
+        weight: "5",
+      }),
+    ).toStrictEqual([
+      ["seo", { caption: "Caption", subtitle: "Hi there", weight: 5 }],
+    ]);
   });
 });

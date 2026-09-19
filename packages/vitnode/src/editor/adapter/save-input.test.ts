@@ -51,6 +51,47 @@ describe("buildSaveInput", () => {
     expect(input.zones.aside).toStrictEqual([c]);
   });
 
+  it("carries the baseline of the changed zones, and of nothing else", () => {
+    const [a, b, c] = [block("a"), block("b"), block("c")];
+    const state = visualEditorReducer(
+      mounted(mount("main", [a, b]), mount("aside", [c])),
+      {
+        ref: { areaId: null, kind: "block", nodeId: b.id, zoneId: "main" },
+        type: "remove",
+      },
+    );
+
+    const input = buildSaveInput(state);
+
+    expect(Object.keys(input.expectedZones)).toStrictEqual(["main"]);
+    expect(input.expectedZones.main).toBe(state.zones.main.initial);
+    expect(input.expectedZones.main).toStrictEqual([a, b]);
+    expect(input.zones.main).toStrictEqual([a]);
+  });
+
+  it("re-baselines on what a save stored, so the next save expects that", () => {
+    const [a, b] = [block("a"), block("b")];
+    const edited = visualEditorReducer(mounted(mount("main", [a])), {
+      container: { areaId: null, zoneId: "main" },
+      index: 1,
+      instance: b,
+      type: "insert",
+    });
+    const saved = visualEditorReducer(edited, {
+      canonical: undefined,
+      invalid: buildInvalidSnapshot(edited),
+      snapshot: buildSaveInput(edited).zones,
+      type: "saved",
+    });
+    const again = visualEditorReducer(saved, {
+      ref: { areaId: null, kind: "block", nodeId: a.id, zoneId: "main" },
+      type: "remove",
+    });
+
+    expect(buildSaveInput(edited).expectedZones.main).toStrictEqual([a]);
+    expect(buildSaveInput(again).expectedZones.main).toStrictEqual([a, b]);
+  });
+
   it("snapshots an area with the blocks that sit inside it", () => {
     const child = createBlockInstance("core:hero", { title: "a" }, "wide");
     const holder = createAreaInstance({ children: [child] });
@@ -82,6 +123,7 @@ describe("buildSaveInput", () => {
   it("is empty before any zone mounts", () => {
     expect(buildSaveInput(initialVisualEditorState)).toStrictEqual({
       changedZoneIds: [],
+      expectedZones: {},
       zones: {},
     });
   });

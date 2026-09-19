@@ -60,6 +60,21 @@ A zone id is never generated and never an array index. Saved editor state will a
 
 That throws the first time the page renders, in development or in a test, because a zone id is a literal you wrote - never something a visitor can influence.
 
+### One id, one place on the page
+
+A zone id names a **location**, so two zones on one page may not share one. Render the same id twice and view mode simply renders both lists, but edit mode refuses:
+
+```tsx
+<ContentZone id="main" />
+<ProfileForm />
+<ContentZone id="main" />
+// BlockError: Two `<ContentZone id="main" />` outlets are on the page at the same time…
+```
+
+The editor stores, moves and saves blocks by zone id. With two of them it cannot tell which place a block belongs to, and a save would write one over the other - so it says so the moment both are on the page, rather than picking one and being wrong quietly. Moving a zone to a different element, re-rendering it under another branch of the page, and React's double-invoked effects in development are all fine: the refusal is only for two elements that are genuinely on the page at once.
+
+Need the same content in two places? Two ids - `main` and `main-aside` - and the page decides what goes in each.
+
 ## Zones around locked application UI
 
 This is the case Content Zones exist for. Not every page is a CMS page: most of an application is code, and the useful thing is to be able to put content *around* it.
@@ -201,7 +216,17 @@ If the page is an [editable page](/docs/dev/blocks/editable-pages), do not write
 </EditablePage>
 ```
 
-An `id` is the whole zone. There is no second copy to drift, and asking for a zone the page does not declare throws rather than rendering one no save will ever reach. An explicitly passed `blocks` or `allowedBlocks` still wins, for a zone whose content genuinely comes from somewhere else.
+An `id` is the whole zone. There is no second copy to drift, and asking for a zone the page does not declare throws rather than rendering one no save will ever reach.
+
+You may still pass props on a declared zone, with one rule: the page declaration is the ceiling.
+
+| | |
+| :--- | :--- |
+| `blocks` | Overrides where the content comes from - the array you pass is what renders. |
+| `allowedBlocks` | **Narrows only.** It is intersected with the page's allowlist, so `"*"` here cannot re-open a zone the page restricted, and an intersection of nothing is a developer error rather than a zone nobody can fill. |
+| `min` / `max` | **Tighten only.** The higher `min` and the lower `max` win, and a `min` that ends up above the `max` throws where you wrote it. |
+
+That is only true for a zone an [editable page](/docs/dev/blocks/editable-pages#what-a-call-site-may-still-say) declares, because that declaration is what the save route checks against. A standalone `<ContentZone>` has nothing to be intersected with, so its own props are simply its own.
 
 For a zone outside an editable page, put the array in a module of its own and import it from both ends:
 
@@ -305,7 +330,7 @@ The format stays small and predictable on purpose. An id, and a comma-separated 
 <Callout title="A zone without a wrapper has no marker - by design" type="warn">
   Most zones render no element, so most zones leave no trace in view-mode HTML. That is the [empty-zone and no-wrapper behaviour](#what-a-zone-renders) working as intended, and it means **the set of zones on a page is not discoverable by scanning public DOM**.
 
-  Edit mode must not try. When it arrives it will know its zones because it rendered them - each `ContentZone` can register itself while edit mode is on - not by walking the document looking for attributes that were never promised to be there.
+  Edit mode does not try. It knows its zones because it rendered them - each `ContentZone` registers itself while edit mode is on - rather than walking the document looking for attributes that were never promised to be there. That registration is also what notices [two zones claiming one id](#one-id-one-place-on-the-page): the list the editor keeps is the truth, not the DOM.
 </Callout>
 
 If you need those values yourself, `@vitnode/core/blocks` exports the pieces without any React:
@@ -329,7 +354,8 @@ parseContentZoneId("settings:before-profile")
 | `id` | — | The zone's stable name. Required. |
 | `blocks` | — | The instances to render. `null`, `undefined` and `[]` all render nothing. |
 | `registry` | the process default | The registry to resolve blocks against. |
-| `allowedBlocks` | none | What may be placed here. Same shape as a `blocks()` field's `allowed`. |
+| `allowedBlocks` | none | What may be placed here. Same shape as a `blocks()` field's `allowed`. Under an editable page it may only narrow what the page allows. |
+| `min` / `max` | `0` / `200` | How many blocks belong here. Under an editable page they may only tighten the page's own bounds, and with no `max` written anywhere storage still applies its usual ceiling of `200`. |
 | `as` | none | An HTML element name to wrap in. Components are not accepted. |
 | `className` | none | A class for that wrapper. Implies `as="div"`. |
 | `validate` | `"development"` | Passed through to the renderer, and gates the allowlist check. |

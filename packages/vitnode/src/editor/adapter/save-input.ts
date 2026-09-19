@@ -9,17 +9,28 @@ import { changedZoneIds } from "../state/reducer";
 
 export const buildSaveInput = (
   state: VisualEditorState,
-): VisualEditorSaveInput => ({
-  changedZoneIds: changedZoneIds(state),
-  zones: Object.fromEntries(
-    state.order
-      .map(zoneId => [zoneId, state.zones[zoneId]?.nodes] as const)
-      .filter(
-        (entry): entry is readonly [string, readonly ContentNode[]] =>
-          entry[1] !== undefined,
-      ),
-  ),
-});
+): VisualEditorSaveInput => {
+  const changed = changedZoneIds(state);
+
+  return {
+    changedZoneIds: changed,
+    expectedZones: Object.fromEntries(
+      changed.flatMap(zoneId => {
+        const zone = state.zones[zoneId];
+
+        return zone ? [[zoneId, zone.initial] as const] : [];
+      }),
+    ),
+    zones: Object.fromEntries(
+      state.order
+        .map(zoneId => [zoneId, state.zones[zoneId]?.nodes] as const)
+        .filter(
+          (entry): entry is readonly [string, readonly ContentNode[]] =>
+            entry[1] !== undefined,
+        ),
+    ),
+  };
+};
 
 export const buildInvalidSnapshot = (
   state: VisualEditorState,

@@ -5,7 +5,7 @@ import type { BlockAllowedSpec, ContentNode } from "./types";
 export interface EditablePageZoneResolution {
   allowedBlocks: BlockAllowedSpec | undefined;
   blocks: readonly ContentNode[];
-  max: number | undefined;
+  max: number;
   min: number | undefined;
 }
 

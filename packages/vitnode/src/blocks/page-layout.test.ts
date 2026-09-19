@@ -20,7 +20,13 @@ const layout = {
 const input = (
   changedZoneIds: string[],
   zones: Record<string, ContentNode[]>,
-): VisualEditorSaveInput => ({ changedZoneIds, zones });
+): VisualEditorSaveInput => ({
+  changedZoneIds,
+  expectedZones: Object.fromEntries(
+    changedZoneIds.map(zoneId => [zoneId, [block("Baseline", "b1")]]),
+  ),
+  zones,
+});
 
 describe("what a page renders before anyone edits it", () => {
   it("is what the layout holds", () => {

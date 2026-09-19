@@ -24,12 +24,13 @@ export const ContentZoneOutlet = ({
     if (node) runtime.registerZone({ mount, node });
   }, [mount, node, runtime]);
 
-  useEffect(
-    () => () => {
-      runtime.releaseZone(id);
-    },
-    [id, runtime],
-  );
+  useEffect(() => {
+    if (!node) return;
+
+    return () => {
+      runtime.releaseZone({ id, node });
+    };
+  }, [id, node, runtime]);
 
   const transparent =
     runtime.preview && mount.as === undefined && mount.className === undefined;

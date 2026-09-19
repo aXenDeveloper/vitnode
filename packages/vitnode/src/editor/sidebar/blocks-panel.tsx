@@ -21,6 +21,7 @@ import {
 import { BlockCatalogEntryCard } from "../block-picker/entry-card";
 import { useVisualEditor } from "../context";
 import { useCatalogDraggable } from "../dnd/use-catalog-draggable";
+import { refusesRootNode } from "../state/bounds";
 
 const CARD_CLASS =
   "border-border bg-card text-card-foreground hover:border-primary/60 hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring flex w-full items-start gap-2 rounded-md border p-2 text-start transition-colors focus-visible:ring-2 focus-visible:outline-none";
@@ -69,12 +70,20 @@ const AreaCatalogItem = ({
   area: AreaCatalogEntry;
 }): ReactElement => {
   const t = useTranslations("core.editor");
-  const { insertArea } = useVisualEditor();
+  const { insertArea, insertTarget, state } = useVisualEditor();
+  const zoneId = insertTarget?.zoneId ?? state.order[0];
+  const refused = refusesRootNode(
+    zoneId === undefined ? undefined : state.zones[zoneId],
+  );
 
   return (
     <button
       aria-label={t("picker.add_area")}
-      className={cn(CARD_CLASS, "cursor-pointer")}
+      className={cn(
+        CARD_CLASS,
+        refused ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+      )}
+      disabled={refused}
       onClick={() => {
         insertArea({});
       }}

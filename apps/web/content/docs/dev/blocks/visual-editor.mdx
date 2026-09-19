@@ -375,6 +375,8 @@ interface EditorBlockRef {
 
 Drag-and-drop ids are built the same way - `blockDraggableId({ zoneId, blockId })` percent-encodes both halves, so an id survives a round trip whatever characters it contains - and the drag payload carries the ref structurally rather than being parsed back out of a string. Selecting the copy of `X` in the sidebar zone can never edit the copy of `X` above the profile form.
 
+Zone ids run the other way: a zone id is a *place*, so one page may only have one of each. Two `<ContentZone>`s claiming the same id while the editor is open is a [developer error](/docs/dev/blocks/content-zones#one-id-one-place-on-the-page), not a merge.
+
 ### Saving is blocked until you decide
 
 While a zone still holds one, the whole editor refuses to save. The **Save** button is disabled, the sidebar footer explains why, and the adapter is not called even from **Save and finish**:
@@ -413,6 +415,7 @@ type VisualEditorSnapshot = Readonly<
 
 interface VisualEditorSaveInput {
   changedZoneIds: readonly string[]
+  expectedZones: VisualEditorSnapshot
   zones: VisualEditorSnapshot
 }
 
@@ -428,7 +431,9 @@ interface VisualEditorAdapter {
 }
 ```
 
-`zones` holds every zone on the page keyed by its id; `changedZoneIds` names the ones that actually differ from what loaded. Resolve and the editor marks itself clean and toasts. Throw or reject and it shows an error and keeps the changes, so nothing is lost to a failed request.
+`zones` holds every zone on the page keyed by its id; `changedZoneIds` names the ones that actually differ from what loaded; `expectedZones` holds, under the same keys, the **baseline** each zone started from - what was there before anybody dragged anything. Resolve and the editor marks itself clean and toasts. Throw or reject and it shows an error and keeps the changes, so nothing is lost to a failed request.
+
+Send the baseline with the write and your API can answer the only question that matters when two people are arranging one page: *is the thing I am replacing still the thing I was given?* Zones are independent, so two moderators editing different zones both succeed, while a write to a zone that moved underneath somebody is refused instead of silently winning. [Editable Pages](/docs/dev/blocks/editable-pages#two-moderators-one-page) does exactly that with a `409`, and the editor says so - *Somebody else saved this page first* - while keeping every change you made.
 
 The one rule the contract asks of you: **save what you were handed**. The editor rebases its idea of "unchanged" onto the snapshot it sent, not onto the state it is in when the promise resolves - so a word typed while the request was in flight is still unsaved afterwards, exactly as it should be.
 
@@ -446,13 +451,16 @@ The one rule the contract asks of you: **save what you were handed**. The editor
 ```tsx
 const adapter = useMemo<VisualEditorAdapter>(
   () => ({
-    save: async ({ changedZoneIds, zones }) => {
+    save: async ({ changedZoneIds, expectedZones, zones }) => {
       await fetcher({
         plugin: "@vitnode/example",
         method: "patch",
         module: "pages",
         path: "/{id}/zones",
-        args: { param: { id: page.id }, json: { zones, changedZoneIds } },
+        args: {
+          param: { id: page.id },
+          json: { changedZoneIds, expectedZones, zones },
+        },
       })
     },
   }),
@@ -557,7 +565,7 @@ Being clear about the edges is more useful than a roadmap.
 | **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                      |
 | **Permission UI**                 | No roles screen. Who may edit is your page's answer, and the save route's; an [editable page](/docs/dev/blocks/editable-pages#can-i-edit-this) names the moderator permission it wants, but granting it is the ordinary staff screen's job. |
 | **Layout administration**         | No AdminCP section listing which pages have been rearranged, no reset-to-default, no export or import, no copying one page's layout onto another. [Deliberately left to a possible V2](/docs/dev/blocks/editable-pages#where-a-layout-is-stored) - the storage shape makes each of them a query on one table, but none is built. |
-| **Conflict detection**            | Two people editing one page overwrite each other. A save is one transaction, so a row is never half-written, but nothing compares revisions on the way in. |
+| **Live collaboration**            | No shared cursors, no presence, no merging two people's edits to **one** zone. Different zones of one page do merge, and a stale write to the same zone is refused rather than applied - see [two moderators, one page](/docs/dev/blocks/editable-pages#two-moderators-one-page) - but nobody watches anybody else arrange anything in real time. |
 | **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel. |
 | **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                             |
 | **Inline rich text**              | Text is edited in the properties panel, not by clicking into the rendered paragraph.                                                                                                                    |

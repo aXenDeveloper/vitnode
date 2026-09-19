@@ -8,6 +8,7 @@ import type { BlockComponentProps, BlockData, ContentNode } from "./types";
 
 import { defineEditablePage } from "../content/editor/define";
 import { field } from "../content/fields";
+import { CONTENT_BLOCKS_DEFAULT_MAX } from "./const";
 import { defineBlock } from "./define";
 import { ContentEditContext } from "./edit-context";
 import { EditablePage } from "./page";
@@ -308,6 +309,7 @@ describe("what a page renders once a save lands", () => {
     await act(async () => {
       await saving.save({
         changedZoneIds: ["main"],
+        expectedZones: { main: [block("Stored", "s1")] },
         zones: { main: [block("Edited", "e1")] },
       });
     });
@@ -333,6 +335,7 @@ describe("what a page renders once a save lands", () => {
     await act(async () => {
       await saving.save({
         changedZoneIds: ["main"],
+        expectedZones: { main: [block("Stored", "s1")] },
         zones: { main: [block("Edited", "e1")] },
       });
     });
@@ -351,6 +354,7 @@ describe("what a page renders once a save lands", () => {
     await act(async () => {
       await saving.save({
         changedZoneIds: ["main"],
+        expectedZones: { main: [block("Stored", "s1")] },
         zones: { main: [block("Edited", "e1")] },
       });
     });
@@ -693,5 +697,63 @@ describe("the allowlist a call site may and may not ask for", () => {
         </EditablePage>,
       ),
     ).toThrow(/no allowed blocks at all/);
+  });
+});
+
+describe("the max a page zone hands the editor when it declares none", () => {
+  const open = defineEditablePage({
+    id: "example:open",
+    permission: { module: "widgets", permission: "can_edit" },
+    zones: {
+      generous: { max: 300 },
+      plain: {},
+    },
+  });
+
+  const registered = (zone: ReactNode): ContentZoneMount => {
+    const mounts: ContentZoneMount[] = [];
+    const runtime: ContentEditRuntime = {
+      preview: false,
+      registerZone: entry => {
+        mounts.push(entry.mount);
+      },
+      releaseZone: () => undefined,
+    };
+
+    render(
+      <EditablePage page={open}>
+        <ContentEditContext value={runtime}>{zone}</ContentEditContext>
+      </EditablePage>,
+    );
+
+    const last = mounts.at(-1);
+
+    if (!last) throw new Error("the zone registered no mount with the editor");
+
+    return last;
+  };
+
+  it("hands the editor the same default the server validates through", () => {
+    expect(registered(<ContentZone id="plain" registry={registry} />).max).toBe(
+      CONTENT_BLOCKS_DEFAULT_MAX,
+    );
+  });
+
+  it("keeps that default when the call site asks for a looser one", () => {
+    expect(
+      registered(<ContentZone id="plain" max={500} registry={registry} />).max,
+    ).toBe(CONTENT_BLOCKS_DEFAULT_MAX);
+  });
+
+  it("takes the call site's max when it is tighter than the default", () => {
+    expect(
+      registered(<ContentZone id="plain" max={50} registry={registry} />).max,
+    ).toBe(50);
+  });
+
+  it("leaves a zone that declares its own max alone", () => {
+    expect(
+      registered(<ContentZone id="generous" registry={registry} />).max,
+    ).toBe(300);
   });
 });
