@@ -437,3 +437,119 @@ describe("the bounds a zone hands the editor", () => {
     expect(mount.min).toBe(2);
   });
 });
+
+describe("the bounds a call site may and may not ask for", () => {
+  const bounded = defineEditablePage({
+    id: "example:bounded",
+    permission: { module: "widgets", permission: "can_edit" },
+    zones: {
+      narrow: {
+        allowed: ["core:text"],
+        default: [block("One", "n1")],
+        max: 3,
+        min: 1,
+      },
+      roomy: {
+        allowed: ["core:text"],
+        default: [block("One", "r1"), block("Two", "r2")],
+        max: 10,
+        min: 2,
+      },
+    },
+  });
+
+  const registered = (zone: ReactNode, inPage = true): ContentZoneMount => {
+    const mounts: ContentZoneMount[] = [];
+    const runtime: ContentEditRuntime = {
+      preview: false,
+      registerZone: entry => {
+        mounts.push(entry.mount);
+      },
+      releaseZone: () => undefined,
+    };
+    const edited = (
+      <ContentEditContext value={runtime}>{zone}</ContentEditContext>
+    );
+
+    render(
+      inPage ? <EditablePage page={bounded}>{edited}</EditablePage> : edited,
+    );
+
+    const last = mounts.at(-1);
+
+    if (!last) throw new Error("the zone registered no mount with the editor");
+
+    return last;
+  };
+
+  it("keeps the page's max when the call site asks for a looser one", () => {
+    expect(
+      registered(<ContentZone id="narrow" max={10} registry={registry} />).max,
+    ).toBe(3);
+  });
+
+  it("takes the call site's max when it is tighter than the page's", () => {
+    expect(
+      registered(<ContentZone id="roomy" max={3} registry={registry} />).max,
+    ).toBe(3);
+  });
+
+  it("keeps the page's min when the call site asks for a looser one", () => {
+    expect(
+      registered(<ContentZone id="roomy" min={0} registry={registry} />).min,
+    ).toBe(2);
+  });
+
+  it("takes the call site's min when it is tighter than the page's", () => {
+    expect(
+      registered(<ContentZone id="narrow" min={2} registry={registry} />).min,
+    ).toBe(2);
+  });
+
+  it("narrows both ends at once, each from whichever side is tighter", () => {
+    const mount = registered(
+      <ContentZone id="roomy" max={4} min={0} registry={registry} />,
+    );
+
+    expect(mount.max).toBe(4);
+    expect(mount.min).toBe(2);
+  });
+
+  it("refuses a pair no list of blocks could satisfy, and says why", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(() =>
+      registered(<ContentZone id="narrow" min={5} registry={registry} />),
+    ).toThrow(/min 5 and max 3/);
+  });
+
+  it("leaves a zone the page never declared with exactly what it was given", () => {
+    const mount = registered(
+      <ContentZone
+        blocks={[block("Alone", "a1")]}
+        id="free"
+        max={5}
+        min={2}
+        registry={registry}
+      />,
+      false,
+    );
+
+    expect(mount.max).toBe(5);
+    expect(mount.min).toBe(2);
+  });
+
+  it("still inherits the page's bounds and allowlist behind explicit blocks", () => {
+    const mount = registered(
+      <ContentZone
+        blocks={[block("Passed", "p1")]}
+        id="roomy"
+        registry={registry}
+      />,
+    );
+
+    expect(mount.allowedBlocks).toStrictEqual(["core:text"]);
+    expect(mount.max).toBe(10);
+    expect(mount.min).toBe(2);
+  });
+});

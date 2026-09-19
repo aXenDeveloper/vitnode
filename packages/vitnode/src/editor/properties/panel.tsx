@@ -5,11 +5,11 @@ import { Fragment, type ReactElement, useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type {
+  AnyBlockDefinition,
   AnyBlockInstance,
   BlockUnknownData,
   RegisteredBlock,
 } from "../../blocks/types";
-import type { ContentFormFieldSpec } from "../../content/admin/spec";
 import type { EditorNodeRef } from "../state/types";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
@@ -38,14 +38,14 @@ import {
 import { BlockVariantControl } from "./variant";
 
 const BlockDataSync = ({
+  definition,
   formSchema,
   onSent,
-  specs,
   target,
 }: {
+  definition: AnyBlockDefinition;
   formSchema: z.ZodObject<z.ZodRawShape>;
   onSent: (patch: BlockUnknownData, removed: readonly string[]) => void;
-  specs: readonly ContentFormFieldSpec[];
   target: EditorNodeRef;
 }) => {
   const { dispatch } = useVisualEditor();
@@ -64,7 +64,7 @@ const BlockDataSync = ({
       if (changed.length === 0) return;
 
       const removed = changed.filter(name =>
-        clearsBlockField(specs, name, values[name]),
+        clearsBlockField(definition, name, values[name]),
       );
       const patch = blockDataFromFormValues(
         {},
@@ -89,7 +89,7 @@ const BlockDataSync = ({
     return () => {
       subscription.unsubscribe();
     };
-  }, [dispatch, form, formSchema, onSent, specs, target]);
+  }, [definition, dispatch, form, formSchema, onSent, target]);
 
   return null;
 };
@@ -128,9 +128,9 @@ const BlockPropertiesForm = ({
       mode="onChange"
     >
       <BlockDataSync
+        definition={entry.definition}
         formSchema={formSchema}
         onSent={onSent}
-        specs={specs}
         target={target}
       />
     </AutoForm>

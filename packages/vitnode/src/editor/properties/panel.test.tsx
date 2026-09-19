@@ -55,6 +55,18 @@ const Schedule = ({
   data,
 }: BlockComponentProps<BlockData<typeof dateFields>>) => <p>{data.startsAt}</p>;
 
+const copyFields = {
+  blurb: field.textarea({ minLength: 3 }),
+  headline: field.text({ minLength: 3, required: true }),
+  note: field.text({ minLength: 0 }),
+  slogan: field.text({ minLength: 3 }),
+  subtitle: field.text({ minLength: 3, nullable: true }),
+};
+
+const Copy = ({ data }: BlockComponentProps<BlockData<typeof copyFields>>) => (
+  <p>{data.headline}</p>
+);
+
 const registry = createBlockRegistry([
   {
     pluginId: "@vitnode/core",
@@ -62,6 +74,7 @@ const registry = createBlockRegistry([
     blocks: [
       defineBlock({ component: Card, fields, id: "card" }),
       defineBlock({ component: Schedule, fields: dateFields, id: "schedule" }),
+      defineBlock({ component: Copy, fields: copyFields, id: "copy" }),
     ],
   },
 ]);
@@ -86,6 +99,12 @@ const scheduled = (data: Record<string, unknown>): HarnessNode => ({
   data,
   id: NODE_ID,
   type: "core:schedule",
+});
+
+const written = (data: Record<string, unknown>): HarnessNode => ({
+  data: { headline: "Headline", ...data },
+  id: NODE_ID,
+  type: "core:copy",
 });
 
 const ref = {
@@ -312,5 +331,63 @@ describe("a date the block does not have to hold, cleared", () => {
     expect(storedData().publishedAt).toBe(
       new Date("2026-09-01T08:30").toISOString(),
     );
+  });
+});
+
+describe("text the block does not have to hold, cleared", () => {
+  it("drops the key an optional text field that refuses empty was stored under", () => {
+    render(<Harness node={written({ slogan: "A valid value" })} />);
+
+    typeInto(screen.getByLabelText(/Slogan/), "");
+
+    expect(storedData()).toStrictEqual({ headline: "Headline" });
+  });
+
+  it("drops the key an optional textarea that refuses empty was stored under", () => {
+    render(<Harness node={written({ blurb: "A valid value" })} />);
+
+    typeInto(screen.getByLabelText(/Blurb/), "");
+
+    expect(storedData()).toStrictEqual({ headline: "Headline" });
+  });
+
+  it("stores the empty string an optional text field actually accepts", () => {
+    render(<Harness node={written({ note: "value" })} />);
+
+    typeInto(screen.getByLabelText(/Note/), "");
+
+    expect(storedData()).toStrictEqual({ headline: "Headline", note: "" });
+  });
+
+  it("never drops a required text field the control cannot express as empty", () => {
+    render(<Harness node={written({})} />);
+
+    typeInto(screen.getByLabelText(/Headline/), "");
+
+    expect(storedData()).toStrictEqual({ headline: "Headline" });
+  });
+
+  it("leaves a nullable text field exactly as it found it", () => {
+    render(<Harness node={written({ subtitle: "A valid value" })} />);
+
+    typeInto(screen.getByLabelText(/Subtitle/), "");
+
+    expect(storedData()).toStrictEqual({
+      headline: "Headline",
+      subtitle: "A valid value",
+    });
+  });
+
+  it("clears one field without touching the others", () => {
+    render(
+      <Harness node={written({ note: "kept", slogan: "A valid value" })} />,
+    );
+
+    typeInto(screen.getByLabelText(/Slogan/), "");
+
+    expect(storedData()).toStrictEqual({
+      headline: "Headline",
+      note: "kept",
+    });
   });
 });

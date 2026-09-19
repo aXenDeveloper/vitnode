@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 
 import { ChevronLeftIcon, XIcon } from "lucide-react";
+import { Activity } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -13,13 +14,9 @@ import { EditorSidebarFooter } from "./footer";
 import { insertTargetScope } from "./insert-target";
 import { EditorPreviewBar } from "./preview-bar";
 
-export const EditorSidebar = (): ReactElement => {
-  const { dispatch, insertTarget, panel, preview, setInsertTarget } =
-    useVisualEditor();
+const EditorSidebarPanels = (): ReactElement => {
+  const { dispatch, insertTarget, panel, setInsertTarget } = useVisualEditor();
   const t = useTranslations("core.editor");
-
-  if (preview) return <EditorPreviewBar />;
-
   const scope = insertTargetScope(insertTarget);
 
   return (
@@ -70,14 +67,32 @@ export const EditorSidebar = (): ReactElement => {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {panel === "blocks" ? (
+        <Activity mode={panel === "blocks" ? "visible" : "hidden"}>
           <AvailableBlocksPanel />
-        ) : (
+        </Activity>
+
+        <Activity mode={panel === "blocks" ? "hidden" : "visible"}>
           <EditorPropertiesPanel />
-        )}
+        </Activity>
       </div>
 
       <EditorSidebarFooter />
     </aside>
+  );
+};
+
+export const EditorSidebar = (): ReactElement => {
+  const { preview } = useVisualEditor();
+
+  return (
+    <>
+      <Activity mode={preview ? "hidden" : "visible"}>
+        <EditorSidebarPanels />
+      </Activity>
+
+      <Activity mode={preview ? "visible" : "hidden"}>
+        <EditorPreviewBar />
+      </Activity>
+    </>
   );
 };

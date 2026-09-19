@@ -22,6 +22,7 @@ import {
 } from "../../blocks/registry";
 import { field } from "../../content/fields";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
+import { classifyZoneEntries } from "../zones/classify";
 import {
   changedZoneIds,
   containerAcceptsBlock,
@@ -3063,5 +3064,136 @@ describe("what the sidebar is allowed to insert into", () => {
     expect(containerAcceptsBlock(state, into("main", "no-such-area"))).toBe(
       false,
     );
+  });
+});
+
+describe("bounds the stored content already breaks", () => {
+  const many = (count: number): AnyBlockInstance[] =>
+    Array.from({ length: count }, (_, at) => block(`stored-${at}`));
+
+  const removeFirst = (state: VisualEditorState): VisualEditorState =>
+    visualEditorReducer(state, {
+      ref: ref("main", state.zones.main.nodes[0].id),
+      type: "remove",
+    });
+
+  const insertOne = (state: VisualEditorState): VisualEditorState =>
+    visualEditorReducer(state, {
+      container: into("main"),
+      index: state.zones.main.nodes.length,
+      instance: block("added"),
+      type: "insert",
+    });
+
+  it("calls a zone holding more blocks than its max allows unsafe", () => {
+    const state = mounted(mount("main", many(5), undefined, { max: 3 }));
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+  });
+
+  it("keeps it unsafe halfway through the repair, and lets the repair happen", () => {
+    const state = mounted(mount("main", many(5), undefined, { max: 3 }));
+
+    const four = removeFirst(state);
+
+    expect(ids(four, "main")).toHaveLength(4);
+    expect(unsafeZoneIds(four)).toStrictEqual(["main"]);
+
+    const three = removeFirst(four);
+
+    expect(ids(three, "main")).toHaveLength(3);
+    expect(unsafeZoneIds(three)).toStrictEqual([]);
+  });
+
+  it("calls a zone holding fewer blocks than its min requires unsafe", () => {
+    const state = mounted(mount("main", [], undefined, { min: 2 }));
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+
+    const one = insertOne(state);
+
+    expect(ids(one, "main")).toHaveLength(1);
+    expect(unsafeZoneIds(one)).toStrictEqual(["main"]);
+
+    const two = insertOne(one);
+
+    expect(ids(two, "main")).toHaveLength(2);
+    expect(unsafeZoneIds(two)).toStrictEqual([]);
+  });
+
+  it("counts an area's children rather than the area itself", () => {
+    const holder = area(many(4));
+    const state = mounted(mount("main", [holder], undefined, { max: 3 }));
+
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
+    expect(
+      unsafeZoneIds(
+        mounted(mount("main", [area(many(3))], undefined, { max: 3 })),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("says nothing about a zone that declares no bounds at all", () => {
+    expect(unsafeZoneIds(mounted(mount("main", many(9))))).toStrictEqual([]);
+  });
+
+  it("turns unsafe when a later mount narrows the max under the edited nodes", () => {
+    const stored = many(5);
+    const opened = mounted(mount("main", stored, undefined, { max: 10 }));
+
+    expect(unsafeZoneIds(opened)).toStrictEqual([]);
+
+    const edited = insertOne(opened);
+
+    expect(ids(edited, "main")).toHaveLength(6);
+
+    const narrowed = visualEditorReducer(edited, {
+      type: "mount",
+      zone: mount("main", stored, undefined, { max: 3 }),
+    });
+
+    expect(ids(narrowed, "main")).toStrictEqual(ids(edited, "main"));
+    expect(narrowed.zones.main.max).toBe(3);
+    expect(unsafeZoneIds(narrowed)).toStrictEqual(["main"]);
+  });
+
+  it("turns unsafe when a later mount raises the min above the edited nodes", () => {
+    const opened = mounted(mount("main", [block("only")]));
+
+    expect(unsafeZoneIds(opened)).toStrictEqual([]);
+
+    const raised = visualEditorReducer(opened, {
+      type: "mount",
+      zone: mount("main", [block("only")], undefined, { min: 2 }),
+    });
+
+    expect(raised.zones.main.min).toBe(2);
+    expect(unsafeZoneIds(raised)).toStrictEqual(["main"]);
+  });
+});
+
+describe("an area stored with more children than an area may hold", () => {
+  it("blocks the save through the invalid entries it is quarantined as", () => {
+    const oversized = area(
+      Array.from({ length: AREA_CHILDREN_DEFAULT_MAX + 1 }, (_, at) =>
+        block(`child-${at}`),
+      ),
+    );
+    const { invalid, nodes } = classifyZoneEntries([block("loose"), oversized]);
+    const state = mounted({
+      allowedBlocks: undefined,
+      id: "main",
+      invalid,
+      max: undefined,
+      min: undefined,
+      nodes,
+      registry: undefined,
+    });
+
+    expect(ids(state, "main")).toHaveLength(1);
+    expect(state.zones.main.invalid).toStrictEqual([
+      { index: 1, value: oversized },
+    ]);
+    expect(unsafeZoneIds(state)).toStrictEqual(["main"]);
   });
 });

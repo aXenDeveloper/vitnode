@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createAreaInstance } from "../../blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
 import { createBlockInstance } from "../../blocks/instance";
 import { classifyZoneEntries, describeInvalidEntry } from "./classify";
 
@@ -196,6 +197,49 @@ describe("classifyZoneEntries, reading an area", () => {
       holder,
       b,
     ]);
+  });
+});
+
+describe("classifyZoneEntries, reading an area bigger than an area may be", () => {
+  const children = (count: number) =>
+    Array.from({ length: count }, (_, at) => block(`child-${at}`));
+
+  it("keeps an area holding exactly as many children as one may hold", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX));
+
+    expect(classifyZoneEntries([holder])).toStrictEqual({
+      invalid: [],
+      nodes: [holder],
+    });
+  });
+
+  it("quarantines an area holding one child more than one may hold", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX + 1));
+
+    expect(classifyZoneEntries([holder])).toStrictEqual({
+      invalid: [{ index: 0, value: holder }],
+      nodes: [],
+    });
+  });
+
+  it("keeps the whole stored area, rather than the children that would fit", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX + 1));
+    const [entry] = classifyZoneEntries([holder]).invalid;
+
+    expect(entry.value).toBe(holder);
+    expect((entry.value as typeof holder).children).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX + 1,
+    );
+  });
+
+  it("leaves the blocks beside it on the page", () => {
+    const loose = block("loose");
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX + 1));
+
+    const { invalid, nodes } = classifyZoneEntries([loose, holder]);
+
+    expect(nodes).toStrictEqual([loose]);
+    expect(invalid).toStrictEqual([{ index: 1, value: holder }]);
   });
 });
 

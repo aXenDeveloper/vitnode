@@ -1,3 +1,5 @@
+import type z from "zod";
+
 import type {
   AnyBlockDefinition,
   BlockUnknownData,
@@ -7,7 +9,9 @@ import type {
   ContentFormFieldSpec,
   ContentFormSpec,
 } from "../../content/admin/spec";
+import type { ContentFieldDescriptor } from "../../content/types";
 
+import { blockDataSchema } from "../../blocks/schema";
 import { humanizeFieldName } from "../../content/admin/labels";
 import { projectFormField } from "../../content/admin/spec";
 import { CONTENT_PATH_SEPARATOR } from "../../content/const";
@@ -41,22 +45,24 @@ export const blockFormSpec = (entry: RegisteredBlock): ContentFormSpec => ({
 export const blockDisplayName = (entry: RegisteredBlock): string =>
   entry.definition.name ?? humanizeFieldName(entry.definition.id);
 
-const EMPTY_UNSETS: ReadonlySet<ContentFormFieldSpec["kind"]> = new Set([
-  "dateTime",
-  "slug",
-]);
+const isCleared = (value: unknown): boolean =>
+  value === "" || value === null || value === undefined;
 
 export const clearsBlockField = (
-  specs: readonly ContentFormFieldSpec[],
+  definition: AnyBlockDefinition,
   name: string,
   value: unknown,
 ): boolean => {
-  const spec = specs.find(item => item.name === name);
-  if (!spec || spec.required || spec.nullable || !EMPTY_UNSETS.has(spec.kind)) {
-    return false;
-  }
+  const fieldValue: ContentFieldDescriptor | undefined =
+    definition.fields[name];
+  if (!fieldValue || fieldValue.required || fieldValue.nullable) return false;
+  if (!isCleared(value)) return false;
+  if (value === undefined) return true;
 
-  return value === "" || value === null || value === undefined;
+  const stored = blockDataSchema(definition).shape[name] as
+    undefined | z.ZodType;
+
+  return stored?.safeParse(value).success !== true;
 };
 
 export const blockDataFromFormValues = (

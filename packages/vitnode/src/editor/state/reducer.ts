@@ -285,13 +285,21 @@ const holdsRejectedBlock = (zone: EditorZoneState): boolean => {
   );
 };
 
+const breaksZoneBounds = (zone: EditorZoneState): boolean => {
+  const blocks = zoneBlockCount(zone.nodes);
+
+  return !fitsZoneMin(zone.min, blocks) || !fitsZoneMax(zone.max, blocks);
+};
+
 export const unsafeZoneIds = (state: VisualEditorState): string[] =>
   state.order.filter(zoneId => {
     const zone = state.zones[zoneId];
 
     return (
       zone !== undefined &&
-      (zone.invalid.length > 0 || holdsRejectedBlock(zone))
+      (zone.invalid.length > 0 ||
+        breaksZoneBounds(zone) ||
+        holdsRejectedBlock(zone))
     );
   });
 

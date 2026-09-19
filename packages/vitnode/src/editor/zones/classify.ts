@@ -2,6 +2,7 @@ import type { BlockAreaInstance, ContentNode } from "../../blocks/types";
 import type { EditorZoneInvalidEntry } from "../state/types";
 
 import { isAreaLike, isBlockAreaInstance } from "../../blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
 import { isBlockInstance } from "../../blocks/instance";
 
 export interface ClassifiedZoneEntries {
@@ -16,6 +17,7 @@ const readableArea = (
   seen: ReadonlySet<string>,
 ): BlockAreaInstance | null => {
   if (!isBlockAreaInstance(value) || seen.has(value.id)) return null;
+  if (value.children.length > AREA_CHILDREN_DEFAULT_MAX) return null;
 
   const ids = new Set([value.id]);
 

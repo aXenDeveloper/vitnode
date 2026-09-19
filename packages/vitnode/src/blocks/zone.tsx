@@ -12,7 +12,11 @@ import type {
 import { useContentEditRuntime } from "./edit-context";
 import { useEditablePage } from "./page-context";
 import { ContentRenderer } from "./renderer";
-import { assertContentZoneId, contentZoneAttributes } from "./zone-meta";
+import {
+  assertContentZoneId,
+  contentZoneAttributes,
+  contentZoneBounds,
+} from "./zone-meta";
 import { ContentZoneOutlet } from "./zone-outlet";
 
 export interface ContentZoneProps {
@@ -50,6 +54,11 @@ export const ContentZone = ({
     (page && blocks === undefined ? page.resolveZone(id) : undefined);
   const nodes = blocks === undefined ? declared?.blocks : blocks;
   const allowed = allowedBlocks ?? declared?.allowedBlocks;
+  const bounds = contentZoneBounds({
+    declared,
+    explicit: { max, min },
+    id,
+  });
 
   if (editRuntime) {
     return createElement(ContentZoneOutlet, {
@@ -60,8 +69,8 @@ export const ContentZone = ({
         className,
         fallback,
         id,
-        max: max ?? declared?.max,
-        min: min ?? declared?.min,
+        max: bounds.max,
+        min: bounds.min,
         registry,
         validate,
       },
