@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlockAllowedSpec } from "../../blocks/types";
+import type { DropCapacity } from "../state/bounds";
 import type { EditorContainerRef } from "../state/types";
 import type {
   EditorDragSource,
@@ -16,6 +17,7 @@ import {
   areaDroppableId,
   CATALOG_DRAGGABLE_PREFIX,
   catalogDraggableId,
+  decideDrop,
   dropEdgeFor,
   dropPlacement,
   dropRejection,
@@ -2031,5 +2033,213 @@ describe("a drop aimed at an area that is already full", () => {
       toIndex: AREA_CHILDREN_DEFAULT_MAX - 1,
       type: "core:hero",
     });
+  });
+});
+
+describe("the room a drop needs on either side of it", () => {
+  const holds = (
+    blocks: number,
+    bounds: { max?: number; min?: number } = {},
+  ) => ({ blocks, max: bounds.max, min: bounds.min });
+
+  const unbounded: DropCapacity = { source: null, target: null };
+
+  const decide = ({
+    capacity = unbounded,
+    source: dragged,
+    target,
+    targetNodeCount = 2,
+  }: {
+    capacity?: DropCapacity;
+    source: EditorDragSource;
+    target: EditorDropTarget | null;
+    targetNodeCount?: number;
+  }) =>
+    decideDrop({
+      capabilities: accepting(undefined),
+      capacity,
+      source: dragged,
+      target,
+      targetNodeCount,
+    });
+
+  it("refuses a block from the catalog once the zone is at its max", () => {
+    const decision = decide({
+      capacity: { source: null, target: holds(3, { max: 3 }) },
+      source: fromCatalog(),
+      target: onContainer("page:main"),
+      targetNodeCount: 3,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("takes that same block while the zone still has room", () => {
+    const decision = decide({
+      capacity: { source: null, target: holds(2, { max: 3 }) },
+      source: fromCatalog(),
+      target: onContainer("page:main"),
+      targetNodeCount: 2,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved).toStrictEqual({
+      kind: "insert",
+      to: into("page:main"),
+      toIndex: 2,
+      type: "core:hero",
+    });
+  });
+
+  it("refuses a block moved in from another zone once the target is full", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(4),
+        target: holds(3, { max: 3 }),
+      },
+      source: source({ container: into("page:aside") }),
+      target: onContainer("page:main"),
+      targetNodeCount: 3,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("refuses to take the block its own zone has to keep", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(2, { min: 2 }),
+        target: holds(0),
+      },
+      source: source({ container: into("page:aside") }),
+      target: onContainer("page:main"),
+      targetNodeCount: 0,
+    });
+
+    expect(decision.rejection).toBe("zone-min");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("lets the same block out while its zone keeps enough", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(3, { min: 2 }),
+        target: holds(0, { max: 4 }),
+      },
+      source: source({ container: into("page:aside") }),
+      target: onContainer("page:main"),
+      targetNodeCount: 0,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved).toStrictEqual({
+      from: into("page:aside"),
+      kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
+      toIndex: 0,
+    });
+  });
+
+  it("leaves a move inside one zone alone at either bound", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(2, { max: 2, min: 2 }),
+        target: holds(2, { max: 2, min: 2 }),
+      },
+      source: source({ index: 0 }),
+      target: onNode({ index: 1 }),
+      targetNodeCount: 2,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved).toStrictEqual({
+      from: into("page:main"),
+      kind: "move",
+      nodeId: "block-a",
+      to: into("page:main"),
+      toIndex: 1,
+    });
+  });
+
+  it("counts every child of an area dragged between zones", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(3),
+        target: holds(2, { max: 3 }),
+      },
+      source: areaSource({
+        childTypes: ["core:hero", "core:hero", "core:hero"],
+        container: into("page:aside"),
+      }),
+      target: onContainer("page:main"),
+      targetNodeCount: 1,
+    });
+
+    expect(decision.rejection).toBe("zone-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("carries an empty area across even between zones at their bounds", () => {
+    const decision = decide({
+      capacity: {
+        source: holds(2, { min: 2 }),
+        target: holds(2, { max: 2 }),
+      },
+      source: areaSource({ container: into("page:aside") }),
+      target: onContainer("page:main"),
+      targetNodeCount: 2,
+    });
+
+    expect(decision.rejection).toBeNull();
+    expect(decision.resolved?.kind).toBe("move");
+  });
+
+  it("names the full area it used to refuse without saying why", () => {
+    const decision = decide({
+      source: fromCatalog(),
+      target: onContainer("page:main", "area-a"),
+      targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
+    });
+
+    expect(decision.rejection).toBe("area-full");
+    expect(decision.resolved).toBeNull();
+  });
+
+  it("never lights a target up for a drop it will not make", () => {
+    const cases = [
+      decide({
+        capacity: { source: null, target: holds(1, { max: 1 }) },
+        source: fromCatalog(),
+        target: onContainer("page:main"),
+        targetNodeCount: 1,
+      }),
+      decide({
+        capacity: {
+          source: holds(1, { min: 1 }),
+          target: holds(0),
+        },
+        source: source({ container: into("page:aside") }),
+        target: onContainer("page:main"),
+        targetNodeCount: 0,
+      }),
+      decide({
+        source: fromCatalog(),
+        target: onContainer("page:main", "area-a"),
+        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
+      }),
+      decide({
+        source: areaSource(),
+        target: onContainer("page:main", "area-a"),
+        targetNodeCount: 0,
+      }),
+    ];
+
+    for (const decision of cases) {
+      expect(decision.rejection).not.toBeNull();
+      expect(decision.resolved).toBeNull();
+    }
   });
 });

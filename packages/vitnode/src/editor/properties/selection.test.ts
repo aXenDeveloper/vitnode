@@ -44,6 +44,8 @@ const stateWith = (nodes: readonly ContentNode[]): VisualEditorState => ({
       initial: nodes,
       initialInvalid: [],
       invalid: [],
+      max: undefined,
+      min: undefined,
       nodes,
       registry: undefined,
       superseded: [],

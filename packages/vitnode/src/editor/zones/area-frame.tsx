@@ -26,6 +26,7 @@ import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useAreaDroppable } from "../dnd/use-container-droppable";
 import { useSortableNode } from "../dnd/use-sortable-node";
+import { fitsZoneMax, refusesRemoval, zoneCapacity } from "../state/bounds";
 import { sameNodeRef } from "../state/reducer";
 import { zoneDropState } from "./drop-state";
 import { AREA_REJECTION_LABELS } from "./rejection-labels";
@@ -85,6 +86,10 @@ export const EditableAreaFrame = ({
     zoneId,
   });
 
+  const capacity = zoneCapacity(state.zones[zoneId]);
+  const full =
+    capacity !== null && !fitsZoneMax(capacity.max, capacity.blocks + 1);
+  const removeRefused = refusesRemoval(capacity, area.children.length);
   const layout = areaLayoutWithDefaults(area.layout);
   const selected = sameNodeRef(state.selected, nodeRef);
   const inserting =
@@ -194,6 +199,7 @@ export const EditableAreaFrame = ({
                 buttonVariants({ size: "icon-xs", variant: "destructive" }),
                 "shadow-sm",
               )}
+              disabled={removeRefused}
               onClick={remove}
               type="button"
             >
@@ -233,6 +239,7 @@ export const EditableAreaFrame = ({
               <Button
                 aria-label={deleteLabel}
                 className="shadow-sm"
+                disabled={removeRefused}
                 size="icon-xs"
                 variant="destructive"
               >
@@ -266,20 +273,22 @@ export const EditableAreaFrame = ({
               className="text-muted-foreground size-5"
             />
             <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
-              {t("area.drop_here")}
+              {full ? t("zone.full") : t("area.drop_here")}
             </p>
 
-            <Button
-              onClick={() => {
-                setInsertTarget({ areaId: area.id, index: 0, zoneId });
-                setPanel();
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <PlusIcon />
-              {t("area.add_block")}
-            </Button>
+            {full ? null : (
+              <Button
+                onClick={() => {
+                  setInsertTarget({ areaId: area.id, index: 0, zoneId });
+                  setPanel();
+                }}
+                size="sm"
+                variant="outline"
+              >
+                <PlusIcon />
+                {t("area.add_block")}
+              </Button>
+            )}
           </div>
         ) : (
           children

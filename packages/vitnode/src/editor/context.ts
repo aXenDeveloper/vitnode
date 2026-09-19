@@ -25,6 +25,7 @@ export interface EditorInsertAreaRequest {
 export type VisualEditorSaveStatus = "error" | "idle" | "saved" | "saving";
 
 export interface VisualEditorContextValue {
+  canInsertBlock: (type: string) => boolean;
   dirty: boolean;
   discard: () => void;
   dispatch: (action: VisualEditorAction) => void;

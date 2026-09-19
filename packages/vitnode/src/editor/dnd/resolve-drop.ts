@@ -1,3 +1,4 @@
+import type { DropCapacity } from "../state/bounds";
 import type {
   EditorContainerRef,
   EditorNodeKind,
@@ -5,7 +6,7 @@ import type {
   TargetCapabilities,
 } from "../state/types";
 
-import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
+import { areaHasRoom, fitsZoneMax, fitsZoneMin } from "../state/bounds";
 
 export const ZONE_DROPPABLE_PREFIX = "vitnode-editor-zone:";
 
@@ -59,7 +60,12 @@ export interface EditorDropTarget {
 }
 
 export type EditorDropRejection =
-  "nested-area" | "not-allowed" | "not-registered";
+  | "area-full"
+  | "nested-area"
+  | "not-allowed"
+  | "not-registered"
+  | "zone-full"
+  | "zone-min";
 
 export type { TargetCapabilities } from "../state/types";
 
@@ -68,6 +74,15 @@ export interface ResolveDropArgs {
   source: EditorDragSource;
   target: EditorDropTarget | null;
   targetNodeCount: number;
+}
+
+export interface DecideDropArgs extends ResolveDropArgs {
+  capacity: DropCapacity;
+}
+
+export interface DropDecision {
+  rejection: EditorDropRejection | null;
+  resolved: null | ResolvedDrop;
 }
 
 export type ResolvedDrop =
@@ -329,9 +344,46 @@ const fillsTargetArea = (
   targetNodeCount: number,
 ): boolean =>
   target.container.areaId !== null &&
-  targetNodeCount >= AREA_CHILDREN_DEFAULT_MAX &&
+  !areaHasRoom(targetNodeCount) &&
   (source.kind === "catalog-block" ||
     !sameContainer(target.container, source.container));
+
+const movedBlocks = (source: EditorDragSource): number =>
+  source.kind === "existing-area" ? source.childTypes.length : 1;
+
+const capacityRejection = ({
+  capacity,
+  source,
+  target,
+  targetNodeCount,
+}: {
+  capacity: DropCapacity;
+  source: EditorDragSource;
+  target: EditorDropTarget;
+  targetNodeCount: number;
+}): EditorDropRejection | null => {
+  if (fillsTargetArea(source, target, targetNodeCount)) return "area-full";
+
+  if (
+    source.kind !== "catalog-block" &&
+    source.container.zoneId === target.container.zoneId
+  ) {
+    return null;
+  }
+
+  const moved = movedBlocks(source);
+  if (moved === 0) return null;
+
+  const { source: leaving, target: landing } = capacity;
+
+  if (landing !== null && !fitsZoneMax(landing.max, landing.blocks + moved)) {
+    return "zone-full";
+  }
+
+  return leaving !== null && !fitsZoneMin(leaving.min, leaving.blocks - moved)
+    ? "zone-min"
+    : null;
+};
 
 export const resolveDrop = ({
   capabilities,
@@ -430,5 +482,19 @@ export const dropPlacement = ({
     indicator: indicator(),
     position: gap + 1,
     total: remaining.length + 1,
+  };
+};
+
+export const decideDrop = (args: DecideDropArgs): DropDecision => {
+  const { capabilities, capacity, source, target, targetNodeCount } = args;
+  if (!target) return { rejection: null, resolved: null };
+
+  const rejection =
+    dropRejection({ capabilities, source, target }) ??
+    capacityRejection({ capacity, source, target, targetNodeCount });
+
+  return {
+    rejection,
+    resolved: rejection === null ? resolveDrop(args) : null,
   };
 };

@@ -3,11 +3,13 @@ import { act, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { VisualEditorAdapter } from "../editor/adapter/types";
+import type { ContentEditRuntime, ContentZoneMount } from "./edit-context";
 import type { BlockComponentProps, BlockData, ContentNode } from "./types";
 
 import { defineEditablePage } from "../content/editor/define";
 import { field } from "../content/fields";
 import { defineBlock } from "./define";
+import { ContentEditContext } from "./edit-context";
 import { EditablePage } from "./page";
 import { createBlockRegistry } from "./registry";
 import { ContentZone } from "./zone";
@@ -54,8 +56,13 @@ const page = defineEditablePage({
   id: "example:settings",
   permission: { module: "widgets", permission: "can_edit" },
   zones: {
-    main: { allowed: ["core:text"] },
-    sidebar: { allowed: ["core:text"], default: [block("Shipped", "d1")] },
+    main: { allowed: ["core:text"], max: 4 },
+    sidebar: {
+      allowed: ["core:text"],
+      default: [block("Shipped", "d1")],
+      max: 3,
+      min: 1,
+    },
   },
 });
 
@@ -119,6 +126,46 @@ describe("a zone inside an editable page", () => {
     expect(screen.queryByText("Stored")).toBeNull();
   });
 
+  it("still takes the allowlist from the page when the blocks are passed", () => {
+    const { container } = render(
+      <EditablePage layout={layout} page={page}>
+        <ContentZone
+          as="aside"
+          blocks={[block("Passed", "p1")]}
+          id="main"
+          registry={registry}
+        />
+      </EditablePage>,
+    );
+
+    expect(screen.getByText("Passed")).toBeDefined();
+    expect(
+      container
+        .querySelector("aside")
+        ?.getAttribute("data-vitnode-zone-allowed"),
+    ).toBe("core:text");
+  });
+
+  it("lets an explicit allowlist win even when the blocks are passed too", () => {
+    const { container } = render(
+      <EditablePage layout={layout} page={page}>
+        <ContentZone
+          allowedBlocks="*"
+          as="aside"
+          blocks={[block("Passed", "p1")]}
+          id="main"
+          registry={registry}
+        />
+      </EditablePage>,
+    );
+
+    expect(
+      container
+        .querySelector("aside")
+        ?.getAttribute("data-vitnode-zone-allowed"),
+    ).toBe("*");
+  });
+
   it("renders a zone the page does not declare when its blocks are passed", () => {
     render(
       <EditablePage layout={layout} page={page}>
@@ -131,6 +178,25 @@ describe("a zone inside an editable page", () => {
     );
 
     expect(screen.getByText("Record")).toBeDefined();
+  });
+
+  it("borrows nothing from the page for a zone the page never declared", () => {
+    const { container } = render(
+      <EditablePage layout={layout} page={page}>
+        <ContentZone
+          as="aside"
+          blocks={[block("Record", "r1")]}
+          id="article-body"
+          registry={registry}
+        />
+      </EditablePage>,
+    );
+
+    expect(
+      container
+        .querySelector("aside")
+        ?.hasAttribute("data-vitnode-zone-allowed"),
+    ).toBe(false);
   });
 
   it("lets an explicitly passed allowlist win too", () => {
@@ -301,5 +367,73 @@ describe("what a page renders once a save lands", () => {
     );
 
     expect(screen.getByText("Reloaded")).toBeDefined();
+  });
+});
+
+describe("the bounds a zone hands the editor", () => {
+  const mountOf = (zone: ReactNode): ContentZoneMount => {
+    const mounts: ContentZoneMount[] = [];
+    const runtime: ContentEditRuntime = {
+      preview: false,
+      registerZone: entry => {
+        mounts.push(entry.mount);
+      },
+      releaseZone: () => undefined,
+    };
+
+    render(
+      <EditablePage layout={layout} page={page}>
+        <ContentEditContext value={runtime}>{zone}</ContentEditContext>
+      </EditablePage>,
+    );
+
+    const last = mounts.at(-1);
+
+    if (!last) throw new Error("the zone registered no mount with the editor");
+
+    return last;
+  };
+
+  it("takes them from the page the zone belongs to", () => {
+    const mount = mountOf(<ContentZone id="sidebar" registry={registry} />);
+
+    expect(mount.max).toBe(3);
+    expect(mount.min).toBe(1);
+  });
+
+  it("inherits them even when the blocks were passed explicitly", () => {
+    const mount = mountOf(
+      <ContentZone
+        blocks={[block("Passed", "p1")]}
+        id="sidebar"
+        registry={registry}
+      />,
+    );
+
+    expect(mount.blocks).toStrictEqual([block("Passed", "p1")]);
+    expect(mount.max).toBe(3);
+    expect(mount.min).toBe(1);
+  });
+
+  it("leaves them unset for a zone the page never declared", () => {
+    const mount = mountOf(
+      <ContentZone
+        blocks={[block("Record", "r1")]}
+        id="article-body"
+        registry={registry}
+      />,
+    );
+
+    expect(mount.max).toBeUndefined();
+    expect(mount.min).toBeUndefined();
+  });
+
+  it("lets the call site override the page's own bounds", () => {
+    const mount = mountOf(
+      <ContentZone id="sidebar" max={2} min={2} registry={registry} />,
+    );
+
+    expect(mount.max).toBe(2);
+    expect(mount.min).toBe(2);
   });
 });

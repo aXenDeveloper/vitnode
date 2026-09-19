@@ -20,6 +20,8 @@ const mount = (id: string, nodes: readonly ContentNode[]): EditorZoneMount => ({
   allowedBlocks: undefined,
   id,
   invalid: [],
+  max: undefined,
+  min: undefined,
   nodes,
   registry: undefined,
 });

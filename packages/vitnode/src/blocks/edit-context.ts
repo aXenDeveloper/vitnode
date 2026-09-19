@@ -16,6 +16,8 @@ export interface ContentZoneMount {
   className: string | undefined;
   fallback: BlockRenderFallback | undefined;
   id: string;
+  max: number | undefined;
+  min: number | undefined;
   registry: BlockRegistry | undefined;
   validate: BlockValidationMode | undefined;
 }
@@ -49,6 +51,8 @@ export const sameContentZoneMount = (
   left.className === right.className &&
   left.allowedBlocks === right.allowedBlocks &&
   left.blocks === right.blocks &&
+  left.max === right.max &&
+  left.min === right.min &&
   left.fallback === right.fallback &&
   left.registry === right.registry &&
   left.validate === right.validate;

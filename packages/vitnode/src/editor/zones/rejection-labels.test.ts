@@ -10,9 +10,12 @@ import {
 } from "./rejection-labels";
 
 const REASONS: EditorDropRejection[] = [
+  "area-full",
   "nested-area",
   "not-allowed",
   "not-registered",
+  "zone-full",
+  "zone-min",
 ];
 
 const resolve = (key: string): unknown =>
@@ -44,6 +47,13 @@ describe("every refusal the editor can show has words for it", () => {
       }
     });
   }
+
+  it("tells a full target apart from a source that has to keep its blocks", () => {
+    for (const record of Object.values(records)) {
+      expect(record["zone-full"]).not.toBe(record["zone-min"]);
+      expect(record["area-full"]).not.toBe(record["zone-full"]);
+    }
+  });
 
   it("tells a missing plugin apart from a zone that forbids the block", () => {
     expect(ZONE_REJECTION_LABELS["not-registered"]).not.toBe(

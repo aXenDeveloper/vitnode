@@ -24,6 +24,7 @@ import { EditableBlockShell } from "../block-shell/block-shell";
 import { useVisualEditor } from "../context";
 import { ContainerSortable } from "../dnd/container-sortable";
 import { useZoneDroppable } from "../dnd/use-container-droppable";
+import { fitsZoneMax, zoneBlockCount } from "../state/bounds";
 import { EditableAreaFrame } from "./area-frame";
 import {
   InvalidBlock,
@@ -138,10 +139,19 @@ export const EditableZone = ({
       allowedBlocks: mount.allowedBlocks,
       id: mount.id,
       invalid,
+      max: mount.max,
+      min: mount.min,
       nodes,
       registry: mount.registry,
     };
-  }, [mount.allowedBlocks, mount.blocks, mount.id, mount.registry]);
+  }, [
+    mount.allowedBlocks,
+    mount.blocks,
+    mount.id,
+    mount.max,
+    mount.min,
+    mount.registry,
+  ]);
 
   useEffect(() => {
     dispatch({ type: "mount", zone: incoming });
@@ -175,6 +185,7 @@ export const EditableZone = ({
   const rejected = rejection !== null;
   const inserting = insertTarget?.zoneId === mount.id;
   const dropping = zoneDropState({ active, inserting, over, rejected });
+  const full = !fitsZoneMax(mount.max, zoneBlockCount(nodes) + 1);
 
   const addBlock = (
     <Button
@@ -192,6 +203,14 @@ export const EditableZone = ({
       <PlusIcon />
       {t("zone.add_block")}
     </Button>
+  );
+
+  const addAction = full ? (
+    <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
+      {t("zone.full")}
+    </p>
+  ) : (
+    addBlock
   );
 
   const notAllowed = (
@@ -254,7 +273,7 @@ export const EditableZone = ({
               <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
                 {t("zone.drop_here")}
               </p>
-              {addBlock}
+              {addAction}
             </>
           )}
         </div>
@@ -303,7 +322,7 @@ export const EditableZone = ({
           </ContainerSortable>
 
           <div className="flex justify-center pt-2">
-            {rejected ? notAllowed : addBlock}
+            {rejected ? notAllowed : addAction}
           </div>
         </>
       )}

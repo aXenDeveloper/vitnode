@@ -27,6 +27,8 @@ const mount = (nodes: readonly AnyBlockInstance[]): EditorZoneMount => ({
   allowedBlocks: undefined,
   id: ZONE,
   invalid: [],
+  max: undefined,
+  min: undefined,
   nodes,
   registry: undefined,
 });

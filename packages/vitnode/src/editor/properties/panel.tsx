@@ -19,7 +19,12 @@ import { useFormApi } from "../../components/ui/form";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
 import { useVisualEditor } from "../context";
 import { blockInstanceIssue } from "../instance/defaults";
-import { sameValue } from "../state/reducer";
+import {
+  refusesDuplicate,
+  refusesRemoval,
+  zoneCapacity,
+} from "../state/bounds";
+import { containerNodes, sameValue } from "../state/reducer";
 import { AreaPropertiesPanelContent } from "./area-panel";
 import { BlockPropertyField } from "./field";
 import { selectedNode } from "./selection";
@@ -151,6 +156,19 @@ const BlockPropertiesPanelContent = ({
     setBaseline(generation => generation + 1);
   }
 
+  const capacity = zoneCapacity(state.zones[target.zoneId]);
+  const siblings =
+    containerNodes(state, {
+      areaId: target.areaId,
+      zoneId: target.zoneId,
+    })?.length ?? 0;
+  const duplicateRefused = refusesDuplicate(
+    capacity,
+    1,
+    target.areaId === null ? null : siblings,
+  );
+  const removeRefused = refusesRemoval(capacity, 1);
+
   const registry =
     state.zones[target.zoneId].registry ?? getDefaultBlockRegistry();
   const entry = registry?.get(instance.type);
@@ -209,6 +227,7 @@ const BlockPropertiesPanelContent = ({
         <Button
           aria-label={t("block.duplicate", { name })}
           className="flex-1"
+          disabled={duplicateRefused}
           onClick={() => {
             dispatch({ ref: target, type: "duplicate" });
           }}
@@ -222,6 +241,7 @@ const BlockPropertiesPanelContent = ({
         <Button
           aria-label={t("block.remove", { name })}
           className="flex-1"
+          disabled={removeRefused}
           onClick={() => {
             dispatch({ ref: target, type: "remove" });
             setPanel();

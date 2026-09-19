@@ -29,6 +29,7 @@ import { LeaveConfirmDialog } from "./runtime/leave-confirm-dialog";
 import { UnsavedChangesGuard } from "./runtime/unsaved-guard";
 import { EditorSidebar } from "./sidebar/sidebar";
 import {
+  containerAcceptsBlock,
   containerNodes,
   findNode,
   initialVisualEditorState,
@@ -67,7 +68,8 @@ const EditorShell = ({
   if (
     insertTarget !== null &&
     (!(insertTarget.zoneId in state.zones) ||
-      containerNodes(state, insertTarget) === null)
+      containerNodes(state, insertTarget) === null ||
+      !containerAcceptsBlock(state, insertTarget))
   ) {
     setInsertTarget(null);
   }
@@ -151,20 +153,38 @@ const EditorShell = ({
     onExit?.();
   }, [dirty, onExit]);
 
+  const zoneAccepts = useCallback(
+    (candidate: string, type: string): boolean => {
+      const zone = state.zones[candidate];
+      if (!zone) return false;
+      if (!containerAcceptsBlock(state, { areaId: null, zoneId: candidate })) {
+        return false;
+      }
+
+      const registry = zone.registry ?? getDefaultBlockRegistry();
+      if (!registry?.has(type)) return false;
+
+      return (
+        zone.allowedBlocks === undefined ||
+        isBlockAllowed(zone.allowedBlocks, type)
+      );
+    },
+    [state],
+  );
+
+  const canInsertBlock = useCallback(
+    (type: string): boolean =>
+      insertTarget === null
+        ? state.order.some(candidate => zoneAccepts(candidate, type))
+        : zoneAccepts(insertTarget.zoneId, type) &&
+          containerAcceptsBlock(state, insertTarget),
+    [insertTarget, state, zoneAccepts],
+  );
+
   const insertBlock = useCallback(
     (request: EditorInsertRequest) => {
-      const accepts = (candidate: string): boolean => {
-        const zone = state.zones[candidate];
-        if (!zone) return false;
-
-        const registry = zone.registry ?? getDefaultBlockRegistry();
-        if (!registry?.has(request.type)) return false;
-
-        return (
-          zone.allowedBlocks === undefined ||
-          isBlockAllowed(zone.allowedBlocks, request.type)
-        );
-      };
+      const accepts = (candidate: string): boolean =>
+        zoneAccepts(candidate, request.type);
 
       const zoneId =
         request.zoneId ??
@@ -184,7 +204,7 @@ const EditorShell = ({
           : request.areaId;
       const container: EditorContainerRef = { areaId, zoneId };
       const nodes = containerNodes(state, container);
-      if (nodes === null) return;
+      if (nodes === null || !containerAcceptsBlock(state, container)) return;
 
       const instance = createBlockInstanceFor(entry);
 
@@ -200,7 +220,7 @@ const EditorShell = ({
       });
       setInsertTarget(null);
     },
-    [insertTarget, state],
+    [insertTarget, state, zoneAccepts],
   );
 
   const insertArea = useCallback(
@@ -231,6 +251,7 @@ const EditorShell = ({
 
   const editor = useMemo<VisualEditorContextValue>(
     () => ({
+      canInsertBlock,
       dirty,
       discard,
       dispatch,
@@ -249,6 +270,7 @@ const EditorShell = ({
       unsafeZoneIds: unsafe,
     }),
     [
+      canInsertBlock,
       dirty,
       discard,
       exit,

@@ -24,6 +24,7 @@ import { field } from "../../content/fields";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import {
   changedZoneIds,
+  containerAcceptsBlock,
   containerNodes,
   findArea,
   findBlock,
@@ -64,10 +65,13 @@ const mount = (
   id: string,
   nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
   allowedBlocks?: EditorZoneMount["allowedBlocks"],
+  bounds: { max?: number; min?: number } = {},
 ): EditorZoneMount => ({
   allowedBlocks,
   id,
   invalid: [],
+  max: bounds.max,
+  min: bounds.min,
   nodes,
   registry: undefined,
 });
@@ -1247,6 +1251,8 @@ describe("persisted content the editor cannot read", () => {
         allowedBlocks: undefined,
         id: "main",
         invalid: [],
+        max: undefined,
+        min: undefined,
         nodes,
         registry: variantRegistry,
       });
@@ -1424,7 +1430,15 @@ describe("stored content the server would refuse", () => {
     nodes: readonly (AnyBlockInstance | BlockAreaInstance)[],
     allowedBlocks?: EditorZoneMount["allowedBlocks"],
   ): VisualEditorState =>
-    mounted({ allowedBlocks, id: "main", invalid: [], nodes, registry });
+    mounted({
+      allowedBlocks,
+      id: "main",
+      invalid: [],
+      max: undefined,
+      min: undefined,
+      nodes,
+      registry,
+    });
 
   const misshapen = (): AnyBlockInstance => ({
     ...block("a"),
@@ -1454,6 +1468,8 @@ describe("stored content the server would refuse", () => {
         allowedBlocks: undefined,
         id: "main",
         invalid: [],
+        max: undefined,
+        min: undefined,
         nodes: [{ ...block("a"), data }],
         registry: constrained,
       });
@@ -2284,6 +2300,8 @@ describe("a cross-zone move the target zone cannot render", () => {
     allowedBlocks: "*",
     id,
     invalid: [],
+    max: undefined,
+    min: undefined,
     nodes,
     registry,
   });
@@ -2601,6 +2619,449 @@ describe("the children an area is allowed to hold", () => {
 
     expect(childIds(next, "main", holder.id)).toHaveLength(
       AREA_CHILDREN_DEFAULT_MAX,
+    );
+  });
+});
+
+describe("the blocks a zone has to keep and the blocks it can hold", () => {
+  const children = (count: number): AnyBlockInstance[] =>
+    Array.from({ length: count }, (_, at) => block(`child-${at}`));
+
+  it("refuses the block that would push the zone past its max", () => {
+    const state = mounted(
+      mount("main", [block("a"), block("b")], undefined, { max: 2 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      container: into("main"),
+      index: 2,
+      instance: block("one too many"),
+      type: "insert",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "main")).toHaveLength(2);
+  });
+
+  it("refuses the child an area has room for but the zone does not", () => {
+    const holder = area(children(2));
+    const state = mounted(mount("main", [holder], undefined, { max: 2 }));
+
+    const next = visualEditorReducer(state, {
+      container: into("main", holder.id),
+      index: 2,
+      instance: block("one too many"),
+      type: "insert",
+    });
+
+    expect(next).toBe(state);
+    expect(childIds(next, "main", holder.id)).toHaveLength(2);
+  });
+
+  it("counts an area's children, not the area itself", () => {
+    const holder = area(children(2));
+    const state = mounted(
+      mount("main", [block("loose"), holder], undefined, { max: 3 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      container: into("main"),
+      index: 2,
+      instance: block("fourth block"),
+      type: "insert",
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it("still takes the block that fits exactly", () => {
+    const state = mounted(mount("main", [block("a")], undefined, { max: 2 }));
+    const added = block("b");
+
+    const next = visualEditorReducer(state, {
+      container: into("main"),
+      index: 1,
+      instance: added,
+      type: "insert",
+    });
+
+    expect(ids(next, "main")).toStrictEqual([ids(state, "main")[0], added.id]);
+  });
+
+  it("still reorders a zone that is at its max", () => {
+    const first = block("a");
+    const second = block("b");
+    const state = mounted(
+      mount("main", [first, second], undefined, { max: 2 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: first.id,
+      to: into("main"),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(ids(next, "main")).toStrictEqual([second.id, first.id]);
+  });
+
+  it("still moves a block into an area of the same zone at its max", () => {
+    const loose = block("loose");
+    const holder = area(children(1));
+    const state = mounted(
+      mount("main", [loose, holder], undefined, { max: 2 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: loose.id,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(next, "main")).toStrictEqual([holder.id]);
+    expect(childIds(next, "main", holder.id)[0]).toBe(loose.id);
+  });
+
+  it("takes a block from another zone while the target still has room", () => {
+    const moving = block("incoming");
+    const state = mounted(
+      mount("main", children(2), undefined, { max: 3 }),
+      mount("aside", [moving]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: moving.id,
+      to: into("main"),
+      toIndex: 2,
+      type: "move",
+    });
+
+    expect(ids(next, "main")).toHaveLength(3);
+    expect(ids(next, "aside")).toStrictEqual([]);
+  });
+
+  it("refuses the block from another zone once the target is at its max", () => {
+    const moving = block("incoming");
+    const state = mounted(
+      mount("main", children(3), undefined, { max: 3 }),
+      mount("aside", [moving]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: moving.id,
+      to: into("main"),
+      toIndex: 3,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "aside")).toStrictEqual([moving.id]);
+  });
+
+  it("counts every child of an area moved in from another zone", () => {
+    const holder = area(children(3));
+    const state = mounted(
+      mount("main", [block("a")], undefined, { max: 3 }),
+      mount("aside", [holder]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: holder.id,
+      to: into("main"),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "aside")).toStrictEqual([holder.id]);
+  });
+
+  it("takes that same area into a zone with room for all of it", () => {
+    const holder = area(children(3));
+    const state = mounted(
+      mount("main", [block("a")], undefined, { max: 4 }),
+      mount("aside", [holder]),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: holder.id,
+      to: into("main"),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(ids(next, "main")).toHaveLength(2);
+    expect(ids(next, "aside")).toStrictEqual([]);
+  });
+
+  it("refuses to duplicate a block the zone has no room for", () => {
+    const only = block("a");
+    const state = mounted(mount("main", [only], undefined, { max: 1 }));
+
+    const next = visualEditorReducer(state, {
+      ref: ref("main", only.id),
+      type: "duplicate",
+    });
+
+    expect(next).toBe(state);
+    expect(next.selected).toBeNull();
+  });
+
+  it("refuses to duplicate an area whose children would not fit", () => {
+    const holder = area(children(2));
+    const state = mounted(
+      mount("main", [block("a"), holder], undefined, { max: 4 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "duplicate",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "main")).toHaveLength(2);
+  });
+
+  it("lets an empty area in even when the zone is at its max", () => {
+    const holder = area();
+    const state = mounted(mount("main", children(2), undefined, { max: 2 }));
+
+    const next = visualEditorReducer(state, {
+      area: holder,
+      index: 2,
+      type: "insert-area",
+      zoneId: "main",
+    });
+
+    expect(ids(next, "main")).toHaveLength(3);
+    expect(ids(next, "main").at(-1)).toBe(holder.id);
+  });
+
+  it("refuses an area that arrives with more children than the zone can hold", () => {
+    const state = mounted(mount("main", [block("a")], undefined, { max: 2 }));
+
+    const next = visualEditorReducer(state, {
+      area: area(children(2)),
+      index: 1,
+      type: "insert-area",
+      zoneId: "main",
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it("refuses to remove the last block a zone has to keep", () => {
+    const only = block("a");
+    const state = mounted(mount("main", [only], undefined, { min: 1 }));
+
+    const next = visualEditorReducer(state, {
+      ref: ref("main", only.id),
+      type: "remove",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "main")).toStrictEqual([only.id]);
+  });
+
+  it("refuses to remove an area holding blocks the zone still needs", () => {
+    const holder = area(children(2));
+    const state = mounted(mount("main", [holder], undefined, { min: 2 }));
+
+    const next = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "remove",
+    });
+
+    expect(next).toBe(state);
+    expect(childIds(next, "main", holder.id)).toHaveLength(2);
+  });
+
+  it("lets a block out while the zone keeps enough of them", () => {
+    const leaving = block("leaving");
+    const state = mounted(
+      mount("main", [...children(2), leaving], undefined, { min: 2 }),
+      mount("aside", []),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: leaving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(next, "main")).toHaveLength(2);
+    expect(ids(next, "aside")).toStrictEqual([leaving.id]);
+  });
+
+  it("refuses the move that would take the zone below its minimum", () => {
+    const leaving = block("leaving");
+    const state = mounted(
+      mount("main", [block("staying"), leaving], undefined, { min: 2 }),
+      mount("aside", []),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: leaving.id,
+      to: into("aside"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "aside")).toStrictEqual([]);
+  });
+
+  it("weighs the source's minimum and the target's max on their own", () => {
+    const leaving = block("leaving");
+    const state = mounted(
+      mount("main", [...children(2), leaving], undefined, { min: 2 }),
+      mount("aside", children(1), undefined, { max: 1 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: leaving.id,
+      to: into("aside"),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "main")).toHaveLength(3);
+  });
+
+  it("still reorders a zone that is at its minimum", () => {
+    const first = block("a");
+    const second = block("b");
+    const state = mounted(
+      mount("main", [first, second], undefined, { min: 2 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: second.id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(ids(next, "main")).toStrictEqual([second.id, first.id]);
+  });
+
+  it("still moves a block into an area of the same zone at its minimum", () => {
+    const loose = block("loose");
+    const holder = area(children(1));
+    const state = mounted(
+      mount("main", [loose, holder], undefined, { min: 2 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: loose.id,
+      to: into("main", holder.id),
+      toIndex: 1,
+      type: "move",
+    });
+
+    expect(childIds(next, "main", holder.id)).toHaveLength(2);
+  });
+
+  it("still ungroups an area while the zone is at its minimum", () => {
+    const holder = area(children(2));
+    const state = mounted(mount("main", [holder], undefined, { min: 2 }));
+
+    const next = visualEditorReducer(state, {
+      ref: areaRef("main", holder.id),
+      type: "unwrap-area",
+    });
+
+    expect(ids(next, "main")).toHaveLength(2);
+  });
+
+  it("keeps the area's own cap separate from the zone's", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX));
+    const state = mounted(mount("main", [holder], undefined, { max: 100 }));
+
+    const next = visualEditorReducer(state, {
+      container: into("main", holder.id),
+      index: AREA_CHILDREN_DEFAULT_MAX,
+      instance: block("one too many"),
+      type: "insert",
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it("leaves a zone that mounted over its max able to shrink", () => {
+    const leaving = block("leaving");
+    const state = mounted(
+      mount("main", [...children(3), leaving], undefined, { max: 2 }),
+    );
+
+    const next = visualEditorReducer(state, {
+      ref: ref("main", leaving.id),
+      type: "remove",
+    });
+
+    expect(ids(next, "main")).toHaveLength(3);
+  });
+});
+
+describe("what the sidebar is allowed to insert into", () => {
+  const children = (count: number): AnyBlockInstance[] =>
+    Array.from({ length: count }, (_, at) => block(`child-${at}`));
+
+  it("refuses an area that is already at the child cap", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX));
+    const state = mounted(mount("main", [holder]));
+
+    expect(containerAcceptsBlock(state, into("main", holder.id))).toBe(false);
+  });
+
+  it("takes an area that is one child short of the cap", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX - 1));
+    const state = mounted(mount("main", [holder]));
+
+    expect(containerAcceptsBlock(state, into("main", holder.id))).toBe(true);
+  });
+
+  it("refuses a zone that is at its max", () => {
+    const state = mounted(mount("main", children(2), undefined, { max: 2 }));
+
+    expect(containerAcceptsBlock(state, into("main"))).toBe(false);
+  });
+
+  it("refuses an area inside a zone that is at its max", () => {
+    const holder = area(children(1));
+    const state = mounted(
+      mount("main", [block("a"), holder], undefined, { max: 2 }),
+    );
+
+    expect(containerAcceptsBlock(state, into("main", holder.id))).toBe(false);
+  });
+
+  it("takes a zone with room to spare", () => {
+    const state = mounted(mount("main", children(1), undefined, { max: 2 }));
+
+    expect(containerAcceptsBlock(state, into("main"))).toBe(true);
+  });
+
+  it("refuses a container that is not there at all", () => {
+    const state = mounted(mount("main", []));
+
+    expect(containerAcceptsBlock(state, into("gone"))).toBe(false);
+    expect(containerAcceptsBlock(state, into("main", "no-such-area"))).toBe(
+      false,
     );
   });
 });

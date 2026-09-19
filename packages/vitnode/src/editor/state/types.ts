@@ -42,6 +42,8 @@ export interface EditorZoneMount {
   allowedBlocks: BlockAllowedSpec | undefined;
   id: string;
   invalid: readonly EditorZoneInvalidEntry[];
+  max: number | undefined;
+  min: number | undefined;
   nodes: readonly ContentNode[];
   registry: BlockRegistry | undefined;
 }
@@ -52,6 +54,8 @@ export interface EditorZoneState {
   initial: readonly ContentNode[];
   initialInvalid: readonly EditorZoneInvalidEntry[];
   invalid: readonly EditorZoneInvalidEntry[];
+  max: number | undefined;
+  min: number | undefined;
   nodes: readonly ContentNode[];
   registry: BlockRegistry | undefined;
   superseded: readonly (readonly ContentNode[])[];

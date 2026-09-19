@@ -21,6 +21,12 @@ import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
 import { createBlockInstanceId } from "../../blocks/instance";
 import { editableBlockIssue } from "../block-shell/issue";
 import {
+  areaHasRoom,
+  fitsZoneMax,
+  fitsZoneMin,
+  zoneBlockCount,
+} from "./bounds";
+import {
   refusesAnyType,
   targetCapabilities,
   zoneRegistry,
@@ -310,6 +316,19 @@ const withZones = (
   zones: Record<string, EditorZoneState>,
 ): VisualEditorState => ({ ...state, zones: { ...state.zones, ...zones } });
 
+const zoneKeepsBounds = (
+  zone: EditorZoneState,
+  nodes: readonly ContentNode[],
+): boolean => {
+  const before = zoneBlockCount(zone.nodes);
+  const after = zoneBlockCount(nodes);
+
+  if (after > before) return fitsZoneMax(zone.max, after);
+  if (after < before) return fitsZoneMin(zone.min, after);
+
+  return true;
+};
+
 const growsPastAreaCap = (
   before: readonly ContentNode[],
   after: readonly ContentNode[],
@@ -339,6 +358,28 @@ const updateContainer = (
       at === found.index ? { ...found.area, children } : node,
     ),
   };
+};
+
+const boundedUpdate = (
+  zone: EditorZoneState,
+  container: EditorContainerRef,
+  update: (nodes: readonly ContentNode[]) => readonly ContentNode[],
+): EditorZoneState | null => {
+  const next = updateContainer(zone, container, update);
+
+  return next !== null && zoneKeepsBounds(zone, next.nodes) ? next : null;
+};
+
+export const containerAcceptsBlock = (
+  state: VisualEditorState,
+  container: EditorContainerRef,
+): boolean => {
+  const zone = state.zones[container.zoneId];
+  const nodes = containerNodes(state, container);
+  if (!zone || nodes === null) return false;
+  if (container.areaId !== null && !areaHasRoom(nodes.length)) return false;
+
+  return fitsZoneMax(zone.max, zoneBlockCount(zone.nodes) + 1);
 };
 
 const zoneNodeIds = (zone: EditorZoneState): Set<string> => {
@@ -465,6 +506,8 @@ const syncMountedZone = (
 ): VisualEditorState => {
   const metadataChanged =
     !sameAllowed(zone.allowedBlocks, next.allowedBlocks) ||
+    zone.max !== next.max ||
+    zone.min !== next.min ||
     zone.registry !== next.registry;
   const incomingChanged =
     !sameNodes(zone.initial, next.nodes) ||
@@ -481,6 +524,8 @@ const syncMountedZone = (
     ? {
         ...settled,
         allowedBlocks: next.allowedBlocks,
+        max: next.max,
+        min: next.min,
         registry: next.registry,
       }
     : settled;
@@ -531,6 +576,8 @@ const mountZone = (
         initial: nodes,
         initialInvalid: invalid,
         invalid,
+        max: next.max,
+        min: next.min,
         nodes,
         registry: next.registry,
         superseded: [],
@@ -643,6 +690,15 @@ const moveNode = (
   );
   if (!attached) return state;
 
+  if (sameZone) {
+    if (!zoneKeepsBounds(source, attached.nodes)) return state;
+  } else if (
+    !zoneKeepsBounds(source, detached.nodes) ||
+    !zoneKeepsBounds(target, attached.nodes)
+  ) {
+    return state;
+  }
+
   const selected = movedSelection(
     state,
     {
@@ -699,7 +755,7 @@ export const visualEditorReducer = (
       if (!zone || !found) return state;
 
       const copy = duplicateNode(found.node);
-      const next = updateContainer(zone, found.container, nodes =>
+      const next = boundedUpdate(zone, found.container, nodes =>
         insertAt(nodes, found.index + 1, copy),
       );
       if (!next) return state;
@@ -722,7 +778,7 @@ export const visualEditorReducer = (
       const zone = state.zones[action.container.zoneId];
       if (!zone) return state;
 
-      const next = updateContainer(zone, action.container, nodes =>
+      const next = boundedUpdate(zone, action.container, nodes =>
         insertAt(nodes, action.index, action.instance),
       );
 
@@ -735,12 +791,10 @@ export const visualEditorReducer = (
         return state;
       }
 
-      return withZones(state, {
-        [zone.id]: {
-          ...zone,
-          nodes: insertAt(zone.nodes, action.index, action.area),
-        },
-      });
+      const nodes = insertAt(zone.nodes, action.index, action.area);
+      if (!zoneKeepsBounds(zone, nodes)) return state;
+
+      return withZones(state, { [zone.id]: { ...zone, nodes } });
     }
 
     case "mount":
@@ -754,7 +808,7 @@ export const visualEditorReducer = (
       const found = findNode(state, action.ref);
       if (!zone || !found) return state;
 
-      const next = updateContainer(zone, found.container, nodes =>
+      const next = boundedUpdate(zone, found.container, nodes =>
         nodes.filter((_, at) => at !== found.index),
       );
       if (!next) return state;

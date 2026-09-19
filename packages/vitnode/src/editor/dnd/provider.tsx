@@ -47,19 +47,19 @@ import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { toBlockCatalogEntry } from "../block-picker/catalog";
 import { BlockCatalogEntryCard } from "../block-picker/entry-card";
 import { useVisualEditor } from "../context";
+import { dropCapacity } from "../state/bounds";
 import { targetCapabilities } from "../state/capabilities";
 import { containerNodes } from "../state/reducer";
 import { DND_REJECTION_LABELS } from "../zones/rejection-labels";
 import { EditorDndContext } from "./context";
 import {
+  decideDrop,
   dropEdgeFor,
   dropPlacement,
-  dropRejection,
   isContainerDroppableId,
   preferInnerCollisions,
   readDragSource,
   readDropTarget,
-  resolveDrop,
 } from "./resolve-drop";
 
 const isRtl = (): boolean =>
@@ -240,9 +240,13 @@ export const EditorDndProvider = ({
         target === null ? null : containerNodes(state, target.container);
       if (!target || !nodes) return outside;
 
-      const capabilities = targetCapabilities(state, target.container);
-      const resolved = resolveDrop({
-        capabilities,
+      const { rejection, resolved } = decideDrop({
+        capabilities: targetCapabilities(state, target.container),
+        capacity: dropCapacity(state, {
+          from:
+            source.kind === "catalog-block" ? null : source.container.zoneId,
+          to: target.container.zoneId,
+        }),
         source,
         target,
         targetNodeCount: nodes.length,
@@ -260,7 +264,7 @@ export const EditorDndProvider = ({
                 overNodeId: target.nodeId,
                 resolved,
               }),
-        rejection: dropRejection({ capabilities, source, target }),
+        rejection,
         resolved,
         source,
       };

@@ -31,10 +31,11 @@ const BlockCatalogItem = ({
   entry: BlockCatalogEntry;
 }): ReactElement => {
   const t = useTranslations("core.editor");
-  const { insertBlock } = useVisualEditor();
+  const { canInsertBlock, insertBlock } = useVisualEditor();
   const { dragging, handleProps, setNodeRef } = useCatalogDraggable({
     type: entry.type,
   });
+  const refused = !canInsertBlock(entry.type);
 
   return (
     <button
@@ -44,7 +45,9 @@ const BlockCatalogItem = ({
         CARD_CLASS,
         "cursor-grab touch-none active:cursor-grabbing",
         dragging ? "opacity-50" : "opacity-100",
+        refused && "cursor-not-allowed opacity-50",
       )}
+      disabled={refused}
       onClick={() => {
         insertBlock({ type: entry.type });
       }}

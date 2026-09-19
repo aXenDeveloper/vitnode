@@ -911,7 +911,8 @@
           "description": "These entries are stored here but are not content the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
           "remove": "Remove invalid entry"
         },
-        "full": "This zone already holds as many blocks as it can."
+        "full": "This zone already holds as many blocks as it can.",
+        "min": "That block cannot leave its own zone, which has to keep the blocks it holds."
       },
       "block": {
         "select": "Select the {name} block",
@@ -948,7 +949,9 @@
         "area_dropped": "{name} was dropped into an area in the {zone} zone, position {position} of {total}.",
         "area_rejected": "An area cannot hold another area.",
         "area_full": "The area is full, so {name} cannot go in it.",
-        "not_registered": "No plugin provides {name} in the {zone} zone, so it cannot go there."
+        "not_registered": "No plugin provides {name} in the {zone} zone, so it cannot go there.",
+        "zone_full": "The {zone} zone is full, so {name} cannot go in it.",
+        "zone_min": "{name} cannot leave its own zone, which has to keep the blocks it holds."
       },
       "picker": {
         "search": "Search blocks…",

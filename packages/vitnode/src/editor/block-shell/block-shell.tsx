@@ -19,7 +19,15 @@ import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useSortableNode } from "../dnd/use-sortable-node";
-import { sameNodeRef } from "../state/reducer";
+import {
+  areaHasRoom,
+  fitsZoneMax,
+  fitsZoneMin,
+  refusesDuplicate,
+  refusesRemoval,
+  zoneCapacity,
+} from "../state/bounds";
+import { containerNodes, sameNodeRef } from "../state/reducer";
 import { editableBlockIssue } from "./issue";
 
 const ISSUE_LABELS = {
@@ -78,6 +86,14 @@ export const EditableBlockShell = ({
     entry,
     instance,
   });
+  const capacity = zoneCapacity(zone);
+  const siblings = containerNodes(state, { areaId, zoneId })?.length ?? 0;
+  const duplicateRefused = refusesDuplicate(
+    capacity,
+    1,
+    areaId === null ? null : siblings,
+  );
+  const removeRefused = refusesRemoval(capacity, 1);
   const placed =
     dropIndicator?.nodeId === instance.id &&
     dropIndicator.zoneId === zoneId &&
@@ -136,6 +152,7 @@ export const EditableBlockShell = ({
         <button
           aria-label={t("block.duplicate", { name })}
           className={actionClassName}
+          disabled={duplicateRefused}
           onClick={() => {
             dispatch({ ref: nodeRef, type: "duplicate" });
           }}
@@ -150,6 +167,7 @@ export const EditableBlockShell = ({
             buttonVariants({ size: "icon-xs", variant: "destructive" }),
             "shadow-sm",
           )}
+          disabled={removeRefused}
           onClick={() => {
             dispatch({ ref: nodeRef, type: "remove" });
           }}

@@ -5,12 +5,16 @@ import { useCallback, useMemo, useState } from "react";
 import type {
   AnyEditablePageDefinition,
   EditablePageLayoutPayload,
+  EditablePageZone,
 } from "../content/editor/types";
 import type {
   VisualEditorAdapter,
   VisualEditorSaveInput,
 } from "../editor/adapter/types";
-import type { EditablePageContextValue } from "./page-context";
+import type {
+  EditablePageContextValue,
+  EditablePageZoneResolution,
+} from "./page-context";
 import type { EditablePageZones } from "./page-layout";
 
 import { editablePageZone } from "../content/editor/define";
@@ -77,20 +81,26 @@ export const EditablePage = ({
     [adapter, adopt],
   );
 
-  const value = useMemo<EditablePageContextValue>(
-    () => ({
-      pageId: page.id,
-      resolveZone: zoneId => {
-        const zone = editablePageZone(page, zoneId);
+  const value = useMemo<EditablePageContextValue>(() => {
+    const resolution = (
+      zone: EditablePageZone,
+      zoneId: string,
+    ): EditablePageZoneResolution => ({
+      allowedBlocks: zone.allowed,
+      blocks: Object.hasOwn(zones, zoneId) ? zones[zoneId] : zone.default,
+      max: zone.max,
+      min: zone.min,
+    });
 
-        return {
-          allowedBlocks: zone.allowed,
-          blocks: Object.hasOwn(zones, zoneId) ? zones[zoneId] : zone.default,
-        };
-      },
-    }),
-    [page, zones],
-  );
+    return {
+      lookupZone: zoneId =>
+        Object.hasOwn(page.zones, zoneId)
+          ? resolution(page.zones[zoneId], zoneId)
+          : undefined,
+      pageId: page.id,
+      resolveZone: zoneId => resolution(editablePageZone(page, zoneId), zoneId),
+    };
+  }, [page, zones]);
 
   if (layout && layout.pageId !== page.id) {
     throw new ContentEngineError(

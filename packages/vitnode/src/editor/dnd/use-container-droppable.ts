@@ -4,13 +4,11 @@ import type { EditorContainerRef } from "../state/types";
 import type { EditorDropRejection } from "./resolve-drop";
 
 import { useVisualEditor } from "../context";
+import { dropCapacity } from "../state/bounds";
 import { targetCapabilities } from "../state/capabilities";
+import { containerNodes } from "../state/reducer";
 import { useEditorDnd } from "./context";
-import {
-  areaDroppableId,
-  dropRejection,
-  zoneDroppableId,
-} from "./resolve-drop";
+import { areaDroppableId, decideDrop, zoneDroppableId } from "./resolve-drop";
 
 export interface ContainerDroppable {
   active: boolean;
@@ -38,8 +36,15 @@ const useContainerDroppable = ({
     rejection:
       dragging === null
         ? null
-        : dropRejection({
+        : decideDrop({
             capabilities: targetCapabilities(state, container),
+            capacity: dropCapacity(state, {
+              from:
+                dragging.kind === "catalog-block"
+                  ? null
+                  : dragging.container.zoneId,
+              to: container.zoneId,
+            }),
             source: dragging,
             target: {
               container,
@@ -48,7 +53,8 @@ const useContainerDroppable = ({
               kind: null,
               nodeId: null,
             },
-          }),
+            targetNodeCount: containerNodes(state, container)?.length ?? 0,
+          }).rejection,
     setNodeRef,
   };
 };

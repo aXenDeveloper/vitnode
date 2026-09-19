@@ -25,6 +25,11 @@ import {
 } from "../../components/ui/select";
 import { useVisualEditor } from "../context";
 import {
+  refusesDuplicate,
+  refusesRemoval,
+  zoneCapacity,
+} from "../state/bounds";
+import {
   AREA_LAYOUT_OPTIONS,
   areaDeleteMode,
   nextAreaLayout,
@@ -82,9 +87,17 @@ export const AreaPropertiesPanelContent = ({
   area: BlockAreaInstance;
   target: EditorNodeRef;
 }): ReactElement => {
-  const { dispatch, setPanel } = useVisualEditor();
+  const { dispatch, setPanel, state } = useVisualEditor();
   const t = useTranslations("core.editor");
   const [confirming, setConfirming] = useState(false);
+
+  const capacity = zoneCapacity(state.zones[target.zoneId]);
+  const duplicateRefused = refusesDuplicate(
+    capacity,
+    Math.max(area.children.length, 1),
+    null,
+  );
+  const removeRefused = refusesRemoval(capacity, area.children.length);
 
   const layout = areaLayoutWithDefaults(area.layout);
   const columns = layout.columns;
@@ -172,6 +185,7 @@ export const AreaPropertiesPanelContent = ({
         <div className="flex gap-2">
           <Button
             className="flex-1"
+            disabled={duplicateRefused}
             onClick={() => {
               dispatch({ ref: target, type: "duplicate" });
             }}
@@ -194,6 +208,7 @@ export const AreaPropertiesPanelContent = ({
         </div>
 
         <Button
+          disabled={removeRefused}
           onClick={() => {
             setConfirming(true);
           }}

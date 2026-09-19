@@ -5,9 +5,12 @@ import type { BlockAllowedSpec, ContentNode } from "./types";
 export interface EditablePageZoneResolution {
   allowedBlocks: BlockAllowedSpec | undefined;
   blocks: readonly ContentNode[];
+  max: number | undefined;
+  min: number | undefined;
 }
 
 export interface EditablePageContextValue {
+  lookupZone: (zoneId: string) => EditablePageZoneResolution | undefined;
   pageId: string;
   resolveZone: (zoneId: string) => EditablePageZoneResolution;
 }

@@ -22,6 +22,8 @@ export interface ContentZoneProps {
   className?: string;
   fallback?: BlockRenderFallback;
   id: string;
+  max?: number;
+  min?: number;
   registry?: BlockRegistry;
   validate?: BlockValidationMode;
 }
@@ -33,6 +35,8 @@ export const ContentZone = ({
   className,
   fallback,
   id,
+  max,
+  min,
   registry,
   validate,
 }: ContentZoneProps): null | ReactElement => {
@@ -41,7 +45,9 @@ export const ContentZone = ({
 
   assertContentZoneId(id);
 
-  const declared = blocks === undefined ? page?.resolveZone(id) : undefined;
+  const declared =
+    page?.lookupZone(id) ??
+    (page && blocks === undefined ? page.resolveZone(id) : undefined);
   const nodes = blocks === undefined ? declared?.blocks : blocks;
   const allowed = allowedBlocks ?? declared?.allowedBlocks;
 
@@ -54,6 +60,8 @@ export const ContentZone = ({
         className,
         fallback,
         id,
+        max: max ?? declared?.max,
+        min: min ?? declared?.min,
         registry,
         validate,
       },
