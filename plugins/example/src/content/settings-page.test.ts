@@ -1,6 +1,6 @@
-import type { ContentNode } from "@vitnode/core/blocks";
+import type { ContentNode } from "@vitnode/core/widgets";
 
-import { isBlockAllowed, isContentNode } from "@vitnode/core/blocks";
+import { isBlockAllowed, isContentNode } from "@vitnode/core/widgets";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

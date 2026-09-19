@@ -6,11 +6,11 @@ icon: MousePointerClick
 
 **Visual Edit Mode** is the part where somebody finally gets to move things around.
 
-A page renders its [content zones](/docs/dev/blocks/content-zones) the way it always has. An authorized person clicks **Edit page**, and the _same page_ - same layout, same fonts, same blocks - grows an outline around each zone, a drag handle on each block and a sidebar down the right-hand side. They rearrange, they save, they leave. Nobody was sent to a separate admin screen to guess what the result would look like.
+A page renders its [content zones](/docs/dev/widgets/content-zones) the way it always has. An authorized moderator clicks **Edit widgets**, and the _same page_ - same layout, same fonts, same widgets - grows an outline around each zone, a drag handle on each widget and a sidebar down the right-hand side. They rearrange, edit text inline, save, and leave. Nobody was sent to a separate admin screen to guess what the result would look like.
 
 ```text
 public page
-   ↓ Edit page
+   ↓ Edit widgets
 the same page, editable
    ↓ Save
 public page again
@@ -20,7 +20,7 @@ public page again
 
 ## `ContentZone` did not change
 
-This is the promise the [Content Zones](/docs/dev/blocks/content-zones) page made, and it is worth being specific about how it was kept.
+This is the promise the [Content Zones](/docs/dev/widgets/content-zones) page made, and it is worth being specific about how it was kept.
 
 ```tsx
 <ContentZone
@@ -38,50 +38,94 @@ A visitor pays one `useContext` that answers `null`. That is the entire cost of 
 
 ## Turning it on
 
-Wrap the part of the page that contains your zones in `ContentEditorRuntime` and give it a boolean.
+There are two ways to turn on visual editing, depending on how your page manages layouts.
+
+### 1. High-level: `<EditablePage>` (Recommended)
+
+For pages that declare their zones with `defineEditablePage`, wrap your zones in `<EditablePage>` from `@vitnode/core/widgets/page`. It automatically resolves zone data, handles defaults, rebases canonical server responses, and mounts the editor runtime when edit mode is active.
 
 ```tsx title="plugins/example/src/pages/zones-page.tsx"
-import { ContentEditorRuntime } from "@vitnode/core/blocks/edit"
+import { EditablePage } from '@vitnode/core/widgets/page'
+import { ContentZone } from '@vitnode/core/widgets/zone'
+import { Button } from '@vitnode/core/components/ui/button'
+import { createContentEditorAdapter } from '@vitnode/core/content/editor'
 
-const SettingsPage = () => {
+const SettingsPage = ({ canEdit, layout }: SettingsPageProps) => {
   const [editing, setEditing] = useState(false)
 
-  const adapter = useMemo<VisualEditorAdapter>(
-    () => ({
-      save: async (input) => {
-        await savePageZones(input)
-      },
-    }),
+  const adapter = useMemo(
+    () =>
+      createContentEditorAdapter({
+        page: settingsPage,
+        save: async (payload) => {
+          await savePageLayout(payload)
+        },
+      }),
     [],
   )
 
   return (
-    <ContentEditorRuntime
+    // [!code ++:4]
+    <EditablePage
       adapter={adapter}
-      enabled={editing}
+      canEdit={canEdit}
+      editing={editing}
+      layout={layout}
       onExit={() => {
         setEditing(false)
       }}
+      page={settingsPage}
     >
-      {canEditPage ? (
+      {canEdit && !editing ? (
         <Button
           onClick={() => {
             setEditing(true)
           }}
+          variant="outline"
         >
-          Edit page
+          Edit widgets
         </Button>
       ) : null}
 
-      <ContentZone
-        id="before-profile"
-        blocks={content.beforeProfile}
-      />
+      <ContentZone id="before-profile" />
       <ProfileForm />
-      <ContentZone id="after-profile" blocks={content.afterProfile} />
-    </ContentEditorRuntime>
+      <ContentZone id="after-profile" />
+    </EditablePage>
   )
 }
+```
+
+See [Editable Pages](/docs/dev/widgets/editable-pages) for the full breakdown of `defineEditablePage`, defaults, and zone permissions.
+
+### 2. Low-level: `<ContentEditorRuntime>`
+
+For custom hosts that manage their own raw zone persistence and do not declare an editable page, wrap your zones in `ContentEditorRuntime` from `@vitnode/core/widgets/edit`:
+
+```tsx
+import { ContentEditorRuntime } from '@vitnode/core/widgets/edit'
+
+;<ContentEditorRuntime
+  adapter={adapter}
+  enabled={editing}
+  onExit={() => {
+    setEditing(false)
+  }}
+>
+  {canEdit && !editing ? (
+    <Button
+      onClick={() => {
+        setEditing(true)
+      }}
+      variant="outline"
+    >
+      Edit widgets
+    </Button>
+  ) : null}
+
+  <ContentZone id="before-profile" blocks={content.beforeProfile} />
+  <ProfileForm />
+  <ContentZone id="after-profile" blocks={content.afterProfile} />
+</ContentEditorRuntime>
 ```
 
 | Prop       |          |                                                                               |
@@ -93,13 +137,15 @@ const SettingsPage = () => {
 
 ### Who gets the button
 
-`canEditPage` in that snippet is **yours**. VitNode does not decide who may edit a page, because VitNode does not know what your pages are - a plugin's settings screen, a marketing page and a user profile have three different answers.
+`canEdit` in those snippets is **yours**. VitNode does not decide who may edit a page, because VitNode does not know what your pages are - a plugin's settings screen, a marketing page and a user profile have three different answers. On editable pages, this is usually checked against the moderator permission declared by the page (e.g. `widgets: ["can_edit"]`).
 
 Keep the button out of the DOM when the answer is no, and never rely on hiding it with CSS:
 
 ```tsx
 {
-  canEditPage ? <Button onClick={startEditing}>Edit page</Button> : null
+  canEdit && !editing ? (
+    <Button onClick={() => setEditing(true)}>Edit widgets</Button>
+  ) : null
 }
 ```
 
@@ -109,21 +155,21 @@ Keep the button out of the DOM when the answer is no, and never rely on hiding i
   declares. That is a *signal*, not the boundary: the save endpoint behind the
   adapter asserts the same permission again and answers `403` without it. A URL
   like `?edit=true` is the same kind of thing - it may *request* edit mode, and
-  it must never grant it. See
-  [Editable Pages](/docs/dev/blocks/editable-pages#can-i-edit-this).
+  it must never grant it. See [Editable
+  Pages](/docs/dev/widgets/editable-pages#can-i-edit-this).
 </Callout>
 
 ## The lazy-loading guarantee
 
 The editor is not small. Drag and drop, a block catalogue, a form runtime and a properties panel add up, and every one of them is useless to a visitor reading the page.
 
-So **none of it is in the public page's bundle**. `@vitnode/core/blocks/edit` reaches React and nothing else; the only path from it to the editor is a dynamic `import()` behind `React.lazy`:
+So **none of it is in the public page's bundle**. `@vitnode/core/widgets/edit` reaches React and nothing else; the only path from it to the editor is a dynamic `import()` behind `React.lazy`:
 
 ```tsx title="packages/vitnode/src/blocks/edit.tsx"
-const EditorRoot = lazy(async () => await import("../editor/root"))
+const EditorRoot = lazy(async () => await import('../editor/root'))
 ```
 
-The chunk is requested when `enabled` first flips to `true` - that is, on the first click of **Edit page** - and never before.
+The chunk is requested when `enabled` first flips to `true` - that is, on the first click of **Edit widgets** - and never before.
 
 ```text
 view mode      blocks/zone.tsx      → react
@@ -183,7 +229,7 @@ page             editor
                    inside <DndContext>, inside the editor's own providers
 ```
 
-The markup lands where you put the zone; the React tree it belongs to is the editor's. One consequence is worth knowing: a block rendered in a zone reads React context from the **editor**, not from inside your page subtree. Context from your app root reaches it as usual - the router, the theme, the intl provider - but a provider you render *between* your page and a `ContentZone` will not. No built-in or plugin block relies on that today, and if yours does, pass the value through the block's own data instead.
+The markup lands where you put the zone; the React tree it belongs to is the editor's. One consequence is worth knowing: a block rendered in a zone reads React context from the **editor**, not from inside your page subtree. Context from your app root reaches it as usual - the router, the theme, the intl provider - but a provider you render _between_ your page and a `ContentZone` will not. No built-in or plugin block relies on that today, and if yours does, pass the value through the block's own data instead.
 
 ## The interaction model
 
@@ -204,7 +250,7 @@ Preview is there because the illusion has to break sometimes. Does the video pla
 
 ## Empty zones become visible
 
-An empty zone [renders nothing at all](/docs/dev/blocks/content-zones#empty-zones) in view mode - no wrapper, no placeholder, no gap. That is deliberate, and it stays true.
+An empty zone [renders nothing at all](/docs/dev/widgets/content-zones#empty-zones) in view mode - no wrapper, no placeholder, no gap. That is deliberate, and it stays true.
 
 In edit mode the same zone renders a dashed drop target with its id and an **Add block** button, because now somebody _is_ looking for a place to put something.
 
@@ -225,11 +271,11 @@ The canvas is _padded_, not covered. The shell reserves the sidebar's width, so 
 
 ### One panel, three modes
 
-|                      |                                                                                                                                    |
-| :------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
-| **Available Blocks** | A search field, a **Layout** section holding the [Area](/docs/dev/blocks/layout-areas) entry, and every block this location accepts, grouped by the namespace that provides it. |
-| **Properties**       | The selected block's [variant](/docs/dev/blocks/block-variants) picker and its fields, with Duplicate and Delete under them.       |
-| **Area properties**  | The selected Area's Columns, Gap, Alignment and Distribution, with Duplicate, Ungroup and Delete area under them.                  |
+|                      |                                                                                                                                                                                  |
+| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Available Blocks** | A search field, a **Layout** section holding the [Area](/docs/dev/widgets/layout-areas) entry, and every block this location accepts, grouped by the namespace that provides it. |
+| **Properties**       | The selected block's [variant](/docs/dev/widgets/block-variants) picker and its fields, with Duplicate and Delete under them.                                                    |
+| **Area properties**  | The selected Area's Columns, Gap, Alignment and Distribution, with Duplicate, Ungroup and Delete area under them.                                                                |
 
 Selecting a block switches to **Properties**; selecting an Area switches to **Area properties**. The **← Available Blocks** action at the top switches back from either _and_ clears the selection, so the page stops ringing something you are no longer editing. Deleting the selection does the same thing on its own.
 
@@ -246,7 +292,7 @@ A catalogue entry is a drag source _and_ a button, because those answer two diff
 
 **Add block** on a zone is what sets that target: the sidebar switches to **Available Blocks**, its header reads _For: sidebar_, and the zone stays lit until a block lands or you clear it. **Add block** on an Area targets the Area instead, and the header says so - _For: an area in after-profile_ - because naming the zone alone would be a lie about where the block is going.
 
-The catalogue's own **Layout** section sits above the plugin groups and holds one entry: **Area**. Clicking it drops an empty Area into the target. It is a button rather than a drag source, and it does not pretend otherwise - no grab cursor, no drag handle - because an Area is not a registered block and has no type to drag. While an Area is the insertion target the Layout section disappears, since [an Area cannot hold another Area](/docs/dev/blocks/layout-areas#areas-cannot-contain-areas).
+The catalogue's own **Layout** section sits above the plugin groups and holds one entry: **Area**. Clicking it drops an empty Area into the target. It is a button rather than a drag source, and it does not pretend otherwise - no grab cursor, no drag handle - because an Area is not a registered block and has no type to drag. While an Area is the insertion target the Layout section disappears, since [an Area cannot hold another Area](/docs/dev/widgets/layout-areas#areas-cannot-contain-areas).
 
 Either gesture inserts the block, selects it and opens **Properties** in one step, so the next thing you do is fill it in.
 
@@ -257,12 +303,12 @@ Either gesture inserts the block, selects it and opens **Properties** in one ste
 ```tsx
 <ContentZone
   id="sidebar"
-  allowedBlocks={["core:text"]}
+  allowedBlocks={['core:text']}
   blocks={content.sidebar}
 />
 ```
 
-Target that sidebar and the catalogue shows exactly one block. Clear the target and it shows the union of what the page's zones accept, because now any of them could be the destination. Same `allowedBlocks` value, same format as a [`blocks()` field's `allowed`](/docs/dev/blocks/blocks-field#restricting-what-may-go-in), now doing a third job.
+Target that sidebar and the catalogue shows exactly one block. Clear the target and it shows the union of what the page's zones accept, because now any of them could be the destination. Same `allowedBlocks` value, same format as a [`blocks()` field's `allowed`](/docs/dev/widgets/blocks-field#restricting-what-may-go-in), now doing a third job.
 
 A zone that allows nothing the installation provides says so, rather than offering an empty list.
 
@@ -287,7 +333,7 @@ Identity is the block instance id throughout - never an array index - so a block
 
 Dropping onto a block inserts **before** it or **after** it, decided by which half of it the pointer is over. That blue line is the answer, shown before you let go.
 
-Nothing ever lands _inside a block_. Dropping **into** something is the Area's gesture: drag a block onto an [Area](/docs/dev/blocks/layout-areas) and it becomes one of that Area's children, at the position the line shows. Drag a child back out and the Area keeps the rest. An Area dropped onto another Area is refused out loud - _An area cannot hold another area_ - rather than silently landing beside it.
+Nothing ever lands _inside a block_. Dropping **into** something is the Area's gesture: drag a block onto an [Area](/docs/dev/widgets/layout-areas) and it becomes one of that Area's children, at the position the line shows. Drag a child back out and the Area keeps the rest. An Area dropped onto another Area is refused out loud - _An area cannot hold another area_ - rather than silently landing beside it.
 
 ### The keyboard does all of it too
 
@@ -319,17 +365,17 @@ The refusal is computed from the same `isBlockAllowed` the field and the catalog
 
 ## The properties panel
 
-Select a block and its fields appear in the sidebar: text, textarea, number, boolean, enum, date-time, and groups of those - the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold), as declared by `defineBlock`. The panel builds itself from the block definition, so a block that adds a field gets a control for it with no editor change at all.
+Select a block and its fields appear in the sidebar: text, textarea, number, boolean, enum, date-time, and groups of those - the [field kinds a block may hold](/docs/dev/widgets/defining-a-block#which-fields-a-block-may-hold), as declared by `defineBlock`. The panel builds itself from the block definition, so a block that adds a field gets a control for it with no editor change at all.
 
 Typing updates the block on the page **as you type**. There is no Apply button, and no preview pane to compare against, because the page _is_ the preview.
 
-A block that wraps its own rendered text in `<BlockField>` can be typed into from the other end as well - click the heading on the page and edit it there. It is the same `data`, the same reducer and the same Save button, so the two panels never disagree. See [Inline Editing](/docs/dev/blocks/inline-editing).
+A block that wraps its own rendered text in `<BlockField>` can be typed into from the other end as well - click the heading on the page and edit it there. It is the same `data`, the same reducer and the same Save button, so the two panels never disagree. See [Inline Editing](/docs/dev/widgets/inline-editing).
 
-A block that declares more than one [variant](/docs/dev/blocks/block-variants) gets a **Variant** picker above those fields. Picking one is a separate action from editing content: it keeps the instance's id, leaves `data` untouched, and does not reset a field you were halfway through. A block with one variant, or none, shows no picker - there is nothing to decide. A stored variant the block no longer offers is named in the panel, with the declared ones still offered beside it.
+A block that declares more than one [variant](/docs/dev/widgets/block-variants) gets a **Variant** picker above those fields. Picking one is a separate action from editing content: it keeps the instance's id, leaves `data` untouched, and does not reset a field you were halfway through. A block with one variant, or none, shows no picker - there is nothing to decide. A stored variant the block no longer offers is named in the panel, with the declared ones still offered beside it.
 
 ### Area properties
 
-Select an [Area](/docs/dev/blocks/layout-areas) rather than one of its children and the same sidebar shows its four layout tokens - **Columns**, **Gap**, **Alignment**, **Distribution** - and re-lays the page out as you pick them. Under them: **Duplicate area**, **Ungroup**, and **Delete area**.
+Select an [Area](/docs/dev/widgets/layout-areas) rather than one of its children and the same sidebar shows its four layout tokens - **Columns**, **Gap**, **Alignment**, **Distribution** - and re-lays the page out as you pick them. Under them: **Duplicate area**, **Ungroup**, and **Delete area**.
 
 Ungroup and Delete are deliberately different buttons. Ungroup removes the container and leaves the blocks where the Area was; Delete takes them with it, and asks first, offering _Ungroup, keep blocks_ in the same dialog. An Area holding nothing is deleted without the interrogation, because there is nothing to lose.
 
@@ -341,9 +387,9 @@ A zone is handed whatever is stored in it, and storage is older than any editor.
 
 Every value a zone mounts with is sorted into one of two piles:
 
-|                                 |                                                                                                                                                         |
-| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **A block with bad data**       | `{ id, type, data }` is intact and `type` is registered, but `data` does not match the fields. It stays a block: selectable, movable, deletable.        |
+|                                   |                                                                                                                                                                           |
+| :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A block with bad data**         | `{ id, type, data }` is intact and `type` is registered, but `data` does not match the fields. It stays a block: selectable, movable, deletable.                          |
 | **Something that is not a block** | No usable `id`, no `type`, an id already used **by an earlier block in the same zone**, or not an object at all. Nothing can be inferred from it, so nothing pretends to. |
 
 The first pile keeps working exactly as before - the block renders an [`InvalidBlock`](#the-properties-panel) placeholder in place of its component, and its own shell keeps the drag handle, the duplicate and the delete button. Its data is bad; its identity is not.
@@ -358,13 +404,13 @@ interface EditorZoneState {
 }
 ```
 
-A `ContentNode` is a block instance or an [Area](/docs/dev/blocks/layout-areas). An Area whose stored `layout` is not one the editor recognises, or which holds an Area of its own, lands in the second pile with everything else: shown as-is, never rewritten.
+A `ContentNode` is a block instance or an [Area](/docs/dev/widgets/layout-areas). An Area whose stored `layout` is not one the editor recognises, or which holds an Area of its own, lands in the second pile with everything else: shown as-is, never rewritten.
 
 Nothing in the editor - no reducer action, no drop resolver, no block component - is ever handed one of those values. The zone shows them at the top, prints what each one looks like, and offers exactly one action per entry: **Remove invalid entry**.
 
 ### One id per zone, not one id per page
 
-An instance id has to be unique **within its zone**, and only within its zone. Two blocks sharing an id in one zone are indistinguishable there, so the second one goes in the opaque pile above. Two blocks sharing an id in two *different* zones are perfectly valid - the Content Engine validates a blocks field on its own, so nothing has ever promised otherwise, and a zone copied from one field into another would trip over any rule that did.
+An instance id has to be unique **within its zone**, and only within its zone. Two blocks sharing an id in one zone are indistinguishable there, so the second one goes in the opaque pile above. Two blocks sharing an id in two _different_ zones are perfectly valid - the Content Engine validates a blocks field on its own, so nothing has ever promised otherwise, and a zone copied from one field into another would trip over any rule that did.
 
 The editor therefore never identifies a block by its id alone. Selection, updates, deletion, duplication, moves and drag-and-drop all carry the zone:
 
@@ -377,7 +423,7 @@ interface EditorBlockRef {
 
 Drag-and-drop ids are built the same way - `blockDraggableId({ zoneId, blockId })` percent-encodes both halves, so an id survives a round trip whatever characters it contains - and the drag payload carries the ref structurally rather than being parsed back out of a string. Selecting the copy of `X` in the sidebar zone can never edit the copy of `X` above the profile form.
 
-Zone ids run the other way: a zone id is a *place*, so one page may only have one of each. Two `<ContentZone>`s claiming the same id while the editor is open is a [developer error](/docs/dev/blocks/content-zones#one-id-one-place-on-the-page), not a merge.
+Zone ids run the other way: a zone id is a _place_, so one page may only have one of each. Two `<ContentZone>`s claiming the same id while the editor is open is a [developer error](/docs/dev/widgets/content-zones#one-id-one-place-on-the-page), not a merge.
 
 ### Saving is blocked until you decide
 
@@ -397,23 +443,21 @@ When a zone's outlet unmounts it is **removed from the document**: out of `zones
 
 What happens to unsaved work in it depends on whether there was any:
 
-|                          |                                                                                                                                       |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
-| **No unsaved changes**   | It is dropped silently. There was nothing to lose.                                                                                     |
-| **Unsaved changes**      | It is still dropped - the zone is gone, there is nowhere to put them back - but the sidebar footer names it, so it is never *quiet*.  |
+|                        |                                                                                                                                      |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **No unsaved changes** | It is dropped silently. There was nothing to lose.                                                                                   |
+| **Unsaved changes**    | It is still dropped - the zone is gone, there is nowhere to put them back - but the sidebar footer names it, so it is never _quiet_. |
 
 That is the rule: an unmounted zone is out of the editable document, and losing work to it is reported rather than blocked. Blocking **Save** would trap you on a page whose zone no longer exists, and keeping the zone would mean writing content the page has stopped showing. Bring the zone back and it re-mounts from whatever the page hands it, with a fresh baseline.
 
-What the *host* does with the gap is the host's call, and it matters. The save payload only carries zones the editor currently holds, so a save must write **only what it names** - never a whole field set composed on top of a fallback, which is how a zone that is off the page gets reset to something nobody chose. [Editable Pages](/docs/dev/blocks/editable-pages#the-two-routes) does exactly that: a zone the payload does not mention is not written, because each zone is its own row.
+What the _host_ does with the gap is the host's call, and it matters. The save payload only carries zones the editor currently holds, so a save must write **only what it names** - never a whole field set composed on top of a fallback, which is how a zone that is off the page gets reset to something nobody chose. [Editable Pages](/docs/dev/widgets/editable-pages#the-two-routes) does exactly that: a zone the payload does not mention is not written, because each zone is its own row.
 
 ## Saving is the host's job
 
 The editor never fetches. Not once. The only way anything leaves it is the adapter you passed:
 
 ```ts
-type VisualEditorSnapshot = Readonly<
-  Record<string, readonly ContentNode[]>
->
+type VisualEditorSnapshot = Readonly<Record<string, readonly ContentNode[]>>
 
 interface VisualEditorSaveInput {
   changedZoneIds: readonly string[]
@@ -435,7 +479,7 @@ interface VisualEditorAdapter {
 
 `zones` holds every zone on the page keyed by its id; `changedZoneIds` names the ones that actually differ from what loaded; `expectedZones` holds, under the same keys, the **baseline** each zone started from - what was there before anybody dragged anything. Resolve and the editor marks itself clean and toasts. Throw or reject and it shows an error and keeps the changes, so nothing is lost to a failed request.
 
-Send the baseline with the write and your API can answer the only question that matters when two people are arranging one page: *is the thing I am replacing still the thing I was given?* Zones are independent, so two moderators editing different zones both succeed, while a write to a zone that moved underneath somebody is refused instead of silently winning. [Editable Pages](/docs/dev/blocks/editable-pages#two-moderators-one-page) does exactly that with a `409`, and the editor says so - *Somebody else saved this page first* - while keeping every change you made.
+Send the baseline with the write and your API can answer the only question that matters when two people are arranging one page: _is the thing I am replacing still the thing I was given?_ Zones are independent, so two moderators editing different zones both succeed, while a write to a zone that moved underneath somebody is refused instead of silently winning. [Editable Pages](/docs/dev/widgets/editable-pages#two-moderators-one-page) does exactly that with a `409`, and the editor says so - _Somebody else saved this page first_ - while keeping every change you made.
 
 The one rule the contract asks of you: **save what you were handed**. The editor rebases its idea of "unchanged" onto the snapshot it sent, not onto the state it is in when the promise resolves - so a word typed while the request was in flight is still unsaved afterwards, exactly as it should be.
 
@@ -444,10 +488,10 @@ The one rule the contract asks of you: **save what you were handed**. The editor
 <Callout title="You probably do not write this by hand">
   If the page declares its zones - and it usually should -
   `createContentEditorAdapter` builds this payload for you, from the same page
-  definition the server reads. See
-  [Editable Pages](/docs/dev/blocks/editable-pages). The rest of this section is
-  the contract underneath it, and what to honour if you are writing an adapter
-  for somewhere else.
+  definition the server reads. See [Editable
+  Pages](/docs/dev/widgets/editable-pages). The rest of this section is the
+  contract underneath it, and what to honour if you are writing an adapter for
+  somewhere else.
 </Callout>
 
 ```tsx
@@ -455,10 +499,10 @@ const adapter = useMemo<VisualEditorAdapter>(
   () => ({
     save: async ({ changedZoneIds, expectedZones, zones }) => {
       await fetcher({
-        plugin: "@vitnode/example",
-        method: "patch",
-        module: "pages",
-        path: "/{id}/zones",
+        plugin: '@vitnode/example',
+        method: 'patch',
+        module: 'pages',
+        path: '/{id}/zones',
         args: {
           param: { id: page.id },
           json: { changedZoneIds, expectedZones, zones },
@@ -482,7 +526,7 @@ const [zones, setZones] = useState(loaderData.zones)
 const save = async (input: VisualEditorSaveInput) => {
   const payload = await writeChangedZones(input)
 
-  setZones(current => ({ ...current, ...payload.zones }))
+  setZones((current) => ({ ...current, ...payload.zones }))
 
   return { zones: payload.zones }
 }
@@ -500,10 +544,10 @@ The same problem arrives from the other direction. A router invalidation, a refe
 
 The rule is the one you would write yourself:
 
-|                      |                                                                                                                                          |
-| :------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Zone is clean**    | The incoming content replaces both the working copy and the baseline. The zone adopts it and stays clean. A selection whose block is gone clears. |
-| **Zone is dirty**    | Nothing about its content moves. Local edits win until **Save** or **Discard** resolves them. Only the allowlist and registry still refresh. |
+|                   |                                                                                                                                                   |
+| :---------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Zone is clean** | The incoming content replaces both the working copy and the baseline. The zone adopts it and stays clean. A selection whose block is gone clears. |
+| **Zone is dirty** | Nothing about its content moves. Local edits win until **Save** or **Discard** resolves them. Only the allowlist and registry still refresh.      |
 
 There is deliberately no merge. Two block arrays cannot be reconciled without inventing an answer, and inventing one is how an editor loses a paragraph somebody typed.
 
@@ -511,11 +555,11 @@ There is deliberately no merge. Two block arrays cannot be reconciled without in
 
 Loading has a trap that is easy to walk into and expensive to walk out of. A route answers three different "there is nothing here" shapes, and they mean three different things:
 
-|                                        |                                                                                                     |
-| :------------------------------------- | :----------------------------------------------------------------------------------------------------- |
-| **200, an empty zone**                 | Nothing is in that zone. Editing and **Save** are fine.                                              |
-| **200, nothing stored yet**            | The page has never been rearranged, so its declared defaults come back with `updatedAt: null`.        |
-| **Anything non-2xx**                   | What is stored is **unknown** - an auth failure, a database error, a dropped connection.             |
+|                             |                                                                                                |
+| :-------------------------- | :--------------------------------------------------------------------------------------------- |
+| **200, an empty zone**      | Nothing is in that zone. Editing and **Save** are fine.                                        |
+| **200, nothing stored yet** | The page has never been rearranged, so its declared defaults come back with `updatedAt: null`. |
+| **Anything non-2xx**        | What is stored is **unknown** - an auth failure, a database error, a dropped connection.       |
 
 Treating the third as the first is how a page overwrites content nobody meant to touch: the load fails, something plausible renders as if it had been read, somebody tidies a heading, presses **Save**, and the real stored layout is gone. The editor cannot catch this, because by then it was handed a perfectly valid set of blocks.
 
@@ -529,7 +573,7 @@ if (!stored.ok) {
 
 The router's `defaultErrorComponent` takes it from there, and **Edit widgets** is never reached. The API holds the same line from the other side: a stored row that cannot be read throws rather than answering with an empty layout.
 
-The second row is a *success*, and the distinction is the whole reason a page declares its defaults rather than inventing them at render time. Defaults that came from the declaration are content somebody shipped on purpose, so the first **Save** is entitled to replace them; defaults invented because a read failed are content nobody chose. [Editable Pages](/docs/dev/blocks/editable-pages#the-two-routes) has the longer version.
+The second row is a _success_, and the distinction is the whole reason a page declares its defaults rather than inventing them at render time. Defaults that came from the declaration are content somebody shipped on purpose, so the first **Save** is entitled to replace them; defaults invented because a read failed are content nobody chose. [Editable Pages](/docs/dev/widgets/editable-pages#the-two-routes) has the longer version.
 
 If throwing does not suit your route, return an explicit error state and disable editing on it. What you must not do is hand the editor a writable copy of something you did not actually read.
 
@@ -551,26 +595,26 @@ The same question is asked by the browser: navigate away with unsaved changes an
 
 The obvious alternative is a `core_content_zones` table that stores `(zoneId, blocks)` for every page in the installation, and a generic save endpoint that writes to it. It was not built, on purpose.
 
-Block content already lives somewhere: in a [`blocks()` field](/docs/dev/blocks/blocks-field) on a content type, in a plugin's own settings row, in whatever column the page loads it from. A generic zones table would be a **second** home for the same data, and then two places to migrate, two permission models, two revision histories, and a stubborn class of bug where the page renders one copy and the editor saves the other.
+Block content already lives somewhere: in a [`blocks()` field](/docs/dev/widgets/blocks-field) on a content type, in a plugin's own settings row, in whatever column the page loads it from. A generic zones table would be a **second** home for the same data, and then two places to migrate, two permission models, two revision histories, and a stubborn class of bug where the page renders one copy and the editor saves the other.
 
 The adapter is the alternative: the page that knew how to _load_ its zones is the page that knows how to _save_ them. It writes to its own column, through its own API, behind its own permission check.
 
-What is generic is the *wiring*, not the storage. [Editable Pages](/docs/dev/blocks/editable-pages) is the one exception, and it earns it: a settings screen's zones belong to no record, so core keeps them in an internal table keyed by the page id - one row per page, holding only the zones somebody customised - and the page declares its zones instead of mapping them. A zone whose blocks *do* live on a content type stays where it always lived, and the page that knew how to load it is still the page that knows how to save it.
+What is generic is the _wiring_, not the storage. [Editable Pages](/docs/dev/widgets/editable-pages) is the one exception, and it earns it: a settings screen's zones belong to no record, so core keeps them in an internal table keyed by the page id - one row per page, holding only the zones somebody customised - and the page declares its zones instead of mapping them. A zone whose blocks _do_ live on a content type stays where it always lived, and the page that knew how to load it is still the page that knows how to save it.
 
 ## What the editor deliberately does not do
 
 Being clear about the edges is more useful than a roadmap.
 
-|                                   |                                                                                                                                                                                                         |
-| :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Nested areas**                  | An [Area](/docs/dev/blocks/layout-areas) holds blocks, one level deep. No areas inside areas, and no block that contains a zone of its own.                                                             |
-| **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                      |
-| **Permission UI**                 | No roles screen. Who may edit is your page's answer, and the save route's; an [editable page](/docs/dev/blocks/editable-pages#can-i-edit-this) names the moderator permission it wants, but granting it is the ordinary staff screen's job. |
-| **Layout administration**         | No AdminCP section listing which pages have been rearranged, no reset-to-default, no export or import, no copying one page's layout onto another. [Deliberately left to a possible V2](/docs/dev/blocks/editable-pages#where-a-layout-is-stored) - the storage shape makes each of them a query on one table, but none is built. |
-| **Live collaboration**            | No shared cursors, no presence, no merging two people's edits to **one** zone. Different zones of one page do merge, and a stale write to the same zone is refused rather than applied - see [two moderators, one page](/docs/dev/blocks/editable-pages#two-moderators-one-page) - but nobody watches anybody else arrange anything in real time. |
-| **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel. |
-| **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                             |
-| **Rich text**                     | A `text` or `textarea` field is a plain string, and it stays one. You can type into it [on the page itself](/docs/dev/blocks/inline-editing) or in the properties panel, but no block field holds bold, links or lists. Tiptap ships in this repository and is deliberately nowhere near a block. |
+|                                   |                                                                                                                                                                                                                                                                                                                                                    |
+| :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Nested areas**                  | An [Area](/docs/dev/widgets/layout-areas) holds blocks, one level deep. No areas inside areas, and no block that contains a zone of its own.                                                                                                                                                                                                       |
+| **Drafts and revisions**          | Save writes. There is no "unpublished version of this page" concept in the editor.                                                                                                                                                                                                                                                                 |
+| **Permission UI**                 | No roles screen. Who may edit is your page's answer, and the save route's; an [editable page](/docs/dev/widgets/editable-pages#can-i-edit-this) names the moderator permission it wants, but granting it is the ordinary staff screen's job.                                                                                                       |
+| **Layout administration**         | No AdminCP section listing which pages have been rearranged, no reset-to-default, no export or import, no copying one page's layout onto another. [Deliberately left to a possible V2](/docs/dev/widgets/editable-pages#where-a-layout-is-stored) - the storage shape makes each of them a query on one table, but none is built.                  |
+| **Live collaboration**            | No shared cursors, no presence, no merging two people's edits to **one** zone. Different zones of one page do merge, and a stale write to the same zone is refused rather than applied - see [two moderators, one page](/docs/dev/widgets/editable-pages#two-moderators-one-page) - but nobody watches anybody else arrange anything in real time. |
+| **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/widgets/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel.                                                                                                                                           |
+| **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                                                                                                                                                                        |
+| **Rich text**                     | A `text` or `textarea` field is a plain string, and it stays one. You can type into it [on the page itself](/docs/dev/widgets/inline-editing) or in the properties panel, but no block field holds bold, links or lists. Tiptap ships in this repository and is deliberately nowhere near a block.                                                 |
 
 Everything in that table is a _later_ decision rather than a closed door - but none of it is built, and none of it is implied by the APIs above.
 
@@ -598,7 +642,7 @@ Two rows of that table were designed _around_ rather than merely skipped, and bo
 
 ### Presentation variants
 
-How a block looks, as opposed to what it says. A wide hero and a narrow hero used to be either two block types or a `width` field sitting in the middle of the copy. A [variant](/docs/dev/blocks/block-variants) pulls them apart:
+How a block looks, as opposed to what it says. A wide hero and a narrow hero used to be either two block types or a `width` field sitting in the middle of the copy. A [variant](/docs/dev/widgets/block-variants) pulls them apart:
 
 ```ts
 interface BlockInstance {
@@ -613,14 +657,19 @@ interface BlockInstance {
 
 ### Layout areas
 
-How blocks sit next to each other, which was never one block's business. An [Area](/docs/dev/blocks/layout-areas) is a node in the zone's own list:
+How blocks sit next to each other, which was never one block's business. An [Area](/docs/dev/widgets/layout-areas) is a node in the zone's own list:
 
 ```ts
 interface BlockAreaInstance {
   children: readonly BlockInstance[]
   id: string
-  kind: "area"
-  layout: { columns: 1 | 2 | 3 | 4; gap?: string; align?: string; justify?: string }
+  kind: 'area'
+  layout: {
+    columns: 1 | 2 | 3 | 4
+    gap?: string
+    align?: string
+    justify?: string
+  }
 }
 ```
 
@@ -630,7 +679,7 @@ Three concerns, kept separate: **data** is what the block says, **variant** is h
 
 ## Verifying it yourself
 
-`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, a block stored with a variant, an Area holding two blocks, a second Area left empty, and an **Edit widgets** action for anybody holding the page's own moderator permission. It is an [editable page](/docs/dev/blocks/editable-pages), so your changes survive a reload; before anybody saves, it renders the layout the page declares.
+`/example/zones` is the manual test page. It has four zones - two around a locked profile form, one narrower sidebar, one empty - blocks from two plugins, a block stored with a variant, an Area holding two blocks, a second Area left empty, and an **Edit widgets** action for anybody holding the page's own moderator permission. It is an [editable page](/docs/dev/widgets/editable-pages), so your changes survive a reload; before anybody saves, it renders the layout the page declares.
 
 Sign in first: the action is gated on the moderator permission **Widgets → can edit** from the example plugin, and a root role holds it without being granted it.
 
@@ -665,11 +714,11 @@ Reload and filter the request list to `/src/editor/`. **Nothing.** Not one edito
 
 **Click Edit widgets**
 
-|            | Expected                                                                          |
-| :--------- | :--------------------------------------------------------------------------------- |
-| Network    | Exactly one new chunk, on this click and not before.                              |
-| Zones      | Dashed outlines with the zone id in the corner.                                   |
-| Layout     | Nothing jumped, except the canvas making room on the right.                       |
+|            | Expected                                                                            |
+| :--------- | :---------------------------------------------------------------------------------- |
+| Network    | Exactly one new chunk, on this click and not before.                                |
+| Zones      | Dashed outlines with the zone id in the corner.                                     |
+| Layout     | Nothing jumped, except the canvas making room on the right.                         |
 | Page state | The profile form still holds what you typed, and the counter still holds its count. |
 
 Click **Finish editing**, then **Edit widgets** again: the second time, **no** request is made. The chunk is already in memory.
@@ -814,11 +863,11 @@ Press **Preview**. Outlines, handles and overlays go; the sidebar collapses to a
 
 Press **Save** in the sidebar footer - not the profile form's own Save button, which is there to prove the form still works.
 
-|         | Expected                                                                                                          |
-| :------ | :---------------------------------------------------------------------------------------------------------------- |
-| Toast   | _Page saved_.                                                                                                     |
-| Footer  | Switches from _Unsaved changes_ to _Saved_.                                                                       |
-| Header  | The line under the title stops saying the page ships these widgets and names the time it was rearranged.         |
+|         | Expected                                                                                                                                                                  |
+| :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Toast   | _Page saved_.                                                                                                                                                             |
+| Footer  | Switches from _Unsaved changes_ to _Saved_.                                                                                                                               |
+| Header  | The line under the title stops saying the page ships these widgets and names the time it was rearranged.                                                                  |
 | Payload | A **Last save payload** block appears at the bottom of the page - open it and read the JSON that went to `PUT /pages/layout`. Edit one zone and it names that zone alone. |
 
 Check that `changedZoneIds` lists only the zones you actually touched.

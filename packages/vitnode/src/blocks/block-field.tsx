@@ -30,6 +30,16 @@ export const BlockField = ({
   return runtime.render({ children, name, placeholder });
 };
 
+export const WidgetField = BlockField;
+
 export const blockFieldsFor = <TFields,>(): BlockFieldComponent<
   Extract<keyof TFields, string>
 > => BlockField as BlockFieldComponent<Extract<keyof TFields, string>>;
+
+export const widgetFieldsFor = blockFieldsFor;
+
+export type WidgetFieldProps = BlockFieldProps;
+export type WidgetFieldNamedProps<TName extends string> =
+  BlockFieldNamedProps<TName>;
+export type WidgetFieldComponent<TName extends string> =
+  BlockFieldComponent<TName>;

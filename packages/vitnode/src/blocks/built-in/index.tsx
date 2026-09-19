@@ -14,3 +14,5 @@ export const blocks = {
   blocks: [ctaBlock, heroBlock, textBlock],
   namespace: "core",
 } satisfies BlockPluginSource;
+
+export const widgets = blocks;

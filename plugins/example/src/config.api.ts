@@ -12,13 +12,13 @@ import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
 
-import { blocks } from "./blocks";
+import { widgets } from "./widgets";
 import "@/api/lib/events";
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
-    blocks,
+    blocks: widgets,
     editablePages: [settingsPage],
     permissionStaff: {
       moderator: {

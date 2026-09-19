@@ -24,12 +24,12 @@
 // A block definition is metadata plus one public React component. There is no
 // editor code in here, and no request is made to build it.
 
-import type { BlockPluginSource } from '@vitnode/core/blocks'
+import type { BlockPluginSource } from '@vitnode/core/widgets'
 
-import { createBlockRegistry, setDefaultBlockRegistry } from '@vitnode/core/blocks'
+import { createBlockRegistry, setDefaultBlockRegistry } from '@vitnode/core/widgets'
 
-import { blocks as blocks0 } from '@vitnode/core/blocks/built-in'
-import { blocks as blocks1 } from '@vitnode/example/blocks'
+import { blocks as blocks0 } from '@vitnode/core/widgets/built-in'
+import { blocks as blocks1 } from '@vitnode/example/widgets'
 
 
 export const pluginBlocks = [

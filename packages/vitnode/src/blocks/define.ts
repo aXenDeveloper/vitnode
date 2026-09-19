@@ -15,9 +15,9 @@ import { assertBlockName } from "./namespace";
 export interface DefineBlockArgs<
   TId extends string,
   TFields extends BlockFieldMap,
-  TVariant extends string,
+  TVariant extends string = string,
 > {
-  component: BlockComponent<BlockData<TFields>>;
+  component: BlockComponent<BlockData<TFields>, TVariant>;
   defaultVariant?: NoInfer<TVariant>;
   description?: string;
   fields: TFields;
@@ -84,7 +84,7 @@ const assertBlockVariants = (
 export const defineBlock = <
   const TFields extends BlockFieldMap,
   TId extends string = string,
-  TVariant extends string = never,
+  TVariant extends string = string,
 >({
   component,
   defaultVariant,

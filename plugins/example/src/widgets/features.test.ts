@@ -1,35 +1,35 @@
 import {
-  blockDataShapeIssue,
-  blockVariantLabel,
-  resolveBlockVariant,
-} from "@vitnode/core/blocks";
+  resolveWidgetVariant,
+  widgetDataShapeIssue,
+  widgetVariantLabel,
+} from "@vitnode/core/widgets";
 import { createBlockInstanceFor } from "@vitnode/core/editor/instance/defaults";
 import { describe, expect, it } from "vitest";
 
-import { featuresBlock } from "./features";
+import { featuresWidget } from "./features";
 
 const registered = {
-  definition: featuresBlock,
+  definition: featuresWidget,
   namespace: "example",
   pluginId: "@vitnode/example",
   type: "example:features",
 };
 
-describe("featuresBlock", () => {
+describe("featuresWidget", () => {
   it("is renderable and saveable the moment the editor adds it", () => {
     const instance = createBlockInstanceFor(registered);
 
     expect(instance.type).toBe("example:features");
-    expect(blockDataShapeIssue(featuresBlock, instance.data)).toBeNull();
+    expect(widgetDataShapeIssue(featuresWidget, instance.data)).toBeNull();
   });
 
   it("offers three variants, each with a label of its own", () => {
-    expect(featuresBlock.variants?.map(variant => variant.id)).toStrictEqual([
+    expect(featuresWidget.variants?.map(variant => variant.id)).toStrictEqual([
       "grid",
       "list",
       "compact",
     ]);
-    expect(featuresBlock.variants?.map(blockVariantLabel)).toStrictEqual([
+    expect(featuresWidget.variants?.map(widgetVariantLabel)).toStrictEqual([
       "Grid",
       "List",
       "Compact",
@@ -37,29 +37,29 @@ describe("featuresBlock", () => {
   });
 
   it("falls back to the grid it declares as the default", () => {
-    expect(featuresBlock.defaultVariant).toBe("grid");
-    expect(resolveBlockVariant(featuresBlock, undefined)).toStrictEqual({
+    expect(featuresWidget.defaultVariant).toBe("grid");
+    expect(resolveWidgetVariant(featuresWidget, undefined)).toStrictEqual({
       kind: "resolved",
       variant: "grid",
     });
   });
 
   it("resolves every variant it declares and refuses one it does not", () => {
-    for (const variant of featuresBlock.variants ?? []) {
-      expect(resolveBlockVariant(featuresBlock, variant.id)).toStrictEqual({
+    for (const variant of featuresWidget.variants ?? []) {
+      expect(resolveWidgetVariant(featuresWidget, variant.id)).toStrictEqual({
         kind: "resolved",
         variant: variant.id,
       });
     }
 
-    expect(resolveBlockVariant(featuresBlock, "carousel")).toStrictEqual({
+    expect(resolveWidgetVariant(featuresWidget, "carousel")).toStrictEqual({
       kind: "unknown",
       variant: "carousel",
     });
   });
 
   it("keeps its items in fields a block may hold, rather than a repeatable", () => {
-    expect(Object.keys(featuresBlock.fields)).toStrictEqual([
+    expect(Object.keys(featuresWidget.fields)).toStrictEqual([
       "heading",
       "intro",
       "primary",
@@ -68,7 +68,7 @@ describe("featuresBlock", () => {
     ]);
 
     for (const name of ["primary", "secondary", "tertiary"]) {
-      expect(featuresBlock.fields[name].kind).toBe("group");
+      expect(featuresWidget.fields[name].kind).toBe("group");
     }
   });
 
@@ -76,9 +76,9 @@ describe("featuresBlock", () => {
     const { data } = createBlockInstanceFor(registered);
 
     expect(Object.keys(data)).not.toContain("variant");
-    expect(blockDataShapeIssue(featuresBlock, data)).toBeNull();
+    expect(widgetDataShapeIssue(featuresWidget, data)).toBeNull();
     expect(
-      blockDataShapeIssue(featuresBlock, { ...data, variant: "grid" }),
+      widgetDataShapeIssue(featuresWidget, { ...data, variant: "grid" }),
     ).not.toBeNull();
   });
 });

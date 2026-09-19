@@ -244,7 +244,7 @@ const renderNode = ({
 
 export interface ContentRendererProps {
   allowed?: BlockAllowedSpec;
-  blocks: null | readonly unknown[] | undefined;
+  blocks?: null | readonly unknown[] | undefined;
   fallback?: BlockRenderFallback;
   registry?: BlockRegistry;
   validate?: BlockValidationMode;

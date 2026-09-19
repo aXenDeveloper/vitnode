@@ -13,7 +13,7 @@ const APP_SRC = resolve(SRC_ROOT, "..", "..", "..", "apps", "web", "src");
 
 const ROUTER = join(APP_SRC, "router.tsx");
 
-const BLOCK_MODULE = /^@vitnode\/[^/]+\/blocks(\/|$)/;
+const BLOCK_MODULE = /^@vitnode\/[^/]+\/(widgets|blocks)(\/|$)/;
 
 const present = existsSync(ROUTER);
 

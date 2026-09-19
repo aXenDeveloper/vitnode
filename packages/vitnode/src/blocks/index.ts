@@ -57,8 +57,11 @@ export {
   CONTENT_ZONE_ID_PATTERN,
   CONTENT_ZONE_SEPARATOR,
 } from "./const";
-export { defineBlock } from "./define";
-export type { DefineBlockArgs } from "./define";
+export { defineBlock, defineBlock as defineWidget } from "./define";
+export type {
+  DefineBlockArgs,
+  DefineBlockArgs as DefineWidgetArgs,
+} from "./define";
 export {
   BLOCK_REGISTRY_MISSING,
   BlockError,
@@ -66,40 +69,71 @@ export {
 } from "./errors";
 export {
   createBlockInstance,
+  createBlockInstance as createWidgetInstance,
   createBlockInstanceId,
+  createBlockInstanceId as createWidgetInstanceId,
   isBlockInstance,
+  isBlockInstance as isWidgetInstance,
   isBlockInstanceId,
+  isBlockInstanceId as isWidgetInstanceId,
 } from "./instance";
 export {
   assertBlockName,
+  assertBlockName as assertWidgetName,
   assertBlockNamespace,
+  assertBlockNamespace as assertWidgetNamespace,
   blockNamespaceForPlugin,
+  blockNamespaceForPlugin as widgetNamespaceForPlugin,
   parseBlockId,
+  parseBlockId as parseWidgetId,
   qualifiedBlockId,
+  qualifiedBlockId as qualifiedWidgetId,
 } from "./namespace";
-export type { ParsedBlockId } from "./namespace";
+export type {
+  ParsedBlockId,
+  ParsedBlockId as ParsedWidgetId,
+} from "./namespace";
 export {
   allowedBlocks,
+  allowedBlocks as allowedWidgets,
   createBlockRegistry,
+  createBlockRegistry as createWidgetRegistry,
   getDefaultBlockRegistry,
+  getDefaultBlockRegistry as getDefaultWidgetRegistry,
   isBlockAllowed,
+  isBlockAllowed as isWidgetAllowed,
   resolveBlockRegistry,
+  resolveBlockRegistry as resolveWidgetRegistry,
   setDefaultBlockRegistry,
+  setDefaultBlockRegistry as setDefaultWidgetRegistry,
 } from "./registry";
 export {
   blockDataIssues,
+  blockDataIssues as widgetDataIssues,
   blockDataSchema,
+  blockDataSchema as widgetDataSchema,
   buildBlockDataSchema,
+  buildBlockDataSchema as buildWidgetDataSchema,
   parseBlockData,
+  parseBlockData as parseWidgetData,
   safeParseBlockData,
+  safeParseBlockData as safeParseWidgetData,
 } from "./schema";
-export { blockDataShapeIssue } from "./shape";
+export {
+  blockDataShapeIssue,
+  blockDataShapeIssue as widgetDataShapeIssue,
+} from "./shape";
 export type {
   AnyBlockDefinition,
+  AnyBlockDefinition as AnyWidgetDefinition,
   AnyBlockInstance,
+  AnyBlockInstance as AnyWidgetInstance,
   AnyBlockVariantDefinition,
+  AnyBlockVariantDefinition as AnyWidgetVariantDefinition,
   BlockAllowedEntry,
+  BlockAllowedEntry as WidgetAllowedEntry,
   BlockAllowedSpec,
+  BlockAllowedSpec as WidgetAllowedSpec,
   BlockAreaAlign,
   BlockAreaColumns,
   BlockAreaGap,
@@ -107,49 +141,78 @@ export type {
   BlockAreaJustify,
   BlockAreaLayout,
   BlockComponent,
+  BlockComponent as WidgetComponent,
   BlockComponentProps,
+  BlockComponentProps as WidgetComponentProps,
   BlockData,
+  BlockData as WidgetData,
   BlockDefinition,
+  BlockDefinition as WidgetDefinition,
   BlockFieldMap,
+  BlockFieldMap as WidgetFieldMap,
   BlockInstance,
+  BlockInstance as WidgetInstance,
   BlockPluginSource,
+  BlockPluginSource as WidgetPluginSource,
   BlockRegistry,
+  BlockRegistry as WidgetRegistry,
   BlockRenderFallback,
+  BlockRenderFallback as WidgetRenderFallback,
   BlockRenderFallbackProps,
+  BlockRenderFallbackProps as WidgetRenderFallbackProps,
   BlockRenderFallbackReason,
+  BlockRenderFallbackReason as WidgetRenderFallbackReason,
   BlockUnknownData,
+  BlockUnknownData as WidgetUnknownData,
   BlockValidationMode,
+  BlockValidationMode as WidgetValidationMode,
   BlockVariantDefinition,
+  BlockVariantDefinition as WidgetVariantDefinition,
   ContentNode,
   ContentZoneDefinition,
   ParsedContentZoneId,
   RegisteredBlock,
+  RegisteredBlock as RegisteredWidget,
 } from "./types";
 export {
   parseBlockInstances,
+  parseBlockInstances as parseWidgetInstances,
   parseContentNodes,
   zodBlockInstances,
+  zodBlockInstances as zodWidgetInstances,
   zodContentNode,
   zodContentNodes,
 } from "./validate";
 export type {
   BlockEnvelope,
+  BlockEnvelope as WidgetEnvelope,
   BlockInstanceIssue,
+  BlockInstanceIssue as WidgetInstanceIssue,
   BlockInstancesResult,
+  BlockInstancesResult as WidgetInstancesResult,
   ContentNodePath,
 } from "./validate";
 export {
   blockVariantLabel,
+  blockVariantLabel as widgetVariantLabel,
   blockVariants,
+  blockVariants as widgetVariants,
   findBlockVariant,
+  findBlockVariant as findWidgetVariant,
   hasBlockVariants,
+  hasBlockVariants as hasWidgetVariants,
   resolveBlockVariant,
+  resolveBlockVariant as resolveWidgetVariant,
 } from "./variant";
-export type { BlockVariantResolution } from "./variant";
+export type {
+  BlockVariantResolution,
+  BlockVariantResolution as WidgetVariantResolution,
+} from "./variant";
 export {
   assertContentZoneId,
   contentZoneAttributes,
   formatBlockAllowed,
+  formatBlockAllowed as formatWidgetAllowed,
   isContentZoneId,
   parseContentZoneId,
 } from "./zone-meta";

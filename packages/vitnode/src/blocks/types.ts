@@ -23,17 +23,21 @@ export interface BlockVariantDefinition<TId extends string = string> {
 
 export type AnyBlockVariantDefinition = BlockVariantDefinition;
 
-export interface BlockComponentProps<TData = BlockUnknownData> {
+export interface BlockComponentProps<
+  TData = BlockUnknownData,
+  TVariant extends string = string,
+> {
   blockId: string;
   data: TData;
   index: number;
   type: string;
-  variant?: string;
+  variant?: TVariant;
 }
 
-export type BlockComponent<TData = BlockUnknownData> = ComponentType<
-  BlockComponentProps<TData>
->;
+export type BlockComponent<
+  TData = BlockUnknownData,
+  TVariant extends string = string,
+> = ComponentType<BlockComponentProps<TData, TVariant>>;
 
 export interface BlockDefinition<
   TId extends string = string,

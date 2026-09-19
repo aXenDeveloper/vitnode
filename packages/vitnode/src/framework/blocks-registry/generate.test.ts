@@ -7,7 +7,7 @@ import { generateBlocksRegistrySource } from "./generate";
 
 const core: ResolvedBlocksModule = {
   pluginId: "@vitnode/core",
-  specifier: "@vitnode/core/blocks/built-in",
+  specifier: "@vitnode/core/widgets/built-in",
 };
 
 const blog: ResolvedBlocksModule = {
@@ -33,7 +33,7 @@ describe("generateBlocksRegistrySource", () => {
       "import { blocks as blocks0 } from '@vitnode/blog/blocks'",
     );
     expect(source).toContain(
-      "import { blocks as blocks1 } from '@vitnode/core/blocks/built-in'",
+      "import { blocks as blocks1 } from '@vitnode/core/widgets/built-in'",
     );
   });
 

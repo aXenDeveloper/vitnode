@@ -1,7 +1,7 @@
-import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks";
+import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
-import { defineBlock } from "@vitnode/core/blocks";
-import { BlockField } from "@vitnode/core/blocks/block-field";
+import { defineWidget } from "@vitnode/core/widgets";
+import { WidgetField } from "@vitnode/core/widgets/block-field";
 import { field } from "@vitnode/core/content/fields";
 
 const featureItem = {
@@ -17,7 +17,7 @@ const featuresFields = {
   tertiary: field.group({ fields: featureItem, nullable: true }),
 };
 
-type FeaturesData = BlockData<typeof featuresFields>;
+type FeaturesData = WidgetData<typeof featuresFields>;
 
 type FeatureItem = NonNullable<FeaturesData["primary"]>;
 
@@ -49,8 +49,8 @@ const GridItem = ({ item }: { item: FeatureItem }) => (
 );
 
 const ListItem = ({ item }: { item: FeatureItem }) => (
-  <li className="border-border flex flex-col gap-1 border-b pb-4 last:border-b-0 last:pb-0 md:flex-row md:items-baseline md:gap-6">
-    <h3 className="text-base leading-relaxed font-semibold text-balance md:w-48 md:shrink-0">
+  <li className="flex flex-col gap-1">
+    <h3 className="text-base leading-relaxed font-semibold text-balance">
       {item.title}
     </h3>
     {item.body ? (
@@ -62,22 +62,23 @@ const ListItem = ({ item }: { item: FeatureItem }) => (
 );
 
 const CompactItem = ({ item }: { item: FeatureItem }) => (
-  <li className="text-sm leading-relaxed">
-    <span className="font-medium">{item.title}</span>
-    {item.body ? (
-      <span className="text-muted-foreground"> — {item.body}</span>
-    ) : null}
+  <li className="flex items-center gap-2">
+    <span className="bg-primary size-1.5 rounded-full" />
+    <span className="text-sm font-medium">{item.title}</span>
   </li>
 );
 
-const Features = ({ data, variant }: BlockComponentProps<FeaturesData>) => {
+const Features = ({
+  data,
+  variant,
+}: WidgetComponentProps<FeaturesData, "grid" | "list" | "compact">) => {
   const items = filledItems(data);
   const compact = variant === "compact";
 
   return (
-    <section className={`flex flex-col ${compact ? "gap-2" : "gap-4"}`}>
-      <div className="flex flex-col gap-1">
-        <BlockField name="heading">
+    <section className="flex flex-col gap-6 py-4">
+      <div className="flex flex-col gap-2">
+        <WidgetField name="heading">
           <h2
             className={
               compact
@@ -87,12 +88,12 @@ const Features = ({ data, variant }: BlockComponentProps<FeaturesData>) => {
           >
             {data.heading}
           </h2>
-        </BlockField>
-        <BlockField name="intro">
+        </WidgetField>
+        <WidgetField name="intro">
           <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
             {data.intro}
           </p>
-        </BlockField>
+        </WidgetField>
       </div>
 
       {variant === "list" ? (
@@ -122,7 +123,7 @@ const Features = ({ data, variant }: BlockComponentProps<FeaturesData>) => {
   );
 };
 
-export const featuresBlock = defineBlock({
+export const featuresWidget = defineWidget({
   component: Features,
   defaultVariant: "grid",
   description:
@@ -140,3 +141,5 @@ export const featuresBlock = defineBlock({
     { description: "A dense summary.", id: "compact", label: "Compact" },
   ],
 });
+
+export const featuresBlock = featuresWidget;

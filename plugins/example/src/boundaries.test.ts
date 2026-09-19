@@ -33,6 +33,11 @@ const fileAt = (base: string): null | string => {
 };
 
 const resolveSpecifier = (specifier: string, from: string): null | string => {
+  if (specifier.startsWith("@vitnode/core/widgets")) {
+    const sub = specifier.slice("@vitnode/core/widgets".length);
+    return fileAt(join(CORE_SRC, "blocks", sub));
+  }
+
   if (specifier.startsWith("@vitnode/core/"))
     return fileAt(join(CORE_SRC, specifier.slice("@vitnode/core/".length)));
 

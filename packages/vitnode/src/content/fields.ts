@@ -361,4 +361,5 @@ export const field = {
   text,
   textarea,
   user,
+  widgets: blocks,
 };

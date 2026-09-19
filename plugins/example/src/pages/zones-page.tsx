@@ -3,10 +3,10 @@ import type {
   EditablePageSavePayload,
 } from "@vitnode/core/content/editor";
 
-import { createBlockRegistry, zodContentNode } from "@vitnode/core/blocks";
-import { blocks as coreBlocks } from "@vitnode/core/blocks/built-in";
-import { EditablePage } from "@vitnode/core/blocks/page";
-import { ContentZone } from "@vitnode/core/blocks/zone";
+import { createBlockRegistry, zodContentNode } from "@vitnode/core/widgets";
+import { blocks as coreBlocks } from "@vitnode/core/widgets/built-in";
+import { EditablePage } from "@vitnode/core/widgets/page";
+import { ContentZone } from "@vitnode/core/widgets/zone";
 import {
   AutoForm,
   AutoFormSubmitButton,
@@ -26,7 +26,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { blocks as exampleBlocks } from "@/blocks";
+import { widgets as exampleWidgets } from "@/widgets";
 import {
   EXAMPLE_ZONE_IDS,
   mayEditSettingsPage,
@@ -53,7 +53,7 @@ const serverRefusal = async (response: Response): Promise<string> => {
   }
 };
 
-const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks]);
+const blocksRegistry = createBlockRegistry([coreBlocks, exampleWidgets]);
 
 const zodLayout = z.object({
   pageId: z.string(),

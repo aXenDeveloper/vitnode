@@ -24,64 +24,68 @@ That is the whole feature. What you write to get it is one page declaration, one
 ### 1. Declare the page
 
 ```ts title="plugins/example/src/content/settings-page.ts"
-import { defineEditablePage } from "@vitnode/core/content/editor"
+import { defineEditablePage } from '@vitnode/core/content/editor'
 
-import { PAGE_BLOCKS_ALLOWED, PAGE_SIDEBAR_BLOCKS_ALLOWED } from "./page-blocks"
+import { PAGE_BLOCKS_ALLOWED, PAGE_SIDEBAR_BLOCKS_ALLOWED } from './page-blocks'
 
 export const settingsPage = defineEditablePage({
-  id: "example:settings",
+  id: 'example:settings',
 
-  permission: { module: "widgets", permission: "can_edit" },
+  permission: { module: 'widgets', permission: 'can_edit' },
 
   zones: {
-    "before-profile": {
+    'before-profile': {
       allowed: PAGE_BLOCKS_ALLOWED,
       max: 20,
       default: [
-        { id: "01JEXAMPLEZONESBEFORE00001", type: "example:callout", data: { /* … */ } },
+        {
+          id: '01JEXAMPLEZONESBEFORE00001',
+          type: 'example:callout',
+          data: {/* … */},
+        },
       ],
     },
-    "after-profile": { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
+    'after-profile': { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
     sidebar: { allowed: PAGE_SIDEBAR_BLOCKS_ALLOWED, max: 20 },
-    "before-footer": { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
+    'before-footer': { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
   },
 })
 ```
 
-| | | |
-| :--- | :--- | :--- |
-| `id` | required | The page's stable identity, `plugin:page`. The stored layout is keyed by it, so it is written once by hand and never generated. |
+|              |          |                                                                                                                                     |
+| :----------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | required | The page's stable identity, `plugin:page`. The stored layout is keyed by it, so it is written once by hand and never generated.     |
 | `permission` | required | The **moderator** permission somebody needs before the editor will offer to open. `plugin` defaults to whoever registered the page. |
-| `zones` | required | One entry per place on the page blocks may go. At least one. |
+| `zones`      | required | One entry per place on the page blocks may go. At least one.                                                                        |
 
 And per zone:
 
-| | |
-| :--- | :--- |
-| `allowed` | The block allowlist, or `"*"`. Declared **here**, so the page never repeats it. |
+|               |                                                                                                                                                             |
+| :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowed`     | The block allowlist, or `"*"`. Declared **here**, so the page never repeats it.                                                                             |
 | `max` / `min` | How many **blocks** the zone accepts. An area counts nothing itself; the blocks inside it each count one. Leaving `max` out is not "unlimited" - see below. |
-| `default` | The layout the zone ships with, as real stored nodes. |
+| `default`     | The layout the zone ships with, as real stored nodes.                                                                                                       |
 
 #### Three limits, and they count different things
 
-Leave `max` out and the zone still has one: **200**, the `CONTENT_BLOCKS_DEFAULT_MAX` a [`blocks()` field](/docs/dev/blocks/blocks-field) already defaults to, because a zone and a field are stored and validated by the same code. Omitted means "the usual ceiling", never "as many as you like".
+Leave `max` out and the zone still has one: **200**, the `CONTENT_BLOCKS_DEFAULT_MAX` a [`blocks()` field](/docs/dev/widgets/blocks-field) already defaults to, because a zone and a field are stored and validated by the same code. Omitted means "the usual ceiling", never "as many as you like".
 
-| Limit | Value | Counts |
-| :--- | :--- | :--- |
-| A zone's `max` / `min` | `200` when `max` is omitted, `0` when `min` is | **Block instances.** A block inside an [area](/docs/dev/blocks/layout-areas) counts one; the area holding it counts nothing, so an empty area counts as nothing at all. |
-| `CONTENT_BLOCKS_ABSOLUTE_MAX` | `1000` | **Nodes in the zone's root list** - blocks and areas alike, children not included. It is the ceiling the stored column can be read back through, so a zone's own `max` may lower it and nothing may raise it. |
-| `AREA_CHILDREN_DEFAULT_MAX` | `50` | **One area's children.** A third limit, checked per area, unrelated to the two above. |
+| Limit                         | Value                                          | Counts                                                                                                                                                                                                        |
+| :---------------------------- | :--------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A zone's `max` / `min`        | `200` when `max` is omitted, `0` when `min` is | **Block instances.** A block inside an [area](/docs/dev/widgets/layout-areas) counts one; the area holding it counts nothing, so an empty area counts as nothing at all.                                      |
+| `CONTENT_BLOCKS_ABSOLUTE_MAX` | `1000`                                         | **Nodes in the zone's root list** - blocks and areas alike, children not included. It is the ceiling the stored column can be read back through, so a zone's own `max` may lower it and nothing may raise it. |
+| `AREA_CHILDREN_DEFAULT_MAX`   | `50`                                           | **One area's children.** A third limit, checked per area, unrelated to the two above.                                                                                                                         |
 
-All three are exported from `@vitnode/core/blocks`, and a zone that declares a `min` above its effective `max` is refused where it is declared rather than the first time somebody saves.
+All three are exported from `@vitnode/core/widgets`, and a zone that declares a `min` above its effective `max` is refused where it is declared rather than the first time somebody saves.
 
 Zone ids are **page-local**: `"sidebar"`, not `"settings:sidebar"`. The page id already namespaces them - it is what the stored layout is keyed by, and the zone ids are the keys inside it.
 
 <Callout title="The defaults are content, not a placeholder">
-  A zone nobody has customised renders its `default`, and the read that serves it says
-  so with `updatedAt: null`. That is the layout you shipped - it is what a visitor
-  sees before anybody has touched the page, and what a future *reset* will restore
-  to. So it lives in code rather than being seeded into the database, and the first
-  **Save** is entitled to write over it.
+  A zone nobody has customised renders its `default`, and the read that serves
+  it says so with `updatedAt: null`. That is the layout you shipped - it is what
+  a visitor sees before anybody has touched the page, and what a future *reset*
+  will restore to. So it lives in code rather than being seeded into the
+  database, and the first **Save** is entitled to write over it.
 </Callout>
 
 The definition module is a plain value with **no third-party import anywhere in its graph**, which is what lets the API and a public page import the same file. Ask for a zone it does not declare - on the page, in a save, anywhere - and it throws with the zone ids it does declare.
@@ -91,11 +95,12 @@ The definition module is a plain value with **no third-party import anywhere in 
 ```ts title="plugins/example/src/config.api.ts"
 buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
-  editablePages: [settingsPage], // [!code ++]
-  permissionStaff: {             // [!code ++]
-    moderator: { widgets: ["can_edit"] }, // [!code ++]
-  },                             // [!code ++]
-  modules: [adminModule, /* … */],
+  // [!code ++:4]
+  editablePages: [settingsPage],
+  permissionStaff: {
+    moderator: { widgets: ['can_edit'] },
+  },
+  modules: [adminModule /* … */],
 })
 ```
 
@@ -106,6 +111,7 @@ Registering one page id twice, or two plugins claiming the same id, is a startup
 ### 3. Render it
 
 ```tsx title="plugins/example/src/pages/zones-page.tsx"
+// [!code ++:4]
 <EditablePage
   adapter={adapter}
   canEdit={canEdit}
@@ -131,26 +137,26 @@ Registering one page id twice, or two plugins claiming the same id, is a startup
 
 #### What a call site may still say
 
-You can pass those props anyway, and they still do something - just not *anything*. The page declaration is what the server checks a save against, so a zone on that page can be narrowed at the call site and never widened.
+You can pass those props anyway, and they still do something - just not _anything_. The page declaration is what the server checks a save against, so a zone on that page can be narrowed at the call site and never widened.
 
-| At the call site | |
-| :--- | :--- |
-| `blocks` | **Overrides the source.** For a zone whose content genuinely comes from somewhere else, the array you pass is what renders. |
-| `allowedBlocks` | **Only narrows.** It is intersected with the page's allowlist, so `"*"` here cannot open a zone the page restricted, and asking for blocks the page does not allow is a developer error rather than a quietly wider zone. |
-| `min` / `max` | **Only tighten.** The higher `min` and the lower `max` win. Ask for a combination no list of blocks could satisfy - a `min` above the `max` - and it throws where you wrote it. |
+| At the call site |                                                                                                                                                                                                                           |
+| :--------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `blocks`         | **Overrides the source.** For a zone whose content genuinely comes from somewhere else, the array you pass is what renders.                                                                                               |
+| `allowedBlocks`  | **Only narrows.** It is intersected with the page's allowlist, so `"*"` here cannot open a zone the page restricted, and asking for blocks the page does not allow is a developer error rather than a quietly wider zone. |
+| `min` / `max`    | **Only tighten.** The higher `min` and the lower `max` win. Ask for a combination no list of blocks could satisfy - a `min` above the `max` - and it throws where you wrote it.                                           |
 
 The page stays the ceiling and the floor. That is what makes "the zone as declared" the one thing both the editor and the save route have to agree on, and it is why an intersection is refused rather than silently emptied: a zone allowing nothing at all is a page nobody could edit.
 
 A **standalone** `<ContentZone>` - one no editable page declares - is unaffected. There is nothing to intersect with, so its own `allowedBlocks`, `min` and `max` are simply its own.
 
-| Prop | | |
-| :--- | :--- | :--- |
-| `page` | required | The definition. It is what resolves each zone's blocks and allowlist. |
-| `layout` | optional | What the loader read. `null` renders every zone's shipped default. |
+| Prop      |          |                                                                                  |
+| :-------- | :------- | :------------------------------------------------------------------------------- |
+| `page`    | required | The definition. It is what resolves each zone's blocks and allowlist.            |
+| `layout`  | optional | What the loader read. `null` renders every zone's shipped default.               |
 | `canEdit` | optional | `true` mounts the editor runtime. `false` renders the children and nothing else. |
-| `editing` | optional | Whether edit mode is *on*. Ignored unless `canEdit`. |
-| `adapter` | optional | Where **Save** goes. `createContentEditorAdapter` builds one. |
-| `onExit` | optional | Called by **Finish editing**, after the unsaved-changes prompt. |
+| `editing` | optional | Whether edit mode is _on_. Ignored unless `canEdit`.                             |
+| `adapter` | optional | Where **Save** goes. `createContentEditorAdapter` builds one.                    |
+| `onExit`  | optional | Called by **Finish editing**, after the unsaved-changes prompt.                  |
 
 `EditablePage` also adopts the canonical **zones** a save comes back with, so the editor rebases onto what the server actually stored. View mode shows the stored result the moment you press **Finish editing**, with no reload and no second request. The metadata around those zones - `updatedAt` and friends - belongs to the page that owns the layout, not to the editor: hold the payload the save answered with in your own state, and a "Last rearranged 2 minutes ago" line moves with it instead of sitting on the timestamp the loader happened to read. Hand `EditablePage` a layout belonging to a different page id and it throws, because rendering one page's blocks under another page's zones is how a save writes them onto the wrong page.
 
@@ -159,17 +165,17 @@ A **standalone** `<ContentZone>` - one no editable page declares - is unaffected
 ```ts title="plugins/example/src/pages/zones-page.tsx"
 const [stored, staff] = await Promise.all([
   fetcher({
-    plugin: "@vitnode/core",
-    method: "get",
-    module: "pages",
-    path: "/layout",
+    plugin: '@vitnode/core',
+    method: 'get',
+    module: 'pages',
+    path: '/layout',
     args: { query: { pageId: settingsPage.id } },
   }),
   fetcher({
-    plugin: "@vitnode/core",
-    method: "get",
-    module: "users",
-    path: "/permissions",
+    plugin: '@vitnode/core',
+    method: 'get',
+    module: 'users',
+    path: '/permissions',
   }),
 ])
 
@@ -189,12 +195,12 @@ const adapter = useMemo(
   () =>
     createContentEditorAdapter({
       page: settingsPage,
-      save: async payload => {
+      save: async (payload) => {
         const response = await fetcher({
-          plugin: "@vitnode/core",
-          method: "put",
-          module: "pages",
-          path: "/layout",
+          plugin: '@vitnode/core',
+          method: 'put',
+          module: 'pages',
+          path: '/layout',
           args: { body: payload },
         })
 
@@ -207,25 +213,25 @@ const adapter = useMemo(
 )
 ```
 
-The adapter turns the editor's snapshot into a payload carrying **only the zones that changed**, refuses up front to send a zone the page does not declare, and hands the server's canonical answer back so the editor rebases onto what was *stored* rather than onto what it sent.
+The adapter turns the editor's snapshot into a payload carrying **only the zones that changed**, refuses up front to send a zone the page does not declare, and hands the server's canonical answer back so the editor rebases onto what was _stored_ rather than onto what it sent.
 
 ```ts
 interface EditablePageSavePayload {
   pageId: string
-  zones: Record<string, ContentNode[]>          // what you want stored
-  expectedZones: Record<string, ContentNode[]>  // what you were editing
+  zones: Record<string, ContentNode[]> // what you want stored
+  expectedZones: Record<string, ContentNode[]> // what you were editing
 }
 ```
 
 `expectedZones` is the second half of every save: for each zone being written, the value the editor started from. The server compares it with what is actually stored before touching anything, which is what turns "last save wins" into "the save that knew what it was replacing wins". The adapter fills it in from the editor's own baseline - you do not assemble it.
 
 <Callout title="Two files, and neither of them the editor">
-  `createContentEditorAdapter` produces a `VisualEditorAdapter`, but it needs nothing
-  from the editor to do it. So it ships beside the page definition, its whole graph
-  is two modules with no third-party package in it, and a plain `import` keeps the
-  example plugin's boundary test green: nothing under core's `src/editor/` is in the
-  page's eager graph. The `@vitnode/core/editor/adapter` barrel, by contrast, is
-  thirty-three modules and Zod.
+  `createContentEditorAdapter` produces a `VisualEditorAdapter`, but it needs
+  nothing from the editor to do it. So it ships beside the page definition, its
+  whole graph is two modules with no third-party package in it, and a plain
+  `import` keeps the example plugin's boundary test green: nothing under core's
+  `src/editor/` is in the page's eager graph. The `@vitnode/core/editor/adapter`
+  barrel, by contrast, is thirty-three modules and Zod.
 </Callout>
 
 ## The two routes
@@ -240,7 +246,7 @@ PUT  /api/vitnode/core/pages/layout                             that page's perm
 ```ts
 interface EditablePageLayoutPayload {
   pageId: string
-  updatedAt: string | null          // null: nothing stored, these are the defaults
+  updatedAt: string | null // null: nothing stored, these are the defaults
   zones: Record<string, ContentNode[]>
 }
 ```
@@ -255,10 +261,10 @@ After validation the write is one read, one comparison, one merge and one upsert
 
 The comparison is **per zone**, inside the same transaction that writes, which is what lets an ordinary afternoon work out:
 
-| | |
-| :--- | :--- |
+|                                 |                                                                                                                                                                                    |
+| :------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Two people, **different zones** | Both saves land. One writes the sidebar, the other the footer, and each leaves the other's zone exactly as it found it. Zones merge because a save only ever writes what it names. |
-| Two people, **the same zone** | The second one gets a `409` and **nothing is written**. The zone moved after their editor read it, so storing their copy would delete a change they never saw. |
+| Two people, **the same zone**   | The second one gets a `409` and **nothing is written**. The zone moved after their editor read it, so storing their copy would delete a change they never saw.                     |
 
 A `409` is not a lost afternoon: the refusal says which zones moved, nothing that was arranged is thrown away, and reloading the page picks up what is really there to redo the change on top of it. Nothing polls and nothing locks - the baseline travels with the save, so the only thing that can ever be overwritten is a zone whose stored value is still the one being edited.
 
@@ -313,10 +319,10 @@ None of this is a Content Engine content type. No publication, no search indexin
 <Callout title="There is no AdminCP → Layouts screen in V1, on purpose">
   Central layout administration - listing the pages somebody has customised,
   resetting one to its shipped defaults, exporting a layout as JSON, copying one
-  page's layout onto another - is deliberately left to a possible **V2**. Each of
-  them is a query on one table keyed by `pageId`: list is `select "pageId"`, reset
-  is a `delete`, export is a single row. The shape makes them easy later; none of
-  them is built now, and none of them is needed to arrange a page.
+  page's layout onto another - is deliberately left to a possible **V2**. Each
+  of them is a query on one table keyed by `pageId`: list is `select "pageId"`,
+  reset is a `delete`, export is a single row. The shape makes them easy later;
+  none of them is built now, and none of them is needed to arrange a page.
 </Callout>
 
 Every submitted zone is re-validated against that zone's own `allowed`, `min` and `max`, read off the **registered page** rather than off the request, before anything is stored.
@@ -325,42 +331,42 @@ Every submitted zone is re-validated against that zone's own `allowed`, `min` an
 
 Every refusal is named, and none of them falls back to a default or silently drops content.
 
-| | |
-| :--- | :--- |
-| A page id nobody registered | `400`, saying there is nothing this save could be writing. |
-| A zone the page does not declare | `400`, listing the zones it does. |
-| No zones at all | `400`. A save names what it changed, and this one named none. |
-| A zone written without a baseline | `400`. Every zone in `zones` needs its counterpart in `expectedZones`. |
-| A zone somebody else changed first | `409`, naming the zones that moved. Nothing is written - not even the zones that would have been fine. |
-| A block the zone does not allow | `400`, from the zone's own `allowed` - nested inside an area too. |
-| Too many or too few blocks | `400`, from the zone's own `max` and `min`, counting an area's children. |
-| The permission is not held | `403`. |
-| The stored layout cannot be read | `500`. A read that fails is never answered with defaults: the next **Save** would write them over whatever is really there. |
+|                                    |                                                                                                                             |
+| :--------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| A page id nobody registered        | `400`, saying there is nothing this save could be writing.                                                                  |
+| A zone the page does not declare   | `400`, listing the zones it does.                                                                                           |
+| No zones at all                    | `400`. A save names what it changed, and this one named none.                                                               |
+| A zone written without a baseline  | `400`. Every zone in `zones` needs its counterpart in `expectedZones`.                                                      |
+| A zone somebody else changed first | `409`, naming the zones that moved. Nothing is written - not even the zones that would have been fine.                      |
+| A block the zone does not allow    | `400`, from the zone's own `allowed` - nested inside an area too.                                                           |
+| Too many or too few blocks         | `400`, from the zone's own `max` and `min`, counting an area's children.                                                    |
+| The permission is not held         | `403`.                                                                                                                      |
+| The stored layout cannot be read   | `500`. A read that fails is never answered with defaults: the next **Save** would write them over whatever is really there. |
 
-The client has its own guard before any of this: a zone holding a value the editor cannot read keeps **Save** disabled until somebody removes it deliberately. See [unreadable content](/docs/dev/blocks/visual-editor#content-the-editor-cannot-read).
+The client has its own guard before any of this: a zone holding a value the editor cannot read keeps **Save** disabled until somebody removes it deliberately. See [unreadable content](/docs/dev/widgets/visual-editor#content-the-editor-cannot-read).
 
 ## What this costs a public page
 
 The page definition is a module a public page imports, so it was measured rather than asserted. Every number is the import graph of a real file in this repository.
 
-| Entry | Source files | Third-party |
-| :--- | ---: | :--- |
-| `@vitnode/core/content/editor` | 12 | none |
-| `createContentEditorAdapter` alone | 2 | none |
-| `EditablePage` (`blocks/page.tsx`), eagerly | 15 | `react` |
-| `ContentZone` (`blocks/zone.tsx`) | 19 | `react` |
-| **The example's page definition, end to end** | **15** | **none** |
-| `@vitnode/core/content/define` | 34 | `zod` |
-| `@vitnode/core/content` (the barrel) | 54 | `zod` |
-| `@vitnode/core/editor/adapter` (the barrel) | 33 | `zod` |
+| Entry                                         | Source files | Third-party |
+| :-------------------------------------------- | -----------: | :---------- |
+| `@vitnode/core/content/editor`                |           12 | none        |
+| `createContentEditorAdapter` alone            |            2 | none        |
+| `EditablePage` (`blocks/page.tsx`), eagerly   |           15 | `react`     |
+| `ContentZone` (`blocks/zone.tsx`)             |           19 | `react`     |
+| **The example's page definition, end to end** |       **15** | **none**    |
+| `@vitnode/core/content/define`                |           34 | `zod`       |
+| `@vitnode/core/content` (the barrel)          |           54 | `zod`       |
+| `@vitnode/core/editor/adapter` (the barrel)   |           33 | `zod`       |
 
 A module whose whole graph has no external specifier cannot add a package to anything that imports it. That is the entire argument for keeping the declaration off the content type: a page gets its zone ids, allowlists and defaults without the schema builder that turns field descriptors into Zod.
 
 The same rule applies to blocks. `plugins/example/src/blocks/callout.tsx` used to import `field` from `@vitnode/core/content`; switching two import paths to `@vitnode/core/content/fields` took the playground's eager graph from **132 modules to 107**, and the Content Engine modules it reaches from **41 to 16**. The rendered page was byte-for-byte identical.
 
 ```ts
-import { field } from "@vitnode/core/content"          // [!code --]
-import { field } from "@vitnode/core/content/fields"   // [!code ++]
+import { field } from '@vitnode/core/content' // [!code --]
+import { field } from '@vitnode/core/content/fields' // [!code ++]
 ```
 
 Two boundary tests keep it that way. Core's own names every module `@vitnode/core/content/editor` reaches and asserts it reaches no third-party one; the example plugin's walks the **real page** and asserts nothing under core's `src/editor/` - and no drag-and-drop, command palette or database package - is in its eager graph, while following its dynamic imports does reach `@dnd-kit/core`, so the guarantee is not vacuous.

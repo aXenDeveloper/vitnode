@@ -1,6 +1,6 @@
 {
-  "title": "Blocks",
-  "description": "Composable, plugin-provided page sections a content type can store in order",
+  "title": "Widgets",
+  "description": "Composable, plugin-provided page sections and widgets that moderators can visually edit in place",
   "icon": "Blocks",
   "pages": [
     "index",

@@ -90,15 +90,20 @@
     "vitnode": "./cli.mjs"
   },
   "exports": {
-    "./blocks": {
+    "./widgets": {
       "import": "./dist/src/blocks/index.js",
       "types": "./dist/src/blocks/index.d.ts",
       "default": "./dist/src/blocks/index.js"
     },
-    "./blocks/built-in": {
+    "./widgets/built-in": {
       "import": "./dist/src/blocks/built-in/index.js",
       "types": "./dist/src/blocks/built-in/index.d.ts",
       "default": "./dist/src/blocks/built-in/index.js"
+    },
+    "./widgets/*": {
+      "import": "./dist/src/blocks/*.js",
+      "types": "./dist/src/blocks/*.d.ts",
+      "default": "./dist/src/blocks/*.js"
     },
     "./content": {
       "import": "./dist/src/content/index.js",

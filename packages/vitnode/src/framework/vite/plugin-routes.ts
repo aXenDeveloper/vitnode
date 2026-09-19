@@ -51,9 +51,11 @@ const ADMIN_NAV_SUBPATH = "admin/nav";
 
 const ADMIN_CONTENT_SUBPATH = "admin/content";
 
+const WIDGETS_SUBPATH = "widgets";
+
 const BLOCKS_SUBPATH = "blocks";
 
-const CORE_BLOCKS_SUBPATH = "blocks/built-in";
+const CORE_BLOCKS_SUBPATH = "widgets/built-in";
 
 const API_CONFIG_SUBPATH = "config.api";
 
@@ -442,11 +444,23 @@ const discover = async (
     CORE_BLOCKS_SUBPATH,
     resolvePackageFile,
   );
-  const pluginBlocks = readOptionalPluginModules<ResolvedBlocksModule>(
+  const pluginWidgets = readOptionalPluginModules<ResolvedBlocksModule>(
     pluginIds,
+    WIDGETS_SUBPATH,
+    resolvePackageFile,
+  );
+  const remainingPluginIds = pluginIds.filter(
+    id => !pluginWidgets.modules.some(m => m.pluginId === id),
+  );
+  const legacyPluginBlocks = readOptionalPluginModules<ResolvedBlocksModule>(
+    remainingPluginIds,
     BLOCKS_SUBPATH,
     resolvePackageFile,
   );
+  const pluginBlocks = {
+    modules: [...pluginWidgets.modules, ...legacyPluginBlocks.modules],
+    watch: [...pluginWidgets.watch, ...legacyPluginBlocks.watch],
+  };
 
   const watch = [
     ...loaded.flatMap(({ watch: file }) => file ?? []),

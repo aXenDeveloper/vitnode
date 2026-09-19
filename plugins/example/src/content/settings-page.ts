@@ -94,7 +94,7 @@ export const settingsPage = defineEditablePage({
             {
               data: {
                 description: "Areas, variants and the difference between them.",
-                href: "/docs/dev/blocks/layout-areas",
+                href: "/docs/dev/widgets/layout-areas",
                 label: "Read about areas",
                 title: "Right column",
               },
@@ -116,7 +116,7 @@ export const settingsPage = defineEditablePage({
           data: {
             description:
               "Four zones sit on this page. Two of them wrap nothing.",
-            href: "/docs/dev/blocks/content-zones",
+            href: "/docs/dev/widgets/content-zones",
             label: "Read the guide",
             title: "Content Zones",
           },

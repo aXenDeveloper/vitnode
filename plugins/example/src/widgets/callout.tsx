@@ -1,7 +1,7 @@
-import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks";
+import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
-import { defineBlock } from "@vitnode/core/blocks";
-import { blockFieldsFor } from "@vitnode/core/blocks/block-field";
+import { defineWidget } from "@vitnode/core/widgets";
+import { widgetFieldsFor } from "@vitnode/core/widgets/block-field";
 import { field } from "@vitnode/core/content/fields";
 
 const calloutFields = {
@@ -13,9 +13,9 @@ const calloutFields = {
   }),
 };
 
-type CalloutData = BlockData<typeof calloutFields>;
+type CalloutData = WidgetData<typeof calloutFields>;
 
-const CalloutField = blockFieldsFor<typeof calloutFields>();
+const CalloutField = widgetFieldsFor<typeof calloutFields>();
 
 const tones: Record<string, string> = {
   info: "border-primary/40 bg-primary/5",
@@ -23,7 +23,7 @@ const tones: Record<string, string> = {
   warning: "border-destructive/40 bg-destructive/5",
 };
 
-const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
+const Callout = ({ data }: WidgetComponentProps<CalloutData>) => (
   <aside
     className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? "info"]}`}
   >
@@ -40,10 +40,12 @@ const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
   </aside>
 );
 
-export const calloutBlock = defineBlock({
+export const calloutWidget = defineWidget({
   component: Callout,
   description: "A short highlighted note in one of three tones.",
   fields: calloutFields,
   id: "callout",
   name: "Callout",
 });
+
+export const calloutBlock = calloutWidget;

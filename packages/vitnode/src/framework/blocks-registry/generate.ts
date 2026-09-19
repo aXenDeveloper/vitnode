@@ -2,9 +2,9 @@ import type { ResolvedBlocksModule } from "./types.js";
 
 import { toSingleQuotedLiteral } from "../plugin-routes/resolve.js";
 
-const TYPES_SPECIFIER = "@vitnode/core/blocks";
+const TYPES_SPECIFIER = "@vitnode/core/widgets";
 
-const RUNTIME_SPECIFIER = "@vitnode/core/blocks";
+const RUNTIME_SPECIFIER = "@vitnode/core/widgets";
 
 const HEADER = `/* eslint-disable */
 
