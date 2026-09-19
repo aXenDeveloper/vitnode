@@ -42,9 +42,19 @@ const leafIssue = (
     return fieldValue.nullable ? null : `"${path}" is null and not nullable`;
   }
 
-  return mismatch(fieldValue, value)
-    ? `"${path}" holds a ${Array.isArray(value) ? "array" : typeof value} where the field is a ${fieldValue.kind}`
-    : null;
+  if (mismatch(fieldValue, value)) {
+    return `"${path}" holds a ${Array.isArray(value) ? "array" : typeof value} where the field is a ${fieldValue.kind}`;
+  }
+
+  if (
+    fieldValue.kind === "enum" &&
+    typeof value === "string" &&
+    !fieldValue.values.includes(value)
+  ) {
+    return `"${path}" holds ${JSON.stringify(value)}, which the field no longer lists among its values`;
+  }
+
+  return null;
 };
 
 export const blockDataShapeIssue = (

@@ -3752,6 +3752,111 @@ describe("a host snapshot that lands while the editor is dirty", () => {
     expect(written.zones.main.initial).toStrictEqual([stored("B!")]);
     expect(isVisualEditorDirty(written)).toBe(true);
   });
+
+  it("settles on the snapshot the moment the edit is undone by hand", () => {
+    const settled = edit(push(edit(opened(), "B"), "C"), "A");
+
+    expect(bodyIn(settled)).toBe("C");
+    expect(settled.zones.main.initial).toStrictEqual([stored("C")]);
+    expect(settled.zones.main.pendingIncoming).toBeUndefined();
+    expect(isVisualEditorDirty(settled)).toBe(false);
+    expect(changedZoneIds(settled)).toStrictEqual([]);
+  });
+
+  it("settles on the newest snapshot, not the one it first postponed", () => {
+    const settled = edit(push(push(edit(opened(), "B"), "C"), "D"), "A");
+
+    expect(bodyIn(settled)).toBe("D");
+    expect(settled.zones.main.initial).toStrictEqual([stored("D")]);
+    expect(isVisualEditorDirty(settled)).toBe(false);
+  });
+
+  it("keeps postponing while any local change is still standing", () => {
+    const standing = edit(push(edit(opened(), "B"), "C"), "D");
+
+    expect(bodyIn(standing)).toBe("D");
+    expect(standing.zones.main.initial).toStrictEqual([stored("A")]);
+    expect(standing.zones.main.pendingIncoming?.nodes).toStrictEqual([
+      stored("C"),
+    ]);
+    expect(isVisualEditorDirty(standing)).toBe(true);
+  });
+
+  it("brings the entries it could not read along when it settles by itself", () => {
+    const unreadable = [{ index: 1, value: { type: "core:gone" } }];
+    const settled = edit(push(edit(opened(), "B"), "C", unreadable), "A");
+
+    expect(settled.zones.main.invalid).toStrictEqual(unreadable);
+    expect(settled.zones.main.initialInvalid).toStrictEqual(unreadable);
+    expect(settled.zones.main.pendingIncoming).toBeUndefined();
+  });
+
+  it("settles after a move is undone, not only after a data edit", () => {
+    const second = "01JPENDINGINCOMING0000002";
+    const pair = (first: string): EditorZoneMount => ({
+      ...mountWith(first),
+      nodes: [
+        stored(first),
+        { data: { body: "Z" }, id: second, type: "core:text" },
+      ],
+    });
+
+    const open = mounted(pair("A"));
+    const away = visualEditorReducer(open, {
+      from: { areaId: null, zoneId: "main" },
+      nodeId: NODE,
+      to: { areaId: null, zoneId: "main" },
+      toIndex: 1,
+      type: "move",
+    });
+    const pushed = visualEditorReducer(away, {
+      type: "mount",
+      zone: pair("C"),
+    });
+
+    expect(pushed.zones.main.pendingIncoming).toBeDefined();
+
+    const back = visualEditorReducer(pushed, {
+      from: { areaId: null, zoneId: "main" },
+      nodeId: NODE,
+      to: { areaId: null, zoneId: "main" },
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(bodyIn(back)).toBe("C");
+    expect(back.zones.main.pendingIncoming).toBeUndefined();
+    expect(isVisualEditorDirty(back)).toBe(false);
+  });
+
+  it("lets go of a selection the snapshot it settles on no longer holds", () => {
+    const gone = "01JPENDINGINCOMING0000003";
+    const withExtra: EditorZoneMount = {
+      ...mountWith("A"),
+      nodes: [
+        stored("A"),
+        { data: { body: "X" }, id: gone, type: "core:text" },
+      ],
+    };
+
+    const open = mounted(withExtra);
+    const chosen = visualEditorReducer(open, {
+      ref: ref("main", gone),
+      type: "select",
+    });
+
+    expect(chosen.selected?.nodeId).toBe(gone);
+
+    const pushed = push(edit(chosen, "B"), "C");
+
+    expect(pushed.selected?.nodeId).toBe(gone);
+
+    const settled = edit(pushed, "A");
+
+    expect(bodyIn(settled)).toBe("C");
+    expect(settled.zones.main.nodes).toHaveLength(1);
+    expect(settled.selected).toBeNull();
+  });
 });
 
 describe("a block the editor has already rejected, in a zone that must keep one", () => {

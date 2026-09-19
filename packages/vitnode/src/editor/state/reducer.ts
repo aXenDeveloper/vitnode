@@ -321,13 +321,64 @@ const insertAt = (
   return [...nodes.slice(0, at), node, ...nodes.slice(at)];
 };
 
+const withResolvableSelection = (
+  state: VisualEditorState,
+  zoneId: string,
+  nodes: readonly ContentNode[],
+): VisualEditorState => {
+  const selected = state.selected;
+
+  return selected !== null &&
+    selected.zoneId === zoneId &&
+    foundIn(nodes, selected) === null
+    ? { ...state, selected: null }
+    : state;
+};
+
+const withoutPendingIncoming = (zone: EditorZoneState): EditorZoneState => {
+  if (zone.pendingIncoming === undefined) return zone;
+
+  const { pendingIncoming: _dropped, ...rest } = zone;
+
+  return rest;
+};
+
+const settlePendingIfClean = (zone: EditorZoneState): EditorZoneState => {
+  const pending = zone.pendingIncoming;
+
+  if (pending === undefined || zoneChanged(zone)) return zone;
+
+  return {
+    ...withoutPendingIncoming(zone),
+    initial: pending.nodes,
+    initialInvalid: pending.invalid,
+    invalid: pending.invalid,
+    nodes: pending.nodes,
+  };
+};
+
 const withZones = (
   state: VisualEditorState,
   zones: Record<string, EditorZoneState>,
-): VisualEditorState => ({
-  ...state,
-  zones: Object.assign(emptyZones(), state.zones, zones),
-});
+): VisualEditorState => {
+  const settled = emptyZones();
+  let resolved = state;
+
+  for (const [id, zone] of Object.entries(zones)) {
+    const adopted = settlePendingIfClean(zone);
+
+    settled[id] = adopted;
+
+    if (adopted !== zone) {
+      resolved = withResolvableSelection(resolved, id, adopted.nodes);
+    }
+  }
+
+  return {
+    ...resolved,
+    zones: Object.assign(emptyZones(), state.zones, settled),
+  };
+};
 
 const zoneKeepsRootNodeCap = (
   zone: EditorZoneState,
@@ -509,32 +560,10 @@ const withoutSelectionOn = (
     ? { ...state, selected: null }
     : state;
 
-const withResolvableSelection = (
-  state: VisualEditorState,
-  zoneId: string,
-  nodes: readonly ContentNode[],
-): VisualEditorState => {
-  const selected = state.selected;
-
-  return selected !== null &&
-    selected.zoneId === zoneId &&
-    foundIn(nodes, selected) === null
-    ? { ...state, selected: null }
-    : state;
-};
-
 const wasSuperseded = (
   zone: EditorZoneState,
   nodes: readonly ContentNode[],
 ): boolean => zone.superseded.some(older => sameNodes(older, nodes));
-
-const withoutPendingIncoming = (zone: EditorZoneState): EditorZoneState => {
-  if (zone.pendingIncoming === undefined) return zone;
-
-  const { pendingIncoming: _dropped, ...rest } = zone;
-
-  return rest;
-};
 
 const holdsIncoming = (
   zone: EditorZoneState,

@@ -143,9 +143,14 @@ describe("the save gate looks as deep as the server does", () => {
     );
   });
 
-  it("still draws such a block on the canvas rather than hiding it", () => {
+  it("still draws a block the write boundary alone would refuse", () => {
     expect(canvas({ heading: "Hi", width: "prose" })).toBeNull();
-    expect(canvas({ heading: "Hello", width: "narrow" })).toBeNull();
+  });
+
+  it("stops drawing one whose enum value left the definition", () => {
+    expect(canvas({ heading: "Hello", width: "narrow" })?.kind).toBe(
+      "invalid-data",
+    );
   });
 
   it("carries the reason, so the panel can say what is wrong", () => {

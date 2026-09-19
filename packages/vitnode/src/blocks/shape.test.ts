@@ -14,7 +14,7 @@ const block = defineBlock({
   id: "shape",
   fields: {
     align: field.enum({ defaultValue: "start", values: ["start", "center"] }),
-    count: field.number({ integer: true }),
+    count: field.number({ integer: true, max: 10, min: 0 }),
     featured: field.boolean({ defaultValue: false }),
     seo: field.group({
       nullable: true,
@@ -95,6 +95,35 @@ describe("blockDataShapeIssue", () => {
 
   it("does not police value constraints - that is the write boundary's job", () => {
     expect(issue({ title: "far longer than the field allows" })).toBeNull();
-    expect(issue({ align: "sideways", title: "Hi" })).toBeNull();
+    expect(issue({ count: -40, title: "Hi" })).toBeNull();
+    expect(issue({ count: 1.5, title: "Hi" })).toBeNull();
+  });
+
+  it("refuses an enum value the field no longer lists", () => {
+    expect(issue({ align: "sideways", title: "Hi" })).toContain("align");
+    expect(issue({ align: "sideways", title: "Hi" })).toContain("sideways");
+  });
+
+  it("refuses an enum value a group leaf no longer lists", () => {
+    const grouped = defineBlock({
+      component: Noop,
+      id: "grouped",
+      fields: {
+        look: field.group({
+          fields: { style: field.enum({ values: ["light", "dark"] }) },
+        }),
+      },
+    }) as unknown as AnyBlockDefinition;
+
+    expect(
+      blockDataShapeIssue(grouped, { look: { style: "legacy" } }),
+    ).toContain("look.style");
+    expect(
+      blockDataShapeIssue(grouped, { look: { style: "dark" } }),
+    ).toBeNull();
+  });
+
+  it("still takes an enum value the field does list", () => {
+    expect(issue({ align: "center", title: "Hi" })).toBeNull();
   });
 });

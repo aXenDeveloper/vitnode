@@ -378,8 +378,14 @@ describe("ContentRenderer", () => {
 describe("structural safety on a public page", () => {
   const strictFields = {
     count: field.number({ integer: true }),
-    seo: field.group({ fields: { title: field.text({ nullable: true }) } }),
+    seo: field.group({
+      fields: {
+        style: field.enum({ defaultValue: "light", values: ["light", "dark"] }),
+        title: field.text({ nullable: true }),
+      },
+    }),
     title: field.text({ maxLength: 20, required: true }),
+    tone: field.enum({ defaultValue: "info", values: ["info", "warning"] }),
   };
 
   const rendered = vi.fn();
@@ -467,6 +473,34 @@ describe("structural safety on a public page", () => {
     expect(screen.getByRole("heading").textContent).toBe(
       "A TITLE FAR LONGER THAN THE FIELD ALLOWS",
     );
+  });
+
+  it("never calls a component for an enum value the block stopped declaring", () => {
+    inProduction({ title: "Fine", tone: "success" });
+
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("holds that enum check where the caller turned validation off", () => {
+    inProduction({ title: "Fine", tone: "success" }, "never");
+
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("never calls a component for a dropped enum value inside a group", () => {
+    inProduction({ seo: { style: "legacy", title: "Hi" }, title: "Fine" });
+
+    expect(rendered).not.toHaveBeenCalled();
+  });
+
+  it("still renders an enum value the block does declare, nested or not", () => {
+    inProduction({
+      seo: { style: "dark", title: "Hi" },
+      title: "Fine",
+      tone: "warning",
+    });
+
+    expect(rendered).toHaveBeenCalledTimes(1);
   });
 
   it("renders a healthy block in production with nothing in its place", () => {
