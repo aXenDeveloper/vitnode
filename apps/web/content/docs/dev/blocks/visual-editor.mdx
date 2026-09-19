@@ -323,6 +323,8 @@ Select a block and its fields appear in the sidebar: text, textarea, number, boo
 
 Typing updates the block on the page **as you type**. There is no Apply button, and no preview pane to compare against, because the page _is_ the preview.
 
+A block that wraps its own rendered text in `<BlockField>` can be typed into from the other end as well - click the heading on the page and edit it there. It is the same `data`, the same reducer and the same Save button, so the two panels never disagree. See [Inline Editing](/docs/dev/blocks/inline-editing).
+
 A block that declares more than one [variant](/docs/dev/blocks/block-variants) gets a **Variant** picker above those fields. Picking one is a separate action from editing content: it keeps the instance's id, leaves `data` untouched, and does not reset a field you were halfway through. A block with one variant, or none, shows no picker - there is nothing to decide. A stored variant the block no longer offers is named in the panel, with the declared ones still offered beside it.
 
 ### Area properties
@@ -568,7 +570,7 @@ Being clear about the edges is more useful than a roadmap.
 | **Live collaboration**            | No shared cursors, no presence, no merging two people's edits to **one** zone. Different zones of one page do merge, and a stale write to the same zone is refused rather than applied - see [two moderators, one page](/docs/dev/blocks/editable-pages#two-moderators-one-page) - but nobody watches anybody else arrange anything in real time. |
 | **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/blocks/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel. |
 | **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                             |
-| **Inline rich text**              | Text is edited in the properties panel, not by clicking into the rendered paragraph.                                                                                                                    |
+| **Rich text**                     | A `text` or `textarea` field is a plain string, and it stays one. You can type into it [on the page itself](/docs/dev/blocks/inline-editing) or in the properties panel, but no block field holds bold, links or lists. Tiptap ships in this repository and is deliberately nowhere near a block. |
 
 Everything in that table is a _later_ decision rather than a closed door - but none of it is built, and none of it is implied by the APIs above.
 

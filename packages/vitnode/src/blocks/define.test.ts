@@ -81,6 +81,35 @@ describe("defineBlock", () => {
     ).not.toThrow();
   });
 
+  it("refuses a field whose own constraints no value could satisfy", () => {
+    expect(() =>
+      defineBlock({
+        component: Noop,
+        fields: { title: field.text({ maxLength: 3, minLength: 10 }) },
+        id: "hero",
+      }),
+    ).toThrow(BlockError);
+    expect(() =>
+      defineBlock({
+        component: Noop,
+        fields: { weight: field.number({ integer: true, max: 1, min: 10 }) },
+        id: "hero",
+      }),
+    ).toThrow(/min 10 greater than max 1/);
+  });
+
+  it("refuses a default the field's own bounds would reject", () => {
+    expect(() =>
+      defineBlock({
+        component: Noop,
+        fields: {
+          weight: field.number({ defaultValue: 99, integer: true, max: 10 }),
+        },
+        id: "hero",
+      }),
+    ).toThrow(/above its own max of 10/);
+  });
+
   describe("variants", () => {
     const cards = (declaration: {
       defaultVariant?: string;

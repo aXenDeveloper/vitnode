@@ -935,6 +935,11 @@
           "description": "Nothing installed on this site provides the block type {type}, so it cannot be rendered."
         }
       },
+      "inline": {
+        "empty": "Add {field}",
+        "label": "Edit {field} on the {name} block",
+        "invalid": "This text does not fit what the field allows yet, so saving stays blocked until it does."
+      },
       "dnd": {
         "instructions": "Press Space to pick up a block. Use the arrow keys to move it between positions and zones, Space to drop it where the line is, and Escape to put it back.",
         "picked_up": "Picked up {name}.",

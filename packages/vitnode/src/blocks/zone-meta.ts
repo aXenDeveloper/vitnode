@@ -7,6 +7,8 @@ import type {
 
 import {
   BLOCK_WILDCARD,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+  CONTENT_BLOCKS_DEFAULT_MAX,
   CONTENT_ZONE_ALLOWED_ATTRIBUTE,
   CONTENT_ZONE_ATTRIBUTE,
   CONTENT_ZONE_ID_MAX_LENGTH,
@@ -56,6 +58,31 @@ export interface ContentZoneBounds {
   min: number | undefined;
 }
 
+export interface ResolvedContentZoneBounds {
+  max: number;
+  min: number | undefined;
+}
+
+export const assertContentZoneBounds = (
+  id: string,
+  { max, min }: ContentZoneBounds,
+): void => {
+  if (min !== undefined && (!Number.isInteger(min) || min < 0)) {
+    throw new BlockError(
+      `Content zone ${JSON.stringify(id)} is mounted with a min of ${min}. A min counts the blocks the zone has to hold, so it is a whole number that is zero or more - a fraction, a negative, NaN or Infinity is compared against a list length on every edit and could never mean anything.`,
+    );
+  }
+
+  if (
+    max !== undefined &&
+    (!Number.isInteger(max) || max < 1 || max > CONTENT_BLOCKS_ABSOLUTE_MAX)
+  ) {
+    throw new BlockError(
+      `Content zone ${JSON.stringify(id)} is mounted with a max of ${max}. A max counts the blocks the zone may hold, so it is a whole number between 1 and ${CONTENT_BLOCKS_ABSOLUTE_MAX} - that ceiling is what a stored zone can be read back through, and blocks the editor accepted above it could never be saved.`,
+    );
+  }
+};
+
 const narrowed = (
   declared: number | undefined,
   explicit: number | undefined,
@@ -84,13 +111,22 @@ export const contentZoneBounds = ({
   declared: ContentZoneBounds | undefined;
   explicit: ContentZoneBounds;
   id: string;
-}): ContentZoneBounds => {
-  const min = narrowed(declared?.min, explicit.min, Math.max);
-  const max = narrowed(declared?.max, explicit.max, Math.min);
+}): ResolvedContentZoneBounds => {
+  assertContentZoneBounds(id, explicit);
 
-  if (min !== undefined && max !== undefined && min > max) {
+  const min = narrowed(declared?.min, explicit.min, Math.max);
+  const max =
+    narrowed(
+      declared === undefined
+        ? undefined
+        : (declared.max ?? CONTENT_BLOCKS_DEFAULT_MAX),
+      explicit.max,
+      Math.min,
+    ) ?? CONTENT_BLOCKS_DEFAULT_MAX;
+
+  if (min !== undefined && min > max) {
     throw new BlockError(
-      `Content zone ${JSON.stringify(id)} would be edited with min ${min} and max ${max}, which no list of blocks could satisfy. The page declares ${declared === undefined ? "nothing" : describeBounds(declared)} and the \`<ContentZone>\` asks for ${describeBounds(explicit)}; a call site may narrow the page's bounds but never widen them, so the two are intersected. Change one of them so the min is not above the max.`,
+      `Content zone ${JSON.stringify(id)} would be edited with min ${min} and max ${max}, which no list of blocks could satisfy. The page declares ${declared === undefined ? "nothing" : describeBounds(declared)} and the \`<ContentZone>\` asks for ${describeBounds(explicit)}; a zone that names no max of its own holds ${CONTENT_BLOCKS_DEFAULT_MAX} blocks, the same number \`field.blocks()\` stores, and a call site may narrow those bounds but never widen them, so the two are intersected. Change one of them so the min is not above the max.`,
     );
   }
 

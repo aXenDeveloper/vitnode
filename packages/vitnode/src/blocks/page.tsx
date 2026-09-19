@@ -19,7 +19,6 @@ import type { EditablePageZones } from "./page-layout";
 
 import { editablePageZone } from "../content/editor/define";
 import { ContentEngineError } from "../content/errors";
-import { CONTENT_BLOCKS_DEFAULT_MAX } from "./const";
 import { ContentEditorRuntime } from "./edit";
 import { EditablePageContext } from "./page-context";
 import { adoptedZones, layoutKey, layoutZones } from "./page-layout";
@@ -89,7 +88,7 @@ export const EditablePage = ({
     ): EditablePageZoneResolution => ({
       allowedBlocks: zone.allowed,
       blocks: Object.hasOwn(zones, zoneId) ? zones[zoneId] : zone.default,
-      max: zone.max ?? CONTENT_BLOCKS_DEFAULT_MAX,
+      max: zone.max,
       min: zone.min,
     });
 

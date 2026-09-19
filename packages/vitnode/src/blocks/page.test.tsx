@@ -419,7 +419,7 @@ describe("the bounds a zone hands the editor", () => {
     expect(mount.min).toBe(1);
   });
 
-  it("leaves them unset for a zone the page never declared", () => {
+  it("falls back to what storage allows for a zone the page never declared", () => {
     const mount = mountOf(
       <ContentZone
         blocks={[block("Record", "r1")]}
@@ -428,7 +428,7 @@ describe("the bounds a zone hands the editor", () => {
       />,
     );
 
-    expect(mount.max).toBeUndefined();
+    expect(mount.max).toBe(CONTENT_BLOCKS_DEFAULT_MAX);
     expect(mount.min).toBeUndefined();
   });
 

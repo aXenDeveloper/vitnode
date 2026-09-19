@@ -1,6 +1,7 @@
 import type { BlockComponentProps, BlockData } from "@vitnode/core/blocks";
 
 import { defineBlock } from "@vitnode/core/blocks";
+import { BlockField } from "@vitnode/core/blocks/block-field";
 import { field } from "@vitnode/core/content/fields";
 
 const featureItem = {
@@ -76,20 +77,22 @@ const Features = ({ data, variant }: BlockComponentProps<FeaturesData>) => {
   return (
     <section className={`flex flex-col ${compact ? "gap-2" : "gap-4"}`}>
       <div className="flex flex-col gap-1">
-        <h2
-          className={
-            compact
-              ? "text-base font-semibold text-balance"
-              : "text-xl font-semibold text-balance md:text-2xl"
-          }
-        >
-          {data.heading}
-        </h2>
-        {data.intro ? (
+        <BlockField name="heading">
+          <h2
+            className={
+              compact
+                ? "text-base font-semibold text-balance"
+                : "text-xl font-semibold text-balance md:text-2xl"
+            }
+          >
+            {data.heading}
+          </h2>
+        </BlockField>
+        <BlockField name="intro">
           <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
             {data.intro}
           </p>
-        ) : null}
+        </BlockField>
       </div>
 
       {variant === "list" ? (

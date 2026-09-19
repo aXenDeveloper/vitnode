@@ -1,6 +1,11 @@
-import type { ContentFieldKind, ContentFieldMap } from "../content/types";
+import type {
+  ContentFieldDescriptor,
+  ContentFieldKind,
+  ContentFieldMap,
+} from "../content/types";
 import type { BlockFieldMap } from "./types";
 
+import { scalarFieldConstraintIssue } from "../content/field-constraints";
 import { contentInnerFields } from "../content/paths";
 import { BlockError } from "./errors";
 
@@ -88,7 +93,7 @@ export const assertBlockFields = <TFields extends BlockFieldMap>(
 const assertBlockField = (
   blockId: string,
   name: string,
-  fieldValue: { kind: string; localized?: boolean },
+  fieldValue: ContentFieldDescriptor,
 ): void => {
   const refusal = blockFieldKindRefusal(fieldValue.kind);
   if (refusal !== null) {
@@ -103,5 +108,10 @@ const assertBlockField = (
       `Field "${name}" is \`localized: true\`. A block's fields are not columns, so there is no translation row for them to live in - localize the whole zone with \`field.blocks({ localized: true })\`, which gives each language its own blocks and its own order.`,
       { blockId },
     );
+  }
+
+  const constraint = scalarFieldConstraintIssue(name, fieldValue);
+  if (constraint !== null) {
+    throw new BlockError(constraint, { blockId });
   }
 };

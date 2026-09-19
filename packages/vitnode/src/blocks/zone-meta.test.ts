@@ -2,13 +2,21 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlockAllowedSpec } from "./types";
+import type { ContentZoneBounds, ResolvedContentZoneBounds } from "./zone-meta";
 
-import { CONTENT_ZONE_ID_MAX_LENGTH } from "./const";
+import {
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+  CONTENT_BLOCKS_DEFAULT_MAX,
+  CONTENT_ZONE_ID_MAX_LENGTH,
+} from "./const";
+import { BlockError } from "./errors";
 import { isBlockAllowed } from "./registry";
 import {
+  assertContentZoneBounds,
   assertContentZoneId,
   contentZoneAllowed,
   contentZoneAttributes,
+  contentZoneBounds,
   formatBlockAllowed,
   isContentZoneId,
   parseContentZoneId,
@@ -258,4 +266,148 @@ describe("what the editor allows against what the page allows", () => {
       expect(widened).toStrictEqual([]);
     },
   );
+});
+
+describe("the bounds a zone is edited under", () => {
+  const NONE: ContentZoneBounds = { max: undefined, min: undefined };
+
+  const resolved = (
+    declared: ContentZoneBounds | undefined,
+    explicit: ContentZoneBounds = NONE,
+  ): ResolvedContentZoneBounds =>
+    contentZoneBounds({ declared, explicit, id: "main" });
+
+  it("gives a zone outside a page the number a stored zone already holds", () => {
+    expect(resolved(undefined).max).toBe(CONTENT_BLOCKS_DEFAULT_MAX);
+  });
+
+  it("keeps a tighter max such a zone asks for itself", () => {
+    expect(resolved(undefined, { max: 50, min: undefined }).max).toBe(50);
+  });
+
+  it("holds a page that declares no max to the same number", () => {
+    expect(resolved(NONE).max).toBe(CONTENT_BLOCKS_DEFAULT_MAX);
+  });
+
+  it("narrows a call site that asks for more than the page can store", () => {
+    expect(resolved(NONE, { max: 500, min: undefined }).max).toBe(
+      CONTENT_BLOCKS_DEFAULT_MAX,
+    );
+  });
+
+  it("takes the call site's max when it is under that ceiling", () => {
+    expect(resolved(NONE, { max: 50, min: undefined }).max).toBe(50);
+  });
+
+  it("leaves a page that raised its own max alone", () => {
+    expect(resolved({ max: 300, min: undefined }).max).toBe(300);
+    expect(
+      resolved({ max: 300, min: undefined }, { max: 500, min: undefined }).max,
+    ).toBe(300);
+  });
+
+  it("leaves min unset when neither side names one", () => {
+    expect(resolved(undefined).min).toBeUndefined();
+    expect(resolved(NONE).min).toBeUndefined();
+  });
+
+  it("keeps the looser of the two mins, because a call site may only tighten", () => {
+    expect(
+      resolved({ max: undefined, min: 2 }, { max: undefined, min: 0 }).min,
+    ).toBe(2);
+    expect(
+      resolved({ max: undefined, min: 2 }, { max: undefined, min: 5 }).min,
+    ).toBe(5);
+  });
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    1.5,
+    -5,
+    0,
+    CONTENT_BLOCKS_ABSOLUTE_MAX + 1,
+  ])("refuses a max of %s before any editor state exists", max => {
+    expect(() => resolved(undefined, { max, min: undefined })).toThrow(
+      BlockError,
+    );
+    expect(() => resolved(undefined, { max, min: undefined })).toThrow(
+      /"main" is mounted with a max of/,
+    );
+  });
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    1.5,
+    -1,
+  ])("refuses a min of %s before any editor state exists", min => {
+    expect(() => resolved(undefined, { max: undefined, min })).toThrow(
+      BlockError,
+    );
+    expect(() => resolved(undefined, { max: undefined, min })).toThrow(
+      /"main" is mounted with a min of/,
+    );
+  });
+
+  it("accepts the two ends a zone may legitimately name", () => {
+    const edges = resolved(undefined, {
+      max: CONTENT_BLOCKS_ABSOLUTE_MAX,
+      min: 0,
+    });
+
+    expect(edges.max).toBe(CONTENT_BLOCKS_ABSOLUTE_MAX);
+    expect(edges.min).toBe(0);
+  });
+
+  it("refuses a min above the max the zone actually gets", () => {
+    expect(() =>
+      resolved(undefined, {
+        max: undefined,
+        min: CONTENT_BLOCKS_DEFAULT_MAX + 1,
+      }),
+    ).toThrow(
+      new RegExp(
+        `min ${CONTENT_BLOCKS_DEFAULT_MAX + 1} and max ${CONTENT_BLOCKS_DEFAULT_MAX}`,
+      ),
+    );
+  });
+
+  it("names both sides and the ceiling in that refusal", () => {
+    expect(() => resolved(NONE, { max: undefined, min: 250 })).toThrow(
+      /page declares no bounds[\s\S]*asks for min 250[\s\S]*field\.blocks\(\)/,
+    );
+  });
+
+  it("still refuses a min above a max the page itself declared", () => {
+    expect(() =>
+      resolved({ max: 3, min: 1 }, { max: undefined, min: 5 }),
+    ).toThrow(/min 5 and max 3/);
+  });
+});
+
+describe("assertContentZoneBounds", () => {
+  it("passes bounds a zone could actually be edited under", () => {
+    expect(() =>
+      assertContentZoneBounds("main", { max: 12, min: 2 }),
+    ).not.toThrow();
+    expect(() =>
+      assertContentZoneBounds("main", { max: undefined, min: undefined }),
+    ).not.toThrow();
+  });
+
+  it("names the zone, the value and the rule it broke", () => {
+    expect(() =>
+      assertContentZoneBounds("before-profile", {
+        max: CONTENT_BLOCKS_ABSOLUTE_MAX + 1,
+        min: undefined,
+      }),
+    ).toThrow(
+      new RegExp(
+        `"before-profile"[\\s\\S]*whole number between 1 and ${CONTENT_BLOCKS_ABSOLUTE_MAX}`,
+      ),
+    );
+  });
 });

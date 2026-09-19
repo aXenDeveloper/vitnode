@@ -11,16 +11,14 @@ import {
   CONTENT_BLOCKS_DEFAULT_MAX,
 } from "../blocks/const";
 import { parseBlockId } from "../blocks/namespace";
-import {
-  CONTENT_ENUM_DEFAULT_LENGTH,
-  CONTENT_FIELD_NAME_PATTERN,
-} from "./const";
+import { CONTENT_FIELD_NAME_PATTERN } from "./const";
 import {
   editorialFields,
   publicationFields,
   systemFields,
 } from "./define-shared";
 import { ContentEngineError } from "./errors";
+import { scalarFieldConstraintIssue } from "./field-constraints";
 import {
   assertContentFileMaxBytes,
   normalizeContentFileExtensions,
@@ -232,24 +230,9 @@ export const assertField = (
     }
   }
 
-  if (fieldValue.kind === "text" || fieldValue.kind === "textarea") {
-    const { maxLength, minLength } = fieldValue;
-    if (maxLength !== undefined && maxLength <= 0) {
-      throw new ContentEngineError(
-        `Field "${name}" has a maxLength of ${maxLength}; it must be positive.`,
-        { contentTypeId: id },
-      );
-    }
-    if (
-      minLength !== undefined &&
-      maxLength !== undefined &&
-      minLength > maxLength
-    ) {
-      throw new ContentEngineError(
-        `Field "${name}" has minLength ${minLength} greater than maxLength ${maxLength}.`,
-        { contentTypeId: id },
-      );
-    }
+  const constraint = scalarFieldConstraintIssue(name, fieldValue);
+  if (constraint !== null) {
+    throw new ContentEngineError(constraint, { contentTypeId: id });
   }
 
   if (fieldValue.kind === "slug") {
@@ -308,49 +291,6 @@ export const assertField = (
           { contentTypeId: id },
         );
       }
-    }
-  }
-
-  if (fieldValue.kind === "number") {
-    const { max, min } = fieldValue;
-    if (min !== undefined && max !== undefined && min > max) {
-      throw new ContentEngineError(
-        `Field "${name}" has min ${min} greater than max ${max}.`,
-        { contentTypeId: id },
-      );
-    }
-  }
-
-  if (fieldValue.kind === "enum") {
-    const { defaultValue, length = CONTENT_ENUM_DEFAULT_LENGTH } = fieldValue;
-    const values: readonly string[] = fieldValue.values;
-
-    if (values.length === 0) {
-      throw new ContentEngineError(
-        `Field "${name}" needs at least one value.`,
-        {
-          contentTypeId: id,
-        },
-      );
-    }
-    if (new Set(values).size !== values.length) {
-      throw new ContentEngineError(
-        `Field "${name}" has duplicate enum values.`,
-        { contentTypeId: id },
-      );
-    }
-    const tooLong = values.find(value => value.length > length);
-    if (tooLong !== undefined) {
-      throw new ContentEngineError(
-        `Field "${name}" value "${tooLong}" is longer than the column length ${length}. Raise \`length\` on the field.`,
-        { contentTypeId: id },
-      );
-    }
-    if (defaultValue !== undefined && !values.includes(defaultValue)) {
-      throw new ContentEngineError(
-        `Field "${name}" has default "${defaultValue}", which is not one of its values.`,
-        { contentTypeId: id },
-      );
     }
   }
 };

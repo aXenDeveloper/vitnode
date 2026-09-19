@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { type ReactElement } from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type {
@@ -8,11 +8,13 @@ import type {
   BlockData,
 } from "../../blocks/types";
 import type { VisualEditorContextValue } from "../context";
+import type { EditorInlineBlockValue } from "../inline/context";
 
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
 import { field } from "../../content/fields";
 import { VisualEditorContext } from "../context";
+import { EditorInlineBlockContext } from "../inline/context";
 import {
   initialVisualEditorState,
   unsafeZoneIds,
@@ -50,7 +52,23 @@ const instance = (data: Record<string, unknown>): AnyBlockInstance => ({
   type: "core:card",
 });
 
-const Shell = ({ data }: { data: Record<string, unknown> }): ReactElement => {
+const inlineValue = (node: AnyBlockInstance): EditorInlineBlockValue => ({
+  definition: undefined,
+  hasInlineFields: true,
+  instance: node,
+  nodeRef: { areaId: null, kind: "block", nodeId: NODE_ID, zoneId: "main" },
+  registerField: () => () => undefined,
+});
+
+const Shell = ({
+  children = <p>drawn</p>,
+  data,
+  inline = false,
+}: {
+  children?: ReactNode;
+  data: Record<string, unknown>;
+  inline?: boolean;
+}): ReactElement => {
   const state = visualEditorReducer(initialVisualEditorState, {
     type: "mount",
     zone: {
@@ -70,16 +88,26 @@ const Shell = ({ data }: { data: Record<string, unknown> }): ReactElement => {
     state,
   } as unknown as VisualEditorContextValue;
 
+  const shell = (
+    <EditableBlockShell
+      areaId={null}
+      index={0}
+      instance={instance(data)}
+      zoneId="main"
+    >
+      {children}
+    </EditableBlockShell>
+  );
+
   return (
     <VisualEditorContext value={value}>
-      <EditableBlockShell
-        areaId={null}
-        index={0}
-        instance={instance(data)}
-        zoneId="main"
-      >
-        <p>drawn</p>
-      </EditableBlockShell>
+      {inline ? (
+        <EditorInlineBlockContext value={inlineValue(instance(data))}>
+          {shell}
+        </EditorInlineBlockContext>
+      ) : (
+        shell
+      )}
     </VisualEditorContext>
   );
 };
@@ -135,5 +163,80 @@ describe("the badge the block shell draws", () => {
 
     expect(badge()).toBeNull();
     expect(blocksSave(data)).toBe(false);
+  });
+});
+
+describe("how inert the body a block shell draws really is", () => {
+  const data = { heading: "Hello", width: "full" };
+
+  it("stays inert while the block marks no inline field", () => {
+    render(<Shell data={data} />);
+
+    expect(screen.getByText("drawn").parentElement?.hasAttribute("inert")).toBe(
+      true,
+    );
+  });
+
+  it("softens to pointer events once an inline field is registered", () => {
+    render(<Shell data={data} inline />);
+
+    const body = screen.getByText("drawn").parentElement;
+
+    expect(body?.hasAttribute("inert")).toBe(false);
+    expect(body?.className).toContain("pointer-events-none");
+  });
+
+  it("keeps focus out of everything a softened body still renders", () => {
+    render(
+      <Shell data={data} inline>
+        <p>
+          <a href="https://vitnode.com">link</a>
+        </p>
+      </Shell>,
+    );
+
+    fireEvent.focus(screen.getByRole("link"));
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "block.select" }),
+    );
+  });
+
+  it("takes what it softened out of the tab order instead of bouncing it", () => {
+    render(
+      <Shell data={data} inline>
+        <p>
+          <a href="https://vitnode.com">link</a>
+          <span data-vitnode-inline-field="heading" tabIndex={0}>
+            Hello
+          </span>
+        </p>
+      </Shell>,
+    );
+
+    expect(screen.getByRole("link").getAttribute("tabindex")).toBe("-1");
+    expect(screen.getByText("Hello").getAttribute("tabindex")).toBe("0");
+  });
+
+  it("gives the tab order back to a block that stops marking inline fields", () => {
+    const { rerender } = render(
+      <Shell data={data} inline>
+        <p>
+          <a href="https://vitnode.com">link</a>
+        </p>
+      </Shell>,
+    );
+
+    expect(screen.getByRole("link").getAttribute("tabindex")).toBe("-1");
+
+    rerender(
+      <Shell data={data}>
+        <p>
+          <a href="https://vitnode.com">link</a>
+        </p>
+      </Shell>,
+    );
+
+    expect(screen.getByRole("link").hasAttribute("tabindex")).toBe(false);
   });
 });
