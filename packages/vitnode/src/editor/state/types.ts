@@ -91,7 +91,12 @@ export type VisualEditorAction =
       instance: AnyBlockInstance;
       type: "insert";
     }
-  | { data: Record<string, unknown>; ref: EditorNodeRef; type: "update" }
+  | {
+      data: Record<string, unknown>;
+      ref: EditorNodeRef;
+      remove?: readonly string[];
+      type: "update";
+    }
   | {
       from: EditorContainerRef;
       nodeId: string;

@@ -17,6 +17,7 @@ import type {
 } from "./types";
 
 import { contentNodeBlocks, isBlockAreaInstance } from "../../blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
 import { createBlockInstanceId } from "../../blocks/instance";
 import { editableBlockIssue } from "../block-shell/issue";
 import {
@@ -309,6 +310,12 @@ const withZones = (
   zones: Record<string, EditorZoneState>,
 ): VisualEditorState => ({ ...state, zones: { ...state.zones, ...zones } });
 
+const growsPastAreaCap = (
+  before: readonly ContentNode[],
+  after: readonly ContentNode[],
+): boolean =>
+  after.length > before.length && after.length > AREA_CHILDREN_DEFAULT_MAX;
+
 const updateContainer = (
   zone: EditorZoneState,
   container: EditorContainerRef,
@@ -324,6 +331,7 @@ const updateContainer = (
   const next = update(found.area.children);
   const children = next.filter(isBlockNode);
   if (children.length !== next.length) return null;
+  if (growsPastAreaCap(found.area.children, children)) return null;
 
   return {
     ...zone,
@@ -723,7 +731,9 @@ export const visualEditorReducer = (
 
     case "insert-area": {
       const zone = state.zones[action.zoneId];
-      if (!zone) return state;
+      if (!zone || action.area.children.length > AREA_CHILDREN_DEFAULT_MAX) {
+        return state;
+      }
 
       return withZones(state, {
         [zone.id]: {
@@ -876,7 +886,8 @@ export const visualEditorReducer = (
       const found = findBlock(state, action.ref);
       if (!zone || !found) return state;
 
-      const data = { ...found.instance.data, ...action.data };
+      const data: BlockUnknownData = { ...found.instance.data, ...action.data };
+      for (const name of action.remove ?? []) delete data[name];
       if (sameValue(found.instance.data, data)) return state;
 
       const next = updateContainer(zone, containerOf(action.ref), nodes =>

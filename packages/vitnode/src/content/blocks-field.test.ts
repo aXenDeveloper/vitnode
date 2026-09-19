@@ -6,7 +6,10 @@ import type { AnyBlockInstance, ContentNode } from "@/blocks/types";
 
 import { defineBlock } from "@/blocks/define";
 import { isBlockInstance } from "@/blocks/instance";
-import { CONTENT_BLOCKS_DEFAULT_MAX } from "@/blocks/const";
+import {
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+  CONTENT_BLOCKS_DEFAULT_MAX,
+} from "@/blocks/const";
 import {
   createBlockRegistry,
   setDefaultBlockRegistry,
@@ -85,6 +88,16 @@ const instance = (type: string, data: Record<string, unknown>, id: string) => ({
   type,
 });
 
+const defineBlocksField = (
+  suffix: string,
+  bounds: { max?: number; min?: number },
+) =>
+  defineContentType({
+    id: `test.blocks-${suffix}`,
+    tableName: `test_blocks_${suffix.replaceAll("-", "_")}`,
+    fields: { content: field.blocks(bounds) },
+  });
+
 describe("field.blocks", () => {
   it("defaults to accepting every registered block", () => {
     expect(openContentType.fields.content.allowed).toBe("*");
@@ -151,6 +164,51 @@ describe("field.blocks", () => {
         fields: { content: field.blocks({ max: 5, min: 5 }) },
       }),
     ).not.toThrow();
+  });
+
+  it("refuses a max that is not a whole number in range", () => {
+    expect(() => defineBlocksField("max-nan", { max: Number.NaN })).toThrow(
+      /max of NaN; it must be a whole number between 1 and 1000/,
+    );
+
+    expect(() => defineBlocksField("max-fraction", { max: 1.5 })).toThrow(
+      /max of 1.5; it must be a whole number/,
+    );
+
+    expect(() => defineBlocksField("max-zero", { max: 0 })).toThrow(
+      /max of 0; it must be a whole number/,
+    );
+
+    expect(() =>
+      defineBlocksField("max-over-absolute", {
+        max: CONTENT_BLOCKS_ABSOLUTE_MAX + 1,
+      }),
+    ).toThrow(/max of 1001; it must be a whole number/);
+  });
+
+  it("refuses a min that is not a whole number at or above zero", () => {
+    expect(() => defineBlocksField("min-nan", { min: Number.NaN })).toThrow(
+      /min of NaN; it must be a whole number that is zero or more/,
+    );
+
+    expect(() => defineBlocksField("min-fraction", { min: 1.5 })).toThrow(
+      /min of 1.5; it must be a whole number that is zero or more/,
+    );
+
+    expect(() => defineBlocksField("min-negative", { min: -1 })).toThrow(
+      /min of -1; it must be a whole number that is zero or more/,
+    );
+  });
+
+  it("accepts bounds at the top of the allowed range", () => {
+    expect(() =>
+      defineBlocksField("min-max-absolute", {
+        max: CONTENT_BLOCKS_ABSOLUTE_MAX,
+        min: CONTENT_BLOCKS_ABSOLUTE_MAX,
+      }),
+    ).not.toThrow();
+
+    expect(() => defineBlocksField("no-bounds", {})).not.toThrow();
   });
 
   it("refuses to be indexed", () => {

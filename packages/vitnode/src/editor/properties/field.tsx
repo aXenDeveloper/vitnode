@@ -14,12 +14,15 @@ import { AutoFormTextarea } from "../../components/form/fields/textarea";
 import { Switch } from "../../components/ui/switch";
 
 export interface BlockPropertyFieldProps extends ItemAutoFormComponentProps {
+  nested?: boolean;
   spec: ContentFormFieldSpec;
 }
 
 const otherPropsFor = (
   spec: ContentFormFieldSpec,
+  { nested = false }: { nested?: boolean } = {},
 ): ItemAutoFormComponentProps["otherProps"] => ({
+  clearsToEmpty: !nested && !spec.required && !spec.nullable,
   enum: spec.options?.map(option => option.value),
   isOptional: !spec.required,
   maxLength: spec.maxLength,
@@ -87,7 +90,8 @@ const BlockPropertyGroup = ({ field, spec }: BlockPropertyFieldProps) => {
                   },
                 )}
                 key={leaf.name}
-                otherProps={otherPropsFor(leaf)}
+                nested
+                otherProps={otherPropsFor(leaf, { nested: true })}
                 spec={leaf}
               />
             ))}
@@ -97,6 +101,7 @@ const BlockPropertyGroup = ({ field, spec }: BlockPropertyFieldProps) => {
 };
 
 export const BlockPropertyField = ({
+  nested = false,
   spec,
   ...props
 }: BlockPropertyFieldProps) => {
@@ -107,7 +112,13 @@ export const BlockPropertyField = ({
       return <AutoFormSwitch label={spec.label} {...props} />;
 
     case "dateTime":
-      return <AutoFormDateTime label={spec.label} {...props} />;
+      return (
+        <AutoFormDateTime
+          label={spec.label}
+          {...props}
+          otherProps={otherPropsFor(spec, { nested })}
+        />
+      );
 
     case "enum":
       return spec.display === "radio" ? (

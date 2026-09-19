@@ -9,7 +9,7 @@ import type {
   TargetCapabilities,
 } from "./resolve-drop";
 
-import { BLOCK_WILDCARD } from "../../blocks/const";
+import { AREA_CHILDREN_DEFAULT_MAX, BLOCK_WILDCARD } from "../../blocks/const";
 import { isBlockAllowed } from "../../blocks/registry";
 import {
   AREA_DROPPABLE_PREFIX,
@@ -1956,5 +1956,80 @@ describe("a target only accepts what it both registers and allows", () => {
         target: targetOf(into("page:main", "area-b")),
       }),
     ).toBe("nested-area");
+  });
+});
+
+describe("a drop aimed at an area that is already full", () => {
+  const area = into("page:main", "area-a");
+
+  it("does not resolve a catalog block into it", () => {
+    expect(
+      resolveDrop({
+        capabilities: accepting("*"),
+        source: fromCatalog(),
+        target: onContainer("page:main", "area-a"),
+        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
+      }),
+    ).toBeNull();
+  });
+
+  it("does not resolve a block arriving from elsewhere", () => {
+    expect(
+      resolveDrop({
+        capabilities: accepting("*"),
+        source: source({ container: into("page:main") }),
+        target: onNode({ container: area, edge: "before", index: 0 }),
+        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
+      }),
+    ).toBeNull();
+  });
+
+  it("still resolves a reorder among the children it already holds", () => {
+    expect(
+      resolveDrop({
+        capabilities: accepting("*"),
+        source: source({ container: area, index: 0 }),
+        target: onNode({ container: area, edge: "after", index: 4 }),
+        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
+      }),
+    ).toStrictEqual({
+      from: area,
+      kind: "move",
+      nodeId: "block-a",
+      to: area,
+      toIndex: 4,
+    });
+  });
+
+  it("leaves the zone root alone at the same count", () => {
+    expect(
+      resolveDrop({
+        capabilities: accepting("*"),
+        source: fromCatalog(),
+        target: onContainer("page:main"),
+        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
+      }),
+    ).toStrictEqual({
+      kind: "insert",
+      to: into("page:main"),
+      toIndex: AREA_CHILDREN_DEFAULT_MAX,
+      type: "core:hero",
+    });
+  });
+
+  it("takes the child that still fits", () => {
+    expect(
+      resolveDrop({
+        capabilities: accepting("*"),
+        source: fromCatalog(),
+        target: onContainer("page:main", "area-a"),
+        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX - 1,
+      }),
+    ).toStrictEqual({
+      kind: "insert",
+      to: area,
+      toIndex: AREA_CHILDREN_DEFAULT_MAX - 1,
+      type: "core:hero",
+    });
   });
 });

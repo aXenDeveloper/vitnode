@@ -117,17 +117,25 @@ export const contentFormSkeletonShape = ({
 }: {
   definition: AnyContentTypeDefinition;
   overrides?: ContentFormSkeletonOverrides;
-}): ContentFormSkeletonShape => ({
-  fields: definition.admin.form.fields.map(name => ({
-    control:
-      overrides?.[name] ?? contentSkeletonControlOf(definition.fields[name]),
-    name,
-  })),
-  sections: definition.admin.form.sections.map(({ fields, name }) => ({
-    fields,
-    name,
-  })),
-});
+}): ContentFormSkeletonShape => {
+  const rendered = definition.admin.form.fields.filter(
+    name => definition.fields[name]?.kind !== "blocks",
+  );
+  const shown = new Set(rendered);
+
+  return {
+    fields: rendered.map(name => ({
+      control:
+        overrides?.[name] ?? contentSkeletonControlOf(definition.fields[name]),
+      name,
+    })),
+    sections: definition.admin.form.sections.flatMap(({ fields, name }) => {
+      const kept = fields.filter(field => shown.has(field));
+
+      return kept.length === 0 ? [] : [{ fields: kept, name }];
+    }),
+  };
+};
 
 export type ContentFormSkeletonOverrides = Record<
   string,

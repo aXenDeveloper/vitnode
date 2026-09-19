@@ -74,6 +74,7 @@ export const EditableBlockShell = ({
   const selected = sameNodeRef(state.selected, nodeRef);
   const issue = editableBlockIssue({
     allowedBlocks: zone?.allowedBlocks,
+    dataCheck: "schema",
     entry,
     instance,
   });

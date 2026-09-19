@@ -9,6 +9,7 @@ import type {
   BlockUnknownData,
   RegisteredBlock,
 } from "../../blocks/types";
+import type { ContentFormFieldSpec } from "../../content/admin/spec";
 import type { EditorNodeRef } from "../state/types";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
@@ -27,16 +28,19 @@ import {
   blockDisplayName,
   blockFieldSpecs,
   blockFormSpec,
+  clearsBlockField,
 } from "./spec";
 import { BlockVariantControl } from "./variant";
 
 const BlockDataSync = ({
   formSchema,
   onSent,
+  specs,
   target,
 }: {
   formSchema: z.ZodObject<z.ZodRawShape>;
-  onSent: (patch: BlockUnknownData) => void;
+  onSent: (patch: BlockUnknownData, removed: readonly string[]) => void;
+  specs: readonly ContentFormFieldSpec[];
   target: EditorNodeRef;
 }) => {
   const { dispatch } = useVisualEditor();
@@ -54,28 +58,33 @@ const BlockDataSync = ({
       edited = values;
       if (changed.length === 0) return;
 
+      const removed = changed.filter(name =>
+        clearsBlockField(specs, name, values[name]),
+      );
       const patch = blockDataFromFormValues(
         {},
         Object.fromEntries(
-          changed.flatMap(name => {
-            const field = formSchema.shape[name] as undefined | z.ZodType;
-            const parsed = field?.safeParse(values[name]);
+          changed
+            .filter(name => !removed.includes(name))
+            .flatMap(name => {
+              const field = formSchema.shape[name] as undefined | z.ZodType;
+              const parsed = field?.safeParse(values[name]);
 
-            return parsed?.success ? [[name, parsed.data] as const] : [];
-          }),
+              return parsed?.success ? [[name, parsed.data] as const] : [];
+            }),
         ),
       );
 
-      if (Object.keys(patch).length === 0) return;
+      if (Object.keys(patch).length === 0 && removed.length === 0) return;
 
-      onSent(patch);
-      dispatch({ data: patch, ref: target, type: "update" });
+      onSent(patch, removed);
+      dispatch({ data: patch, ref: target, remove: removed, type: "update" });
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [dispatch, form, formSchema, onSent, target]);
+  }, [dispatch, form, formSchema, onSent, specs, target]);
 
   return null;
 };
@@ -88,7 +97,7 @@ const BlockPropertiesForm = ({
 }: {
   entry: RegisteredBlock;
   instance: AnyBlockInstance;
-  onSent: (patch: BlockUnknownData) => void;
+  onSent: (patch: BlockUnknownData, removed: readonly string[]) => void;
   target: EditorNodeRef;
 }) => {
   const [base] = useState<BlockUnknownData>(() => instance.data);
@@ -113,7 +122,12 @@ const BlockPropertiesForm = ({
       )}
       mode="onChange"
     >
-      <BlockDataSync formSchema={formSchema} onSent={onSent} target={target} />
+      <BlockDataSync
+        formSchema={formSchema}
+        onSent={onSent}
+        specs={specs}
+        target={target}
+      />
     </AutoForm>
   );
 };
@@ -179,8 +193,13 @@ const BlockPropertiesPanelContent = ({
           entry={entry}
           instance={instance}
           key={`${target.zoneId}/${target.nodeId}/${baseline}`}
-          onSent={patch => {
-            setSent(current => ({ ...current, ...patch }));
+          onSent={(patch, removed) => {
+            setSent(current => {
+              const next: BlockUnknownData = { ...current, ...patch };
+              for (const name of removed) delete next[name];
+
+              return next;
+            });
           }}
           target={target}
         />

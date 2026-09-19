@@ -39,20 +39,53 @@ const Card = ({ data }: BlockComponentProps<BlockData<typeof fields>>) => (
   <p>{data.title}</p>
 );
 
+const dateFields = {
+  archivedAt: field.dateTime({ nullable: true }),
+  publishedAt: field.dateTime(),
+  seo: field.group({
+    fields: {
+      retiredAt: field.dateTime({ nullable: true }),
+      note: field.text({ nullable: true }),
+    },
+  }),
+  startsAt: field.dateTime({ required: true }),
+};
+
+const Schedule = ({
+  data,
+}: BlockComponentProps<BlockData<typeof dateFields>>) => <p>{data.startsAt}</p>;
+
 const registry = createBlockRegistry([
   {
     pluginId: "@vitnode/core",
     namespace: "core",
-    blocks: [defineBlock({ component: Card, fields, id: "card" })],
+    blocks: [
+      defineBlock({ component: Card, fields, id: "card" }),
+      defineBlock({ component: Schedule, fields: dateFields, id: "schedule" }),
+    ],
   },
 ]);
 
 const NODE_ID = "01JPANELTESTBLOCK00000001";
 
-const instance = (title: string, body: string) => ({
+interface HarnessNode {
+  data: Record<string, unknown>;
+  id: string;
+  type: string;
+}
+
+const instance = (title: string, body: string): HarnessNode => ({
   data: { body, title },
   id: NODE_ID,
   type: "core:card",
+});
+
+const ISO = "2026-08-02T10:00:00.000Z";
+
+const scheduled = (data: Record<string, unknown>): HarnessNode => ({
+  data,
+  id: NODE_ID,
+  type: "core:schedule",
 });
 
 const ref = {
@@ -67,7 +100,11 @@ const harness = {
   state: initialVisualEditorState,
 };
 
-const Harness = (): ReactElement => {
+const Harness = ({
+  node = instance("AAA", "body"),
+}: {
+  node?: HarnessNode;
+}): ReactElement => {
   const [state, dispatch] = useReducer(visualEditorReducer, undefined, () => {
     let seeded = visualEditorReducer(initialVisualEditorState, {
       type: "mount",
@@ -75,7 +112,7 @@ const Harness = (): ReactElement => {
         allowedBlocks: undefined,
         id: "main",
         invalid: [],
-        nodes: [instance("AAA", "body")],
+        nodes: [node],
         registry,
       },
     });
@@ -112,6 +149,9 @@ const storedTitle = (): unknown =>
 
 const storedBody = (): unknown =>
   contentNodeBlocks(harness.state.zones.main.nodes)[0]?.data.body;
+
+const storedData = (): Record<string, unknown> =>
+  contentNodeBlocks(harness.state.zones.main.nodes)[0]?.data ?? {};
 
 describe("the properties form and data that changes underneath it", () => {
   it("does not write a discarded edit back when the block is selected again", () => {
@@ -205,5 +245,68 @@ describe("the properties form and data that changes underneath it", () => {
 
     expect(storedBody()).toBe("kept");
     expect(storedTitle()).toBe("AAA");
+  });
+});
+
+describe("a date the block does not have to hold, cleared", () => {
+  it("drops the key an optional date was stored under", () => {
+    render(<Harness node={scheduled({ publishedAt: ISO, startsAt: ISO })} />);
+
+    typeInto(screen.getByLabelText(/Published at/), "");
+
+    expect(storedData()).toStrictEqual({ startsAt: ISO });
+  });
+
+  it("does not fault the field an optional date was cleared from", () => {
+    render(<Harness node={scheduled({ publishedAt: ISO, startsAt: ISO })} />);
+
+    const input = screen.getByLabelText(/Published at/);
+    typeInto(input, "");
+
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+  });
+
+  it("stores null for a nullable date inside a group, keeping its siblings", () => {
+    render(
+      <Harness
+        node={scheduled({
+          seo: { note: "hi", retiredAt: ISO },
+          startsAt: ISO,
+        })}
+      />,
+    );
+
+    typeInto(screen.getByLabelText(/Retired at/), "");
+
+    expect(storedData()).toStrictEqual({
+      seo: { note: "hi", retiredAt: null },
+      startsAt: ISO,
+    });
+  });
+
+  it("stores null for a nullable date", () => {
+    render(<Harness node={scheduled({ archivedAt: ISO, startsAt: ISO })} />);
+
+    typeInto(screen.getByLabelText(/Archived at/), "");
+
+    expect(storedData()).toStrictEqual({ archivedAt: null, startsAt: ISO });
+  });
+
+  it("holds on to a required date the control cannot express as empty", () => {
+    render(<Harness node={scheduled({ startsAt: ISO })} />);
+
+    typeInto(screen.getByLabelText(/Starts at/), "");
+
+    expect(storedData()).toStrictEqual({ startsAt: ISO });
+  });
+
+  it("stores an ISO string, never a Date, when a date is picked", () => {
+    render(<Harness node={scheduled({ startsAt: ISO })} />);
+
+    typeInto(screen.getByLabelText(/Published at/), "2026-09-01T08:30");
+
+    expect(storedData().publishedAt).toBe(
+      new Date("2026-09-01T08:30").toISOString(),
+    );
   });
 });

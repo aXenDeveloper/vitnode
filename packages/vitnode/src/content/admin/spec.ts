@@ -255,6 +255,10 @@ export const buildContentFormSpec = ({
   pluginId: string;
 }): ContentFormSpec => {
   const fields = definition.fields;
+  const formFieldNames = definition.admin.form.fields.filter(
+    name => fields[name]?.kind !== "blocks",
+  );
+  const rendered = new Set(formFieldNames);
 
   return {
     contentTypeId: definition.id,
@@ -267,22 +271,27 @@ export const buildContentFormSpec = ({
     // One form, shared and localized fields alike, in the order they were
     // declared. Where a value is *stored* is settled by `spec.localized` on the
     // way back out - it is not a reason to split the screen in two.
-    fields: definition.admin.form.fields
-      .filter(name => fields[name]?.kind !== "blocks")
-      .map(name => projectFormField(name, fields[name], labelEnum, labelField)),
-    sections: definition.admin.form.sections.map(section => {
+    fields: formFieldNames.map(name =>
+      projectFormField(name, fields[name], labelEnum, labelField),
+    ),
+    sections: definition.admin.form.sections.flatMap(section => {
+      const sectionFields = section.fields.filter(name => rendered.has(name));
+      if (sectionFields.length === 0) return [];
+
       // Humanised from the name when nothing translates it, which is the same
       // fallback a field label gets - a form is readable before it is localized.
       const labels = labelSection?.(section.name) ?? {
         title: humanizeFieldName(section.name),
       };
 
-      return {
-        fields: section.fields,
-        name: section.name,
-        title: labels.title,
-        ...(labels.desc === undefined ? {} : { desc: labels.desc }),
-      };
+      return [
+        {
+          fields: sectionFields,
+          name: section.name,
+          title: labels.title,
+          ...(labels.desc === undefined ? {} : { desc: labels.desc }),
+        },
+      ];
     }),
   };
 };

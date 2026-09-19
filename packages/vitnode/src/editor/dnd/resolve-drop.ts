@@ -5,6 +5,8 @@ import type {
   TargetCapabilities,
 } from "../state/types";
 
+import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
+
 export const ZONE_DROPPABLE_PREFIX = "vitnode-editor-zone:";
 
 export const AREA_DROPPABLE_PREFIX = "vitnode-editor-area:";
@@ -321,6 +323,16 @@ export const dropRejection = ({
   return typeRejection(capabilities, source.type);
 };
 
+const fillsTargetArea = (
+  source: EditorDragSource,
+  target: EditorDropTarget,
+  targetNodeCount: number,
+): boolean =>
+  target.container.areaId !== null &&
+  targetNodeCount >= AREA_CHILDREN_DEFAULT_MAX &&
+  (source.kind === "catalog-block" ||
+    !sameContainer(target.container, source.container));
+
 export const resolveDrop = ({
   capabilities,
   source,
@@ -329,6 +341,7 @@ export const resolveDrop = ({
 }: ResolveDropArgs): null | ResolvedDrop => {
   if (!target) return null;
   if (dropRejection({ capabilities, source, target }) !== null) return null;
+  if (fillsTargetArea(source, target, targetNodeCount)) return null;
 
   if (source.kind === "catalog-block") {
     const toIndex =

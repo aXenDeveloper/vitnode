@@ -41,6 +41,24 @@ export const blockFormSpec = (entry: RegisteredBlock): ContentFormSpec => ({
 export const blockDisplayName = (entry: RegisteredBlock): string =>
   entry.definition.name ?? humanizeFieldName(entry.definition.id);
 
+const EMPTY_UNSETS: ReadonlySet<ContentFormFieldSpec["kind"]> = new Set([
+  "dateTime",
+  "slug",
+]);
+
+export const clearsBlockField = (
+  specs: readonly ContentFormFieldSpec[],
+  name: string,
+  value: unknown,
+): boolean => {
+  const spec = specs.find(item => item.name === name);
+  if (!spec || spec.required || spec.nullable || !EMPTY_UNSETS.has(spec.kind)) {
+    return false;
+  }
+
+  return value === "" || value === null || value === undefined;
+};
+
 export const blockDataFromFormValues = (
   base: BlockUnknownData,
   values: Record<string, unknown>,

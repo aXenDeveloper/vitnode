@@ -14,6 +14,7 @@ import type {
 } from "./types";
 
 import { createAreaInstance, isBlockAreaInstance } from "../../blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
 import { createBlockInstance } from "../../blocks/instance";
 import {
   createBlockRegistry,
@@ -2387,5 +2388,219 @@ describe("a cross-zone move the target zone cannot render", () => {
     expect(next.zones.aside.nodes.map(node => node.id)).toStrictEqual([
       moving.id,
     ]);
+  });
+});
+
+describe("the children an area is allowed to hold", () => {
+  const children = (count: number): AnyBlockInstance[] =>
+    Array.from({ length: count }, (_, at) => block(`child-${at}`));
+
+  const full = (): AnyBlockInstance[] => children(AREA_CHILDREN_DEFAULT_MAX);
+
+  it("refuses the block that would push an area past the cap", () => {
+    const holder = area(full());
+    const state = mounted(mount("main", [holder]));
+
+    const next = visualEditorReducer(state, {
+      container: into("main", holder.id),
+      index: 0,
+      instance: block("one too many"),
+      type: "insert",
+    });
+
+    expect(next).toBe(state);
+    expect(childIds(next, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
+  });
+
+  it("takes the block that still fits", () => {
+    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX - 1));
+    const last = block("last one in");
+    const state = visualEditorReducer(mounted(mount("main", [holder])), {
+      container: into("main", holder.id),
+      index: AREA_CHILDREN_DEFAULT_MAX - 1,
+      instance: last,
+      type: "insert",
+    });
+
+    const held = childIds(state, "main", holder.id);
+
+    expect(held).toHaveLength(AREA_CHILDREN_DEFAULT_MAX);
+    expect(held.at(-1)).toBe(last.id);
+  });
+
+  it("refuses to duplicate a child of a full area", () => {
+    const held = full();
+    const holder = area(held);
+    const state = mounted(mount("main", [holder]));
+
+    const next = visualEditorReducer(state, {
+      ref: ref("main", held[0].id, holder.id),
+      type: "duplicate",
+    });
+
+    expect(next).toBe(state);
+    expect(next.selected).toBeNull();
+    expect(childIds(next, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
+  });
+
+  it("refuses a move from the zone root into a full area", () => {
+    const holder = area(full());
+    const outside = block("outside");
+    const state = mounted(mount("main", [outside, holder]));
+
+    const next = visualEditorReducer(state, {
+      from: into("main"),
+      nodeId: outside.id,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "main")).toStrictEqual([outside.id, holder.id]);
+    expect(childIds(next, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
+  });
+
+  it("refuses a move out of another area into a full one", () => {
+    const child = block("inside");
+    const left = area([child]);
+    const right = area(full());
+    const state = mounted(mount("main", [left, right]));
+
+    const next = visualEditorReducer(state, {
+      from: into("main", left.id),
+      nodeId: child.id,
+      to: into("main", right.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(childIds(next, "main", left.id)).toStrictEqual([child.id]);
+    expect(childIds(next, "main", right.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
+  });
+
+  it("refuses a move from another zone into a full area", () => {
+    const holder = area(full());
+    const moving = block("incoming");
+    const state = mounted(mount("main", [holder]), mount("aside", [moving]));
+
+    const next = visualEditorReducer(state, {
+      from: into("aside"),
+      nodeId: moving.id,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "aside")).toStrictEqual([moving.id]);
+    expect(childIds(next, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
+  });
+
+  it("still reorders a child inside a full area", () => {
+    const held = full();
+    const holder = area(held);
+    const state = mounted(mount("main", [holder]));
+
+    const next = visualEditorReducer(state, {
+      from: into("main", holder.id),
+      nodeId: held[0].id,
+      to: into("main", holder.id),
+      toIndex: AREA_CHILDREN_DEFAULT_MAX - 1,
+      type: "move",
+    });
+
+    const order = childIds(next, "main", holder.id);
+
+    expect(order).toHaveLength(AREA_CHILDREN_DEFAULT_MAX);
+    expect(order[0]).toBe(held[1].id);
+    expect(order.at(-1)).toBe(held[0].id);
+  });
+
+  it("takes a block back once a child has left a full area", () => {
+    const held = full();
+    const holder = area(held);
+    const waiting = block("waiting");
+    const state = mounted(mount("main", [waiting, holder]));
+
+    const emptied = visualEditorReducer(state, {
+      from: into("main", holder.id),
+      nodeId: held[0].id,
+      to: into("main"),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(childIds(emptied, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX - 1,
+    );
+
+    const refilled = visualEditorReducer(emptied, {
+      from: into("main"),
+      nodeId: waiting.id,
+      to: into("main", holder.id),
+      toIndex: 0,
+      type: "move",
+    });
+
+    expect(childIds(refilled, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
+    expect(childIds(refilled, "main", holder.id)[0]).toBe(waiting.id);
+  });
+
+  it("leaves the zone root uncapped", () => {
+    const state = mounted(mount("main", full()));
+    const added = block("one more");
+
+    const next = visualEditorReducer(state, {
+      container: into("main"),
+      index: AREA_CHILDREN_DEFAULT_MAX,
+      instance: added,
+      type: "insert",
+    });
+
+    expect(ids(next, "main")).toHaveLength(AREA_CHILDREN_DEFAULT_MAX + 1);
+    expect(ids(next, "main").at(-1)).toBe(added.id);
+  });
+
+  it("refuses an area that arrives already over the cap", () => {
+    const state = mounted(mount("main", []));
+
+    const next = visualEditorReducer(state, {
+      area: area(children(AREA_CHILDREN_DEFAULT_MAX + 1)),
+      index: 0,
+      type: "insert-area",
+      zoneId: "main",
+    });
+
+    expect(next).toBe(state);
+    expect(ids(next, "main")).toStrictEqual([]);
+  });
+
+  it("still lets a child out of an area that mounted over the cap", () => {
+    const held = children(AREA_CHILDREN_DEFAULT_MAX + 1);
+    const holder = area(held);
+    const state = mounted(mount("main", [holder]));
+
+    const next = visualEditorReducer(state, {
+      ref: ref("main", held[0].id, holder.id),
+      type: "remove",
+    });
+
+    expect(childIds(next, "main", holder.id)).toHaveLength(
+      AREA_CHILDREN_DEFAULT_MAX,
+    );
   });
 });

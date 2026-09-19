@@ -265,15 +265,18 @@ export const assertField = (
   if (fieldValue.kind === "blocks") {
     const { allowed, max, min } = fieldValue;
 
-    if (max !== undefined && (max <= 0 || max > CONTENT_BLOCKS_ABSOLUTE_MAX)) {
+    if (
+      max !== undefined &&
+      (!Number.isInteger(max) || max <= 0 || max > CONTENT_BLOCKS_ABSOLUTE_MAX)
+    ) {
       throw new ContentEngineError(
-        `Field "${name}" has a max of ${max}; it must be between 1 and ${CONTENT_BLOCKS_ABSOLUTE_MAX}.`,
+        `Field "${name}" has a max of ${max}; it must be a whole number between 1 and ${CONTENT_BLOCKS_ABSOLUTE_MAX}.`,
         { contentTypeId: id },
       );
     }
-    if (min !== undefined && min < 0) {
+    if (min !== undefined && (!Number.isInteger(min) || min < 0)) {
       throw new ContentEngineError(
-        `Field "${name}" has a min of ${min}; it cannot be negative.`,
+        `Field "${name}" has a min of ${min}; it must be a whole number that is zero or more.`,
         { contentTypeId: id },
       );
     }
