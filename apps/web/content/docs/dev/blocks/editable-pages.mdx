@@ -152,7 +152,7 @@ A **standalone** `<ContentZone>` - one no editable page declares - is unaffected
 | `adapter` | optional | Where **Save** goes. `createContentEditorAdapter` builds one. |
 | `onExit` | optional | Called by **Finish editing**, after the unsaved-changes prompt. |
 
-`EditablePage` also adopts the canonical answer a save comes back with - the stored zones **and** the layout metadata around them, `updatedAt` included. View mode shows the stored result the moment you press **Finish editing**, with no reload and no second request, and a "Last rearranged 2 minutes ago" line on the page moves with it instead of sitting on the timestamp the loader happened to read. Hand it a layout belonging to a different page id and it throws, because rendering one page's blocks under another page's zones is how a save writes them onto the wrong page.
+`EditablePage` also adopts the canonical **zones** a save comes back with, so the editor rebases onto what the server actually stored. View mode shows the stored result the moment you press **Finish editing**, with no reload and no second request. The metadata around those zones - `updatedAt` and friends - belongs to the page that owns the layout, not to the editor: hold the payload the save answered with in your own state, and a "Last rearranged 2 minutes ago" line moves with it instead of sitting on the timestamp the loader happened to read. Hand `EditablePage` a layout belonging to a different page id and it throws, because rendering one page's blocks under another page's zones is how a save writes them onto the wrong page.
 
 ## Loading it
 

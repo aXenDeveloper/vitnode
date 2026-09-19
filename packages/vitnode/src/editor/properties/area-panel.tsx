@@ -95,7 +95,7 @@ export const AreaPropertiesPanelContent = ({
   const capacity = zoneCapacity(state.zones[target.zoneId]);
   const duplicateRefused = refusesDuplicate(
     capacity,
-    Math.max(area.children.length, 1),
+    area.children.length,
     null,
   );
   const removeRefused = refusesRemoval(capacity, area.children.length);
