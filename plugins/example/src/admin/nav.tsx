@@ -1,10 +1,16 @@
 import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
 
-import { FlaskConicalIcon, FolderIcon, NotebookPenIcon } from "lucide-react";
+import {
+  FlaskConicalIcon,
+  FolderIcon,
+  LayoutTemplateIcon,
+  NotebookPenIcon,
+} from "lucide-react";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { articleContentType } from "@/content/article";
 import { categoryContentType } from "@/content/category";
+import { pageContentType } from "@/content/page";
 
 /** The article content type, as the sidebar reads it. */
 export const exampleArticleNav = {
@@ -18,9 +24,14 @@ export const exampleCategoryNav = {
   icon: <FolderIcon />,
 };
 
+export const examplePageNav = {
+  definition: pageContentType,
+  icon: <LayoutTemplateIcon />,
+};
+
 export const adminNav = {
   pluginId: CONFIG_PLUGIN.pluginId,
-  contentTypes: [exampleArticleNav, exampleCategoryNav],
+  contentTypes: [exampleArticleNav, exampleCategoryNav, examplePageNav],
   admin: {
     nav: [
       {

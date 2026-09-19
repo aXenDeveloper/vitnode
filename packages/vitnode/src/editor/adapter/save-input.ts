@@ -1,0 +1,44 @@
+import type { ContentNode } from "../../blocks/types";
+import type {
+  VisualEditorInvalidSnapshot,
+  VisualEditorState,
+} from "../state/types";
+import type { VisualEditorSaveInput } from "./types";
+
+import { changedZoneIds } from "../state/reducer";
+
+export const buildSaveInput = (
+  state: VisualEditorState,
+): VisualEditorSaveInput => {
+  const changed = changedZoneIds(state);
+
+  return {
+    changedZoneIds: changed,
+    expectedZones: Object.fromEntries(
+      changed.flatMap(zoneId => {
+        const zone = state.zones[zoneId];
+
+        return zone ? [[zoneId, zone.initial] as const] : [];
+      }),
+    ),
+    zones: Object.fromEntries(
+      state.order
+        .map(zoneId => [zoneId, state.zones[zoneId]?.nodes] as const)
+        .filter(
+          (entry): entry is readonly [string, readonly ContentNode[]] =>
+            entry[1] !== undefined,
+        ),
+    ),
+  };
+};
+
+export const buildInvalidSnapshot = (
+  state: VisualEditorState,
+): VisualEditorInvalidSnapshot =>
+  Object.fromEntries(
+    state.order.flatMap(zoneId => {
+      const zone = state.zones[zoneId];
+
+      return zone ? [[zoneId, zone.invalid] as const] : [];
+    }),
+  );

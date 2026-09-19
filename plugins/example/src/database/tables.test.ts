@@ -20,10 +20,12 @@ import {
   example_localized_articles,
   example_localized_articles_translations,
 } from "./localized-articles";
+import { example_pages } from "./pages";
 
 const articles = getTableConfig(example_articles);
 const categories = getTableConfig(example_categories);
 const localizedArticles = getTableConfig(example_localized_articles);
+const pages = getTableConfig(example_pages);
 
 // `translationTable` is `null` for every content type without localization, so
 // this narrows once - and fails loudly rather than silently skipping the
@@ -280,6 +282,7 @@ describe("the generated migration", () => {
         ...indexNames(advancedCategories),
         ...indexNames(advancedRelated),
         ...indexNames(advancedFaq),
+        ...indexNames(pages),
       ].sort(byName),
     );
   });

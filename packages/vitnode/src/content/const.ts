@@ -80,6 +80,7 @@ export const CONTENT_ENUM_DEFAULT_LENGTH = 64;
 export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
 
 export const CONTENT_LOCALIZED_FIELD_KINDS = [
+  "blocks",
   "slug",
   "text",
   "textarea",
@@ -195,6 +196,7 @@ export const CONTENT_PUBLIC_PATH_MAX_LENGTH = 64;
 export const CONTENT_PUBLIC_RESERVED_PATHS = ["admin"] as const;
 
 export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
+  "blocks",
   "boolean",
   "dateTime",
   "enum",

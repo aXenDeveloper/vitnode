@@ -42,6 +42,7 @@ const assertNotLocalized = (
 };
 
 const NON_COLUMN_KINDS = new Set<ContentFieldDescriptor["kind"]>([
+  "blocks",
   "group",
   "repeatable",
 ]);
@@ -316,7 +317,10 @@ export const resolveAdmin = <TFields>(
   const formFields =
     sections.length > 0
       ? sections.flatMap(section => section.fields)
-      : (admin.form?.fields?.map(String) ?? fieldNames).map(String);
+      : (
+          admin.form?.fields?.map(String) ??
+          fieldNames.filter(name => fields[name].kind !== "blocks")
+        ).map(String);
   assertKnownColumns(
     id,
     sections.length > 0 ? "admin.form.sections" : "admin.form.fields",

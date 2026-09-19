@@ -870,6 +870,13 @@
         "or": "Lub kontynuuj przez e-mail"
       }
     },
+    "editor": {
+      "inline": {
+        "empty": "Dodaj {field}",
+        "invalid": "Ten tekst nie pasuje jeszcze do tego, na co pozwala pole, więc zapis pozostaje zablokowany.",
+        "label": "Edytuj {field} w bloku {name}"
+      }
+    },
     "files": {
       "actions": {
         "delete": "Usuń",

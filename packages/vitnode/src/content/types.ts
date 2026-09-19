@@ -1,3 +1,4 @@
+import type { BlockAllowedSpec, ContentNode } from "../blocks/types";
 import type {
   CONTENT_ADMIN_FORM_MODES,
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
@@ -235,6 +236,17 @@ export interface ContentGroupField<
   localized: TLocalized;
 }
 
+export interface ContentBlocksField<
+  TAllowed extends BlockAllowedSpec = BlockAllowedSpec,
+  TLocalized extends boolean = boolean,
+> extends ContentFieldShared<false, false> {
+  allowed: TAllowed;
+  kind: "blocks";
+  localized: TLocalized;
+  max?: number;
+  min?: number;
+}
+
 export interface ContentRepeatableField<
   TFields = ContentLeafFieldMap,
 > extends ContentFieldShared<false, false> {
@@ -247,6 +259,7 @@ export interface ContentRepeatableField<
 }
 
 export type ContentFieldDescriptor =
+  | ContentBlocksField
   | ContentBooleanField
   | ContentDateTimeField
   | ContentEnumField
@@ -346,27 +359,31 @@ export type ContentRepeatableInputRow<TFields> = Prettify<
   CreateValuesOf<TFields, keyof TFields> & { id?: number }
 >;
 
-export type ContentFieldValue<TField> = TField extends {
-  fields: infer TInner;
-  kind: "group";
-}
-  ? ApplyNullable<ContentGroupValue<TInner>, TField>
-  : TField extends { fields: infer TInner; kind: "repeatable" }
-    ? ContentRepeatableRow<TInner>[]
-    : TField extends ContentReferenceCollection
-      ? number[]
-      : ApplyNullable<ScalarFieldValue<TField>, TField>;
+export type ContentFieldValue<TField> = TField extends { kind: "blocks" }
+  ? ContentNode[]
+  : TField extends {
+        fields: infer TInner;
+        kind: "group";
+      }
+    ? ApplyNullable<ContentGroupValue<TInner>, TField>
+    : TField extends { fields: infer TInner; kind: "repeatable" }
+      ? ContentRepeatableRow<TInner>[]
+      : TField extends ContentReferenceCollection
+        ? number[]
+        : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
-export type ContentFieldInput<TField> = TField extends {
-  fields: infer TInner;
-  kind: "group";
-}
-  ? ApplyNullable<CreateValuesOf<TInner, keyof TInner>, TField>
-  : TField extends { fields: infer TInner; kind: "repeatable" }
-    ? ContentRepeatableInputRow<TInner>[]
-    : TField extends ContentReferenceCollection
-      ? number[]
-      : ApplyNullable<ScalarFieldInput<TField>, TField>;
+export type ContentFieldInput<TField> = TField extends { kind: "blocks" }
+  ? ContentNode[]
+  : TField extends {
+        fields: infer TInner;
+        kind: "group";
+      }
+    ? ApplyNullable<CreateValuesOf<TInner, keyof TInner>, TField>
+    : TField extends { fields: infer TInner; kind: "repeatable" }
+      ? ContentRepeatableInputRow<TInner>[]
+      : TField extends ContentReferenceCollection
+        ? number[]
+        : ApplyNullable<ScalarFieldInput<TField>, TField>;
 
 export type ContentFieldPatch<TField> = TField extends {
   fields: infer TInner;

@@ -1,0 +1,18 @@
+{
+  "title": "Widgets",
+  "description": "Composable, plugin-provided page sections and widgets that moderators can visually edit in place",
+  "icon": "Blocks",
+  "pages": [
+    "index",
+    "defining-a-block",
+    "blocks-field",
+    "rendering",
+    "content-zones",
+    "visual-editor",
+    "inline-editing",
+    "editable-pages",
+    "block-variants",
+    "layout-areas",
+    "end-to-end"
+  ]
+}

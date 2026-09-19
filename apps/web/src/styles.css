@@ -5,9 +5,12 @@
 @import '@vitnode/core/styles/tiptap.css';
 @import './site/marketing/marketing.css';
 
+@source "../node_modules/@vitnode/core/dist/src/blocks";
 @source "../node_modules/@vitnode/core/dist/src/components";
+@source "../node_modules/@vitnode/core/dist/src/editor";
 @source "../node_modules/@vitnode/core/dist/src/tanstack";
 @source "../node_modules/@vitnode/core/dist/src/views";
+@source "../node_modules/@vitnode/example/dist/src";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
