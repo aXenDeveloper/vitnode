@@ -44,6 +44,8 @@
   "@vitnode/core:staff_admins:can_create": "Create administrators",
   "@vitnode/core:staff_admins:can_edit": "Edit administrator permissions",
   "@vitnode/core:staff_admins:can_delete": "Remove administrators",
+  "@vitnode/core:widgets": "Widgets",
+  "@vitnode/core:widgets:can_edit": "Rearrange widgets on core's pages",
   "core": {
     "search": {
       "title": "Search",
@@ -366,6 +368,7 @@
       },
       "user_bar": {
         "my_profile": "My Profile",
+        "edit_widgets": "Edit widgets",
         "log_out": "Log out",
         "mod_cp": "Moderator CP",
         "admin_cp": "Admin CP",
@@ -874,6 +877,190 @@
         "errors": {
           "version_conflict": "Someone else saved this language while you were editing."
         }
+      }
+    },
+    "editor": {
+      "title": "Editing page",
+      "available_blocks": "Available Widgets",
+      "finish": "Finish editing",
+      "back_to_editing": "Back to editing",
+      "insert_for": "For: {zone}",
+      "insert_for_area": "For: an area in {zone}",
+      "insert_clear": "Clear the target zone",
+      "move": "Move",
+      "edit": "Edit",
+      "remove": "Remove",
+      "preview": "Preview",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "save_failed": "Save failed",
+      "unsaved": "Unsaved changes",
+      "discard": "Discard changes",
+      "discard_confirm": "Every widget you added, moved or edited goes back to how the page was loaded. This cannot be undone.",
+      "duplicate": "Duplicate",
+      "properties": "Properties",
+      "no_selection": "Select a widget on the page to edit it here.",
+      "group_enabled": "Has a value",
+      "no_value": "No value",
+      "invalid_block": "The data stored for this widget does not match what the widget declares, so it cannot be edited here.",
+      "zone": {
+        "label": "Content zone",
+        "drop_here": "Drag and drop widgets here",
+        "targeted": "Waiting for the widget you pick next",
+        "add_block": "Add widget",
+        "rejected": "This zone does not accept the widget you are dragging.",
+        "not_registered": "No plugin installed here provides that widget, so this zone cannot render it.",
+        "invalid": {
+          "title": "This zone holds content the editor cannot read",
+          "description": "These entries are stored here but are not content the editor understands, so it can neither show nor edit them. Nothing has been removed: they are still exactly as they were stored, and saving stays blocked until you remove each one on purpose.",
+          "remove": "Remove invalid entry"
+        },
+        "full": "This zone already holds as many widgets as it can.",
+        "min": "That widget cannot leave its own zone, which has to keep the widgets it holds."
+      },
+      "block": {
+        "select": "Select the {name} widget",
+        "drag": "Drag the {name} widget to reorder it",
+        "move": "Move the {name} widget",
+        "edit": "Edit the {name} widget",
+        "duplicate": "Duplicate the {name} widget",
+        "remove": "Remove the {name} widget",
+        "issue": {
+          "unknown_type": "No widget is installed for this type.",
+          "not_allowed": "This zone does not allow this widget.",
+          "invalid_data": "The stored data does not match the fields this widget declares.",
+          "unknown_variant": "The stored variant is not one this widget offers."
+        },
+        "invalid": {
+          "title": "Widget data needs fixing",
+          "description": "The saved data for the {name} widget no longer matches the fields it declares, so it is not rendered here. Fix it in the properties panel, or remove the widget.",
+          "detail": "What does not match: {issue}"
+        },
+        "unknown": {
+          "title": "Unknown widget",
+          "description": "Nothing installed on this site provides the widget type {type}, so it cannot be rendered."
+        }
+      },
+      "inline": {
+        "empty": "Add {field}",
+        "label": "Edit {field} on the {name} widget",
+        "invalid": "This text does not fit what the field allows yet, so saving stays blocked until it does."
+      },
+      "dnd": {
+        "instructions": "Press Space to pick up a widget. Use the arrow keys to move it between positions and zones, Space to drop it where the line is, and Escape to put it back.",
+        "picked_up": "Picked up {name}.",
+        "outside": "{name} is not over a content zone.",
+        "rejected": "The {zone} zone does not accept {name}.",
+        "unchanged": "{name} is over the {zone} zone, where it already is.",
+        "over": "{name} is over the {zone} zone, position {position} of {total}.",
+        "dropped": "{name} was dropped into the {zone} zone, position {position} of {total}.",
+        "not_dropped": "{name} was not dropped anywhere. Nothing changed.",
+        "cancelled": "Dragging {name} was cancelled. Nothing changed.",
+        "area_over": "{name} is over an area in the {zone} zone, position {position} of {total}.",
+        "area_dropped": "{name} was dropped into an area in the {zone} zone, position {position} of {total}.",
+        "area_rejected": "An area cannot hold another area.",
+        "area_full": "The area is full, so {name} cannot go in it.",
+        "not_registered": "No plugin provides {name} in the {zone} zone, so it cannot go there.",
+        "zone_full": "The {zone} zone is full, so {name} cannot go in it.",
+        "zone_min": "{name} cannot leave its own zone, which has to keep the widgets it holds."
+      },
+      "picker": {
+        "search": "Search widgets…",
+        "clear": "Clear search",
+        "empty": "This zone does not accept any of the installed widgets.",
+        "no_results": "No widgets match your search.",
+        "add": "Add the {name} widget",
+        "none_installed": "No widgets are installed on this site yet.",
+        "layout_group": "Layout",
+        "add_area": "Add an area"
+      },
+      "leave": {
+        "title": "Leave without saving?",
+        "desc": "You have unsaved changes on this page. Leave now and they are gone.",
+        "cancel": "Keep editing",
+        "confirm": "Leave without saving",
+        "save": "Save and finish",
+        "choice_title": "You have unsaved changes",
+        "choice_desc": "Save them before you finish, leave them behind, or keep editing this page."
+      },
+      "saved_toast": {
+        "title": "Page saved",
+        "desc": "Every zone on this page now matches what you see."
+      },
+      "save_error": {
+        "title": "Your changes were not saved",
+        "desc": "Something went wrong on the way to the server. Nothing you arranged has been lost - try again."
+      },
+      "save_refused": {
+        "title": "This save was refused"
+      },
+      "save_conflict": {
+        "title": "Somebody else saved this page first",
+        "desc": "This layout changed since you opened the editor. Reload or discard before saving again."
+      },
+      "no_adapter": {
+        "title": "Nowhere to save to",
+        "desc": "This page opened the editor without a save adapter, so there is nothing to store your changes in."
+      },
+      "unsafe": {
+        "title": "This page cannot be saved yet",
+        "desc": "This zone contains invalid or legacy content that the Visual Editor cannot safely save. Resolve or explicitly remove the invalid content before saving."
+      },
+      "dropped": {
+        "desc": "These zones left the page while you were editing, so what you changed in them is gone and was never saved: {zones}.",
+        "dismiss": "Got it"
+      },
+      "variant": {
+        "label": "Variant",
+        "hint": "How this widget is presented. It changes the look, never the content.",
+        "unknown": "The stored variant “{variant}” is not one this widget offers any more, so it cannot be rendered. Pick a variant below, or remove the widget.",
+        "placeholder": "This widget is stored with the variant “{variant}”, which it no longer offers, so it is not rendered here. Pick a variant in the properties panel, or remove the widget.",
+        "clear": "Use the widget's default",
+        "clear_hint": "Stores no variant, so this widget follows whatever default it declares."
+      },
+      "area": {
+        "name": "Area",
+        "description": "Lay widgets out side by side in up to four columns.",
+        "summary": "Area · {columns, plural, one {# column} other {# columns}}",
+        "select": "Select this area",
+        "drag": "Drag this area to reorder it",
+        "properties": "Area properties",
+        "drop_here": "Drop widgets here",
+        "add_block": "Add widget",
+        "rejected": "This area does not accept the widget you are dragging.",
+        "not_registered": "No plugin installed here provides that widget, so this area cannot hold it.",
+        "nested_rejected": "An area cannot hold another area.",
+        "columns": "Columns",
+        "columns_value": "{columns, plural, one {# column} other {# columns}}",
+        "gap": "Gap",
+        "margin_y": "Space above & below",
+        "margin_x": "Space left & right",
+        "spacing_px": "{px}px",
+        "align": "Alignment",
+        "justify": "Distribution",
+        "settings": "Settings",
+        "ungroup": "Ungroup",
+        "duplicate": "Duplicate area",
+        "remove": "Delete area",
+        "align_option": {
+          "start": "Top",
+          "center": "Centre",
+          "stretch": "Stretch"
+        },
+        "justify_option": {
+          "start": "Start",
+          "center": "Centre",
+          "stretch": "Fill the column"
+        },
+        "delete": {
+          "title": "Delete this area?",
+          "empty": "This area holds no widgets, so deleting it removes the layout and nothing else.",
+          "desc": "{count, plural, one {# widget sits inside this area} other {# widgets sit inside this area}}. Deleting the area deletes them with it. Ungroup instead to keep them on the page.",
+          "confirm": "Delete area and widgets",
+          "ungroup": "Ungroup, keep widgets"
+        },
+        "full": "This area already holds as many widgets as it can."
       }
     }
   },

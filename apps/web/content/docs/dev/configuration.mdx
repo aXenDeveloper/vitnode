@@ -85,12 +85,12 @@ modules instead, and they never pass through this object.
 What a TanStack Start app **renders** comes back through generated projections
 of those modules, and that is the part worth knowing:
 
-| Generated file                | From                         | Loaded                                          |
-| :---------------------------- | :--------------------------- | :---------------------------------------------- |
-| `src/plugin-routes.gen.ts`    | the plugin's `src/routes.ts` | per route, behind `lazy()`                      |
-| `src/admin-nav.gen.ts`        | the plugin's `admin/nav`     | with the AdminCP shell                          |
-| `src/content-registry.gen.ts` | the plugin's `admin/content` | behind a dynamic `import()` in `src/router.tsx` |
-| `src/package-messages.gen.ts` | the factory's `localeFiles`  | per request, one locale at a time               |
+| Generated file                | From                         | Loaded                                                        |
+| :---------------------------- | :--------------------------- | :------------------------------------------------------------ |
+| `src/plugin-routes.gen.ts`    | the plugin's `src/routes.ts` | per route, behind `lazy()`                                    |
+| `src/admin-nav.gen.ts`        | the plugin's `admin/nav`     | with the AdminCP shell                                        |
+| `src/content-registry.gen.ts` | the plugin's `admin/content` | behind a dynamic `import()` in `src/router.tsx`               |
+| `src/package-messages.gen.ts` | the factory's `localeFiles`  | per request, one locale at a time                             |
 | `src/api-registry.gen.ts`     | the plugin's `config.api`    | never - type-only, it teaches the fetcher which plugins exist |
 
 One literal import per configured plugin, written at build time. So a content
@@ -244,8 +244,8 @@ the redirect and once for the page.
 ## `vite.config.ts`
 
 One VitNode plugin, which is the environment handling, the dev server's
-dependency pre-bundling, the SSR externals and the plugin route generator in the
-order they have to run:
+dependency pre-bundling, the SSR externals, the Tailwind source list and the
+plugin route generator in the order they have to run:
 
 ```ts title="apps/web/vite.config.ts"
 import { vitnode } from '@vitnode/core/framework/vite'
@@ -277,10 +277,10 @@ vitnode({ appRoot: import.meta.dirname, clientEnv: ['VITNODE_MAP_KEY'] })
 ```
 
 Everything named there is compiled into JavaScript anyone can read, so add a key
-only when something in the browser genuinely reads it. The four plugins are
+only when something in the browser genuinely reads it. The five plugins are
 still exported individually - `vitNodeEnv`, `vitNodeOptimizeDeps`,
-`vitNodeSsrExternals`, `vitNodePluginRoutes` - if you ever need to drop or
-reorder one.
+`vitNodeSsrExternals`, `vitNodeTailwindSources`, `vitNodePluginRoutes` - if you
+ever need to drop or reorder one.
 
 ### What gets externalised from the server render
 
@@ -301,6 +301,31 @@ a restart clears it - which is exactly the loop this plugin removes.
 The build list is `@vitnode/core`, every plugin in your `vitnode.config.ts` and
 `tslib`. It comes from the same configured plugin list the route generator reads,
 so removing a plugin from your config is one edit, not two.
+
+### Which files Tailwind scans
+
+You do not write `@source` lines for VitNode packages either. Tailwind only
+generates a utility it has seen spelled out somewhere, and the components that
+ship inside `@vitnode/core` and your plugins live in `node_modules`, which
+Tailwind skips by default. So the plugin appends one `@source` per package to
+every stylesheet that imports Tailwind:
+
+```css title="what your styles.css effectively becomes"
+@import 'tailwindcss';
+
+@source "<app>/node_modules/@vitnode/core/dist/src/**/*.js";
+@source "<app>/node_modules/@acme/blog/dist/src/**/*.js";
+```
+
+The list is `@vitnode/core` plus every plugin in your `vitnode.config.ts`, and it
+covers each package's whole build output. Installing a plugin is therefore still
+one edit: its styles work the moment it is configured.
+
+This one fails quietly in a way worth recognising, because nothing errors. The
+class name lands in the DOM and hot reloading works perfectly - the element just
+has no styling, and reloading the page does not help, because the rule was never
+generated. If you ever see that for a package of your own, it is missing from the
+scan, not broken.
 
 ## Learn More
 

@@ -3,6 +3,7 @@ import React from "react";
 import type { LocaleConfig } from "@/lib/i18n/types";
 import type { VitNodeConfig } from "@/vitnode.config";
 
+import { EditWidgetsHost } from "@/blocks/edit-widgets-host";
 import { EditorConfigProvider } from "@/components/editor-provider";
 import { LanguagesProvider } from "@/components/languages-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -51,7 +52,7 @@ export const VitNodeProviders = ({
       <TooltipProvider>
         <LanguagesProvider languages={locales}>
           <EditorConfigProvider config={editor}>
-            {children}
+            <EditWidgetsHost>{children}</EditWidgetsHost>
           </EditorConfigProvider>
         </LanguagesProvider>
       </TooltipProvider>

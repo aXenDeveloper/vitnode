@@ -1,30 +1,37 @@
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 
+import { blocks } from "@/blocks/built-in";
 import { CONFIG_PLUGIN } from "@/config";
+import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
 import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
+import { pagesModule } from "./modules/pages/pages.module";
 import { queueModule } from "./modules/queue/queue.module";
 import { searchModule } from "./modules/search/search.module";
 import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
+  blocks,
+  editablePages: [settingsPage],
   modules: [
     middlewareModule,
     usersModule,
     adminModule,
     contentModule,
     cronModule,
+    pagesModule,
     queueModule,
     searchModule,
   ],
   permissionStaff: {
     moderator: {
       users: ["can_edit"],
+      widgets: ["can_edit"],
     },
     admin: {
       dashboard: [

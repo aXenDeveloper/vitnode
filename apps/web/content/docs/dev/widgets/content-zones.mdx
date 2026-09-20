@@ -1,0 +1,545 @@
+---
+title: Content Zones
+description: A named place on a page where widgets may appear. It renders what you hand it, adds no element of its own, and makes no request.
+icon: LayoutTemplate
+---
+
+A **Content Zone** is a place on a page where widgets may appear, named by the developer who put it there.
+
+```tsx title="src/routes/_main/pages.$slug.tsx"
+import { ContentZone } from '@vitnode/core/widgets/zone'
+
+import { blocksRegistry } from '@/blocks.gen'
+
+;<ContentZone id="main" blocks={page.content} registry={blocksRegistry} />
+```
+
+That is the whole idea. A zone takes a list of block instances and renders them through [`ContentRenderer`](/docs/dev/widgets/rendering). What it adds on top is a **name** - and a name is what the [Visual Editor](/docs/dev/widgets/visual-editor) and [Editable Pages](/docs/dev/widgets/editable-pages) use to place, rearrange, and save widgets on the page.
+
+```text
+Public page
+   ↓
+ContentZone
+   ↓
+ContentRenderer
+   ↓
+Blocks
+```
+
+## A zone id is not a block id
+
+These two identifiers are easy to confuse and never interchangeable.
+
+|                       | Says                         | Looks like                        | Written by                      |
+| :-------------------- | :--------------------------- | :-------------------------------- | :------------------------------ |
+| **Zone id**           | _where_ content is rendered  | `main`, `settings:before-profile` | you, in the page's source       |
+| **Block instance id** | _which block_ sits inside it | `01JC4Z8N9WQKX7R2M5T6V3B8HD`      | `createBlockInstanceId()`, once |
+
+A page has a handful of zones and they do not change when content does. A zone holds any number of block instances, and which ones it holds changes every time somebody edits the page.
+
+### Rules for a zone id
+
+One or more `:`-separated segments of lowercase letters, digits and single hyphens, up to 64 characters.
+
+```tsx
+<ContentZone id="main" />
+<ContentZone id="sidebar" />
+<ContentZone id="before-profile" />
+<ContentZone id="homepage:hero" />
+<ContentZone id="settings:before-profile" />
+```
+
+The optional prefix is yours to use however you like - a screen, a plugin, a section. `settings:before-profile` and `profile:before-profile` are two different zones, which is the point.
+
+A zone id is never generated and never an array index. Saved editor state will address zones by these strings, so an id that changes is a zone that loses its content. `ContentZone` refuses anything it could not address later:
+
+```tsx
+<ContentZone id="Before Profile" blocks={content} />
+// BlockError: Content zone id "Before Profile" is not usable. …
+```
+
+That throws the first time the page renders, in development or in a test, because a zone id is a literal you wrote - never something a visitor can influence.
+
+### One id, one place on the page
+
+A zone id names a **location**, so two zones on one page may not share one. Render the same id twice and view mode simply renders both lists, but edit mode refuses:
+
+```tsx
+<ContentZone id="main" />
+<ProfileForm />
+<ContentZone id="main" />
+// BlockError: Two `<ContentZone id="main" />` outlets are on the page at the same time…
+```
+
+The editor stores, moves and saves blocks by zone id. With two of them it cannot tell which place a block belongs to, and a save would write one over the other - so it says so the moment both are on the page, rather than picking one and being wrong quietly. Moving a zone to a different element, re-rendering it under another branch of the page, and React's double-invoked effects in development are all fine: the refusal is only for two elements that are genuinely on the page at once.
+
+Need the same content in two places? Two ids - `main` and `main-aside` - and the page decides what goes in each.
+
+## Zones around locked application UI
+
+This is the case Content Zones exist for. Not every page is a CMS page: most of an application is code, and the useful thing is to be able to put content _around_ it.
+
+```tsx title="src/routes/_main/settings.tsx"
+<UserSettingsLayout>
+  <ContentZone
+    id="settings:before-profile"
+    blocks={layoutContent.beforeProfile}
+  />
+
+  <ProfileForm />
+
+  <ContentZone
+    id="settings:after-profile"
+    blocks={layoutContent.afterProfile}
+  />
+</UserSettingsLayout>
+```
+
+`ProfileForm` is application code. It has validation, permissions and tests, and nobody is going to drag a block into the middle of it. The two zones around it are content widgets - an authorized moderator clicks **Edit widgets** in the user menu to rearrange them without touching the form.
+
+```text
+editable zone
+   ↓
+locked system UI
+   ↓
+editable zone
+```
+
+<Callout title="See it running">
+  `/example/zones` in the example plugin is exactly this page: four zones around
+  a profile form that stays application code.
+</Callout>
+
+## Several zones on one page
+
+Nothing assumes one zone per page. Each one has its own id, its own list and its own rules.
+
+```tsx
+<>
+  <ContentZone id="hero" blocks={page.hero} />
+
+  <ArticleContent />
+
+  <ContentZone id="after-content" blocks={page.afterContent} />
+</>
+```
+
+## What a zone renders
+
+By default: **nothing but the blocks**. No wrapper, no element, no class.
+
+That is deliberate. A zone often lives inside a flex or grid container, and an uninvited `<div>` there is a broken `gap` and a column that stopped being a column.
+
+Ask for a wrapper when you want one:
+
+```tsx
+<ContentZone
+  as="aside"
+  className="flex w-full flex-col gap-4 md:w-64"
+  id="settings:sidebar"
+  blocks={content}
+/>
+```
+
+| Props                              | Renders                             |
+| :--------------------------------- | :---------------------------------- |
+| neither `as` nor `className`       | the blocks, and nothing around them |
+| `className` only                   | a `<div>` with that class           |
+| `as` (with or without `className`) | that element                        |
+
+`as` takes an **HTML element name** - `"section"`, `"aside"`, `"header"`, `"ul"` - and not a component. The wrapper's job is to carry the zone's identity into the DOM, and a component is free to drop the `data-*` props it is handed, which would lose that identity silently and only in the case nobody tests. If you want the zone inside a component of yours, compose instead of substituting:
+
+```tsx
+<Card>
+  <ContentZone id="settings:sidebar" blocks={content} />
+</Card>
+```
+
+That reads better anyway, and the zone stays exactly as heavy as it was.
+
+## Empty zones
+
+An empty zone renders **nothing at all** - wrapper included.
+
+```tsx
+<ContentZone id="sidebar" blocks={[]} />
+```
+
+There is no empty container, no stray border and no gap in a flex column. `null`, `undefined` and `[]` behave identically, so a page whose zones are all empty is byte-for-byte a page without zones. The registry is not even consulted.
+
+This is a deliberate performance and layout decision, not an oversight. Most zones in an application are empty most of the time - a page with eight placement points and two filled ones should cost exactly two. Emitting a marker element for the other six would put six nodes in every visitor's document, participate in every flex and grid calculation, and exist for the benefit of a person who is not there.
+
+An editor will need to _see_ an empty zone in order to drop something into it. That is edit mode's job, and edit mode can render whatever placeholder it likes, because by then somebody has asked for it.
+
+## Restricting what may go in a zone
+
+`allowedBlocks` takes the same shape - and means the same thing - as `allowed` on a [`blocks()` field](/docs/dev/widgets/blocks-field#restricting-what-may-go-in):
+
+```tsx
+<ContentZone
+  id="main"
+  blocks={page.content}
+  allowedBlocks={['core:*', 'blog:*']}
+/>
+```
+
+There is one allowlist format in VitNode, one function that evaluates it, and this is it.
+
+### Two allowlists, two jobs
+
+The same value means two different things in two places, and the difference matters.
+
+|                | `field.blocks({ allowed })` | `<ContentZone allowedBlocks>`               |
+| :------------- | :-------------------------- | :------------------------------------------ |
+| **Is**         | a write boundary            | a description of the location               |
+| **Runs**       | on every create and update  | not at all in production                    |
+| **On refusal** | the whole request is a 422  | the block is skipped in development         |
+| **Answers**    | "may this be stored?"       | "what belongs here?"                        |
+| **For**        | the API                     | the future editor, and you reading the page |
+
+The field is the thing that _enforces_. A stored instance has already crossed it, so a page re-checking the same list on every render would be paying twice for one answer. The zone's copy exists to say what a location is for - which is what a block picker will need, and what a reader of the JSX needs.
+
+Public rendering is therefore **not** a second _schema_ validation boundary - it re-parses nothing, though it does always check that a stored block still structurally matches its block's fields. What the zone does with its allowlist follows the same `validate` modes the [renderer](/docs/dev/widgets/rendering#validation) already uses, and it _skips_, never rejects:
+
+| `validate`                  | A block the zone does not allow                  |
+| :-------------------------- | :----------------------------------------------- |
+| `"never"`                   | renders                                          |
+| `"development"` _(default)_ | is skipped in development, renders in production |
+| `"always"`                  | is skipped everywhere                            |
+
+In development the block is skipped, a dashed notice names it, and one `console.warn` is logged per block type - a development aid for content that drifted, not a gate. In production the write boundary is trusted and nothing is checked at all.
+
+`validate="always"` is the exception, for a page rendering blocks the API never saw - a live import, a third-party feed. Even then it costs one `Map` lookup and a list scan per block, not a schema parse.
+
+### Declaring the allowlist once
+
+The zone's allowlist and the field's `allowed` are usually the same value, and writing it twice is a typo waiting to happen.
+
+If the page is an [editable page](/docs/dev/widgets/editable-pages), do not write it on the page at all. `defineEditablePage` declares each zone's allowlist once, and `<EditablePage>` hands every zone under it both the allowlist and the blocks:
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
+<EditablePage layout={layout} page={settingsPage}>
+  <ContentZone id="before-profile" registry={blocksRegistry} />
+</EditablePage>
+```
+
+An `id` is the whole zone. There is no second copy to drift, and asking for a zone the page does not declare throws rather than rendering one no save will ever reach.
+
+You may still pass props on a declared zone, with one rule: the page declaration is the ceiling.
+
+|                 |                                                                                                                                                                                                                 |
+| :-------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `blocks`        | Overrides where the content comes from - the array you pass is what renders.                                                                                                                                    |
+| `allowedBlocks` | **Narrows only.** It is intersected with the page's allowlist, so `"*"` here cannot re-open a zone the page restricted, and an intersection of nothing is a developer error rather than a zone nobody can fill. |
+| `min` / `max`   | **Tighten only.** The higher `min` and the lower `max` win, and a `min` that ends up above the `max` throws where you wrote it.                                                                                 |
+
+That is only true for a zone an [editable page](/docs/dev/widgets/editable-pages#what-a-call-site-may-still-say) declares, because that declaration is what the save route checks against. A standalone `<ContentZone>` has nothing to be intersected with, so its own props are simply its own.
+
+For a zone outside an editable page, put the array in a module of its own and import it from both ends:
+
+```ts title="plugins/example/src/content/page-blocks.ts"
+export const PAGE_BLOCKS_ALLOWED = ['core:*', 'example:callout'] as const
+```
+
+```ts title="plugins/example/src/content/page.ts"
+content: field.blocks({ allowed: PAGE_BLOCKS_ALLOWED, max: 50 })
+```
+
+```tsx
+<ContentZone
+  id="settings:before-profile"
+  allowedBlocks={PAGE_BLOCKS_ALLOWED}
+  blocks={content}
+/>
+```
+
+One declaration, two readers, and the page imports an array rather than a content type.
+
+<Callout title="Why the zone does not take the field itself" type="warn">
+  An earlier draft of this API accepted `field={pageContentType.fields.content}` so the allowlist could be read straight off the descriptor. It was measured and removed.
+
+A content type is authored by _calling_ `defineContentType` at module scope, so importing one retains everything that call reaches - the field factories, the schema builders, Zod, the admin labels. On `/example/zones` the difference was **8 chunks and 23.5 kB** against **15 chunks and 181.8 kB**, to read one array of strings.
+
+A boundary test keeps that honest: `blocks/zone.tsx` reaches `react` and nothing else, `content/define.ts` reaches Zod, and `content/fields.ts` reaches nothing - the descriptors are cheap, the content _type_ is not.
+
+</Callout>
+
+### Where the registry comes in
+
+Pass it, from the route that renders blocks:
+
+```tsx
+import { blocksRegistry } from '@/blocks.gen'
+```
+
+`blocks.gen.ts` statically imports every configured plugin's block components, so importing it from a root module - `router.tsx`, a root layout - would put every block in the application on every page, including the ones that render none. Import it in the route that needs it and it stays in that route's chunk. A test asserts the application's root router cannot reach it.
+
+A plugin cannot see the host's generated file at all, so a plugin-owned page builds the registry it needs from the blocks it knows about:
+
+```tsx title="plugins/example/src/pages/zones-page.tsx"
+import { createBlockRegistry } from '@vitnode/core/widgets'
+import { blocks as coreBlocks } from '@vitnode/core/widgets/built-in'
+
+import { blocks as exampleBlocks } from '@/blocks'
+
+const blocksRegistry = createBlockRegistry([coreBlocks, exampleBlocks])
+```
+
+Either way the registry is a value the page owns, and nothing global had to be set up first.
+
+## A zone never fetches
+
+`ContentZone` is rendering infrastructure. It takes block data as a prop and never goes looking for it.
+
+```text
+route loader
+   ↓
+one request for the page
+   ↓
+zones render what it returned
+```
+
+The alternative writes itself, and it is the thing to avoid:
+
+```text
+page
+  ├ zone A → request
+  ├ zone B → request
+  └ zone C → request
+```
+
+Five zones on a settings page would be five round trips for data that came from one row. A block that genuinely needs its own data - "the six newest articles" - fetches it inside its own component, where it can be cached and suspended on its own terms.
+
+## Performance
+
+A zone costs a function call.
+
+- **No request.** It renders the list it was given.
+- **No hydration.** It holds no state, subscribes to nothing, and server-renders like any other component. A page full of zones ships the same JavaScript as a page without them.
+- **No editor.** `@vitnode/core/widgets/zone` reaches React and `ContentRenderer`, and that is the entire list. A boundary test asserts the reachable module graph, so drag-and-drop, forms, query and AdminCP code cannot drift into it later.
+- **No DOM.** Unless you ask for a wrapper, a zone is not in the markup at all.
+
+## What the editor will find
+
+When a zone renders a wrapper, the wrapper carries its identity:
+
+```html
+<aside
+  class="…"
+  data-vitnode-zone="settings:sidebar"
+  data-vitnode-zone-allowed="core:*,example:callout"
+></aside>
+```
+
+Two attributes, both short strings. That is the whole metadata story for now, and it is free: they ride on an element you asked for anyway. There is no zone registry, no context and no module-level state holding a list of zones - a public page has nobody to tell.
+
+The format stays small and predictable on purpose. An id, and a comma-separated allowlist. Nothing here will ever grow into a serialised JSON blob in an attribute: anything bigger than a couple of identifiers belongs in edit mode, where it can be a JavaScript value instead of a string somebody has to parse back out of the document.
+
+<Callout title="A zone without a wrapper has no marker - by design" type="warn">
+  Most zones render no element, so most zones leave no trace in view-mode HTML. That is the [empty-zone and no-wrapper behaviour](#what-a-zone-renders) working as intended, and it means **the set of zones on a page is not discoverable by scanning public DOM**.
+
+Edit mode does not try. It knows its zones because it rendered them - each `ContentZone` registers itself while edit mode is on - rather than walking the document looking for attributes that were never promised to be there. That registration is also what notices [two zones claiming one id](#one-id-one-place-on-the-page): the list the editor keeps is the truth, not the DOM.
+
+</Callout>
+
+If you need those values yourself, `@vitnode/core/widgets` exports the pieces without any React:
+
+```ts
+import {
+  assertContentZoneId,
+  contentZoneAttributes,
+  isContentZoneId,
+  parseContentZoneId,
+} from '@vitnode/core/widgets'
+
+parseContentZoneId('settings:before-profile')
+// { name: "before-profile", scope: "settings" }
+```
+
+## Props
+
+| Prop            | Default                   |                                                                                                                                                                                       |
+| :-------------- | :------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`            | —                         | The zone's stable name. Required.                                                                                                                                                     |
+| `blocks`        | —                         | The instances to render. `null`, `undefined` and `[]` all render nothing.                                                                                                             |
+| `registry`      | the process default       | The registry to resolve blocks against.                                                                                                                                               |
+| `allowedBlocks` | none                      | What may be placed here. Same shape as a `blocks()` field's `allowed`. Under an editable page it may only narrow what the page allows.                                                |
+| `min` / `max`   | `0` / `200`               | How many blocks belong here. Under an editable page they may only tighten the page's own bounds, and with no `max` written anywhere storage still applies its usual ceiling of `200`. |
+| `as`            | none                      | An HTML element name to wrap in. Components are not accepted.                                                                                                                         |
+| `className`     | none                      | A class for that wrapper. Implies `as="div"`.                                                                                                                                         |
+| `validate`      | `"development"`           | Passed through to the renderer, and gates the allowlist check.                                                                                                                        |
+| `fallback`      | a development-only notice | What to render for a block that is skipped.                                                                                                                                           |
+
+Everything but `id` and `blocks` is optional and named, so later additions - a label, a maximum, a permission - are additions rather than a new signature.
+
+## Verifying it yourself
+
+`/example/zones` in the example plugin is the manual test page for everything above. It renders four zones around a locked profile form, and its own copy lists what each one should look like.
+
+### In development
+
+<Steps>
+<Step>
+
+Start the development environment from the repository root:
+
+```bash
+pnpm dev
+```
+
+</Step>
+<Step>
+
+Open [http://localhost:3000/example/zones](http://localhost:3000/example/zones) and check the page itself:
+
+|              | Expected                                                               |
+| :----------- | :--------------------------------------------------------------------- |
+| Order        | Blocks appear in the order the loader lists them - callout, then text. |
+| Locked UI    | The profile form renders untouched between the two zones.              |
+| Empty zone   | `settings:before-footer` leaves no gap below the layout.               |
+| Independence | Each zone renders its own blocks; none affects another.                |
+
+</Step>
+<Step>
+
+Open DevTools → Elements and check the DOM:
+
+| Zone                      | Expected                                                                             |
+| :------------------------ | :----------------------------------------------------------------------------------- |
+| `settings:sidebar`        | `<aside data-vitnode-zone="settings:sidebar" data-vitnode-zone-allowed="core:text">` |
+| `settings:before-profile` | its two blocks, with **no** element wrapping them                                    |
+| `settings:after-profile`  | its block, with **no** element wrapping it                                           |
+| `settings:before-footer`  | nothing - no element, no comment, no whitespace node                                 |
+
+</Step>
+<Step>
+
+Open DevTools → Network, filter to Fetch/XHR, and reload. `ContentZone` issues **no request of its own**: the blocks arrived with the route's loader data.
+
+</Step>
+<Step>
+
+Break a zone id on purpose, to confirm it fails loudly rather than silently:
+
+```tsx
+<ContentZone id="Settings Sidebar" blocks={loaderData.sidebar} />
+```
+
+The page should throw a `BlockError` naming the id and the rule. Put it back.
+
+</Step>
+<Step>
+
+Open an unrelated route - `/`, or `/docs` - with the Network panel open, and confirm **no block module loads**. A page that renders no blocks should never request one. This is the property the root router must not break; the [import-graph test](#performance) is the standing guard, and this is how you see it.
+
+</Step>
+</Steps>
+
+### A block whose plugin is gone
+
+Content outlives plugins, so the interesting case is a page referencing a block nothing registers. Simulate it **temporarily** - do not commit the change.
+
+<Steps>
+<Step>
+
+In `plugins/example/src/blocks.tsx`, comment the callout out of the registered list:
+
+```ts
+export const blocks = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  blocks: [], // was [calloutBlock]
+} satisfies BlockPluginSource
+```
+
+The loader in `zones-page.tsx` still places an `example:callout`, which is exactly the situation: stored content naming a block that is no longer installed.
+
+</Step>
+<Step>
+
+**In development**, reload `/example/zones`. Expect a dashed notice reading _Block "example:callout" is not registered_, one `console.warn` in the terminal and browser console, and **every other block still rendering** - the text block, the profile form, the CTA, the sidebar.
+
+</Step>
+<Step>
+
+**In production**, run the production flow below with the same edit in place. Expect the callout to be silently absent, no notice, no error, and a 200 response. A visitor sees a page with one section missing, not a stack trace.
+
+</Step>
+<Step>
+
+Revert `blocks.tsx`.
+
+</Step>
+</Steps>
+
+### Against a production build
+
+Dev-mode checks miss bundling, minification and real SSR, so repeat the important ones against a build:
+
+<Steps>
+<Step>
+
+Build and start:
+
+```bash
+pnpm build
+pnpm start
+```
+
+`pnpm build` runs `vite build` for the web app; `pnpm start` serves `.output/server/index.mjs`. To do just the web app, use `pnpm --filter web build` and `pnpm --filter web start`.
+
+</Step>
+<Step>
+
+Read the **server-rendered markup**, not the hydrated DOM - `view-source:`, or:
+
+```bash
+curl -s http://localhost:3000/example/zones | grep -o 'data-vitnode-zone[^>]*'
+```
+
+Exactly one match, for the sidebar. The unwrapped zones contribute no attribute, and the empty one contributes nothing.
+
+</Step>
+<Step>
+
+Confirm the block content is in the HTML the server sent, not painted in afterwards - search the source for a block's text. If it is there, the zone server-rendered and needs no hydration to be readable.
+
+</Step>
+<Step>
+
+Confirm no editor code reached the page:
+
+```bash
+curl -s http://localhost:3000/example/zones | grep -cE 'dnd-kit|tiptap|cmdk'
+```
+
+`0`. The [import-graph tests](#performance) are the standing guarantee; this is the spot check that the guarantee survived bundling.
+
+</Step>
+<Step>
+
+Load an unrelated route and confirm its chunks hold no block components - search the modules it preloads for a block id such as `core:hero`:
+
+```bash
+curl -s http://localhost:3000/ | grep -o '/assets/[^"]*\.js' | sort -u
+```
+
+Fetch those and grep for `core:hero`. Nothing should match: a page that renders no blocks must not carry any.
+
+</Step>
+</Steps>
+
+## The same zone, in edit mode
+
+A zone renders blocks. It is also the surface an authorized editor arranges them on - see [Visual Edit Mode](/docs/dev/widgets/visual-editor).
+
+```text
+ContentZone in view mode:
+render blocks
+
+ContentZone in edit mode:
+render blocks + the editing surface
+```
+
+The part worth saying is what did **not** change. Zones are still addressed by the ids you wrote, block instances by the ids already stored, and the allowlist by the format both the field and the zone already speak. Edit mode is a change inside `ContentZone`, not a change to the pages that use it - so there is no `EditableContentZone` to migrate to, and nothing stored before it existed needed rewriting.
+
+The editor is not in the bundle of a page nobody is editing. It arrives on the first click of **Edit widgets**, through a dynamic import that a [boundary test](/docs/dev/widgets/visual-editor#the-lazy-loading-guarantee) keeps honest.

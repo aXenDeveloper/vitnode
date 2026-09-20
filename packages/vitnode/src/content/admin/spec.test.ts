@@ -11,6 +11,8 @@ import {
 
 import type { ContentSectionLabeller } from "./spec";
 
+import { defineContentType } from "../define";
+import { field } from "../fields";
 import { contentTypeName, humanizeFieldName } from "./labels";
 import {
   buildContentColumnSpec,
@@ -181,6 +183,68 @@ describe("buildContentFormSpec", () => {
       const spec = sectioned();
 
       expect(JSON.parse(JSON.stringify(spec))).toEqual(spec);
+    });
+
+    describe("blocks fields", () => {
+      const withBlocks = buildContentFormSpec({
+        definition: defineContentType({
+          id: "test.sectioned-blocks",
+          tableName: "test_sectioned_blocks",
+          fields: {
+            title: field.text({ required: true, maxLength: 200 }),
+            body: field.blocks(),
+            excerpt: field.textarea({ nullable: true }),
+            layout: field.blocks(),
+            featured: field.boolean({ defaultValue: false }),
+          },
+          admin: {
+            titleField: "title",
+            form: {
+              sections: [
+                { fields: ["title", "body", "excerpt"], name: "general" },
+                { fields: ["layout"], name: "page" },
+                { fields: ["featured"], name: "visibility" },
+              ],
+            },
+          },
+        }),
+        labelEnum,
+        labelField,
+        pluginId: "@vitnode/example",
+      });
+
+      it("removes a blocks field a section names", () => {
+        expect(
+          withBlocks.sections.flatMap(section => section.fields),
+        ).not.toContain("body");
+        expect(withBlocks.fields.map(item => item.name)).toEqual([
+          "title",
+          "excerpt",
+          "featured",
+        ]);
+      });
+
+      it("keeps the rest of a mixed section, in order", () => {
+        expect(withBlocks.sections[0]).toMatchObject({
+          fields: ["title", "excerpt"],
+          name: "general",
+        });
+      });
+
+      it("drops a section that named only blocks fields", () => {
+        expect(withBlocks.sections.map(section => section.name)).toEqual([
+          "general",
+          "visibility",
+        ]);
+      });
+
+      it("leaves a section holding no blocks field alone", () => {
+        expect(withBlocks.sections[1]).toEqual({
+          fields: ["featured"],
+          name: "visibility",
+          title: "Visibility",
+        });
+      });
     });
   });
 });

@@ -7,6 +7,7 @@ import { vitNodeEnv } from "./env";
 import { vitNodeOptimizeDeps } from "./optimize-deps";
 import { vitNodePluginRoutes } from "./plugin-routes";
 import { vitNodeSsrExternals } from "./ssr-externals";
+import { vitNodeTailwindSources } from "./tailwind-sources";
 
 export interface VitNodeViteOptions
   extends VitNodeEnvOptions, VitNodePluginRoutesOptions {}
@@ -19,5 +20,6 @@ export const vitnode = ({
   vitNodeEnv({ clientEnv }),
   vitNodeOptimizeDeps(),
   vitNodeSsrExternals({ appRoot }),
+  vitNodeTailwindSources({ appRoot }),
   vitNodePluginRoutes({ appRoot, hostRoutesDir }),
 ];

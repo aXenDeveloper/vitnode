@@ -6,6 +6,7 @@ import type {
   ContentFieldKind,
 } from "../types";
 
+import { zodContentNode } from "../../blocks/validate";
 import {
   getLangValue,
   type MultiLangValue,
@@ -114,7 +115,7 @@ const systemKinds: Record<string, "number" | "publication" | "system"> = {
 };
 
 /** One field descriptor, projected into the serialisable form spec. */
-const projectFormField = (
+export const projectFormField = (
   name: string,
   fieldValue: ContentFieldDescriptor,
   labelEnum: ContentEnumLabeller,
@@ -254,6 +255,10 @@ export const buildContentFormSpec = ({
   pluginId: string;
 }): ContentFormSpec => {
   const fields = definition.fields;
+  const formFieldNames = definition.admin.form.fields.filter(
+    name => fields[name]?.kind !== "blocks",
+  );
+  const rendered = new Set(formFieldNames);
 
   return {
     contentTypeId: definition.id,
@@ -266,22 +271,27 @@ export const buildContentFormSpec = ({
     // One form, shared and localized fields alike, in the order they were
     // declared. Where a value is *stored* is settled by `spec.localized` on the
     // way back out - it is not a reason to split the screen in two.
-    fields: definition.admin.form.fields.map(name =>
+    fields: formFieldNames.map(name =>
       projectFormField(name, fields[name], labelEnum, labelField),
     ),
-    sections: definition.admin.form.sections.map(section => {
+    sections: definition.admin.form.sections.flatMap(section => {
+      const sectionFields = section.fields.filter(name => rendered.has(name));
+      if (sectionFields.length === 0) return [];
+
       // Humanised from the name when nothing translates it, which is the same
       // fallback a field label gets - a form is readable before it is localized.
       const labels = labelSection?.(section.name) ?? {
         title: humanizeFieldName(section.name),
       };
 
-      return {
-        fields: section.fields,
-        name: section.name,
-        title: labels.title,
-        ...(labels.desc === undefined ? {} : { desc: labels.desc }),
-      };
+      return [
+        {
+          fields: sectionFields,
+          name: section.name,
+          title: labels.title,
+          ...(labels.desc === undefined ? {} : { desc: labels.desc }),
+        },
+      ];
     }),
   };
 };
@@ -360,6 +370,11 @@ const leafObjectSchema = (
     ),
   );
 
+/** The shape a group's leaves hold in a form, before the form parses them. */
+export const buildGroupFormSchema = (
+  spec: ContentFormFieldSpec,
+): z.ZodObject<z.ZodRawShape> => leafObjectSchema(spec);
+
 const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   const schema = z.array(z.number());
 
@@ -368,6 +383,8 @@ const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
 
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   switch (spec.kind) {
+    case "blocks":
+      return z.array(zodContentNode);
     case "boolean":
       return z.boolean();
     case "dateTime":
@@ -668,8 +685,12 @@ export const buildFormSchemaFromSpec = (
           return [
             fieldSpec.name,
             // `seo: null` is a real state a nullable group can be in, and the
-            // editor has to open on it rather than on an empty object.
-            current === null ? nullable.default(null) : nullable.optional(),
+            // form has to open on it rather than on an empty object. A nullable
+            // group is `anyOf` in JSON Schema, which `getDefaults` cannot
+            // recurse into, so the whole stored object is the default.
+            current === undefined
+              ? nullable.optional()
+              : nullable.default(current),
           ];
         }
 

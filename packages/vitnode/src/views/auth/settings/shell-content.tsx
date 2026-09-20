@@ -5,15 +5,20 @@ import { HeaderContent } from "@/components/ui/header-content";
 
 export const SettingsShellContent = ({
   children,
+  footer,
+  header,
   nav,
 }: {
   children: React.ReactNode;
+  footer?: React.ReactNode;
+  header?: React.ReactNode;
   nav: React.ReactNode;
 }) => {
   const t = useTranslations("core.auth.settings");
 
   return (
     <div className="container mx-auto flex flex-col gap-6 px-4">
+      {header}
       <HeaderContent className="mb-0" desc={t("desc")} h1={t("title")} />
 
       <div className="flex flex-col items-start gap-6 md:flex-row">
@@ -25,6 +30,7 @@ export const SettingsShellContent = ({
           <CardContent>{children}</CardContent>
         </Card>
       </div>
+      {footer}
     </div>
   );
 };

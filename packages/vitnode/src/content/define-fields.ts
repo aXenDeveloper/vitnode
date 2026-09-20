@@ -6,15 +6,19 @@ import type {
 } from "./types";
 
 import {
-  CONTENT_ENUM_DEFAULT_LENGTH,
-  CONTENT_FIELD_NAME_PATTERN,
-} from "./const";
+  BLOCK_WILDCARD,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+  CONTENT_BLOCKS_DEFAULT_MAX,
+} from "../blocks/const";
+import { parseBlockId } from "../blocks/namespace";
+import { CONTENT_FIELD_NAME_PATTERN } from "./const";
 import {
   editorialFields,
   publicationFields,
   systemFields,
 } from "./define-shared";
 import { ContentEngineError } from "./errors";
+import { scalarFieldConstraintIssue } from "./field-constraints";
 import {
   assertContentFileMaxBytes,
   normalizeContentFileExtensions,
@@ -27,6 +31,7 @@ const SLUG_SOURCE_KINDS = new Set<ContentFieldDescriptor["kind"]>(["text"]);
 /** A field with no default that is neither required nor nullable is unwritable. */
 const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   if (fieldValue.kind === "dateTime") return fieldValue.defaultNow;
+  if (fieldValue.kind === "blocks") return true;
   // A group is writable because its leaves are - `resolveContentAdvanced`
   // proves each of them is nullable or defaulted when the group is optional.
   // A collection is writable because the empty set is its default.
@@ -87,6 +92,7 @@ export const assertFieldName = (
 };
 
 const FIELD_KINDS = new Set<string>([
+  "blocks",
   "boolean",
   "dateTime",
   "enum",
@@ -224,24 +230,9 @@ export const assertField = (
     }
   }
 
-  if (fieldValue.kind === "text" || fieldValue.kind === "textarea") {
-    const { maxLength, minLength } = fieldValue;
-    if (maxLength !== undefined && maxLength <= 0) {
-      throw new ContentEngineError(
-        `Field "${name}" has a maxLength of ${maxLength}; it must be positive.`,
-        { contentTypeId: id },
-      );
-    }
-    if (
-      minLength !== undefined &&
-      maxLength !== undefined &&
-      minLength > maxLength
-    ) {
-      throw new ContentEngineError(
-        `Field "${name}" has minLength ${minLength} greater than maxLength ${maxLength}.`,
-        { contentTypeId: id },
-      );
-    }
+  const constraint = scalarFieldConstraintIssue(name, fieldValue);
+  if (constraint !== null) {
+    throw new ContentEngineError(constraint, { contentTypeId: id });
   }
 
   if (fieldValue.kind === "slug") {
@@ -254,46 +245,52 @@ export const assertField = (
     }
   }
 
-  if (fieldValue.kind === "number") {
-    const { max, min } = fieldValue;
-    if (min !== undefined && max !== undefined && min > max) {
-      throw new ContentEngineError(
-        `Field "${name}" has min ${min} greater than max ${max}.`,
-        { contentTypeId: id },
-      );
-    }
-  }
+  if (fieldValue.kind === "blocks") {
+    const { allowed, max, min } = fieldValue;
 
-  if (fieldValue.kind === "enum") {
-    const { defaultValue, length = CONTENT_ENUM_DEFAULT_LENGTH } = fieldValue;
-    const values: readonly string[] = fieldValue.values;
+    if (
+      max !== undefined &&
+      (!Number.isInteger(max) || max <= 0 || max > CONTENT_BLOCKS_ABSOLUTE_MAX)
+    ) {
+      throw new ContentEngineError(
+        `Field "${name}" has a max of ${max}; it must be a whole number between 1 and ${CONTENT_BLOCKS_ABSOLUTE_MAX}.`,
+        { contentTypeId: id },
+      );
+    }
+    if (min !== undefined && (!Number.isInteger(min) || min < 0)) {
+      throw new ContentEngineError(
+        `Field "${name}" has a min of ${min}; it must be a whole number that is zero or more.`,
+        { contentTypeId: id },
+      );
+    }
+    const effectiveMax = max ?? CONTENT_BLOCKS_DEFAULT_MAX;
 
-    if (values.length === 0) {
+    if (min !== undefined && min > effectiveMax) {
       throw new ContentEngineError(
-        `Field "${name}" needs at least one value.`,
-        {
-          contentTypeId: id,
-        },
-      );
-    }
-    if (new Set(values).size !== values.length) {
-      throw new ContentEngineError(
-        `Field "${name}" has duplicate enum values.`,
+        max === undefined
+          ? `Field "${name}" has a min of ${min}, and a blocks field stores at most ${CONTENT_BLOCKS_DEFAULT_MAX} blocks unless it raises \`max\` itself. No value could ever satisfy both, so every write to this field would be refused.`
+          : `Field "${name}" has min ${min} greater than max ${max}.`,
         { contentTypeId: id },
       );
     }
-    const tooLong = values.find(value => value.length > length);
-    if (tooLong !== undefined) {
-      throw new ContentEngineError(
-        `Field "${name}" value "${tooLong}" is longer than the column length ${length}. Raise \`length\` on the field.`,
-        { contentTypeId: id },
+
+    if (allowed !== BLOCK_WILDCARD) {
+      if (allowed.length === 0) {
+        throw new ContentEngineError(
+          `Field "${name}" allows no blocks at all, so nothing could ever be placed in it. Use \`allowed: "*"\`, or name the blocks it accepts.`,
+          { contentTypeId: id },
+        );
+      }
+
+      const malformed = allowed.find(
+        entry => entry !== BLOCK_WILDCARD && parseBlockId(entry) === null,
       );
-    }
-    if (defaultValue !== undefined && !values.includes(defaultValue)) {
-      throw new ContentEngineError(
-        `Field "${name}" has default "${defaultValue}", which is not one of its values.`,
-        { contentTypeId: id },
-      );
+      if (malformed !== undefined) {
+        throw new ContentEngineError(
+          `Field "${name}" allows "${malformed}", which is not a block id. Write "namespace:name", "namespace:*" or "*".`,
+          { contentTypeId: id },
+        );
+      }
     }
   }
 };

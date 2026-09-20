@@ -6,6 +6,7 @@ import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
+import { pageContent } from "@/database/pages";
 
 export const adminModule = buildModule({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -25,6 +26,7 @@ export const adminModule = buildModule({
         articleContent,
         categoryContent,
         localizedArticleContent,
+        pageContent,
       ],
     }),
   ],

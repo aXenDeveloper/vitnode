@@ -37,6 +37,7 @@ import { resolvePersonalInformationFields } from "@/lib/user-personal-informatio
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
+import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
@@ -50,6 +51,11 @@ import type { SSOApiPlugin } from "../models/sso";
 
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
+import {
+  assertEditablePagePermissionsGrantable,
+  registerEditablePage,
+  validateEditablePages,
+} from "../lib/editable-pages";
 import {
   loggerMiddleware,
   type LoggerMiddlewareType,
@@ -114,6 +120,8 @@ export interface EnvVariablesVitNode {
     contentTypes: RegisteredContentType[];
     cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
+    /** Pages an editor may lay out, with the plugin that registered each. */
+    editablePages: RegisteredEditablePage[];
     email?: VitNodeApiConfig["email"];
     events: { adapter: EventsApiPlugin; listeners: EventListenerConfig[] };
     // Whether a cron adapter is configured (`buildApiConfig({ cron })`), i.e. an
@@ -325,6 +333,16 @@ export const globalMiddleware = ({
       .map(entry => entry.definition.id),
   });
 
+  // Validated across *all* plugins, like content types: `buildApiPlugin` can
+  // only see the pages of the plugin it is building.
+  const editablePagesMetadata: RegisteredEditablePage[] = validateEditablePages(
+    plugins.flatMap(plugin =>
+      (plugin.editablePages ?? []).map(page =>
+        registerEditablePage(page, plugin.pluginId),
+      ),
+    ),
+  );
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -334,6 +352,11 @@ export const globalMiddleware = ({
       ),
     }),
   );
+
+  assertEditablePagePermissionsGrantable({
+    pages: editablePagesMetadata,
+    permissionStaff: permissionStaffMetadata,
+  });
 
   return async (c: Context, next: Next) => {
     if (!c.get("ipAddress")) {
@@ -394,6 +417,7 @@ export const globalMiddleware = ({
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       cron: cronMetadata,
+      editablePages: editablePagesMetadata,
       queue: queueMetadata,
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,

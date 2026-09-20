@@ -1,5 +1,7 @@
+import type { BlockAllowedSpec } from "../blocks/types";
 import type {
   AnyContentTypeDefinition,
+  ContentBlocksField,
   ContentBooleanField,
   ContentDateTimeField,
   ContentEnumField,
@@ -21,7 +23,7 @@ import {
   assertContentFileMaxBytes,
   normalizeContentFileExtensions,
   normalizeContentFileMimeTypes,
-} from "./files";
+} from "./file-rules";
 
 interface SharedArgs<
   TRequired extends boolean = false,
@@ -326,7 +328,27 @@ const repeatable = <const TFields extends Record<string, { kind: string }>>(
   required: false,
 });
 
+const blocks = <
+  const TAllowed extends BlockAllowedSpec = "*",
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> & {
+    allowed?: TAllowed;
+    description?: string;
+    max?: number;
+    min?: number;
+  } = {},
+): ContentBlocksField<TAllowed, TLocalized> => ({
+  ...args,
+  allowed: (args.allowed ?? "*") as TAllowed,
+  kind: "blocks",
+  localized: localizedOf(args),
+  nullable: false,
+  required: false,
+});
+
 export const field = {
+  blocks,
   boolean,
   dateTime,
   enum: enumField,
@@ -339,4 +361,5 @@ export const field = {
   text,
   textarea,
   user,
+  widgets: blocks,
 };
