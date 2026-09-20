@@ -18,6 +18,10 @@ export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
   blocks,
   editablePages: [settingsPage],
+  navigation: [
+    { href: "/discover", icon: "compass", id: "discover" },
+    { href: "/search", icon: "search", id: "search" },
+  ],
   modules: [
     middlewareModule,
     usersModule,
@@ -65,6 +69,12 @@ export const newBuildPluginApiCore = buildApiPlugin({
       files: [
         "can_view",
         { permission: "can_download", dependsOn: ["can_view"] },
+        { permission: "can_delete", dependsOn: ["can_view"] },
+      ],
+      navigation: [
+        "can_view",
+        { permission: "can_create", dependsOn: ["can_view"] },
+        { permission: "can_edit", dependsOn: ["can_view"] },
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],

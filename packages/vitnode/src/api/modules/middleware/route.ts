@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
+import { loadPublicNavigation } from "@/api/modules/admin/navigation/lib/cache";
+import { zodPublicNavigationNodeSchema } from "@/api/modules/admin/navigation/lib/schema";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const routeMiddlewareSchema = z.object({
@@ -21,6 +23,7 @@ export const routeMiddlewareSchema = z.object({
     }),
   ),
   isEmail: z.boolean(),
+  navigation: z.array(zodPublicNavigationNodeSchema),
   captcha: z
     .object({
       siteKey: z.string(),
@@ -46,13 +49,14 @@ export const routeMiddleware = buildRoute({
       },
     },
   },
-  handler: c => {
+  handler: async c => {
     const sso = c.get("core").authorization.ssoAdapters;
 
     return c.json(
       {
         ai: { models: c.get("ai").models() },
         isEmail: !!c.get("core").email?.adapter,
+        navigation: await loadPublicNavigation(c),
         sso: sso.map(s => ({ id: s.id, name: s.name, icon: s.icon })),
         captcha: c.get("core").captcha
           ? {

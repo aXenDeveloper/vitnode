@@ -9,6 +9,18 @@ export interface VitNodeEvents {
     changedZones: string[];
     pageId: string;
   };
+  "navigation.created": {
+    navigationId: number;
+  };
+  "navigation.deleted": {
+    navigationId: number;
+  };
+  "navigation.reordered": {
+    items: { children: number[]; id: number }[];
+  };
+  "navigation.updated": {
+    navigationId: number;
+  };
   "role.created": {
     roleId: number;
   };

@@ -208,12 +208,21 @@ describe("whether this deployment has password recovery at all", () => {
     // The other half of the contract: a real read must not look like an outage,
     // or a deployment with no email adapter would stop answering 404.
     expect(
-      knownMiddlewareConfig({ ai: { models: [] }, isEmail: false, sso: [] })
-        .isKnown,
+      knownMiddlewareConfig({
+        ai: { models: [] },
+        isEmail: false,
+        navigation: [],
+        sso: [],
+      }).isKnown,
     ).toBe(true);
     expect(
       passwordRecoveryAvailability(
-        knownMiddlewareConfig({ ai: { models: [] }, isEmail: false, sso: [] }),
+        knownMiddlewareConfig({
+          ai: { models: [] },
+          isEmail: false,
+          navigation: [],
+          sso: [],
+        }),
       ),
     ).toBe("disabled");
   });

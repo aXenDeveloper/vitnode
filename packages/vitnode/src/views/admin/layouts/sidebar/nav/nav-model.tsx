@@ -168,6 +168,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           permission: core("system"),
         },
         {
+          title: key("admin.global.nav.system.navigation"),
+          href: "/admin/core/system/navigation",
+          permission: core("navigation"),
+        },
+        {
           title: key("admin.global.nav.system.files"),
           href: "/admin/core/system/files",
           permission: core("files"),

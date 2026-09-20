@@ -29,6 +29,11 @@
   "@vitnode/core:files:can_view": "View uploaded files",
   "@vitnode/core:files:can_download": "Download files",
   "@vitnode/core:files:can_delete": "Delete files",
+  "@vitnode/core:navigation": "Navigation",
+  "@vitnode/core:navigation:can_view": "View the main menu",
+  "@vitnode/core:navigation:can_create": "Add main menu items",
+  "@vitnode/core:navigation:can_edit": "Edit and reorder main menu items",
+  "@vitnode/core:navigation:can_delete": "Remove main menu items",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:cron": "Cron Jobs",
@@ -302,6 +307,10 @@
         "no_icons": "No icons found.",
         "loading_icons": "Loading icons…"
       },
+      "icon_picker": {
+        "placeholder": "Pick an icon",
+        "remove": "Remove icon"
+      },
       "file": {
         "any_format": "Any file type",
         "max_size": "Maximum file size: {size}",
@@ -385,6 +394,16 @@
           "unreadable": "This image could not be read. Try a different file.",
           "too_large_after_crop": "The cropped image is {size}, which is over the {max} limit. Zoom in or pick a smaller image."
         }
+      }
+    },
+    "navigation": {
+      "discover": {
+        "title": "Discover",
+        "description": "The newest posts from everyone here."
+      },
+      "search": {
+        "title": "Search",
+        "description": "Find members, posts and pages."
       }
     },
     "profile": {
@@ -1149,6 +1168,7 @@
         "system": {
           "title": "System",
           "integrations": "Integrations",
+          "navigation": "Navigation",
           "files": "Files"
         },
         "advanced": {
@@ -1716,6 +1736,71 @@
             "full_log": "Full Log Message"
           }
         }
+      }
+    },
+    "navigation": {
+      "list": {
+        "desc": "Choose what the main menu links to, and in what order. Changes go live right away.",
+        "custom": "Custom link",
+        "prebuilt": "Prebuilt page",
+        "from": "from {plugin}",
+        "missing": "The plugin behind this item is no longer installed, so the menu skips it.",
+        "opensInNewTab": "Opens in a new tab",
+        "reorderSuccess": "Menu order saved",
+        "reorderSuccessDesc": "Visitors see the new order the next time the menu loads.",
+        "noResults": {
+          "title": "The main menu is empty",
+          "description": "Add a prebuilt page or a custom link and it shows up in the header."
+        },
+        "dragHandle": "Drag to move {name}"
+      },
+      "create": {
+        "title": "Add menu item",
+        "desc": "Pick a page a plugin already provides, or link anywhere you like.",
+        "submit": "Add to menu",
+        "success": "Menu item added",
+        "successDesc": "\"{name}\" is now in the main menu."
+      },
+      "edit": {
+        "title": "Edit menu item",
+        "submit": "Save changes",
+        "success": "Menu item updated",
+        "successDesc": "Changes to \"{name}\" are live."
+      },
+      "delete": {
+        "title": "Remove menu item",
+        "desc": "Remove \"{name}\" from the main menu? Visitors stop seeing it right away. You can add it back later.",
+        "confirm": "Remove",
+        "cancel": "Cancel",
+        "success": "Menu item removed",
+        "successDesc": "\"{name}\" is no longer in the main menu."
+      },
+      "form": {
+        "kind": {
+          "label": "What to add",
+          "preset": "Prebuilt page",
+          "presetDesc": "A page VitNode or an installed plugin already provides.",
+          "custom": "Custom link",
+          "customDesc": "Any address, on this site or elsewhere."
+        },
+        "preset": "Page",
+        "presetPlaceholder": "Choose a page...",
+        "presetEmpty": "Every prebuilt page is already in the menu.",
+        "presetLocked": "A prebuilt item keeps the page its plugin points at. Change the title, the description, or where it opens.",
+        "href": "URL",
+        "hrefPlaceholder": "/discover or https://example.com",
+        "title": "Title",
+        "icon": "Icon",
+        "iconPlaceholder": "No icon",
+        "description": "Description",
+        "openInNewTab": "Open in a new tab",
+        "openInNewTabDesc": "Handy for links that leave this site."
+      },
+      "errors": {
+        "hrefInvalid": "Start with / or https://",
+        "titleRequired": "Give the item a title in at least one language.",
+        "presetRequired": "Choose a page.",
+        "presetTaken": "This page is already in the menu."
       }
     }
   }

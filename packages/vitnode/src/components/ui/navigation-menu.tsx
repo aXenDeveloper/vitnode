@@ -196,6 +196,7 @@ function NavigationMenuTrigger({
       <ChevronDownIcon
         aria-hidden="true"
         className="relative top-px ms-1 size-3 shrink-0 transition duration-300 group-data-popup-open/navigation-menu-trigger:rotate-180"
+        data-slot="navigation-menu-chevron"
       />
     </NavigationMenuPrimitive.Trigger>
   );

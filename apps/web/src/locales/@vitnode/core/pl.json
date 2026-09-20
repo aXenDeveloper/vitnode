@@ -15,6 +15,11 @@
   "@vitnode/core:files:can_delete": "Usuwanie plików",
   "@vitnode/core:files:can_download": "Pobieranie plików",
   "@vitnode/core:files:can_view": "Wyświetlanie przesłanych plików",
+  "@vitnode/core:navigation": "Nawigacja",
+  "@vitnode/core:navigation:can_create": "Dodawanie pozycji menu głównego",
+  "@vitnode/core:navigation:can_delete": "Usuwanie pozycji menu głównego",
+  "@vitnode/core:navigation:can_edit": "Edytowanie i zmiana kolejności pozycji menu głównego",
+  "@vitnode/core:navigation:can_view": "Wyświetlanie menu głównego",
   "@vitnode/core:queue": "Zadania w kolejce",
   "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
   "@vitnode/core:roles": "Role",
@@ -238,6 +243,7 @@
         "system": {
           "files": "Pliki",
           "integrations": "Integracje",
+          "navigation": "Nawigacja",
           "title": "System"
         },
         "user_bar": {
@@ -258,6 +264,71 @@
         "hint": "Wpisz co najmniej {count} znaki, aby wyszukać użytkowników.",
         "placeholder": "Szukaj stron i użytkowników...",
         "title": "Wyszukiwanie w panelu"
+      }
+    },
+    "navigation": {
+      "create": {
+        "desc": "Wybierz stronę, którą udostępnia wtyczka, albo podlinkuj dowolny adres.",
+        "submit": "Dodaj do menu",
+        "success": "Pozycja menu dodana",
+        "successDesc": "„{name}” jest już w menu głównym.",
+        "title": "Dodaj pozycję menu"
+      },
+      "delete": {
+        "cancel": "Anuluj",
+        "confirm": "Usuń",
+        "desc": "Usunąć „{name}” z menu głównego? Odwiedzający od razu przestaną ją widzieć. Możesz dodać ją ponownie później.",
+        "success": "Pozycja menu usunięta",
+        "successDesc": "„{name}” nie jest już w menu głównym.",
+        "title": "Usuń pozycję menu"
+      },
+      "edit": {
+        "submit": "Zapisz zmiany",
+        "success": "Pozycja menu zaktualizowana",
+        "successDesc": "Zmiany w „{name}” są już widoczne.",
+        "title": "Edytuj pozycję menu"
+      },
+      "errors": {
+        "hrefInvalid": "Zacznij od / lub https://",
+        "presetRequired": "Wybierz stronę.",
+        "presetTaken": "Ta strona jest już w menu.",
+        "titleRequired": "Nadaj pozycji tytuł w co najmniej jednym języku."
+      },
+      "form": {
+        "description": "Opis",
+        "href": "Adres URL",
+        "hrefPlaceholder": "/discover lub https://example.com",
+        "icon": "Ikona",
+        "iconPlaceholder": "Bez ikony",
+        "kind": {
+          "custom": "Własny link",
+          "customDesc": "Dowolny adres, w tej witrynie lub poza nią.",
+          "label": "Co dodać",
+          "preset": "Gotowa strona",
+          "presetDesc": "Strona, którą VitNode lub zainstalowana wtyczka już udostępnia."
+        },
+        "openInNewTab": "Otwieraj w nowej karcie",
+        "openInNewTabDesc": "Przydatne dla linków prowadzących poza witrynę.",
+        "preset": "Strona",
+        "presetEmpty": "Każda gotowa strona jest już w menu.",
+        "presetLocked": "Gotowa pozycja zachowuje stronę wskazaną przez wtyczkę. Zmień tytuł, opis lub sposób otwierania.",
+        "presetPlaceholder": "Wybierz stronę...",
+        "title": "Tytuł"
+      },
+      "list": {
+        "custom": "Własny link",
+        "desc": "Wybierz, do czego prowadzi menu główne i w jakiej kolejności. Zmiany są widoczne od razu.",
+        "dragHandle": "Przeciągnij, aby przenieść {name}",
+        "from": "z {plugin}",
+        "missing": "Wtyczka odpowiadająca za tę pozycję nie jest już zainstalowana, więc menu ją pomija.",
+        "noResults": {
+          "description": "Dodaj gotową stronę lub własny link, a pojawi się w nagłówku.",
+          "title": "Menu główne jest puste"
+        },
+        "opensInNewTab": "Otwiera się w nowej karcie",
+        "prebuilt": "Gotowa strona",
+        "reorderSuccess": "Kolejność menu zapisana",
+        "reorderSuccessDesc": "Odwiedzający zobaczą nową kolejność przy następnym wczytaniu menu."
       }
     },
     "role": {
@@ -873,14 +944,14 @@
       }
     },
     "editor": {
-      "move": "Przenieś",
       "edit": "Edytuj",
-      "remove": "Usuń",
       "inline": {
         "empty": "Dodaj {field}",
         "invalid": "Ten tekst nie pasuje jeszcze do tego, na co pozwala pole, więc zapis pozostaje zablokowany.",
         "label": "Edytuj {field} w widżecie {name}"
-      }
+      },
+      "move": "Przenieś",
+      "remove": "Usuń"
     },
     "files": {
       "actions": {
@@ -1118,6 +1189,10 @@
       "go_to_next_page": "Przejdź do następnej strony",
       "go_to_page": "Przejdź do strony",
       "go_to_prev_page": "Przejdź do poprzedniej strony",
+      "icon_picker": {
+        "placeholder": "Wybierz ikonę",
+        "remove": "Usuń ikonę"
+      },
       "image_crop": {
         "change": "Zmień obraz",
         "drop": "Przeciągnij obraz tutaj lub wybierz plik",
@@ -1172,6 +1247,16 @@
         "mod_cp": "Panel moderatora",
         "my_profile": "Mój profil",
         "settings": "Ustawienia"
+      }
+    },
+    "navigation": {
+      "discover": {
+        "description": "Najnowsze wpisy od wszystkich tutaj.",
+        "title": "Odkrywaj"
+      },
+      "search": {
+        "description": "Znajdź członków, wpisy i strony.",
+        "title": "Szukaj"
       }
     },
     "profile": {
