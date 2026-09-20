@@ -201,9 +201,7 @@ export const areaMarginStyle = (
   return { marginBlock: px(marginY), marginInline: px(marginX) };
 };
 
-export const areaLayoutClassNames = (
-  layout: BlockAreaStoredLayout,
-): string => {
+export const areaLayoutClassNames = (layout: BlockAreaStoredLayout): string => {
   const resolved = areaLayoutWithDefaults(layout);
 
   return [

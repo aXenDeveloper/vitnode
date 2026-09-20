@@ -90,8 +90,10 @@ export interface BlockAreaLayout {
 
 export type AreaStoredSpacing = AreaLegacySpacing | number;
 
-export interface BlockAreaStoredLayout
-  extends Omit<BlockAreaLayout, "gap" | "marginX" | "marginY"> {
+export interface BlockAreaStoredLayout extends Omit<
+  BlockAreaLayout,
+  "gap" | "marginX" | "marginY"
+> {
   gap?: AreaStoredSpacing;
   marginX?: AreaStoredSpacing;
   marginY?: AreaStoredSpacing;
