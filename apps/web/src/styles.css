@@ -82,7 +82,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1rem;
 }
 
 :root:not(.dark) {

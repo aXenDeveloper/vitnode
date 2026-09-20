@@ -297,7 +297,7 @@ export const EditNameCodeContent = ({
           <DialogDescription>{t("editNameCodeDesc")}</DialogDescription>
         </DialogHeader>
 
-        <Alert variant="destructive">
+        <Alert variant="warning">
           <TriangleAlertIcon />
           <AlertTitle>{t("editNameCodeWarningTitle")}</AlertTitle>
           <AlertDescription>{t("editNameCodeWarning")}</AlertDescription>

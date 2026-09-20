@@ -78,7 +78,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1rem;
 }
 
 @theme inline {

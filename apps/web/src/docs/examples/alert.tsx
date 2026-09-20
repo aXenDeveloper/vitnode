@@ -3,12 +3,25 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@vitnode/core/components/ui/alert'
-import { CircleCheckIcon, CircleXIcon, TriangleAlertIcon } from 'lucide-react'
+import {
+  CircleCheckIcon,
+  CircleXIcon,
+  InfoIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 
 export default function AlertDemo() {
   return (
     <div className="flex w-full flex-col gap-4">
       <Alert>
+        <InfoIcon />
+        <AlertTitle>Reindexing runs in the background</AlertTitle>
+        <AlertDescription>
+          You can keep editing content while the search index rebuilds.
+        </AlertDescription>
+      </Alert>
+
+      <Alert variant="success">
         <CircleCheckIcon />
         <AlertTitle>Changes saved</AlertTitle>
         <AlertDescription>

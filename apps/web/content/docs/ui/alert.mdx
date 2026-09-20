@@ -31,9 +31,22 @@ first child and the layout aligns it with the title and description.
 
 ## Variants
 
+Every coloured variant shares the same shape - a tinted surface, a matching
+border, a coloured icon and a readable title - so they read as one family and
+only the hue tells you how worried to be.
+
 - `default` - neutral, informational messages.
+- `success` - something finished and it went well (green).
 - `warning` - a non-blocking caution the user should act on (amber).
 - `destructive` - an error or a failed action (red).
+
+```tsx
+<Alert variant="success">
+  <CircleCheckIcon />
+  <AlertTitle>Changes saved</AlertTitle>
+  <AlertDescription>Your settings have been updated.</AlertDescription>
+</Alert>
+```
 
 ## Dismissible
 
@@ -65,7 +78,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
   type={{
     variant: {
       description: "The visual style of the alert.",
-      type: "default | warning | destructive",
+      type: "default | success | warning | destructive",
       default: "default",
     },
   }}

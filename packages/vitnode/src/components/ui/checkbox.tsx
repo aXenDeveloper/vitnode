@@ -1,12 +1,20 @@
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { cn } from "cn";
-import { CheckIcon, MinusIcon } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import React from "react";
+
+const checkPath = "M4 12l5 5 11-11";
+const indeterminatePath = "M5 12h14";
 
 function Checkbox({
   className,
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+  const shouldReduceMotion = useReducedMotion();
+  const transition = shouldReduceMotion
+    ? { duration: 0 }
+    : ({ type: "spring", duration: 0.35, bounce: 0 } as const);
+
   return (
     <CheckboxPrimitive.Root
       className={cn(
@@ -19,9 +27,40 @@ function Checkbox({
       <CheckboxPrimitive.Indicator
         className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
         data-slot="checkbox-indicator"
-      >
-        {props.indeterminate ? <MinusIcon /> : <CheckIcon />}
-      </CheckboxPrimitive.Indicator>
+        keepMounted
+        render={(indicatorProps, { checked, indeterminate }) => (
+          <span {...indicatorProps}>
+            <motion.svg
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <motion.path
+                animate={{
+                  opacity: indeterminate ? 1 : 0,
+                  pathLength: indeterminate ? 1 : 0,
+                }}
+                d={indeterminatePath}
+                initial={false}
+                transition={transition}
+              />
+              <motion.path
+                animate={{
+                  opacity: checked && !indeterminate ? 1 : 0,
+                  pathLength: checked && !indeterminate ? 1 : 0,
+                }}
+                d={checkPath}
+                initial={false}
+                transition={transition}
+              />
+            </motion.svg>
+          </span>
+        )}
+      />
     </CheckboxPrimitive.Root>
   );
 }
