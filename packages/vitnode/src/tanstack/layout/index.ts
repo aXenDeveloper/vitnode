@@ -1,10 +1,5 @@
 export { ErrorActions } from "./error-actions";
-export {
-  Header,
-  HEADER_NAMESPACES,
-  headerIntlQueryOptions,
-  loadMainShell,
-} from "./header";
+export { Header, loadMainShell } from "./header";
 export { LanguageSwitcher } from "./language-switcher";
 export { MainHeader } from "./main-header";
 export { Error500Page, NotFound } from "./not-found";

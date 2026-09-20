@@ -61,6 +61,12 @@
         "from_index": "You arrived here from the guide index - the route's search contract recognised it, and everything else in the query string was dropped."
       }
     },
+    "navigation": {
+      "browse": {
+        "title": "Browse",
+        "description": "A paginated list, shipped by the example plugin."
+      }
+    },
     "browse": {
       "title": "Browse",
       "desc": "A paginated page whose route declares an eager search schema, so ?page=999 is clamped before anything renders.",

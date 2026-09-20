@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { VitNodeAPI } from "@vitnode/core/api/config";
+import "hono";
 
 import { vitNodeApiConfig } from "./vitnode.api.config.js";
 
@@ -11,6 +12,6 @@ VitNodeAPI({
 });
 
 export default {
-  port: 8000,
+  port: Number(process.env.PORT ?? 8000),
   fetch: app.fetch,
 };

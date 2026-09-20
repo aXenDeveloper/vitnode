@@ -279,6 +279,58 @@ export const roleCleanupListener = buildEventListener({
 </Accordion>
 </Accordions>
 
+## Navigation events
+
+Four names, declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts`. Every one fires **after** the
+main menu changed in the AdminCP and after the cached menu was expired, so a
+listener that re-reads the menu sees the new state.
+
+| Event                  | Payload            | Fires when                                                           |
+| ---------------------- | ------------------ | -------------------------------------------------------------------- |
+| `navigation.created`   | `{ navigationId }` | A prebuilt page or a custom link is added to the main menu           |
+| `navigation.updated`   | `{ navigationId }` | A menu item's title, description, URL or new-tab setting is edited   |
+| `navigation.reordered` | `{ items }`        | The menu is saved in a new order or nesting - `items` is the whole tree |
+| `navigation.deleted`   | `{ navigationId }` | A menu item is removed, together with its translations               |
+
+<Accordions>
+<Accordion title="navigation.created, navigation.updated and navigation.deleted">
+
+The item's translated title and description live in `core_languages_words`, so
+the payload carries only the id. On `deleted` the row is already gone; key any
+cleanup off `payload.navigationId`.
+
+<TypeTable
+  type={{
+    navigationId: {
+      description: 'Id of the affected `core_navigation` row.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** purge a CDN's cached HTML, or log who changed the menu
+and when.
+
+</Accordion>
+<Accordion title="navigation.reordered">
+
+Fires after a drag-and-drop in the AdminCP saved the menu. The payload is the
+entire menu as the administrator now sees it, one level deep.
+
+<TypeTable
+  type={{
+    items: {
+      description:
+        'Top-level items in order; each carries the ids of its dropdown children, in order.',
+      type: '{ id: number; children: number[] }[]',
+    },
+  }}
+/>
+
+</Accordion>
+</Accordions>
+
 ## Page layout events
 
 One name, declared in `VitNodeEvents` in

@@ -19,3 +19,4 @@ export const ADMIN_USERS_SCREEN = "users";
 export const ADMIN_ROLES_SCREEN = "roles";
 export const ADMIN_STAFF_SCREEN = "staff";
 export const ADMIN_DASHBOARD_SCREEN = "dashboard";
+export const ADMIN_NAVIGATION_SCREEN = "navigation";

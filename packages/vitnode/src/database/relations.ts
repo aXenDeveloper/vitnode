@@ -8,6 +8,7 @@ import * as files from "./files";
 import * as languages from "./languages";
 import * as logs from "./logs";
 import * as moderators from "./moderators";
+import * as navigation from "./navigation";
 import * as queue from "./queue";
 import * as roles from "./roles";
 import * as search from "./search";
@@ -24,6 +25,7 @@ export const coreSchema = {
   ...languages,
   ...logs,
   ...moderators,
+  ...navigation,
   ...queue,
   ...roles,
   ...search,

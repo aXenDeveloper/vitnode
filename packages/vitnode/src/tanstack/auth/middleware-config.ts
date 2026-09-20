@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { z } from "zod";
 
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   ai: { models: [] },
   isEmail: false,
   isKnown: false,
+  navigation: [],
   sso: [],
 });
 
@@ -61,6 +63,11 @@ export const middlewareConfigQueryOptions = () =>
 
 export const useMiddlewareConfigQuery = () =>
   useSuspenseQuery(middlewareConfigQueryOptions());
+
+export const invalidateMiddlewareConfig = async (
+  queryClient: QueryClient,
+): Promise<void> =>
+  await queryClient.invalidateQueries({ queryKey: MIDDLEWARE_QUERY_KEY });
 
 export const ssoProvidersOf = (config: MiddlewareConfig): SSOProvider[] =>
   normalizeSSOProviders(config.sso);

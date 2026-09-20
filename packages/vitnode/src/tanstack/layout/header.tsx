@@ -1,54 +1,67 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { AbstractIntlMessages } from "use-intl";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import React from "react";
 import { createTranslator } from "use-intl";
+
+import type { HeaderNavTranslate } from "@/views/layouts/theme/header/header-nav";
 
 import { LogoVitNodeBrand } from "@/components/logo-vitnode";
 import { HeaderLayoutContent } from "@/views/layouts/theme/header/header-content";
 import {
-  HEADER_NAV_MESSAGE_KEYS,
-  headerNavItems,
+  headerNavItemsFrom,
+  headerNavNamespaces,
 } from "@/views/layouts/theme/header/header-nav";
 
+import {
+  middlewareConfigQueryOptions,
+  useMiddlewareConfigQuery,
+} from "../auth/middleware-config";
 import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
-import { intlQueryOptions } from "../i18n/query";
+import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 
-export const HEADER_NAMESPACES = ["core.search"] as const;
+const headerNavTranslator = (
+  locale: string,
+  messages: AbstractIntlMessages,
+): HeaderNavTranslate => {
+  const translators = new Map<string, ReturnType<typeof createTranslator>>();
 
-export const headerIntlQueryOptions = ({ locale }: { locale: string }) =>
-  intlQueryOptions({ locale, namespaces: HEADER_NAMESPACES });
+  return (namespace, key) => {
+    const translator =
+      translators.get(namespace) ??
+      createTranslator({ locale, messages, namespace });
+    translators.set(namespace, translator);
 
-interface HeaderNavMessages {
-  core: { search: { nav: { discover: string; search: string } } };
-}
+    return translator.has(key) ? translator(key) : undefined;
+  };
+};
 
 export const Header = ({
   logo = <LogoVitNodeBrand />,
   user,
 }: {
   logo?: React.ReactNode;
-  /** The session slot - avatar and menu when signed in, sign-in button when not. */
   user?: React.ReactNode;
 }) => {
   const locale = useLocale();
-  const { data } = useSuspenseQuery(headerIntlQueryOptions({ locale }));
+  const { data: config } = useMiddlewareConfigQuery();
+  const namespaces = headerNavNamespaces(config.navigation, GLOBAL_NAMESPACE);
+  const { data } = useSuspenseQuery(intlQueryOptions({ locale, namespaces }));
 
-  const t = createTranslator({
-    locale,
-    messages: data.messages as unknown as HeaderNavMessages,
-    namespace: "core.search",
-  });
+  const navigation = React.useMemo(
+    () =>
+      headerNavItemsFrom({
+        items: config.navigation,
+        locale,
+        translate: headerNavTranslator(locale, data.messages),
+      }),
+    [config.navigation, data.messages, locale],
+  );
 
   return (
-    <HeaderLayoutContent
-      logo={logo}
-      navigation={headerNavItems({
-        discover: t(HEADER_NAV_MESSAGE_KEYS.discover),
-        search: t(HEADER_NAV_MESSAGE_KEYS.search),
-      })}
-      user={user}
-    />
+    <HeaderLayoutContent logo={logo} navigation={navigation} user={user} />
   );
 };
 
@@ -59,11 +72,19 @@ export const loadMainShell = async ({
   locale: string;
   queryClient: QueryClient;
 }): Promise<void> => {
-  await Promise.all([
+  const [config] = await Promise.all([
     queryClient.query({
-      ...headerIntlQueryOptions({ locale }),
+      ...middlewareConfigQueryOptions(),
       staleTime: "static",
     }),
     prefetchSession(queryClient),
   ]);
+
+  await queryClient.query({
+    ...intlQueryOptions({
+      locale,
+      namespaces: headerNavNamespaces(config.navigation, GLOBAL_NAMESPACE),
+    }),
+    staleTime: "static",
+  });
 };

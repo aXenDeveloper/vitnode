@@ -28,6 +28,13 @@ export const ADMIN_ROLE_PERMISSIONS = {
   view: core("roles", "can_view"),
 } as const;
 
+export const ADMIN_NAVIGATION_PERMISSIONS = {
+  create: core("navigation", "can_create"),
+  delete: core("navigation", "can_delete"),
+  edit: core("navigation", "can_edit"),
+  view: core("navigation", "can_view"),
+} as const;
+
 export const staffPermissionModuleFor = (
   type: PermissionStaffType,
 ): "staff_admins" | "staff_moderators" =>

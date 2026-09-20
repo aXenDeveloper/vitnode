@@ -1,64 +1,187 @@
 import { describe, expect, it } from "vitest";
 
+import type { PublicNavigationNode } from "@/lib/navigation";
+
 import {
   HEADER_HREF,
-  HEADER_NAV_MESSAGE_KEYS,
-  headerNavItems,
+  headerNavItemsFrom,
+  headerNavNamespaces,
 } from "./header-nav";
 
-describe("the main nav", () => {
-  const labels = { discover: "Discover", search: "Search" };
+const node = (
+  overrides: Partial<PublicNavigationNode>,
+): PublicNavigationNode => ({
+  description: [],
+  href: "/discover",
+  icon: null,
+  id: 1,
+  isOpenInNewTab: false,
+  items: [],
+  kind: "preset",
+  pluginId: "@vitnode/core",
+  presetId: "discover",
+  title: [],
+  ...overrides,
+});
 
-  it("is Discover then Search", () => {
-    expect(headerNavItems(labels)).toEqual([
-      { href: "/discover", label: "Discover" },
-      { href: "/search", label: "Search" },
+const custom = (
+  id: number,
+  title: string,
+  overrides: Partial<PublicNavigationNode> = {},
+): PublicNavigationNode =>
+  node({
+    href: `/${title.toLowerCase()}`,
+    id,
+    kind: "custom",
+    pluginId: null,
+    presetId: null,
+    title: [{ languageCode: "en", value: title }],
+    ...overrides,
+  });
+
+const translate = (namespace: string, key: string) =>
+  ({
+    "core.navigation": {
+      "discover.title": "Discover",
+      "search.description": "Find anything",
+      "search.title": "Search",
+    } as Record<string, string>,
+  })[namespace]?.[key];
+
+describe("the main nav", () => {
+  const items = [
+    node({}),
+    node({ href: "/search", id: 2, presetId: "search" }),
+    custom(3, "Docs", {
+      href: "https://vitnode.com/docs",
+      isOpenInNewTab: true,
+    }),
+  ];
+
+  it("is what the AdminCP saved, in that order", () => {
+    expect(headerNavItemsFrom({ items, locale: "en", translate })).toEqual([
+      { href: "/discover", id: "1", label: "Discover" },
+      {
+        description: "Find anything",
+        href: "/search",
+        id: "2",
+        label: "Search",
+      },
+      {
+        href: "https://vitnode.com/docs",
+        id: "3",
+        isOpenInNewTab: true,
+        label: "Docs",
+      },
     ]);
+  });
+
+  it("turns a parent with children into a dropdown", () => {
+    const [community] = headerNavItemsFrom({
+      items: [
+        custom(10, "Community", {
+          items: [
+            custom(11, "Members", { isOpenInNewTab: true }),
+            custom(12, "Events", {
+              description: [{ languageCode: "en", value: "What is on" }],
+            }),
+          ],
+        }),
+      ],
+      locale: "en",
+      translate,
+    });
+
+    expect(community.items).toEqual([
+      { href: "/members", id: "11", isOpenInNewTab: true, label: "Members" },
+      { description: "What is on", href: "/events", id: "12", label: "Events" },
+    ]);
+  });
+
+  it("leaves out a child nobody can name and keeps the parent a plain link", () => {
+    const [parent] = headerNavItemsFrom({
+      items: [
+        custom(10, "Community", {
+          items: [node({ id: 11, presetId: "nameless" })],
+        }),
+      ],
+      locale: "en",
+      translate,
+    });
+
+    expect(parent.items).toBeUndefined();
+  });
+
+  it("drops an item nobody can name", () => {
+    expect(
+      headerNavItemsFrom({
+        items: [node({ presetId: "nameless" })],
+        locale: "en",
+        translate,
+      }),
+    ).toEqual([]);
+  });
+
+  it("carries the icon the menu item resolved to", () => {
+    const [entry] = headerNavItemsFrom({
+      items: [node({ icon: "icon:compass" })],
+      locale: "en",
+      translate,
+    });
+
+    expect(entry.icon).toBe("icon:compass");
   });
 
   it("carries the label it was given, untouched", () => {
-    // Both frameworks translate `core.search.nav.*`, so a nav rendered in
-    // Polish is Polish because of what was passed in and nothing else - there is
-    // no fallback string in here to mask a namespace nobody warmed.
-    expect(headerNavItems({ discover: "Odkrywaj", search: "Szukaj" })).toEqual([
-      { href: "/discover", label: "Odkrywaj" },
-      { href: "/search", label: "Szukaj" },
-    ]);
-  });
-
-  it("points at internal paths with no locale prefix", () => {
-    // The prefix is the router's to write - `rewrite.output` in `apps/web`.
-    // A prefix here would be a second one.
-    for (const { href } of headerNavItems(labels)) {
-      expect(href.startsWith("/")).toBe(true);
-      expect(href).not.toMatch(/^\/(en|pl)\b/);
-    }
+    expect(
+      headerNavItemsFrom({
+        items: [node({ title: [{ languageCode: "pl", value: "Odkrywaj" }] })],
+        locale: "pl",
+        translate,
+      })[0].label,
+    ).toBe("Odkrywaj");
   });
 
   it("gives every link a distinct key", () => {
-    // `href` is the React key, so a duplicate is a silently dropped link.
-    const hrefs = headerNavItems(labels).map(item => item.href);
+    const ids = headerNavItemsFrom({
+      items: [
+        ...items,
+        custom(4, "Docs again", { href: "https://vitnode.com/docs" }),
+      ],
+      locale: "en",
+      translate,
+    }).map(entry => entry.id);
 
-    expect(new Set(hrefs).size).toBe(hrefs.length);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 
-/**
- * The logo, which is not in the nav list and is still the same destination in
- * both frameworks.
- */
+describe("the namespaces the header warms", () => {
+  it("are the plugins whose presets are in the menu, children included", () => {
+    expect(
+      headerNavNamespaces(
+        [
+          custom(10, "Community", {
+            items: [
+              node({ id: 2, pluginId: "@vitnode/blog", presetId: "posts" }),
+            ],
+          }),
+          node({}),
+        ],
+        "core.global",
+      ),
+    ).toEqual(["@vitnode/blog.navigation", "core.navigation"]);
+  });
+
+  it("fall back to the namespace every page already has", () => {
+    expect(headerNavNamespaces([custom(1, "Docs")], "core.global")).toEqual([
+      "core.global",
+    ]);
+  });
+});
+
 describe("the header's destinations", () => {
   it("sends the logo home", () => {
     expect(HEADER_HREF.home).toBe("/");
-  });
-
-  it("reads its labels from the namespace that already owns them", () => {
-    // `core.search.nav.*`, where the header has always read them. Shared as
-    // literals so a typed translator still checks them at each call site - the
-    // two translator *types* are not interchangeable.
-    expect(HEADER_NAV_MESSAGE_KEYS).toEqual({
-      discover: "nav.discover",
-      search: "nav.search",
-    });
   });
 });

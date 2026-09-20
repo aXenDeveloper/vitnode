@@ -1,0 +1,222 @@
+---
+title: Main Navigation
+description: Let administrators build the header menu from prebuilt plugin pages and custom links, and offer your plugin's pages as one-click menu items.
+icon: PanelTop
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+The links in the site header are not hard-coded. Administrators build the menu
+in **AdminCP → Core → System → Navigation**, and every item there is one of two
+things:
+
+- a **prebuilt page** - a destination a plugin declared, so the admin picks it
+  from a list and never types a URL;
+- a **custom link** - any address, on this site or elsewhere.
+
+Both carry a title and a description in every enabled language, can open in a
+new tab, can be dragged into any order, and can be tucked one level under
+another item to form a dropdown. Your plugin's job is small: tell VitNode which
+of its pages are worth a spot in the menu.
+
+## Offer a prebuilt page
+
+<Steps>
+  <Step>
+
+### Declare the preset
+
+Add a `navigation` array to the plugin's API config. An `id` and an `href` are
+all a preset needs; `isOpenInNewTab` is optional and off by default.
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: '@acme/site-notes',
+    // [!code ++:9]
+    navigation: [
+      { href: '/notes', icon: 'notebook-pen', id: 'notes' },
+      {
+        href: 'https://status.acme.dev',
+        icon: 'activity',
+        id: 'status',
+        isOpenInNewTab: true,
+      },
+    ],
+    modules: [],
+  })
+```
+
+The `id` is lowercase letters, digits, `-` and `_`. The `href` starts with `/`
+for a page on this site or with `https://` for anything else - plaintext
+`http://` is refused, for presets and for what an administrator types. The
+optional
+`icon` is a [lucide](https://lucide.dev/icons) name in kebab-case, such as
+`notebook-pen`. VitNode refuses a preset that breaks any of those rules at boot,
+with a message naming the plugin, so a typo never reaches an administrator.
+
+  </Step>
+  <Step>
+
+### Name it in the locale file
+
+The default title and description live under `navigation.<id>` in the plugin's
+own message tree. That is what the admin sees in the picker and what visitors
+see in the header until an admin overrides it.
+
+```json title="plugins/site-notes/src/locales/en.json"
+{
+  "@acme/site-notes": {
+    // [!code ++:6]
+    "navigation": {
+      "notes": {
+        "title": "Notes",
+        "description": "Short posts from the team."
+      }
+    }
+  }
+}
+```
+
+`description` is optional. A preset with no title in any language is skipped by
+the header rather than shown as a raw key, so this step is not decorative.
+
+  </Step>
+  <Step>
+
+### Add it to the menu
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start the app">
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+Open **AdminCP → Core → System → Navigation**, click **Add menu item**, keep
+**Prebuilt page** selected and pick *Notes*. It appears in the header
+immediately.
+
+{/* Image prompt: VitNode AdminCP "Navigation" screen. A vertical list of menu items, each a card with a drag handle, a lucide icon, a bold title, a small "Prebuilt page" or "Custom link" badge and a monospace URL, with one item indented under another to show a dropdown. An "Add menu item" dialog is open, with a two-option radio "Prebuilt page / Custom link", a page picker, title, an icon picker showing a grid of lucide icons, description, and an "Open in a new tab" switch. Clean light theme, 1440x900. */}
+
+  </Step>
+</Steps>
+
+## What administrators can change
+
+| Setting              | Prebuilt page                                     | Custom link |
+| -------------------- | ------------------------------------------------- | ----------- |
+| Title, description   | Optional override per language, defaults to yours | Required    |
+| URL                  | Always the plugin's `href`, even after it changes | Any `/path` or `https://` address |
+| Icon                 | Yours by default, replaceable                     | Optional    |
+| Open in a new tab    | Yes                                               | Yes         |
+| Order                | Drag and drop                                     | Drag and drop |
+| Nesting              | One level, as a dropdown                          | One level, as a dropdown |
+
+### Icons
+
+Every menu item can carry a lucide icon, picked from the same picker a role
+prefix uses, restricted to its icon half - no emoji. A prebuilt item starts on
+the icon its plugin declared and the picker opens on it; the remove button on
+the field goes back to that default rather than storing a blank. Icons are
+stored as `icon:<name>` and drawn server-side, exactly like a role's prefix.
+
+### Order and dropdowns
+
+Every item in the list has a grip handle. Drag it up or down to reorder, or drop
+it a little to the **right** to nest it under the item above. The menu is one
+level deep on purpose: a header dropdown with sub-dropdowns is a maze, not a
+menu, so an item that already has children stays at the top level and nothing
+can be dropped under a child.
+
+Keyboard works too: focus a handle, press <kbd>Space</kbd>, move with the arrow
+keys - <kbd>→</kbd> nests, <kbd>←</kbd> un-nests - and press <kbd>Space</kbd>
+again to drop.
+
+A top-level item with children renders in the header as a **dropdown**: the
+parent opens it on hover and still follows its own URL when clicked, and its
+children are the links, each with its description under the label. Remove a
+parent and its children move back to the top level rather than disappearing.
+
+Because a preset item stores only `pluginId` and `id`, moving a route in your
+plugin moves every menu that links to it. Uninstalling the plugin hides its
+items from the header and flags them in the AdminCP list, without deleting the
+admin's titles - reinstall the plugin and they are back.
+
+## How the header gets the menu
+
+The menu ships inside the middleware endpoint every page already reads, next to
+the SSO and captcha configuration:
+
+```ts
+const response = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'middleware',
+  path: '/',
+})
+
+const { navigation } = await response.json()
+```
+
+Each top-level entry carries the resolved `href`, `icon`, `isOpenInNewTab`, the
+stored `title` and `description` overrides for every language, and an `items`
+array with the same shape for its dropdown. Preset defaults are
+translated in the browser from the plugin's `navigation` namespace, which the
+header warms for exactly the plugins whose presets are in the menu.
+
+On the server the menu is cached for a day (`c.get("cache")`, Redis when
+`REDIS_URL` is set) and expired the moment an administrator saves a change, so
+"long cache" and "instant updates" are not in tension. Without Redis it is one
+small query per request.
+
+## Permissions
+
+Everything under **Navigation** is gated by the core `navigation` staff module:
+
+| Permission   | Lets an administrator            |
+| ------------ | -------------------------------- |
+| `can_view`   | Open the screen and see the list |
+| `can_create` | Add items                        |
+| `can_edit`   | Edit and reorder items           |
+| `can_delete` | Remove items                     |
+
+Grant them per role or per admin under **Staff → Administrators**, like any
+other [staff permission](/docs/dev/working-with-users/staff-permissions).
+
+## Events
+
+Every change emits a [built-in event](/docs/dev/events/built-in-events#navigation-events):
+`navigation.created`, `navigation.updated`, `navigation.reordered` and
+`navigation.deleted`. Listen to them to purge a CDN or keep an audit trail.
+
+## Next
+
+<Cards>
+  <Card
+    title="AdminCP pages"
+    href="/docs/dev/plugins/admin"
+    description="Give your plugin its own screen in the admin panel."
+  />
+  <Card
+    title="Plugin routes"
+    href="/docs/dev/plugins/routes"
+    description="Declare the public page a preset should point at."
+  />
+  <Card
+    title="Translations"
+    href="/docs/dev/i18n"
+    description="Where the navigation namespace lives and how it is loaded."
+  />
+</Cards>

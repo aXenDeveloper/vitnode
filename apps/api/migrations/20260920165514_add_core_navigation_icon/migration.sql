@@ -1,0 +1,1 @@
+ALTER TABLE "core_navigation" ADD COLUMN "icon" varchar(64);

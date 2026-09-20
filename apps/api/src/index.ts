@@ -9,6 +9,7 @@ import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websock
 import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle";
 import { mkdirSync } from "node:fs";
 import { WebSocketServer } from "ws";
+import "hono";
 
 import { vitNodeApiConfig } from "./vitnode.api.config.js";
 
@@ -63,10 +64,10 @@ app.get(
   upgradeWebSocket(handleVitNodeWebSocket()),
 );
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
-    port: 8000,
+    port: Number(process.env.PORT ?? 8000),
     websocket: {
       server: wss,
     },
@@ -80,3 +81,5 @@ serve(
     );
   },
 );
+
+export default server;

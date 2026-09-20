@@ -7,6 +7,7 @@ import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
+import type { NavigationPresetDeclaration } from "@/lib/navigation";
 
 import { BlockError } from "@/blocks/errors";
 import {
@@ -26,6 +27,7 @@ import type { WebSocketConfig } from "./websocket";
 import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
+import { collectNavigationPresets } from "./navigation-presets";
 import { applyModuleTags } from "./openapi-tags";
 
 export type { ApiPluginContract };
@@ -44,6 +46,7 @@ export interface BuildPluginApiReturn<
   hono: OpenAPIHono;
   messages?: LocaleMessagesMap;
   modules: Modules;
+  navigation?: NavigationPresetDeclaration[];
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
@@ -66,6 +69,7 @@ export function buildApiPlugin<
   pluginId,
   messages,
   modules = [] as unknown as Modules,
+  navigation,
   permissionStaff,
   searchIndexers,
 }: {
@@ -73,6 +77,7 @@ export function buildApiPlugin<
   editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
   modules?: Modules;
+  navigation?: NavigationPresetDeclaration[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
   searchIndexers?: SearchIndexer[];
@@ -92,6 +97,8 @@ export function buildApiPlugin<
   const registeredPages: RegisteredEditablePage[] = validateEditablePages(
     (editablePages ?? []).map(page => registerEditablePage(page, pluginId)),
   );
+
+  collectNavigationPresets([{ navigation, pluginId }]);
 
   const hono = new OpenAPIHono();
   const contentModels: AnyContentModel[] = [];
@@ -140,6 +147,7 @@ export function buildApiPlugin<
     editablePages: registeredPages.map(entry => entry.page),
     messages,
     modules,
+    navigation,
     hono,
     openApiTags: [...new Set(openApiTags)],
     contentModels,

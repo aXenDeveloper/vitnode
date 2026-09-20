@@ -20,6 +20,7 @@ export const exampleApiPlugin = () =>
     pluginId: CONFIG_PLUGIN.pluginId,
     blocks: widgets,
     editablePages: [settingsPage],
+    navigation: [{ href: "/example/browse", icon: "list", id: "browse" }],
     permissionStaff: {
       moderator: {
         widgets: ["can_edit"],

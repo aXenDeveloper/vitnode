@@ -6,6 +6,7 @@ import type { CacheClient } from "@/api/lib/cache";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
+import type { NavigationPreset } from "@/lib/navigation";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
@@ -60,6 +61,7 @@ import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { collectNavigationPresets } from "../lib/navigation-presets";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
 declare module "hono" {
@@ -137,6 +139,8 @@ export interface EnvVariablesVitNode {
       shortTitle?: string;
       title: string;
     };
+    /** Every prebuilt main-menu item the installed plugins offer. */
+    navigation: NavigationPreset[];
     permissionStaff: PermissionStaffCatalogEntry[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
@@ -343,6 +347,9 @@ export const globalMiddleware = ({
     ),
   );
 
+  const navigationMetadata: NavigationPreset[] =
+    collectNavigationPresets(plugins);
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -421,6 +428,7 @@ export const globalMiddleware = ({
       queue: queueMetadata,
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
+      navigation: navigationMetadata,
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
