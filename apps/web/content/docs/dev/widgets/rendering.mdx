@@ -1,0 +1,142 @@
+---
+title: Rendering Widgets
+description: ContentRenderer walks the stored instances, resolves each one in the registry, and renders it on the server like any other component.
+icon: MonitorPlay
+---
+
+## The renderer
+
+```tsx title="src/routes/_main/pages.$slug.tsx"
+import { ContentRenderer } from '@vitnode/core/widgets/renderer'
+
+import { blocksRegistry } from '@/blocks.gen'
+
+export const PageScreen = ({ page }: { page: PageContent }) => (
+  <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
+    <h1 className="text-3xl font-semibold text-balance">{page.title}</h1>
+
+    <ContentRenderer blocks={page.content} registry={blocksRegistry} />
+  </main>
+)
+```
+
+For each stored instance it resolves the definition in the registry and renders the component with the instance's own id as the React key - so re-ordering a page moves DOM nodes instead of re-mounting them.
+
+| Prop       | Default                   |                                                                                                                                                                             |
+| :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `blocks`   | —                         | The stored list. `null`, `undefined` and `[]` all render nothing.                                                                                                           |
+| `registry` | the process default       | The registry to resolve against. Passing it is the normal way.                                                                                                              |
+| `validate` | `"development"`           | `"never"`, `"development"` or `"always"`. It governs the allowlist and the developer warnings, never the structural check - see below.                                      |
+| `fallback` | a development-only notice | What to render for a block that cannot be resolved or fails a check.                                                                                                        |
+| `allowed`  | none                      | An allowlist to hold the instances to, under the same `validate` gate. [Content Zones](/docs/dev/widgets/content-zones#restricting-what-may-go-in-a-zone) pass theirs here. |
+
+## Where the registry comes from
+
+Pass it. `blocksRegistry` is exported from the generated `src/blocks.gen.ts`, and handing it to the renderer is explicit, testable, and works when one process serves more than one application.
+
+<Callout title="Import blocks.gen only where you render blocks" type="warn">
+  That file statically imports every configured plugin's block components, so
+  anything that reaches it carries all of them. Import it from the route or page
+  that renders blocks - never from `router.tsx`, a root layout, or any other
+  module the whole application loads. A test asserts the application's root
+  router cannot reach it.
+</Callout>
+
+Evaluating `src/blocks.gen.ts` also installs that registry as the process default, so a renderer with no `registry` prop finds one. Treat that as a convenience for a renderer deep inside a tree that cannot be handed one, not as setup: it only works if something already imported the file on that route.
+
+The API does not rely on it. It builds its own registry when it boots, from the same plugins' `blocks`, so write-time validation is never waiting on a front end to evaluate a module. With no registry at all, `ContentRenderer` throws a `BlockRegistryMissingError` naming both ways out.
+
+`setDefaultBlockRegistry` returns the function that undoes it, so a test - or a second application - can install one without leaking it:
+
+```ts
+const restore = setDefaultBlockRegistry(registry)
+try {
+  // ...
+} finally {
+  restore()
+}
+```
+
+## Validation
+
+Block data is validated **once, on write**. Every create and update runs each instance through its block's schema before the row is written, applying defaults and rejecting anything the fields refuse. What is in the column has therefore already crossed a trusted boundary.
+
+So the renderer never repeats that parse. A full Zod parse per block per render is real work on the hot path, and re-running a check the write boundary already made buys nothing.
+
+What it does run, on every render and in every mode, is far cheaper: before a block's component is called, the renderer compares the stored object against the block's fields. Stored data and a block definition drift apart - a field is renamed, a plugin ships a new version, a row is edited by hand - and a component written for today's fields is handed yesterday's object. `data.headline.toUpperCase()` on an object that has no `headline` is a crashed public page, so this one check is not something a mode can switch off.
+
+The check is **structural, not a schema parse**: it reports a field the block no longer declares, a required field that is gone, a `null` in a field that is not nullable, a value of the wrong kind, and a group whose shape no longer matches. It deliberately does not police `minLength`, `max` or enum membership - those are the write boundary's job, and a too-long string is not a reason to blank a section of a live page.
+
+That is what catches the cases where stored data and a block definition have drifted apart:
+
+- a field renamed or made required after records were written
+- a row edited by hand in the database
+- content imported around the API
+
+None of them can take a page down: the instance is skipped, its component is never called, and everything else renders.
+
+`validate` decides what happens around that check - the allowlist a zone passes in, and what a developer is told:
+
+| `validate`                  | What happens                                                   |
+| :-------------------------- | :------------------------------------------------------------- |
+| `"never"`                   | The structural check, and no allowlist.                        |
+| `"development"` _(default)_ | The structural check, plus the allowlist in development.       |
+| `"always"`                  | The structural check, plus the allowlist in every environment. |
+
+`validate="never"` is not a way to render data that no longer matches its block. There isn't one, and that is the point - it says "hold nothing to an allowlist", on a page that already trusts what it renders.
+
+Set `validate="always"` on a page rendering block data the API never placed - a live import, a third-party feed - so a zone's allowlist is enforced there as well. It costs a `Map` lookup per block, not a schema parse.
+
+Warnings follow a separate rule, and it is not this one: **nothing is ever logged in production**, whatever `validate` says, because a visitor's console is not a place to report a developer's problem. In development, a block that is not registered, one stored with a variant it does not declare, and an area stored somewhere an area cannot go each warn regardless of `validate` - they say a page is broken, not that a check was asked for. `validate` gates only the allowlist refusal and the drift warning, so `"never"` silences those two and nothing else.
+
+<Callout title="The renderer never transforms">
+  Whatever is stored is what the component receives, in every mode. Validation
+  decides whether to render an instance; it never fills in defaults or coerces a
+  value, so a page cannot look different in development from how it looks in
+  production.
+</Callout>
+
+## When a block is unavailable
+
+Content outlives plugins. A page may reference `blog:latest-posts` long after the Blog plugin was disabled.
+
+That never takes the page down, in any `validate` mode - resolving a block is a `Map` lookup, and a miss is handled the same way a failed check is.
+
+|                 | Behaviour                                                                                        |
+| :-------------- | :----------------------------------------------------------------------------------------------- |
+| **Production**  | Nothing is rendered in its place. A visitor sees a page with one section missing, not an error.  |
+| **Development** | A dashed notice naming the block and why it was skipped, plus one `console.warn` per block type. |
+
+Pass `fallback` to decide for yourself:
+
+```tsx
+<ContentRenderer
+  blocks={page.content}
+  fallback={({ instance, reason }) =>
+    reason === 'unknown-type' ? (
+      <PluginMissingNotice type={instance.type} />
+    ) : null
+  }
+/>
+```
+
+## Performance
+
+A block is a normal React component and the renderer is a loop.
+
+- **No request.** Definitions come from the configured plugins, not from the database. A page of hero + text + image + CTA is exactly as many requests as a page without blocks.
+- **No client state.** `ContentRenderer` holds none, subscribes to nothing, and renders on the server like anything else.
+- **No validation library.** `defineBlock` and `ContentRenderer` do not reach Zod; the schema machinery lives in the write path. Bundling core's three blocks plus a plugin's, the registry and the renderer comes to about 25 kB of JavaScript with no third-party dependency in it at all.
+- **No editor.** `@vitnode/core/widgets` is free of React entirely - it is the metadata surface the API validates with - and `@vitnode/core/widgets/renderer` reaches no drag-and-drop, AdminCP, form or query code. Tests assert the reachable module graph of each entry point, so future editor code cannot drift into the public bundle.
+
+Keep your own block components in that spirit: a block that needs a chart library should `lazy()` it inside its own module, so a page that never places it never pays for it.
+
+## Content Zones
+
+`ContentRenderer` is the loop. A [Content Zone](/docs/dev/widgets/content-zones) is that loop with a name on it:
+
+```tsx
+<ContentZone id="main" blocks={page.content} registry={blocksRegistry} />
+```
+
+The name is what lets an editor put something in a particular place later, and what lets blocks sit around application UI that stays locked. A zone renders through this renderer, so everything on this page applies to it unchanged.

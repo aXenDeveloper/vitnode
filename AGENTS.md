@@ -101,5 +101,9 @@ npm i x
 
 # Testing
 
-- Write and run vitest unit tests for all new features and bug fixes - skip only if vitest isn't configured.
-- Do not test trivial code, config, database models, third-party libraries or UI components.
+- Write and run vitest unit tests for a new feature - a capability the codebase did not have - and for every bug fix. Skip only if vitest isn't configured.
+- UI component tests (`*.test.tsx`) should test DOM output, click events, and dialogs. Never test CSS classes or form UI (`AutoForm`, form fields).
+- Do not test an existing feature applied somewhere new. Building the widgets system earns tests; adding widget zones or widgets to another page or plugin does not, because the mechanism is already covered and only the wiring is new.
+- Do not test database models or schema definitions (Drizzle tables, column types, indexes, foreign keys).
+- Do not test static config, constants, color presets, or plugin configuration (`config.api`, content type definitions).
+- Do not test third-party libraries or trivial helper/wrapper code.

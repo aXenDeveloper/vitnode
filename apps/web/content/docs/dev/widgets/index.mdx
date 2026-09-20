@@ -1,0 +1,158 @@
+---
+title: Widgets Overview
+description: Plugins define widgets, VitNode collects them into a registry, and content types or editable page zones store an ordered list of widgets that moderators can visually edit in place.
+icon: Blocks
+---
+
+A **widget** is a page section somebody can place, in an order they choose: a hero, a paragraph of prose, a call to action, "the six newest articles". A plugin defines it once - the fields it holds and the React component that renders it - and every content type or editable page in the installation can offer it.
+
+```text
+Plugin
+  ↓ defines widgets (defineWidget)
+Widget Registry
+  ↓ allowed by a blocks() field or defineEditablePage()
+Content record / Page layout
+  ↓
+ContentZone
+  ↓
+ContentRenderer / Visual Editor (Edit widgets)
+```
+
+## What a widget is made of
+
+| Part          | What it is                                                                                                                                    |
+| :------------ | :-------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Id**        | `hero`, written without a namespace. The registry prefixes the plugin's own, so it is stored as `core:hero`.                                  |
+| **Fields**    | Content Engine field descriptors - the same `field.text()`, `field.enum()` and friends a content type uses. There is no second schema system. |
+| **Component** | One public React component. It receives the data the record stores for that instance.                                                         |
+| **Schema**    | Derived from `fields` at the write boundary. You never write it, and a public render never builds it.                                         |
+
+## What a widget is not
+
+A widget is **not** a content type. It has no table, no id of its own in the database, no permissions and no API routes. It is a value that lives inside a record or a page layout - which is exactly why re-ordering a page is one `UPDATE` and not a migration.
+
+## Visual editing
+
+Widgets power in-place visual editing. Wrap your page's content zones in `<EditablePage>`:
+
+```tsx title="plugins/example/src/pages/settings-page.tsx"
+// [!code ++:4]
+<EditablePage
+  adapter={adapter}
+  canEdit={canEdit}
+  layout={layout}
+  page={settingsPage}
+>
+  <ContentZone id="before-profile" />
+  <ProfileForm />
+  <ContentZone id="sidebar" />
+</EditablePage>
+```
+
+There is no button to write. **Edit widgets** appears in the user menu in the site header whenever a page like this one is on screen and `canEdit` says yes. When an authorized moderator clicks it:
+
+- **Drag and drop**: Rearrange widgets or drag new widgets into allowed zones.
+- **Inline editing**: Click text directly on the page to edit—see [Inline Editing](/docs/dev/widgets/inline-editing).
+- **Properties panel**: Configure widget settings, variants, and [Layout Areas](/docs/dev/widgets/layout-areas).
+- **Zero visitor footprint**: The editor chunk is lazily loaded on click and never ships to ordinary visitors.
+- **Layout persistence**: Overrides save directly to `core_page_layouts`—see [Editable Pages](/docs/dev/widgets/editable-pages).
+- **Room, not overlap**: The whole site slides over for the sidebar, so nothing you are arranging ends up underneath it.
+
+## How widgets reach an application
+
+Nothing is scanned and nothing is queried. A plugin exports a `widgets` module; VitNode's Vite plugin sees it and writes `src/widgets.gen.ts`, which builds the registry and registers it.
+
+```ts title="src/widgets.gen.ts (generated)"
+import {
+  createWidgetRegistry,
+  setDefaultWidgetRegistry,
+} from '@vitnode/core/widgets'
+
+import { widgets as widgets0 } from '@vitnode/core/widgets/built-in'
+import { widgets as widgets1 } from '@vitnode/example/widgets'
+
+export const pluginWidgets = [widgets0, widgets1]
+
+export const widgetsRegistry = createWidgetRegistry(pluginWidgets)
+
+setDefaultWidgetRegistry(widgetsRegistry)
+```
+
+Installing a plugin is the whole registration step. Removing it takes its widgets with it, and a page that still references one keeps rendering everything else - see [Rendering](/docs/dev/widgets/rendering).
+
+A registry is a plain value, not a service: `createWidgetRegistry` returns an isolated one, and every consumer takes it as an argument. The last line installs it as the process default, which is a convenience for a renderer used without a `registry` prop. Two applications in one process each create their own and pass it explicitly.
+
+Import `src/blocks.gen.ts` **only from a route that renders widgets** - it statically imports every plugin's widget components, so a root module that touches it makes every visitor pay for all of them. The API never needs it: it builds its own registry from the same plugins when it boots, which is what validates every write.
+
+## Where validation happens
+
+```text
+write (untrusted)   →  full schema check, defaults applied  →  JSONB
+read                →  nothing
+render              →  structural check, every mode
+```
+
+Widget data is checked in full once, where it arrives: every create and update runs each instance through its widget's own schema before a row is written, and `ContentRenderer` never repeats that parse. What it does repeat, in every mode, is a cheap structural comparison of the stored object against the widget's current fields - because the write was validated against the definition the widget had _then_, and a plugin can rename a field afterwards. A widget whose stored shape no longer matches is skipped rather than handed to a component that would reach for a key that is gone. [Rendering](/docs/dev/widgets/rendering#validation) has the detail.
+
+## Widgets that ship with core
+
+| Id          | What it renders                                                                          |
+| :---------- | :--------------------------------------------------------------------------------------- |
+| `core:hero` | A page heading with an optional eyebrow, lead paragraph and one link.                    |
+| `core:text` | Plain paragraphs of prose. Blank lines separate paragraphs; nothing is parsed as markup. |
+| `core:cta`  | A short call to action with one link.                                                    |
+
+## Guides
+
+<Cards>
+  <Card
+    title="Defining a Widget"
+    description="defineWidget, fields, namespacing and typed component props"
+    href="/docs/dev/widgets/defining-a-block"
+  />
+  <Card
+    title="The blocks() Field"
+    description="Storing an ordered zone on a content type, and restricting what may go in it"
+    href="/docs/dev/widgets/blocks-field"
+  />
+  <Card
+    title="Widget Variants"
+    description="One widget, several looks - stored beside the data instead of inside it"
+    href="/docs/dev/widgets/block-variants"
+  />
+  <Card
+    title="Layout Areas"
+    description="Widgets side by side in up to four columns, without a columns container"
+    href="/docs/dev/widgets/layout-areas"
+  />
+  <Card
+    title="Rendering"
+    description="ContentRenderer, missing widgets, and why a widget costs no extra request"
+    href="/docs/dev/widgets/rendering"
+  />
+  <Card
+    title="Content Zones"
+    description="Naming a place on a page where widgets may appear, including around locked application UI"
+    href="/docs/dev/widgets/content-zones"
+  />
+  <Card
+    title="Editable Pages"
+    description="Declaring a page's zones once, so the people who run the site rearrange them on the page itself"
+    href="/docs/dev/widgets/editable-pages"
+  />
+  <Card
+    title="Visual Editor"
+    description="Turn a public page into an interactive editing surface with drag and drop and a widget sidebar"
+    href="/docs/dev/widgets/visual-editor"
+  />
+  <Card
+    title="Inline Editing"
+    description="Click headings and text directly on the page to edit with zero rich-text overhead"
+    href="/docs/dev/widgets/inline-editing"
+  />
+  <Card
+    title="End-to-end Example"
+    description="From an empty plugin to a rendered page, in seven steps"
+    href="/docs/dev/widgets/end-to-end"
+  />
+</Cards>

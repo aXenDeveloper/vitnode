@@ -3,10 +3,6 @@
 @import "tw-animate-css";
 @import "@vitnode/core/styles/tiptap.css";
 
-@source "../node_modules/@vitnode/core/dist/src/components";
-@source "../node_modules/@vitnode/core/dist/src/tanstack";
-@source "../node_modules/@vitnode/core/dist/src/views";
-
 :root:not(.dark) {
   color-scheme: light;
   --background: oklch(1 0 0);

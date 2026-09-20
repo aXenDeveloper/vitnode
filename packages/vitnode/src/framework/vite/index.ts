@@ -5,5 +5,7 @@ export type { VitNodePluginRoutesOptions } from "./plugin-routes";
 export { vitNodePluginRoutes } from "./plugin-routes";
 export type { VitNodeSsrExternalsOptions } from "./ssr-externals";
 export { vitNodeSsrExternals } from "./ssr-externals";
+export type { VitNodeTailwindSourcesOptions } from "./tailwind-sources";
+export { vitNodeTailwindSources } from "./tailwind-sources";
 export type { VitNodeViteOptions } from "./vitnode";
 export { vitnode } from "./vitnode";

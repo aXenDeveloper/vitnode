@@ -30,10 +30,12 @@ export const AutoFormDateTime = ({
   // lands on the DOM element the rest props spread into.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   multiLang,
-  otherProps: { isOptional },
+  otherProps: { clearsToEmpty, isOptional },
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "type" | "value">) => {
+  const cleared = clearsToEmpty ? "" : null;
+
   return (
     <>
       {!!label && (
@@ -50,7 +52,12 @@ export const AutoFormDateTime = ({
           }}
           onChange={event => {
             const { value } = event.target;
-            field.onChange(value === "" ? null : new Date(value).toISOString());
+            const date = value === "" ? null : new Date(value);
+            field.onChange(
+              date && !Number.isNaN(date.getTime())
+                ? date.toISOString()
+                : cleared,
+            );
             props.onChange?.(event);
           }}
           type="datetime-local"

@@ -8,6 +8,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     exclude: ["**/node_modules/**", "**/dist/**"],
+    passWithNoTests: true,
     typecheck: {
       tsconfig: "./tsconfig.json",
       include: ["**/*.test-d.ts"],

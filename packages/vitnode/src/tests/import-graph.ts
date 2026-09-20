@@ -113,7 +113,10 @@ export const stripComments = (source: string): string => {
   return out;
 };
 
-export const runtimeImports = (path: string): string[] => {
+export const runtimeImports = (
+  path: string,
+  { dynamic = true }: { dynamic?: boolean } = {},
+): string[] => {
   const source = stripComments(readFileSync(path, "utf8")).replace(
     /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
     "$1",
@@ -124,13 +127,43 @@ export const runtimeImports = (path: string): string[] => {
       /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']|require\s*\(\s*["']([^"']+)["']/g,
     ),
   ]
+    .filter(match => dynamic || match[2] === undefined)
     .map(match => match[1] ?? match[2] ?? match[3] ?? match[4])
     .filter((specifier): specifier is string => Boolean(specifier));
 };
 
+export const reachedFiles = (
+  entry: string,
+  {
+    dynamic = true,
+    srcRoot = SRC_ROOT,
+  }: { dynamic?: boolean; srcRoot?: string } = {},
+): string[] => {
+  const seen = new Set<string>();
+
+  const walk = (file: string) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+
+    for (const specifier of runtimeImports(file, { dynamic })) {
+      const target = resolveSpecifier(specifier, file, srcRoot);
+      if (target) walk(target);
+    }
+  };
+
+  walk(entry);
+
+  return [...seen].map(file => relative(srcRoot, file)).sort();
+};
+
+export interface ImportGraphOptions {
+  dynamic?: boolean;
+}
+
 export const externalGraph = (
   entry: string,
   srcRoot: string = SRC_ROOT,
+  { dynamic = true }: ImportGraphOptions = {},
 ): Map<string, string[]> => {
   const found = new Map<string, string[]>();
   const parents = new Map<string, string>();
@@ -138,8 +171,12 @@ export const externalGraph = (
 
   const chain = (file: string): string => {
     const parts: string[] = [];
-    for (let at: string | undefined = file; at; at = parents.get(at)) {
+    const walked = new Set<string>();
+
+    for (let at: string | undefined = file; at && !walked.has(at);) {
+      walked.add(at);
       parts.unshift(relative(srcRoot, at));
+      at = parents.get(at);
     }
 
     return parts.join(" -> ");
@@ -149,7 +186,7 @@ export const externalGraph = (
     if (seen.has(file)) return;
     seen.add(file);
 
-    for (const specifier of runtimeImports(file)) {
+    for (const specifier of runtimeImports(file, { dynamic })) {
       const target = resolveSpecifier(specifier, file, srcRoot);
 
       if (target) {
@@ -171,7 +208,8 @@ export const externalGraph = (
 export const reachedSpecifiers = (
   entry: string,
   srcRoot: string = SRC_ROOT,
-): string[] => [...externalGraph(entry, srcRoot).keys()];
+  options: ImportGraphOptions = {},
+): string[] => [...externalGraph(entry, srcRoot, options).keys()];
 
 /** A package and its subpaths, so `hono` matches `hono/cors` but not `honox`. */
 const matches = (specifier: string, forbidden: string): boolean =>
@@ -187,8 +225,9 @@ export const offenders = (
   entry: string,
   forbidden: string[],
   srcRoot: string = SRC_ROOT,
+  options: ImportGraphOptions = {},
 ): string[] =>
-  [...externalGraph(entry, srcRoot)]
+  [...externalGraph(entry, srcRoot, options)]
     .filter(([specifier]) => forbidden.some(one => matches(specifier, one)))
     .flatMap(([specifier, chains]) => chains.map(at => `${specifier} in ${at}`))
     .sort();

@@ -74,6 +74,7 @@ export interface ItemAutoFormComponentProps {
   multiLang?: boolean;
   otherProps: {
     ["aria-invalid"]?: boolean;
+    clearsToEmpty?: boolean;
     enum?: string[];
     isOptional?: boolean;
     maxItems?: number;

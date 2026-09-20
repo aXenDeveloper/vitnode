@@ -21,6 +21,7 @@ import { UserMenuIdentity } from "@/components/user-menu-identity";
 
 import type { UserHeaderState, UserHeaderUser } from "./user-header-model";
 
+import { EditWidgetsMenuItem } from "./edit-widgets-item";
 import { USER_HEADER_HREF, userHeaderMenu } from "./user-header-model";
 
 export const UserHeaderSkeleton = () => <Skeleton className="h-9 w-32" />;
@@ -102,6 +103,8 @@ const AuthenticatedUserHeader = ({
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator />
+
+        <EditWidgetsMenuItem />
 
         {userHeaderMenu(user).map(group => (
           <React.Fragment key={group[0].key}>

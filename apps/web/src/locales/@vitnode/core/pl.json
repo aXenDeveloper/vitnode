@@ -44,6 +44,8 @@
   "@vitnode/core:users:can_edit": "Edytowanie użytkowników",
   "@vitnode/core:users:can_edit_admin": "Edytowanie użytkowników z uprawnieniami administratora",
   "@vitnode/core:users:can_view": "Wyświetlanie listy użytkowników",
+  "@vitnode/core:widgets": "Widżety",
+  "@vitnode/core:widgets:can_edit": "Zmiana układu widżetów na stronach rdzenia",
   "admin": {
     "advanced": {
       "cron": {
@@ -870,6 +872,16 @@
         "or": "Lub kontynuuj przez e-mail"
       }
     },
+    "editor": {
+      "move": "Przenieś",
+      "edit": "Edytuj",
+      "remove": "Usuń",
+      "inline": {
+        "empty": "Dodaj {field}",
+        "invalid": "Ten tekst nie pasuje jeszcze do tego, na co pozwala pole, więc zapis pozostaje zablokowany.",
+        "label": "Edytuj {field} w widżecie {name}"
+      }
+    },
     "files": {
       "actions": {
         "delete": "Usuń",
@@ -1154,6 +1166,7 @@
       "toggle_sidebar": "Przełącz pasek boczny",
       "user_bar": {
         "admin_cp": "Panel administratora",
+        "edit_widgets": "Edytuj widżety",
         "files": "Moje pliki",
         "log_out": "Wyloguj się",
         "mod_cp": "Panel moderatora",
