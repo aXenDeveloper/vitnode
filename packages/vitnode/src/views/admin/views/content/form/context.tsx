@@ -1,9 +1,9 @@
 import React from "react";
 
-import type { HeaderContentBack } from "@/components/ui/header-content";
+import type { PageTitleBack } from "@/components/ui/page-title";
 
 export interface ContentFormHeaderValue {
-  back: HeaderContentBack;
+  back: PageTitleBack;
   desc?: React.ReactNode;
   title: React.ReactNode;
 }

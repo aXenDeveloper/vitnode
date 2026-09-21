@@ -5,7 +5,7 @@ import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { ADMIN_ROLE_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 import { searchAdminRolesInBrowser } from "@/views/admin/views/core/users/roles/roles-query";
 import {
@@ -55,11 +55,11 @@ export const AdminRolesRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_ROLES_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <AdminStaffPermissionGate {...ADMIN_ROLE_PERMISSIONS.create}>
             <CreateRoleAction onSave={onSave} onSaved={onSaved} />
           </AdminStaffPermissionGate>
-        </HeaderContent>
+        </PageTitle>
 
         <DataTableNavigationProvider value={navigation}>
           <RolesAdminTableContent

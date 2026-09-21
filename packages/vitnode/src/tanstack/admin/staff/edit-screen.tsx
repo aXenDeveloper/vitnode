@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { RoleFormatContent } from "@/components/role-format-content";
 import { buttonVariants } from "@/components/ui/button";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { EditStaffFormContent } from "@/views/admin/views/core/staff/edit/edit-staff-form-content";
 import { StaffUserFormatContent } from "@/views/admin/views/core/staff/table/staff-user-format-content";
 
@@ -77,7 +77,7 @@ const StaffEditHeader = ({
   const t = useTranslations("admin.staff.edit");
 
   return (
-    <HeaderContent
+    <PageTitle
       desc={
         <div className="flex items-center gap-2">
           {t("subject")}
@@ -94,7 +94,7 @@ const StaffEditHeader = ({
         <ArrowLeftIcon />
         {backLabel}
       </Link>
-    </HeaderContent>
+    </PageTitle>
   );
 };
 

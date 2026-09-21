@@ -4,7 +4,7 @@ import React from "react";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { CronTableContent } from "@/views/admin/views/core/advanced/cron/cron-table-content";
 
 import type { AdminTableNavigate } from "../table-search";
@@ -47,7 +47,7 @@ export const AdminCronRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_CRON_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title} />
+        <PageTitle desc={description} h1={title} />
 
         <DataTableNavigationProvider value={navigation}>
           <CronTableContent data={data} onRun={onRun} />

@@ -4,7 +4,7 @@ import React from "react";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { SearchHeaderActions } from "@/views/admin/views/core/advanced/search/search-header-actions";
 import { SearchIndexContent } from "@/views/admin/views/core/advanced/search/search-index-content";
 
@@ -52,9 +52,9 @@ export const AdminSearchIndexRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_SEARCH_INDEX_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <SearchHeaderActions onRebuild={actions.rebuild} />
-        </HeaderContent>
+        </PageTitle>
 
         <DataTableNavigationProvider value={navigation}>
           <SearchIndexContent

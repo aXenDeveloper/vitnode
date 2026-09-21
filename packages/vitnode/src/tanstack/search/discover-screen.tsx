@@ -1,4 +1,4 @@
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { SearchFeedContent } from "@/views/search/search-feed-content";
 
 import type { DiscoverRouteData } from "./discover-route";
@@ -17,7 +17,7 @@ export const DiscoverRouteContent = ({
   return (
     <RouteMessages namespaces={DISCOVER_NAMESPACES}>
       <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
-        <HeaderContent desc={description} h1={title} />
+        <PageTitle desc={description} h1={title} />
 
         <SearchFeedContent
           queryOptions={discoverFeedQueryOptions({ locale })}

@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import React from "react";
 
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 
 import { useContentForm } from "./context";
 
@@ -19,14 +19,14 @@ export const ContentFormHeader = ({
   if (!header) return null;
 
   return (
-    <HeaderContent
+    <PageTitle
       back={header.back}
       className={className}
       desc={header.desc}
       h1={header.title}
     >
       {children}
-    </HeaderContent>
+    </PageTitle>
   );
 };
 

@@ -1,9 +1,9 @@
 import { useTranslations } from "use-intl";
 
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 
 export const SecuritySettings = () => {
   const t = useTranslations("core.auth.settings.nav");
 
-  return <HeaderContent h2={t("security")} />;
+  return <PageTitle h2={t("security")} />;
 };

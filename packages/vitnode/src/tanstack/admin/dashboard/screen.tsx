@@ -7,7 +7,7 @@ import type { AdminDashboardWidget } from "@/lib/plugin";
 import type { DashboardWidgetTranslator } from "@/views/admin/views/core/dashboard/widgets/resolve-widgets";
 
 import { Badge } from "@/components/ui/badge";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { CONFIG } from "@/lib/config";
 import { DashboardBoardProvider } from "@/views/admin/views/core/dashboard/grid/board-provider";
 import { DashboardGrid } from "@/views/admin/views/core/dashboard/grid/dashboard-grid";
@@ -102,7 +102,7 @@ const AdminDashboardBoard = ({
       layout={layout}
       managedIds={managedIds}
     >
-      <HeaderContent
+      <PageTitle
         desc={
           vitnodeVersion ? t("version", { version: vitnodeVersion }) : undefined
         }
@@ -121,7 +121,7 @@ const AdminDashboardBoard = ({
         }
       >
         <DashboardEditActions />
-      </HeaderContent>
+      </PageTitle>
 
       <DashboardGrid />
     </DashboardBoardProvider>

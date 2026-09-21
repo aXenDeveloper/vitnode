@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import {
   CreateNavigationAction,
   NavigationAdminListContent,
@@ -39,7 +39,7 @@ export const AdminNavigationRouteContent = ({
   return (
     <RouteMessages namespaces={messageNamespaces}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <AdminStaffPermissionGate {...ADMIN_NAVIGATION_PERMISSIONS.create}>
             <CreateNavigationAction
               items={data.items}
@@ -47,7 +47,7 @@ export const AdminNavigationRouteContent = ({
               presets={presetsData.presets}
             />
           </AdminStaffPermissionGate>
-        </HeaderContent>
+        </PageTitle>
 
         <NavigationAdminListContent
           items={data.items}

@@ -4,33 +4,33 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { Button } from "./button";
 
-interface HeaderContentH1Props {
+interface PageTitleH1Props {
   h1: React.ReactNode | string;
   h2?: never;
 }
 
-interface HeaderContentH2Props {
+interface PageTitleH2Props {
   h1?: never;
   h2: React.ReactNode | string;
 }
 
-export interface HeaderContentBack {
+export interface PageTitleBack {
   href: string;
   label: React.ReactNode;
 }
 
-interface HeaderContentBaseProps {
-  back?: HeaderContentBack;
+interface PageTitleBaseProps {
+  back?: PageTitleBack;
   children?: React.ReactNode;
   className?: string;
   desc?: React.ReactNode;
   ref?: React.RefCallback<HTMLDivElement>;
 }
 
-export type HeaderContentProps = HeaderContentBaseProps &
-  (HeaderContentH1Props | HeaderContentH2Props);
+export type PageTitleProps = PageTitleBaseProps &
+  (PageTitleH1Props | PageTitleH2Props);
 
-export const HeaderContent = ({
+export const PageTitle = ({
   back,
   children,
   className,
@@ -38,7 +38,7 @@ export const HeaderContent = ({
   h1,
   h2,
   ref,
-}: HeaderContentProps) => {
+}: PageTitleProps) => {
   return (
     <div
       className={cn(

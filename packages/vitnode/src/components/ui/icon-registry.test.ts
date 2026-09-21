@@ -1,6 +1,13 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-import { loadLucideIcon, loadLucideIcons } from "./icon-registry";
+import {
+  loadLucideIcon,
+  loadLucideIcons,
+  preloadAllLucideIcons,
+  readLucideIcon,
+  seedLucideIcons,
+  subscribeLucideIcons,
+} from "./icon-registry";
 
 describe("loadLucideIcon", () => {
   test("resolves icon data for a canonical name", async () => {
@@ -19,18 +26,57 @@ describe("loadLucideIcon", () => {
     expect(alias?.node).toStrictEqual(canonical?.node);
   });
 
-  test("resolves every name the picker offers", async () => {
-    const { names } = await loadLucideIcons();
-    const resolved = await Promise.all(names.map(loadLucideIcon));
-
-    expect(resolved.filter(icon => !icon)).toStrictEqual([]);
-  });
-
   test("returns undefined for an unknown name", async () => {
     await expect(loadLucideIcon("not-a-real-icon")).resolves.toBeUndefined();
   });
 
-  test("returns a stable promise so React.use does not re-suspend", () => {
+  test("returns a stable promise per name", () => {
     expect(loadLucideIcon("camera")).toBe(loadLucideIcon("camera"));
+  });
+
+  test("fills the synchronous cache and notifies subscribers", async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeLucideIcons(listener);
+
+    expect(readLucideIcon("anchor")).toBeUndefined();
+
+    await loadLucideIcon("anchor");
+
+    expect(readLucideIcon("anchor")?.name).toBe("anchor");
+    expect(listener).toHaveBeenCalled();
+
+    unsubscribe();
+  });
+
+  test("remembers a miss so it is never fetched twice", async () => {
+    await loadLucideIcon("not-a-real-icon");
+
+    expect(readLucideIcon("not-a-real-icon")).toBeNull();
+  });
+});
+
+describe("seedLucideIcons", () => {
+  test("makes seeded icons readable synchronously", async () => {
+    const house = await loadLucideIcon("house");
+
+    if (!house) throw new Error("house must resolve");
+
+    seedLucideIcons({ "seeded-house": house, "seeded-miss": null });
+
+    expect(readLucideIcon("seeded-house")).toBe(house);
+    expect(readLucideIcon("seeded-miss")).toBeNull();
+    await expect(loadLucideIcon("seeded-house")).resolves.toBe(house);
+  });
+});
+
+describe("preloadAllLucideIcons", () => {
+  test("caches every name the picker offers and marks the rest as missing", async () => {
+    await preloadAllLucideIcons();
+
+    const { names } = await loadLucideIcons();
+    const cold = names.filter(name => !readLucideIcon(name));
+
+    expect(cold).toStrictEqual([]);
+    expect(readLucideIcon("definitely-not-an-icon")).toBeNull();
   });
 });

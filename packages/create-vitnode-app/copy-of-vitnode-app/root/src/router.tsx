@@ -4,6 +4,7 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { createVitNodeQueryClient } from "@vitnode/core/lib/query-client";
 import { createLocaleRewrite } from "@vitnode/core/tanstack/i18n";
+import { setupLucideIconSsr } from "@vitnode/core/tanstack/icons";
 import {
   Error500Page,
   ErrorActions,
@@ -62,6 +63,7 @@ export function getRouter() {
 
   holder.current = router;
 
+  setupLucideIconSsr({ router });
   setupRouterSsrQueryIntegration({ queryClient, router });
 
   return router;

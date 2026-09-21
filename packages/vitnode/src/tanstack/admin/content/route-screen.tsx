@@ -1,6 +1,6 @@
 import React from "react";
 
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 
 import type { ContentAdminRouteData } from "./route";
 
@@ -34,9 +34,9 @@ export const ContentAdminRouteContent = ({
        * heading and the two page views draw none.
        */}
       {action === "list" ? (
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           {actions}
-        </HeaderContent>
+        </PageTitle>
       ) : null}
       {children}
     </div>

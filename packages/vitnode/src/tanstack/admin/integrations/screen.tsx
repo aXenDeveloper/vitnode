@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { CONFIG_PLUGIN } from "@/config";
 import { IntegrationsContent } from "@/views/admin/views/core/system/integrations/integrations-content";
 import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
@@ -37,7 +37,7 @@ export const AdminIntegrationsRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_INTEGRATIONS_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title} />
+        <PageTitle desc={description} h1={title} />
 
         <IntegrationsContent
           canSendTestEmail={canSendTestEmail}

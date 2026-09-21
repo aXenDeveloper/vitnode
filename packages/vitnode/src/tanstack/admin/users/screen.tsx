@@ -5,7 +5,7 @@ import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 import { CreateUserAdminContent } from "@/views/admin/views/core/users/list/create-user-content";
 import { UsersAdminTableContent } from "@/views/admin/views/core/users/list/users-table-content";
@@ -72,11 +72,11 @@ export const AdminUsersRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_USERS_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <AdminStaffPermissionGate {...ADMIN_USER_PERMISSIONS.create}>
             <CreateUserAdminContent onCreate={onCreate} />
           </AdminStaffPermissionGate>
-        </HeaderContent>
+        </PageTitle>
 
         <DataTableNavigationProvider value={navigation}>
           <UsersAdminTableContent

@@ -2,7 +2,12 @@ import { cn } from "cn";
 import { Icon } from "lucide-react";
 import React from "react";
 
-import { loadLucideIcon } from "./icon-registry";
+import {
+  loadLucideIcon,
+  LucideIconCollectorContext,
+  readLucideIcon,
+  subscribeLucideIcons,
+} from "./icon-registry";
 
 export interface DynamicIconProps {
   absoluteStrokeWidth?: boolean;
@@ -12,24 +17,36 @@ export interface DynamicIconProps {
   strokeWidth?: number | string;
 }
 
-const ResolvedIcon = ({ name, ...props }: DynamicIconProps) => {
-  const icon = React.use(loadLucideIcon(name));
-
-  return icon ? <Icon icon={icon} {...props} /> : null;
-};
-
 export const DynamicIcon = ({
   className,
   fallback,
+  name,
   ...props
-}: DynamicIconProps & { fallback?: React.ReactNode }) => (
-  <React.Suspense
-    fallback={
-      fallback ?? (
-        <span aria-hidden className={cn("inline-block size-4", className)} />
-      )
-    }
-  >
-    <ResolvedIcon className={className} {...props} />
-  </React.Suspense>
-);
+}: DynamicIconProps & { fallback?: React.ReactNode }) => {
+  const collector = React.use(LucideIconCollectorContext);
+  const icon = React.useSyncExternalStore(
+    subscribeLucideIcons,
+    () => readLucideIcon(name),
+    () => (collector ? readLucideIcon(name) : undefined),
+  );
+
+  React.useEffect(() => {
+    if (icon === undefined) void loadLucideIcon(name);
+  }, [icon, name]);
+
+  if (icon === undefined) {
+    return (
+      <>
+        {fallback ?? (
+          <span aria-hidden className={cn("inline-block size-4", className)} />
+        )}
+      </>
+    );
+  }
+
+  collector?.collect(name, icon);
+
+  if (icon === null) return null;
+
+  return <Icon className={className} icon={icon} {...props} />;
+};

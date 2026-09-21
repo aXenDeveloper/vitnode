@@ -8,7 +8,7 @@ import type { DataTableNavigation } from "@/components/table/navigation";
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { buttonVariants } from "@/components/ui/button";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 import { staffCreateHref } from "@/views/admin/views/core/staff/staff-model";
 import { StaffTableContent } from "@/views/admin/views/core/staff/table/staff-table-content";
@@ -58,14 +58,14 @@ export const AdminStaffRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_STAFF_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <AdminStaffPermissionGate {...adminStaffPermissions(type).create}>
             <Link className={buttonVariants()} to={staffCreateHref(type)}>
               <PlusIcon />
               {createLabel}
             </Link>
           </AdminStaffPermissionGate>
-        </HeaderContent>
+        </PageTitle>
 
         <DataTableNavigationProvider value={navigation}>
           <StaffTableContent data={data} onDelete={onDelete} type={type} />

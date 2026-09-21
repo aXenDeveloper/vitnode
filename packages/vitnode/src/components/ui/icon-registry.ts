@@ -1,5 +1,6 @@
 import type { LucideIconData } from "lucide-react";
-import type React from "react";
+
+import React from "react";
 
 import {
   componentNameToIconName,
@@ -16,6 +17,13 @@ export type LucideIconComponent = React.ComponentType<{
 export interface LucideIconRegistry {
   get: (name: string) => LucideIconComponent | undefined;
   names: string[];
+}
+
+export type LucideIconSnapshot = Record<string, LucideIconData | null>;
+
+export interface LucideIconCollector {
+  collect: (name: string, icon: LucideIconData | null) => void;
+  snapshot: () => LucideIconSnapshot;
 }
 
 type LucideIconLoader = () => Promise<{ __iconData?: LucideIconData }>;
@@ -46,24 +54,98 @@ const loadIconLoaders = (): Promise<Map<string, LucideIconLoader>> => {
   return loaders;
 };
 
-const icons = new Map<string, Promise<LucideIconData | undefined>>();
+const icons = new Map<string, LucideIconData | null>();
+const requests = new Map<string, Promise<LucideIconData | undefined>>();
+const listeners = new Set<() => void>();
+let everyIconLoaded = false;
+
+const notify = () => {
+  for (const listener of listeners) listener();
+};
+
+export const readLucideIcon = (
+  name: string,
+): LucideIconData | null | undefined => {
+  const icon = icons.get(name);
+
+  if (icon !== undefined) return icon;
+
+  return everyIconLoaded ? null : undefined;
+};
+
+export const subscribeLucideIcons = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
+export const seedLucideIcons = (seeded: LucideIconSnapshot): void => {
+  for (const [name, icon] of Object.entries(seeded)) icons.set(name, icon);
+
+  notify();
+};
 
 // eslint-disable-next-line @typescript-eslint/promise-function-async
 export const loadLucideIcon = (name: string) => {
-  const cached = icons.get(name);
+  const cached = requests.get(name);
 
   if (cached) return cached;
 
-  const pending = loadIconLoaders().then(async resolved => {
-    const loader = resolved.get(name);
+  const known = readLucideIcon(name);
+  const request =
+    known === undefined
+      ? loadIconLoaders().then(async resolved => {
+          const loader = resolved.get(name);
+          const icon = loader ? (await loader()).__iconData : undefined;
 
-    return loader ? (await loader()).__iconData : undefined;
+          icons.set(name, icon ?? null);
+          notify();
+
+          return icon;
+        })
+      : Promise.resolve(known ?? undefined);
+
+  requests.set(name, request);
+
+  return request;
+};
+
+let everyIcon: Promise<void> | undefined;
+
+// eslint-disable-next-line @typescript-eslint/promise-function-async
+export const preloadAllLucideIcons = (): Promise<void> => {
+  everyIcon ??= loadIconLoaders().then(async resolved => {
+    const loaded = await Promise.all(
+      [...resolved.entries()].map(
+        async ([name, loader]) => [name, (await loader()).__iconData] as const,
+      ),
+    );
+
+    for (const [name, icon] of loaded) if (icon) icons.set(name, icon);
+
+    everyIconLoaded = true;
+    notify();
   });
 
-  icons.set(name, pending);
-
-  return pending;
+  return everyIcon;
 };
+
+export const createLucideIconCollector = (): LucideIconCollector => {
+  const collected = new Map<string, LucideIconData | null>();
+
+  return {
+    collect: (name, icon) => {
+      collected.set(name, icon);
+    },
+    snapshot: () => Object.fromEntries(collected),
+  };
+};
+
+export const LucideIconCollectorContext = React.createContext<
+  LucideIconCollector | undefined
+>(undefined);
 
 let registry: Promise<LucideIconRegistry> | undefined;
 

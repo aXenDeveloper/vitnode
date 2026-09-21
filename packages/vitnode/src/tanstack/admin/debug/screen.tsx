@@ -4,7 +4,7 @@ import React from "react";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { CONFIG_PLUGIN } from "@/config";
 import { ClearCacheAction } from "@/views/admin/views/core/debug/actions/clear-cache/clear-cache";
 import { QueueViewContent } from "@/views/admin/views/core/debug/queue/queue-view-content";
@@ -55,7 +55,7 @@ export const AdminDebugRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_DEBUG_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <AdminPermissionGate
             module={DEBUG_MODULE}
             permission="can_clear_cache"
@@ -63,12 +63,12 @@ export const AdminDebugRouteContent = ({
           >
             <ClearCacheAction onClearCache={onClearCache} />
           </AdminPermissionGate>
-        </HeaderContent>
+        </PageTitle>
 
-        <HeaderContent className="mt-8" h2={queueTitle} />
+        <PageTitle className="mt-8" h2={queueTitle} />
         <QueueViewContent data={queue} />
 
-        <HeaderContent className="mt-8" h2={logsTitle} />
+        <PageTitle className="mt-8" h2={logsTitle} />
         <DataTableNavigationProvider value={navigation}>
           <SystemLogsContent data={logs} />
         </DataTableNavigationProvider>

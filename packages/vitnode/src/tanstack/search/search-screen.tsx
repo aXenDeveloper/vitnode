@@ -1,4 +1,4 @@
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { SearchControlsContent } from "@/views/search/search-controls-content";
 
 import type { SearchRouteData } from "./search-route";
@@ -18,7 +18,7 @@ export const SearchRouteContent = ({
   return (
     <RouteMessages namespaces={SEARCH_NAMESPACES}>
       <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
-        <HeaderContent desc={description} h1={title} />
+        <PageTitle desc={description} h1={title} />
 
         <SearchControlsContent
           defaultParams={params}

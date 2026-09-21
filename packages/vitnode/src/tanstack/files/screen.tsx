@@ -4,7 +4,7 @@ import React from "react";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { MyFilesTableContent } from "@/views/files/my-files-table-content";
 
 import type { MyFilesNavigate, MyFilesRouteData } from "./route";
@@ -47,7 +47,7 @@ export const MyFilesRouteContent = ({
   return (
     <RouteMessages namespaces={MY_FILES_NAMESPACES}>
       <div className="container mx-auto flex flex-col gap-6 p-4">
-        <HeaderContent desc={description} h1={title} />
+        <PageTitle desc={description} h1={title} />
 
         <DataTableNavigationProvider value={navigation}>
           {/*

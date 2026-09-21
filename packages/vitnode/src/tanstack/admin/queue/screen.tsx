@@ -4,7 +4,7 @@ import React from "react";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { QueueTableContent } from "@/views/admin/views/core/advanced/queue/queue-table-content";
 
 import type { AdminTableNavigate } from "../table-search";
@@ -46,7 +46,7 @@ export const AdminQueueRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_QUEUE_NAMESPACES}>
       <div className="p-4">
-        <HeaderContent desc={description} h1={title} />
+        <PageTitle desc={description} h1={title} />
 
         <DataTableNavigationProvider value={navigation}>
           <QueueTableContent data={data} />

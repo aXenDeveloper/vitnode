@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { CreateStaffFormContent } from "@/views/admin/views/core/staff/create/create-staff-form-content";
 import { staffEditHref } from "@/views/admin/views/core/staff/staff-model";
 import { searchAdminUsersInBrowser } from "@/views/admin/views/core/users/list/users-query";
@@ -32,7 +32,7 @@ export const AdminStaffCreateRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_STAFF_CREATE_NAMESPACES}>
       <div className="mx-auto max-w-4xl p-4">
-        <HeaderContent desc={description} h1={title}>
+        <PageTitle desc={description} h1={title}>
           <Link
             className={buttonVariants({ variant: "outline" })}
             to={backHref}
@@ -40,7 +40,7 @@ export const AdminStaffCreateRouteContent = ({
             <ArrowLeftIcon />
             {backLabel}
           </Link>
-        </HeaderContent>
+        </PageTitle>
 
         <CreateStaffFormContent
           onCreate={onCreate}

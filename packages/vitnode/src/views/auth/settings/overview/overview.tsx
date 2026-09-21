@@ -6,7 +6,7 @@ import type { ProfileRole } from "@/views/profile/profile-query";
 
 import { Avatar } from "@/components/avatar";
 import { RoleFormatContent } from "@/components/role-format-content";
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { displayNameOf } from "@/lib/user-personal-information";
 import { SelfUserImageDialog } from "@/views/profile/images/self-image-dialog";
 
@@ -45,7 +45,7 @@ export const OverviewSettingsContent = ({
 
   return (
     <>
-      <HeaderContent desc={t("desc")} h2={tNav("overview")} />
+      <PageTitle desc={t("desc")} h2={tNav("overview")} />
 
       <div className="flex flex-col gap-4 sm:gap-6">
         <section className="border-border flex flex-col items-center gap-4 rounded-xl border p-4 text-center sm:flex-row sm:p-5 sm:text-start">

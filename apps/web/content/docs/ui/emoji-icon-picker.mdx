@@ -121,6 +121,30 @@ import { DynamicIcon } from '@vitnode/core/components/ui/dynamic-icon'
 ;<DynamicIcon className="size-5" name="shield-check" />
 ```
 
+`DynamicIcon` is server-rendered with no Suspense boundary around it, so the
+SVG is already in the first HTML and never pops in after hydration. The server
+keeps every Lucide icon warm in memory, and only the handful of icons a page
+actually rendered ride along to the browser inside the router's dehydrated
+state - the browser bundle never ships the icon library. On a client-side
+navigation an icon that is not cached yet renders a same-size placeholder and
+swaps in once its tiny chunk arrives.
+
+All of that hangs off one line in `getRouter()`, which the scaffold already
+includes:
+
+```tsx title="src/router.tsx"
+import { setupLucideIconSsr } from '@vitnode/core/tanstack/icons'
+
+const router = createTanStackRouter({ routeTree })
+
+// [!code ++]
+setupLucideIconSsr({ router })
+setupRouterSsrQueryIntegration({ queryClient, router })
+```
+
+Skip it and `DynamicIcon` still works - it just goes back to fetching icons in
+the browser after the page has loaded.
+
 Both are decorative by default (`aria-hidden`), because they sit next to the
 text they illustrate. If an icon is the only content of a control, give that
 control its own `aria-label`.

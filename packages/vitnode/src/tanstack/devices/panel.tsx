@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTranslations } from "use-intl";
 
-import { HeaderContent } from "@/components/ui/header-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { DevicesContent } from "@/views/auth/settings/devices/devices-content";
 import { DevicesListSkeleton } from "@/views/auth/settings/devices/devices-list-skeleton";
 import { devicesQueryOptions } from "@/views/auth/settings/devices/devices-query";
@@ -11,7 +11,7 @@ import { useRevokeDeviceCallback } from "./query";
 const DevicesHeading = () => {
   const t = useTranslations("core.auth.settings.devices");
 
-  return <HeaderContent desc={t("desc")} h2={t("title")} />;
+  return <PageTitle desc={t("desc")} h2={t("title")} />;
 };
 
 export const DevicesPanelPending = () => (
