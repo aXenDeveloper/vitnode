@@ -4,6 +4,7 @@ const FIRST = "first";
 const LAST = "last";
 /** The row the next page starts from. Meaningless without `first` or `last`. */
 const CURSOR = "cursor";
+const PAGE = "page";
 
 export const DEFAULT_TABLE_PAGE_SIZE = 10;
 
@@ -27,6 +28,32 @@ const resetPagination = (params: URLSearchParams): void => {
   params.delete(CURSOR);
   params.delete(FIRST);
   params.delete(LAST);
+  params.delete(PAGE);
+};
+
+export const readTablePage = (search: TableSearch): number => {
+  const page = Number(copy(search).get(PAGE));
+
+  return Number.isInteger(page) && page > 0 ? page : 1;
+};
+
+export const withTablePageNumber = (
+  search: TableSearch,
+  page: number | string,
+): string => {
+  const params = copy(search);
+  const next = Math.trunc(Number(page));
+
+  if (Number.isFinite(next) && next > 1) {
+    params.set(PAGE, `${next}`);
+  } else {
+    params.delete(PAGE);
+  }
+
+  params.delete(CURSOR);
+  params.delete(LAST);
+
+  return params.toString();
 };
 
 /** The column and direction the table is sorted by right now. */
@@ -84,6 +111,7 @@ export const withTablePageSize = (
   params.set(FIRST, `${pageSize}`);
   params.delete(LAST);
   params.delete(CURSOR);
+  params.delete(PAGE);
 
   return params.toString();
 };

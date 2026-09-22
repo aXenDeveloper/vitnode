@@ -32,5 +32,9 @@ export const core_moderators_permissions = camelCase.table.withRLS(
   t => [
     index("core_moderators_permissions_role_id_idx").on(t.roleId),
     index("core_moderators_permissions_user_id_idx").on(t.userId),
+    index("core_moderators_permissions_updated_at_id_idx").on(
+      t.updatedAt,
+      t.id,
+    ),
   ],
 );

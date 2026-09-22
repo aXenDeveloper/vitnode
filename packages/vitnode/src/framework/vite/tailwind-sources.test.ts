@@ -17,14 +17,17 @@ const installed = (appRoot: string, packageName: string): null | string =>
 const prepared = async ({
   readBuildOutput = installed,
   readPluginIds = vi.fn(async () => Promise.resolve(["@acme/blog"])),
+  stylesheets = {},
 }: {
   readBuildOutput?: (appRoot: string, packageName: string) => null | string;
   readPluginIds?: () => Promise<string[]>;
+  stylesheets?: Record<string, string>;
 } = {}): Promise<{ plugin: Plugin; transform: TransformHook }> => {
   const plugin = vitNodeTailwindSources({
     appRoot: "/app",
     readBuildOutput,
     readPluginIds,
+    readStylesheet: path => stylesheets[path] ?? null,
   });
 
   await (plugin.configResolved as () => Promise<void>)();
@@ -68,6 +71,55 @@ describe("the Tailwind sources a VitNode app scans", () => {
 
     expect(
       transform('@import "./theme.css";', "/app/src/theme.css"),
+    ).toBeNull();
+  });
+
+  it("scans the same sources for a route stylesheet built on the app one", async () => {
+    const { transform } = await prepared({
+      stylesheets: { "/app/src/styles.css": APP_CSS },
+    });
+
+    expect(
+      sourcesIn(
+        transform(
+          '@import "../styles.css";\n@import "fumadocs-ui/css/preset.css";\n',
+          "/app/src/docs/docs.css",
+        )?.code ?? "",
+      ),
+    ).toEqual([
+      "/app/node_modules/@vitnode/core/dist/src/**/*.js",
+      "/app/node_modules/@acme/blog/dist/src/**/*.js",
+    ]);
+  });
+
+  it("follows a chain of relative imports to the Tailwind one", async () => {
+    const { transform } = await prepared({
+      stylesheets: {
+        "/app/src/app.css": '@import "./base/tailwind.css";',
+        "/app/src/base/tailwind.css": APP_CSS,
+      },
+    });
+
+    expect(
+      transform('@import "./app.css";', "/app/src/route.css"),
+    ).not.toBeNull();
+  });
+
+  it("gives up on a stylesheet that imports itself", async () => {
+    const { transform } = await prepared({
+      stylesheets: { "/app/src/loop.css": '@import "./loop.css";' },
+    });
+
+    expect(transform('@import "./loop.css";', "/app/src/loop.css")).toBeNull();
+  });
+
+  it("leaves a package stylesheet's imports to that package", async () => {
+    const { transform } = await prepared({
+      stylesheets: { "/app/src/styles.css": APP_CSS },
+    });
+
+    expect(
+      transform('@import "fumadocs-ui/css/preset.css";', "/app/src/docs.css"),
     ).toBeNull();
   });
 

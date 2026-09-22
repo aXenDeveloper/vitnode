@@ -67,6 +67,7 @@ const createDbMock = (
       from: (value: unknown) => record("from", value),
       leftJoin: (value: unknown) => record("leftJoin", value),
       limit: (value: unknown) => record("limit", value),
+      offset: (value: unknown) => record("offset", value),
       orderBy: (value: unknown) => record("orderBy", value),
       returning: (value: unknown) => record("returning", value),
       set: (value: unknown) => record("set", value),

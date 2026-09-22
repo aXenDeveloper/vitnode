@@ -59,6 +59,7 @@ export const core_users = camelCase.table.withRLS(
     index("core_users_email_idx").on(t.email),
     index("core_users_avatar_id_idx").on(t.avatarId),
     index("core_users_cover_id_idx").on(t.coverId),
+    index("core_users_created_at_id_idx").on(t.createdAt, t.id),
   ],
 );
 

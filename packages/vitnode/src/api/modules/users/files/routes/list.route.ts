@@ -76,7 +76,7 @@ export const listUserFilesRoute = buildRoute({
         eq(core_files.userId, user.id),
         notAttachedAsUserImage(c.get("db")),
       ),
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -93,7 +93,8 @@ export const listUserFilesRoute = buildRoute({
           .from(core_files)
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_files,
       orderBy: {
         column: query.orderBy

@@ -65,7 +65,9 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
     };
     edges: T[];
     filters?: FilterDataTable[];
+    header?: React.ReactNode;
     id: string;
+    rowOpens?: (row: T) => void;
     order: {
       columns?: (keyof T)[];
       defaultOrder: {
@@ -81,10 +83,12 @@ const SKELETON_CELL_WIDTHS = ["w-full", "w-3/4", "w-1/2", "w-5/6", "w-2/3"];
 
 export const DataTableSkeleton = ({
   columns,
+  header = false,
   rows = 6,
   toolbar = false,
 }: {
   columns: number;
+  header?: boolean;
   rows?: number;
   toolbar?: boolean;
 }) => {
@@ -92,17 +96,24 @@ export const DataTableSkeleton = ({
   const rowIds = Array.from({ length: rows }, (_, i) => `s-row-${i}`);
 
   return (
-    <div className="space-y-4">
-      {toolbar && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="flex-1">
-            <Skeleton className="h-9 w-full" />
-          </div>
+    // The surface the table settles into, band for band — see `ContentDataTable`.
+    <div className="bg-card ring-foreground/10 overflow-hidden rounded-xl shadow-xs ring-1">
+      {header && (
+        <div className="border-foreground/10 flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-8 w-40" />
         </div>
       )}
 
-      <div className="[&>div]:bg-card [&>div]:rounded-md [&>div]:border">
-        <Table className="min-w-full">
+      {toolbar && (
+        <div className="border-foreground/10 flex flex-wrap items-center gap-2 border-b px-4 py-3">
+          <Skeleton className="h-9 w-full sm:w-80" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+      )}
+
+      <div>
+        <Table className="min-w-full [&_td]:px-4 [&_td]:py-3 sm:[&_td]:px-6 [&_th]:px-4 sm:[&_th]:px-6">
           <TableHeader className="bg-muted/60">
             <TableRow>
               {headerIds.map((hid, i) => (
@@ -138,7 +149,9 @@ export const DataTableSkeleton = ({
         </Table>
       </div>
 
-      <div className="flex w-full flex-col-reverse items-center justify-end gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
+      <div className="border-foreground/10 flex w-full flex-col-reverse items-center justify-between gap-4 border-t px-4 py-3 sm:flex-row sm:gap-8 sm:px-6">
+        <Skeleton className="h-4 w-24" />
+
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8">
           <Skeleton className="h-8 w-[4.5rem]" />
 

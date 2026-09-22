@@ -353,7 +353,7 @@ export const buildContentRoutes = <
       // The whole query string goes through both schemas, each of which reads
       // only the keys it owns:
       //
-      //   paginationQuery   cursor, first, last, order, orderBy, search
+      //   paginationQuery   cursor, first, last, order, orderBy, page, search
       //   schemas.filters   one entry per declared filterable field
       //
       // Neither is strict, so anything else - a stale bookmark, a tracking
@@ -361,7 +361,7 @@ export const buildContentRoutes = <
       // exception: it is a literal enum, so a *present* but unknown column is a
       // 400 at validation time.
       const raw = c.req.query();
-      const { cursor, first, last, order, orderBy, search } =
+      const { cursor, first, last, order, orderBy, page, search } =
         paginationQuery.parse(raw);
       // Every value is coerced here (query strings carry numbers and booleans as
       // text), and an unsupported field cannot survive the parse - so this path
@@ -381,7 +381,7 @@ export const buildContentRoutes = <
           column: orderBy as ContentOrderableFieldName<TDefinition>,
           order,
         },
-        query: { cursor, first, last, search },
+        query: { cursor, first, last, page, search },
       });
 
       const withTranslations = await withRowTranslations(c, data, raw.locale);

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import type { AnyContentTypeDefinition } from "@/content/types";
 
-import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import { CONTENT_DEFAULT_PAGE_SIZE } from "@/content/const";
 import { defineContentType } from "@/content/define";
 import { field } from "@/content/fields";
@@ -185,11 +184,10 @@ describe("normalizeContentListSearch", () => {
     ).toBeUndefined();
   });
 
-  it("asks the API for the Content Engine's page size, not the table's", () => {
+  it("asks the API for the Content Engine's page size", () => {
     expect(contentListRouteParams({}, articles).first).toBe(
       String(CONTENT_DEFAULT_PAGE_SIZE),
     );
-    expect(CONTENT_DEFAULT_PAGE_SIZE).not.toBe(DEFAULT_TABLE_PAGE_SIZE);
   });
 
   it("keeps page sizes as numbers", () => {

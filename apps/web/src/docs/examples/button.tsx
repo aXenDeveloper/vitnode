@@ -1,6 +1,15 @@
 import { Button } from '@vitnode/core/components/ui/button'
 import { Card } from '@vitnode/core/components/ui/card'
-import { ArrowRight, CheckCircle, Eye, Home, Star, Trash2 } from 'lucide-react'
+import {
+  ArrowRight,
+  CheckCircle,
+  CircleCheckIcon,
+  Eye,
+  Home,
+  Star,
+  Trash2,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import React from 'react'
 
 export default function ButtonExample() {
@@ -27,6 +36,14 @@ export default function ButtonExample() {
       <Button isLoading={isLoading} variant="link">
         <ArrowRight />
         Link
+      </Button>
+      <Button isLoading={isLoading} variant="success">
+        <CircleCheckIcon />
+        Success
+      </Button>
+      <Button isLoading={isLoading} variant="warning">
+        <TriangleAlertIcon />
+        Warning
       </Button>
       <Button isLoading={isLoading} size="sm" variant="destructive">
         <Trash2 />

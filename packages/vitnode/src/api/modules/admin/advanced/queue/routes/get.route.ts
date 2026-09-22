@@ -80,7 +80,7 @@ export const getQueueTasksRoute = buildRoute({
       // reset links included. The response schema above never admitted to
       // returning it, and nothing validates a response against that schema, so
       // the extra column simply travelled.
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -102,7 +102,8 @@ export const getQueueTasksRoute = buildRoute({
           .from(core_queue)
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_queue,
       orderBy: {
         column: query.orderBy

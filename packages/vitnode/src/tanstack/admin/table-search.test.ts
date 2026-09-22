@@ -5,6 +5,7 @@ import type { AdminTableContract } from "@/views/admin/table/params";
 import { cronRouteParams, normalizeCronRouteSearch } from "./cron/route-search";
 import { normalizeSearchIndexRouteSearch } from "./search-index/route-search";
 import {
+  adminTableRouteParams,
   adminTableSearchFrom,
   adminTableSearchParams,
   normalizeAdminTableSearch,
@@ -126,5 +127,56 @@ describe("the search index screen's single parameter", () => {
 
   it("ignores a term the router parsed into something else", () => {
     expect(normalizeSearchIndexRouteSearch({ search: 42 })).toEqual({});
+  });
+});
+
+describe("a numbered page in the URL", () => {
+  it("survives validation", () => {
+    expect(normalizeAdminTableSearch({ page: 4 }, contract)).toEqual({
+      page: 4,
+    });
+  });
+
+  it("is the URL saying nothing on page one", () => {
+    expect(normalizeAdminTableSearch({ page: 1 }, contract)).toEqual({});
+  });
+
+  it("is dropped when it is not a page number", () => {
+    for (const page of [0, -3, "abc", 1.5, {}, null]) {
+      expect(normalizeAdminTableSearch({ page }, contract)).toEqual({});
+    }
+  });
+
+  it("wins over a cursor, which the API refuses beside it", () => {
+    expect(
+      normalizeAdminTableSearch({ cursor: "eyJpZCI6MX0", page: 3 }, contract),
+    ).toEqual({ page: 3 });
+  });
+
+  it("wins over a backwards walk, which the API refuses beside it", () => {
+    const search = normalizeAdminTableSearch({ last: 20, page: 3 }, contract);
+
+    expect(search.last).toBeUndefined();
+    expect(search.page).toBe(3);
+  });
+
+  it("stays out of the URL beyond the page itself", () => {
+    expect(
+      Object.fromEntries(adminTableSearchParams({ page: 3 }, contract)),
+    ).toEqual({ page: "3" });
+  });
+
+  it("asks the API for the page and the size it is counting in", () => {
+    expect(adminTableRouteParams({ page: 3 }, contract)).toEqual({
+      first: "10",
+      page: "3",
+    });
+  });
+
+  it("is carried back out of a control's query string", () => {
+    expect(adminTableSearchFrom("page=5&first=20", contract)).toEqual({
+      first: 20,
+      page: 5,
+    });
   });
 });

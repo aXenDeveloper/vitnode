@@ -4,12 +4,14 @@ import {
   DEFAULT_TABLE_PAGE_SIZE,
   readTableFilter,
   readTableOrder,
+  readTablePage,
   readTablePageSize,
   readTableSearch,
   toggleTableOrder,
   withTableFilter,
   withTableOrder,
   withTablePage,
+  withTablePageNumber,
   withTablePageSize,
   withTableSearch,
 } from "./url-state";
@@ -161,7 +163,7 @@ describe("changing the page size", () => {
 
   it("keeps the sort and the search", () => {
     expect(withTablePageSize(FULL, 40)).toBe(
-      "search=foo&page=3&tab=media&orderBy=name&order=asc&first=40",
+      "search=foo&tab=media&orderBy=name&order=asc&first=40",
     );
   });
 });
@@ -232,6 +234,16 @@ describe("paging", () => {
       "search=foo&page=3&tab=media&orderBy=name&order=asc&first=20&cursor=end-1",
     );
   });
+
+  it("returns to the first page when the page size changes", () => {
+    expect(readTablePage(withTablePageSize(FULL, 40))).toBe(1);
+  });
+
+  it("returns to the first page when a filter changes", () => {
+    expect(
+      readTablePage(withTableFilter(FULL, { id: "roles", values: ["1"] })),
+    ).toBe(1);
+  });
 });
 
 describe("searching", () => {
@@ -289,7 +301,7 @@ describe("filtering", () => {
 
   it("keeps the sort and the search", () => {
     expect(withTableFilter(FULL, { id: "roles", values: ["1"] })).toBe(
-      "search=foo&page=3&tab=media&orderBy=name&order=asc&roles=1",
+      "search=foo&tab=media&orderBy=name&order=asc&roles=1",
     );
   });
 
@@ -309,6 +321,7 @@ describe("the helpers are pure", () => {
     withTableOrder(params, { column: "size", order: "desc" });
     withTablePageSize(params, 40);
     withTablePage(params, { cursor: "x", direction: "next", pageSize: 40 });
+    withTablePageNumber(params, 5);
     withTableSearch(params, "bar");
     withTableFilter(params, { id: "roles", values: ["1"] });
 

@@ -108,7 +108,7 @@ export const listRolesAdminRoute = buildRoute({
           )
         : undefined,
       primaryCursor: core_roles.id,
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -134,7 +134,8 @@ export const listRolesAdminRoute = buildRoute({
           .from(core_roles)
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_roles,
       orderBy: {
         column: query.orderBy

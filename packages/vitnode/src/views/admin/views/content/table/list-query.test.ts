@@ -153,6 +153,9 @@ describe("one page, as the table model", () => {
     ],
     pageInfo: {
       count: 1,
+      currentPage: 1,
+      pageSize: 25,
+      totalPages: 1,
       endCursor: "b",
       hasNextPage: false,
       hasPreviousPage: false,

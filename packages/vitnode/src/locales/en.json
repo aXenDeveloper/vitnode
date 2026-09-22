@@ -394,7 +394,10 @@
           "unreadable": "This image could not be read. Try a different file.",
           "too_large_after_crop": "The cropped image is {size}, which is over the {max} limit. Zoom in or pick a smaller image."
         }
-      }
+      },
+      "showing_range": "Showing {from}–{to} of {total}",
+      "rows_per_page": "Rows per page",
+      "page_of": "Page {page} of {total}"
     },
     "navigation": {
       "discover": {

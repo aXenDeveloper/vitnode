@@ -1,12 +1,14 @@
 ---
 title: Pagination
-description: Add stable cursor pagination to a plugin API route and navigate its results from a typed plugin page.
+description: Add stable cursor pagination — or numbered pages — to a plugin API route and navigate its results from a typed plugin page.
 icon: ChevronsRight
 ---
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-VitNode uses cursor-based pagination rather than offset pagination. Cursors ensure stable page boundaries even while records are created or deleted, with zero database performance degradation on large tables.
+VitNode pages with cursors by default. Cursors keep page boundaries stable even while records are created or deleted, and they cost the same whether you are on page 2 or page 20,000.
+
+When a list needs numbered pages — 1, 2, 3 … 38, the kind admin tables show — the same route also accepts `?page=`. You do not have to choose up front: one route serves both.
 
 ## Quick start
 
@@ -41,14 +43,15 @@ export const getPostsRoute = buildRoute({
       primaryCursor: blog_posts.id,
       table: blog_posts,
       orderBy: { column: blog_posts.createdAt, order: 'desc' },
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get('db')
           .select({ ...getColumns(blog_posts), ...cursorSelection })
           .from(blog_posts)
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
     })
 
     return c.json(data)
@@ -56,18 +59,37 @@ export const getPostsRoute = buildRoute({
 })
 ```
 
-The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pageInfo }`.
+The route automatically accepts `?cursor=...&first=10` (cursor walk) or `?page=3&first=10` (numbered page), and returns `{ edges, pageInfo }`.
+
+<Callout type="warn">
+  Always spread `offset` into the statement. Without it, `?page=` silently
+  returns the first page over and over.
+</Callout>
 
 </Step>
 </Steps>
 
-## Why Cursors Over Offsets
+## Cursors or numbered pages?
 
-| Metric                        | `LIMIT ... OFFSET`              | Keyset Cursor                          |
+| Metric                        | `?page=` (offset)               | `?cursor=` (keyset)                    |
 | ----------------------------- | ------------------------------- | -------------------------------------- |
 | Insert / Delete mid-walk      | Rows shift, duplicate, or skip  | Unaffected (stable pointer)            |
-| Deep pagination (Page 10,000) | Full table scan up to offset    | Single indexed B-tree lookup           |
+| Deep pagination (page 10,000) | Walks every skipped row         | Single indexed B-tree lookup           |
 | Sort order stability          | Prone to non-deterministic ties | Guaranteed by primaryCursor tiebreaker |
+| Jump to an arbitrary page     | Yes                             | No — you can only step                 |
+| "Page 4 of 38"                | Yes                             | No — there is no page number           |
+
+Rule of thumb: **numbered pages for admin tables**, where people want page 7 and the lists are short; **cursors for public feeds and infinite scroll**, where depth is unbounded and nobody counts pages.
+
+### Index the column you order by
+
+Both modes need an index on the ordered tuple, and neither is fast without one:
+
+```ts title="plugins/blog/src/database/posts.ts"
+index('blog_posts_created_at_id_idx').on(t.createdAt, t.id)
+```
+
+The cursor predicate is emitted as a row comparison — `(createdAt, id) < ($1, $2)` — precisely so Postgres can seek straight to the boundary on that index. Measured on a million rows, the seek reaches the hundred-thousandth row in 0.19ms. Without the index, the same query scans and sorts the whole table on every page.
 
 ---
 
@@ -82,7 +104,7 @@ The route automatically accepts `?cursor=...&first=10` and returns `{ edges, pag
     },
     params: {
       description:
-        'Validated query parameters: { query: { cursor, first, last, search } }.',
+        'Validated query parameters: { query: { cursor, first, last, page, search } }.',
       required: true,
       type: 'object',
     },
@@ -163,6 +185,8 @@ request.
   ],
   "pageInfo": {
     "totalCount": 120,
+    "totalPages": 12,
+    "currentPage": 1,
     "count": 10,
     "hasNextPage": true,
     "hasPreviousPage": false,
@@ -177,6 +201,15 @@ request.
     totalCount: {
       description: 'Total rows matching criteria across all pages.',
       type: 'number',
+    },
+    totalPages: {
+      description: 'How many numbered pages totalCount divides into.',
+      type: 'number',
+    },
+    currentPage: {
+      description:
+        'The page being shown, clamped onto the last one if you ask past the end. Null whenever the walk is by cursor.',
+      type: 'number | null',
     },
     count: { description: 'Number of rows in current page.', type: 'number' },
     hasNextPage: {

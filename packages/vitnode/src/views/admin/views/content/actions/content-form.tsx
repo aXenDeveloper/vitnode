@@ -398,14 +398,12 @@ const ContentFormFields = ({
       // MUST NOT be async: `AutoForm` calls this to get an element, and an
       // async function hands it a fresh Promise every render - React 19
       // suspends on promise children, so the dialog spins forever.
-      // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
       component: props => {
-        const override = fieldOverrides[fieldSpec.name];
-        if (override) {
-          return override({
-            ...props,
-            multiLang: fieldSpec.localized === true,
-          });
+        const Override = fieldOverrides[fieldSpec.name];
+        if (Override) {
+          return (
+            <Override {...props} multiLang={fieldSpec.localized === true} />
+          );
         }
 
         return (

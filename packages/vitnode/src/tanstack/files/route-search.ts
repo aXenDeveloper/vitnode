@@ -17,6 +17,7 @@ export interface MyFilesRouteSearch {
   last?: number;
   order?: MyFilesOrder;
   orderBy?: MyFilesOrderBy;
+  page?: number;
   search?: string;
 }
 
@@ -28,6 +29,7 @@ const rawParamsOf = (input: UncheckedMyFilesSearch): RawMyFilesParams => ({
   first: asSearchValue(input.first),
   last: asSearchValue(input.last),
   order: asSearchValue(input.order),
+  page: asSearchValue(input.page),
   orderBy: asSearchValue(input.orderBy),
   search: asSearchValue(input.search),
 });
@@ -39,11 +41,12 @@ export const myFilesRouteParams = (
 export const normalizeMyFilesRouteSearch = (
   input: UncheckedMyFilesSearch,
 ): MyFilesRouteSearch => {
-  const { cursor, first, last, order, orderBy, search } =
+  const { cursor, first, last, order, orderBy, page, search } =
     myFilesRouteParams(input);
 
   return {
     ...(cursor === undefined ? {} : { cursor }),
+    ...(page === undefined ? {} : { page: Number(page) }),
     // See above: the default page size is the URL saying nothing.
     ...(first === undefined || first === DEFAULT_PAGE_SIZE
       ? {}

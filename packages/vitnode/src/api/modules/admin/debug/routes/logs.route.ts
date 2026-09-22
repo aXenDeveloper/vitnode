@@ -66,7 +66,7 @@ export const logsDebugAdminRoute = buildRoute({
         query,
       },
       primaryCursor: core_logs.id,
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -91,7 +91,8 @@ export const logsDebugAdminRoute = buildRoute({
           .leftJoin(core_users, eq(core_users.id, core_logs.userId))
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_logs,
       orderBy: {
         column: query.orderBy ? core_logs[query.orderBy] : core_logs.createdAt,

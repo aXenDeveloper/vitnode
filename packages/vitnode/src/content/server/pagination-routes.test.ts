@@ -121,6 +121,28 @@ describe("pagination input a list route refuses", () => {
     );
   });
 
+  it("carries a numbered page through to the service", async () => {
+    const { app, findMany } = harness();
+
+    const res = await app.request("/?page=3&first=10");
+
+    expect(res.status).toBe(200);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({ first: "10", page: "3" }),
+      }),
+    );
+  });
+
+  it("refuses a page beside a cursor, which mean different things", async () => {
+    const { app, findMany } = harness();
+
+    const res = await app.request("/?page=2&cursor=eyJpZCI6MX0");
+
+    expect(res.status).toBe(400);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it("refuses a legacy numeric cursor on an ordering that is not the identifier", async () => {
     // The exact shape of the old bug, refused where the ordering is known: a
     // bare number says nothing about where `title` was, so honouring it would

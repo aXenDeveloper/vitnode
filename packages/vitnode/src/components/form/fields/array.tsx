@@ -24,6 +24,7 @@ import {
   useFormApi,
   useFormField,
 } from "../../ui/form";
+import { AutoFormFieldSlot } from "../auto-form";
 
 const reconcileRowKeys = (previous: number[], length: number): number[] => {
   if (previous.length >= length) {
@@ -126,22 +127,25 @@ export const AutoFormArray = ({
                       className={fieldDef.className}
                       data-invalid={fieldState.invalid}
                     >
-                      {fieldDef.component({
-                        field,
-                        itemParams:
-                          fieldParams &&
-                          typeof fieldParams === "object" &&
-                          "itemParams" in fieldParams
-                            ? (fieldParams.itemParams as InputParams)
-                            : undefined,
-                        description:
+                      <AutoFormFieldSlot
+                        component={fieldDef.component}
+                        description={
                           typeof fieldParams === "object" &&
                           fieldParams &&
                           "description" in fieldParams &&
                           typeof fieldParams.description === "string"
                             ? fieldParams.description
-                            : undefined,
-                        otherProps: {
+                            : undefined
+                        }
+                        field={field}
+                        itemParams={
+                          fieldParams &&
+                          typeof fieldParams === "object" &&
+                          "itemParams" in fieldParams
+                            ? (fieldParams.itemParams as InputParams)
+                            : undefined
+                        }
+                        otherProps={{
                           isOptional: false,
                           ["aria-invalid"]: fieldState.invalid,
                           enum:
@@ -179,8 +183,8 @@ export const AutoFormArray = ({
                             typeof fieldParams.type === "string"
                               ? fieldParams.type
                               : undefined,
-                        },
-                      })}
+                        }}
+                      />
                     </Field>
                   )}
                 />

@@ -366,6 +366,9 @@ const emptyPage = (): MyFilesPage => ({
   edges: [],
   pageInfo: {
     count: 0,
+    currentPage: null,
+    pageSize: 10,
+    totalPages: 0,
     endCursor: null,
     hasNextPage: false,
     hasPreviousPage: false,

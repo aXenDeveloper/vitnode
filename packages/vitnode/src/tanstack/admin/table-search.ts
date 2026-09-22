@@ -18,6 +18,7 @@ export interface AdminTableRouteSearch<TOrderBy extends string = string> {
   last?: number;
   order?: AdminTableOrder;
   orderBy?: TOrderBy;
+  page?: number;
   search?: string;
   status?: string;
 }
@@ -31,6 +32,7 @@ const rawParamsOf = (
   cursor: asSearchValue(input.cursor),
   first: asSearchValue(input.first),
   last: asSearchValue(input.last),
+  page: asSearchValue(input.page),
   order: asSearchValue(input.order),
   orderBy: asSearchValue(input.orderBy),
   search: asSearchValue(input.search),
@@ -47,11 +49,12 @@ export const normalizeAdminTableSearch = <TOrderBy extends string>(
   input: UncheckedAdminTableSearch<TOrderBy>,
   contract: AdminTableContract<TOrderBy>,
 ): AdminTableRouteSearch<TOrderBy> => {
-  const { cursor, first, last, order, orderBy, search, status } =
+  const { cursor, first, last, order, orderBy, page, search, status } =
     adminTableRouteParams(input, contract);
 
   return {
     ...(cursor === undefined ? {} : { cursor }),
+    ...(page === undefined ? {} : { page: Number(page) }),
     // See above: the default page size is the URL saying nothing.
     ...(first === undefined || first === defaultPageSizeOf(contract)
       ? {}
