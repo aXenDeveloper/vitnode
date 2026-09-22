@@ -77,16 +77,6 @@ export const FilesTableContent = ({
           cell: ({ row }) => formatBytes(row.size),
         },
         {
-          accessorKey: "dimensions",
-          header: t("list.dimensions"),
-          cell: ({ row }) =>
-            row.dimensions ? (
-              `${row.dimensions.width}x${row.dimensions.height}`
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            ),
-        },
-        {
           accessorKey: "user",
           header: t("list.uploadedBy"),
           cell: ({ row }) =>

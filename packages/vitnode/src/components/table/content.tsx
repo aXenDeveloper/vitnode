@@ -139,6 +139,8 @@ export function ContentDataTable<T extends DataTableTMin>({
               "[&_td]:px-3 [&_td]:py-3 [&_th]:px-3",
               "[&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6",
               "[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6",
+              bulkActions &&
+                "[&_td:first-child]:pe-4 sm:[&_td:first-child]:pe-5 [&_th:first-child]:pe-4 sm:[&_th:first-child]:pe-5",
               props.className,
             )}
           >

@@ -2,7 +2,6 @@ import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
 import { field } from "@vitnode/core/content/fields";
 import { defineWidget } from "@vitnode/core/widgets";
-import { widgetFieldsFor } from "@vitnode/core/widgets/block-field";
 
 const calloutFields = {
   body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
@@ -15,8 +14,6 @@ const calloutFields = {
 
 type CalloutData = WidgetData<typeof calloutFields>;
 
-const CalloutField = widgetFieldsFor<typeof calloutFields>();
-
 const tones: Record<string, string> = {
   info: "border-primary/40 bg-primary/5",
   success: "border-success/40 bg-success/5",
@@ -27,16 +24,12 @@ const Callout = ({ data }: WidgetComponentProps<CalloutData>) => (
   <aside
     className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? "info"]}`}
   >
-    <CalloutField name="title">
-      <h2 className="text-base font-semibold text-balance md:text-lg">
-        {data.title}
-      </h2>
-    </CalloutField>
-    <CalloutField name="body">
-      <p className="text-sm leading-relaxed text-pretty md:text-base">
-        {data.body}
-      </p>
-    </CalloutField>
+    <h2 className="text-base font-semibold text-balance md:text-lg">
+      {data.title}
+    </h2>
+    <p className="text-sm leading-relaxed text-pretty md:text-base">
+      {data.body}
+    </p>
   </aside>
 );
 

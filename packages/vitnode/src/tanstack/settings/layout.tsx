@@ -25,6 +25,7 @@ export const SettingsLayoutContent = ({
           footer={<PageWidgetsZone id={SETTINGS_ZONE_IDS.footer} />}
           header={<PageWidgetsZone id={SETTINGS_ZONE_IDS.header} />}
           nav={<SettingsNavContent pathname={pathname} />}
+          pathname={pathname}
         >
           {children}
         </SettingsShellContent>

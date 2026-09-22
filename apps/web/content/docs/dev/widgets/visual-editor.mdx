@@ -6,7 +6,7 @@ icon: MousePointerClick
 
 **Visual Edit Mode** is the part where somebody finally gets to move things around.
 
-A page renders its [content zones](/docs/dev/widgets/content-zones) the way it always has. An authorized moderator opens the user menu in the header, clicks **Edit widgets**, and the _same page_ - same layout, same fonts, same widgets - grows an outline around each zone, a drag handle on each widget and a sidebar that slides in down the right-hand side while the whole site moves over to make room for it. They rearrange, edit text inline, save, and leave. Nobody was sent to a separate admin screen to guess what the result would look like.
+A page renders its [content zones](/docs/dev/widgets/content-zones) the way it always has. An authorized moderator opens the user menu in the header, clicks **Edit widgets**, and the _same page_ - same layout, same fonts, same widgets - grows an outline around each zone, a drag handle on each widget and a sidebar that slides in down the right-hand side while the whole site moves over to make room for it. They rearrange, edit in the sidebar, save, and leave. Nobody was sent to a separate admin screen to guess what the result would look like.
 
 ```text
 public page
@@ -349,8 +349,6 @@ Select a block and its fields appear in the sidebar: text, textarea, number, boo
 
 Typing updates the block on the page **as you type**. There is no Apply button, and no preview pane to compare against, because the page _is_ the preview.
 
-A block that wraps its own rendered text in `<BlockField>` can be typed into from the other end as well - click the heading on the page and edit it there. It is the same `data`, the same reducer and the same Save button, so the two panels never disagree. See [Inline Editing](/docs/dev/widgets/inline-editing).
-
 A block that declares more than one [variant](/docs/dev/widgets/block-variants) gets a **Variant** picker above those fields. Picking one is a separate action from editing content: it keeps the instance's id, leaves `data` untouched, and does not reset a field you were halfway through. A block with one variant, or none, shows no picker - there is nothing to decide. A stored variant the block no longer offers is named in the panel, with the declared ones still offered beside it.
 
 ### Area properties
@@ -594,7 +592,7 @@ Being clear about the edges is more useful than a roadmap.
 | **Live collaboration**            | No shared cursors, no presence, no merging two people's edits to **one** zone. Different zones of one page do merge, and a stale write to the same zone is refused rather than applied - see [two moderators, one page](/docs/dev/widgets/editable-pages#two-moderators-one-page) - but nobody watches anybody else arrange anything in real time. |
 | **File and relation fields**      | The properties panel edits the [field kinds a block may hold](/docs/dev/widgets/defining-a-block#which-fields-a-block-may-hold). Blocks cannot hold uploads or references yet, so neither can the panel.                                                                                                                                           |
 | **Responsive breakpoint editing** | One arrangement, rendered responsively by the blocks themselves. No per-breakpoint layouts.                                                                                                                                                                                                                                                        |
-| **Rich text**                     | A `text` or `textarea` field is a plain string, and it stays one. You can type into it [on the page itself](/docs/dev/widgets/inline-editing) or in the properties panel, but no block field holds bold, links or lists. Tiptap ships in this repository and is deliberately nowhere near a block.                                                 |
+| **Rich text**                     | A `text` or `textarea` field is a plain string, and it stays one. You type into it in the properties panel, and no block field holds bold, links or lists. Tiptap ships in this repository and is deliberately nowhere near a block.                                                                                                               |
 
 Everything in that table is a _later_ decision rather than a closed door - but none of it is built, and none of it is implied by the APIs above.
 

@@ -535,7 +535,6 @@
         },
         "list": {
           "createdAt": "Przesłano",
-          "dimensions": "Wymiary",
           "folder": "Folder",
           "metadata": "Metadane",
           "name": "Nazwa",
@@ -799,14 +798,17 @@
         "title": "Resetowanie hasła"
       },
       "settings": {
-        "desc": "Zarządzaj profilem, bezpieczeństwem i preferencjami konta.",
         "devices": {
-          "browser": "Przeglądarka",
+          "active_now": "Aktywne teraz",
+          "browser_on_os": "{browser} na {os}",
           "current_device": "To urządzenie",
           "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",
           "empty": "Brak aktywnych urządzeń.",
           "ip_address": "Adres IP",
           "last_active": "Ostatnia aktywność",
+          "other_devices": "Inne urządzenia",
+          "others_desc": "Wylogowane urządzenie musi zalogować się ponownie.",
+          "others_empty": "Nie jesteś zalogowany na żadnym innym urządzeniu.",
           "revoke": {
             "action": "Wyloguj urządzenie",
             "confirm": "Wyloguj",
@@ -823,18 +825,21 @@
           "security": "Bezpieczeństwo"
         },
         "overview": {
+          "accountTitle": "Konto",
           "desc": "Twój awatar i dane Twojego konta.",
           "edit": "Edytuj",
           "email": "Adres e-mail",
-          "emailNotVerified": "Niezweryfikowany",
           "firstName": "Imię",
           "headline": "Nagłówek",
           "headlineDesc": "Jedna linijka o Tobie, do {max} znaków.",
           "lastName": "Nazwisko",
           "nickname": "Pseudonim",
-          "personalDialogDesc": "Opowiedz społeczności, kim jesteś. Każde pole jest opcjonalne.",
+          "notSet": "Nie ustawiono",
+          "personalDesc": "Opowiedz społeczności, kim jesteś. Każde pole jest opcjonalne.",
           "personalTitle": "Informacje osobiste",
           "phone": "Telefon",
+          "profileTitle": "Profil",
+          "role": "Rola",
           "save": "Zapisz zmiany",
           "saved": "Informacje osobiste zaktualizowane.",
           "savedDesc": "Twój profil od razu pokazuje nowe dane.",
@@ -945,11 +950,6 @@
     },
     "editor": {
       "edit": "Edytuj",
-      "inline": {
-        "empty": "Dodaj {field}",
-        "invalid": "Ten tekst nie pasuje jeszcze do tego, na co pozwala pole, więc zapis pozostaje zablokowany.",
-        "label": "Edytuj {field} w widżecie {name}"
-      },
       "move": "Przenieś",
       "remove": "Usuń"
     },

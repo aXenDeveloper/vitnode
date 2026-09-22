@@ -10,8 +10,16 @@ import { useRevokeDeviceCallback } from "./query";
 
 const DevicesHeading = () => {
   const t = useTranslations("core.auth.settings.devices");
+  const tSettings = useTranslations("core.auth.settings");
 
-  return <PageTitle desc={t("desc")} h2={t("title")} />;
+  return (
+    <PageTitle
+      className="mb-0"
+      desc={t("desc")}
+      h1={t("title")}
+      subtitle={tSettings("title")}
+    />
+  );
 };
 
 export const DevicesPanelPending = () => (

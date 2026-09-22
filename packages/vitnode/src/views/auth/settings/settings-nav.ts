@@ -23,6 +23,9 @@ export const isSettingsNavItemActive = (
   pathname: string,
 ): boolean => normalizeUrl(item.href) === normalizeUrl(pathname);
 
+export const isSettingsRootPath = (pathname: string): boolean =>
+  normalizeUrl(pathname) === normalizeUrl(SETTINGS_ROOT_HREF);
+
 export const activeSettingsNavKey = (
   pathname: string,
 ): SettingsNavKey | undefined =>

@@ -1,11 +1,11 @@
-import { cn } from "cn";
-import { CheckIcon, PlusCircleIcon, Trash2 } from "lucide-react";
+import { PlusCircleIcon, Trash2 } from "lucide-react";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useTranslations } from "use-intl";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import {
   Command,
   CommandEmpty,
@@ -139,16 +139,13 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
                         onSelect={() => toggle(option.value)}
                         value={option.value}
                       >
-                        <div
-                          className={cn(
-                            "border-primary flex size-4 items-center justify-center rounded-sm border",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50 [&_svg]:invisible",
-                          )}
-                        >
-                          <CheckIcon className="size-3.5" />
-                        </div>
+                        <Checkbox
+                          aria-hidden
+                          checked={isSelected}
+                          className="pointer-events-none"
+                          readOnly
+                          tabIndex={-1}
+                        />
                         <span>{option.label}</span>
                       </CommandItem>
                     );

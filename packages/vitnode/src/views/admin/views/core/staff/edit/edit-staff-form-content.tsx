@@ -1,6 +1,5 @@
 import { cn } from "cn";
 import {
-  CheckIcon,
   ChevronRightIcon,
   LockIcon,
   SearchIcon,
@@ -23,6 +22,7 @@ import type {
 } from "@/views/admin/views/core/staff/staff-model";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -99,30 +99,24 @@ const PermissionRow = ({
         !locked && "hover:bg-muted/40",
       )}
     >
-      <span
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-md transition-colors",
-          locked
-            ? "bg-muted text-muted-foreground"
-            : isChecked
-              ? "bg-primary text-primary-foreground"
-              : "border-input border",
-        )}
-      >
-        {locked ? (
-          <LockIcon className="size-3" />
-        ) : isChecked ? (
-          <CheckIcon className="size-3.5" />
-        ) : null}
-      </span>
+      <Checkbox
+        checked={isChecked}
+        disabled={locked}
+        onCheckedChange={value => {
+          onToggle(permission.key, value);
+        }}
+      />
 
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "text-sm leading-none",
+            "flex items-center gap-1.5 text-sm leading-none",
             locked && "text-muted-foreground",
           )}
         >
+          {locked ? (
+            <LockIcon aria-hidden className="size-3.5 shrink-0" />
+          ) : null}
           {permission.label}
         </p>
         {locked ? (
@@ -131,14 +125,6 @@ const PermissionRow = ({
           </p>
         ) : null}
       </div>
-
-      <Switch
-        checked={isChecked}
-        disabled={locked}
-        onCheckedChange={value => {
-          onToggle(permission.key, value);
-        }}
-      />
     </label>
   );
 };
