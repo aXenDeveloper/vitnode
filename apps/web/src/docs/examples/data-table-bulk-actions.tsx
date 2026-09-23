@@ -40,12 +40,15 @@ export default function DataTableBulkActionsExample() {
         },
       }}
       pageInfo={{
+        count: edges.length,
+        currentPage: 1,
+        endCursor: null,
         hasNextPage: false,
         hasPreviousPage: false,
+        pageSize: 10,
         startCursor: null,
-        endCursor: null,
-        count: edges.length,
         totalCount: edges.length,
+        totalPages: 1,
       }}
     />
   )

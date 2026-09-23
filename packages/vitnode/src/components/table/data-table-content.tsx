@@ -67,7 +67,6 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
     filters?: FilterDataTable[];
     header?: React.ReactNode;
     id: string;
-    rowOpens?: (row: T) => void;
     order: {
       columns?: (keyof T)[];
       defaultOrder: {
@@ -75,6 +74,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
         order: "asc" | "desc";
       };
     };
+    rowOpens?: (row: T) => void;
     search?: boolean;
   };
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_TABLE_PAGE_SIZE,
+  hasTableCursor,
   readTableFilter,
   readTableOrder,
   readTablePage,
@@ -72,6 +73,16 @@ describe("reading what the URL asks for", () => {
   it("accepts a query string with or without its leading question mark", () => {
     expect(readTableSearch("?search=foo")).toBe("foo");
     expect(readTablePageSize("?first=20")).toBe(20);
+  });
+
+  it("detects whether a query string has cursor pagination", () => {
+    expect(hasTableCursor("cursor=abc&first=10")).toBe(true);
+    expect(hasTableCursor("?cursor=abc&first=10")).toBe(true);
+    expect(hasTableCursor("last=10&cursor=abc")).toBe(true);
+    expect(hasTableCursor("last=10")).toBe(true);
+    expect(hasTableCursor("cursor=&first=10")).toBe(false);
+    expect(hasTableCursor("page=2&first=10")).toBe(false);
+    expect(hasTableCursor("")).toBe(false);
   });
 });
 

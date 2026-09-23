@@ -31,6 +31,14 @@ const resetPagination = (params: URLSearchParams): void => {
   params.delete(PAGE);
 };
 
+export const hasTableCursor = (search: TableSearch): boolean => {
+  const params = copy(search);
+
+  return (
+    Boolean(params.get(CURSOR)?.trim()) || Boolean(params.get(LAST)?.trim())
+  );
+};
+
 export const readTablePage = (search: TableSearch): number => {
   const page = Number(copy(search).get(PAGE));
 

@@ -21,7 +21,9 @@ import {
 import { useDataTableUrl } from "./navigation";
 import { tablePageWindow } from "./page-window";
 import {
+  hasTableCursor,
   readTablePage,
+  withTablePage,
   withTablePageNumber,
   withTablePageSize,
 } from "./url-state";
@@ -32,9 +34,11 @@ export const PaginationDataTable = ({
   pageInfo: {
     count,
     currentPage,
+    endCursor,
     hasNextPage,
     hasPreviousPage,
     pageSize,
+    startCursor,
     totalCount,
     totalPages,
   },
@@ -53,13 +57,14 @@ export const PaginationDataTable = ({
 }) => {
   const t = useTranslations("core.global");
   const { isPending, navigate, searchParams } = useDataTableUrl();
-  const page = currentPage ?? readTablePage(searchParams);
+  const isCursor = currentPage === null && hasTableCursor(searchParams);
+  const page = isCursor ? null : (currentPage ?? readTablePage(searchParams));
   const pageSizes = [...new Set([...PAGE_SIZE_OPTIONS, pageSize])].sort(
     (a, b) => a - b,
   );
 
-  const from = count === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = count === 0 ? 0 : from + count - 1;
+  const from = count === 0 || page == null ? 0 : (page - 1) * pageSize + 1;
+  const to = count === 0 || page == null ? 0 : from + count - 1;
 
   const searchFor = (nextPage: number) =>
     withTablePageNumber(searchParams, nextPage);
@@ -83,6 +88,46 @@ export const PaginationDataTable = ({
           tabIndex: -1,
         };
 
+  const searchForCursor = (
+    direction: "next" | "previous",
+    cursor: null | string,
+  ) =>
+    withTablePage(searchParams, {
+      cursor,
+      direction,
+      pageSize,
+    });
+  const hrefForCursor = (
+    direction: "next" | "previous",
+    cursor: null | string,
+  ) => {
+    const next = searchForCursor(direction, cursor);
+
+    return next ? `?${next}` : "?";
+  };
+  const goToCursor =
+    (direction: "next" | "previous", cursor: null | string) =>
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+      navigate(searchForCursor(direction, cursor));
+    };
+
+  const cursorStepProps = (
+    direction: "next" | "previous",
+    cursor: null | string,
+    enabled: boolean,
+  ) =>
+    enabled
+      ? {
+          href: hrefForCursor(direction, cursor),
+          onClick: goToCursor(direction, cursor),
+        }
+      : {
+          "aria-disabled": true as const,
+          className: "pointer-events-none opacity-50",
+          tabIndex: -1,
+        };
+
   return (
     <div
       aria-busy={isPending}
@@ -94,7 +139,9 @@ export const PaginationDataTable = ({
       <p aria-live="polite" className="text-muted-foreground text-sm">
         {count === 0
           ? t("results_not_found")
-          : t("showing_range", { from, to, total: totalCount })}
+          : page != null
+            ? t("showing_range", { from, to, total: totalCount })
+            : null}
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end sm:gap-6">
@@ -123,56 +170,80 @@ export const PaginationDataTable = ({
           </SelectContent>
         </Select>
 
-        {totalPages > 1 && (
-          <Pagination className="mx-0 w-auto justify-end">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  text={t("previous")}
-                  {...stepProps(page - 1, hasPreviousPage)}
-                />
-              </PaginationItem>
-
-              <PaginationItem className="sm:hidden">
-                <span className="text-muted-foreground px-2 text-sm">
-                  {t("page_of", { page, total: totalPages })}
-                </span>
-              </PaginationItem>
-
-              {tablePageWindow({ current: page, total: totalPages }).map(
-                (slot, index) => (
-                  <PaginationItem
-                    className="hidden sm:block"
-                    key={
-                      slot === "ellipsis"
-                        ? `gap-${index === 1 ? "start" : "end"}`
-                        : slot
-                    }
-                  >
-                    {slot === "ellipsis" ? (
-                      <PaginationEllipsis />
-                    ) : (
-                      <PaginationLink
-                        href={hrefFor(slot)}
-                        isActive={slot === page}
-                        onClick={goTo(slot)}
-                      >
-                        {slot}
-                      </PaginationLink>
-                    )}
+        {isCursor
+          ? (hasPreviousPage || hasNextPage) && (
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      text={t("previous")}
+                      {...cursorStepProps(
+                        "previous",
+                        startCursor,
+                        hasPreviousPage,
+                      )}
+                    />
                   </PaginationItem>
-                ),
-              )}
+                  <PaginationItem>
+                    <PaginationNext
+                      text={t("next")}
+                      {...cursorStepProps("next", endCursor, hasNextPage)}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )
+          : page != null &&
+            totalPages > 1 && (
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      text={t("previous")}
+                      {...stepProps(page - 1, hasPreviousPage)}
+                    />
+                  </PaginationItem>
 
-              <PaginationItem>
-                <PaginationNext
-                  text={t("next")}
-                  {...stepProps(page + 1, hasNextPage)}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
+                  <PaginationItem className="sm:hidden">
+                    <span className="text-muted-foreground px-2 text-sm">
+                      {t("page_of", { page, total: totalPages })}
+                    </span>
+                  </PaginationItem>
+
+                  {tablePageWindow({ current: page, total: totalPages }).map(
+                    (slot, index) => (
+                      <PaginationItem
+                        className="hidden sm:block"
+                        key={
+                          slot === "ellipsis"
+                            ? `gap-${index === 1 ? "start" : "end"}`
+                            : slot
+                        }
+                      >
+                        {slot === "ellipsis" ? (
+                          <PaginationEllipsis />
+                        ) : (
+                          <PaginationLink
+                            href={hrefFor(slot)}
+                            isActive={slot === page}
+                            onClick={goTo(slot)}
+                          >
+                            {slot}
+                          </PaginationLink>
+                        )}
+                      </PaginationItem>
+                    ),
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      text={t("next")}
+                      {...stepProps(page + 1, hasNextPage)}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import type {
   DataTableTMin,
 } from "./data-table-content";
 
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia } from "../ui/empty";
 import {
   Table,
   TableBody,
@@ -16,14 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia } from "../ui/empty";
 import { FiltersDataTable } from "./filters";
 import { useDataTableUrl } from "./navigation";
 import { NoResultsDataTable } from "./no-results";
 import { OrderTableHeadDataTable } from "./order-table-head";
 import { PaginationDataTable } from "./pagination";
 import { SearchDataTable } from "./search";
-import { readTableOrder } from "./url-state";
 import {
   BulkActionsDataTable,
   RowSelectableDataTable,
@@ -31,6 +30,7 @@ import {
   SelectionProviderDataTable,
   SelectRowDataTable,
 } from "./selection";
+import { readTableOrder } from "./url-state";
 
 /**
  * ALIGNMENT WITHOUT LEAVING TABLE LAYOUT. This was `flex`, which takes a cell
@@ -80,6 +80,7 @@ export function ContentDataTable<T extends DataTableTMin>({
     if (ordered.column !== String(column.accessorKey)) {
       return "none";
     }
+
     return ordered.order === "asc" ? "ascending" : "descending";
   };
   const hasToolbar = Boolean(search) || Boolean(filters?.length);
@@ -217,7 +218,11 @@ export function ContentDataTable<T extends DataTableTMin>({
 
                   return (
                     <TableRow
-                      className={rowOpens ? "cursor-pointer" : undefined}
+                      className={
+                        rowOpens
+                          ? "focus-visible:bg-muted/50 focus-visible:outline-ring cursor-pointer focus-visible:outline-1"
+                          : undefined
+                      }
                       key={row.id}
                       onClick={
                         rowOpens
@@ -239,6 +244,24 @@ export function ContentDataTable<T extends DataTableTMin>({
                             }
                           : undefined
                       }
+                      onKeyDown={
+                        rowOpens
+                          ? event => {
+                              if (
+                                (event.target as HTMLElement).closest(
+                                  "a,button,input,select,textarea,[role=checkbox]",
+                                )
+                              ) {
+                                return;
+                              }
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                rowOpens(row);
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={rowOpens ? 0 : undefined}
                     >
                       {cells}
                     </TableRow>
