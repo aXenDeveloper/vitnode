@@ -71,6 +71,9 @@ interface ResolvedLocale {
 
 const EMPTY_PAGE = {
   count: 0,
+  currentPage: null,
+  pageSize: CONTENT_PUBLIC_DEFAULT_PAGE_SIZE,
+  totalPages: 0,
   endCursor: null,
   hasNextPage: false,
   hasPreviousPage: false,
@@ -317,11 +320,13 @@ export const createContentLocalizedPublicService = <
     {
       cursorSelection,
       limit,
+      offset = 0,
       order,
     }: {
       /** Only a paginated read asks for one; a single read has nothing to mint. */
       cursorSelection?: PaginationCursorSelection;
       limit: number;
+      offset?: number;
       order?: SQL;
     },
   ): Promise<Record<string, unknown>[]> => {
@@ -336,8 +341,8 @@ export const createContentLocalizedPublicService = <
         .where(where);
 
       return order
-        ? await scoped.orderBy(order).limit(limit)
-        : await scoped.limit(limit);
+        ? await scoped.orderBy(order).limit(limit).offset(offset)
+        : await scoped.limit(limit).offset(offset);
     }
 
     const scoped = query
@@ -346,8 +351,8 @@ export const createContentLocalizedPublicService = <
       .where(where);
 
     return order
-      ? await scoped.orderBy(order).limit(limit)
-      : await scoped.limit(limit);
+      ? await scoped.orderBy(order).limit(limit).offset(offset)
+      : await scoped.limit(limit).offset(offset);
   };
 
   const readOne = async (
@@ -494,6 +499,7 @@ export const createContentLocalizedPublicService = <
         query: async ({
           cursorSelection,
           limit,
+          offset,
           orderBy: order,
           where: paged,
         }) =>
@@ -503,6 +509,7 @@ export const createContentLocalizedPublicService = <
               typeof limit === "number"
                 ? Math.min(limit, CONTENT_PUBLIC_MAX_PAGE_SIZE + 1)
                 : CONTENT_PUBLIC_DEFAULT_PAGE_SIZE,
+            offset,
             order,
           }),
       });

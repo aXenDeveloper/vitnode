@@ -19,9 +19,12 @@ export type ContentListPage = AdminTablePage<ContentRowData>;
 
 const zodPageInfo = z.object({
   count: z.number(),
+  currentPage: z.number().nullable(),
+  totalPages: z.number(),
   endCursor: z.string().nullable(),
   hasNextPage: z.boolean(),
   hasPreviousPage: z.boolean(),
+  pageSize: z.number(),
   startCursor: z.string().nullable(),
   totalCount: z.number(),
 });

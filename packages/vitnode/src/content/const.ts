@@ -183,7 +183,7 @@ export const CONTENT_LOCALE_PATTERN = /^[a-z]{2,8}(?:[-_][a-z0-9]{2,8})*$/i;
 /** `core_languages.code` is `varchar(32)`. */
 export const CONTENT_LOCALE_MAX_LENGTH = 32;
 
-export const CONTENT_DEFAULT_PAGE_SIZE = 25;
+export const CONTENT_DEFAULT_PAGE_SIZE = 10;
 export const CONTENT_OPTIONS_LIMIT = 25;
 
 export const CONTENT_PUBLIC_DEFAULT_PAGE_SIZE = 25;

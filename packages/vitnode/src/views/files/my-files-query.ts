@@ -21,6 +21,7 @@ export interface MyFilesParams {
   last?: string;
   order?: MyFilesOrder;
   orderBy?: MyFilesOrderBy;
+  page?: string;
   search?: string;
 }
 
@@ -33,7 +34,10 @@ export const normalizeMyFilesParams = (
 ): MyFilesParams => {
   const params: MyFilesParams = {};
 
-  const cursor = readFirstValue(raw.cursor);
+  const page = readFirstValue(raw.page);
+  if (/^[1-9]\d{0,8}$/.test(page) && page !== "1") params.page = page;
+
+  const cursor = params.page ? "" : readFirstValue(raw.cursor);
   if (/^[A-Za-z0-9_-]{1,512}$/.test(cursor)) params.cursor = cursor;
 
   const first = readPageSize(readFirstValue(raw.first), MY_FILES_MAX_PAGE_SIZE);
@@ -41,6 +45,8 @@ export const normalizeMyFilesParams = (
 
   if (first !== undefined) {
     params.first = first;
+  } else if (params.page !== undefined) {
+    params.first = String(DEFAULT_TABLE_PAGE_SIZE);
   } else if (last === undefined) {
     params.first = String(DEFAULT_TABLE_PAGE_SIZE);
   } else {
@@ -78,11 +84,14 @@ export interface MyFilesPage {
   edges: MyFile[];
   pageInfo: {
     count: number;
+    currentPage: null | number;
     endCursor: null | string;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
+    pageSize: number;
     startCursor: null | string;
     totalCount: number;
+    totalPages: number;
   };
 }
 

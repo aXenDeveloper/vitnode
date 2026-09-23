@@ -331,7 +331,7 @@ export const buildContentPublicRoutes = <
       // parameter is ignored rather than turned into a 400. `orderBy` is the
       // exception: a *present* but unknown column fails validation.
       const raw = c.req.query();
-      const { cursor, first, last, order, orderBy, search } =
+      const { cursor, first, last, order, orderBy, page, search } =
         paginationQuery.parse(raw);
       const filters = schemas.publicFilters.parse(
         raw,
@@ -354,7 +354,7 @@ export const buildContentPublicRoutes = <
           column: orderBy as ContentPublicOrderableFieldName<TDefinition>,
           order,
         },
-        query: { cursor, first, last, search },
+        query: { cursor, first, last, page, search },
       });
 
       return c.json(data, 200, localeHeaders(resolved.locale, resolved.source));

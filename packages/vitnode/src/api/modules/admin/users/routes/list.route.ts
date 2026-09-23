@@ -98,7 +98,7 @@ export const listUsersAdminRoute = buildRoute({
       search: [core_users.name, core_users.email, core_users.nameCode],
       where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
       primaryCursor: core_users.id,
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -123,7 +123,8 @@ export const listUsersAdminRoute = buildRoute({
           .leftJoin(avatarFile, eq(avatarFile.id, core_users.avatarId))
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_users,
       orderBy: {
         column: query.orderBy

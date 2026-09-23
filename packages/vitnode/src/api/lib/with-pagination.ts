@@ -19,7 +19,6 @@ import {
   asc,
   count,
   desc,
-  eq,
   gt,
   ilike,
   isNotNull,
@@ -56,9 +55,13 @@ export type PaginationCursorSelection = Record<
 >;
 
 function parsePaginationParams(params: {
-  query: { cursor?: string; first?: string; last?: string };
-}): { cursor?: string; first?: number; last?: number } {
-  const size = (raw: string | undefined, name: string): number | undefined => {
+  query: { cursor?: string; first?: string; last?: string; page?: string };
+}): { cursor?: string; first?: number; last?: number; page?: number } {
+  const whole = (
+    raw: string | undefined,
+    name: string,
+    max?: number,
+  ): number | undefined => {
     if (raw === undefined || raw === "") return undefined;
 
     const parsed = Number(raw);
@@ -68,11 +71,12 @@ function parsePaginationParams(params: {
       });
     }
 
-    return Math.min(parsed, MAX_PAGE_SIZE);
+    return max === undefined ? parsed : Math.min(parsed, max);
   };
 
-  const first = size(params.query.first, "first");
-  const last = size(params.query.last, "last");
+  const first = whole(params.query.first, "first", MAX_PAGE_SIZE);
+  const last = whole(params.query.last, "last", MAX_PAGE_SIZE);
+  const page = whole(params.query.page, "page");
 
   if (first !== undefined && last !== undefined) {
     throw new HTTPException(400, {
@@ -80,9 +84,21 @@ function parsePaginationParams(params: {
     });
   }
 
+  if (page !== undefined && last !== undefined) {
+    throw new HTTPException(400, {
+      message: 'Use either "page" or "last", not both.',
+    });
+  }
+
   const cursor = params.query.cursor?.trim();
 
-  return { cursor: cursor === "" ? undefined : cursor, first, last };
+  if (page !== undefined && cursor !== undefined && cursor !== "") {
+    throw new HTTPException(400, {
+      message: 'Use either "page" or "cursor", not both.',
+    });
+  }
+
+  return { cursor: cursor === "" ? undefined : cursor, first, last, page };
 }
 
 function effectiveDirection(
@@ -125,6 +141,10 @@ function buildCursorCondition({
 
   const boundary = boundaryValue(column, cursor);
 
+  const afterTuple = sql`(${column}, ${primary}) ${sql.raw(
+    direction === "asc" ? ">" : "<",
+  )} (${boundary}, ${identifier})`;
+
   if (direction === "asc") {
     // NULLS LAST: a null cursor is inside the trailing block, and everything
     // that is not null is already behind us.
@@ -132,13 +152,9 @@ function buildCursorCondition({
       return required(and(isNull(column), gt(primary, identifier)));
     }
 
-    return required(
-      or(
-        gt(column, boundary),
-        and(eq(column, boundary), gt(primary, identifier)),
-        isNull(column),
-      ),
-    );
+    return column.notNull
+      ? afterTuple
+      : required(or(afterTuple, isNull(column)));
   }
 
   // NULLS FIRST: a null cursor is inside the *leading* block, so the rest of
@@ -149,12 +165,7 @@ function buildCursorCondition({
     );
   }
 
-  return required(
-    or(
-      lt(column, boundary),
-      and(eq(column, boundary), lt(primary, identifier)),
-    ),
-  );
+  return afterTuple;
 }
 
 function boundaryValue(column: PgColumn, cursor: PaginationCursor): SQL {
@@ -235,6 +246,7 @@ export async function withPagination<
       cursor?: string;
       first?: string;
       last?: string;
+      page?: string;
       search?: string;
     };
   };
@@ -249,6 +261,7 @@ export async function withPagination<
      */
     cursorSelection: PaginationCursorSelection;
     limit: number | Placeholder<string, unknown>;
+    offset: number;
     orderBy: SQL;
     where: SQL | undefined;
   }) => Promise<QueryMin[]>;
@@ -259,15 +272,23 @@ export async function withPagination<
   edges: Omit<QueryMin, typeof PAGINATION_CURSOR_FIELD>[];
   pageInfo: {
     count: number;
+    currentPage: null | number;
     /** An opaque cursor. Hand it back as `cursor`; never parse it. */
     endCursor: null | string;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
+    pageSize: number;
     startCursor: null | string;
     totalCount: number;
+    totalPages: number;
   };
 }> {
-  const { cursor: rawCursor, first, last } = parsePaginationParams(params);
+  const {
+    cursor: rawCursor,
+    first,
+    last,
+    page: requestedPage,
+  } = parsePaginationParams(params);
 
   const isForward = last === undefined;
   const direction = effectiveDirection(isForward, orderByFromParams.order);
@@ -351,13 +372,23 @@ export async function withPagination<
       : orderColumn,
   };
 
-  const limit = (first ?? last ?? 50) + 1;
-  const edges = await query({ cursorSelection, limit, where, orderBy });
+  const pageSize = first ?? last ?? 50;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const currentPage =
+    requestedPage === undefined
+      ? null
+      : Math.max(1, Math.min(requestedPage, totalPages || 1));
+  const offset = currentPage === null ? 0 : (currentPage - 1) * pageSize;
+
+  const limit = pageSize + 1;
+  const edges = await query({ cursorSelection, limit, offset, where, orderBy });
 
   const requested = first ?? last ?? edges.length;
   const hasMore = edges.length > requested;
   const slicedEdges = edges.slice(0, requested);
-  const finalEdges = isForward ? slicedEdges : slicedEdges.reverse();
+  const finalEdges =
+    isForward || currentPage !== null ? slicedEdges : slicedEdges.reverse();
 
   const boundaries = cursorsFrom({
     edges: finalEdges,
@@ -370,13 +401,22 @@ export async function withPagination<
   return {
     pageInfo: {
       totalCount,
+      totalPages,
+      currentPage,
+      pageSize,
       count: finalEdges.length,
       // An empty page has nothing to page from, so it never advertises a
       // neighbour it cannot hand out a cursor for.
       hasNextPage:
         finalEdges.length === 0 ? false : isForward ? hasMore : Boolean(cursor),
       hasPreviousPage:
-        finalEdges.length === 0 ? false : isForward ? Boolean(cursor) : hasMore,
+        finalEdges.length === 0
+          ? false
+          : currentPage !== null
+            ? currentPage > 1
+            : isForward
+              ? Boolean(cursor)
+              : hasMore,
       ...boundaries,
     },
     edges: finalEdges.map(withoutCursorField),
@@ -476,6 +516,9 @@ const zodPageSize = z
 
 export const zodPaginationPageInfo = z.object({
   totalCount: z.number(),
+  totalPages: z.number(),
+  currentPage: z.number().nullable(),
+  pageSize: z.number(),
   count: z.number(),
   hasNextPage: z.boolean(),
   hasPreviousPage: z.boolean(),
@@ -498,8 +541,17 @@ export const zodPaginationQuery = z
       .optional(),
     first: zodPageSize.optional(),
     last: zodPageSize.optional(),
+    page: zodPageSize.optional(),
   })
   .refine(
     query => query.first === undefined || query.last === undefined,
     'Use either "first" or "last", not both.',
+  )
+  .refine(
+    query => query.page === undefined || query.last === undefined,
+    'Use either "page" or "last", not both.',
+  )
+  .refine(
+    query => query.page === undefined || query.cursor === undefined,
+    'Use either "page" or "cursor", not both.',
   );

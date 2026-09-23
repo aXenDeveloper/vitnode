@@ -243,6 +243,9 @@ export const CollectionsTableContent = ({
           order={{ defaultOrder: { column: "itemType", order: "asc" } }}
           pageInfo={{
             count: edges.length,
+            currentPage: 1,
+            pageSize: edges.length || 1,
+            totalPages: 1,
             endCursor: null,
             hasNextPage: false,
             hasPreviousPage: false,

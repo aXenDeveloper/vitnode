@@ -120,7 +120,7 @@ export const routeDeclarationsFromRoutesModule = (
 
   if (legacy.length > 0) {
     throw new Error(
-      `${ERROR_PREFIX} ${source} exports the old flat route manifest - ${String(legacy.length)} route${legacy.length === 1 ? "" : "s"} declaring an \`entry\`. Plugin routes are now a nested tree: replace each record with \`page()\`, \`layout()\` or \`index()\` from \`@vitnode/core/routing\`, move \`entry\` to \`component: lazy(() => import("./pages/..."))\`, rename \`namespaces\` to \`messages\`, and drop \`id\`, \`kind\`, \`parentId\` and \`searchEntry\`. See https://vitnode.com/docs/dev/plugins/routes.`,
+      `${ERROR_PREFIX} ${source} exports the old flat route manifest - ${String(legacy.length)} route${legacy.length === 1 ? "" : "s"} declaring an \`entry\`. Plugin routes are now a nested tree: replace each record with \`page()\`, \`layout()\` or \`index()\` from \`@vitnode/core/routing\`, move \`entry\` to \`component: lazy(() => import("./pages/..."))\`, rename \`namespaces\` to \`messages\`, and drop \`id\`, \`kind\`, \`parentId\` and \`searchEntry\`. See https://vitnode.com/docs/dev/routing.`,
     );
   }
 

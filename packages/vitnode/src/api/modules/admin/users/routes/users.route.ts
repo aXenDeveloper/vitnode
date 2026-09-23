@@ -59,7 +59,7 @@ export const usersAdminRoute = buildRoute({
         query,
       },
       primaryCursor: core_users.id,
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -79,7 +79,8 @@ export const usersAdminRoute = buildRoute({
           .from(core_users)
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_users,
       orderBy: {
         column: query.orderBy

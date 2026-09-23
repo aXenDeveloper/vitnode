@@ -25,6 +25,7 @@ interface PageTitleBaseProps {
   className?: string;
   desc?: React.ReactNode;
   ref?: React.RefCallback<HTMLDivElement>;
+  subtitle?: React.ReactNode;
 }
 
 export type PageTitleProps = PageTitleBaseProps &
@@ -38,6 +39,7 @@ export const PageTitle = ({
   h1,
   h2,
   ref,
+  subtitle,
 }: PageTitleProps) => {
   return (
     <div
@@ -48,6 +50,11 @@ export const PageTitle = ({
       ref={ref}
     >
       <div className="h-full flex-1 space-y-1 text-left sm:self-center">
+        {!!subtitle && (
+          <p className="text-muted-foreground text-sm font-medium">
+            {subtitle}
+          </p>
+        )}
         {h1 ? (
           <h1 className="text-foreground text-2xl font-bold sm:text-3xl">
             {h1}

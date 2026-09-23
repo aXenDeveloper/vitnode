@@ -112,6 +112,13 @@ const usesFormValues = <T extends z.ZodObject<z.ZodRawShape>>(
   typeof item.hidden === "function" ||
   (item.children?.some(child => usesFormValues(child)) ?? false);
 
+export const AutoFormFieldSlot = ({
+  component,
+  ...props
+}: ItemAutoFormComponentProps & {
+  component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+}) => <>{component(props)}</>;
+
 function AutoFormField({
   invalid,
   submitCount,
@@ -284,20 +291,23 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
               orientation="responsive"
               submitCount={submitCount}
             >
-              {component({
-                field,
-                ...(nestedFields.length
+              <AutoFormFieldSlot
+                component={component}
+                {...(nestedFields.length
                   ? { children: nestedFields.map(renderField) }
-                  : {}),
-                description:
+                  : {})}
+                description={
                   typeof params.description === "string"
                     ? params.description
-                    : "",
-                itemParams:
+                    : ""
+                }
+                field={field}
+                itemParams={
                   "itemParams" in params
                     ? (params.itemParams as InputParams)
-                    : undefined,
-                otherProps: {
+                    : undefined
+                }
+                otherProps={{
                   isOptional: !params.required,
                   enum: Array.isArray(params.enum) ? params.enum : undefined,
                   maxLength:
@@ -323,8 +333,8 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
                       : undefined,
                   type:
                     typeof params.type === "string" ? params.type : undefined,
-                },
-              })}
+                }}
+              />
             </AutoFormField>
           );
         }}

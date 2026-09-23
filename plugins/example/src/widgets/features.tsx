@@ -2,7 +2,6 @@ import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
 import { field } from "@vitnode/core/content/fields";
 import { defineWidget } from "@vitnode/core/widgets";
-import { WidgetField } from "@vitnode/core/widgets/block-field";
 
 const featureItem = {
   body: field.textarea({ maxLength: 240, nullable: true }),
@@ -78,22 +77,18 @@ const Features = ({
   return (
     <section className="flex flex-col gap-6 py-4">
       <div className="flex flex-col gap-2">
-        <WidgetField name="heading">
-          <h2
-            className={
-              compact
-                ? "text-base font-semibold text-balance"
-                : "text-xl font-semibold text-balance md:text-2xl"
-            }
-          >
-            {data.heading}
-          </h2>
-        </WidgetField>
-        <WidgetField name="intro">
-          <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-            {data.intro}
-          </p>
-        </WidgetField>
+        <h2
+          className={
+            compact
+              ? "text-base font-semibold text-balance"
+              : "text-xl font-semibold text-balance md:text-2xl"
+          }
+        >
+          {data.heading}
+        </h2>
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {data.intro}
+        </p>
       </div>
 
       {variant === "list" ? (

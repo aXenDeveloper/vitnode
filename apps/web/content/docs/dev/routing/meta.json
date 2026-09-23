@@ -2,5 +2,5 @@
   "title": "Routing",
   "description": "Claim a URL, name the page, and let the router handle locales",
   "icon": "Route",
-  "pages": ["routes", "navigation", "breadcrumbs", "loading", "not-found"]
+  "pages": ["index", "navigation", "breadcrumbs", "loading", "not-found"]
 }

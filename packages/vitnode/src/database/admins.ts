@@ -33,6 +33,7 @@ export const core_admin_permissions = camelCase.table.withRLS(
   t => [
     index("core_admin_permissions_role_id_idx").on(t.roleId),
     index("core_admin_permissions_user_id_idx").on(t.userId),
+    index("core_admin_permissions_updated_at_id_idx").on(t.updatedAt, t.id),
   ],
 );
 

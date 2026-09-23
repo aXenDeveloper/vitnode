@@ -10,8 +10,8 @@ description: Display small labels or indicators.
 ## Usage
 
 ```ts
-import { Home } from 'lucide-react';
-import { Badge } from '@vitnode/core/components/ui/badge';
+import { Home } from 'lucide-react'
+import { Badge } from '@vitnode/core/components/ui/badge'
 ```
 
 ```tsx
@@ -20,15 +20,36 @@ import { Badge } from '@vitnode/core/components/ui/badge';
 </Badge>
 ```
 
+## Variants
+
+A badge labels a state, so let the word do the work and the colour reinforce it:
+
+- `default` - a neutral, prominent label.
+- `secondary` / `outline` / `ghost` - quieter labels that sit inside dense UI
+  like tables.
+- `success` - a healthy or finished state (Published, Active, Paid).
+- `warning` - something needs attention but nothing is broken yet (Pending,
+  Expiring, Draft).
+- `destructive` - a failed or blocked state (Failed, Banned, Overdue).
+
+The three status variants use the same tinted surface as their button
+counterparts, so a `success` badge and a `success` button read as the same idea.
+
+```tsx
+<Badge variant="success">Published</Badge>
+<Badge variant="warning">Pending</Badge>
+<Badge variant="destructive">Failed</Badge>
+```
+
 ## Props
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     variant: {
       description: 'The variant of the badge.',
-      type: 'default | secondary | outline | destructive',
+      type: 'default | secondary | outline | ghost | link | success | warning | destructive',
       default: 'default',
     },
   }}

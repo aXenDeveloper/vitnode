@@ -18,5 +18,8 @@ export const core_files = camelCase.table.withRLS(
     metadata: t.jsonb().$type<Record<string, unknown>>().notNull().default({}),
     createdAt: t.timestamp().notNull().defaultNow(),
   }),
-  t => [index("core_files_user_id_idx").on(t.userId)],
+  t => [
+    index("core_files_user_id_idx").on(t.userId),
+    index("core_files_created_at_id_idx").on(t.createdAt, t.id),
+  ],
 );

@@ -1,4 +1,4 @@
-import type { FocusEvent, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 import { cn } from "cn";
 import {
@@ -7,7 +7,6 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useSortableNode } from "../dnd/use-sortable-node";
-import { useEditorInlineBlock } from "../inline/context";
 import { refusesRemoval, zoneCapacity } from "../state/bounds";
 import { sameNodeRef } from "../state/reducer";
 import { isRepairRemoval } from "../state/repair";
@@ -33,9 +31,6 @@ const ISSUE_LABELS = {
   "unknown-type": "block.issue.unknown_type",
   "unknown-variant": "block.issue.unknown_variant",
 } as const satisfies Record<EditableBlockIssue["kind"], string>;
-
-const FOCUSABLE =
-  'a[href], area[href], button, details, iframe, input, select, textarea, [contenteditable], [tabindex]:not([tabindex="-1"])';
 
 export interface EditableBlockShellProps {
   areaId: null | string;
@@ -55,9 +50,6 @@ export const EditableBlockShell = ({
   const t = useTranslations("core.editor");
   const { dispatch, preview, state } = useVisualEditor();
   const { dropIndicator } = useEditorDnd();
-  const inline = useEditorInlineBlock();
-  const overlayRef = useRef<HTMLButtonElement | null>(null);
-  const bodyRef = useRef<HTMLDivElement | null>(null);
   const nodeRef: EditorNodeRef = {
     areaId,
     kind: "block",
@@ -68,26 +60,6 @@ export const EditableBlockShell = ({
     index,
     nodeRef,
     type: instance.type,
-  });
-  const softInert = !preview && inline?.hasInlineFields === true;
-
-  useLayoutEffect(() => {
-    const body = bodyRef.current;
-
-    if (!softInert || body === null) return;
-
-    const held = [...body.querySelectorAll<HTMLElement>(FOCUSABLE)]
-      .filter(node => node.closest("[data-vitnode-inline-field]") === null)
-      .map(node => [node, node.getAttribute("tabindex")] as const);
-
-    for (const [node] of held) node.setAttribute("tabindex", "-1");
-
-    return () => {
-      for (const [node, previous] of held) {
-        if (previous === null) node.removeAttribute("tabindex");
-        else node.setAttribute("tabindex", previous);
-      }
-    };
   });
 
   if (preview) return <>{children}</>;
@@ -118,22 +90,6 @@ export const EditableBlockShell = ({
       : null;
   const edge = placed?.edge ?? null;
 
-  const keepFocusOut = (event: FocusEvent<HTMLDivElement>): void => {
-    const focused = event.target;
-
-    if (focused.closest("[data-vitnode-inline-field]") !== null) return;
-
-    const overlay = overlayRef.current;
-
-    if (overlay === null) {
-      focused.blur();
-
-      return;
-    }
-
-    overlay.focus();
-  };
-
   return (
     <div
       className={cn(
@@ -148,17 +104,7 @@ export const EditableBlockShell = ({
       ref={setNodeRef}
       style={style}
     >
-      {softInert ? (
-        <div
-          className="pointer-events-none"
-          onFocusCapture={keepFocusOut}
-          ref={bodyRef}
-        >
-          {children}
-        </div>
-      ) : (
-        <div inert>{children}</div>
-      )}
+      <div inert>{children}</div>
 
       <button
         aria-current={selected}
@@ -166,7 +112,6 @@ export const EditableBlockShell = ({
         onClick={() => {
           dispatch({ ref: nodeRef, type: "select" });
         }}
-        ref={overlayRef}
         type="button"
       >
         <span className="sr-only">{t("block.select", { name })}</span>

@@ -13,6 +13,7 @@ export interface AdminTableParams<TOrderBy extends string = string> {
   last?: string;
   order?: AdminTableOrder;
   orderBy?: TOrderBy;
+  page?: string;
   search?: string;
   /** Comma-separated, as the queue route's `status` filter reads it. */
   status?: string;
@@ -50,7 +51,12 @@ export const normalizeAdminTableParams = <TOrderBy extends string>(
 ): AdminTableParams<TOrderBy> => {
   const params: AdminTableParams<TOrderBy> = {};
 
-  const cursor = readFirstValue(raw.cursor);
+  const page = readFirstValue(raw.page);
+  if (/^[1-9]\d{0,8}$/.test(page) && page !== "1") params.page = page;
+
+  // A page number and a cursor answer different questions, and the API refuses
+  // both together, so the number wins and the walk is dropped.
+  const cursor = params.page ? "" : readFirstValue(raw.cursor);
   if (/^[A-Za-z0-9_-]{1,512}$/.test(cursor)) params.cursor = cursor;
 
   const first = readPageSize(
@@ -64,6 +70,8 @@ export const normalizeAdminTableParams = <TOrderBy extends string>(
 
   if (first !== undefined) {
     params.first = first;
+  } else if (params.page !== undefined) {
+    params.first = String(contract.defaultPageSize ?? DEFAULT_TABLE_PAGE_SIZE);
   } else if (last === undefined) {
     params.first = String(contract.defaultPageSize ?? DEFAULT_TABLE_PAGE_SIZE);
   } else {
@@ -91,11 +99,14 @@ export const normalizeAdminTableParams = <TOrderBy extends string>(
 
 export interface AdminTablePageInfo {
   count: number;
+  currentPage: null | number;
   endCursor: null | string;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  pageSize: number;
   startCursor: null | string;
   totalCount: number;
+  totalPages: number;
 }
 
 /** One page of an admin list: the rows, and where the pager is. */

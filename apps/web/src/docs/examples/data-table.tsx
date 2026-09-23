@@ -69,12 +69,15 @@ export default function DataTableExample() {
         },
       }}
       pageInfo={{
+        count: 1,
+        currentPage: 1,
+        endCursor: null,
         hasNextPage: false,
         hasPreviousPage: false,
+        pageSize: 10,
         startCursor: null,
-        endCursor: null,
-        count: 1,
         totalCount: 1,
+        totalPages: 1,
       }}
     />
   )

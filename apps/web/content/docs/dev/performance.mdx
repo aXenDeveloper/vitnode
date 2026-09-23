@@ -140,11 +140,8 @@ The home page went from 133 running animations to 42 on arrival with this one ru
 Tailwind emits one utility per class it finds in the sources you list. A documentation UI kit scanned globally pays its CSS on the home page too. Give it a stylesheet of its own and load it from the layout route that renders it:
 
 ```css title="apps/web/src/docs/docs.css"
-@layer theme, base, components, utilities;
-@import 'tailwindcss/theme.css';
-@import '../theme.css' theme(reference);
-@import 'tailwindcss/utilities.css' layer(utilities) source(none);
-@import 'fumadocs-ui/css/neutral.css';
+@import '../styles.css';
+@import 'fumadocs-ui/css/shadcn.css';
 @import 'fumadocs-ui/css/preset.css';
 
 @source '../../node_modules/fumadocs-ui/dist/**/*.js';
@@ -160,7 +157,11 @@ export const Route = createFileRoute('/_docs')({
 })
 ```
 
-`theme(reference)` makes the app's design tokens available to the second stylesheet without emitting them twice, and `source(none)` stops it from scanning the whole app again.
+A stylesheet a route puts in `head` is a resource React never unloads, so the moment someone opens the docs the page carries both sheets for the rest of the visit - including after they navigate back to the home page. That is fine, on one condition: the route stylesheet has to scan **everything** the app stylesheet scans.
+
+Both sheets are full Tailwind builds emitting into the same `theme, base, components, utilities` layers, and inside one layer the later sheet wins. Let the route stylesheet miss a class and the app stylesheet's version of it loses to whatever the route stylesheet emits last - a missing `sm:block` loses to a plain `hidden`, and the site logo and main navigation quietly vanish from every page after a trip to the docs.
+
+Two things keep the sets aligned: the route stylesheet starts by importing the app one, and `vitNodeTailwindSources` gives both the same `@source` directives for `@vitnode/core` and your configured plugins. Anything you add to the app stylesheet's sources, add for the route stylesheet too.
 
 ### 8. Group Shared Vendor Modules
 

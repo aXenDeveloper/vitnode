@@ -31,5 +31,6 @@ export const core_queue = camelCase.table.withRLS(
   }),
   t => [
     index("core_queue_status_available_at_idx").on(t.status, t.availableAt),
+    index("core_queue_created_at_id_idx").on(t.createdAt, t.id),
   ],
 );

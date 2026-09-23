@@ -52,8 +52,14 @@ export interface ContentPublicFindManyArgs<
     column?: ContentPublicOrderableFieldName<TDefinition>;
     order?: "asc" | "desc";
   };
-  /** Raw pagination query (`cursor`, `first`, `last`, `search`). */
-  query?: { cursor?: string; first?: string; last?: string; search?: string };
+  /** Raw pagination query (`cursor`, `first`, `last`, `page`, `search`). */
+  query?: {
+    cursor?: string;
+    first?: string;
+    last?: string;
+    page?: string;
+    search?: string;
+  };
 }
 
 export interface ContentPublicService<TDefinition> {
@@ -338,7 +344,13 @@ export const createContentPublicService = <
         },
         table,
         where: conditions.length > 1 ? and(...conditions) : conditions[0],
-        query: async ({ cursorSelection, limit, orderBy: order, where }) =>
+        query: async ({
+          cursorSelection,
+          limit,
+          offset,
+          orderBy: order,
+          where,
+        }) =>
           await c
             .get("db")
             // The cursor value is projected by this statement and stripped from
@@ -352,7 +364,8 @@ export const createContentPublicService = <
               typeof limit === "number"
                 ? Math.min(limit, CONTENT_PUBLIC_MAX_PAGE_SIZE + 1)
                 : CONTENT_PUBLIC_DEFAULT_PAGE_SIZE,
-            ),
+            )
+            .offset(offset),
       });
 
       return {

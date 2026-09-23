@@ -394,7 +394,10 @@
           "unreadable": "This image could not be read. Try a different file.",
           "too_large_after_crop": "The cropped image is {size}, which is over the {max} limit. Zoom in or pick a smaller image."
         }
-      }
+      },
+      "showing_range": "Showing {from}–{to} of {total}",
+      "rows_per_page": "Rows per page",
+      "page_of": "Page {page} of {total}"
     },
     "navigation": {
       "discover": {
@@ -625,7 +628,6 @@
       },
       "settings": {
         "title": "Settings",
-        "desc": "Manage your profile, security, and account preferences.",
         "nav": {
           "overview": "Overview",
           "devices": "Devices",
@@ -633,11 +635,13 @@
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
-          "emailNotVerified": "Not verified",
+          "profileTitle": "Profile",
+          "accountTitle": "Account",
           "edit": "Edit",
           "personalTitle": "Personal Information",
-          "personalDialogDesc": "Tell the community who you are. Every field is optional.",
+          "personalDesc": "Tell the community who you are. Every field is optional.",
           "nickname": "Nickname",
+          "role": "Role",
           "showRealName": "Show my real name",
           "showRealNameDesc": "Your profile shows your first and last name instead of your nickname. Your nickname is used until you set one.",
           "firstName": "First name",
@@ -647,6 +651,7 @@
           "secondaryRoles": "Secondary roles",
           "headline": "Headline",
           "headlineDesc": "One line about you, up to {max} characters.",
+          "notSet": "Not set",
           "save": "Save changes",
           "saved": "Personal information updated.",
           "savedDesc": "Your profile shows the new details right away."
@@ -654,11 +659,15 @@
         "devices": {
           "title": "Devices",
           "desc": "Manage your devices where you are logged in.",
-          "current_device": "Current Device",
-          "last_active": "Last Active",
-          "browser": "Browser",
-          "ip_address": "IP Address",
-          "session_expires": "Session Expires",
+          "current_device": "This device",
+          "other_devices": "Other devices",
+          "others_desc": "A signed-out device has to sign in again.",
+          "others_empty": "No other devices are signed in.",
+          "browser_on_os": "{browser} on {os}",
+          "active_now": "Active now",
+          "last_active": "Last active",
+          "ip_address": "IP address",
+          "session_expires": "Session expires",
           "empty": "No active devices.",
           "revoke": {
             "action": "Sign out device",
@@ -960,11 +969,6 @@
           "title": "Unknown widget",
           "description": "Nothing installed on this site provides the widget type {type}, so it cannot be rendered."
         }
-      },
-      "inline": {
-        "empty": "Add {field}",
-        "label": "Edit {field} on the {name} widget",
-        "invalid": "This text does not fit what the field allows yet, so saving stays blocked until it does."
       },
       "dnd": {
         "instructions": "Press Space to pick up a widget. Use the arrow keys to move it between positions and zones, Space to drop it where the line is, and Escape to put it back.",
@@ -1621,7 +1625,6 @@
           "name": "Name",
           "folder": "Folder",
           "size": "Size",
-          "dimensions": "Dimensions",
           "uploadedBy": "Uploaded by",
           "metadata": "Metadata",
           "createdAt": "Uploaded",

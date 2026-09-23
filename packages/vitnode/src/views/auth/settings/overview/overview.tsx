@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
@@ -13,7 +14,13 @@ import { SelfUserImageDialog } from "@/views/profile/images/self-image-dialog";
 import type { PersonalInformationUser } from "./personal-content";
 import type { UpdatePersonalInformation } from "./personal-update";
 
+import {
+  SETTINGS_ROW,
+  SETTINGS_ROW_LABEL,
+  SettingsGroup,
+} from "../settings-group";
 import { PersonalInformationContent } from "./personal-content";
+import { RealNameRow } from "./real-name-row";
 
 export interface SettingsOverviewUser extends PersonalInformationUser {
   avatarColor: string;
@@ -38,6 +45,7 @@ export const OverviewSettingsContent = ({
 }) => {
   const t = useTranslations("core.auth.settings.overview");
   const tNav = useTranslations("core.auth.settings.nav");
+  const tSettings = useTranslations("core.auth.settings");
   const displayName = displayNameOf({
     ...user,
     showRealName: personalFields.showRealName && user.showRealName,
@@ -45,50 +53,87 @@ export const OverviewSettingsContent = ({
 
   return (
     <>
-      <PageTitle desc={t("desc")} h2={tNav("overview")} />
+      <PageTitle
+        className="mb-0"
+        desc={t("desc")}
+        h1={tNav("overview")}
+        subtitle={tSettings("title")}
+      />
 
-      <div className="flex flex-col gap-4 sm:gap-6">
-        <section className="border-border flex flex-col items-center gap-4 rounded-xl border p-4 text-center sm:flex-row sm:p-5 sm:text-start">
-          <div className="relative shrink-0">
-            <Avatar
-              className="size-20"
-              loading="eager"
-              size={80}
-              user={{ ...user, name: displayName }}
+      <SettingsGroup title={t("profileTitle")}>
+        <li className={SETTINGS_ROW}>
+          <Avatar
+            className="size-12 shrink-0"
+            loading="eager"
+            size={48}
+            user={{ ...user, name: displayName }}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-foreground font-semibold text-pretty wrap-anywhere">
+              {displayName}
+            </span>
+            <span className="text-muted-foreground truncate text-sm">
+              @{user.nameCode}
+            </span>
+          </div>
+          {editor ? (
+            <SelfUserImageDialog
+              editor={editor}
+              hasImage={user.avatarUrl !== null}
+              kind="avatar"
+              size="icon-sm"
             />
+          ) : null}
+        </li>
 
-            {editor ? (
-              <div className="absolute inset-e-0 bottom-0">
-                <SelfUserImageDialog
-                  editor={editor}
-                  hasImage={user.avatarUrl !== null}
-                  kind="avatar"
-                />
-              </div>
-            ) : null}
-          </div>
+        {personalFields.showRealName ? (
+          <RealNameRow
+            canEdit={canEditPersonalInfo}
+            checked={user.showRealName}
+            onUpdate={onUpdate}
+          />
+        ) : null}
+      </SettingsGroup>
 
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex flex-wrap items-baseline justify-center gap-x-2 sm:justify-start">
-              <h3 className="text-foreground truncate text-lg font-bold">
-                {displayName}
-              </h3>
-              <span className="text-muted-foreground truncate text-sm">
-                @{user.nameCode}
-              </span>
-            </div>
+      <PersonalInformationContent
+        canEdit={canEditPersonalInfo}
+        fields={personalFields}
+        onUpdate={onUpdate}
+        user={user}
+      />
 
-            <RoleFormatContent className="text-sm" role={user.role} />
-          </div>
-        </section>
-
-        <PersonalInformationContent
-          canEdit={canEditPersonalInfo}
-          fields={personalFields}
-          onUpdate={onUpdate}
-          user={user}
-        />
-      </div>
+      <SettingsGroup title={t("accountTitle")}>
+        <li className={SETTINGS_ROW}>
+          <span className={SETTINGS_ROW_LABEL}>{t("nickname")}</span>
+          <span className="text-muted-foreground min-w-0 flex-1 truncate text-end text-sm">
+            {user.name}
+          </span>
+        </li>
+        <li className={SETTINGS_ROW}>
+          <span className={SETTINGS_ROW_LABEL}>{t("email")}</span>
+          <span className="text-muted-foreground min-w-0 flex-1 text-end text-sm wrap-anywhere">
+            {user.email}
+          </span>
+        </li>
+        <li className={SETTINGS_ROW}>
+          <span className={SETTINGS_ROW_LABEL}>{t("role")}</span>
+          <span className="flex min-w-0 flex-1 justify-end text-sm">
+            <RoleFormatContent role={user.role} />
+          </span>
+        </li>
+        {user.secondaryRoles.length === 0 ? null : (
+          <li className={cn(SETTINGS_ROW, "items-start")}>
+            <span className={SETTINGS_ROW_LABEL}>{t("secondaryRoles")}</span>
+            <ul className="flex min-w-0 flex-1 flex-wrap justify-end gap-x-4 gap-y-1 text-sm">
+              {user.secondaryRoles.map(role => (
+                <li key={role.id}>
+                  <RoleFormatContent role={role} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        )}
+      </SettingsGroup>
     </>
   );
 };

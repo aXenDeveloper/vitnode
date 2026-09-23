@@ -10,14 +10,44 @@ description: A button component for triggering actions in your application.
 ## Usage
 
 ```ts
-import { Home } from "lucide-react";
-import { Button } from "@vitnode/core/components/ui/button";
+import { Home } from 'lucide-react'
+import { Button } from '@vitnode/core/components/ui/button'
 ```
 
 ```tsx
 <Button>
   <Home />
   Default
+</Button>
+```
+
+## Variants
+
+Pick the variant by the weight of the action, not by the colour you feel like:
+
+- `default` - the one primary action on the screen.
+- `secondary` / `outline` / `ghost` - supporting actions, in descending
+  loudness.
+- `link` - an action that behaves like navigation.
+- `success` - confirms or completes something (approve, publish, mark as done).
+- `warning` - a risky but reversible action the user should slow down for
+  (unpublish, revoke a session).
+- `destructive` - it deletes data and it isn't coming back.
+
+`success`, `warning` and `destructive` share the same tinted shape - a soft
+coloured surface with matching text - so only the hue tells you how nervous to
+be. Colour alone never carries the meaning, so keep the label honest: a green
+button still needs to say "Approve".
+
+```tsx
+<Button variant="success">
+  <CircleCheckIcon />
+  Approve
+</Button>
+
+<Button variant="warning">
+  <TriangleAlertIcon />
+  Unpublish
 </Button>
 ```
 
@@ -28,9 +58,9 @@ another component, such as a link. Set `nativeButton={false}` when the rendered
 element is not a native `<button>`.
 
 ```tsx
-import Link from "next/link";
+import Link from 'next/link'
 
-<Button nativeButton={false} render={<Link href="/home" />}>
+;<Button nativeButton={false} render={<Link href="/home" />}>
   Home
 </Button>
 ```
@@ -46,34 +76,34 @@ in progress.
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     variant: {
-      description: "The variant of the button.",
-      type: "default | secondary | outline | ghost | link | destructive",
-      default: "default",
+      description: 'The variant of the button.',
+      type: 'default | secondary | outline | ghost | link | success | warning | destructive',
+      default: 'default',
     },
     size: {
-      description: "The size of the button.",
-      type: "default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg",
-      default: "default",
+      description: 'The size of the button.',
+      type: 'default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg',
+      default: 'default',
     },
     isLoading: {
-      description: "Shows a loading spinner and disables the button.",
-      type: "boolean",
+      description: 'Shows a loading spinner and disables the button.',
+      type: 'boolean',
     },
     render: {
       description:
-        "A React element to render in place of the default button element.",
-      type: "ReactElement",
+        'A React element to render in place of the default button element.',
+      type: 'ReactElement',
     },
     nativeButton: {
       description:
-        "Whether the rendered element is a native button. Set to false when using `render` with a non-button element.",
-      type: "boolean",
-      default: "true",
+        'Whether the rendered element is a native button. Set to false when using `render` with a non-button element.',
+      type: 'boolean',
+      default: 'true',
     },
   }}
 />

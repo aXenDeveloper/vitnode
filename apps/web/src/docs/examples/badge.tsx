@@ -7,6 +7,8 @@ export default function BadgeDemo() {
       <div className="flex w-full flex-wrap gap-2">
         <Badge>Badge</Badge>
         <Badge variant="secondary">Secondary</Badge>
+        <Badge variant="success">Success</Badge>
+        <Badge variant="warning">Warning</Badge>
         <Badge variant="destructive">Destructive</Badge>
         <Badge variant="outline">Outline</Badge>
       </div>

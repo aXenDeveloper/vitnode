@@ -90,7 +90,7 @@ Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blo
 
 | Kind                                               | Supported | Why                                                                                                                                                 |
 | :------------------------------------------------- | :-------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `field.text()`, `field.textarea()`                 | ✅        | The two kinds that can also be [edited in place](/docs/dev/widgets/inline-editing) on the page.                                                     |
+| `field.text()`, `field.textarea()`                 | ✅        | Plain strings, edited in the properties panel.                                                                                                      |
 | `field.number()`, `field.boolean()`                | ✅        |                                                                                                                                                     |
 | `field.enum()`, `field.dateTime()`                 | ✅        |                                                                                                                                                     |
 | `field.group()`                                    | ✅        | Nested objects are ordinary JSON.                                                                                                                   |
@@ -100,27 +100,6 @@ Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blo
 | `field.blocks()`                                   | Not yet   | Nested blocks need depth limits, their own allowlist and cycle detection first.                                                                     |
 
 Every one of those rules lives in one table, `blockFieldKindRefusal`, and the error a refused field produces quotes the reason from it.
-
-### Text a moderator can type into on the page
-
-A `text` or a `textarea` field can be edited twice over: in the properties panel, and by clicking the words themselves while somebody is editing the page. Opt in by wrapping whatever you render for that field:
-
-```tsx
-import { WidgetField } from '@vitnode/core/widgets/block-field'
-
-const Callout = ({ data }: WidgetComponentProps<CalloutData>) => (
-  <aside>
-    <WidgetField name="title">
-      <h2>{data.title}</h2>
-    </WidgetField>
-    <WidgetField name="body">
-      <p>{data.body}</p>
-    </WidgetField>
-  </aside>
-)
-```
-
-On a page nobody is editing, `WidgetField` renders its children and stops - no wrapper element, no attributes, no editor code in the bundle. The other kinds stay in the properties panel, where a date picker and a select belong. [Inline Editing](/docs/dev/widgets/inline-editing) has the whole story, including the typed variant that only accepts this widget's own field names.
 
 <Callout title="Media and relations are a limitation of today, not of the model">
   The serialized shape - `{ id, type, data }`, with `data` holding this field map's values - does not change when these land: a `file` field would store a `core_files.id` exactly as a file *column* does. What is missing is the lifecycle around it. A content column pins its file with `ON DELETE RESTRICT`, which is what makes the Files screen answer 409 instead of leaving a published page pointing at bytes that are gone; a value inside JSONB has no foreign key to carry that.
@@ -148,7 +127,7 @@ pl:  Hero  →  CTA   →  Gallery
 
 See [The blocks() field](/docs/dev/widgets/blocks-field#localization).
 
-Editing a widget's text [on the page itself](/docs/dev/widgets/inline-editing#which-language-am-i-typing-in) changes nothing about this. What somebody types goes into the `data` of the snapshot the page mounted for the locale it is showing, and it is saved by whoever already owned that locale's zone.
+Editing a widget's text in the [properties panel](/docs/dev/widgets/visual-editor#the-properties-panel) changes nothing about this. What somebody types goes into the `data` of the snapshot the page mounted for the locale it is showing, and it is saved by whoever already owned that locale's zone.
 
 ## Validating data by hand
 

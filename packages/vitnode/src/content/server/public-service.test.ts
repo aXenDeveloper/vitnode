@@ -41,6 +41,7 @@ const createDbMock = (results: unknown[][]) => {
       from: (value: unknown) => record("from", value),
       leftJoin: (value: unknown) => record("leftJoin", value),
       limit: (value: unknown) => record("limit", value),
+      offset: (value: unknown) => record("offset", value),
       orderBy: (value: unknown) => record("orderBy", value),
       then: async <TResult>(resolve: (rows: unknown[]) => TResult) =>
         Promise.resolve(rows).then(resolve),

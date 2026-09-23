@@ -13,41 +13,41 @@ description: A table component with sorting, filtering, and pagination compatibl
 import {
   type ColumnDef,
   DataTable,
-} from "@vitnode/core/components/table/data-table";
+} from '@vitnode/core/components/table/data-table'
 ```
 
 Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe - it only accepts a `keyof T`, just like TanStack Table. A **display column** (for actions, selection, etc.) has no `accessorKey` and instead requires a string `id`.
 
 ```tsx
 const columns: ColumnDef<User>[] = [
-  { accessorKey: "name", header: "Name" },
-  { accessorKey: "email", header: "Email" },
-  { accessorKey: "role", header: "Role" },
-  { accessorKey: "status", header: "Status", align: "center" },
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'email', header: 'Email' },
+  { accessorKey: 'role', header: 'Role' },
+  { accessorKey: 'status', header: 'Status', align: 'center' },
   {
-    id: "actions",
-    header: "",
-    align: "right",
+    id: 'actions',
+    header: '',
+    align: 'right',
     cell: () => (
       <Button size="sm" variant="outline">
         Edit
       </Button>
     ),
   },
-];
+]
 
-<DataTable
+;<DataTable
   id="users-table"
   columns={columns}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
     defaultOrder: {
-      column: "name",
-      order: "asc",
+      column: 'name',
+      order: 'asc',
     },
   }}
-/>;
+/>
 ```
 
 <Callout type="info" title="Type-safe columns">
@@ -56,13 +56,13 @@ const columns: ColumnDef<User>[] = [
   `string`) for display columns that aren't backed by a data field.
 </Callout>
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     columns: {
       description:
-        "Array of column definitions. Accessor columns bind to data via a type-safe accessorKey (keyof T); display columns (e.g. actions) use a string id instead.",
+        'Array of column definitions. Accessor columns bind to data via a type-safe accessorKey (keyof T); display columns (e.g. actions) use a string id instead.',
       required: true,
       type: `ColumnDef<T>[] where ColumnDef<T> is:
         // accessor column
@@ -84,12 +84,12 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
         }`,
     },
     edges: {
-      description: "Data to be displayed in the table",
+      description: 'Data to be displayed in the table',
       required: true,
-      type: "Array",
+      type: 'Array',
     },
     order: {
-      description: "Column sorting configuration",
+      description: 'Column sorting configuration',
       required: true,
       type: `{
         columns?: string[];
@@ -100,35 +100,40 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       }`,
     },
     pageInfo: {
-      description: "Pagination information from the API",
+      description:
+        'Pagination information from the API. Pass it straight through — the table renders numbered pages and a "Showing 21–30 of 380" range from it.',
       required: true,
       type: `{
+        count: number;
+        totalCount: number;
+        totalPages: number;
+        currentPage: number | null;
         hasNextPage: boolean;
         hasPreviousPage: boolean;
-        startCursor: string;
-        endCursor: string;
+        startCursor: string | null;
+        endCursor: string | null;
       }`,
     },
     search: {
       description:
-        "Renders a search input above the table. Requires the API route to define the searchable columns.",
+        'Renders a search input above the table. Requires the API route to define the searchable columns.',
       required: false,
-      type: "boolean",
+      type: 'boolean',
     },
     searchPlaceholder: {
-      description: "Custom placeholder text for the search input",
+      description: 'Custom placeholder text for the search input',
       required: false,
-      type: "string",
+      type: 'string',
     },
     bulkActions: {
       description:
-        "Actions for the rows a person ticked, rendered in a bar that floats at the bottom centre of the viewport. Passing this turns row selection on: the table grows a leading checkbox column, and the nodes here read the ticked ids with useDataTableSelection().",
+        'Actions for the rows a person ticked, rendered in a bar that floats at the bottom centre of the viewport. Passing this turns row selection on: the table grows a leading checkbox column, and the nodes here read the ticked ids with useDataTableSelection().',
       required: false,
-      type: "ReactNode",
+      type: 'ReactNode',
     },
     filters: {
       description:
-        "Renders one or more faceted multi-select dropdowns above the table. Each filter controls its own URL query parameter.",
+        'Renders one or more faceted multi-select dropdowns above the table. Each filter controls its own URL query parameter.',
       required: false,
       type: `{
         id: string;
@@ -157,8 +162,8 @@ You can customize how each cell is rendered using the `cell` property. The rende
   id="users-table"
   columns={[
     {
-      accessorKey: "id",
-      header: "Id",
+      accessorKey: 'id',
+      header: 'Id',
       // [!code ++]
       cell: ({ row, allData }) => (
         // [!code ++]
@@ -170,14 +175,14 @@ You can customize how each cell is rendered using the `cell` property. The rende
         // [!code ++]
       ),
     },
-    { accessorKey: "createdAt", header: "Created at" },
+    { accessorKey: 'createdAt', header: 'Created at' },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
-    columns: ["createdAt", "id"],
+    columns: ['createdAt', 'id'],
     defaultOrder: {
-      order: "desc",
+      order: 'desc',
     },
   }}
 />
@@ -229,15 +234,15 @@ Set the `search` prop to `true` to render a search input above the table. You ca
   // [!code ++]
   searchPlaceholder="Search users..."
   columns={[
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
+    { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'email', header: 'Email' },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
     defaultOrder: {
-      column: "name",
-      order: "asc",
+      column: 'name',
+      order: 'asc',
     },
   }}
 />
@@ -252,24 +257,24 @@ The input writes the term to the `?search=` query parameter (debounced) and relo
 
 ## Filters
 
-Pass the `filters` prop to render one or more faceted, multi-select dropdowns above the table (next to the search input). Each filter controls its own URL query parameter, so it works out of the box with server-side data fetching. Multiple selected values are stored as a comma-separated list, e.g. `?roleId=1,3`, and changing a filter resets the pagination cursor.
+Pass the `filters` prop to render one or more faceted, multi-select dropdowns above the table (next to the search input). Each filter controls its own URL query parameter, so it works out of the box with server-side data fetching. Multiple selected values are stored as a comma-separated list, e.g. `?roleId=1,3`, and changing a filter returns you to the first page.
 
 <TypeTable
   type={{
     id: {
-      description: "The URL query parameter this filter reads and writes.",
+      description: 'The URL query parameter this filter reads and writes.',
       required: true,
-      type: "string",
+      type: 'string',
     },
     label: {
       description:
-        "Text shown on the filter trigger and as the search placeholder.",
+        'Text shown on the filter trigger and as the search placeholder.',
       required: true,
-      type: "string",
+      type: 'string',
     },
     options: {
       description:
-        "Static options, filtered on the client. `label` can be any node; provide `keywords` so typing can search a node-based label.",
+        'Static options, filtered on the client. `label` can be any node; provide `keywords` so typing can search a node-based label.',
       required: false,
       type: `{
         value: string;
@@ -279,9 +284,9 @@ Pass the `filters` prop to render one or more faceted, multi-select dropdowns ab
     },
     onSearch: {
       description:
-        "Async source called (debounced) as the user types. The API is expected to return results already filtered and capped (e.g. 20 per request).",
+        'Async source called (debounced) as the user types. The API is expected to return results already filtered and capped (e.g. 20 per request).',
       required: false,
-      type: "(search: string) => Promise<Option[]>",
+      type: '(search: string) => Promise<Option[]>',
     },
   }}
 />
@@ -298,15 +303,15 @@ When the set of options is small and known ahead of time, pass them directly via
     // [!code ++]
     {
       // [!code ++]
-      id: "status",
+      id: 'status',
       // [!code ++]
-      label: "Status",
+      label: 'Status',
       // [!code ++]
       options: [
         // [!code ++]
-        { value: "active", label: "Active" },
+        { value: 'active', label: 'Active' },
         // [!code ++]
-        { value: "banned", label: "Banned" },
+        { value: 'banned', label: 'Banned' },
         // [!code ++]
       ],
       // [!code ++]
@@ -314,15 +319,15 @@ When the set of options is small and known ahead of time, pass them directly via
     // [!code ++]
   ]}
   columns={[
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
+    { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'email', header: 'Email' },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
     defaultOrder: {
-      column: "name",
-      order: "asc",
+      column: 'name',
+      order: 'asc',
     },
   }}
 />
@@ -333,35 +338,35 @@ When the set of options is small and known ahead of time, pass them directly via
 When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server. The universal fetcher answers from the browser here, with the visitor's own cookies:
 
 ```tsx title="search-roles.tsx"
-import type { FilterOption } from "@vitnode/core/components/table/filters";
+import type { FilterOption } from '@vitnode/core/components/table/filters'
 
-import { RoleFormat } from "@vitnode/core/components/role-format";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { RoleFormat } from '@vitnode/core/components/role-format'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
 export const searchRoles = async (search: string): Promise<FilterOption[]> => {
   const res = await fetcher({
-    plugin: "@vitnode/core",
-    path: "/list",
-    method: "get",
-    module: "admin/roles",
+    plugin: '@vitnode/core',
+    path: '/list',
+    method: 'get',
+    module: 'admin/roles',
     args: {
-      query: { search, first: "20" },
+      query: { search, first: '20' },
     },
     withPagination: true,
-  });
+  })
 
   if (res.status !== 200) {
-    return [];
+    return []
   }
 
-  const data = await res.json();
+  const data = await res.json()
 
-  return data.edges.map(role => ({
+  return data.edges.map((role) => ({
     value: String(role.id),
     label: <RoleFormat role={role} />,
-    keywords: role.name.map(item => item.name),
-  }));
-};
+    keywords: role.name.map((item) => item.name),
+  }))
+}
 ```
 
 ```tsx
@@ -392,6 +397,28 @@ where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
 
 </Callout>
 
+## Pagination
+
+The table renders its own pager from `pageInfo` — numbered pages with a first/last
+anchor and an ellipsis in between, a rows-per-page select, and a
+"Showing 21–30 of 380" range. You wire up nothing: pass `pageInfo` through and it
+appears.
+
+Each page is a real link (`?page=3`), so middle-click and "open in new tab" work,
+while a plain click stays a client-side navigation. On phones the numbers collapse
+to a "Page 3 of 38" label between the arrows, because forty tap targets do not fit
+on a 390px screen.
+
+Two details worth knowing:
+
+- **Changing the page size or a filter returns you to page one.** A filter changes
+  which rows exist, so the page you were on no longer means what it meant.
+- **A page past the end lands on the last page**, not on an empty table. Stale
+  links and hand-typed numbers stay useful.
+
+The API does the counting. See [Pagination](/docs/dev/database/pagination) for the
+route side, including the index your ordered column needs.
+
 ## Bulk Actions
 
 Pass `bulkActions` to let a person act on several rows at once. That single prop is what turns selection on: the table grows a leading checkbox column - one per row, plus a header checkbox that ticks the whole page - and while anything is ticked, a bar floats at the bottom centre of the viewport with the count, your actions, and a button to clear the selection.
@@ -401,14 +428,14 @@ Pass `bulkActions` to let a person act on several rows at once. That single prop
 Your actions read the ticked ids with the `useDataTableSelection` hook. They are rendered inside the bar, which lives inside the table's selection provider, so nothing has to be threaded through props:
 
 ```tsx title="delete-bulk-action.tsx"
-"use client";
+'use client'
 
-import { useDataTableSelection } from "@vitnode/core/components/table/selection";
-import { Button } from "@vitnode/core/components/ui/button";
+import { useDataTableSelection } from '@vitnode/core/components/table/selection'
+import { Button } from '@vitnode/core/components/ui/button'
 
 export const DeleteBulkAction = () => {
   // [!code ++]
-  const { clear, selected } = useDataTableSelection();
+  const { clear, selected } = useDataTableSelection()
 
   return (
     <Button
@@ -418,8 +445,8 @@ export const DeleteBulkAction = () => {
       <Trash2Icon />
       Delete
     </Button>
-  );
-};
+  )
+}
 ```
 
 ```tsx
@@ -428,15 +455,15 @@ export const DeleteBulkAction = () => {
   // [!code ++]
   bulkActions={<DeleteBulkAction />}
   columns={[
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
+    { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'email', header: 'Email' },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
     defaultOrder: {
-      column: "name",
-      order: "asc",
+      column: 'name',
+      order: 'asc',
     },
   }}
 />
@@ -447,40 +474,40 @@ export const DeleteBulkAction = () => {
 <TypeTable
   type={{
     selected: {
-      description: "The ticked row ids, in the order they were ticked.",
+      description: 'The ticked row ids, in the order they were ticked.',
       required: true,
-      type: "number[]",
+      type: 'number[]',
     },
     isSelected: {
-      description: "Whether one row id is ticked.",
+      description: 'Whether one row id is ticked.',
       required: true,
-      type: "(id: number) => boolean",
+      type: '(id: number) => boolean',
     },
     allSelected: {
-      description: "Every row on the page is ticked.",
+      description: 'Every row on the page is ticked.',
       required: true,
-      type: "boolean",
+      type: 'boolean',
     },
     someSelected: {
       description:
         "Some but not all rows are ticked - the header checkbox's indeterminate state.",
       required: true,
-      type: "boolean",
+      type: 'boolean',
     },
     toggle: {
-      description: "Ticks or unticks one row.",
+      description: 'Ticks or unticks one row.',
       required: true,
-      type: "(id: number) => void",
+      type: '(id: number) => void',
     },
     toggleAll: {
-      description: "Ticks or unticks every row on the page.",
+      description: 'Ticks or unticks every row on the page.',
       required: true,
-      type: "(next: boolean) => void",
+      type: '(next: boolean) => void',
     },
     clear: {
-      description: "Unticks everything, which hides the bar.",
+      description: 'Unticks everything, which hides the bar.',
       required: true,
-      type: "() => void",
+      type: '() => void',
     },
   }}
 />
@@ -506,55 +533,55 @@ Here's a complete example showing how to use the `DataTable` component in a page
 import {
   DataTable,
   SearchParamsDataTable,
-} from "@vitnode/core/components/table/data-table";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
+} from '@vitnode/core/components/table/data-table'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
 export const UsersView = async ({
   searchParams,
 }: {
-  searchParams: Promise<SearchParamsDataTable>;
+  searchParams: Promise<SearchParamsDataTable>
 }) => {
-  const query = await searchParams;
+  const query = await searchParams
   const res = await fetcher({
-    plugin: "@vitnode/core",
-    path: "/list",
-    method: "get",
-    module: "admin/users",
+    plugin: '@vitnode/core',
+    path: '/list',
+    method: 'get',
+    module: 'admin/users',
     args: {
       query,
     },
     withPagination: true,
-  });
-  const data = await res.json();
+  })
+  const data = await res.json()
 
   return (
     <DataTable
       id="users-table"
       columns={[
         {
-          accessorKey: "id",
-          header: "ID",
+          accessorKey: 'id',
+          header: 'ID',
         },
         {
-          accessorKey: "username",
-          header: "Username",
+          accessorKey: 'username',
+          header: 'Username',
           cell: ({ row }) => (
             <span className="font-medium">{row.username}</span>
           ),
         },
-        { accessorKey: "email", header: "Email" },
-        { accessorKey: "createdAt", header: "Created at" },
+        { accessorKey: 'email', header: 'Email' },
+        { accessorKey: 'createdAt', header: 'Created at' },
       ]}
       edges={data.edges}
       order={{
-        columns: ["id", "username", "email", "createdAt"],
+        columns: ['id', 'username', 'email', 'createdAt'],
         defaultOrder: {
-          column: "createdAt",
-          order: "desc",
+          column: 'createdAt',
+          order: 'desc',
         },
       }}
       pageInfo={data.pageInfo}
     />
-  );
-};
+  )
+}
 ```

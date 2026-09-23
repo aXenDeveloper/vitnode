@@ -91,7 +91,7 @@ export const listFilesAdminRoute = buildRoute({
       c,
       primaryCursor: core_files.id,
       search: [core_files.name],
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({
@@ -116,7 +116,8 @@ export const listFilesAdminRoute = buildRoute({
           .leftJoin(core_roles, eq(core_roles.id, core_users.roleId))
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_files,
       orderBy: {
         column: query.orderBy

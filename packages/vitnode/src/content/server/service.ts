@@ -76,12 +76,15 @@ export type ContentListRow<TDefinition> = ContentSelect<TDefinition> & {
 
 export interface ContentPageInfo {
   count: number;
+  currentPage: null | number;
 
   endCursor: null | string;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  pageSize: number;
   startCursor: null | string;
   totalCount: number;
+  totalPages: number;
 }
 
 export interface ContentFindManyArgs<TDefinition> {
@@ -91,8 +94,14 @@ export interface ContentFindManyArgs<TDefinition> {
     column?: ContentOrderableFieldName<TDefinition>;
     order?: "asc" | "desc";
   };
-  /** Raw pagination query (`cursor`, `first`, `last`, `search`). */
-  query?: { cursor?: string; first?: string; last?: string; search?: string };
+  /** Raw pagination query (`cursor`, `first`, `last`, `page`, `search`). */
+  query?: {
+    cursor?: string;
+    first?: string;
+    last?: string;
+    page?: string;
+    search?: string;
+  };
   where?: SQL;
 }
 
@@ -785,6 +794,7 @@ export const createContentService = <
         query: async ({
           cursorSelection,
           limit,
+          offset,
           orderBy: order,
           where: rowWhere,
         }) => {
@@ -825,7 +835,8 @@ export const createContentService = <
             .orderBy(order)
             .limit(
               typeof limit === "number" ? limit : CONTENT_DEFAULT_PAGE_SIZE,
-            );
+            )
+            .offset(offset);
         },
       });
 

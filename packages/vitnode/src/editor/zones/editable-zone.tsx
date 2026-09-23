@@ -14,7 +14,7 @@ import type {
   ContentNode,
   RegisteredBlock,
 } from "../../blocks/types";
-import type { EditorNodeRef, EditorZoneMount } from "../state/types";
+import type { EditorZoneMount } from "../state/types";
 import type { ZoneDropState } from "./drop-state";
 
 import { isBlockAreaInstance } from "../../blocks/area";
@@ -24,7 +24,6 @@ import { EditableBlockShell } from "../block-shell/block-shell";
 import { useVisualEditor } from "../context";
 import { ContainerSortable } from "../dnd/container-sortable";
 import { useZoneDroppable } from "../dnd/use-container-droppable";
-import { EditorInlineBlock } from "../inline/block";
 import {
   fitsRootNodeCap,
   fitsZoneMax,
@@ -112,28 +111,16 @@ const EditableBlock = ({
   zoneId: string;
 }): ReactElement => {
   const entry = registry?.get(instance.type);
-  const nodeRef: EditorNodeRef = {
-    areaId,
-    kind: "block",
-    nodeId: instance.id,
-    zoneId,
-  };
 
   return (
-    <EditorInlineBlock
-      definition={entry?.definition}
+    <EditableBlockShell
+      areaId={areaId}
+      index={index}
       instance={instance}
-      nodeRef={nodeRef}
+      zoneId={zoneId}
     >
-      <EditableBlockShell
-        areaId={areaId}
-        index={index}
-        instance={instance}
-        zoneId={zoneId}
-      >
-        <EditableBlockBody entry={entry} index={index} instance={instance} />
-      </EditableBlockShell>
-    </EditorInlineBlock>
+      <EditableBlockBody entry={entry} index={index} instance={instance} />
+    </EditableBlockShell>
   );
 };
 

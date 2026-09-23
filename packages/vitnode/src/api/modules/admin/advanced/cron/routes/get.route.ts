@@ -57,14 +57,15 @@ export const getCronsRoute = buildRoute({
       },
       c,
       primaryCursor: core_cron.id,
-      query: async ({ cursorSelection, limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
           .select({ ...getColumns(core_cron), ...cursorSelection })
           .from(core_cron)
           .where(where)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit)
+          .offset(offset),
       table: core_cron,
       orderBy: {
         column: query.orderBy ? core_cron[query.orderBy] : core_cron.lastRun,
