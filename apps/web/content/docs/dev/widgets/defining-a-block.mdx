@@ -11,6 +11,7 @@ import type { WidgetComponentProps, WidgetData } from '@vitnode/core/widgets'
 
 import { defineWidget } from '@vitnode/core/widgets'
 import { field } from '@vitnode/core/content'
+import { InfoIcon } from 'lucide-react'
 
 const calloutFields = {
   body: field.textarea({ required: true, minLength: 1, maxLength: 600 }),
@@ -34,12 +35,32 @@ export const calloutWidget = defineWidget({
   component: Callout,
   description: 'A short highlighted note in one of three tones.',
   fields: calloutFields,
+  icon: InfoIcon,
   id: 'callout',
   name: 'Callout',
 })
 ```
 
 `WidgetData<typeof calloutFields>` is the inferred data type: `title` and `body` are `string`, `tone` is `"info" | "success" | "warning" | undefined` because it has a default. Nothing is written twice.
+
+## Give it an icon
+
+`icon` is the picture people see next to the widget's name in the [Visual Editor](/docs/dev/widgets/visual-editor): on its card in the catalogue, on the card that follows the pointer while it is dragged, and at the top of its properties panel. Pass the icon **component**, not an element - `icon: InfoIcon`, not `icon: <InfoIcon />` - so the editor can size and colour it to match everything around it.
+
+```tsx
+import { MegaphoneIcon } from 'lucide-react'
+
+export const promoWidget = defineWidget({
+  component: Promo,
+  fields: promoFields,
+  icon: MegaphoneIcon,
+  id: 'promo',
+})
+```
+
+Any component that accepts a `className` works, so an icon from another set or your own inline SVG is fine too. Pick one that says what the widget **is** at a glance: a megaphone for a call to action, a "T" for text. Leave `icon` off and the widget gets the generic widget icon, which is fine but makes every such card look alike. Core's own widgets use `PanelTopIcon` (Hero), `MegaphoneIcon` (Call to action) and `TypeIcon` (Text).
+
+The icon only shows up in the editor. Your widget's component on the public page never renders it.
 
 ## Component props
 

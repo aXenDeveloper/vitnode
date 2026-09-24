@@ -6,7 +6,7 @@ icon: MousePointerClick
 
 **Visual Edit Mode** is the part where somebody finally gets to move things around.
 
-A page renders its [content zones](/docs/dev/widgets/content-zones) the way it always has. An authorized moderator opens the user menu in the header, clicks **Edit widgets**, and the _same page_ - same layout, same fonts, same widgets - grows an outline around each zone, a drag handle on each widget and a sidebar that slides in down the right-hand side while the whole site moves over to make room for it. They rearrange, edit in the sidebar, save, and leave. Nobody was sent to a separate admin screen to guess what the result would look like.
+A page renders its [content zones](/docs/dev/widgets/content-zones) the way it always has. An authorized moderator opens the user menu in the header, clicks **Edit widgets**, and the _same page_ - same layout, same fonts, same widgets - grows an outline around each zone, makes every widget draggable where it stands, and slides a sidebar that slides in down the right-hand side while the whole site moves over to make room for it. They rearrange, edit in the sidebar, save, and leave. Nobody was sent to a separate admin screen to guess what the result would look like.
 
 ```text
 public page
@@ -16,7 +16,7 @@ the same page, editable
 public page again
 ```
 
-{/* Image prompt: A VitNode settings page in Visual Edit Mode. The left three quarters is a normal-looking settings screen with a profile form in the middle; above and below it, two content zones are outlined with dashed borders and small corner labels reading "before-profile" and "after-profile". One block is selected with a blue ring and shows a small floating row of icon buttons (drag handle, duplicate, delete) in its top-right corner. The right quarter is a full-height sidebar headed "Available Widgets" with a search field and a grouped list of draggable block cards under "Core" and "Example", and a footer holding Preview, Discard, Save and Finish editing buttons above a line reading "Unsaved changes". Dark theme, 1600x900. */}
+{/* Image prompt: A VitNode settings page in Visual Edit Mode. The left three quarters is a normal-looking settings screen with a profile form in the middle; above and below it, two content zones are outlined with dashed borders and small corner labels reading "Before profile" and "After profile". One block is selected with a blue ring and shows a small floating pill of icon buttons (edit, delete) in its top-right corner. The right quarter is a full-height sidebar headed "Widgets" with a search field and a grouped list of draggable block cards under "CORE" and "EXAMPLE", and a footer with a small amber dot beside "Unsaved changes" and a Discard link, above an eye-icon Preview button, a Finish editing button and a wide blue Save button. Dark theme, 1600x900. */}
 
 ## `ContentZone` did not change
 
@@ -217,7 +217,7 @@ VitNode solves that with three layers on every block, and one escape hatch:
 | :---------------------- | :------------------------------------------------------------------------------------------------------------------------ |
 | **`inert` container**   | The block's own component renders inside an `inert` element, so nothing in it can be clicked, focused or tabbed to.       |
 | **Transparent overlay** | A full-size `<button>` above it. Clicking anywhere on the block selects it; screen readers get _"Select the Hero block"_. |
-| **Floating actions**    | A drag handle, Duplicate and Delete appear on hover, on focus, and while selected.                                        |
+| **Floating actions**    | Edit and Delete appear on hover, on focus, and while selected. There is no move button: the widget itself is the handle. |
 | **Preview toggle**      | Removes all three. The block becomes the real thing again, exactly as a visitor sees it.                                  |
 
 The alternative - asking every block author to make their component "editor-aware" - was never on the table. A block's component is public rendering code, it is written by plugin authors who have never read the editor's source, and it must not grow a second mode. `inert` does the whole job in one attribute, from the outside.
@@ -228,7 +228,17 @@ Preview is there because the illusion has to break sometimes. Does the video pla
 
 An empty zone [renders nothing at all](/docs/dev/widgets/content-zones#empty-zones) in view mode - no wrapper, no placeholder, no gap. That is deliberate, and it stays true.
 
-In edit mode the same zone renders a dashed drop target with its id and an **Add block** button, because now somebody _is_ looking for a place to put something.
+In edit mode the same zone renders a dashed drop target with its name and an **Add block** button, because now somebody _is_ looking for a place to put something.
+
+That name is the zone's id made readable, so nobody has to decode your naming scheme: hyphens become spaces, the first letter is capitalised, and each `:` scope becomes its own part.
+
+| Zone id                   | Shown as                    |
+| :------------------------ | :-------------------------- |
+| `header`                  | Header                      |
+| `before-profile`          | Before profile              |
+| `settings:before-profile` | Settings · Before profile   |
+
+The same name is used in the sidebar (_Adding to Before profile_) and in what screen readers announce during a drag. The id itself is untouched - it is still what gets stored and what you write in code.
 
 ```text
 view mode   before-footer   (nothing)
@@ -251,13 +261,15 @@ Which frame that is comes from the **editor**, not from the seam that loads it. 
 
 ### One panel, three modes
 
-|                      |                                                                                                                                                                                  |
-| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Available Widgets** | A search field, a **Layout** section holding the [Area](/docs/dev/widgets/layout-areas) entry, and every block this location accepts, grouped by the namespace that provides it. |
-| **Properties**       | The selected block's [variant](/docs/dev/widgets/block-variants) picker and its fields, with Duplicate and Delete under them.                                                     |
-| **Area properties**  | The selected Area's Columns, Gap, Alignment and Distribution, with Duplicate, Ungroup and Delete area under them.                                                                 |
+|                     |                                                                                                                                                                                  |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Widgets**         | A search field, a **Layout** section holding the [Area](/docs/dev/widgets/layout-areas) entry, and every block this location accepts, grouped by the namespace that provides it. |
+| **Properties**      | The selected block's name and type in the header, next to Duplicate and Delete, then its [variant](/docs/dev/widgets/block-variants) picker and its fields.                     |
+| **Area properties** | Duplicate, Ungroup and Delete area in the header, then the Area's **Layout** (Columns, Alignment, Distribution) and **Spacing** (Gap and the space around it).                  |
 
-Selecting a block switches to **Properties**; selecting an Area switches to **Area properties**. The **← Available Widgets** action at the top switches back from either _and_ clears the selection, so the page stops ringing something you are no longer editing. Deleting the selection does the same thing on its own.
+Selecting a block switches to **Properties**; selecting an Area switches to **Area properties**. Each panel keeps its header pinned while its content scrolls, so the actions never scroll out of reach. The **←** button at the top (_Back to widgets_) switches back from either _and_ clears the selection, so the page stops ringing something you are no longer editing. Deleting the selection does the same thing on its own.
+
+The footer keeps the state of the page in one glance: a coloured dot and a word (**Saved**, **Unsaved changes**, **Saving…**, **Save failed**), **Discard changes** beside it, and underneath **Preview**, **Finish editing** and **Save** - the only blue button in the panel, lit up only when there is something to save.
 
 In **Preview** the sidebar collapses to a slim bar holding **Back to editing** and **Finish editing**. It never collapses to nothing - a preview you cannot leave is a trap - and the editor stays mounted behind it with every unsaved change intact.
 
@@ -270,11 +282,22 @@ A catalogue entry is a drag source _and_ a button, because those answer two diff
 | **Drag it**  | You care where it goes. An insertion line shows the exact position while you are still holding it.                               |
 | **Click it** | You do not, or you already said where. It goes to the targeted zone - or, with nothing targeted, the first zone that accepts it. |
 
-**Add widget** on a zone is what sets that target: the sidebar switches to **Available Widgets**, its header reads _For: sidebar_, and the zone stays lit until a block lands or you clear it. **Add widget** on an Area targets the Area instead, and the header says so - _For: an area in after-profile_ - because naming the zone alone would be a lie about where the block is going.
+**Add widget** on a zone is what sets that target: the sidebar switches to **Widgets**, its header shows _Adding to Sidebar_, and the zone stays lit until a block lands or you clear it. **Add widget** on an Area targets the Area instead, and the header says so - _Adding to an area in After profile_ - because naming the zone alone would be a lie about where the block is going.
 
 The catalogue's own **Layout** section sits above the plugin groups and holds one entry: **Area**. It works exactly like a block entry: click it and an empty Area drops into the target, or drag it and it lands where the insertion line says. An Area is not a registered block and has no type, so what travels with the drag is the layout itself rather than a block id - and dropping one onto an Area is refused, because [an Area cannot hold another Area](/docs/dev/widgets/layout-areas#areas-cannot-contain-areas). While an Area is the insertion target the Layout section disappears for the same reason.
 
-Either gesture inserts the block, selects it and opens **Properties** in one step, so the next thing you do is fill it in.
+Either gesture inserts the block, selects it and opens **Properties** in one step, so the next thing you do is fill it in. The new block fades in where it landed and scrolls into view if it landed off screen - handy when a click sent it to the bottom of a long page.
+
+### How a drag feels
+
+A drag is meant to feel like picking something up, not like watching a diagram.
+
+|                    |                                                                                                                                                              |
+| :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Picking up**     | The card lifts a touch (2% larger, deeper shadow). The place it came from turns into a dashed slot, so you can see the gap you are about to leave.           |
+| **Moving**         | Every zone that accepts what you hold lights up softly; the one under the pointer lights up fully. Zones that refuse it dim instead of shouting in red.      |
+| **Dropping**       | The card settles into its new slot in 200ms, shrinking back to its real size on the way. Drop a catalogue card nowhere useful and it glides back home.       |
+| **Reduced motion** | With _reduce motion_ switched on in the operating system, all of the above happens instantly - same feedback, no movement.                                 |
 
 ### The catalogue follows the target
 
@@ -301,7 +324,7 @@ A zone that allows nothing the installation provides says so, rather than offeri
 
 ## Drag and drop
 
-Grab a block by its handle, or a catalogue entry anywhere on its card, and move it.
+Grab a block anywhere on it, or a catalogue entry anywhere on its card, and move it. A click without moving still just selects the block, and an Area is dragged by its own frame - its header or the space around its columns - so grabbing a widget inside an Area moves that widget, not the Area. On a touchscreen a swipe keeps scrolling the page; press and hold to pick a widget up.
 
 - **Reorder** inside a zone: drop it above or below a sibling.
 - **Move across zones**: drop it into another zone, or onto one of that zone's blocks to land at that position.
@@ -317,11 +340,12 @@ Nothing ever lands _inside a block_. Dropping **into** something is the Area's g
 
 ### The keyboard does all of it too
 
-Drag and drop that needs a mouse is drag and drop half the people cannot use, so the handle is a real button and every gesture has a key.
+Drag and drop that needs a mouse is drag and drop half the people cannot use, so every block is a real button and every gesture has a key.
 
 | Key                       | What it does                                                          |
 | :------------------------ | :-------------------------------------------------------------------- |
-| <kbd>Tab</kbd>            | Reaches the drag handle of a block, like any other button.            |
+| <kbd>Tab</kbd>            | Reaches each block (and each Area's header), like any other button.   |
+| <kbd>Enter</kbd>          | Selects the block and opens its properties.                           |
 | <kbd>Space</kbd>          | Picks the block up - and, the second time, drops it.                  |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Moves it through the positions of its zone and on into the next zone. |
 | <kbd>Esc</kbd>            | Puts it back where it started.                                        |
@@ -353,7 +377,7 @@ A block that declares more than one [variant](/docs/dev/widgets/block-variants) 
 
 ### Area properties
 
-Select an [Area](/docs/dev/widgets/layout-areas) rather than one of its children and the same sidebar shows its four layout tokens - **Columns**, **Gap**, **Alignment**, **Distribution** - and re-lays the page out as you pick them. Under them: **Duplicate area**, **Ungroup**, and **Delete area**.
+Select an [Area](/docs/dev/widgets/layout-areas) rather than one of its children and the same sidebar shows its layout in two groups - **Layout** (**Columns** as a one-click 1–4 switch, **Alignment**, **Distribution**) and **Spacing** (**Gap** and the space around the Area) - and re-lays the page out as you pick them. **Duplicate area**, **Ungroup** and **Delete area** sit in the panel's header.
 
 Ungroup and Delete are deliberately different buttons. Ungroup removes the container and leaves the blocks where the Area was; Delete takes them with it, and asks first, offering _Ungroup, keep blocks_ in the same dialog. An Area holding nothing is deleted without the interrogation, because there is nothing to lose.
 
@@ -370,7 +394,7 @@ Every value a zone mounts with is sorted into one of two piles:
 | **A block with bad data**         | `{ id, type, data }` is intact and `type` is registered, but `data` does not match the fields. It stays a block: selectable, movable, deletable.                          |
 | **Something that is not a block** | No usable `id`, no `type`, an id already used **by an earlier block in the same zone**, or not an object at all. Nothing can be inferred from it, so nothing pretends to. |
 
-The first pile keeps working exactly as before - the block renders an [`InvalidBlock`](#the-properties-panel) placeholder in place of its component, and its own shell keeps the drag handle, the duplicate and the delete button. Its data is bad; its identity is not.
+The first pile keeps working exactly as before - the block renders an [`InvalidBlock`](#the-properties-panel) placeholder in place of its component, and its own shell stays draggable and keeps its delete button. Its data is bad; its identity is not.
 
 The second pile never becomes a content node. It is kept beside them, not among them:
 
@@ -417,7 +441,7 @@ So removal is a decision you make, one entry at a time, and it is an edit like a
 
 A page is allowed to change its mind. A tab, a feature flag, a route transition - any of them can stop rendering a `ContentZone` while edit mode is still on, and the editor has to have an answer that is not "persist it anyway".
 
-When a zone's outlet unmounts it is **removed from the document**: out of `zones`, out of `order`, and therefore out of the next save payload entirely. A stale zone can never be written back. If it owned the selection, the selection clears and the sidebar returns to **Available Widgets**; if it was the target of **Add widget**, that target clears too.
+When a zone's outlet unmounts it is **removed from the document**: out of `zones`, out of `order`, and therefore out of the next save payload entirely. A stale zone can never be written back. If it owned the selection, the selection clears and the sidebar returns to **Widgets**; if it was the target of **Add widget**, that target clears too.
 
 What happens to unsaved work in it depends on whether there was any:
 
@@ -606,7 +630,7 @@ The section above is about scope. This one is about rough edges in the part that
 
 Dimming it would mean fading the page and un-fading the zones, and a descendant cannot undo an ancestor's `opacity` or `filter`: those create a new compositing context that the zone inside it is stuck in. The only other route is selector-based - "dim everything that does not contain a zone" - which would have to make assumptions about a page's DOM that VitNode does not get to make, since the page is yours. So the editor emphasises the zones rather than de-emphasising the page, and a host that wants more can style `[data-vitnode-zone]` and its surroundings itself.
 
-**Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen. The page reserves room for it - `--editor-sheet-height` is padding on the canvas below `md` and the width of the sidebar above it, so the last zone always scrolls clear of the sheet and Preview takes both away - but nothing is _tuned_ for touch: a drag competes with page scrolling, and a 44px drag handle on a 360px screen is a big ask. Arranging a page on a phone is possible. Enjoyable is a later stage.
+**Mobile is a bottom sheet, and only that.** Below `md` the sidebar becomes a sheet so it does not eat a phone screen. The page reserves room for it - `--editor-sheet-height` is padding on the canvas below `md` and the width of the sidebar above it, so the last zone always scrolls clear of the sheet and Preview takes both away - but nothing is _tuned_ for touch: a drag competes with page scrolling, and press-and-hold is the only way to tell a drag from a scroll. Arranging a page on a phone is possible. Enjoyable is a later stage.
 
 **Blocks themselves do remount when you enter edit mode.** The page around them does not - that is the whole point of the [stable boundary](#turning-it-on-does-not-restart-your-page) - but a `ContentZone` genuinely swaps what it renders, from `ContentRenderer` output to the editor's portal, so each block component is built again. A block holding transient state of its own restarts with it: a playing video, an open accordion, a carousel's position, a `useState` counter. Content survives, because content lives in the block's data; ephemeral UI state does not. Closing that gap means hoisting block instances above the view/edit split, which is a bigger change than this stage is willing to make.
 
@@ -745,14 +769,14 @@ Drop on the top half and the new block is second, not last.
 
 **Move an existing block between compatible zones**
 
-Drag the `core:text` block out of `before-profile` by its handle and into `after-profile`. It keeps its content and its instance id - the properties panel does not flicker on the way.
+Drag the `core:text` block out of `before-profile` and into `after-profile`. It keeps its content and its instance id - the properties panel does not flicker on the way.
 
 </Step>
 <Step>
 
 **Move a block with the keyboard only**
 
-Put the mouse down. <kbd>Tab</kbd> to a block's drag handle, press <kbd>Space</kbd>, then <kbd>↓</kbd>.
+Put the mouse down. <kbd>Tab</kbd> to a block, press <kbd>Space</kbd>, then <kbd>↓</kbd>.
 
 The blue insertion line appears under the block below, exactly as it does for a pointer - keep pressing <kbd>↓</kbd> and it walks into the next zone. <kbd>Space</kbd> drops the block where the line is; <kbd>Esc</kbd> puts it back. Whatever the line said, that is where the block lands.
 
@@ -770,7 +794,7 @@ The zone turns red and says it does not accept the block. Release: nothing moves
 
 **Select a block**
 
-Click any block on the page. Expect a ring around it and a floating row of actions - drag handle, Duplicate, Delete - in its corner.
+Click any block on the page. Expect a ring around it and a floating row of actions - Edit, Delete - in its corner.
 
 </Step>
 <Step>
@@ -880,7 +904,7 @@ Now do it the other way round: click **Edit widgets**, change something, and pre
 - **An empty Area is edit-mode only.** The page ships one. In edit mode it is a two-column drop target; press **Finish editing** and it leaves no markup behind at all, exactly like an empty zone.
 - **Add widget inside an Area** targets the Area, not the zone: the sidebar header reads _For: an area in after-profile_, and the **Layout** section disappears while it does, because an Area cannot hold another Area.
 - **Duplicate** drops a copy directly below the original with its own instance id; **Delete** takes it away and returns the sidebar to the catalogue.
-- The profile form in the middle must have **no** outline, **no** handle and **no** overlay, and its input must still take focus and type. It is application code.
+- The profile form in the middle must have **no** outline, **no** drag surface and **no** overlay, and its input must still take focus and type. It is application code.
 - Navigating away with unsaved changes - a header link, or the back button - prompts, with **Keep editing** and **Leave without saving**.
 - **Below `md`** the sidebar becomes a bottom sheet and the canvas gains padding to match: scroll to the end and the last zone, its **Add widget** button included, clears the sheet completely. **Preview** takes the padding away with the sheet, so the page is exactly as a visitor sees it.
 - **Seed something unreadable** and the refusal is easy to see. Save the zone once first, so there is a row to corrupt:

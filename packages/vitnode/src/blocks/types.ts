@@ -39,6 +39,8 @@ export type BlockComponent<
   TVariant extends string = string,
 > = ComponentType<BlockComponentProps<TData, TVariant>>;
 
+export type BlockIcon = ComponentType<{ className?: string }>;
+
 export interface BlockDefinition<
   TId extends string = string,
   TFields extends BlockFieldMap = ContentFieldMap,
@@ -48,6 +50,7 @@ export interface BlockDefinition<
   defaultVariant?: TVariant;
   description?: string;
   fields: TFields;
+  icon?: BlockIcon;
   id: TId;
   name?: string;
   variants?: readonly BlockVariantDefinition<TVariant>[];

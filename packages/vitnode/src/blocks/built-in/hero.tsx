@@ -1,3 +1,5 @@
+import { PanelTopIcon } from "lucide-react";
+
 import type { BlockComponentProps, BlockData } from "../types";
 
 import { field } from "../../content/fields";
@@ -56,6 +58,7 @@ export const heroBlock = defineBlock({
   component: Hero,
   description: "A page heading with an optional lead paragraph and one link.",
   fields: heroFields,
+  icon: PanelTopIcon,
   id: "hero",
   name: "Hero",
 });

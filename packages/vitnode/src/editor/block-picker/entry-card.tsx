@@ -1,34 +1,38 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 export const BLOCK_CATALOG_CARD_CLASS =
-  "border-border bg-card text-card-foreground flex w-full items-start gap-2 rounded-md border p-2 text-start";
+  "border-border bg-card text-card-foreground flex w-full items-center gap-3 rounded-lg border p-2 text-start";
 
 export interface BlockCatalogCardEntry {
   description?: string | undefined;
   name: string;
-  type?: string | undefined;
 }
 
 export const BlockCatalogEntryCard = ({
   entry,
+  icon,
 }: {
   entry: BlockCatalogCardEntry;
+  icon: ReactNode;
 }): ReactElement => (
-  <span className="flex min-w-0 flex-col gap-0.5">
-    <span className="truncate text-sm leading-relaxed font-medium">
-      {entry.name}
+  <>
+    <span
+      aria-hidden="true"
+      className="bg-muted text-muted-foreground group-enabled/entry:group-hover/entry:bg-primary/10 group-enabled/entry:group-hover/entry:text-primary flex size-9 shrink-0 items-center justify-center rounded-sm transition-colors duration-150 [&_svg]:size-4"
+    >
+      {icon}
     </span>
 
-    {entry.description === undefined ? null : (
-      <span className="text-muted-foreground line-clamp-2 text-xs leading-relaxed text-pretty">
-        {entry.description}
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className="truncate text-sm leading-relaxed font-medium">
+        {entry.name}
       </span>
-    )}
 
-    {entry.type === undefined ? null : (
-      <span className="text-muted-foreground truncate text-xs leading-relaxed">
-        {entry.type}
-      </span>
-    )}
-  </span>
+      {entry.description === undefined ? null : (
+        <span className="text-muted-foreground line-clamp-2 text-xs leading-relaxed text-pretty">
+          {entry.description}
+        </span>
+      )}
+    </span>
+  </>
 );

@@ -1,5 +1,6 @@
 import type {
   BlockAllowedSpec,
+  BlockIcon,
   BlockRegistry,
   RegisteredBlock,
 } from "../../blocks/types";
@@ -10,6 +11,7 @@ import { allowedBlocks } from "../../blocks/registry";
 
 export interface BlockCatalogEntry {
   description: string | undefined;
+  icon: BlockIcon | undefined;
   name: string;
   namespace: string;
   type: string;
@@ -58,6 +60,7 @@ export const toBlockCatalogEntry = (
   entry: RegisteredBlock,
 ): BlockCatalogEntry => ({
   description: entry.definition.description,
+  icon: entry.definition.icon,
   name: entry.definition.name ?? entry.definition.id,
   namespace: parseBlockId(entry.type)?.namespace ?? entry.namespace,
   type: entry.type,

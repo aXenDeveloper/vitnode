@@ -102,8 +102,18 @@
       "dev_mode": "Tryb deweloperski",
       "version": "Wersja: {version}",
       "widgets": {
-        "drag_handle": "Przenieś {title}",
+        "dnd": {
+          "added": "Dodano {title} na pozycji {position} z {total}.",
+          "cancelled": "Anulowano przenoszenie {title}. Nic się nie zmieniło.",
+          "instructions": "Naciśnij Spację, aby podnieść widżet. Przesuwaj go strzałkami, upuść Spacją, a Escape odłoży go z powrotem.",
+          "moved": "{title} przeniesiono na pozycję {position} z {total}.",
+          "not_dropped": "{title} nie został nigdzie upuszczony. Nic się nie zmieniło.",
+          "over": "{title} jest nad pozycją {position} z {total}.",
+          "picked_up": "Podniesiono {title}."
+        },
         "drop_here": "Upuść tutaj widżet",
+        "drop_hint": "Albo kliknij widżet w panelu, aby dodać go na końcu.",
+        "drop_incoming": "{title} trafi tutaj",
         "edit": "Edytuj układ",
         "empty_desc": "Dodaj widżety, aby mieć ważne dane zawsze pod ręką.",
         "empty_title": "Twój pulpit jest pusty",
@@ -118,16 +128,27 @@
           "title": "Notatki"
         },
         "panel": {
-          "desc": "Przeciągnij widżet na swój pulpit.",
+          "add": "Dodaj {title}",
+          "back": "Wróć do widżetów",
+          "desc": "Kliknij widżet, aby go dodać, lub przeciągnij go na pulpit.",
           "empty_desc": "Usuń widżet, aby wrócił na tę listę.",
           "empty_title": "Wszystko jest już na pulpicie",
           "no_results_desc": "Nic tutaj nie nazywa się \"{query}\". Spróbuj innego słowa.",
           "no_results_title": "Brak pasujących widżetów",
           "search": "Szukaj widżetu",
-          "title": "Dostępne widżety"
+          "title": "Widżety"
+        },
+        "properties": {
+          "title": "Właściwości: {title}"
         },
         "refresh_error": "Nie udało się odświeżyć tego widżetu. Odśwież stronę, aby zobaczyć zmiany.",
         "remove": "Usuń {title}",
+        "resize": {
+          "handle": "Zmień rozmiar: {title}",
+          "hint": "Przeciągnij róg albo użyj strzałek: w lewo i w prawo zmieniają szerokość, w górę i w dół wysokość.",
+          "size": "Szerokość {width}, wysokość {rows} z 3."
+        },
+        "select": "Wybierz {title}",
         "send-notification": {
           "default_message": "Wiadomość od administratora 👋",
           "desc": "Wysyła powiadomienie do użytkownika w czasie rzeczywistym, na każdej przeglądarce, na której jest zalogowany.",
@@ -147,15 +168,22 @@
           "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
           "error_title": "Nie udało się zapisać ustawień",
           "load_error": "Nie udało się wczytać tych ustawień. Zamknij i spróbuj ponownie.",
+          "none": "Ten widżet nie ma nic do ustawienia. Zmień jego rozmiar powyżej albo przeciągnij go w inne miejsce pulpitu.",
           "open": "Skonfiguruj {title}",
-          "title": "Skonfiguruj {title}"
+          "save": "Zapisz ustawienia",
+          "saved_desc": "{title} korzysta teraz z nowych ustawień.",
+          "saved_title": "Zapisano ustawienia",
+          "section": "Ustawienia"
         },
         "size": {
           "large": "Duża",
           "medium": "Średnia",
+          "section": "Rozmiar",
           "small": "Mała",
-          "title": "Szerokość"
-        }
+          "width": "Szerokość"
+        },
+        "status_clean": "Brak zmian",
+        "status_unsaved": "Niezapisane zmiany"
       }
     },
     "debug": {

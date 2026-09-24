@@ -1,3 +1,5 @@
+import { TypeIcon } from "lucide-react";
+
 import type { BlockComponentProps, BlockData } from "../types";
 
 import { field } from "../../content/fields";
@@ -40,6 +42,7 @@ export const textBlock = defineBlock({
   description:
     "Plain paragraphs of prose. Blank lines separate paragraphs, and nothing is parsed as markup.",
   fields: textFields,
+  icon: TypeIcon,
   id: "text",
   name: "Text",
 });

@@ -1,6 +1,6 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
-import { CopyIcon, Trash2Icon, UngroupIcon } from "lucide-react";
+import { Columns2Icon, CopyIcon, Trash2Icon, UngroupIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
@@ -23,7 +23,14 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Slider } from "../../components/ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
+import { TooltipWithContent } from "../../components/ui/tooltip";
 import { useVisualEditor } from "../context";
+import {
+  EditorPanelBack,
+  EditorPanelHeader,
+  EditorPanelSeparator,
+} from "../sidebar/panel-header";
 import {
   refusesDuplicate,
   refusesRemoval,
@@ -44,6 +51,64 @@ interface TokenOption {
   label: string;
   value: string;
 }
+
+const AreaPanelGroup = ({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}): ReactElement => (
+  <section className="flex flex-col gap-4">
+    <h3 className="text-muted-foreground text-xs leading-relaxed font-medium tracking-wider uppercase">
+      {title}
+    </h3>
+
+    {children}
+  </section>
+);
+
+const AreaColumnsControl = ({
+  label,
+  onSelect,
+  value,
+}: {
+  label: string;
+  onSelect: (value: BlockAreaLayout["columns"]) => void;
+  value: BlockAreaLayout["columns"];
+}): ReactElement => {
+  const t = useTranslations("core.editor");
+
+  return (
+    <LabelledControl label={label}>
+      {ids => (
+        <ToggleGroup
+          {...ids}
+          className="bg-muted w-full rounded-lg p-0.5"
+          onValueChange={next => {
+            const picked = Number(next[0]);
+
+            if (isAreaColumns(picked)) onSelect(picked);
+          }}
+          spacing={0.5}
+          value={[String(value)]}
+        >
+          {AREA_LAYOUT_OPTIONS.columns.map(option => (
+            <ToggleGroupItem
+              aria-label={t("area.columns_value", { columns: option })}
+              className="text-muted-foreground hover:text-foreground aria-pressed:bg-card aria-pressed:text-foreground flex-1 tabular-nums transition-[background-color,color,box-shadow] duration-150 hover:bg-transparent aria-pressed:shadow-sm"
+              key={option}
+              size="sm"
+              value={String(option)}
+            >
+              {option}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      )}
+    </LabelledControl>
+  );
+};
 
 const AreaLayoutSelect = ({
   items,
@@ -102,28 +167,23 @@ const AreaSpacingSlider = ({
   const t = useTranslations("core.editor");
 
   return (
-    <LabelledControl label={label}>
+    <LabelledControl label={label} value={t("area.spacing_px", { px: value })}>
       {ids => (
-        <div className="flex flex-col gap-2">
-          <Slider
-            {...ids}
-            max={AREA_SPACING_RANGE.max}
-            min={AREA_SPACING_RANGE.min}
-            onValueChange={next => {
-              const picked = Array.isArray(next) ? next[0] : next;
+        <Slider
+          {...ids}
+          className="py-1"
+          max={AREA_SPACING_RANGE.max}
+          min={AREA_SPACING_RANGE.min}
+          onValueChange={next => {
+            const picked = Array.isArray(next) ? next[0] : next;
 
-              if (typeof picked === "number") {
-                onSelect(clampAreaSpacing(picked));
-              }
-            }}
-            step={1}
-            value={[value]}
-          />
-
-          <span className="text-muted-foreground text-xs leading-relaxed">
-            {t("area.spacing_px", { px: value })}
-          </span>
-        </div>
+            if (typeof picked === "number") {
+              onSelect(clampAreaSpacing(picked));
+            }
+          }}
+          step={1}
+          value={[value]}
+        />
       )}
     </LabelledControl>
   );
@@ -165,122 +225,120 @@ export const AreaPropertiesPanelContent = ({
   };
 
   return (
-    <section
-      aria-label={t("area.properties")}
-      className="flex flex-col gap-4 p-4"
-    >
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="text-sm leading-none font-semibold text-balance">
-          {t("area.properties")}
-        </h2>
-        <p className="text-muted-foreground truncate text-xs">
-          {t("area.summary", { columns })}
-        </p>
-      </div>
+    <section aria-label={t("area.properties")} className="flex flex-col">
+      <EditorPanelHeader
+        actions={
+          <>
+            <TooltipWithContent text={t("area.duplicate")}>
+              <Button
+                aria-label={t("area.duplicate")}
+                disabled={duplicateRefused}
+                onClick={() => {
+                  dispatch({ ref: target, type: "duplicate" });
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <CopyIcon />
+              </Button>
+            </TooltipWithContent>
 
-      <div className="flex flex-col gap-4">
-        <AreaLayoutSelect
-          items={AREA_LAYOUT_OPTIONS.columns.map(option => ({
-            label: t("area.columns_value", { columns: option }),
-            value: String(option),
-          }))}
-          label={t("area.columns")}
-          onSelect={value => {
-            const picked = Number(value);
-            if (!isAreaColumns(picked)) return;
+            <TooltipWithContent text={t("area.ungroup")}>
+              <Button
+                aria-label={t("area.ungroup")}
+                disabled={ungroupRefused}
+                onClick={ungroup}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <UngroupIcon />
+              </Button>
+            </TooltipWithContent>
 
-            apply({ columns: picked });
-          }}
-          value={String(columns)}
-        />
+            <EditorPanelSeparator />
 
-        <AreaSpacingSlider
-          label={t("area.gap")}
-          onSelect={gap => {
-            apply({ gap });
-          }}
-          value={layout.gap}
-        />
+            <TooltipWithContent text={t("area.remove")}>
+              <Button
+                aria-label={t("area.remove")}
+                className="hover:bg-destructive/10 hover:text-destructive -me-2"
+                disabled={removeRefused}
+                onClick={() => {
+                  setConfirming(true);
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <Trash2Icon />
+              </Button>
+            </TooltipWithContent>
+          </>
+        }
+        description={t("area.columns_value", { columns })}
+        icon={<Columns2Icon />}
+        leading={<EditorPanelBack />}
+        title={t("area.name")}
+      />
 
-        <AreaSpacingSlider
-          label={t("area.margin_y")}
-          onSelect={marginY => {
-            apply({ marginY });
-          }}
-          value={layout.marginY}
-        />
-
-        <AreaSpacingSlider
-          label={t("area.margin_x")}
-          onSelect={marginX => {
-            apply({ marginX });
-          }}
-          value={layout.marginX}
-        />
-
-        <AreaLayoutSelect
-          items={AREA_LAYOUT_OPTIONS.align.map(option => ({
-            label: t(`area.align_option.${option}`),
-            value: option,
-          }))}
-          label={t("area.align")}
-          onSelect={value => {
-            if (isAreaAlign(value)) apply({ align: value });
-          }}
-          value={layout.align}
-        />
-
-        <AreaLayoutSelect
-          items={AREA_LAYOUT_OPTIONS.justify.map(option => ({
-            label: t(`area.justify_option.${option}`),
-            value: option,
-          }))}
-          label={t("area.justify")}
-          onSelect={value => {
-            if (isAreaJustify(value)) apply({ justify: value });
-          }}
-          value={layout.justify}
-        />
-      </div>
-
-      <div className="border-border flex flex-col gap-2 border-t pt-4">
-        <div className="flex gap-2">
-          <Button
-            className="flex-1"
-            disabled={duplicateRefused}
-            onClick={() => {
-              dispatch({ ref: target, type: "duplicate" });
+      <div className="flex flex-col gap-8 p-4">
+        <AreaPanelGroup title={t("area.section_layout")}>
+          <AreaColumnsControl
+            label={t("area.columns")}
+            onSelect={picked => {
+              apply({ columns: picked });
             }}
-            size="sm"
-            variant="secondary"
-          >
-            <CopyIcon />
-            {t("area.duplicate")}
-          </Button>
+            value={columns}
+          />
 
-          <Button
-            className="flex-1"
-            disabled={ungroupRefused}
-            onClick={ungroup}
-            size="sm"
-            variant="secondary"
-          >
-            <UngroupIcon />
-            {t("area.ungroup")}
-          </Button>
-        </div>
+          <AreaLayoutSelect
+            items={AREA_LAYOUT_OPTIONS.align.map(option => ({
+              label: t(`area.align_option.${option}`),
+              value: option,
+            }))}
+            label={t("area.align")}
+            onSelect={value => {
+              if (isAreaAlign(value)) apply({ align: value });
+            }}
+            value={layout.align}
+          />
 
-        <Button
-          disabled={removeRefused}
-          onClick={() => {
-            setConfirming(true);
-          }}
-          size="sm"
-          variant="destructive"
-        >
-          <Trash2Icon />
-          {t("area.remove")}
-        </Button>
+          <AreaLayoutSelect
+            items={AREA_LAYOUT_OPTIONS.justify.map(option => ({
+              label: t(`area.justify_option.${option}`),
+              value: option,
+            }))}
+            label={t("area.justify")}
+            onSelect={value => {
+              if (isAreaJustify(value)) apply({ justify: value });
+            }}
+            value={layout.justify}
+          />
+        </AreaPanelGroup>
+
+        <AreaPanelGroup title={t("area.section_spacing")}>
+          <AreaSpacingSlider
+            label={t("area.gap")}
+            onSelect={gap => {
+              apply({ gap });
+            }}
+            value={layout.gap}
+          />
+
+          <AreaSpacingSlider
+            label={t("area.margin_y")}
+            onSelect={marginY => {
+              apply({ marginY });
+            }}
+            value={layout.marginY}
+          />
+
+          <AreaSpacingSlider
+            label={t("area.margin_x")}
+            onSelect={marginX => {
+              apply({ marginX });
+            }}
+            value={layout.marginX}
+          />
+        </AreaPanelGroup>
       </div>
 
       <ConfirmActionAlertDialog

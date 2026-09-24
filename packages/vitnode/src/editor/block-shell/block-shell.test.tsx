@@ -207,13 +207,25 @@ describe("the remove button a block shell offers", () => {
 });
 
 describe("the action toolbar buttons", () => {
-  it("renders drag, edit, and remove buttons with accessible names", () => {
+  it("renders edit and remove buttons with accessible names", () => {
     const data = { heading: "Hello", width: "full" };
 
     render(<Shell data={data} />);
 
-    expect(screen.getByRole("button", { name: "block.drag" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "block.edit" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "block.remove" })).not.toBeNull();
+  });
+});
+
+describe("moving a block", () => {
+  it("has no separate move button, because the block itself is dragged", () => {
+    render(<Shell data={{ heading: "Hello", width: "full" }} />);
+
+    expect(screen.queryByRole("button", { name: "block.drag" })).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "block.select" })
+        .getAttribute("aria-roledescription"),
+    ).toBe("sortable");
   });
 });

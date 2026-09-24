@@ -2,15 +2,18 @@ import type { CSSProperties } from "react";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useReducedMotion } from "motion/react";
 
 import type { EditorNodeRef } from "../state/types";
 
+import { DRAG_SHIFT_TRANSITION } from "../../lib/dnd/drag-motion";
 import { useVisualEditor } from "../context";
 import { nodeDraggableId } from "./resolve-drop";
 
 export interface SortableNode {
+  activatorProps: Record<string, unknown>;
   dragging: boolean;
-  handleProps: Record<string, unknown>;
+  dragListeners: Record<string, unknown>;
   setNodeRef: (node: HTMLElement | null) => void;
   style: CSSProperties;
 }
@@ -27,6 +30,7 @@ export const useSortableNode = ({
   type: string | undefined;
 }): SortableNode => {
   const { preview } = useVisualEditor();
+  const reduceMotion = useReducedMotion();
 
   const {
     attributes,
@@ -48,15 +52,13 @@ export const useSortableNode = ({
     },
     disabled: preview,
     id: nodeDraggableId(nodeRef),
+    transition: reduceMotion ? null : DRAG_SHIFT_TRANSITION,
   });
 
   return {
+    activatorProps: { ...attributes, ref: setActivatorNodeRef },
     dragging: isDragging,
-    handleProps: {
-      ...attributes,
-      ...listeners,
-      ref: setActivatorNodeRef,
-    },
+    dragListeners: listeners ?? {},
     setNodeRef,
     style: {
       transform: CSS.Translate.toString(transform),

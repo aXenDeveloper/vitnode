@@ -2,6 +2,7 @@ import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
 import { field } from "@vitnode/core/content/fields";
 import { defineWidget } from "@vitnode/core/widgets";
+import { SparklesIcon } from "lucide-react";
 
 const featureItem = {
   body: field.textarea({ maxLength: 240, nullable: true }),
@@ -124,6 +125,7 @@ export const featuresWidget = defineWidget({
   description:
     "Up to three features, told the same way in three different shapes.",
   fields: featuresFields,
+  icon: SparklesIcon,
   id: "features",
   name: "Features",
   variants: [

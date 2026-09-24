@@ -1,3 +1,5 @@
+import { MegaphoneIcon } from "lucide-react";
+
 import type { BlockComponentProps, BlockData } from "../types";
 
 import { field } from "../../content/fields";
@@ -38,6 +40,7 @@ export const ctaBlock = defineBlock({
   component: Cta,
   description: "A short call to action with one link.",
   fields: ctaFields,
+  icon: MegaphoneIcon,
   id: "cta",
   name: "Call to action",
 });

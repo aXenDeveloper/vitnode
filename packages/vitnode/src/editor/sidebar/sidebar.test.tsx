@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { act, type ReactElement, useEffect, useReducer, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,12 +39,19 @@ const Quote = ({
   data,
 }: BlockComponentProps<BlockData<typeof quoteFields>>) => <p>{data.body}</p>;
 
+const HeroIcon = () => <svg data-testid="hero-icon" />;
+
 const registry = createBlockRegistry([
   {
     pluginId: "@vitnode/core",
     namespace: "core",
     blocks: [
-      defineBlock({ component: Hero, fields: heroFields, id: "hero" }),
+      defineBlock({
+        component: Hero,
+        fields: heroFields,
+        icon: HeroIcon,
+        id: "hero",
+      }),
       defineBlock({ component: Quote, fields: quoteFields, id: "quote" }),
     ],
   },
@@ -228,5 +235,42 @@ describe("the catalogue the sidebar keeps between panels", () => {
 
     expect(search().value).toBe("");
     expect(screen.queryByRole("button", { name: "picker.clear" })).toBeNull();
+  });
+});
+
+describe("the icon a widget declares", () => {
+  const catalogCard = (name: string): HTMLElement => {
+    const card = screen
+      .getAllByRole("button", { name: "picker.add" })
+      .find(button => button.textContent?.includes(name));
+
+    if (!card) throw new Error(`No catalogue card for ${name}`);
+
+    return card;
+  };
+
+  it("is drawn on the widget's catalogue card", () => {
+    render(<Harness />);
+
+    expect(within(catalogCard("hero")).getByTestId("hero-icon")).toBeDefined();
+  });
+
+  it("is not borrowed by a widget that declares none", () => {
+    render(<Harness />);
+
+    const card = catalogCard("quote");
+
+    expect(within(card).queryByTestId("hero-icon")).toBeNull();
+    expect(card.querySelector("svg")).not.toBeNull();
+  });
+
+  it("heads the properties panel while that widget is selected", () => {
+    render(<Harness />);
+
+    select(true);
+
+    const panel = screen.getByRole("region", { name: "properties" });
+
+    expect(within(panel).getByTestId("hero-icon")).toBeDefined();
   });
 });

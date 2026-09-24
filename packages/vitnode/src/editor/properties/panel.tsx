@@ -1,6 +1,6 @@
 import type z from "zod";
 
-import { CopyIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import { Fragment, type ReactElement, useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
@@ -16,9 +16,16 @@ import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { AutoForm } from "../../components/form/auto-form";
 import { Button } from "../../components/ui/button";
 import { useFormApi } from "../../components/ui/form";
+import { TooltipWithContent } from "../../components/ui/tooltip";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
+import { BlockGlyph } from "../block-picker/block-glyph";
 import { useVisualEditor } from "../context";
 import { blockInstanceIssue } from "../instance/defaults";
+import {
+  EditorPanelBack,
+  EditorPanelHeader,
+  EditorPanelSeparator,
+} from "../sidebar/panel-header";
 import {
   refusesDuplicate,
   refusesRemoval,
@@ -190,82 +197,92 @@ const BlockPropertiesPanelContent = ({
   const name = entry ? blockDisplayName(entry) : t("block.unknown.title");
 
   return (
-    <section aria-label={t("properties")} className="flex flex-col gap-4 p-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="text-sm leading-none font-semibold text-balance">
-          {name}
-        </h2>
-        <p className="text-muted-foreground truncate text-xs">
-          {instance.type}
-        </p>
-      </div>
+    <section aria-label={t("properties")} className="flex flex-col">
+      <EditorPanelHeader
+        actions={
+          <>
+            <TooltipWithContent text={t("duplicate")}>
+              <Button
+                aria-label={t("block.duplicate", { name })}
+                disabled={duplicateRefused}
+                onClick={() => {
+                  dispatch({ ref: target, type: "duplicate" });
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <CopyIcon />
+              </Button>
+            </TooltipWithContent>
 
-      {issue === null ? null : (
-        <div
-          className="border-destructive/40 bg-destructive/10 text-destructive flex flex-col gap-1 rounded-md border p-3"
-          role="status"
-        >
-          <p className="text-sm leading-relaxed text-pretty">
-            {entry ? t("invalid_block") : t("block.issue.unknown_type")}
-          </p>
-          <p className="text-sm leading-relaxed opacity-80">{issue}</p>
-        </div>
-      )}
+            <EditorPanelSeparator />
 
-      {entry ? (
-        <BlockVariantControl
-          definition={entry.definition}
-          target={target}
-          variant={instance.variant}
-        />
-      ) : null}
+            <TooltipWithContent text={tGlobal("remove")}>
+              <Button
+                aria-label={t("block.remove", { name })}
+                className="hover:bg-destructive/10 hover:text-destructive -me-2"
+                disabled={removeRefused}
+                onClick={() => {
+                  dispatch({ ref: target, type: "remove" });
+                  setPanel();
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <Trash2Icon />
+              </Button>
+            </TooltipWithContent>
+          </>
+        }
+        description={<span className="font-mono">{instance.type}</span>}
+        icon={<BlockGlyph icon={entry?.definition.icon} />}
+        leading={<EditorPanelBack />}
+        title={name}
+      />
 
-      {entry ? (
-        <BlockPropertiesForm
-          entry={entry}
-          instance={instance}
-          key={`${target.zoneId}/${target.nodeId}/${baseline}`}
-          onSent={(patch, removed) => {
-            setSent(current => {
-              const next: BlockUnknownData = { ...current, ...patch };
-              for (const name of removed) delete next[name];
+      <div className="flex flex-col gap-6 p-4">
+        {issue === null ? null : (
+          <div
+            className="border-destructive/30 bg-destructive/10 text-destructive flex gap-2 rounded-lg border p-3"
+            role="status"
+          >
+            <TriangleAlertIcon
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0"
+            />
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="text-sm leading-relaxed text-pretty">
+                {entry ? t("invalid_block") : t("block.issue.unknown_type")}
+              </p>
+              <p className="text-sm leading-relaxed opacity-80">{issue}</p>
+            </div>
+          </div>
+        )}
 
-              return next;
-            });
-          }}
-          target={target}
-        />
-      ) : null}
+        {entry ? (
+          <BlockVariantControl
+            definition={entry.definition}
+            target={target}
+            variant={instance.variant}
+          />
+        ) : null}
 
-      <div className="border-border flex gap-2 border-t pt-4">
-        <Button
-          aria-label={t("block.duplicate", { name })}
-          className="flex-1"
-          disabled={duplicateRefused}
-          onClick={() => {
-            dispatch({ ref: target, type: "duplicate" });
-          }}
-          size="sm"
-          variant="secondary"
-        >
-          <CopyIcon />
-          {t("duplicate")}
-        </Button>
+        {entry ? (
+          <BlockPropertiesForm
+            entry={entry}
+            instance={instance}
+            key={`${target.zoneId}/${target.nodeId}/${baseline}`}
+            onSent={(patch, removed) => {
+              setSent(current => {
+                const next: BlockUnknownData = { ...current, ...patch };
+                for (const name of removed) delete next[name];
 
-        <Button
-          aria-label={t("block.remove", { name })}
-          className="flex-1"
-          disabled={removeRefused}
-          onClick={() => {
-            dispatch({ ref: target, type: "remove" });
-            setPanel();
-          }}
-          size="sm"
-          variant="destructive"
-        >
-          <Trash2Icon />
-          {tGlobal("remove")}
-        </Button>
+                return next;
+              });
+            }}
+            target={target}
+          />
+        ) : null}
       </div>
     </section>
   );
@@ -280,8 +297,8 @@ export const EditorPropertiesPanel = (): ReactElement => {
 
   if (selected === null || view === null) {
     return (
-      <section aria-label={t("properties")} className="p-4">
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+      <section aria-label={t("properties")} className="p-6">
+        <p className="text-muted-foreground text-center text-sm leading-relaxed text-balance">
           {t("no_selection")}
         </p>
       </section>

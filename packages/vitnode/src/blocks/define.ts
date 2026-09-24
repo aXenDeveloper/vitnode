@@ -4,6 +4,7 @@ import type {
   BlockData,
   BlockDefinition,
   BlockFieldMap,
+  BlockIcon,
   BlockVariantDefinition,
 } from "./types";
 
@@ -21,6 +22,7 @@ export interface DefineBlockArgs<
   defaultVariant?: NoInfer<TVariant>;
   description?: string;
   fields: TFields;
+  icon?: BlockIcon;
   id: TId;
   name?: string;
   variants?: readonly BlockVariantDefinition<TVariant>[];
@@ -90,6 +92,7 @@ export const defineBlock = <
   defaultVariant,
   description,
   fields,
+  icon,
   id,
   name,
   variants,
@@ -106,6 +109,7 @@ export const defineBlock = <
     defaultVariant,
     description,
     fields: assertBlockFields(id, fields),
+    icon,
     id,
     name,
     variants,

@@ -1,12 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 
 import { cn } from "cn";
-import {
-  GripVerticalIcon,
-  PencilIcon,
-  Trash2Icon,
-  TriangleAlertIcon,
-} from "lucide-react";
+import { PencilIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +18,13 @@ import { useSortableNode } from "../dnd/use-sortable-node";
 import { refusesRemoval, zoneCapacity } from "../state/bounds";
 import { sameNodeRef } from "../state/reducer";
 import { isRepairRemoval } from "../state/repair";
+import {
+  DropIndicator,
+  NODE_ARRIVAL_CLASS,
+  NODE_DESTRUCTIVE_ACTION_CLASS,
+  NodeToolbar,
+  NodeToolbarSeparator,
+} from "../zones/node-chrome";
 import { editableBlockIssue } from "./issue";
 
 const ISSUE_LABELS = {
@@ -48,7 +50,7 @@ export const EditableBlockShell = ({
   zoneId,
 }: EditableBlockShellProps): ReactElement => {
   const t = useTranslations("core.editor");
-  const { dispatch, preview, state } = useVisualEditor();
+  const { arrivingNodeId, dispatch, preview, state } = useVisualEditor();
   const { dropIndicator } = useEditorDnd();
   const nodeRef: EditorNodeRef = {
     areaId,
@@ -56,11 +58,12 @@ export const EditableBlockShell = ({
     nodeId: instance.id,
     zoneId,
   };
-  const { dragging, handleProps, setNodeRef, style } = useSortableNode({
-    index,
-    nodeRef,
-    type: instance.type,
-  });
+  const { activatorProps, dragListeners, dragging, setNodeRef, style } =
+    useSortableNode({
+      index,
+      nodeRef,
+      type: instance.type,
+    });
 
   if (preview) return <>{children}</>;
 
@@ -88,27 +91,41 @@ export const EditableBlockShell = ({
     dropIndicator.areaId === areaId
       ? dropIndicator
       : null;
-  const edge = placed?.edge ?? null;
+  const revealed = selected && !dragging;
 
   return (
     <div
       className={cn(
-        "group/block relative rounded-md transition-opacity",
-        dragging ? "opacity-50" : "opacity-100",
-        selected ? "ring-primary ring-2" : "hover:ring-border hover:ring-1",
+        "group/block relative rounded-md transition-[box-shadow,background-color,outline-color] duration-150 ease-out motion-reduce:transition-none",
+        dragging
+          ? "bg-primary/5 outline-primary/50 outline-2 -outline-offset-2 outline-dashed"
+          : selected
+            ? "ring-primary ring-2"
+            : "hover:ring-primary/50 hover:ring-1",
+        arrivingNodeId === instance.id && NODE_ARRIVAL_CLASS,
       )}
       data-block-id={instance.id}
       data-block-type={instance.type}
-      data-drop-edge={edge ?? undefined}
+      data-drop-edge={placed?.edge}
       data-selected={selected ? "" : undefined}
       ref={setNodeRef}
       style={style}
     >
-      <div inert>{children}</div>
+      <div
+        className={cn(
+          "transition-opacity duration-150 motion-reduce:transition-none",
+          dragging && "opacity-30",
+        )}
+        inert
+      >
+        {children}
+      </div>
 
       <button
+        {...activatorProps}
+        {...dragListeners}
         aria-current={selected}
-        className="focus-visible:ring-ring absolute inset-0 rounded-md focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring absolute inset-0 cursor-grab rounded-md focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
         onClick={() => {
           dispatch({ ref: nodeRef, type: "select" });
         }}
@@ -117,86 +134,60 @@ export const EditableBlockShell = ({
         <span className="sr-only">{t("block.select", { name })}</span>
       </button>
 
-      <div
+      <NodeToolbar
         className={cn(
-          "absolute end-2 top-2 z-30 flex items-center gap-1 transition-opacity",
-          selected
-            ? "opacity-100"
-            : "opacity-0 group-focus-within/block:opacity-100 group-hover/block:opacity-100",
+          "absolute end-2 top-2 z-30",
+          revealed
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-1 opacity-0 group-focus-within/block:pointer-events-auto group-focus-within/block:translate-y-0 group-focus-within/block:opacity-100 group-hover/block:pointer-events-auto group-hover/block:translate-y-0 group-hover/block:opacity-100",
         )}
       >
-        <TooltipWithContent text={t("move")}>
-          <Button
-            {...handleProps}
-            aria-label={t("block.drag", { name })}
-            className="cursor-grab touch-none shadow-sm active:cursor-grabbing"
-            size="icon-sm"
-            type="button"
-            variant="secondary"
-          >
-            <GripVerticalIcon />
-          </Button>
-        </TooltipWithContent>
-
         <TooltipWithContent text={t("edit")}>
           <Button
             aria-label={t("block.edit", { name })}
-            className="shadow-sm"
             onClick={() => {
               dispatch({ ref: nodeRef, type: "select" });
             }}
             size="icon-sm"
             type="button"
-            variant="secondary"
+            variant="ghost"
           >
             <PencilIcon />
           </Button>
         </TooltipWithContent>
 
+        <NodeToolbarSeparator />
+
         <TooltipWithContent text={t("remove")}>
           <Button
             aria-label={t("block.remove", { name })}
-            className="shadow-sm"
+            className={NODE_DESTRUCTIVE_ACTION_CLASS}
             disabled={removeRefused}
             onClick={() => {
               dispatch({ ref: nodeRef, type: "remove" });
             }}
             size="icon-sm"
             type="button"
-            variant="destructive"
+            variant="ghost"
           >
             <Trash2Icon />
           </Button>
         </TooltipWithContent>
-      </div>
+      </NodeToolbar>
 
       {issue === null ? null : (
-        <p className="border-destructive/60 bg-background text-destructive pointer-events-none absolute start-2 top-2 z-10 flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs leading-relaxed">
+        <p className="border-destructive/40 bg-card text-destructive pointer-events-none absolute start-2 top-2 z-10 flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs leading-relaxed shadow-xs">
           <TriangleAlertIcon aria-hidden="true" className="size-3" />
           {t(ISSUE_LABELS[issue.kind])}
         </p>
       )}
 
-      {placed === null ? null : placed.axis === "horizontal" ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "bg-primary pointer-events-none absolute inset-y-0 z-20 w-0.5 rounded-full",
-            placed.edge === "before" ? "-start-1" : "-end-1",
-          )}
-        >
-          <span className="bg-primary absolute start-1/2 top-0 size-2 -translate-x-1/2 rounded-full rtl:translate-x-1/2" />
-        </span>
-      ) : (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "bg-primary pointer-events-none absolute inset-x-0 z-20 h-0.5 rounded-full",
-            placed.edge === "before" ? "-top-1" : "-bottom-1",
-          )}
-        >
-          <span className="bg-primary absolute start-0 top-1/2 size-2 -translate-y-1/2 rounded-full" />
-        </span>
+      {placed === null ? null : (
+        <DropIndicator
+          axis={placed.axis}
+          edge={placed.edge}
+          key={placed.edge}
+        />
       )}
     </div>
   );

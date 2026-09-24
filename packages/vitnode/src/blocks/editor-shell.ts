@@ -8,7 +8,7 @@ export const EDITOR_SHELL_STYLE = {
 } as CSSProperties;
 
 export const EDITOR_SHELL_CLASS =
-  "transition-[padding] duration-200 ease-linear";
+  "transition-[padding] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
 
 export const EDITOR_SHELL_EDITING_CLASS =
   "pb-(--editor-sheet-height) md:pe-(--editor-sidebar-width) md:pb-0";

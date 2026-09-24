@@ -2,6 +2,7 @@ import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
 import { field } from "@vitnode/core/content/fields";
 import { defineWidget } from "@vitnode/core/widgets";
+import { InfoIcon } from "lucide-react";
 
 const calloutFields = {
   body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
@@ -37,6 +38,7 @@ export const calloutWidget = defineWidget({
   component: Callout,
   description: "A short highlighted note in one of three tones.",
   fields: calloutFields,
+  icon: InfoIcon,
   id: "callout",
   name: "Callout",
 });

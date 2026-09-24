@@ -909,13 +909,13 @@
     },
     "editor": {
       "title": "Editing page",
-      "available_blocks": "Available Widgets",
+      "available_blocks": "Widgets",
       "finish": "Finish editing",
       "back_to_editing": "Back to editing",
-      "insert_for": "For: {zone}",
-      "insert_for_area": "For: an area in {zone}",
+      "back_to_widgets": "Back to widgets",
+      "insert_for": "Adding to {zone}",
+      "insert_for_area": "Adding to an area in {zone}",
       "insert_clear": "Clear the target zone",
-      "move": "Move",
       "edit": "Edit",
       "remove": "Remove",
       "preview": "Preview",
@@ -949,7 +949,6 @@
       },
       "block": {
         "select": "Select the {name} widget",
-        "drag": "Drag the {name} widget to reorder it",
         "move": "Move the {name} widget",
         "edit": "Edit the {name} widget",
         "duplicate": "Duplicate the {name} widget",
@@ -990,6 +989,7 @@
       },
       "picker": {
         "search": "Search widgets…",
+        "hint": "Click to add, or drag onto the page.",
         "clear": "Clear search",
         "empty": "This zone does not accept any of the installed widgets.",
         "no_results": "No widgets match your search.",
@@ -1047,8 +1047,9 @@
         "description": "Lay widgets out side by side in up to four columns.",
         "summary": "Area · {columns, plural, one {# column} other {# columns}}",
         "select": "Select this area",
-        "drag": "Drag this area to reorder it",
         "properties": "Area properties",
+        "section_layout": "Layout",
+        "section_spacing": "Spacing",
         "drop_here": "Drop widgets here",
         "add_block": "Add widget",
         "rejected": "This area does not accept the widget you are dragging.",
@@ -1093,7 +1094,6 @@
       "version": "Version: {version}",
       "widgets": {
         "edit": "Edit layout",
-        "drag_handle": "Move {title}",
         "remove": "Remove {title}",
         "drop_here": "Drop a widget here",
         "empty_title": "Your dashboard is empty",
@@ -1102,27 +1102,34 @@
         "error_desc": "Something went wrong on the way to the server. Please try again.",
         "refresh_error": "Could not reload this widget. Reload the page to see your changes.",
         "panel": {
-          "title": "Available widgets",
-          "desc": "Drag a widget onto your dashboard.",
+          "title": "Widgets",
+          "desc": "Click a widget to add it, or drag it onto the dashboard.",
           "search": "Search for a widget",
           "empty_title": "Everything is already on the board",
           "empty_desc": "Remove a widget to put it back here.",
           "no_results_title": "No widget matches",
-          "no_results_desc": "Nothing here is called \"{query}\". Try another word."
+          "no_results_desc": "Nothing here is called \"{query}\". Try another word.",
+          "add": "Add {title}",
+          "back": "Back to widgets"
         },
         "size": {
-          "title": "Width",
           "small": "Small",
           "medium": "Medium",
-          "large": "Large"
+          "large": "Large",
+          "section": "Size",
+          "width": "Width"
         },
         "settings": {
           "open": "Configure {title}",
-          "title": "Configure {title}",
           "desc": "These settings apply to this card only - other admins keep their own.",
           "error_title": "Could not save the settings",
           "error_desc": "Something went wrong on the way to the server. Please try again.",
-          "load_error": "Could not load these settings. Close this and try again."
+          "load_error": "Could not load these settings. Close this and try again.",
+          "section": "Settings",
+          "none": "This widget has nothing to set up. Change its size above, or drag it somewhere else on the board.",
+          "saved_title": "Settings saved",
+          "saved_desc": "{title} now uses the new settings.",
+          "save": "Save settings"
         },
         "notes": {
           "title": "Notes",
@@ -1145,6 +1152,28 @@
             "message": "Default title",
             "message_desc": "What the Title field starts with each time the dashboard loads. Leave it empty for the built-in greeting."
           }
+        },
+        "drop_hint": "Or click one in the panel to add it at the end.",
+        "drop_incoming": "{title} goes here",
+        "status_unsaved": "Unsaved changes",
+        "status_clean": "No changes yet",
+        "dnd": {
+          "instructions": "Press Space to pick up a widget. Use the arrow keys to move it, Space to drop it and Escape to put it back.",
+          "picked_up": "Picked up {title}.",
+          "over": "{title} is over position {position} of {total}.",
+          "moved": "{title} moved to position {position} of {total}.",
+          "added": "{title} added at position {position} of {total}.",
+          "not_dropped": "{title} was not dropped anywhere. Nothing changed.",
+          "cancelled": "Moving {title} was cancelled. Nothing changed."
+        },
+        "resize": {
+          "handle": "Resize {title}",
+          "hint": "Drag the corner, or use the arrow keys: left and right change the width, up and down the height.",
+          "size": "Width {width}, height {rows} of 3."
+        },
+        "select": "Select {title}",
+        "properties": {
+          "title": "{title} properties"
         }
       }
     },
