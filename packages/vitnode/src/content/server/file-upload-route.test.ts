@@ -6,35 +6,23 @@ import type { Context, MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { StorageImageUnprocessableError } from "@/api/models/storage";
+import { createTestCache } from "@/tests/cache";
 import {
   testFilePostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
-
-const permissions = { create: true, edit: true, view: true };
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async () => {
-    await Promise.resolve();
-  },
-  checkStaffPermission: async (
-    _c: unknown,
-    { permission }: { permission: string },
-  ) =>
-    await Promise.resolve(
-      permission === "can_create"
-        ? permissions.create
-        : permission === "can_edit"
-          ? permissions.edit
-          : permissions.view,
-    ),
-}));
 
 const files = createContentModel(testFilePostContentType);
 const plain = createContentModel(testPostContentType, {
@@ -44,13 +32,23 @@ const plain = createContentModel(testPostContentType, {
 });
 
 const PLUGIN_ID = "@vitnode/example";
+const ADMIN_ID = 1;
 
-const harness = ({
+const grant = (...names: string[]): PermissionsStaffArgs[] =>
+  names.map(permission => ({
+    module: testFilePostContentType.permissionModule,
+    permission,
+    plugin: PLUGIN_ID,
+  }));
+
+const harness = async ({
+  permissions = ROOT_STAFF_PERMISSIONS,
   storageThrows,
   storedAs,
   storedMimeType,
   storedSize,
 }: {
+  permissions?: PermissionsStaffArgs[] | typeof ROOT_STAFF_PERMISSIONS;
   /** Mimics `StorageModel`, which speaks in `HTTPException`s. */
   storageThrows?: HTTPException;
   storedAs?: string;
@@ -71,6 +69,8 @@ const harness = ({
     });
   });
   const deleteFile = vi.fn().mockResolvedValue(undefined);
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, { permissions, userId: ADMIN_ID });
 
   const app = new OpenAPIHono();
   const middleware: MiddlewareHandler = async (c, next) => {
@@ -78,7 +78,10 @@ const harness = ({
       deleteFile,
       upload,
     } as unknown as Context["var"]["storage"]);
-    c.set("admin", { user: { id: 1 } } as unknown as Context["var"]["admin"]);
+    c.set("admin", {
+      user: { id: ADMIN_ID },
+    } as unknown as Context["var"]["admin"]);
+    c.set("cache", cache);
     await next();
   };
   app.use("*", middleware);
@@ -107,12 +110,6 @@ const fileOf = (name: string, type: string, bytes = 8): File =>
   new File([new Uint8Array(bytes)], name, { type });
 
 describe("the generated upload route", () => {
-  beforeEach(() => {
-    permissions.create = true;
-    permissions.edit = true;
-    permissions.view = true;
-  });
-
   it("is not mounted for a content type with no file field", () => {
     const paths = buildContentRoutes(plain, { pluginId: PLUGIN_ID }).map(
       entry => `${entry.route.method} ${entry.route.path}`,
@@ -132,7 +129,7 @@ describe("the generated upload route", () => {
   });
 
   it("stores a GIF for the GIF-only field and returns its descriptor", async () => {
-    const { app, upload } = harness();
+    const { app, upload } = await harness();
 
     const res = await post(app, "animation", fileOf("banner.gif", "image/gif"));
 
@@ -158,7 +155,7 @@ describe("the generated upload route", () => {
   });
 
   it("refuses a PNG for the GIF-only field before uploading anything", async () => {
-    const { app, upload } = harness();
+    const { app, upload } = await harness();
 
     const res = await post(app, "animation", fileOf("shot.png", "image/png"));
 
@@ -174,7 +171,7 @@ describe("the generated upload route", () => {
    * and the browser still declares what it is.
    */
   it("refuses a PNG renamed to .gif, because the media type is wrong", async () => {
-    const { app, upload } = harness();
+    const { app, upload } = await harness();
 
     const res = await post(
       app,
@@ -190,7 +187,7 @@ describe("the generated upload route", () => {
   });
 
   it("refuses a real GIF whose extension is wrong", async () => {
-    const { app, upload } = harness();
+    const { app, upload } = await harness();
 
     const res = await post(app, "animation", fileOf("banner.png", "image/gif"));
 
@@ -202,7 +199,7 @@ describe("the generated upload route", () => {
   });
 
   it("refuses a GIF over 10 MB without spending the bandwidth", async () => {
-    const { app, upload } = harness();
+    const { app, upload } = await harness();
 
     const res = await post(
       app,
@@ -218,7 +215,7 @@ describe("the generated upload route", () => {
   });
 
   it("accepts a PDF for the PDF field and a JPG for the image field", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     await expect(
       post(app, "document", fileOf("spec.pdf", "application/pdf")).then(
@@ -233,7 +230,7 @@ describe("the generated upload route", () => {
   });
 
   it("refuses a PDF for the image field", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const res = await post(app, "cover", fileOf("spec.pdf", "application/pdf"));
 
@@ -241,7 +238,7 @@ describe("the generated upload route", () => {
   });
 
   it("refuses a field that is not a file field", async () => {
-    const { app, upload } = harness();
+    const { app, upload } = await harness();
 
     for (const field of ["title", "slug", "nope"]) {
       const res = await post(app, field, fileOf("x.gif", "image/gif"));
@@ -258,7 +255,7 @@ describe("the generated upload route", () => {
    * file this request created is removed on the way out.
    */
   it("refuses and deletes a file the storage pipeline converted out of the allowlist", async () => {
-    const { app, deleteFile } = harness({
+    const { app, deleteFile } = await harness({
       storedAs: "banner.webp",
       storedMimeType: "image/webp",
     });
@@ -275,7 +272,7 @@ describe("the generated upload route", () => {
   });
 
   it("accepts a PNG converted to WebP when the field allows WebP", async () => {
-    const { app, deleteFile } = harness({
+    const { app, deleteFile } = await harness({
       storedAs: "hero.webp",
       storedMimeType: "image/webp",
     });
@@ -287,7 +284,7 @@ describe("the generated upload route", () => {
   });
 
   it("refuses a stored file that came back larger than the ceiling", async () => {
-    const { app, deleteFile } = harness({ storedSize: 6 * 1024 * 1024 });
+    const { app, deleteFile } = await harness({ storedSize: 6 * 1024 * 1024 });
 
     const res = await post(app, "cover", fileOf("hero.jpg", "image/jpeg"));
 
@@ -308,7 +305,7 @@ describe("the generated upload route", () => {
       (await res.json()) as { code?: string; message?: string };
 
     it("names the field when the URL does not name a file field", async () => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const res = await post(app, "title", fileOf("x.gif", "image/gif"));
       const body = await bodyOf(res);
@@ -319,9 +316,7 @@ describe("the generated upload route", () => {
     });
 
     it("says which permission is missing rather than just Forbidden", async () => {
-      permissions.create = false;
-      permissions.edit = false;
-      const { app } = harness();
+      const { app } = await harness({ permissions: grant("can_view") });
 
       const res = await post(app, "animation", fileOf("a.gif", "image/gif"));
       const body = await bodyOf(res);
@@ -332,7 +327,7 @@ describe("the generated upload route", () => {
     });
 
     it("passes a corrupt-image failure through with its own words", async () => {
-      const { app } = harness({
+      const { app } = await harness({
         storageThrows: new HTTPException(400, {
           message: "Invalid or corrupt image file",
         }),
@@ -347,7 +342,7 @@ describe("the generated upload route", () => {
     });
 
     it("separates an unconvertible image from a corrupt one", async () => {
-      const { app } = harness({
+      const { app } = await harness({
         storageThrows: new StorageImageUnprocessableError(
           "This image is 20000\u00d7400 pixels, which is too large to convert to WEBP. WEBP allows at most 16383 pixels per side. Resize it and upload it again.",
         ),
@@ -368,7 +363,7 @@ describe("the generated upload route", () => {
         "Storage provider not found",
         "Image optimization library (sharp) failed to load",
       ]) {
-        const { app } = harness({
+        const { app } = await harness({
           storageThrows: new HTTPException(500, { message }),
         });
 
@@ -384,18 +379,24 @@ describe("the generated upload route", () => {
     it("answers JSON for every refusal, never bare text", async () => {
       const cases: (() => Promise<Response>)[] = [
         async () =>
-          await post(harness().app, "title", fileOf("a.gif", "image/gif")),
+          await post(
+            (await harness()).app,
+            "title",
+            fileOf("a.gif", "image/gif"),
+          ),
         async () =>
           await post(
-            harness().app,
+            (await harness()).app,
             "cover",
             fileOf("spec.pdf", "application/pdf"),
           ),
         async () =>
           await post(
-            harness({
-              storageThrows: new HTTPException(500, { message: "nope" }),
-            }).app,
+            (
+              await harness({
+                storageThrows: new HTTPException(500, { message: "nope" }),
+              })
+            ).app,
             "cover",
             fileOf("hero.jpg", "image/jpeg"),
           ),
@@ -416,8 +417,9 @@ describe("the generated upload route", () => {
 
   describe("permissions", () => {
     it("accepts a role that may only create", async () => {
-      permissions.edit = false;
-      const { app } = harness();
+      const { app } = await harness({
+        permissions: grant("can_view", "can_create"),
+      });
 
       await expect(
         post(app, "animation", fileOf("a.gif", "image/gif")).then(
@@ -427,8 +429,9 @@ describe("the generated upload route", () => {
     });
 
     it("accepts a role that may only edit", async () => {
-      permissions.create = false;
-      const { app } = harness();
+      const { app } = await harness({
+        permissions: grant("can_view", "can_edit"),
+      });
 
       await expect(
         post(app, "animation", fileOf("a.gif", "image/gif")).then(
@@ -438,9 +441,9 @@ describe("the generated upload route", () => {
     });
 
     it("refuses a read-only role", async () => {
-      permissions.create = false;
-      permissions.edit = false;
-      const { app, upload } = harness();
+      const { app, upload } = await harness({
+        permissions: grant("can_view"),
+      });
 
       const res = await post(app, "animation", fileOf("a.gif", "image/gif"));
 

@@ -1,34 +1,35 @@
 // @vitest-environment node
 import type { Context } from "hono";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   testLocalizedPageContentType,
   testStrictLocalizedPageContentType,
 } from "@/tests/content-fixtures";
 
-import type * as LanguageResolverModule from "./language-resolver";
-
+import { core_languages } from "../../database/languages";
 import { createContentModel } from "./model";
 import { contentPublicLocaleStates } from "./public-locales";
 
-const LANGUAGES = [
-  { id: 1, isDefault: true, isEnabled: true, locale: "en" },
-  { id: 2, isDefault: false, isEnabled: true, locale: "pl" },
-  { id: 3, isDefault: false, isEnabled: true, locale: "de" },
+const LANGUAGE_ROWS = [
+  { code: "en", id: 1, isDefault: true },
+  { code: "pl", id: 2, isDefault: false },
+  { code: "de", id: 3, isDefault: false },
   // Switched off, so it has no public page in any state and is not reported.
-  { id: 4, isDefault: false, isEnabled: false, locale: "cs" },
+  { code: "cs", id: 4, isDefault: false },
 ];
 
-vi.mock("./language-resolver", async importOriginal => {
-  const actual = await importOriginal<typeof LanguageResolverModule>();
-
-  return {
-    ...actual,
-    listContentLanguages: vi.fn(async () => Promise.resolve(LANGUAGES)),
-  };
-});
+const CORE = {
+  i18n: {
+    locales: [
+      { code: "en", name: "English" },
+      { code: "pl", name: "Polski" },
+      { code: "de", name: "Deutsch" },
+      { code: "cs", enabled: false, name: "Čeština" },
+    ],
+  },
+};
 
 const fallbackPages = createContentModel(testLocalizedPageContentType);
 const strictPages = createContentModel(testStrictLocalizedPageContentType);
@@ -42,29 +43,35 @@ const context = (...resultSets: Record<string, unknown>[][]): Context => {
   let call = 0;
 
   const db = {
-    select: () => {
-      const rows = resultSets[call] ?? [];
-      call += 1;
+    select: () => ({
+      from: (table: unknown) => {
+        if (table === core_languages) return LANGUAGE_ROWS;
 
-      // Both a promise and a builder, which is exactly what the real query
-      // builder is: the base read ends in `.limit(1)` and the translation read
-      // is awaited directly. Typed loosely so the linter does not read it as an
-      // ordinary promise-returning function and rewrite it.
-      const result = Object.assign(Promise.resolve(rows), {
-        limit: async (value: number) =>
-          await Promise.resolve(rows.slice(0, value)),
-      }) as unknown as Record<string, unknown>;
+        const rows = resultSets[call] ?? [];
+        call += 1;
 
-      const builder: Record<string, unknown> = {
-        from: () => builder,
-        where: () => result,
-      };
+        // Both a promise and a builder, which is exactly what the real query
+        // builder is: the base read ends in `.limit(1)` and the translation read
+        // is awaited directly. Typed loosely so the linter does not read it as an
+        // ordinary promise-returning function and rewrite it.
+        const result = Object.assign(Promise.resolve(rows), {
+          limit: async (value: number) =>
+            await Promise.resolve(rows.slice(0, value)),
+        }) as unknown as Record<string, unknown>;
 
-      return builder;
-    },
+        return { where: () => result };
+      },
+    }),
   };
 
-  return { get: (key: string) => (key === "db" ? db : undefined) } as never;
+  return {
+    get: (key: string) => {
+      if (key === "db") return db;
+      if (key === "core") return CORE;
+
+      return undefined;
+    },
+  } as never;
 };
 
 /** The common case: one base row plus its translations. */

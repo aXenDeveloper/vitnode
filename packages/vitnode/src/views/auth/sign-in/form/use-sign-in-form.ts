@@ -18,7 +18,10 @@ export type SignInSubmit = (
 ) => Promise<SignInMutationResult>;
 
 export const useSignInForm = ({ onSignIn }: { onSignIn: SignInSubmit }) => {
-  const [error, setError] = React.useState<SignInFormError>("");
+  const [failure, setFailure] = React.useState<{
+    error: SignInFormError;
+    repeat: number;
+  }>({ error: "", repeat: 0 });
   const t = useTranslations("core.auth.sign_in");
   const tErrors = useTranslations("core.global.errors");
   const formSchema = createSignInFormSchema({
@@ -27,21 +30,25 @@ export const useSignInForm = ({ onSignIn }: { onSignIn: SignInSubmit }) => {
   });
 
   const onSubmit: AutoFormOnSubmit<SignInFormSchema> = async values => {
-    setError("");
     const outcome = signInFormOutcome(await onSignIn(values));
 
-    if (!outcome) return;
-
-    if (outcome.kind === "field") {
-      setError(outcome.error);
+    if (outcome?.kind === "field") {
+      setFailure(current => ({
+        error: outcome.error,
+        repeat: current.error === outcome.error ? current.repeat + 1 : 0,
+      }));
 
       return;
     }
+
+    setFailure({ error: "", repeat: 0 });
+
+    if (!outcome) return;
 
     toast.error(tErrors("title"), {
       description: tErrors("internal_server_error"),
     });
   };
 
-  return { error, formSchema, onSubmit };
+  return { ...failure, formSchema, onSubmit };
 };

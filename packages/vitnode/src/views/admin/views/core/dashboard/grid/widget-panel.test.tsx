@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -7,12 +7,25 @@ import type { DashboardWidgetOption } from "../widgets/types";
 
 import { WidgetPanel } from "./widget-panel";
 
-vi.mock("use-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
+const desktopMediaQuery = (media: string): MediaQueryList => ({
+  addEventListener: () => undefined,
+  addListener: () => undefined,
+  dispatchEvent: () => false,
+  matches: false,
+  media,
+  onchange: null,
+  removeEventListener: () => undefined,
+  removeListener: () => undefined,
+});
 
-vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
+beforeEach(() => {
+  vi.stubGlobal("innerWidth", 1280);
+  vi.stubGlobal("matchMedia", desktopMediaQuery);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const notes: DashboardWidgetOption = {
   category: { id: "@vitnode/core", title: "Core" },
@@ -36,7 +49,9 @@ describe("the dashboard's widget panel", () => {
     const onAdd = vi.fn();
 
     renderPanel(onAdd);
-    fireEvent.click(screen.getByRole("button", { name: "panel.add" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "admin.dashboard.widgets.panel.add" }),
+    );
 
     expect(onAdd).toHaveBeenCalledWith(notes);
   });
@@ -56,6 +71,10 @@ describe("the dashboard's widget panel", () => {
     expect(
       screen.getByRole("region", { name: "Notes properties" }),
     ).toBeDefined();
-    expect(screen.queryByRole("button", { name: "panel.add" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "admin.dashboard.widgets.panel.add",
+      }),
+    ).toBeNull();
   });
 });

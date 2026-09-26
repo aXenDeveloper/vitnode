@@ -1,7 +1,10 @@
 // @vitest-environment node
+import type { Context } from "hono";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { testAdvancedLocalizedContentType } from "@/tests/content-fixtures";
+import { createTestRevisionsTable } from "@/tests/revisions-table";
 
 import type { ContentTranslationRevisionSnapshot } from "../revisions";
 import type { ContentTranslationModel } from "./translation-model";
@@ -17,60 +20,11 @@ const PLUGIN_ID = "@vitnode/example";
 const ACTOR = { type: "staff" as const, userId: 1 };
 const definition = testAdvancedLocalizedContentType;
 
-const captured: {
-  changedFields: readonly string[];
-  operation: string;
-  snapshot: ContentTranslationRevisionSnapshot;
-  version: number;
-}[] = [];
+let revisions = createTestRevisionsTable();
 
-let storedRevision: ContentTranslationRevisionSnapshot | null = null;
-let nextRevisionId = 100;
-
-vi.mock("./revisions-model", () => ({
-  CONTENT_REVISIONS_DEFAULT_PAGE_SIZE: 25,
-  CONTENT_REVISIONS_MAX_PAGE_SIZE: 100,
-  createContentRevisionsModel: ({
-    languageId,
-  }: {
-    languageId?: null | number;
-  }) => ({
-    capture: (
-      _tx: unknown,
-      input: {
-        changedFields: readonly string[];
-        operation: string;
-        snapshot: ContentTranslationRevisionSnapshot;
-        version: number;
-      },
-    ) => {
-      captured.push(input);
-      nextRevisionId += 1;
-
-      return nextRevisionId;
-    },
-    findById: (_itemId: number, revisionId: number) =>
-      storedRevision !== null && languageId === 2
-        ? {
-            actorName: null,
-            actorType: "staff" as const,
-            actorUserId: 1,
-            changedFields: [],
-            createdAt: new Date(),
-            id: revisionId,
-            operation: "update" as const,
-            restoredFromRevisionId: null,
-            snapshot: storedRevision,
-            version: 1,
-          }
-        : null,
-    latest: () => null,
-    list: () => ({
-      edges: [],
-      pageInfo: { endCursor: null, hasNextPage: false },
-    }),
-  }),
-}));
+const storeRevision = (snapshot: ContentTranslationRevisionSnapshot) => {
+  revisions.seed({ id: 101, languageId: 2, snapshot, version: 1 });
+};
 
 /** One translation row, in the **logical** shape the model returns. */
 const row = (values: Record<string, unknown>, overrides = {}) =>
@@ -125,11 +79,8 @@ const service = (model: ReturnType<typeof translations>) => {
 
   return createContentTranslationEditorialService({
     c: {
-      get: () => ({
-        transaction: async <T>(body: (tx: unknown) => Promise<T>) =>
-          await body({}),
-      }),
-    } as never,
+      get: (key: string) => (key === "db" ? revisions.db : undefined),
+    } as unknown as Context,
     definition,
     pluginId: PLUGIN_ID,
     schemas,
@@ -138,9 +89,7 @@ const service = (model: ReturnType<typeof translations>) => {
 };
 
 beforeEach(() => {
-  captured.length = 0;
-  storedRevision = null;
-  nextRevisionId = 100;
+  revisions = createTestRevisionsTable();
 });
 
 describe("snapshotting a localized group", () => {
@@ -323,18 +272,20 @@ describe("projecting a localized group for restore", () => {
 describe("restoring a localized group", () => {
   it("writes the whole group back through the model", async () => {
     const model = translations();
-    storedRevision = contentTranslationRevisionSnapshot(
-      definition,
-      {
-        createdAt: new Date(),
-        itemId: 7,
-        seo: { description: "Historical description", title: "Historical" },
-        slug: "witaj",
-        title: "Witaj",
-        updatedAt: new Date(),
-        version: 1,
-      },
-      { languageId: 2, locale: "pl" },
+    storeRevision(
+      contentTranslationRevisionSnapshot(
+        definition,
+        {
+          createdAt: new Date(),
+          itemId: 7,
+          seo: { description: "Historical description", title: "Historical" },
+          slug: "witaj",
+          title: "Witaj",
+          updatedAt: new Date(),
+          version: 1,
+        },
+        { languageId: 2, locale: "pl" },
+      ),
     );
 
     model.findByLanguageId.mockResolvedValue(
@@ -364,9 +315,9 @@ describe("restoring a localized group", () => {
       seo: { description: "Historical description", title: "Historical" },
     });
     // One new immutable revision, stamped `restore`.
-    expect(captured).toHaveLength(1);
-    expect(captured[0].operation).toBe("restore");
-    expect(captured[0].snapshot.fields.seo).toStrictEqual({
+    expect(revisions.written).toHaveLength(1);
+    expect(revisions.written[0].operation).toBe("restore");
+    expect(revisions.written[0].snapshot.fields.seo).toStrictEqual({
       description: "Historical description",
       title: "Historical",
     });
@@ -374,19 +325,21 @@ describe("restoring a localized group", () => {
 
   it("restores one leaf and preserves its unchanged sibling", async () => {
     const model = translations();
-    storedRevision = contentTranslationRevisionSnapshot(
-      definition,
-      {
-        createdAt: new Date(),
-        itemId: 7,
-        // Only the description differs from what is stored now.
-        seo: { description: "Old description", title: "Same title" },
-        slug: "witaj",
-        title: "Witaj",
-        updatedAt: new Date(),
-        version: 1,
-      },
-      { languageId: 2, locale: "pl" },
+    storeRevision(
+      contentTranslationRevisionSnapshot(
+        definition,
+        {
+          createdAt: new Date(),
+          itemId: 7,
+          // Only the description differs from what is stored now.
+          seo: { description: "Old description", title: "Same title" },
+          slug: "witaj",
+          title: "Witaj",
+          updatedAt: new Date(),
+          version: 1,
+        },
+        { languageId: 2, locale: "pl" },
+      ),
     );
 
     model.findByLanguageId.mockResolvedValue(
@@ -417,18 +370,20 @@ describe("restoring a localized group", () => {
   it("is a no-op when the group already matches", async () => {
     const model = translations();
     const current = { seo: { description: "D", title: "T" } };
-    storedRevision = contentTranslationRevisionSnapshot(
-      definition,
-      {
-        createdAt: new Date(),
-        itemId: 7,
-        slug: "witaj",
-        title: "Witaj",
-        updatedAt: new Date(),
-        version: 1,
-        ...current,
-      },
-      { languageId: 2, locale: "pl" },
+    storeRevision(
+      contentTranslationRevisionSnapshot(
+        definition,
+        {
+          createdAt: new Date(),
+          itemId: 7,
+          slug: "witaj",
+          title: "Witaj",
+          updatedAt: new Date(),
+          version: 1,
+          ...current,
+        },
+        { languageId: 2, locale: "pl" },
+      ),
     );
     model.findByLanguageId.mockResolvedValue(row(current));
 
@@ -442,23 +397,25 @@ describe("restoring a localized group", () => {
     expect(outcome?.changed).toBe(false);
     expect(outcome?.changedFields).toStrictEqual([]);
     expect(model.update).not.toHaveBeenCalled();
-    expect(captured).toHaveLength(0);
+    expect(revisions.written).toHaveLength(0);
   });
 
   it("touches only this locale's localized values", async () => {
     const model = translations();
-    storedRevision = contentTranslationRevisionSnapshot(
-      definition,
-      {
-        createdAt: new Date(),
-        itemId: 7,
-        seo: { description: "D", title: "T" },
-        slug: "witaj",
-        title: "Witaj",
-        updatedAt: new Date(),
-        version: 1,
-      },
-      { languageId: 2, locale: "pl" },
+    storeRevision(
+      contentTranslationRevisionSnapshot(
+        definition,
+        {
+          createdAt: new Date(),
+          itemId: 7,
+          seo: { description: "D", title: "T" },
+          slug: "witaj",
+          title: "Witaj",
+          updatedAt: new Date(),
+          version: 1,
+        },
+        { languageId: 2, locale: "pl" },
+      ),
     );
     model.findByLanguageId.mockResolvedValue(row({ seo: null }));
     model.update.mockResolvedValue({
@@ -485,21 +442,23 @@ describe("restoring a localized group", () => {
 
   it("keeps the translation's publication state", async () => {
     const model = translations();
-    storedRevision = contentTranslationRevisionSnapshot(
-      definition,
-      {
-        createdAt: new Date(),
-        itemId: 7,
-        // The snapshot was taken while the translation was a draft...
-        publishedAt: null,
-        seo: { description: "D", title: "T" },
-        slug: "witaj",
-        status: "draft",
-        title: "Witaj",
-        updatedAt: new Date(),
-        version: 1,
-      },
-      { languageId: 2, locale: "pl" },
+    storeRevision(
+      contentTranslationRevisionSnapshot(
+        definition,
+        {
+          createdAt: new Date(),
+          itemId: 7,
+          // The snapshot was taken while the translation was a draft...
+          publishedAt: null,
+          seo: { description: "D", title: "T" },
+          slug: "witaj",
+          status: "draft",
+          title: "Witaj",
+          updatedAt: new Date(),
+          version: 1,
+        },
+        { languageId: 2, locale: "pl" },
+      ),
     );
     // ...and it is published now. A field restore must not take it down.
     model.findByLanguageId.mockResolvedValue(
@@ -526,12 +485,12 @@ describe("restoring a localized group", () => {
     );
     // The version still moves forward, and the new revision records the state.
     expect(outcome?.version).toBe(2);
-    expect(captured[0].snapshot.publication?.status).toBe("published");
+    expect(revisions.written[0].snapshot.publication?.status).toBe("published");
   });
 
   it("rejects a snapshot the current schema refuses", async () => {
     const model = translations();
-    storedRevision = {
+    storeRevision({
       contentTypeId: definition.id,
       createdAt: "2026-01-01T00:00:00.000Z",
       // `seo.title` is `maxLength: 200`. A snapshot taken before the limit was
@@ -543,7 +502,7 @@ describe("restoring a localized group", () => {
       schemaVersion: 1,
       updatedAt: "2026-01-01T00:00:00.000Z",
       version: 1,
-    };
+    });
     model.findByLanguageId.mockResolvedValue(row({}));
 
     await expect(
@@ -555,6 +514,6 @@ describe("restoring a localized group", () => {
 
     // All or nothing: nothing was written and no revision claims otherwise.
     expect(model.update).not.toHaveBeenCalled();
-    expect(captured).toHaveLength(0);
+    expect(revisions.written).toHaveLength(0);
   });
 });

@@ -2,7 +2,7 @@
 
 You are VitNode, an expert AI coding assistant. Follow repository conventions and best practices for performance, security, accessibility, UX, and SEO.
 
-Account test:
+Account test with admin permissions:
 login: test@test.com
 pass: Test123!
 
@@ -11,7 +11,7 @@ pass: Test123!
 - Arrow functions for components - never `React.FC`.
 - No `any`; use `unknown` as rarely as possible.
 - Use `AutoForm` for forms instead of hand-built form components.
-- `React.lazy` + `Suspense` for content-heavy dialogs (e.g. dialogs in forms).
+- Use `React.lazy` + `Suspense` for content-heavy dialogs (e.g. dialogs in forms).
 - After create/edit/delete: refresh the table data and show a `sonner` toast with a description.
 - `<Activity>` hides and restores children's UI and internal state:
 
@@ -107,3 +107,14 @@ npm i x
 - Do not test database models or schema definitions (Drizzle tables, column types, indexes, foreign keys).
 - Do not test static config, constants, color presets, or plugin configuration (`config.api`, content type definitions).
 - Do not test third-party libraries or trivial helper/wrapper code.
+
+### Mocking
+
+- Avoid `vi.mock`. It swaps a whole module for the file, so the test stops exercising the real code and breaks silently when the module is renamed or reshaped. Reach for a real seam first:
+  - a value on the Hono context: `c.set("db" | "cache" | "admin" | "events", fake)` in a test middleware;
+  - a global: `vi.stubGlobal("fetch", ...)`, `vi.stubGlobal("matchMedia", ...)`;
+  - an object or instance: `vi.spyOn(model, "method")`;
+  - a prop, a provider, or a function argument.
+- `vi.mock` is allowed only as a last resort, for a boundary with no seam (a `React.lazy` editor, a child process). Never use it for a module the test could drive for real.
+- Staff permissions: grant them with `grantStaffPermissions` from `@/tests/staff-permissions` on a `createTestCache()` from `@/tests/cache`, set as `c.set("cache", cache)`. Never mock `check-staff-permission`. Assert on the response (`200` with the permission, `403` without), not on which permission was asked for.
+- `use-intl` is mocked once for every test in `packages/vitnode/src/tests/setup.ts`: `t("key")` renders `namespace.key`. Don't mock it per file.

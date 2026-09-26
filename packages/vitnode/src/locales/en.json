@@ -1776,8 +1776,6 @@
       "list": {
         "desc": "Choose what the main menu links to, and in what order. Changes go live right away.",
         "custom": "Custom link",
-        "prebuilt": "Prebuilt page",
-        "from": "from {plugin}",
         "missing": "The plugin behind this item is no longer installed, so the menu skips it.",
         "opensInNewTab": "Opens in a new tab",
         "reorderSuccess": "Menu order saved",
@@ -1786,14 +1784,35 @@
           "title": "The main menu is empty",
           "description": "Add a prebuilt page or a custom link and it shows up in the header."
         },
-        "dragHandle": "Drag to move {name}"
+        "dragHandle": "Drag to move {name}",
+        "label": "Menu items",
+        "summary": "{header} in the header · {dropdowns} in dropdowns",
+        "collapseAll": "Collapse all",
+        "expandAll": "Expand all",
+        "showChildren": "Show what's inside {name}",
+        "hideChildren": "Hide what's inside {name}",
+        "actions": "More actions for {name}",
+        "edit": "Edit",
+        "addChild": "Add sub-item",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "moveToTop": "Move to top level",
+        "moveInside": "Move inside…",
+        "delete": "Remove",
+        "pluginMissing": "Plugin missing"
       },
       "create": {
         "title": "Add menu item",
         "desc": "Pick a page a plugin already provides, or link anywhere you like.",
         "submit": "Add to menu",
         "success": "Menu item added",
-        "successDesc": "\"{name}\" is now in the main menu."
+        "successDesc": "\"{name}\" is now in the main menu.",
+        "childTitle": "Add a page to “{name}”",
+        "presets": "Pages from your plugins",
+        "back": "Choose something else",
+        "inHeader": "Shown in the header bar.",
+        "inDropdown": "Shown in the “{name}” dropdown.",
+        "fromPlugin": "{placement} A page from {plugin}."
       },
       "edit": {
         "title": "Edit menu item",
@@ -1807,18 +1826,15 @@
         "confirm": "Remove",
         "cancel": "Cancel",
         "success": "Menu item removed",
-        "successDesc": "\"{name}\" is no longer in the main menu."
+        "successDesc": "\"{name}\" is no longer in the main menu.",
+        "descWithChildren": "Remove “{name}” from the main menu? {count, plural, one {Its sub-item moves} other {Its # sub-items move}} to the top level."
       },
       "form": {
         "kind": {
-          "label": "What to add",
-          "preset": "Prebuilt page",
-          "presetDesc": "A page VitNode or an installed plugin already provides.",
           "custom": "Custom link",
           "customDesc": "Any address, on this site or elsewhere."
         },
         "preset": "Page",
-        "presetPlaceholder": "Choose a page...",
         "presetEmpty": "Every prebuilt page is already in the menu.",
         "presetLocked": "A prebuilt item keeps the page its plugin points at. Change the title, the description, or where it opens.",
         "href": "URL",
@@ -1828,12 +1844,25 @@
         "iconPlaceholder": "No icon",
         "description": "Description",
         "openInNewTab": "Open in a new tab",
-        "openInNewTabDesc": "Handy for links that leave this site."
+        "openInNewTabDesc": "Handy for links that leave this site.",
+        "presetMissing": "Plugin not installed",
+        "preview": "How visitors see it",
+        "previewUntitled": "Untitled item",
+        "descriptionDesc": "Shown under the title when the item sits in a dropdown.",
+        "parent": "Placement",
+        "parentRoot": "Top level",
+        "parentInside": "Inside “{name}”",
+        "parentDesc": "Top-level items sit in the header bar. Items inside another one show in its dropdown.",
+        "parentLocked": "It holds {count, plural, one {# sub-item} other {# sub-items}}, so it stays at the top level. Menus go two levels deep.",
+        "sections": {
+          "destination": "Destination",
+          "label": "Label",
+          "position": "Position"
+        }
       },
       "errors": {
         "hrefInvalid": "Start with / or https://",
         "titleRequired": "Give the item a title in at least one language.",
-        "presetRequired": "Choose a page.",
         "presetTaken": "This page is already in the menu."
       }
     }

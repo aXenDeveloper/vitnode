@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { type ReactElement, type ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type {
   AnyBlockInstance,
@@ -20,11 +20,6 @@ import {
   visualEditorReducer,
 } from "../state/reducer";
 import { EditableBlockShell } from "./block-shell";
-
-vi.mock("use-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
 
 const fields = {
   heading: field.text({ minLength: 3, required: true }),
@@ -105,7 +100,7 @@ const Shell = ({
 };
 
 const badge = (): HTMLElement | null =>
-  screen.queryByText("block.issue.invalid_data");
+  screen.queryByText("core.editor.block.issue.invalid_data");
 
 const blocksSave = (data: Record<string, unknown>): boolean =>
   unsafeZoneIds(zoneState(data)).includes("main");
@@ -160,7 +155,7 @@ describe("the remove button a block shell offers", () => {
 
   const removeDisabled = (): boolean =>
     screen
-      .getByRole("button", { name: "block.remove" })
+      .getByRole("button", { name: "core.editor.block.remove" })
       .hasAttribute("disabled");
 
   const reducerRemoves = (
@@ -212,8 +207,12 @@ describe("the action toolbar buttons", () => {
 
     render(<Shell data={data} />);
 
-    expect(screen.getByRole("button", { name: "block.edit" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "block.remove" })).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "core.editor.block.edit" }),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "core.editor.block.remove" }),
+    ).not.toBeNull();
   });
 });
 
@@ -221,10 +220,12 @@ describe("moving a block", () => {
   it("has no separate move button, because the block itself is dragged", () => {
     render(<Shell data={{ heading: "Hello", width: "full" }} />);
 
-    expect(screen.queryByRole("button", { name: "block.drag" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "core.editor.block.drag" }),
+    ).toBeNull();
     expect(
       screen
-        .getByRole("button", { name: "block.select" })
+        .getByRole("button", { name: "core.editor.block.select" })
         .getAttribute("aria-roledescription"),
     ).toBe("sortable");
   });

@@ -296,7 +296,13 @@
     },
     "navigation": {
       "create": {
+        "back": "Wybierz coś innego",
+        "childTitle": "Dodaj stronę do „{name}”",
         "desc": "Wybierz stronę, którą udostępnia wtyczka, albo podlinkuj dowolny adres.",
+        "fromPlugin": "{placement} Strona z {plugin}.",
+        "inDropdown": "Wyświetlana w rozwijanym menu „{name}”.",
+        "inHeader": "Wyświetlana w pasku nagłówka.",
+        "presets": "Strony z Twoich wtyczek",
         "submit": "Dodaj do menu",
         "success": "Pozycja menu dodana",
         "successDesc": "„{name}” jest już w menu głównym.",
@@ -306,6 +312,7 @@
         "cancel": "Anuluj",
         "confirm": "Usuń",
         "desc": "Usunąć „{name}” z menu głównego? Odwiedzający od razu przestaną ją widzieć. Możesz dodać ją ponownie później.",
+        "descWithChildren": "Usunąć „{name}” z menu głównego? {count, plural, one {Jej podpozycja trafi} few {Jej # podpozycje trafią} other {Jej # podpozycji trafi}} na najwyższy poziom.",
         "success": "Pozycja menu usunięta",
         "successDesc": "„{name}” nie jest już w menu głównym.",
         "title": "Usuń pozycję menu"
@@ -318,45 +325,67 @@
       },
       "errors": {
         "hrefInvalid": "Zacznij od / lub https://",
-        "presetRequired": "Wybierz stronę.",
         "presetTaken": "Ta strona jest już w menu.",
         "titleRequired": "Nadaj pozycji tytuł w co najmniej jednym języku."
       },
       "form": {
         "description": "Opis",
+        "descriptionDesc": "Wyświetlany pod tytułem, gdy pozycja jest w rozwijanym menu.",
         "href": "Adres URL",
         "hrefPlaceholder": "/discover lub https://example.com",
         "icon": "Ikona",
         "iconPlaceholder": "Bez ikony",
         "kind": {
           "custom": "Własny link",
-          "customDesc": "Dowolny adres, w tej witrynie lub poza nią.",
-          "label": "Co dodać",
-          "preset": "Gotowa strona",
-          "presetDesc": "Strona, którą VitNode lub zainstalowana wtyczka już udostępnia."
+          "customDesc": "Dowolny adres, w tej witrynie lub poza nią."
         },
         "openInNewTab": "Otwieraj w nowej karcie",
         "openInNewTabDesc": "Przydatne dla linków prowadzących poza witrynę.",
+        "parent": "Umiejscowienie",
+        "parentDesc": "Pozycje najwyższego poziomu są w pasku nagłówka. Pozycje umieszczone w innej pojawiają się w jej rozwijanym menu.",
+        "parentInside": "W „{name}”",
+        "parentLocked": "Zawiera {count, plural, one {# podpozycję} few {# podpozycje} other {# podpozycji}}, więc zostaje na najwyższym poziomie. Menu ma dwa poziomy.",
+        "parentRoot": "Najwyższy poziom",
         "preset": "Strona",
         "presetEmpty": "Każda gotowa strona jest już w menu.",
         "presetLocked": "Gotowa pozycja zachowuje stronę wskazaną przez wtyczkę. Zmień tytuł, opis lub sposób otwierania.",
-        "presetPlaceholder": "Wybierz stronę...",
+        "presetMissing": "Wtyczka nie jest zainstalowana",
+        "preview": "Jak widzą to odwiedzający",
+        "previewUntitled": "Pozycja bez tytułu",
+        "sections": {
+          "destination": "Cel",
+          "label": "Etykieta",
+          "position": "Położenie"
+        },
         "title": "Tytuł"
       },
       "list": {
+        "actions": "Więcej akcji: {name}",
+        "addChild": "Dodaj podpozycję",
+        "collapseAll": "Zwiń wszystko",
         "custom": "Własny link",
+        "delete": "Usuń",
         "desc": "Wybierz, do czego prowadzi menu główne i w jakiej kolejności. Zmiany są widoczne od razu.",
         "dragHandle": "Przeciągnij, aby przenieść {name}",
-        "from": "z {plugin}",
+        "edit": "Edytuj",
+        "expandAll": "Rozwiń wszystko",
+        "hideChildren": "Ukryj, co jest w „{name}”",
+        "label": "Pozycje menu",
         "missing": "Wtyczka odpowiadająca za tę pozycję nie jest już zainstalowana, więc menu ją pomija.",
+        "moveDown": "Przenieś niżej",
+        "moveInside": "Przenieś do…",
+        "moveToTop": "Przenieś na najwyższy poziom",
+        "moveUp": "Przenieś wyżej",
         "noResults": {
           "description": "Dodaj gotową stronę lub własny link, a pojawi się w nagłówku.",
           "title": "Menu główne jest puste"
         },
         "opensInNewTab": "Otwiera się w nowej karcie",
-        "prebuilt": "Gotowa strona",
+        "pluginMissing": "Brak wtyczki",
         "reorderSuccess": "Kolejność menu zapisana",
-        "reorderSuccessDesc": "Odwiedzający zobaczą nową kolejność przy następnym wczytaniu menu."
+        "reorderSuccessDesc": "Odwiedzający zobaczą nową kolejność przy następnym wczytaniu menu.",
+        "showChildren": "Pokaż, co jest w „{name}”",
+        "summary": "{header} w nagłówku · {dropdowns} w rozwijanych menu"
       }
     },
     "role": {

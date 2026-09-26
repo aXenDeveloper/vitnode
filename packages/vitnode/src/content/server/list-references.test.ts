@@ -4,16 +4,16 @@ import type { Context, MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
+
 import { defineContentType } from "../define";
 import { field } from "../fields";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async () => {
-    await Promise.resolve();
-  },
-}));
 
 const coauthoredContentType = defineContentType({
   id: "test.coauthoredlist",
@@ -65,7 +65,9 @@ const ADA = {
 };
 const BOB = { label: "Bob", role: { color: null, prefix: "⭐" }, value: 5 };
 
-const harness = (model: typeof coauthored | typeof unlisted) => {
+const ADMIN_ID = 1;
+
+const harness = async (model: typeof coauthored | typeof unlisted) => {
   const service = {
     findMany: vi.fn(async () => {
       await Promise.resolve();
@@ -91,6 +93,11 @@ const harness = (model: typeof coauthored | typeof unlisted) => {
       from: () => ({ leftJoin: () => ({ where: userQuery }) }),
     }),
   };
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: ADMIN_ID,
+  });
   vi.spyOn(model, "service").mockReturnValue(service as never);
 
   const loadMany = vi.spyOn(model.advanced, "loadMany").mockResolvedValue(
@@ -103,7 +110,10 @@ const harness = (model: typeof coauthored | typeof unlisted) => {
 
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
-    c.set("admin", { user: { id: 1 } } as unknown as Context["var"]["admin"]);
+    c.set("admin", {
+      user: { id: ADMIN_ID },
+    } as unknown as Context["var"]["admin"]);
+    c.set("cache", cache);
     c.set("db", db as never);
     await next();
   };
@@ -129,7 +139,7 @@ describe("admin list reference columns", () => {
   });
 
   it("resolves every row's people in one junction read and one user read", async () => {
-    const { app, db, loadMany, service, userQuery } = harness(coauthored);
+    const { app, db, loadMany, service, userQuery } = await harness(coauthored);
 
     const res = await app.request("/");
     const body = (await res.json()) as ListBody;
@@ -147,7 +157,7 @@ describe("admin list reference columns", () => {
   });
 
   it("reads nothing extra when no to-many field is a column", async () => {
-    const { app, loadMany, service, userQuery } = harness(unlisted);
+    const { app, loadMany, service, userQuery } = await harness(unlisted);
 
     const res = await app.request("/");
     const body = (await res.json()) as ListBody;

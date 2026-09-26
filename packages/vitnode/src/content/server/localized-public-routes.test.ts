@@ -1,38 +1,45 @@
 // @vitest-environment node
+import type { MiddlewareHandler } from "hono";
+
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { testLocalizedPageContentType } from "@/tests/content-fixtures";
 
-import type * as LanguageResolverModule from "./language-resolver";
-
+import { core_languages } from "../../database/languages";
 import { createContentModel } from "./model";
 import { buildContentPublicRoutes } from "./public-routes";
 
-const LANGUAGES = [
-  { id: 1, isDefault: true, isEnabled: true, locale: "en" },
-  { id: 2, isDefault: false, isEnabled: true, locale: "pl" },
+const LANGUAGE_ROWS = [
+  { code: "en", id: 1, isDefault: true },
+  { code: "pl", id: 2, isDefault: false },
   // Present in `core_languages` but switched off in this app's config. Readable
   // in the AdminCP, unreachable in public - the read-side half of the rule that
   // already stops content being written into one.
-  { id: 3, isDefault: false, isEnabled: false, locale: "de" },
+  { code: "de", id: 3, isDefault: false },
 ];
 
-vi.mock("./language-resolver", async importOriginal => {
-  const actual = await importOriginal<typeof LanguageResolverModule>();
+const CORE = {
+  i18n: {
+    locales: [
+      { code: "en", name: "English" },
+      { code: "pl", name: "Polski" },
+      { code: "de", enabled: false, name: "Deutsch" },
+    ],
+  },
+};
 
-  return {
-    ...actual,
-    findContentLanguage: vi.fn(async (_c: unknown, locale: string) =>
-      Promise.resolve(
-        LANGUAGES.find(
-          language => language.locale.toLowerCase() === locale.toLowerCase(),
-        ) ?? null,
-      ),
-    ),
-    listContentLanguages: vi.fn(async () => Promise.resolve(LANGUAGES)),
-  };
-});
+const languageDatabase = {
+  select: () => ({
+    from: async (table: unknown) => {
+      if (table !== core_languages) {
+        throw new Error("Only core_languages is read directly by this route.");
+      }
+
+      return await Promise.resolve(LANGUAGE_ROWS);
+    },
+  }),
+};
 
 const pages = createContentModel(testLocalizedPageContentType);
 const PLUGIN_ID = "@vitnode/example";
@@ -68,6 +75,13 @@ const harness = () => {
   vi.spyOn(pages, "publicService", "get").mockReturnValue(() => service);
 
   const app = new OpenAPIHono();
+  const context: MiddlewareHandler = async (c, next) => {
+    c.set("core", CORE as never);
+    c.set("db", languageDatabase as never);
+    await next();
+  };
+  app.use("*", context);
+
   for (const { handler, route } of buildContentPublicRoutes(pages, {
     pluginId: PLUGIN_ID,
   })) {

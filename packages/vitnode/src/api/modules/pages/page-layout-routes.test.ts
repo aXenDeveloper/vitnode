@@ -2,8 +2,9 @@
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { AnyEditablePageDefinition } from "@/content/editor/types";
 import type { PageLayoutZones } from "@/database/page-layouts";
 
@@ -15,23 +16,10 @@ import {
 } from "@/blocks/registry";
 import { defineEditablePage } from "@/content/editor/define";
 import { field } from "@/content/fields";
+import { createTestCache } from "@/tests/cache";
+import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { buildPageLayoutRoutes } from "./page-layout-routes";
-
-let granted = new Set<string>();
-let grantedPlugin = "@vitnode/core";
-
-vi.mock("@/api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async (
-    _c: unknown,
-    args: { permission: string; plugin: string },
-  ) => {
-    if (granted.has(args.permission) && args.plugin === grantedPlugin) return;
-
-    const { HTTPException } = await import("hono/http-exception");
-    throw new HTTPException(403, { message: "Forbidden" });
-  },
-}));
 
 const Noop = () => null;
 
@@ -70,6 +58,15 @@ beforeAll(() => {
 });
 
 const PLUGIN_ID = "@vitnode/core";
+
+const MODERATOR = { id: 1, roleId: 1 };
+
+const canEdit = (
+  module: string,
+  plugin: string = PLUGIN_ID,
+): PermissionsStaffArgs => ({ module, permission: "can_edit", plugin });
+
+const EDITOR_PERMISSIONS = [canEdit("widgets"), canEdit("forum")];
 
 const hero = (id: string, title: string, variant?: string) => ({
   data: { title },
@@ -145,15 +142,27 @@ const pageIdOf = (condition: unknown): string =>
     )?.value,
   );
 
-const harness = ({
+const harness = async ({
   pages = [settingsPage, otherPage],
+  permissions = EDITOR_PERMISSIONS,
   readFails = false,
   rows = {},
 }: {
   pages?: readonly AnyEditablePageDefinition[];
+  permissions?: PermissionsStaffArgs[];
   readFails?: boolean;
   rows?: Record<string, PageLayoutZones>;
 } = {}) => {
+  const cache = createTestCache();
+  const grant = async (granted: PermissionsStaffArgs[]) => {
+    await grantStaffPermissions(cache, {
+      permissions: granted,
+      type: "moderator",
+      userId: MODERATOR.id,
+    });
+  };
+  await grant(permissions);
+
   const store = new Map<string, StoredRow>(
     Object.entries(rows).map(([pageId, zones]) => [
       pageId,
@@ -217,7 +226,8 @@ const harness = ({
 
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
-    c.set("user", { id: 1, roleId: 1 } as never);
+    c.set("user", MODERATOR as never);
+    c.set("cache", cache);
     c.set("core", {
       editablePages: pages.map(page => registerEditablePage(page, PLUGIN_ID)),
     } as never);
@@ -237,7 +247,7 @@ const harness = ({
   app.openapi(read.route, read.handler);
   app.openapi(write.route, write.handler);
 
-  return { app, events, statements, store, writes };
+  return { app, events, grant, statements, store, writes };
 };
 
 const save = async (app: OpenAPIHono, body: unknown) =>
@@ -249,11 +259,6 @@ const save = async (app: OpenAPIHono, body: unknown) =>
 
 const read = async (app: OpenAPIHono, pageId: string) =>
   await app.request(`/layout?pageId=${encodeURIComponent(pageId)}`);
-
-beforeEach(() => {
-  granted = new Set(["can_edit"]);
-  grantedPlugin = PLUGIN_ID;
-});
 
 describe("route shape", () => {
   it("mounts one public read and one guarded save", () => {
@@ -275,10 +280,10 @@ describe("route shape", () => {
 
 describe("GET /layout", () => {
   it("answers the effective layout without asking for a permission", async () => {
-    const { app } = harness({
+    const { app } = await harness({
+      permissions: [],
       rows: { "example:settings": { sidebar: [quote("s1", "Stored")] } },
     });
-    granted = new Set();
 
     const response = await read(app, "example:settings");
 
@@ -296,13 +301,13 @@ describe("GET /layout", () => {
   });
 
   it("is a 404 for a page id nothing registered", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect((await read(app, "example:nowhere")).status).toBe(404);
   });
 
   it("fails rather than answering defaults when the read fails", async () => {
-    const { app } = harness({ readFails: true });
+    const { app } = await harness({ readFails: true });
 
     expect((await read(app, "example:settings")).status).toBe(500);
   });
@@ -310,7 +315,7 @@ describe("GET /layout", () => {
 
 describe("PUT /layout", () => {
   it("answers canonically for the submitted zones only, and says so once", async () => {
-    const { app, events, writes } = harness({
+    const { app, events, writes } = await harness({
       rows: { "example:settings": { sidebar: [quote("s1", "Old")] } },
     });
 
@@ -338,7 +343,7 @@ describe("PUT /layout", () => {
   });
 
   it("writes nothing and emits nothing when the save changes nothing", async () => {
-    const { app, events, writes } = harness({
+    const { app, events, writes } = await harness({
       rows: { "example:settings": { sidebar: [quote("s1", "Same")] } },
     });
 
@@ -358,7 +363,7 @@ describe("PUT /layout", () => {
   });
 
   it("reads and writes inside one locked transaction", async () => {
-    const { app, statements } = harness({
+    const { app, statements } = await harness({
       rows: { "example:settings": { sidebar: [quote("s1", "Old")] } },
     });
 
@@ -375,7 +380,7 @@ describe("PUT /layout", () => {
   });
 
   it("stores nothing when a zone is saved back to its shipped default", async () => {
-    const { app, events, writes } = harness();
+    const { app, events, writes } = await harness();
 
     const response = await save(app, {
       expectedZones: { intro: [text("intro-shipped", "Shipped intro")] },
@@ -393,7 +398,7 @@ describe("PUT /layout", () => {
   });
 
   it("keeps an area and counts the blocks inside it", async () => {
-    const { app, store } = harness();
+    const { app, store } = await harness();
 
     const response = await save(app, {
       expectedZones: { "before-profile": [hero("shipped", "Shipped default")] },
@@ -414,7 +419,7 @@ describe("PUT /layout", () => {
   });
 
   it("keeps a variant the block declares", async () => {
-    const { app, store } = harness();
+    const { app, store } = await harness();
 
     const response = await save(app, {
       expectedZones: { "before-profile": [hero("shipped", "Shipped default")] },
@@ -431,7 +436,7 @@ describe("PUT /layout", () => {
 
 describe("a save built on a zone somebody else already moved", () => {
   it("is a 409, and writes and emits nothing", async () => {
-    const { app, events, store, writes } = harness({
+    const { app, events, store, writes } = await harness({
       rows: { "example:settings": { sidebar: [quote("s1", "Two")] } },
     });
 
@@ -451,7 +456,7 @@ describe("a save built on a zone somebody else already moved", () => {
   });
 
   it("is a 200 that writes nothing when it asks for what is already stored", async () => {
-    const { app, events, writes } = harness({
+    const { app, events, writes } = await harness({
       rows: { "example:settings": { sidebar: [quote("s1", "Two")] } },
     });
 
@@ -467,7 +472,7 @@ describe("a save built on a zone somebody else already moved", () => {
   });
 
   it("does not stand in the way of two people editing different zones", async () => {
-    const { app, store } = harness({
+    const { app, store } = await harness({
       rows: {
         "example:settings": {
           "after-profile": [quote("a1", "After one")],
@@ -501,7 +506,7 @@ describe("a save built on a zone somebody else already moved", () => {
       hero("h3", "Three"),
       hero("h4", "Four"),
     ];
-    const { app, store } = harness({
+    const { app, store } = await harness({
       rows: { "example:settings": { "before-profile": overfull } },
     });
 
@@ -518,7 +523,7 @@ describe("a save built on a zone somebody else already moved", () => {
   });
 
   it("is a 400 when the baselines do not name the very zones being written", async () => {
-    const { app, writes } = harness();
+    const { app, writes } = await harness();
 
     const mismatched = [
       { expectedZones: {}, zones: { sidebar: [quote("s1", "Mine")] } },
@@ -631,7 +636,7 @@ describe("a refused save", () => {
   ];
 
   it.each(refusals)("is a 400 for %s, and writes nothing", async (_, body) => {
-    const { app, events, writes } = harness();
+    const { app, events, writes } = await harness();
 
     expect(
       (
@@ -648,7 +653,7 @@ describe("a refused save", () => {
   });
 
   it("is a 400 for __proto__, and pollutes nothing", async () => {
-    const { app, writes } = harness();
+    const { app, writes } = await harness();
 
     const response = await app.request("/layout", {
       body: '{"pageId":"example:settings","zones":{"__proto__":[]},"expectedZones":{"__proto__":[]}}',
@@ -664,8 +669,11 @@ describe("a refused save", () => {
 
 describe("permissions", () => {
   it("refuses a caller without the page's permission", async () => {
-    const { app, writes } = harness();
-    granted = new Set(["can_view"]);
+    const { app, writes } = await harness({
+      permissions: [
+        { module: "widgets", permission: "can_view", plugin: PLUGIN_ID },
+      ],
+    });
 
     const response = await save(app, {
       expectedZones: { sidebar: [] },
@@ -678,8 +686,7 @@ describe("permissions", () => {
   });
 
   it("checks the permission before it looks at the zones", async () => {
-    const { app } = harness();
-    granted = new Set();
+    const { app } = await harness({ permissions: [] });
 
     const response = await save(app, {
       expectedZones: { footer: [] },
@@ -691,8 +698,9 @@ describe("permissions", () => {
   });
 
   it("cannot be satisfied by the same permission from another plugin", async () => {
-    const { app } = harness();
-    grantedPlugin = "@vitnode/blog";
+    const { app } = await harness({
+      permissions: [canEdit("widgets", "@vitnode/blog")],
+    });
 
     const response = await save(app, {
       expectedZones: { sidebar: [] },
@@ -704,7 +712,7 @@ describe("permissions", () => {
   });
 
   it("checks each page's own permission", async () => {
-    const { app } = harness();
+    const { app, grant } = await harness();
 
     expect(
       (
@@ -716,7 +724,10 @@ describe("permissions", () => {
       ).status,
     ).toBe(200);
 
-    granted = new Set(["can_moderate"]);
+    await grant([
+      canEdit("widgets"),
+      { module: "forum", permission: "can_moderate", plugin: PLUGIN_ID },
+    ]);
 
     expect(
       (

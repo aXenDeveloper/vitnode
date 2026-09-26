@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { act, type ReactElement, useEffect, useReducer, useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { BlockComponentProps, BlockData } from "../../blocks/types";
 import type { VisualEditorContextValue } from "../context";
@@ -14,19 +14,6 @@ import {
   visualEditorReducer,
 } from "../state/reducer";
 import { EditorSidebar } from "./sidebar";
-
-vi.mock("use-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
-
-vi.mock("../../hooks/use-captcha", () => ({
-  useCaptcha: () => ({
-    getToken: async () => Promise.resolve(undefined),
-    isReady: true,
-    onReset: () => undefined,
-  }),
-}));
 
 const heroFields = { headline: field.text({ required: true }) };
 const quoteFields = { body: field.text({ required: true }) };
@@ -129,7 +116,7 @@ const Harness = (): ReactElement => {
 };
 
 const search = (): HTMLInputElement =>
-  screen.getByLabelText<HTMLInputElement>("picker.search");
+  screen.getByLabelText<HTMLInputElement>("core.editor.picker.search");
 
 const searchFor = (query: string): void => {
   act(() => {
@@ -151,7 +138,7 @@ const preview = (on: boolean): void => {
 
 const catalogNames = (): string[] =>
   screen
-    .getAllByRole("button", { name: /^picker\.add$/ })
+    .getAllByRole("button", { name: /^core\.editor\.picker\.add$/ })
     .map(button => button.textContent ?? "");
 
 describe("the catalogue the sidebar keeps between panels", () => {
@@ -181,13 +168,21 @@ describe("the catalogue the sidebar keeps between panels", () => {
 
     preview(true);
 
-    expect(screen.queryByRole("complementary", { name: "title" })).toBeNull();
-    expect(screen.getByRole("navigation", { name: "title" })).toBeDefined();
+    expect(
+      screen.queryByRole("complementary", { name: "core.editor.title" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("navigation", { name: "core.editor.title" }),
+    ).toBeDefined();
 
     preview(false);
 
-    expect(screen.getByRole("complementary", { name: "title" })).toBeDefined();
-    expect(screen.queryByRole("navigation", { name: "title" })).toBeNull();
+    expect(
+      screen.getByRole("complementary", { name: "core.editor.title" }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("navigation", { name: "core.editor.title" }),
+    ).toBeNull();
     expect(search()).toBe(input);
     expect(search().value).toBe("hero");
   });
@@ -199,49 +194,65 @@ describe("the catalogue the sidebar keeps between panels", () => {
 
     searchFor("quote");
 
-    const filtered = screen.getByRole("button", { name: "picker.add" });
+    const filtered = screen.getByRole("button", {
+      name: "core.editor.picker.add",
+    });
 
     select(true);
     select(false);
 
-    expect(screen.getByRole("button", { name: "picker.add" })).toBe(filtered);
+    expect(screen.getByRole("button", { name: "core.editor.picker.add" })).toBe(
+      filtered,
+    );
     expect(catalogNames()).toHaveLength(1);
   });
 
   it("shows one panel at a time, never both", () => {
     render(<Harness />);
 
-    expect(screen.queryByRole("region", { name: "properties" })).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "core.editor.properties" }),
+    ).toBeNull();
 
     select(true);
 
-    expect(screen.getByRole("region", { name: "properties" })).toBeDefined();
-    expect(screen.queryByLabelText("picker.search")).not.toBeNull();
-    expect(screen.queryByRole("textbox", { name: "picker.search" })).toBeNull();
+    expect(
+      screen.getByRole("region", { name: "core.editor.properties" }),
+    ).toBeDefined();
+    expect(screen.queryByLabelText("core.editor.picker.search")).not.toBeNull();
+    expect(
+      screen.queryByRole("textbox", { name: "core.editor.picker.search" }),
+    ).toBeNull();
   });
 
   it("clears the search query when the clear button is clicked", () => {
     render(<Harness />);
 
-    expect(screen.queryByRole("button", { name: "picker.clear" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "core.editor.picker.clear" }),
+    ).toBeNull();
 
     searchFor("quote");
     expect(search().value).toBe("quote");
 
-    const clearButton = screen.getByRole("button", { name: "picker.clear" });
+    const clearButton = screen.getByRole("button", {
+      name: "core.editor.picker.clear",
+    });
     act(() => {
       fireEvent.click(clearButton);
     });
 
     expect(search().value).toBe("");
-    expect(screen.queryByRole("button", { name: "picker.clear" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "core.editor.picker.clear" }),
+    ).toBeNull();
   });
 });
 
 describe("the icon a widget declares", () => {
   const catalogCard = (name: string): HTMLElement => {
     const card = screen
-      .getAllByRole("button", { name: "picker.add" })
+      .getAllByRole("button", { name: "core.editor.picker.add" })
       .find(button => button.textContent?.includes(name));
 
     if (!card) throw new Error(`No catalogue card for ${name}`);
@@ -269,7 +280,9 @@ describe("the icon a widget declares", () => {
 
     select(true);
 
-    const panel = screen.getByRole("region", { name: "properties" });
+    const panel = screen.getByRole("region", {
+      name: "core.editor.properties",
+    });
 
     expect(within(panel).getByTestId("hero-icon")).toBeDefined();
   });

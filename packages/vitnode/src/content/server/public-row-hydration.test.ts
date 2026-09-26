@@ -1,12 +1,17 @@
 // @vitest-environment node
+import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
+import { PgDialect } from "drizzle-orm/pg-core";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AnyContentTypeDefinition } from "@/content/types";
+
 import {
+  testFileGalleryContentType,
   testFilePostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
@@ -20,6 +25,8 @@ import {
 } from "./public-row-hydration";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+const dialect = new PgDialect();
 
 const order: string[] = [];
 
@@ -44,39 +51,63 @@ const loadMany = vi.fn(
 
 const advanced = { loadMany } as unknown as ContentAdvancedStore;
 
-const resolveFiles = vi.fn(
-  async (
-    _c: Context,
-    _definition: unknown,
-    rows: Record<string, unknown>[],
-  ) => {
-    order.push("files");
+const fileRow = (id: number) => ({
+  id,
+  key: `uploads/${id}.png`,
+  metadata: null,
+  mimeType: "image/png",
+  name: `${id}.png`,
+  size: 100,
+});
 
-    return Promise.resolve(rows.map(row => ({ ...row, hydrated: true })));
-  },
-);
+const descriptor = (id: number) => ({
+  id,
+  mimeType: "image/png",
+  name: `${id}.png`,
+  size: 100,
+  url: `https://cdn.test/uploads/${id}.png`,
+});
 
-vi.mock("./files", () => ({
-  resolveContentPublicRowFiles: async (
-    ...args: Parameters<typeof resolveFiles>
-  ) => resolveFiles(...args),
-}));
+const fileQueries: unknown[][] = [];
 
-const c = {
-  get: (key: string) => (key === "db" ? "db-handle" : undefined),
-} as Context;
+const db = {
+  select: () => ({
+    from: () => ({
+      where: async (condition: SQL) => {
+        order.push("files");
+        const { params } = dialect.sqlToQuery(condition);
+        fileQueries.push(params);
+
+        return await Promise.resolve(
+          params.filter(id => typeof id === "number").map(fileRow),
+        );
+      },
+    }),
+  }),
+};
+
+const store: Record<string, unknown> = {
+  core: { storage: { adapter: {} } },
+  db,
+  storage: { getUrl: (key: string) => `https://cdn.test/${key}` },
+};
+
+const c = { get: (key: string) => store[key] } as unknown as Context;
 
 beforeEach(() => {
   order.length = 0;
+  fileQueries.length = 0;
   loadMany.mockClear();
-  resolveFiles.mockClear();
 });
 
-const hydrator = (publicCollections: readonly string[]) =>
+const hydrator = (
+  publicCollections: readonly string[],
+  definition: AnyContentTypeDefinition = testPostContentType,
+) =>
   createContentPublicRowHydrator({
     advanced,
     c,
-    definition: testPostContentType,
+    definition,
     publicCollections,
   });
 
@@ -97,20 +128,24 @@ describe("nesting", () => {
   it("runs first, so a nested id is what the collections are keyed by", async () => {
     await hydrator(["tags"])([{ "seo.title": "T", id: 4 }]);
 
-    expect(loadMany).toHaveBeenCalledWith([4], "db-handle", ["tags"]);
+    expect(loadMany).toHaveBeenCalledWith([4], db, ["tags"]);
   });
 });
 
 describe("an empty list", () => {
   it("loads nothing at all", async () => {
-    await expect(hydrator(["tags"])([])).resolves.toEqual([]);
+    await expect(
+      hydrator(["gallery"], testFileGalleryContentType)([]),
+    ).resolves.toEqual([]);
 
     expect(loadMany).not.toHaveBeenCalled();
-    expect(resolveFiles).not.toHaveBeenCalled();
+    expect(fileQueries).toEqual([]);
   });
 
   it("short-circuits even when there is nothing to load either", async () => {
-    await expect(hydrator([])([])).resolves.toEqual([]);
+    await expect(hydrator([], testFileGalleryContentType)([])).resolves.toEqual(
+      [],
+    );
 
     expect(order).toEqual([]);
   });
@@ -148,35 +183,52 @@ describe("the collections", () => {
 
 describe("the file fields", () => {
   it("resolve after the collections are attached", async () => {
-    await hydrator(["tags"])([{ id: 1 }]);
+    const rows = await hydrator(
+      ["gallery"],
+      testFileGalleryContentType,
+    )([{ id: 1 }]);
 
     // A `multiple: true` file field has no column: its identifiers only exist
     // on the row once `loadMany` has put them there.
     expect(order).toEqual(["collections", "files"]);
+    expect(rows[0].gallery).toEqual([descriptor(10)]);
   });
 
   it("resolve on the rows the collections were merged into", async () => {
-    await hydrator(["tags"])([{ id: 1 }]);
+    const rows = await hydrator(
+      ["gallery"],
+      testFileGalleryContentType,
+    )([{ id: 1 }, { id: 2 }]);
 
-    expect(resolveFiles.mock.calls[0][2]).toEqual([{ id: 1, tags: [10] }]);
+    expect(fileQueries).toEqual([[10, 20]]);
+    expect(rows[0]).toMatchObject({ gallery: [descriptor(10)], id: 1 });
+    expect(rows[1]).toMatchObject({ gallery: [descriptor(20)], id: 2 });
   });
 
   it("still resolve when there is no collection to load", async () => {
-    const rows = await hydrator([])([{ id: 1 }]);
+    const rows = await hydrator(
+      [],
+      testFileGalleryContentType,
+    )([{ cover: 3, id: 1 }]);
 
     expect(order).toEqual(["files"]);
-    expect(rows[0]).toMatchObject({ hydrated: true });
+    expect(rows[0]).toMatchObject({ cover: descriptor(3) });
   });
 
   it("are handed the definition whose allowlist decides which ones are public", async () => {
-    await createContentPublicRowHydrator({
+    const rows = await createContentPublicRowHydrator({
       advanced,
       c,
       definition: testFilePostContentType,
       publicCollections: [],
-    })([{ id: 1 }]);
+    })([{ animation: 5, cover: 3, document: 4, id: 1 }]);
 
-    expect(resolveFiles.mock.calls[0][1]).toBe(testFilePostContentType);
+    expect(fileQueries).toEqual([[3]]);
+    expect(rows[0]).toMatchObject({
+      animation: 5,
+      cover: descriptor(3),
+      document: 4,
+    });
   });
 });
 
@@ -198,11 +250,11 @@ describe("a content type with no collection store", () => {
   it("hydrates the rows without one", async () => {
     const rows = await createContentPublicRowHydrator({
       c,
-      definition: testPostContentType,
+      definition: testFilePostContentType,
       publicCollections: ["tags"],
-    })([{ id: 1 }]);
+    })([{ cover: 3, id: 1 }]);
 
-    expect(rows[0]).toMatchObject({ hydrated: true, id: 1 });
+    expect(rows[0]).toMatchObject({ cover: descriptor(3), id: 1 });
     expect(order).toEqual(["files"]);
   });
 });

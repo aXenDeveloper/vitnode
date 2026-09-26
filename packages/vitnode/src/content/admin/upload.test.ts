@@ -1,35 +1,29 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const fetches: { formData?: FormData; method: string; path?: string }[] = [];
-let next: (() => Promise<Response>) | null = null;
+import { ContentUploadError, uploadContentFile } from "./upload";
 
-vi.mock("../../lib/fetcher/raw", () => ({
-  rawApiFetch: async ({
-    formData,
-    method,
-    path,
-  }: {
-    formData?: FormData;
-    method: string;
-    path?: string;
-  }) => {
-    fetches.push({ formData, method, path });
-    const response = await (next?.() ??
-      Promise.resolve(new Response(null, { status: 200 })));
+const API_ORIGIN = "http://api.test";
 
-    if (response.status === 500) {
-      const text = await response.text();
-      throw new Error(
-        `500 - http://localhost:3000/api/x\n${text.trim() === "" ? response.statusText : text}`,
-      );
-    }
+let respond = (): Response => new Response(null, { status: 200 });
 
-    return response;
-  },
-}));
+const apiFetch = vi.fn<typeof fetch>(
+  async () => await Promise.resolve(respond()),
+);
 
-const { ContentUploadError, uploadContentFile } = await import("./upload");
+const sent = (index = 0) => {
+  const [input, init] = apiFetch.mock.calls[index] ?? [];
+
+  if (!(input instanceof URL)) throw new Error("no request reached fetch");
+
+  return {
+    credentials: init?.credentials,
+    formData: init?.body instanceof FormData ? init.body : undefined,
+    headers: new Headers(init?.headers),
+    method: init?.method,
+    url: input.href,
+  };
+};
 
 const SPEC = { permissionModule: "posts", pluginId: "@vitnode/blog" };
 
@@ -45,8 +39,7 @@ const failing = (
   status: number,
   headers?: Record<string, string>,
 ) => {
-  next = async () =>
-    await Promise.resolve(new Response(body, { headers, status }));
+  respond = () => new Response(body, { headers, status });
 };
 
 const rejection = async (): Promise<
@@ -68,8 +61,17 @@ const json = (body: unknown, status: number) =>
   });
 
 beforeEach(() => {
-  fetches.length = 0;
-  next = null;
+  respond = () => new Response(null, { status: 200 });
+  apiFetch.mockClear();
+  vi.stubEnv("VITNODE_API_URL", API_ORIGIN);
+  vi.stubGlobal("fetch", apiFetch);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("a successful upload", () => {
@@ -90,11 +92,16 @@ describe("a successful upload", () => {
     const descriptor = await upload();
 
     expect(descriptor).toMatchObject({ id: 42, name: "hero.webp" });
-    expect(fetches[0]).toMatchObject({
-      method: "post",
-      path: "/uploads/coverImage",
-    });
-    expect(fetches[0].formData?.get("file")).toBeInstanceOf(File);
+
+    const request = sent();
+
+    expect(request.url).toBe(
+      `${API_ORIGIN}/api/@vitnode/blog/admin/content/posts/uploads/coverImage`,
+    );
+    expect(request.method).toBe("POST");
+    expect(request.credentials).toBe("include");
+    expect(request.headers.has("Content-Type")).toBe(false);
+    expect(request.formData?.get("file")).toBeInstanceOf(File);
   });
 });
 

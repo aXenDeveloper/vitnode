@@ -3,10 +3,8 @@ import React from "react";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { PageTitle } from "@/components/ui/page-title";
-import {
-  CreateNavigationAction,
-  NavigationAdminListContent,
-} from "@/views/admin/views/core/navigation/navigation-list-content";
+import { CreateNavigationAction } from "@/views/admin/views/core/navigation/navigation-create-dialog";
+import { NavigationAdminListContent } from "@/views/admin/views/core/navigation/navigation-list-content";
 import { ADMIN_NAVIGATION_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 
 import type { AdminNavigationRouteData } from "./route";

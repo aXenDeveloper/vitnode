@@ -5,7 +5,12 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
 import { testFilePostContentType } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { CONTENT_FILE_CODES } from "../const";
 import { defineContentType } from "../define";
@@ -15,13 +20,6 @@ import { ContentFileReferenceError } from "./files";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async () => {
-    await Promise.resolve();
-  },
-  checkStaffPermission: async () => await Promise.resolve(true),
-}));
 
 const localizedFileContentType = defineContentType({
   id: "test.localized-file",
@@ -86,7 +84,7 @@ const withErrorHandler = (app: OpenAPIHono): OpenAPIHono => {
 };
 
 /** The generated admin routes over a service that throws whatever is given. */
-const harness = () => {
+const harness = async () => {
   const service = {
     advanced: vi.fn().mockResolvedValue({}),
     advancedFields: vi.fn().mockResolvedValue({}),
@@ -104,11 +102,17 @@ const harness = () => {
     update: vi.fn(),
   };
 
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: adminUser.id,
+  });
   vi.spyOn(filePosts, "service").mockReturnValue(service);
 
   const app = withErrorHandler(new OpenAPIHono());
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser } as unknown as Context["var"]["admin"]);
+    c.set("cache", cache);
     c.set("events", {
       emit: async () => await Promise.resolve({ failures: [], listeners: 0 }),
     } as unknown as Context["var"]["events"]);
@@ -131,7 +135,7 @@ const harness = () => {
 };
 
 /** The composite pair over a stubbed service, inside a stubbed transaction. */
-const localizedHarness = () => {
+const localizedHarness = async () => {
   const service = {
     advanced: vi.fn().mockResolvedValue({}),
     advancedFields: vi.fn().mockResolvedValue({}),
@@ -150,6 +154,11 @@ const localizedHarness = () => {
     update: vi.fn(),
   };
 
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: adminUser.id,
+  });
   vi.spyOn(localizedFiles, "service").mockReturnValue(service as never);
   vi.spyOn(
     localizedFiles as unknown as { translationService: unknown },
@@ -160,6 +169,7 @@ const localizedHarness = () => {
   const app = withErrorHandler(new OpenAPIHono());
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser } as unknown as Context["var"]["admin"]);
+    c.set("cache", cache);
     c.set("events", {
       emit: async () => await Promise.resolve({ failures: [], listeners: 0 }),
     } as unknown as Context["var"]["events"]);
@@ -237,7 +247,7 @@ describe("a refused file identifier on a content write", () => {
 
   describe.each(cases)("%s", (code, fieldName, message) => {
     it("is a structured 400 on create", async () => {
-      const { app, service } = harness();
+      const { app, service } = await harness();
       service.create.mockRejectedValue(rejection(code, fieldName, message));
 
       const response = await send(app, "/", "POST", {
@@ -251,7 +261,7 @@ describe("a refused file identifier on a content write", () => {
     });
 
     it("is a structured 400 on update", async () => {
-      const { app, service } = harness();
+      const { app, service } = await harness();
       service.update.mockRejectedValue(rejection(code, fieldName, message));
 
       const response = await send(app, "/7", "PUT", { title: "Hello" });
@@ -262,7 +272,7 @@ describe("a refused file identifier on a content write", () => {
   });
 
   it("names the field for a composite create", async () => {
-    const { app, service } = localizedHarness();
+    const { app, service } = await localizedHarness();
     service.create.mockRejectedValue(
       rejection(CONTENT_FILE_CODES.mimeType, "cover", "Not a PNG."),
     );
@@ -281,7 +291,7 @@ describe("a refused file identifier on a content write", () => {
   });
 
   it("names the field for a composite update", async () => {
-    const { app, service } = localizedHarness();
+    const { app, service } = await localizedHarness();
     service.update.mockRejectedValue(
       rejection(CONTENT_FILE_CODES.size, "cover", "Too big."),
     );
@@ -301,7 +311,7 @@ describe("a refused file identifier on a content write", () => {
   });
 
   it("keeps the internal prefix and the content type id out of the body", async () => {
-    const { app, service } = harness();
+    const { app, service } = await harness();
     service.create.mockRejectedValue(
       rejection(CONTENT_FILE_CODES.size, "cover", "This file is too big."),
     );
@@ -317,7 +327,7 @@ describe("a refused file identifier on a content write", () => {
   });
 
   it("leaves every other input error as plain text", async () => {
-    const { app, service } = harness();
+    const { app, service } = await harness();
     service.create.mockRejectedValue(
       new ContentInputError("Provide the slug explicitly."),
     );

@@ -4,12 +4,20 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+
+import { createTestCache } from "@/tests/cache";
 import {
   testCategoryContentType,
   testLocalizedArticleContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
+import { CONTENT_PERMISSIONS } from "../const";
 import {
   ContentDefaultTranslationRequired,
   ContentLanguageError,
@@ -21,28 +29,7 @@ import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 import { buildContentTranslationRoutes } from "./translation-routes";
 
-let permissionGranted = true;
-const permissionChecks: { module: string; permission: string }[] = [];
 const emitted = vi.fn(() => ({ failures: [], listeners: 0 }));
-
-// `assertStaffPermission` reads roles out of the database. The routes' job is to
-// *call* it with the right module and permission, so the check itself is replaced
-// with a switchable verdict that records what it was asked.
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async (
-    _c: unknown,
-    args: { module: string; permission: string },
-  ) => {
-    permissionChecks.push({
-      module: args.module,
-      permission: args.permission,
-    });
-    if (!permissionGranted) {
-      const { HTTPException } = await import("hono/http-exception");
-      throw new HTTPException(403, { message: "Forbidden" });
-    }
-  },
-}));
 
 const localized = createContentModel(testLocalizedArticleContentType);
 const categories = createContentModel(testCategoryContentType);
@@ -50,6 +37,19 @@ const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
 const PLUGIN_ID = "@vitnode/example";
+
+const localizedPermission = (permission: string): PermissionsStaffArgs => ({
+  module: "localized",
+  permission,
+  plugin: PLUGIN_ID,
+});
+
+const everyLocalizedPermissionExcept = (
+  permission: string,
+): PermissionsStaffArgs[] =>
+  Object.values(CONTENT_PERMISSIONS)
+    .filter(entry => entry !== permission)
+    .map(localizedPermission);
 
 const adminUser = {
   avatarColor: "000000",
@@ -88,7 +88,11 @@ interface Harness {
   translations: Record<string, ReturnType<typeof vi.fn>>;
 }
 
-const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
+const harness = async (
+  permissions:
+    | PermissionsStaffArgs[]
+    | typeof ROOT_STAFF_PERMISSIONS = ROOT_STAFF_PERMISSIONS,
+): Promise<Harness> => {
   const translations = {
     create: vi.fn(),
     delete: vi.fn(),
@@ -112,8 +116,8 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
     update: vi.fn(),
   };
 
-  permissionGranted = allow;
-  permissionChecks.length = 0;
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, { permissions, userId: adminUser.id });
   vi.spyOn(localized, "translationService", "get").mockReturnValue(
     () => translations,
   );
@@ -121,7 +125,8 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   const app = new OpenAPIHono();
 
   const context: MiddlewareHandler = async (c, next) => {
-    c.set("admin", allow ? { user: adminUser } : null);
+    c.set("admin", { user: adminUser });
+    c.set("cache", cache);
     // Every write route announces itself after the commit. The transport is not
     // what these tests are about, so it records instead of delivering - and a
     // missing one would surface as a 500 rather than as a missing event.
@@ -177,7 +182,7 @@ describe("route registration", () => {
 
 describe("GET /{id}/translations", () => {
   it("returns every locale with its values, in one read", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.findManyRowsForItem.mockResolvedValue([
       translationRow(),
       translationRow({ languageId: 2, locale: "pl", version: 3 }),
@@ -202,25 +207,26 @@ describe("GET /{id}/translations", () => {
     expect(translations.findByLocale).not.toHaveBeenCalled();
   });
 
-  it("needs `can_view`", async () => {
-    const { app, translations } = harness();
+  it("lists with `can_view` alone", async () => {
+    const { app, translations } = await harness([
+      localizedPermission("can_view"),
+    ]);
     translations.findManyRowsForItem.mockResolvedValue([]);
 
-    await app.request("/7/translations");
-
-    expect(permissionChecks).toEqual([
-      { module: "localized", permission: "can_view" },
-    ]);
+    expect((await app.request("/7/translations")).status).toBe(200);
   });
 
   it("is 403 without the permission", async () => {
-    const { app } = harness({ allow: false });
+    const { app, translations } = await harness(
+      everyLocalizedPermissionExcept("can_view"),
+    );
 
     expect((await app.request("/7/translations")).status).toBe(403);
+    expect(translations.findManyRowsForItem).not.toHaveBeenCalled();
   });
 
   it("rejects a non-numeric identifier", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect((await app.request("/abc/translations")).status).toBe(400);
   });
@@ -228,7 +234,7 @@ describe("GET /{id}/translations", () => {
 
 describe("GET /{id}/translations/{locale}", () => {
   it("returns one translation with its values", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.findByLocale.mockResolvedValue(translationRow());
 
     const response = await app.request("/7/translations/en");
@@ -244,14 +250,14 @@ describe("GET /{id}/translations/{locale}", () => {
   });
 
   it("is 404 when there is no translation in that locale", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.findByLocale.mockResolvedValue(null);
 
     expect((await app.request("/7/translations/de")).status).toBe(404);
   });
 
   it("passes the locale through untouched, casing included", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.findByLocale.mockResolvedValue(translationRow());
 
     await app.request("/7/translations/PL");
@@ -261,7 +267,7 @@ describe("GET /{id}/translations/{locale}", () => {
   });
 
   it("rejects a locale wider than core_languages.code", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect(
       (await app.request(`/7/translations/${"x".repeat(33)}`)).status,
@@ -278,7 +284,7 @@ describe("POST /{id}/translations/{locale}", () => {
     });
 
   it("creates a translation and answers 201", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockResolvedValue(
       translationRow({ languageId: 2, locale: "pl" }),
     );
@@ -291,19 +297,26 @@ describe("POST /{id}/translations/{locale}", () => {
     });
   });
 
-  it("needs `can_edit`, and no permission of its own", async () => {
-    const { app, translations } = harness();
+  it("creates with `can_edit` alone, needing no permission of its own", async () => {
+    const { app, translations } = await harness([
+      localizedPermission("can_edit"),
+    ]);
     translations.create.mockResolvedValue(translationRow());
 
-    await post(app, { values: { title: "Witaj" } });
+    expect((await post(app, { values: { title: "Witaj" } })).status).toBe(201);
+  });
 
-    expect(permissionChecks).toEqual([
-      { module: "localized", permission: "can_edit" },
-    ]);
+  it("refuses to create without `can_edit`", async () => {
+    const { app, translations } = await harness(
+      everyLocalizedPermissionExcept("can_edit"),
+    );
+
+    expect((await post(app, { values: { title: "Witaj" } })).status).toBe(403);
+    expect(translations.create).not.toHaveBeenCalled();
   });
 
   it("rejects values outside the envelope", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     // `expectedVersion`, `locale` and `itemId` are transport, so they can never
     // be part of a strict `values` object.
@@ -314,7 +327,7 @@ describe("POST /{id}/translations/{locale}", () => {
   });
 
   it("answers 404 for a record that is not there", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockRejectedValue(
       new ContentTranslationItemMissing({
         contentTypeId: "test.localized",
@@ -326,7 +339,7 @@ describe("POST /{id}/translations/{locale}", () => {
   });
 
   it("answers 404 for an unknown locale", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockRejectedValue(
       new ContentLanguageError({ locale: "de", reason: "missing" }),
     );
@@ -337,7 +350,7 @@ describe("POST /{id}/translations/{locale}", () => {
   });
 
   it("answers a structured 409 for a disabled locale", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockRejectedValue(
       new ContentLanguageError({ locale: "pl", reason: "disabled" }),
     );
@@ -353,7 +366,7 @@ describe("POST /{id}/translations/{locale}", () => {
   });
 
   it("answers a structured 409 when the locale already has one", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockRejectedValue(
       new ContentTranslationExists({
         contentTypeId: "test.localized",
@@ -374,7 +387,7 @@ describe("POST /{id}/translations/{locale}", () => {
   });
 
   it("answers a structured 409 when a localized slug is taken", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockRejectedValue(
       Object.assign(new Error("duplicate key"), { code: "23505" }),
     );
@@ -391,7 +404,7 @@ describe("POST /{id}/translations/{locale}", () => {
   });
 
   it("never leaks the driver's message", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.create.mockRejectedValue(
       Object.assign(
         new Error(
@@ -416,7 +429,7 @@ describe("PUT /{id}/translations/{locale}", () => {
     });
 
   it("updates one locale and reports the new version", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.update.mockResolvedValue({
       changed: true,
       changedFields: ["title"],
@@ -443,7 +456,7 @@ describe("PUT /{id}/translations/{locale}", () => {
   });
 
   it("reports a no-op as changed: false", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.update.mockResolvedValue({
       changed: false,
       changedFields: [],
@@ -463,13 +476,13 @@ describe("PUT /{id}/translations/{locale}", () => {
   });
 
   it("requires an expected version", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect((await put(app, { values: { title: "New" } })).status).toBe(400);
   });
 
   it("rejects an empty patch", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect((await put(app, { expectedVersion: 1, values: {} })).status).toBe(
       400,
@@ -477,7 +490,7 @@ describe("PUT /{id}/translations/{locale}", () => {
   });
 
   it("answers a structured 409 naming the locale that moved", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.update.mockRejectedValue(
       new ContentTranslationVersionConflict({
         contentTypeId: "test.localized",
@@ -506,7 +519,7 @@ describe("PUT /{id}/translations/{locale}", () => {
   });
 
   it("is 404 when the translation is missing", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.update.mockResolvedValue(null);
 
     expect(
@@ -524,7 +537,7 @@ describe("DELETE /{id}/translations/{locale}", () => {
     });
 
   it("deletes a non-default translation", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.delete.mockResolvedValue(
       translationRow({ languageId: 2, locale: "pl", version: 2 }),
     );
@@ -537,25 +550,32 @@ describe("DELETE /{id}/translations/{locale}", () => {
     });
   });
 
-  it("needs `can_delete`", async () => {
-    const { app, translations } = harness();
+  it("deletes with `can_delete` alone", async () => {
+    const { app, translations } = await harness([
+      localizedPermission("can_delete"),
+    ]);
     translations.delete.mockResolvedValue(translationRow());
 
-    await remove(app, { expectedVersion: 1 });
+    expect((await remove(app, { expectedVersion: 1 })).status).toBe(200);
+  });
 
-    expect(permissionChecks).toEqual([
-      { module: "localized", permission: "can_delete" },
-    ]);
+  it("refuses to delete without `can_delete`", async () => {
+    const { app, translations } = await harness(
+      everyLocalizedPermissionExcept("can_delete"),
+    );
+
+    expect((await remove(app, { expectedVersion: 1 })).status).toBe(403);
+    expect(translations.delete).not.toHaveBeenCalled();
   });
 
   it("requires an expected version", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect((await remove(app, {})).status).toBe(400);
   });
 
   it("refuses the default translation with a structured 409", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.delete.mockRejectedValue(
       new ContentDefaultTranslationRequired({
         contentTypeId: "test.localized",
@@ -576,7 +596,7 @@ describe("DELETE /{id}/translations/{locale}", () => {
   });
 
   it("is 404 when the translation is already gone", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.delete.mockResolvedValue(null);
 
     expect((await remove(app, { expectedVersion: 1 })).status).toBe(404);
@@ -584,8 +604,8 @@ describe("DELETE /{id}/translations/{locale}", () => {
 });
 
 describe("the OpenAPI document", () => {
-  it("describes every translation route and its 409 union", () => {
-    const { app } = harness();
+  it("describes every translation route and its 409 union", async () => {
+    const { app } = await harness();
     const document = app.getOpenAPI31Document({
       info: { title: "test", version: "1" },
       openapi: "3.1.0",

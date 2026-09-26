@@ -4,13 +4,17 @@ import type { AdminNavigationItem } from "./navigation-query";
 
 import {
   applyNavigationDrop,
+  childrenOfNavigation,
   flattenNavigationItems,
+  moveNavigationItem,
   NAVIGATION_INDENTATION_PX,
   navigationItemIcon,
   navigationItemsFrom,
   navigationOrderBody,
   projectNavigationDrop,
+  restoreCollapsedChildren,
   sameNavigationOrder,
+  shiftNavigationItem,
   withoutNavigationChildrenOf,
 } from "./navigation-tree";
 
@@ -239,5 +243,87 @@ describe("sameNavigationOrder", () => {
         items: [...body.items].reverse(),
       }),
     ).toBe(false);
+  });
+});
+
+describe("shiftNavigationItem", () => {
+  const flattened = flattenNavigationItems(menu);
+
+  it("moves a parent past its neighbour together with its children", () => {
+    expect(ids(shiftNavigationItem({ flattened, id: 2, step: -1 }))).toEqual([
+      "2@0",
+      "3@1",
+      "4@1",
+      "1@0",
+      "5@0",
+    ]);
+  });
+
+  it("swaps a child with its sibling inside the same dropdown", () => {
+    expect(ids(shiftNavigationItem({ flattened, id: 4, step: -1 }))).toEqual([
+      "1@0",
+      "2@0",
+      "4@1",
+      "3@1",
+      "5@0",
+    ]);
+  });
+
+  it("stays put at either end of its group", () => {
+    expect(ids(shiftNavigationItem({ flattened, id: 1, step: -1 }))).toEqual(
+      ids(flattened),
+    );
+    expect(ids(shiftNavigationItem({ flattened, id: 4, step: 1 }))).toEqual(
+      ids(flattened),
+    );
+  });
+});
+
+describe("moveNavigationItem", () => {
+  const flattened = flattenNavigationItems(menu);
+
+  it("tucks a top-level item at the end of another item's dropdown", () => {
+    expect(ids(moveNavigationItem({ flattened, id: 5, parentId: 2 }))).toEqual([
+      "1@0",
+      "2@0",
+      "3@1",
+      "4@1",
+      "5@1",
+    ]);
+  });
+
+  it("lifts a child to the top level right below its old parent", () => {
+    expect(
+      ids(moveNavigationItem({ flattened, id: 3, parentId: null })),
+    ).toEqual(["1@0", "2@0", "4@1", "3@0", "5@0"]);
+  });
+
+  it("refuses to nest an item that has children of its own", () => {
+    expect(ids(moveNavigationItem({ flattened, id: 2, parentId: 1 }))).toEqual(
+      ids(flattened),
+    );
+  });
+
+  it("refuses to nest under a child, which would be a second level", () => {
+    expect(ids(moveNavigationItem({ flattened, id: 5, parentId: 3 }))).toEqual(
+      ids(flattened),
+    );
+  });
+});
+
+describe("restoreCollapsedChildren", () => {
+  it("puts a collapsed parent's hidden children back right under it", () => {
+    const flattened = flattenNavigationItems(menu);
+    const hidden = new Map([[2, childrenOfNavigation(flattened, 2)]]);
+    const shown = withoutNavigationChildrenOf(flattened, 2);
+
+    expect(
+      ids(
+        restoreCollapsedChildren(
+          shiftNavigationItem({ flattened: shown, id: 5, step: -1 }),
+          hidden,
+        ),
+      ),
+    ).toEqual(["1@0", "5@0", "2@0", "3@1", "4@1"]);
   });
 });

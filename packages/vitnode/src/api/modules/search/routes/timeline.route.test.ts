@@ -2,20 +2,22 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { buildRoute } from "@/api/lib/route";
+
+import { createTestCache } from "@/tests/cache";
+import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { timelineUserAdminRoute } from "../../admin/users/routes/timeline.route";
 import { timelineRoute } from "./timeline.route";
 
-const { assertStaffPermission } = vi.hoisted(() => ({
-  assertStaffPermission: vi.fn(async () => {
-    await Promise.resolve();
-  }),
-}));
-
-vi.mock("@/api/lib/check-staff-permission", () => ({ assertStaffPermission }));
+const VIEW_USERS: PermissionsStaffArgs = {
+  module: "users",
+  permission: "can_view",
+  plugin: "@vitnode/core",
+};
 
 const EMPTY_RESULT = {
   edges: [],
@@ -29,10 +31,15 @@ const EMPTY_RESULT = {
   },
 };
 
-const appFor = (
+const appFor = async (
   built: ReturnType<typeof buildRoute>,
   viewer: null | { id: number },
+  permissions: PermissionsStaffArgs[] = [],
 ) => {
+  const cache = createTestCache();
+  if (viewer) {
+    await grantStaffPermissions(cache, { permissions, userId: viewer.id });
+  }
   const search = {
     search: vi.fn(async () => {
       await Promise.resolve();
@@ -43,6 +50,12 @@ const appFor = (
   const app = new OpenAPIHono();
 
   app.use("*", async (c, next) => {
+    if (viewer) {
+      c.set("admin", {
+        user: { ...viewer, roleId: 1 },
+      } as unknown as Context["var"]["admin"]);
+    }
+    c.set("cache", cache);
     c.set("search", search as unknown as Context["var"]["search"]);
     c.set("user", viewer as unknown as Context["var"]["user"]);
     await next();
@@ -53,12 +66,8 @@ const appFor = (
 };
 
 describe("member timeline", () => {
-  beforeEach(() => {
-    assertStaffPermission.mockClear();
-  });
-
   it("shows a guest only public documents", async () => {
-    const { app, search } = appFor(timelineRoute, null);
+    const { app, search } = await appFor(timelineRoute, null);
 
     const res = await app.request("/timeline/1?lang=en&first=20");
 
@@ -74,7 +83,7 @@ describe("member timeline", () => {
   });
 
   it("shows another member only public documents", async () => {
-    const { app, search } = appFor(timelineRoute, { id: 2 });
+    const { app, search } = await appFor(timelineRoute, { id: 2 });
 
     await app.request("/timeline/1");
 
@@ -84,7 +93,7 @@ describe("member timeline", () => {
   });
 
   it("shows members their own drafts", async () => {
-    const { app, search } = appFor(timelineRoute, { id: 1 });
+    const { app, search } = await appFor(timelineRoute, { id: 1 });
 
     await app.request("/timeline/1?cursor=42");
 
@@ -98,7 +107,7 @@ describe("member timeline", () => {
   });
 
   it("refuses an id that is not a number", async () => {
-    const { app, search } = appFor(timelineRoute, { id: 1 });
+    const { app, search } = await appFor(timelineRoute, { id: 1 });
 
     const res = await app.request("/timeline/abc");
 
@@ -107,21 +116,20 @@ describe("member timeline", () => {
   });
 
   it("needs no staff permission", async () => {
-    const { app } = appFor(timelineRoute, null);
+    const { app, search } = await appFor(timelineRoute, { id: 2 }, []);
 
-    await app.request("/timeline/1");
+    const res = await app.request("/timeline/1");
 
-    expect(assertStaffPermission).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(search.search).toHaveBeenCalledOnce();
   });
 });
 
 describe("AdminCP user timeline", () => {
-  beforeEach(() => {
-    assertStaffPermission.mockClear();
-  });
-
   it("shows every state, whoever the author is", async () => {
-    const { app, search } = appFor(timelineUserAdminRoute, { id: 9 });
+    const { app, search } = await appFor(timelineUserAdminRoute, { id: 9 }, [
+      VIEW_USERS,
+    ]);
 
     const res = await app.request("/1/timeline?lang=pl");
 
@@ -136,18 +144,16 @@ describe("AdminCP user timeline", () => {
     );
   });
 
-  it("asks for the permission to view users", async () => {
-    const { app } = appFor(timelineUserAdminRoute, { id: 9 });
+  it("refuses an administrator without users:can_view", async () => {
+    const { app, search } = await appFor(timelineUserAdminRoute, { id: 9 }, [
+      { ...VIEW_USERS, permission: "can_edit" },
+      { ...VIEW_USERS, module: "roles" },
+      { ...VIEW_USERS, plugin: "@vitnode/blog" },
+    ]);
 
-    await app.request("/1/timeline");
+    const res = await app.request("/1/timeline");
 
-    expect(assertStaffPermission).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        module: "users",
-        permission: "can_view",
-        type: "admin",
-      }),
-    );
+    expect(res.status).toBe(403);
+    expect(search.search).not.toHaveBeenCalled();
   });
 });

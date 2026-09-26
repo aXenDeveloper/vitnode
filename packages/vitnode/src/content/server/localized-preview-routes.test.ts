@@ -4,12 +4,15 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
 import {
   testLocalizedGuideContentType,
   testLocalizedPageContentType,
 } from "@/tests/content-fixtures";
-
-import type * as LanguageResolverModule from "./language-resolver";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { createContentModel } from "./model";
 import { verifyContentPreviewToken } from "./preview-token";
@@ -17,31 +20,7 @@ import { buildContentTranslationRoutes } from "./translation-routes";
 
 const SECRET = "a".repeat(48);
 const PLUGIN_ID = "@vitnode/example";
-
-const LANGUAGES = [
-  { id: 1, isDefault: true, isEnabled: true, locale: "en" },
-  { id: 2, isDefault: false, isEnabled: true, locale: "pl" },
-];
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: vi.fn(),
-}));
-
-vi.mock("./language-resolver", async importOriginal => {
-  const actual = await importOriginal<typeof LanguageResolverModule>();
-
-  return {
-    ...actual,
-    findContentLanguage: vi.fn(async (_c: unknown, locale: string) =>
-      Promise.resolve(
-        LANGUAGES.find(
-          language => language.locale.toLowerCase() === locale.toLowerCase(),
-        ) ?? null,
-      ),
-    ),
-    listContentLanguages: vi.fn(async () => Promise.resolve(LANGUAGES)),
-  };
-});
+const ADMIN_ID = 1;
 
 const pages = createContentModel(testLocalizedPageContentType);
 // Localized and editorial but with no `publicApi`, so `editorial.preview` cannot
@@ -61,7 +40,7 @@ const translationRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const harness = ({ secret = SECRET }: { secret?: string } = {}) => {
+const harness = async ({ secret = SECRET }: { secret?: string } = {}) => {
   const translations = {
     create: vi.fn(),
     delete: vi.fn(),
@@ -113,9 +92,16 @@ const harness = ({ secret = SECRET }: { secret?: string } = {}) => {
     () => shared as never,
   );
 
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: ADMIN_ID,
+  });
+
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
-    c.set("admin", { user: { id: 1 } } as never);
+    c.set("admin", { user: { id: ADMIN_ID } } as never);
+    c.set("cache", cache);
     c.set("core", { contentPreviewSecret: secret } as never);
     await next();
   };
@@ -159,7 +145,7 @@ describe("route registration", () => {
 
 describe("minting a locale preview link", () => {
   it("freezes both halves of the page", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const body = (await (
       await app.request("/7/translations/pl/preview", { method: "post" })
@@ -172,7 +158,7 @@ describe("minting a locale preview link", () => {
   });
 
   it("binds the token to the locale it was minted for", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const body = (await (
       await app.request("/7/translations/pl/preview", { method: "post" })
@@ -190,7 +176,7 @@ describe("minting a locale preview link", () => {
   });
 
   it("refuses the same token on another language", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const body = (await (
       await app.request("/7/translations/pl/preview", { method: "post" })
@@ -209,7 +195,7 @@ describe("minting a locale preview link", () => {
   });
 
   it("carries the locale in the link, so the reader stays bound", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const body = (await (
       await app.request("/7/translations/pl/preview", { method: "post" })
@@ -219,7 +205,7 @@ describe("minting a locale preview link", () => {
   });
 
   it("404s a locale with no translation rather than linking to the fallback", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.findByLocale.mockResolvedValue(null);
 
     // The button is on a language tab. A link that quietly previewed a
@@ -233,7 +219,7 @@ describe("minting a locale preview link", () => {
 
   it("503s rather than handing back a link it cannot address", async () => {
     vi.stubEnv("VITNODE_WEB_URL", "not a url");
-    const { app } = harness();
+    const { app } = await harness();
 
     const response = await app.request("/7/translations/pl/preview", {
       method: "post",
@@ -245,7 +231,7 @@ describe("minting a locale preview link", () => {
   });
 
   it("freezes nothing when there is no revision to freeze", async () => {
-    const { app, editorial, shared } = harness();
+    const { app, editorial, shared } = await harness();
     shared.revisions.latest.mockResolvedValue(null);
     editorial.listRevisions.mockResolvedValue({
       edges: [],
