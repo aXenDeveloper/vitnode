@@ -77,6 +77,13 @@ the historical records already in Postgres.
 </Step>
 </Steps>
 
+<Callout type="info" title="Upgrading an existing index">
+  Documents now carry `authorIds` (a list) instead of `authorId`, plus drafts
+  as private documents. If your index was created before that, delete it in
+  Elasticsearch and run **Rebuild index**. VitNode recreates it with the new
+  mapping.
+</Callout>
+
 <Callout type="warn" title="Keep Postgres">
   Do not delete `core_search_index`. It remains VitNode's source of truth and
   lets you switch providers without losing your map back home.

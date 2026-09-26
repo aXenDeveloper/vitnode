@@ -18,7 +18,6 @@ import { contentDefinitionOf } from "./model";
 import {
   contentSearchDocument,
   contentTranslationSearchDocument,
-  isContentRowPublic,
 } from "./search-document";
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
@@ -52,38 +51,23 @@ export interface ContentSearchSyncOutcome {
 /** What the row is, and what the index therefore has to hold. */
 const decide = (
   definition: AnyContentTypeDefinition,
-  { changed, changedFields, operation, row }: ContentSearchSyncInput,
-  isPublic: boolean,
+  { changed, changedFields, operation }: ContentSearchSyncInput,
 ): "delete" | "skip" | "upsert" => {
-  const values = row as Record<string, unknown>;
+  if (operation === "delete") return "delete";
 
-  if (operation === "delete") {
-    // `publishedAt` survives an unpublish, so this covers both "currently
-    // published" and "was published, is a draft now" - and skips a record that
-    // was never published, which was never indexed.
-    return values.publishedAt === null || values.publishedAt === undefined
-      ? "skip"
-      : "delete";
-  }
-
-  if (operation === "unpublish") return changed === true ? "delete" : "skip";
-
-  // An idempotent publish is a no-op for the same reason it emits no event:
+  // An idempotent transition is a no-op for the same reason it emits no event:
   // the document is already there and would be rewritten byte for byte.
-  if (operation === "publish") {
-    return changed === true && isPublic ? "upsert" : "skip";
+  if (operation === "publish" || operation === "unpublish") {
+    return changed === true ? "upsert" : "skip";
   }
 
-  if (operation === "create") return isPublic ? "upsert" : "skip";
+  if (operation === "create") return "upsert";
 
   // `update` and `restore` both write field values and neither can change
   // `status` - a restore projects only declared fields, and the publication
-  // columns are not among them. So a draft stays a draft and a published record
-  // stays published: nothing to delete, and nothing to write unless a field the
-  // document is built from actually moved. A slug change is covered, because
-  // the exposed slug is one of the indexed field names.
-  if (!isPublic) return "skip";
-
+  // columns are not among them. So nothing to write unless a field the document
+  // is built from actually moved. A slug change is covered, because the exposed
+  // slug is one of the indexed field names.
   const indexed = contentSearchIndexedPaths(definition);
 
   return (changedFields ?? []).some(name => indexed.has(name))
@@ -104,12 +88,12 @@ export const syncContentSearch = async (
     return { action: "skip", documentId };
   }
 
-  const decided = decide(definition, input, isContentRowPublic(input.row));
+  const decided = decide(definition, input);
   if (decided === "skip") return { action: decided, documentId };
 
-  // A publicly visible row the mapper will not build - a title that is only
-  // whitespace, say - has its document removed rather than left holding whatever
-  // text it was indexed with last time.
+  // A row the mapper will not build - a title that is only whitespace, say - has
+  // its document removed rather than left holding whatever text it was indexed
+  // with last time.
   const document =
     decided === "upsert"
       ? contentSearchDocument(
@@ -248,16 +232,17 @@ const readTranslations = async (
 /**
  * Brings the search index in line with one mutation of a **localized** record.
  *
- * One document per published translation, so this is a loop rather than a single
+ * One document per translation, so this is a loop rather than a single
  * decision - and the loop is the point: a record's own publish or unpublish moves
  * every language at once, while a translation's moves exactly one. `locale` is
  * what distinguishes the two, and omitting it on a translation mutation would
  * rewrite every other language's document for nothing.
  *
- * A translation that must not be indexed - a draft, a blank title, a record that
- * is itself a draft - has its document **deleted for that language only**. Taking
- * the Polish copy down must leave the English one exactly where it is, which is
- * why `SearchModel.delete` takes a language.
+ * A draft translation, or one whose record is a draft, stays in the index as a
+ * private document. A translation that cannot be indexed - a blank title - has
+ * its document **deleted for that language only**. Taking the Polish copy down
+ * must leave the English one exactly where it is, which is why
+ * `SearchModel.delete` takes a language.
  *
  * The same rules as the base sync otherwise: call it only after the write has
  * returned, never inside the transaction, and a failing search engine never turns

@@ -262,18 +262,71 @@ describe("indexes", () => {
 });
 
 describe("admin surfaces", () => {
-  it("refuse a collection as a list column", () => {
+  it("accept a to-many relation or user as a list column", () => {
     defineContentType({
       admin: {
-        // @ts-expect-error a to-many relation is not a column.
-        list: { columns: ["tags"] },
+        list: { columns: ["name", "tags", "authors"] },
       },
       fields: {
+        authors: field.user({ multiple: true, ordered: true }),
         name: field.text({ required: true }),
         tags: field.relation({
           multiple: true,
           target: () => categoryContentType,
         }),
+      },
+      id: "test.d-reflist",
+      tableName: "test_d_reflist",
+    });
+  });
+
+  it("accept a single file as the list thumbnail", () => {
+    defineContentType({
+      admin: {
+        list: { columns: ["name"], thumbnailField: "cover" },
+        titleField: "name",
+      },
+      fields: {
+        cover: field.file({ maxBytes: 1024 }),
+        name: field.text({ required: true }),
+      },
+      id: "test.d-thumb",
+      tableName: "test_d_thumb",
+    });
+  });
+
+  it("refuse a gallery as the list thumbnail", () => {
+    defineContentType({
+      admin: {
+        list: {
+          columns: ["name"],
+          // @ts-expect-error a gallery is many images, not one thumbnail.
+          thumbnailField: "photos",
+        },
+        titleField: "name",
+      },
+      fields: {
+        name: field.text({ required: true }),
+        photos: field.file({ maxBytes: 1024, multiple: true }),
+      },
+      id: "test.d-thumbs",
+      tableName: "test_d_thumbs",
+    });
+  });
+
+  it("refuse a repeatable as a list column", () => {
+    defineContentType({
+      admin: {
+        // @ts-expect-error a repeatable is many rows of values, not one cell.
+        list: { columns: ["faq"] },
+      },
+      fields: {
+        faq: field.repeatable({
+          fields: {
+            question: field.text({ required: true }),
+          },
+        }),
+        name: field.text({ required: true }),
       },
       id: "test.d-badlist",
       tableName: "test_d_badlist",

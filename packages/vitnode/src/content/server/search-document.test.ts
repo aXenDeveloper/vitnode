@@ -33,9 +33,15 @@ const document = (overrides: Record<string, unknown> = {}) =>
     ...overrides,
   });
 
+const withAuthorField = {
+  ...testSearchablePostContentType,
+  search: { ...testSearchablePostContentType.search, authorField: "author" },
+};
+
 describe("content search document", () => {
   it("maps a published row", () => {
     expect(document()).toEqual({
+      authorIds: [],
       content: "A short excerpt.\n\nThe body of the post.",
       createdAt: PUBLISHED_AT,
       isPublic: true,
@@ -67,10 +73,31 @@ describe("content search document", () => {
     ).toBe("@vitnode/example");
   });
 
-  it("never carries an author, container or metadata", () => {
+  it("credits nobody unless search names an author field", () => {
+    expect(document()?.authorIds).toEqual([]);
+  });
+
+  it("credits the author field's user when search names one", () => {
+    expect(contentSearchDocument(withAuthorField, row)?.authorIds).toEqual([3]);
+  });
+
+  it("credits every author in order, once each", () => {
+    expect(
+      contentSearchDocument(withAuthorField, { ...row, author: [5, 3, 5] })
+        ?.authorIds,
+    ).toEqual([5, 3]);
+  });
+
+  it("credits nobody when the author field is empty", () => {
+    expect(
+      contentSearchDocument(withAuthorField, { ...row, author: null })
+        ?.authorIds,
+    ).toEqual([]);
+  });
+
+  it("never carries a container or metadata", () => {
     const result = document();
 
-    expect(result?.authorId).toBeUndefined();
     expect(result?.containerId).toBeUndefined();
     expect(result?.containerType).toBeUndefined();
     expect(result?.metadata).toBeUndefined();
@@ -95,18 +122,31 @@ describe("content search document", () => {
       expect(serialized).not.toContain('"author"');
     });
 
-    it("returns null for a draft", () => {
-      expect(document({ publishedAt: null, status: "draft" })).toBeNull();
+    it("indexes a draft as a private document without a url", () => {
+      const result = document({ publishedAt: null, status: "draft" });
+
+      expect(result).toMatchObject({
+        createdAt: CREATED_AT,
+        isPublic: false,
+        title: "Hello world",
+      });
+      expect(result).not.toHaveProperty("url");
     });
 
-    it("returns null when publishedAt is missing", () => {
-      expect(document({ publishedAt: null })).toBeNull();
+    it("keeps the document private when publishedAt is missing", () => {
+      expect(document({ publishedAt: null })?.isPublic).toBe(false);
     });
 
-    it("returns null when publishedAt is in the future", () => {
+    it("keeps the document private when publishedAt is in the future", () => {
       expect(
-        document({ publishedAt: new Date(Date.now() + 60_000) }),
-      ).toBeNull();
+        document({ publishedAt: new Date(Date.now() + 60_000) })?.isPublic,
+      ).toBe(false);
+    });
+
+    it("keeps a private document even when it has no slug", () => {
+      expect(
+        document({ publishedAt: null, slug: "", status: "draft" })?.isPublic,
+      ).toBe(false);
     });
 
     it("returns null when search is disabled", () => {

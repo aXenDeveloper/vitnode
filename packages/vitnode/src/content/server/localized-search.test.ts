@@ -99,25 +99,30 @@ describe("contentTranslationSearchDocument", () => {
     expect(document()?.createdAt).toEqual(LATER);
   });
 
-  it("refuses a draft translation of a published record", () => {
-    expect(
-      document({ translation: { publishedAt: null, status: "draft" } }),
-    ).toBeNull();
+  it("keeps a draft translation of a published record private", () => {
+    const result = document({
+      translation: { publishedAt: null, status: "draft" },
+    });
+
+    expect(result?.isPublic).toBe(false);
+    expect(result).not.toHaveProperty("url");
   });
 
-  it("refuses a published translation of a draft record", () => {
+  it("keeps a published translation of a draft record private", () => {
     // Subordination: nothing is public in any language while the record is a
-    // draft, so nothing is indexed either.
+    // draft.
     expect(
-      document({ base: { publishedAt: null, status: "draft" } }),
-    ).toBeNull();
+      document({ base: { publishedAt: null, status: "draft" } })?.isPublic,
+    ).toBe(false);
   });
 
-  it("refuses a future publication date on either half", () => {
+  it("keeps a future publication date on either half private", () => {
     const future = new Date(Date.now() + 60_000);
 
-    expect(document({ base: { publishedAt: future } })).toBeNull();
-    expect(document({ translation: { publishedAt: future } })).toBeNull();
+    expect(document({ base: { publishedAt: future } })?.isPublic).toBe(false);
+    expect(document({ translation: { publishedAt: future } })?.isPublic).toBe(
+      false,
+    );
   });
 
   it("refuses a translation with no usable title", () => {

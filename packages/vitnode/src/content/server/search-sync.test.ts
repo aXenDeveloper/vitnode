@@ -140,7 +140,7 @@ describe("content search lifecycle synchronization", () => {
   });
 
   describe("create", () => {
-    it("indexes nothing for a new draft", async () => {
+    it("indexes a new draft as a private document without a url", async () => {
       const { app, search, service } = harness();
       service.create.mockResolvedValue(draftRow);
 
@@ -150,13 +150,19 @@ describe("content search lifecycle synchronization", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(search.index).not.toHaveBeenCalled();
+      expect(search.index).toHaveBeenCalledTimes(1);
+      expect(search.index).toHaveBeenCalledWith(
+        expect.objectContaining({ isPublic: false, itemId: 7 }),
+      );
+      expect(search.index).toHaveBeenCalledWith(
+        expect.not.objectContaining({ url: expect.anything() }),
+      );
       expect(search.delete).not.toHaveBeenCalled();
     });
   });
 
   describe("update", () => {
-    it("indexes nothing for a draft", async () => {
+    it("reindexes a draft privately when an indexed field changes", async () => {
       const { app, search, service } = harness();
       service.update.mockResolvedValue({
         changedFields: ["title"],
@@ -169,7 +175,9 @@ describe("content search lifecycle synchronization", () => {
       });
 
       expect(res.status).toBe(200);
-      expect(search.index).not.toHaveBeenCalled();
+      expect(search.index).toHaveBeenCalledWith(
+        expect.objectContaining({ isPublic: false, itemId: 7 }),
+      );
     });
 
     it("upserts when a published record's indexed field changes", async () => {
@@ -290,7 +298,7 @@ describe("content search lifecycle synchronization", () => {
   });
 
   describe("unpublish", () => {
-    it("deletes the document on a real transition", async () => {
+    it("keeps the document as a private one on a real transition", async () => {
       const { app, search, service } = harness();
       service.unpublish.mockResolvedValue({
         changed: true,
@@ -300,9 +308,15 @@ describe("content search lifecycle synchronization", () => {
 
       await app.request("/7/unpublish", { method: "POST" });
 
-      expect(search.delete).toHaveBeenCalledTimes(1);
-      expect(search.delete).toHaveBeenCalledWith("test.searchable", 7);
-      expect(search.index).not.toHaveBeenCalled();
+      expect(search.index).toHaveBeenCalledTimes(1);
+      expect(search.index).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdAt: PUBLISHED_AT,
+          isPublic: false,
+          itemId: 7,
+        }),
+      );
+      expect(search.delete).not.toHaveBeenCalled();
     });
 
     it("does nothing when the record was already a draft", async () => {
@@ -342,13 +356,13 @@ describe("content search lifecycle synchronization", () => {
       expect(search.delete).toHaveBeenCalledWith("test.searchable", 7);
     });
 
-    it("does nothing for a never-published draft", async () => {
+    it("removes the private document of a never-published draft", async () => {
       const { app, search, service } = harness();
       service.delete.mockResolvedValue(draftRow);
 
       await app.request("/7", { method: "DELETE" });
 
-      expect(search.delete).not.toHaveBeenCalled();
+      expect(search.delete).toHaveBeenCalledWith("test.searchable", 7);
     });
   });
 

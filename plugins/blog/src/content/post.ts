@@ -100,6 +100,7 @@ export const blogPostContentType = defineContentType({
     titleField: "title",
     contentFields: ["title", "content"],
     pathTemplate: "/{locale}/blog/{slug}",
+    authorField: "authorId",
   },
 
   delivery: {
@@ -131,15 +132,8 @@ export const blogPostContentType = defineContentType({
     create: { mode: "page" },
     edit: { mode: "page" },
     list: {
-      // Scalar columns only, which is why neither the categories nor the
-      // authors are here: both are sets on generated junction tables, and a
-      // list that loaded them would issue a query per row. The form carries
-      // them, which is where they are edited anyway.
-      // The title still leads - it is what somebody scans a list by. `coverImage`
-      // sits beside it and renders as a thumbnail plus the stored file name,
-      // never as the identifier the column holds: a raw `42` is the one thing an
-      // editor cannot recognise.
-      columns: ["title", "coverImage", "status", "publishedAt", "updatedAt"],
+      columns: ["title", "authorId", "status", "publishedAt", "updatedAt"],
+      thumbnailField: "coverImage",
     },
   },
 });

@@ -23,6 +23,7 @@ import {
   contentListQueryOptions,
   fetchContentListPage,
 } from "@/views/admin/views/content/table/list-query";
+import { SEARCH_QUERY_ROOT } from "@/views/search/search-feed-query";
 
 import type { ContentListParams } from "./route-search";
 
@@ -79,7 +80,10 @@ export const invalidateContentAfterWrite = async (
     else await invalidateContentItem(queryClient, contentTypeId, itemId);
   }
 
-  await invalidateContentList(queryClient, contentTypeId);
+  await Promise.all([
+    invalidateContentList(queryClient, contentTypeId),
+    queryClient.invalidateQueries({ queryKey: SEARCH_QUERY_ROOT }),
+  ]);
 };
 
 export { invalidateContentList };

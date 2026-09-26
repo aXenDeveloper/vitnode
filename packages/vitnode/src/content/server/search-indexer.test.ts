@@ -1,7 +1,7 @@
 // @vitest-environment node
 import type { Context } from "hono";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   testCategoryContentType,
@@ -9,6 +9,8 @@ import {
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
 
+import { defineContentType } from "../define";
+import { field } from "../fields";
 import { createContentModel } from "./model";
 import { createContentSearchIndexer } from "./search-indexer";
 
@@ -75,6 +77,33 @@ const indexerFor = (model: typeof plain | typeof searchable) =>
 
 const PUBLISHED_AT = new Date("2026-02-01T10:00:00.000Z");
 
+const coauthoredContentType = defineContentType({
+  id: "test.coauthored",
+  tableName: "test_multi_authors",
+  fields: {
+    title: field.text({ required: true }),
+    slug: field.slug({ source: "title" }),
+    body: field.textarea({ nullable: true }),
+    authors: field.user({ multiple: true, ordered: true }),
+  },
+  publication: { enabled: true },
+  publicApi: {
+    enabled: true,
+    path: "multi-authors",
+    fields: ["title", "slug", "body", "publishedAt"],
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["body"],
+    pathTemplate: "/multi-authors/{slug}",
+    authorField: "authors",
+  },
+  admin: { titleField: "title" },
+});
+
+const multiAuthor = createContentModel(coauthoredContentType);
+
 const dbRow = (id: number, slug: string) => ({
   body: "Body copy.",
   code: "SECRET",
@@ -94,14 +123,13 @@ describe("generated content search indexer", () => {
   });
 
   describe("count", () => {
-    it("counts only published rows", async () => {
+    it("counts every row, drafts included", async () => {
       const { c, calls } = createDbMock([[{ value: 12 }]]);
 
       const total = await indexerFor(searchable).count?.(c);
 
       expect(total).toBe(12);
-      // The published predicate is not optional, so there is always a `where`.
-      expect(calls.some(call => call.op === "where" && call.arg)).toBe(true);
+      expect(calls.some(call => call.op === "where" && call.arg)).toBe(false);
     });
 
     it("reports zero for an empty table", async () => {
@@ -221,6 +249,50 @@ describe("generated content search indexer", () => {
       const selection = opOf(calls, "select") as Record<string, unknown>;
       expect(selection).not.toHaveProperty("code");
       expect(JSON.stringify(page.documents)).not.toContain("SECRET");
+    });
+  });
+
+  it("indexes a draft as a private document", async () => {
+    const { c } = createDbMock([
+      [{ ...dbRow(1, "one"), publishedAt: null, status: "draft" }],
+    ]);
+
+    const { documents } = await indexerFor(searchable).load(c, 0, 200);
+
+    expect(documents).toHaveLength(1);
+    expect(documents[0]).toMatchObject({ isPublic: false, itemId: 1 });
+    expect(documents[0]).not.toHaveProperty("url");
+  });
+
+  it("reads every author of a multi-author field from its junction", async () => {
+    const { c, calls } = createDbMock([
+      [
+        {
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          body: "Body.",
+          id: 1,
+          publishedAt: PUBLISHED_AT,
+          slug: "one",
+          status: "published",
+          title: "One",
+          updatedAt: null,
+        },
+      ],
+    ]);
+    const loadMany = vi
+      .spyOn(multiAuthor.advanced, "loadMany")
+      .mockResolvedValue(new Map([[1, { authors: [5, 3] }]]));
+
+    const { documents } = await createContentSearchIndexer(multiAuthor, {
+      pluginId: PLUGIN_ID,
+    }).load(c, 0, 200);
+
+    expect(opOf(calls, "select")).not.toHaveProperty("authors");
+    expect(loadMany).toHaveBeenCalledWith([1], expect.anything(), ["authors"]);
+    expect(documents[0]).toMatchObject({
+      authorIds: [5, 3],
+      isPublic: true,
+      url: "/multi-authors/one",
     });
   });
 

@@ -49,6 +49,55 @@ export const getLangValue = (
   );
 };
 
+const hasText = (text: string): boolean => text.trim() !== "";
+
+export const pickLangCode = ({
+  defaultLanguage,
+  isFilled = hasText,
+  languageCodes,
+  locale,
+  value,
+}: {
+  defaultLanguage?: null | string;
+  isFilled?: (text: string) => boolean;
+  languageCodes: readonly string[];
+  locale: string;
+  value: MultiLangValue | string | undefined;
+}): string => {
+  const current = languageCodes.includes(locale)
+    ? locale
+    : (languageCodes[0] ?? locale);
+
+  return (
+    [current, defaultLanguage, ...languageCodes]
+      .filter(
+        (code): code is string =>
+          typeof code === "string" && languageCodes.includes(code),
+      )
+      .find(code => isFilled(getLangValue(value, code))) ?? current
+  );
+};
+
+export const resolveLangValue = (
+  value: MultiLangValue | string | undefined,
+  {
+    defaultLanguage,
+    locale,
+  }: { defaultLanguage?: null | string; locale: string },
+): string =>
+  getLangValue(
+    value,
+    pickLangCode({
+      defaultLanguage,
+      languageCodes: [
+        locale,
+        ...(Array.isArray(value) ? value.map(item => item.languageCode) : []),
+      ],
+      locale,
+      value,
+    }),
+  );
+
 export const upsertLangValue = (
   value: MultiLangValue | undefined,
   languageCode: string,

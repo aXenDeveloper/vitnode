@@ -30,7 +30,8 @@ await c.get('search').index({
   title: article.title,
   content: article.content, // HTML automatically stripped to plain text
   url: `/articles/${article.slug}`,
-  authorId: article.authorId,
+  authorIds: [article.authorId],
+  isPublic: article.status === 'published',
   createdAt: article.createdAt,
 })
 ```
@@ -76,7 +77,7 @@ export const postSearchIndexer = buildSearchIndexer({
       title: post.title,
       content: post.content,
       url: `/articles/${post.slug}`,
-      authorId: post.authorId,
+      authorIds: [post.authorId],
       createdAt: post.createdAt,
     }))
   },
@@ -112,6 +113,48 @@ For setup, credentials, configuration, and the first rebuild, follow the
 
 ---
 
+## Member timelines
+
+Every member gets a timeline: everything credited to them, newest first. It lives on their profile (`/users/{nameCode}`) and on the **Timeline** tab of their AdminCP user page.
+
+Who sees what depends on who's looking:
+
+| Viewer | Published | Drafts |
+| --- | --- | --- |
+| Anyone, on `/search` and `/discover` | Yes | No |
+| Anyone, on a member's profile | Yes | No |
+| The member, on their own profile | Yes | Yes, marked **Draft** |
+| Staff, on the AdminCP user page | Yes | Yes, marked **Draft** |
+
+A draft has no public page yet, so its title isn't a link. Nobody gets sent to a 404.
+
+Content Engine types opt in with `search.authorField`, which names the `field.user()` that holds the authors. With a multi-author field, every co-author gets the record on their timeline:
+
+```ts title="plugins/blog/src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  fields: {
+    authorId: field.user({ min: 1, multiple: true, ordered: true }),
+    // ...
+  },
+  search: {
+    enabled: true,
+    titleField: 'title',
+    contentFields: ['title', 'content'],
+    pathTemplate: '/{locale}/blog/{slug}',
+    authorField: 'authorId', // [!code ++]
+  },
+})
+```
+
+The first author is the one shown next to the result. After turning `authorField` on for content that already exists, rebuild the index so older records get their authors.
+
+The timelines come from two routes:
+
+- `GET /api/@vitnode/core/search/timeline/{userId}` is public. It includes drafts only when the signed-in viewer is that member.
+- `GET /api/@vitnode/core/admin/users/{id}/timeline` needs the `users` → `can_view` staff permission and returns every state.
+
+---
+
 ## AdminCP Search Management
 
 {/* Image prompt: VitNode AdminCP Search settings screen at /admin/core/advanced/search. Dashboard displaying search index statistics, engine status (PostgreSQL / Elasticsearch), registered item types with indexed document counts, and a "Rebuild Index" button. Dark theme, 1440x900. */}
@@ -120,6 +163,8 @@ Manage search status at **Core → Advanced → Search** (`/admin/core/advanced/
 
 - View indexed record counts across all collections.
 - Trigger background rebuilds of specific collections or the entire site.
+
+A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is running. Until then it waits in the queue, patient but unproductive.
 
 ---
 
@@ -149,13 +194,20 @@ Manage search status at **Core → Advanced → Search** (`/admin/core/advanced/
       type: 'string',
     },
     url: {
-      description: 'Canonical destination URL for search result clicks.',
-      required: true,
+      description:
+        'Canonical destination URL for search result clicks. Leave it out for a private document that has no public page yet.',
       type: 'string',
     },
-    authorId: {
-      description: 'User ID of creator (powers member profile activity).',
-      type: 'number',
+    authorIds: {
+      description:
+        'User IDs credited with the record, lead author first. Powers member timelines.',
+      type: 'number[]',
+    },
+    isPublic: {
+      description:
+        'Whether the record shows up in public search. A private document is visible only on its authors’ own timelines and in the AdminCP.',
+      type: 'boolean',
+      default: 'true',
     },
   }}
 />

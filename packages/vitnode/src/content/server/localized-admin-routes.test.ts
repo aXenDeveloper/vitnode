@@ -124,6 +124,7 @@ const harness = () => {
     create: vi.fn(),
     findManyForItem: vi.fn().mockResolvedValue([]),
     findManyRowsForItem: vi.fn().mockResolvedValue([]),
+    findManyRowsForItems: vi.fn().mockResolvedValue([]),
     update: vi.fn(),
   };
 

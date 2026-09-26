@@ -65,6 +65,7 @@
       "empty": "Nothing found yet.",
       "loadMore": "Load more",
       "loading": "Loading…",
+      "draft": "Draft",
       "sortBy": "Sort by",
       "sort": {
         "relevance": "Relevance",
@@ -418,6 +419,7 @@
       "role": "Role",
       "secondaryRoles": "Secondary roles",
       "editProfile": "Edit profile",
+      "timeline": "Timeline",
       "notFound": {
         "title": "Profile not found",
         "desc": "This user doesn't exist, or their username has changed."

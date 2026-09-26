@@ -2,6 +2,7 @@ import type React from "react";
 
 import { Editor } from "@/components/ui/editor";
 import { FormControl, FormMessage } from "@/components/ui/form";
+import { stripHtml } from "@/lib/strip-html";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
@@ -12,6 +13,8 @@ import {
   MultiLangSelect,
   useMultiLangField,
 } from "./multi-lang";
+
+const hasHtmlText = (html: string): boolean => stripHtml(html) !== "";
 
 type AutoFormEditorProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Editor>, "onChange" | "value"> & {
@@ -33,7 +36,7 @@ const MultiLangEditor = ({
     isOptional?: boolean;
   }) => {
   const { languages, selected, setSelected, currentValue, setValue } =
-    useMultiLangField(field);
+    useMultiLangField(field, { isFilled: hasHtmlText });
 
   return (
     <>

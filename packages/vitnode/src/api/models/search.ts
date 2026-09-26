@@ -12,7 +12,7 @@ import { stripHtml } from "@/lib/strip-html";
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
 
 export interface SearchDocument {
-  authorId?: null | number;
+  authorIds?: readonly number[];
   containerId?: number;
   containerType?: string;
   content: string;
@@ -66,6 +66,7 @@ export interface SearchHit {
   content: string;
   createdAt: Date;
   id: number;
+  isPublic: boolean;
   itemId: number;
   itemType: string;
   languageCode: string;
@@ -251,7 +252,7 @@ const toRow = (doc: SearchDocument) => ({
   itemType: doc.itemType,
   itemId: doc.itemId,
   languageCode: doc.languageCode ?? "",
-  authorId: doc.authorId ?? null,
+  authorIds: [...new Set(doc.authorIds ?? [])],
   title: doc.title,
   content: doc.content,
   containerType: doc.containerType ?? null,
@@ -349,7 +350,7 @@ export class SearchModel {
           // Included so a rebuild corrects the owner of a row written before the
           // indexer declared one, rather than leaving the first writer's guess.
           pluginId: row.pluginId,
-          authorId: row.authorId,
+          authorIds: row.authorIds,
           title: row.title,
           content: row.content,
           containerType: row.containerType,

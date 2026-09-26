@@ -402,6 +402,7 @@ export type {
   ContentReferenceFieldName,
   ContentRelationField,
   ContentSchedulingEnabled,
+  ContentSearchAuthorField,
   ContentSearchConfig,
   ContentSearchDescriptionField,
   ContentSearchTextField,

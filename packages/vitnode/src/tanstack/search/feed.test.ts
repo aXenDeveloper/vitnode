@@ -37,6 +37,7 @@ const item = (id: number): SearchResultItem => ({
   content: "A short body.",
   createdAt: "2026-08-01T10:00:00.000Z",
   id,
+  isPublic: true,
   itemId: id,
   itemType: "blog_post",
   languageCode: "en",

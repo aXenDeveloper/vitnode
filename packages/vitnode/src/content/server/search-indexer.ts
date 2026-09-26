@@ -1,4 +1,3 @@
-import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
   PgTable,
@@ -27,11 +26,6 @@ import {
 } from "../paths";
 import { contentSearchIndexedFieldNames } from "../search";
 import { listContentLanguages } from "./language-resolver";
-import {
-  contentTranslationPublicationColumns,
-  publicationColumns,
-  publishedCondition,
-} from "./publication";
 import {
   contentSearchDocument,
   contentTranslationSearchDocument,
@@ -62,9 +56,8 @@ interface ContentSearchSources {
 const resolveSearchSources = (
   definition: AnyContentTypeDefinition,
 ): ContentSearchSources => {
-  const { localizedFields, sharedFields } = partitionContentFields(
-    definition.fields,
-  );
+  const { collectionFields, localizedFields, sharedFields } =
+    partitionContentFields(definition.fields);
   const sources: ContentSearchSources = {
     collections: [],
     localizedColumns: [],
@@ -79,6 +72,11 @@ const resolveSearchSources = (
     if (!path) {
       if (localizedFields[name] !== undefined) {
         sources.localizedColumns.push(name);
+        continue;
+      }
+
+      if (collectionFields[name] !== undefined) {
+        if (!sources.collections.includes(name)) sources.collections.push(name);
         continue;
       }
       if (sharedFields[name] !== undefined) sources.sharedColumns.push(name);
@@ -129,6 +127,18 @@ const loadSearchCollections = async ({
   return await advanced.loadMany(unique, c.get("db"), wanted);
 };
 
+const assertPublicationColumns = (
+  definition: AnyContentTypeDefinition,
+  columns: Record<string, PgColumn>,
+): void => {
+  if (!definition.publication.enabled || !columns.status) {
+    throw new ContentEngineError(
+      "The search indexer needs `publication: { enabled: true }` on the content type.",
+      { contentTypeId: definition.id },
+    );
+  }
+};
+
 export interface ContentSearchIndexer extends SearchIndexer {
   load: (
     c: Context,
@@ -148,7 +158,7 @@ export const createContentSearchIndexer = <
   // builders are written against the erased table, not this content type's.
   const table: PgTableWithColumns<TableConfig> = model.table;
   const columns = model.columns as Record<string, PgColumn>;
-  const published = publicationColumns(definition, columns);
+  assertPublicationColumns(definition, columns);
   const primaryCursor = columns.id;
 
   const sources = resolveSearchSources(definition);
@@ -165,15 +175,10 @@ export const createContentSearchIndexer = <
   return {
     itemType: definition.id,
 
-    // Published rows, not every row: the AdminCP coverage bar compares this
-    // against the number of indexed items, and counting drafts would pin a
-    // mostly-unpublished collection at "stale" forever.
+    // Every row, drafts included: a draft is indexed as a private document, and
+    // the AdminCP coverage bar compares this against the number indexed.
     count: async c => {
-      const [row] = await c
-        .get("db")
-        .select({ value: count() })
-        .from(table)
-        .where(publishedCondition(published));
+      const [row] = await c.get("db").select({ value: count() }).from(table);
 
       return row?.value ?? 0;
     },
@@ -188,11 +193,7 @@ export const createContentSearchIndexer = <
         .get("db")
         .select(selection)
         .from(table)
-        .where(
-          cursor === undefined
-            ? publishedCondition(published)
-            : and(publishedCondition(published), gt(primaryCursor, cursor)),
-        )
+        .where(cursor === undefined ? undefined : gt(primaryCursor, cursor))
         .orderBy(asc(primaryCursor))
         .limit(limit);
 
@@ -252,11 +253,7 @@ export const createContentLocalizedSearchIndexer = <
   }
 
   const rows = translationColumns;
-  const base = publicationColumns(definition, columns);
-  const translation = contentTranslationPublicationColumns(
-    definition,
-    translationColumns,
-  );
+  assertPublicationColumns(definition, columns);
 
   const sources = resolveSearchSources(definition);
   const advanced = model.advanced;
@@ -264,9 +261,6 @@ export const createContentLocalizedSearchIndexer = <
     ...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns]),
   ];
   const localizedSelection = [...new Set(sources.localizedColumns)];
-
-  const visible = (): SQL | undefined =>
-    and(publishedCondition(base), publishedCondition(translation));
 
   const cursors = new WeakMap<
     Context,
@@ -276,16 +270,15 @@ export const createContentLocalizedSearchIndexer = <
   return {
     itemType: definition.id,
 
-    // Published *translations*, not published records: the coverage bar compares
-    // this against the number of indexed documents, and a record counts once per
-    // language it is actually readable in.
+    // Translations, not records: the coverage bar compares this against the
+    // number of indexed documents, and a record counts once per language it has,
+    // drafts included.
     count: async c => {
       const [row] = await c
         .get("db")
         .select({ value: count() })
         .from(translationTable)
-        .innerJoin(table, eq(rows.itemId, columns.id))
-        .where(visible());
+        .innerJoin(table, eq(rows.itemId, columns.id));
 
       return row?.value ?? 0;
     },
@@ -314,15 +307,12 @@ export const createContentLocalizedSearchIndexer = <
         .innerJoin(table, eq(rows.itemId, columns.id))
         .where(
           cursor === undefined
-            ? visible()
-            : and(
-                visible(),
-                or(
-                  gt(columns.id, cursor.itemId),
-                  and(
-                    eq(columns.id, cursor.itemId),
-                    gt(rows.languageId, cursor.languageId),
-                  ),
+            ? undefined
+            : or(
+                gt(columns.id, cursor.itemId),
+                and(
+                  eq(columns.id, cursor.itemId),
+                  gt(rows.languageId, cursor.languageId),
                 ),
               ),
         )

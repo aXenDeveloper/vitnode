@@ -104,6 +104,7 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
     findManyByLanguageId: vi.fn().mockResolvedValue([]),
     findManyForItem: vi.fn(),
     findManyRowsForItem: vi.fn(),
+    findManyRowsForItems: vi.fn().mockResolvedValue([]),
     publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
     resolveLanguage: vi.fn(),

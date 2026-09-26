@@ -57,10 +57,22 @@ export const isContentRowPublic = (row: object): boolean => {
   });
 };
 
+const toAuthorIds = (value: unknown): number[] => [
+  ...new Set(
+    (Array.isArray(value) ? value : [value]).filter(
+      (id): id is number => Number.isSafeInteger(id) && (id as number) > 0,
+    ),
+  ),
+];
+
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
   row: object,
-  { locale, pluginId }: { locale?: string; pluginId?: string } = {},
+  {
+    isPublic = isContentRowPublic(row),
+    locale,
+    pluginId,
+  }: { isPublic?: boolean; locale?: string; pluginId?: string } = {},
 ): null | SearchDocument => {
   const { publicApi, search } = definition;
   if (!search.enabled) return null;
@@ -70,17 +82,17 @@ export const contentSearchDocument = (
   const itemId = values.id;
   if (typeof itemId !== "number") return null;
 
-  if (!isContentRowPublic(row)) return null;
-
   const title = normalize(readSearchValue(values, search.titleField));
   if (title === "") return null;
 
-  const url = contentSearchUrl(
-    definition,
-    normalize(values[publicApi.slugField]),
-    locale,
-  );
-  if (url === null) return null;
+  const url = isPublic
+    ? contentSearchUrl(
+        definition,
+        normalize(values[publicApi.slugField]),
+        locale,
+      )
+    : null;
+  if (isPublic && url === null) return null;
 
   // A published row always carries `publishedAt`, so this resolves to the
   // publication date - which is the date the feed and the timeline sort by.
@@ -98,6 +110,9 @@ export const contentSearchDocument = (
       ];
 
   return {
+    authorIds: search.authorField
+      ? toAuthorIds(values[search.authorField])
+      : [],
     // `SearchModel.index` strips HTML from `content` (but never from `title`,
     // which is why the title is normalized above).
     // `readSearchValue` has already collapsed the whitespace *inside* each
@@ -108,9 +123,7 @@ export const contentSearchDocument = (
       .filter(value => value !== "")
       .join("\n\n"),
     createdAt,
-    // Only publicly visible rows get this far, and an unpublished record is
-    // deleted from the index rather than hidden in it.
-    isPublic: true,
+    isPublic,
     itemId,
     // Content type ids are globally unique and already namespaced as
     // `plugin.entity`, so the id alone is a collision-free item type.
@@ -122,13 +135,12 @@ export const contentSearchDocument = (
     // value that matches every locale, and what every document written before
     // Stage 5D already carries. A localized one is indexed once per language.
     ...(locale === undefined || locale === "" ? {} : { languageCode: locale }),
-    // Deliberately absent: `authorId` (a `user` field can never be public, and
-    // the public search route resolves it into a person), `containerType` /
-    // `containerId` (there is no `containerType` query filter to qualify them
-    // with), and `metadata` (nothing reads it).
+    // Deliberately absent: `containerType` / `containerId` (there is no
+    // `containerType` query filter to qualify them with), and `metadata`
+    // (nothing reads it).
     title,
     updatedAt: toDate(values.updatedAt),
-    url,
+    ...(url === null ? {} : { url }),
   };
 };
 
@@ -148,20 +160,16 @@ export const contentTranslationSearchDocument = (
   const baseValues = base as Record<string, unknown>;
   const translationValues = translation as Record<string, unknown>;
 
-  if (
-    !isContentTranslationPubliclyVisible({
-      base: {
-        publishedAt: toTimestamp(baseValues.publishedAt),
-        status: normalize(baseValues.status) || undefined,
-      },
-      translation: {
-        publishedAt: toTimestamp(translationValues.publishedAt),
-        status: normalize(translationValues.status) || undefined,
-      },
-    })
-  ) {
-    return null;
-  }
+  const isPublic = isContentTranslationPubliclyVisible({
+    base: {
+      publishedAt: toTimestamp(baseValues.publishedAt),
+      status: normalize(baseValues.status) || undefined,
+    },
+    translation: {
+      publishedAt: toTimestamp(translationValues.publishedAt),
+      status: normalize(translationValues.status) || undefined,
+    },
+  });
 
   const { localizedFields } = partitionContentFields(definition.fields);
   // The localized half wins, and only for declared localized fields: a
@@ -174,9 +182,13 @@ export const contentTranslationSearchDocument = (
   }
 
   // `publishedAt` decides the document's date, and this language's is the honest
-  // one. The status is already known to be published on both halves.
+  // one.
   merged.publishedAt = translationValues.publishedAt ?? baseValues.publishedAt;
   merged.updatedAt = translationValues.updatedAt ?? baseValues.updatedAt;
 
-  return contentSearchDocument(definition, merged, { locale, pluginId });
+  return contentSearchDocument(definition, merged, {
+    isPublic,
+    locale,
+    pluginId,
+  });
 };

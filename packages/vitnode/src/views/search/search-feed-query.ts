@@ -30,6 +30,20 @@ export interface SearchFeedPageArgs {
   params: SearchFeedParams;
 }
 
+export const SEARCH_QUERY_ROOT = ["search"] as const;
+
+export const searchTimelineQuery = ({
+  cursor,
+  locale,
+}: {
+  cursor: SearchFeedCursor;
+  locale: string;
+}): Record<string, string> => ({
+  first: String(SEARCH_FEED_PAGE_SIZE),
+  lang: locale,
+  ...(cursor === null ? {} : { cursor }),
+});
+
 export const searchFeedQuery = ({
   cursor,
   locale,
@@ -102,7 +116,7 @@ export const searchFeedQueryKey = ({
 }: {
   locale: string;
   params: SearchFeedParams;
-}) => ["search", params, locale] as const;
+}) => [...SEARCH_QUERY_ROOT, params, locale] as const;
 
 /**
  * How a page is actually fetched. See {@link searchFeedQueryOptions}.

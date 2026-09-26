@@ -26,6 +26,7 @@ const searchDescriptionKinds: ReadonlySet<string> = new Set(
 const searchTextKinds: ReadonlySet<string> = new Set(CONTENT_SEARCH_TEXT_KINDS);
 
 const disabledSearch: ResolvedContentSearchConfig = {
+  authorField: null,
   contentFields: [],
   descriptionField: null,
   enabled: false,
@@ -78,6 +79,27 @@ const assertSearchField = ({
   if (!exposed.has(name)) {
     throw new ContentEngineError(
       `${label} names "${name}", which is not in publicApi.fields. Every indexed field must be publicly exposed - otherwise a result snippet, a highlighted match, ranking or an exact-match probe would leak a private value.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+const assertSearchAuthorField = (
+  id: string,
+  fields: ContentFieldMap,
+  name: string,
+): void => {
+  const target = resolveFieldTarget(fields, name);
+  if (!target) {
+    throw new ContentEngineError(
+      `search.authorField references unknown field "${name}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (target.container !== "row" || target.descriptor.kind !== "user") {
+    throw new ContentEngineError(
+      `search.authorField names "${name}", which is not a top-level \`field.user()\`. The index credits people, so the author has to be a user field on the record itself.`,
       { contentTypeId: id },
     );
   }
@@ -269,7 +291,11 @@ export const resolveSearch = (
 
   assertSearchPathTemplate(id, search.pathTemplate, localized);
 
+  const authorField = search.authorField ?? null;
+  if (authorField !== null) assertSearchAuthorField(id, fields, authorField);
+
   return {
+    authorField,
     contentFields,
     descriptionField,
     enabled: true,

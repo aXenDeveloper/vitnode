@@ -64,6 +64,7 @@ export const contentSearchIndexedFieldNames = (
         search.descriptionField,
         ...search.contentFields,
         publicApi.slugField,
+        search.authorField,
       ].filter((name): name is string => Boolean(name)),
     ),
   ];
@@ -108,10 +109,9 @@ export const contentSearchIndexedCollections = (
   const owners = new Set<string>();
 
   for (const name of contentSearchIndexedFieldNames(definition)) {
-    const path = splitContentFieldPath(name);
-    if (!path) continue;
+    const owner = splitContentFieldPath(name)?.[0] ?? name;
 
-    const fieldValue = definition.fields[path[0]];
+    const fieldValue = definition.fields[owner];
     if (!fieldValue) continue;
     if (
       fieldValue.kind !== "repeatable" &&
@@ -120,7 +120,7 @@ export const contentSearchIndexedCollections = (
       continue;
     }
 
-    owners.add(path[0]);
+    owners.add(owner);
   }
 
   return [...owners];

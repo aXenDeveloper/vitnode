@@ -79,6 +79,7 @@ export const articleContentType = defineContentType({
     descriptionField: "excerpt",
     contentFields: ["title", "excerpt"],
     pathTemplate: "/articles/{slug}",
+    authorField: "author",
   },
 
   delivery: {

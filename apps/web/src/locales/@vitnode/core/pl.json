@@ -1330,6 +1330,7 @@
       },
       "role": "Rola",
       "secondaryRoles": "Role dodatkowe",
+      "timeline": "Oś czasu",
       "title": "{name} (@{nameCode})"
     },
     "search": {
@@ -1383,6 +1384,7 @@
       "desc": "Przeszukaj wszystko w społeczności.",
       "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
       "discoverTitle": "Odkrywaj",
+      "draft": "Szkic",
       "empty": "Nic tu jeszcze nie ma.",
       "loadMore": "Wczytaj więcej",
       "loading": "Wczytywanie…",

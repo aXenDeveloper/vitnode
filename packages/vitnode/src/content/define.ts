@@ -18,6 +18,7 @@ import type {
   ContentPublicationConfig,
   ContentPublicExposableField,
   ContentSchedulingEnabled,
+  ContentSearchAuthorField,
   ContentSearchConfig,
   ContentSearchDescriptionField,
   ContentSearchEnabled,
@@ -155,7 +156,8 @@ export const defineContentType = <
     | ContentSearchConfig<
         ContentSearchTitleField<TFields, TPublicField>,
         ContentSearchDescriptionField<TFields, TPublicField>,
-        ContentSearchTextField<TFields, TPublicField>
+        ContentSearchTextField<TFields, TPublicField>,
+        ContentSearchAuthorField<TFields>
       >
     | { enabled: false } = { enabled: false },
   // The whole `editorial` argument, inferred as one type, for the same two

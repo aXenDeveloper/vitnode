@@ -620,6 +620,92 @@ describe("defineContentType", () => {
   });
 
   describe("admin validation", () => {
+    it("accepts a to-many user or relation field as a list column", () => {
+      expect(
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            authors: field.user({ multiple: true, ordered: true }),
+            tags: field.relation({
+              multiple: true,
+              target: () => testCategoryContentType,
+            }),
+          },
+          admin: { list: { columns: ["title", "authors", "tags"] } },
+        }).admin.list.columns,
+      ).toEqual(["title", "authors", "tags"]);
+    });
+
+    it("still refuses a to-many user field as the title", () => {
+      expect(() =>
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            authors: field.user({ multiple: true }),
+          },
+          admin: { titleField: "authors" },
+        }),
+      ).toThrow(/not one column on the base table/);
+    });
+
+    describe("list.thumbnailField", () => {
+      const withCover = (
+        admin: Parameters<typeof defineContentType>[0]["admin"],
+        cover = field.file({ maxBytes: 1024 }),
+      ) =>
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            body: field.textarea({ nullable: true }),
+            cover,
+          },
+          admin,
+        });
+
+      it("resolves a single file field drawn beside the title", () => {
+        expect(
+          withCover({
+            titleField: "title",
+            list: { columns: ["title"], thumbnailField: "cover" as never },
+          }).admin.list.thumbnailField,
+        ).toBe("cover");
+      });
+
+      it("defaults to none", () => {
+        expect(withCover({}).admin.list.thumbnailField).toBeNull();
+      });
+
+      it("refuses a gallery", () => {
+        expect(() =>
+          withCover(
+            {
+              titleField: "title",
+              list: { columns: ["title"], thumbnailField: "cover" as never },
+            },
+            field.file({ maxBytes: 1024, multiple: true }) as never,
+          ),
+        ).toThrow(/not a shared single `field.file\(\)`/);
+      });
+
+      it("refuses a field that is not a file", () => {
+        expect(() =>
+          withCover({
+            titleField: "title",
+            list: { columns: ["title"], thumbnailField: "body" as never },
+          }),
+        ).toThrow(/not a shared single `field.file\(\)`/);
+      });
+
+      it("refuses a list without the title column", () => {
+        expect(() =>
+          withCover({
+            titleField: "title",
+            list: { columns: ["body"], thumbnailField: "cover" as never },
+          }),
+        ).toThrow(/is not one of admin.list.columns/);
+      });
+    });
+
     it("rejects a searchable field that is not text-like", () => {
       expect(() =>
         define({

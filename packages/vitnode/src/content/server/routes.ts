@@ -57,7 +57,13 @@ import {
 } from "./files";
 import { withHttpErrors } from "./http-errors";
 import { findContentLanguage } from "./language-resolver";
+import {
+  contentReferenceListColumns,
+  withContentReferenceLists,
+  zodContentReferenceListItem,
+} from "./list-references";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
+import { resolveContentLocalizedValues } from "./localized-display";
 import {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -141,6 +147,8 @@ export const buildContentRoutes = <
   const fileFields = contentFileFields(definition);
   const hasFileFields = Object.keys(fileFields).length > 0;
 
+  const hasReferenceLists = contentReferenceListColumns(definition).length > 0;
+
   /**
    * The resolved descriptor of each file field, keyed by field name.
    *
@@ -207,7 +215,20 @@ export const buildContentRoutes = <
   const listRow = schemas.selectObject.extend({
     labels: zodLabels,
     ...(hasFileFields ? { files: zodFiles } : {}),
-    ...(localized ? { translation: zodRowTranslation.optional() } : {}),
+    ...(hasReferenceLists
+      ? {
+          references: z.record(
+            z.string(),
+            z.array(zodContentReferenceListItem),
+          ),
+        }
+      : {}),
+    ...(localized
+      ? {
+          localizedValues: z.record(z.string(), z.unknown()).optional(),
+          translation: zodRowTranslation.optional(),
+        }
+      : {}),
   });
   const publicationResponse = z.object({
     /** `false` when the record was already in the requested state. */
@@ -392,7 +413,11 @@ export const buildContentRoutes = <
       return c.json(
         {
           ...withTranslations,
-          edges: await withFiles(c, withTranslations.edges),
+          edges: await withContentReferenceLists(
+            c,
+            model,
+            await withFiles(c, withTranslations.edges),
+          ),
         },
         200,
       );
@@ -418,52 +443,60 @@ export const buildContentRoutes = <
     locale: string | undefined,
   ) => {
     const build = model.translationService;
-    if (!localized || !build || locale === undefined || locale.trim() === "") {
-      return data;
-    }
+    if (!localized || !build) return data;
 
-    const language = await findContentLanguage(c, locale);
     // An unknown locale reads as "no translation in that language" rather than
     // as an error: the selector is a view control, and a stale bookmark naming a
     // language that has since been removed should still show the list.
-    if (!language) {
-      return {
-        ...data,
-        edges: data.edges.map(row => ({ ...row, translation: null })),
-      };
-    }
+    const language =
+      locale === undefined || locale.trim() === ""
+        ? null
+        : await findContentLanguage(c, locale);
 
     const translations = build(c);
+    const { localizedFields } = partitionContentFields(definition.fields);
+    const localizedFieldNames = Object.keys(localizedFields);
     // The first localized text field, in declaration order - the same rule the
     // locale editor's tab titles follow, so the list and the editor agree about
     // which value names a translation.
     const titleField =
-      Object.entries(
-        partitionContentFields(definition.fields).localizedFields,
-      ).find(([, fieldValue]) => fieldValue.kind === "text")?.[0] ?? null;
+      Object.entries(localizedFields).find(
+        ([, fieldValue]) => fieldValue.kind === "text",
+      )?.[0] ?? null;
 
-    // One `WHERE itemId IN (...) AND languageId = ?` for the whole page. A
-    // translation is keyed by `(itemId, languageId)`, so this reads at most one
-    // row per record and needs no ordering to stay unambiguous.
-    const rows = await translations.findManyByLanguageId(
+    const rows = await translations.findManyRowsForItems(
       data.edges.map(row => row.id),
-      language.id,
     );
-    const byId = new Map<number, (typeof rows)[number]>(
-      rows.map(row => [row.itemId as number, row]),
-    );
+    const byItem = new Map<number, (typeof rows)[number][]>();
+    for (const row of rows) {
+      const itemId = row.itemId as number;
+      byItem.set(itemId, [...(byItem.get(itemId) ?? []), row]);
+    }
 
     return {
       ...data,
       edges: data.edges.map(row => {
-        const translation = byId.get(row.id);
-        if (!translation) return { ...row, translation: null };
+        const all = byItem.get(row.id) ?? [];
+        const localizedValues = resolveContentLocalizedValues({
+          defaultLocale: definition.localization.defaultLocale,
+          fields: localizedFieldNames,
+          locale: language?.locale ?? null,
+          translations: all.map(item => ({
+            locale: item.locale,
+            values: item.values,
+          })),
+        });
+        const translation = language
+          ? all.find(item => item.locale === language.locale)
+          : undefined;
+        if (!translation) return { ...row, localizedValues, translation: null };
 
         const values = translation.values as Record<string, unknown>;
         const meta = translation as unknown as Record<string, unknown>;
 
         return {
           ...row,
+          localizedValues,
           translation: {
             locale: translation.locale,
             ...(definition.publication.enabled
@@ -825,9 +858,8 @@ export const buildContentRoutes = <
         { pluginId },
       );
 
-      // A new record is a draft, so this normally indexes nothing - but it is
-      // computed from the row rather than assumed, the same way the Server
-      // Action computes its cache tags.
+      // A new record is a draft, so this normally indexes a private document -
+      // but its visibility is computed from the row rather than assumed.
       await syncContentSearch(c, definition, {
         advanced: await advancedForSearch(c, model, row),
         operation: "create",
@@ -1680,9 +1712,9 @@ export const buildContentRoutes = <
         { pluginId },
       );
 
-      // `publishedAt` survives an unpublish, so a record that was ever published
-      // is removed from the index defensively - a delete of a document that is
-      // not there costs one statement and repairs any drift.
+      // Drafts are indexed as private documents, so every delete removes one - a
+      // delete of a document that is not there costs one statement and repairs
+      // any drift.
       await syncContentSearch(c, definition, {
         operation: "delete",
         pluginId,

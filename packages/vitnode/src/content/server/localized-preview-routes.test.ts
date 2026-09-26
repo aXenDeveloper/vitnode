@@ -77,6 +77,7 @@ const harness = ({ secret = SECRET }: { secret?: string } = {}) => {
     findManyForItem: vi.fn(),
     findManyByLanguageId: vi.fn().mockResolvedValue([]),
     findManyRowsForItem: vi.fn().mockResolvedValue([]),
+    findManyRowsForItems: vi.fn().mockResolvedValue([]),
     publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
     resolveLanguage: vi.fn(),
