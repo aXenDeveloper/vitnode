@@ -26,6 +26,7 @@ export const zodSearchHitSchema = z.object({
   containerType: z.string().nullable(),
   containerId: z.number().nullable(),
   url: z.string().nullable(),
+  isPublic: z.boolean(),
   metadata: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   score: z.number().nullable(),
@@ -50,7 +51,7 @@ export const zodSearchHitSchema = z.object({
  * primitive as much as it was a bad status code. A filter nobody can parse is
  * not an error; it is a filter that was not asked for.
  */
-const positiveIntOrUndefined = (
+export const positiveIntOrUndefined = (
   value: string | undefined,
 ): number | undefined => {
   if (value === undefined || value === "") return undefined;
@@ -68,6 +69,15 @@ const dateOrUndefined = (value: string | undefined): Date | undefined => {
 
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
+
+export const zodSearchResultSchema = z.object({
+  edges: z.array(zodSearchHitSchema),
+  // The search index has its own pagination - a relevance-sorted page walks by
+  // offset, and an ordinary one by row id - so it keeps the numeric cursors it
+  // has always had rather than the opaque keyset cursor `withPagination` mints
+  // for a table.
+  pageInfo: zodSearchPageInfo,
+});
 
 export const searchRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -91,14 +101,7 @@ export const searchRoute = buildRoute({
       200: {
         content: {
           "application/json": {
-            schema: z.object({
-              edges: z.array(zodSearchHitSchema),
-              // The search index has its own pagination - a relevance-sorted
-              // page walks by offset, and an ordinary one by row id - so it
-              // keeps the numeric cursors it has always had rather than the
-              // opaque keyset cursor `withPagination` mints for a table.
-              pageInfo: zodSearchPageInfo,
-            }),
+            schema: zodSearchResultSchema,
           },
         },
         description: "Search results",

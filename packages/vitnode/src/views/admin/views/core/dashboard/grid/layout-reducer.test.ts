@@ -5,7 +5,11 @@ import type {
   DashboardWidgetOption,
 } from "../widgets/types";
 
-import { dashboardLayoutReducer, isLayoutDirty } from "./layout-reducer";
+import {
+  dashboardLayoutReducer,
+  isLayoutDirty,
+  withSavedSettings,
+} from "./layout-reducer";
 
 const item = (id: string, span: 1 | 2 | 3 = 1): DashboardLayoutItem => ({
   id,
@@ -168,6 +172,17 @@ describe("dashboardLayoutReducer", () => {
 
       expect(next).toEqual([item("a"), item("b", 3)]);
     });
+
+    it("changes the height as well when the corner is dragged down", () => {
+      const next = dashboardLayoutReducer([item("a")], {
+        type: "resize",
+        id: "a",
+        rows: 3,
+        span: 2,
+      });
+
+      expect(next).toEqual([{ ...item("a", 2), rows: 3 }]);
+    });
   });
 
   it("reset replaces the whole state", () => {
@@ -207,5 +222,23 @@ describe("isLayoutDirty", () => {
         [{ ...item("a"), settings: { content: "old" } }],
       ),
     ).toBe(false);
+  });
+});
+
+describe("withSavedSettings", () => {
+  it("keeps an unsaved arrangement while taking the settings that were just saved", () => {
+    const arranged = [item("b", 3), { ...item("a"), settings: { old: true } }];
+    const saved = [{ ...item("a"), settings: { old: false } }, item("b")];
+
+    expect(withSavedSettings(arranged, saved)).toEqual([
+      { ...item("b", 3), settings: undefined },
+      { ...item("a"), settings: { old: false } },
+    ]);
+  });
+
+  it("leaves a widget that is not saved yet as it is", () => {
+    const arranged = [{ ...item("new"), settings: { draft: 1 } }];
+
+    expect(withSavedSettings(arranged, [])).toEqual(arranged);
   });
 });

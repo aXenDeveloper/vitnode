@@ -3,6 +3,7 @@ import type { Context } from "hono";
 
 import {
   and,
+  arrayContains,
   asc,
   count,
   desc,
@@ -30,6 +31,8 @@ import { core_search_index, resolveSearchTextConfig } from "@/database/search";
 import { core_users } from "@/database/users";
 
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
+
+const leadAuthorId = sql<null | number>`${core_search_index.authorIds}[1]`;
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -60,7 +63,9 @@ const buildFilters = (params: SearchQueryParams): SQL | undefined => {
     conditions.push(inArray(core_search_index.itemType, params.itemTypes));
   }
   if (params.authorId !== undefined) {
-    conditions.push(eq(core_search_index.authorId, params.authorId));
+    conditions.push(
+      arrayContains(core_search_index.authorIds, [params.authorId]),
+    );
   }
   if (params.containerId !== undefined) {
     conditions.push(eq(core_search_index.containerId, params.containerId));
@@ -184,12 +189,13 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         itemType: core_search_index.itemType,
         itemId: core_search_index.itemId,
         languageCode: core_search_index.languageCode,
-        authorId: core_search_index.authorId,
+        authorId: leadAuthorId,
         title: core_search_index.title,
         content: core_search_index.content,
         containerType: core_search_index.containerType,
         containerId: core_search_index.containerId,
         url: core_search_index.url,
+        isPublic: core_search_index.isPublic,
         metadata: core_search_index.metadata,
         createdAt: core_search_index.createdAt,
         score: rankExpr,
@@ -202,7 +208,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         authorAvatarKey: authorAvatarFile.key,
       })
       .from(core_search_index)
-      .leftJoin(core_users, eq(core_users.id, core_search_index.authorId))
+      .leftJoin(core_users, eq(core_users.id, leadAuthorId))
       .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
       .where(where)
       .orderBy(...orderBy)
@@ -224,6 +230,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
       containerType: row.containerType,
       containerId: row.containerId,
       url: row.url,
+      isPublic: row.isPublic,
       metadata: row.metadata,
       createdAt: row.createdAt,
       score: row.score,

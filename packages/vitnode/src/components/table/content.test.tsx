@@ -7,11 +7,6 @@ import type { ColumnDef, DataTableTMin } from "./data-table-content";
 import { ContentDataTable } from "./content";
 import { DataTableNavigationProvider } from "./navigation";
 
-vi.mock("use-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
-
 interface TestItem extends DataTableTMin {
   action?: string;
   id: number;

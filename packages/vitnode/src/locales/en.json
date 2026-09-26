@@ -65,6 +65,7 @@
       "empty": "Nothing found yet.",
       "loadMore": "Load more",
       "loading": "Loading…",
+      "draft": "Draft",
       "sortBy": "Sort by",
       "sort": {
         "relevance": "Relevance",
@@ -418,6 +419,7 @@
       "role": "Role",
       "secondaryRoles": "Secondary roles",
       "editProfile": "Edit profile",
+      "timeline": "Timeline",
       "notFound": {
         "title": "Profile not found",
         "desc": "This user doesn't exist, or their username has changed."
@@ -909,13 +911,13 @@
     },
     "editor": {
       "title": "Editing page",
-      "available_blocks": "Available Widgets",
+      "available_blocks": "Widgets",
       "finish": "Finish editing",
       "back_to_editing": "Back to editing",
-      "insert_for": "For: {zone}",
-      "insert_for_area": "For: an area in {zone}",
+      "back_to_widgets": "Back to widgets",
+      "insert_for": "Adding to {zone}",
+      "insert_for_area": "Adding to an area in {zone}",
       "insert_clear": "Clear the target zone",
-      "move": "Move",
       "edit": "Edit",
       "remove": "Remove",
       "preview": "Preview",
@@ -949,7 +951,6 @@
       },
       "block": {
         "select": "Select the {name} widget",
-        "drag": "Drag the {name} widget to reorder it",
         "move": "Move the {name} widget",
         "edit": "Edit the {name} widget",
         "duplicate": "Duplicate the {name} widget",
@@ -990,6 +991,7 @@
       },
       "picker": {
         "search": "Search widgets…",
+        "hint": "Click to add, or drag onto the page.",
         "clear": "Clear search",
         "empty": "This zone does not accept any of the installed widgets.",
         "no_results": "No widgets match your search.",
@@ -1047,8 +1049,9 @@
         "description": "Lay widgets out side by side in up to four columns.",
         "summary": "Area · {columns, plural, one {# column} other {# columns}}",
         "select": "Select this area",
-        "drag": "Drag this area to reorder it",
         "properties": "Area properties",
+        "section_layout": "Layout",
+        "section_spacing": "Spacing",
         "drop_here": "Drop widgets here",
         "add_block": "Add widget",
         "rejected": "This area does not accept the widget you are dragging.",
@@ -1093,7 +1096,6 @@
       "version": "Version: {version}",
       "widgets": {
         "edit": "Edit layout",
-        "drag_handle": "Move {title}",
         "remove": "Remove {title}",
         "drop_here": "Drop a widget here",
         "empty_title": "Your dashboard is empty",
@@ -1102,27 +1104,34 @@
         "error_desc": "Something went wrong on the way to the server. Please try again.",
         "refresh_error": "Could not reload this widget. Reload the page to see your changes.",
         "panel": {
-          "title": "Available widgets",
-          "desc": "Drag a widget onto your dashboard.",
+          "title": "Widgets",
+          "desc": "Click a widget to add it, or drag it onto the dashboard.",
           "search": "Search for a widget",
           "empty_title": "Everything is already on the board",
           "empty_desc": "Remove a widget to put it back here.",
           "no_results_title": "No widget matches",
-          "no_results_desc": "Nothing here is called \"{query}\". Try another word."
+          "no_results_desc": "Nothing here is called \"{query}\". Try another word.",
+          "add": "Add {title}",
+          "back": "Back to widgets"
         },
         "size": {
-          "title": "Width",
           "small": "Small",
           "medium": "Medium",
-          "large": "Large"
+          "large": "Large",
+          "section": "Size",
+          "width": "Width"
         },
         "settings": {
           "open": "Configure {title}",
-          "title": "Configure {title}",
           "desc": "These settings apply to this card only - other admins keep their own.",
           "error_title": "Could not save the settings",
           "error_desc": "Something went wrong on the way to the server. Please try again.",
-          "load_error": "Could not load these settings. Close this and try again."
+          "load_error": "Could not load these settings. Close this and try again.",
+          "section": "Settings",
+          "none": "This widget has nothing to set up. Change its size above, or drag it somewhere else on the board.",
+          "saved_title": "Settings saved",
+          "saved_desc": "{title} now uses the new settings.",
+          "save": "Save settings"
         },
         "notes": {
           "title": "Notes",
@@ -1145,6 +1154,28 @@
             "message": "Default title",
             "message_desc": "What the Title field starts with each time the dashboard loads. Leave it empty for the built-in greeting."
           }
+        },
+        "drop_hint": "Or click one in the panel to add it at the end.",
+        "drop_incoming": "{title} goes here",
+        "status_unsaved": "Unsaved changes",
+        "status_clean": "No changes yet",
+        "dnd": {
+          "instructions": "Press Space to pick up a widget. Use the arrow keys to move it, Space to drop it and Escape to put it back.",
+          "picked_up": "Picked up {title}.",
+          "over": "{title} is over position {position} of {total}.",
+          "moved": "{title} moved to position {position} of {total}.",
+          "added": "{title} added at position {position} of {total}.",
+          "not_dropped": "{title} was not dropped anywhere. Nothing changed.",
+          "cancelled": "Moving {title} was cancelled. Nothing changed."
+        },
+        "resize": {
+          "handle": "Resize {title}",
+          "hint": "Drag the corner, or use the arrow keys: left and right change the width, up and down the height.",
+          "size": "Width {width}, height {rows} of 3."
+        },
+        "select": "Select {title}",
+        "properties": {
+          "title": "{title} properties"
         }
       }
     },
@@ -1745,8 +1776,6 @@
       "list": {
         "desc": "Choose what the main menu links to, and in what order. Changes go live right away.",
         "custom": "Custom link",
-        "prebuilt": "Prebuilt page",
-        "from": "from {plugin}",
         "missing": "The plugin behind this item is no longer installed, so the menu skips it.",
         "opensInNewTab": "Opens in a new tab",
         "reorderSuccess": "Menu order saved",
@@ -1755,14 +1784,35 @@
           "title": "The main menu is empty",
           "description": "Add a prebuilt page or a custom link and it shows up in the header."
         },
-        "dragHandle": "Drag to move {name}"
+        "dragHandle": "Drag to move {name}",
+        "label": "Menu items",
+        "summary": "{header} in the header · {dropdowns} in dropdowns",
+        "collapseAll": "Collapse all",
+        "expandAll": "Expand all",
+        "showChildren": "Show what's inside {name}",
+        "hideChildren": "Hide what's inside {name}",
+        "actions": "More actions for {name}",
+        "edit": "Edit",
+        "addChild": "Add sub-item",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "moveToTop": "Move to top level",
+        "moveInside": "Move inside…",
+        "delete": "Remove",
+        "pluginMissing": "Plugin missing"
       },
       "create": {
         "title": "Add menu item",
         "desc": "Pick a page a plugin already provides, or link anywhere you like.",
         "submit": "Add to menu",
         "success": "Menu item added",
-        "successDesc": "\"{name}\" is now in the main menu."
+        "successDesc": "\"{name}\" is now in the main menu.",
+        "childTitle": "Add a page to “{name}”",
+        "presets": "Pages from your plugins",
+        "back": "Choose something else",
+        "inHeader": "Shown in the header bar.",
+        "inDropdown": "Shown in the “{name}” dropdown.",
+        "fromPlugin": "{placement} A page from {plugin}."
       },
       "edit": {
         "title": "Edit menu item",
@@ -1776,18 +1826,15 @@
         "confirm": "Remove",
         "cancel": "Cancel",
         "success": "Menu item removed",
-        "successDesc": "\"{name}\" is no longer in the main menu."
+        "successDesc": "\"{name}\" is no longer in the main menu.",
+        "descWithChildren": "Remove “{name}” from the main menu? {count, plural, one {Its sub-item moves} other {Its # sub-items move}} to the top level."
       },
       "form": {
         "kind": {
-          "label": "What to add",
-          "preset": "Prebuilt page",
-          "presetDesc": "A page VitNode or an installed plugin already provides.",
           "custom": "Custom link",
           "customDesc": "Any address, on this site or elsewhere."
         },
         "preset": "Page",
-        "presetPlaceholder": "Choose a page...",
         "presetEmpty": "Every prebuilt page is already in the menu.",
         "presetLocked": "A prebuilt item keeps the page its plugin points at. Change the title, the description, or where it opens.",
         "href": "URL",
@@ -1797,12 +1844,25 @@
         "iconPlaceholder": "No icon",
         "description": "Description",
         "openInNewTab": "Open in a new tab",
-        "openInNewTabDesc": "Handy for links that leave this site."
+        "openInNewTabDesc": "Handy for links that leave this site.",
+        "presetMissing": "Plugin not installed",
+        "preview": "How visitors see it",
+        "previewUntitled": "Untitled item",
+        "descriptionDesc": "Shown under the title when the item sits in a dropdown.",
+        "parent": "Placement",
+        "parentRoot": "Top level",
+        "parentInside": "Inside “{name}”",
+        "parentDesc": "Top-level items sit in the header bar. Items inside another one show in its dropdown.",
+        "parentLocked": "It holds {count, plural, one {# sub-item} other {# sub-items}}, so it stays at the top level. Menus go two levels deep.",
+        "sections": {
+          "destination": "Destination",
+          "label": "Label",
+          "position": "Position"
+        }
       },
       "errors": {
         "hrefInvalid": "Start with / or https://",
         "titleRequired": "Give the item a title in at least one language.",
-        "presetRequired": "Choose a page.",
         "presetTaken": "This page is already in the menu."
       }
     }

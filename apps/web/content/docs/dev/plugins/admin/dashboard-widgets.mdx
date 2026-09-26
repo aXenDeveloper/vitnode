@@ -10,7 +10,7 @@ Dashboard widgets are **AdminCP plugin extensions**. Define the component and
 register it in the same plugin factory that owns the feature; the host dashboard
 then discovers it automatically.
 
-{/* Image prompt: VitNode AdminCP dashboard with a “Site notes” statistics widget in a draggable grid. Show the widget drawer, resize affordance, and settings gear. Dark theme, 1600x900. */}
+{/* Image prompt: VitNode AdminCP dashboard with a “Site notes” statistics widget in a draggable grid. Show the widget panel, the corner resize bracket on each card, and the settings gear. Dark theme, 1600x900. */}
 
 <Steps>
   <Step>
@@ -98,7 +98,25 @@ the plugin alongside the widget.
 | `defaultEnabled`              | Whether a new dashboard receives the widget.      |
 | `allowMultiple`               | Whether an admin may place more than one copy.    |
 | `permission`                  | Staff permission required to see the widget.      |
-| `settingsComponent`           | Plugin form shown by the widget settings control. |
+| `settingsComponent`           | Plugin form shown in the widget's panel while the dashboard is being edited. |
+
+## How admins arrange them
+
+Your widget does not need any code for this - it is what the dashboard does with every widget. Press **Edit layout** and the **Widgets** panel slides in beside the grid.
+
+| To…                    | Do this                                                                                                                                  |
+| :--------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| **Add a widget**       | Click it in the panel to put it at the end, or drag it onto the grid. While you drag, the grid opens a gap the widget's real size, right where it will land. |
+| **Change your mind**   | Drag it back over the panel and let go. Nothing is added, and the card glides back to where it came from.                                  |
+| **Move a widget**      | Drag the card from anywhere on it, or <kbd>Tab</kbd> to it and use Space and the arrow keys. The spot it came from turns into a dashed slot. |
+| **Resize a widget**    | Grab the little bracket in the card's bottom corner and pull. Sideways snaps the width between 1 and 3 columns, down and up snap the height between 1 and 3 rows, and the other widgets glide out of the way. A dashed outline follows your pointer so you can see where you are pulling. From the keyboard, <kbd>Tab</kbd> to the corner and use the arrow keys. |
+| **Edit a widget**      | Click the card (or <kbd>Tab</kbd> to it and press <kbd>Enter</kbd>). The panel switches to that widget: a width switch, its own settings form if it has one, and a bin in the header. **Save settings** stores the settings straight away and leaves the rest of your unsaved arrangement alone. The arrow at the top goes back to the list. |
+| **Remove a widget**    | The bin on the card's toolbar, or in its panel. |
+| **Finish**             | The panel footer says whether anything changed. **Save** keeps the arrangement; **Cancel** throws it away and leaves edit mode. |
+
+New widgets fade in and scroll into view, and screen readers hear where a widget was picked up and dropped in the admin's own language. With _reduce motion_ turned on in the operating system, all of it happens instantly.
+
+The drop gap uses `defaultSpan` and `defaultRows`, so pick them to match what the widget looks like the moment it is added.
 
 <Cards>
   <Card

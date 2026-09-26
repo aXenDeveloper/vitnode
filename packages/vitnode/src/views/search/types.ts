@@ -12,6 +12,7 @@ export interface SearchResultItem {
   content: string;
   createdAt: Date | string;
   id: number;
+  isPublic: boolean;
   itemId: number;
   itemType: string;
   languageCode: string;

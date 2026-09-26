@@ -104,11 +104,11 @@ npm run dev
 
 </Tabs>
 
-Open **AdminCP → Core → System → Navigation**, click **Add menu item**, keep
-**Prebuilt page** selected and pick *Notes*. It appears in the header
-immediately.
+Open **AdminCP → Core → System → Navigation**, click **Add menu item** and
+pick the *Notes* tile under **Pages from your plugins**. Tweak the title or
+icon if you like, then **Add to menu**. It appears in the header immediately.
 
-{/* Image prompt: VitNode AdminCP "Navigation" screen. A vertical list of menu items, each a card with a drag handle, a lucide icon, a bold title, a small "Prebuilt page" or "Custom link" badge and a monospace URL, with one item indented under another to show a dropdown. An "Add menu item" dialog is open, with a two-option radio "Prebuilt page / Custom link", a page picker, title, an icon picker showing a grid of lucide icons, description, and an "Open in a new tab" switch. Clean light theme, 1440x900. */}
+{/* Image prompt: VitNode AdminCP "Navigation" screen. One rounded card listing menu items as compact one-line rows: a grip handle, a lucide icon, a title, a monospace URL on the right, the plugin name or "Custom", and a "⋯" button; child rows are indented behind a thin vertical guide line under their parent, and the card header reads "3 in the header · 4 in dropdowns" with a "Collapse all" button. An "Add menu item" dialog is open in front, showing "Pages from your plugins" as a grid of tiles (icon, page name, plugin name) and a wide "Custom link" tile below. Clean light theme, 1440x900. */}
 
   </Step>
 </Steps>
@@ -140,9 +140,19 @@ level deep on purpose: a header dropdown with sub-dropdowns is a maze, not a
 menu, so an item that already has children stays at the top level and nothing
 can be dropped under a child.
 
+While you drag, a dashed slot shows exactly where the item will land - shifted
+right when it is about to go inside the item above.
+
 Keyboard works too: focus a handle, press <kbd>Space</kbd>, move with the arrow
 keys - <kbd>→</kbd> nests, <kbd>←</kbd> un-nests - and press <kbd>Space</kbd>
 again to drop.
+
+Not a fan of dragging? Every row has a **⋯** menu with **Move up**, **Move
+down**, **Move inside…** and **Move to top level**, plus **Add sub-item** on
+top-level rows, which opens the add dialog already aimed at that dropdown.
+Clicking a row opens its editor on the side, where **Placement** does the same
+job as dragging it sideways. Long menus fold up too: the arrow next to a parent
+hides its dropdown, and **Collapse all** tidies the whole list.
 
 A top-level item with children renders in the header as a **dropdown**: the
 parent opens it on hover and still follows its own URL when clicked, and its

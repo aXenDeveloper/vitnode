@@ -56,7 +56,7 @@ export const contentRowTitle = (
 
   const value =
     definition.fields[titleField]?.localized === true
-      ? row.translation?.values?.[titleField]
+      ? row.localizedValues?.[titleField]
       : row[titleField];
 
   return typeof value === "string" && value !== "" ? value : `#${row.id}`;
@@ -66,8 +66,6 @@ export const contentRowTitle = (
 export interface ContentCellLabels {
   /** `core.content.table.empty_value` - a column this row has no value for. */
   empty: string;
-  /** `core.content.translations.states.missing` - untranslated in this language. */
-  missing?: string;
   /** `core.content.status.*`, for the publication badge. */
   status: { draft: string; published: string };
 }
@@ -114,7 +112,6 @@ export const buildContentTableColumns = ({
         ) : (
           <ContentCell
             emptyLabel={labels.empty}
-            missingLabel={labels.missing}
             row={row}
             spec={spec}
             statusLabels={labels.status}

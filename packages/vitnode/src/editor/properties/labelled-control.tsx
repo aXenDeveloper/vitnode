@@ -13,17 +13,27 @@ export const LabelledControl = ({
   children,
   description,
   label,
+  value,
 }: {
   children: (ids: LabelledControlIds) => ReactNode;
   description?: string;
   label: string;
+  value?: ReactNode;
 }): ReactElement => {
   const labelId = useId();
   const descriptionId = useId();
 
   return (
     <div className="flex flex-col gap-2">
-      <Label id={labelId}>{label}</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label id={labelId}>{label}</Label>
+
+        {value === undefined ? null : (
+          <span className="text-muted-foreground text-xs leading-relaxed tabular-nums">
+            {value}
+          </span>
+        )}
+      </div>
 
       {children({
         "aria-describedby":

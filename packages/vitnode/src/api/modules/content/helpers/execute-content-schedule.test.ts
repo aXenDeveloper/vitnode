@@ -1,29 +1,48 @@
 // @vitest-environment node
+import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getTableName } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { describe, expect, it, vi } from "vitest";
 
+import { core_content_schedules } from "@/database/content";
 import { testEditorialPostContentType } from "@/tests/content-fixtures";
 
-const claimContentSchedule = vi.fn();
-const settleContentSchedule = vi.fn();
-
-vi.mock("@/content/server/schedules-model", () => ({
-  claimContentSchedule: (...args: unknown[]) => claimContentSchedule(...args),
-  settleContentSchedule: (...args: unknown[]) => settleContentSchedule(...args),
-}));
-
-const { executeContentSchedule } = await import("./execute-content-schedule");
+import { executeContentSchedule } from "./execute-content-schedule";
 
 const PLUGIN_ID = "@vitnode/example";
 
-const claimed = {
-  action: "publish" as const,
+const dialect = new PgDialect();
+
+const compile = (condition: SQL | undefined) => {
+  if (!condition) throw new Error("Expected a condition.");
+
+  return dialect.sqlToQuery(condition);
+};
+
+interface ScheduleRow {
+  action: "publish" | "unpublish";
+  contentTypeId: string;
+  createdBy: null | number;
+  generation: number;
+  id: number;
+  itemId: number;
+  pluginId: string;
+  scheduledFor: Date;
+  status: "cancelled" | "completed" | "pending";
+}
+
+const pending: ScheduleRow = {
+  action: "publish",
   contentTypeId: testEditorialPostContentType.id,
   createdBy: 3,
+  generation: 1,
   id: 55,
   itemId: 7,
   pluginId: PLUGIN_ID,
+  scheduledFor: new Date("2026-01-01T09:00:00.000Z"),
+  status: "pending",
 };
 
 const row = {
@@ -48,12 +67,32 @@ const outcome = {
   version: 4,
 };
 
+type Handle = "db" | "tx";
+
+interface Claim {
+  condition: SQL | undefined;
+  handle: Handle;
+  lock: string;
+  table: string;
+}
+
+interface Settlement {
+  condition: SQL | undefined;
+  handle: Handle;
+  patch: Record<string, unknown>;
+  table: string;
+}
+
 const harness = ({
   editorial,
   registered = true,
+  schedule = pending,
+  stillPending = true,
 }: {
   editorial?: Partial<Record<"publish" | "unpublish", unknown>>;
   registered?: boolean;
+  schedule?: null | ScheduleRow;
+  stillPending?: boolean;
 } = {}) => {
   const publish = vi.fn().mockResolvedValue(outcome);
   const unpublish = vi.fn().mockResolvedValue(outcome);
@@ -64,11 +103,53 @@ const harness = ({
   };
 
   const dispatch = vi.fn().mockResolvedValue({ id: 1 });
+  const claims: Claim[] = [];
+  const settlements: Settlement[] = [];
   let committed = false;
 
+  const handleFor = (handle: Handle) => ({
+    select: () => ({
+      from: (table: typeof core_content_schedules) => ({
+        where: (condition: SQL | undefined) => ({
+          limit: () => ({
+            for: async (lock: string) => {
+              claims.push({
+                condition,
+                handle,
+                lock,
+                table: getTableName(table),
+              });
+
+              return await Promise.resolve(schedule ? [schedule] : []);
+            },
+          }),
+        }),
+      }),
+    }),
+    update: (table: typeof core_content_schedules) => ({
+      set: (patch: Record<string, unknown>) => ({
+        where: (condition: SQL | undefined) => ({
+          returning: async () => {
+            settlements.push({
+              condition,
+              handle,
+              patch,
+              table: getTableName(table),
+            });
+
+            return await Promise.resolve(stillPending ? [{ id: 55 }] : []);
+          },
+        }),
+      }),
+    }),
+  });
+
+  const tx = handleFor("tx");
+
   const db = {
-    transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
-      const result = await fn({ tx: true });
+    ...handleFor("db"),
+    transaction: async (fn: (handle: typeof tx) => Promise<unknown>) => {
+      const result = await fn(tx);
       committed = true;
 
       return result;
@@ -90,7 +171,16 @@ const harness = ({
             : undefined,
   } as unknown as Context;
 
-  return { c, committed: () => committed, dispatch, publish, unpublish };
+  return {
+    c,
+    claims,
+    committed: () => committed,
+    dispatch,
+    publish,
+    settlements,
+    tx,
+    unpublish,
+  };
 };
 
 /** The single argument every effects dispatch carries. */
@@ -102,15 +192,15 @@ const dispatchedPayload = (dispatch: ReturnType<typeof vi.fn>) =>
     tx?: unknown;
   };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  settleContentSchedule.mockResolvedValue(true);
-});
+const completed = {
+  completedAt: expect.any(Date),
+  lastError: null,
+  status: "completed",
+};
 
 describe("executeContentSchedule", () => {
   it("publishes, settles the schedule, and queues the announcements", async () => {
-    claimContentSchedule.mockResolvedValue(claimed);
-    const { c, dispatch, publish } = harness();
+    const { c, dispatch, publish, settlements } = harness();
 
     const result = await executeContentSchedule(c, {
       generation: 1,
@@ -119,6 +209,8 @@ describe("executeContentSchedule", () => {
 
     expect(result.status).toBe("executed");
     expect(publish).toHaveBeenCalledTimes(1);
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0].patch).toEqual(completed);
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatchedPayload(dispatch).name).toBe("content-schedule-effects");
   });
@@ -129,26 +221,27 @@ describe("executeContentSchedule", () => {
       // `tx`, so the row lock `claimContentSchedule` takes is still held when
       // the transition commits - which is what makes a concurrent cancel wait
       // rather than succeed and then be ignored.
-      claimContentSchedule.mockResolvedValue(claimed);
-      const { c, dispatch, publish } = harness();
+      const { c, claims, dispatch, publish, settlements, tx } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
 
-      const tx = { tx: true };
-      expect(claimContentSchedule).toHaveBeenCalledWith(tx, expect.anything());
+      expect(claims).toMatchObject([
+        {
+          handle: "tx",
+          lock: "update",
+          table: getTableName(core_content_schedules),
+        },
+      ]);
       expect(publish.mock.calls[0][1]).toMatchObject({ tx });
-      expect(settleContentSchedule).toHaveBeenCalledWith(
-        tx,
-        55,
-        expect.anything(),
-      );
-      expect(dispatchedPayload(dispatch).tx).toEqual(tx);
+      expect(settlements).toMatchObject([
+        { handle: "tx", table: getTableName(core_content_schedules) },
+      ]);
+      expect(dispatchedPayload(dispatch).tx).toBe(tx);
     });
 
     it("dispatches the effects before the transaction commits", async () => {
       // If the queue row could land after the commit, a crash in between would
       // leave a published record nobody was ever told about.
-      claimContentSchedule.mockResolvedValue(claimed);
       const { c, committed, dispatch } = harness();
 
       dispatch.mockImplementation(async () => {
@@ -165,29 +258,19 @@ describe("executeContentSchedule", () => {
     it("settles only while the schedule is still pending", async () => {
       // The guard that stops a stale worker overwriting `cancelled` with
       // `completed`.
-      claimContentSchedule.mockResolvedValue(claimed);
-      const { c } = harness();
+      const { c, settlements } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
 
-      expect(settleContentSchedule).toHaveBeenCalledWith(
-        expect.anything(),
-        55,
-        {
-          expectedStatus: "pending",
-          lastError: null,
-          status: "completed",
-        },
-      );
+      expect(settlements[0].patch).toEqual(completed);
+      expect(compile(settlements[0].condition).params).toEqual([55, "pending"]);
     });
 
     it("rolls the transition back when the schedule is no longer pending", async () => {
       // Structurally impossible while the lock is held - so if it happens the
       // lock was not held, and publishing a cancelled plan is the worse of the
       // two outcomes.
-      claimContentSchedule.mockResolvedValue(claimed);
-      settleContentSchedule.mockResolvedValue(false);
-      const { c, dispatch } = harness();
+      const { c, dispatch } = harness({ stillPending: false });
 
       await expect(
         executeContentSchedule(c, { generation: 1, scheduleId: 55 }),
@@ -198,7 +281,6 @@ describe("executeContentSchedule", () => {
   });
 
   it("runs as the system, never as a made-up user", async () => {
-    claimContentSchedule.mockResolvedValue(claimed);
     const { c, publish } = harness();
 
     await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
@@ -213,7 +295,6 @@ describe("executeContentSchedule", () => {
       // The actor is genuinely the system, so "on whose instruction" has to
       // come from somewhere else - and it is the whole point of the audit
       // trail.
-      claimContentSchedule.mockResolvedValue(claimed);
       const { c, dispatch } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
@@ -233,7 +314,6 @@ describe("executeContentSchedule", () => {
     it("says the record was private before a publish", async () => {
       // Derived from the transition's own guard rather than read back outside
       // the lock: `publish` only changes a row that was not published.
-      claimContentSchedule.mockResolvedValue(claimed);
       const { c, dispatch } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
@@ -242,19 +322,17 @@ describe("executeContentSchedule", () => {
     });
 
     it("says the record was public before an unpublish", async () => {
-      claimContentSchedule.mockResolvedValue({
-        ...claimed,
-        action: "unpublish",
+      const { c, dispatch, unpublish } = harness({
+        schedule: { ...pending, action: "unpublish" },
       });
-      const { c, dispatch } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
 
+      expect(unpublish).toHaveBeenCalledTimes(1);
       expect(dispatchedPayload(dispatch).payload.wasPublic).toBe(true);
     });
 
     it("is JSON, so the queue can store and replay it", async () => {
-      claimContentSchedule.mockResolvedValue(claimed);
       const { c, dispatch } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
@@ -267,7 +345,6 @@ describe("executeContentSchedule", () => {
     });
 
     it("is stamped with core, so the worker can find the handler", async () => {
-      claimContentSchedule.mockResolvedValue(claimed);
       const { c, dispatch } = harness();
 
       await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
@@ -277,11 +354,22 @@ describe("executeContentSchedule", () => {
   });
 
   describe("no-ops", () => {
-    it("does nothing when the row is cancelled, superseded or not yet due", async () => {
-      // All four guards collapse to the same answer from `claim`, so this is
-      // one test rather than four identical ones.
-      claimContentSchedule.mockResolvedValue(null);
-      const { c, dispatch, publish } = harness();
+    it.each([
+      { schedule: null, state: "gone" },
+      {
+        schedule: { ...pending, status: "cancelled" as const },
+        state: "cancelled",
+      },
+      { schedule: { ...pending, generation: 2 }, state: "superseded" },
+      {
+        schedule: {
+          ...pending,
+          scheduledFor: new Date(Date.now() + 60 * 60 * 1000),
+        },
+        state: "not yet due",
+      },
+    ])("does nothing when the row is $state", async ({ schedule }) => {
+      const { c, dispatch, publish, settlements } = harness({ schedule });
 
       const result = await executeContentSchedule(c, {
         generation: 1,
@@ -293,12 +381,11 @@ describe("executeContentSchedule", () => {
       // The load-bearing part: a superseded task must not touch search or the
       // cache, or a cancelled plan would still expire a live page.
       expect(dispatch).not.toHaveBeenCalled();
-      expect(settleContentSchedule).not.toHaveBeenCalled();
+      expect(settlements).toEqual([]);
     });
 
     it("does nothing more when the record is already published", async () => {
-      claimContentSchedule.mockResolvedValue(claimed);
-      const { c, dispatch } = harness({
+      const { c, dispatch, settlements } = harness({
         editorial: {
           publish: vi.fn().mockResolvedValue({ ...outcome, changed: false }),
         },
@@ -313,19 +400,12 @@ describe("executeContentSchedule", () => {
       expect(dispatch).not.toHaveBeenCalled();
       // Still settled, or it would be retried forever for a record that is
       // already in the state the schedule wanted.
-      expect(settleContentSchedule).toHaveBeenCalledWith(
-        expect.anything(),
-        55,
-        {
-          expectedStatus: "pending",
-          lastError: null,
-          status: "completed",
-        },
-      );
+      expect(settlements).toHaveLength(1);
+      expect(settlements[0].patch).toEqual(completed);
+      expect(compile(settlements[0].condition).params).toEqual([55, "pending"]);
     });
 
     it("does nothing when the record was deleted first", async () => {
-      claimContentSchedule.mockResolvedValue(claimed);
       const { c, dispatch } = harness({
         editorial: { publish: vi.fn().mockResolvedValue(null) },
       });
@@ -343,8 +423,7 @@ describe("executeContentSchedule", () => {
   it("cancels rather than retrying when the content type is gone", async () => {
     // A plugin removed, or `editorial` turned off. An error every ten minutes
     // forever is not a useful way to report a config change.
-    claimContentSchedule.mockResolvedValue(claimed);
-    const { c, dispatch } = harness({ registered: false });
+    const { c, dispatch, settlements } = harness({ registered: false });
 
     const result = await executeContentSchedule(c, {
       generation: 1,
@@ -352,21 +431,18 @@ describe("executeContentSchedule", () => {
     });
 
     expect(result.status).toBe("unregistered");
-    expect(settleContentSchedule).toHaveBeenCalledWith(
-      expect.anything(),
-      55,
-      expect.objectContaining({
-        expectedStatus: "pending",
-        status: "cancelled",
-      }),
-    );
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0].patch).toMatchObject({
+      lastError: expect.stringContaining(testEditorialPostContentType.id),
+      status: "cancelled",
+    });
+    expect(compile(settlements[0].condition).params).toEqual([55, "pending"]);
     expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("records the error and rethrows a real failure", async () => {
     // This one *is* worth retrying, and the queue's backoff is the policy.
-    claimContentSchedule.mockResolvedValue(claimed);
-    const { c } = harness({
+    const { c, settlements } = harness({
       editorial: {
         publish: vi.fn().mockRejectedValue(new Error("deadlock detected")),
       },
@@ -376,27 +452,25 @@ describe("executeContentSchedule", () => {
       executeContentSchedule(c, { generation: 1, scheduleId: 55 }),
     ).rejects.toThrow("deadlock detected");
 
-    expect(settleContentSchedule).toHaveBeenCalledWith(expect.anything(), 55, {
-      expectedStatus: "pending",
-      lastError: "deadlock detected",
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]).toMatchObject({
+      handle: "db",
+      patch: { lastError: "deadlock detected" },
     });
     // Left pending, so the AdminCP shows it as overdue rather than done.
-    expect(settleContentSchedule).not.toHaveBeenCalledWith(
-      expect.anything(),
-      55,
-      expect.objectContaining({ status: "completed" }),
-    );
+    expect(settlements[0].patch).not.toHaveProperty("status");
+    expect(compile(settlements[0].condition).params).toEqual([55, "pending"]);
   });
 
-  it("passes the generation straight through to the claim", async () => {
-    claimContentSchedule.mockResolvedValue(null);
-    const { c } = harness();
+  it("claims the booked row for the generation the task carries", async () => {
+    const { c, claims } = harness({ schedule: { ...pending, generation: 4 } });
 
-    await executeContentSchedule(c, { generation: 4, scheduleId: 55 });
-
-    expect(claimContentSchedule).toHaveBeenCalledWith(expect.anything(), {
+    const result = await executeContentSchedule(c, {
       generation: 4,
       scheduleId: 55,
     });
+
+    expect(result.status).toBe("executed");
+    expect(compile(claims[0].condition).params).toEqual([55]);
   });
 });

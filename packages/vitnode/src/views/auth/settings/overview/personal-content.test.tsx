@@ -1,5 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
 
@@ -7,26 +15,33 @@ import type { PersonalInformationUser } from "./personal-content";
 
 import { PersonalInformationContent } from "./personal-content";
 
-vi.mock("use-intl", () => ({
-  useTranslations: (namespace?: string) => (key: string) =>
-    namespace ? `${namespace}.${key}` : key,
-}));
-
-vi.mock("./personal-field-editor", () => ({
-  PersonalFieldEditor: ({
-    field,
-    onClose,
-  }: {
-    field: string;
-    onClose: () => void;
-  }) => (
-    <button onClick={onClose} type="button">
-      close {field}
-    </button>
-  ),
-}));
-
 const label = (key: string) => `core.auth.settings.overview.${key}`;
+
+const finePointer = (media: string): MediaQueryList => ({
+  addEventListener: () => undefined,
+  addListener: () => undefined,
+  dispatchEvent: () => false,
+  matches: false,
+  media,
+  onchange: null,
+  removeEventListener: () => undefined,
+  removeListener: () => undefined,
+});
+
+beforeAll(async () => {
+  await import("./personal-field-editor");
+});
+
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", finePointer);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+const editorFor = async (field: string) =>
+  await screen.findByRole<HTMLInputElement>("textbox", { name: label(field) });
 
 const user: PersonalInformationUser = {
   email: "ada@example.com",
@@ -74,12 +89,10 @@ describe("PersonalInformationContent", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /firstName/ }));
 
-    const close = await screen.findByRole("button", {
-      name: "close firstName",
-    });
+    expect((await editorFor("firstName")).value).toBe("Ada");
     expect(screen.queryByRole("button", { name: /firstName.*Ada/ })).toBeNull();
 
-    fireEvent.click(close);
+    fireEvent.click(screen.getByRole("button", { name: "core.global.cancel" }));
 
     await waitFor(() => {
       expect(document.activeElement).toBe(
@@ -92,13 +105,13 @@ describe("PersonalInformationContent", () => {
     renderContent();
 
     fireEvent.click(screen.getByRole("button", { name: /firstName/ }));
-    await screen.findByRole("button", { name: "close firstName" });
+    await editorFor("firstName");
 
     fireEvent.click(screen.getByRole("button", { name: /lastName/ }));
 
-    await screen.findByRole("button", { name: "close lastName" });
+    await editorFor("lastName");
     expect(
-      screen.queryByRole("button", { name: "close firstName" }),
+      screen.queryByRole("textbox", { name: label("firstName") }),
     ).toBeNull();
   });
 

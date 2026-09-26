@@ -128,7 +128,8 @@ export const ArticleCard = ({ article }: Props) => {
 
 ## AdminCP Translation Features
 
-- **Language Selector Tabs**: Automatically rendered in AdminCP form dialogs for each enabled system language.
+- **Per-field language select**: Every localized text, textarea and editor field has its own language select, so you can translate one field without leaving the form.
+- **Untranslated? You still see text**: No more wall of "Missing". A localized value in the list, the edit page title and each field is shown in your AdminCP language first. If that's empty, you get the content type's `defaultLocale`, then any language that has something written. A field that's empty in every language opens on your language, ready to type in.
 - **Independent Status**: Each translation language manages its own draft/published lifecycle when publication is enabled.
 - **Independent Revisions**: When editorial is enabled, revision histories and restores operate per locale (`GET /{id}/translations/{locale}/revisions` and `POST /{id}/translations/{locale}/revisions/{revisionId}/restore`).
 - **Composite Key Integrity**: Translations are uniquely identified by `(itemId, languageId)`, guaranteeing exactly one translation per locale per item.

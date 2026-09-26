@@ -13,7 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getLangValue, upsertLangValue } from "@/lib/helpers/multi-lang";
+import {
+  getLangValue,
+  pickLangCode,
+  upsertLangValue,
+} from "@/lib/helpers/multi-lang";
+
+import { useMultiLangDefaultLanguage } from "./multi-lang-default-language";
 
 export { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 export type {
@@ -25,17 +31,23 @@ export interface MultiLangFieldProps {
   field: FormFieldApi<MultiLangValue | undefined>;
 }
 
-export const useMultiLangField = (field: MultiLangFieldProps["field"]) => {
+export const useMultiLangField = (
+  field: MultiLangFieldProps["field"],
+  { isFilled }: { isFilled?: (text: string) => boolean } = {},
+) => {
   const languages = useLanguages();
   const locale = useLocale();
-  const [selected, setSelected] = React.useState(
-    () =>
-      languages.find(language => language.code === locale)?.code ??
-      languages[0]?.code ??
-      locale,
-  );
-
+  const defaultLanguage = useMultiLangDefaultLanguage();
   const { value } = field;
+  const [selected, setSelected] = React.useState(() =>
+    pickLangCode({
+      defaultLanguage,
+      isFilled,
+      languageCodes: languages.map(language => language.code),
+      locale,
+      value,
+    }),
+  );
 
   const setValue = (newValue: string) => {
     field.onChange(upsertLangValue(value, selected, newValue));

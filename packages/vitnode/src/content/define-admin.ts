@@ -51,6 +51,10 @@ const isAdminColumnField = (fieldValue: ContentFieldDescriptor): boolean =>
   !NON_COLUMN_KINDS.has(fieldValue.kind) &&
   !isContentReferenceCollection(fieldValue);
 
+const isReferenceListField = (fieldValue: ContentFieldDescriptor): boolean =>
+  isContentReferenceCollection(fieldValue) &&
+  (fieldValue.kind === "relation" || fieldValue.kind === "user");
+
 const adminFormModes: readonly string[] = CONTENT_ADMIN_FORM_MODES;
 
 const resolveFormMode = (
@@ -207,7 +211,14 @@ export const resolveAdmin = <TFields>(
   // The presentation surfaces. Localized names are welcome; a group or a
   // collection still is not, because neither is one cell or one title.
   for (const [label, names] of [
-    ["admin.list.columns", admin.list?.columns],
+    [
+      "admin.list.columns",
+      admin.list?.columns?.filter(
+        name =>
+          fields[String(name)] === undefined ||
+          !isReferenceListField(fields[String(name)]),
+      ),
+    ],
     [
       "admin.titleField",
       admin.titleField === undefined || admin.titleField === null
@@ -225,6 +236,10 @@ export const resolveAdmin = <TFields>(
     ...(editorial ? editorialFields : []),
   ];
   const knownColumns = new Set([...displayFieldNames, ...generatedColumns]);
+  const knownListColumns = new Set([
+    ...knownColumns,
+    ...fieldNames.filter(name => isReferenceListField(fields[name])),
+  ]);
 
   const searchableFields = (
     admin.list?.searchableFields?.map(String) ??
@@ -301,7 +316,7 @@ export const resolveAdmin = <TFields>(
   const columns = (admin.list?.columns?.map(String) ?? defaultColumns).map(
     String,
   );
-  assertKnownColumns(id, "admin.list.columns", columns, knownColumns);
+  assertKnownColumns(id, "admin.list.columns", columns, knownListColumns);
 
   const sections = resolveFormSections(id, admin.form?.sections);
   if (sections.length > 0 && admin.form?.fields !== undefined) {
@@ -374,6 +389,28 @@ export const resolveAdmin = <TFields>(
     );
   }
 
+  const thumbnailField = admin.list?.thumbnailField ?? null;
+  if (thumbnailField !== null) {
+    const descriptor = fields[thumbnailField] as
+      ContentFieldDescriptor | undefined;
+    if (
+      descriptor?.kind !== "file" ||
+      descriptor.multiple ||
+      isLocalized(thumbnailField)
+    ) {
+      throw new ContentEngineError(
+        `admin.list.thumbnailField references "${thumbnailField}", which is not a shared single \`field.file()\`. A thumbnail is one image per record.`,
+        { contentTypeId: id },
+      );
+    }
+    if (titleField === null || !columns.includes(titleField)) {
+      throw new ContentEngineError(
+        `admin.list.thumbnailField is drawn in the title column, but admin.titleField${titleField === null ? " is not set" : ` "${titleField}" is not one of admin.list.columns`}.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
   return {
     colorField,
     create: { mode: resolveFormMode(id, "admin.create.mode", admin.create) },
@@ -385,6 +422,7 @@ export const resolveAdmin = <TFields>(
       defaultOrderBy,
       orderableFields,
       searchableFields,
+      thumbnailField,
     },
     navigation: { enabled: admin.navigation?.enabled ?? true },
     path: resolveAdminPath(id, admin.path),

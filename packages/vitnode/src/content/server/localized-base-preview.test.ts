@@ -2,30 +2,35 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
 import { testDeliveredPreviewableContentType } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { createContentModel } from "./model";
 import { buildContentPublicRoutes } from "./public-routes";
 import { buildContentRoutes } from "./routes";
 
-// `assertStaffPermission` reads roles out of the database. Whether the preview
-// route is permission-gated is asserted elsewhere; here it is in the way.
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async () => Promise.resolve(),
-}));
-
 const PLUGIN_ID = "@vitnode/example";
 const SECRET = "unit-test-content-preview-secret-0123456789";
+const ADMIN_ID = 1;
 
 const posts = createContentModel(testDeliveredPreviewableContentType);
 
-const mintHarness = () => {
+const mintHarness = async () => {
   const service = { findById: vi.fn() };
   const revisions = {
     latest: vi.fn().mockResolvedValue({ id: 42, version: 5 }),
   };
   const findByLocale = vi.fn();
   const listRevisions = vi.fn().mockResolvedValue({ edges: [{ id: 99 }] });
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: ADMIN_ID,
+  });
 
   vi.spyOn(posts, "service").mockReturnValue(service as never);
   vi.spyOn(posts, "editorialService", "get").mockReturnValue(
@@ -40,7 +45,8 @@ const mintHarness = () => {
 
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {
-    c.set("admin", { user: { id: 1 } } as never);
+    c.set("admin", { user: { id: ADMIN_ID } } as never);
+    c.set("cache", cache);
     c.set("core", { contentPreviewSecret: SECRET } as never);
     c.set("user", null);
     await next();
@@ -107,7 +113,7 @@ describe("the base preview mint on a localized content type", () => {
   const article = { id: 7, publishedAt: null, status: "draft", version: 5 };
 
   it("links at the record's page in the web app, not the JSON endpoint", async () => {
-    const { app, findByLocale, service } = mintHarness();
+    const { app, findByLocale, service } = await mintHarness();
     service.findById.mockResolvedValue(article);
     findByLocale.mockResolvedValue({
       languageId: 1,
@@ -130,7 +136,7 @@ describe("the base preview mint on a localized content type", () => {
     // Without this the link 404s wherever it points: the public preview route
     // resolves a locale for every localized read and refuses a token that names
     // a different one - and a locale-less token names none.
-    const { app, findByLocale, service } = mintHarness();
+    const { app, findByLocale, service } = await mintHarness();
     service.findById.mockResolvedValue(article);
     findByLocale.mockResolvedValue({
       languageId: 1,
@@ -149,7 +155,7 @@ describe("the base preview mint on a localized content type", () => {
 
   it("mints a link the public route actually honours", async () => {
     // The round trip, because the two halves agreeing is the whole fix.
-    const mint = mintHarness();
+    const mint = await mintHarness();
     mint.service.findById.mockResolvedValue(article);
     mint.findByLocale.mockResolvedValue({
       languageId: 1,
@@ -191,7 +197,7 @@ describe("the base preview mint on a localized content type", () => {
 
   it("falls back to the endpoint when the record has no translation yet", async () => {
     // Nothing to name a language or a slug with, so there is no page to link at.
-    const { app, findByLocale, service } = mintHarness();
+    const { app, findByLocale, service } = await mintHarness();
     service.findById.mockResolvedValue(article);
     findByLocale.mockResolvedValue(null);
 

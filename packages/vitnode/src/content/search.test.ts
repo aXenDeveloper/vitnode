@@ -69,6 +69,7 @@ describe("search configuration", () => {
     const definition = define({ search: validSearch });
 
     expect(definition.search).toEqual({
+      authorField: null,
       contentFields: ["excerpt", "body"],
       descriptionField: "excerpt",
       enabled: true,
@@ -79,6 +80,7 @@ describe("search configuration", () => {
 
   it("defaults to disabled when `search` is omitted", () => {
     expect(define().search).toEqual({
+      authorField: null,
       contentFields: [],
       descriptionField: null,
       enabled: false,
@@ -242,6 +244,27 @@ describe("search configuration", () => {
     });
   });
 
+  describe("author field", () => {
+    it("resolves a user field without it being public", () => {
+      expect(
+        define({ search: { ...validSearch, authorField: "author" } }).search
+          .authorField,
+      ).toBe("author");
+    });
+
+    it("rejects an unknown field", () => {
+      expect(() =>
+        define({ search: { ...validSearch, authorField: "writer" } }),
+      ).toThrow(/search.authorField references unknown field "writer"/);
+    });
+
+    it("rejects a field that is not a user field", () => {
+      expect(() =>
+        define({ search: { ...validSearch, authorField: "title" } }),
+      ).toThrow(/is not a top-level `field.user\(\)`/);
+    });
+  });
+
   it("rejects a content type id wider than the search index column", () => {
     expect(() =>
       defineContentType({
@@ -292,5 +315,13 @@ describe("search helpers", () => {
 
   it("lists nothing when search is off", () => {
     expect(contentSearchIndexedFieldNames(testPostContentType)).toEqual([]);
+  });
+
+  it("lists the author field, so a change of author reindexes", () => {
+    expect(
+      contentSearchIndexedFieldNames(
+        define({ search: { ...validSearch, authorField: "author" } }),
+      ),
+    ).toContain("author");
   });
 });

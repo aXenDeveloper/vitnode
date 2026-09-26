@@ -1,11 +1,17 @@
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import type {
+  Active,
+  Announcements,
+  CollisionDetection,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+} from "@dnd-kit/core";
 
 import {
   closestCenter,
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -13,11 +19,19 @@ import {
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { cn } from "cn";
+import { useReducedMotion } from "motion/react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { Card } from "@/components/ui/card";
+import {
+  DRAG_OVERLAY_LIFT_CLASS,
+  DRAG_OVERLAY_LIFT_STYLE,
+  LIFTED_DROP_ANIMATION,
+} from "@/lib/dnd/drag-motion";
+import { revealWhenRendered } from "@/lib/dnd/reveal";
+import { FinePointerSensor } from "@/lib/dnd/sensors";
 
 import type { DashboardActions } from "../widgets/dashboard-actions";
 import type {
@@ -26,19 +40,52 @@ import type {
   DashboardWidgetOption,
   DashboardWidgetView,
 } from "../widgets/types";
+import type { DashboardIncomingWidget } from "./board-context";
+import type { LayoutSnapshot } from "./layout-flip";
+import type { DashboardLayoutAction } from "./layout-reducer";
 
-import { widgetIdOf } from "../widgets/instance-id";
+import { nextInstanceId, widgetIdOf } from "../widgets/instance-id";
 import { DashboardBoardContext } from "./board-context";
 import { DROP_END_ID } from "./drop-placeholder";
-import { dashboardLayoutReducer, isLayoutDirty } from "./layout-reducer";
+import { nextIncomingIndex, pointsAtBoard } from "./incoming";
+import { playLayoutFlip, snapshotLayout } from "./layout-flip";
+import {
+  dashboardLayoutReducer,
+  isLayoutDirty,
+  withSavedSettings,
+} from "./layout-reducer";
 import { panelWidgetId } from "./panel-drag-id";
 import { WidgetCardContent } from "./widget-card";
+import { WIDGET_OPTION_CARD_CLASS, WidgetOptionCardBody } from "./widget-panel";
 
 const RefreshedWidgetContent = ({
   content,
 }: {
   content: Promise<React.ReactNode>;
 }): React.ReactNode => React.use(content);
+
+const panelWidgetOf = (active: Active): DashboardWidgetOption | undefined =>
+  active.data.current?.fromPanel === true
+    ? (active.data.current.widget as DashboardWidgetOption | undefined)
+    : undefined;
+
+const PICK_UP_WITH_SPACE = {
+  cancel: ["Escape"],
+  end: ["Space", "Enter"],
+  start: ["Space"],
+};
+
+const boardCollision: CollisionDetection = args => {
+  const pointer = args.pointerCoordinates;
+
+  if (!panelWidgetOf(args.active) || pointer === null) {
+    return closestCenter(args);
+  }
+
+  return pointsAtBoard({ pointer, targets: [...args.droppableRects.values()] })
+    ? closestCenter(args)
+    : [];
+};
 
 interface DashboardBoardProviderProps {
   actions: DashboardActions;
@@ -58,9 +105,15 @@ export const DashboardBoardProvider = ({
   managedIds,
 }: DashboardBoardProviderProps) => {
   const t = useTranslations("admin.dashboard.widgets");
+  const reduceMotion = useReducedMotion();
 
   const [isEditing, setIsEditing] = React.useState(false);
+  const [selectedId, setSelectedId] = React.useState<null | string>(null);
   const [activeId, setActiveId] = React.useState<null | string>(null);
+  const [incoming, setIncoming] =
+    React.useState<DashboardIncomingWidget | null>(null);
+  const [arrivingId, setArrivingId] = React.useState<null | string>(null);
+  const [addedFromPanel, setAddedFromPanel] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
   const [items, dispatch] = React.useReducer(dashboardLayoutReducer, layout);
   const [refreshed, setRefreshed] = React.useState<
@@ -70,7 +123,12 @@ export const DashboardBoardProvider = ({
   const [syncedLayout, setSyncedLayout] = React.useState(layout);
   if (syncedLayout !== layout) {
     setSyncedLayout(layout);
-    dispatch({ type: "reset", state: layout });
+    dispatch({
+      type: "reset",
+      state: isLayoutDirty(items, syncedLayout)
+        ? withSavedSettings(items, layout)
+        : layout,
+    });
     setRefreshed({});
   }
 
@@ -127,53 +185,179 @@ export const DashboardBoardProvider = ({
   }, [catalog, items]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(FinePointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 200, tolerance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: PICK_UP_WITH_SPACE,
     }),
   );
 
+  const gridRef = React.useRef<HTMLDivElement>(null);
+  const flipFromRef = React.useRef<LayoutSnapshot | null>(null);
+
+  const dispatchAnimated = React.useCallback(
+    (action: DashboardLayoutAction) => {
+      flipFromRef.current = reduceMotion
+        ? null
+        : snapshotLayout(gridRef.current);
+      dispatch(action);
+    },
+    [reduceMotion],
+  );
+
+  React.useLayoutEffect(() => {
+    playLayoutFlip(gridRef.current, flipFromRef.current);
+    flipFromRef.current = null;
+  }, [items]);
+
+  const itemIds = items.map(item => item.id);
+  const selected =
+    placed.find(widget => widget.instanceId === selectedId) ?? null;
+  if (selectedId !== null && selected === null) setSelectedId(null);
+
+  const select = React.useCallback((instanceId: null | string) => {
+    setSelectedId(instanceId);
+    if (instanceId !== null) revealWhenRendered("[data-dashboard-properties]");
+  }, []);
+
+  const setEditing = (editing: boolean) => {
+    setIsEditing(editing);
+    if (!editing) setSelectedId(null);
+  };
   const activeView = placed.find(widget => widget.instanceId === activeId);
-  const activeCatalogEntry =
-    activeView ??
-    (activeId ? catalogById.get(panelWidgetId(activeId) ?? "") : undefined);
+  const activePanelWidget = activeId
+    ? catalogById.get(panelWidgetId(activeId) ?? "")
+    : undefined;
 
-  const onDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    if (!over) return;
+  const titleOf = (id: string): string =>
+    placed.find(widget => widget.instanceId === id)?.title ??
+    catalogById.get(panelWidgetId(id) ?? widgetIdOf(id))?.title ??
+    id;
 
-    const draggedId = String(active.id);
-    const overId = String(over.id);
-
-    if (active.data.current?.fromPanel === true) {
-      const widget = active.data.current.widget as
-        DashboardWidgetOption | undefined;
-      if (!widget) return;
-
-      const overIndex = items.findIndex(item => item.id === overId);
-      dispatch({
-        type: "add",
-        widget,
-        index: overIndex === -1 ? undefined : overIndex,
+  const landingOf = (
+    active: Active,
+    overId: null | string,
+  ): null | { position: number; total: number } => {
+    if (panelWidgetOf(active)) {
+      const index = nextIncomingIndex({
+        current: incoming?.index ?? null,
+        endId: DROP_END_ID,
+        itemIds,
+        overId,
       });
+
+      return index === null
+        ? null
+        : { position: index + 1, total: itemIds.length + 1 };
+    }
+
+    const to =
+      overId === DROP_END_ID
+        ? itemIds.length - 1
+        : overId === null
+          ? -1
+          : itemIds.indexOf(overId);
+
+    return to === -1 ? null : { position: to + 1, total: itemIds.length };
+  };
+
+  const addAt = (widget: DashboardWidgetOption, index?: number) => {
+    const instanceId = nextInstanceId(widget.id, itemIds);
+
+    dispatchAnimated({ type: "add", widget, index });
+    setArrivingId(instanceId);
+    revealWhenRendered(`[data-dashboard-widget="${CSS.escape(instanceId)}"]`);
+  };
+
+  const onDragStart = ({ active }: DragStartEvent) => {
+    setActiveId(String(active.id));
+    setAddedFromPanel(false);
+  };
+
+  const onDragOver = ({ active, over }: DragOverEvent) => {
+    const widget = panelWidgetOf(active);
+    if (!widget) return;
+
+    setIncoming(current => {
+      const index = nextIncomingIndex({
+        current: current?.index ?? null,
+        endId: DROP_END_ID,
+        itemIds,
+        overId: over ? String(over.id) : null,
+      });
+
+      if (index === null) return null;
+      if (current?.index === index) return current;
+
+      return { index, widget };
+    });
+  };
+
+  const onDragCancel = () => {
+    setActiveId(null);
+    setIncoming(null);
+  };
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveId(null);
+    setIncoming(null);
+
+    const overId = over ? String(over.id) : null;
+    const widget = panelWidgetOf(active);
+
+    if (widget) {
+      const index = nextIncomingIndex({
+        current: incoming?.index ?? null,
+        endId: DROP_END_ID,
+        itemIds,
+        overId,
+      });
+      if (index === null) return;
+
+      setAddedFromPanel(true);
+      addAt(widget, index);
 
       return;
     }
 
-    const from = items.findIndex(item => item.id === draggedId);
+    if (overId === null) return;
+
+    const from = itemIds.indexOf(String(active.id));
     if (from === -1) return;
 
     const to =
-      overId === DROP_END_ID
-        ? items.length - 1
-        : items.findIndex(item => item.id === overId);
+      overId === DROP_END_ID ? itemIds.length - 1 : itemIds.indexOf(overId);
     if (to === -1) return;
 
     dispatch({ type: "move", index: from, toIndex: to });
+  };
+
+  const announcements: Announcements = {
+    onDragCancel: ({ active }) =>
+      t("dnd.cancelled", { title: titleOf(String(active.id)) }),
+    onDragEnd: ({ active, over }) => {
+      const title = titleOf(String(active.id));
+      const landing = landingOf(active, over ? String(over.id) : null);
+
+      if (landing === null) return t("dnd.not_dropped", { title });
+
+      return t(panelWidgetOf(active) ? "dnd.added" : "dnd.moved", {
+        title,
+        ...landing,
+      });
+    },
+    onDragOver: ({ active, over }) => {
+      const landing = landingOf(active, over ? String(over.id) : null);
+
+      return landing === null
+        ? undefined
+        : t("dnd.over", { title: titleOf(String(active.id)), ...landing });
+    },
+    onDragStart: ({ active }) =>
+      t("dnd.picked_up", { title: titleOf(String(active.id)) }),
   };
 
   const refreshWidget = React.useCallback(
@@ -196,8 +380,8 @@ export const DashboardBoardProvider = ({
   );
 
   const onCancel = () => {
-    dispatch({ type: "reset", state: layout });
-    setIsEditing(false);
+    dispatchAnimated({ type: "reset", state: layout });
+    setEditing(false);
   };
 
   const onSave = () => {
@@ -213,7 +397,7 @@ export const DashboardBoardProvider = ({
         return;
       }
 
-      setIsEditing(false);
+      setEditing(false);
     });
   };
 
@@ -221,8 +405,14 @@ export const DashboardBoardProvider = ({
     <DashboardBoardContext.Provider
       value={{
         actions,
+        addWidget: widget => {
+          addAt(widget);
+        },
+        arrivingId,
         available,
-        dispatch,
+        dispatch: dispatchAnimated,
+        gridRef,
+        incoming,
         isDirty: isLayoutDirty(items, layout),
         isEditing,
         isPending,
@@ -230,23 +420,28 @@ export const DashboardBoardProvider = ({
         onSave,
         placed,
         refreshWidget,
-        setIsEditing,
+        select,
+        selected,
+        setIsEditing: setEditing,
       }}
     >
       <DndContext
-        collisionDetection={closestCenter}
+        accessibility={{
+          announcements,
+          screenReaderInstructions: { draggable: t("dnd.instructions") },
+        }}
+        collisionDetection={boardCollision}
         id="vitnode-dashboard-board"
         modifiers={[restrictToWindowEdges]}
-        onDragCancel={() => setActiveId(null)}
+        onDragCancel={onDragCancel}
         onDragEnd={onDragEnd}
-        onDragStart={(event: DragStartEvent) =>
-          setActiveId(String(event.active.id))
-        }
+        onDragOver={onDragOver}
+        onDragStart={onDragStart}
         sensors={sensors}
       >
         <div
           className={cn(
-            "transition-[padding] duration-200 ease-linear",
+            "transition-[padding] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
             isEditing && "md:pe-(--dashboard-panel-width)",
           )}
           style={
@@ -258,20 +453,28 @@ export const DashboardBoardProvider = ({
           {children}
         </div>
 
-        <DragOverlay>
-          {activeCatalogEntry ? (
-            <Card className="ring-primary flex cursor-grabbing flex-col shadow-lg ring-2">
-              <WidgetCardContent
-                isEditing
-                widget={{
-                  ...activeCatalogEntry,
-                  instanceId: activeView?.instanceId ?? activeCatalogEntry.id,
-                  span: activeView?.span ?? activeCatalogEntry.defaultSpan,
-                  rows: activeView?.rows ?? activeCatalogEntry.defaultRows,
-                  contentKey: activeView?.contentKey ?? "{}",
-                }}
-              />
+        <DragOverlay
+          dropAnimation={
+            reduceMotion || addedFromPanel ? null : LIFTED_DROP_ANIMATION
+          }
+        >
+          {activeView ? (
+            <Card
+              className={cn(
+                "ring-primary/40 flex flex-col",
+                DRAG_OVERLAY_LIFT_CLASS,
+              )}
+              style={DRAG_OVERLAY_LIFT_STYLE}
+            >
+              <WidgetCardContent isEditing widget={activeView} />
             </Card>
+          ) : activePanelWidget ? (
+            <div
+              className={cn(WIDGET_OPTION_CARD_CLASS, DRAG_OVERLAY_LIFT_CLASS)}
+              style={DRAG_OVERLAY_LIFT_STYLE}
+            >
+              <WidgetOptionCardBody widget={activePanelWidget} />
+            </div>
           ) : null}
         </DragOverlay>
       </DndContext>

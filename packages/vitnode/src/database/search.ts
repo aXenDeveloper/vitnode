@@ -3,8 +3,6 @@ import type { SQL } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { camelCase, customType, index, unique } from "drizzle-orm/pg-core";
 
-import { core_users } from "./users";
-
 // Drizzle ships no native `tsvector` type, so we declare it once and reuse it
 // for the generated full-text-search column below. The column and its GIN index
 // live in the schema (not a hand-written migration) so `drizzle-kit generate`
@@ -72,10 +70,11 @@ export const core_search_index = camelCase.table.withRLS(
     itemType: t.varchar({ length: 100 }).notNull(),
     itemId: t.integer().notNull(),
     languageCode: t.varchar({ length: 32 }).notNull().default(""),
-    authorId: t.integer().references(() => core_users.id, {
-      onDelete: "set null",
-      onUpdate: "cascade",
-    }),
+    authorIds: t
+      .integer()
+      .array()
+      .notNull()
+      .default(sql`'{}'::integer[]`),
     title: t.text().notNull().default(""),
     content: t.text().notNull().default(""),
     // Generated tsvector for full-text search. The text-search config is chosen
@@ -104,7 +103,7 @@ export const core_search_index = camelCase.table.withRLS(
     ),
     index("core_search_index_search_vector_idx").using("gin", t.searchVector),
     index("core_search_index_created_at_idx").on(t.createdAt),
-    index("core_search_index_author_id_idx").on(t.authorId),
+    index("core_search_index_author_ids_idx").using("gin", t.authorIds),
     index("core_search_index_item_type_idx").on(t.itemType),
     index("core_search_index_language_code_idx").on(t.languageCode),
     index("core_search_index_is_public_idx").on(t.isPublic),

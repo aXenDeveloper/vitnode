@@ -14,7 +14,7 @@ export const SendNotificationSettingsForm = ({
   defaultTitle: string;
 }) => {
   const t = useTranslations("admin.dashboard.widgets.send-notification");
-  const tCore = useTranslations("core.global");
+  const tWidgets = useTranslations("admin.dashboard.widgets");
   const { save } = useWidgetSettingsDialog();
 
   const formSchema = z.object({
@@ -49,8 +49,8 @@ export const SendNotificationSettingsForm = ({
       mode="all"
       onSubmit={onSubmit}
       submitButtonProps={{
-        ["aria-label"]: tCore("save"),
-        children: tCore("save"),
+        ["aria-label"]: tWidgets("settings.save"),
+        children: tWidgets("settings.save"),
       }}
     />
   );

@@ -229,6 +229,9 @@ Synchronize records with the VitNode search and discovery engine:
 - **`search.titleField`**: Non-nullable text field used as the search result heading.
 - **`search.descriptionField`**: Optional text or textarea field prepended to the indexed body.
 - **`search.contentFields`**: Array of fields and group/repeatable leaves concatenated into the full-text search document.
+- **`search.authorField`**: Optional top-level `field.user()` whose people are credited in the index. Their published records show up on their [timelines](/docs/dev/search#member-timelines), and their drafts stay visible only to them and to staff. It doesn't have to be in `publicApi.fields`, but turning it on makes authorship public on search results.
+
+Drafts are indexed too, as private documents without a URL. Public search and Discover only ever return published records.
 
 
 ## Learn More

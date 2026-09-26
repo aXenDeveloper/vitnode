@@ -63,6 +63,34 @@ export const postContentType = defineContentType({
 
 System columns (`createdAt`, `updatedAt`, `status`, `publishedAt`) are always orderable and do not need to be listed in `orderableFields`.
 
+### People and tags as columns
+
+A to-many `field.user()` or `field.relation()` can be a column too. Authors are listed by name with their role's color and prefix, and relations show up as badges. The whole page is resolved in one go rather than once per row, so a list of fifty articles doesn't turn into fifty extra queries.
+
+```ts
+list: {
+  columns: ["title", "authorId", "categoryId", "status"], // [!code highlight]
+},
+```
+
+File galleries (`field.file({ multiple: true })`) still can't be columns.
+
+### A thumbnail beside the title
+
+Point `list.thumbnailField` at a single `field.file()` and its image is drawn at the start of the title cell. There's no separate column and no file name. A record without an image gets a neutral placeholder, so the titles stay lined up.
+
+```ts
+admin: {
+  titleField: "title",
+  list: {
+    columns: ["title", "authorId", "status"],
+    thumbnailField: "coverImage", // [!code ++]
+  },
+},
+```
+
+The title field has to be one of the list's `columns`, because that's where the thumbnail goes.
+
 ---
 
 ## Customizing Form Sections

@@ -1,13 +1,15 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
+
+import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { useAdminStaffPermissions } from "@/components/staff-permission/provider";
 import { UserDetailContent } from "@/views/admin/views/core/users/detail/user-detail-content";
 import { canEditAdminUser } from "@/views/admin/views/core/users/detail/user-query";
+import { adminUserTimelineQueryOptions } from "@/views/admin/views/core/users/detail/user-timeline-query";
 import { searchAdminRolesInBrowser } from "@/views/admin/views/core/users/roles/roles-query";
-import { SearchFeedContent } from "@/views/search/search-feed-content";
-import { searchFeedQueryOptions } from "@/views/search/search-feed-query";
+import { SearchFeedList } from "@/views/search/search-feed-content";
 
 import type { AdminUserRouteData } from "./detail-route";
 
@@ -18,20 +20,20 @@ import { adminUserQuery, useAdminUserMutations } from "./query";
 export type AdminUserRouteProps = AdminUserRouteData;
 
 const UserTimeline = ({
+  adminUserId,
   locale,
   userId,
 }: {
+  adminUserId: AdminIdentity;
   locale: string;
   userId: number;
-}) => (
-  <SearchFeedContent
-    queryOptions={searchFeedQueryOptions({
-      locale,
-      params: { authorId: String(userId), sort: "newest" },
-    })}
-    variant="timeline"
-  />
-);
+}) => {
+  const query = useInfiniteQuery(
+    adminUserTimelineQueryOptions({ adminUserId, locale, userId }),
+  );
+
+  return <SearchFeedList query={query} variant="timeline" />;
+};
 
 const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const t = useTranslations("admin.user.show.images");
@@ -59,7 +61,13 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
           });
         }}
         searchRoles={searchAdminRolesInBrowser}
-        timeline={<UserTimeline locale={locale} userId={user.id} />}
+        timeline={
+          <UserTimeline
+            adminUserId={adminUserId}
+            locale={locale}
+            userId={user.id}
+          />
+        }
         user={user}
       />
     </div>

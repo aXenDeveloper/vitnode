@@ -272,6 +272,36 @@ describe("buildContentColumnSpec", () => {
       published: "PUBLISHED",
     });
   });
+
+  it("marks a to-many column and puts the thumbnail on the title column", () => {
+    const listed = defineContentType({
+      id: "test.listed",
+      tableName: "test_listed",
+      fields: {
+        title: field.text({ required: true }),
+        cover: field.file({ maxBytes: 1024 }),
+        authors: field.user({ multiple: true, ordered: true }),
+      },
+      admin: {
+        titleField: "title",
+        list: { columns: ["title", "authors"], thumbnailField: "cover" },
+      },
+    });
+
+    expect(
+      buildContentColumnSpec({ definition: listed, labelEnum, labelField }),
+    ).toEqual([
+      { kind: "text", label: "Title", name: "title", thumbnail: "cover" },
+      { kind: "user", label: "Authors", multiple: true, name: "authors" },
+    ]);
+  });
+
+  it("leaves single-value columns without a list or thumbnail marker", () => {
+    for (const spec of columnSpecs) {
+      expect(spec).not.toHaveProperty("multiple");
+      expect(spec).not.toHaveProperty("thumbnail");
+    }
+  });
 });
 
 describe("buildFormSchemaFromSpec", () => {
@@ -558,10 +588,41 @@ describe("the localized form adapter", () => {
   });
 
   it("names the record in the language the editor is working in", () => {
-    const values = { title: [{ languageCode: "pl", value: "Witaj" }] };
+    const values = {
+      title: [
+        { languageCode: "en", value: "Hello" },
+        { languageCode: "pl", value: "Witaj" },
+      ],
+    };
 
     expect(contentTitleFromValues(localizedSpec, values, "pl")).toBe("Witaj");
-    expect(contentTitleFromValues(localizedSpec, values, "en")).toBeUndefined();
+    expect(contentTitleFromValues(localizedSpec, values, "en")).toBe("Hello");
+  });
+
+  it("falls back to the default language, then to any language with a title", () => {
+    expect(
+      contentTitleFromValues(
+        localizedSpec,
+        {
+          title: [
+            { languageCode: "de", value: "Hallo" },
+            { languageCode: "en", value: "Hello" },
+            { languageCode: "pl", value: "  " },
+          ],
+        },
+        "pl",
+      ),
+    ).toBe("Hello");
+    expect(
+      contentTitleFromValues(
+        localizedSpec,
+        { title: [{ languageCode: "de", value: "Hallo" }] },
+        "pl",
+      ),
+    ).toBe("Hallo");
+    expect(
+      contentTitleFromValues(localizedSpec, { title: [] }, "pl"),
+    ).toBeUndefined();
   });
 });
 

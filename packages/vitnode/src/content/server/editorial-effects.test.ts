@@ -1,21 +1,17 @@
 // @vitest-environment node
 import type { Context } from "hono";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { testEditorialPostContentType } from "@/tests/content-fixtures";
+import { testSearchablePostContentType } from "@/tests/content-fixtures";
 
 import type { ContentEditorialOutcome } from "./editorial-service";
 
-const syncContentSearch = vi.fn();
-
-vi.mock("./search-sync", () => ({
-  syncContentSearch: (...args: unknown[]) => syncContentSearch(...args),
-}));
-
-const { contentEditorialEffects } = await import("./editorial-effects");
+import { contentEditorialEffects } from "./editorial-effects";
 
 const OWNER = "@vitnode/example";
+
+const definition = testSearchablePostContentType;
 
 const outcome = (
   overrides: Partial<ContentEditorialOutcome<never>> = {},
@@ -53,6 +49,10 @@ const harness = ({
   emit?: ReturnType<typeof vi.fn>;
   log?: ReturnType<typeof vi.fn>;
 } = {}) => {
+  const search = {
+    delete: vi.fn().mockResolvedValue(undefined),
+    index: vi.fn().mockResolvedValue(undefined),
+  };
   const store: Record<string, unknown> = {
     events: { emit },
     // The effects layer writes post-commit failures here. Present on the
@@ -60,12 +60,14 @@ const harness = ({
     // shape a real request has.
     log: { error: log },
     plugin: { id: contextPlugin },
+    search,
   };
 
   return {
     c: { get: (key: string) => store[key] } as unknown as Context,
     emit,
     log,
+    search,
   };
 };
 
@@ -85,29 +87,29 @@ const withFailure = () =>
     status: "delivered",
   });
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  syncContentSearch.mockResolvedValue({
-    action: "upsert",
-    documentId: "example.post:7",
-  });
-});
-
 describe("contentEditorialEffects", () => {
   it("returns what the event transport and the index both reported", async () => {
     // Both, because `EventsModel.emit` does not throw: discarding its result
     // makes a dead listener look exactly like a delivered one.
-    const { c } = harness();
+    const { c, search } = harness();
 
-    const result = await contentEditorialEffects(
-      c,
-      testEditorialPostContentType,
-      outcome(),
-      { pluginId: OWNER },
-    );
+    const result = await contentEditorialEffects(c, definition, outcome(), {
+      pluginId: OWNER,
+    });
 
     expect(result.event).toMatchObject({ delivered: 1, failures: [] });
-    expect(result.search).toMatchObject({ action: "upsert" });
+    expect(result.search).toEqual({
+      action: "upsert",
+      documentId: `${definition.id}:7`,
+    });
+    expect(search.index).toHaveBeenCalledTimes(1);
+    expect(search.index.mock.calls[0][0]).toMatchObject({
+      isPublic: true,
+      itemId: 7,
+      itemType: definition.id,
+      pluginId: OWNER,
+      title: "Hello world",
+    });
   });
 
   it("surfaces a listener failure rather than swallowing it", async () => {
@@ -127,12 +129,9 @@ describe("contentEditorialEffects", () => {
       }),
     });
 
-    const result = await contentEditorialEffects(
-      c,
-      testEditorialPostContentType,
-      outcome(),
-      { pluginId: OWNER },
-    );
+    const result = await contentEditorialEffects(c, definition, outcome(), {
+      pluginId: OWNER,
+    });
 
     expect(result.event?.failures).toHaveLength(1);
   });
@@ -140,7 +139,7 @@ describe("contentEditorialEffects", () => {
   it("still writes the search document when the event failed", async () => {
     // Two independent systems, and an interactive mutation has already
     // committed by the time either runs.
-    const { c } = harness({
+    const { c, search } = harness({
       emit: vi.fn().mockResolvedValue({
         delivered: 0,
         eventId: "event-1",
@@ -156,17 +155,17 @@ describe("contentEditorialEffects", () => {
       }),
     });
 
-    await contentEditorialEffects(c, testEditorialPostContentType, outcome(), {
+    await contentEditorialEffects(c, definition, outcome(), {
       pluginId: OWNER,
     });
 
-    expect(syncContentSearch).toHaveBeenCalledTimes(1);
+    expect(search.index).toHaveBeenCalledTimes(1);
   });
 
   it("credits the content type's owner, not the plugin on the context", async () => {
     const { c, emit } = harness({ contextPlugin: "@vitnode/core" });
 
-    await contentEditorialEffects(c, testEditorialPostContentType, outcome(), {
+    await contentEditorialEffects(c, definition, outcome(), {
       pluginId: OWNER,
     });
 
@@ -176,18 +175,19 @@ describe("contentEditorialEffects", () => {
   it("does no work at all for a no-op outcome", async () => {
     // A double-clicked publish button transitions nothing, so there is nothing
     // to announce and nothing to index.
-    const { c, emit } = harness();
+    const { c, emit, search } = harness();
 
     const result = await contentEditorialEffects(
       c,
-      testEditorialPostContentType,
+      definition,
       outcome({ changed: false }),
       { pluginId: OWNER },
     );
 
     expect(result).toEqual({ event: null, search: null });
     expect(emit).not.toHaveBeenCalled();
-    expect(syncContentSearch).not.toHaveBeenCalled();
+    expect(search.index).not.toHaveBeenCalled();
+    expect(search.delete).not.toHaveBeenCalled();
   });
 
   describe("the payload", () => {
@@ -195,12 +195,9 @@ describe("contentEditorialEffects", () => {
       // Absent rather than null, so no existing listener sees a new field.
       const { c, emit } = harness();
 
-      await contentEditorialEffects(
-        c,
-        testEditorialPostContentType,
-        outcome(),
-        { pluginId: OWNER },
-      );
+      await contentEditorialEffects(c, definition, outcome(), {
+        pluginId: OWNER,
+      });
 
       const payload = emit.mock.calls[0][1] as Record<string, unknown>;
       expect(payload).not.toHaveProperty("scheduleId");
@@ -210,12 +207,11 @@ describe("contentEditorialEffects", () => {
     it("carries the booking and its owner when a schedule fired it", async () => {
       const { c, emit } = harness();
 
-      await contentEditorialEffects(
-        c,
-        testEditorialPostContentType,
-        outcome(),
-        { pluginId: OWNER, scheduledBy: 3, scheduleId: 55 },
-      );
+      await contentEditorialEffects(c, definition, outcome(), {
+        pluginId: OWNER,
+        scheduledBy: 3,
+        scheduleId: 55,
+      });
 
       expect(emit.mock.calls[0][1]).toMatchObject({
         contentId: 7,
@@ -231,17 +227,14 @@ describe("contentEditorialEffects", () => {
     it("logs the failed listener with the record it belongs to", async () => {
       const { c, log } = harness({ emit: withFailure() });
 
-      await contentEditorialEffects(
-        c,
-        testEditorialPostContentType,
-        outcome(),
-        { pluginId: OWNER },
-      );
+      await contentEditorialEffects(c, definition, outcome(), {
+        pluginId: OWNER,
+      });
 
       expect(log).toHaveBeenCalledTimes(1);
       const message = String(log.mock.calls[0][0]);
       expect(message).toContain("[content-effects]");
-      expect(message).toContain(testEditorialPostContentType.id);
+      expect(message).toContain(definition.id);
       expect(message).toContain('"itemId":7');
       expect(message).toContain("send-notification");
       expect(message).toContain("Service unavailable");
@@ -252,7 +245,7 @@ describe("contentEditorialEffects", () => {
 
       await contentEditorialEffects(
         c,
-        testEditorialPostContentType,
+        definition,
         outcome({ operation: "unpublish" }),
         { pluginId: OWNER },
       );
@@ -265,12 +258,9 @@ describe("contentEditorialEffects", () => {
       // nobody reads.
       const { c, log } = harness();
 
-      await contentEditorialEffects(
-        c,
-        testEditorialPostContentType,
-        outcome(),
-        { pluginId: OWNER },
-      );
+      await contentEditorialEffects(c, definition, outcome(), {
+        pluginId: OWNER,
+      });
 
       expect(log).not.toHaveBeenCalled();
     });
@@ -286,12 +276,9 @@ describe("contentEditorialEffects", () => {
         .spyOn(console, "error")
         .mockImplementation(() => undefined);
 
-      const result = await contentEditorialEffects(
-        c,
-        testEditorialPostContentType,
-        outcome(),
-        { pluginId: OWNER },
-      );
+      const result = await contentEditorialEffects(c, definition, outcome(), {
+        pluginId: OWNER,
+      });
 
       expect(result.event?.failures).toHaveLength(1);
       expect(console_).toHaveBeenCalled();
@@ -299,16 +286,14 @@ describe("contentEditorialEffects", () => {
     });
 
     it("still writes the search document after reporting the failure", async () => {
-      const { c } = harness({ emit: withFailure() });
+      const { c, log, search } = harness({ emit: withFailure() });
 
-      await contentEditorialEffects(
-        c,
-        testEditorialPostContentType,
-        outcome(),
-        { pluginId: OWNER },
-      );
+      await contentEditorialEffects(c, definition, outcome(), {
+        pluginId: OWNER,
+      });
 
-      expect(syncContentSearch).toHaveBeenCalledTimes(1);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(search.index).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { AnyContentTypeDefinition } from "@/content/types";
 
+import { resolveLangValue } from "@/lib/helpers/multi-lang";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { TranslationRow } from "../content-mutation";
@@ -149,10 +150,20 @@ export const contentItemTitle = ({
 
   const raw =
     definition.fields[titleField]?.localized === true
-      ? translations.find(
-          entry => entry.locale.toLowerCase() === locale.toLowerCase(),
-        )?.values[titleField]
+      ? resolveLangValue(
+          translations.map(entry => ({
+            languageCode: entry.locale,
+            value:
+              typeof entry.values[titleField] === "string"
+                ? entry.values[titleField]
+                : "",
+          })),
+          {
+            defaultLanguage: definition.localization.defaultLocale,
+            locale,
+          },
+        )
       : row[titleField];
 
-  return typeof raw === "string" && raw !== "" ? raw : `#${row.id}`;
+  return typeof raw === "string" && raw.trim() !== "" ? raw : `#${row.id}`;
 };

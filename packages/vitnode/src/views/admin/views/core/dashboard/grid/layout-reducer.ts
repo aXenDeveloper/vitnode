@@ -1,4 +1,5 @@
 import type {
+  AdminDashboardWidgetRows,
   AdminDashboardWidgetSpan,
   DashboardLayoutItem,
   DashboardWidgetOption,
@@ -9,7 +10,12 @@ import { nextInstanceId } from "../widgets/instance-id";
 export type DashboardLayoutState = DashboardLayoutItem[];
 
 export type DashboardLayoutAction =
-  | { id: string; span: AdminDashboardWidgetSpan; type: "resize" }
+  | {
+      id: string;
+      rows?: AdminDashboardWidgetRows;
+      span?: AdminDashboardWidgetSpan;
+      type: "resize";
+    }
   | { id: string; type: "remove" }
   | { index: number; toIndex: number; type: "move" }
   | { index?: number; type: "add"; widget: DashboardWidgetOption }
@@ -65,7 +71,13 @@ export const dashboardLayoutReducer = (
 
     case "resize":
       return state.map(item =>
-        item.id === action.id ? { ...item, span: action.span } : item,
+        item.id === action.id
+          ? {
+              ...item,
+              rows: action.rows ?? item.rows,
+              span: action.span ?? item.span,
+            }
+          : item,
       );
 
     default:
@@ -89,4 +101,15 @@ export const isLayoutDirty = (
       item.rows !== other.rows
     );
   });
+};
+
+export const withSavedSettings = (
+  items: DashboardLayoutState,
+  saved: DashboardLayoutState,
+): DashboardLayoutState => {
+  const settings = new Map(saved.map(item => [item.id, item.settings]));
+
+  return items.map(item =>
+    settings.has(item.id) ? { ...item, settings: settings.get(item.id) } : item,
+  );
 };

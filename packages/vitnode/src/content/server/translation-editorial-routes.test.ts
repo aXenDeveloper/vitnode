@@ -4,11 +4,19 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+
+import { createTestCache } from "@/tests/cache";
 import {
   testLocalizedArticleContentType,
   testLocalizedGuideContentType,
 } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
+import { CONTENT_PERMISSIONS } from "../const";
 import {
   ContentRevisionNotRestorable,
   ContentTranslationVersionConflict,
@@ -17,29 +25,24 @@ import { contentPermissionEntries } from "../registry";
 import { createContentModel } from "./model";
 import { buildContentTranslationRoutes } from "./translation-routes";
 
-let permissionGranted = true;
-const permissionChecks: { module: string; permission: string }[] = [];
 const emitted = vi.fn(() => ({ failures: [], listeners: 0 }));
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async (
-    _c: unknown,
-    args: { module: string; permission: string },
-  ) => {
-    permissionChecks.push({
-      module: args.module,
-      permission: args.permission,
-    });
-    if (!permissionGranted) {
-      const { HTTPException } = await import("hono/http-exception");
-      throw new HTTPException(403, { message: "Forbidden" });
-    }
-  },
-}));
 
 const guide = createContentModel(testLocalizedGuideContentType);
 const plain = createContentModel(testLocalizedArticleContentType);
 const PLUGIN_ID = "@vitnode/example";
+
+const guidePermission = (permission: string): PermissionsStaffArgs => ({
+  module: "localized_guide",
+  permission,
+  plugin: PLUGIN_ID,
+});
+
+const everyGuidePermissionExcept = (
+  permission: string,
+): PermissionsStaffArgs[] =>
+  Object.values(CONTENT_PERMISSIONS)
+    .filter(entry => entry !== permission)
+    .map(guidePermission);
 
 const adminUser = {
   avatarColor: "000000",
@@ -89,7 +92,11 @@ const outcome = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const harness = ({ allow = true }: { allow?: boolean } = {}) => {
+const harness = async (
+  permissions:
+    | PermissionsStaffArgs[]
+    | typeof ROOT_STAFF_PERMISSIONS = ROOT_STAFF_PERMISSIONS,
+) => {
   const editorial = {
     create: vi.fn(),
     delete: vi.fn(),
@@ -101,8 +108,8 @@ const harness = ({ allow = true }: { allow?: boolean } = {}) => {
     update: vi.fn(),
   };
 
-  permissionGranted = allow;
-  permissionChecks.length = 0;
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, { permissions, userId: adminUser.id });
   vi.spyOn(guide, "translationEditorialService", "get").mockReturnValue(
     () => editorial,
   );
@@ -117,7 +124,8 @@ const harness = ({ allow = true }: { allow?: boolean } = {}) => {
 
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
-    c.set("admin", allow ? { user: adminUser } : null);
+    c.set("admin", { user: adminUser });
+    c.set("cache", cache);
     c.set("events", { emit: emitted } as never);
     await next();
   };
@@ -187,7 +195,7 @@ describe("route registration", () => {
 
 describe("publish and unpublish", () => {
   it("publishes one locale and announces it once", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.publish.mockResolvedValue(
       outcome({ row: row({ status: "published", version: 2 }) }),
     );
@@ -204,7 +212,7 @@ describe("publish and unpublish", () => {
   });
 
   it("announces nothing for an idempotent publish", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.publish.mockResolvedValue(
       outcome({ changed: false, revisionId: null }),
     );
@@ -216,26 +224,31 @@ describe("publish and unpublish", () => {
     expect(emitted).not.toHaveBeenCalled();
   });
 
-  it("needs `can_publish`", async () => {
-    const { app, editorial } = harness();
+  it("unpublishes with `can_publish` alone", async () => {
+    const { app, editorial } = await harness([guidePermission("can_publish")]);
     editorial.unpublish.mockResolvedValue(outcome({ operation: "unpublish" }));
 
-    await post(app, "/7/translations/pl/unpublish");
+    expect((await post(app, "/7/translations/pl/unpublish")).status).toBe(200);
+  });
 
-    expect(permissionChecks).toEqual([
-      { module: "localized_guide", permission: "can_publish" },
-    ]);
+  it("refuses to unpublish without `can_publish`", async () => {
+    const { app, editorial } = await harness(
+      everyGuidePermissionExcept("can_publish"),
+    );
+
+    expect((await post(app, "/7/translations/pl/unpublish")).status).toBe(403);
+    expect(editorial.unpublish).not.toHaveBeenCalled();
   });
 
   it("answers 404 when the locale has no translation", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.publish.mockResolvedValue(null);
 
     expect((await post(app, "/7/translations/pl/publish")).status).toBe(404);
   });
 
   it("answers a structured 409 for a stale version", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.publish.mockRejectedValue(
       new ContentTranslationVersionConflict({
         contentTypeId: testLocalizedGuideContentType.id,
@@ -264,7 +277,7 @@ describe("publish and unpublish", () => {
 
 describe("history", () => {
   it("lists one locale's revisions", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.listRevisions.mockResolvedValue({
       edges: [],
       pageInfo: { endCursor: null, hasNextPage: false },
@@ -280,7 +293,7 @@ describe("history", () => {
   });
 
   it("passes the cursor through as a version", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.listRevisions.mockResolvedValue({
       edges: [],
       pageInfo: { endCursor: null, hasNextPage: false },
@@ -294,22 +307,31 @@ describe("history", () => {
     });
   });
 
-  it("needs `can_view` to read, not `can_restore`", async () => {
-    const { app, editorial } = harness();
+  it("reads with `can_view` alone", async () => {
+    const { app, editorial } = await harness([guidePermission("can_view")]);
     editorial.listRevisions.mockResolvedValue({
       edges: [],
       pageInfo: { endCursor: null, hasNextPage: false },
     });
 
-    await app.request("/7/translations/pl/revisions");
+    expect((await app.request("/7/translations/pl/revisions")).status).toBe(
+      200,
+    );
+  });
 
-    expect(permissionChecks).toEqual([
-      { module: "localized_guide", permission: "can_view" },
-    ]);
+  it("refuses to read without `can_view`, even with `can_restore`", async () => {
+    const { app, editorial } = await harness(
+      everyGuidePermissionExcept("can_view"),
+    );
+
+    expect((await app.request("/7/translations/pl/revisions")).status).toBe(
+      403,
+    );
+    expect(editorial.listRevisions).not.toHaveBeenCalled();
   });
 
   it("answers 404 for a revision outside this locale", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.findRevision.mockResolvedValue(null);
 
     expect((await app.request("/7/translations/pl/revisions/42")).status).toBe(
@@ -319,19 +341,28 @@ describe("history", () => {
 });
 
 describe("restore", () => {
-  it("needs `can_restore`", async () => {
-    const { app, editorial } = harness();
+  it("restores with `can_restore` alone", async () => {
+    const { app, editorial } = await harness([guidePermission("can_restore")]);
     editorial.restore.mockResolvedValue(outcome({ operation: "restore" }));
 
-    await post(app, "/7/translations/pl/revisions/42/restore");
+    expect(
+      (await post(app, "/7/translations/pl/revisions/42/restore")).status,
+    ).toBe(200);
+  });
 
-    expect(permissionChecks).toEqual([
-      { module: "localized_guide", permission: "can_restore" },
-    ]);
+  it("refuses to restore without `can_restore`", async () => {
+    const { app, editorial } = await harness(
+      everyGuidePermissionExcept("can_restore"),
+    );
+
+    expect(
+      (await post(app, "/7/translations/pl/revisions/42/restore")).status,
+    ).toBe(403);
+    expect(editorial.restore).not.toHaveBeenCalled();
   });
 
   it("requires an expectedVersion", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect(
       (await post(app, "/7/translations/pl/revisions/42/restore", {})).status,
@@ -339,7 +370,7 @@ describe("restore", () => {
   });
 
   it("answers a structured 422 when the snapshot no longer fits", async () => {
-    const { app, editorial } = harness();
+    const { app, editorial } = await harness();
     editorial.restore.mockRejectedValue(
       new ContentRevisionNotRestorable({
         contentTypeId: testLocalizedGuideContentType.id,
@@ -361,7 +392,7 @@ describe("restore", () => {
   });
 
   it("rejects a non-numeric revision identifier", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     expect(
       (await post(app, "/7/translations/pl/revisions/abc/restore")).status,

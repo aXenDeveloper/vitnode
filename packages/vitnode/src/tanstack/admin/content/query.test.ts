@@ -13,6 +13,7 @@ import {
   contentOptionsQueryRoot,
 } from "@/views/admin/views/content/content-query";
 import { contentListRequestKey } from "@/views/admin/views/content/table/list-query";
+import { SEARCH_QUERY_ROOT } from "@/views/search/search-feed-query";
 
 import type { ContentListParams } from "./route-search";
 
@@ -181,6 +182,7 @@ describe("invalidateContentAfterWrite", () => {
       { key: contentOptionsQueryRoot("blog.post"), type: "remove" },
       { key: contentItemQueryRoot("blog.post", 7), type: "invalidate" },
       { key: contentListQueryRoot("blog.post"), type: "invalidate" },
+      { key: SEARCH_QUERY_ROOT, type: "invalidate" },
     ]);
   });
 
@@ -226,6 +228,7 @@ describe("invalidateContentAfterWrite", () => {
     expect(calls).toEqual([
       { key: contentOptionsQueryRoot("blog.post"), type: "remove" },
       { key: contentListQueryRoot("blog.post"), type: "invalidate" },
+      { key: SEARCH_QUERY_ROOT, type: "invalidate" },
     ]);
   });
 });

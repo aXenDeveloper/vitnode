@@ -322,7 +322,7 @@ describe("core's own blocks", () => {
     expect(offenders(entry, EDITOR_PACKAGES)).toStrictEqual([]);
   });
 
-  it("reaches no third-party module at all", () => {
-    expect(reachedSpecifiers(entry)).toStrictEqual([]);
+  it("reaches no third-party module but the icons the widgets show", () => {
+    expect(reachedSpecifiers(entry)).toStrictEqual(["lucide-react"]);
   });
 });

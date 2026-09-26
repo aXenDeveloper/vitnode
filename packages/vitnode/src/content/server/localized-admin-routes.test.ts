@@ -4,12 +4,17 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+
+import { createTestCache } from "@/tests/cache";
 import {
   testCategoryContentType,
   testLocalizedGuideContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
+import { grantStaffPermissions } from "@/tests/staff-permissions";
 
+import { CONTENT_PERMISSIONS } from "../const";
 import {
   ContentTranslationVersionConflict,
   ContentVersionConflict,
@@ -18,25 +23,19 @@ import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
-let granted = new Set<string>(["can_create", "can_edit", "can_view"]);
-const permissionChecks: string[] = [];
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async (_c: unknown, args: { permission: string }) => {
-    permissionChecks.push(args.permission);
-    if (!granted.has(args.permission)) {
-      const { HTTPException } = await import("hono/http-exception");
-      throw new HTTPException(403, { message: "Forbidden" });
-    }
-  },
-}));
-
 const guides = createContentModel(testLocalizedGuideContentType);
 const categories = createContentModel(testCategoryContentType);
 const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
 const PLUGIN_ID = "@vitnode/example";
+
+const grant = (...names: string[]): PermissionsStaffArgs[] =>
+  names.map(permission => ({
+    module: testLocalizedGuideContentType.permissionModule,
+    permission,
+    plugin: PLUGIN_ID,
+  }));
 
 const adminUser = {
   avatarColor: "000000",
@@ -102,7 +101,13 @@ interface TxLog {
   entered: boolean;
 }
 
-const harness = () => {
+const harness = async (
+  permissions = grant(
+    CONTENT_PERMISSIONS.create,
+    CONTENT_PERMISSIONS.edit,
+    CONTENT_PERMISSIONS.view,
+  ),
+) => {
   const tx = { commit: vi.fn() };
   const txLog: TxLog = { committed: false, entered: false };
 
@@ -124,9 +129,12 @@ const harness = () => {
     create: vi.fn(),
     findManyForItem: vi.fn().mockResolvedValue([]),
     findManyRowsForItem: vi.fn().mockResolvedValue([]),
+    findManyRowsForItems: vi.fn().mockResolvedValue([]),
     update: vi.fn(),
   };
 
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, { permissions, userId: adminUser.id });
   vi.spyOn(guides, "service").mockReturnValue(service as never);
   vi.spyOn(
     guides as unknown as { editorialService: unknown },
@@ -147,6 +155,7 @@ const harness = () => {
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser });
+    c.set("cache", cache);
     c.set("events", {
       emit: vi.fn(
         async () => await Promise.resolve({ failures: [], listeners: 0 }),
@@ -188,8 +197,6 @@ const post = async (
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  granted = new Set(["can_create", "can_edit", "can_view"]);
-  permissionChecks.length = 0;
 });
 
 describe("route registration", () => {
@@ -220,7 +227,7 @@ describe("route registration", () => {
 
 describe("POST /localized", () => {
   it("writes the base row and the default translation in one transaction", async () => {
-    const { app, editorial, translationEditorial, txLog } = harness();
+    const { app, editorial, translationEditorial, txLog } = await harness();
     editorial.create.mockResolvedValue({
       changed: true,
       changedFields: [],
@@ -252,7 +259,7 @@ describe("POST /localized", () => {
   });
 
   it("refuses a create with no default-locale translation", async () => {
-    const { app, editorial, txLog } = harness();
+    const { app, editorial, txLog } = await harness();
 
     const response = await post(app, "/localized", "POST", {
       // The editor was working in Polish, and the record must exist in English.
@@ -271,7 +278,7 @@ describe("POST /localized", () => {
   });
 
   it("writes the default translation before any other language", async () => {
-    const { app, editorial, translationEditorial } = harness();
+    const { app, editorial, translationEditorial } = await harness();
     editorial.create.mockResolvedValue({
       changed: true,
       changedFields: [],
@@ -303,7 +310,7 @@ describe("POST /localized", () => {
   });
 
   it("rolls the whole create back when one language is refused", async () => {
-    const { app, editorial, translationEditorial } = harness();
+    const { app, editorial, translationEditorial } = await harness();
     editorial.create.mockResolvedValue({
       changed: true,
       changedFields: [],
@@ -360,7 +367,7 @@ describe("PUT /{id}/localized", () => {
   };
 
   it("saves shared fields and two languages in one transaction", async () => {
-    const { app, editorial, translationEditorial, txLog } = harness();
+    const { app, editorial, translationEditorial, txLog } = await harness();
     editorial.update.mockResolvedValue(sharedOutcome);
     translationEditorial.update.mockImplementation(
       async (_id: number, locale: string) =>
@@ -390,7 +397,7 @@ describe("PUT /{id}/localized", () => {
   });
 
   it("touches nothing shared when only one language changed", async () => {
-    const { app, editorial, translationEditorial } = harness();
+    const { app, editorial, translationEditorial } = await harness();
     translationEditorial.update.mockResolvedValue(
       translationOutcome({ locale: "pl" }),
     );
@@ -410,7 +417,7 @@ describe("PUT /{id}/localized", () => {
   });
 
   it("commits nothing when one language's version moved", async () => {
-    const { app, editorial, translationEditorial } = harness();
+    const { app, editorial, translationEditorial } = await harness();
     editorial.update.mockResolvedValue(sharedOutcome);
     translationEditorial.update.mockImplementation(
       async (_id: number, locale: string) => {
@@ -449,7 +456,7 @@ describe("PUT /{id}/localized", () => {
   });
 
   it("reports a base version conflict before writing any language", async () => {
-    const { app, editorial, translationEditorial } = harness();
+    const { app, editorial, translationEditorial } = await harness();
     editorial.update.mockRejectedValue(
       new ContentVersionConflict({
         contentTypeId: "test.localized-guide",
@@ -476,7 +483,7 @@ describe("PUT /{id}/localized", () => {
   });
 
   it("needs `expectedVersion` to change a shared field", async () => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const response = await post(app, "/7/localized", "PUT", {
       translations: [],
@@ -487,8 +494,9 @@ describe("PUT /{id}/localized", () => {
   });
 
   it("writes a language on `can_edit` alone", async () => {
-    const { app, translationEditorial } = harness();
-    granted = new Set(["can_edit", "can_view"]);
+    const { app, translationEditorial } = await harness(
+      grant(CONTENT_PERMISSIONS.edit),
+    );
     translationEditorial.update.mockResolvedValue(
       translationOutcome({ locale: "pl" }),
     );
@@ -503,8 +511,13 @@ describe("PUT /{id}/localized", () => {
   });
 
   it("refuses the whole save without `can_edit`", async () => {
-    const { app, editorial, translationEditorial } = harness();
-    granted = new Set(["can_view"]);
+    const { app, editorial, translationEditorial } = await harness(
+      grant(
+        ...Object.values(CONTENT_PERMISSIONS).filter(
+          permission => permission !== CONTENT_PERMISSIONS.edit,
+        ),
+      ),
+    );
 
     const response = await post(app, "/7/localized", "PUT", {
       expectedVersion: 3,
@@ -517,7 +530,6 @@ describe("PUT /{id}/localized", () => {
     // Gated on the server, not on whether the browser disabled an input - and
     // one check for the shared half and the languages alike.
     expect(response.status).toBe(403);
-    expect(permissionChecks).toEqual(["can_edit"]);
     expect(editorial.update).not.toHaveBeenCalled();
     expect(translationEditorial.update).not.toHaveBeenCalled();
   });

@@ -4,32 +4,16 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+
+import { createTestCache } from "@/tests/cache";
+import { grantStaffPermissions } from "@/tests/staff-permissions";
+
+import { CONTENT_PERMISSIONS } from "../const";
 import { defineContentType } from "../define";
 import { field } from "../fields";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
-
-/** Grants for the request currently in flight. `"module:permission"`. */
-let granted = new Set<string>();
-/** What each request was asked for, in order. */
-let asked: { module: string; permission: string; plugin: string }[] = [];
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async (
-    _c: unknown,
-    args: { module: string; permission: string; plugin: string },
-  ) => {
-    asked.push({
-      module: args.module,
-      permission: args.permission,
-      plugin: args.plugin,
-    });
-    if (granted.has(`${args.module}:${args.permission}`)) return;
-
-    const { HTTPException } = await import("hono/http-exception");
-    throw new HTTPException(403, { message: "Forbidden" });
-  },
-}));
 
 /**
  * Everything a content type can switch on, at once.
@@ -91,6 +75,8 @@ const kitchenSink = defineContentType({
 const model = createContentModel(kitchenSink);
 const MODULE = kitchenSink.permissionModule;
 const PLUGIN_ID = "@vitnode/example";
+const OTHER_PLUGIN_ID = "@vitnode/other";
+const ALL_PERMISSIONS = Object.values(CONTENT_PERMISSIONS);
 
 const adminUser = {
   avatarColor: "000000",
@@ -146,12 +132,26 @@ const BODY = {
   values: { title: "Hello world" },
 };
 
+const grantOf = (
+  permissions: string[],
+  plugin = PLUGIN_ID,
+): PermissionsStaffArgs[] =>
+  permissions.map(permission => ({ module: MODULE, permission, plugin }));
+
+let cache = createTestCache();
+
+const grant = async (permissions: PermissionsStaffArgs[]) => {
+  cache = createTestCache();
+  await grantStaffPermissions(cache, { permissions, userId: adminUser.id });
+};
+
 const routes = buildContentRoutes(model, { pluginId: PLUGIN_ID });
 
 const app = (() => {
   const instance = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser });
+    c.set("cache", cache);
     c.set("events", {
       emit: async () => await Promise.resolve({ failures: [] }),
     } as never);
@@ -183,9 +183,11 @@ const request = async (method: string, path: string) =>
 const label = (route: { method: string; path: string }): string =>
   `${route.method.toUpperCase()} ${route.path}`;
 
-beforeEach(() => {
-  granted = new Set();
-  asked = [];
+const statusOf = async (route: { method: string; path: string }) =>
+  (await request(route.method.toUpperCase(), concretePath(route.path))).status;
+
+beforeEach(async () => {
+  await grant([]);
 });
 
 /**
@@ -197,11 +199,52 @@ beforeEach(() => {
  * without appearing in the matrix below - and a route with no
  * `adminStaffPermission` at all cannot join it silently, because it would answer
  * something other than 403 with every permission denied.
- *
- * The permission check itself is stubbed: it reads roles out of the database,
- * and what is under test is which `(module, permission)` each route asks for.
  */
 describe("the generated permission matrix", () => {
+  const DOCUMENTED_MATRIX: Record<string, string> = {
+    "DELETE /{id}": "can_delete",
+    "DELETE /{id}/translations/{locale}": "can_delete",
+    "GET /": "can_view",
+    "GET /options/{field}": "can_view",
+    "GET /{id}": "can_view",
+    // Read-only: it reports what the slug mutations already did, so the
+    // permission that allowed the mutation is the only one it needs. There is
+    // no manual redirect manager to gate separately.
+    "GET /{id}/delivery": "can_view",
+    "GET /{id}/public-locales": "can_view",
+    "GET /{id}/revisions": "can_view",
+    "GET /{id}/revisions/{revisionId}": "can_view",
+    "GET /{id}/schedules": "can_view",
+    "GET /{id}/translations": "can_view",
+    "GET /{id}/translations/{locale}": "can_view",
+    "GET /{id}/translations/{locale}/revisions": "can_view",
+    "GET /{id}/translations/{locale}/revisions/{revisionId}": "can_view",
+    "POST /": "can_create",
+    // The composite create the AdminCP form posts to. `can_create`, exactly
+    // like the plain one - it writes the same base row, plus the default
+    // translation the engine has always required alongside it.
+    "POST /localized": "can_create",
+    "POST /{id}/preview": "can_view",
+    "POST /{id}/publish": "can_publish",
+    "POST /{id}/revisions/{revisionId}/restore": "can_restore",
+    "POST /{id}/schedule": "can_publish",
+    "POST /{id}/schedule/{scheduleId}/cancel": "can_publish",
+    // Writing a language is editing the record, so it is the same permission
+    // the shared `PUT` asks for. There is no translation permission.
+    "POST /{id}/translations/{locale}": "can_edit",
+    "POST /{id}/translations/{locale}/preview": "can_view",
+    "POST /{id}/translations/{locale}/publish": "can_publish",
+    "POST /{id}/translations/{locale}/revisions/{revisionId}/restore":
+      "can_restore",
+    "POST /{id}/translations/{locale}/unpublish": "can_publish",
+    "POST /{id}/unpublish": "can_publish",
+    "PUT /{id}": "can_edit",
+    // The composite save. One check for the shared half and every language,
+    // because one Save button writes one record.
+    "PUT /{id}/localized": "can_edit",
+    "PUT /{id}/translations/{locale}": "can_edit",
+  };
+
   it("gates every route on a staff permission", async () => {
     // Nothing granted, so a route with a permission answers 403 and a route
     // without one answers whatever its handler does. The assertion is over the
@@ -216,63 +259,39 @@ describe("the generated permission matrix", () => {
     }
   });
 
-  it("asks for exactly the documented permission on each route", async () => {
-    const matrix: Record<string, string> = {};
+  it("documents a permission for exactly the routes the builder produced", () => {
+    expect(routes.map(({ route }) => label(route)).sort()).toEqual(
+      Object.keys(DOCUMENTED_MATRIX).sort(),
+    );
+  });
 
+  it("lets each route through on exactly the documented permission", async () => {
     for (const { route } of routes) {
-      asked = [];
-      await request(route.method.toUpperCase(), concretePath(route.path));
+      await grant(grantOf([DOCUMENTED_MATRIX[label(route)]]));
 
       // One check per route, not two: a second would mean a route gated twice,
       // where only one of the two is visible in the AdminCP permission editor.
-      expect([label(route), asked.length]).toEqual([label(route), 1]);
-      expect(asked[0].module).toBe(MODULE);
-      matrix[label(route)] = asked[0].permission;
+      expect([label(route), await statusOf(route)]).not.toEqual([
+        label(route),
+        403,
+      ]);
     }
+  });
 
-    expect(matrix).toEqual({
-      "DELETE /{id}": "can_delete",
-      "DELETE /{id}/translations/{locale}": "can_delete",
-      "GET /": "can_view",
-      "GET /options/{field}": "can_view",
-      "GET /{id}": "can_view",
-      // Read-only: it reports what the slug mutations already did, so the
-      // permission that allowed the mutation is the only one it needs. There is
-      // no manual redirect manager to gate separately.
-      "GET /{id}/delivery": "can_view",
-      "GET /{id}/public-locales": "can_view",
-      "GET /{id}/revisions": "can_view",
-      "GET /{id}/revisions/{revisionId}": "can_view",
-      "GET /{id}/schedules": "can_view",
-      "GET /{id}/translations": "can_view",
-      "GET /{id}/translations/{locale}": "can_view",
-      "GET /{id}/translations/{locale}/revisions": "can_view",
-      "GET /{id}/translations/{locale}/revisions/{revisionId}": "can_view",
-      "POST /": "can_create",
-      // The composite create the AdminCP form posts to. `can_create`, exactly
-      // like the plain one - it writes the same base row, plus the default
-      // translation the engine has always required alongside it.
-      "POST /localized": "can_create",
-      "POST /{id}/preview": "can_view",
-      "POST /{id}/publish": "can_publish",
-      "POST /{id}/revisions/{revisionId}/restore": "can_restore",
-      "POST /{id}/schedule": "can_publish",
-      "POST /{id}/schedule/{scheduleId}/cancel": "can_publish",
-      // Writing a language is editing the record, so it is the same permission
-      // the shared `PUT` asks for. There is no translation permission.
-      "POST /{id}/translations/{locale}": "can_edit",
-      "POST /{id}/translations/{locale}/preview": "can_view",
-      "POST /{id}/translations/{locale}/publish": "can_publish",
-      "POST /{id}/translations/{locale}/revisions/{revisionId}/restore":
-        "can_restore",
-      "POST /{id}/translations/{locale}/unpublish": "can_publish",
-      "POST /{id}/unpublish": "can_publish",
-      "PUT /{id}": "can_edit",
-      // The composite save. One check for the shared half and every language,
-      // because one Save button writes one record.
-      "PUT /{id}/localized": "can_edit",
-      "PUT /{id}/translations/{locale}": "can_edit",
-    });
+  it("refuses each route with every other permission granted", async () => {
+    for (const { route } of routes) {
+      const documented = DOCUMENTED_MATRIX[label(route)];
+      await grant(
+        grantOf(
+          ALL_PERMISSIONS.filter(permission => permission !== documented),
+        ),
+      );
+
+      expect([label(route), await statusOf(route)]).toEqual([
+        label(route),
+        403,
+      ]);
+    }
   });
 
   /**
@@ -286,10 +305,8 @@ describe("the generated permission matrix", () => {
    * a version they never typed.
    */
   describe("editor isolation", () => {
-    const EDITOR = [`${MODULE}:can_view`, `${MODULE}:can_edit`];
-
     const statusFor = async (method: string, path: string) => {
-      granted = new Set(EDITOR);
+      await grant(grantOf(["can_view", "can_edit"]));
 
       return (await request(method, path)).status;
     };
@@ -353,7 +370,7 @@ describe("the generated permission matrix", () => {
     });
 
     it("refuses a collection write to a viewer", async () => {
-      granted = new Set([`${MODULE}:can_view`]);
+      await grant(grantOf(["can_view"]));
 
       const res = await app.request("/7", {
         body: JSON.stringify({
@@ -368,7 +385,7 @@ describe("the generated permission matrix", () => {
     });
 
     it("lets a viewer open the picker, which reads labels and writes nothing", async () => {
-      granted = new Set([`${MODULE}:can_view`]);
+      await grant(grantOf(["can_view"]));
       vi.spyOn(model, "service").mockReturnValue({
         options: async () => await Promise.resolve([]),
       } as never);
@@ -390,12 +407,22 @@ describe("the generated permission matrix", () => {
   describe("cross-plugin isolation", () => {
     it("checks the permission under the route's own plugin", async () => {
       for (const { route } of routes) {
-        asked = [];
-        await request(route.method.toUpperCase(), concretePath(route.path));
+        await grant(grantOf(ALL_PERMISSIONS));
 
-        expect([label(route), asked[0].plugin]).toEqual([
+        expect([label(route), await statusOf(route)]).not.toEqual([
           label(route),
-          PLUGIN_ID,
+          403,
+        ]);
+      }
+    });
+
+    it("refuses every route when the module is granted under another plugin", async () => {
+      for (const { route } of routes) {
+        await grant(grantOf(ALL_PERMISSIONS, OTHER_PLUGIN_ID));
+
+        expect([label(route), await statusOf(route)]).toEqual([
+          label(route),
+          403,
         ]);
       }
     });
@@ -408,31 +435,28 @@ describe("the generated permission matrix", () => {
       const other = new OpenAPIHono();
       other.use("*", async (c, next) => {
         c.set("admin", { user: adminUser });
+        c.set("cache", cache);
         await next();
       });
       for (const { handler, route } of buildContentRoutes(model, {
-        pluginId: "@vitnode/other",
+        pluginId: OTHER_PLUGIN_ID,
       })) {
         other.openapi(route, handler);
       }
 
-      asked = [];
-      granted = new Set([`${MODULE}:can_view`]);
       vi.spyOn(model, "service").mockReturnValue({
         findMany: async () =>
           await Promise.resolve({ edges: [], pageInfo: {} }),
       } as never);
-      const res = await other.request("/");
+
+      await grant(grantOf(["can_view"]));
+      const underExample = await other.request("/");
+      await grant(grantOf(["can_view"], OTHER_PLUGIN_ID));
+      const underOther = await other.request("/");
       vi.restoreAllMocks();
 
-      // Granted by module name - the module is the same string - and the check
-      // still ran under the other plugin, which is the fact worth pinning.
-      expect(res.status).not.toBe(403);
-      expect(asked[0]).toMatchObject({
-        module: MODULE,
-        permission: "can_view",
-        plugin: "@vitnode/other",
-      });
+      expect(underExample.status).toBe(403);
+      expect(underOther.status).not.toBe(403);
     });
   });
 });

@@ -67,13 +67,14 @@ const key = ({
 }): string => `${module}:${permission}`;
 
 describe("the scan is reading real declarations", () => {
-  it("finds the seven users routes that declare one", () => {
+  it("finds the eight users routes that declare one", () => {
     expect([...declarationsIn("users").keys()]).toEqual([
       "create.route.ts",
       "image-delete.route.ts",
       "image-upload.route.ts",
       "list.route.ts",
       "show.route.ts",
+      "timeline.route.ts",
       "update.route.ts",
       "verify-email.route.ts",
     ]);

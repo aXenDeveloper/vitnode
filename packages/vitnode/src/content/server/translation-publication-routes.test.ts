@@ -4,7 +4,14 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+
+import { createTestCache } from "@/tests/cache";
 import { testStrictLocalizedPageContentType } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { createContentModel } from "./model";
 import { buildContentTranslationRoutes } from "./translation-routes";
@@ -15,22 +22,6 @@ const PLUGIN_ID = "@vitnode/example";
 const emitted = vi.fn<
   (name: string, payload: unknown) => { failures: never[]; listeners: number }
 >(() => ({ failures: [], listeners: 0 }));
-const permissionChecks: { module: string; permission: string }[] = [];
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async (
-    _c: unknown,
-    args: { module: string; permission: string },
-  ) => {
-    permissionChecks.push({
-      module: args.module,
-      permission: args.permission,
-    });
-
-    return await Promise.resolve();
-  },
-}));
-
 const adminUser = {
   avatarColor: "000000",
   headline: null,
@@ -65,7 +56,11 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const harness = () => {
+const harness = async (
+  permissions:
+    | PermissionsStaffArgs[]
+    | typeof ROOT_STAFF_PERMISSIONS = ROOT_STAFF_PERMISSIONS,
+) => {
   const translations = {
     create: vi.fn(),
     delete: vi.fn(),
@@ -81,6 +76,7 @@ const harness = () => {
     findManyByLanguageId: vi.fn().mockResolvedValue([]),
     findManyForItem: vi.fn(),
     findManyRowsForItem: vi.fn().mockResolvedValue([]),
+    findManyRowsForItems: vi.fn().mockResolvedValue([]),
     publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
     resolveLanguage: vi.fn(),
@@ -88,7 +84,8 @@ const harness = () => {
     update: vi.fn(),
   };
 
-  permissionChecks.length = 0;
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, { permissions, userId: adminUser.id });
   vi.spyOn(page, "translationService", "get").mockReturnValue(
     () => translations,
   );
@@ -96,6 +93,7 @@ const harness = () => {
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser });
+    c.set("cache", cache);
     c.set("events", { emit: emitted } as never);
     await next();
   };
@@ -143,25 +141,36 @@ describe("route registration without editorial", () => {
     expect(paths().some(path => path.includes("revisions"))).toBe(false);
   });
 
-  it("still requires `can_publish` for the transition", async () => {
-    const { app, translations } = harness();
+  const canPublish = {
+    module: "strict_localized_page",
+    permission: "can_publish",
+    plugin: PLUGIN_ID,
+  };
+
+  it("publishes with `can_publish` alone", async () => {
+    const { app, translations } = await harness([canPublish]);
     translations.publish.mockResolvedValue({
       changed: true,
       row: row({ status: "published", version: 2 }),
       version: 2,
     });
 
-    await post(app, "/7/translations/pl/publish");
+    expect((await post(app, "/7/translations/pl/publish")).status).toBe(200);
+  });
 
-    expect(permissionChecks).toEqual([
-      { module: "strict_localized_page", permission: "can_publish" },
+  it("refuses the transition without `can_publish`", async () => {
+    const { app, translations } = await harness([
+      { ...canPublish, permission: "can_edit" },
     ]);
+
+    expect((await post(app, "/7/translations/pl/publish")).status).toBe(403);
+    expect(translations.publish).not.toHaveBeenCalled();
   });
 });
 
 describe("publishing a translation without editorial", () => {
   it("moves the status through the repository and announces it once", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.publish.mockResolvedValue({
       changed: true,
       row: row({ status: "published", version: 2 }),
@@ -185,7 +194,7 @@ describe("publishing a translation without editorial", () => {
   });
 
   it("carries no revision id in the event, because there is no history", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.publish.mockResolvedValue({
       changed: true,
       row: row({ status: "published", version: 2 }),
@@ -205,7 +214,7 @@ describe("publishing a translation without editorial", () => {
   });
 
   it("is a true no-op when the translation is already published", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.publish.mockResolvedValue({
       changed: false,
       row: row({ status: "published", version: 2 }),
@@ -222,7 +231,7 @@ describe("publishing a translation without editorial", () => {
   });
 
   it("unpublishes and announces that too", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.unpublish.mockResolvedValue({
       changed: true,
       row: row({ publishedAt: new Date("2026-01-01T00:00:00Z"), version: 3 }),
@@ -243,7 +252,7 @@ describe("publishing a translation without editorial", () => {
   });
 
   it("is 404 when the locale has no translation", async () => {
-    const { app, translations } = harness();
+    const { app, translations } = await harness();
     translations.publish.mockResolvedValue(null);
 
     expect((await post(app, "/7/translations/de/publish")).status).toBe(404);

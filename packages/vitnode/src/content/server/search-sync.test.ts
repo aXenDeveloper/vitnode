@@ -4,20 +4,19 @@ import type { Context, MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
 import {
   testCategoryContentType,
   testPostContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async () => {
-    await Promise.resolve();
-  },
-}));
 
 const categories = createContentModel(testCategoryContentType);
 const searchable = createContentModel(testSearchablePostContentType);
@@ -26,6 +25,7 @@ const plain = createContentModel(testPostContentType, {
 });
 
 const PLUGIN_ID = "@vitnode/example";
+const ADMIN_ID = 1;
 
 const PUBLISHED_AT = new Date("2026-02-01T10:00:00.000Z");
 const CREATED_AT = new Date("2026-01-01T00:00:00.000Z");
@@ -51,7 +51,7 @@ const draftRow = {
   status: "draft" as const,
 };
 
-const harness = ({
+const harness = async ({
   logFails = false,
   model = searchable,
   searchFails = false,
@@ -90,6 +90,12 @@ const harness = ({
 
   vi.spyOn(model, "service").mockReturnValue(service);
 
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: ADMIN_ID,
+  });
+
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("events", {
@@ -111,7 +117,10 @@ const harness = ({
         await Promise.resolve();
       },
     });
-    c.set("admin", { user: { id: 1 } } as unknown as Context["var"]["admin"]);
+    c.set("admin", {
+      user: { id: ADMIN_ID },
+    } as unknown as Context["var"]["admin"]);
+    c.set("cache", cache);
     await next();
   };
   app.use("*", context);
@@ -140,8 +149,8 @@ describe("content search lifecycle synchronization", () => {
   });
 
   describe("create", () => {
-    it("indexes nothing for a new draft", async () => {
-      const { app, search, service } = harness();
+    it("indexes a new draft as a private document without a url", async () => {
+      const { app, search, service } = await harness();
       service.create.mockResolvedValue(draftRow);
 
       const res = await app.request("/", {
@@ -150,14 +159,20 @@ describe("content search lifecycle synchronization", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(search.index).not.toHaveBeenCalled();
+      expect(search.index).toHaveBeenCalledTimes(1);
+      expect(search.index).toHaveBeenCalledWith(
+        expect.objectContaining({ isPublic: false, itemId: 7 }),
+      );
+      expect(search.index).toHaveBeenCalledWith(
+        expect.not.objectContaining({ url: expect.anything() }),
+      );
       expect(search.delete).not.toHaveBeenCalled();
     });
   });
 
   describe("update", () => {
-    it("indexes nothing for a draft", async () => {
-      const { app, search, service } = harness();
+    it("reindexes a draft privately when an indexed field changes", async () => {
+      const { app, search, service } = await harness();
       service.update.mockResolvedValue({
         changedFields: ["title"],
         row: draftRow,
@@ -169,11 +184,13 @@ describe("content search lifecycle synchronization", () => {
       });
 
       expect(res.status).toBe(200);
-      expect(search.index).not.toHaveBeenCalled();
+      expect(search.index).toHaveBeenCalledWith(
+        expect.objectContaining({ isPublic: false, itemId: 7 }),
+      );
     });
 
     it("upserts when a published record's indexed field changes", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.update.mockResolvedValue({
         changedFields: ["title"],
         row: publishedRow,
@@ -192,7 +209,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("indexes nothing when only a non-indexed field changes", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.update.mockResolvedValue({
         changedFields: ["views"],
         row: publishedRow,
@@ -204,7 +221,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("rewrites the url when the slug changes", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.update.mockResolvedValue({
         changedFields: ["slug"],
         row: { ...publishedRow, slug: "renamed" },
@@ -220,7 +237,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("removes the document when a published record stops being indexable", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       // Still published, but there is no longer a title to show in a result.
       service.update.mockResolvedValue({
         changedFields: ["title"],
@@ -234,7 +251,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("indexes nothing when nothing changed", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.update.mockResolvedValue({
         changedFields: [],
         row: publishedRow,
@@ -251,7 +268,7 @@ describe("content search lifecycle synchronization", () => {
 
   describe("publish", () => {
     it("upserts once on a real transition", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.publish.mockResolvedValue({
         changed: true,
         publishedAt: PUBLISHED_AT,
@@ -275,7 +292,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("does nothing when the record was already published", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.publish.mockResolvedValue({
         changed: false,
         publishedAt: PUBLISHED_AT,
@@ -290,8 +307,8 @@ describe("content search lifecycle synchronization", () => {
   });
 
   describe("unpublish", () => {
-    it("deletes the document on a real transition", async () => {
-      const { app, search, service } = harness();
+    it("keeps the document as a private one on a real transition", async () => {
+      const { app, search, service } = await harness();
       service.unpublish.mockResolvedValue({
         changed: true,
         publishedAt: PUBLISHED_AT,
@@ -300,13 +317,19 @@ describe("content search lifecycle synchronization", () => {
 
       await app.request("/7/unpublish", { method: "POST" });
 
-      expect(search.delete).toHaveBeenCalledTimes(1);
-      expect(search.delete).toHaveBeenCalledWith("test.searchable", 7);
-      expect(search.index).not.toHaveBeenCalled();
+      expect(search.index).toHaveBeenCalledTimes(1);
+      expect(search.index).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdAt: PUBLISHED_AT,
+          isPublic: false,
+          itemId: 7,
+        }),
+      );
+      expect(search.delete).not.toHaveBeenCalled();
     });
 
     it("does nothing when the record was already a draft", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.unpublish.mockResolvedValue({
         changed: false,
         publishedAt: null,
@@ -321,7 +344,7 @@ describe("content search lifecycle synchronization", () => {
 
   describe("delete", () => {
     it("deletes the document for a published record", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       service.delete.mockResolvedValue(publishedRow);
 
       await app.request("/7", { method: "DELETE" });
@@ -330,7 +353,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("deletes defensively for a record that was published before", async () => {
-      const { app, search, service } = harness();
+      const { app, search, service } = await harness();
       // `publishedAt` survives an unpublish, so this row was indexed once.
       service.delete.mockResolvedValue({
         ...publishedRow,
@@ -342,19 +365,19 @@ describe("content search lifecycle synchronization", () => {
       expect(search.delete).toHaveBeenCalledWith("test.searchable", 7);
     });
 
-    it("does nothing for a never-published draft", async () => {
-      const { app, search, service } = harness();
+    it("removes the private document of a never-published draft", async () => {
+      const { app, search, service } = await harness();
       service.delete.mockResolvedValue(draftRow);
 
       await app.request("/7", { method: "DELETE" });
 
-      expect(search.delete).not.toHaveBeenCalled();
+      expect(search.delete).toHaveBeenCalledWith("test.searchable", 7);
     });
   });
 
   describe("failure handling", () => {
     it("keeps the mutation successful when the engine throws", async () => {
-      const { app, logged, service } = harness({ searchFails: true });
+      const { app, logged, service } = await harness({ searchFails: true });
       service.publish.mockResolvedValue({
         changed: true,
         publishedAt: PUBLISHED_AT,
@@ -372,7 +395,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("logs structured context", async () => {
-      const { app, logged, service } = harness({ searchFails: true });
+      const { app, logged, service } = await harness({ searchFails: true });
       service.delete.mockResolvedValue(publishedRow);
 
       await app.request("/7", { method: "DELETE" });
@@ -393,7 +416,7 @@ describe("content search lifecycle synchronization", () => {
     });
 
     it("writes no error log when synchronization succeeds", async () => {
-      const { app, logged, search, service } = harness();
+      const { app, logged, search, service } = await harness();
       service.publish.mockResolvedValue({
         changed: true,
         publishedAt: PUBLISHED_AT,
@@ -415,7 +438,7 @@ describe("content search lifecycle synchronization", () => {
         .mockImplementation(() => undefined);
 
       try {
-        const { app, logged, service } = harness({
+        const { app, logged, service } = await harness({
           logFails: true,
           searchFails: true,
         });
@@ -449,7 +472,7 @@ describe("content search lifecycle synchronization", () => {
         .mockImplementation(() => undefined);
 
       try {
-        const { app, service } = harness({ searchFails: true });
+        const { app, service } = await harness({ searchFails: true });
         service.delete.mockResolvedValue(publishedRow);
 
         const res = await app.request("/7", { method: "DELETE" });
@@ -464,7 +487,7 @@ describe("content search lifecycle synchronization", () => {
 
   describe("content types without search", () => {
     it("never touches the search engine", async () => {
-      const { app, search, service } = harness({ model: plain });
+      const { app, search, service } = await harness({ model: plain });
       service.publish.mockResolvedValue({
         changed: true,
         publishedAt: PUBLISHED_AT,

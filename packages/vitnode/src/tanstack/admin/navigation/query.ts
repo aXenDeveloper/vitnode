@@ -74,12 +74,13 @@ export const useAdminNavigationMutations = (): {
     return {
       onDelete: async id => await settle(await deleteAdminNavigation(id)),
       onReorder: async body => await settle(await reorderAdminNavigation(body)),
-      onSave: async ({ id, values }) => {
+      onSave: async ({ id, parentId, values }) => {
         const texts = {
           description: values.description,
           icon: values.icon === "" ? null : values.icon,
           isOpenInNewTab: values.isOpenInNewTab,
           title: values.title,
+          ...(parentId === undefined ? {} : { parentId }),
         };
 
         if (id !== undefined) {

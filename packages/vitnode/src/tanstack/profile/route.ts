@@ -12,7 +12,11 @@ import {
 
 import { userProfileQuery } from "./query";
 
-export const PROFILE_NAMESPACES = ["core.global", "core.profile"] as const;
+export const PROFILE_NAMESPACES = [
+  "core.global",
+  "core.profile",
+  "core.search",
+] as const;
 
 export interface ProfileLoaderContext {
   queryClient: QueryClient;

@@ -5,26 +5,18 @@ import { Hono } from "hono";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
 import { core_admin_permissions } from "@/database/admins";
 import { core_sessions_known_devices } from "@/database/sessions";
+import { core_users } from "@/database/users";
 import { parseSetCookies } from "@/lib/fetcher/set-cookie";
 
-// `checkIfUserIsAdmin` resolves the user before it looks at permissions, and
-// that path is a module of its own with no bearing on cookie attributes.
-vi.mock("./user", () => ({
-  UserModel: class {
-    getUserById = async () =>
-      await Promise.resolve({ id: 7, roleId: 1, name: "Test" });
-  },
-}));
-
-const { DeviceModel } = await import("./device");
-const { SessionModel } = await import("./session");
-const { SessionAdminModel } = await import("./session-admin");
+import { DeviceModel } from "./device";
+import { SessionModel } from "./session";
+import { SessionAdminModel } from "./session-admin";
 
 type Authorization = EnvVariablesVitNode["core"]["authorization"];
 
@@ -52,6 +44,11 @@ const fakeDb = () => {
         // the device cookie.
         return [];
       }
+      if (op.kind === "select" && op.table === core_users) {
+        return [
+          { avatarKey: null, coverKey: null, id: 7, name: "Test", roleId: 1 },
+        ];
+      }
       if (op.kind === "select" && op.table === core_admin_permissions) {
         return [{ id: 1 }];
       }
@@ -65,6 +62,7 @@ const fakeDb = () => {
 
         return self;
       },
+      leftJoin: () => self,
       limit: () => self,
       returning: () => self,
       set: () => self,

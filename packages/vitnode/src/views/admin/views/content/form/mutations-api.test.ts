@@ -1,43 +1,56 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { requestHandler } from "@tanstack/react-start/server";
+import {
+  afterEach,
+  aroundEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
-import type * as contentRequest from "../content-request";
-import type { ContentApiRequest } from "../content-request";
-
-const fetchMock = vi.fn<(request: ContentApiRequest) => Promise<Response>>();
-
-vi.mock("../content-request", async () => {
-  const actual =
-    await vi.importActual<typeof contentRequest>("../content-request");
-
-  return {
-    ...actual,
-    contentApiFetch: async (request: ContentApiRequest) =>
-      await fetchMock(request),
-  };
-});
-
-const {
+import {
   createContentInBrowser,
   editContentInBrowser,
   editLocalizedContentInBrowser,
   loadContentOptionsInBrowser,
   setContentPublishedInBrowser,
-} = await import("./mutations-api");
+} from "./mutations-api";
+
+const API_ORIGIN = "http://api.test";
+const MODULE_PATH = "/api/@vitnode/blog/admin/content/posts";
 
 const TARGET = { permissionModule: "posts", pluginId: "@vitnode/blog" };
 
+let respond = (): Response => new Response(null, { status: 200 });
+
+const apiFetch = vi.fn<typeof fetch>(
+  async () => await Promise.resolve(respond()),
+);
+
+const sent = (index = 0) => {
+  const [url, init] = apiFetch.mock.calls[index] ?? [];
+
+  if (!(url instanceof URL)) throw new Error("no request reached fetch");
+
+  const body: unknown =
+    typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+
+  return {
+    body,
+    method: init?.method,
+    path: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+  };
+};
+
 const answers = (status: number, body: unknown) => {
-  fetchMock.mockImplementation(
-    async () =>
-      await Promise.resolve(new Response(JSON.stringify(body), { status })),
-  );
+  respond = () => new Response(JSON.stringify(body), { status });
 };
 
 const refuses = (status: number, body: string) => {
-  fetchMock.mockImplementation(
-    async () => await Promise.resolve(new Response(body, { status })),
-  );
+  respond = () => new Response(body, { status });
 };
 
 const versionConflict = JSON.stringify({
@@ -54,8 +67,30 @@ const uniqueConflict = JSON.stringify({
   itemId: 7,
 });
 
+const insideStartRequest = async (
+  runTest: () => Promise<void>,
+): Promise<void> => {
+  await requestHandler(async () => {
+    await runTest();
+
+    return new Response(null, { status: 204 });
+  })(new Request(`${API_ORIGIN}/admin/content/posts`), undefined);
+};
+
+aroundEach(insideStartRequest);
+
 beforeEach(() => {
-  fetchMock.mockReset();
+  respond = () => new Response(null, { status: 200 });
+  apiFetch.mockClear();
+  vi.stubEnv("VITNODE_API_URL", API_ORIGIN);
+  vi.stubGlobal("fetch", apiFetch);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("a refused write", () => {
@@ -103,7 +138,7 @@ describe("a refused write", () => {
     // `rawApiFetch` throws on a 500. A form that is still open with the editor's
     // unsaved text in it has to receive a result, or the error boundary replaces
     // it and the work is gone.
-    fetchMock.mockRejectedValue(new Error("500 - /api/…\nboom"));
+    refuses(500, "boom");
 
     await expect(
       createContentInBrowser(TARGET, { title: "Hi" }),
@@ -132,10 +167,10 @@ describe("the version precondition", () => {
       values: { title: "Hi" },
     });
 
-    expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({
+    expect(sent()).toMatchObject({
       body: { expectedVersion: 4, values: { title: "Hi" } },
-      method: "put",
-      path: "/7",
+      method: "PUT",
+      path: `${MODULE_PATH}/7`,
     });
   });
 
@@ -151,9 +186,7 @@ describe("the version precondition", () => {
       values: { title: "Hi" },
     });
 
-    expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({
-      body: { title: "Hi" },
-    });
+    expect(sent().body).toEqual({ title: "Hi" });
   });
 
   it("reads the version back, so the next save guards on the right one", async () => {
@@ -192,9 +225,7 @@ describe("the version precondition", () => {
       values: undefined,
     });
 
-    expect(fetchMock.mock.calls[0]?.[0].body).not.toHaveProperty(
-      "expectedVersion",
-    );
+    expect(sent().body).not.toHaveProperty("expectedVersion");
   });
 
   it("omits the shared half of a localized save when nothing shared moved", async () => {
@@ -208,16 +239,17 @@ describe("the version precondition", () => {
       values: undefined,
     });
 
-    expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({
+    expect(sent()).toMatchObject({
       body: {
         expectedVersion: 4,
         translations: [
           { expectedVersion: 9, locale: "pl", values: { t: "x" } },
         ],
       },
-      path: "/7/localized",
+      method: "PUT",
+      path: `${MODULE_PATH}/7/localized`,
     });
-    expect(fetchMock.mock.calls[0]?.[0].body).not.toHaveProperty("values");
+    expect(sent().body).not.toHaveProperty("values");
   });
 });
 
@@ -231,7 +263,7 @@ describe("a save with nothing in it", () => {
       }),
     ).resolves.toEqual({ unchanged: true });
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(apiFetch).not.toHaveBeenCalled();
   });
 
   it("is reported as unchanged rather than as a success", async () => {
@@ -255,9 +287,9 @@ describe("publication", () => {
     await expect(
       setContentPublishedInBrowser(TARGET, 7, "publish"),
     ).resolves.toEqual({ version: 6 });
-    expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({
-      method: "post",
-      path: "/7/publish",
+    expect(sent()).toMatchObject({
+      method: "POST",
+      path: `${MODULE_PATH}/7/publish`,
     });
   });
 
@@ -266,7 +298,7 @@ describe("publication", () => {
 
     await setContentPublishedInBrowser(TARGET, 7, "unpublish");
 
-    expect(fetchMock.mock.calls[0]?.[0].path).toBe("/7/unpublish");
+    expect(sent().path).toBe(`${MODULE_PATH}/7/unpublish`);
   });
 });
 
@@ -295,8 +327,9 @@ describe("picker options", () => {
 
     await loadContentOptionsInBrowser(TARGET, "categoryId", "", [3, 9]);
 
-    expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({
-      path: "/options/categoryId",
+    expect(sent()).toMatchObject({
+      method: "GET",
+      path: `${MODULE_PATH}/options/categoryId`,
       query: { ids: "3,9" },
     });
   });

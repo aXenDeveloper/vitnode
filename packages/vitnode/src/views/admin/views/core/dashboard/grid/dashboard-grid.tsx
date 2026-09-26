@@ -1,5 +1,6 @@
 import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import { LayoutGridIcon, PencilIcon } from "lucide-react";
+import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -11,25 +12,40 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-import type { AdminDashboardWidgetSpan } from "../widgets/types";
-
 import { useDashboardBoard } from "./board-context";
-import { DropPlaceholder } from "./drop-placeholder";
+import { DropPlaceholder, IncomingPlaceholder } from "./drop-placeholder";
 import { DashboardPanelActions } from "./edit-actions";
+import { INCOMING_ID } from "./incoming";
 import { gridClasses } from "./span-classes";
 import { WidgetCard } from "./widget-card";
 import { WidgetPanel } from "./widget-panel";
+import { WidgetPropertiesPanel } from "./widget-properties";
 
 export const DashboardGrid = () => {
   const t = useTranslations("admin.dashboard.widgets");
   const {
+    addWidget,
+    arrivingId,
     available,
     dispatch,
+    gridRef,
+    incoming,
     isEditing,
     placed,
-    refreshWidget,
+    select,
+    selected,
     setIsEditing,
   } = useDashboardBoard();
+
+  const placedIds = placed.map(widget => widget.instanceId);
+  const sortableIds =
+    incoming === null
+      ? placedIds
+      : placedIds.toSpliced(incoming.index, 0, INCOMING_ID);
+  const incomingSlot =
+    incoming === null ? null : (
+      <IncomingPlaceholder key={INCOMING_ID} widget={incoming.widget} />
+    );
 
   return (
     <>
@@ -48,25 +64,34 @@ export const DashboardGrid = () => {
           </Button>
         </Empty>
       ) : (
-        <SortableContext
-          items={placed.map(widget => widget.instanceId)}
-          strategy={rectSortingStrategy}
-        >
-          <div className={gridClasses}>
-            {placed.map(widget => (
-              <WidgetCard
-                isEditing={isEditing}
-                key={widget.instanceId}
-                onRemove={id => dispatch({ type: "remove", id })}
-                onResize={(id, span: AdminDashboardWidgetSpan) =>
-                  dispatch({ type: "resize", id, span })
-                }
-                onSettingsSaved={() => refreshWidget(widget.instanceId)}
-                widget={widget}
-              />
+        <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+          <div className={gridClasses} ref={gridRef}>
+            {placed.map((widget, index) => (
+              <React.Fragment key={widget.instanceId}>
+                {incoming?.index === index ? incomingSlot : null}
+                <WidgetCard
+                  isArriving={widget.instanceId === arrivingId}
+                  isEditing={isEditing}
+                  isSelected={widget.instanceId === selected?.instanceId}
+                  onRemove={id => dispatch({ type: "remove", id })}
+                  onResize={(id, size) =>
+                    dispatch({ type: "resize", id, ...size })
+                  }
+                  onSelect={select}
+                  widget={widget}
+                />
+              </React.Fragment>
             ))}
 
-            {isEditing && <DropPlaceholder isEmpty={placed.length === 0} />}
+            {incoming !== null && incoming.index >= placed.length
+              ? incomingSlot
+              : null}
+
+            {isEditing && (
+              <DropPlaceholder
+                isEmpty={placed.length === 0 && incoming === null}
+              />
+            )}
           </div>
         </SortableContext>
       )}
@@ -74,6 +99,15 @@ export const DashboardGrid = () => {
       <WidgetPanel
         actions={<DashboardPanelActions />}
         isOpen={isEditing}
+        onAdd={addWidget}
+        properties={
+          selected === null ? null : (
+            <WidgetPropertiesPanel
+              key={selected.instanceId}
+              widget={selected}
+            />
+          )
+        }
         widgets={available}
       />
     </>

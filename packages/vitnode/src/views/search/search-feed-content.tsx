@@ -6,13 +6,14 @@ import { useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import type { SearchFeedQueryOptions } from "./search-feed-query";
-import type { SearchResultItem } from "./types";
+import type { SearchFeedPage, SearchResultItem } from "./types";
 
 import { getSearchTypeRenderer } from "./registry";
 
@@ -126,6 +127,12 @@ const ItemTitle = ({ item }: { item: SearchResultItem }) =>
     <>{item.title}</>
   );
 
+const DraftBadge = () => {
+  const t = useTranslations("core.search");
+
+  return <Badge variant="warning">{t("draft")}</Badge>;
+};
+
 const TimelineItem = ({
   item,
   isLast,
@@ -151,6 +158,7 @@ const TimelineItem = ({
           </>
         )}
         <DateFormat date={item.createdAt} />
+        {!item.isPublic && <DraftBadge />}
       </div>
       <h3 className="text-xl leading-tight font-bold">{item.title}</h3>
       {snippet && <p className="text-muted-foreground">{snippet}</p>}
@@ -215,6 +223,7 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
               </span>
             )}
             <DateFormat date={item.createdAt} />
+            {!item.isPublic && <DraftBadge />}
           </div>
 
           <h3 className="text-foreground truncate text-lg font-semibold">
@@ -232,18 +241,23 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
   );
 };
 
-export const SearchFeedContent = ({
-  queryOptions,
+export interface SearchFeedListQuery {
+  data?: { pages: readonly SearchFeedPage[] };
+  fetchNextPage: () => Promise<unknown>;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoading: boolean;
+}
+
+export const SearchFeedList = ({
+  query: { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading },
   variant = "list",
 }: {
-  queryOptions: SearchFeedQueryOptions;
+  query: SearchFeedListQuery;
   variant?: SearchFeedVariant;
 }) => {
   const t = useTranslations("core.search");
   const sentinelRef = React.useRef<HTMLDivElement>(null);
-
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery(queryOptions);
 
   React.useEffect(() => {
     const el = sentinelRef.current;
@@ -321,4 +335,16 @@ export const SearchFeedContent = ({
       {loadMore}
     </div>
   );
+};
+
+export const SearchFeedContent = ({
+  queryOptions,
+  variant = "list",
+}: {
+  queryOptions: SearchFeedQueryOptions;
+  variant?: SearchFeedVariant;
+}) => {
+  const query = useInfiniteQuery(queryOptions);
+
+  return <SearchFeedList query={query} variant={variant} />;
 };

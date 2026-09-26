@@ -607,6 +607,23 @@ type ContentDisplayColumn<
   | ContentSystemField
   | ScalarDisplayFieldKeys<TFields>;
 
+type ContentReferenceListFieldKeys<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends {
+      kind: "relation" | "user";
+      multiple: true;
+    }
+      ? K
+      : never;
+  }[keyof TFields];
+
+type ContentSingleFileFieldKeys<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends { kind: "file"; multiple: false }
+      ? K
+      : never;
+  }[keyof TFields];
+
 export interface ContentAdminListConfig<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
@@ -619,7 +636,10 @@ export interface ContentAdminListConfig<
    * record's translation in the reader's own language. Ordering and filtering
    * still address the base table, so `orderableFields` stays shared-only.
    */
-  columns?: ContentDisplayColumn<TFields, TPublication, TEditorial>[];
+  columns?: (
+    | ContentDisplayColumn<TFields, TPublication, TEditorial>
+    | ContentReferenceListFieldKeys<TFields>
+  )[];
   defaultOrder?: "asc" | "desc";
   defaultOrderBy?: ContentAddressableColumn<TFields, TPublication, TEditorial>;
   /**
@@ -629,6 +649,7 @@ export interface ContentAdminListConfig<
   orderableFields?: ScalarColumnFieldKeys<TFields>[];
   /** Only shared `text` and `textarea` fields may be searched. */
   searchableFields?: ScalarColumnFieldKeys<TFields>[];
+  thumbnailField?: ContentSingleFileFieldKeys<TFields>;
 }
 
 /**
@@ -786,6 +807,7 @@ export interface ResolvedContentAdminConfig {
     defaultOrderBy: string;
     orderableFields: string[];
     searchableFields: string[];
+    thumbnailField: null | string;
   };
   navigation: { enabled: boolean };
   /** The path under `/admin/content/`, e.g. `blog/articles`. Never empty. */
@@ -1079,6 +1101,11 @@ export interface ContentRepeatableTable {
   tableName: string;
 }
 
+export type ContentSearchAuthorField<TFields> = ContentFieldNamesOfKind<
+  TFields,
+  "user"
+>;
+
 export type ContentSearchDescriptionField<
   TFields,
   TPublicField extends string,
@@ -1125,7 +1152,7 @@ export type ContentSearchTextField<
  * Opts a content type into automatic search synchronization.
  *
  * Requires `publication` *and* `publicApi`: only published rows are ever
- * indexed, and every indexed field has to be publicly readable already - a
+ * public in the index, and every indexed field has to be publicly readable already - a
  * private value would otherwise leak through a result snippet, a highlighted
  * match, ranking, or the mere fact that a record matched an exact-match probe.
  *
@@ -1143,7 +1170,9 @@ export interface ContentSearchConfig<
   TTitle extends string = string,
   TDescription extends string = string,
   TText extends string = string,
+  TAuthor extends string = string,
 > {
+  authorField?: TAuthor;
   /** Concatenated into the indexed body, in order. At least one. */
   contentFields: readonly [TText, ...TText[]];
   /** Prepended to the indexed body so it shows up in result excerpts. */
@@ -1179,6 +1208,7 @@ export type ContentSearchEnabled<TSearch> = TSearch extends { enabled: true }
 export interface ResolvedContentSearchConfig<
   TEnabled extends boolean = boolean,
 > {
+  authorField: null | string;
   contentFields: string[];
   descriptionField: null | string;
   enabled: TEnabled;

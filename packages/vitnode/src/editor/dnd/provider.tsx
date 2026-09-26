@@ -14,7 +14,6 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
   pointerWithin,
   rectIntersection,
   TouchSensor,
@@ -24,16 +23,16 @@ import {
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { cn } from "cn";
-import {
-  Columns2Icon,
-  GripVerticalIcon,
-  LayoutGridIcon,
-  PlusIcon,
-} from "lucide-react";
+import { Columns2Icon } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import type { BlockRegistry, RegisteredBlock } from "../../blocks/types";
+import type {
+  BlockIcon,
+  BlockRegistry,
+  RegisteredBlock,
+} from "../../blocks/types";
 import type {
   AreaCatalogEntry,
   BlockCatalogEntry,
@@ -53,6 +52,13 @@ import type {
 import { isBlockAreaInstance } from "../../blocks/area";
 import { parseBlockId } from "../../blocks/namespace";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
+import {
+  DRAG_OVERLAY_LIFT_CLASS,
+  DRAG_OVERLAY_LIFT_STYLE,
+  LIFTED_DROP_ANIMATION,
+} from "../../lib/dnd/drag-motion";
+import { FinePointerSensor } from "../../lib/dnd/sensors";
+import { BlockGlyph } from "../block-picker/block-glyph";
 import { toBlockCatalogEntry } from "../block-picker/catalog";
 import {
   BLOCK_CATALOG_CARD_CLASS,
@@ -63,6 +69,7 @@ import { dropCapacity } from "../state/bounds";
 import { targetCapabilities } from "../state/capabilities";
 import { containerNodes } from "../state/reducer";
 import { DND_REJECTION_LABELS } from "../zones/rejection-labels";
+import { zoneDisplayName } from "../zones/zone-name";
 import { EditorDndContext } from "./context";
 import {
   decideDrop,
@@ -75,14 +82,25 @@ import {
   readDropTarget,
 } from "./resolve-drop";
 
+const PICK_UP_WITH_SPACE = {
+  cancel: ["Escape"],
+  end: ["Space", "Enter"],
+  start: ["Space"],
+};
+
 const isRtl = (): boolean =>
   typeof document !== "undefined" && document.dir === "rtl";
 
 type DragOverlayPreview =
   | { area: AreaCatalogEntry; kind: "catalog-area" }
   | { entry: BlockCatalogEntry; kind: "catalog-block" }
-  | { kind: "existing-area"; name: string }
-  | { kind: "existing-block"; name: string; namespace: null | string };
+  | {
+      icon: BlockIcon | undefined;
+      kind: "existing-block";
+      name: string;
+      namespace: null | string;
+    }
+  | { kind: "existing-area"; name: string };
 
 interface EditorDragPlan {
   container: EditorContainerRef | null;
@@ -129,14 +147,16 @@ export const EditorDndProvider = ({
   const [dropIndicator, setDropIndicator] =
     useState<EditorDropIndicator | null>(null);
   const pointerRef = useRef<null | { x: number; y: number }>(null);
+  const reduceMotion = useReducedMotion();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(FinePointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 200, tolerance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: PICK_UP_WITH_SPACE,
     }),
   );
 
@@ -181,6 +201,7 @@ export const EditorDndProvider = ({
           ? toBlockCatalogEntry(found)
           : {
               description: undefined,
+              icon: undefined,
               name: dragging.type,
               namespace: parseBlockId(dragging.type)?.namespace ?? "",
               type: dragging.type,
@@ -194,6 +215,7 @@ export const EditorDndProvider = ({
     );
 
     return {
+      icon: entry?.definition.icon,
       kind: "existing-block",
       name: entry?.definition.name ?? entry?.definition.id ?? dragging.type,
       namespace: parseBlockId(dragging.type)?.namespace ?? null,
@@ -305,7 +327,7 @@ export const EditorDndProvider = ({
       const name = dragName(plan.source);
       if (plan.container === null) return t("dnd.outside", { name });
 
-      const zone = plan.container.zoneId;
+      const zone = zoneDisplayName(plan.container.zoneId);
       if (plan.rejection !== null) {
         return t(DND_REJECTION_LABELS[plan.rejection], { name, zone });
       }
@@ -343,7 +365,7 @@ export const EditorDndProvider = ({
                 name,
                 position: plan.placement.position,
                 total: plan.placement.total,
-                zone: plan.container.zoneId,
+                zone: zoneDisplayName(plan.container.zoneId),
               },
             );
       },
@@ -440,48 +462,49 @@ export const EditorDndProvider = ({
       >
         {children}
 
-        <DragOverlay>
+        <DragOverlay
+          dropAnimation={reduceMotion ? null : LIFTED_DROP_ANIMATION}
+        >
           {overlay === null ? null : overlay.kind === "catalog-area" ||
             overlay.kind === "catalog-block" ? (
             // The card the pointer picked up, at the size it was picked up at.
             <div
-              className={cn(
-                BLOCK_CATALOG_CARD_CLASS,
-                "ring-primary cursor-grabbing shadow-lg ring-2",
-              )}
+              className={cn(BLOCK_CATALOG_CARD_CLASS, DRAG_OVERLAY_LIFT_CLASS)}
+              style={DRAG_OVERLAY_LIFT_STYLE}
             >
-              {overlay.kind === "catalog-area" ? (
-                <Columns2Icon
-                  aria-hidden="true"
-                  className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                />
-              ) : (
-                <PlusIcon
-                  aria-hidden="true"
-                  className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                />
-              )}
               <BlockCatalogEntryCard
                 entry={
                   overlay.kind === "catalog-area" ? overlay.area : overlay.entry
+                }
+                icon={
+                  overlay.kind === "catalog-area" ? (
+                    <Columns2Icon />
+                  ) : (
+                    <BlockGlyph icon={overlay.entry.icon} />
+                  )
                 }
               />
             </div>
           ) : (
             // Sized to the node it was picked up from, so what follows the
             // pointer keeps the footprint the drop is about to give it.
-            <div className="bg-popover text-popover-foreground ring-primary flex h-full w-full cursor-grabbing items-start gap-2 overflow-hidden rounded-lg border p-3 shadow-lg ring-2">
-              {overlay.kind === "existing-area" ? (
-                <LayoutGridIcon
-                  aria-hidden="true"
-                  className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                />
-              ) : (
-                <GripVerticalIcon
-                  aria-hidden="true"
-                  className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                />
+            <div
+              className={cn(
+                "bg-popover text-popover-foreground flex h-full w-full items-start gap-3 overflow-hidden rounded-lg border p-3",
+                DRAG_OVERLAY_LIFT_CLASS,
               )}
+              style={DRAG_OVERLAY_LIFT_STYLE}
+            >
+              <span
+                aria-hidden="true"
+                className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-sm [&_svg]:size-4"
+              >
+                {overlay.kind === "existing-area" ? (
+                  <Columns2Icon />
+                ) : (
+                  <BlockGlyph icon={overlay.icon} />
+                )}
+              </span>
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm leading-relaxed font-medium">
                   {overlay.name}

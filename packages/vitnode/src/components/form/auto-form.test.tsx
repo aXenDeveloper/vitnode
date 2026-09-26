@@ -1,24 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import z from "zod";
 
 import type { ItemAutoFormComponentProps } from "./auto-form";
 
-vi.mock("use-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
-
-vi.mock("../../hooks/use-captcha", () => ({
-  useCaptcha: () => ({
-    getToken: async () => Promise.resolve(""),
-    isReady: true,
-    onReset: () => undefined,
-  }),
-}));
-
-const { AutoForm } = await import("./auto-form");
+import { AutoForm } from "./auto-form";
 
 const LabelContext = React.createContext("first label");
 

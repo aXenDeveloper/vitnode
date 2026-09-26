@@ -4,17 +4,18 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
 import {
   testArticleContentType,
   testCategoryContentType,
 } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
-
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: async () => await Promise.resolve(),
-}));
 
 const categories = createContentModel(testCategoryContentType);
 const articles = createContentModel(testArticleContentType, {
@@ -43,7 +44,7 @@ const adminUser = {
   roleId: 1,
 };
 
-const harness = () => {
+const harness = async () => {
   const findMany = vi.fn().mockResolvedValue({
     edges: [],
     pageInfo: {
@@ -55,6 +56,11 @@ const harness = () => {
       totalCount: 0,
     },
   });
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: adminUser.id,
+  });
   vi.spyOn(articles, "service").mockReturnValue({
     findMany,
     relations: {},
@@ -64,6 +70,7 @@ const harness = () => {
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser });
+    c.set("cache", cache);
     await next();
   };
   app.use("*", context);
@@ -93,7 +100,7 @@ describe("pagination input a list route refuses", () => {
     ["a garbage cursor", "cursor=%21%21not-a-cursor"],
     ["an empty cursor", "cursor="],
   ])("answers 400 for %s", async (_why, query) => {
-    const { app } = harness();
+    const { app } = await harness();
 
     const res = await app.request(`/?${query}`);
 
@@ -101,7 +108,7 @@ describe("pagination input a list route refuses", () => {
   });
 
   it("never reaches the service with a page size it would have to clamp", async () => {
-    const { app, findMany } = harness();
+    const { app, findMany } = await harness();
 
     await app.request("/?first=0");
 
@@ -109,7 +116,7 @@ describe("pagination input a list route refuses", () => {
   });
 
   it("still accepts a legitimate page", async () => {
-    const { app, findMany } = harness();
+    const { app, findMany } = await harness();
 
     const res = await app.request("/?first=25");
 
@@ -122,7 +129,7 @@ describe("pagination input a list route refuses", () => {
   });
 
   it("carries a numbered page through to the service", async () => {
-    const { app, findMany } = harness();
+    const { app, findMany } = await harness();
 
     const res = await app.request("/?page=3&first=10");
 
@@ -135,7 +142,7 @@ describe("pagination input a list route refuses", () => {
   });
 
   it("refuses a page beside a cursor, which mean different things", async () => {
-    const { app, findMany } = harness();
+    const { app, findMany } = await harness();
 
     const res = await app.request("/?page=2&cursor=eyJpZCI6MX0");
 
@@ -147,7 +154,7 @@ describe("pagination input a list route refuses", () => {
     // The exact shape of the old bug, refused where the ordering is known: a
     // bare number says nothing about where `title` was, so honouring it would
     // skip rows. The service raises it; the route passes it through unchanged.
-    const { app } = harness();
+    const { app } = await harness();
     const { HTTPException } = await import("hono/http-exception");
     vi.spyOn(articles, "service").mockReturnValue({
       findMany: vi.fn().mockImplementation(() => {

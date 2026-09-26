@@ -305,6 +305,12 @@ only when more than one language is enabled) that switches which language you
 are editing; it does **not** change the app-wide locale, only the value inside
 that field.
 
+The select starts on the first language that has text: your current language,
+then the form's default language (Content Engine forms use the content type's
+`defaultLocale`), then any other language. If every language is empty, it
+starts on your current language. `AutoFormEditor` ignores empty markup like
+`<p></p>`, so a blank editor never counts as translated.
+
 "Enabled" here means every locale in your [`i18n.locales`](/docs/dev/i18n) config
 that is not marked [`enabled: false`](/docs/dev/i18n#disabling-one) - a disabled
 language is not offered in the select.

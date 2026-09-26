@@ -46,6 +46,7 @@ const entry = (
   partial: Partial<BlockCatalogEntry> = {},
 ): BlockCatalogEntry => ({
   description: "A full-width banner",
+  icon: undefined,
   name: "Hero",
   namespace: "core",
   type: "core:hero",

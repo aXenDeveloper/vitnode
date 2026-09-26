@@ -165,16 +165,16 @@ describe("contentRowTitle", () => {
     expect(contentRowTitle(articles, row({ title: 42 }))).toBe("#7");
   });
 
-  it("reads a localized title from the row's translation", () => {
+  it("reads a localized title from the row's resolved values", () => {
     expect(
       contentRowTitle(
         localized,
-        row({ translation: { values: { heading: "Witaj" } } }),
+        row({ localizedValues: { heading: "Witaj" } }),
       ),
     ).toBe("Witaj");
   });
 
-  it("names an untranslated record by its id rather than by another language", () => {
+  it("never reads a localized title off the base row", () => {
     expect(contentRowTitle(localized, row({ heading: "Hello" }))).toBe("#7");
   });
 });

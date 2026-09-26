@@ -1,7 +1,10 @@
 // @vitest-environment node
+import type { Context } from "hono";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { testLocalizedGuideContentType } from "@/tests/content-fixtures";
+import { createTestRevisionsTable } from "@/tests/revisions-table";
 
 import type { ContentTranslationRevisionSnapshot } from "../revisions";
 import type { ContentTranslationModel } from "./translation-model";
@@ -13,76 +16,7 @@ import { CONTENT_TRANSLATION_INITIAL_VERSION } from "./translation-model";
 const PLUGIN_ID = "@vitnode/example";
 const ACTOR = { type: "staff" as const, userId: 1 };
 
-/** Every revision written during one test, in order. */
-const captured: {
-  changedFields: readonly string[];
-  itemId: number;
-  languageId: null | number;
-  operation: string;
-  restoredFromRevisionId?: number;
-  snapshot: ContentTranslationRevisionSnapshot;
-  version: number;
-}[] = [];
-
-let nextRevisionId = 100;
-let storedRevision: ContentTranslationRevisionSnapshot | null = null;
-let revisionLanguageId = 1;
-
-const latestVersionByLanguage = new Map<number, number>();
-
-// The revisions model is a real, tested unit of its own; what matters here is
-// *what this layer asks it to write* - which language, which operation, which
-// snapshot - so it records instead of touching a database.
-vi.mock("./revisions-model", () => ({
-  CONTENT_REVISIONS_DEFAULT_PAGE_SIZE: 25,
-  CONTENT_REVISIONS_MAX_PAGE_SIZE: 100,
-  createContentRevisionsModel: ({
-    languageId,
-  }: {
-    languageId?: null | number;
-  }) => ({
-    capture: (
-      _tx: unknown,
-      input: {
-        changedFields: readonly string[];
-        itemId: number;
-        operation: string;
-        restoredFromRevisionId?: number;
-        snapshot: ContentTranslationRevisionSnapshot;
-        version: number;
-      },
-    ) => {
-      captured.push({ ...input, languageId: languageId ?? null });
-      nextRevisionId += 1;
-
-      return nextRevisionId;
-    },
-    findById: (_itemId: number, revisionId: number) =>
-      storedRevision !== null && languageId === revisionLanguageId
-        ? {
-            actorName: null,
-            actorType: "staff" as const,
-            actorUserId: 1,
-            changedFields: [],
-            createdAt: new Date(),
-            id: revisionId,
-            operation: "update" as const,
-            restoredFromRevisionId: null,
-            snapshot: storedRevision,
-            version: 1,
-          }
-        : null,
-    latest: () => {
-      const version = latestVersionByLanguage.get(languageId ?? 0);
-
-      return version === undefined ? null : { version };
-    },
-    list: () => ({
-      edges: [],
-      pageInfo: { endCursor: null, hasNextPage: false },
-    }),
-  }),
-}));
+let revisions = createTestRevisionsTable();
 
 const language = (locale: string, id: number) => ({
   id,
@@ -121,6 +55,7 @@ const translations = () => {
     findByLocale: vi.fn(),
     findManyForItem: vi.fn(),
     findManyRowsForItem: vi.fn().mockResolvedValue([]),
+    findManyRowsForItems: vi.fn().mockResolvedValue([]),
     publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
     resolveLanguage: vi.fn((locale: string) =>
@@ -141,14 +76,9 @@ const service = (model: ReturnType<typeof translations>) => {
   if (!schemas) throw new Error("fixture is not localized");
 
   return createContentTranslationEditorialService({
-    // Only `transaction` is reached: every method under test either takes a `tx`
-    // or opens one, and nothing here queries.
     c: {
-      get: () => ({
-        transaction: async <T>(body: (tx: unknown) => Promise<T>) =>
-          await body({}),
-      }),
-    } as never,
+      get: (key: string) => (key === "db" ? revisions.db : undefined),
+    } as unknown as Context,
     definition: testLocalizedGuideContentType,
     pluginId: PLUGIN_ID,
     schemas,
@@ -157,11 +87,7 @@ const service = (model: ReturnType<typeof translations>) => {
 };
 
 beforeEach(() => {
-  captured.length = 0;
-  nextRevisionId = 100;
-  storedRevision = null;
-  revisionLanguageId = 1;
-  latestVersionByLanguage.clear();
+  revisions = createTestRevisionsTable();
 });
 
 describe("create", () => {
@@ -178,8 +104,8 @@ describe("create", () => {
 
     expect(outcome.changed).toBe(true);
     expect(outcome.locale).toBe("pl");
-    expect(captured).toHaveLength(1);
-    expect(captured[0]).toMatchObject({
+    expect(revisions.written).toHaveLength(1);
+    expect(revisions.written[0]).toMatchObject({
       itemId: 7,
       languageId: 2,
       operation: "create",
@@ -201,7 +127,7 @@ describe("create", () => {
     // The Polish translation was created, edited and deleted: the delete revision
     // holds version 3. Recreating it at 1 would collide with the `create`
     // revision from its first life, because the history was never removed.
-    latestVersionByLanguage.set(2, 3);
+    revisions.seed({ languageId: 2, version: 3 });
 
     const model = translations();
     model.create.mockResolvedValue(row({ version: 4 }));
@@ -215,14 +141,17 @@ describe("create", () => {
 
     const options = model.create.mock.calls[0][3] as Record<symbol, unknown>;
     expect(options[CONTENT_TRANSLATION_INITIAL_VERSION]).toBe(4);
-    expect(captured[0]).toMatchObject({ operation: "create", version: 4 });
+    expect(revisions.written[0]).toMatchObject({
+      operation: "create",
+      version: 4,
+    });
     expect(outcome.version).toBe(4);
   });
 
   it("reads the history of the locale being created, not of another", async () => {
     // English reached version 9; Polish has never existed. A shared counter would
     // start the Polish translation at 10 and leave a hole nothing explains.
-    latestVersionByLanguage.set(1, 9);
+    revisions.seed({ languageId: 1, version: 9 });
 
     const model = translations();
     model.create.mockResolvedValue(row());
@@ -263,13 +192,13 @@ describe("create", () => {
 
     // `featured` is shared. A translation snapshot that carried it would let a
     // restore of one language rewrite it.
-    expect(Object.keys(captured[0].snapshot.fields)).toEqual([
+    expect(Object.keys(revisions.written[0].snapshot.fields)).toEqual([
       "title",
       "slug",
       "body",
       "summary",
     ]);
-    expect(captured[0].snapshot.locale).toBe("pl");
+    expect(revisions.written[0].snapshot.locale).toBe("pl");
   });
 
   it("reports every localized field as changed", async () => {
@@ -307,8 +236,8 @@ describe("update", () => {
 
     expect(outcome?.previousSlug).toBe("stary");
     expect(outcome?.version).toBe(2);
-    expect(captured).toHaveLength(1);
-    expect(captured[0].operation).toBe("update");
+    expect(revisions.written).toHaveLength(1);
+    expect(revisions.written[0].operation).toBe("update");
   });
 
   it("writes nothing at all for a no-op", async () => {
@@ -330,7 +259,7 @@ describe("update", () => {
 
     expect(outcome?.changed).toBe(false);
     expect(outcome?.revisionId).toBeNull();
-    expect(captured).toHaveLength(0);
+    expect(revisions.written).toHaveLength(0);
   });
 
   it("returns null when the locale has no translation", async () => {
@@ -365,7 +294,10 @@ describe("delete", () => {
     // 5, not 4: the row is gone, so nothing holds version 4 any more - and the
     // partial unique index would reject a second revision claiming it.
     expect(outcome?.version).toBe(5);
-    expect(captured[0]).toMatchObject({ operation: "delete", version: 5 });
+    expect(revisions.written[0]).toMatchObject({
+      operation: "delete",
+      version: 5,
+    });
   });
 });
 
@@ -381,8 +313,11 @@ describe("publish and unpublish", () => {
     const outcome = await service(model).publish(7, "pl", { actor: ACTOR });
 
     expect(outcome?.changed).toBe(true);
-    expect(captured[0]).toMatchObject({ operation: "publish", version: 2 });
-    expect(captured[0].snapshot.publication?.status).toBe("published");
+    expect(revisions.written[0]).toMatchObject({
+      operation: "publish",
+      version: 2,
+    });
+    expect(revisions.written[0].snapshot.publication?.status).toBe("published");
   });
 
   it("writes nothing for an already published translation", async () => {
@@ -397,7 +332,7 @@ describe("publish and unpublish", () => {
 
     expect(outcome?.changed).toBe(false);
     expect(outcome?.revisionId).toBeNull();
-    expect(captured).toHaveLength(0);
+    expect(revisions.written).toHaveLength(0);
   });
 
   it("passes an optional expectedVersion straight through", async () => {
@@ -438,7 +373,11 @@ describe("restore", () => {
 
   it("restores one locale's values and creates a new version", async () => {
     const model = translations();
-    storedRevision = snapshot({ title: "Old title" });
+    revisions.seed({
+      languageId: 1,
+      snapshot: snapshot({ title: "Old title" }),
+      version: 1,
+    });
     model.findByLanguageId.mockResolvedValue(
       row({ languageId: 1, locale: "en", values: { title: "New title" } }),
     );
@@ -462,7 +401,8 @@ describe("restore", () => {
     // Forward to a new version, not back to the historical one.
     expect(outcome?.version).toBe(5);
     expect(outcome?.restoredFromRevisionId).toBe(42);
-    expect(captured[0]).toMatchObject({
+    expect(revisions.written[0]).toMatchObject({
+      languageId: 1,
       operation: "restore",
       restoredFromRevisionId: 42,
     });
@@ -470,10 +410,13 @@ describe("restore", () => {
 
   it("refuses a revision belonging to another locale", async () => {
     const model = translations();
-    storedRevision = snapshot({ title: "Old title" });
     // The stored revision belongs to language 1; the request is for `pl`, which
     // resolves to 2 - so the scoped read finds nothing.
-    revisionLanguageId = 1;
+    revisions.seed({
+      languageId: 1,
+      snapshot: snapshot({ title: "Old title" }),
+      version: 1,
+    });
 
     expect(
       await service(model).restore(7, "pl", 42, {
@@ -488,7 +431,11 @@ describe("restore", () => {
     const model = translations();
     // A snapshot that somehow carries a shared field - a hand-edited row, or one
     // written before the partition existed.
-    storedRevision = snapshot({ featured: true, title: "Old title" });
+    revisions.seed({
+      languageId: 1,
+      snapshot: snapshot({ featured: true, title: "Old title" }),
+      version: 1,
+    });
     model.findByLanguageId.mockResolvedValue(
       row({ languageId: 1, locale: "en", values: { title: "New" } }),
     );
@@ -517,7 +464,7 @@ describe("restore", () => {
     const model = translations();
     // `title` is required, and an empty patch fails the "at least one field"
     // refinement - so the restore is refused before anything is written.
-    storedRevision = snapshot({});
+    revisions.seed({ languageId: 1, snapshot: snapshot({}), version: 1 });
     model.findByLanguageId.mockResolvedValue(
       row({ languageId: 1, locale: "en" }),
     );
@@ -533,7 +480,11 @@ describe("restore", () => {
 
   it("writes nothing when the values already match", async () => {
     const model = translations();
-    storedRevision = snapshot({ title: "Same" });
+    revisions.seed({
+      languageId: 1,
+      snapshot: snapshot({ title: "Same" }),
+      version: 1,
+    });
     model.findByLanguageId.mockResolvedValue(
       row({ languageId: 1, locale: "en", values: { title: "Same" } }),
     );
@@ -545,15 +496,19 @@ describe("restore", () => {
 
     expect(outcome?.changed).toBe(false);
     expect(outcome?.restoredFromRevisionId).toBeNull();
-    expect(captured).toHaveLength(0);
+    expect(revisions.written).toHaveLength(0);
   });
 
   it("never moves publication state", async () => {
     const model = translations();
-    storedRevision = {
-      ...snapshot({ title: "Old" }),
-      publication: { publishedAt: null, status: "draft" },
-    };
+    revisions.seed({
+      languageId: 1,
+      snapshot: {
+        ...snapshot({ title: "Old" }),
+        publication: { publishedAt: null, status: "draft" },
+      },
+      version: 1,
+    });
     model.findByLanguageId.mockResolvedValue(
       row({
         languageId: 1,
@@ -607,7 +562,7 @@ describe("history reads", () => {
 
   it("returns null for a revision id outside this locale", async () => {
     const model = translations();
-    storedRevision = null;
+    revisions.seed({ languageId: 2, version: 1 });
 
     expect(await service(model).findRevision(7, "en", 42)).toBeNull();
   });

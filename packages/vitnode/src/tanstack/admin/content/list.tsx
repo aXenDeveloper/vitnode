@@ -98,7 +98,6 @@ const ContentListTable = ({
         columnSpecs,
         labels: {
           empty: t("table.empty_value"),
-          missing: t("translations.states.missing"),
           status: {
             draft: t("status.draft"),
             published: t("status.published"),

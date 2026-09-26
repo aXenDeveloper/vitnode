@@ -129,6 +129,11 @@ export interface ContentTranslationModel<TDefinition> {
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
 
+  findManyRowsForItems: (
+    itemIds: readonly number[],
+    options?: ContentTranslationOptions,
+  ) => Promise<ContentTranslationRow<TDefinition>[]>;
+
   publish: (
     itemId: number,
     locale: string,
@@ -611,6 +616,22 @@ export const createContentTranslationModel = <
         .from(translationTable)
         .where(eq(itemColumn, itemId))
         .orderBy(asc(languageColumn));
+
+      const languages = await listContentLanguagesById(c, options?.tx);
+
+      return rows.map(row =>
+        toRow(row, languages.get(row.languageId as number)?.locale ?? ""),
+      );
+    },
+
+    findManyRowsForItems: async (itemIds, options) => {
+      if (itemIds.length === 0) return [];
+
+      const rows = await db(options)
+        .select(fullSelection())
+        .from(translationTable)
+        .where(inArray(itemColumn, [...itemIds]))
+        .orderBy(asc(itemColumn), asc(languageColumn));
 
       const languages = await listContentLanguagesById(c, options?.tx);
 

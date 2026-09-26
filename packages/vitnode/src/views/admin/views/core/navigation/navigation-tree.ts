@@ -212,3 +212,132 @@ export const navigationItemsFrom = (
     return { ...entry.item, parentId: entry.parentId, position };
   });
 };
+
+const regroupNavigation = (
+  order: NavigationOrderBody,
+  flattened: readonly FlattenedNavigationItem[],
+): FlattenedNavigationItem[] => {
+  const byId = new Map(flattened.map(entry => [entry.item.id, entry.item]));
+
+  return order.items.flatMap(group => {
+    const root = byId.get(group.id);
+    if (!root) return [];
+
+    return [
+      { depth: 0 as const, item: root, parentId: null },
+      ...group.children.flatMap(childId => {
+        const child = byId.get(childId);
+
+        return child
+          ? [{ depth: 1 as const, item: child, parentId: group.id }]
+          : [];
+      }),
+    ];
+  });
+};
+
+export const shiftNavigationItem = ({
+  flattened,
+  id,
+  step,
+}: {
+  flattened: readonly FlattenedNavigationItem[];
+  id: number;
+  step: -1 | 1;
+}): FlattenedNavigationItem[] => {
+  const { items } = navigationOrderBody(flattened);
+  const rootAt = items.findIndex(group => group.id === id);
+
+  if (rootAt !== -1) {
+    const target = rootAt + step;
+    if (target < 0 || target >= items.length) return [...flattened];
+
+    return regroupNavigation(
+      { items: arrayMove(items, rootAt, target) },
+      flattened,
+    );
+  }
+
+  return regroupNavigation(
+    {
+      items: items.map(group => {
+        const at = group.children.indexOf(id);
+        const target = at + step;
+        if (at === -1 || target < 0 || target >= group.children.length) {
+          return group;
+        }
+
+        return { ...group, children: arrayMove(group.children, at, target) };
+      }),
+    },
+    flattened,
+  );
+};
+
+export const moveNavigationItem = ({
+  flattened,
+  id,
+  parentId,
+}: {
+  flattened: readonly FlattenedNavigationItem[];
+  id: number;
+  parentId: null | number;
+}): FlattenedNavigationItem[] => {
+  const { items } = navigationOrderBody(flattened);
+  const ownGroup = items.find(group => group.id === id);
+  const oldParent = items.find(group => group.children.includes(id));
+  const isRoot = ownGroup !== undefined;
+
+  if (parentId === null ? isRoot : parentId === id) return [...flattened];
+  if (parentId !== null) {
+    const canNest =
+      (ownGroup?.children.length ?? 0) === 0 &&
+      items.some(group => group.id === parentId);
+    if (!canNest || oldParent?.id === parentId) return [...flattened];
+  }
+
+  const rest = items
+    .filter(group => group.id !== id)
+    .map(group => ({
+      ...group,
+      children: group.children.filter(childId => childId !== id),
+    }));
+
+  if (parentId === null) {
+    const insertAt = oldParent
+      ? rest.findIndex(group => group.id === oldParent.id) + 1
+      : rest.length;
+
+    return regroupNavigation(
+      {
+        items: [
+          ...rest.slice(0, insertAt),
+          { children: [], id },
+          ...rest.slice(insertAt),
+        ],
+      },
+      flattened,
+    );
+  }
+
+  return regroupNavigation(
+    {
+      items: rest.map(group =>
+        group.id === parentId
+          ? { ...group, children: [...group.children, id] }
+          : group,
+      ),
+    },
+    flattened,
+  );
+};
+
+export const restoreCollapsedChildren = (
+  flattened: readonly FlattenedNavigationItem[],
+  hidden: ReadonlyMap<number, readonly FlattenedNavigationItem[]>,
+): FlattenedNavigationItem[] =>
+  flattened.flatMap(entry => {
+    const children = entry.depth === 0 ? hidden.get(entry.item.id) : undefined;
+
+    return children ? [entry, ...children] : [entry];
+  });

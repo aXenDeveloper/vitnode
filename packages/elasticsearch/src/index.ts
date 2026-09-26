@@ -29,7 +29,7 @@ export interface ElasticsearchAdapterOptions {
 }
 
 interface EsSource {
-  authorId: null | number;
+  authorIds?: number[];
   containerId: null | number;
   containerType: null | string;
   content: string;
@@ -67,7 +67,7 @@ const toSource = (doc: SearchDocument): EsSource => ({
   itemType: doc.itemType,
   itemId: doc.itemId,
   languageCode: doc.languageCode ?? "",
-  authorId: doc.authorId ?? null,
+  authorIds: [...new Set(doc.authorIds ?? [])],
   title: doc.title,
   content: doc.content,
   containerType: doc.containerType ?? null,
@@ -94,7 +94,7 @@ const buildFilters = (
     filter.push({ terms: { itemType: params.itemTypes } });
   }
   if (params.authorId !== undefined) {
-    filter.push({ term: { authorId: params.authorId } });
+    filter.push({ term: { authorIds: params.authorId } });
   }
   if (params.containerId !== undefined) {
     filter.push({ term: { containerId: params.containerId } });
@@ -134,7 +134,7 @@ const buildRankingFunctions = (
   }
   if (ranking.authorBoost && ranking.authorBoost.authorIds.length > 0) {
     functions.push({
-      filter: { terms: { authorId: ranking.authorBoost.authorIds } },
+      filter: { terms: { authorIds: ranking.authorBoost.authorIds } },
       weight: ranking.authorBoost.weight,
     });
   }
@@ -198,12 +198,13 @@ const mapHit = (hit: estypes.SearchHit<EsSource>): null | SearchHit => {
     itemType: source.itemType,
     itemId: source.itemId,
     languageCode: source.languageCode,
-    authorId: source.authorId,
+    authorId: source.authorIds?.[0] ?? null,
     title: source.title,
     content: source.content,
     containerType: source.containerType,
     containerId: source.containerId,
     url: source.url,
+    isPublic: source.isPublic,
     metadata: source.metadata,
     createdAt: new Date(source.createdAt),
     score: hit._score ?? null,
@@ -252,7 +253,7 @@ export const ElasticsearchSearchAdapter = (
             itemType: { type: "keyword" },
             itemId: { type: "integer" },
             languageCode: { type: "keyword" },
-            authorId: { type: "integer" },
+            authorIds: { type: "integer" },
             title: { type: "text" },
             content: { type: "text" },
             containerType: { type: "keyword" },

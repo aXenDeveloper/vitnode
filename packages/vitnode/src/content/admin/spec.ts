@@ -10,6 +10,7 @@ import { zodContentNode } from "../../blocks/validate";
 import {
   getLangValue,
   type MultiLangValue,
+  resolveLangValue,
   upsertLangValue,
 } from "../../lib/helpers/multi-lang";
 import {
@@ -18,7 +19,11 @@ import {
   contentRepeatableMax,
   contentRepeatableMin,
 } from "../advanced";
-import { contentFieldPath, contentInnerFields } from "../paths";
+import {
+  contentFieldPath,
+  contentInnerFields,
+  isContentReferenceCollection,
+} from "../paths";
 import { humanizeFieldName } from "./labels";
 
 export interface ContentFormFieldSpec {
@@ -88,9 +93,11 @@ export interface ContentColumnSpec {
   label: string;
 
   localized?: boolean;
+  multiple?: boolean;
   name: string;
   /** Enum value -> translated label, for badge cells. */
   options?: Record<string, string>;
+  thumbnail?: string;
 }
 
 export type ContentFieldLabeller = (
@@ -322,6 +329,13 @@ export const buildContentColumnSpec = ({
       label: labelField(name, fieldValue),
       name,
       ...(fieldValue?.localized === true ? { localized: true } : {}),
+      ...(fieldValue && isContentReferenceCollection(fieldValue)
+        ? { multiple: true }
+        : {}),
+      ...(name === definition.admin.titleField &&
+      definition.admin.list.thumbnailField !== null
+        ? { thumbnail: definition.admin.list.thumbnailField }
+        : {}),
       ...(fieldValue?.kind === "enum"
         ? {
             options: Object.fromEntries(
@@ -494,7 +508,10 @@ export const contentTitleFromValues = (
 
   const raw = values[spec.titleField];
   const value = Array.isArray(raw)
-    ? getLangValue(raw as MultiLangValue, locale ?? spec.defaultLocale ?? "")
+    ? resolveLangValue(raw as MultiLangValue, {
+        defaultLanguage: spec.defaultLocale,
+        locale: locale ?? spec.defaultLocale ?? "",
+      })
     : raw;
 
   return typeof value === "string" && value.trim() !== "" ? value : undefined;

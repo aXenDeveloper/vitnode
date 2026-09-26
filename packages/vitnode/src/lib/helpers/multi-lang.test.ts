@@ -4,6 +4,8 @@ import {
   getLangValue,
   getMultiLangConstraints,
   multiLangValueSchema,
+  pickLangCode,
+  resolveLangValue,
   upsertLangValue,
 } from "./multi-lang";
 
@@ -52,6 +54,99 @@ describe("getLangValue", () => {
     expect(getLangValue(value, "en")).toBe("Hello");
     expect(getLangValue(value, "pl")).toBe("");
     expect(getLangValue(undefined, "en")).toBe("");
+  });
+});
+
+describe("pickLangCode", () => {
+  const LANGUAGES = ["en", "pl", "de"];
+
+  const pick = (
+    value: { languageCode: string; value: string }[],
+    options: {
+      defaultLanguage?: string;
+      isFilled?: (text: string) => boolean;
+      locale?: string;
+    } = {},
+  ) =>
+    pickLangCode({
+      defaultLanguage: options.defaultLanguage ?? "en",
+      isFilled: options.isFilled,
+      languageCodes: LANGUAGES,
+      locale: options.locale ?? "pl",
+      value,
+    });
+
+  it("keeps the current language when it has text", () => {
+    expect(
+      pick([
+        { languageCode: "en", value: "Hello" },
+        { languageCode: "pl", value: "Cześć" },
+      ]),
+    ).toBe("pl");
+  });
+
+  it("falls back to the default language", () => {
+    expect(
+      pick([
+        { languageCode: "de", value: "Hallo" },
+        { languageCode: "en", value: "Hello" },
+        { languageCode: "pl", value: "   " },
+      ]),
+    ).toBe("en");
+  });
+
+  it("falls back to any language with text", () => {
+    expect(pick([{ languageCode: "de", value: "Hallo" }])).toBe("de");
+  });
+
+  it("stays on the current language when every language is empty", () => {
+    expect(pick([])).toBe("pl");
+    expect(pick([{ languageCode: "en", value: "" }])).toBe("pl");
+  });
+
+  it("uses the first language when the current one is not enabled", () => {
+    expect(pick([], { locale: "fr" })).toBe("en");
+  });
+
+  it("never picks a language that is not enabled", () => {
+    expect(pick([{ languageCode: "fr", value: "Bonjour" }])).toBe("pl");
+  });
+
+  it("uses the given emptiness check, e.g. for editor HTML", () => {
+    expect(
+      pick(
+        [
+          { languageCode: "en", value: "<p>Hello</p>" },
+          { languageCode: "pl", value: "<p></p>" },
+        ],
+        { isFilled: html => html.replace(/<[^>]+>/g, "").trim() !== "" },
+      ),
+    ).toBe("en");
+  });
+});
+
+describe("resolveLangValue", () => {
+  it("reads the current language, then the default, then any other", () => {
+    const value = [
+      { languageCode: "de", value: "Hallo" },
+      { languageCode: "en", value: "Hello" },
+    ];
+
+    expect(
+      resolveLangValue(value, { defaultLanguage: "en", locale: "de" }),
+    ).toBe("Hallo");
+    expect(
+      resolveLangValue(value, { defaultLanguage: "en", locale: "pl" }),
+    ).toBe("Hello");
+    expect(
+      resolveLangValue([{ languageCode: "de", value: "Hallo" }], {
+        defaultLanguage: "en",
+        locale: "pl",
+      }),
+    ).toBe("Hallo");
+    expect(resolveLangValue([], { defaultLanguage: "en", locale: "pl" })).toBe(
+      "",
+    );
   });
 });
 

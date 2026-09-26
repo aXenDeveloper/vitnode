@@ -20,3 +20,10 @@ export const zoneDropState = ({
 
   return inserting ? "inserting" : "idle";
 };
+
+export type ZoneDropTone = "blocked" | ZoneDropState;
+
+export const zoneDropTone = (
+  state: ZoneDropState,
+  over: boolean,
+): ZoneDropTone => (state === "rejected" && !over ? "blocked" : state);

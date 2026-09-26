@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
 import { cn } from "cn";
-import { PlusIcon } from "lucide-react";
+import { BanIcon, PlusIcon } from "lucide-react";
 import { createElement, useEffect, useMemo } from "react";
 import { useTranslations } from "use-intl";
 
@@ -15,7 +15,7 @@ import type {
   RegisteredBlock,
 } from "../../blocks/types";
 import type { EditorZoneMount } from "../state/types";
-import type { ZoneDropState } from "./drop-state";
+import type { ZoneDropTone } from "./drop-state";
 
 import { isBlockAreaInstance } from "../../blocks/area";
 import { resolveBlockRegistry } from "../../blocks/registry";
@@ -38,25 +38,26 @@ import {
 } from "./block-placeholder";
 import { editableBlockRender } from "./block-render";
 import { classifyZoneEntries } from "./classify";
-import { zoneDropState } from "./drop-state";
+import { zoneDropState, zoneDropTone } from "./drop-state";
 import { InvalidZoneEntries } from "./invalid-entries";
+import { DROP_TARGET_CLASSES } from "./node-chrome";
 import { ZONE_REJECTION_LABELS } from "./rejection-labels";
+import { zoneDisplayName } from "./zone-name";
 
 const ZONE_CLASSES = {
-  idle: "bg-muted/20 outline-border/60 hover:outline-border",
-  inserting: "bg-primary/5 outline-primary/70 ring-primary/20 ring-2",
-  over: "bg-primary/5 outline-primary ring-primary/40 ring-2",
-  rejected: "bg-destructive/5 outline-destructive/60",
-  targeting: "bg-muted/20 outline-border",
-} as const satisfies Record<ZoneDropState, string>;
+  blocked: "outline-input opacity-50",
+  idle: "outline-input hover:outline-muted-foreground/50",
+  inserting: "bg-primary/3 outline-primary/70",
+  over: "bg-primary/5 outline-primary",
+  rejected: "bg-destructive/5 outline-destructive/70",
+  targeting: "bg-primary/3 outline-primary/50",
+} as const satisfies Record<ZoneDropTone, string>;
 
-const PLACEHOLDER_CLASSES = {
-  idle: "border-border bg-muted/30",
-  inserting: "border-primary/60 bg-primary/5",
-  over: "border-primary bg-primary/10",
-  rejected: "border-destructive/60 bg-destructive/5",
-  targeting: "border-border bg-muted/30",
-} as const satisfies Record<ZoneDropState, string>;
+const HIGHLIGHTED_TONES: ReadonlySet<ZoneDropTone> = new Set([
+  "inserting",
+  "over",
+  "targeting",
+]);
 
 interface EditableBlockBodyProps {
   entry: RegisteredBlock | undefined;
@@ -187,9 +188,12 @@ export const EditableZone = ({
     nodes.length === 0
       ? undefined
       : resolveBlockRegistry(zone?.registry ?? mount.registry);
-  const rejected = rejection !== null;
   const inserting = insertTarget?.zoneId === mount.id;
-  const dropping = zoneDropState({ active, inserting, over, rejected });
+  const tone = zoneDropTone(
+    zoneDropState({ active, inserting, over, rejected: rejection !== null }),
+    over,
+  );
+  const highlighted = HIGHLIGHTED_TONES.has(tone);
   const full =
     !fitsZoneMax(mount.max, zoneBlockCount(nodes) + 1) ||
     !fitsRootNodeCap(zoneRootNodeCount(nodes) + 1);
@@ -221,7 +225,8 @@ export const EditableZone = ({
   );
 
   const notAllowed = (
-    <p className="text-destructive text-xs leading-relaxed text-pretty">
+    <p className="text-destructive flex items-center gap-1.5 text-xs leading-relaxed text-pretty">
+      <BanIcon aria-hidden="true" className="size-3.5 shrink-0" />
       {t(
         rejection === null ? "zone.rejected" : ZONE_REJECTION_LABELS[rejection],
       )}
@@ -231,22 +236,22 @@ export const EditableZone = ({
   return (
     <div
       className={cn(
-        "relative rounded-md outline-1 outline-offset-4 transition-colors outline-dashed",
-        ZONE_CLASSES[dropping],
+        "relative rounded-md outline-1 outline-offset-4 transition-[outline-color,background-color,opacity] duration-150 ease-out outline-dashed motion-reduce:transition-none",
+        ZONE_CLASSES[tone],
       )}
-      data-editor-zone={dropping}
+      data-editor-zone={tone}
       ref={setNodeRef}
     >
       <span
         className={cn(
-          "bg-background pointer-events-none absolute start-2 -top-2.5 z-10 rounded-md border px-1.5 text-xs leading-relaxed transition-colors",
-          inserting
-            ? "border-primary text-primary"
+          "bg-card pointer-events-none absolute start-3 -top-3.5 z-10 flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs leading-relaxed font-medium shadow-xs transition-colors duration-150",
+          highlighted
+            ? "border-primary/50 text-primary"
             : "border-border text-muted-foreground",
         )}
       >
         <span className="sr-only">{t("zone.label")} </span>
-        {mount.id}
+        {zoneDisplayName(mount.id)}
         {inserting ? (
           <span className="sr-only"> {t("zone.targeted")}</span>
         ) : null}
@@ -259,20 +264,20 @@ export const EditableZone = ({
       {nodes.length === 0 ? (
         <div
           className={cn(
-            "flex min-h-32 flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center transition-colors md:min-h-40",
-            PLACEHOLDER_CLASSES[dropping],
+            "flex min-h-32 flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center transition-colors duration-150 md:min-h-40",
+            DROP_TARGET_CLASSES[tone],
           )}
         >
-          {rejected ? (
+          {tone === "rejected" ? (
             notAllowed
           ) : (
             <>
               <span
                 className={cn(
-                  "flex size-10 items-center justify-center rounded-full border border-dashed transition-colors",
-                  inserting || over
-                    ? "border-primary/60 text-primary"
-                    : "border-border text-muted-foreground",
+                  "flex size-10 items-center justify-center rounded-full transition-colors duration-150",
+                  highlighted
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/10 text-primary",
                 )}
               >
                 <PlusIcon aria-hidden="true" className="size-5" />
@@ -329,7 +334,7 @@ export const EditableZone = ({
           </ContainerSortable>
 
           <div className="flex justify-center py-4">
-            {rejected ? notAllowed : addAction}
+            {tone === "rejected" ? notAllowed : addAction}
           </div>
         </>
       )}

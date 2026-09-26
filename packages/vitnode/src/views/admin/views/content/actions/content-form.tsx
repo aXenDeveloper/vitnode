@@ -8,6 +8,7 @@ import type { ContentFileFieldValue } from "@/content/files";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
+import { MultiLangDefaultLanguageContext } from "@/components/form/fields/multi-lang-default-language";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { useDialog } from "@/components/ui/dialog";
 import {
@@ -437,56 +438,58 @@ const ContentFormFields = ({
         />
       ) : null}
 
-      <AutoForm
-        fields={fields}
-        formSchema={formSchema}
-        layout={renderedFields => (
-          <ContentFormProvider
-            value={{
-              fieldNames: spec.fields.map(field => field.name),
-              fields: renderedFields,
-              header: presentation === "page" ? header : undefined,
-              localizedFieldNames: localizedFields,
-              mode: data ? "edit" : "create",
-              publication: {
-                canPublish,
-                enabled: publication,
-                publishedAt: data?.publishedAt,
-                status: data?.status,
-                transition: data ? transition : undefined,
-              },
-              singular,
-              title,
-            }}
-          >
-            {Layout ? (
-              <Layout
-                contentTypeId={spec.contentTypeId}
-                itemId={data?.id}
-                mode={data ? "edit" : "create"}
-                pluginId={spec.pluginId}
-                publication={publication}
-                singular={singular}
-                title={title}
-              />
-            ) : (
-              <>
-                <ContentFormHeader />
+      <MultiLangDefaultLanguageContext value={spec.defaultLocale}>
+        <AutoForm
+          fields={fields}
+          formSchema={formSchema}
+          layout={renderedFields => (
+            <ContentFormProvider
+              value={{
+                fieldNames: spec.fields.map(field => field.name),
+                fields: renderedFields,
+                header: presentation === "page" ? header : undefined,
+                localizedFieldNames: localizedFields,
+                mode: data ? "edit" : "create",
+                publication: {
+                  canPublish,
+                  enabled: publication,
+                  publishedAt: data?.publishedAt,
+                  status: data?.status,
+                  transition: data ? transition : undefined,
+                },
+                singular,
+                title,
+              }}
+            >
+              {Layout ? (
+                <Layout
+                  contentTypeId={spec.contentTypeId}
+                  itemId={data?.id}
+                  mode={data ? "edit" : "create"}
+                  pluginId={spec.pluginId}
+                  publication={publication}
+                  singular={singular}
+                  title={title}
+                />
+              ) : (
+                <>
+                  <ContentFormHeader />
 
-                {publication && data ? (
-                  <ContentFormPublication
-                    publishedAt={data.publishedAt}
-                    status={data.status}
-                  />
-                ) : null}
+                  {publication && data ? (
+                    <ContentFormPublication
+                      publishedAt={data.publishedAt}
+                      status={data.status}
+                    />
+                  ) : null}
 
-                <ContentFormSections sections={sections} />
-              </>
-            )}
-          </ContentFormProvider>
-        )}
-        onSubmit={onSubmit}
-      />
+                  <ContentFormSections sections={sections} />
+                </>
+              )}
+            </ContentFormProvider>
+          )}
+          onSubmit={onSubmit}
+        />
+      </MultiLangDefaultLanguageContext>
     </>
   );
 };

@@ -4,38 +4,35 @@ import type { MiddlewareHandler } from "hono";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
 import { testLocalizedGuideContentType } from "@/tests/content-fixtures";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
-import type * as LanguageResolverModule from "./language-resolver";
-
+import { core_languages } from "../../database/languages";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
 const PLUGIN_ID = "@vitnode/example";
 
-const LANGUAGES = [
-  { id: 1, isDefault: true, isEnabled: true, locale: "en" },
-  { id: 2, isDefault: false, isEnabled: true, locale: "pl" },
+const LANGUAGE_ROWS = [
+  { code: "en", id: 1, isDefault: true },
+  { code: "pl", id: 2, isDefault: false },
 ];
 
-vi.mock("../../api/lib/check-staff-permission", () => ({
-  assertStaffPermission: vi.fn(),
-}));
+const languageDatabase = {
+  select: () => ({
+    from: async (table: unknown) => {
+      if (table !== core_languages) {
+        throw new Error("Only core_languages is read directly by this route.");
+      }
 
-vi.mock("./language-resolver", async importOriginal => {
-  const actual = await importOriginal<typeof LanguageResolverModule>();
-
-  return {
-    ...actual,
-    findContentLanguage: vi.fn(async (_c: unknown, locale: string) =>
-      Promise.resolve(
-        LANGUAGES.find(
-          language => language.locale.toLowerCase() === locale.toLowerCase(),
-        ) ?? null,
-      ),
-    ),
-  };
-});
+      return await Promise.resolve(LANGUAGE_ROWS);
+    },
+  }),
+};
 
 const guides = createContentModel(testLocalizedGuideContentType);
 
@@ -69,11 +66,11 @@ const pageInfo = {
   totalCount: 3,
 };
 
-const translationRow = (itemId: number, title: string) => ({
+const translationRow = (itemId: number, title: string, locale = "pl") => ({
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   itemId,
-  languageId: 2,
-  locale: "pl",
+  languageId: locale === "en" ? 1 : 2,
+  locale,
   publishedAt: null,
   status: "draft",
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -81,12 +78,12 @@ const translationRow = (itemId: number, title: string) => ({
   version: 1,
 });
 
-const harness = () => {
+const harness = async () => {
   const findMany = vi.fn().mockResolvedValue({
     edges: [{ id: 1 }, { id: 2 }, { id: 3 }],
     pageInfo,
   });
-  const findManyByLanguageId = vi.fn().mockResolvedValue([]);
+  const findManyRowsForItems = vi.fn().mockResolvedValue([]);
 
   vi.spyOn(guides, "service").mockReturnValue({
     findMany,
@@ -94,12 +91,20 @@ const harness = () => {
     repeatable: {},
   } as never);
   vi.spyOn(guides, "translationService", "get").mockReturnValue(
-    () => ({ findManyByLanguageId }) as never,
+    () => ({ findManyRowsForItems }) as never,
   );
+
+  const cache = createTestCache();
+  await grantStaffPermissions(cache, {
+    permissions: ROOT_STAFF_PERMISSIONS,
+    userId: adminUser.id,
+  });
 
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser });
+    c.set("cache", cache);
+    c.set("db", languageDatabase as never);
     await next();
   };
   app.use("*", context);
@@ -110,7 +115,7 @@ const harness = () => {
     app.openapi(route, handler);
   }
 
-  return { app, findMany, findManyByLanguageId };
+  return { app, findMany, findManyRowsForItems };
 };
 
 /** The `translation.title` of every edge, `null` where there is none. */
@@ -126,10 +131,19 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+/** The resolved `localizedValues.title` of every edge. */
+const displayTitles = async (response: Response): Promise<unknown[]> => {
+  const body = (await response.json()) as {
+    edges: { localizedValues?: Record<string, unknown> }[];
+  };
+
+  return body.edges.map(edge => edge.localizedValues?.title);
+};
+
 describe("the localized admin list", () => {
   it("reads the whole page's translations in one call", async () => {
-    const { app, findManyByLanguageId } = harness();
-    findManyByLanguageId.mockResolvedValue([
+    const { app, findManyRowsForItems } = await harness();
+    findManyRowsForItems.mockResolvedValue([
       translationRow(1, "Witaj"),
       translationRow(3, "Cześć"),
     ]);
@@ -137,44 +151,67 @@ describe("the localized admin list", () => {
     const response = await app.request("/?locale=pl");
 
     expect(response.status).toBe(200);
-    // Once, with every id on the page and the one language they are being read
-    // in - not once per row.
-    expect(findManyByLanguageId).toHaveBeenCalledTimes(1);
-    expect(findManyByLanguageId).toHaveBeenCalledWith([1, 2, 3], 2);
+    expect(findManyRowsForItems).toHaveBeenCalledTimes(1);
+    expect(findManyRowsForItems).toHaveBeenCalledWith([1, 2, 3]);
   });
 
   it("pairs each translation back onto its own row", async () => {
-    const { app, findManyByLanguageId } = harness();
-    // Deliberately out of the page's order, and missing the middle record: a
-    // batch read comes back in whatever order Postgres produced it.
-    findManyByLanguageId.mockResolvedValue([
+    const { app, findManyRowsForItems } = await harness();
+    findManyRowsForItems.mockResolvedValue([
       translationRow(3, "Cześć"),
       translationRow(1, "Witaj"),
     ]);
 
     const response = await app.request("/?locale=pl");
 
-    // A record with no Polish copy stays in the list as `null` rather than
-    // being dropped - seeing which ones are missing is what the selector is for.
     await expect(titles(response)).resolves.toEqual(["Witaj", null, "Cześć"]);
   });
 
-  it("attaches nothing when the list is not being viewed in a language", async () => {
-    const { app, findManyByLanguageId } = harness();
+  it("shows the default language where the viewed one has no text", async () => {
+    const { app, findManyRowsForItems } = await harness();
+    findManyRowsForItems.mockResolvedValue([
+      translationRow(1, "Hello", "en"),
+      translationRow(1, "Witaj"),
+      translationRow(2, "Hello again", "en"),
+      translationRow(3, "  "),
+      translationRow(3, "Third", "en"),
+    ]);
+
+    const response = await app.request("/?locale=pl");
+
+    await expect(displayTitles(response)).resolves.toEqual([
+      "Witaj",
+      "Hello again",
+      "Third",
+    ]);
+  });
+
+  it("resolves in the default language when the list names no language", async () => {
+    const { app, findManyRowsForItems } = await harness();
+    findManyRowsForItems.mockResolvedValue([
+      translationRow(1, "Witaj"),
+      translationRow(1, "Hello", "en"),
+    ]);
 
     const response = await app.request("/");
-    const body = (await response.json()) as { edges: object[] };
 
-    expect(findManyByLanguageId).not.toHaveBeenCalled();
-    expect(body.edges.every(edge => !("translation" in edge))).toBe(true);
+    await expect(titles(response)).resolves.toEqual([null, null, null]);
+    await expect(displayTitles(await app.request("/"))).resolves.toEqual([
+      "Hello",
+      null,
+      null,
+    ]);
   });
 
   it("reads a locale the install does not have as no translation", async () => {
-    const { app, findManyByLanguageId } = harness();
+    const { app, findManyRowsForItems } = await harness();
+    findManyRowsForItems.mockResolvedValue([translationRow(2, "Witaj")]);
 
     const response = await app.request("/?locale=de");
 
-    expect(findManyByLanguageId).not.toHaveBeenCalled();
     await expect(titles(response)).resolves.toEqual([null, null, null]);
+    await expect(
+      displayTitles(await app.request("/?locale=de")),
+    ).resolves.toEqual([null, "Witaj", null]);
   });
 });

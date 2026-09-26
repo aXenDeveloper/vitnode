@@ -1,22 +1,11 @@
 import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import type * as UserImages from "@/api/lib/user-images";
-import type { UserImageHolder } from "@/api/lib/user-images";
-
-import { releaseUserImageHolders } from "@/api/lib/user-images";
 import { core_content_file_refs } from "@/database/content";
 
 import { STORAGE_FILE_IN_USE, StorageModel } from "./storage";
-
-vi.mock("@/api/lib/user-images", async importOriginal => ({
-  ...(await importOriginal<typeof UserImages>()),
-  releaseUserImageHolders: vi.fn().mockResolvedValue(undefined),
-}));
-
-const released = vi.mocked(releaseUserImageHolders);
 
 const makeCtx = (
   overrides: { admin?: unknown; storage?: unknown } = {},
@@ -87,11 +76,13 @@ const makeDeleteCtx = (
   ctx: Context;
   del: ReturnType<typeof vi.fn>;
   deleteReturning: ReturnType<typeof vi.fn>;
+  emit: ReturnType<typeof vi.fn>;
   holdersWhere: ReturnType<typeof vi.fn>;
   pinsReturning: ReturnType<typeof vi.fn>;
   rolledBack: () => boolean;
 } => {
   const del = vi.fn().mockResolvedValue(undefined);
+  const emit = vi.fn().mockResolvedValue({ failures: [], listeners: 0 });
   const holdersWhere = vi.fn().mockResolvedValue(overrides.holders ?? []);
   const deleteReturning =
     "referenceError" in overrides
@@ -130,6 +121,9 @@ const makeDeleteCtx = (
             },
     },
     db: {
+      select: () => ({
+        from: () => ({ where: async () => await Promise.resolve([]) }),
+      }),
       transaction: async (body: (handle: typeof tx) => Promise<unknown>) => {
         try {
           return await body(tx);
@@ -139,12 +133,14 @@ const makeDeleteCtx = (
         }
       },
     },
+    events: { emit },
   };
 
   return {
     ctx: { get: (k: string) => store[k] } as unknown as Context,
     del,
     deleteReturning,
+    emit,
     holdersWhere,
     pinsReturning,
     rolledBack: () => rolledBack,
@@ -268,10 +264,6 @@ describe("StorageModel.delete", () => {
 });
 
 describe("StorageModel.deleteFile", () => {
-  beforeEach(() => {
-    released.mockClear();
-  });
-
   it("deletes the database row first, then the storage object", async () => {
     const key = "2026/07/avatars/x.png";
     const { ctx, del, deleteReturning } = makeDeleteCtx({ key });
@@ -308,7 +300,7 @@ describe("StorageModel.deleteFile", () => {
   });
 
   it("releases every user whose avatar or cover the file was", async () => {
-    const { ctx, del } = makeDeleteCtx(
+    const { ctx, del, emit } = makeDeleteCtx(
       { key: "2026/09/avatars/x.webp" },
       {
         holders: [
@@ -320,33 +312,32 @@ describe("StorageModel.deleteFile", () => {
 
     await new StorageModel(ctx).deleteFile(1);
 
-    const expected: UserImageHolder[] = [
-      { kind: "avatar", userId: 7 },
-      { kind: "cover", userId: 9 },
-    ];
-    expect(released).toHaveBeenCalledWith(ctx, expected);
+    expect(emit.mock.calls).toEqual([
+      ["user.avatar.updated", { fileId: null, userId: 7 }],
+      ["user.cover.updated", { fileId: null, userId: 9 }],
+    ]);
     expect(del.mock.invocationCallOrder[0]).toBeLessThan(
-      released.mock.invocationCallOrder[0],
+      emit.mock.invocationCallOrder[0],
     );
   });
 
   it("releases nobody when the file is not a profile image", async () => {
-    const { ctx } = makeDeleteCtx({ key: "2026/09/content/x.webp" });
+    const { ctx, emit } = makeDeleteCtx({ key: "2026/09/content/x.webp" });
 
     await new StorageModel(ctx).deleteFile(1);
 
-    expect(released).toHaveBeenCalledWith(ctx, []);
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("releases nobody when the delete was refused", async () => {
-    const { ctx } = makeDeleteCtx(
+    const { ctx, emit } = makeDeleteCtx(
       { key: "a/b.png" },
       { holders: [{ avatarId: 1, coverId: null, id: 7 }], pins: 2 },
     );
 
     await new StorageModel(ctx).deleteFile(1).catch(() => undefined);
 
-    expect(released).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("still removes the row when no storage adapter is configured", async () => {

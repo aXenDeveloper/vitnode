@@ -15,5 +15,11 @@ export const rowsClasses: Record<AdminDashboardWidgetRows, string> = {
   3: "min-h-112",
 };
 
+export const rowsHeightRem: Record<AdminDashboardWidgetRows, number> = {
+  1: 14,
+  2: 20,
+  3: 28,
+};
+
 export const gridClasses =
   "grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3";

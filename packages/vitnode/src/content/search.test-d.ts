@@ -249,6 +249,47 @@ describe("search configuration types", () => {
     );
   });
 
+  it("accepts a private user field as the authorField", () => {
+    assertType(
+      defineContentType({
+        admin,
+        fields,
+        id: "test.author",
+        publicApi,
+        publication: { enabled: true },
+        search: {
+          authorField: "author",
+          contentFields: ["body"],
+          enabled: true,
+          pathTemplate: "/articles/{slug}",
+          titleField: "title",
+        },
+        tableName: "test_author",
+      }),
+    );
+  });
+
+  it("rejects an authorField that is not a user field", () => {
+    assertType(
+      defineContentType({
+        admin,
+        fields,
+        id: "test.author_title",
+        publicApi,
+        publication: { enabled: true },
+        search: {
+          // @ts-expect-error - only a user field credits a person.
+          authorField: "title",
+          contentFields: ["body"],
+          enabled: true,
+          pathTemplate: "/articles/{slug}",
+          titleField: "title",
+        },
+        tableName: "test_author_title",
+      }),
+    );
+  });
+
   it("rejects search without a public API", () => {
     assertType(
       defineContentType({

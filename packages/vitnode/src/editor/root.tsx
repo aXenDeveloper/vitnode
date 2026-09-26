@@ -41,6 +41,7 @@ import {
   visualEditorReducer,
 } from "./state/reducer";
 import { EditableZone } from "./zones/editable-zone";
+import { revealArrivedNode } from "./zones/reveal-arrival";
 
 export interface EditorRootProps {
   adapter?: VisualEditorAdapter;
@@ -70,6 +71,12 @@ const EditorShell = ({
   );
   const [saveStatus, setSaveStatus] = useState<VisualEditorSaveStatus>("idle");
   const [leaving, setLeaving] = useState(false);
+  const [arrivingNodeId, setArrivingNodeId] = useState<null | string>(null);
+
+  const arrive = useCallback((nodeId: string) => {
+    setArrivingNodeId(nodeId);
+    revealArrivedNode(nodeId);
+  }, []);
 
   /**
    * The room the site gives the sidebar is asked for **here**, by the editor
@@ -256,9 +263,10 @@ const EditorShell = ({
         ref: { areaId, kind: "block", nodeId: instance.id, zoneId },
         type: "select",
       });
+      arrive(instance.id);
       setInsertTarget(null);
     },
-    [insertTarget, state, zoneAccepts],
+    [arrive, insertTarget, state, zoneAccepts],
   );
 
   const insertArea = useCallback(
@@ -283,13 +291,15 @@ const EditorShell = ({
         ref: { areaId: null, kind: "area", nodeId: area.id, zoneId },
         type: "select",
       });
+      arrive(area.id);
       setInsertTarget(null);
     },
-    [insertTarget, state.order, state.zones],
+    [arrive, insertTarget, state.order, state.zones],
   );
 
   const editor = useMemo<VisualEditorContextValue>(
     () => ({
+      arrivingNodeId,
       canInsertBlock,
       dirty,
       discard,
@@ -309,6 +319,7 @@ const EditorShell = ({
       unsafeZoneIds: unsafe,
     }),
     [
+      arrivingNodeId,
       canInsertBlock,
       closing,
       dirty,
