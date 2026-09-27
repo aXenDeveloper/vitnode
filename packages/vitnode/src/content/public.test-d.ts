@@ -10,6 +10,7 @@ import { testPostContentType } from "@/tests/content-fixtures";
 import type {
   ContentPublicReadOptions,
   ContentPublicService,
+  ContentPublicSlugReadOptions,
 } from "./server/public-service";
 import type {
   AnyContentTypeDefinition,
@@ -182,7 +183,7 @@ describe("publicApi types", () => {
         [number, ContentPublicReadOptions?]
       >();
       expectTypeOf<Service["findBySlug"]>().parameters.toEqualTypeOf<
-        [string, ContentPublicReadOptions?]
+        [string, ContentPublicSlugReadOptions?]
       >();
     });
 

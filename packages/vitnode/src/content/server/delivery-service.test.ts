@@ -81,6 +81,23 @@ const localizedType = defineContentType({
   tableName: "delivery_localized_articles",
 });
 
+const strictLocalizedType = defineContentType({
+  id: "delivery.strict-localized",
+  delivery: { enabled: true },
+  fields: {
+    slug: field.slug({ localized: true, source: "title" }),
+    title: field.text({ localized: true, required: true }),
+  },
+  localization: { defaultLocale: "en", enabled: true, fallback: "none" },
+  publication: { enabled: true },
+  publicApi: {
+    enabled: true,
+    fields: ["id", "title", "slug"],
+    path: "strict-articles",
+  },
+  tableName: "delivery_strict_localized_articles",
+});
+
 /** One retired or current address, as `core_content_slug_history` stores it. */
 interface HistoryRow {
   itemId: number;
@@ -164,19 +181,27 @@ const buildService = ({
   const publicService = {
     findById: async (id: number, options?: { locale?: string }) =>
       await Promise.resolve(rowFor(id, options?.locale)),
-    findBySlug: async (slug: string, options?: { locale?: string }) => {
+    findBySlug: async (
+      slug: string,
+      options?: { fallback?: boolean; locale?: string },
+    ) => {
       const hit = bySlug[slug];
       if (!hit) return await Promise.resolve(null);
-      // Strict-locale, exactly as the real service is: a URL belongs to the
-      // language it was published under.
+
+      const wanted = (options?.locale ?? defaultLocale).toLowerCase();
+      if (!localized || hit.locale === wanted) {
+        return await Promise.resolve(rowFor(hit.itemId, hit.locale));
+      }
+
       if (
-        localized &&
-        hit.locale !== (options?.locale ?? defaultLocale).toLowerCase()
+        !options?.fallback ||
+        definition.localization.fallback !== "default" ||
+        hit.locale !== defaultLocale
       ) {
         return await Promise.resolve(null);
       }
 
-      return await Promise.resolve(rowFor(hit.itemId, hit.locale));
+      return await Promise.resolve(rowFor(hit.itemId, wanted));
     },
     findMany: async () =>
       await Promise.resolve({ edges: [], pageInfo: {} as never }),
@@ -438,21 +463,48 @@ describe("localized resolveSlug", () => {
     });
   });
 
-  it("resolves a slug strictly, never through the fallback", async () => {
+  it("serves the default language at an address in a language with no translation", async () => {
     const service = buildService({
       byId: { 7: [translation("en", "hello")] },
       bySlug: { hello: { itemId: 7, locale: "en" } },
       definition: localizedType,
     });
 
-    // `/pl/articles/hello` is not the English article, even though the content type
-    // falls back to English for a *read*.
+    expect(await service.resolveSlug("hello", { locale: "pl" })).toMatchObject({
+      canonicalPath: "/articles/hello",
+      isFallback: true,
+      locale: "en",
+      requestedLocale: "pl",
+      type: "content",
+    });
+  });
+
+  it("redirects a default-language slug to the translation that exists", async () => {
+    const service = buildService({
+      byId: { 7: [translation("en", "hello"), translation("pl", "witaj")] },
+      bySlug: {
+        hello: { itemId: 7, locale: "en" },
+        witaj: { itemId: 7, locale: "pl" },
+      },
+      definition: localizedType,
+    });
+
+    expect(await service.resolveSlug("hello", { locale: "pl" })).toStrictEqual({
+      location: "/pl/articles/witaj",
+      status: 308,
+      type: "redirect",
+    });
+  });
+
+  it("keeps a content type without a fallback strict", async () => {
+    const service = buildService({
+      byId: { 7: [translation("en", "hello")] },
+      bySlug: { hello: { itemId: 7, locale: "en" } },
+      definition: strictLocalizedType,
+    });
+
     expect(await service.resolveSlug("hello", { locale: "pl" })).toStrictEqual({
       type: "not_found",
-    });
-    expect(await service.resolveSlug("hello", { locale: "en" })).toMatchObject({
-      canonicalPath: "/articles/hello",
-      type: "content",
     });
   });
 });

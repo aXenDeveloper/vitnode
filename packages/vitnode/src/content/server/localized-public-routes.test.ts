@@ -199,21 +199,22 @@ describe("locale headers", () => {
 });
 
 describe("locale-aware detail route", () => {
-  it("passes the resolved locale to the strict-locale lookup", async () => {
+  it("passes the resolved locale to the slug lookup", async () => {
     const { app, service } = harness();
     service.findBySlug.mockResolvedValue(row);
 
     await app.request("/witaj?locale=pl");
 
-    expect(service.findBySlug).toHaveBeenCalledWith("witaj", { locale: "pl" });
+    expect(service.findBySlug).toHaveBeenCalledWith("witaj", {
+      fallback: true,
+      locale: "pl",
+    });
   });
 
   it("404s a slug that has no translation in this language", async () => {
     const { app, service } = harness();
     service.findBySlug.mockResolvedValue(null);
 
-    // The service is strict-locale, so this is what "never falls back" looks
-    // like from the outside: the same 404 as a typo.
     expect((await app.request("/witaj?locale=en")).status).toBe(404);
   });
 

@@ -356,6 +356,28 @@ export const testLocalizedSearchPageContentType = defineContentType({
   },
 });
 
+export const testStrictLocalizedSearchPageContentType = defineContentType({
+  id: "test.strict-localized-search-page",
+  tableName: "test_strict_localized_search_pages",
+  localization: { enabled: true, defaultLocale: "en", fallback: "none" },
+  publication: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "strict-pages",
+    fields: ["title", "slug", "publishedAt"],
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/strict-pages/{slug}",
+  },
+});
+
 export const testAdvancedLocalizedContentType = defineContentType({
   id: "test.advanced-localized",
   tableName: "test_advanced_localized",

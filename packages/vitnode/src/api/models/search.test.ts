@@ -3,7 +3,15 @@ import type { Context } from "hono";
 
 import { describe, expect, it, vi } from "vitest";
 
+import type { RegisteredContentType } from "@/content/registry";
+
 import { core_search_index } from "@/database/search";
+import {
+  testLocalizedPageContentType,
+  testLocalizedSearchPageContentType,
+  testSearchablePostContentType,
+  testStrictLocalizedSearchPageContentType,
+} from "@/tests/content-fixtures";
 
 import type { SearchDocument, SearchProviderApiPlugin } from "./search";
 
@@ -11,6 +19,7 @@ import { PostgresSearchAdapter } from "../adapters/search/postgres";
 import {
   assertSearchProviderCapabilities,
   normalizeSearchIndexerPage,
+  searchLanguageFallbacks,
   SearchModel,
 } from "./search";
 
@@ -404,5 +413,73 @@ describe("provider diagnostics", () => {
       itemType: "blog_post",
       languageCode: "pl",
     });
+  });
+});
+
+const registered = (
+  definition: RegisteredContentType["definition"],
+): RegisteredContentType => ({ definition, pluginId: "@vitnode/core" });
+
+const localizedSearchPage = registered(testLocalizedSearchPageContentType);
+
+describe("searchLanguageFallbacks", () => {
+  it("falls back to the default language of a type that asks for it", () => {
+    expect(searchLanguageFallbacks([localizedSearchPage], "pl")).toEqual([
+      { itemType: "test.localized-search-page", languageCode: "en" },
+    ]);
+  });
+
+  it("adds nothing when the viewer already reads the default language", () => {
+    expect(searchLanguageFallbacks([localizedSearchPage], "EN")).toEqual([]);
+  });
+
+  it("skips types that do not fall back, are not localized, or are not searchable", () => {
+    expect(
+      searchLanguageFallbacks(
+        [
+          registered(testStrictLocalizedSearchPageContentType),
+          registered(testSearchablePostContentType),
+          registered(testLocalizedPageContentType),
+        ],
+        "pl",
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("SearchModel language fallback", () => {
+  const contextWith = (provider: SearchProviderApiPlugin) =>
+    ({
+      get: (key: string) =>
+        key === "core"
+          ? {
+              contentTypes: [localizedSearchPage],
+              search: { adapter: provider },
+            }
+          : undefined,
+    }) as unknown as Context;
+
+  it("asks the provider for the default language where a translation is missing", async () => {
+    const provider = createProvider();
+    const c = contextWith(provider);
+
+    await new SearchModel(c).search({ authorId: 1, languageCode: "pl" });
+
+    expect(provider.search).toHaveBeenCalledWith(c, {
+      authorId: 1,
+      languageCode: "pl",
+      languageFallbacks: [
+        { itemType: "test.localized-search-page", languageCode: "en" },
+      ],
+    });
+  });
+
+  it("leaves a search without a language untouched", async () => {
+    const provider = createProvider();
+    const c = contextWith(provider);
+
+    await new SearchModel(c).search({ authorId: 1 });
+
+    expect(provider.search).toHaveBeenCalledWith(c, { authorId: 1 });
   });
 });

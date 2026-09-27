@@ -484,10 +484,8 @@ export const buildContentPublicRoutes = <
       // that is not published in this language and a typo are all the same 404.
       // A 403 would confirm the record exists, which is the one thing a draft
       // URL must not do - and so would a 404 that only some of them produced.
-      //
-      // Strict-locale by construction: `findBySlug` does not fall back, so this
-      // never answers a Polish URL with the English article.
       const row = await service(c).findBySlug(c.req.param("slug"), {
+        fallback: true,
         locale: resolved.locale,
       });
       if (!row) throw notFound();

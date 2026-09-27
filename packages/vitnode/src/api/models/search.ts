@@ -3,7 +3,10 @@ import type { Context } from "hono";
 import { and, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import type { RegisteredContentType } from "@/content/registry";
+
 import { storageUrlOf } from "@/api/lib/storage-url";
+import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
 import { core_search_index } from "@/database/search";
 import { core_users } from "@/database/users";
@@ -46,9 +49,28 @@ export interface SearchQueryParams {
   // Restrict results to one locale (the viewer's). Rows with an empty
   // `languageCode` (language-agnostic content) always match.
   languageCode?: string;
+  languageFallbacks?: SearchLanguageFallback[];
   sort?: "newest" | "oldest" | "relevance";
   term?: string;
 }
+
+export interface SearchLanguageFallback {
+  itemType: string;
+  languageCode: string;
+}
+
+export const searchLanguageFallbacks = (
+  contentTypes: readonly RegisteredContentType[],
+  languageCode: string,
+): SearchLanguageFallback[] =>
+  contentTypes.flatMap(({ definition: { id, localization, search } }) =>
+    search.enabled &&
+    localization.enabled &&
+    localization.fallback === "default" &&
+    !contentLocalesMatch(localization.defaultLocale, languageCode)
+      ? [{ itemType: id, languageCode: localization.defaultLocale }]
+      : [],
+  );
 
 export interface SearchHitAuthor {
   avatarColor: string;
@@ -464,7 +486,16 @@ export class SearchModel {
   }
 
   async search(params: SearchQueryParams): Promise<SearchResult> {
-    const result = await this.provider().search(this.c, params);
+    const languageFallbacks = params.languageCode
+      ? searchLanguageFallbacks(
+          this.c.get("core").contentTypes,
+          params.languageCode,
+        )
+      : [];
+    const result = await this.provider().search(
+      this.c,
+      languageFallbacks.length > 0 ? { ...params, languageFallbacks } : params,
+    );
 
     return { ...result, edges: await this.hydrateAuthors(result.edges) };
   }

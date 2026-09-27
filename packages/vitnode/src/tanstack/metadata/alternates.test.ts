@@ -152,6 +152,20 @@ describe("localeAlternateLinks", () => {
     ]);
   });
 
+  it("points the canonical at the default language when this one has no version", () => {
+    const links = localeAlternateLinks({
+      alternates: { en: "/articles/hello-world" },
+      locale: "pl",
+      localeRouting: prefixed,
+      webOrigin: "https://site.example",
+    });
+
+    expect(links[0]).toEqual({
+      href: "https://site.example/articles/hello-world",
+      rel: "canonical",
+    });
+  });
+
   it.each([
     ["an unknown locale", { fr: "/articles/bonjour" }],
     ["a protocol-relative path", { en: "//evil.example/x" }],

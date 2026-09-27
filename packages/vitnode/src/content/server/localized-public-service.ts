@@ -399,16 +399,21 @@ export const createContentLocalizedPublicService = <
       const slugField = publicApi.slugField;
 
       // A localized slug is matched inside the translation, a shared one on the
-      // base row. Both are strict: the fallback language is not consulted either
-      // way, so a URL always resolves in the language it was published under.
-      const condition = isLocalized(slugField)
-        ? publishedTranslation(
-            resolved.requested.id,
-            eq(translationColumns[slugField], slug),
-          )
-        : eq(columns[slugField], slug);
+      // base row.
+      const slugIn = (languageId: number): SQL =>
+        isLocalized(slugField)
+          ? publishedTranslation(
+              languageId,
+              eq(translationColumns[slugField], slug),
+            )
+          : eq(columns[slugField], slug);
 
-      return await readOne(resolved, condition, { strict: true });
+      const row = await readOne(resolved, slugIn(resolved.requested.id), {
+        strict: true,
+      });
+      if (row || !options?.fallback || !resolved.fallbackTo) return row;
+
+      return await readOne(resolved, slugIn(resolved.fallbackTo.id));
     },
 
     findMany: async ({ filters = {}, locale, orderBy, query = {} } = {}) => {

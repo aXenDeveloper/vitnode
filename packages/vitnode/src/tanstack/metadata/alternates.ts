@@ -84,8 +84,8 @@ export const localeAlternateLinks = (
 
   if (hrefs.size === 0) return [];
 
-  const canonical = hrefs.get(options.locale);
   const fallback = hrefs.get(localeRouting.defaultLocale);
+  const canonical = hrefs.get(options.locale) ?? fallback;
 
   return [
     ...(canonical === undefined

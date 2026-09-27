@@ -273,17 +273,34 @@ export const createContentDeliveryService = <
   ): Promise<ContentDeliveryResolution> => {
     const requestedLocale = localeFor(locale);
 
-    // The live record first, and strictly by slug: a URL belongs to the language
-    // it was published under, so `findBySlug` never falls back.
-    const row = await buildPublic(c).findBySlug(slug, { locale });
+    const row = await buildPublic(c).findBySlug(slug, {
+      fallback: true,
+      locale,
+    });
     if (row) {
       const values = row as Record<string, unknown>;
+      const itemId = typeof values.id === "number" ? values.id : null;
+
+      if (itemId !== null && slugOf(definition, values) !== slug) {
+        const destination = await strictCanonical(
+          itemId,
+          requestedLocale,
+          host,
+        );
+        if (destination === null) return { type: "not_found" };
+
+        return {
+          location: destination.location,
+          status: CONTENT_DELIVERY_REDIRECT_STATUS,
+          type: "redirect",
+        };
+      }
 
       return {
         ...(await metadataFor(values, {
           // Only what the public projection actually carries - see
           // `ContentDeliveryMetadata.itemId`.
-          itemId: typeof values.id === "number" ? values.id : null,
+          itemId,
           origin,
           requestedLocale,
         })),

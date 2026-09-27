@@ -13,6 +13,7 @@ import {
   inArray,
   lt,
   lte,
+  notExists,
   or,
   sql,
 } from "drizzle-orm";
@@ -34,10 +35,48 @@ const authorAvatarFile = alias(core_files, "search_author_avatar_file");
 
 const leadAuthorId = sql<null | number>`${core_search_index.authorIds}[1]`;
 
+const requestedTranslation = alias(
+  core_search_index,
+  "search_requested_translation",
+);
+
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
-const buildFilters = (params: SearchQueryParams): SQL | undefined => {
+const fallbackLanguageConditions = (
+  c: Context,
+  params: SearchQueryParams,
+  languageCode: string,
+): SQL[] =>
+  (params.languageFallbacks ?? []).flatMap(fallback => {
+    const condition = and(
+      eq(core_search_index.itemType, fallback.itemType),
+      eq(core_search_index.languageCode, fallback.languageCode),
+      notExists(
+        c
+          .get("db")
+          .select({ id: requestedTranslation.id })
+          .from(requestedTranslation)
+          .where(
+            and(
+              eq(requestedTranslation.itemType, core_search_index.itemType),
+              eq(requestedTranslation.itemId, core_search_index.itemId),
+              eq(requestedTranslation.languageCode, languageCode),
+              params.includePrivate
+                ? undefined
+                : eq(requestedTranslation.isPublic, true),
+            ),
+          ),
+      ),
+    );
+
+    return condition ? [condition] : [];
+  });
+
+const buildFilters = (
+  c: Context,
+  params: SearchQueryParams,
+): SQL | undefined => {
   const conditions: SQL[] = [];
 
   const term = params.term?.trim();
@@ -54,6 +93,7 @@ const buildFilters = (params: SearchQueryParams): SQL | undefined => {
     const languageCondition = or(
       eq(core_search_index.languageCode, params.languageCode),
       eq(core_search_index.languageCode, ""),
+      ...fallbackLanguageConditions(c, params, params.languageCode),
     );
     if (languageCondition) {
       conditions.push(languageCondition);
@@ -134,7 +174,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     const term = params.term?.trim();
     const useRelevance = params.sort === "relevance" && !!term;
     const size = Math.min(params.first ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-    const filters = buildFilters(params);
+    const filters = buildFilters(c, params);
 
     const [{ total }] = await db
       .select({ total: count() })

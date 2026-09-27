@@ -43,6 +43,10 @@ export interface ContentPublicReadOptions {
   locale?: string;
 }
 
+export interface ContentPublicSlugReadOptions extends ContentPublicReadOptions {
+  fallback?: boolean;
+}
+
 export interface ContentPublicFindManyArgs<
   TDefinition,
 > extends ContentPublicReadOptions {
@@ -71,7 +75,7 @@ export interface ContentPublicService<TDefinition> {
 
   findBySlug: (
     slug: string,
-    options?: ContentPublicReadOptions,
+    options?: ContentPublicSlugReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
   findMany: (args?: ContentPublicFindManyArgs<TDefinition>) => Promise<{
     edges: ContentPublicListRow<TDefinition>[];

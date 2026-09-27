@@ -271,6 +271,7 @@ describe("route registration", () => {
 
     expect(res.status).toBe(200);
     expect(service.findBySlug).toHaveBeenCalledWith("preview", {
+      fallback: true,
       locale: undefined,
     });
   });

@@ -155,6 +155,7 @@ export type {
   ContentPublicFindManyArgs,
   ContentPublicReadOptions,
   ContentPublicService,
+  ContentPublicSlugReadOptions,
 } from "./public-service";
 export {
   contentPublicCondition,
