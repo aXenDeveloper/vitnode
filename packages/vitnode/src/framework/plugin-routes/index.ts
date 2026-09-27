@@ -17,6 +17,16 @@ export {
   assertNoHostRouteCollision,
   hostRoutePathsFromFiles,
 } from "./host-routes.js";
+export type {
+  AssertLocaleRoutePathsOptions,
+  LocaleRoutePathsConfig,
+  LocaleRoutePathTargetsOptions,
+} from "./locale-route-paths.js";
+export {
+  assertLocaleRoutePaths,
+  i18nFromLoadedConfig,
+  localeRoutePathTargets,
+} from "./locale-route-paths.js";
 
 export {
   assertPluginId,

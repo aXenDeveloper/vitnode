@@ -14,7 +14,7 @@ export interface ContentSitemapEntry {
   lastModified: Date;
   /** The language this URL is in, or `null` for a nonlocalized content type. */
   locale: null | string;
-  /** Relative, always. An origin is applied at serialization time. */
+  origin?: string;
   path: string;
   priority: null | number;
 }
@@ -47,7 +47,10 @@ export const contentSitemapXml = ({
    * The alternates of each entry, keyed by `itemId`. Omit it and no `xhtml:link`
    * element is emitted at all, which is a valid sitemap and the right default.
    */
-  alternates?: ReadonlyMap<number, readonly { locale: string; path: string }[]>;
+  alternates?: ReadonlyMap<
+    number,
+    readonly { locale: string; origin?: string; path: string }[]
+  >;
   entries: readonly ContentSitemapEntry[];
   origin: string;
 }): string => {
@@ -60,7 +63,7 @@ export const contentSitemapXml = ({
   ];
 
   for (const entry of entries) {
-    const loc = absolute(origin, entry.path);
+    const loc = absolute(entry.origin ?? origin, entry.path);
     if (loc === null) continue;
 
     lines.push("  <url>");
@@ -76,7 +79,7 @@ export const contentSitemapXml = ({
     }
 
     for (const alternate of alternates?.get(entry.itemId) ?? []) {
-      const href = absolute(origin, alternate.path);
+      const href = absolute(alternate.origin ?? origin, alternate.path);
       if (href === null) continue;
 
       lines.push(

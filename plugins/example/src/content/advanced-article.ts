@@ -121,7 +121,7 @@ export const advancedArticleContentType = defineContentType({
     titleField: "title",
     descriptionField: "seo.description",
     contentFields: ["title", "seo.description", "faq.question", "faq.answer"],
-    pathTemplate: "/{locale}/advanced-articles/{slug}",
+    pathTemplate: "/advanced-articles/{slug}",
   },
 
   delivery: {

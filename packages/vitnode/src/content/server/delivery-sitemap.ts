@@ -4,6 +4,7 @@ import type { Context } from "hono";
 
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 
+import type { ContentLocaleRouting } from "../public-url";
 import type { ContentSitemapEntry } from "../sitemap";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliverySitemapArgs } from "./delivery-service";
@@ -13,10 +14,11 @@ import {
   CONTENT_SITEMAP_DEFAULT_PAGE_SIZE,
   CONTENT_SITEMAP_MAX_URLS,
 } from "../const";
-import { contentDeliveryPath } from "../delivery";
+import { contentDeliveryPublicUrl } from "../delivery";
 import { ContentDeliveryNotEnabled } from "../errors";
 import { splitContentFieldPath } from "../paths";
 import { findContentLanguage } from "./language-resolver";
+import { contentLocaleRouting } from "./locale-routing";
 import {
   contentTranslationPublicationColumns,
   publicationColumns,
@@ -123,6 +125,7 @@ export const readContentDeliverySitemapPage = async <
       definition,
       limit,
       locale: null,
+      routing: contentLocaleRouting(c),
       rows: rows.map(row => ({
         itemId: row.itemId as number,
         lastModified: row.lastModified as Date,
@@ -195,6 +198,7 @@ export const readContentDeliverySitemapPage = async <
     definition,
     limit,
     locale: language.locale,
+    routing: contentLocaleRouting(c),
     rows: rows.map(row => ({
       itemId: row.itemId as number,
       // `greatest()` comes back as a string on some drivers, so it is normalized
@@ -219,11 +223,13 @@ const page = ({
   definition,
   limit,
   locale,
+  routing,
   rows,
 }: {
   definition: AnyContentTypeDefinition;
   limit: number;
   locale: null | string;
+  routing: ContentLocaleRouting;
   rows: readonly { itemId: number; lastModified: Date; slug: unknown }[];
 }): ContentDeliverySitemapPage => {
   const visible = rows.slice(0, limit);
@@ -231,22 +237,24 @@ const page = ({
   const entries: ContentSitemapEntry[] = [];
 
   for (const row of visible) {
-    const path = contentDeliveryPath({
+    const url = contentDeliveryPublicUrl({
       definition,
       locale,
+      routing,
       slug: typeof row.slug === "string" ? row.slug : "",
     });
     // A row with no buildable path has no URL, so it has no sitemap line. It stays
     // out of the entries and still advances the cursor, which is why the cursor is
     // taken from `visible` rather than from `entries`.
-    if (path === null) continue;
+    if (url === null) continue;
 
     entries.push({
       changeFrequency: sitemap.changeFrequency,
       itemId: row.itemId,
       lastModified: row.lastModified,
       locale,
-      path,
+      ...(url.origin === undefined ? {} : { origin: url.origin }),
+      path: url.pathname,
       priority: sitemap.priority,
     });
   }

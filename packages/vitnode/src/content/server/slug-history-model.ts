@@ -3,6 +3,7 @@ import type { Context } from "hono";
 
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
+import type { ContentLocaleRouting } from "../public-url";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
@@ -15,7 +16,6 @@ export interface ContentSlugHistoryEntry {
   itemId: number;
   /** `null` for a shared slug - see `core_content_slug_history`. */
   languageId: null | number;
-  /** The URL that was live, exactly as it was live. */
   path: string;
   retiredAt: Date | null;
   slug: string;
@@ -291,9 +291,11 @@ export const contentSlugHistoryCurrentPaths = async (
 export const contentSlugHistoryPath = ({
   definition,
   locale,
+  routing,
   slug,
 }: {
   definition: AnyContentTypeDefinition;
   locale: null | string;
+  routing: ContentLocaleRouting;
   slug: string;
-}): string => contentDeliveryPath({ definition, locale, slug }) ?? "";
+}): string => contentDeliveryPath({ definition, locale, routing, slug }) ?? "";

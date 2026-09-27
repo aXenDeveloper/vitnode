@@ -105,11 +105,13 @@ const assertSearchAuthorField = (
   }
 };
 
-const assertSearchPathTemplate = (
+const LEGACY_LOCALE_PREFIX = `/${CONTENT_SEARCH_LOCALE_PLACEHOLDER}/`;
+
+const resolveSearchPathTemplate = (
   id: string,
   template: string,
   localized: boolean,
-): void => {
+): string => {
   if (!template.startsWith("/")) {
     throw new ContentEngineError(
       `search.pathTemplate "${template}" must start with "/". Search result URLs are relative to the site root.`,
@@ -133,44 +135,36 @@ const assertSearchPathTemplate = (
     );
   }
 
-  // A localized content type is indexed once per language, and two languages
-  // routinely answer to the same slug - so a template with no `{locale}` would
-  // give every translation of a record the same link, and a hit would point at
-  // whichever language the reader happened to be in.
-  const locales = template.split(CONTENT_SEARCH_LOCALE_PLACEHOLDER).length - 1;
-  if (localized && locales !== 1) {
-    throw new ContentEngineError(
-      `search.pathTemplate "${template}" must contain exactly one "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}" placeholder on a localized content type, not ${locales}. One document per language means one URL per language.`,
-      { contentTypeId: id },
-    );
-  }
-  if (!localized && locales > 0) {
+  const legacyPrefixed = template.startsWith(LEGACY_LOCALE_PREFIX);
+  const source = legacyPrefixed
+    ? template.slice(LEGACY_LOCALE_PREFIX.length - 1)
+    : template;
+
+  if (!localized && template.includes(CONTENT_SEARCH_LOCALE_PLACEHOLDER)) {
     throw new ContentEngineError(
       `search.pathTemplate "${template}" uses "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}", but this content type is not localized - there is no language for it to substitute.`,
       { contentTypeId: id },
     );
   }
 
-  // Everything else that looks like a placeholder is a typo, and substitution is
-  // a single literal replace - so an unvalidated one would end up in the URL.
-  const rest = template
-    .replace(CONTENT_SEARCH_SLUG_PLACEHOLDER, "")
-    .replace(CONTENT_SEARCH_LOCALE_PLACEHOLDER, "");
-  if (rest.includes("{") || rest.includes("}")) {
+  if (source.includes(CONTENT_SEARCH_LOCALE_PLACEHOLDER)) {
     throw new ContentEngineError(
-      `search.pathTemplate "${template}" uses a placeholder other than "${CONTENT_SEARCH_SLUG_PLACEHOLDER}"${localized ? ` and "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}"` : ""}. No other placeholder is supported.`,
+      `search.pathTemplate "${template}" places "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}" somewhere other than the start of the path. The language is no longer part of the template: i18n.localePrefix, i18n.domains and i18n.routePaths now place it. Remove "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}" (recommended), or keep it only as the first segment ("/${CONTENT_SEARCH_LOCALE_PLACEHOLDER}/...").`,
       { contentTypeId: id },
     );
   }
 
-  // Substituted with a non-empty token rather than removed, so a template whose
-  // segments are placeholders (`/{locale}/articles/{slug}`) is not mistaken for
-  // one with an empty segment.
-  const structural = template
-    .split(CONTENT_SEARCH_SLUG_PLACEHOLDER)
-    .join("x")
-    .split(CONTENT_SEARCH_LOCALE_PLACEHOLDER)
-    .join("x");
+  // Everything else that looks like a placeholder is a typo, and substitution is
+  // a single literal replace - so an unvalidated one would end up in the URL.
+  const rest = source.replace(CONTENT_SEARCH_SLUG_PLACEHOLDER, "");
+  if (rest.includes("{") || rest.includes("}")) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" uses a placeholder other than "${CONTENT_SEARCH_SLUG_PLACEHOLDER}". No other placeholder is supported.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const structural = source.split(CONTENT_SEARCH_SLUG_PLACEHOLDER).join("x");
 
   if (
     structural.includes("//") ||
@@ -182,6 +176,8 @@ const assertSearchPathTemplate = (
       { contentTypeId: id },
     );
   }
+
+  return source;
 };
 
 export const resolveSearch = (
@@ -289,7 +285,11 @@ export const resolveSearch = (
     });
   }
 
-  assertSearchPathTemplate(id, search.pathTemplate, localized);
+  const pathTemplate = resolveSearchPathTemplate(
+    id,
+    search.pathTemplate,
+    localized,
+  );
 
   const authorField = search.authorField ?? null;
   if (authorField !== null) assertSearchAuthorField(id, fields, authorField);
@@ -299,7 +299,7 @@ export const resolveSearch = (
     contentFields,
     descriptionField,
     enabled: true,
-    pathTemplate: search.pathTemplate,
+    pathTemplate,
     titleField,
   };
 };

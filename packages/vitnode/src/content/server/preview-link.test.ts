@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  testContentLocaleRouting,
   testDeliveredLocalizedContentType,
   testDeliveredPostContentType,
   testEditorialPostContentType,
@@ -11,6 +12,7 @@ import {
 import { contentPreviewUrl } from "./preview-link";
 
 const PLUGIN_ID = "@vitnode/example";
+const routing = testContentLocaleRouting();
 const TOKEN = "eyJhdWQiOiJjb250ZW50LXByZXZpZXcifQ.c2lnbmF0dXJl";
 
 // Deliberately different hosts. Both default to localhost:3000, which would make
@@ -30,6 +32,7 @@ describe("contentPreviewUrl", () => {
     const url = contentPreviewUrl({
       definition: testEditorialPostContentType,
       pluginId: PLUGIN_ID,
+      routing,
       token: TOKEN,
     });
 
@@ -45,6 +48,7 @@ describe("contentPreviewUrl", () => {
       const url = contentPreviewUrl({
         definition: testDeliveredPostContentType,
         pluginId: PLUGIN_ID,
+        routing,
         slug: "my-post",
         token: TOKEN,
       });
@@ -60,6 +64,7 @@ describe("contentPreviewUrl", () => {
         definition: testDeliveredLocalizedContentType,
         locale: "pl",
         pluginId: PLUGIN_ID,
+        routing,
         slug: "moj-wpis",
         token: TOKEN,
       });
@@ -72,10 +77,48 @@ describe("contentPreviewUrl", () => {
       expect(parsed.searchParams.get("preview")).toBe(TOKEN);
     });
 
+    it("uses the public URL of the default locale, unprefixed under as-needed", () => {
+      const url = contentPreviewUrl({
+        definition: testDeliveredLocalizedContentType,
+        locale: "en",
+        pluginId: PLUGIN_ID,
+        routing,
+        slug: "my-post",
+        token: TOKEN,
+      });
+
+      expect(new URL(url).pathname).toBe("/delivered-localized/my-post");
+    });
+
+    it("resolves against the locale's own domain and translated route", () => {
+      const url = contentPreviewUrl({
+        definition: testDeliveredLocalizedContentType,
+        locale: "pl",
+        pluginId: PLUGIN_ID,
+        routing: testContentLocaleRouting({
+          domains: [
+            { defaultLocale: "en", origin: "https://vitnode.com" },
+            { defaultLocale: "pl", origin: "https://vitnode.pl" },
+          ],
+          routePaths: {
+            pl: { "/delivered-localized/:slug": "/wpisy/:slug" },
+          },
+        }),
+        slug: "moj-wpis",
+        token: TOKEN,
+      });
+
+      const parsed = new URL(url);
+      expect(parsed.origin).toBe("https://vitnode.pl");
+      expect(parsed.pathname).toBe("/wpisy/moj-wpis");
+      expect(parsed.searchParams.get("preview")).toBe(TOKEN);
+    });
+
     it("survives a slug that needs encoding", () => {
       const url = contentPreviewUrl({
         definition: testDeliveredPostContentType,
         pluginId: PLUGIN_ID,
+        routing,
         slug: "a b&c",
         token: TOKEN,
       });
@@ -89,6 +132,7 @@ describe("contentPreviewUrl", () => {
       const url = contentPreviewUrl({
         definition: testDeliveredLocalizedContentType,
         pluginId: PLUGIN_ID,
+        routing,
         slug: "moj-wpis",
         token: TOKEN,
       });
@@ -104,6 +148,7 @@ describe("contentPreviewUrl", () => {
       const url = contentPreviewUrl({
         definition: testDeliveredPostContentType,
         pluginId: PLUGIN_ID,
+        routing,
         slug,
         token: TOKEN,
       });
@@ -117,6 +162,7 @@ describe("contentPreviewUrl", () => {
       const url = contentPreviewUrl({
         definition: testPostContentType,
         pluginId: PLUGIN_ID,
+        routing,
         token: TOKEN,
       });
 
@@ -134,6 +180,7 @@ describe("contentPreviewUrl", () => {
         definition: testPostContentType,
         locale: "pl",
         pluginId: PLUGIN_ID,
+        routing,
         token: TOKEN,
       });
 

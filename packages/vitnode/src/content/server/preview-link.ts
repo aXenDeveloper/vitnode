@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentLocaleRouting } from "../public-url";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { CONFIG } from "../../lib/config";
@@ -9,7 +10,7 @@ import {
   CONTENT_PREVIEW_QUERY_PARAM,
   CONTENT_PREVIEW_TOKEN_PLACEHOLDER,
 } from "../const";
-import { contentDeliveryPath } from "../delivery";
+import { contentDeliveryPublicUrl } from "../delivery";
 import { contentPreviewConfigProblems } from "./preview-config";
 import { ensureContentPreviewSecret } from "./preview-secret";
 
@@ -57,13 +58,13 @@ export const assertContentPreviewIsServable = (): void => {
  * of the system read it from there: the generated public preview route resolves
  * its locale exactly the way every other public read does, and a preview page
  * passes the same value to `contentPreviewFetch`. It is omitted on the canonical
- * page, which already carries the language in its path - a localized delivery URL
- * is `/{locale}/...` by construction, so the page reads its own route parameter.
+ * page, whose URL already carries the language.
  */
 export const contentPreviewUrl = ({
   definition,
   locale,
   pluginId,
+  routing,
   slug,
   token,
 }: {
@@ -71,6 +72,7 @@ export const contentPreviewUrl = ({
   /** The language the link previews, for a localized content type. */
   locale?: string;
   pluginId: string;
+  routing: ContentLocaleRouting;
   /**
    * The record's public slug, which is what turns a preview into a link to the
    * record's own page.
@@ -99,11 +101,11 @@ export const contentPreviewUrl = ({
 
   const canonical =
     definition.delivery.enabled && slug !== undefined && slug !== null
-      ? contentDeliveryPath({ definition, locale, slug })
+      ? contentDeliveryPublicUrl({ definition, locale, routing, slug })
       : null;
 
   if (canonical !== null) {
-    const url = new URL(canonical, CONFIG.web);
+    const url = new URL(canonical.pathname, canonical.origin ?? CONFIG.web);
     // `set` rather than string concatenation: the token is base64url plus a dot,
     // and letting `URLSearchParams` encode it is what keeps that true.
     url.searchParams.set(CONTENT_PREVIEW_QUERY_PARAM, token);

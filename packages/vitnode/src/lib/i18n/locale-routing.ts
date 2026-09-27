@@ -1,6 +1,15 @@
-import type { LocaleConfig, VitNodeI18nConfig } from "./types";
+import type { ResolvedLocaleDomain } from "./locale-domains";
+import type { RoutePathTranslator } from "./route-paths";
+import type {
+  LocaleConfig,
+  LocaleDomainConfig,
+  LocaleRoutePaths,
+  VitNodeI18nConfig,
+} from "./types";
 
+import { normalizeHost, resolveLocaleDomains } from "./locale-domains";
 import { negotiateLocale } from "./negotiate-locale";
+import { compileRoutePaths } from "./route-paths";
 
 export const DEFAULT_IGNORED_LOCALE_PATHS = ["/admin", "/api"] as const;
 
@@ -9,6 +18,7 @@ export type LocalePrefixMode = NonNullable<VitNodeI18nConfig["localePrefix"]>;
 
 export interface LocaleRoutingConfig {
   defaultLocale: string;
+  domains?: readonly LocaleDomainConfig[];
   /**
    * Prefixes that opt out of locale routing entirely, with their descendants.
    * Defaults to {@link DEFAULT_IGNORED_LOCALE_PATHS}.
@@ -17,11 +27,35 @@ export interface LocaleRoutingConfig {
 
   localePrefix?: LocalePrefixMode;
   locales: readonly string[];
+  routePaths?: LocaleRoutePaths;
 }
 
 export interface LocaleSources {
   acceptLanguage?: null | string;
   cookieLocale?: null | string;
+  host?: null | string;
+}
+
+export interface LocaleHostContext {
+  host?: null | string;
+}
+
+export type ResolvedLocaleSource =
+  "accept-language" | "cookie" | "default" | "domain" | "prefix";
+
+export interface ResolvedPublicPathname {
+  internalPathname: string;
+  locale: string;
+  source: ResolvedLocaleSource;
+}
+
+export interface LocalePublicUrl {
+  origin?: string;
+  pathname: string;
+}
+
+export interface LocaleAlternate extends LocalePublicUrl {
+  locale: string;
 }
 
 export interface LocaleRouting {
@@ -29,34 +63,62 @@ export interface LocaleRouting {
   alternatePathnames: (
     pathname: string,
   ) => { locale: string; pathname: string }[];
-  /** The one URL that should be indexed for `pathname` in `locale`. */
+  alternatesFor: (internalPathname: string) => LocaleAlternate[];
   canonicalPathname: (pathname: string, locale: string) => string;
+  canonicalUrlFor: (
+    internalPathname: string,
+    locale: string,
+  ) => LocalePublicUrl;
   readonly defaultLocale: string;
-  /** `/pl/discover` -> `/discover`. Leaves ignored and unprefixed paths alone. */
-  deLocalizePathname: (pathname: string) => string;
-  /** {@link deLocalizePathname}, applied to a URL's path and nothing else. */
-  deLocalizeUrl: (url: URL) => URL;
-
-  extractLocaleFromPath: (pathname: string) => string | undefined;
+  deLocalizePathname: (pathname: string, context?: LocaleHostContext) => string;
+  deLocalizeUrl: (url: URL, context?: LocaleHostContext) => URL;
+  domainForHost: (
+    host: null | string | undefined,
+  ) => ResolvedLocaleDomain | undefined;
+  domainForLocale: (locale: string) => ResolvedLocaleDomain | undefined;
+  readonly domains: readonly ResolvedLocaleDomain[];
+  extractLocaleFromPath: (
+    pathname: string,
+    context?: LocaleHostContext,
+  ) => string | undefined;
   isSupportedLocale: (value: null | string | undefined) => value is string;
   readonly localePrefix: LocalePrefixMode;
   readonly locales: readonly string[];
-  /** `/discover` + `pl` -> `/pl/discover`. Idempotent, and a no-op for `en`. */
-  localizePathname: (pathname: string, locale: string) => string;
-  /** {@link localizePathname}, applied to a URL's path and nothing else. */
-  localizeUrl: (url: URL, locale: string) => URL;
-  /**
-   * Where `pathname` should permanently redirect to, or `undefined` when it is
-   * already canonical.
-   */
-  redirectPathnameFor: (pathname: string) => string | undefined;
-
+  localizePathname: (
+    pathname: string,
+    locale: string,
+    context?: LocaleHostContext,
+  ) => string;
+  localizeUrl: (url: URL, locale: string, context?: LocaleHostContext) => URL;
+  publicUrlFor: (
+    internalPathname: string,
+    locale: string,
+    context?: LocaleHostContext,
+  ) => LocalePublicUrl;
+  redirectPathnameFor: (
+    pathname: string,
+    context?: LocaleHostContext,
+  ) => string | undefined;
+  redirectUrlFor: (url: URL, context?: LocaleHostContext) => undefined | URL;
   resolveLocale: (pathname: string, sources?: LocaleSources) => string;
+  resolvePublicPathname: (
+    pathname: string,
+    sources?: LocaleSources,
+  ) => ResolvedPublicPathname;
+  readonly routePaths: RoutePathTranslator;
   /** `true` for `/api`, `/api/x`, `/admin`, `/admin/x`; `false` for `/discover`. */
   shouldIgnoreLocalePath: (pathname: string) => boolean;
 }
 
+interface HostScope {
+  defaultLocale: string;
+  domain?: ResolvedLocaleDomain;
+  locales: readonly string[];
+}
+
 /** `/admin/` -> `/admin`, `admin` -> `/admin`. */
+const RELATIVE_BASE = "https://vitnode.invalid";
+
 const normalizeIgnoredPath = (path: string): string => {
   const withSlash = path.startsWith("/") ? path : `/${path}`;
 
@@ -77,9 +139,11 @@ const normalizeIgnoredPath = (path: string): string => {
  */
 export const createLocaleRouting = ({
   defaultLocale,
+  domains: domainConfigs,
   ignoredPaths = DEFAULT_IGNORED_LOCALE_PATHS,
   locales,
   localePrefix = "as-needed",
+  routePaths: routePathConfig,
 }: LocaleRoutingConfig): LocaleRouting => {
   const supported = new Set(locales);
   const ignored = ignoredPaths.map(normalizeIgnoredPath);
@@ -91,16 +155,57 @@ export const createLocaleRouting = ({
   const shouldIgnoreLocalePath = (pathname: string): boolean =>
     ignored.some(path => pathname === path || pathname.startsWith(`${path}/`));
 
+  const domains = resolveLocaleDomains({
+    domains: domainConfigs,
+    localePrefix,
+    locales,
+  });
+  const routePaths = compileRoutePaths({
+    isIgnoredPath: shouldIgnoreLocalePath,
+    localePrefix,
+    locales,
+    routePaths: routePathConfig,
+  });
+
+  const domainForHost = (
+    host: null | string | undefined,
+  ): ResolvedLocaleDomain | undefined => {
+    const normalized = normalizeHost(host);
+    if (!normalized) return undefined;
+
+    return domains.find(domain => domain.host === normalized);
+  };
+
+  const domainForLocale = (locale: string) =>
+    domains.find(domain => domain.locales.includes(locale));
+
+  const unassignedScope: HostScope =
+    localePrefix === "never"
+      ? { defaultLocale, locales: [defaultLocale] }
+      : { defaultLocale, locales };
+
+  const scopeOfDomain = (domain: ResolvedLocaleDomain): HostScope => ({
+    defaultLocale: domain.defaultLocale,
+    domain,
+    locales: domain.locales,
+  });
+
+  const scopeFor = (host: null | string | undefined): HostScope => {
+    const domain = domainForHost(host);
+
+    return domain ? scopeOfDomain(domain) : unassignedScope;
+  };
+
   /**
    * The prefix this configuration writes for `locale` - `""` when it writes
    * none. Unsupported input gets `""` rather than an invented prefix, so a
    * stale locale in a cookie degrades to the unprefixed URL instead of a 404.
    */
-  const prefixFor = (locale: string): string => {
-    if (localePrefix === "never" || !supported.has(locale)) return "";
+  const prefixFor = (locale: string, scope: HostScope): string => {
+    if (localePrefix === "never" || !scope.locales.includes(locale)) return "";
     if (localePrefix === "always") return `/${locale}`;
 
-    return locale === defaultLocale ? "" : `/${locale}`;
+    return locale === scope.defaultLocale ? "" : `/${locale}`;
   };
 
   /**
@@ -127,13 +232,77 @@ export const createLocaleRouting = ({
     return { locale: candidate, rest: rest === "" ? "/" : rest };
   };
 
-  const deLocalizePathname = (pathname: string): string => {
-    if (shouldIgnoreLocalePath(pathname)) return pathname;
+  const resolveUnroutedLocale = (
+    scope: HostScope,
+    sources: LocaleSources,
+  ): { locale: string; source: ResolvedLocaleSource } => {
+    const { acceptLanguage, cookieLocale } = sources;
 
-    return splitLocalePrefix(pathname).rest;
+    if (isSupportedLocale(cookieLocale)) {
+      return { locale: cookieLocale, source: "cookie" };
+    }
+
+    const negotiated = negotiateLocale(acceptLanguage, [...locales]);
+    if (negotiated) return { locale: negotiated, source: "accept-language" };
+
+    return {
+      locale: scope.defaultLocale,
+      source: scope.domain ? "domain" : "default",
+    };
   };
 
-  const extractLocaleFromPath = (pathname: string): string | undefined => {
+  const resolvePublicPathname = (
+    pathname: string,
+    sources: LocaleSources = {},
+  ): ResolvedPublicPathname => {
+    const scope = scopeFor(sources.host);
+
+    if (shouldIgnoreLocalePath(pathname)) {
+      return {
+        internalPathname: pathname,
+        ...resolveUnroutedLocale(scope, sources),
+      };
+    }
+
+    const { locale: prefixed, rest } = splitLocalePrefix(pathname);
+
+    if (prefixed && shouldIgnoreLocalePath(rest)) {
+      return {
+        internalPathname: rest,
+        ...resolveUnroutedLocale(scope, sources),
+      };
+    }
+
+    // A public URL says which language it is in, and nothing else gets a vote.
+    // A cookie or an `Accept-Language` that could override it would mean one URL
+    // serving two languages: ambiguous to a crawler, unshareable between people
+    // with different browsers, and a cache key that no CDN can compute.
+    const locale = prefixed ?? scope.defaultLocale;
+    const source: ResolvedLocaleSource = prefixed
+      ? "prefix"
+      : scope.domain
+        ? "domain"
+        : "default";
+
+    return {
+      internalPathname: routePaths.toInternal(
+        prefixed ? rest : pathname,
+        locale,
+      ),
+      locale,
+      source,
+    };
+  };
+
+  const deLocalizePathname = (
+    pathname: string,
+    context: LocaleHostContext = {},
+  ): string => resolvePublicPathname(pathname, context).internalPathname;
+
+  const extractLocaleFromPath = (
+    pathname: string,
+    context: LocaleHostContext = {},
+  ): string | undefined => {
     if (shouldIgnoreLocalePath(pathname)) return undefined;
 
     const { locale } = splitLocalePrefix(pathname);
@@ -141,17 +310,88 @@ export const createLocaleRouting = ({
     // A prefix this configuration would not have written is not a locale: under
     // `"as-needed"`, `/en/discover` is a URL to be redirected, not the English
     // page. Treating it as one would leave two indexable URLs for one page.
-    return locale && prefixFor(locale) ? locale : undefined;
+    return locale && prefixFor(locale, scopeFor(context.host))
+      ? locale
+      : undefined;
   };
 
-  const localizePathname = (pathname: string, locale: string): string => {
-    const base = deLocalizePathname(pathname);
-    if (shouldIgnoreLocalePath(base)) return base;
+  const publicPathnameIn = (
+    internalPathname: string,
+    locale: string,
+    scope: HostScope,
+  ): string => {
+    const translated = routePaths.toPublic(internalPathname, locale);
+    const prefix = prefixFor(locale, scope);
+    if (!prefix) return translated;
 
-    const prefix = prefixFor(locale);
-    if (!prefix) return base;
+    return translated === "/" ? prefix : `${prefix}${translated}`;
+  };
 
-    return base === "/" ? prefix : `${prefix}${base}`;
+  const publicUrlFor = (
+    internalPathname: string,
+    locale: string,
+    context: LocaleHostContext = {},
+  ): LocalePublicUrl => {
+    if (shouldIgnoreLocalePath(internalPathname)) {
+      return { pathname: internalPathname };
+    }
+
+    const current = scopeFor(context.host);
+    if (current.locales.includes(locale) || !isSupportedLocale(locale)) {
+      return { pathname: publicPathnameIn(internalPathname, locale, current) };
+    }
+
+    const target = domainForLocale(locale);
+    if (!target) {
+      return {
+        pathname: publicPathnameIn(internalPathname, locale, unassignedScope),
+      };
+    }
+
+    return {
+      origin: target.origin,
+      pathname: publicPathnameIn(
+        internalPathname,
+        locale,
+        scopeOfDomain(target),
+      ),
+    };
+  };
+
+  const canonicalUrlFor = (
+    internalPathname: string,
+    locale: string,
+  ): LocalePublicUrl => {
+    const target = domainForLocale(locale);
+    if (!target || shouldIgnoreLocalePath(internalPathname)) {
+      return publicUrlFor(internalPathname, locale);
+    }
+
+    return {
+      origin: target.origin,
+      pathname: publicPathnameIn(
+        internalPathname,
+        locale,
+        scopeOfDomain(target),
+      ),
+    };
+  };
+
+  const toInternalInput = (pathname: string): string => {
+    const { locale, rest } = splitLocalePrefix(pathname);
+
+    return locale ? routePaths.toInternal(rest, locale) : pathname;
+  };
+
+  const localizePathname = (
+    pathname: string,
+    locale: string,
+    context: LocaleHostContext = {},
+  ): string => {
+    const internal = toInternalInput(pathname);
+    if (shouldIgnoreLocalePath(internal)) return internal;
+
+    return publicPathnameIn(internal, locale, scopeFor(context.host));
   };
 
   /**
@@ -171,69 +411,105 @@ export const createLocaleRouting = ({
     return next;
   };
 
-  const redirectPathnameFor = (pathname: string): string | undefined => {
+  const withPublicUrl = (url: URL, target: LocalePublicUrl): URL => {
+    if (!target.origin || target.origin === url.origin) {
+      return withPathname(url, target.pathname);
+    }
+
+    const next = new URL(target.origin);
+    next.pathname = target.pathname;
+    next.search = url.search;
+    next.hash = url.hash;
+
+    return next;
+  };
+
+  const redirectUrlFor = (
+    url: URL,
+    context: LocaleHostContext = {},
+  ): undefined | URL => {
+    const { pathname } = url;
+
     // Already where it belongs: an ignored path carries no prefix by
     // definition, so there is nothing to canonicalise.
     if (shouldIgnoreLocalePath(pathname)) return undefined;
 
-    const { locale, rest } = splitLocalePrefix(pathname);
+    const { locale: prefixed, rest } = splitLocalePrefix(pathname);
 
     // `/pl/admin` -> `/admin`. Ignored paths have no localized twin, and
     // serving one would split every admin URL in two.
-    if (locale && shouldIgnoreLocalePath(rest)) return rest;
+    if (prefixed && shouldIgnoreLocalePath(rest)) {
+      return withPathname(url, rest);
+    }
 
-    const canonical = localizePathname(rest, locale ?? defaultLocale);
+    const { internalPathname, locale } = resolvePublicPathname(
+      pathname,
+      context,
+    );
+    const target = publicUrlFor(internalPathname, locale, context);
 
-    return canonical === pathname ? undefined : canonical;
+    if (!target.origin && target.pathname === pathname) return undefined;
+
+    return withPublicUrl(url, target);
+  };
+
+  const redirectPathnameFor = (
+    pathname: string,
+    context: LocaleHostContext = {},
+  ): string | undefined => {
+    const target = redirectUrlFor(new URL(pathname, RELATIVE_BASE), context);
+    if (target?.origin !== RELATIVE_BASE) return undefined;
+
+    return target.pathname;
   };
 
   const resolveLocale = (
     pathname: string,
     sources: LocaleSources = {},
-  ): string => {
-    // A public URL says which language it is in, and nothing else gets a vote.
-    // A cookie or an `Accept-Language` that could override it would mean one URL
-    // serving two languages: ambiguous to a crawler, unshareable between people
-    // with different browsers, and a cache key that no CDN can compute.
-    if (!shouldIgnoreLocalePath(pathname) && localePrefix !== "never") {
-      return extractLocaleFromPath(pathname) ?? defaultLocale;
-    }
+  ): string => resolvePublicPathname(pathname, sources).locale;
 
-    // Read here rather than destructured in the signature above, which would
-    // evaluate both on every call - including the public-URL path that returned
-    // already, and including a caller whose `cookieLocale` is a getter that
-    // reaches for a request that may not exist.
-    const { acceptLanguage, cookieLocale } = sources;
-
-    // Nothing in the URL to read, so the visitor's own preference decides:
-    // what they last chose, then what their browser asks for, then the default.
-    if (isSupportedLocale(cookieLocale)) return cookieLocale;
-
-    return negotiateLocale(acceptLanguage, [...locales]) ?? defaultLocale;
-  };
+  const alternatesFor = (internalPathname: string): LocaleAlternate[] =>
+    locales.map(locale => ({
+      locale,
+      ...canonicalUrlFor(internalPathname, locale),
+    }));
 
   return {
     alternatePathnames: pathname => {
-      const base = deLocalizePathname(pathname);
+      const base = toInternalInput(pathname);
 
       return locales.map(locale => ({
         locale,
-        pathname: localizePathname(base, locale),
+        pathname: publicPathnameIn(base, locale, unassignedScope),
       }));
     },
-    canonicalPathname: (pathname, locale) => localizePathname(pathname, locale),
+    alternatesFor,
+    canonicalPathname: (pathname, locale) =>
+      canonicalUrlFor(toInternalInput(pathname), locale).pathname,
+    canonicalUrlFor,
     defaultLocale,
     deLocalizePathname,
-    deLocalizeUrl: url => withPathname(url, deLocalizePathname(url.pathname)),
+    deLocalizeUrl: (url, context) =>
+      withPathname(url, deLocalizePathname(url.pathname, context)),
+    domainForHost,
+    domainForLocale,
+    domains,
     extractLocaleFromPath,
     isSupportedLocale,
     locales,
     localePrefix,
     localizePathname,
-    localizeUrl: (url, locale) =>
-      withPathname(url, localizePathname(url.pathname, locale)),
+    localizeUrl: (url, locale, context = {}) => {
+      const internal = toInternalInput(url.pathname);
+
+      return withPublicUrl(url, publicUrlFor(internal, locale, context));
+    },
+    publicUrlFor,
     redirectPathnameFor,
+    redirectUrlFor,
     resolveLocale,
+    resolvePublicPathname,
+    routePaths,
     shouldIgnoreLocalePath,
   };
 };
@@ -249,15 +525,17 @@ export const createLocaleRouting = ({
 export const localeRoutingFromConfig = (
   i18n: Pick<
     VitNodeI18nConfig,
-    "defaultLocale" | "localePrefix" | "locales"
+    "defaultLocale" | "domains" | "localePrefix" | "locales" | "routePaths"
   > & { locales: LocaleConfig[] },
   options: { ignoredPaths?: readonly string[] } = {},
 ): LocaleRouting =>
   createLocaleRouting({
     defaultLocale: i18n.defaultLocale,
+    domains: i18n.domains,
     ignoredPaths: options.ignoredPaths,
     locales: i18n.locales
       .filter(locale => locale.enabled !== false)
       .map(locale => locale.code),
     localePrefix: i18n.localePrefix,
+    routePaths: i18n.routePaths,
   });

@@ -18,4 +18,11 @@ export const i18n = {
     },
   ],
   messages: {},
+  routePaths: {
+    pl: {
+      "/discover": "/odkrywaj",
+      "/search": "/szukaj",
+      "/users/:nameCode": "/uzytkownicy/:nameCode",
+    },
+  },
 } satisfies VitNodeI18nConfig;

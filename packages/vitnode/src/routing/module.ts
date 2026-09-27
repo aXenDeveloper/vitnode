@@ -2,6 +2,7 @@
 export type PluginRouteRobots = "index, follow" | "noindex, nofollow";
 
 export interface PluginRouteHead {
+  alternates?: Readonly<Record<string, string>>;
   /** The `<meta name="description">`, when the page has one. */
   description?: string;
 

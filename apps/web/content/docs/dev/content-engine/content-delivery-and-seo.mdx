@@ -107,12 +107,42 @@ export default ArticlePage
   rules, public API, and public route evolve together, so they belong together.
 </Callout>
 
+## Public URLs
+
+`delivery.path` is the **English route** of the record's page, the same pattern the plugin's `page()` declares. It defaults to `/{publicApi.path}/:slug`, so the example above is `/articles/:slug` without writing it. Set it when the website URL and the API path differ:
+
+```ts
+publicApi: { enabled: true, path: "articles", fields: ["id", "title", "slug"] },
+delivery: {
+  enabled: true,
+  path: "/news/:slug", // [!code ++]
+},
+```
+
+The API stays at `/api/{pluginId}/content/articles/...`. Only the page URL changes. `delivery.path` needs exactly one `:slug`, no other parameters or `*`, and can't start with `/admin` or `/api`.
+
+Every URL delivery builds goes through the app's [localized URL](/docs/dev/i18n/localized-urls) rules (`localePrefix`, `domains`, `routePaths`), so it matches what the router serves:
+
+| Record                          | `as-needed`, one domain              | With `domains`                                   |
+| :------------------------------ | :----------------------------------- | :----------------------------------------------- |
+| English, slug `hello-world`     | `/articles/hello-world`              | `https://vitnode.com/articles/hello-world`       |
+| Polish, slug `witaj-swiecie`    | `/pl/artykuly/witaj-swiecie`         | `https://vitnode.pl/artykuly/witaj-swiecie`      |
+
+(`artykuly` assumes the app translated `/articles/:slug` in `routePaths`.)
+
+- **Default locale is unprefixed.** Under `as-needed`, English URLs no longer start with `/en/`.
+- **hreflang, `x-default` and sitemap lines are absolute per domain** once `domains` is configured. Each language gets its own domain's origin.
+- **Only published translations are alternates.** A Polish request that falls back to English content reports the English canonical URL (`isFallback: true`), so fallback text is never labelled as Polish.
+- **Slug history redirects are 308s and stay in their language.** An old Polish slug redirects to the current Polish URL, never to English. The `path` stored in `core_content_slug_history` is informational: history is reported with each slug's current URL, so changing `routePaths` or `domains` doesn't strand old slugs.
+- **Preview links** open the record's canonical page with `?preview=`, on its language's domain when there is one, and `VITNODE_WEB_URL` otherwise.
+
 ## Delivery Configuration Reference
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `enabled` | `true` | — | Opts into the delivery layer. Requires `publicApi: { enabled: true }`. |
-| `redirects.enabled` | `boolean` | `false` | Stores historical public slugs in `core_content_slug_history` and serves 301 redirects when slugs change. Requires `editorial: { enabled: true }`. |
+| `path` | `string` | `/{publicApi.path}/:slug` | The English route of the record's page, with exactly one `:slug`. Separate from `publicApi.path`, which only names the API. |
+| `redirects.enabled` | `boolean` | `false` | Stores historical public slugs in `core_content_slug_history` and answers old slugs with a 308 redirect. Requires `editorial: { enabled: true }`. |
 | `seo.titleField` | `string` | — | Exposed field name used to populate page titles. |
 | `seo.fallbackTitleField` | `string` | — | Fallback field name if `titleField` is empty. |
 | `seo.descriptionField` | `string` | — | Exposed field name used for page meta description. |
@@ -122,7 +152,7 @@ export default ArticlePage
 | `sitemap.enabled` | `boolean` | `false` | Includes published records in the XML sitemap. |
 | `sitemap.changeFrequency` | `"always" \| "hourly" \| "daily" \| "weekly" \| "monthly" \| "yearly" \| "never"` | — | Sitemap `<changefreq>` hint. |
 | `sitemap.priority` | `number` | — | Sitemap priority rating from `0.0` to `1.0`. |
-| `hreflang.xDefault` | `"defaultLocale"` | — | Emits `x-default` alternate link pointing to the default locale URL for localized content. |
+| `hreflang.xDefault` | `"defaultLocale"` | — | Emits an `x-default` alternate pointing at the default locale's URL, when that translation is published. |
 
 ## Learn More
 

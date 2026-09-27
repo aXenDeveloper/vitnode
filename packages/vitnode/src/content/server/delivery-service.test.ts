@@ -408,7 +408,7 @@ describe("localized resolveSlug", () => {
     });
 
     expect(await service.resolveSlug("hello", { locale: "en" })).toStrictEqual({
-      location: "/en/articles/hello-world",
+      location: "/articles/hello-world",
       status: 308,
       type: "redirect",
     });
@@ -451,7 +451,7 @@ describe("localized resolveSlug", () => {
       type: "not_found",
     });
     expect(await service.resolveSlug("hello", { locale: "en" })).toMatchObject({
-      canonicalPath: "/en/articles/hello",
+      canonicalPath: "/articles/hello",
       type: "content",
     });
   });
@@ -468,7 +468,7 @@ describe("findById", () => {
 
     // `/pl/articles/hello` would be a self-declared canonical that answers 404.
     expect(metadata).toMatchObject({
-      canonicalPath: "/en/articles/hello",
+      canonicalPath: "/articles/hello",
       isFallback: true,
       locale: "en",
       requestedLocale: "pl",

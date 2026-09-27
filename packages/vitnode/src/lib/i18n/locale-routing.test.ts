@@ -256,24 +256,56 @@ describe('localePrefix: "always"', () => {
 });
 
 describe('localePrefix: "never"', () => {
-  const {
-    extractLocaleFromPath,
-    localizePathname,
-    redirectPathnameFor,
-    resolveLocale,
-  } = routing({ localePrefix: "never" });
+  const neverRouting = () =>
+    routing({
+      domains: [
+        { defaultLocale: "en", origin: "https://vitnode.com" },
+        { defaultLocale: "pl", origin: "https://vitnode.pl" },
+      ],
+      localePrefix: "never",
+    });
 
   it("writes no prefix and reads none", () => {
-    expect(localizePathname("/discover", "pl")).toBe("/discover");
+    const { extractLocaleFromPath, localizePathname } = neverRouting();
+
+    expect(localizePathname("/discover", "pl", { host: "vitnode.pl" })).toBe(
+      "/discover",
+    );
     expect(extractLocaleFromPath("/pl/discover")).toBeUndefined();
   });
 
   it("leaves a path that looks like a locale prefix alone - it is a route", () => {
-    expect(redirectPathnameFor("/pl/discover")).toBeUndefined();
+    const { redirectPathnameFor } = neverRouting();
+
+    expect(
+      redirectPathnameFor("/pl/discover", { host: "vitnode.com" }),
+    ).toBeUndefined();
   });
 
-  it("reads every locale from the cookie", () => {
-    expect(resolveLocale("/discover", { cookieLocale: "pl" })).toBe("pl");
+  it("reads a public page's locale from the host, never from the cookie", () => {
+    const { resolveLocale } = neverRouting();
+
+    expect(
+      resolveLocale("/discover", { cookieLocale: "en", host: "vitnode.pl" }),
+    ).toBe("pl");
+    expect(
+      resolveLocale("/discover", { cookieLocale: "pl", host: "vitnode.com" }),
+    ).toBe("en");
+  });
+
+  it("refuses several locales sharing one host, because one URL would serve both", () => {
+    expect(() => routing({ localePrefix: "never" })).toThrow(
+      expect.objectContaining({ code: "ambiguous-never-prefix" }),
+    );
+  });
+
+  it("allows a single-locale app without domains", () => {
+    const { localizePathname } = routing({
+      locales: ["en"],
+      localePrefix: "never",
+    });
+
+    expect(localizePathname("/discover", "en")).toBe("/discover");
   });
 });
 
@@ -313,5 +345,170 @@ describe("localeRoutingFromConfig", () => {
 
     expect(shouldIgnoreLocalePath("/admin/users")).toBe(true);
     expect(shouldIgnoreLocalePath("/api/foo")).toBe(true);
+  });
+});
+
+describe("translated route paths", () => {
+  const translated = (
+    localePrefix: LocaleRoutingConfig["localePrefix"] = "as-needed",
+  ) =>
+    routing({
+      localePrefix,
+      routePaths: { pl: { "/articles/:id": "/artykuly/:id" } },
+    });
+
+  it("maps a public URL to the English route and back", () => {
+    const { localizePathname, resolvePublicPathname } = translated();
+
+    expect(resolvePublicPathname("/pl/artykuly/42")).toEqual({
+      internalPathname: "/articles/42",
+      locale: "pl",
+      source: "prefix",
+    });
+    expect(localizePathname("/articles/42", "pl")).toBe("/pl/artykuly/42");
+    expect(localizePathname("/articles/42", "en")).toBe("/articles/42");
+  });
+
+  it("stays idempotent for an already-localized path", () => {
+    const { localizePathname } = translated();
+
+    expect(localizePathname("/pl/artykuly/42", "pl")).toBe("/pl/artykuly/42");
+    expect(localizePathname("/pl/artykuly/42", "en")).toBe("/articles/42");
+  });
+
+  it("falls back to the English spelling for an untranslated route", () => {
+    expect(translated().localizePathname("/discover", "pl")).toBe(
+      "/pl/discover",
+    );
+  });
+
+  it("redirects an old English-spelled link to the translation, and never loops", () => {
+    const { redirectUrlFor } = translated();
+
+    expect(redirectUrlFor(url("/pl/articles/42?ref=x#top"))?.href).toBe(
+      "https://vitnode.test/pl/artykuly/42?ref=x#top",
+    );
+    expect(redirectUrlFor(url("/pl/artykuly/42"))).toBeUndefined();
+    expect(redirectUrlFor(url("/articles/42"))).toBeUndefined();
+  });
+
+  it('keeps prefix mode "always" working with translations', () => {
+    const { localizePathname, redirectPathnameFor } = translated("always");
+
+    expect(localizePathname("/articles/42", "en")).toBe("/en/articles/42");
+    expect(localizePathname("/articles/42", "pl")).toBe("/pl/artykuly/42");
+    expect(redirectPathnameFor("/pl/articles/42")).toBe("/pl/artykuly/42");
+  });
+
+  it("never translates admin or API paths", () => {
+    const { localizePathname, resolvePublicPathname } = translated();
+
+    expect(localizePathname("/admin/articles/42", "pl")).toBe(
+      "/admin/articles/42",
+    );
+    expect(resolvePublicPathname("/api/articles/42").internalPathname).toBe(
+      "/api/articles/42",
+    );
+  });
+
+  it("lists every locale's URL for hreflang", () => {
+    expect(translated().alternatesFor("/articles/42")).toEqual([
+      { locale: "en", pathname: "/articles/42" },
+      { locale: "pl", pathname: "/pl/artykuly/42" },
+    ]);
+  });
+});
+
+describe("language domains", () => {
+  const withDomains = (
+    localePrefix: LocaleRoutingConfig["localePrefix"] = "as-needed",
+  ) =>
+    routing({
+      domains: [
+        { defaultLocale: "en", origin: "https://vitnode.com" },
+        { defaultLocale: "pl", origin: "https://vitnode.pl" },
+      ],
+      localePrefix,
+      routePaths: { pl: { "/articles/:id": "/artykuly/:id" } },
+    });
+
+  it("lets the domain pick the locale over a cookie that disagrees", () => {
+    const { resolvePublicPathname } = withDomains();
+
+    expect(
+      resolvePublicPathname("/artykuly/42", {
+        acceptLanguage: "en",
+        cookieLocale: "en",
+        host: "vitnode.pl",
+      }),
+    ).toEqual({
+      internalPathname: "/articles/42",
+      locale: "pl",
+      source: "domain",
+    });
+  });
+
+  it("ignores a host nobody configured", () => {
+    const { resolveLocale } = withDomains();
+
+    expect(
+      resolveLocale("/discover", { cookieLocale: "pl", host: "evil.example" }),
+    ).toBe("en");
+    expect(resolveLocale("/discover", { host: "vitnode.pl/evil" })).toBe("en");
+  });
+
+  it("links to another language on its own origin", () => {
+    const { publicUrlFor } = withDomains("never");
+
+    expect(publicUrlFor("/articles/42", "pl", { host: "vitnode.com" })).toEqual(
+      {
+        origin: "https://vitnode.pl",
+        pathname: "/artykuly/42",
+      },
+    );
+    expect(publicUrlFor("/articles/42", "pl", { host: "vitnode.pl" })).toEqual({
+      pathname: "/artykuly/42",
+    });
+  });
+
+  it("redirects a prefixed URL to the language's own domain", () => {
+    const { redirectUrlFor } = withDomains();
+
+    expect(
+      redirectUrlFor(url("https://vitnode.com/pl/artykuly/42?q=1"), {
+        host: "vitnode.com",
+      })?.href,
+    ).toBe("https://vitnode.pl/artykuly/42?q=1");
+    expect(
+      redirectUrlFor(url("https://vitnode.pl/artykuly/42"), {
+        host: "vitnode.pl",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("keeps every language local on an unconfigured host in a prefix mode", () => {
+    const { publicUrlFor } = withDomains();
+
+    expect(
+      publicUrlFor("/articles/42", "pl", { host: "localhost:3000" }),
+    ).toEqual({
+      pathname: "/pl/artykuly/42",
+    });
+  });
+
+  it("puts canonical URLs on each language's configured origin", () => {
+    expect(withDomains().alternatesFor("/articles/42")).toEqual([
+      { locale: "en", origin: "https://vitnode.com", pathname: "/articles/42" },
+      { locale: "pl", origin: "https://vitnode.pl", pathname: "/artykuly/42" },
+    ]);
+  });
+
+  it("reads admin's locale from the cookie, then the domain default", () => {
+    const { resolveLocale } = withDomains();
+
+    expect(
+      resolveLocale("/admin", { cookieLocale: "en", host: "vitnode.pl" }),
+    ).toBe("en");
+    expect(resolveLocale("/admin", { host: "vitnode.pl" })).toBe("pl");
   });
 });

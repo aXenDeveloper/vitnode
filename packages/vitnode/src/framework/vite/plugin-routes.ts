@@ -21,6 +21,7 @@ import type { PackageMessagesSource } from "../package-messages";
 import type {
   CompiledPluginRoutes,
   HostRoutePath,
+  LocaleRoutePathsConfig,
   PluginRouteCompilerSource,
 } from "../plugin-routes";
 
@@ -36,6 +37,7 @@ import {
   compilePluginRoutes,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
+  i18nFromLoadedConfig,
   lazyImportSpecifier,
   pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
@@ -106,28 +108,31 @@ const resolverFor = (appRoot: string) => {
   };
 };
 
-const readConfiguredPlugins = async (
+interface AppConfig {
+  i18n: LocaleRoutePathsConfig | undefined;
+  plugins: PackageMessagesSource[];
+}
+
+const readAppConfig = async (
   appRoot: string,
   configPath: string,
-): Promise<PackageMessagesSource[]> => {
+): Promise<AppConfig> => {
   const jiti = createJiti(pathToFileURL(join(appRoot, "package.json")).href, {
     interopDefault: true,
     moduleCache: false,
   });
+  const loaded = await jiti.import(configPath);
 
-  return pluginsFromLoadedConfig(
-    await jiti.import(configPath),
-    relative(appRoot, configPath),
-  );
+  return {
+    i18n: i18nFromLoadedConfig(loaded),
+    plugins: pluginsFromLoadedConfig(loaded, relative(appRoot, configPath)),
+  };
 };
 
 export const configuredPluginIds = async (
   appRoot: string,
 ): Promise<string[]> => {
-  const plugins = await readConfiguredPlugins(
-    appRoot,
-    pathsFor(appRoot).config,
-  );
+  const { plugins } = await readAppConfig(appRoot, pathsFor(appRoot).config);
 
   return plugins.map(plugin => plugin.pluginId);
 };
@@ -407,7 +412,7 @@ const discover = async (
 ) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
-  const plugins = await readConfiguredPlugins(appRoot, paths.config);
+  const { i18n, plugins } = await readAppConfig(appRoot, paths.config);
   const pluginIds = plugins.map(plugin => plugin.pluginId);
   const packageMessages = resolvePackageMessagesModules(
     plugins,
@@ -478,6 +483,7 @@ const discover = async (
       appRoot,
       hostRoutesConfigFor(appRoot, options.hostRoutesDir),
     ),
+    i18n,
     sources: loaded.map(({ source }) => source),
   });
 

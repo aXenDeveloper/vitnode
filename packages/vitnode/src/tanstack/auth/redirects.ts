@@ -136,8 +136,10 @@ export const returnToFor = ({
  */
 export const createAuthNavigation = ({
   localeRouting,
+  readHost,
 }: {
   localeRouting: Pick<LocaleRouting, "deLocalizeUrl">;
+  readHost?: () => string | undefined;
 }) => {
   /**
    * An href in the spelling the route tree uses: the locale prefix removed, the
@@ -146,6 +148,7 @@ export const createAuthNavigation = ({
   const internalHref = (href: string): string => {
     const { hash, pathname, search } = localeRouting.deLocalizeUrl(
       new URL(href, RELATIVE_BASE),
+      { host: readHost?.() },
     );
 
     return `${pathname}${search}${hash}`;

@@ -2,13 +2,20 @@ import type { AnyRouter, LocationRewrite } from "@tanstack/react-router";
 
 import { useRouterState } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
-import { getRequestHeader } from "@tanstack/react-start/server";
+import { getRequest, getRequestHeader } from "@tanstack/react-start/server";
 
 import { readLocaleCookie } from "@/lib/i18n/locale-cookie";
 
+import { browserHostOf, requestHostOf } from "./host";
 import { getIntlRuntime } from "./runtime";
 
 const RELATIVE_BASE = "https://vitnode.invalid";
+
+export type LocaleHostReader = () => string | undefined;
+
+export interface LocaleHostOptions {
+  readHost?: LocaleHostReader;
+}
 
 const readCookieLocale = createIsomorphicFn()
   .server(() => {
@@ -27,8 +34,19 @@ const readCookieLocale = createIsomorphicFn()
   // bundled into the server too - only the client build ever drops one.
   .client(() => readLocaleCookie(globalThis.document?.cookie));
 
+export const readRequestHost: LocaleHostReader = createIsomorphicFn()
+  .server(() => {
+    try {
+      return requestHostOf(getRequest());
+    } catch {
+      return undefined;
+    }
+  })
+  .client(() => browserHostOf(globalThis.location));
+
 export const resolveLocale = <TLocale extends string = string>(
   publicPathname: string,
+  { readHost = readRequestHost }: LocaleHostOptions = {},
 ): TLocale => {
   const { localeRouting } = getIntlRuntime();
 
@@ -38,6 +56,7 @@ export const resolveLocale = <TLocale extends string = string>(
     get cookieLocale() {
       return readCookieLocale();
     },
+    host: readHost(),
   }) as TLocale;
 };
 
@@ -47,11 +66,19 @@ export const publicPathnameOf = ({
   publicHref: string;
 }): string => new URL(publicHref, RELATIVE_BASE).pathname;
 
-export const localizeHref = (href: string, locale: string): string => {
+export const localizeHref = (
+  href: string,
+  locale: string,
+  { readHost = readRequestHost }: LocaleHostOptions = {},
+): string => {
   const { localeRouting } = getIntlRuntime();
-  const url = localeRouting.localizeUrl(new URL(href, RELATIVE_BASE), locale);
+  const url = localeRouting.localizeUrl(new URL(href, RELATIVE_BASE), locale, {
+    host: readHost(),
+  });
 
-  return `${url.pathname}${url.search}${url.hash}`;
+  return url.origin === RELATIVE_BASE
+    ? `${url.pathname}${url.search}${url.hash}`
+    : url.href;
 };
 
 /**
@@ -72,8 +99,10 @@ export const localizeHref = (href: string, locale: string): string => {
  */
 export const createLocaleRewrite = (
   getRouter: () => AnyRouter | undefined,
+  { readHost = readRequestHost }: LocaleHostOptions = {},
 ): LocationRewrite => ({
-  input: ({ url }) => getIntlRuntime().localeRouting.deLocalizeUrl(url),
+  input: ({ url }) =>
+    getIntlRuntime().localeRouting.deLocalizeUrl(url, { host: readHost() }),
   output: ({ url }) => {
     const location = getRouter()?.latestLocation;
     // Before the router has parsed a location there is nothing to read a locale
@@ -82,7 +111,8 @@ export const createLocaleRewrite = (
 
     return getIntlRuntime().localeRouting.localizeUrl(
       url,
-      resolveLocale(publicPathnameOf(location)),
+      resolveLocale(publicPathnameOf(location), { readHost }),
+      { host: readHost() },
     );
   },
 });

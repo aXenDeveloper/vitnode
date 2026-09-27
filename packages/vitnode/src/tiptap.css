@@ -85,7 +85,7 @@
     }
 
     input[type="checkbox"] {
-      @apply accent-primary size-4 cursor-pointer;
+      @apply accent-primary size-4 enabled:cursor-pointer;
     }
 
     li[data-checked="true"] > div {

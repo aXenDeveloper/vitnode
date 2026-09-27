@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { createTranslator } from "use-intl";
 
+import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, Messages } from "@/lib/i18n/types";
 
 import { loadMessages } from "@/lib/i18n/load-messages";
@@ -59,6 +60,10 @@ export class I18nModel {
 
   get defaultLocale(): string {
     return this.c.get("core").i18n.defaultLocale;
+  }
+
+  get localeRouting(): LocaleRouting {
+    return this.c.get("core").i18n.localeRouting;
   }
 
   get locales(): LocaleConfig[] {

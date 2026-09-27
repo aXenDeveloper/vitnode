@@ -16,7 +16,7 @@ import { CONTENT_DELIVERY_REDIRECT_STATUS } from "../const";
 import {
   contentDeliveryHreflang,
   contentDeliveryOpenGraph,
-  contentDeliveryPath,
+  contentDeliveryPublicUrl,
   contentDeliveryRobots,
   contentDeliverySeo,
   contentDeliveryUrl,
@@ -24,9 +24,11 @@ import {
 } from "../delivery";
 import { ContentDeliveryNotEnabled } from "../errors";
 import { contentLocalesMatch, normalizeContentLocale } from "../locale";
+import { contentPublicHref } from "../public-url";
 import { readDeliveryAlternates } from "./delivery-alternates";
 import { readContentDeliverySitemapPage } from "./delivery-sitemap";
-import { findContentLanguage } from "./language-resolver";
+import { findContentLanguage, listContentLanguages } from "./language-resolver";
+import { contentLocaleRouting } from "./locale-routing";
 import { createContentSlugHistoryModel } from "./slug-history-model";
 
 export interface ContentDeliveryMetadata {
@@ -34,7 +36,6 @@ export interface ContentDeliveryMetadata {
   alternates: ContentDeliveryAlternate[];
 
   canonicalPath: null | string;
-  /** Present only when the caller supplied an origin. */
   canonicalUrl?: null | string;
   /** Framework-neutral `hreflang`, ready for an adapter to translate. */
   hreflang: ContentDeliveryHreflang;
@@ -59,6 +60,7 @@ export type ContentDeliveryResolution =
   | { type: "not_found" };
 
 export interface ContentDeliveryReadOptions {
+  host?: null | string;
   /** The language to read, for a localized content type. */
   locale?: string;
   /** Turns every path in the result into an absolute URL as well. */
@@ -89,7 +91,7 @@ export interface ContentDeliveryService {
 
   resolvePath: (
     path: string,
-    options?: { origin?: string },
+    options?: { host?: null | string; origin?: string },
   ) => Promise<ContentDeliveryResolution>;
   /** The same resolution, when the caller has already split locale from slug. */
   resolveSlug: (
@@ -141,6 +143,7 @@ export const createContentDeliveryService = <
   }
 
   const localized = definition.localization.enabled;
+  const routing = contentLocaleRouting(c);
   const buildPublic = model.publicService;
   if (!buildPublic) throw new ContentDeliveryNotEnabled({ contentTypeId });
 
@@ -176,19 +179,24 @@ export const createContentDeliveryService = <
   ): Promise<ContentDeliveryMetadata> => {
     const locale = localeOf(definition, row);
     const slug = slugOf(definition, row);
-    const canonicalPath =
-      slug === null ? null : contentDeliveryPath({ definition, locale, slug });
+    const canonical =
+      slug === null
+        ? null
+        : contentDeliveryPublicUrl({ definition, locale, routing, slug });
+    const canonicalPath = canonical?.pathname ?? null;
     const alternates =
       localized && itemId !== null ? await readAlternates(itemId) : [];
 
     return {
       alternates,
       canonicalPath,
-      ...(origin === undefined
-        ? {}
-        : {
-            canonicalUrl: contentDeliveryUrl({ origin, path: canonicalPath }),
-          }),
+      ...(canonical?.origin === undefined
+        ? origin === undefined
+          ? {}
+          : {
+              canonicalUrl: contentDeliveryUrl({ origin, path: canonicalPath }),
+            }
+        : { canonicalUrl: contentPublicHref(canonical) }),
       hreflang: contentDeliveryHreflang({ alternates, definition }),
       // Compared on the normalized forms, so `PL` asking and `pl` answering is not
       // reported as a fallback.
@@ -210,10 +218,11 @@ export const createContentDeliveryService = <
   ): Promise<ContentDeliveryAlternate[]> =>
     localized ? await readDeliveryAlternates({ c, itemId, model }) : [];
 
-  const strictCanonicalPath = async (
+  const strictCanonical = async (
     itemId: number,
     locale: null | string,
-  ): Promise<null | string> => {
+    host: null | string | undefined,
+  ): Promise<null | { location: string; slug: string }> => {
     const row = await buildPublic(c).findById(itemId, {
       locale: locale ?? undefined,
     });
@@ -230,10 +239,17 @@ export const createContentDeliveryService = <
     }
 
     const slug = slugOf(definition, values);
+    if (slug === null) return null;
 
-    return slug === null
-      ? null
-      : contentDeliveryPath({ definition, locale: served, slug });
+    const url = contentDeliveryPublicUrl({
+      definition,
+      host,
+      locale: served,
+      routing,
+      slug,
+    });
+
+    return url === null ? null : { location: contentPublicHref(url), slug };
   };
 
   const localeFor = (locale: string | undefined): null | string => {
@@ -246,7 +262,7 @@ export const createContentDeliveryService = <
 
   const resolve = async (
     slug: string,
-    { locale, origin }: ContentDeliveryReadOptions = {},
+    { host, locale, origin }: ContentDeliveryReadOptions = {},
   ): Promise<ContentDeliveryResolution> => {
     const requestedLocale = localeFor(locale);
 
@@ -277,23 +293,55 @@ export const createContentDeliveryService = <
     // Straight to the record's **current** address, never to the next entry in the
     // chain. `a -> b -> c` collapses here rather than in the data: the database
     // keeps the chronology, and the resolver answers with one hop.
-    const destination = await strictCanonicalPath(
+    const destination = await strictCanonical(
       owner.itemId,
       requestedLocale,
+      host,
     );
 
     // Unpublished, deleted, or published only in another language: a historical URL
     // must not become a way to reach content that is not public. 404 rather than a
     // redirect to a page that would itself 404.
-    if (destination === null || destination === owner.path) {
+    if (destination === null || destination.slug === owner.slug) {
       return { type: "not_found" };
     }
 
     return {
-      location: destination,
+      location: destination.location,
       status: CONTENT_DELIVERY_REDIRECT_STATUS,
       type: "redirect",
     };
+  };
+
+  const currentHistoryPaths = async (
+    entries: ContentSlugHistoryEntry[],
+  ): Promise<ContentSlugHistoryEntry[]> => {
+    if (entries.length === 0) return entries;
+
+    const languages = await listContentLanguages(c);
+    const localeOfLanguage = new Map(
+      languages.map(language => [language.id, language.locale]),
+    );
+
+    return entries.map(entry => {
+      const locale =
+        entry.languageId === null
+          ? localized
+            ? definition.localization.defaultLocale
+            : null
+          : (localeOfLanguage.get(entry.languageId) ?? null);
+      const url =
+        locale === null && localized
+          ? null
+          : contentDeliveryPublicUrl({
+              definition,
+              locale,
+              routing,
+              slug: entry.slug,
+            });
+
+      return url === null ? entry : { ...entry, path: url.pathname };
+    });
   };
 
   return {
@@ -315,7 +363,7 @@ export const createContentDeliveryService = <
         locale === undefined ? null : normalizeContentLocale(locale),
       );
 
-      return await slugHistory.list({
+      const entries = await slugHistory.list({
         itemId,
         // `undefined` - not `null` - when the caller named no locale, so the query
         // is unscoped rather than scoped to the shared rows. A shared slug's
@@ -326,13 +374,19 @@ export const createContentDeliveryService = <
             ? undefined
             : languageId,
       });
+
+      return await currentHistoryPaths(entries);
     },
 
-    resolvePath: async (path, { origin } = {}) => {
-      const parts = parseContentDeliveryPath(definition, path);
+    resolvePath: async (path, { host, origin } = {}) => {
+      const parts = parseContentDeliveryPath(definition, path, {
+        host,
+        routing,
+      });
       if (!parts) return { type: "not_found" };
 
       return await resolve(parts.slug, {
+        host,
         locale: parts.locale ?? undefined,
         origin,
       });

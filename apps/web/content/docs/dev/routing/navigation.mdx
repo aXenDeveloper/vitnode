@@ -17,19 +17,24 @@ const DiscoverLink = () => <Link to="/discover">Discover</Link>
 ```
 
 That renders `/discover` for an English reader and `/pl/discover` for a Polish
-one. Same component, same `to`, no branch and no `useLocale()` call.
+one - or `/pl/odkrywaj`, once the app [translates the path](/docs/dev/i18n/localized-urls).
+Same component, same `to`, no branch and no `useLocale()` call.
 
 ## One route, two URLs
 
 `/discover` and `/pl/discover` are **one route**. The router's `rewrite` is what
 makes that work, and it runs in both directions:
 
-| Stage                                         | Value            |
-| --------------------------------------------- | ---------------- |
-| The address bar                               | `/pl/discover`   |
-| What the route tree matches (`rewrite.input`) | `/discover`      |
-| What you write                                | `to="/discover"` |
-| What React renders (`rewrite.output`)         | `/pl/discover`   |
+| Stage                                         | Value            | With `routePaths` |
+| --------------------------------------------- | ---------------- | ----------------- |
+| The address bar                               | `/pl/discover`   | `/pl/odkrywaj`    |
+| What the route tree matches (`rewrite.input`) | `/discover`      | `/discover`       |
+| What you write                                | `to="/discover"` | `to="/discover"`  |
+| What React renders (`rewrite.output`)         | `/pl/discover`   | `/pl/odkrywaj`    |
+
+A translated path is spelled by the same rewrite, so route files, route IDs and
+every `to` stay English. With `i18n.domains`, the domain already says the
+language, so on `vitnode.pl` the same link renders `/odkrywaj`.
 
 `input` is why no route file anywhere in the app mentions a locale - there is no
 `routes/pl/` directory and there is not going to be one. `output` reads the

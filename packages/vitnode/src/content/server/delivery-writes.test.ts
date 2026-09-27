@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { testContentLocaleRouting } from "@/tests/content-fixtures";
+
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 import type {
@@ -116,11 +118,14 @@ const tx = {} as ContentDatabase;
 const apply = async (
   definition: AnyContentTypeDefinition,
   transition: Parameters<typeof applyContentDeliveryWrite>[0]["transition"],
-  options?: Parameters<typeof recorder>[0],
+  options?: Parameters<typeof recorder>[0] & {
+    routing?: ReturnType<typeof testContentLocaleRouting>;
+  },
 ) => {
   const { calls, model } = recorder(options);
   const outcome = await applyContentDeliveryWrite({
     definition,
+    routing: options?.routing ?? testContentLocaleRouting(),
     slugHistory: model,
     transition,
     tx,
@@ -415,6 +420,50 @@ describe("a localized slug", () => {
   });
 });
 
+describe("the locale routing policy", () => {
+  it("records the default language unprefixed and a translated route for the rest", async () => {
+    const routing = testContentLocaleRouting({
+      routePaths: { pl: { "/articles/:slug": "/artykuly/:slug" } },
+    });
+
+    const english = await apply(
+      localizedType,
+      {
+        isPublic: true,
+        itemId: 7,
+        languageId: 1,
+        locale: "en",
+        previousSlug: "old",
+        slug: "hello-world",
+        wasPublic: true,
+      },
+      { routing },
+    );
+    const polish = await apply(
+      localizedType,
+      {
+        isPublic: true,
+        itemId: 7,
+        languageId: 2,
+        locale: "pl",
+        previousSlug: "stary",
+        slug: "witaj-swiecie",
+        wasPublic: true,
+      },
+      { routing },
+    );
+
+    expect(english.outcome).toMatchObject({
+      canonicalPath: "/articles/hello-world",
+      previousPath: "/articles/old",
+    });
+    expect(polish.outcome).toMatchObject({
+      canonicalPath: "/pl/artykuly/witaj-swiecie",
+      previousPath: "/pl/artykuly/stary",
+    });
+  });
+});
+
 describe("a record that predates slug history", () => {
   it("redirects its first slug change instead of losing the URL", async () => {
     const { calls, outcome } = await apply(
@@ -642,6 +691,7 @@ describe("delivery without redirects", () => {
 
     const outcome = await applyContentDeliveryWrite({
       definition: withoutRedirects,
+      routing: testContentLocaleRouting(),
       // `null` is how the caller says "this content type keeps no history".
       slugHistory: null,
       transition: {

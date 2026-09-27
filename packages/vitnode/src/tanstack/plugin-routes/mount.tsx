@@ -81,18 +81,20 @@ const pluginRouteHead =
 
     const envelope = (loaderData ?? {}) as Partial<PluginRouteLoaderData>;
 
+    const head = normalizePluginRouteHead(
+      route.head({
+        loaderData: envelope.data,
+        params,
+        search: envelope.search ?? {},
+        // `head` runs outside the React tree, so `useTranslations` cannot
+        // reach it. The namespaces are already cached by the loader, so this
+        // resolves without a request.
+        t: await pluginRouteTranslator(spec, match.context),
+      }),
+    );
+
     return pageHead(
-      normalizePluginRouteHead(
-        route.head({
-          loaderData: envelope.data,
-          params,
-          search: envelope.search ?? {},
-          // `head` runs outside the React tree, so `useTranslations` cannot
-          // reach it. The namespaces are already cached by the loader, so this
-          // resolves without a request.
-          t: await pluginRouteTranslator(spec, match.context),
-        }),
-      ),
+      head.alternates ? { ...head, locale: match.context.locale } : head,
     );
   };
 

@@ -56,6 +56,7 @@ import {
   ContentFileReferenceError,
   contentSnapshotFileIds,
 } from "./files";
+import { contentLocaleRouting } from "./locale-routing";
 import {
   changedPathsToColumns,
   diffChangedPaths,
@@ -369,6 +370,7 @@ export const createContentEditorialService = <
 
     return await applyContentDeliveryWrite({
       definition,
+      routing: contentLocaleRouting(c),
       slugHistory,
       transition: {
         isPublic: publiclyVisible(after),

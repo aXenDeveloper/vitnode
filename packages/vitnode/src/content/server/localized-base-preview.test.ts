@@ -128,7 +128,7 @@ describe("the base preview mint on a localized content type", () => {
 
     const url = new URL(body.url);
     expect(url.origin).toBe("https://example.com");
-    expect(url.pathname).toBe("/en/delivered-previewable/hello-world");
+    expect(url.pathname).toBe("/delivered-previewable/hello-world");
     expect(url.searchParams.get("preview")).toBe(body.token);
   });
 

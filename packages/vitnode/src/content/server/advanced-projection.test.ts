@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { testContentLocaleRouting } from "@/tests/content-fixtures";
+
 import type { ContentFieldMap } from "../types";
 
 import { defineContentType } from "../define";
@@ -248,13 +250,17 @@ describe("contentSearchDocument", () => {
   };
 
   it("reads a group leaf through its canonical path", () => {
-    const document = contentSearchDocument(articleContentType, values);
+    const document = contentSearchDocument(articleContentType, values, {
+      routing: testContentLocaleRouting(),
+    });
 
     expect(document?.content).toContain("SEO heading");
   });
 
   it("joins a repeatable leaf in position order", () => {
-    const document = contentSearchDocument(articleContentType, values);
+    const document = contentSearchDocument(articleContentType, values, {
+      routing: testContentLocaleRouting(),
+    });
 
     // Position order rather than insertion order: position is what the page
     // renders, and an index that disagreed would highlight the wrong entry.
@@ -262,20 +268,22 @@ describe("contentSearchDocument", () => {
   });
 
   it("indexes nothing from a group that is null", () => {
-    const document = contentSearchDocument(articleContentType, {
-      ...values,
-      seo: null,
-    });
+    const document = contentSearchDocument(
+      articleContentType,
+      { ...values, seo: null },
+      { routing: testContentLocaleRouting() },
+    );
 
     expect(document?.content).not.toContain("SEO heading");
     expect(document?.content).toContain("Hello");
   });
 
   it("never indexes relation identifiers as text", () => {
-    const document = contentSearchDocument(articleContentType, {
-      ...values,
-      categories: [42],
-    });
+    const document = contentSearchDocument(
+      articleContentType,
+      { ...values, categories: [42] },
+      { routing: testContentLocaleRouting() },
+    );
 
     expect(document?.content).not.toContain("42");
   });

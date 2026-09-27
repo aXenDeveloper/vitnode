@@ -171,10 +171,13 @@ export {
 } from "./const";
 export { defineContentType } from "./define";
 export {
+  contentDeliveryAlternateHref,
   contentDeliveryDisabled,
   contentDeliveryHreflang,
+  contentDeliveryInternalPath,
   contentDeliveryOpenGraph,
   contentDeliveryPath,
+  contentDeliveryPublicUrl,
   contentDeliveryRobots,
   contentDeliverySeo,
   contentDeliveryUrl,
@@ -274,6 +277,12 @@ export {
   resolveContentLocalization,
 } from "./localization";
 export type { ContentFieldPartition } from "./localization";
+export {
+  contentPublicHref,
+  contentPublicUrl,
+  contentRoutingLocale,
+} from "./public-url";
+export type { ContentLocaleRouting, ContentPublicUrl } from "./public-url";
 export {
   CONTENT_DEFAULT_PUBLICATION_STATUS,
   CONTENT_PUBLICATION_ACTIONS,

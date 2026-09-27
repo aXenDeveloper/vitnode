@@ -1,3 +1,4 @@
+import type { ContentLocaleRouting, ContentPublicUrl } from "./public-url";
 import type {
   AnyContentTypeDefinition,
   ContentDeliveryConfig,
@@ -9,6 +10,7 @@ import type {
   ResolvedContentPublicApiConfig,
 } from "./types";
 
+import { parseRoutePath } from "../routing/path";
 import {
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
   CONTENT_DELIVERY_NO_INDEX_KINDS,
@@ -19,6 +21,7 @@ import {
 import { ContentEngineError } from "./errors";
 import { normalizeContentLocale } from "./locale";
 import { readContentPath, splitContentFieldPath } from "./paths";
+import { contentPublicHref, contentPublicUrl } from "./public-url";
 
 /** Kinds the three SEO slots accept, as runtime sets. */
 const titleKinds: ReadonlySet<string> = new Set(CONTENT_DELIVERY_TITLE_KINDS);
@@ -33,6 +36,7 @@ const noIndexKinds: ReadonlySet<string> = new Set(
 export const contentDeliveryDisabled: ResolvedContentDeliveryConfig<false> = {
   enabled: false,
   hreflang: { xDefault: null },
+  path: "",
   redirects: { enabled: false },
   seo: {
     descriptionField: null,
@@ -132,6 +136,76 @@ const assertSeoField = ({
       );
     }
   }
+};
+
+const CONTENT_DELIVERY_SLUG_SEGMENT = ":slug";
+
+const RESERVED_DELIVERY_PREFIXES: ReadonlySet<string> = new Set([
+  "admin",
+  "api",
+]);
+
+const resolveContentDeliveryPath = ({
+  id,
+  path,
+  publicPath,
+}: {
+  id: string;
+  path: string | undefined;
+  publicPath: string;
+}): string => {
+  if (path === undefined)
+    return `/${publicPath}/${CONTENT_DELIVERY_SLUG_SEGMENT}`;
+
+  if (
+    typeof path !== "string" ||
+    path.length > CONTENT_DELIVERY_PATH_MAX_LENGTH
+  ) {
+    throw new ContentEngineError(
+      `delivery.path must be a string of at most ${CONTENT_DELIVERY_PATH_MAX_LENGTH} characters.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const parsed = parseRoutePath(path);
+  if (!parsed.ok) {
+    throw new ContentEngineError(
+      `delivery.path is not a valid route path: ${parsed.reason}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const slugs = parsed.segments.filter(
+    segment => segment.kind === "param" && segment.name === "slug",
+  ).length;
+  if (slugs !== 1) {
+    throw new ContentEngineError(
+      `delivery.path "${path}" must contain exactly one "${CONTENT_DELIVERY_SLUG_SEGMENT}" parameter, not ${slugs}. It is the one value a record fills in.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const extra = parsed.segments.find(
+    segment =>
+      segment.kind === "splat" ||
+      (segment.kind === "param" && segment.name !== "slug"),
+  );
+  if (extra) {
+    throw new ContentEngineError(
+      `delivery.path "${path}" declares ${extra.kind === "param" ? `":${extra.name}"` : '"*"'}, but "${CONTENT_DELIVERY_SLUG_SEGMENT}" is the only parameter a record can fill.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const [first] = parsed.segments;
+  if (first?.kind === "static" && RESERVED_DELIVERY_PREFIXES.has(first.value)) {
+    throw new ContentEngineError(
+      `delivery.path "${path}" starts with "/${first.value}", which is reserved for the ${first.value === "api" ? "API" : "AdminCP"} and never served as a public page.`,
+      { contentTypeId: id },
+    );
+  }
+
+  return parsed.path;
 };
 
 export const resolveContentDelivery = ({
@@ -255,6 +329,12 @@ export const resolveContentDelivery = ({
     }
   }
 
+  const path = resolveContentDeliveryPath({
+    id,
+    path: delivery.path,
+    publicPath: publicApi.path,
+  });
+
   const exposed = new Set(publicApi.fields);
 
   // Alternates and `hreflang` are resolved by identifier - the query enumerates a
@@ -348,6 +428,7 @@ export const resolveContentDelivery = ({
   return {
     enabled: true,
     hreflang: { xDefault: delivery.hreflang?.xDefault ?? null },
+    path,
     redirects: { enabled: redirects },
     seo: {
       descriptionField: seo.descriptionField ?? null,
@@ -376,68 +457,68 @@ export const resolveContentDelivery = ({
 // Canonical URLs
 // ---------------------------------------------------------------------------
 
-/**
- * The canonical **path** of one record, in one language.
- *
- * ```text
- * /articles/my-article           nonlocalized
- * /pl/articles/moj-artykul       localized
- * ```
- *
- * Relative, always, and that is the point: a content type definition lives in
- * source control and gets deployed to a preview domain, a staging domain and
- * production, so an origin baked into it would be wrong in two of the three
- * places. {@link contentDeliveryUrl} adds one when a caller has one to add.
- *
- * The locale segment is **normalized** through `normalizeContentLocale`, so
- * `PL`, `pl` and `" pl "` produce one path and therefore one cache key. The slug
- * is percent-encoded: a generated slug is already URL-safe, but a row written
- * straight into the database is not, and a path is what this function promises.
- *
- * `null` for an empty slug or an empty public path, rather than a link to
- * `/articles/` - a canonical URL that points at a list page is worse than no
- * canonical URL at all.
- */
-export const contentDeliveryPath = ({
+export const contentDeliveryInternalPath = ({
   definition,
-  locale,
   slug,
 }: {
   definition: AnyContentTypeDefinition;
-  /** Required for a localized content type, ignored otherwise. */
-  locale?: null | string;
   slug: string;
 }): null | string => {
-  const path = definition.publicApi.path;
+  const route = definition.delivery.path;
   const trimmed = slug.trim();
-  if (path === "" || trimmed === "") return null;
+  if (route === "" || trimmed === "") return null;
 
-  const segments: string[] = [];
-
-  if (definition.localization.enabled) {
-    const normalized = normalizeContentLocale(locale ?? "");
-    // A localized record has one URL per language and no locale-less one. Without
-    // a locale there is no path to build, and guessing would hand a reader the
-    // wrong language under a URL that claims otherwise.
-    if (normalized === "") return null;
-
-    segments.push(encodeURIComponent(normalized));
-  }
-
-  segments.push(path, encodeURIComponent(trimmed));
-
-  return `/${segments.join("/")}`;
+  return route
+    .split("/")
+    .map(segment =>
+      segment === CONTENT_DELIVERY_SLUG_SEGMENT
+        ? encodeURIComponent(trimmed)
+        : segment,
+    )
+    .join("/");
 };
+
+export const contentDeliveryPublicUrl = ({
+  definition,
+  host,
+  locale,
+  routing,
+  slug,
+}: {
+  definition: AnyContentTypeDefinition;
+  host?: null | string;
+  locale?: null | string;
+  routing: ContentLocaleRouting;
+  slug: string;
+}): ContentPublicUrl | null => {
+  const internalPath = contentDeliveryInternalPath({ definition, slug });
+  if (internalPath === null) return null;
+
+  return contentPublicUrl({
+    host,
+    internalPath,
+    locale: definition.localization.enabled
+      ? (locale ?? "")
+      : routing.defaultLocale,
+    routing,
+  });
+};
+
+export const contentDeliveryPath = (args: {
+  definition: AnyContentTypeDefinition;
+  locale?: null | string;
+  routing: ContentLocaleRouting;
+  slug: string;
+}): null | string => contentDeliveryPublicUrl(args)?.pathname ?? null;
 
 /**
  * A canonical path turned absolute, when the caller has an origin.
  *
  * `origin` is whatever the request or the deployment says it is - a configured
- * public URL, `VITNODE_WEB_URL`, a forwarded host. It is separate from the
- * path for the reason {@link contentDeliveryPath} explains, and it is validated
- * here rather than concatenated: `https://example.com` and
- * `https://example.com/` have to produce the same URL, and a malformed origin
- * has to be a `null` rather than a link with two schemes in it.
+ * public URL, `VITNODE_WEB_URL`, a forwarded host. It is validated here rather
+ * than concatenated: `https://example.com` and `https://example.com/` have to
+ * produce the same URL, and a malformed origin has to be a `null` rather than a
+ * link with two schemes in it.
  */
 export const contentDeliveryUrl = ({
   origin,
@@ -459,6 +540,7 @@ export const contentDeliveryUrl = ({
 export interface ContentDeliveryAlternate {
   /** The canonical `core_languages.code`. */
   locale: string;
+  origin?: string;
   path: string;
 }
 
@@ -468,6 +550,11 @@ export interface ContentDeliveryHreflang {
   xDefault?: string;
 }
 
+export const contentDeliveryAlternateHref = (
+  alternate: ContentDeliveryAlternate,
+): string =>
+  contentPublicHref({ origin: alternate.origin, pathname: alternate.path });
+
 export const contentDeliveryHreflang = ({
   alternates,
   definition,
@@ -476,8 +563,9 @@ export const contentDeliveryHreflang = ({
   definition: AnyContentTypeDefinition;
 }): ContentDeliveryHreflang => {
   const languages: Record<string, string> = {};
-  for (const alternate of alternates)
-    languages[alternate.locale] = alternate.path;
+  for (const alternate of alternates) {
+    languages[alternate.locale] = contentDeliveryAlternateHref(alternate);
+  }
 
   if (definition.delivery.hreflang.xDefault !== "defaultLocale") {
     return { languages };
@@ -495,7 +583,7 @@ export const contentDeliveryHreflang = ({
 
   return fallback === undefined
     ? { languages }
-    : { languages, xDefault: fallback.path };
+    : { languages, xDefault: contentDeliveryAlternateHref(fallback) };
 };
 
 const contentDeliveryLocalesMatch = (a: string, b: string): boolean =>
@@ -587,40 +675,91 @@ export interface ContentDeliveryPathParts {
   slug: string;
 }
 
-export const parseContentDeliveryPath = (
+const decodeSegments = (pathname: string): null | string[] => {
+  const segments: string[] = [];
+
+  for (const segment of pathname.split("/")) {
+    if (segment === "") continue;
+
+    try {
+      segments.push(decodeURIComponent(segment));
+    } catch {
+      return null;
+    }
+  }
+
+  return segments;
+};
+
+const validSlug = (slug: string | undefined): slug is string =>
+  slug !== undefined && slug !== "" && slug !== "." && slug !== "..";
+
+const matchDeliveryRoute = (
   definition: AnyContentTypeDefinition,
-  path: string,
+  internalPathname: string,
+): null | string => {
+  const route = definition.delivery.path;
+  if (route === "") return null;
+
+  const expected = route.split("/").filter(segment => segment !== "");
+  const actual = decodeSegments(internalPathname);
+  if (actual?.length !== expected.length) return null;
+
+  let slug: string | undefined;
+  for (const [index, segment] of expected.entries()) {
+    const value = actual[index];
+    if (segment === CONTENT_DELIVERY_SLUG_SEGMENT) {
+      slug = value;
+      continue;
+    }
+
+    if (value.toLowerCase() !== segment) return null;
+  }
+
+  return validSlug(slug) ? slug : null;
+};
+
+const parseLegacyDeliveryPath = (
+  definition: AnyContentTypeDefinition,
+  pathname: string,
 ): ContentDeliveryPathParts | null => {
-  if (path.length > CONTENT_DELIVERY_PATH_MAX_LENGTH) return null;
+  const parts = decodeSegments(pathname);
+  if (!parts) return null;
 
-  const withoutQuery = path.split(/[?#]/)[0] ?? "";
-  const segments = withoutQuery
-    .split("/")
-    .filter(segment => segment !== "")
-    .map(segment => {
-      try {
-        return decodeURIComponent(segment);
-      } catch {
-        // A malformed escape is not a path this engine produced.
-        return null;
-      }
-    });
-
-  if (segments.some(segment => segment === null)) return null;
-
-  const parts = segments as string[];
   const localized = definition.localization.enabled;
-  const expected = localized ? 3 : 2;
-  if (parts.length !== expected) return null;
+  if (parts.length !== (localized ? 3 : 2)) return null;
 
   const [prefix, slug] = localized
     ? [parts[1], parts[2]]
     : [parts[0], parts[1]];
-  if (prefix !== definition.publicApi.path) return null;
-  if (slug === "" || slug === "." || slug === "..") return null;
+  if (prefix !== definition.publicApi.path || !validSlug(slug)) return null;
 
   return {
     locale: localized ? normalizeContentLocale(parts[0]) : null,
+    slug,
+  };
+};
+
+export const parseContentDeliveryPath = (
+  definition: AnyContentTypeDefinition,
+  path: string,
+  { host, routing }: { host?: null | string; routing: ContentLocaleRouting },
+): ContentDeliveryPathParts | null => {
+  if (path.length > CONTENT_DELIVERY_PATH_MAX_LENGTH) return null;
+
+  const pathname = path.split(/[?#]/)[0] ?? "";
+  const resolved = routing.resolvePublicPathname(
+    pathname.startsWith("/") ? pathname : `/${pathname}`,
+    { host },
+  );
+  const slug = matchDeliveryRoute(definition, resolved.internalPathname);
+
+  if (slug === null) return parseLegacyDeliveryPath(definition, pathname);
+
+  return {
+    locale: definition.localization.enabled
+      ? normalizeContentLocale(resolved.locale)
+      : null,
     slug,
   };
 };

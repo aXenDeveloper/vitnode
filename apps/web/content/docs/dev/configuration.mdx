@@ -156,7 +156,10 @@ where you reword a string a package translates differently to how you want it.
   `src/vitnode.api.config.ts` configures the Hono app at `/api/*` - the
   database, storage, email, Redis. In a single app it reads `vitNodeConfig.i18n`
   so the site and its emails agree on which languages exist. In a split
-  deployment the API is a separate package and declares its own list.
+  deployment the API is a separate package and declares its own list - and its
+  own `localePrefix`, `domains` and `routePaths`, which must mirror the web
+  app's so the content URLs it builds match. See [Localized
+  URLs](/docs/dev/i18n/localized-urls).
 </Callout>
 
 ---

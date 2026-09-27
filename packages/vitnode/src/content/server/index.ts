@@ -98,6 +98,7 @@ export type {
   ContentLanguage,
   ContentLocalizationProblem,
 } from "./language-resolver";
+export { contentLocaleRouting } from "./locale-routing";
 export { createContentLocalizedPublicService } from "./localized-public-service";
 export { createContentLocalizedService } from "./localized-service";
 export type {

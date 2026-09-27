@@ -39,14 +39,26 @@ export interface LocaleConfig {
   name: string;
 }
 
+export interface LocaleDomainConfig<TLocale extends string = string> {
+  defaultLocale: TLocale;
+  locales?: TLocale[];
+  origin: string;
+}
+
+export type LocaleRoutePaths<TLocale extends string = string> = Partial<
+  Record<TLocale, Record<string, string>>
+>;
+
 export interface VitNodeI18nConfig<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
   defaultLocale: AppLocales[number]["code"];
+  domains?: LocaleDomainConfig<AppLocales[number]["code"]>[];
   localePrefix?: "always" | "as-needed" | "never";
   locales: AppLocales;
 
   messages?: AppMessagesMap;
+  routePaths?: LocaleRoutePaths<AppLocales[number]["code"]>;
   timeZone?: string;
 }
 

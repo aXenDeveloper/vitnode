@@ -8,6 +8,8 @@ import {
   serializeLocaleCookie,
 } from "@/lib/i18n/locale-cookie";
 
+import { requestHostOf } from "./host";
+
 export interface LocaleRequestPlan {
   /** A finished response to send instead of rendering. */
   redirect?: Response;
@@ -69,10 +71,12 @@ export const handleLocaleRequest = (
 
   if (localeRouting.shouldIgnoreLocalePath(pathname)) return {};
 
+  const host = requestHostOf(request);
+
   // Read before anything redirects. `extractLocaleFromPath` answers only for a
   // prefix this app actually writes, so `/en/admin` - the default locale spelled
   // out - is a URL to canonicalise rather than a choice to record.
-  const urlLocale = localeRouting.extractLocaleFromPath(pathname);
+  const urlLocale = localeRouting.extractLocaleFromPath(pathname, { host });
   const cookieLocale = readLocaleCookie(
     request.headers.get("cookie"),
     LOCALE_COOKIE_NAME,
@@ -85,10 +89,34 @@ export const handleLocaleRequest = (
       ? serializeLocaleCookie(urlLocale, { secure: url.protocol === "https:" })
       : undefined;
 
-  const redirectTo = localeRouting.redirectPathnameFor(pathname);
+  const redirectTo = localeRouting.redirectUrlFor(url, { host });
   if (redirectTo === undefined) return setCookie ? { setCookie } : {};
 
-  const target = new URL(url);
+  const location = locationHeaderFor(redirectTo, url, localeRouting);
+  if (location === undefined) return setCookie ? { setCookie } : {};
+
+  const headers = new Headers({ location: location.value });
+
+  if (localeRouting.domains.length > 0) {
+    headers.append("vary", "host, x-forwarded-host");
+  }
+
+  // The API is the one destination that learns nothing from the prefix it was
+  // given: `/pl/api/foo` is a mistake to correct, not a language to remember.
+  if (setCookie && !location.crossOrigin && !isApiPath(redirectTo.pathname)) {
+    headers.append("set-cookie", setCookie);
+  }
+
+  // Built by hand rather than with `Response.redirect`, whose headers are
+  // immutable - the cookie above could never be attached to one.
+  return { redirect: new Response(null, { headers, status: 308 }) };
+};
+
+const locationHeaderFor = (
+  target: URL,
+  requested: URL,
+  localeRouting: LocaleRouting,
+): undefined | { crossOrigin: boolean; value: string } => {
   // Leading slashes collapsed to exactly one. A `Location` of `//example.com` is
   // not a path at all - it is a *protocol-relative URL*, and the browser reads
   // everything after the two slashes as a host. Canonicalising `/en//evil.com`
@@ -96,19 +124,16 @@ export const handleLocaleRequest = (
   // for one of its own URLs with a 308 to somebody else's - a phishing link that
   // is genuinely hosted on this domain. A backslash is folded in too, because
   // browsers treat it as a separator here even though the URL parser does not.
-  target.pathname = redirectTo.replace(/^[/\\]+/, "/");
+  const pathname = target.pathname.replace(/^[/\\]+/, "/");
+  const path = pathname + target.search + target.hash;
 
-  const headers = new Headers({
-    location: target.pathname + target.search + target.hash,
-  });
-
-  // The API is the one destination that learns nothing from the prefix it was
-  // given: `/pl/api/foo` is a mistake to correct, not a language to remember.
-  if (setCookie && !isApiPath(redirectTo)) {
-    headers.append("set-cookie", setCookie);
+  if (target.origin === requested.origin) {
+    return { crossOrigin: false, value: path };
   }
 
-  // Built by hand rather than with `Response.redirect`, whose headers are
-  // immutable - the cookie above could never be attached to one.
-  return { redirect: new Response(null, { headers, status: 308 }) };
+  if (!localeRouting.domains.some(domain => domain.origin === target.origin)) {
+    return undefined;
+  }
+
+  return { crossOrigin: true, value: target.origin + path };
 };

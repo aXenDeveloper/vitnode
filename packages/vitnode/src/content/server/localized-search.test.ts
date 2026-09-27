@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  testContentLocaleRouting,
   testLocalizedSearchPageContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
@@ -11,6 +12,8 @@ import {
   contentSearchDocument,
   contentTranslationSearchDocument,
 } from "./search-document";
+
+const routing = testContentLocaleRouting();
 
 const PAST = new Date("2020-01-01T00:00:00.000Z");
 const LATER = new Date("2020-06-01T00:00:00.000Z");
@@ -47,34 +50,77 @@ const document = (
       locale: overrides.locale ?? "pl",
       translation: { ...translation, ...overrides.translation },
     },
-    { pluginId: "@vitnode/example" },
+    { pluginId: "@vitnode/example", routing },
   );
 
 describe("contentSearchUrl on a localized content type", () => {
-  it("substitutes the language as well as the slug", () => {
+  const url = (
+    slug: string,
+    locale?: string,
+    options: Partial<Parameters<typeof contentSearchUrl>[0]> = {},
+  ) =>
+    contentSearchUrl({
+      definition: testLocalizedSearchPageContentType,
+      locale,
+      routing,
+      slug,
+      ...options,
+    });
+
+  it("lets the locale routing place the language", () => {
+    expect(url("hello", "en")).toBe("/pages/hello");
+    expect(url("witaj", "pl")).toBe("/pl/pages/witaj");
+  });
+
+  it("treats a legacy /{locale}/ template exactly like the new form", () => {
+    expect(testLocalizedSearchPageContentType.search.pathTemplate).toBe(
+      "/pages/{slug}",
+    );
     expect(
-      contentSearchUrl(testLocalizedSearchPageContentType, "witaj", "pl"),
-    ).toBe("/pl/pages/witaj");
+      url("hello", "en", {
+        routing: testContentLocaleRouting({ localePrefix: "always" }),
+      }),
+    ).toBe("/en/pages/hello");
+  });
+
+  it("translates the route and links a language's own domain absolutely", () => {
+    const routePaths = { pl: { "/pages/:slug": "/strony/:slug" } };
+
+    expect(
+      url("witaj", "pl", { routing: testContentLocaleRouting({ routePaths }) }),
+    ).toBe("/pl/strony/witaj");
+    expect(
+      url("witaj", "pl", {
+        routing: testContentLocaleRouting({
+          domains: [
+            { defaultLocale: "en", origin: "https://vitnode.com" },
+            { defaultLocale: "pl", origin: "https://vitnode.pl" },
+          ],
+          routePaths,
+        }),
+      }),
+    ).toBe("https://vitnode.pl/strony/witaj");
   });
 
   it("refuses to build one without a language", () => {
     // One document per language means one URL per language. A link to the wrong
     // language is worse than no link.
-    expect(
-      contentSearchUrl(testLocalizedSearchPageContentType, "witaj"),
-    ).toBeNull();
+    expect(url("witaj")).toBeNull();
   });
 
-  it("encodes both, so neither can escape its segment", () => {
-    expect(
-      contentSearchUrl(testLocalizedSearchPageContentType, "a/b", "pt-BR"),
-    ).toBe("/pt-BR/pages/a%2Fb");
+  it("encodes the slug, so it cannot escape its segment", () => {
+    expect(url("a/b", "pl")).toBe("/pl/pages/a%2Fb");
   });
 
   it("ignores a language on a content type that has none", () => {
-    expect(contentSearchUrl(testSearchablePostContentType, "hello", "pl")).toBe(
-      "/searchable/hello",
-    );
+    expect(
+      contentSearchUrl({
+        definition: testSearchablePostContentType,
+        locale: "pl",
+        routing,
+        slug: "hello",
+      }),
+    ).toBe("/searchable/hello");
   });
 });
 
@@ -142,7 +188,7 @@ describe("contentTranslationSearchDocument", () => {
       contentTranslationSearchDocument(
         testSearchablePostContentType,
         { base, locale: "pl", translation },
-        {},
+        { routing },
       ),
     ).toBeNull();
   });
@@ -152,16 +198,20 @@ describe("contentSearchDocument locale", () => {
   it("leaves `languageCode` off a content type with no languages", () => {
     // `""` is the language-agnostic value that matches every locale, and it is
     // what every document written before Stage 5D already carries.
-    const built = contentSearchDocument(testSearchablePostContentType, {
-      createdAt: PAST,
-      excerpt: "Prose",
-      id: 1,
-      publishedAt: PAST,
-      slug: "hello",
-      status: "published",
-      title: "Hello",
-      updatedAt: PAST,
-    });
+    const built = contentSearchDocument(
+      testSearchablePostContentType,
+      {
+        createdAt: PAST,
+        excerpt: "Prose",
+        id: 1,
+        publishedAt: PAST,
+        slug: "hello",
+        status: "published",
+        title: "Hello",
+        updatedAt: PAST,
+      },
+      { routing },
+    );
 
     expect(built).not.toBeNull();
     expect(built).not.toHaveProperty("languageCode");

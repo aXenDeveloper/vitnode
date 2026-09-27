@@ -1178,10 +1178,6 @@ export interface ContentSearchConfig<
   /** Prepended to the indexed body so it shows up in result excerpts. */
   descriptionField?: TDescription;
   enabled: true;
-  /**
-   * The public URL of one record, e.g. `/articles/{slug}`. Relative, and
-   * `{slug}` - the exposed slug field - is the only placeholder.
-   */
   pathTemplate: string;
   /** The result heading. Weighted above the body by the index. */
   titleField: TTitle;
@@ -1381,6 +1377,7 @@ export interface ContentDeliveryConfig<
 > {
   enabled: TPublicEnabled extends true ? true : never;
   hreflang?: ContentDeliveryHreflangConfig;
+  path?: string;
 
   redirects?: TPublicEnabled extends true
     ? TEditorialEnabled extends true
@@ -1416,6 +1413,7 @@ export interface ResolvedContentDeliveryConfig<
 > {
   enabled: TEnabled;
   hreflang: { xDefault: "defaultLocale" | null };
+  path: string;
   redirects: { enabled: boolean };
   seo: ResolvedContentDeliverySeoConfig;
   sitemap: {

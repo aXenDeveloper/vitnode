@@ -64,6 +64,7 @@ export const buildContentDeliveryRoutes = <
 
   const zodAlternate = z.object({
     locale: z.string(),
+    origin: z.string().optional(),
     path: z.string(),
   });
 
@@ -75,6 +76,7 @@ export const buildContentDeliveryRoutes = <
   const zodMetadata = z.object({
     alternates: z.array(zodAlternate),
     canonicalPath: z.string().nullable(),
+    canonicalUrl: z.string().nullable().optional(),
     hreflang: z.object({
       languages: z.record(z.string(), z.string()),
       xDefault: z.string().optional(),
@@ -105,6 +107,7 @@ export const buildContentDeliveryRoutes = <
     itemId: z.number().int(),
     lastModified: z.string(),
     locale: z.string().nullable(),
+    origin: z.string().optional(),
     path: z.string(),
     priority: z.number().nullable(),
   });

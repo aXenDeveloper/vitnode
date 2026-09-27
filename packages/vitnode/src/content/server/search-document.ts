@@ -1,4 +1,5 @@
 import type { SearchDocument } from "../../api/models/search";
+import type { ContentLocaleRouting } from "../public-url";
 import type { AnyContentTypeDefinition } from "../types";
 
 import {
@@ -72,7 +73,13 @@ export const contentSearchDocument = (
     isPublic = isContentRowPublic(row),
     locale,
     pluginId,
-  }: { isPublic?: boolean; locale?: string; pluginId?: string } = {},
+    routing,
+  }: {
+    isPublic?: boolean;
+    locale?: string;
+    pluginId?: string;
+    routing: ContentLocaleRouting;
+  },
 ): null | SearchDocument => {
   const { publicApi, search } = definition;
   if (!search.enabled) return null;
@@ -86,11 +93,12 @@ export const contentSearchDocument = (
   if (title === "") return null;
 
   const url = isPublic
-    ? contentSearchUrl(
+    ? contentSearchUrl({
         definition,
-        normalize(values[publicApi.slugField]),
         locale,
-      )
+        routing,
+        slug: normalize(values[publicApi.slugField]),
+      })
     : null;
   if (isPublic && url === null) return null;
 
@@ -151,7 +159,7 @@ export const contentTranslationSearchDocument = (
     locale,
     translation,
   }: { base: object; locale: string; translation: object },
-  { pluginId }: { pluginId?: string } = {},
+  { pluginId, routing }: { pluginId?: string; routing: ContentLocaleRouting },
 ): null | SearchDocument => {
   if (!definition.search.enabled || !definition.localization.enabled) {
     return null;
@@ -190,5 +198,6 @@ export const contentTranslationSearchDocument = (
     isPublic,
     locale,
     pluginId,
+    routing,
   });
 };

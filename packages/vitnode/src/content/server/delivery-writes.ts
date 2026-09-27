@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import type { ContentSitemapChange } from "../cache";
+import type { ContentLocaleRouting } from "../public-url";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 import type { ContentSlugHistoryModel } from "./slug-history-model";
@@ -43,11 +44,13 @@ export interface ContentDeliveryTransition {
 
 export const applyContentDeliveryWrite = async ({
   definition,
+  routing,
   slugHistory,
   transition,
   tx,
 }: {
   definition: AnyContentTypeDefinition;
+  routing: ContentLocaleRouting;
   /** `null` for a content type with `delivery` but no `redirects`. */
   slugHistory: ContentSlugHistoryModel | null;
   transition: ContentDeliveryTransition;
@@ -65,7 +68,7 @@ export const applyContentDeliveryWrite = async ({
   const pathFor = (value: null | string): null | string =>
     value === null
       ? null
-      : contentDeliveryPath({ definition, locale, slug: value });
+      : contentDeliveryPath({ definition, locale, routing, slug: value });
 
   const canonicalPath = pathFor(slug);
   const previousPath = pathFor(previousSlug);

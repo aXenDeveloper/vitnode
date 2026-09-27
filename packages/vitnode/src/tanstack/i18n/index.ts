@@ -1,7 +1,11 @@
+export type { RequestHostSource } from "./host";
+export { browserHostOf, requestHostOf } from "./host";
+export type { LocaleHostOptions, LocaleHostReader } from "./locale";
 export {
   createLocaleRewrite,
   localizeHref,
   publicPathnameOf,
+  readRequestHost,
   resolveLocale,
   useLocale,
 } from "./locale";
@@ -23,4 +27,13 @@ export type {
   IntlRuntime,
 } from "./runtime";
 export { configureIntl, getIntlRuntime, resetIntlRuntime } from "./runtime";
-export { switchLocaleOn, useSwitchLocale } from "./switch-locale";
+export type {
+  LocaleSwitchInput,
+  LocaleSwitchPlan,
+  SwitchLocaleOptions,
+} from "./switch-locale";
+export {
+  planLocaleSwitch,
+  switchLocaleOn,
+  useSwitchLocale,
+} from "./switch-locale";
