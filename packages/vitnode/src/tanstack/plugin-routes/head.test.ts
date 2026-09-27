@@ -62,3 +62,36 @@ describe("normalizePluginRouteHead", () => {
     expect(normalizePluginRouteHead(declared)).toEqual({});
   });
 });
+
+describe("normalizePluginRouteHead alternates", () => {
+  it("keeps per-locale internal pathnames", () => {
+    expect(
+      normalizePluginRouteHead({
+        alternates: { en: "/articles/hello", pl: "/articles/witaj" },
+      }),
+    ).toEqual({
+      alternates: { en: "/articles/hello", pl: "/articles/witaj" },
+    });
+  });
+
+  it("drops entries that are not internal pathnames", () => {
+    expect(
+      normalizePluginRouteHead({
+        alternates: {
+          de: "//evil.example",
+          en: "/articles/hello",
+          fr: 42,
+          pl: "https://evil.example/x",
+        },
+      }),
+    ).toEqual({ alternates: { en: "/articles/hello" } });
+  });
+
+  it.each([
+    ["an array", ["/articles/hello"]],
+    ["a string", "/articles/hello"],
+    ["an object with nothing usable", { en: "" }],
+  ])("drops alternates that are %s", (_label, alternates) => {
+    expect(normalizePluginRouteHead({ alternates })).toEqual({});
+  });
+});

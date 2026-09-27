@@ -36,7 +36,7 @@ export const localizedArticleContentType = defineContentType({
     enabled: true,
     titleField: "title",
     contentFields: ["title", "body"],
-    pathTemplate: "/{locale}/localized-articles/{slug}",
+    pathTemplate: "/localized-articles/{slug}",
   },
 
   // Per-locale versions, per-locale revisions, per-locale restore. `retention` is

@@ -5,7 +5,12 @@ import type { ResolvedContentRegistryModule } from "../content-registry";
 
 import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
-import { readOptionalPluginModules } from "./plugin-routes";
+import { ContentUrlError } from "../plugin-routes";
+import {
+  loadPluginContentUrls,
+  readOptionalPluginModules,
+  resolvePluginContentModules,
+} from "./plugin-routes";
 
 /** A resolver over a fixed map of specifier → file, as the build sees one. */
 const resolverFor =
@@ -171,5 +176,72 @@ describe("both projections stay deterministic", () => {
     expect(content).not.toContain("@acme/settings");
     expect(nav).toContain("@acme/settings/admin/nav");
     expect(nav).not.toContain("@acme/docs");
+  });
+});
+
+describe("content type discovery", () => {
+  const CONTENT_EXPORTS = resolverFor({
+    "@acme/blog/content": "/pkg/blog/dist/src/content.js",
+    "@acme/docs/content": "/pkg/docs/dist/src/content.js",
+  });
+
+  const POST = {
+    delivery: { enabled: true, path: "/blog/:slug" },
+    id: "acme.post",
+    search: { enabled: false, pathTemplate: "" },
+  };
+
+  it("resolves only the plugins that export the content subpath", () => {
+    expect(resolvePluginContentModules(ALL, CONTENT_EXPORTS)).toEqual([
+      {
+        file: "/pkg/blog/dist/src/content.js",
+        pluginId: "@acme/blog",
+        specifier: "@acme/blog/content",
+      },
+      {
+        file: "/pkg/docs/dist/src/content.js",
+        pluginId: "@acme/docs",
+        specifier: "@acme/docs/content",
+      },
+    ]);
+  });
+
+  it("skips a plugin without the subpath and imports nothing for it", async () => {
+    const imported: string[] = [];
+    const sources = await loadPluginContentUrls(
+      resolvePluginContentModules(["@acme/quiet"], CONTENT_EXPORTS),
+      async file => {
+        imported.push(file);
+
+        return await Promise.resolve({ contentTypes: [] });
+      },
+    );
+
+    expect(sources).toEqual([]);
+    expect(imported).toEqual([]);
+  });
+
+  it("reads each resolved module's contentTypes", async () => {
+    const sources = await loadPluginContentUrls(
+      resolvePluginContentModules(["@acme/blog"], CONTENT_EXPORTS),
+      async () => await Promise.resolve({ contentTypes: [POST] }),
+    );
+
+    expect(sources).toEqual([
+      {
+        contentTypes: [POST],
+        pluginId: "@acme/blog",
+        specifier: "@acme/blog/content",
+      },
+    ]);
+  });
+
+  it("fails on a resolved module without a contentTypes export", async () => {
+    await expect(
+      loadPluginContentUrls(
+        resolvePluginContentModules(["@acme/docs"], CONTENT_EXPORTS),
+        async () => await Promise.resolve({ default: [POST] }),
+      ),
+    ).rejects.toBeInstanceOf(ContentUrlError);
   });
 });

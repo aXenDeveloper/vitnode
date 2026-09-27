@@ -29,6 +29,7 @@ export interface BaseBuildModuleReturn<
   modules?: BaseBuildModuleReturn<P>[];
   name: M;
   pluginId: P;
+  publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks: BuildQueueTaskReturn[];
   routes: Routes;
   searchIndexers?: SearchIndexer[];
@@ -56,6 +57,7 @@ export function buildModule<
   modules,
   contentModels,
   contentTypes,
+  publicContentTypes,
   cronJobs = [],
   events = [],
   queueTasks = [],
@@ -69,6 +71,7 @@ export function buildModule<
   modules?: Modules;
   name: M;
   pluginId: P;
+  publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks?: BuildQueueTaskReturn[];
   routes: Routes;
   searchIndexers?: SearchIndexer[];
@@ -98,6 +101,7 @@ export function buildModule<
     contentTypes,
     cronJobs,
     events,
+    publicContentTypes,
     queueTasks,
     searchIndexers,
     webSockets,

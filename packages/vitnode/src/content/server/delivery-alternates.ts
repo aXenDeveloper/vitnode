@@ -13,8 +13,12 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 import type { ContentDatabase } from "./service";
 
-import { contentDeliveryPath } from "../delivery";
+import {
+  contentDeliveryInternalPath,
+  contentDeliveryPublicUrl,
+} from "../delivery";
 import { listContentLanguages } from "./language-resolver";
+import { contentLocaleRouting } from "./locale-routing";
 import {
   contentTranslationPublicationColumns,
   publicationColumns,
@@ -82,6 +86,7 @@ export const readDeliveryAlternatesMany = async <
       ? translationColumns[slugField]
       : columns[slugField];
 
+  const routing = contentLocaleRouting(c);
   const languages = await listContentLanguages(c);
   const byId = new Map(languages.map(language => [language.id, language]));
   // Widened, not cast: the generated table type carries every column as a literal,
@@ -125,15 +130,23 @@ export const readDeliveryAlternatesMany = async <
     const language = byId.get(languageId);
     if (!language?.isEnabled) continue;
 
-    const path = contentDeliveryPath({
+    const slug = typeof row.slug === "string" ? row.slug : "";
+    const internalPath = contentDeliveryInternalPath({ definition, slug });
+    const url = contentDeliveryPublicUrl({
       definition,
       locale: language.locale,
-      slug: typeof row.slug === "string" ? row.slug : "",
+      routing,
+      slug,
     });
-    if (path === null) continue;
+    if (url === null || internalPath === null) continue;
 
     const entries = grouped.get(itemId) ?? [];
-    entries.push({ locale: language.locale, path });
+    entries.push({
+      internalPath,
+      locale: language.locale,
+      ...(url.origin === undefined ? {} : { origin: url.origin }),
+      path: url.pathname,
+    });
     grouped.set(itemId, entries);
   }
 

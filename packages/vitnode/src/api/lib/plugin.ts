@@ -10,6 +10,7 @@ import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
 
 import { BlockError } from "@/blocks/errors";
+import { contentPublicUrls } from "@/content/public-urls";
 import {
   validateContentTypes,
   withContentPermissions,
@@ -50,6 +51,7 @@ export interface BuildPluginApiReturn<
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
+  publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
@@ -103,6 +105,7 @@ export function buildApiPlugin<
   const hono = new OpenAPIHono();
   const contentModels: AnyContentModel[] = [];
   const contentTypes: AnyContentTypeDefinition[] = [];
+  const publicContentTypes: AnyContentTypeDefinition[] = [];
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
   const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
@@ -116,6 +119,7 @@ export function buildApiPlugin<
 
     contentModels.push(...collectContentModels(handler));
     contentTypes.push(...collectContentTypes(handler));
+    publicContentTypes.push(...collectPublicContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
 
     handler.cronJobs?.forEach(cron => {
@@ -141,6 +145,16 @@ export function buildApiPlugin<
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
+  const publishing = new Map<string, AnyContentTypeDefinition>();
+  for (const definition of [
+    ...registered.map(entry => entry.definition),
+    ...publicContentTypes,
+  ]) {
+    if (contentPublicUrls(definition).length > 0) {
+      publishing.set(definition.id, definition);
+    }
+  }
+
   return {
     pluginId,
     blocks,
@@ -152,6 +166,7 @@ export function buildApiPlugin<
     openApiTags: [...new Set(openApiTags)],
     contentModels,
     contentTypes: registered.map(entry => entry.definition),
+    publicContentTypes: [...publishing.values()],
     cronJobs,
     events,
     queueTasks,
@@ -175,6 +190,15 @@ function collectContentTypes(
   return [
     ...(module.contentTypes ?? []),
     ...(module.modules ?? []).flatMap(collectContentTypes),
+  ];
+}
+
+function collectPublicContentTypes(
+  module: BaseBuildModuleReturn,
+): AnyContentTypeDefinition[] {
+  return [
+    ...(module.publicContentTypes ?? []),
+    ...(module.modules ?? []).flatMap(collectPublicContentTypes),
   ];
 }
 

@@ -66,6 +66,16 @@ export const routes = definePluginRoutes([
 ])
 ```
 
+The page's path must match `delivery.path`, which defaults to `/{publicApi.path}/:slug`. The build checks it for you. Export the plugin's content types from a browser-safe `src/content.ts`, and a content type whose URL no page serves stops `dev` and `build` with `content-url-without-page`:
+
+```ts title="plugins/blog/src/content.ts"
+import { articleContentType } from "@/content/article"
+
+export const contentTypes = [articleContentType]
+```
+
+Expose it as `./content` in the plugin's `package.json` exports. When the API boots, it loads that same module and refuses to start if the plugin publishes a URL the module doesn't declare. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+
   </Step>
   <Step>
 
@@ -74,30 +84,71 @@ export const routes = definePluginRoutes([
 ```tsx title="plugins/blog/src/pages/article-page.tsx"
 import type { PluginRoutePageProps } from "@vitnode/core/routing"
 import { definePluginRoute } from "@vitnode/core/routing"
+import {
+  contentDeliveryPage,
+  contentDeliveryPageHead,
+} from "@vitnode/core/tanstack/content"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
+import { z } from "zod"
 
-interface Article {
-  excerpt: string | null
-  title: string
-}
-
-// [!code ++:8]
-export const route = definePluginRoute({
-  load: async ({ params }) => await fetchArticle(params.slug),
-  head: ({ loaderData }) => ({
-    description: loaderData?.excerpt,
-    title: loaderData?.title,
-  }),
+const zodArticle = z.object({
+  excerpt: z.string().nullable(),
+  title: z.string(),
 })
 
-const ArticlePage = ({ loaderData }: PluginRoutePageProps<Article>) => (
+const loadArticle = async ({
+  locale,
+  slug,
+}: {
+  locale: string
+  slug: string
+}) => {
+  const [resolution, detail] = await Promise.all([
+    fetcher({
+      plugin: "@acme/blog",
+      method: "get",
+      module: "content/articles",
+      path: "/delivery/resolve/{slug}",
+      args: { params: { slug: encodeURIComponent(slug) }, query: { locale } },
+    }),
+    fetcher({
+      plugin: "@acme/blog",
+      method: "get",
+      module: "content/articles",
+      path: "/{slug}",
+      args: { params: { slug: encodeURIComponent(slug) }, query: { locale } },
+    }),
+  ])
+
+  return contentDeliveryPage({
+    item: detail.status === 200 ? zodArticle.parse(await detail.json()) : null,
+    resolution: await resolution.json(),
+  })
+}
+
+// [!code ++:9]
+export const route = definePluginRoute({
+  load: async ({ context, params }) =>
+    await loadArticle({ locale: context.locale, slug: params.slug }),
+  head: ({ loaderData }) =>
+    contentDeliveryPageHead(loaderData?.metadata, {
+      title: loaderData?.item.title,
+    }),
+})
+
+const ArticlePage = ({
+  loaderData: { item },
+}: PluginRoutePageProps<Awaited<ReturnType<typeof loadArticle>>>) => (
   <article className="container mx-auto max-w-3xl p-4">
-    <h2 className="text-3xl font-semibold">{loaderData.title}</h2>
-    <p>{loaderData.excerpt}</p>
+    <h1 className="text-3xl font-semibold text-balance">{item.title}</h1>
+    <p className="leading-relaxed">{item.excerpt}</p>
   </article>
 )
 
 export default ArticlePage
 ```
+
+`contentDeliveryPage` turns the resolve response into page data: a retired slug throws a 308 to the current URL, and an unknown one is a 404. `contentDeliveryPageHead` fills the title, description, `robots` and the internal alternates of every published translation. Those become the canonical and `hreflang` links, and they are what the language switcher follows. Blog's own `/blog/:slug` page (`plugins/blog/src/pages/post-page.tsx`) is the full version.
 
   </Step>
 </Steps>
@@ -107,12 +158,43 @@ export default ArticlePage
   rules, public API, and public route evolve together, so they belong together.
 </Callout>
 
+## Public URLs
+
+`delivery.path` is the **English route** of the record's page, the same pattern the plugin's `page()` declares. It defaults to `/{publicApi.path}/:slug`, so the example above is `/articles/:slug` without writing it. Set it when the website URL and the API path differ:
+
+```ts
+publicApi: { enabled: true, path: "articles", fields: ["id", "title", "slug"] },
+delivery: {
+  enabled: true,
+  path: "/news/:slug", // [!code ++]
+},
+```
+
+The API stays at `/api/{pluginId}/content/articles/...`. Only the page URL changes. `delivery.path` needs exactly one `:slug`, no other parameters or `*`, and can't start with `/admin` or `/api`.
+
+Every URL delivery builds goes through the app's [localized URL](/docs/dev/i18n/localized-urls) rules (`localePrefix`, `domains`, `routePaths`), so it matches what the router serves:
+
+| Record                          | `as-needed`, one domain              | With `domains`                                   |
+| :------------------------------ | :----------------------------------- | :----------------------------------------------- |
+| English, slug `hello-world`     | `/articles/hello-world`              | `https://vitnode.com/articles/hello-world`       |
+| Polish, slug `witaj-swiecie`    | `/pl/artykuly/witaj-swiecie`         | `https://vitnode.pl/artykuly/witaj-swiecie`      |
+
+(`artykuly` assumes the app translated `/articles/:slug` in `routePaths`.)
+
+- **Default locale is unprefixed.** Under `as-needed`, English URLs no longer start with `/en/`.
+- **hreflang, `x-default` and sitemap lines are absolute per domain** once `domains` is configured. Each language gets its own domain's origin.
+- **Every URL comes in two forms.** Each alternate has a public `path` (what visitors see, like `/pl/wpisy/witaj-swiecie`) and an `internalPath` (the English route with that language's slug, like `/blog/witaj-swiecie`). Metadata also has `canonicalInternalPath`. Page heads declare the internal form.
+- **Only published translations are alternates.** A Polish request that falls back to English content reports the English canonical URL (`isFallback: true`), so fallback text is never labelled as Polish.
+- **Slug history redirects are 308s and stay in their language.** An old Polish slug redirects to the current Polish URL, never to English. The `path` stored in `core_content_slug_history` is informational: history is reported with each slug's current URL, so changing `routePaths` or `domains` doesn't strand old slugs.
+- **Preview links** open the record's canonical page with `?preview=`, on its language's domain when there is one, and `VITNODE_WEB_URL` otherwise.
+
 ## Delivery Configuration Reference
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `enabled` | `true` | — | Opts into the delivery layer. Requires `publicApi: { enabled: true }`. |
-| `redirects.enabled` | `boolean` | `false` | Stores historical public slugs in `core_content_slug_history` and serves 301 redirects when slugs change. Requires `editorial: { enabled: true }`. |
+| `path` | `string` | `/{publicApi.path}/:slug` | The English route of the record's page, with exactly one `:slug`. Separate from `publicApi.path`, which only names the API. |
+| `redirects.enabled` | `boolean` | `false` | Stores historical public slugs in `core_content_slug_history` and answers old slugs with a 308 redirect. Requires `editorial: { enabled: true }`. |
 | `seo.titleField` | `string` | — | Exposed field name used to populate page titles. |
 | `seo.fallbackTitleField` | `string` | — | Fallback field name if `titleField` is empty. |
 | `seo.descriptionField` | `string` | — | Exposed field name used for page meta description. |
@@ -122,7 +204,7 @@ export default ArticlePage
 | `sitemap.enabled` | `boolean` | `false` | Includes published records in the XML sitemap. |
 | `sitemap.changeFrequency` | `"always" \| "hourly" \| "daily" \| "weekly" \| "monthly" \| "yearly" \| "never"` | — | Sitemap `<changefreq>` hint. |
 | `sitemap.priority` | `number` | — | Sitemap priority rating from `0.0` to `1.0`. |
-| `hreflang.xDefault` | `"defaultLocale"` | — | Emits `x-default` alternate link pointing to the default locale URL for localized content. |
+| `hreflang.xDefault` | `"defaultLocale"` | — | Emits an `x-default` alternate pointing at the default locale's URL, when that translation is published. |
 
 ## Learn More
 

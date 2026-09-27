@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { testContentLocaleRouting } from "@/tests/content-fixtures";
+
 import { defineContentType } from "./define";
 import {
   contentDeliveryHreflang,
   contentDeliveryOpenGraph,
   contentDeliveryPath,
+  contentDeliveryPublicUrl,
   contentDeliveryRobots,
   contentDeliverySeo,
   contentDeliveryUrl,
@@ -65,6 +68,7 @@ describe("delivery definition validation", () => {
     expect(plainType.delivery).toStrictEqual({
       enabled: false,
       hreflang: { xDefault: null },
+      path: "",
       redirects: { enabled: false },
       seo: {
         descriptionField: null,
@@ -537,47 +541,201 @@ const localizedType = defineContentType({
   tableName: "delivery_localized",
 });
 
+const routing = testContentLocaleRouting();
+
+const blogType = defineContentType({
+  ...base,
+  id: "delivery.blog",
+  delivery: {
+    enabled: true,
+    hreflang: { xDefault: "defaultLocale" },
+    path: "/blog/:slug",
+  },
+  fields: {
+    slug: field.slug({ localized: true, source: "title" }),
+    title: field.text({ localized: true, required: true }),
+  },
+  localization: { defaultLocale: "en", enabled: true },
+  publicApi: { enabled: true, fields: ["id", "title", "slug"], path: "posts" },
+  tableName: "delivery_blog",
+});
+
+const translatedRouting = testContentLocaleRouting({
+  routePaths: { pl: { "/blog/:slug": "/wpisy/:slug" } },
+});
+
+const domainRouting = testContentLocaleRouting({
+  domains: [
+    { defaultLocale: "en", origin: "https://vitnode.com" },
+    { defaultLocale: "pl", origin: "https://vitnode.pl" },
+  ],
+  routePaths: { pl: { "/blog/:slug": "/wpisy/:slug" } },
+});
+
+describe("delivery.path", () => {
+  const withPath = (path: string) =>
+    defineContentType({
+      ...base,
+      id: "delivery.routed",
+      delivery: { enabled: true, path },
+      fields,
+      publicApi,
+      tableName: "delivery_routed",
+    });
+
+  it("defaults to the public API segment", () => {
+    expect(articleType.delivery.path).toBe("/articles/:slug");
+  });
+
+  it("keeps a declared website route apart from the API path", () => {
+    expect(blogType.delivery.path).toBe("/blog/:slug");
+    expect(blogType.publicApi.path).toBe("posts");
+  });
+
+  it("requires exactly one :slug", () => {
+    expect(() => withPath("/blog")).toThrow(
+      /must contain exactly one ":slug" parameter, not 0/,
+    );
+  });
+
+  it("refuses any other parameter or a catch-all", () => {
+    expect(() => withPath("/blog/:year/:slug")).toThrow(
+      /declares ":year", but ":slug" is the only parameter/,
+    );
+    expect(() => withPath("/blog/:slug/*")).toThrow(/declares "\*"/);
+  });
+
+  it("refuses a route the router could not parse", () => {
+    expect(() => withPath("/Blog/:slug")).toThrow(
+      /delivery.path is not a valid route path: .*uppercase/,
+    );
+    expect(() => withPath("blog/:slug")).toThrow(/must start with "\/"/);
+  });
+
+  it("refuses the AdminCP and API prefixes", () => {
+    expect(() => withPath("/admin/:slug")).toThrow(/reserved for the AdminCP/);
+    expect(() => withPath("/api/:slug")).toThrow(/reserved for the API/);
+  });
+});
+
 describe("contentDeliveryPath", () => {
-  it("has no locale segment for a nonlocalized content type", () => {
+  it("writes the default locale without a prefix under as-needed", () => {
     expect(
-      contentDeliveryPath({ definition: articleType, slug: "my-article" }),
+      contentDeliveryPath({
+        definition: articleType,
+        routing,
+        slug: "my-article",
+      }),
+    ).toBe("/articles/my-article");
+    expect(
+      contentDeliveryPath({
+        definition: localizedType,
+        locale: "en",
+        routing,
+        slug: "my-article",
+      }),
     ).toBe("/articles/my-article");
   });
 
-  it("prefixes the locale for a localized content type", () => {
+  it("prefixes every other locale", () => {
     expect(
       contentDeliveryPath({
         definition: localizedType,
         locale: "pl",
+        routing,
         slug: "moj-artykul",
       }),
     ).toBe("/pl/articles/moj-artykul");
   });
 
+  it("prefixes every locale under always", () => {
+    expect(
+      contentDeliveryPath({
+        definition: localizedType,
+        locale: "en",
+        routing: testContentLocaleRouting({ localePrefix: "always" }),
+        slug: "my-article",
+      }),
+    ).toBe("/en/articles/my-article");
+  });
+
+  it("translates the route per locale and keeps each language's own slug", () => {
+    expect(
+      contentDeliveryPath({
+        definition: blogType,
+        locale: "en",
+        routing: translatedRouting,
+        slug: "hello-world",
+      }),
+    ).toBe("/blog/hello-world");
+    expect(
+      contentDeliveryPath({
+        definition: blogType,
+        locale: "pl",
+        routing: translatedRouting,
+        slug: "witaj-swiecie",
+      }),
+    ).toBe("/pl/wpisy/witaj-swiecie");
+  });
+
+  it("puts a locale with its own domain on that origin", () => {
+    expect(
+      contentDeliveryPublicUrl({
+        definition: blogType,
+        locale: "pl",
+        routing: domainRouting,
+        slug: "witaj-swiecie",
+      }),
+    ).toStrictEqual({
+      origin: "https://vitnode.pl",
+      pathname: "/wpisy/witaj-swiecie",
+    });
+  });
+
   it("normalizes the locale, so one URL has one cache key", () => {
     const paths = ["PL", "pl", " pl "].map(locale =>
-      contentDeliveryPath({ definition: localizedType, locale, slug: "witaj" }),
+      contentDeliveryPath({
+        definition: localizedType,
+        locale,
+        routing,
+        slug: "witaj",
+      }),
     );
 
     expect(new Set(paths).size).toBe(1);
     expect(paths[0]).toBe("/pl/articles/witaj");
   });
 
+  it("prefixes a language the routing does not know rather than colliding", () => {
+    expect(
+      contentDeliveryPath({
+        definition: localizedType,
+        locale: "de",
+        routing,
+        slug: "hallo",
+      }),
+    ).toBe("/de/articles/hallo");
+  });
+
   it("refuses to build a localized path with no locale", () => {
     expect(
-      contentDeliveryPath({ definition: localizedType, slug: "witaj" }),
+      contentDeliveryPath({
+        definition: localizedType,
+        routing,
+        slug: "witaj",
+      }),
     ).toBeNull();
   });
 
   it("is null for an empty slug rather than pointing at the list page", () => {
     expect(
-      contentDeliveryPath({ definition: articleType, slug: "  " }),
+      contentDeliveryPath({ definition: articleType, routing, slug: "  " }),
     ).toBeNull();
   });
 
   it("percent-encodes a slug that was written straight into the database", () => {
     expect(
-      contentDeliveryPath({ definition: articleType, slug: "a b/c" }),
+      contentDeliveryPath({ definition: articleType, routing, slug: "a b/c" }),
     ).toBe("/articles/a%20b%2Fc");
   });
 });
@@ -603,47 +761,86 @@ describe("contentDeliveryUrl", () => {
 });
 
 describe("parseContentDeliveryPath", () => {
-  it("round-trips the path it builds", () => {
-    expect(
-      parseContentDeliveryPath(articleType, "/articles/my-article"),
-    ).toStrictEqual({ locale: null, slug: "my-article" });
+  const parse = (
+    definition: Parameters<typeof parseContentDeliveryPath>[0],
+    path: string,
+    options: Partial<Parameters<typeof parseContentDeliveryPath>[2]> = {},
+  ) => parseContentDeliveryPath(definition, path, { routing, ...options });
 
+  it("round-trips the path it builds", () => {
+    expect(parse(articleType, "/articles/my-article")).toStrictEqual({
+      locale: null,
+      slug: "my-article",
+    });
+    expect(parse(localizedType, "/articles/my-article")).toStrictEqual({
+      locale: "en",
+      slug: "my-article",
+    });
+    expect(parse(localizedType, "/pl/articles/moj-artykul")).toStrictEqual({
+      locale: "pl",
+      slug: "moj-artykul",
+    });
+  });
+
+  it("inverts a translated route", () => {
     expect(
-      parseContentDeliveryPath(localizedType, "/pl/articles/moj-artykul"),
-    ).toStrictEqual({ locale: "pl", slug: "moj-artykul" });
+      parse(blogType, "/pl/wpisy/witaj-swiecie", {
+        routing: translatedRouting,
+      }),
+    ).toStrictEqual({ locale: "pl", slug: "witaj-swiecie" });
+  });
+
+  it("reads the language off a configured domain", () => {
+    expect(
+      parse(blogType, "/wpisy/witaj-swiecie", {
+        host: "vitnode.pl",
+        routing: domainRouting,
+      }),
+    ).toStrictEqual({ locale: "pl", slug: "witaj-swiecie" });
+  });
+
+  it("still answers the old /{locale}/{publicApi.path}/{slug} shape", () => {
+    expect(parse(localizedType, "/en/articles/my-article")).toStrictEqual({
+      locale: "en",
+      slug: "my-article",
+    });
+    expect(parse(blogType, "/pl/posts/witaj")).toStrictEqual({
+      locale: "pl",
+      slug: "witaj",
+    });
   });
 
   it("decodes the slug and normalizes the locale", () => {
-    expect(
-      parseContentDeliveryPath(localizedType, "/PL/articles/a%20b"),
-    ).toStrictEqual({ locale: "pl", slug: "a b" });
+    expect(parse(localizedType, "/PL/articles/a%20b")).toStrictEqual({
+      locale: "pl",
+      slug: "a b",
+    });
   });
 
   it("strips a query string and a fragment", () => {
-    expect(
-      parseContentDeliveryPath(articleType, "/articles/x?utm=1#top"),
-    ).toStrictEqual({ locale: null, slug: "x" });
+    expect(parse(articleType, "/articles/x?utm=1#top")).toStrictEqual({
+      locale: null,
+      slug: "x",
+    });
   });
 
   it("refuses a path that belongs to another content type", () => {
-    expect(parseContentDeliveryPath(articleType, "/news/x")).toBeNull();
+    expect(parse(articleType, "/news/x")).toBeNull();
   });
 
   it("refuses the wrong number of segments", () => {
-    for (const path of ["/articles", "/articles/a/b", "/pl/articles/a"]) {
-      expect(parseContentDeliveryPath(articleType, path)).toBeNull();
+    for (const path of ["/articles", "/articles/a/b", "/de/articles/a"]) {
+      expect(parse(articleType, path)).toBeNull();
     }
   });
 
   it("refuses a traversal and a malformed escape", () => {
-    expect(parseContentDeliveryPath(articleType, "/articles/..")).toBeNull();
-    expect(parseContentDeliveryPath(articleType, "/articles/%zz")).toBeNull();
+    expect(parse(articleType, "/articles/..")).toBeNull();
+    expect(parse(articleType, "/articles/%zz")).toBeNull();
   });
 
   it("refuses a path longer than the stored column", () => {
-    expect(
-      parseContentDeliveryPath(articleType, `/articles/${"a".repeat(600)}`),
-    ).toBeNull();
+    expect(parse(articleType, `/articles/${"a".repeat(600)}`)).toBeNull();
   });
 });
 
@@ -750,8 +947,16 @@ describe("robots projection", () => {
 
 describe("contentDeliveryHreflang", () => {
   const alternates = [
-    { locale: "en", path: "/en/articles/my-article" },
-    { locale: "pl", path: "/pl/articles/moj-artykul" },
+    {
+      internalPath: "/articles/my-article",
+      locale: "en",
+      path: "/en/articles/my-article",
+    },
+    {
+      internalPath: "/articles/moj-artykul",
+      locale: "pl",
+      path: "/pl/articles/moj-artykul",
+    },
   ];
 
   it("maps alternates to a language map", () => {
@@ -773,6 +978,34 @@ describe("contentDeliveryHreflang", () => {
         definition: localizedType,
       }),
     ).toStrictEqual({ languages: { pl: "/pl/articles/moj-artykul" } });
+  });
+
+  it("uses absolute URLs for alternates that live on their own domain", () => {
+    expect(
+      contentDeliveryHreflang({
+        alternates: [
+          {
+            internalPath: "/blog/hello-world",
+            locale: "en",
+            origin: "https://vitnode.com",
+            path: "/blog/hello-world",
+          },
+          {
+            internalPath: "/blog/witaj-swiecie",
+            locale: "pl",
+            origin: "https://vitnode.pl",
+            path: "/wpisy/witaj-swiecie",
+          },
+        ],
+        definition: blogType,
+      }),
+    ).toStrictEqual({
+      languages: {
+        en: "https://vitnode.com/blog/hello-world",
+        pl: "https://vitnode.pl/wpisy/witaj-swiecie",
+      },
+      xDefault: "https://vitnode.com/blog/hello-world",
+    });
   });
 
   it("emits no x-default when the content type did not ask for one", () => {

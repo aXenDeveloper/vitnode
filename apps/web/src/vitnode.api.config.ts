@@ -6,6 +6,7 @@ import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
+import { contentModules } from './content-modules.gen'
 import { appMessages } from './locales/app'
 import { vitNodeConfig } from './vitnode.config'
 
@@ -26,6 +27,7 @@ export const POSTGRES_URL =
  */
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin()],
+  contentModules,
   storage: {
     image: {
       quality: 85,

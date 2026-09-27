@@ -197,7 +197,18 @@ type InferInputType<
         : undefined
       : never;
 
-export type BuildArgsType<RouteCfg> = {
+type OptionalQueryType<RouteCfg> =
+  InferInputType<RouteCfg, "query"> extends undefined
+    ? RouteCfg extends { request: { query?: infer S } }
+      ? ExtractZodType<Exclude<S, undefined>>
+      : never
+    : never;
+
+type OptionalQueryArgs<RouteCfg> = [OptionalQueryType<RouteCfg>] extends [never]
+  ? unknown
+  : { query?: OptionalQueryType<RouteCfg> };
+
+export type BuildArgsType<RouteCfg> = OptionalQueryArgs<RouteCfg> & {
   [
     K in "body" | "params" | "query" as InferInputType<
       RouteCfg,

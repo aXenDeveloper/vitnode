@@ -411,25 +411,41 @@ describe("capability combinations", () => {
     expect(definition.localization.enabled).toBe(true);
   });
 
-  it("requires a locale in the search path template", () => {
-    // One document per language means one URL per language. Without it every
-    // translation of a record would carry the same link.
+  const withSearchTemplate = (pathTemplate: string) =>
+    withCapability({
+      publication: { enabled: true },
+      publicApi: {
+        enabled: true,
+        fields: ["title", "slug"],
+        path: "boundaries",
+      },
+      search: {
+        contentFields: ["title"],
+        enabled: true,
+        pathTemplate,
+        titleField: "title",
+      },
+    });
+
+  it("accepts a search path template that leaves the language to the locale routing", () => {
+    expect(withSearchTemplate("/boundaries/{slug}").search.pathTemplate).toBe(
+      "/boundaries/{slug}",
+    );
+  });
+
+  it("treats a leading {locale} as the legacy marker and strips it", () => {
+    expect(
+      withSearchTemplate("/{locale}/boundaries/{slug}").search.pathTemplate,
+    ).toBe("/boundaries/{slug}");
+  });
+
+  it("refuses {locale} anywhere but the front, with a migration hint", () => {
+    expect(() => withSearchTemplate("/boundaries/{locale}/{slug}")).toThrow(
+      /i18n.localePrefix, i18n.domains and i18n.routePaths now place it. Remove "\{locale\}" \(recommended\)/,
+    );
     expect(() =>
-      withCapability({
-        publication: { enabled: true },
-        publicApi: {
-          enabled: true,
-          fields: ["title", "slug"],
-          path: "boundaries",
-        },
-        search: {
-          contentFields: ["title"],
-          enabled: true,
-          pathTemplate: "/boundaries/{slug}",
-          titleField: "title",
-        },
-      }),
-    ).toThrow(/\{locale\}/);
+      withSearchTemplate("/{locale}/{locale}/boundaries/{slug}"),
+    ).toThrow(/somewhere other than the start of the path/);
   });
 });
 

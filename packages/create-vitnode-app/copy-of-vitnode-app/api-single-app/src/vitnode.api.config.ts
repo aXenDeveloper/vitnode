@@ -2,6 +2,7 @@ import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
+import { contentModules } from "./content-modules.gen";
 import { vitNodeConfig } from "./vitnode.config";
 
 export const POSTGRES_URL =
@@ -13,6 +14,7 @@ export const vitNodeApiConfig = buildApiConfig({
     shortTitle: "VitNode",
   },
   plugins: [],
+  contentModules,
   
   i18n: vitNodeConfig.i18n,
   dbProvider: drizzle({

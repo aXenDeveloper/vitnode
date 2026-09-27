@@ -134,6 +134,14 @@ export const ArticleCard = ({ article }: Props) => {
 - **Independent Revisions**: When editorial is enabled, revision histories and restores operate per locale (`GET /{id}/translations/{locale}/revisions` and `POST /{id}/translations/{locale}/revisions/{revisionId}/restore`).
 - **Composite Key Integrity**: Translations are uniquely identified by `(itemId, languageId)`, guaranteeing exactly one translation per locale per item.
 
+## Localized URLs
+
+Mark the slug `localized: true` and each translation gets its own slug: `hello-world` in English, `witaj-swiecie` in Polish. That's the part of the URL the content owns. The static segments (`articles` → `artykuly`) belong to the app's `i18n.routePaths`, so with [delivery](/docs/dev/content-engine/content-delivery-and-seo) enabled the Polish record lives at `/pl/artykuly/witaj-swiecie`.
+
+- Only **published** translations become hreflang alternates and sitemap lines.
+- A fallback response (`fallback: "default"` served English for a Polish request) keeps the English canonical URL.
+- Language prefixes, domains and translated segments all come from one place. [Localized URLs](/docs/dev/i18n/localized-urls) covers the rules.
+
 ## Configuration Reference
 
 | Option | Type | Default | Description |

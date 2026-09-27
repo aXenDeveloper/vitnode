@@ -23,6 +23,11 @@ import { CONFIG } from "@/lib/config";
 import { initRealtimePubSub } from "@/ws/registry";
 
 import {
+  assertPluginContentModules,
+  generatedContentModules,
+  packageContentModules,
+} from "./lib/content-modules";
+import {
   globalAdminMiddleware,
   globalMiddleware,
 } from "./middlewares/global.middleware";
@@ -71,6 +76,13 @@ export function VitNodeAPI({
   initRealtimePubSub(redisClient);
 
   const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
+
+  assertPluginContentModules({
+    loader: vitNodeApiConfig.contentModules
+      ? generatedContentModules(vitNodeApiConfig.contentModules)
+      : packageContentModules(),
+    plugins,
+  });
 
   setDefaultBlockRegistry(
     createBlockRegistry(plugins.flatMap(plugin => plugin.blocks ?? [])),

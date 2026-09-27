@@ -39,6 +39,7 @@ import {
   applyContentDeliveryWrite,
   contentSlugHistoryFor,
 } from "./delivery-writes";
+import { contentLocaleRouting } from "./locale-routing";
 import { diffChangedPaths } from "./query";
 import {
   contentTranslationRevisionSnapshot,
@@ -244,6 +245,7 @@ export const createContentTranslationEditorialService = <
 
     return await applyContentDeliveryWrite({
       definition,
+      routing: contentLocaleRouting(c),
       slugHistory,
       transition: {
         isPublic: visible(after),

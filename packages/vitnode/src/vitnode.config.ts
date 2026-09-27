@@ -75,6 +75,7 @@ export interface VitNodeApiConfig {
   content?: {
     revalidateOrigins?: string[];
   };
+  contentModules?: Readonly<Record<string, unknown>>;
   cron?: CronAdapter;
   dbProvider: ReturnType<typeof drizzle>;
   /**

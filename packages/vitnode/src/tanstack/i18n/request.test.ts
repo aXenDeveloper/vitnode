@@ -69,3 +69,189 @@ describe("handleLocaleRequest", () => {
     });
   });
 });
+
+const translated = createLocaleRouting({
+  defaultLocale: "en",
+  locales: ["en", "pl"],
+  routePaths: { pl: { "/articles/:id": "/artykuly/:id" } },
+});
+
+const onDomains = createLocaleRouting({
+  defaultLocale: "en",
+  domains: [
+    { defaultLocale: "en", origin: "https://vitnode.com" },
+    { defaultLocale: "pl", origin: "https://vitnode.pl" },
+  ],
+  locales: ["en", "pl"],
+  routePaths: { pl: { "/articles/:id": "/artykuly/:id" } },
+});
+
+const request = (url: string, headers: Record<string, string> = {}) =>
+  new Request(url, { headers });
+
+describe("handleLocaleRequest with translated route paths", () => {
+  it("sends an old English spelling to the translated one, query and hash intact", () => {
+    const plan = handleLocaleRequest(
+      request("https://site.example/pl/articles/42?page=2#comments"),
+      translated,
+    );
+
+    expect(plan.redirect?.status).toBe(308);
+    expect(plan.redirect?.headers.get("location")).toBe(
+      "/pl/artykuly/42?page=2#comments",
+    );
+  });
+
+  it("does not redirect the canonical URL again", () => {
+    const plan = handleLocaleRequest(
+      request("https://site.example/pl/artykuly/42?page=2"),
+      translated,
+    );
+
+    expect(plan.redirect).toBeUndefined();
+  });
+
+  it("still records a locale chosen by its prefix", () => {
+    const plan = handleLocaleRequest(
+      request("https://site.example/pl/artykuly/42"),
+      translated,
+    );
+
+    expect(plan.setCookie).toMatch(/^vitnode_locale=pl/);
+  });
+
+  it("keeps the prefix under localePrefix always", () => {
+    const always = createLocaleRouting({
+      defaultLocale: "en",
+      localePrefix: "always",
+      locales: ["en", "pl"],
+      routePaths: { pl: { "/articles/:id": "/artykuly/:id" } },
+    });
+
+    expect(
+      handleLocaleRequest(
+        request("https://site.example/articles/1"),
+        always,
+      ).redirect?.headers.get("location"),
+    ).toBe("/en/articles/1");
+    expect(
+      handleLocaleRequest(request("https://site.example/en/articles/1"), always)
+        .redirect,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    "https://site.example/admin/articles/42",
+    "https://site.example/api/articles/42",
+    "https://site.example/api",
+  ])("leaves %s alone", url => {
+    expect(handleLocaleRequest(request(url), translated)).toEqual({});
+    expect(
+      handleLocaleRequest(
+        request(url, { cookie: "vitnode_locale=pl", host: "vitnode.pl" }),
+        onDomains,
+      ),
+    ).toEqual({});
+  });
+});
+
+describe("handleLocaleRequest on language domains", () => {
+  it("sends a locale that lives on another domain to that origin", () => {
+    const plan = handleLocaleRequest(
+      request("https://vitnode.com/pl/articles/42?page=2#top", {
+        host: "vitnode.com",
+      }),
+      onDomains,
+    );
+
+    expect(plan.redirect?.headers.get("location")).toBe(
+      "https://vitnode.pl/artykuly/42?page=2#top",
+    );
+    expect(plan.redirect?.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("never lets a forged X-Forwarded-Host pick another domain's language", () => {
+    const forged = { "x-forwarded-host": "vitnode.pl" };
+
+    expect(
+      handleLocaleRequest(
+        request("https://vitnode.com/articles/42", forged),
+        onDomains,
+      ),
+    ).toEqual({});
+    expect(
+      handleLocaleRequest(
+        request("https://vitnode.com/pl/articles/42", forged),
+        onDomains,
+      ).redirect?.headers.get("location"),
+    ).toBe("https://vitnode.pl/artykuly/42");
+  });
+
+  it("serves the domain's language whatever the cookie says", () => {
+    const plan = handleLocaleRequest(
+      request("https://vitnode.pl/artykuly/42", {
+        cookie: "vitnode_locale=en",
+        host: "vitnode.pl",
+      }),
+      onDomains,
+    );
+
+    expect(plan).toEqual({});
+    expect(
+      onDomains.resolveLocale("/artykuly/42", {
+        cookieLocale: "en",
+        host: "vitnode.pl",
+      }),
+    ).toBe("pl");
+  });
+
+  it("does not redirect a canonical domain URL", () => {
+    expect(
+      handleLocaleRequest(
+        request("https://vitnode.pl/artykuly/42", { host: "vitnode.pl" }),
+        onDomains,
+      ).redirect,
+    ).toBeUndefined();
+    expect(
+      handleLocaleRequest(
+        request("https://vitnode.com/articles/42", { host: "vitnode.com" }),
+        onDomains,
+      ).redirect,
+    ).toBeUndefined();
+  });
+
+  it("answers with the same redirect whatever X-Forwarded-Host says", () => {
+    const plain = handleLocaleRequest(
+      request("https://vitnode.com/pl/articles/42"),
+      onDomains,
+    );
+    const forged = handleLocaleRequest(
+      request("https://vitnode.com/pl/articles/42", {
+        "x-forwarded-host": "evil.example",
+      }),
+      onDomains,
+    );
+
+    expect(forged.redirect?.headers.get("location")).toBe(
+      plain.redirect?.headers.get("location"),
+    );
+    expect(forged.redirect?.headers.get("vary")).toBeNull();
+  });
+
+  it.each([
+    ["an unconfigured host", "evil.example"],
+    ["a host with a path", "vitnode.pl/evil"],
+    ["a host with credentials", "user@vitnode.pl"],
+    ["a list led by garbage", "vitnode.pl evil, vitnode.pl"],
+  ])("ignores %s", (_label, forwarded) => {
+    const plan = handleLocaleRequest(
+      request("https://preview.example/pl/articles/42", {
+        host: "preview.example",
+        "x-forwarded-host": forwarded,
+      }),
+      onDomains,
+    );
+
+    expect(plan.redirect?.headers.get("location")).toBe("/pl/artykuly/42");
+  });
+});

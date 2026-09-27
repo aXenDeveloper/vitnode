@@ -24,6 +24,14 @@ export const vitNodeConfig = buildConfig({
       { code: 'en', name: 'English' },
       { code: 'pl', name: 'Polski' },
     ],
+    routePaths: {
+      pl: {
+        '/blog/:slug': '/wpisy/:slug',
+        '/discover': '/odkrywaj',
+        '/search': '/szukaj',
+        '/users/:nameCode': '/uzytkownicy/:nameCode',
+      },
+    },
     timeZone: 'UTC',
   },
   metadata: {

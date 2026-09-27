@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  testContentLocaleRouting,
   testPostContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
@@ -237,6 +238,18 @@ describe("search configuration", () => {
       );
     });
 
+    it("keeps a template that names no language as the English source path", () => {
+      expect(withTemplate("/articles/{slug}").search.pathTemplate).toBe(
+        "/articles/{slug}",
+      );
+    });
+
+    it("refuses {locale} on a content type that is not localized", () => {
+      expect(() => withTemplate("/{locale}/articles/{slug}")).toThrow(
+        /uses "\{locale\}", but this content type is not localized/,
+      );
+    });
+
     it("rejects a template longer than the limit", () => {
       expect(() => withTemplate(`/${"a".repeat(512)}/{slug}`)).toThrow(
         /is longer than 512 characters/,
@@ -281,24 +294,46 @@ describe("search configuration", () => {
 });
 
 describe("search helpers", () => {
+  const routing = testContentLocaleRouting();
+
   it("builds a relative URL from the template", () => {
-    expect(contentSearchUrl(testSearchablePostContentType, "hello-world")).toBe(
-      "/searchable/hello-world",
-    );
+    expect(
+      contentSearchUrl({
+        definition: testSearchablePostContentType,
+        routing,
+        slug: "hello-world",
+      }),
+    ).toBe("/searchable/hello-world");
   });
 
   it("percent-encodes the slug", () => {
-    expect(contentSearchUrl(testSearchablePostContentType, "a b/c")).toBe(
-      "/searchable/a%20b%2Fc",
-    );
+    expect(
+      contentSearchUrl({
+        definition: testSearchablePostContentType,
+        routing,
+        slug: "a b/c",
+      }),
+    ).toBe("/searchable/a%20b%2Fc");
   });
 
   it("returns null for an empty slug", () => {
-    expect(contentSearchUrl(testSearchablePostContentType, "   ")).toBeNull();
+    expect(
+      contentSearchUrl({
+        definition: testSearchablePostContentType,
+        routing,
+        slug: "   ",
+      }),
+    ).toBeNull();
   });
 
   it("returns null when search is off", () => {
-    expect(contentSearchUrl(testPostContentType, "hello")).toBeNull();
+    expect(
+      contentSearchUrl({
+        definition: testPostContentType,
+        routing,
+        slug: "hello",
+      }),
+    ).toBeNull();
   });
 
   it("namespaces the document id by content type", () => {

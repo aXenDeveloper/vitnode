@@ -1,10 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  CalendarClockIcon,
-  CheckIcon,
-  TriangleAlertIcon,
-  XIcon,
-} from "lucide-react";
+import { CalendarClockIcon, CheckIcon, XIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -200,7 +195,6 @@ export const SchedulePanel = ({
     <div className="flex flex-col gap-4">
       {schedules.data?.hasCronAdapter === false ? (
         <Alert variant="warning">
-          <TriangleAlertIcon />
           <AlertTitle>{t("no_cron.title")}</AlertTitle>
           <AlertDescription>{t("no_cron.desc")}</AlertDescription>
         </Alert>

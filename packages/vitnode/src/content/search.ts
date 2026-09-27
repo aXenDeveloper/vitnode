@@ -1,16 +1,21 @@
+import type { ContentLocaleRouting } from "./public-url";
 import type { AnyContentTypeDefinition } from "./types";
 
-import {
-  CONTENT_SEARCH_LOCALE_PLACEHOLDER,
-  CONTENT_SEARCH_SLUG_PLACEHOLDER,
-} from "./const";
+import { CONTENT_SEARCH_SLUG_PLACEHOLDER } from "./const";
 import { isContentReferenceCollection, splitContentFieldPath } from "./paths";
+import { contentPublicHref, contentPublicUrl } from "./public-url";
 
-export const contentSearchUrl = (
-  definition: AnyContentTypeDefinition,
-  slug: string,
-  locale?: string,
-): null | string => {
+export const contentSearchUrl = ({
+  definition,
+  locale,
+  routing,
+  slug,
+}: {
+  definition: AnyContentTypeDefinition;
+  locale?: string;
+  routing: ContentLocaleRouting;
+  slug: string;
+}): null | string => {
   const trimmed = slug.trim();
   if (trimmed === "" || definition.search.pathTemplate === "") return null;
 
@@ -22,17 +27,15 @@ export const contentSearchUrl = (
   // language is worse than no link at all.
   if (localized && language === "") return null;
 
-  const withSlug = definition.search.pathTemplate.replace(
-    CONTENT_SEARCH_SLUG_PLACEHOLDER,
-    encodeURIComponent(trimmed),
-  );
+  const url = contentPublicUrl({
+    internalPath: definition.search.pathTemplate
+      .split(CONTENT_SEARCH_SLUG_PLACEHOLDER)
+      .join(encodeURIComponent(trimmed)),
+    locale: localized ? language : routing.defaultLocale,
+    routing,
+  });
 
-  return localized
-    ? withSlug.replace(
-        CONTENT_SEARCH_LOCALE_PLACEHOLDER,
-        encodeURIComponent(language),
-      )
-    : withSlug;
+  return url === null ? null : contentPublicHref(url);
 };
 
 export const contentSearchDocumentId = (

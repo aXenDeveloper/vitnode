@@ -8,13 +8,17 @@ import type { PluginRouteCompilerSource } from "../plugin-routes";
 import { definePluginRoutes, lazy, page } from "../../routing/tree";
 import { generateAdminNavSource } from "../admin-nav";
 import { generateApiRegistrySource } from "../api-registry";
+import { generateContentModulesSource } from "../content-modules";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
   resolvePackageMessagesModules,
 } from "../package-messages";
 import { compilePluginRoutes } from "../plugin-routes";
-import { readOptionalPluginModules } from "./plugin-routes";
+import {
+  readOptionalPluginModules,
+  resolvePluginContentModules,
+} from "./plugin-routes";
 
 /** A resolver over a fixed map of specifier → file, as the build sees one. */
 const resolverFor =
@@ -30,10 +34,12 @@ const WORKSPACE = resolverFor({
   "@acme/blog/admin/content": "/pkg/blog/dist/admin/content.js",
   "@acme/blog/admin/nav": "/pkg/blog/dist/admin/nav.js",
   "@acme/blog/config.api": "/pkg/blog/dist/config.api.js",
+  "@acme/blog/content": "/pkg/blog/dist/content.js",
   "@acme/blog/routes": "/pkg/blog/dist/routes.js",
   "@acme/shop/admin/content": "/pkg/shop/dist/admin/content.js",
   "@acme/shop/admin/nav": "/pkg/shop/dist/admin/nav.js",
   "@acme/shop/config.api": "/pkg/shop/dist/config.api.js",
+  "@acme/shop/content": "/pkg/shop/dist/content.js",
   "@acme/shop/routes": "/pkg/shop/dist/routes.js",
 });
 
@@ -86,6 +92,9 @@ const projectionsFor = (pluginIds: readonly string[]) => {
         WORKSPACE,
       ).modules,
     ),
+    contentModules: generateContentModulesSource(
+      resolvePluginContentModules(pluginIds, WORKSPACE),
+    ),
     contentRegistry: generateContentRegistrySource(
       readOptionalPluginModules<ResolvedContentRegistryModule>(
         pluginIds,
@@ -109,6 +118,7 @@ const projectionsFor = (pluginIds: readonly string[]) => {
 const FILES = [
   "adminNav",
   "apiRegistry",
+  "contentModules",
   "contentRegistry",
   "packageMessages",
   "registry",

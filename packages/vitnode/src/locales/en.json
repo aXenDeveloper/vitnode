@@ -152,8 +152,6 @@
       "next_page": "Next page",
       "remove": "Remove",
       "editor": {
-        "undo": "Undo",
-        "redo": "Redo",
         "paragraph": "Paragraph",
         "heading": "Heading {level}",
         "bold": "Bold",
@@ -164,23 +162,19 @@
         "text_format_more": {
           "label": "More text formats",
           "strike": "Strike",
-          "code": "Inline code"
+          "code": "Inline code",
+          "clear": "Clear formatting"
         },
         "alignments": {
           "left": "Left align",
           "center": "Center align",
           "right": "Right align",
-          "justify": "Justify align"
+          "justify": "Justify align",
+          "label": "Alignment"
         },
-        "blockquote": "Blockquote",
         "code_block": "Code block",
-        "horizontal_rule": "Horizontal rule",
         "placeholder": "Write something…",
         "drag_handle": "Drag to move block",
-        "font_size": {
-          "label": "Font size",
-          "default": "Default"
-        },
         "color": {
           "label": "Text color",
           "remove": "Remove color"
@@ -198,7 +192,8 @@
           "src": {
             "label": "Audio URL"
           },
-          "submit": "Insert audio"
+          "submit": "Insert audio",
+          "hint": "Embed an mp3, wav or ogg file"
         },
         "table": {
           "label": "Table",
@@ -213,6 +208,91 @@
           "delete_column": "Delete column",
           "delete_row": "Delete row",
           "delete": "Delete table"
+        },
+        "toolbar": "Formatting",
+        "task_list": "Task list",
+        "link": {
+          "label": "Link",
+          "address": "Link address",
+          "save": "Save link",
+          "remove": "Remove link"
+        },
+        "insert": {
+          "label": "Insert",
+          "tip": "Tip: type <key>/</key> anywhere to insert without leaving the keyboard."
+        },
+        "blocks": {
+          "label": "Insert block",
+          "empty": "No block matches that. Keep typing, or press Esc.",
+          "groups": {
+            "text": "Text",
+            "lists": "Lists",
+            "insert": "Insert"
+          },
+          "paragraph": {
+            "title": "Text",
+            "hint": "Plain paragraph"
+          },
+          "heading_1": {
+            "title": "Heading 1",
+            "hint": "Page section"
+          },
+          "heading_2": {
+            "title": "Heading 2",
+            "hint": "Sub-section"
+          },
+          "heading_3": {
+            "title": "Heading 3",
+            "hint": "Small heading"
+          },
+          "quote": {
+            "title": "Quote",
+            "hint": "Call out a quote"
+          },
+          "bullet_list": {
+            "title": "Bulleted list",
+            "hint": "Simple bullets"
+          },
+          "ordered_list": {
+            "title": "Numbered list",
+            "hint": "Steps in order"
+          },
+          "task_list": {
+            "title": "Task list",
+            "hint": "Checkboxes to tick off"
+          },
+          "code_block": {
+            "title": "Code block",
+            "hint": "Monospaced snippet"
+          },
+          "table": {
+            "title": "Table",
+            "hint": "3 × 3 grid with a header row"
+          },
+          "divider": {
+            "title": "Divider",
+            "hint": "Horizontal line"
+          },
+          "emoji": {
+            "title": "Emoji",
+            "hint": "Search by shortcode"
+          },
+          "panel_info": {
+            "title": "Info panel",
+            "hint": "Highlight useful context"
+          },
+          "panel_warning": {
+            "title": "Warning panel",
+            "hint": "Point out something to double-check"
+          },
+          "panel_success": {
+            "title": "Success panel",
+            "hint": "Call out what went right"
+          },
+          "panel_error": {
+            "title": "Error panel",
+            "hint": "Flag a blocker or a risk"
+          }
         }
       },
       "theme": {

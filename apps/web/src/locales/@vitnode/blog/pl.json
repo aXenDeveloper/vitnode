@@ -52,7 +52,10 @@
         "title": "Artykuły"
       }
     },
-    "title": "Blog"
+    "title": "Blog",
+    "post": {
+      "published": "Opublikowano"
+    }
   },
   "@vitnode/blog:categories": "Kategorie",
   "@vitnode/blog:categories:can_create": "Tworzenie kategorii",

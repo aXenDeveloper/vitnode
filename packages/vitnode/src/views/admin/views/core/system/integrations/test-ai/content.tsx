@@ -1,4 +1,4 @@
-import { LoaderCircleIcon, TriangleAlertIcon } from "lucide-react";
+import { LoaderCircleIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -132,7 +132,6 @@ export const ContentTestAI = ({ models }: { models: TestAIModel[] }) => {
     return (
       <div className="flex flex-col gap-4">
         <Alert variant="destructive">
-          <TriangleAlertIcon />
           <AlertTitle>{tError("title")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>

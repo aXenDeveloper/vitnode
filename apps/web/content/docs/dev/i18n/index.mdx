@@ -173,6 +173,24 @@ export const vitNodeApiConfig = buildApiConfig({
 
 Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw key paths from displaying in production.
 
+---
+
+## Localized URLs
+
+Strings aren't the only thing you can translate. The same `i18n` block decides how public URLs look in each language: a prefix (`/pl/...`), a domain per language (`vitnode.pl`), and translated paths such as `/pl/odkrywaj` for `/discover`:
+
+```ts title="apps/web/src/vitnode.config.ts"
+i18n: {
+  defaultLocale: 'en',
+  // [!code ++:3]
+  routePaths: {
+    pl: { '/discover': '/odkrywaj' },
+  },
+},
+```
+
+[Localized URLs](/docs/dev/i18n/localized-urls) covers the rules, domains, redirects and SEO.
+
 ## Learn More
 
 <Cards>
@@ -180,6 +198,11 @@ Missing keys automatically fall back to `defaultLocale` (`en`), preventing raw k
     title="Translating Pages"
     description="Using use-intl hooks and declaring route namespaces"
     href="/docs/dev/i18n/pages"
+  />
+  <Card
+    title="Localized URLs"
+    description="Translated paths, locale prefixes and a domain per language"
+    href="/docs/dev/i18n/localized-urls"
   />
   <Card
     title="Messages Reference"

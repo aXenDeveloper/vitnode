@@ -677,12 +677,12 @@ different facts with different audiences.
     },
     previousPath: {
       description:
-        'The full path it answered to before, e.g. /pl/articles/stary-slug. Nullable for the same declared reason, and populated for the same real one.',
+        'The public path it answered to before, spelled by the localized URL rules, e.g. /pl/artykuly/stary-slug (or /artykuly/stary-slug on a Polish domain). A path, never an origin. Nullable on delivery_slug_changed for the same declared reason, populated for the same real one, and always a string on delivery_redirect_created.',
       type: 'null | string',
     },
     canonicalPath: {
       description:
-        'The path it answers to now, and where the historical one redirects.',
+        'The public path it answers to now, and where the historical one redirects. Same shape as previousPath: locale prefix and translated segments applied, no origin.',
       type: 'string',
     },
     locale: {

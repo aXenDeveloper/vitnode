@@ -26,6 +26,7 @@ import {
 } from "../paths";
 import { contentSearchIndexedFieldNames } from "../search";
 import { listContentLanguages } from "./language-resolver";
+import { contentLocaleRouting } from "./locale-routing";
 import {
   contentSearchDocument,
   contentTranslationSearchDocument,
@@ -221,7 +222,7 @@ export const createContentSearchIndexer = <
             ...contentColumnsToValues(sources.sharedGroups, values),
             ...collections.get(Number(values.id)),
           },
-          { pluginId },
+          { pluginId, routing: contentLocaleRouting(c) },
         );
 
         return document ? [document] : [];
@@ -377,7 +378,7 @@ export const createContentLocalizedSearchIndexer = <
               ),
             },
           },
-          { pluginId },
+          { pluginId, routing: contentLocaleRouting(c) },
         );
 
         return document ? [document] : [];

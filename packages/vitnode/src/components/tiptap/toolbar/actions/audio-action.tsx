@@ -2,17 +2,14 @@ import { AudioLinesIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
-import { TooltipWithContent } from "@/components/ui/tooltip";
 
 const AudioForm = React.lazy(async () =>
   import("./audio/audio-form").then(module => ({
@@ -20,21 +17,17 @@ const AudioForm = React.lazy(async () =>
   })),
 );
 
-export const AudioAction = () => {
+export const AudioDialog = ({
+  open,
+  onOpenChange,
+}: {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) => {
   const t = useTranslations("core.global.editor.audio");
 
   return (
-    <Dialog>
-      <TooltipWithContent text={t("label")}>
-        <DialogTrigger
-          render={
-            <Button aria-label={t("label")} size="icon-sm" variant="ghost" />
-          }
-        >
-          <AudioLinesIcon />
-        </DialogTrigger>
-      </TooltipWithContent>
-
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

@@ -99,7 +99,7 @@ export const blogPostContentType = defineContentType({
     enabled: true,
     titleField: "title",
     contentFields: ["title", "content"],
-    pathTemplate: "/{locale}/blog/{slug}",
+    pathTemplate: "/blog/{slug}",
     authorField: "authorId",
   },
 

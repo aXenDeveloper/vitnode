@@ -1,11 +1,4 @@
-import {
-  CheckIcon,
-  LinkIcon,
-  MailIcon,
-  PencilIcon,
-  TriangleAlertIcon,
-  XIcon,
-} from "lucide-react";
+import { CheckIcon, LinkIcon, MailIcon, PencilIcon, XIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -298,7 +291,6 @@ export const EditNameCodeContent = ({
         </DialogHeader>
 
         <Alert variant="warning">
-          <TriangleAlertIcon />
           <AlertTitle>{t("editNameCodeWarningTitle")}</AlertTitle>
           <AlertDescription>{t("editNameCodeWarning")}</AlertDescription>
         </Alert>

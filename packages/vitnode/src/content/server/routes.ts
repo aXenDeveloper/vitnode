@@ -62,6 +62,7 @@ import {
   withContentReferenceLists,
   zodContentReferenceListItem,
 } from "./list-references";
+import { contentLocaleRouting } from "./locale-routing";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import { resolveContentLocalizedValues } from "./localized-display";
 import {
@@ -325,11 +326,16 @@ export const buildContentRoutes = <
   const previewEnabled = definition.editorial.preview.enabled;
 
   const previewSecret = contentPreviewSecret;
-  const previewUrl = (token: string, target: ContentPreviewTarget): string =>
+  const previewUrl = (
+    c: Context,
+    token: string,
+    target: ContentPreviewTarget,
+  ): string =>
     contentPreviewUrl({
       definition,
       locale: target.locale,
       pluginId,
+      routing: contentLocaleRouting(c),
       slug: target.slug,
       token,
     });
@@ -1264,8 +1270,7 @@ export const buildContentRoutes = <
             /**
              * Every address it has ever answered to, current one first.
              *
-             * `path` is the URL exactly as it was live, which is what somebody's
-             * bookmark holds. The storage columns behind it - `languageId`,
+             * The storage columns behind it - `languageId`,
              * `pluginId`, the row id - are deliberately absent: they are details of
              * `core_content_slug_history` rather than part of this contract.
              */
@@ -1411,7 +1416,7 @@ export const buildContentRoutes = <
           expiresAt,
           revisionId: latest?.id ?? 0,
           token,
-          url: previewUrl(token, target),
+          url: previewUrl(c, token, target),
           version:
             latest?.version ?? (typeof version === "number" ? version : 1),
         },

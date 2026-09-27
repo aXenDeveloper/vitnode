@@ -14,6 +14,8 @@ To keep the AdminCP sidebar light while lazy-loading heavy rich text editors on 
 | `admin/content` | `src/admin/content.tsx` | Content Engine editing screens, custom fields, and form layouts                               |
 | `config`        | `src/config.tsx`        | The plugin's identity, locale barrel and route declarations - plain data the browser may hold |
 
+One more, for plugins whose content types publish public URLs (delivery or search): `content` (`src/content.ts`) exports those definitions as `contentTypes`. The web build reads it to check that a page route serves every URL. When the API boots, it loads the same module and refuses to start if the plugin publishes a content URL that the module doesn't declare, or declares differently. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+
 ---
 
 ## 1. `admin/nav.tsx` (Sidebar Navigation)
@@ -97,7 +99,8 @@ Declare the subpaths in your plugin's `package.json`:
   "exports": {
     "./config": "./dist/src/config.js",
     "./admin/nav": "./dist/src/admin/nav.js",
-    "./admin/content": "./dist/src/admin/content.js"
+    "./admin/content": "./dist/src/admin/content.js",
+    "./content": "./dist/src/content.js"
   }
 }
 ```

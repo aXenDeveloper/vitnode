@@ -1,9 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import { createContentModel } from "@/content/server/model";
+import { buildContentPublicModule } from "@/content/server/public-module";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testDeliveredPostContentType,
+  testSearchablePostContentType,
 } from "@/tests/content-fixtures";
 
 import type { SearchIndexer } from "../models/search";
@@ -215,5 +219,40 @@ describe("validateSearchIndexers", () => {
         { ...indexer("test.article"), pluginId: "@vitnode/example" },
       ]).map(item => item.itemType),
     ).toEqual(["blog_post", "test.article"]);
+  });
+});
+
+describe("buildApiPlugin public content URLs", () => {
+  const PLUGIN_ID = "@vitnode/example";
+
+  const searchableAdmin = buildModule({
+    pluginId: PLUGIN_ID,
+    name: "admin",
+    routes: [],
+    contentTypes: [testSearchablePostContentType, testCategoryContentType],
+  });
+
+  const deliveredPublic = buildContentPublicModule({
+    pluginId: PLUGIN_ID,
+    contentTypes: [createContentModel(testDeliveredPostContentType)],
+  });
+
+  it("reports every content type that publishes a URL, however it is exposed", () => {
+    const plugin = buildApiPlugin({
+      pluginId: PLUGIN_ID,
+      modules: [searchableAdmin, deliveredPublic],
+    });
+
+    expect(plugin.publicContentTypes?.map(item => item.id)).toEqual([
+      "test.searchable",
+      "test.delivered-post",
+    ]);
+  });
+
+  it("reports nothing for content without delivery or search", () => {
+    expect(
+      buildApiPlugin({ pluginId: PLUGIN_ID, modules: [adminModule] })
+        .publicContentTypes,
+    ).toEqual([]);
   });
 });

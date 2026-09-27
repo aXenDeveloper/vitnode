@@ -1122,11 +1122,13 @@
         "alignments": {
           "center": "Wyśrodkuj",
           "justify": "Wyjustuj",
+          "label": "Wyrównanie",
           "left": "Wyrównaj do lewej",
           "right": "Wyrównaj do prawej"
         },
         "audio": {
           "desc": "Wklej link do pliku audio, na przykład mp3, wav lub ogg.",
+          "hint": "Osadź plik mp3, wav lub ogg",
           "label": "Audio",
           "src": {
             "label": "Adres URL audio"
@@ -1134,7 +1136,79 @@
           "submit": "Wstaw audio",
           "title": "Wstaw audio"
         },
-        "blockquote": "Cytat",
+        "blocks": {
+          "bullet_list": {
+            "hint": "Proste punkty",
+            "title": "Lista punktowana"
+          },
+          "code_block": {
+            "hint": "Fragment kodu",
+            "title": "Blok kodu"
+          },
+          "divider": {
+            "hint": "Linia pozioma",
+            "title": "Separator"
+          },
+          "emoji": {
+            "hint": "Szukaj po skrócie",
+            "title": "Emoji"
+          },
+          "empty": "Żaden blok nie pasuje. Pisz dalej albo naciśnij Esc.",
+          "groups": {
+            "insert": "Wstaw",
+            "lists": "Listy",
+            "text": "Tekst"
+          },
+          "heading_1": {
+            "hint": "Sekcja strony",
+            "title": "Nagłówek 1"
+          },
+          "heading_2": {
+            "hint": "Podsekcja",
+            "title": "Nagłówek 2"
+          },
+          "heading_3": {
+            "hint": "Mały nagłówek",
+            "title": "Nagłówek 3"
+          },
+          "label": "Wstaw blok",
+          "ordered_list": {
+            "hint": "Kroki po kolei",
+            "title": "Lista numerowana"
+          },
+          "panel_error": {
+            "hint": "Oznacz blokadę lub ryzyko",
+            "title": "Panel błędu"
+          },
+          "panel_info": {
+            "hint": "Wyróżnij ważny kontekst",
+            "title": "Panel informacyjny"
+          },
+          "panel_success": {
+            "hint": "Pokaż, co się udało",
+            "title": "Panel sukcesu"
+          },
+          "panel_warning": {
+            "hint": "Zwróć uwagę na coś do sprawdzenia",
+            "title": "Panel ostrzeżenia"
+          },
+          "paragraph": {
+            "hint": "Zwykły akapit",
+            "title": "Tekst"
+          },
+          "quote": {
+            "hint": "Wyróżnij cytat",
+            "title": "Cytat"
+          },
+          "table": {
+            "hint": "Siatka 3 × 3 z wierszem nagłówka",
+            "title": "Tabela"
+          },
+          "task_list": {
+            "hint": "Pola do odhaczenia",
+            "title": "Lista zadań"
+          }
+        },
         "bold": "Pogrubienie",
         "bullet_list": "Lista punktowana",
         "code_block": "Blok kodu",
@@ -1149,17 +1223,21 @@
           "label": "Emoji",
           "search": "Szukaj emoji…"
         },
-        "font_size": {
-          "default": "Domyślny",
-          "label": "Rozmiar czcionki"
-        },
         "heading": "Nagłówek {level}",
-        "horizontal_rule": "Linia pozioma",
+        "insert": {
+          "label": "Wstaw",
+          "tip": "Wskazówka: wpisz <key>/</key> w dowolnym miejscu, aby wstawić blok bez odrywania rąk od klawiatury."
+        },
         "italic": "Kursywa",
+        "link": {
+          "address": "Adres linku",
+          "label": "Link",
+          "remove": "Usuń link",
+          "save": "Zapisz link"
+        },
         "ordered_list": "Lista numerowana",
         "paragraph": "Akapit",
         "placeholder": "Napisz coś…",
-        "redo": "Ponów",
         "table": {
           "add_column_after": "Dodaj kolumnę po",
           "add_column_before": "Dodaj kolumnę przed",
@@ -1174,13 +1252,15 @@
           "toggle_header_column": "Przełącz kolumnę nagłówka",
           "toggle_header_row": "Przełącz wiersz nagłówka"
         },
+        "task_list": "Lista zadań",
         "text_format_more": {
+          "clear": "Wyczyść formatowanie",
           "code": "Kod w linii",
           "label": "Więcej formatów tekstu",
           "strike": "Przekreślenie"
         },
-        "underline": "Podkreślenie",
-        "undo": "Cofnij"
+        "toolbar": "Formatowanie",
+        "underline": "Podkreślenie"
       },
       "emoji_icon_picker": {
         "emoji": "Emoji",

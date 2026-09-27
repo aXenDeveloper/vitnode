@@ -52,6 +52,9 @@
           "none": "No color"
         }
       }
+    },
+    "post": {
+      "published": "Published"
     }
   },
   "@vitnode/blog:posts": "Articles",

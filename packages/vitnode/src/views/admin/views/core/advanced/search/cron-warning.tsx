@@ -1,4 +1,4 @@
-import { TriangleAlertIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -21,7 +21,6 @@ export const CronWarning = () => {
 
   return (
     <Alert variant="warning">
-      <TriangleAlertIcon />
       <AlertTitle>{t("admin.cron.title")}</AlertTitle>
       <AlertDescription>
         {t.rich("admin.cron.desc", {

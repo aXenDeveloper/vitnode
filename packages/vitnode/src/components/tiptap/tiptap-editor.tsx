@@ -37,7 +37,10 @@ export const TipTapEditor = ({
     }),
     editorProps: {
       attributes: {
-        class: "max-w-full focus:outline-none p-6",
+        class:
+          "max-w-full min-h-40 py-4 ps-10 pe-4 text-base focus:outline-none md:text-sm",
+        role: "textbox",
+        "aria-multiline": "true",
       },
     },
     content: value,
@@ -52,7 +55,7 @@ export const TipTapEditor = ({
   return (
     <div
       className={cn(
-        "bg-card relative w-full rounded-md border shadow-xs",
+        "bg-card focus-within:border-ring focus-within:ring-ring/50 relative w-full rounded-md border shadow-xs transition-[border-color,box-shadow] duration-150 focus-within:ring-3",
         { "max-h-80 overflow-hidden overflow-y-scroll": !disableScroll },
         className,
       )}

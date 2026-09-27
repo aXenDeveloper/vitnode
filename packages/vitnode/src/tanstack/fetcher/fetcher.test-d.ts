@@ -232,6 +232,18 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
     expectTypeOf(detail.status).toEqualTypeOf<200 | 404>();
   });
 
+  it("accepts the optional locale a content type's public routes declare", async () => {
+    const resolved = await fetcher({
+      plugin: "@acme/notes",
+      args: { params: { slug: "hello" }, query: { locale: "pl" } },
+      method: "get",
+      module: "content/posts",
+      path: "/{slug}",
+    });
+
+    expectTypeOf(resolved.status).toEqualTypeOf<200 | 404>();
+  });
+
   it("keeps a status-aware union when a route declares several answers", async () => {
     const response = await fetcher({
       plugin: "@acme/notes",

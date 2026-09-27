@@ -16,6 +16,7 @@ const PLUGIN_ID = "@vitnode/example";
 
 const metadata = {
   alternates: [],
+  canonicalInternalPath: "/delivered-posts/hello-world",
   canonicalPath: "/delivered-posts/hello-world",
   hreflang: { languages: {} },
   isFallback: false,

@@ -56,5 +56,6 @@ export const buildContentPublicModule = <
     routes: [],
     modules,
     // No `contentTypes` - see the warning above.
+    publicContentTypes: contentTypes.map(model => model.definition),
   }) as ContentPublicModule<NoInfer<P>, Models>;
 };

@@ -25,6 +25,7 @@ import {
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "../const";
 import { resolveContentActor } from "./actor";
+import { contentLocaleRouting } from "./locale-routing";
 import {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -734,6 +735,7 @@ export const buildContentTranslationRoutes = <
             definition,
             locale: translation.locale,
             pluginId,
+            routing: contentLocaleRouting(c),
             slug: await resolveContentTranslationPreviewSlug(c, model, {
               id,
               values: translation.values,

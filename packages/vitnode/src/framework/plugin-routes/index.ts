@@ -5,6 +5,21 @@ export type {
 } from "./compile.js";
 export { compilePluginRoutes } from "./compile.js";
 export { lazyImportSpecifier } from "./component-source.js";
+export type {
+  AssertContentUrlsHavePagesOptions,
+  ContentUrlDefinition,
+  ContentUrlErrorCode,
+  ContentUrlErrorDetails,
+  ContentUrlSetting,
+  ContentUrlSource,
+} from "./content-urls.js";
+export {
+  assertContentUrlsHavePages,
+  CONTENT_TYPES_EXPORT,
+  CONTENT_URLS_ERROR_PREFIX,
+  contentTypesFromContentModule,
+  ContentUrlError,
+} from "./content-urls.js";
 export { CORE_PLUGIN_ID, CORE_ROUTES_SPECIFIER } from "./core.js";
 export {
   annotatePluginRouteError,
@@ -17,6 +32,16 @@ export {
   assertNoHostRouteCollision,
   hostRoutePathsFromFiles,
 } from "./host-routes.js";
+export type {
+  AssertLocaleRoutePathsOptions,
+  LocaleRoutePathsConfig,
+  LocaleRoutePathTargetsOptions,
+} from "./locale-route-paths.js";
+export {
+  assertLocaleRoutePaths,
+  i18nFromLoadedConfig,
+  localeRoutePathTargets,
+} from "./locale-route-paths.js";
 
 export {
   assertPluginId,

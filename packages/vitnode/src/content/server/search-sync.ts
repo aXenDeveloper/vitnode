@@ -14,6 +14,7 @@ import {
   contentSearchIndexedPaths,
 } from "../search";
 import { listContentLanguages } from "./language-resolver";
+import { contentLocaleRouting } from "./locale-routing";
 import { contentDefinitionOf } from "./model";
 import {
   contentSearchDocument,
@@ -99,7 +100,7 @@ export const syncContentSearch = async (
       ? contentSearchDocument(
           definition,
           { ...input.row, ...input.advanced },
-          { pluginId: input.pluginId },
+          { pluginId: input.pluginId, routing: contentLocaleRouting(c) },
         )
       : null;
   const action = decided === "upsert" && !document ? "delete" : decided;
@@ -338,7 +339,7 @@ export const syncContentLocalizedSearch = async (
         locale,
         translation: translation.values,
       },
-      { pluginId: input.pluginId },
+      { pluginId: input.pluginId, routing: contentLocaleRouting(c) },
     );
 
     outcomes.push(

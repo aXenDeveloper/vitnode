@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import type { CacheClient } from "@/api/lib/cache";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
+import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { NavigationPreset } from "@/lib/navigation";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
@@ -33,6 +34,7 @@ import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
 import { ensureContentPreviewSecret } from "@/content/server/preview-secret";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
+import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { realtime } from "@/ws/registry";
@@ -132,6 +134,7 @@ export interface EnvVariablesVitNode {
     hasCronAdapter: boolean;
     i18n: {
       defaultLocale: string;
+      localeRouting: LocaleRouting;
       locales: LocaleConfig[];
       sources: MessagesSource[];
     };
@@ -233,11 +236,20 @@ export const globalMiddleware = ({
     appMessages: i18n?.messages,
     plugins,
   });
+  const defaultLocale = i18n?.defaultLocale ?? "en";
+  const locales =
+    i18n?.locales ??
+    collectLocaleCodes(messagesSources).map(code => ({ code, name: code }));
   const i18nMetadata = {
-    defaultLocale: i18n?.defaultLocale ?? "en",
-    locales:
-      i18n?.locales ??
-      collectLocaleCodes(messagesSources).map(code => ({ code, name: code })),
+    defaultLocale,
+    localeRouting: localeRoutingFromConfig({
+      defaultLocale,
+      domains: i18n?.domains,
+      localePrefix: i18n?.localePrefix,
+      locales,
+      routePaths: i18n?.routePaths,
+    }),
+    locales,
     sources: messagesSources,
   };
 

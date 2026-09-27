@@ -20,13 +20,16 @@ import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PackageMessagesSource } from "../package-messages";
 import type {
   CompiledPluginRoutes,
+  ContentUrlSource,
   HostRoutePath,
+  LocaleRoutePathsConfig,
   PluginRouteCompilerSource,
 } from "../plugin-routes";
 
 import { generateAdminNavSource } from "../admin-nav";
 import { generateApiRegistrySource } from "../api-registry";
 import { generateBlocksRegistrySource } from "../blocks-registry";
+import { generateContentModulesSource } from "../content-modules";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
@@ -34,8 +37,10 @@ import {
 } from "../package-messages";
 import {
   compilePluginRoutes,
+  contentTypesFromContentModule,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
+  i18nFromLoadedConfig,
   lazyImportSpecifier,
   pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
@@ -59,6 +64,8 @@ const CORE_BLOCKS_SUBPATH = "widgets/built-in";
 
 const API_CONFIG_SUBPATH = "config.api";
 
+const CONTENT_TYPES_SUBPATH = "content";
+
 const ERROR_PREFIX = "[VitNode plugin routes]";
 
 /** Where a file-based router keeps an app's own route files, by convention. */
@@ -81,6 +88,7 @@ const pathsFor = (appRoot: string) => ({
 
   apiRegistry: join(appRoot, "src", "api-registry.gen.ts"),
 
+  contentModules: join(appRoot, "src", "content-modules.gen.ts"),
   contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
 
   packageMessages: join(appRoot, "src", "package-messages.gen.ts"),
@@ -92,7 +100,7 @@ const pathsFor = (appRoot: string) => ({
   routerConfig: join(appRoot, "tsr.config.json"),
 });
 
-const resolverFor = (appRoot: string) => {
+export const resolverFor = (appRoot: string) => {
   const requireFromApp = createRequire(join(appRoot, "package.json"));
 
   return (specifier: string): null | string => {
@@ -106,28 +114,31 @@ const resolverFor = (appRoot: string) => {
   };
 };
 
-const readConfiguredPlugins = async (
+interface AppConfig {
+  i18n: LocaleRoutePathsConfig | undefined;
+  plugins: PackageMessagesSource[];
+}
+
+const readAppConfig = async (
   appRoot: string,
   configPath: string,
-): Promise<PackageMessagesSource[]> => {
+): Promise<AppConfig> => {
   const jiti = createJiti(pathToFileURL(join(appRoot, "package.json")).href, {
     interopDefault: true,
     moduleCache: false,
   });
+  const loaded = await jiti.import(configPath);
 
-  return pluginsFromLoadedConfig(
-    await jiti.import(configPath),
-    relative(appRoot, configPath),
-  );
+  return {
+    i18n: i18nFromLoadedConfig(loaded),
+    plugins: pluginsFromLoadedConfig(loaded, relative(appRoot, configPath)),
+  };
 };
 
 export const configuredPluginIds = async (
   appRoot: string,
 ): Promise<string[]> => {
-  const plugins = await readConfiguredPlugins(
-    appRoot,
-    pathsFor(appRoot).config,
-  );
+  const { plugins } = await readAppConfig(appRoot, pathsFor(appRoot).config);
 
   return plugins.map(plugin => plugin.pluginId);
 };
@@ -189,6 +200,44 @@ const assertNoLegacyRouteManifest = (
     `${ERROR_PREFIX} Plugin "${pluginId}" exports "${legacy}" but no "${pluginId}/${ROUTES_SUBPATH}". Plugin routes are now a nested tree in the plugin's own \`src/routes.ts\`: export \`routes = definePluginRoutes([...])\` built from \`page()\`, \`layout()\` and \`index()\`, with each module named by \`component: lazy(() => import("./pages/..."))\` instead of an \`entry\` string. See https://vitnode.com/docs/dev/routing.`,
   );
 };
+
+const importModuleFile = async (file: string): Promise<unknown> =>
+  (await import(versionedModuleUrl(file, statSync(file)))) as unknown;
+
+export interface PluginContentModuleFile {
+  file: string;
+  pluginId: string;
+  specifier: string;
+}
+
+export const resolvePluginContentModules = (
+  pluginIds: readonly string[],
+  resolvePackageFile: (specifier: string) => null | string,
+): PluginContentModuleFile[] =>
+  pluginIds.flatMap(pluginId => {
+    const specifier = `${pluginId}/${CONTENT_TYPES_SUBPATH}`;
+    const file = resolvePackageFile(specifier);
+
+    return file === null ? [] : [{ file, pluginId, specifier }];
+  });
+
+export const loadPluginContentUrls = async (
+  modules: readonly PluginContentModuleFile[],
+  importFile: (file: string) => Promise<unknown> = importModuleFile,
+): Promise<ContentUrlSource[]> =>
+  Promise.all(
+    modules.map(
+      async ({ file, pluginId, specifier }): Promise<ContentUrlSource> => ({
+        contentTypes: contentTypesFromContentModule(
+          await importFile(file),
+          pluginId,
+          specifier,
+        ),
+        pluginId,
+        specifier,
+      }),
+    ),
+  );
 
 /** Where an app's own route files are, and which of them are not routes. */
 interface HostRoutesConfig {
@@ -407,7 +456,7 @@ const discover = async (
 ) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
-  const plugins = await readConfiguredPlugins(appRoot, paths.config);
+  const { i18n, plugins } = await readAppConfig(appRoot, paths.config);
   const pluginIds = plugins.map(plugin => plugin.pluginId);
   const packageMessages = resolvePackageMessagesModules(
     plugins,
@@ -422,6 +471,10 @@ const discover = async (
     [CORE_PLUGIN_ID, ...pluginIds].map(async pluginId =>
       readPluginRoutes(pluginId, resolvePackageFile),
     ),
+  );
+  const contentModules = resolvePluginContentModules(
+    pluginIds,
+    resolvePackageFile,
   );
   const adminNav = readOptionalPluginModules<ResolvedAdminNavModule>(
     pluginIds,
@@ -469,15 +522,20 @@ const discover = async (
     ...apiRegistry.watch,
     ...coreBlocks.watch,
     ...pluginBlocks.watch,
+    ...contentModules.map(({ file }) => file),
   ];
 
   onLoaded?.(watch);
 
+  const contentUrls = await loadPluginContentUrls(contentModules);
+
   const compiled = compilePluginRoutes({
+    contentUrls,
     hostRoutes: readHostRoutes(
       appRoot,
       hostRoutesConfigFor(appRoot, options.hostRoutesDir),
     ),
+    i18n,
     sources: loaded.map(({ source }) => source),
   });
 
@@ -495,6 +553,10 @@ const discover = async (
     apiRegistry: apiRegistry.modules,
     blocksRegistry: [...coreBlocks.modules, ...pluginBlocks.modules],
     compiled,
+    contentModules: contentModules.map(({ pluginId, specifier }) => ({
+      pluginId,
+      specifier,
+    })),
     contentRegistry: contentRegistry.modules,
     packageMessages,
     watch,
@@ -513,7 +575,7 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-/** All six generated files, from one discovery pass. */
+/** All seven generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -525,6 +587,7 @@ const writeGenerated = async (
     apiRegistry,
     blocksRegistry,
     compiled,
+    contentModules,
     contentRegistry,
     packageMessages,
   } = await discover(appRoot, options, onLoaded);
@@ -536,6 +599,10 @@ const writeGenerated = async (
     writeIfChanged(
       paths.blocksRegistry,
       generateBlocksRegistrySource(blocksRegistry),
+    ),
+    writeIfChanged(
+      paths.contentModules,
+      generateContentModulesSource(contentModules),
     ),
     writeIfChanged(
       paths.contentRegistry,

@@ -15,37 +15,47 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
-import { TriangleAlertIcon } from "lucide-react";
 ```
 
 ```tsx
 <Alert variant="warning">
-  <TriangleAlertIcon />
-  <AlertTitle>Heads up</AlertTitle>
-  <AlertDescription>Something needs your attention.</AlertDescription>
+  <AlertTitle>Plugins need a workspace</AlertTitle>
+  <AlertDescription>
+    Run the generator from a repository with turbo.json.
+  </AlertDescription>
 </Alert>
 ```
 
-An optional leading icon is picked up automatically - render any icon as the
-first child and the layout aligns it with the title and description.
+The alert looks just like the callouts in these docs - and like the panels in
+the [Editor](/docs/ui/editor#panels), so a warning reads the same everywhere.
+Every variant brings its own icon, so you only write the words.
 
 ## Variants
 
-Every coloured variant shares the same shape - a tinted surface, a matching
-border, a coloured icon and a readable title - so they read as one family and
-only the hue tells you how worried to be.
-
-- `default` - neutral, informational messages.
+- `default` - neutral, for notes that are neither good nor bad news.
+- `info` - useful context (blue).
 - `success` - something finished and it went well (green).
 - `warning` - a non-blocking caution the user should act on (amber).
 - `destructive` - an error or a failed action (red).
 
 ```tsx
 <Alert variant="success">
-  <CircleCheckIcon />
   <AlertTitle>Changes saved</AlertTitle>
   <AlertDescription>Your settings have been updated.</AlertDescription>
 </Alert>
+```
+
+## Custom icon
+
+Pass any icon to `icon` to replace the variant's default one, or `null` to show
+none at all:
+
+```tsx
+import { HardDriveIcon } from "lucide-react";
+
+<Alert icon={<HardDriveIcon />} variant="info">
+  <AlertTitle>Storage is connected</AlertTitle>
+</Alert>;
 ```
 
 ## Dismissible
@@ -59,7 +69,6 @@ import { Button } from "@vitnode/core/components/ui/button";
 import { XIcon } from "lucide-react";
 
 <Alert variant="warning">
-  <TriangleAlertIcon />
   <AlertTitle>Heads up</AlertTitle>
   <AlertDescription>Something needs your attention.</AlertDescription>
   <AlertAction>
@@ -77,9 +86,15 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 <TypeTable
   type={{
     variant: {
-      description: "The visual style of the alert.",
-      type: "default | success | warning | destructive",
+      description: "The visual style of the alert, including its default icon.",
+      type: "default | info | success | warning | destructive",
       default: "default",
+    },
+    icon: {
+      description:
+        "Replaces the variant's icon. Pass null to render the alert without one.",
+      type: "ReactNode",
+      default: "the variant's icon",
     },
   }}
 />

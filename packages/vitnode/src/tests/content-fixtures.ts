@@ -1,5 +1,17 @@
+import type { LocaleRoutingConfig } from "@/lib/i18n/locale-routing";
+
 import { defineContentType } from "@/content/define";
 import { field } from "@/content/fields";
+import { createLocaleRouting } from "@/lib/i18n/locale-routing";
+
+export const testContentLocaleRouting = (
+  config: Partial<LocaleRoutingConfig> = {},
+) =>
+  createLocaleRouting({
+    defaultLocale: "en",
+    locales: ["en", "pl"],
+    ...config,
+  });
 
 export const testCategoryContentType = defineContentType({
   id: "test.category",

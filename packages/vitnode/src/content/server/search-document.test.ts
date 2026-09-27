@@ -2,11 +2,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  testContentLocaleRouting,
   testPostContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
 
 import { contentSearchDocument } from "./search-document";
+
+const routing = testContentLocaleRouting();
 
 const PUBLISHED_AT = new Date("2026-02-01T10:00:00.000Z");
 const CREATED_AT = new Date("2026-01-01T00:00:00.000Z");
@@ -28,10 +31,11 @@ const row = {
 };
 
 const document = (overrides: Record<string, unknown> = {}) =>
-  contentSearchDocument(testSearchablePostContentType, {
-    ...row,
-    ...overrides,
-  });
+  contentSearchDocument(
+    testSearchablePostContentType,
+    { ...row, ...overrides },
+    { routing },
+  );
 
 const withAuthorField = {
   ...testSearchablePostContentType,
@@ -69,6 +73,7 @@ describe("content search document", () => {
     expect(
       contentSearchDocument(testSearchablePostContentType, row, {
         pluginId: "@vitnode/example",
+        routing,
       })?.pluginId,
     ).toBe("@vitnode/example");
   });
@@ -78,20 +83,28 @@ describe("content search document", () => {
   });
 
   it("credits the author field's user when search names one", () => {
-    expect(contentSearchDocument(withAuthorField, row)?.authorIds).toEqual([3]);
+    expect(
+      contentSearchDocument(withAuthorField, row, { routing })?.authorIds,
+    ).toEqual([3]);
   });
 
   it("credits every author in order, once each", () => {
     expect(
-      contentSearchDocument(withAuthorField, { ...row, author: [5, 3, 5] })
-        ?.authorIds,
+      contentSearchDocument(
+        withAuthorField,
+        { ...row, author: [5, 3, 5] },
+        { routing },
+      )?.authorIds,
     ).toEqual([5, 3]);
   });
 
   it("credits nobody when the author field is empty", () => {
     expect(
-      contentSearchDocument(withAuthorField, { ...row, author: null })
-        ?.authorIds,
+      contentSearchDocument(
+        withAuthorField,
+        { ...row, author: null },
+        { routing },
+      )?.authorIds,
     ).toEqual([]);
   });
 
@@ -106,10 +119,11 @@ describe("content search document", () => {
   it("prefers publishedAt over createdAt", () => {
     expect(document()?.createdAt).toEqual(PUBLISHED_AT);
     expect(
-      contentSearchDocument(testSearchablePostContentType, {
-        ...row,
-        publishedAt: "2026-02-01T10:00:00.000Z",
-      })?.createdAt,
+      contentSearchDocument(
+        testSearchablePostContentType,
+        { ...row, publishedAt: "2026-02-01T10:00:00.000Z" },
+        { routing },
+      )?.createdAt,
     ).toEqual(PUBLISHED_AT);
   });
 
@@ -150,7 +164,9 @@ describe("content search document", () => {
     });
 
     it("returns null when search is disabled", () => {
-      expect(contentSearchDocument(testPostContentType, row)).toBeNull();
+      expect(
+        contentSearchDocument(testPostContentType, row, { routing }),
+      ).toBeNull();
     });
   });
 

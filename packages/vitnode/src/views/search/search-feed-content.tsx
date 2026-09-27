@@ -112,7 +112,7 @@ const ResultLink = ({ children, className, href }: SearchFeedLinkProps) => {
   }
 
   return (
-    <Link className={className} to={href}>
+    <Link className={className} href={href} to={href}>
       {children}
     </Link>
   );

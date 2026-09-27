@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { AlertCircle } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "use-intl";
 
@@ -47,7 +46,6 @@ export const SSOLinkFormContent = ({
           transition={SHAKE_TRANSITION}
         >
           <Alert variant="destructive">
-            <AlertCircle className="size-4" />
             <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
             <AlertDescription>{t(`errors.${error}.desc`)}</AlertDescription>
           </Alert>
