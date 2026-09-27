@@ -8,13 +8,14 @@ import { core_navigation } from "@/database/navigation";
 
 import { navigationLocationOf } from "./location";
 
+export type NavigationDatabase = Omit<Context["var"]["db"], "$client">;
+
 export const nextNavigationPosition = async (
-  c: Context,
+  db: NavigationDatabase,
   parentId: null | number,
   location: NavigationLocation,
 ): Promise<number> => {
-  const [last] = await c
-    .get("db")
+  const [last] = await db
     .select({ position: core_navigation.position })
     .from(core_navigation)
     .where(
@@ -58,11 +59,10 @@ export const checkNavigationParent = async (
 };
 
 export const countNavigationRoots = async (
-  c: Context,
+  db: NavigationDatabase,
   location: NavigationLocation,
 ): Promise<number> => {
-  const [row] = await c
-    .get("db")
+  const [row] = await db
     .select({ total: count() })
     .from(core_navigation)
     .where(

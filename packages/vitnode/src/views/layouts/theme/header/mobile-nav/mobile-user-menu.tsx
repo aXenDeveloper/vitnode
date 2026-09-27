@@ -1,9 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { LanguagesIcon, LogOutIcon, UserIcon, XIcon } from "lucide-react";
+import {
+  LanguagesIcon,
+  LogOutIcon,
+  PencilRulerIcon,
+  UserIcon,
+  XIcon,
+} from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import { useStartEditWidgets } from "@/blocks/edit-widgets-context";
 import { Avatar } from "@/components/avatar";
 import { useLanguages } from "@/components/languages-provider";
 import { NewTabIndicator } from "@/components/new-tab-indicator";
@@ -155,6 +162,29 @@ const GuestActions = ({ onNavigate }: { onNavigate: () => void }) => {
   );
 };
 
+const EditWidgetsRow = ({ onNavigate }: { onNavigate: () => void }) => {
+  const startEditWidgets = useStartEditWidgets();
+  const t = useTranslations("core.global.user_bar");
+
+  if (startEditWidgets === null) return null;
+
+  return (
+    <li>
+      <button
+        className={mobileNavRowClassName}
+        onClick={() => {
+          onNavigate();
+          startEditWidgets();
+        }}
+        type="button"
+      >
+        <PencilRulerIcon aria-hidden className="text-muted-foreground size-5" />
+        <span className="flex-1">{t("edit_widgets")}</span>
+      </button>
+    </li>
+  );
+};
+
 const AccountLinks = ({
   onNavigate,
   user,
@@ -175,6 +205,7 @@ const AccountLinks = ({
         {t("account")}
       </MobileNavSectionHeading>
       <ul className="flex flex-col gap-0.5">
+        <EditWidgetsRow onNavigate={onNavigate} />
         {userHeaderMenu(user)
           .flat()
           .map(({ href, Icon, key, newTab }) => (

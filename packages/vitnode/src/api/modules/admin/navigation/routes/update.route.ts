@@ -170,7 +170,7 @@ export const updateNavigationAdminRoute = buildRoute({
 
       values.parentId = body.parentId;
       values.position = await nextNavigationPosition(
-        c,
+        db,
         body.parentId,
         location,
       );

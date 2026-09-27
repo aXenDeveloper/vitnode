@@ -146,6 +146,18 @@ describe("the mobile tab bar", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("keeps the tab list to list items", async () => {
+    await mount();
+
+    const list = await screen.findByRole("list");
+
+    expect([...list.children].map(child => child.tagName)).toEqual([
+      "LI",
+      "LI",
+      "LI",
+    ]);
+  });
+
   it("renders nothing without items", async () => {
     await mount({ shown: [] });
 

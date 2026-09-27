@@ -14,6 +14,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { EditWidgetsControl } from "@/blocks/edit-widgets-context";
+
+import { EditWidgetsContext } from "@/blocks/edit-widgets-context";
 import { LanguagesProvider } from "@/components/languages-provider";
 
 import type { HeaderNavItem } from "../header-nav";
@@ -43,8 +46,23 @@ const signedIn: UserHeaderState = {
   },
 };
 
+const editWidgets = (
+  overrides: Partial<EditWidgetsControl> = {},
+): EditWidgetsControl => ({
+  editing: false,
+  offer: { canEdit: true, pageId: "home" },
+  publish: vi.fn(),
+  release: vi.fn(),
+  setShell: vi.fn(),
+  shell: null,
+  start: vi.fn(),
+  stop: vi.fn(),
+  ...overrides,
+});
+
 const mount = async (
   props: Partial<React.ComponentProps<typeof MobileUserMenuContent>> = {},
+  control: EditWidgetsControl | null = null,
 ) => {
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ["/"] }),
@@ -73,7 +91,9 @@ const mount = async (
         { code: "de", name: "Deutsch" },
       ]}
     >
-      <RouterProvider router={router} />
+      <EditWidgetsContext value={control}>
+        <RouterProvider router={router} />
+      </EditWidgetsContext>
     </LanguagesProvider>,
   );
 };
@@ -210,6 +230,38 @@ describe("the mobile user menu", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
+  });
+
+  it("starts the widget editor and closes the drawer", async () => {
+    const control = editWidgets();
+    await mount({ state: signedIn }, control);
+
+    const drawer = await openMenu();
+    fireEvent.click(
+      within(drawer).getByRole("button", {
+        name: "core.global.user_bar.edit_widgets",
+      }),
+    );
+
+    expect(control.start).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("hides the widget editor from a member who cannot edit the page", async () => {
+    await mount(
+      { state: signedIn },
+      editWidgets({ offer: { canEdit: false, pageId: "home" } }),
+    );
+
+    const drawer = await openMenu();
+
+    expect(
+      within(drawer).queryByRole("button", {
+        name: "core.global.user_bar.edit_widgets",
+      }),
+    ).toBeNull();
   });
 
   it("switches the language from a select that lists every language", async () => {

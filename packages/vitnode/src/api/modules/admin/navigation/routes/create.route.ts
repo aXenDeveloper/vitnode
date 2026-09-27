@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { findNavigationPreset } from "@/api/lib/navigation-presets";
 import { buildRoute } from "@/api/lib/route";
@@ -29,6 +29,9 @@ const errorSchema = z.object({ error: z.string() });
 
 export const NAVIGATION_ICON_ERROR =
   "An icon is a lucide icon, written as icon:compass";
+
+export const NAVIGATION_PRESET_TAKEN_ERROR =
+  "This prebuilt item is already in the menu";
 
 export const NAVIGATION_PARENT_ERRORS = {
   depth: "A menu item can only be nested one level deep",
@@ -114,17 +117,6 @@ export const createNavigationAdminRoute = buildRoute({
       );
     }
 
-    const capacityProblem = navigationCapacityProblem({
-      count: await countNavigationRoots(c, location),
-      location,
-    });
-    if (capacityProblem) {
-      return c.json(
-        { error: NAVIGATION_LOCATION_ERRORS[capacityProblem] },
-        409,
-      );
-    }
-
     let values: Pick<
       typeof core_navigation.$inferInsert,
       "href" | "isOpenInNewTab" | "kind" | "pluginId" | "presetId"
@@ -138,25 +130,6 @@ export const createNavigationAdminRoute = buildRoute({
       );
       if (!preset) {
         return c.json({ error: "Navigation preset not found" }, 404);
-      }
-
-      const [existing] = await db
-        .select({ id: core_navigation.id })
-        .from(core_navigation)
-        .where(
-          and(
-            eq(core_navigation.kind, "preset"),
-            eq(core_navigation.location, location),
-            eq(core_navigation.pluginId, body.pluginId),
-            eq(core_navigation.presetId, body.presetId),
-          ),
-        )
-        .limit(1);
-      if (existing) {
-        return c.json(
-          { error: "This prebuilt item is already in the menu" },
-          409,
-        );
       }
 
       values = {
@@ -183,26 +156,68 @@ export const createNavigationAdminRoute = buildRoute({
       };
     }
 
-    const [item] = await db
-      .insert(core_navigation)
-      .values({
-        ...values,
-        icon: icon.value,
-        location,
-        parentId,
-        position: await nextNavigationPosition(c, parentId, location),
-        updatedAt: new Date(),
-      })
-      .returning({ id: core_navigation.id });
+    const created = await db.transaction(
+      async (tx): Promise<{ error: string } | { id: number }> => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${`core_navigation:${location}`}))`,
+        );
 
-    await saveNavigationWords(c, item.id, {
+        const capacityProblem = navigationCapacityProblem({
+          count: await countNavigationRoots(tx, location),
+          location,
+        });
+        if (capacityProblem) {
+          return { error: NAVIGATION_LOCATION_ERRORS[capacityProblem] };
+        }
+
+        if (body.kind === "preset") {
+          const [existing] = await tx
+            .select({ id: core_navigation.id })
+            .from(core_navigation)
+            .where(
+              and(
+                eq(core_navigation.kind, "preset"),
+                eq(core_navigation.location, location),
+                eq(core_navigation.pluginId, body.pluginId),
+                eq(core_navigation.presetId, body.presetId),
+              ),
+            )
+            .limit(1);
+          if (existing) {
+            return { error: NAVIGATION_PRESET_TAKEN_ERROR };
+          }
+        }
+
+        const [inserted] = await tx
+          .insert(core_navigation)
+          .values({
+            ...values,
+            icon: icon.value,
+            location,
+            parentId,
+            position: await nextNavigationPosition(tx, parentId, location),
+            updatedAt: new Date(),
+          })
+          .returning({ id: core_navigation.id });
+
+        return { id: inserted.id };
+      },
+    );
+
+    if ("error" in created) {
+      return c.json({ error: created.error }, 409);
+    }
+
+    await saveNavigationWords(c, created.id, {
       description: body.description,
       title: body.title,
     });
 
     await expireNavigationCache(c);
-    await c.get("events").emit("navigation.created", { navigationId: item.id });
+    await c.get("events").emit("navigation.created", {
+      navigationId: created.id,
+    });
 
-    return c.json({ id: item.id }, 201);
+    return c.json({ id: created.id }, 201);
   },
 });

@@ -93,7 +93,7 @@ export const MobileNavBar = ({
     );
   const highlightedIndex = isMenuOpen || isInMenu ? items.length : activeIndex;
   const { containerRef, indicatorRef, isReady } =
-    useSlidingIndicator<HTMLUListElement>(highlightedIndex);
+    useSlidingIndicator<HTMLDivElement>(highlightedIndex);
 
   if (items.length === 0) return null;
 
@@ -110,10 +110,7 @@ export const MobileNavBar = ({
           aria-label={t("label")}
           className="bg-popover text-popover-foreground pointer-events-auto flex w-full max-w-md items-center rounded-full p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.2)] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
         >
-          <ul
-            className="relative flex min-w-0 flex-1 items-center"
-            ref={containerRef}
-          >
+          <div className="relative flex min-w-0 flex-1" ref={containerRef}>
             <span
               aria-hidden
               className={cn(
@@ -122,37 +119,39 @@ export const MobileNavBar = ({
               )}
               ref={indicatorRef}
             />
-            {items.map(item => (
-              <li
-                className="flex min-w-0 flex-1"
-                data-sliding-indicator-item
-                key={item.id}
-              >
-                <MobileNavLink
-                  aria-current={isActive(item.href) ? "page" : undefined}
-                  className={tabClassName}
-                  item={item}
+            <ul className="flex min-w-0 flex-1 items-center">
+              {items.map(item => (
+                <li
+                  className="flex min-w-0 flex-1"
+                  data-sliding-indicator-item
+                  key={item.id}
                 >
-                  <MobileNavIcon
-                    className="size-5"
-                    icon={item.icon}
-                    label={item.label}
+                  <MobileNavLink
+                    aria-current={isActive(item.href) ? "page" : undefined}
+                    className={tabClassName}
+                    item={item}
+                  >
+                    <MobileNavIcon
+                      className="size-5"
+                      icon={item.icon}
+                      label={item.label}
+                    />
+                    <span className={tabLabelClassName}>{item.label}</span>
+                  </MobileNavLink>
+                </li>
+              ))}
+              {hasMenu ? (
+                <li className="flex min-w-0 flex-1" data-sliding-indicator-item>
+                  <MenuTab
+                    isCurrent={isInMenu}
+                    menuNavigation={menuNavigation}
+                    onOpenChange={setIsMenuOpen}
+                    open={isMenuOpen}
                   />
-                  <span className={tabLabelClassName}>{item.label}</span>
-                </MobileNavLink>
-              </li>
-            ))}
-            {hasMenu ? (
-              <li className="flex min-w-0 flex-1" data-sliding-indicator-item>
-                <MenuTab
-                  isCurrent={isInMenu}
-                  menuNavigation={menuNavigation}
-                  onOpenChange={setIsMenuOpen}
-                  open={isMenuOpen}
-                />
-              </li>
-            ) : null}
-          </ul>
+                </li>
+              ) : null}
+            </ul>
+          </div>
         </nav>
       </div>
     </>
