@@ -10,7 +10,7 @@ import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
 
 import { BlockError } from "@/blocks/errors";
-import { assertContentTypesDeclared } from "@/content/public-urls";
+import { contentPublicUrls } from "@/content/public-urls";
 import {
   validateContentTypes,
   withContentPermissions,
@@ -51,6 +51,7 @@ export interface BuildPluginApiReturn<
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
+  publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
@@ -66,7 +67,6 @@ export function buildApiPlugin<
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
 >({
   blocks,
-  contentTypes: declaredContentTypes,
   editablePages,
   pluginId,
   messages,
@@ -76,7 +76,6 @@ export function buildApiPlugin<
   searchIndexers,
 }: {
   blocks?: BlockPluginSource;
-  contentTypes?: readonly AnyContentTypeDefinition[];
   editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
   modules?: Modules;
@@ -146,14 +145,15 @@ export function buildApiPlugin<
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
-  assertContentTypesDeclared({
-    declared: declaredContentTypes,
-    pluginId,
-    published: [
-      ...registered.map(entry => entry.definition),
-      ...publicContentTypes,
-    ],
-  });
+  const publishing = new Map<string, AnyContentTypeDefinition>();
+  for (const definition of [
+    ...registered.map(entry => entry.definition),
+    ...publicContentTypes,
+  ]) {
+    if (contentPublicUrls(definition).length > 0) {
+      publishing.set(definition.id, definition);
+    }
+  }
 
   return {
     pluginId,
@@ -166,6 +166,7 @@ export function buildApiPlugin<
     openApiTags: [...new Set(openApiTags)],
     contentModels,
     contentTypes: registered.map(entry => entry.definition),
+    publicContentTypes: [...publishing.values()],
     cronJobs,
     events,
     queueTasks,

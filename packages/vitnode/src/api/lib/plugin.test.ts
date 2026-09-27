@@ -1,8 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import type { ContentUrlError } from "@/content/public-urls";
-
 import { createContentModel } from "@/content/server/model";
 import { buildContentPublicModule } from "@/content/server/public-module";
 import {
@@ -231,7 +229,7 @@ describe("buildApiPlugin public content URLs", () => {
     pluginId: PLUGIN_ID,
     name: "admin",
     routes: [],
-    contentTypes: [testSearchablePostContentType],
+    contentTypes: [testSearchablePostContentType, testCategoryContentType],
   });
 
   const deliveredPublic = buildContentPublicModule({
@@ -239,87 +237,22 @@ describe("buildApiPlugin public content URLs", () => {
     contentTypes: [createContentModel(testDeliveredPostContentType)],
   });
 
-  const errorOf = (run: () => unknown): ContentUrlError => {
-    try {
-      run();
-    } catch (error) {
-      return error as ContentUrlError;
-    }
+  it("reports every content type that publishes a URL, however it is exposed", () => {
+    const plugin = buildApiPlugin({
+      pluginId: PLUGIN_ID,
+      modules: [searchableAdmin, deliveredPublic],
+    });
 
-    throw new Error("expected buildApiPlugin to refuse the plugin");
-  };
-
-  it("refuses public content URLs the plugin never declared in a content module", () => {
-    const error = errorOf(() =>
-      buildApiPlugin({ pluginId: PLUGIN_ID, modules: [searchableAdmin] }),
-    );
-
-    expect(error.code).toBe("undeclared-content-types");
-    expect(error.pluginId).toBe(PLUGIN_ID);
-    expect(error.message).toContain('"test.searchable"');
-    expect(error.message).toContain('search.pathTemplate "/searchable/{slug}"');
-    expect(error.message).toContain("buildApiPlugin({ contentTypes })");
+    expect(plugin.publicContentTypes?.map(item => item.id)).toEqual([
+      "test.searchable",
+      "test.delivered-post",
+    ]);
   });
 
-  it("sees a content type exposed only through the public module", () => {
-    const error = errorOf(() =>
-      buildApiPlugin({ pluginId: PLUGIN_ID, modules: [deliveredPublic] }),
-    );
-
-    expect(error.code).toBe("undeclared-content-types");
-    expect(error.message).toContain('delivery.path "/delivered-posts/:slug"');
-  });
-
-  it("refuses a declaration that leaves a public content type out", () => {
-    const error = errorOf(() =>
-      buildApiPlugin({
-        contentTypes: [testSearchablePostContentType],
-        pluginId: PLUGIN_ID,
-        modules: [searchableAdmin, deliveredPublic],
-      }),
-    );
-
-    expect(error.code).toBe("incomplete-content-types");
-    expect(error.contentTypeId).toBe("test.delivered-post");
-    expect(error.message).toContain('Add "test.delivered-post"');
-  });
-
-  it("refuses a declaration whose URLs drifted from the registered type", () => {
-    const stale = {
-      ...testSearchablePostContentType,
-      search: {
-        ...testSearchablePostContentType.search,
-        pathTemplate: "/old/{slug}",
-      },
-    };
-
+  it("reports nothing for content without delivery or search", () => {
     expect(
-      errorOf(() =>
-        buildApiPlugin({
-          contentTypes: [stale],
-          pluginId: PLUGIN_ID,
-          modules: [searchableAdmin],
-        }),
-      ).code,
-    ).toBe("incomplete-content-types");
-  });
-
-  it("accepts a declaration that covers every public content type", () => {
-    expect(() =>
-      buildApiPlugin({
-        contentTypes: [
-          testSearchablePostContentType,
-          testDeliveredPostContentType,
-        ],
-        pluginId: PLUGIN_ID,
-        modules: [searchableAdmin, deliveredPublic],
-      }),
-    ).not.toThrow();
-  });
-
-  it("asks nothing of a plugin whose content publishes no URLs", () => {
-    expect(() =>
-      buildApiPlugin({ pluginId: PLUGIN_ID, modules: [adminModule] }),
-    ).not.toThrow();
+      buildApiPlugin({ pluginId: PLUGIN_ID, modules: [adminModule] })
+        .publicContentTypes,
+    ).toEqual([]);
   });
 });

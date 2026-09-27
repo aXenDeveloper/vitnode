@@ -5,14 +5,12 @@ import { buildContentPublicModule } from "@vitnode/core/content/server";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
-import { contentTypes } from "@/content";
 import { categoryContent } from "@/database/categories";
 import { postContent } from "@/database/posts";
 
 export const blogApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
-    contentTypes,
     modules: [
       adminModule,
       buildContentPublicModule({

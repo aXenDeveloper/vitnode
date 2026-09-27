@@ -7,7 +7,6 @@ import type { PluginRoute } from "../../routing/types.js";
 import type { HostRoutePath } from "./host-routes.js";
 
 import {
-  CONTENT_TYPES_EXPORT,
   CONTENT_URLS_ERROR_PREFIX,
   contentPublicUrls,
   ContentUrlError,
@@ -24,6 +23,7 @@ export type {
 export {
   CONTENT_TYPES_EXPORT,
   CONTENT_URLS_ERROR_PREFIX,
+  contentTypesFromContentModule,
   ContentUrlError,
 } from "../../content/public-urls.js";
 
@@ -38,44 +38,6 @@ export interface AssertContentUrlsHavePagesOptions {
   hostRoutes?: readonly HostRoutePath[];
   manifest: readonly PluginRoute[];
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const hasSetting = (value: unknown, field: "path" | "pathTemplate"): boolean =>
-  isRecord(value) &&
-  typeof value.enabled === "boolean" &&
-  typeof value[field] === "string";
-
-const isContentUrlDefinition = (
-  value: unknown,
-): value is ContentUrlDefinition =>
-  isRecord(value) &&
-  typeof value.id === "string" &&
-  hasSetting(value.delivery, "path") &&
-  hasSetting(value.search, "pathTemplate");
-
-export const contentTypesFromContentModule = (
-  loaded: unknown,
-  pluginId: string,
-  specifier: string,
-): ContentUrlDefinition[] => {
-  const contentTypes = isRecord(loaded)
-    ? loaded[CONTENT_TYPES_EXPORT]
-    : undefined;
-
-  if (
-    Array.isArray(contentTypes) &&
-    contentTypes.every(isContentUrlDefinition)
-  ) {
-    return contentTypes;
-  }
-
-  throw new ContentUrlError(
-    `${CONTENT_URLS_ERROR_PREFIX} "${specifier}" must export \`${CONTENT_TYPES_EXPORT}\`: an array of the plugin's content type definitions, each returned by \`defineContentType\` from "@vitnode/core/content". Export it, or remove the "${specifier}" module if the plugin publishes no content URLs.`,
-    { code: "invalid-content-types-module", pluginId },
-  );
-};
 
 const disableHint: Record<ContentUrlSetting, string> = {
   "delivery.path": "turn delivery off (`delivery: { enabled: false }`)",

@@ -74,19 +74,7 @@ import { articleContentType } from "@/content/article"
 export const contentTypes = [articleContentType]
 ```
 
-Pass that same list to the plugin's API, so what the API publishes is exactly what the build checks:
-
-```ts title="plugins/blog/src/config.api.ts"
-import { contentTypes } from "@/content"
-
-export const blogApiPlugin = () =>
-  buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    // [!code ++]
-    contentTypes,
-    modules: [adminModule, publicModule],
-  })
-```
+Expose it as `./content` in the plugin's `package.json` exports. When the API boots, it loads that same module and refuses to start if the plugin publishes a URL the module doesn't declare. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
 
   </Step>
   <Step>

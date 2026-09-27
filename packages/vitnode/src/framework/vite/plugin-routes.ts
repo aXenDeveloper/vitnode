@@ -29,6 +29,7 @@ import type {
 import { generateAdminNavSource } from "../admin-nav";
 import { generateApiRegistrySource } from "../api-registry";
 import { generateBlocksRegistrySource } from "../blocks-registry";
+import { generateContentModulesSource } from "../content-modules";
 import { generateContentRegistrySource } from "../content-registry";
 import {
   generatePackageMessagesSource,
@@ -36,9 +37,7 @@ import {
 } from "../package-messages";
 import {
   compilePluginRoutes,
-  CONTENT_URLS_ERROR_PREFIX,
   contentTypesFromContentModule,
-  ContentUrlError,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
   i18nFromLoadedConfig,
@@ -89,6 +88,7 @@ const pathsFor = (appRoot: string) => ({
 
   apiRegistry: join(appRoot, "src", "api-registry.gen.ts"),
 
+  contentModules: join(appRoot, "src", "content-modules.gen.ts"),
   contentRegistry: join(appRoot, "src", "content-registry.gen.ts"),
 
   packageMessages: join(appRoot, "src", "package-messages.gen.ts"),
@@ -100,7 +100,7 @@ const pathsFor = (appRoot: string) => ({
   routerConfig: join(appRoot, "tsr.config.json"),
 });
 
-const resolverFor = (appRoot: string) => {
+export const resolverFor = (appRoot: string) => {
   const requireFromApp = createRequire(join(appRoot, "package.json"));
 
   return (specifier: string): null | string => {
@@ -210,63 +210,15 @@ export interface PluginContentModuleFile {
   specifier: string;
 }
 
-const BUILT_CONTENT_MODULE = join("dist", "src", `${CONTENT_TYPES_SUBPATH}.js`);
-
-const packageNameOf = (manifest: string): string | undefined => {
-  try {
-    const { name } = JSON.parse(readFileSync(manifest, "utf8")) as {
-      name?: unknown;
-    };
-
-    return typeof name === "string" ? name : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-export const builtContentModuleOutsideExports =
-  (resolvePackageFile: (specifier: string) => null | string) =>
-  (pluginId: string): null | string => {
-    const anchor =
-      resolvePackageFile(`${pluginId}/config`) ??
-      resolvePackageFile(`${pluginId}/${API_CONFIG_SUBPATH}`);
-    if (anchor === null) return null;
-
-    for (let dir = dirname(anchor); dir !== dirname(dir); dir = dirname(dir)) {
-      const manifest = join(dir, "package.json");
-      if (!existsSync(manifest) || packageNameOf(manifest) !== pluginId) {
-        continue;
-      }
-
-      const file = join(dir, BUILT_CONTENT_MODULE);
-
-      return existsSync(file) ? file : null;
-    }
-
-    return null;
-  };
-
 export const resolvePluginContentModules = (
   pluginIds: readonly string[],
   resolvePackageFile: (specifier: string) => null | string,
-  findUnexportedContentModule: (
-    pluginId: string,
-  ) => null | string = builtContentModuleOutsideExports(resolvePackageFile),
 ): PluginContentModuleFile[] =>
   pluginIds.flatMap(pluginId => {
     const specifier = `${pluginId}/${CONTENT_TYPES_SUBPATH}`;
     const file = resolvePackageFile(specifier);
-    if (file !== null) return [{ file, pluginId, specifier }];
 
-    const unexported = findUnexportedContentModule(pluginId);
-    if (unexported !== null) {
-      throw new ContentUrlError(
-        `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" ships a content module at "${unexported}", but its package.json exports do not expose "${specifier}", so this build cannot check that pages serve its content URLs. Add "./content": "./dist/src/content.js" to the plugin's exports (a "./*" wildcard covers it too).`,
-        { code: "content-module-not-exported", pluginId },
-      );
-    }
-
-    return [];
+    return file === null ? [] : [{ file, pluginId, specifier }];
   });
 
 export const loadPluginContentUrls = async (
@@ -601,6 +553,10 @@ const discover = async (
     apiRegistry: apiRegistry.modules,
     blocksRegistry: [...coreBlocks.modules, ...pluginBlocks.modules],
     compiled,
+    contentModules: contentModules.map(({ pluginId, specifier }) => ({
+      pluginId,
+      specifier,
+    })),
     contentRegistry: contentRegistry.modules,
     packageMessages,
     watch,
@@ -619,7 +575,7 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-/** All six generated files, from one discovery pass. */
+/** All seven generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -631,6 +587,7 @@ const writeGenerated = async (
     apiRegistry,
     blocksRegistry,
     compiled,
+    contentModules,
     contentRegistry,
     packageMessages,
   } = await discover(appRoot, options, onLoaded);
@@ -642,6 +599,10 @@ const writeGenerated = async (
     writeIfChanged(
       paths.blocksRegistry,
       generateBlocksRegistrySource(blocksRegistry),
+    ),
+    writeIfChanged(
+      paths.contentModules,
+      generateContentModulesSource(contentModules),
     ),
     writeIfChanged(
       paths.contentRegistry,

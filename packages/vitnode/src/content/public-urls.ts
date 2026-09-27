@@ -5,11 +5,10 @@ export const CONTENT_URLS_ERROR_PREFIX = "[VitNode content URLs]";
 export const CONTENT_TYPES_EXPORT = "contentTypes";
 
 export type ContentUrlErrorCode =
-  | "content-module-not-exported"
+  | "content-module-missing"
   | "content-url-without-page"
   | "incomplete-content-types"
-  | "invalid-content-types-module"
-  | "undeclared-content-types";
+  | "invalid-content-types-module";
 
 export type ContentUrlSetting = "delivery.path" | "search.pathTemplate";
 
@@ -86,15 +85,55 @@ const describeUrls = (definition: ContentUrlDefinition): string =>
 const sameUrls = (a: ContentUrlDefinition, b: ContentUrlDefinition): boolean =>
   JSON.stringify(contentPublicUrls(a)) === JSON.stringify(contentPublicUrls(b));
 
-const CONTENT_MODULE_HINT =
-  "Export every content type with public URLs from the plugin's browser-safe `src/content.ts` as `export const contentTypes = [...]`, list `./content` in its package.json exports (the `./*` wildcard covers it), and pass that same array to `buildApiPlugin({ contentTypes })`. The web build reads the module to check that a page serves each URL.";
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
-export const assertContentTypesDeclared = ({
-  declared,
+const hasSetting = (value: unknown, field: "path" | "pathTemplate"): boolean =>
+  isRecord(value) &&
+  typeof value.enabled === "boolean" &&
+  typeof value[field] === "string";
+
+const isContentUrlDefinition = (
+  value: unknown,
+): value is ContentUrlDefinition =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  hasSetting(value.delivery, "path") &&
+  hasSetting(value.search, "pathTemplate");
+
+export const contentModuleSpecifier = (pluginId: string): string =>
+  `${pluginId}/content`;
+
+export const contentTypesFromContentModule = (
+  loaded: unknown,
+  pluginId: string,
+  specifier: string = contentModuleSpecifier(pluginId),
+): ContentUrlDefinition[] => {
+  const contentTypes = isRecord(loaded)
+    ? loaded[CONTENT_TYPES_EXPORT]
+    : undefined;
+
+  if (
+    Array.isArray(contentTypes) &&
+    contentTypes.every(isContentUrlDefinition)
+  ) {
+    return contentTypes;
+  }
+
+  throw new ContentUrlError(
+    `${CONTENT_URLS_ERROR_PREFIX} "${specifier}" must export \`${CONTENT_TYPES_EXPORT}\`: an array of the plugin's content type definitions, each returned by \`defineContentType\` from "@vitnode/core/content". Export it, or remove the "${specifier}" module if the plugin publishes no content URLs.`,
+    { code: "invalid-content-types-module", pluginId },
+  );
+};
+
+export const assertContentModuleCovers = ({
+  loaded,
+  loadedFrom,
   pluginId,
   published,
 }: {
-  declared: readonly ContentUrlDefinition[] | undefined;
+  loaded: unknown;
+  loadedFrom: string;
   pluginId: string;
   published: readonly ContentUrlDefinition[];
 }): void => {
@@ -104,16 +143,20 @@ export const assertContentTypesDeclared = ({
   const [first] = publishing;
   if (first === undefined) return;
 
-  if (declared === undefined) {
+  const specifier = contentModuleSpecifier(pluginId);
+
+  if (loaded === undefined) {
     throw new ContentUrlError(
-      `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" registers content types with public URLs (${publishing.map(definition => `"${definition.id}": ${describeUrls(definition)}`).join("; ")}), but does not declare its content module, so no build can check that a page serves those URLs. ${CONTENT_MODULE_HINT}`,
+      `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" registers content types with public URLs (${publishing.map(definition => `"${definition.id}": ${describeUrls(definition)}`).join("; ")}), but "${specifier}" was not found through ${loadedFrom}, so no web build can check that a page serves those URLs. Export them from a browser-safe module as \`export const ${CONTENT_TYPES_EXPORT} = [...]\` and expose it as "./content" in the plugin's package.json exports.`,
       {
-        code: "undeclared-content-types",
+        code: "content-module-missing",
         contentTypeId: first.id,
         pluginId,
       },
     );
   }
+
+  const declared = contentTypesFromContentModule(loaded, pluginId, specifier);
 
   for (const definition of publishing) {
     const match = declared.find(candidate => candidate.id === definition.id);
@@ -121,8 +164,8 @@ export const assertContentTypesDeclared = ({
 
     throw new ContentUrlError(
       match
-        ? `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" registers content type "${definition.id}" with ${describeUrls(definition)}, but its declared content module lists it with ${describeUrls(match) || "no public URLs"}. Pass the same definitions to both - import \`contentTypes\` from \`src/content.ts\` instead of building a second list.`
-        : `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" registers content type "${definition.id}" with ${describeUrls(definition)}, but the \`contentTypes\` it passes to \`buildApiPlugin\` do not include it, so no build checks that a page serves those URLs. Add "${definition.id}" to \`contentTypes\` in the plugin's \`src/content.ts\`.`,
+        ? `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" registers content type "${definition.id}" with ${describeUrls(definition)}, but "${specifier}" exports it with ${describeUrls(match) || "no public URLs"}, so the web build checks the wrong pages. Register the definitions that module exports instead of a second copy.`
+        : `${CONTENT_URLS_ERROR_PREFIX} Plugin "${pluginId}" registers content type "${definition.id}" with ${describeUrls(definition)}, but "${specifier}" does not export it, so no web build checks that a page serves those URLs. Add it to \`${CONTENT_TYPES_EXPORT}\` in that module.`,
       {
         code: "incomplete-content-types",
         contentTypeId: definition.id,
