@@ -200,6 +200,23 @@ describe("localized delivery URLs", () => {
     });
   });
 
+  it("reports each URL's internal path next to its public one", async () => {
+    const service = buildService({ routing: withDomains });
+
+    const metadata = await service.findById(7, { locale: "pl" });
+
+    expect(metadata?.canonicalInternalPath).toBe("/blog/witaj-swiecie");
+    expect(
+      metadata?.alternates.map(({ internalPath, locale }) => ({
+        internalPath,
+        locale,
+      })),
+    ).toStrictEqual([
+      { internalPath: "/blog/hello-world", locale: "en" },
+      { internalPath: "/blog/witaj-swiecie", locale: "pl" },
+    ]);
+  });
+
   it("never labels default-language fallback content as a Polish alternate", async () => {
     const service = buildService({ published: ["en"], routing: translated });
 

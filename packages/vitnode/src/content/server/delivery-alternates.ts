@@ -13,7 +13,10 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 import type { ContentDatabase } from "./service";
 
-import { contentDeliveryPublicUrl } from "../delivery";
+import {
+  contentDeliveryInternalPath,
+  contentDeliveryPublicUrl,
+} from "../delivery";
 import { listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
 import {
@@ -127,16 +130,19 @@ export const readDeliveryAlternatesMany = async <
     const language = byId.get(languageId);
     if (!language?.isEnabled) continue;
 
+    const slug = typeof row.slug === "string" ? row.slug : "";
+    const internalPath = contentDeliveryInternalPath({ definition, slug });
     const url = contentDeliveryPublicUrl({
       definition,
       locale: language.locale,
       routing,
-      slug: typeof row.slug === "string" ? row.slug : "",
+      slug,
     });
-    if (url === null) continue;
+    if (url === null || internalPath === null) continue;
 
     const entries = grouped.get(itemId) ?? [];
     entries.push({
+      internalPath,
       locale: language.locale,
       ...(url.origin === undefined ? {} : { origin: url.origin }),
       path: url.pathname,

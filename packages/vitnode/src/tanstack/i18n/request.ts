@@ -97,10 +97,6 @@ export const handleLocaleRequest = (
 
   const headers = new Headers({ location: location.value });
 
-  if (localeRouting.domains.length > 0) {
-    headers.append("vary", "host, x-forwarded-host");
-  }
-
   // The API is the one destination that learns nothing from the prefix it was
   // given: `/pl/api/foo` is a mistake to correct, not a language to remember.
   if (setCookie && !location.crossOrigin && !isApiPath(redirectTo.pathname)) {

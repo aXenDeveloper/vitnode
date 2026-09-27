@@ -114,6 +114,8 @@ server {
 }
 ```
 
+Keep `proxy_set_header Host $host;`. VitNode picks a [language domain](/docs/dev/i18n/localized-urls#behind-a-proxy) from the `Host` header and deliberately ignores `X-Forwarded-Host`, which any visitor can send.
+
 ---
 
 ## Running with PM2 (Process Manager)

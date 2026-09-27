@@ -6,38 +6,38 @@ const hostOf = (url: string, headers: Record<string, string> = {}) =>
   requestHostOf(new Request(url, { headers }));
 
 describe("requestHostOf", () => {
-  it("prefers the host a proxy forwarded", () => {
-    expect(
-      hostOf("http://127.0.0.1:3000/", {
-        host: "127.0.0.1:3000",
-        "x-forwarded-host": "Vitnode.PL",
-      }),
-    ).toBe("vitnode.pl");
+  it("reads the host the request was addressed to", () => {
+    expect(hostOf("https://VitNode.PL/x")).toBe("vitnode.pl");
+    expect(hostOf("https://vitnode.pl:443/x")).toBe("vitnode.pl");
+    expect(hostOf("http://localhost:3000/x")).toBe("localhost:3000");
   });
 
-  it("takes the first entry of a forwarded list", () => {
+  it("ignores an X-Forwarded-Host the client could have sent itself", () => {
     expect(
-      hostOf("http://127.0.0.1/", {
-        "x-forwarded-host": "vitnode.pl, proxy.internal",
-      }),
-    ).toBe("vitnode.pl");
-  });
-
-  it("falls back to Host, then the request URL, past a malformed forwarded host", () => {
-    expect(
-      hostOf("http://127.0.0.1/", {
-        host: "vitnode.com",
-        "x-forwarded-host": "vitnode.pl/evil",
+      hostOf("https://vitnode.com/discover", {
+        "x-forwarded-host": "vitnode.pl",
       }),
     ).toBe("vitnode.com");
-    expect(hostOf("https://vitnode.pl:443/x")).toBe("vitnode.pl");
+    expect(
+      hostOf("http://127.0.0.1:3000/discover", {
+        "x-forwarded-host": "vitnode.pl",
+      }),
+    ).toBe("127.0.0.1:3000");
   });
 });
 
 describe("browserHostOf", () => {
   it("reads the address bar's host in the same form as the server", () => {
     expect(browserHostOf({ host: "vitnode.pl" })).toBe(
-      hostOf("http://127.0.0.1/", { "x-forwarded-host": "vitnode.pl" }),
+      hostOf("https://vitnode.pl/discover"),
+    );
+  });
+
+  it("agrees with the server when a client forges X-Forwarded-Host", () => {
+    expect(browserHostOf({ host: "vitnode.com" })).toBe(
+      hostOf("https://vitnode.com/discover", {
+        "x-forwarded-host": "vitnode.pl",
+      }),
     );
   });
 

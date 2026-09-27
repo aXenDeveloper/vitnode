@@ -15,6 +15,7 @@ import type { ContentSlugHistoryEntry } from "./slug-history-model";
 import { CONTENT_DELIVERY_REDIRECT_STATUS } from "../const";
 import {
   contentDeliveryHreflang,
+  contentDeliveryInternalPath,
   contentDeliveryOpenGraph,
   contentDeliveryPublicUrl,
   contentDeliveryRobots,
@@ -35,6 +36,7 @@ export interface ContentDeliveryMetadata {
   /** Real published translations only. Empty for a nonlocalized content type. */
   alternates: ContentDeliveryAlternate[];
 
+  canonicalInternalPath: null | string;
   canonicalPath: null | string;
   canonicalUrl?: null | string;
   /** Framework-neutral `hreflang`, ready for an adapter to translate. */
@@ -184,11 +186,16 @@ export const createContentDeliveryService = <
         ? null
         : contentDeliveryPublicUrl({ definition, locale, routing, slug });
     const canonicalPath = canonical?.pathname ?? null;
+    const canonicalInternalPath =
+      canonical === null || slug === null
+        ? null
+        : contentDeliveryInternalPath({ definition, slug });
     const alternates =
       localized && itemId !== null ? await readAlternates(itemId) : [];
 
     return {
       alternates,
+      canonicalInternalPath,
       canonicalPath,
       ...(canonical?.origin === undefined
         ? origin === undefined

@@ -30,9 +30,10 @@ export const vitNodeConfig = buildConfig({
       { code: 'en', name: 'English' },
       { code: 'pl', name: 'Polski' },
     ],
-    // [!code ++:7]
+    // [!code ++:8]
     routePaths: {
       pl: {
+        '/blog/:slug': '/wpisy/:slug',
         '/discover': '/odkrywaj',
         '/search': '/szukaj',
         '/users/:nameCode': '/uzytkownicy/:nameCode',
@@ -54,6 +55,7 @@ Every link, redirect, canonical URL and sitemap line now uses the new spelling. 
 
 | Page      | English         | Polish before      | Polish after               |
 | :-------- | :-------------- | :----------------- | :------------------------- |
+| A post    | `/blog/hello`   | `/pl/blog/czesc`   | `/pl/wpisy/czesc`          |
 | Discover  | `/discover`     | `/pl/discover`     | `/pl/odkrywaj`             |
 | Search    | `/search`       | `/pl/search`       | `/pl/szukaj`               |
 | A profile | `/users/jane-1` | `/pl/users/jane-1` | `/pl/uzytkownicy/jane-1`   |
@@ -160,9 +162,20 @@ The rules:
 - `origin` is a scheme and a host only: `https://vitnode.pl`, with no path, query or trailing page.
 - Each host appears once, and each locale belongs to exactly one domain.
 - Once you add `domains`, every enabled locale needs one, so a link to any language knows which host to open.
-- Only **configured** hosts pick a locale or show up in SEO URLs. `X-Forwarded-Host` and `Host` are only ever matched against your configured origins, and a cross-domain redirect only goes to one of them.
+- Only **configured** hosts pick a locale or show up in SEO URLs, and a cross-domain redirect only goes to one of them.
 - **Unconfigured hosts** (`localhost`, preview deployments) act as if there were no domains in the prefix modes. So `pnpm dev` keeps serving `/pl/odkrywaj` locally instead of bouncing you to production.
-- Redirects include `Vary: host, x-forwarded-host`, so a shared cache keeps the two domains apart.
+
+### Behind a proxy
+
+VitNode reads the host from the request URL your server hands it, which comes from the `Host` header. It **ignores `X-Forwarded-Host`**. Any visitor can send that header, and a proxy that doesn't overwrite it passes it straight through. If VitNode trusted it, a request to `vitnode.com` could render Polish, while the browser (which only knows its own address bar) hydrates English and gets different links. Worse, a cache that ignores `Vary` could store the resulting redirect for everyone.
+
+So the one proxy requirement is: **forward the original `Host`**.
+
+- **Vercel** does this already, nothing to set.
+- **Nginx**: keep `proxy_set_header Host $host;`, as in the [self-hosted guide](/docs/dev/deployments/self-hosted#reverse-proxy-nginx-configuration).
+- **Other proxies**: enable their "preserve host" option (Caddy does by default; Traefik: `passHostHeader`, on by default).
+
+A proxy that rewrites `Host` to something like `localhost:3000` still works, but only as an unconfigured host, so every language is served there with its prefix and no domain picks a locale.
 
 ### Why `never` needs a domain per language
 
@@ -208,12 +221,57 @@ export const route = definePluginRoute({
 
 VitNode turns that into a `canonical` link, one `alternate` per language and an `x-default` for the default locale, all absolute and spelled for each language: `https://vitnode.pl/artykuly/witaj-swiecie` with domains, or your `VITNODE_WEB_URL` plus `/pl/artykuly/witaj-swiecie` without them.
 
-<Callout type="info" title="Public paths work too">
-  A public path such as `/pl/artykuly/witaj-swiecie` (the `path` in a delivery
-  API's `alternates`) is read back to its English route first, so it is never
-  prefixed or translated twice. Internal paths are still the clearest thing to
-  write by hand.
+<Callout type="warn" title="Internal paths, not public ones">
+  Pass `/articles/witaj-swiecie`, not `/pl/artykuly/witaj-swiecie`. `alternates`
+  are always read as internal paths, so a public one would be translated a
+  second time. The delivery API gives you both: each alternate has a public
+  `path` and an `internalPath`, and metadata has `canonicalInternalPath`.
 </Callout>
+
+A page backed by the Content System doesn't write any of this by hand. `@vitnode/core/tanstack/content` turns a delivery response into page data and a head. That covers redirects, 404s, the SEO title and description, and the internal alternates of every published translation. Blog's own post page is built this way:
+
+```tsx title="plugins/blog/src/pages/post-page.tsx"
+const loadBlogPost = async ({
+  locale,
+  slug,
+}: {
+  locale: string
+  slug: string
+}) => {
+  const [resolution, detail] = await Promise.all([
+    fetcher({
+      plugin: '@vitnode/blog',
+      method: 'get',
+      module: 'content/blog',
+      path: '/delivery/resolve/{slug}',
+      args: { params: { slug: encodeURIComponent(slug) }, query: { locale } },
+    }),
+    fetcher({
+      plugin: '@vitnode/blog',
+      method: 'get',
+      module: 'content/blog',
+      path: '/{slug}',
+      args: { params: { slug: encodeURIComponent(slug) }, query: { locale } },
+    }),
+  ])
+
+  return contentDeliveryPage({
+    item: detail.status === 200 ? zodBlogPost.parse(await detail.json()) : null,
+    resolution: await resolution.json(),
+  })
+}
+
+export const route = definePluginRoute({
+  load: async ({ context, params }) =>
+    await loadBlogPost({ locale: context.locale, slug: params.slug }),
+  head: ({ loaderData }) =>
+    contentDeliveryPageHead(loaderData?.metadata, {
+      title: loaderData?.item.title,
+    }),
+})
+```
+
+A retired slug answers with a 308 to the current one, and an unknown slug is a 404.
 
 App routes can do the same with `pageHead` or `localeAlternateLinks` from `@vitnode/core/tanstack/metadata`:
 
@@ -236,12 +294,12 @@ export const Route = createFileRoute('/pricing')({
 
 Two different things change in a URL, and they're owned by different people:
 
-| Part of the URL                                    | Owned by                            | Example (hypothetical custom plugin) |
-| :------------------------------------------------- | :---------------------------------- | :----------------------------------- |
-| Static segments (`articles` → `artykuly`)          | Your app, `routePaths`              | `/articles/…` → `/pl/artykuly/…`     |
-| Parameter values (`hello-world` → `witaj-swiecie`) | The content, a localized slug field | each translation has its own slug    |
+| Part of the URL                                    | Owned by                            | Example (Blog)                    |
+| :------------------------------------------------- | :---------------------------------- | :-------------------------------- |
+| Static segments (`blog` → `wpisy`)                 | Your app, `routePaths`              | `/blog/…` → `/pl/wpisy/…`         |
+| Parameter values (`hello-world` → `witaj-swiecie`) | The content, a localized slug field | each translation has its own slug |
 
-Put together, `/articles/hello-world` in English is `/pl/artykuly/witaj-swiecie` in Polish. The translation table never touches `witaj-swiecie`, and the content never touches `artykuly`.
+Put together, Blog's `/blog/hello-world` in English is `/pl/wpisy/witaj-swiecie` in Polish. The translation table never touches `witaj-swiecie`, and the content never touches `wpisy`.
 
 ## Content, sitemaps and search follow along
 
@@ -251,6 +309,21 @@ Content Engine builds every URL with the same rules as the router, so nothing dr
 - Only published translations become alternates. A Polish request that falls back to English content keeps the **English** canonical URL, so fallback text is never labelled as Polish.
 - Slug-history redirects stay within their language.
 - Search result URLs are built from `search.pathTemplate` (like `/blog/{slug}`) the same way, and they're absolute once domains are configured.
+
+### Content URLs need a page
+
+A content type publishes URLs from `delivery.path` (default `/{publicApi.path}/:slug`) and `search.pathTemplate`. Both are English route paths, and **a page route has to serve them**. Otherwise every canonical link, sitemap line and search result would be a 404. So the build checks it: a content type whose URL no page route serves stops `dev` and `build` with `content-url-without-page`. Blog serves `/blog/:slug` with its own page, which is also why `'/blog/:slug'` is a valid `routePaths` key.
+
+The build learns a plugin's content types from its optional `content` module. That's a browser-safe `src/content.ts` exporting them (`@vitnode/<plugin>/content` once built):
+
+```ts title="plugins/blog/src/content.ts"
+import { blogCategoryContentType } from '@/content/category'
+import { blogPostContentType } from '@/content/post'
+
+export const contentTypes = [blogPostContentType, blogCategoryContentType]
+```
+
+A plugin without that module isn't checked.
 
 Details live in [Content Delivery and SEO](/docs/dev/content-engine/content-delivery-and-seo) and [Search](/docs/dev/search).
 
@@ -293,6 +366,13 @@ A bad configuration fails loudly, when `dev` or `build` starts, not quietly in p
 | `route-collision`          | A translation spells the same URL as another route                                             | Spell one of them differently                      |
 | `route-shadowed`           | A translation overlaps a more specific untranslated route                                      | Translate that route too, or add an identity entry |
 
+**Content URLs**, also at build time. These start with `[VitNode content URLs]` and are a `ContentUrlError`:
+
+| Code                           | Cause                                                                                  | Fix                                                                            |
+| :----------------------------- | :------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| `content-url-without-page`     | A content type's `delivery.path` or `search.pathTemplate` has no page route serving it | Add a page at that path, point the setting at an existing page, or turn it off |
+| `invalid-content-types-module` | A plugin's `content` module doesn't export a `contentTypes` array                      | Export the plugin's `defineContentType` definitions, or delete the module      |
+
 ## Migration notes
 
 <Callout
@@ -308,6 +388,7 @@ A bad configuration fails loudly, when `dev` or `build` starts, not quietly in p
 
 - **`search.pathTemplate` no longer needs `{locale}`.** Write `/blog/{slug}`. A legacy leading `/{locale}/` is still accepted and stripped. `{locale}` anywhere else is an error. Then rebuild the search index.
 - **Content URLs in the default locale are unprefixed** under `as-needed`. Canonical URLs, hreflang and sitemaps used to emit `/en/...` for every record, and now emit `/...`. Old `/en/...` links redirect with a 308.
+- **Every content URL needs a page.** A plugin that exports a `content` module must give each content type with delivery or search a page route at that path, or the build stops with `content-url-without-page`. Blog now ships its `/blog/:slug` page.
 - **A split API needs the same routing config.** In a single app, `vitnode.api.config.ts` reuses `vitNodeConfig.i18n`, so nothing to do. In a separate API app (`apiMonorepo` or `onlyApi` in `create-vitnode-app`), its own `i18n` must mirror `localePrefix`, `domains` and `routePaths`. Otherwise canonical URLs, sitemaps and search links built by the API won't match the site.
 
 ```ts title="apps/api/src/i18n.ts"

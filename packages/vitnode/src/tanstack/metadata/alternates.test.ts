@@ -70,35 +70,35 @@ describe("localeAlternateLinks", () => {
     ]);
   });
 
-  it("accepts public paths, such as delivery API alternates, without prefixing them twice", () => {
-    const fromInternal = localeAlternateLinks({
-      alternates: ALTERNATES,
-      locale: "pl",
-      localeRouting: prefixed,
-      webOrigin: "https://site.example",
+  it("keeps declared internal paths internal, even where they overlap a translated spelling", () => {
+    const swapped = createLocaleRouting({
+      defaultLocale: "en",
+      domains: [
+        { defaultLocale: "en", origin: "https://vitnode.com" },
+        { defaultLocale: "pl", origin: "https://vitnode.pl" },
+      ],
+      locales: ["en", "pl"],
+      routePaths: {
+        pl: { "/news/:id": "/guides/:id", "/guides/:id": "/news/:id" },
+      },
     });
 
     expect(
       localeAlternateLinks({
-        alternates: {
-          en: "/articles/hello-world",
-          pl: "/pl/artykuly/witaj-swiecie",
-        },
+        alternates: { en: "/guides/1", pl: "/guides/1" },
         locale: "pl",
-        localeRouting: prefixed,
-        webOrigin: "https://site.example",
-      }),
-    ).toEqual(fromInternal);
-    expect(
-      localeAlternateLinks({
-        alternates: {
-          en: "/articles/hello-world",
-          pl: "/artykuly/witaj-swiecie",
-        },
-        locale: "pl",
-        localeRouting: onDomains,
-      }).find(link => link.hrefLang === "pl")?.href,
-    ).toBe("https://vitnode.pl/artykuly/witaj-swiecie");
+        localeRouting: swapped,
+      }).filter(
+        link => link.rel === "alternate" && link.hrefLang !== "x-default",
+      ),
+    ).toEqual([
+      {
+        href: "https://vitnode.com/guides/1",
+        hrefLang: "en",
+        rel: "alternate",
+      },
+      { href: "https://vitnode.pl/news/1", hrefLang: "pl", rel: "alternate" },
+    ]);
   });
 
   it("uses each locale's own domain when one is configured", () => {

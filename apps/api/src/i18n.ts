@@ -20,6 +20,7 @@ export const i18n = {
   messages: {},
   routePaths: {
     pl: {
+      "/blog/:slug": "/wpisy/:slug",
       "/discover": "/odkrywaj",
       "/search": "/szukaj",
       "/users/:nameCode": "/uzytkownicy/:nameCode",

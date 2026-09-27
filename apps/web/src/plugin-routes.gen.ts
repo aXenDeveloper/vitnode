@@ -18,17 +18,22 @@
 
 import type { PluginRouteDeclarationSource } from '@vitnode/core/routing'
 
-import { routes as pluginRoutes0 } from '@vitnode/core/routes'
-import { routes as pluginRoutes1 } from '@vitnode/example/routes'
+import { routes as pluginRoutes0 } from '@vitnode/blog/routes'
+import { routes as pluginRoutes1 } from '@vitnode/core/routes'
+import { routes as pluginRoutes2 } from '@vitnode/example/routes'
 
 
 export const pluginRouteSources = [
   {
-    pluginId: '@vitnode/core',
+    pluginId: '@vitnode/blog',
     routes: pluginRoutes0,
   },
   {
-    pluginId: '@vitnode/example',
+    pluginId: '@vitnode/core',
     routes: pluginRoutes1,
+  },
+  {
+    pluginId: '@vitnode/example',
+    routes: pluginRoutes2,
   },
 ] as const satisfies readonly PluginRouteDeclarationSource[]

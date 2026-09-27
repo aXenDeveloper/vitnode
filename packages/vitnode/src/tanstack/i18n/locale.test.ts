@@ -173,9 +173,7 @@ describe("createLocaleRewrite on language domains", () => {
     configure({ domains: DOMAINS });
 
     const serverHost = requestHostOf(
-      new Request("http://127.0.0.1:3000/artykuly/42", {
-        headers: { "x-forwarded-host": "vitnode.pl" },
-      }),
+      new Request("https://vitnode.pl/artykuly/42"),
     );
     const browserHost = browserHostOf({ host: "vitnode.pl" });
 
@@ -184,6 +182,28 @@ describe("createLocaleRewrite on language domains", () => {
 
     expect(articleHref(server, "7")).toBe(articleHref(browser, "7"));
     expect(articleHref(server, "7")).toBe("/artykuly/7");
+  });
+});
+
+describe("conflicting host headers", () => {
+  it("renders what the browser will hydrate when a client forges X-Forwarded-Host", async () => {
+    configure({ domains: DOMAINS });
+
+    const serverHost = requestHostOf(
+      new Request("https://vitnode.com/articles/42", {
+        headers: { "x-forwarded-host": "vitnode.pl" },
+      }),
+    );
+    const browserHost = browserHostOf({ host: "vitnode.com" });
+
+    const server = await routerAt("/articles/42", () => serverHost);
+    const browser = await routerAt("/articles/42", () => browserHost);
+
+    expect(resolveLocale("/articles/42", { readHost: () => serverHost })).toBe(
+      "en",
+    );
+    expect(articleHref(server, "7")).toBe(articleHref(browser, "7"));
+    expect(articleHref(server, "7")).toBe("/articles/7");
   });
 });
 

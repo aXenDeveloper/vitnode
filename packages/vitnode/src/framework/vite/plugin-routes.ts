@@ -20,6 +20,7 @@ import type { ResolvedContentRegistryModule } from "../content-registry";
 import type { PackageMessagesSource } from "../package-messages";
 import type {
   CompiledPluginRoutes,
+  ContentUrlSource,
   HostRoutePath,
   LocaleRoutePathsConfig,
   PluginRouteCompilerSource,
@@ -35,6 +36,7 @@ import {
 } from "../package-messages";
 import {
   compilePluginRoutes,
+  contentTypesFromContentModule,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
   i18nFromLoadedConfig,
@@ -60,6 +62,8 @@ const BLOCKS_SUBPATH = "blocks";
 const CORE_BLOCKS_SUBPATH = "widgets/built-in";
 
 const API_CONFIG_SUBPATH = "config.api";
+
+const CONTENT_TYPES_SUBPATH = "content";
 
 const ERROR_PREFIX = "[VitNode plugin routes]";
 
@@ -194,6 +198,44 @@ const assertNoLegacyRouteManifest = (
     `${ERROR_PREFIX} Plugin "${pluginId}" exports "${legacy}" but no "${pluginId}/${ROUTES_SUBPATH}". Plugin routes are now a nested tree in the plugin's own \`src/routes.ts\`: export \`routes = definePluginRoutes([...])\` built from \`page()\`, \`layout()\` and \`index()\`, with each module named by \`component: lazy(() => import("./pages/..."))\` instead of an \`entry\` string. See https://vitnode.com/docs/dev/routing.`,
   );
 };
+
+const importModuleFile = async (file: string): Promise<unknown> =>
+  (await import(versionedModuleUrl(file, statSync(file)))) as unknown;
+
+export interface PluginContentModuleFile {
+  file: string;
+  pluginId: string;
+  specifier: string;
+}
+
+export const resolvePluginContentModules = (
+  pluginIds: readonly string[],
+  resolvePackageFile: (specifier: string) => null | string,
+): PluginContentModuleFile[] =>
+  pluginIds.flatMap(pluginId => {
+    const specifier = `${pluginId}/${CONTENT_TYPES_SUBPATH}`;
+    const file = resolvePackageFile(specifier);
+
+    return file === null ? [] : [{ file, pluginId, specifier }];
+  });
+
+export const loadPluginContentUrls = async (
+  modules: readonly PluginContentModuleFile[],
+  importFile: (file: string) => Promise<unknown> = importModuleFile,
+): Promise<ContentUrlSource[]> =>
+  Promise.all(
+    modules.map(
+      async ({ file, pluginId, specifier }): Promise<ContentUrlSource> => ({
+        contentTypes: contentTypesFromContentModule(
+          await importFile(file),
+          pluginId,
+          specifier,
+        ),
+        pluginId,
+        specifier,
+      }),
+    ),
+  );
 
 /** Where an app's own route files are, and which of them are not routes. */
 interface HostRoutesConfig {
@@ -428,6 +470,10 @@ const discover = async (
       readPluginRoutes(pluginId, resolvePackageFile),
     ),
   );
+  const contentModules = resolvePluginContentModules(
+    pluginIds,
+    resolvePackageFile,
+  );
   const adminNav = readOptionalPluginModules<ResolvedAdminNavModule>(
     pluginIds,
     ADMIN_NAV_SUBPATH,
@@ -474,11 +520,15 @@ const discover = async (
     ...apiRegistry.watch,
     ...coreBlocks.watch,
     ...pluginBlocks.watch,
+    ...contentModules.map(({ file }) => file),
   ];
 
   onLoaded?.(watch);
 
+  const contentUrls = await loadPluginContentUrls(contentModules);
+
   const compiled = compilePluginRoutes({
+    contentUrls,
     hostRoutes: readHostRoutes(
       appRoot,
       hostRoutesConfigFor(appRoot, options.hostRoutesDir),

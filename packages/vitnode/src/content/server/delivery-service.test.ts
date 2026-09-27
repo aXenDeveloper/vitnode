@@ -468,6 +468,7 @@ describe("findById", () => {
 
     // `/pl/articles/hello` would be a self-declared canonical that answers 404.
     expect(metadata).toMatchObject({
+      canonicalInternalPath: "/articles/hello",
       canonicalPath: "/articles/hello",
       isFallback: true,
       locale: "en",

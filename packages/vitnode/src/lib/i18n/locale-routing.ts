@@ -528,14 +528,52 @@ export const localeRoutingFromConfig = (
     "defaultLocale" | "domains" | "localePrefix" | "locales" | "routePaths"
   > & { locales: LocaleConfig[] },
   options: { ignoredPaths?: readonly string[] } = {},
-): LocaleRouting =>
-  createLocaleRouting({
+): LocaleRouting => {
+  const disabled = new Set(
+    i18n.locales
+      .filter(locale => locale.enabled === false)
+      .map(locale => locale.code),
+  );
+
+  return createLocaleRouting({
     defaultLocale: i18n.defaultLocale,
-    domains: i18n.domains,
+    domains: withoutDisabledDomainLocales(i18n.domains, disabled),
     ignoredPaths: options.ignoredPaths,
     locales: i18n.locales
-      .filter(locale => locale.enabled !== false)
+      .filter(locale => !disabled.has(locale.code))
       .map(locale => locale.code),
     localePrefix: i18n.localePrefix,
-    routePaths: i18n.routePaths,
+    routePaths: withoutDisabledRoutePaths(i18n.routePaths, disabled),
   });
+};
+
+const withoutDisabledDomainLocales = (
+  domains: readonly LocaleDomainConfig[] | undefined,
+  disabled: ReadonlySet<string>,
+): LocaleDomainConfig[] | undefined =>
+  domains?.flatMap(domain => {
+    const served = (domain.locales ?? [domain.defaultLocale]).filter(
+      locale => !disabled.has(locale),
+    );
+    const [first] = served;
+    if (first === undefined) return [];
+
+    return [
+      {
+        ...domain,
+        defaultLocale: disabled.has(domain.defaultLocale)
+          ? first
+          : domain.defaultLocale,
+        locales: served,
+      },
+    ];
+  });
+
+const withoutDisabledRoutePaths = (
+  routePaths: LocaleRoutePaths | undefined,
+  disabled: ReadonlySet<string>,
+): LocaleRoutePaths | undefined =>
+  routePaths &&
+  Object.fromEntries(
+    Object.entries(routePaths).filter(([locale]) => !disabled.has(locale)),
+  );

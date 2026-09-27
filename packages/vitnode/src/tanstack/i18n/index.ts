@@ -1,4 +1,3 @@
-export type { RequestHostSource } from "./host";
 export { browserHostOf, requestHostOf } from "./host";
 export type { LocaleHostOptions, LocaleHostReader } from "./locale";
 export {

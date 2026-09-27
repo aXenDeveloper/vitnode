@@ -66,6 +66,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "react-resizable-panels",
   "react-scan",
   "recharts",
+  "sanitize-html",
   "sonner",
   "use-debounce",
   "use-intl",

@@ -63,6 +63,7 @@ export const buildContentDeliveryRoutes = <
   };
 
   const zodAlternate = z.object({
+    internalPath: z.string(),
     locale: z.string(),
     origin: z.string().optional(),
     path: z.string(),
@@ -75,6 +76,7 @@ export const buildContentDeliveryRoutes = <
 
   const zodMetadata = z.object({
     alternates: z.array(zodAlternate),
+    canonicalInternalPath: z.string().nullable(),
     canonicalPath: z.string().nullable(),
     canonicalUrl: z.string().nullable().optional(),
     hreflang: z.object({

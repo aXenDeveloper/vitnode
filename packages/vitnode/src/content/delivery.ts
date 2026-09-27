@@ -538,6 +538,7 @@ export const contentDeliveryUrl = ({
 
 /** One published translation's URL, as `alternates` and `hreflang` report it. */
 export interface ContentDeliveryAlternate {
+  internalPath: string;
   /** The canonical `core_languages.code`. */
   locale: string;
   origin?: string;

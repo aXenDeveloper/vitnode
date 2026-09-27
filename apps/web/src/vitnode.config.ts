@@ -26,6 +26,7 @@ export const vitNodeConfig = buildConfig({
     ],
     routePaths: {
       pl: {
+        '/blog/:slug': '/wpisy/:slug',
         '/discover': '/odkrywaj',
         '/search': '/szukaj',
         '/users/:nameCode': '/uzytkownicy/:nameCode',

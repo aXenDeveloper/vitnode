@@ -69,10 +69,10 @@ export const localeAlternateLinks = (
   const webOrigin = () => options.webOrigin ?? CONFIG.web;
 
   const hrefs = new Map<string, string>();
-  for (const [locale, pathname] of alternatesOf(options, localeRouting)) {
-    const { internalPathname } = localeRouting.resolvePublicPathname(pathname, {
-      host: localeRouting.domainForLocale(locale)?.host,
-    });
+  for (const [locale, internalPathname] of alternatesOf(
+    options,
+    localeRouting,
+  )) {
     const target = localeRouting.canonicalUrlFor(internalPathname, locale);
     const { origin } = target;
     const href = absoluteHref(

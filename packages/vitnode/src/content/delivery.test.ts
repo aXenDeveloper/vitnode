@@ -947,8 +947,16 @@ describe("robots projection", () => {
 
 describe("contentDeliveryHreflang", () => {
   const alternates = [
-    { locale: "en", path: "/en/articles/my-article" },
-    { locale: "pl", path: "/pl/articles/moj-artykul" },
+    {
+      internalPath: "/articles/my-article",
+      locale: "en",
+      path: "/en/articles/my-article",
+    },
+    {
+      internalPath: "/articles/moj-artykul",
+      locale: "pl",
+      path: "/pl/articles/moj-artykul",
+    },
   ];
 
   it("maps alternates to a language map", () => {
@@ -977,11 +985,13 @@ describe("contentDeliveryHreflang", () => {
       contentDeliveryHreflang({
         alternates: [
           {
+            internalPath: "/blog/hello-world",
             locale: "en",
             origin: "https://vitnode.com",
             path: "/blog/hello-world",
           },
           {
+            internalPath: "/blog/witaj-swiecie",
             locale: "pl",
             origin: "https://vitnode.pl",
             path: "/wpisy/witaj-swiecie",

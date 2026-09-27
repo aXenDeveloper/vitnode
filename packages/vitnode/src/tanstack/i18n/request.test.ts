@@ -170,16 +170,21 @@ describe("handleLocaleRequest on language domains", () => {
     expect(plan.redirect?.headers.get("set-cookie")).toBeNull();
   });
 
-  it("reads the public host from x-forwarded-host", () => {
-    const plan = handleLocaleRequest(
-      request("http://127.0.0.1:3000/articles/42", {
-        host: "127.0.0.1:3000",
-        "x-forwarded-host": "vitnode.pl",
-      }),
-      onDomains,
-    );
+  it("never lets a forged X-Forwarded-Host pick another domain's language", () => {
+    const forged = { "x-forwarded-host": "vitnode.pl" };
 
-    expect(plan.redirect?.headers.get("location")).toBe("/artykuly/42");
+    expect(
+      handleLocaleRequest(
+        request("https://vitnode.com/articles/42", forged),
+        onDomains,
+      ),
+    ).toEqual({});
+    expect(
+      handleLocaleRequest(
+        request("https://vitnode.com/pl/articles/42", forged),
+        onDomains,
+      ).redirect?.headers.get("location"),
+    ).toBe("https://vitnode.pl/artykuly/42");
   });
 
   it("serves the domain's language whatever the cookie says", () => {
@@ -215,13 +220,22 @@ describe("handleLocaleRequest on language domains", () => {
     ).toBeUndefined();
   });
 
-  it("marks a host-dependent redirect as varying by host", () => {
-    const plan = handleLocaleRequest(
-      request("https://vitnode.com/pl/articles/42", { host: "vitnode.com" }),
+  it("answers with the same redirect whatever X-Forwarded-Host says", () => {
+    const plain = handleLocaleRequest(
+      request("https://vitnode.com/pl/articles/42"),
+      onDomains,
+    );
+    const forged = handleLocaleRequest(
+      request("https://vitnode.com/pl/articles/42", {
+        "x-forwarded-host": "evil.example",
+      }),
       onDomains,
     );
 
-    expect(plan.redirect?.headers.get("vary")).toBe("host, x-forwarded-host");
+    expect(forged.redirect?.headers.get("location")).toBe(
+      plain.redirect?.headers.get("location"),
+    );
+    expect(forged.redirect?.headers.get("vary")).toBeNull();
   });
 
   it.each([

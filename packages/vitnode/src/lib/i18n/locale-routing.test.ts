@@ -337,6 +337,62 @@ describe("localeRoutingFromConfig", () => {
     expect(extractLocaleFromPath("/pl/discover")).toBeUndefined();
   });
 
+  it("drops a switched-off locale from domains and route paths instead of failing", () => {
+    const routing = localeRoutingFromConfig({
+      defaultLocale: "en",
+      domains: [
+        {
+          defaultLocale: "de",
+          locales: ["de", "en"],
+          origin: "https://vitnode.com",
+        },
+        { defaultLocale: "pl", origin: "https://vitnode.pl" },
+      ],
+      locales: [
+        { code: "en", name: "English" },
+        { code: "de", enabled: false, name: "Deutsch" },
+        { code: "pl", enabled: false, name: "Polski" },
+      ],
+      routePaths: { pl: { "/discover": "/odkrywaj" } },
+    });
+
+    expect(routing.domains).toEqual([
+      {
+        defaultLocale: "en",
+        host: "vitnode.com",
+        locales: ["en"],
+        origin: "https://vitnode.com",
+      },
+    ]);
+    expect(routing.routePaths.entries).toEqual([]);
+    expect(routing.resolveLocale("/discover", { host: "vitnode.pl" })).toBe(
+      "en",
+    );
+  });
+
+  it("still reports a locale that is not configured at all", () => {
+    expect(() =>
+      localeRoutingFromConfig({
+        defaultLocale: "en",
+        locales: [{ code: "en", name: "English" }],
+        routePaths: { de: { "/discover": "/entdecken" } },
+      }),
+    ).toThrow(expect.objectContaining({ code: "unknown-route-locale" }));
+    expect(() =>
+      localeRoutingFromConfig({
+        defaultLocale: "en",
+        domains: [
+          {
+            defaultLocale: "en",
+            locales: ["en", "de"],
+            origin: "https://vitnode.com",
+          },
+        ],
+        locales: [{ code: "en", name: "English" }],
+      }),
+    ).toThrow(expect.objectContaining({ code: "unknown-domain-locale" }));
+  });
+
   it("ignores /admin and /api unless told otherwise", () => {
     const { shouldIgnoreLocalePath } = localeRoutingFromConfig({
       defaultLocale: "en",

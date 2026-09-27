@@ -3,6 +3,7 @@ import { buildPlugin } from "@vitnode/core/lib/plugin";
 import { CONFIG_PLUGIN } from "@/const";
 
 import messages from "./locales";
+import { routes } from "./routes";
 
 export const blogPlugin = () =>
   buildPlugin({
@@ -11,4 +12,5 @@ export const blogPlugin = () =>
       en: "@vitnode/blog/locales/en.json",
     },
     messages,
+    routes,
   });
