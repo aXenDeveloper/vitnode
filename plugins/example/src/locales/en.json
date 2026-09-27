@@ -16,6 +16,27 @@
         "editor": {
           "title": "Editor showcase",
           "desc": "Stored editor HTML rendered with EditorContent - one of everything, so a change to the tiptap extensions or to the .tiptap styles shows up here first."
+        },
+        "form": {
+          "title": "Editor in a form",
+          "desc": "AutoFormEditor inside an AutoForm. Type / for blocks, use + for panels and tables, and press Ctrl or Cmd + Enter to save.",
+          "summary": {
+            "label": "Summary"
+          },
+          "description": {
+            "label": "Description",
+            "desc": "Steps, logs and acceptance criteria. Nothing is stored - this form only shows what the editor sends.",
+            "required": "Describe what happened"
+          },
+          "comment": {
+            "label": "Comment",
+            "placeholder": "Leave a note for the assignee…"
+          },
+          "submit": "Save issue",
+          "success": {
+            "title": "Issue saved",
+            "desc": "{words, plural, one {# word} other {# words}} in the description."
+          }
         }
       }
     },

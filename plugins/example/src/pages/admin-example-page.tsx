@@ -3,6 +3,7 @@ import { EditorContent } from "@vitnode/core/components/ui/editor-content";
 import { definePluginRoute } from "@vitnode/core/routing";
 import { useTranslations } from "use-intl";
 
+import { AdminExampleEditorForm } from "./admin-example-editor-form";
 import { editorShowcaseHtml } from "./editor-showcase";
 
 const AdminExamplePage = () => {
@@ -40,6 +41,8 @@ const AdminExamplePage = () => {
           <EditorContent content={editorShowcaseHtml(emojis?.[0]?.emojis[0])} />
         </div>
       </section>
+
+      <AdminExampleEditorForm />
     </div>
   );
 };

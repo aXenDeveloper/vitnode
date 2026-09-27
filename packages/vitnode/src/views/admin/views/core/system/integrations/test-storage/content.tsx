@@ -78,8 +78,7 @@ export const ContentTestStorage = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Alert>
-        <HardDriveIcon />
+      <Alert icon={<HardDriveIcon />} variant="info">
         <AlertTitle>{t("info.title")}</AlertTitle>
         <AlertDescription>{t("info.desc")}</AlertDescription>
       </Alert>

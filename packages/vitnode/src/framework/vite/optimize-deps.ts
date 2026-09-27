@@ -46,6 +46,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "@tiptap/extension-audio",
   "@tiptap/extension-drag-handle-react",
   "@tiptap/extension-emoji",
+  "@tiptap/extension-list",
   "@tiptap/extension-table",
   "@tiptap/extension-text-align",
   "@tiptap/extension-text-style",

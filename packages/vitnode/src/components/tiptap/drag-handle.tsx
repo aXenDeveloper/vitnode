@@ -11,7 +11,7 @@ export const TipTapDragHandle = ({ editor }: { editor: Editor }) => {
     <DragHandle className="z-10" editor={editor} nested>
       <span
         aria-label={t("drag_handle")}
-        className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-6 cursor-grab items-center justify-center rounded-sm active:cursor-grabbing"
+        className="text-muted-foreground hover:bg-accent hover:text-foreground me-1 flex size-6 cursor-grab items-center justify-center rounded-sm active:cursor-grabbing"
         role="button"
       >
         <GripVerticalIcon className="size-4" />

@@ -67,6 +67,73 @@ const [content, setContent] = useState("<p>Hello World! 🌎️</p>");
   </Tab>
 </Tabs>
 
+## Writing in the editor
+
+The toolbar keeps the everyday tools one click away and tucks the rest into
+menus, so it fits on a single row even in a narrow form:
+
+- **Text style** - paragraph or heading 1–4.
+- **Bold** and **italic**, plus a **…** menu with underline, strikethrough,
+  inline code, text alignment and _Clear formatting_.
+- **Text color**, **lists** (bulleted, numbered and task lists), **link**,
+  **emoji**, **table** and **code block**.
+- **+ Insert** - quotes, code blocks, tables, dividers, emoji, audio and panels.
+
+{/* Image prompt: A clean light-mode screenshot of a rich text editor inside an admin form. A single-row toolbar reads "Paragraph ▾ | B I … A | lists | link emoji table code | + ▾", and below it an open slash menu lists "Info panel", "Success panel" and "Error panel" with small icons and one-line hints. Neutral grays, blue accent. */}
+
+### Slash commands
+
+Type <kbd>/</kbd> anywhere to insert a block without reaching for the mouse.
+Keep typing to filter (`/tab` finds _Table_), move with the arrow keys and
+press <kbd>Enter</kbd>. Your fingers never leave the keyboard - your coffee
+stays safe.
+
+The menu searches both the translated block names and English keywords, so
+`/table` works in every language.
+
+### Panels
+
+Panels are callouts for things readers should not miss, styled like the
+callouts in these docs:
+
+| Panel   | Use it for                   |
+| ------- | ---------------------------- |
+| Info    | Useful context               |
+| Warning | Something to double-check    |
+| Error   | A blocker or a real risk     |
+| Success | What went right              |
+
+A panel with one paragraph shows it as a muted description. Add a second
+paragraph and the first one becomes the title - no extra button, just press
+<kbd>Enter</kbd>.
+
+Pick one from **+ Insert** or with `/panel`. Choosing the same panel again
+removes it; choosing another kind switches the color. Panels are stored as
+plain HTML (`<div data-panel="info">`), so `EditorContent` renders them with
+no extra setup.
+
+### Task lists
+
+Task lists store each item's checkbox state, so a list of acceptance criteria
+stays ticked after you save. Start one from the toolbar, from `/task`, or by
+typing `[ ]` at the start of a line.
+
+### Keyboard shortcuts
+
+| Action           | Shortcut                                             |
+| ---------------- | ---------------------------------------------------- |
+| Submit the form  | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>      |
+| Bold / italic    | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>B</kbd> / <kbd>I</kbd> |
+| Underline        | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>U</kbd>          |
+| Bulleted list    | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>8</kbd> |
+| Numbered list    | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>7</kbd> |
+| Task list        | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>9</kbd> |
+| Undo / redo      | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Z</kbd> / <kbd>Shift</kbd> + <kbd>Z</kbd> |
+
+<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> submits the form the editor
+sits in, exactly like pressing the submit button. Outside a form it does
+nothing.
+
 ## Multi-language
 
 Set the `multiLang` prop to edit the content in every enabled language. A

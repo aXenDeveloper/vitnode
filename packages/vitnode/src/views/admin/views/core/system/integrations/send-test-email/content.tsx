@@ -16,8 +16,7 @@ export const ContentSendTestEmail = ({ onSend }: { onSend: SendTestEmail }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Alert>
-        <MailCheckIcon />
+      <Alert icon={<MailCheckIcon />} variant="info">
         <AlertTitle>{t("info.title")}</AlertTitle>
         <AlertDescription>{t("info.desc")}</AlertDescription>
       </Alert>

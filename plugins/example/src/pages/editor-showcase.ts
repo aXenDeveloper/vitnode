@@ -19,9 +19,15 @@ export const editorShowcaseHtml = (emoji?: EditorCustomEmoji): string => `
 <h3>Lists</h3>
 <ul class="list-disc"><li><p>Bullet item</p></li><li><p>Another one</p></li></ul>
 <ol class="list-decimal"><li><p>Ordered item</p></li><li><p>Second</p></li></ol>
+<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>Done task</p></li><li data-type="taskItem" data-checked="false"><p>Open task</p></li></ul>
 <h3>Blockquote and code</h3>
 <blockquote><p>A blockquote keeps its own border, spacing and muted colour.</p></blockquote>
 <pre><code>&lt;EditorContent content={html} /&gt;</code></pre>
+<h3>Panels</h3>
+<div data-panel="info" class="tiptap-panel"><p>Panels have an optional title</p><p>The first paragraph becomes the title as soon as the panel has a second one.</p></div>
+<div data-panel="warning" class="tiptap-panel"><p>Plugins need a workspace</p><p>Run the generator from a repository with <code>turbo.json</code>; a plain single-folder app has nowhere for <code>plugins/*</code>.</p></div>
+<div data-panel="error" class="tiptap-panel"><p>An error panel flags a blocker or a real risk.</p></div>
+<div data-panel="success" class="tiptap-panel"><p>A success panel calls out what went right.</p></div>
 <h3>Table</h3>
 <div class="tableWrapper"><table><tbody>
 <tr><th colspan="1" rowspan="1"><p>Extension</p></th><th colspan="1" rowspan="1"><p>Shows up as</p></th></tr>

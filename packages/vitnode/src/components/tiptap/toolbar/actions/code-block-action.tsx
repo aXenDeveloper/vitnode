@@ -1,5 +1,5 @@
 import { useEditorState } from "@tiptap/react";
-import { UnderlineIcon } from "lucide-react";
+import { CodeSquareIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Toggle } from "@/components/ui/toggle";
@@ -8,36 +8,32 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { useToolbarEditor } from "../use-toolbar-editor";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
-export const UnderlineAction = () => {
+export const CodeBlockAction = () => {
   const t = useTranslations("core.global.editor");
   const { editor } = useToolbarEditor();
-  const { isUnderline } = useEditorState({
+  const isCodeBlock = useEditorState({
     editor,
-    selector: ctx => {
-      return {
-        isUnderline: ctx.editor.isActive("underline"),
-      };
-    },
+    selector: ctx => ctx.editor.isActive("codeBlock"),
   });
 
   return (
     <TooltipWithContent
       text={
         <>
-          {t("underline")}
-          <TooltipShortcut>+U</TooltipShortcut>
+          {t("code_block")}
+          <TooltipShortcut>+Alt+C</TooltipShortcut>
         </>
       }
     >
       <div>
         <Toggle
-          aria-label={t("underline")}
+          aria-label={t("code_block")}
           className="size-8"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          pressed={isUnderline}
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          pressed={isCodeBlock}
           size="sm"
         >
-          <UnderlineIcon />
+          <CodeSquareIcon />
         </Toggle>
       </div>
     </TooltipWithContent>
