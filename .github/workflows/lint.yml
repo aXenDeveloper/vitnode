@@ -1,4 +1,4 @@
-name: Build, Lint & Test
+name: Lint
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
       - reopened
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -29,6 +29,7 @@ jobs:
         with:
           registry-url: "https://registry.npmjs.org/"
           node-version: 24
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -39,14 +40,5 @@ jobs:
       - name: Build Plugins
         run: pnpm build:plugins
 
-      - name: Run build
-        run: pnpm build
-
-      - name: Check formatting
+      - name: Run lint
         run: pnpm lint
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Run type tests
-        run: pnpm test:types
