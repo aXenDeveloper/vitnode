@@ -8,6 +8,7 @@ import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 import type {
   NavigationKind,
+  NavigationLocation,
   NavigationPreset,
   NavigationText,
 } from "@/lib/navigation";
@@ -60,6 +61,7 @@ export interface AdminNavigationFormValues {
 
 export interface AdminNavigationSaveArgs {
   id?: number;
+  location?: NavigationLocation;
   parentId?: null | number;
   values: AdminNavigationFormValues;
 }
@@ -68,6 +70,7 @@ export interface AdminNavigationFormProps {
   data?: AdminNavigationItem;
   items: AdminNavigationItem[];
   kind?: NavigationKind;
+  location?: NavigationLocation;
   onSave: (
     args: AdminNavigationSaveArgs,
   ) => Promise<AdminMutationResult<unknown>>;
@@ -142,6 +145,7 @@ export const NavigationPresetSummary = ({
 };
 
 interface PreviewSource {
+  isBottomBar: boolean;
   items: AdminNavigationItem[];
   kind: NavigationKind;
   preset?: NavigationPreset;
@@ -149,6 +153,7 @@ interface PreviewSource {
 }
 
 const NavigationFormPreview = ({
+  isBottomBar,
   items,
   kind,
   preset,
@@ -201,7 +206,14 @@ const NavigationFormPreview = ({
         {t("preview")}
       </figcaption>
 
-      {parent ? (
+      {isBottomBar ? (
+        <span className="bg-background flex h-14 w-20 max-w-full min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 shadow-xs">
+          <EmojiIcon className="text-primary size-5" value={icon} />
+          <span className="text-primary w-full truncate text-center text-xs font-medium">
+            {label}
+          </span>
+        </span>
+      ) : parent ? (
         <div className="flex flex-col gap-1.5">
           <span className="flex items-center gap-1.5 text-sm font-medium">
             <EmojiIcon
@@ -265,6 +277,7 @@ export const AdminNavigationFormContent = ({
   data,
   items,
   kind: kindProp,
+  location: locationProp,
   onSave,
   onSaved,
   parentId: parentIdProp = null,
@@ -280,6 +293,9 @@ export const AdminNavigationFormContent = ({
   const { setIsDirty, setOpen } = useDialog();
 
   const isEdit = data !== undefined;
+  const location: NavigationLocation =
+    data?.location ?? locationProp ?? "header";
+  const isBottomBar = location === "bottom_bar";
   const kind: NavigationKind = data?.kind ?? kindProp ?? "custom";
   const preset =
     chosenPreset ??
@@ -309,9 +325,9 @@ export const AdminNavigationFormContent = ({
     .filter(item => item.parentId === null && item.id !== data?.id)
     .sort((a, b) => a.position - b.position || a.id - b.id);
   const isChild =
-    surface === "sheet"
-      ? true
-      : parentIdProp !== null && parentIdProp !== undefined;
+    !isBottomBar &&
+    (surface === "sheet" ||
+      (parentIdProp !== null && parentIdProp !== undefined));
 
   const formSchema = z.object({
     href: z
@@ -368,11 +384,15 @@ export const AdminNavigationFormContent = ({
       }
     }
 
-    const nextParentId =
-      surface === "sheet" ? parentFromKey(parentValue) : parentIdProp;
+    const nextParentId = isBottomBar
+      ? null
+      : surface === "sheet"
+        ? parentFromKey(parentValue)
+        : parentIdProp;
 
     const result = await onSave({
       id: data?.id,
+      location,
       parentId:
         isEdit && nextParentId === data.parentId ? undefined : nextParentId,
       values: {
@@ -395,7 +415,7 @@ export const AdminNavigationFormContent = ({
       toast.error(tErrors("title"), {
         description:
           result.error.status === 409
-            ? t("errors.presetTaken")
+            ? t(isBottomBar ? "errors.bottomBarConflict" : "errors.presetTaken")
             : tErrors("internal_server_error"),
       });
 
@@ -415,9 +435,14 @@ export const AdminNavigationFormContent = ({
       }).title || values.href;
 
     toast.success(t(isEdit ? "edit.success" : "create.success"), {
-      description: t(isEdit ? "edit.successDesc" : "create.successDesc", {
-        name,
-      }),
+      description: t(
+        isEdit
+          ? "edit.successDesc"
+          : isBottomBar
+            ? "create.successDescBottomBar"
+            : "create.successDesc",
+        { name },
+      ),
     });
     setIsDirty?.(false);
     setOpen?.(false);
@@ -486,7 +511,7 @@ export const AdminNavigationFormContent = ({
       ),
       id: "isOpenInNewTab",
     },
-    ...(surface === "sheet"
+    ...(surface === "sheet" && !isBottomBar
       ? [
           {
             component: (props: ItemAutoFormComponentProps) => (
@@ -535,6 +560,7 @@ export const AdminNavigationFormContent = ({
           <>
             <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
               <NavigationFormPreview
+                isBottomBar={isBottomBar}
                 items={items}
                 kind={kind}
                 preset={preset}
@@ -558,12 +584,14 @@ export const AdminNavigationFormContent = ({
                 {rendered.description}
               </SheetSection>
 
-              <SheetSection
-                id="navigation-form-position"
-                title={t("form.sections.position")}
-              >
-                {rendered.parentId}
-              </SheetSection>
+              {isBottomBar ? null : (
+                <SheetSection
+                  id="navigation-form-position"
+                  title={t("form.sections.position")}
+                >
+                  {rendered.parentId}
+                </SheetSection>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t p-4">

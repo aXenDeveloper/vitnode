@@ -1,0 +1,109 @@
+---
+title: Mobile Navigation
+description: How VitNode's menus behave on phones - a floating bottom bar of up to three links you pick in the AdminCP plus a Menu tab for the rest, and a side drawer behind the user button for the account.
+icon: Smartphone
+---
+
+import { Callout } from 'fumadocs-ui/components/callout'
+
+On a phone, the desktop header's navigation has nowhere to go. So below the
+`sm` breakpoint (640px) VitNode splits it in two: your most-used links move to a
+**floating bottom bar** pinned to the bottom of the screen - the kind your thumb
+already knows from native apps - and everything else lives in a **side drawer**
+behind the user button at the top.
+
+Both are managed in the AdminCP, no code or config required.
+
+{/* Image prompt: A phone-sized light-mode screenshot of a community site. At the bottom floats a white, fully rounded bar with a soft shadow and four equal tabs - "Home", "Discover", "Search" and a hamburger "Menu" tab, with icons above small labels, the active "Search" tab tinted blue on a light gray pill. Top right in the header sits a small round user avatar. Neutral grays, blue accent, 390x844. */}
+
+## Two menus, one screen
+
+Open **AdminCP → System → Navigation**. It has two tabs, named after where the
+menu sits rather than the device, because a tablet is happy with the header:
+
+| Tab            | Where visitors see it                                                   | Holds                                              |
+| :------------- | :---------------------------------------------------------------------- | :------------------------------------------------- |
+| **Header**     | In the header on tablets and desktops, and in the side drawer on phones | Any number of items, with dropdowns one level deep |
+| **Bottom bar** | Pinned to the bottom of the screen, on phones only                      | Up to three links, no dropdowns, plus a Menu tab   |
+
+Each tab works the same way: **Add link** opens the same picker (a page one of
+your plugins provides, or a custom link), rows drag to reorder, and the row menu
+has Edit, Move up, Move down and Remove. A page can sit in both menus at once -
+Search in the header _and_ in the bottom bar is a perfectly normal choice.
+
+Once the bottom bar holds three links, **Add link** switches off until you remove
+one.
+
+{/* Image prompt: A light-mode AdminCP screenshot of the Navigation page. Under the title, a segmented tab control reads "Header | Bottom bar" with "Bottom bar" selected and a hint beside it: "Up to three links at the bottom of the screen on phones, plus a Menu tab with the rest of the header menu." Below, one rounded card headed "3 of 3 links" lists Home, Discover and Search as compact rows with drag handles. The "Add link" button top right is disabled. Neutral grays, blue accent, 1440x900. */}
+
+## The bottom bar
+
+Each link is an icon above a short label. The current page is tinted and sits
+on a highlight that slides between tabs. A tab counts as current when the URL is
+its address or anything below it, so `/blog/my-first-post` keeps a Blog tab lit
+(`/` only matches the home page itself).
+
+The last tab is always **Menu**. It opens a drawer from the bottom with the
+rest of the Header menu - everything the bar does not already show, dropdowns
+included. On a page that lives in there, the Menu tab is the one lit. If the bar
+already covers every header link, the Menu tab steps aside.
+
+An empty bottom bar is not drawn at all. That is the default on a fresh
+install, so phones start with just the header and its side drawer until you add
+a link.
+
+<Callout type="info" title="Give every link an icon and a short label">
+  At 320px each of the four tabs gets about 72px, which fits one word like
+  "Discover" or "Settings" - longer labels are cut off with an ellipsis. A link
+  without an icon shows the first letter of its label instead. Titles are per
+  item, so the header can say "Community highlights" while the bottom bar says
+  "Discover".
+</Callout>
+
+## The side drawer
+
+The user button stays at the top of the header, where it always was. On a phone
+it shows the member's avatar (or a person icon for guests), and a tap slides a
+drawer in from the side with:
+
+- the member's name and email, linking to their profile - or **Login** and
+  **Register** buttons for guests,
+- the **full Header menu**, dropdowns included - only while the bottom bar is
+  empty, since otherwise its Menu tab already has it,
+- the account links from the desktop user menu (profile, files, settings,
+  AdminCP for admins),
+- theme and language switches,
+- **Log out**.
+
+Swipe it away, tap outside it, press <kbd>Esc</kbd> or hit the close button.
+Desktop is untouched: the same button still opens the usual dropdown there.
+
+{/* Image prompt: A phone-sized dark-mode screenshot of a side drawer covering the right five-sixths of the screen over a blurred page. At the top "Menu" with a close X, then a rounded card with a round avatar, the name "Ada" and an email, a "Navigation" list with icons and the current item highlighted, an "Account" list (My Profile, My Files, Settings), and a Light / Dark / System segmented control. Neutral grays, blue accent, 390x844. */}
+
+## For developers
+
+- **API.** Both menus live in `core_navigation`; a `location` column says which
+  (`header` or `bottom_bar`). The admin routes under `admin/navigation` take an
+  optional `location` on `/create` and `/reorder` and default to the header, so
+  older clients keep working. The bottom bar refuses a parent (`400`) and a
+  fourth link (`409`).
+- **Public data.** The middleware response carries the bottom bar next to the
+  header menu as a flat `bottomBar` array, cached separately and expired
+  together with it.
+- **Events.** `navigation.reordered` includes `location`. See
+  [Built-in events](/docs/dev/events/built-in-events).
+- **Room at the bottom.** While the bar is on screen, the page gets extra
+  bottom padding so it never covers your footer.
+- **Notches and home indicators.** The bar sits above the iPhone home indicator
+  via `env(safe-area-inset-bottom)`, which needs `viewport-fit=cover` in your
+  viewport meta tag. New apps have it; in an older app, update the viewport
+  entry in `src/routes/__root.tsx`:
+
+```ts title="src/routes/__root.tsx"
+{ content: 'width=device-width, initial-scale=1, viewport-fit=cover', name: 'viewport' },
+```
+
+- **Translations.** The drawer's own words - "Menu", "Navigation", "Account" -
+  live under `core.global.mobile_nav`; the AdminCP tab labels under
+  `admin.navigation.tabs`. See [Languages & Localization](/docs/dev/i18n) to
+  translate them.

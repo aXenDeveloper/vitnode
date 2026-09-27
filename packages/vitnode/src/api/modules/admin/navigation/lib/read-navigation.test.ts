@@ -8,6 +8,7 @@ import type { NavigationRecord } from "./read-navigation";
 import {
   groupNavigationWords,
   navigationTreeOf,
+  toPublicBottomBar,
   toPublicNavigation,
   withNavigationPresets,
 } from "./read-navigation";
@@ -22,6 +23,7 @@ const record = (overrides: Partial<NavigationRecord>): NavigationRecord => ({
   id: 1,
   isOpenInNewTab: false,
   kind: "preset",
+  location: "header",
   parentId: null,
   pluginId: "@vitnode/core",
   position: 0,
@@ -169,5 +171,35 @@ describe("groupNavigationWords", () => {
       title: [{ languageCode: "en", value: "Docs" }],
     });
     expect(grouped.get(2)).toEqual({ description: [], title: [] });
+  });
+});
+
+describe("the bottom bar", () => {
+  const bar = (id: number, overrides: Partial<NavigationRecord> = {}) =>
+    custom(id, { location: "bottom_bar", position: id, ...overrides });
+
+  it("keeps bottom bar items out of the header menu", () => {
+    const header = toPublicNavigation([custom(1), bar(2)], []);
+
+    expect(header.map(item => item.id)).toEqual([1]);
+  });
+
+  it("lists only bottom bar items, flat and in order", () => {
+    const items = toPublicBottomBar([custom(1), bar(2), bar(3)], []);
+
+    expect(items.map(item => item.id)).toEqual([2, 3]);
+    expect(items[0]).not.toHaveProperty("items");
+  });
+
+  it("caps the bottom bar at three links", () => {
+    const items = toPublicBottomBar([bar(1), bar(2), bar(3), bar(4)], []);
+
+    expect(items.map(item => item.id)).toEqual([1, 2, 3]);
+  });
+
+  it("skips a nested row that somehow landed in the bottom bar", () => {
+    const items = toPublicBottomBar([bar(1), bar(2, { parentId: 1 })], []);
+
+    expect(items.map(item => item.id)).toEqual([1]);
   });
 });

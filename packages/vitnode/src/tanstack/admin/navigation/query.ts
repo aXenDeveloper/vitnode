@@ -5,6 +5,7 @@ import React from "react";
 
 import type { AdminNavigationFormProps } from "@/views/admin/views/core/navigation/navigation-form-content";
 import type { NavigationAdminListProps } from "@/views/admin/views/core/navigation/navigation-list-content";
+import type { AdminNavigationOrderInput } from "@/views/admin/views/core/navigation/navigation-mutations";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
@@ -54,7 +55,9 @@ const INVALID_INPUT: AdminMutationResult<never> = {
 
 export const useAdminNavigationMutations = (): {
   onDelete: NavigationAdminListProps["onDelete"];
-  onReorder: NavigationAdminListProps["onReorder"];
+  onReorder: (
+    body: AdminNavigationOrderInput,
+  ) => ReturnType<NavigationAdminListProps["onReorder"]>;
   onSave: AdminNavigationFormProps["onSave"];
 } => {
   const queryClient = useQueryClient();
@@ -74,7 +77,7 @@ export const useAdminNavigationMutations = (): {
     return {
       onDelete: async id => await settle(await deleteAdminNavigation(id)),
       onReorder: async body => await settle(await reorderAdminNavigation(body)),
-      onSave: async ({ id, parentId, values }) => {
+      onSave: async ({ id, location, parentId, values }) => {
         const texts = {
           description: values.description,
           icon: values.icon === "" ? null : values.icon,
@@ -98,6 +101,7 @@ export const useAdminNavigationMutations = (): {
               ...texts,
               href: values.href,
               kind: "custom",
+              location,
             }),
           );
         }
@@ -106,7 +110,12 @@ export const useAdminNavigationMutations = (): {
         if (!preset) return INVALID_INPUT;
 
         return await settle(
-          await createAdminNavigation({ ...texts, ...preset, kind: "preset" }),
+          await createAdminNavigation({
+            ...texts,
+            ...preset,
+            kind: "preset",
+            location,
+          }),
         );
       },
     };

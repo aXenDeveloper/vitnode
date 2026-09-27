@@ -1,8 +1,14 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
-import { loadPublicNavigation } from "@/api/modules/admin/navigation/lib/cache";
-import { zodPublicNavigationNodeSchema } from "@/api/modules/admin/navigation/lib/schema";
+import {
+  loadPublicBottomBar,
+  loadPublicNavigation,
+} from "@/api/modules/admin/navigation/lib/cache";
+import {
+  zodPublicNavigationItemSchema,
+  zodPublicNavigationNodeSchema,
+} from "@/api/modules/admin/navigation/lib/schema";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const routeMiddlewareSchema = z.object({
@@ -24,6 +30,7 @@ export const routeMiddlewareSchema = z.object({
   ),
   isEmail: z.boolean(),
   navigation: z.array(zodPublicNavigationNodeSchema),
+  bottomBar: z.array(zodPublicNavigationItemSchema),
   captcha: z
     .object({
       siteKey: z.string(),
@@ -57,6 +64,7 @@ export const routeMiddleware = buildRoute({
         ai: { models: c.get("ai").models() },
         isEmail: !!c.get("core").email?.adapter,
         navigation: await loadPublicNavigation(c),
+        bottomBar: await loadPublicBottomBar(c),
         sso: sso.map(s => ({ id: s.id, name: s.name, icon: s.icon })),
         captcha: c.get("core").captcha
           ? {

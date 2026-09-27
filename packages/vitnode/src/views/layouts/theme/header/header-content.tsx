@@ -11,6 +11,8 @@ export interface HeaderLayoutContentProps extends Omit<
   "children"
 > {
   logo: React.ReactNode;
+  mobileUser?: React.ReactNode;
+  moreNavigationLabel: string;
   navigation: HeaderNavItem[];
   user?: React.ReactNode;
 }
@@ -18,6 +20,8 @@ export interface HeaderLayoutContentProps extends Omit<
 export const HeaderLayoutContent = ({
   className,
   logo,
+  mobileUser,
+  moreNavigationLabel,
   navigation,
   user,
   ...props
@@ -32,9 +36,25 @@ export const HeaderLayoutContent = ({
     <div className="dark:bg-background/75 bg-card/75 container mx-auto flex h-14 items-center border-b px-4 py-2 backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
       <Link to={HEADER_HREF.home}>{logo}</Link>
 
-      <HeaderNavMenu className="ms-4" navigation={navigation} />
+      <HeaderNavMenu
+        className="ms-4"
+        moreLabel={moreNavigationLabel}
+        navigation={navigation}
+      />
 
-      <div className="ml-auto flex items-center gap-2">{user}</div>
+      <div className="ms-auto flex shrink-0 items-center gap-2">
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            mobileUser !== undefined && "max-sm:hidden",
+          )}
+        >
+          {user}
+        </div>
+        {mobileUser === undefined ? null : (
+          <div className="flex sm:hidden">{mobileUser}</div>
+        )}
+      </div>
     </div>
   </header>
 );

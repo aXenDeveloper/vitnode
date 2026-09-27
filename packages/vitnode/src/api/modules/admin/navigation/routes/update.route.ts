@@ -7,6 +7,11 @@ import { core_navigation } from "@/database/navigation";
 import { isValidNavigationHref } from "@/lib/navigation";
 
 import { expireNavigationCache } from "../lib/cache";
+import {
+  NAVIGATION_LOCATION_ERRORS,
+  navigationLocationOf,
+  navigationPlacementProblem,
+} from "../lib/location";
 import { checkNavigationParent, nextNavigationPosition } from "../lib/position";
 import {
   hasNavigationText,
@@ -77,6 +82,7 @@ export const updateNavigationAdminRoute = buildRoute({
       .select({
         id: core_navigation.id,
         kind: core_navigation.kind,
+        location: core_navigation.location,
         parentId: core_navigation.parentId,
       })
       .from(core_navigation)
@@ -85,6 +91,8 @@ export const updateNavigationAdminRoute = buildRoute({
     if (!item) {
       return c.json({ error: "Navigation item not found" }, 404);
     }
+
+    const location = navigationLocationOf(item.location);
 
     if (body.href !== undefined) {
       if (item.kind !== "custom") {
@@ -127,12 +135,24 @@ export const updateNavigationAdminRoute = buildRoute({
       }
 
       if (body.parentId !== null) {
-        const problem = await checkNavigationParent(c, body.parentId);
-        if (problem === "missing") {
+        const parent = await checkNavigationParent(c, body.parentId);
+        if (parent.problem === "missing") {
           return c.json({ error: NAVIGATION_PARENT_ERRORS.missing }, 404);
         }
-        if (problem === "depth") {
+        if (parent.problem === "depth") {
           return c.json({ error: NAVIGATION_PARENT_ERRORS.depth }, 400);
+        }
+
+        const placementProblem = navigationPlacementProblem({
+          location,
+          parentId: body.parentId,
+          parentLocation: parent.location,
+        });
+        if (placementProblem) {
+          return c.json(
+            { error: NAVIGATION_LOCATION_ERRORS[placementProblem] },
+            400,
+          );
         }
 
         const [child] = await db
@@ -149,7 +169,11 @@ export const updateNavigationAdminRoute = buildRoute({
       }
 
       values.parentId = body.parentId;
-      values.position = await nextNavigationPosition(c, body.parentId);
+      values.position = await nextNavigationPosition(
+        c,
+        body.parentId,
+        location,
+      );
     }
 
     await db

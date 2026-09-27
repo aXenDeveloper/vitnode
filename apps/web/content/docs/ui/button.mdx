@@ -74,6 +74,25 @@ in progress.
 <Button isLoading>Save changes</Button>
 ```
 
+## Disabled with a reason
+
+A greyed-out button with no explanation is a riddle nobody asked for. Pass
+`disabledTooltip` next to `disabled` to tell people _why_ they can't click it.
+
+```tsx
+<Button disabled disabledTooltip="You need the Publish permission">
+  Publish
+</Button>
+```
+
+A natively disabled button swallows hover and focus, so while the tooltip is
+active the button uses `aria-disabled` instead. It stays reachable with the
+keyboard, clicks still do nothing, and screen readers hear the reason as the
+button's description.
+
+The tooltip only shows while `disabled` is `true`. It stays hidden while
+`isLoading` is set, since "please wait" is already the answer.
+
 ## Props
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
@@ -93,6 +112,11 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
     isLoading: {
       description: 'Shows a loading spinner and disables the button.',
       type: 'boolean',
+    },
+    disabledTooltip: {
+      description:
+        'Explains why the button is disabled. Shown as a tooltip on hover and focus while `disabled` is true.',
+      type: 'ReactNode',
     },
     render: {
       description:

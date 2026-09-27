@@ -4,6 +4,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type {
   NavigationKind,
+  NavigationLocation,
   NavigationPreset,
   NavigationText,
   PublicNavigationItem,
@@ -15,10 +16,13 @@ import { CONFIG_PLUGIN } from "@/config";
 import { core_languages_words } from "@/database/languages";
 import { core_navigation } from "@/database/navigation";
 import {
+  NAVIGATION_BOTTOM_BAR_MAX_ITEMS,
   NAVIGATION_KINDS,
   NAVIGATION_TABLE_NAME,
   NAVIGATION_WORDS,
 } from "@/lib/navigation";
+
+import { navigationLocationOf } from "./location";
 
 export interface NavigationRecord {
   createdAt: Date;
@@ -28,6 +32,7 @@ export interface NavigationRecord {
   id: number;
   isOpenInNewTab: boolean;
   kind: NavigationKind;
+  location: NavigationLocation;
   parentId: null | number;
   pluginId: null | string;
   position: number;
@@ -125,6 +130,7 @@ export const readNavigationRecords = async (
     id: row.id,
     isOpenInNewTab: row.isOpenInNewTab,
     kind: isNavigationKind(row.kind) ? row.kind : "custom",
+    location: navigationLocationOf(row.location),
     parentId: row.parentId,
     pluginId: row.pluginId,
     position: row.position,
@@ -206,11 +212,27 @@ const publicItemOf = (
   };
 };
 
+export const toPublicBottomBar = (
+  records: readonly NavigationRecord[],
+  presets: readonly NavigationPreset[],
+): PublicNavigationItem[] =>
+  records
+    .filter(record => record.location === "bottom_bar")
+    .filter(record => record.parentId === null)
+    .flatMap(record => {
+      const item = publicItemOf(record, presets);
+
+      return item ? [item] : [];
+    })
+    .slice(0, NAVIGATION_BOTTOM_BAR_MAX_ITEMS);
+
 export const toPublicNavigation = (
   records: readonly NavigationRecord[],
   presets: readonly NavigationPreset[],
 ): PublicNavigationNode[] => {
-  const { childrenOf, roots } = navigationTreeOf(records);
+  const { childrenOf, roots } = navigationTreeOf(
+    records.filter(record => record.location === "header"),
+  );
 
   return roots.flatMap(root => {
     const items = (childrenOf.get(root.id) ?? []).flatMap(child => {

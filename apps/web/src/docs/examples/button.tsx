@@ -6,6 +6,7 @@ import {
   CircleCheckIcon,
   Eye,
   Home,
+  Lock,
   Star,
   Trash2,
   TriangleAlertIcon,
@@ -56,6 +57,14 @@ export default function ButtonExample() {
         variant="destructive"
       >
         <Trash2 />
+      </Button>
+      <Button
+        disabled
+        disabledTooltip="You need the Publish permission"
+        variant="outline"
+      >
+        <Lock />
+        Publish
       </Button>
       <Button onClick={() => setIsLoading(!isLoading)}>Toggle Loading</Button>
     </Card>

@@ -8,7 +8,16 @@ import { core_navigation } from "@/database/navigation";
 import { isValidNavigationHref } from "@/lib/navigation";
 
 import { expireNavigationCache } from "../lib/cache";
-import { checkNavigationParent, nextNavigationPosition } from "../lib/position";
+import {
+  NAVIGATION_LOCATION_ERRORS,
+  navigationCapacityProblem,
+  navigationPlacementProblem,
+} from "../lib/location";
+import {
+  checkNavigationParent,
+  countNavigationRoots,
+  nextNavigationPosition,
+} from "../lib/position";
 import {
   hasNavigationText,
   normalizeNavigationIcon,
@@ -32,7 +41,7 @@ export const createNavigationAdminRoute = buildRoute({
   route: {
     method: "post",
     description:
-      "Add a prebuilt page or a custom link to the main menu (Admin only)",
+      "Add a prebuilt page or a custom link to the header menu or the bottom bar (Admin only)",
     path: "/create",
     request: {
       body: {
@@ -66,7 +75,7 @@ export const createNavigationAdminRoute = buildRoute({
       },
       409: {
         content: { "application/json": { schema: errorSchema } },
-        description: "Preset already in the menu",
+        description: "Preset already in this menu, or the bottom bar is full",
       },
     },
   },
@@ -74,20 +83,46 @@ export const createNavigationAdminRoute = buildRoute({
     const body = c.req.valid("json");
     const db = c.get("db");
     const parentId = body.parentId ?? null;
+    const location = body.location ?? "header";
 
     const icon = normalizeNavigationIcon(body.icon);
     if (!icon.ok) {
       return c.json({ error: NAVIGATION_ICON_ERROR }, 400);
     }
 
+    let parentLocation: typeof location | undefined;
     if (parentId !== null) {
-      const problem = await checkNavigationParent(c, parentId);
-      if (problem === "missing") {
+      const parent = await checkNavigationParent(c, parentId);
+      if (parent.problem === "missing") {
         return c.json({ error: NAVIGATION_PARENT_ERRORS.missing }, 404);
       }
-      if (problem === "depth") {
+      if (parent.problem === "depth") {
         return c.json({ error: NAVIGATION_PARENT_ERRORS.depth }, 400);
       }
+      parentLocation = parent.location;
+    }
+
+    const placementProblem = navigationPlacementProblem({
+      location,
+      parentId,
+      parentLocation,
+    });
+    if (placementProblem) {
+      return c.json(
+        { error: NAVIGATION_LOCATION_ERRORS[placementProblem] },
+        400,
+      );
+    }
+
+    const capacityProblem = navigationCapacityProblem({
+      count: await countNavigationRoots(c, location),
+      location,
+    });
+    if (capacityProblem) {
+      return c.json(
+        { error: NAVIGATION_LOCATION_ERRORS[capacityProblem] },
+        409,
+      );
     }
 
     let values: Pick<
@@ -111,6 +146,7 @@ export const createNavigationAdminRoute = buildRoute({
         .where(
           and(
             eq(core_navigation.kind, "preset"),
+            eq(core_navigation.location, location),
             eq(core_navigation.pluginId, body.pluginId),
             eq(core_navigation.presetId, body.presetId),
           ),
@@ -152,8 +188,9 @@ export const createNavigationAdminRoute = buildRoute({
       .values({
         ...values,
         icon: icon.value,
+        location,
         parentId,
-        position: await nextNavigationPosition(c, parentId),
+        position: await nextNavigationPosition(c, parentId, location),
         updatedAt: new Date(),
       })
       .returning({ id: core_navigation.id });

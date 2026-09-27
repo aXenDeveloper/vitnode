@@ -9,6 +9,7 @@ import {
   NAVIGATION_DESCRIPTION_MAX_LENGTH,
   NAVIGATION_HREF_MAX_LENGTH,
   NAVIGATION_KINDS,
+  NAVIGATION_LOCATIONS,
   NAVIGATION_PRESET_ID_MAX_LENGTH,
   NAVIGATION_TITLE_MAX_LENGTH,
 } from "@/lib/navigation";
@@ -22,6 +23,8 @@ const navigationTextSchema = (maxLength: number) =>
   );
 
 export const zodNavigationIdSchema = z.number().int().positive();
+
+export const zodNavigationLocationSchema = z.enum(NAVIGATION_LOCATIONS);
 
 export const zodNavigationTitleSchema = navigationTextSchema(
   NAVIGATION_TITLE_MAX_LENGTH,
@@ -66,6 +69,7 @@ export const zodPublicNavigationNodeSchema =
 export const zodAdminNavigationItemSchema = z.object({
   id: z.number(),
   parentId: z.number().nullable(),
+  location: zodNavigationLocationSchema,
   kind: z.enum(NAVIGATION_KINDS),
   pluginId: z.string().nullable(),
   presetId: z.string().nullable(),
@@ -109,6 +113,7 @@ const sharedCreateFields = {
   description: zodNavigationDescriptionSchema.optional(),
   icon: zodNavigationIconSchema.nullable().optional(),
   isOpenInNewTab: z.boolean().optional(),
+  location: zodNavigationLocationSchema.optional(),
   parentId: zodNavigationIdSchema.nullable().optional(),
 };
 
@@ -143,6 +148,7 @@ export const zodUpdateNavigationSchema = z
   });
 
 export const zodReorderNavigationSchema = z.object({
+  location: zodNavigationLocationSchema.optional(),
   items: z
     .array(
       z.object({

@@ -2,6 +2,8 @@ import type { Context } from "hono";
 
 import { randomUUID } from "node:crypto";
 
+import type { NavigationLocation } from "@/lib/navigation";
+
 import type { EventListenerConfig } from "../lib/events";
 
 export interface VitNodeEvents {
@@ -17,6 +19,7 @@ export interface VitNodeEvents {
   };
   "navigation.reordered": {
     items: { children: number[]; id: number }[];
+    location: NavigationLocation;
   };
   "navigation.updated": {
     navigationId: number;

@@ -3,6 +3,11 @@ import { CONFIG_PLUGIN } from "@/config";
 export const NAVIGATION_KINDS = ["preset", "custom"] as const;
 export type NavigationKind = (typeof NAVIGATION_KINDS)[number];
 
+export const NAVIGATION_LOCATIONS = ["header", "bottom_bar"] as const;
+export type NavigationLocation = (typeof NAVIGATION_LOCATIONS)[number];
+
+export const NAVIGATION_BOTTOM_BAR_MAX_ITEMS = 3;
+
 export const NAVIGATION_TABLE_NAME = "core_navigation";
 
 export const NAVIGATION_WORDS = {

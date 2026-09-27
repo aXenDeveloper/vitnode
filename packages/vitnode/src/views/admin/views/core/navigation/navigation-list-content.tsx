@@ -36,6 +36,7 @@ import {
   LayoutTemplateIcon,
   LinkIcon,
   MoreHorizontalIcon,
+  PanelBottomIcon,
   PanelTopIcon,
   PencilIcon,
   PlusIcon,
@@ -45,7 +46,7 @@ import React from "react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
 
-import type { NavigationPreset } from "@/lib/navigation";
+import type { NavigationLocation, NavigationPreset } from "@/lib/navigation";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
@@ -88,7 +89,10 @@ import {
 } from "@/components/ui/sheet";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
-import { navigationItemLabels } from "@/lib/navigation";
+import {
+  NAVIGATION_BOTTOM_BAR_MAX_ITEMS,
+  navigationItemLabels,
+} from "@/lib/navigation";
 import { ADMIN_NAVIGATION_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 
 import type { AdminNavigationFormProps } from "./navigation-form-content";
@@ -130,6 +134,7 @@ const AdminNavigationFormContent = React.lazy(async () =>
 
 export interface NavigationAdminListProps {
   items: AdminNavigationItem[];
+  location: NavigationLocation;
   onDelete: (id: number) => Promise<AdminMutationResult<unknown>>;
   onReorder: (
     body: NavigationOrderBody,
@@ -143,6 +148,7 @@ interface NavigationRowPermissions {
   canCreate: boolean;
   canDelete: boolean;
   canEdit: boolean;
+  canNest: boolean;
 }
 
 interface NavigationRowActions {
@@ -245,7 +251,8 @@ const NavigationRowMenu = ({
   const locale = useLocale();
   const translate = useNavigationTranslate();
   const { id } = entry.item;
-  const canAddChild = permissions.canCreate && entry.depth === 0;
+  const canAddChild =
+    permissions.canCreate && permissions.canNest && entry.depth === 0;
   const targets = parents.filter(parent => parent.id !== id);
 
   return (
@@ -315,7 +322,9 @@ const NavigationRowMenu = ({
                 <CornerLeftUpIcon />
                 {t("moveToTop")}
               </DropdownMenuItem>
-            ) : hasChildren || targets.length === 0 ? null : (
+            ) : hasChildren ||
+              targets.length === 0 ||
+              !permissions.canNest ? null : (
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <CornerDownRightIcon />
@@ -420,7 +429,7 @@ const SortableNavigationRow = ({
   const hasMenu =
     permissions.canEdit ||
     permissions.canDelete ||
-    (permissions.canCreate && entry.depth === 0);
+    (permissions.canCreate && permissions.canNest && entry.depth === 0);
 
   const label = (
     <>
@@ -788,6 +797,7 @@ const useOverlayTarget = (items: readonly AdminNavigationItem[]) => {
 
 export const NavigationAdminListContent = ({
   items,
+  location,
   onDelete,
   onReorder,
   onSave,
@@ -803,7 +813,13 @@ export const NavigationAdminListContent = ({
   const canDelete = useAdminStaffPermission(
     ADMIN_NAVIGATION_PERMISSIONS.delete,
   );
-  const permissions = { canCreate, canDelete, canEdit };
+  const isBottomBar = location === "bottom_bar";
+  const permissions = {
+    canCreate,
+    canDelete,
+    canEdit,
+    canNest: !isBottomBar,
+  };
 
   const [ordered, setOrdered] = React.useState(items);
   const [synced, setSynced] = React.useState(items);
@@ -869,7 +885,7 @@ export const NavigationAdminListContent = ({
   const projectionFor = (target: null | number) =>
     activeId !== null && target !== null
       ? projectNavigationDrop({
-          activeHasChildren: activeChildren.length > 0,
+          activeHasChildren: isBottomBar || activeChildren.length > 0,
           activeId,
           flattened: visible,
           indentationWidth: NAVIGATION_INDENTATION_PX,
@@ -996,10 +1012,18 @@ export const NavigationAdminListContent = ({
       <Empty className="border">
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <PanelTopIcon />
+            {isBottomBar ? <PanelBottomIcon /> : <PanelTopIcon />}
           </EmptyMedia>
-          <EmptyTitle>{t("noResults.title")}</EmptyTitle>
-          <EmptyDescription>{t("noResults.description")}</EmptyDescription>
+          <EmptyTitle>
+            {t(isBottomBar ? "bottomBarEmpty.title" : "noResults.title")}
+          </EmptyTitle>
+          <EmptyDescription>
+            {isBottomBar
+              ? t("bottomBarEmpty.description", {
+                  max: NAVIGATION_BOTTOM_BAR_MAX_ITEMS,
+                })
+              : t("noResults.description")}
+          </EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
@@ -1013,10 +1037,15 @@ export const NavigationAdminListContent = ({
       >
         <header className="flex min-h-11 items-center justify-between gap-2 border-b px-4 py-1.5">
           <p className="text-muted-foreground text-sm tabular-nums">
-            {t("summary", {
-              dropdowns: nestedCount,
-              header: parents.length,
-            })}
+            {isBottomBar
+              ? t("bottomBarSummary", {
+                  count: parents.length,
+                  max: NAVIGATION_BOTTOM_BAR_MAX_ITEMS,
+                })
+              : t("summary", {
+                  dropdowns: nestedCount,
+                  header: parents.length,
+                })}
           </p>
           {parentIds.length > 0 ? (
             <Button
@@ -1035,7 +1064,7 @@ export const NavigationAdminListContent = ({
 
         <DndContext
           collisionDetection={closestCenter}
-          id="admin-navigation"
+          id={`admin-navigation-${location}`}
           measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
           onDragCancel={reset}
           onDragEnd={onDragEnd}
@@ -1109,6 +1138,7 @@ export const NavigationAdminListContent = ({
 
       <NavigationCreateDialog
         items={ordered}
+        location={location}
         onOpenChange={creating.setOpen}
         onSave={onSave}
         onSaved={onSaved}

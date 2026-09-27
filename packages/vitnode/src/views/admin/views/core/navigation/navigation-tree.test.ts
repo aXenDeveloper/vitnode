@@ -32,6 +32,7 @@ const item = (
   id,
   isOpenInNewTab: false,
   kind: "custom",
+  location: "header",
   parentId,
   pluginId: null,
   position,

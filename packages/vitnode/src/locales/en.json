@@ -303,6 +303,13 @@
       },
       "language": "Language",
       "opens_in_new_tab": "Opens in a new tab",
+      "more_navigation": "More",
+      "mobile_nav": {
+        "label": "Main navigation",
+        "menu": "Menu",
+        "navigation": "Navigation",
+        "account": "Account"
+      },
       "preferences": "Preferences",
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",
@@ -1854,7 +1861,7 @@
     },
     "navigation": {
       "list": {
-        "desc": "Choose what the main menu links to, and in what order. Changes go live right away.",
+        "desc": "Choose what your menus link to, and in what order. Changes go live right away.",
         "custom": "Custom link",
         "missing": "The plugin behind this item is no longer installed, so the menu skips it.",
         "opensInNewTab": "Opens in a new tab",
@@ -1879,7 +1886,12 @@
         "moveToTop": "Move to top level",
         "moveInside": "Move inside…",
         "delete": "Remove",
-        "pluginMissing": "Plugin missing"
+        "pluginMissing": "Plugin missing",
+        "bottomBarSummary": "{count} of {max} links",
+        "bottomBarEmpty": {
+          "title": "The bottom bar is empty",
+          "description": "Add up to {max} links and phones show them in a bar at the bottom of the screen. Empty means no bar at all."
+        }
       },
       "create": {
         "title": "Add menu item",
@@ -1892,7 +1904,11 @@
         "back": "Choose something else",
         "inHeader": "Shown in the header bar.",
         "inDropdown": "Shown in the “{name}” dropdown.",
-        "fromPlugin": "{placement} A page from {plugin}."
+        "fromPlugin": "{placement} A page from {plugin}.",
+        "bottomBarTitle": "Add link",
+        "bottomBarFull": "The bottom bar holds {max} links. Remove one to add another.",
+        "inBottomBar": "Shown in the bottom bar on phones.",
+        "successDescBottomBar": "\"{name}\" is now in the bottom bar."
       },
       "edit": {
         "title": "Edit menu item",
@@ -1943,7 +1959,15 @@
       "errors": {
         "hrefInvalid": "Start with / or https://",
         "titleRequired": "Give the item a title in at least one language.",
-        "presetTaken": "This page is already in the menu."
+        "presetTaken": "This page is already in the menu.",
+        "bottomBarConflict": "This page is already in the bottom bar, or the bar is full."
+      },
+      "tabs": {
+        "label": "Menus",
+        "header": "Header",
+        "bottomBar": "Bottom bar",
+        "headerDesc": "In the header on tablets and desktops, and in the side menu on phones.",
+        "bottomBarDesc": "Up to three links at the bottom of the screen on phones, plus a Menu tab with the rest of the header menu."
       }
     }
   }
