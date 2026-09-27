@@ -314,7 +314,7 @@ Content Engine builds every URL with the same rules as the router, so nothing dr
 
 A content type publishes URLs from `delivery.path` (default `/{publicApi.path}/:slug`) and `search.pathTemplate`. Both are English route paths, and **a page route has to serve them**. Otherwise every canonical link, sitemap line and search result would be a 404. So the build checks it: a content type whose URL no page route serves stops `dev` and `build` with `content-url-without-page`. Blog serves `/blog/:slug` with its own page, which is also why `'/blog/:slug'` is a valid `routePaths` key.
 
-The build learns a plugin's content types from its optional `content` module. That's a browser-safe `src/content.ts` exporting them (`@vitnode/<plugin>/content` once built):
+The web build can't read your API: `config.api.ts` is server code, and a plugin factory may need options only your app knows. So a plugin states its content types **once**, in a browser-safe `src/content.ts`, and both sides use that one list:
 
 ```ts title="plugins/blog/src/content.ts"
 import { blogCategoryContentType } from '@/content/category'
@@ -323,7 +323,30 @@ import { blogPostContentType } from '@/content/post'
 export const contentTypes = [blogPostContentType, blogCategoryContentType]
 ```
 
-A plugin without that module isn't checked.
+```ts title="plugins/blog/src/config.api.ts"
+import { contentTypes } from '@/content'
+
+export const blogApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    // [!code ++]
+    contentTypes,
+    modules: [
+      adminModule,
+      buildContentPublicModule({
+        pluginId: CONFIG_PLUGIN.pluginId,
+        contentTypes: [categoryContent, postContent],
+      }),
+    ],
+  })
+```
+
+Each side checks its half, so no public URL goes unchecked:
+
+- **The web build** imports `@vitnode/<plugin>/content` and checks every URL in it against your page routes (`content-url-without-page`). If the module was built but the package's `exports` hide it, the build stops with `content-module-not-exported`. The `./*` wildcard covers it.
+- **The API** compares what the plugin actually registers, through admin and public modules alike, with that list. A content type with public URLs that isn't declared stops the API with `undeclared-content-types` (no `contentTypes` passed) or `incomplete-content-types` (missing, or declared with different URLs).
+
+A plugin whose content publishes no URLs (no delivery, no search) needs none of this.
 
 Details live in [Content Delivery and SEO](/docs/dev/content-engine/content-delivery-and-seo) and [Search](/docs/dev/search).
 
@@ -372,6 +395,14 @@ A bad configuration fails loudly, when `dev` or `build` starts, not quietly in p
 | :----------------------------- | :------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
 | `content-url-without-page`     | A content type's `delivery.path` or `search.pathTemplate` has no page route serving it | Add a page at that path, point the setting at an existing page, or turn it off |
 | `invalid-content-types-module` | A plugin's `content` module doesn't export a `contentTypes` array                      | Export the plugin's `defineContentType` definitions, or delete the module      |
+| `content-module-not-exported`  | `dist/src/content.js` exists, but the package's `exports` don't expose `./content`     | Add `"./content": "./dist/src/content.js"` (or a `"./*"` wildcard)             |
+
+**Content declarations**, when the API starts (`buildApiPlugin`), also a `ContentUrlError`:
+
+| Code                       | Cause                                                                                    | Fix                                                                           |
+| :------------------------- | :--------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------- |
+| `undeclared-content-types` | The plugin registers content types with public URLs but passes no `contentTypes`         | Export them from `src/content.ts` and pass `buildApiPlugin({ contentTypes })` |
+| `incomplete-content-types` | A registered public content type is missing from `contentTypes`, or declared differently | Add it to `src/content.ts`, and import that list instead of building another  |
 
 ## Migration notes
 
@@ -388,7 +419,7 @@ A bad configuration fails loudly, when `dev` or `build` starts, not quietly in p
 
 - **`search.pathTemplate` no longer needs `{locale}`.** Write `/blog/{slug}`. A legacy leading `/{locale}/` is still accepted and stripped. `{locale}` anywhere else is an error. Then rebuild the search index.
 - **Content URLs in the default locale are unprefixed** under `as-needed`. Canonical URLs, hreflang and sitemaps used to emit `/en/...` for every record, and now emit `/...`. Old `/en/...` links redirect with a 308.
-- **Every content URL needs a page.** A plugin that exports a `content` module must give each content type with delivery or search a page route at that path, or the build stops with `content-url-without-page`. Blog now ships its `/blog/:slug` page.
+- **Every content URL needs a page, and every plugin with public content declares it.** Plugins that register content types with delivery or search now export them from `src/content.ts` and pass the same array to `buildApiPlugin({ contentTypes })`. Until they do, the API refuses to start with `undeclared-content-types`, which names each content type and URL. That's deliberate: the alternative is a site publishing links nobody checked. Every declared URL then needs a page route (`content-url-without-page`). Blog now ships its `/blog/:slug` page. Plugins without public content are unaffected.
 - **A split API needs the same routing config.** In a single app, `vitnode.api.config.ts` reuses `vitNodeConfig.i18n`, so nothing to do. In a separate API app (`apiMonorepo` or `onlyApi` in `create-vitnode-app`), its own `i18n` must mirror `localePrefix`, `domains` and `routePaths`. Otherwise canonical URLs, sitemaps and search links built by the API won't match the site.
 
 ```ts title="apps/api/src/i18n.ts"

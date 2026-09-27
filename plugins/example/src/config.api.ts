@@ -5,6 +5,7 @@ import { buildContentPublicModule } from "@vitnode/core/content/server";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
+import { contentTypes } from "@/content";
 import { settingsPage } from "@/content/settings-page";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
@@ -18,6 +19,7 @@ import "@/api/lib/events";
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    contentTypes,
     blocks: widgets,
     editablePages: [settingsPage],
     navigation: [{ href: "/example/browse", icon: "list", id: "browse" }],

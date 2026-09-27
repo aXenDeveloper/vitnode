@@ -74,6 +74,20 @@ import { articleContentType } from "@/content/article"
 export const contentTypes = [articleContentType]
 ```
 
+Pass that same list to the plugin's API, so what the API publishes is exactly what the build checks:
+
+```ts title="plugins/blog/src/config.api.ts"
+import { contentTypes } from "@/content"
+
+export const blogApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    // [!code ++]
+    contentTypes,
+    modules: [adminModule, publicModule],
+  })
+```
+
   </Step>
   <Step>
 

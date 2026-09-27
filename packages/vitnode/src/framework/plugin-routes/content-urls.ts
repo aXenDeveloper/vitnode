@@ -1,51 +1,31 @@
+import type {
+  ContentPublicUrl,
+  ContentUrlDefinition,
+  ContentUrlSetting,
+} from "../../content/public-urls.js";
 import type { PluginRoute } from "../../routing/types.js";
 import type { HostRoutePath } from "./host-routes.js";
 
-import { CONTENT_SEARCH_SLUG_PLACEHOLDER } from "../../content/const.js";
+import {
+  CONTENT_TYPES_EXPORT,
+  CONTENT_URLS_ERROR_PREFIX,
+  contentPublicUrls,
+  ContentUrlError,
+} from "../../content/public-urls.js";
 import { parseRoutePath, routeMatchKey } from "../../routing/path.js";
 import { localeRoutePathTargets } from "./locale-route-paths.js";
 
-export const CONTENT_URLS_ERROR_PREFIX = "[VitNode content URLs]";
-
-export const CONTENT_TYPES_EXPORT = "contentTypes";
-
-export type ContentUrlErrorCode =
-  "content-url-without-page" | "invalid-content-types-module";
-
-export type ContentUrlSetting = "delivery.path" | "search.pathTemplate";
-
-export interface ContentUrlErrorDetails {
-  code: ContentUrlErrorCode;
-  contentTypeId?: string;
-  pattern?: string;
-  pluginId: string;
-  setting?: ContentUrlSetting;
-}
-
-export class ContentUrlError extends Error {
-  constructor(message: string, details: ContentUrlErrorDetails) {
-    super(message);
-
-    this.name = "ContentUrlError";
-    this.code = details.code;
-    this.contentTypeId = details.contentTypeId;
-    this.pattern = details.pattern;
-    this.pluginId = details.pluginId;
-    this.setting = details.setting;
-  }
-
-  readonly code: ContentUrlErrorCode;
-  readonly contentTypeId?: string;
-  readonly pattern?: string;
-  readonly pluginId: string;
-  readonly setting?: ContentUrlSetting;
-}
-
-export interface ContentUrlDefinition {
-  delivery: { enabled: boolean; path: string };
-  id: string;
-  search: { enabled: boolean; pathTemplate: string };
-}
+export type {
+  ContentUrlDefinition,
+  ContentUrlErrorCode,
+  ContentUrlErrorDetails,
+  ContentUrlSetting,
+} from "../../content/public-urls.js";
+export {
+  CONTENT_TYPES_EXPORT,
+  CONTENT_URLS_ERROR_PREFIX,
+  ContentUrlError,
+} from "../../content/public-urls.js";
 
 export interface ContentUrlSource {
   contentTypes: readonly ContentUrlDefinition[];
@@ -57,12 +37,6 @@ export interface AssertContentUrlsHavePagesOptions {
   contentUrls: readonly ContentUrlSource[];
   hostRoutes?: readonly HostRoutePath[];
   manifest: readonly PluginRoute[];
-}
-
-interface ContentUrl {
-  declared: string;
-  routePath: string;
-  setting: ContentUrlSetting;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -103,31 +77,6 @@ export const contentTypesFromContentModule = (
   );
 };
 
-const contentUrlsOf = (definition: ContentUrlDefinition): ContentUrl[] => {
-  const urls: ContentUrl[] = [];
-
-  if (definition.delivery.enabled && definition.delivery.path !== "") {
-    urls.push({
-      declared: definition.delivery.path,
-      routePath: definition.delivery.path,
-      setting: "delivery.path",
-    });
-  }
-
-  if (definition.search.enabled && definition.search.pathTemplate !== "") {
-    urls.push({
-      declared: definition.search.pathTemplate,
-      routePath: definition.search.pathTemplate.replaceAll(
-        CONTENT_SEARCH_SLUG_PLACEHOLDER,
-        ":slug",
-      ),
-      setting: "search.pathTemplate",
-    });
-  }
-
-  return urls;
-};
-
 const disableHint: Record<ContentUrlSetting, string> = {
   "delivery.path": "turn delivery off (`delivery: { enabled: false }`)",
   "search.pathTemplate": "turn search off for this content type",
@@ -136,7 +85,7 @@ const disableHint: Record<ContentUrlSetting, string> = {
 const urlWithoutPageError = (
   source: ContentUrlSource,
   definition: ContentUrlDefinition,
-  url: ContentUrl,
+  url: ContentPublicUrl,
   reason: string,
 ): ContentUrlError => {
   const declaredIn =
@@ -173,7 +122,7 @@ export const assertContentUrlsHavePages = ({
 
   for (const source of contentUrls) {
     for (const definition of source.contentTypes) {
-      for (const url of contentUrlsOf(definition)) {
+      for (const url of contentPublicUrls(definition)) {
         const parsed = parseRoutePath(url.routePath);
 
         if (!parsed.ok) {

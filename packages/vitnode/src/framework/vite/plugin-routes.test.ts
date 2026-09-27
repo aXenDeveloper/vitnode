@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { ResolvedAdminNavModule } from "../admin-nav";
@@ -7,6 +10,7 @@ import { generateAdminNavSource } from "../admin-nav";
 import { generateContentRegistrySource } from "../content-registry";
 import { ContentUrlError } from "../plugin-routes";
 import {
+  builtContentModuleOutsideExports,
   loadPluginContentUrls,
   readOptionalPluginModules,
   resolvePluginContentModules,
@@ -243,5 +247,49 @@ describe("content type discovery", () => {
         async () => await Promise.resolve({ default: [POST] }),
       ),
     ).rejects.toBeInstanceOf(ContentUrlError);
+  });
+
+  it("refuses a built content module the package does not export", () => {
+    expect(() =>
+      resolvePluginContentModules(
+        ["@acme/locked"],
+        CONTENT_EXPORTS,
+        () => "/pkg/locked/dist/src/content.js",
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: "content-module-not-exported",
+        pluginId: "@acme/locked",
+      }),
+    );
+  });
+
+  it("finds a built content module from the plugin's own package root", () => {
+    const root = mkdtempSync(join(tmpdir(), "vitnode-content-"));
+
+    try {
+      const packageRoot = join(root, "node_modules", "@acme", "locked");
+      mkdirSync(join(packageRoot, "dist", "src"), { recursive: true });
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({ name: "@acme/locked" }),
+      );
+      writeFileSync(join(packageRoot, "dist", "src", "config.js"), "");
+      const resolve = resolverFor({
+        "@acme/locked/config": join(packageRoot, "dist", "src", "config.js"),
+      });
+      const find = builtContentModuleOutsideExports(resolve);
+
+      expect(find("@acme/locked")).toBeNull();
+
+      writeFileSync(join(packageRoot, "dist", "src", "content.js"), "");
+
+      expect(find("@acme/locked")).toBe(
+        join(packageRoot, "dist", "src", "content.js"),
+      );
+      expect(find("@acme/elsewhere")).toBeNull();
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 });

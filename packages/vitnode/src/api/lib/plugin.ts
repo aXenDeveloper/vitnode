@@ -10,6 +10,7 @@ import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
 
 import { BlockError } from "@/blocks/errors";
+import { assertContentTypesDeclared } from "@/content/public-urls";
 import {
   validateContentTypes,
   withContentPermissions,
@@ -65,6 +66,7 @@ export function buildApiPlugin<
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
 >({
   blocks,
+  contentTypes: declaredContentTypes,
   editablePages,
   pluginId,
   messages,
@@ -74,6 +76,7 @@ export function buildApiPlugin<
   searchIndexers,
 }: {
   blocks?: BlockPluginSource;
+  contentTypes?: readonly AnyContentTypeDefinition[];
   editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
   modules?: Modules;
@@ -103,6 +106,7 @@ export function buildApiPlugin<
   const hono = new OpenAPIHono();
   const contentModels: AnyContentModel[] = [];
   const contentTypes: AnyContentTypeDefinition[] = [];
+  const publicContentTypes: AnyContentTypeDefinition[] = [];
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
   const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
@@ -116,6 +120,7 @@ export function buildApiPlugin<
 
     contentModels.push(...collectContentModels(handler));
     contentTypes.push(...collectContentTypes(handler));
+    publicContentTypes.push(...collectPublicContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
 
     handler.cronJobs?.forEach(cron => {
@@ -140,6 +145,15 @@ export function buildApiPlugin<
   );
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
+
+  assertContentTypesDeclared({
+    declared: declaredContentTypes,
+    pluginId,
+    published: [
+      ...registered.map(entry => entry.definition),
+      ...publicContentTypes,
+    ],
+  });
 
   return {
     pluginId,
@@ -175,6 +189,15 @@ function collectContentTypes(
   return [
     ...(module.contentTypes ?? []),
     ...(module.modules ?? []).flatMap(collectContentTypes),
+  ];
+}
+
+function collectPublicContentTypes(
+  module: BaseBuildModuleReturn,
+): AnyContentTypeDefinition[] {
+  return [
+    ...(module.publicContentTypes ?? []),
+    ...(module.modules ?? []).flatMap(collectPublicContentTypes),
   ];
 }
 

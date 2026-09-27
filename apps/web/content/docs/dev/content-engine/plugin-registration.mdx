@@ -14,7 +14,7 @@ To keep the AdminCP sidebar light while lazy-loading heavy rich text editors on 
 | `admin/content` | `src/admin/content.tsx` | Content Engine editing screens, custom fields, and form layouts                               |
 | `config`        | `src/config.tsx`        | The plugin's identity, locale barrel and route declarations - plain data the browser may hold |
 
-One more, optional and build-only: `content` (`src/content.ts`) exports the plugin's content type definitions as `contentTypes`. The build reads it to check that every content type publishing public URLs has a page route serving them. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+One more, for plugins whose content types publish public URLs (delivery or search): `content` (`src/content.ts`) exports those definitions as `contentTypes`. The web build reads it to check that a page route serves every URL. The plugin passes the same array to `buildApiPlugin({ contentTypes })`, and the API refuses to start if it registers a public content type the list doesn't include. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
 
 ---
 
