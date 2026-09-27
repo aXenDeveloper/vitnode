@@ -45,7 +45,7 @@ const PreferencesMenu = ({
         <Settings2Icon />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-48 p-2">
+      <DropdownMenuContent align="end" className="w-56 p-2">
         <ThemeSwitcherMenu />
         {languageSwitcher}
       </DropdownMenuContent>

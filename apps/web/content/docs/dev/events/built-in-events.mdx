@@ -42,17 +42,17 @@ Nine names, all declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
 the write it describes has committed.
 
-| Event          | Payload                                  | Fires when                                                                |
-| -------------- | ---------------------------------------- | ------------------------------------------------------------------------- |
-| `user.created` | `{ userId, email, name, emailVerified }` | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up |
-| `user.updated` | `{ userId, email, name }`                | A user is edited in the AdminCP (profile fields and/or role assignments)  |
-| `user.deleted` | `{ userId, email }`                      | Never - the name is declared for plugins, core has no deletion flow       |
-| `user.sso.linked` | `{ userId, email, providerId }`       | A visitor proves an existing account is theirs with its password and an SSO identity is linked to it |
-| `user.avatar.updated` | `{ userId, fileId }`              | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP |
-| `user.cover.updated` | `{ userId, fileId }`               | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP |
-| `role.created` | `{ roleId }`                             | A role is created in the AdminCP                                          |
-| `role.updated` | `{ roleId }`                             | A role is edited in the AdminCP                                           |
-| `role.deleted` | `{ roleId }`                             | A role is deleted in the AdminCP                                          |
+| Event                 | Payload                                  | Fires when                                                                                           |
+| --------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `user.created`        | `{ userId, email, name, emailVerified }` | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                            |
+| `user.updated`        | `{ userId, email, name }`                | A user is edited in the AdminCP (profile fields and/or role assignments)                             |
+| `user.deleted`        | `{ userId, email }`                      | Never - the name is declared for plugins, core has no deletion flow                                  |
+| `user.sso.linked`     | `{ userId, email, providerId }`          | A visitor proves an existing account is theirs with its password and an SSO identity is linked to it |
+| `user.avatar.updated` | `{ userId, fileId }`                     | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP          |
+| `user.cover.updated`  | `{ userId, fileId }`                     | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP    |
+| `role.created`        | `{ roleId }`                             | A role is created in the AdminCP                                                                     |
+| `role.updated`        | `{ roleId }`                             | A role is edited in the AdminCP                                                                      |
+| `role.deleted`        | `{ roleId }`                             | A role is deleted in the AdminCP                                                                     |
 
 <Accordions>
 <Accordion title="user.created">
@@ -188,7 +188,8 @@ linked.
       type: 'number',
     },
     email: {
-      description: "The account's email - the address the provider and the account had in common.",
+      description:
+        "The account's email - the address the provider and the account had in common.",
       type: 'string',
     },
     providerId: {
@@ -283,15 +284,15 @@ export const roleCleanupListener = buildEventListener({
 
 Four names, declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Every one fires **after** the
-main menu changed in the AdminCP and after the cached menu was expired, so a
+header menu or the bottom bar changed in the AdminCP and after the cached menus were expired, so a
 listener that re-reads the menu sees the new state.
 
-| Event                  | Payload            | Fires when                                                           |
-| ---------------------- | ------------------ | -------------------------------------------------------------------- |
-| `navigation.created`   | `{ navigationId }` | A prebuilt page or a custom link is added to the main menu           |
-| `navigation.updated`   | `{ navigationId }` | A menu item's title, description, URL, new-tab setting or placement is edited |
-| `navigation.reordered` | `{ items }`        | The menu is saved in a new order or nesting - `items` is the whole tree |
-| `navigation.deleted`   | `{ navigationId }` | A menu item is removed, together with its translations               |
+| Event                  | Payload               | Fires when                                                                      |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------- |
+| `navigation.created`   | `{ navigationId }`    | A prebuilt page or a custom link is added to the header menu or the bottom bar  |
+| `navigation.updated`   | `{ navigationId }`    | A menu item's title, description, URL, new-tab setting or placement is edited   |
+| `navigation.reordered` | `{ items, location }` | One menu is saved in a new order or nesting - `items` is that menu's whole tree |
+| `navigation.deleted`   | `{ navigationId }`    | A menu item is removed, together with its translations                          |
 
 <Accordions>
 <Accordion title="navigation.created, navigation.updated and navigation.deleted">
@@ -315,15 +316,20 @@ and when.
 </Accordion>
 <Accordion title="navigation.reordered">
 
-Fires after a drag-and-drop in the AdminCP saved the menu. The payload is the
-entire menu as the administrator now sees it, one level deep.
+Fires after a drag-and-drop in the AdminCP saved a menu. The payload is that
+entire menu as the administrator now sees it, one level deep - the header menu
+or the bottom bar, never both.
 
 <TypeTable
   type={{
     items: {
       description:
-        'Top-level items in order; each carries the ids of its dropdown children, in order.',
+        'Top-level items in order; each carries the ids of its dropdown children, in order. Bottom bar items never have children.',
       type: '{ id: number; children: number[] }[]',
+    },
+    location: {
+      description: 'Which menu was saved.',
+      type: '"header" | "bottom_bar"',
     },
   }}
 />
@@ -337,8 +343,8 @@ One name, declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. It fires **after** the layout row
 has been written, and not at all when a save changed nothing.
 
-| Event                      | Payload                    | Fires when                                                              |
-| -------------------------- | -------------------------- | ----------------------------------------------------------------------- |
+| Event                      | Payload                    | Fires when                                                                            |
+| -------------------------- | -------------------------- | ------------------------------------------------------------------------------------- |
 | `core.page-layout.updated` | `{ pageId, changedZones }` | Somebody saves widget changes on an [editable page](/docs/dev/widgets/editable-pages) |
 
 <Accordions>
@@ -357,11 +363,13 @@ override, which counts as a change and is reported here.
 <TypeTable
   type={{
     pageId: {
-      description: 'Id of the editable page, as `defineEditablePage` declared it.',
+      description:
+        'Id of the editable page, as `defineEditablePage` declared it.',
       type: 'string',
     },
     changedZones: {
-      description: 'Zone ids whose stored override changed, added or was removed.',
+      description:
+        'Zone ids whose stored override changed, added or was removed.',
       type: 'string[]',
     },
   }}

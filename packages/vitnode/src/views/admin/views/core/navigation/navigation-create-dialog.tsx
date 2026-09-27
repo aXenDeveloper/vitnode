@@ -8,7 +8,11 @@ import {
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
-import type { NavigationKind, NavigationPreset } from "@/lib/navigation";
+import type {
+  NavigationKind,
+  NavigationLocation,
+  NavigationPreset,
+} from "@/lib/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +25,13 @@ import {
 } from "@/components/ui/dialog";
 import { EmojiIcon } from "@/components/ui/emoji-icon";
 import { Loader } from "@/components/ui/loader";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
-import { navigationItemLabels, navigationPresetKey } from "@/lib/navigation";
+import {
+  NAVIGATION_BOTTOM_BAR_MAX_ITEMS,
+  navigationItemLabels,
+  navigationPresetKey,
+} from "@/lib/navigation";
 
 import type { AdminNavigationFormProps } from "./navigation-form-content";
 import type { AdminNavigationItem } from "./navigation-query";
@@ -53,8 +62,17 @@ interface NavigationCreateChoice {
   preset?: NavigationPreset;
 }
 
+export const isNavigationLocationFull = (
+  location: NavigationLocation,
+  items: readonly AdminNavigationItem[],
+): boolean =>
+  location === "bottom_bar" &&
+  items.filter(item => item.parentId === null).length >=
+    NAVIGATION_BOTTOM_BAR_MAX_ITEMS;
+
 export interface NavigationCreateDialogProps {
   items: AdminNavigationItem[];
+  location: NavigationLocation;
   onOpenChange: (open: boolean) => void;
   onSave: AdminNavigationFormProps["onSave"];
   onSaved?: () => void;
@@ -183,6 +201,7 @@ const NavigationCreateChoiceStep = ({
 const NavigationCreateDetailsStep = ({
   choice,
   items,
+  location,
   onBack,
   onSave,
   onSaved,
@@ -192,6 +211,7 @@ const NavigationCreateDetailsStep = ({
 }: {
   choice: NavigationCreateChoice;
   items: AdminNavigationItem[];
+  location: NavigationLocation;
   onBack: () => void;
   onSave: AdminNavigationFormProps["onSave"];
   onSaved?: () => void;
@@ -212,9 +232,12 @@ const NavigationCreateDetailsStep = ({
         translate,
       }).title || preset.id
     : t("form.kind.custom");
-  const placement = parentName
-    ? t("create.inDropdown", { name: parentName })
-    : t("create.inHeader");
+  const placement =
+    location === "bottom_bar"
+      ? t("create.inBottomBar")
+      : parentName
+        ? t("create.inDropdown", { name: parentName })
+        : t("create.inHeader");
 
   return (
     <div className="animate-in fade-in-0 slide-in-from-right-2 flex flex-col gap-5 duration-200 motion-reduce:animate-none">
@@ -244,6 +267,7 @@ const NavigationCreateDetailsStep = ({
         <AdminNavigationFormContent
           items={items}
           kind={choice.kind}
+          location={location}
           onSave={onSave}
           onSaved={onSaved}
           parentId={parentId}
@@ -258,6 +282,7 @@ const NavigationCreateDetailsStep = ({
 
 const NavigationCreateSteps = ({
   items,
+  location,
   onSave,
   onSaved,
   parentId,
@@ -279,6 +304,7 @@ const NavigationCreateSteps = ({
     <NavigationCreateDetailsStep
       choice={choice}
       items={items}
+      location={location}
       onBack={() => {
         setReturned(true);
         setChoice(null);
@@ -315,6 +341,7 @@ export const NavigationCreateDialog = ({
 
 export const CreateNavigationAction = ({
   items,
+  location,
   onSave,
   onSaved,
   presets,
@@ -325,21 +352,38 @@ export const CreateNavigationAction = ({
   const t = useTranslations("admin.navigation.create");
   const [session, setSession] = React.useState(0);
   const [open, setOpen] = React.useState(false);
+  const isFull = isNavigationLocationFull(location, items);
+
+  const button = (
+    <Button
+      disabled={isFull}
+      onClick={() => {
+        setSession(current => current + 1);
+        setOpen(true);
+      }}
+    >
+      <PlusIcon />
+      {t(location === "bottom_bar" ? "bottomBarTitle" : "title")}
+    </Button>
+  );
 
   return (
     <>
-      <Button
-        onClick={() => {
-          setSession(current => current + 1);
-          setOpen(true);
-        }}
-      >
-        <PlusIcon />
-        {t("title")}
-      </Button>
+      {isFull ? (
+        <TooltipWithContent
+          text={t("bottomBarFull", { max: NAVIGATION_BOTTOM_BAR_MAX_ITEMS })}
+        >
+          <span className="inline-flex" tabIndex={0}>
+            {button}
+          </span>
+        </TooltipWithContent>
+      ) : (
+        button
+      )}
 
       <NavigationCreateDialog
         items={items}
+        location={location}
         onOpenChange={setOpen}
         onSave={onSave}
         onSaved={onSaved}

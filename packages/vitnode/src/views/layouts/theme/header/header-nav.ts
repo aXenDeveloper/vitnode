@@ -77,3 +77,31 @@ export const headerNavNamespaces = (
 
   return namespaces.length > 0 ? namespaces : [fallback];
 };
+
+export const visibleHeaderNavCount = ({
+  availableWidth,
+  gap,
+  itemWidths,
+  moreWidth,
+}: {
+  availableWidth: number;
+  gap: number;
+  itemWidths: readonly number[];
+  moreWidth: number;
+}): number => {
+  const totalWidth = itemWidths.reduce(
+    (sum, width, index) => sum + width + (index > 0 ? gap : 0),
+    0,
+  );
+  if (totalWidth <= availableWidth) return itemWidths.length;
+
+  let usedWidth = moreWidth;
+  let count = 0;
+  for (const width of itemWidths) {
+    if (usedWidth + gap + width > availableWidth) break;
+    usedWidth += gap + width;
+    count += 1;
+  }
+
+  return count;
+};

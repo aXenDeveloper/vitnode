@@ -48,7 +48,10 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
     ],
     meta: [
       { charSet: 'utf-8' },
-      { content: 'width=device-width, initial-scale=1', name: 'viewport' },
+      {
+        content: 'width=device-width, initial-scale=1, viewport-fit=cover',
+        name: 'viewport',
+      },
       { title: metadata.title },
     ],
   }),

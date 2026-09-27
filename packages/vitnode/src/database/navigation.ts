@@ -7,6 +7,7 @@ export const core_navigation = camelCase.table.withRLS(
     parentId: t.integer().references((): AnyPgColumn => core_navigation.id, {
       onDelete: "set null",
     }),
+    location: t.varchar({ length: 16 }).notNull().default("header"),
     kind: t.varchar({ length: 16 }).notNull(),
     pluginId: t.varchar({ length: 50 }),
     presetId: t.varchar({ length: 120 }),
@@ -23,6 +24,7 @@ export const core_navigation = camelCase.table.withRLS(
   }),
   t => [
     index("core_navigation_position_idx").on(t.position),
+    index("core_navigation_location_idx").on(t.location),
     index("core_navigation_parent_idx").on(t.parentId),
   ],
 );

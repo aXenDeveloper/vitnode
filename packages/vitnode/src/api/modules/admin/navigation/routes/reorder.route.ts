@@ -6,6 +6,10 @@ import { CONFIG_PLUGIN } from "@/config";
 import { core_navigation } from "@/database/navigation";
 
 import { expireNavigationCache } from "../lib/cache";
+import {
+  NAVIGATION_LOCATION_ERRORS,
+  navigationOrderProblem,
+} from "../lib/location";
 import { reorderNavigationTree } from "../lib/reorder";
 import { zodReorderNavigationSchema } from "../lib/schema";
 
@@ -21,7 +25,7 @@ export const reorderNavigationAdminRoute = buildRoute({
   route: {
     method: "post",
     description:
-      "Save the whole main menu as an ordered tree, one level deep (Admin only)",
+      "Save one menu - the header or the bottom bar - as an ordered tree, one level deep (Admin only)",
     path: "/reorder",
     request: {
       body: {
@@ -56,12 +60,18 @@ export const reorderNavigationAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { items } = c.req.valid("json");
+    const { items, location = "header" } = c.req.valid("json");
     const db = c.get("db");
+
+    const orderProblem = navigationOrderProblem({ items, location });
+    if (orderProblem) {
+      return c.json({ error: NAVIGATION_LOCATION_ERRORS[orderProblem] }, 400);
+    }
 
     const existing = await db
       .select({ id: core_navigation.id })
-      .from(core_navigation);
+      .from(core_navigation)
+      .where(eq(core_navigation.location, location));
 
     const outcome = reorderNavigationTree(
       items,
@@ -85,8 +95,8 @@ export const reorderNavigationAdminRoute = buildRoute({
     });
 
     await expireNavigationCache(c);
-    await c.get("events").emit("navigation.reordered", { items });
+    await c.get("events").emit("navigation.reordered", { items, location });
 
-    return c.json({ items }, 200);
+    return c.json({ items, location }, 200);
   },
 });

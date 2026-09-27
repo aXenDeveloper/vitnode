@@ -21,6 +21,7 @@ export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   isEmail: false,
   isKnown: false,
   navigation: [],
+  bottomBar: [],
   sso: [],
 });
 

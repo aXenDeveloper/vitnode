@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { findNavigationPreset } from "@/api/lib/navigation-presets";
 import { buildRoute } from "@/api/lib/route";
@@ -8,7 +8,16 @@ import { core_navigation } from "@/database/navigation";
 import { isValidNavigationHref } from "@/lib/navigation";
 
 import { expireNavigationCache } from "../lib/cache";
-import { checkNavigationParent, nextNavigationPosition } from "../lib/position";
+import {
+  NAVIGATION_LOCATION_ERRORS,
+  navigationCapacityProblem,
+  navigationPlacementProblem,
+} from "../lib/location";
+import {
+  checkNavigationParent,
+  countNavigationRoots,
+  nextNavigationPosition,
+} from "../lib/position";
 import {
   hasNavigationText,
   normalizeNavigationIcon,
@@ -21,6 +30,9 @@ const errorSchema = z.object({ error: z.string() });
 export const NAVIGATION_ICON_ERROR =
   "An icon is a lucide icon, written as icon:compass";
 
+export const NAVIGATION_PRESET_TAKEN_ERROR =
+  "This prebuilt item is already in the menu";
+
 export const NAVIGATION_PARENT_ERRORS = {
   depth: "A menu item can only be nested one level deep",
   missing: "Parent menu item not found",
@@ -32,7 +44,7 @@ export const createNavigationAdminRoute = buildRoute({
   route: {
     method: "post",
     description:
-      "Add a prebuilt page or a custom link to the main menu (Admin only)",
+      "Add a prebuilt page or a custom link to the header menu or the bottom bar (Admin only)",
     path: "/create",
     request: {
       body: {
@@ -66,7 +78,7 @@ export const createNavigationAdminRoute = buildRoute({
       },
       409: {
         content: { "application/json": { schema: errorSchema } },
-        description: "Preset already in the menu",
+        description: "Preset already in this menu, or the bottom bar is full",
       },
     },
   },
@@ -74,20 +86,35 @@ export const createNavigationAdminRoute = buildRoute({
     const body = c.req.valid("json");
     const db = c.get("db");
     const parentId = body.parentId ?? null;
+    const location = body.location ?? "header";
 
     const icon = normalizeNavigationIcon(body.icon);
     if (!icon.ok) {
       return c.json({ error: NAVIGATION_ICON_ERROR }, 400);
     }
 
+    let parentLocation: typeof location | undefined;
     if (parentId !== null) {
-      const problem = await checkNavigationParent(c, parentId);
-      if (problem === "missing") {
+      const parent = await checkNavigationParent(c, parentId);
+      if (parent.problem === "missing") {
         return c.json({ error: NAVIGATION_PARENT_ERRORS.missing }, 404);
       }
-      if (problem === "depth") {
+      if (parent.problem === "depth") {
         return c.json({ error: NAVIGATION_PARENT_ERRORS.depth }, 400);
       }
+      parentLocation = parent.location;
+    }
+
+    const placementProblem = navigationPlacementProblem({
+      location,
+      parentId,
+      parentLocation,
+    });
+    if (placementProblem) {
+      return c.json(
+        { error: NAVIGATION_LOCATION_ERRORS[placementProblem] },
+        400,
+      );
     }
 
     let values: Pick<
@@ -103,24 +130,6 @@ export const createNavigationAdminRoute = buildRoute({
       );
       if (!preset) {
         return c.json({ error: "Navigation preset not found" }, 404);
-      }
-
-      const [existing] = await db
-        .select({ id: core_navigation.id })
-        .from(core_navigation)
-        .where(
-          and(
-            eq(core_navigation.kind, "preset"),
-            eq(core_navigation.pluginId, body.pluginId),
-            eq(core_navigation.presetId, body.presetId),
-          ),
-        )
-        .limit(1);
-      if (existing) {
-        return c.json(
-          { error: "This prebuilt item is already in the menu" },
-          409,
-        );
       }
 
       values = {
@@ -147,25 +156,68 @@ export const createNavigationAdminRoute = buildRoute({
       };
     }
 
-    const [item] = await db
-      .insert(core_navigation)
-      .values({
-        ...values,
-        icon: icon.value,
-        parentId,
-        position: await nextNavigationPosition(c, parentId),
-        updatedAt: new Date(),
-      })
-      .returning({ id: core_navigation.id });
+    const created = await db.transaction(
+      async (tx): Promise<{ error: string } | { id: number }> => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${`core_navigation:${location}`}))`,
+        );
 
-    await saveNavigationWords(c, item.id, {
+        const capacityProblem = navigationCapacityProblem({
+          count: await countNavigationRoots(tx, location),
+          location,
+        });
+        if (capacityProblem) {
+          return { error: NAVIGATION_LOCATION_ERRORS[capacityProblem] };
+        }
+
+        if (body.kind === "preset") {
+          const [existing] = await tx
+            .select({ id: core_navigation.id })
+            .from(core_navigation)
+            .where(
+              and(
+                eq(core_navigation.kind, "preset"),
+                eq(core_navigation.location, location),
+                eq(core_navigation.pluginId, body.pluginId),
+                eq(core_navigation.presetId, body.presetId),
+              ),
+            )
+            .limit(1);
+          if (existing) {
+            return { error: NAVIGATION_PRESET_TAKEN_ERROR };
+          }
+        }
+
+        const [inserted] = await tx
+          .insert(core_navigation)
+          .values({
+            ...values,
+            icon: icon.value,
+            location,
+            parentId,
+            position: await nextNavigationPosition(tx, parentId, location),
+            updatedAt: new Date(),
+          })
+          .returning({ id: core_navigation.id });
+
+        return { id: inserted.id };
+      },
+    );
+
+    if ("error" in created) {
+      return c.json({ error: created.error }, 409);
+    }
+
+    await saveNavigationWords(c, created.id, {
       description: body.description,
       title: body.title,
     });
 
     await expireNavigationCache(c);
-    await c.get("events").emit("navigation.created", { navigationId: item.id });
+    await c.get("events").emit("navigation.created", {
+      navigationId: created.id,
+    });
 
-    return c.json({ id: item.id }, 201);
+    return c.json({ id: created.id }, 201);
   },
 });

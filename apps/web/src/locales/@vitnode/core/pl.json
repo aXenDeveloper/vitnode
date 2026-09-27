@@ -306,7 +306,11 @@
         "submit": "Dodaj do menu",
         "success": "Pozycja menu dodana",
         "successDesc": "„{name}” jest już w menu głównym.",
-        "title": "Dodaj pozycję menu"
+        "title": "Dodaj pozycję menu",
+        "bottomBarTitle": "Dodaj link",
+        "bottomBarFull": "Dolny pasek mieści {max} linki. Usuń jeden, aby dodać kolejny.",
+        "inBottomBar": "Wyświetlany w dolnym pasku na telefonach.",
+        "successDescBottomBar": "„{name}” jest teraz w dolnym pasku."
       },
       "delete": {
         "cancel": "Anuluj",
@@ -326,7 +330,8 @@
       "errors": {
         "hrefInvalid": "Zacznij od / lub https://",
         "presetTaken": "Ta strona jest już w menu.",
-        "titleRequired": "Nadaj pozycji tytuł w co najmniej jednym języku."
+        "titleRequired": "Nadaj pozycji tytuł w co najmniej jednym języku.",
+        "bottomBarConflict": "Ta strona jest już w dolnym pasku albo pasek jest pełny."
       },
       "form": {
         "description": "Opis",
@@ -365,7 +370,7 @@
         "collapseAll": "Zwiń wszystko",
         "custom": "Własny link",
         "delete": "Usuń",
-        "desc": "Wybierz, do czego prowadzi menu główne i w jakiej kolejności. Zmiany są widoczne od razu.",
+        "desc": "Wybierz, do czego prowadzą Twoje menu i w jakiej kolejności. Zmiany działają od razu.",
         "dragHandle": "Przeciągnij, aby przenieść {name}",
         "edit": "Edytuj",
         "expandAll": "Rozwiń wszystko",
@@ -385,7 +390,19 @@
         "reorderSuccess": "Kolejność menu zapisana",
         "reorderSuccessDesc": "Odwiedzający zobaczą nową kolejność przy następnym wczytaniu menu.",
         "showChildren": "Pokaż, co jest w „{name}”",
-        "summary": "{header} w nagłówku · {dropdowns} w rozwijanych menu"
+        "summary": "{header} w nagłówku · {dropdowns} w rozwijanych menu",
+        "bottomBarSummary": "{count} z {max} linków",
+        "bottomBarEmpty": {
+          "title": "Dolny pasek jest pusty",
+          "description": "Dodaj do {max} linków, a telefony pokażą je w pasku na dole ekranu. Pusty pasek w ogóle się nie wyświetla."
+        }
+      },
+      "tabs": {
+        "label": "Menu",
+        "header": "Nagłówek",
+        "bottomBar": "Dolny pasek",
+        "headerDesc": "W nagłówku na tabletach i komputerach, a na telefonach w menu bocznym.",
+        "bottomBarDesc": "Do trzech linków na dole ekranu na telefonach oraz karta Menu z resztą menu nagłówka."
       }
     },
     "role": {
@@ -1352,6 +1369,13 @@
         "title": "Brak wyników"
       },
       "opens_in_new_tab": "Otwiera się w nowej karcie",
+      "more_navigation": "Więcej",
+      "mobile_nav": {
+        "label": "Nawigacja główna",
+        "menu": "Menu",
+        "navigation": "Nawigacja",
+        "account": "Konto"
+      },
       "optional": "Opcjonalne",
       "or": "lub",
       "pick_color": "Wybierz kolor",

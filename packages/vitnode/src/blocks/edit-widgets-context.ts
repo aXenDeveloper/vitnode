@@ -33,6 +33,18 @@ export const EditWidgetsContext = createContext<EditWidgetsControl | null>(
 export const useEditWidgets = (): EditWidgetsControl | null =>
   use(EditWidgetsContext);
 
+export const useStartEditWidgets = (): (() => void) | null => {
+  const control = useEditWidgets();
+
+  if (control === null || control.offer?.canEdit !== true || control.editing) {
+    return null;
+  }
+
+  return () => {
+    control.start();
+  };
+};
+
 export const sameEditWidgetsOffer = (
   left: EditWidgetsOffer | null,
   right: EditWidgetsOffer | null,

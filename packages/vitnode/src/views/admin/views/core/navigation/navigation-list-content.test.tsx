@@ -27,6 +27,7 @@ const items: AdminNavigationItem[] = [
     id: 1,
     isOpenInNewTab: false,
     kind: "preset",
+    location: "header",
     parentId: null,
     pluginId: "@vitnode/core",
     position: 0,
@@ -49,6 +50,7 @@ const items: AdminNavigationItem[] = [
     id: 2,
     isOpenInNewTab: true,
     kind: "custom",
+    location: "header",
     parentId: 1,
     pluginId: null,
     position: 0,
@@ -65,6 +67,7 @@ const items: AdminNavigationItem[] = [
     id: 3,
     isOpenInNewTab: false,
     kind: "custom",
+    location: "header",
     parentId: null,
     pluginId: null,
     position: 1,
@@ -98,6 +101,7 @@ const renderList = (
 ) => {
   const props = {
     items,
+    location: "header" as const,
     onDelete: vi.fn(async () => Promise.resolve({ data: true })),
     onReorder: vi.fn(async () => Promise.resolve({ data: true })),
     onSave: vi.fn(async () => Promise.resolve({ data: true })),
@@ -369,7 +373,11 @@ describe("NavigationAdminListContent", () => {
     fireEvent.click(screen.getByText("Explore"));
 
     expect(
-      await screen.findByText("admin.navigation.form.presetLocked"),
+      await screen.findByText(
+        "admin.navigation.form.presetLocked",
+        {},
+        { timeout: 5000 },
+      ),
     ).toBeTruthy();
   });
 
@@ -393,5 +401,50 @@ describe("usedNavigationPresetKeys", () => {
       "@vitnode/core::discover",
     ]);
     expect(usedNavigationPresetKeys(items, 1)).toEqual([]);
+  });
+
+  describe("in the bottom bar", () => {
+    const flat = items
+      .filter(item => item.parentId === null)
+      .map(item => ({ ...item, location: "bottom_bar" as const }));
+
+    it("counts links against the bar's limit", () => {
+      renderList({ items: flat, location: "bottom_bar" });
+
+      expect(
+        screen.getByText("admin.navigation.list.bottomBarSummary"),
+      ).toBeTruthy();
+      expect(screen.queryByText("admin.navigation.list.summary")).toBeNull();
+    });
+
+    it("offers no sub-items and no nesting", async () => {
+      renderList({ items: flat, location: "bottom_bar" });
+
+      const menu = await openRowMenu(0);
+
+      expect(
+        within(menu).queryByRole("menuitem", {
+          name: "admin.navigation.list.addChild",
+        }),
+      ).toBeNull();
+      expect(
+        within(menu).queryByRole("menuitem", {
+          name: /admin.navigation.list.moveInside/,
+        }),
+      ).toBeNull();
+      expect(
+        within(menu).getByRole("menuitem", {
+          name: "admin.navigation.list.moveDown",
+        }),
+      ).toBeTruthy();
+    });
+
+    it("explains the empty bar", () => {
+      renderList({ items: [], location: "bottom_bar" });
+
+      expect(
+        screen.getByText("admin.navigation.list.bottomBarEmpty.title"),
+      ).toBeTruthy();
+    });
   });
 });

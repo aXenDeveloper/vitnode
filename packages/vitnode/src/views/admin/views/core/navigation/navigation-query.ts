@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type {
   NavigationKind,
+  NavigationLocation,
   NavigationPreset,
   NavigationText,
 } from "@/lib/navigation";
@@ -25,6 +26,7 @@ export interface AdminNavigationItem {
   id: number;
   isOpenInNewTab: boolean;
   kind: NavigationKind;
+  location: NavigationLocation;
   parentId: null | number;
   pluginId: null | string;
   position: number;

@@ -212,6 +212,7 @@ describe("whether this deployment has password recovery at all", () => {
         ai: { models: [] },
         isEmail: false,
         navigation: [],
+        bottomBar: [],
         sso: [],
       }).isKnown,
     ).toBe(true);
@@ -221,6 +222,7 @@ describe("whether this deployment has password recovery at all", () => {
           ai: { models: [] },
           isEmail: false,
           navigation: [],
+          bottomBar: [],
           sso: [],
         }),
       ),

@@ -49,7 +49,7 @@ export const deleteNavigationAdminRoute = buildRoute({
     }
 
     const [item] = await db
-      .select({ id: core_navigation.id })
+      .select({ id: core_navigation.id, location: core_navigation.location })
       .from(core_navigation)
       .where(eq(core_navigation.id, itemId))
       .limit(1);
@@ -68,7 +68,12 @@ export const deleteNavigationAdminRoute = buildRoute({
         const [lastRoot] = await tx
           .select({ position: core_navigation.position })
           .from(core_navigation)
-          .where(isNull(core_navigation.parentId))
+          .where(
+            and(
+              isNull(core_navigation.parentId),
+              eq(core_navigation.location, item.location),
+            ),
+          )
           .orderBy(desc(core_navigation.position))
           .limit(1);
         let position = (lastRoot?.position ?? -1) + 1;

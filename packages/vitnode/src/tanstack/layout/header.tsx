@@ -3,8 +3,12 @@ import type { AbstractIntlMessages } from "use-intl";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
-import { createTranslator } from "use-intl";
+import { createTranslator, useTranslations } from "use-intl";
 
+import type {
+  PublicNavigationItem,
+  PublicNavigationNode,
+} from "@/lib/navigation";
 import type { HeaderNavTranslate } from "@/views/layouts/theme/header/header-nav";
 
 import { LogoVitNodeBrand } from "@/components/logo-vitnode";
@@ -13,6 +17,8 @@ import {
   headerNavItemsFrom,
   headerNavNamespaces,
 } from "@/views/layouts/theme/header/header-nav";
+import { MobileNavBar } from "@/views/layouts/theme/header/mobile-nav/mobile-nav-bar";
+import { navigationOutsideBottomBar } from "@/views/layouts/theme/header/mobile-nav/mobile-nav-model";
 
 import {
   middlewareConfigQueryOptions,
@@ -21,6 +27,11 @@ import {
 import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
+import { MobileUserMenu } from "./mobile-user-menu";
+
+const asNavigationNodes = (
+  items: readonly PublicNavigationItem[],
+): PublicNavigationNode[] => items.map(item => ({ ...item, items: [] }));
 
 const headerNavTranslator = (
   locale: string,
@@ -46,22 +57,51 @@ export const Header = ({
   user?: React.ReactNode;
 }) => {
   const locale = useLocale();
+  const t = useTranslations("core.global");
   const { data: config } = useMiddlewareConfigQuery();
-  const namespaces = headerNavNamespaces(config.navigation, GLOBAL_NAMESPACE);
+  const bottomBarNodes = React.useMemo(
+    () => asNavigationNodes(config.bottomBar),
+    [config.bottomBar],
+  );
+  const namespaces = headerNavNamespaces(
+    [...config.navigation, ...bottomBarNodes],
+    GLOBAL_NAMESPACE,
+  );
   const { data } = useSuspenseQuery(intlQueryOptions({ locale, namespaces }));
 
+  const translate = React.useMemo(
+    () => headerNavTranslator(locale, data.messages),
+    [data.messages, locale],
+  );
   const navigation = React.useMemo(
-    () =>
-      headerNavItemsFrom({
-        items: config.navigation,
-        locale,
-        translate: headerNavTranslator(locale, data.messages),
-      }),
-    [config.navigation, data.messages, locale],
+    () => headerNavItemsFrom({ items: config.navigation, locale, translate }),
+    [config.navigation, locale, translate],
+  );
+  const bottomBar = React.useMemo(
+    () => headerNavItemsFrom({ items: bottomBarNodes, locale, translate }),
+    [bottomBarNodes, locale, translate],
+  );
+  const menuNavigation = React.useMemo(
+    () => navigationOutsideBottomBar(navigation, bottomBar),
+    [bottomBar, navigation],
   );
 
   return (
-    <HeaderLayoutContent logo={logo} navigation={navigation} user={user} />
+    <>
+      <HeaderLayoutContent
+        logo={logo}
+        mobileUser={
+          <MobileUserMenu
+            hasNavigation={bottomBar.length === 0}
+            navigation={navigation}
+          />
+        }
+        moreNavigationLabel={t("more_navigation")}
+        navigation={navigation}
+        user={user}
+      />
+      <MobileNavBar items={bottomBar} menuNavigation={menuNavigation} />
+    </>
   );
 };
 
@@ -83,7 +123,10 @@ export const loadMainShell = async ({
   await queryClient.query({
     ...intlQueryOptions({
       locale,
-      namespaces: headerNavNamespaces(config.navigation, GLOBAL_NAMESPACE),
+      namespaces: headerNavNamespaces(
+        [...config.navigation, ...asNavigationNodes(config.bottomBar)],
+        GLOBAL_NAMESPACE,
+      ),
     }),
     staleTime: "static",
   });
