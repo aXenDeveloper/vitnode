@@ -38,7 +38,7 @@ core event as for one of your own.
 
 ## Core events (`@vitnode/core`)
 
-Nine names, all declared in `VitNodeEvents` in
+Twelve names, all declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
 the write it describes has committed.
 
@@ -48,6 +48,9 @@ the write it describes has committed.
 | `user.updated`        | `{ userId, email, name }`                | A user is edited in the AdminCP (profile fields and/or role assignments)                             |
 | `user.deleted`        | `{ userId, email }`                      | Never - the name is declared for plugins, core has no deletion flow                                  |
 | `user.sso.linked`     | `{ userId, email, providerId }`          | A visitor proves an existing account is theirs with its password and an SSO identity is linked to it |
+| `user.passkey.created` | `{ userId, passkeyId }`                 | A member adds a [passkey](/docs/dev/passkeys) in **Settings → Security**                              |
+| `user.passkey.updated` | `{ userId, passkeyId, name }`           | A member renames one of their passkeys                                                               |
+| `user.passkey.deleted` | `{ userId, passkeyId }`                 | A member removes one of their passkeys                                                               |
 | `user.avatar.updated` | `{ userId, fileId }`                     | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP          |
 | `user.cover.updated`  | `{ userId, fileId }`                     | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP    |
 | `role.created`        | `{ roleId }`                             | A role is created in the AdminCP                                                                     |

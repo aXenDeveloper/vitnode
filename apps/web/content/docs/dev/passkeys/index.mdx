@@ -1,0 +1,211 @@
+---
+title: Passkeys (WebAuthn)
+description: Let members sign in with Face ID, Touch ID, Windows Hello or a security key. Configure the RP ID and origins, run the migration, and learn how the WebAuthn ceremonies work in VitNode.
+icon: Fingerprint
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { TypeTable } from "fumadocs-ui/components/type-table"
+
+Passkeys let members sign in with their fingerprint, face or screen lock instead of a password. They are built on WebAuthn, can't be phished, and there is nothing to leak - the server only ever stores a **public** key.
+
+VitNode ships passkeys in core. Members add them under **Settings → Security** and use them with **Sign in with a passkey** on `/login`. Under the hood it uses [SimpleWebAuthn](https://simplewebauthn.dev) (`@simplewebauthn/server` and `@simplewebauthn/browser`) - the same libraries Better Auth uses - while sessions, users and permissions stay 100% VitNode.
+
+<Callout type="info">
+  Looking for the member-facing walkthrough? See [Using
+  passkeys](/docs/dev/passkeys/using-passkeys) - it's written so you can link
+  your community straight to it.
+</Callout>
+
+## Quick start
+
+Passkeys are **opt-in**: they stay off until your API config has an `authorization.passkeys` block. Even an empty block turns them on, with everything derived from `VITNODE_WEB_URL`:
+
+- **origin** - `VITNODE_WEB_URL` itself, e.g. `https://community.example.com`
+- **RP ID** - its hostname, e.g. `community.example.com`
+- **RP name** - `metadata.shortTitle`, falling back to `metadata.title`
+
+Being explicit is recommended for production:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:7]
+  authorization: {
+    passkeys: {
+      rpName: "My Community",
+      rpId: process.env.VITNODE_PASSKEY_RP_ID, // unset = hostname of the first origin
+      origins: [process.env.VITNODE_WEB_URL ?? "http://localhost:3000"],
+    },
+  },
+})
+```
+
+Then run the migration (below) and you're done. The login page shows the passkey button as soon as the API reports passkeys as enabled.
+
+## Database migration
+
+Passkeys add two tables to core:
+
+| Table                           | What's in it                                                                                                                                                            |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core_users_passkeys`           | One row per credential: unique credential ID, COSE public key, signature counter, WebAuthn user handle, transports, device type, backup state, AAGUID, name, timestamps |
+| `core_users_passkey_challenges` | Short-lived challenges: a SHA-256 hash of the browser token, the ceremony, the challenge, the user (for registration) and `expiresAt`                                   |
+
+Both reference `core_users` with `ON DELETE CASCADE`. Apply them like any other core migration:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Run migrations'>
+
+```bash tab="bun"
+bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
+In development `pnpm dev` runs `vitnode db:prepare`, which applies it for you.
+
+## RP ID, origins and HTTPS
+
+A passkey belongs to one **RP ID** (a domain). The browser only offers it on pages whose hostname is that domain or a subdomain of it, and VitNode only accepts responses from the **origins** you list.
+
+- **HTTPS is required**, with one exception: `localhost` (and `*.localhost`) works over plain HTTP, so local development needs no certificates.
+- **IP addresses can't be RP IDs.** Open `http://localhost:3000`, not `http://127.0.0.1:3000` - the browser will refuse.
+- **Origins are bare**: `https://example.com`, not `https://example.com/` or `https://example.com/login`.
+- **Sharing across subdomains**: set `rpId: "example.com"` and list every origin, e.g. `https://example.com` and `https://forum.example.com`.
+
+<Callout type="warn">
+  Choose the RP ID before members create passkeys. **Changing it later makes
+  every existing passkey unusable** - they are cryptographically bound to the
+  old domain. Members would have to sign in another way and add new ones.
+</Callout>
+
+VitNode checks the configuration when the API boots:
+
+- A `passkeys` block that can't work (plain HTTP on a real domain, an RP ID that isn't a parent of an origin, an IP address - including a derived one like `VITNODE_WEB_URL=http://192.168.1.10:3000`) **fails the boot** with a message naming the problem.
+
+Turn passkeys off by removing (or commenting out) the `passkeys` block, or with `passkeys: { enabled: false }`. The **Sign in with a passkey** button disappears from `/login`, the **Security** item disappears from settings (`/settings/security` answers "not found"), and every passkey route answers `404 passkeys_disabled`. Saved passkeys stay in the database, so switching passkeys back on brings them straight back.
+
+<TypeTable
+  type={{
+    enabled: {
+      default: "true (once the block exists)",
+      description:
+        "Set to false to hide the passkey button and refuse new ceremonies.",
+      type: "boolean",
+    },
+    origins: {
+      default: "[VITNODE_WEB_URL]",
+      description:
+        "Every origin the login and settings pages are served from. Responses from any other origin are rejected.",
+      type: "string[]",
+    },
+    rpId: {
+      default: "hostname of the first origin",
+      description:
+        "The domain passkeys are bound to. Must equal, or be a parent domain of, every origin's hostname.",
+      type: "string",
+    },
+    rpName: {
+      default: "metadata.shortTitle ?? metadata.title",
+      description: "Name some authenticators show while creating a passkey.",
+      type: "string",
+    },
+  }}
+/>
+
+## How it works
+
+Every ceremony is two requests: **options** (the server issues a challenge) and **verify** (the browser answers it). All routes live under `/api/@vitnode/core/users/passkeys`.
+
+| Method   | Path                | Who                 | Does                                                                                           |
+| -------- | ------------------- | ------------------- | ---------------------------------------------------------------------------------------------- |
+| `POST`   | `/register/options` | signed-in member    | Issues creation options and a registration challenge bound to this browser **and** this member |
+| `POST`   | `/register`         | signed-in member    | Verifies the attestation and saves the passkey                                                 |
+| `POST`   | `/sign-in/options`  | anyone              | Issues request options with **no** `allowCredentials`, so the browser offers any saved passkey |
+| `POST`   | `/sign-in`          | anyone              | Verifies the assertion and starts a normal session                                             |
+| `GET`    | `/`                 | signed-in member    | Lists the member's own passkeys                                                                |
+| `PATCH`  | `/{id}`             | the passkey's owner | Renames it                                                                                     |
+| `DELETE` | `/{id}`             | the passkey's owner | Removes it - refused with `409 last_recovery_method` if it's the account's last way in         |
+
+From the frontend, call them with the typed fetcher - `module: "users/passkeys"` - like any other core route:
+
+```ts
+import { fetcherClient } from "@vitnode/core/lib/fetcher-client"
+
+const res = await fetcherClient({
+  plugin: "@vitnode/core",
+  method: "get",
+  module: "users/passkeys",
+  path: "/",
+  options: { credentials: "include" },
+})
+```
+
+### Challenges
+
+- Each options call creates a random token, stores **only its SHA-256 hash** with the challenge, and sets it in an HttpOnly cookie named `<cookieName>_passkey_registration` or `<cookieName>_passkey_authentication` (so `vitnode_auth_passkey_...` by default).
+- Challenges expire after **five minutes**. Expired rows are swept every time a new ceremony starts.
+- Verification consumes the challenge with a single `DELETE ... RETURNING` scoped to the token hash, the ceremony, "not expired" and - for registration - the signed-in user. It's atomic: two concurrent requests with the same cookie can never both win, and a replayed response always fails.
+- Because the lookup is by the cookie's token, a challenge can't be used from another browser, by another account, or for the other ceremony.
+
+### Verification
+
+The server calls SimpleWebAuthn's `verifyRegistrationResponse` / `verifyAuthenticationResponse` with the stored challenge, your configured `origins` and `rpId`, and `requireUserVerification: true` (options also ask for `userVerification: "required"` and a discoverable credential with `residentKey: "required"`).
+
+On sign-in, the user comes **only** from the stored credential - anything the browser sends besides the WebAuthn response is ignored. If the authenticator returns a user handle, it must match the one saved with that credential.
+
+### Signature counters
+
+- Authenticators that always report `0` (most synced passkeys - iCloud Keychain, Google Password Manager) are accepted every time.
+- Authenticators with a real counter must go **up**. A counter that stays the same or goes backwards - including dropping back to `0` - is rejected as a possible cloned key.
+- The new counter is written with a compare-and-set (`WHERE counter = <previous>`), so two sign-ins racing on one credential can't both succeed.
+
+### Sessions
+
+A successful passkey sign-in calls `SessionModel.createSessionByUserId()` - exactly what password sign-in does - so it sets the usual `vitnode_auth` cookie on the current device. It **never** creates an AdminCP session: staff still sign in at `/admin` separately.
+
+On the client, `usePasskeySignInAction` clears identity-specific caches (the AdminCP entries, files, devices and passkeys) before navigating, and keeps the `returnTo` destination, just like the password form.
+
+### Keeping members locked in (the good way)
+
+A member can't remove their **last** passkey unless the account still has a password or a linked SSO provider. A password only counts while [password sign-in](/docs/dev/advanced/auth#turning-off-password-sign-in) is switched on. The check runs in a transaction that locks the user row, so two tabs deleting "one of two" passkeys at once can't leave the account with nothing.
+
+## Events
+
+| Event                  | Payload                       | Fires when                 |
+| ---------------------- | ----------------------------- | -------------------------- |
+| `user.passkey.created` | `{ passkeyId, userId }`       | A member adds a passkey    |
+| `user.passkey.updated` | `{ passkeyId, userId, name }` | A member renames a passkey |
+| `user.passkey.deleted` | `{ passkeyId, userId }`       | A member removes a passkey |
+
+See [Built-in events](/docs/dev/events/built-in-events) for how to listen to them.
+
+## Deployment checklist
+
+- **Serve the site over HTTPS** on the exact origins you configured. A reverse proxy is fine - what matters is the URL in the member's address bar.
+- **Set `VITNODE_WEB_URL`** (and `VITNODE_PASSKEY_RP_ID` if you share passkeys across subdomains) in every environment.
+- **Preview deployments** on generated hostnames (e.g. `my-app-git-branch.vercel.app`) are different origins - passkeys created on production won't work there, and a preview needs its own origin in `origins` to register new ones.
+- **Separate API server?** Nothing changes: the API checks the _web_ origin the ceremony ran on, not its own URL. Make sure `cookieDomain`/CORS already let the browser send credentialed requests to it.
+- **Custom auth transport?** If you registered one with `setAuthTransport`, implement `startPasskeySignIn` and `finishPasskeySignIn` and relay cookies on both - the challenge cookie is set by the first call and read by the second.
+- **Rate limiting** - the options routes create a database row per call. Keep the [rate limiter](/docs/dev/advanced/rate-limiter) on in production.
+
+## Troubleshooting
+
+In development, VitNode logs why a ceremony failed (wrong origin, RP ID mismatch, counter error...) to the API console. The browser only ever receives a generic error code.
+
+| You see                                          | Likely cause                                                                                |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| No passkey button on `/login`                    | Passkeys disabled, or the derived config was invalid - check the boot log                   |
+| "The RP ID is neither ... nor a parent domain"   | `rpId` doesn't match the hostname of an origin                                              |
+| Browser error "invalid domain" / `SecurityError` | The page's hostname isn't the RP ID or a subdomain of it, or the page isn't HTTPS/localhost |
+| "That took a little too long"                    | The five-minute challenge expired, or the cookie was blocked - start again                  |
+| "Passkey not recognized"                         | The passkey was removed on the site, or it belongs to another RP ID                         |

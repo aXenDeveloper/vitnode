@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import type {
+  PasskeyErrorCode,
+  zodPasskeyAuthenticationOptionsSchema,
+  zodPasskeyAuthenticationResponseSchema,
+} from "@/api/modules/users/passkeys/schema";
+
 import { RATE_LIMIT_STATUS } from "@/lib/fetcher/rate-limit";
 import { signUpConflictReason } from "@/views/auth/sign-up/form/schema";
 
@@ -41,6 +47,25 @@ export type SsoCallbackInput = z.infer<typeof ssoCallbackInputSchema>;
 
 export type SignInResult =
   { ok: false; reason: "access_denied" | "server_error" } | { ok: true };
+
+export type PasskeySignInOptions = z.infer<
+  typeof zodPasskeyAuthenticationOptionsSchema
+>;
+
+export type PasskeySignInOptionsBody =
+  PasskeySignInOptions | { error: PasskeyErrorCode };
+
+export interface PasskeySignInInput {
+  response: z.input<typeof zodPasskeyAuthenticationResponseSchema>;
+}
+
+export type PasskeySignInStartResult =
+  | { ok: false; reason: "server_error" | "unavailable" }
+  | { ok: true; options: PasskeySignInOptions };
+
+export type PasskeySignInResult =
+  | { ok: false; reason: "access_denied" | "expired" | "server_error" }
+  | { ok: true };
 
 export type SignOutResult =
   { ok: false; reason: "server_error" } | { ok: true };
@@ -94,6 +119,28 @@ export const SESSION_UNAVAILABLE = "The session could not be read.";
 
 export const signInResultFromStatus = (status: number): SignInResult => {
   if (status === 201) return { ok: true };
+  if (status === 403) return { ok: false, reason: "access_denied" };
+
+  return { ok: false, reason: "server_error" };
+};
+
+export const passkeySignInStartResultFromStatus = (
+  status: number,
+  body?: PasskeySignInOptionsBody,
+): PasskeySignInStartResult => {
+  if (status === 404) return { ok: false, reason: "unavailable" };
+  if (status !== 200 || !body || !("challenge" in body)) {
+    return { ok: false, reason: "server_error" };
+  }
+
+  return { ok: true, options: body };
+};
+
+export const passkeySignInResultFromStatus = (
+  status: number,
+): PasskeySignInResult => {
+  if (status === 201) return { ok: true };
+  if (status === 400) return { ok: false, reason: "expired" };
   if (status === 403) return { ok: false, reason: "access_denied" };
 
   return { ok: false, reason: "server_error" };

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type { SettingsNavKey } from "./settings-nav";
+import type { SettingsNavItem, SettingsNavKey } from "./settings-nav";
 
 import { SETTINGS_INTERACTIVE_ROW } from "./settings-group";
 import {
@@ -26,14 +26,20 @@ const ICONS: Record<
   security: KeyRoundIcon,
 };
 
-export const SettingsNavContent = ({ pathname }: { pathname: string }) => {
+export const SettingsNavContent = ({
+  items = SETTINGS_NAV_ITEMS,
+  pathname,
+}: {
+  items?: readonly SettingsNavItem[];
+  pathname: string;
+}) => {
   const t = useTranslations("core.auth.settings");
   const tNav = useTranslations("core.auth.settings.nav");
 
   return (
     <nav aria-label={t("title")}>
       <ul className="bg-card ring-foreground/10 divide-y overflow-hidden rounded-xl shadow-xs ring-1">
-        {SETTINGS_NAV_ITEMS.map(item => {
+        {items.map(item => {
           const Icon = ICONS[item.key];
           const isActive = isSettingsNavItemActive(item, pathname);
 

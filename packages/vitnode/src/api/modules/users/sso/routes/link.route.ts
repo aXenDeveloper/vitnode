@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { SessionModel } from "@/api/models/session";
 import { SSOModel } from "@/api/models/sso";
@@ -54,6 +55,7 @@ export const linkRoute = buildRoute({
     },
   },
   handler: async c => {
+    assertPasswordSignInEnabled(c);
     const { providerId } = c.req.valid("param");
     const { password, token } = c.req.valid("json");
     const { userId } = await new SSOModel(c).link({

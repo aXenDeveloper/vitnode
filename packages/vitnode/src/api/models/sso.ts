@@ -6,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import crypto from "node:crypto";
 
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
+import { isPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { ensureServerSecret } from "@/api/lib/server-secret";
 import { ssoConfirmsEmail } from "@/api/lib/sso-email-confirmation";
 import {
@@ -172,7 +173,8 @@ export class SSOModel {
 
         return {
           email: userWithEmail.email,
-          hasPassword: userWithEmail.password !== null,
+          hasPassword:
+            isPasswordSignInEnabled(this.c) && userWithEmail.password !== null,
           kind: "link_required",
           linkToken: await this.mintLinkToken({
             email: userFromSSO.email,

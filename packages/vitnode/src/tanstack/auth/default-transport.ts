@@ -32,6 +32,15 @@ const operations = createAuthOperations({
       path: "/{providerId}/callback",
     }),
 
+  finishPasskeySignIn: async data =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { body: data },
+      method: "post",
+      module: "users/passkeys",
+      path: "/sign-in",
+    }),
+
   linkSso: async data =>
     await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
@@ -90,6 +99,14 @@ const operations = createAuthOperations({
       path: "/sign_up",
     }),
 
+  startPasskeySignIn: async () =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "post",
+      module: "users/passkeys",
+      path: "/sign-in/options",
+    }),
+
   startSso: async data =>
     await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
@@ -105,11 +122,13 @@ export const readSessionFromApi = operations.readSession;
 export const defaultAuthTransport = {
   changePasswordFromReset: operations.changePasswordFromReset,
   completeSso: operations.completeSso,
+  finishPasskeySignIn: operations.finishPasskeySignIn,
   linkSso: operations.linkSso,
   readSession: operations.readSession,
   requestPasswordReset: operations.requestPasswordReset,
   signIn: operations.signIn,
   signOut: operations.signOut,
   signUp: operations.signUp,
+  startPasskeySignIn: operations.startPasskeySignIn,
   startSso: operations.startSso,
 };

@@ -1,0 +1,64 @@
+---
+title: Using passkeys
+description: A friendly guide for members - how to create a passkey, sign in with it, and remove it when you no longer need it.
+icon: KeyRound
+---
+
+A passkey lets you sign in with your fingerprint, your face or your device's screen lock - no password to remember, and nothing a phishing site can steal. It's the same thing your phone already uses to unlock itself, just pointed at this site.
+
+Your passkey is stored on your device or in your password manager (iCloud Keychain, Google Password Manager, 1Password, Bitwarden and friends). The site only ever keeps a public key, which is useless to anyone who gets hold of it.
+
+## Before you start
+
+- Use a recent browser: Chrome, Safari, Edge or Firefox.
+- Your device needs a screen lock - a PIN, pattern, password, fingerprint or face unlock. A hardware security key with a PIN works too.
+- You need to be signed in the usual way to add your first passkey.
+
+## Create a passkey
+
+1. Sign in with your email and password (or your social login).
+2. Open your avatar menu, go to **Settings**, then **Security**.
+3. Select **Add a passkey**.
+4. Your browser asks you to confirm - use your fingerprint, face, PIN or security key.
+5. Done! You'll see "Passkey added", and the new passkey shows up in the list.
+
+The passkey gets a name automatically, like "iCloud Keychain" or "Chrome (Mac OS)". Want something clearer, like "Work laptop"? Select the pencil icon next to it, type a new name and select **Save**.
+
+<Callout type="info">
+  If you see "Already set up", this device or password manager already has a
+  passkey for your account - you're good to go.
+</Callout>
+
+You can add as many passkeys as you like - for example one on your phone and one on your laptop. If your password manager syncs passkeys, one passkey follows you to all your devices; these show a **Synced** badge. Passkeys marked **This device only** live on one device or security key.
+
+## Sign in with a passkey
+
+1. Go to the login page.
+2. Select **Sign in with a passkey**. You don't need to type your email.
+3. Pick your passkey in the browser prompt and confirm with your fingerprint, face or PIN.
+
+That's it - you'll land wherever you were heading. Signing in on a computer with a passkey that lives on your phone? Most browsers offer a QR code to scan with your phone.
+
+## Remove a passkey
+
+1. Go to **Settings → Security**.
+2. Select the red bin icon next to the passkey.
+3. Confirm with **Remove**.
+
+The site forgets the passkey straight away, so it can't be used to sign in anymore. It may still appear in your password manager - delete it there too to keep things tidy.
+
+<Callout type="warn">
+  You can't remove your **last** passkey if it's the only way into your account.
+  Add another passkey, or set a password with "Forgot password?" on the login
+  page first. This keeps you from accidentally locking yourself out.
+</Callout>
+
+## Something went wrong?
+
+| Message                        | What to do                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| Passkey sign-in cancelled      | The prompt was closed or timed out. Just try again.                                        |
+| That took a little too long    | The request expired after five minutes. Start again.                                       |
+| Passkey not recognized         | That passkey was removed or belongs to another site. Try another one or use your password. |
+| Passkeys aren't supported here | Your browser or device can't use passkeys. Update your browser or sign in another way.     |
+| Passkeys are turned off        | This site has switched passkeys off for now. Use your password or social login.            |

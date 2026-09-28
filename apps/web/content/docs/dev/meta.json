@@ -33,6 +33,7 @@
     "email",
     "captcha",
     "sso",
+    "passkeys",
     "cron",
     "websocket",
     "advanced",

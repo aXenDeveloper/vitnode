@@ -21,6 +21,8 @@ export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   isEmail: false,
   isKnown: false,
   navigation: [],
+  passkeys: false,
+  password: true,
   bottomBar: [],
   sso: [],
 });
@@ -72,3 +74,26 @@ export const invalidateMiddlewareConfig = async (
 
 export const ssoProvidersOf = (config: MiddlewareConfig): SSOProvider[] =>
   normalizeSSOProviders(config.sso);
+
+export interface AuthMethods {
+  passkey: boolean;
+  password: boolean;
+  resetPassword: boolean;
+  signUp: boolean;
+  sso: SSOProvider[];
+}
+
+export const authMethodsOf = (config: MiddlewareConfig): AuthMethods => {
+  const sso = ssoProvidersOf(config);
+
+  return {
+    passkey: config.passkeys,
+    password: config.password,
+    resetPassword: config.password && config.isEmail,
+    signUp: config.password || sso.length > 0,
+    sso,
+  };
+};
+
+export const hasSignInMethod = (methods: AuthMethods): boolean =>
+  methods.password || methods.passkey || methods.sso.length > 0;

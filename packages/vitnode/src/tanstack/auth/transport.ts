@@ -2,6 +2,9 @@ import type {
   ChangePasswordInput,
   ChangePasswordResult,
   CompleteSsoResult,
+  PasskeySignInInput,
+  PasskeySignInResult,
+  PasskeySignInStartResult,
   PasswordResetRequestInput,
   PasswordResetRequestResult,
   SignInInput,
@@ -25,6 +28,9 @@ export interface AuthTransport {
     input: ChangePasswordInput,
   ) => Promise<ChangePasswordResult>;
   completeSso: (input: SsoCallbackInput) => Promise<CompleteSsoResult>;
+  finishPasskeySignIn: (
+    input: PasskeySignInInput,
+  ) => Promise<PasskeySignInResult>;
   linkSso: (input: SsoLinkInput) => Promise<SsoLinkResult>;
 
   readSession: () => Promise<SessionApi>;
@@ -34,6 +40,7 @@ export interface AuthTransport {
   signIn: (input: SignInInput) => Promise<SignInResult>;
   signOut: (input: SignOutInput) => Promise<SignOutResult>;
   signUp: (input: SignUpInput) => Promise<SignUpResult>;
+  startPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startSso: (input: SsoStartInput) => Promise<SsoStartResult>;
 }
 

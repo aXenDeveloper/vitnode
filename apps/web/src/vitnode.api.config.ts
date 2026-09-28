@@ -45,6 +45,13 @@ export const vitNodeApiConfig = buildApiConfig({
    * file and the email half cannot drift from the UI half.
    */
   i18n: { ...vitNodeConfig.i18n, messages: appMessages },
+  authorization: {
+    passkeys: {
+      rpName: 'VitNode',
+      rpId: process.env.VITNODE_PASSKEY_RP_ID,
+      origins: [process.env.VITNODE_WEB_URL ?? 'http://localhost:3000'],
+    },
+  },
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     relations: coreRelations,

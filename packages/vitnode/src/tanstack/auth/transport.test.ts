@@ -18,12 +18,14 @@ const unreachable = () => {
 const stub: AuthTransport = {
   changePasswordFromReset: unreachable,
   completeSso: unreachable,
+  finishPasskeySignIn: unreachable,
   linkSso: unreachable,
   readSession: unreachable,
   requestPasswordReset: unreachable,
   signIn: unreachable,
   signOut: unreachable,
   signUp: unreachable,
+  startPasskeySignIn: unreachable,
   startSso: unreachable,
 };
 

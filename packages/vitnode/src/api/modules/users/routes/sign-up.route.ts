@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { PasswordModel } from "@/api/models/password";
 import { UserModel } from "@/api/models/user";
@@ -65,6 +66,7 @@ export const signUpRoute = buildRoute({
     },
   },
   handler: async c => {
+    assertPasswordSignInEnabled(c);
     const hashedPassword = await new PasswordModel().encryptPassword(
       c.req.valid("json").password,
     );

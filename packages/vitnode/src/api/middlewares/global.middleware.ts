@@ -42,6 +42,7 @@ import { realtime } from "@/ws/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
+import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { WebSocketConfig } from "../lib/websocket";
@@ -64,6 +65,7 @@ import {
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
 import { collectNavigationPresets } from "../lib/navigation-presets";
+import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
 declare module "hono" {
@@ -112,6 +114,8 @@ export interface EnvVariablesVitNode {
       cookieSecure: boolean;
       deviceCookieExpires: number;
       deviceCookieName: string;
+      passkeys: ResolvedPasskeysConfig;
+      password: { enabled: boolean };
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
@@ -362,6 +366,12 @@ export const globalMiddleware = ({
   const navigationMetadata: NavigationPreset[] =
     collectNavigationPresets(plugins);
 
+  const passkeysMetadata = resolvePasskeysConfig({
+    config: authorization?.passkeys,
+    rpNameFallback: metadata.shortTitle ?? metadata.title,
+    webOrigin: CONFIG.web.origin,
+  });
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -426,6 +436,8 @@ export const globalMiddleware = ({
         // No default on purpose: absent means host-only, which is correct on
         // localhost, on a generated preview hostname and in production alike.
         cookieDomain: authorization?.cookieDomain,
+        passkeys: passkeysMetadata,
+        password: { enabled: authorization?.password?.enabled ?? true },
       },
       captcha,
       personalInformationFields: resolvePersonalInformationFields(

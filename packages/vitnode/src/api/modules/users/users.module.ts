@@ -3,6 +3,7 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import { userFilesModule } from "./files/files.module";
 import { userImagesModule } from "./images/images.module";
+import { passkeysUserModule } from "./passkeys/passkeys.module";
 import { changePasswordRoute } from "./routes/change-password.route";
 import { listDevicesRoute } from "./routes/devices.route";
 import { mePolicyRoute } from "./routes/me-policy.route";
@@ -34,5 +35,10 @@ export const usersModule = buildModule({
     mePolicyRoute,
     updateMeRoute,
   ],
-  modules: [ssoUserModule, userFilesModule, userImagesModule],
+  modules: [
+    ssoUserModule,
+    passkeysUserModule,
+    userFilesModule,
+    userImagesModule,
+  ],
 });

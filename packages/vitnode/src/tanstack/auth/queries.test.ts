@@ -9,6 +9,10 @@ import {
   devicesQueryKey,
 } from "@/views/auth/settings/devices/devices-query";
 import {
+  PASSKEYS_IDENTITY_ROOT,
+  passkeysQueryKey,
+} from "@/views/auth/settings/passkeys/passkeys-query";
+import {
   MY_FILES_IDENTITY_ROOT,
   myFilesQueryKey,
   myFilesQueryRoot,
@@ -33,6 +37,8 @@ const BOB_FILES = [
 ];
 const ALICE_DEVICES = [...devicesQueryKey(ALICE)];
 const BOB_DEVICES = [...devicesQueryKey(BOB)];
+const ALICE_PASSKEYS = [...passkeysQueryKey(ALICE)];
+const BOB_PASSKEYS = [...passkeysQueryKey(BOB)];
 
 const SESSION = [...SESSION_QUERY_KEY];
 const INTL = ["vitnode", "intl", "en", ["core.global"]];
@@ -50,6 +56,8 @@ const seeded = (): QueryClient => {
     BOB_FILES,
     ALICE_DEVICES,
     BOB_DEVICES,
+    ALICE_PASSKEYS,
+    BOB_PASSKEYS,
     SESSION,
     INTL,
     MIDDLEWARE,
@@ -90,6 +98,10 @@ describe("the identity roots prefix the keys they collect", () => {
     expect(ALICE_DEVICES.slice(0, 2)).toEqual([...DEVICES_IDENTITY_ROOT]);
   });
 
+  it("covers every visitor's passkey list", () => {
+    expect(ALICE_PASSKEYS.slice(0, 2)).toEqual([...PASSKEYS_IDENTITY_ROOT]);
+  });
+
   /**
    * And is genuinely *above* the per-owner root rather than equal to it. A
    * cleanup written as `myFilesQueryRoot(currentUser)` would drop the visitor
@@ -124,6 +136,15 @@ describe("removeUserIdentityQueries", () => {
 
     expect(held(queryClient, ALICE_DEVICES)).toBe(false);
     expect(held(queryClient, BOB_DEVICES)).toBe(false);
+  });
+
+  it("drops every visitor's passkey list", () => {
+    const queryClient = seeded();
+
+    removeUserIdentityQueries(queryClient);
+
+    expect(held(queryClient, ALICE_PASSKEYS)).toBe(false);
+    expect(held(queryClient, BOB_PASSKEYS)).toBe(false);
   });
 
   /**
@@ -197,8 +218,8 @@ describe("every public identity boundary drops the private cache", () => {
   });
 
   /**
-   * Five call sites, one per flow that can change who is at the keyboard: a
-   * sign-in, a finished SSO exchange, an SSO identity linked with a password
+   * Six call sites, one per flow that can change who is at the keyboard: a
+   * sign-in, a passkey sign-in, a finished SSO exchange, an SSO identity linked with a password
    * (which mints a session too), a sign-out and a *verified* sign-up.
    *
    * An unverified sign-up is deliberately not one - no session was minted, so
@@ -206,8 +227,8 @@ describe("every public identity boundary drops the private cache", () => {
    * password-reset request, which mints nothing and leaves the visitor exactly
    * who they were.
    */
-  it("runs on all five, and only those five", () => {
-    expect(actionsSource().split(CLEANUP).length - 1).toBe(5);
+  it("runs on all six, and only those six", () => {
+    expect(actionsSource().split(CLEANUP).length - 1).toBe(6);
   });
 
   /**
@@ -219,7 +240,7 @@ describe("every public identity boundary drops the private cache", () => {
 
     expect(
       code.split("removeAdminIdentityQueries(queryClient)").length - 1,
-    ).toBe(5);
+    ).toBe(6);
   });
 
   it("clears before it navigates", () => {

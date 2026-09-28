@@ -29,6 +29,8 @@ const AUTHORIZATION: Authorization = {
   cookieSecure: true,
   deviceCookieExpires: 1000 * 60 * 60 * 24 * 365,
   deviceCookieName: "vitnode_device",
+  passkeys: { enabled: false, problems: [] },
+  password: { enabled: true },
   ssoAdapters: [],
 };
 

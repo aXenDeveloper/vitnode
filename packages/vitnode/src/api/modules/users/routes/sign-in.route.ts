@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
@@ -53,6 +54,7 @@ export const signInRoute = buildRoute({
   },
   handler: async c => {
     const { password, isAdmin, email } = c.req.valid("json");
+    if (!isAdmin) assertPasswordSignInEnabled(c);
     const data = await new UserModel().signInWithPassword({
       password,
       email,

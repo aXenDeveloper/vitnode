@@ -55,6 +55,19 @@ export interface VitNodeEvents {
     email: string;
     userId: number;
   };
+  "user.passkey.created": {
+    passkeyId: number;
+    userId: number;
+  };
+  "user.passkey.deleted": {
+    passkeyId: number;
+    userId: number;
+  };
+  "user.passkey.updated": {
+    name: string;
+    passkeyId: number;
+    userId: number;
+  };
   "user.sso.linked": {
     email: string;
     providerId: string;
