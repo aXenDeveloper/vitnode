@@ -1,0 +1,21 @@
+name: Setup
+description: Install pnpm, Node.js and dependencies
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6.0.9
+      name: Install pnpm
+      with:
+        version: 11.9.0
+
+    - name: Install Node.js
+      uses: actions/setup-node@v6.4.0
+      with:
+        registry-url: "https://registry.npmjs.org/"
+        node-version: 24
+        cache: "pnpm"
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
