@@ -1,4 +1,5 @@
 import type {
+  AdminPasskeySignInResult,
   ChangePasswordInput,
   ChangePasswordResult,
   CompleteSsoResult,
@@ -28,6 +29,9 @@ export interface AuthTransport {
     input: ChangePasswordInput,
   ) => Promise<ChangePasswordResult>;
   completeSso: (input: SsoCallbackInput) => Promise<CompleteSsoResult>;
+  finishAdminPasskeySignIn: (
+    input: PasskeySignInInput,
+  ) => Promise<AdminPasskeySignInResult>;
   finishPasskeySignIn: (
     input: PasskeySignInInput,
   ) => Promise<PasskeySignInResult>;
@@ -40,6 +44,7 @@ export interface AuthTransport {
   signIn: (input: SignInInput) => Promise<SignInResult>;
   signOut: (input: SignOutInput) => Promise<SignOutResult>;
   signUp: (input: SignUpInput) => Promise<SignUpResult>;
+  startAdminPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startSso: (input: SsoStartInput) => Promise<SsoStartResult>;
 }

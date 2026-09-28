@@ -9,7 +9,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table"
 
 Passkeys let members sign in with their fingerprint, face or screen lock instead of a password. They are built on WebAuthn, can't be phished, and there is nothing to leak - the server only ever stores a **public** key.
 
-VitNode ships passkeys in core. Members add them under **Settings → Security** and use them with **Sign in with a passkey** on `/login`. Under the hood it uses [SimpleWebAuthn](https://simplewebauthn.dev) (`@simplewebauthn/server` and `@simplewebauthn/browser`) - the same libraries Better Auth uses - while sessions, users and permissions stay 100% VitNode.
+VitNode ships passkeys in core. Members add them under **Settings → Security** and use them with **Sign in with a passkey** on `/login`. Staff can use the same passkey on the AdminCP login at `/admin` - see [AdminCP passkey sign-in](/docs/dev/passkeys/admincp). Under the hood it uses [SimpleWebAuthn](https://simplewebauthn.dev) (`@simplewebauthn/server` and `@simplewebauthn/browser`) - the same libraries Better Auth uses - while sessions, users and permissions stay 100% VitNode.
 
 <Callout type="info">
   Looking for the member-facing walkthrough? See [Using
@@ -19,27 +19,32 @@ VitNode ships passkeys in core. Members add them under **Settings → Security**
 
 ## Quick start
 
-Passkeys are **opt-in**: they stay off until your API config has an `authorization.passkeys` block. Even an empty block turns them on, with everything derived from `VITNODE_WEB_URL`:
+Passkeys are **opt-in**: they stay off until you set `authorization.passkeys`. `true` turns them on, with everything derived from `VITNODE_WEB_URL`:
 
 - **origin** - `VITNODE_WEB_URL` itself, e.g. `https://community.example.com`
 - **RP ID** - its hostname, e.g. `community.example.com`
 - **RP name** - `metadata.shortTitle`, falling back to `metadata.title`
 
-Being explicit is recommended for production:
-
 ```ts title="apps/api/src/vitnode.api.config.ts"
 import { buildApiConfig } from "@vitnode/core/vitnode.config"
 
 export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:7]
+  // [!code ++:3]
   authorization: {
-    passkeys: {
-      rpName: "My Community",
-      rpId: process.env.VITNODE_PASSKEY_RP_ID, // unset = hostname of the first origin
-      origins: [process.env.VITNODE_WEB_URL ?? "http://localhost:3000"],
-    },
+    passkeys: true,
   },
 })
+```
+
+Need something the defaults can't give you - several origins, or one RP ID shared across subdomains? Pass an object instead, and set only what differs:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+authorization: {
+  passkeys: {
+    rpId: "example.com",
+    origins: ["https://example.com", "https://forum.example.com"],
+  },
+},
 ```
 
 Then run the migration (below) and you're done. The login page shows the passkey button as soon as the API reports passkeys as enabled.
@@ -90,18 +95,12 @@ A passkey belongs to one **RP ID** (a domain). The browser only offers it on pag
 
 VitNode checks the configuration when the API boots:
 
-- A `passkeys` block that can't work (plain HTTP on a real domain, an RP ID that isn't a parent of an origin, an IP address - including a derived one like `VITNODE_WEB_URL=http://192.168.1.10:3000`) **fails the boot** with a message naming the problem.
+- A `passkeys` setting that can't work (plain HTTP on a real domain, an RP ID that isn't a parent of an origin, an IP address - including a derived one like `VITNODE_WEB_URL=http://192.168.1.10:3000`) **fails the boot** with a message naming the problem.
 
-Turn passkeys off by removing (or commenting out) the `passkeys` block, or with `passkeys: { enabled: false }`. The **Sign in with a passkey** button disappears from `/login`, the **Security** item disappears from settings (`/settings/security` answers "not found"), and every passkey route answers `404 passkeys_disabled`. Saved passkeys stay in the database, so switching passkeys back on brings them straight back.
+Turn passkeys off by removing `passkeys`, or with `passkeys: false`. The **Sign in with a passkey** button disappears from `/login`, the **Security** item disappears from settings (`/settings/security` answers "not found"), and every passkey route answers `404 passkeys_disabled`. Saved passkeys stay in the database, so switching passkeys back on brings them straight back.
 
 <TypeTable
   type={{
-    enabled: {
-      default: "true (once the block exists)",
-      description:
-        "Set to false to hide the passkey button and refuse new ceremonies.",
-      type: "boolean",
-    },
     origins: {
       default: "[VITNODE_WEB_URL]",
       description:
@@ -132,6 +131,8 @@ Every ceremony is two requests: **options** (the server issues a challenge) and 
 | `POST`   | `/register`         | signed-in member    | Verifies the attestation and saves the passkey                                                 |
 | `POST`   | `/sign-in/options`  | anyone              | Issues request options with **no** `allowCredentials`, so the browser offers any saved passkey |
 | `POST`   | `/sign-in`          | anyone              | Verifies the assertion and starts a normal session                                             |
+| `POST`   | `/admin-sign-in/options` | anyone         | Issues a two-minute, AdminCP-only challenge with `userVerification: "required"`                |
+| `POST`   | `/admin-sign-in`    | anyone              | Verifies the assertion, checks staff access live, and starts an **AdminCP** session only       |
 | `GET`    | `/`                 | signed-in member    | Lists the member's own passkeys                                                                |
 | `PATCH`  | `/{id}`             | the passkey's owner | Renames it                                                                                     |
 | `DELETE` | `/{id}`             | the passkey's owner | Removes it - refused with `409 last_recovery_method` if it's the account's last way in         |
@@ -152,10 +153,10 @@ const res = await fetcherClient({
 
 ### Challenges
 
-- Each options call creates a random token, stores **only its SHA-256 hash** with the challenge, and sets it in an HttpOnly cookie named `<cookieName>_passkey_registration` or `<cookieName>_passkey_authentication` (so `vitnode_auth_passkey_...` by default).
-- Challenges expire after **five minutes**. Expired rows are swept every time a new ceremony starts.
+- Each options call creates a random token, stores **only its SHA-256 hash** with the challenge, and sets it in an HttpOnly cookie named `<cookieName>_passkey_registration`, `<cookieName>_passkey_authentication` or `<cookieName>_passkey_admin_sign_in` (so `vitnode_auth_passkey_...` by default).
+- Challenges expire after **five minutes** - AdminCP sign-in challenges after **two**. Expired rows are swept every time a new ceremony starts.
 - Verification consumes the challenge with a single `DELETE ... RETURNING` scoped to the token hash, the ceremony, "not expired" and - for registration - the signed-in user. It's atomic: two concurrent requests with the same cookie can never both win, and a replayed response always fails.
-- Because the lookup is by the cookie's token, a challenge can't be used from another browser, by another account, or for the other ceremony.
+- Because the lookup is by the cookie's token, a challenge can't be used from another browser, by another account, or for another ceremony - a public sign-in challenge never opens the AdminCP, and the other way round.
 
 ### Verification
 
@@ -171,7 +172,9 @@ On sign-in, the user comes **only** from the stored credential - anything the br
 
 ### Sessions
 
-A successful passkey sign-in calls `SessionModel.createSessionByUserId()` - exactly what password sign-in does - so it sets the usual `vitnode_auth` cookie on the current device. It **never** creates an AdminCP session: staff still sign in at `/admin` separately.
+A successful passkey sign-in calls `SessionModel.createSessionByUserId()` - exactly what password sign-in does - so it sets the usual `vitnode_auth` cookie on the current device. It **never** creates an AdminCP session, even for staff. The AdminCP has its own passkey flow at `/admin` with a separate challenge, a live staff check and its own session - see [AdminCP passkey sign-in](/docs/dev/passkeys/admincp).
+
+Accounts with AdminCP access can only **add** a passkey while an AdminCP session for the same user is open in that browser (`403 admin_session_required` otherwise). Everyone else enrolls as usual.
 
 On the client, `usePasskeySignInAction` clears identity-specific caches (the AdminCP entries, files, devices and passkeys) before navigating, and keeps the `returnTo` destination, just like the password form.
 
@@ -192,10 +195,10 @@ See [Built-in events](/docs/dev/events/built-in-events) for how to listen to the
 ## Deployment checklist
 
 - **Serve the site over HTTPS** on the exact origins you configured. A reverse proxy is fine - what matters is the URL in the member's address bar.
-- **Set `VITNODE_WEB_URL`** (and `VITNODE_PASSKEY_RP_ID` if you share passkeys across subdomains) in every environment.
+- **Set `VITNODE_WEB_URL`** in every environment, and set `rpId` in the config if you share passkeys across subdomains.
 - **Preview deployments** on generated hostnames (e.g. `my-app-git-branch.vercel.app`) are different origins - passkeys created on production won't work there, and a preview needs its own origin in `origins` to register new ones.
 - **Separate API server?** Nothing changes: the API checks the _web_ origin the ceremony ran on, not its own URL. Make sure `cookieDomain`/CORS already let the browser send credentialed requests to it.
-- **Custom auth transport?** If you registered one with `setAuthTransport`, implement `startPasskeySignIn` and `finishPasskeySignIn` and relay cookies on both - the challenge cookie is set by the first call and read by the second.
+- **Custom auth transport?** If you registered one with `setAuthTransport`, implement `startPasskeySignIn`, `finishPasskeySignIn`, `startAdminPasskeySignIn` and `finishAdminPasskeySignIn`, and relay cookies on all four - the challenge cookie is set by the first call and read by the second.
 - **Rate limiting** - the options routes create a database row per call. Keep the [rate limiter](/docs/dev/advanced/rate-limiter) on in production.
 
 ## Troubleshooting

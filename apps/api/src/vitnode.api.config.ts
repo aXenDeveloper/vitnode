@@ -94,11 +94,7 @@ export const vitNodeApiConfig = buildApiConfig({
   },
 
   authorization: {
-    passkeys: {
-      rpName: "VitNode",
-      rpId: process.env.VITNODE_PASSKEY_RP_ID,
-      origins: [process.env.VITNODE_WEB_URL ?? "http://localhost:3000"],
-    },
+    passkeys: true,
     ssoAdapters: [
       DiscordSSOApiPlugin({
         clientId: process.env.DISCORD_CLIENT_ID,

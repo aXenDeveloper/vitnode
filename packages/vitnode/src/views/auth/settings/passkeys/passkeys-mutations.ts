@@ -7,7 +7,11 @@ import type { Passkey } from "./passkeys-query";
 import { createPasskeyInBrowser } from "../../passkeys/webauthn";
 
 export type AddPasskeyFailure =
-  "expired" | "server_error" | "unavailable" | PasskeyCeremonyFailure;
+  | "admin_session_required"
+  | "expired"
+  | "server_error"
+  | "unavailable"
+  | PasskeyCeremonyFailure;
 
 export type AddPasskeyResult =
   { failure: AddPasskeyFailure; ok: false } | { ok: true; passkey: Passkey };
@@ -48,6 +52,9 @@ export const addPasskeyInBrowser: AddPasskey = async () => {
     });
 
     if (optionsResponse.status === 404) return failed("unavailable");
+    if (optionsResponse.status === 403) {
+      return failed("admin_session_required");
+    }
     if (optionsResponse.status !== 200) return failed("server_error");
 
     const options = await optionsResponse.json();
@@ -66,6 +73,9 @@ export const addPasskeyInBrowser: AddPasskey = async () => {
     });
 
     if (verifyResponse.status === 409) return failed("already_registered");
+    if (verifyResponse.status === 403) {
+      return failed("admin_session_required");
+    }
     if (verifyResponse.status === 400) return failed("expired");
     if (verifyResponse.status !== 201) return failed("server_error");
 

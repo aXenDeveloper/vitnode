@@ -12,6 +12,7 @@ export type PasskeySignInFeedback =
   | "cancelled"
   | "expired"
   | "failed"
+  | "not_staff"
   | "rejected"
   | "server_error"
   | "unavailable"

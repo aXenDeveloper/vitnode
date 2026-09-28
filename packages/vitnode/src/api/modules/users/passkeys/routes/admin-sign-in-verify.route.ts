@@ -1,8 +1,8 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/lib/route";
-import { PasskeyModel } from "@/api/models/passkey";
-import { SessionModel } from "@/api/models/session";
+import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
+import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { passkeyFailure } from "../failure";
@@ -11,13 +11,13 @@ import {
   zodPasskeyAuthenticationResponseSchema,
 } from "../schema";
 
-export const passkeyAuthenticationVerifyRoute = buildRoute({
+export const passkeyAdminSignInVerifyRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:
-      "Finish signing in with a passkey and start a normal session. Never starts an AdminCP session.",
-    path: "/sign-in",
+      "Finish signing in to the AdminCP with a user-verified passkey and start an AdminCP session. The account must hold staff access right now; a public session is never read or upgraded.",
+    path: "/admin-sign-in",
     request: {
       body: {
         required: true,
@@ -37,7 +37,7 @@ export const passkeyAuthenticationVerifyRoute = buildRoute({
             schema: z.object({ id: z.number() }),
           },
         },
-        description: "Signed in",
+        description: "Signed in to the AdminCP",
       },
       ...PASSKEY_ERROR_RESPONSES,
     },
@@ -48,9 +48,13 @@ export const passkeyAuthenticationVerifyRoute = buildRoute({
     try {
       const { userId } = await new PasskeyModel(c).verifyAuthentication(
         response,
-        "authentication",
+        "admin_sign_in",
       );
-      await new SessionModel(c).createSessionByUserId(userId);
+      const admin = new SessionAdminModel(c);
+      if (!(await admin.checkIfUserIsAdmin(userId))) {
+        throw new PasskeyError("not_staff", 403);
+      }
+      await admin.createSessionByUserId(userId);
 
       return c.json({ id: userId }, 201);
     } catch (error) {

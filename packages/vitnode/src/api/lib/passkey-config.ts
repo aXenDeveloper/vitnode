@@ -1,5 +1,4 @@
 export interface PasskeysConfig {
-  enabled?: boolean;
   origins?: string[];
   rpId?: string;
   rpName?: string;
@@ -83,16 +82,15 @@ export const resolvePasskeysConfig = ({
   rpNameFallback,
   webOrigin,
 }: {
-  config: PasskeysConfig | undefined;
+  config: boolean | PasskeysConfig | undefined;
   rpNameFallback: string;
   webOrigin: string;
 }): ResolvedPasskeysConfig => {
-  if (!config || config.enabled === false) {
-    return { enabled: false, problems: [] };
-  }
+  if (!config) return { enabled: false, problems: [] };
 
-  const origins = config.origins ?? [webOrigin];
-  const rpId = config.rpId ?? parseOrigin(origins[0] ?? "")?.hostname ?? "";
+  const overrides = config === true ? {} : config;
+  const origins = overrides.origins ?? [webOrigin];
+  const rpId = overrides.rpId ?? parseOrigin(origins[0] ?? "")?.hostname ?? "";
   const problems = passkeyConfigProblems({ origins, rpId });
 
   if (problems.length > 0) {
@@ -105,6 +103,6 @@ export const resolvePasskeysConfig = ({
     enabled: true,
     origins,
     rpId,
-    rpName: config.rpName ?? rpNameFallback,
+    rpName: overrides.rpName ?? rpNameFallback,
   };
 };

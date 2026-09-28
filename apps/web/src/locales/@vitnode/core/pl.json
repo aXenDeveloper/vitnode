@@ -972,6 +972,10 @@
             "unsupported": {
               "desc": "Ta przeglądarka lub urządzenie nie potrafi tworzyć kluczy dostępu z blokadą ekranu lub biometrią.",
               "title": "Klucze dostępu nie są tu obsługiwane"
+            },
+            "admin_session_required": {
+              "title": "Najpierw otwórz AdminCP",
+              "desc": "Twoje konto ma dostęp do AdminCP, więc dodanie klucza dostępu wymaga dodatkowego potwierdzenia. Zaloguj się do AdminCP hasłem w tej przeglądarce i spróbuj ponownie."
             }
           },
           "last_used": "Ostatnio użyty",
@@ -1028,6 +1032,10 @@
             "unsupported": {
               "desc": "Ta przeglądarka lub urządzenie nie obsługuje kluczy dostępu. Wybierz inny sposób logowania.",
               "title": "Klucze dostępu nie są tu obsługiwane"
+            },
+            "not_staff": {
+              "title": "Brak dostępu do AdminCP",
+              "desc": "Klucz dostępu jest prawidłowy, ale to konto nie może otworzyć AdminCP. Jeśli uważasz, że to pomyłka, skontaktuj się z administratorem."
             }
           },
           "unsupported_hint": "Ta przeglądarka nie obsługuje kluczy dostępu. Zaloguj się adresem e-mail i hasłem."

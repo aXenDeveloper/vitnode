@@ -13,29 +13,42 @@ describe("resolvePasskeysConfig", () => {
     ).toEqual({ enabled: false, problems: [] });
   });
 
-  it("can be switched off inside the block", () => {
+  it("is off when set to false", () => {
     expect(
       resolvePasskeysConfig({
-        config: { enabled: false, rpId: "example.com" },
+        config: false,
         rpNameFallback: "VitNode",
         webOrigin: "https://example.com",
       }),
     ).toEqual({ enabled: false, problems: [] });
   });
 
-  it("derives the RP ID and origin from the web origin for an empty block", () => {
-    expect(
+  it.each([true, {}])(
+    "derives the RP ID and origin from the web origin for %j",
+    config => {
+      expect(
+        resolvePasskeysConfig({
+          config,
+          rpNameFallback: "VitNode",
+          webOrigin: "http://localhost:3000",
+        }),
+      ).toEqual({
+        enabled: true,
+        origins: ["http://localhost:3000"],
+        rpId: "localhost",
+        rpName: "VitNode",
+      });
+    },
+  );
+
+  it("fails fast when true meets a web origin that cannot host passkeys", () => {
+    expect(() =>
       resolvePasskeysConfig({
-        config: {},
+        config: true,
         rpNameFallback: "VitNode",
-        webOrigin: "http://localhost:3000",
+        webOrigin: "http://192.168.1.10:3000",
       }),
-    ).toEqual({
-      enabled: true,
-      origins: ["http://localhost:3000"],
-      rpId: "localhost",
-      rpName: "VitNode",
-    });
+    ).toThrow(/IP address/);
   });
 
   it("accepts a parent-domain RP ID shared by several origins", () => {

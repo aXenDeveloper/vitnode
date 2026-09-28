@@ -106,10 +106,12 @@ export const zodPasskeySchema = z.object({
 
 export const zodPasskeyErrorSchema = z.object({
   error: z.enum([
+    "admin_session_required",
     "already_registered",
     "invalid_challenge",
     "last_recovery_method",
     "not_found",
+    "not_staff",
     "passkeys_disabled",
     "verification_failed",
   ]),
@@ -128,7 +130,9 @@ export const passkeyErrorResponse = (description: string) => ({
 
 export const PASSKEY_ERROR_RESPONSES = {
   400: passkeyErrorResponse("The challenge or the credential was rejected"),
-  403: passkeyErrorResponse("The passkey could not be verified"),
+  403: passkeyErrorResponse(
+    "The passkey could not be verified, or the account may not do this",
+  ),
   404: passkeyErrorResponse("Passkeys are disabled or the passkey is unknown"),
   409: passkeyErrorResponse("The request conflicts with the account's state"),
 };

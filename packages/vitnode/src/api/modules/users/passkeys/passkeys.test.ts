@@ -90,6 +90,20 @@ const harness = ({
   const createAdminSession = vi
     .spyOn(SessionAdminModel.prototype, "createSessionByUserId")
     .mockResolvedValue({ token: "admin-token" });
+  const staff = new Set<number>();
+  vi.spyOn(
+    SessionAdminModel.prototype,
+    "checkIfUserIsAdmin",
+  ).mockImplementation(async userId => Promise.resolve(staff.has(userId)));
+  let adminViewer: null | Viewer = null;
+  vi.spyOn(SessionAdminModel.prototype, "getUser").mockImplementation(
+    async () =>
+      Promise.resolve(
+        adminViewer as unknown as Awaited<
+          ReturnType<SessionAdminModel["getUser"]>
+        >,
+      ),
+  );
   const emit = vi.fn(async () => Promise.resolve(undefined));
 
   let viewer: null | Viewer = null;
@@ -139,6 +153,15 @@ const harness = ({
     },
     disablePasswordSignIn: () => {
       password = { enabled: false };
+    },
+    grantStaff: (user: Viewer) => {
+      staff.add(user.id);
+    },
+    revokeStaff: (user: Viewer) => {
+      staff.delete(user.id);
+    },
+    signInToAdminAs: (user: null | Viewer) => {
+      adminViewer = user;
     },
     signInAs: (user: null | Viewer) => {
       viewer = user;
@@ -779,5 +802,363 @@ describe("passkey management", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: "last_recovery_method" });
     expect(h.passkeys.has(alicePasskeyId)).toBe(true);
+  });
+});
+
+const ADMIN_CHALLENGE_COOKIE = "vitnode_auth_passkey_admin_sign_in";
+const PUBLIC_CHALLENGE_COOKIE = "vitnode_auth_passkey_authentication";
+
+const startAdminSignIn = async (h: Harness) => {
+  const response = await h.request("/admin-sign-in/options", {
+    method: "POST",
+  });
+  expect(response.status).toBe(200);
+
+  return (await response.json()) as AuthenticationOptions;
+};
+
+const adminSignIn = async (
+  h: Harness,
+  authenticator: Authenticator,
+  overrides?: CeremonyOverrides,
+) => {
+  const options = await startAdminSignIn(h);
+  const assertion = authenticator.getAssertion({
+    challenge: options.challenge,
+    overrides,
+  });
+
+  return await h.request("/admin-sign-in", json({ response: assertion }));
+};
+
+const enrolled = async ({ asStaff = true }: { asStaff?: boolean } = {}) => {
+  const h = harness();
+  const authenticator = newAuthenticator();
+  if (asStaff) {
+    h.grantStaff(ALICE);
+    h.signInToAdminAs(ALICE);
+  }
+  h.signInAs(ALICE);
+  const registration = await register(h, authenticator);
+  expect(registration.status).toBe(201);
+  h.signInAs(null);
+  h.signInToAdminAs(null);
+  h.switchBrowser();
+
+  return { authenticator, h };
+};
+
+describe("AdminCP passkey sign-in", () => {
+  it("issues a fresh two-minute AdminCP challenge that requires user verification", async () => {
+    vi.useFakeTimers({
+      now: new Date("2026-09-28T12:00:00Z"),
+      toFake: ["Date"],
+    });
+    const { h } = await enrolled();
+
+    const publicOptions = await startSignIn(h);
+    const options = await startAdminSignIn(h);
+
+    expect(options.userVerification).toBe("required");
+    expect(options.allowCredentials ?? []).toEqual([]);
+    expect(options.challenge).not.toBe(publicOptions.challenge);
+    expect(h.cookies().has(ADMIN_CHALLENGE_COOKIE)).toBe(true);
+
+    const adminChallenge = [...h.challenges.values()].find(
+      row => row.ceremony === "admin_sign_in",
+    );
+    expect(adminChallenge).toMatchObject({
+      challenge: options.challenge,
+      expiresAt: new Date("2026-09-28T12:02:00Z"),
+      userId: null,
+    });
+  });
+
+  it("starts an AdminCP session for a staff member's passkey", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+
+    const response = await adminSignIn(h, authenticator);
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ id: ALICE.id });
+    expect(h.createAdminSession).toHaveBeenCalledExactlyOnceWith(ALICE.id);
+    expect(h.createSession).not.toHaveBeenCalled();
+    expect(h.cookies().has(ADMIN_CHALLENGE_COOKIE)).toBe(false);
+  });
+
+  it("refuses a regular member's passkey", async () => {
+    const { authenticator, h } = await enrolled({ asStaff: false });
+
+    const response = await adminSignIn(h, authenticator);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "not_staff" });
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+    expect(h.createSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses a staff member whose access was removed after enrolling", async () => {
+    const { authenticator, h } = await enrolled();
+    h.revokeStaff(ALICE);
+
+    const response = await adminSignIn(h, authenticator);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "not_staff" });
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses an assertion made without user verification", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+
+    const response = await adminSignIn(h, authenticator, {
+      userVerified: false,
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "verification_failed" });
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses a challenge older than two minutes", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+    const options = await startAdminSignIn(h);
+    const assertion = authenticator.getAssertion({
+      challenge: options.challenge,
+    });
+
+    vi.setSystemTime(Date.now() + 2 * 60_000 + 1);
+    const response = await h.request(
+      "/admin-sign-in",
+      json({ response: assertion }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_challenge" });
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses a reused AdminCP challenge", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+    const options = await startAdminSignIn(h);
+    const cookies = h.cookies();
+    const assertion = authenticator.getAssertion({
+      challenge: options.challenge,
+    });
+
+    const first = await h.request(
+      "/admin-sign-in",
+      json({ response: assertion }),
+    );
+    h.restoreCookies(cookies);
+    const replay = await h.request(
+      "/admin-sign-in",
+      json({ response: assertion }),
+    );
+
+    expect(first.status).toBe(201);
+    expect(replay.status).toBe(400);
+    expect(await replay.json()).toEqual({ error: "invalid_challenge" });
+    expect(h.createAdminSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a public sign-in challenge presented to the AdminCP", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+    const options = await startSignIn(h);
+    const assertion = authenticator.getAssertion({
+      challenge: options.challenge,
+    });
+
+    h.restoreCookies(
+      new Map([
+        [
+          ADMIN_CHALLENGE_COOKIE,
+          h.cookies().get(PUBLIC_CHALLENGE_COOKIE) ?? "",
+        ],
+      ]),
+    );
+    const response = await h.request(
+      "/admin-sign-in",
+      json({ response: assertion }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_challenge" });
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses an AdminCP challenge presented to public sign-in", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+    const options = await startAdminSignIn(h);
+    const assertion = authenticator.getAssertion({
+      challenge: options.challenge,
+    });
+
+    h.restoreCookies(
+      new Map([
+        [
+          PUBLIC_CHALLENGE_COOKIE,
+          h.cookies().get(ADMIN_CHALLENGE_COOKIE) ?? "",
+        ],
+      ]),
+    );
+    const response = await h.request("/sign-in", json({ response: assertion }));
+
+    expect(response.status).toBe(400);
+    expect(h.createSession).not.toHaveBeenCalled();
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses a registration challenge presented to the AdminCP", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+    h.signInAs(ALICE);
+    h.signInToAdminAs(ALICE);
+    const registration = await startRegistration(h);
+    const assertion = authenticator.getAssertion({
+      challenge: registration.challenge,
+    });
+
+    h.restoreCookies(
+      new Map([
+        [
+          ADMIN_CHALLENGE_COOKIE,
+          h.cookies().get("vitnode_auth_passkey_registration") ?? "",
+        ],
+      ]),
+    );
+    const response = await h.request(
+      "/admin-sign-in",
+      json({ response: assertion }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses an assertion from the wrong origin", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+
+    const response = await adminSignIn(h, authenticator, {
+      origin: "https://admin.evil.example",
+    });
+
+    expect(response.status).toBe(403);
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses an assertion for the wrong RP ID", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+
+    const response = await adminSignIn(h, authenticator, {
+      rpId: "evil.example",
+    });
+
+    expect(response.status).toBe(403);
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("never turns a public session into an AdminCP session", async () => {
+    const { h } = await enrolled();
+    h.grantStaff(ALICE);
+    h.signInAs(ALICE);
+
+    const withoutChallenge = await h.request(
+      "/admin-sign-in",
+      json({ response: newAuthenticator().getAssertion({ challenge: "" }) }),
+    );
+
+    expect(withoutChallenge.status).toBe(400);
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("keeps public passkey sign-in public, even for staff", async () => {
+    const { authenticator, h } = await enrolled();
+    h.grantStaff(ALICE);
+
+    const response = await signIn(h, authenticator);
+
+    expect(response.status).toBe(201);
+    expect(h.createSession).toHaveBeenCalledExactlyOnceWith(ALICE.id);
+    expect(h.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when passkeys are disabled", async () => {
+    const h = harness({ passkeys: { enabled: false, problems: [] } });
+
+    const response = await h.request("/admin-sign-in/options", {
+      method: "POST",
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "passkeys_disabled" });
+  });
+});
+
+describe("staff passkey enrollment", () => {
+  it("asks staff to open the AdminCP before adding a passkey", async () => {
+    const h = harness();
+    h.grantStaff(ALICE);
+    h.signInAs(ALICE);
+
+    const response = await h.request("/register/options", { method: "POST" });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "admin_session_required" });
+    expect(h.challenges.size).toBe(0);
+  });
+
+  it("refuses an AdminCP session that belongs to someone else", async () => {
+    const h = harness();
+    h.grantStaff(ALICE);
+    h.signInAs(ALICE);
+    h.signInToAdminAs(BOB);
+
+    const response = await h.request("/register/options", { method: "POST" });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("refuses to save the passkey when the AdminCP session ended mid-ceremony", async () => {
+    const h = harness();
+    h.grantStaff(ALICE);
+    h.signInAs(ALICE);
+    h.signInToAdminAs(ALICE);
+    const options = await startRegistration(h);
+    const credential = newAuthenticator().createCredential({
+      challenge: options.challenge,
+      userId: options.user.id,
+    });
+
+    h.signInToAdminAs(null);
+    const response = await h.request(
+      "/register",
+      json({ response: credential }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "admin_session_required" });
+    expect(h.passkeys.size).toBe(0);
+  });
+
+  it("lets staff with their own AdminCP session add a passkey", async () => {
+    const h = harness();
+    h.grantStaff(ALICE);
+    h.signInAs(ALICE);
+    h.signInToAdminAs(ALICE);
+
+    const response = await register(h, newAuthenticator());
+
+    expect(response.status).toBe(201);
+    expect(h.passkeys.size).toBe(1);
   });
 });

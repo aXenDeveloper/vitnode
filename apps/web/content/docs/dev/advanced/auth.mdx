@@ -36,7 +36,7 @@ export const vitNodeApiConfig = buildApiConfig({
 | **Known Device** | `vitnode_device` | 1 year | `core_sessions_known_devices` | Device authorization tracking |
 
 <Callout type="info" title="Session Isolation">
-  Signing out of the AdminCP does not terminate the user's public session, and vice versa. An administrator compromised in a public context cannot access the AdminCP without re-authenticating with staff credentials.
+  Signing out of the AdminCP does not terminate the user's public session, and vice versa. An administrator compromised in a public context cannot access the AdminCP without re-authenticating with staff credentials - a password or a user-verified passkey, checked against live staff access. Neither a public session nor social SSO ever becomes an AdminCP session.
 </Callout>
 
 ---
@@ -118,14 +118,14 @@ The rules are per-provider, because they are only true per-provider:
       type: "SSOApiPlugin[]",
     },
     password: {
-      default: "{ enabled: true }",
-      description: "Set { enabled: false } to switch off email + password sign-in and sign-up for members. Config only - there is no AdminCP toggle. AdminCP sign-in at /admin keeps using passwords.",
-      type: "{ enabled?: boolean }",
+      default: "true",
+      description: "Set to false to switch off email + password sign-in and sign-up for members. Config only - there is no AdminCP toggle. AdminCP sign-in at /admin keeps using passwords (and passkeys, if enabled).",
+      type: "boolean",
     },
     passkeys: {
-      default: "off (add the block to turn passkeys on)",
-      description: "WebAuthn passkeys: { enabled, rpId, rpName, origins }. A passkey sign-in creates a normal public session, never an AdminCP one. See /docs/dev/passkeys.",
-      type: "PasskeysConfig",
+      default: "false",
+      description: "WebAuthn passkeys: true for the defaults, or { rpId, rpName, origins } to override them. A public passkey sign-in creates a normal public session, never an AdminCP one; the AdminCP has its own passkey flow. See /docs/dev/passkeys and /docs/dev/passkeys/admincp.",
+      type: "boolean | PasskeysConfig",
     },
   }}
 />
@@ -138,7 +138,7 @@ Running a passkeys-only or social-login-only community? Switch passwords off:
 export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:3]
   authorization: {
-    password: { enabled: false },
+    password: false,
   },
 })
 ```
@@ -152,7 +152,7 @@ With passwords off:
 - A stored password no longer counts as a way into the account, so members can't remove their last [passkey](/docs/dev/passkeys) unless they have another passkey or a linked SSO provider.
 
 <Callout type="warn">
-  The AdminCP sign-in at `/admin` still uses email + password - it has no other way in yet, and switching it off would lock your staff out. Signing out works exactly as before.
+  The AdminCP sign-in at `/admin` keeps its email + password form, so switching member passwords off never locks your staff out. With passkeys enabled, staff can also use [AdminCP passkey sign-in](/docs/dev/passkeys/admincp). Signing out works exactly as before.
 </Callout>
 
 Password hashes already in the database are left alone, so switching `enabled` back to `true` restores password sign-in for everyone who had one.

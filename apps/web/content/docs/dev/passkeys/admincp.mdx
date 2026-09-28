@@ -1,0 +1,118 @@
+---
+title: AdminCP passkey sign-in
+description: Let staff sign in to the VitNode AdminCP with a user-verified passkey. How enrollment, sign-in and recovery work, why user verification is required, and how AdminCP sessions stay separate from public ones.
+icon: ShieldCheck
+---
+
+Staff can sign in to the AdminCP at `/admin` with the same passkey they use on the community site - fingerprint, face, PIN or security key, no password to type. It uses the passkeys you already [configured](/docs/dev/passkeys), so there is nothing extra to switch on. If passkeys are enabled, the **Sign in with a passkey** button shows up on the AdminCP login screen.
+
+The AdminCP is still the high-security zone, so this flow is stricter than the public one:
+
+- a **fresh AdminCP-only challenge** that lives for **two minutes** and works exactly once
+- **user verification is required** - just tapping a key doesn't count
+- **staff access is checked live** on the server at sign-in
+- it creates an **AdminCP session only**, and never upgrades a public one
+
+## For staff: the short version
+
+<Steps>
+<Step>
+
+### Add a passkey (once)
+
+1. Sign in to the AdminCP at `/admin` with your **email and password**.
+2. In the **same browser**, go to the community site, sign in, and open **Settings → Security**.
+3. Select **Add a passkey** and confirm with your fingerprint, face or PIN.
+
+</Step>
+<Step>
+
+### Sign in with it
+
+1. Go to `/admin`.
+2. Select **Sign in with a passkey**.
+3. Pick your passkey and confirm with your fingerprint, face or PIN.
+
+You'll land wherever you were heading in the AdminCP.
+
+</Step>
+</Steps>
+
+<Callout type="info">
+  Why the password first? Your account has AdminCP access, so VitNode only lets
+  it add a passkey while an AdminCP session for **you** is open in that browser.
+  That way a hijacked social login can't quietly add a passkey and walk into the
+  AdminCP.
+</Callout>
+
+## Enrollment
+
+Passkeys are enrolled in one place - **Settings → Security** - and one passkey works for both the site and the AdminCP. Nothing is stored per area, so there's no second passkey to manage.
+
+For accounts that **currently have AdminCP access**, both enrollment steps (`/register/options` and `/register`) also require the browser to hold a valid AdminCP session for the same user. Without one, the API answers `403 admin_session_required` and the settings page explains what to do. Members without staff access enroll exactly as before.
+
+The check runs at both steps, so an AdminCP session that expires or is signed out mid-ceremony stops the passkey from being saved.
+
+## Sign-in
+
+1. `POST /api/@vitnode/core/users/passkeys/admin-sign-in/options` issues request options with `userVerification: "required"` and no `allowCredentials`, so the browser offers any passkey saved for your RP ID. It stores a new challenge with the ceremony `admin_sign_in` and sets it in the HttpOnly cookie `<cookieName>_passkey_admin_sign_in`.
+2. The browser asks the authenticator for an assertion.
+3. `POST /api/@vitnode/core/users/passkeys/admin-sign-in` then:
+   - **consumes** the challenge atomically, scoped to the cookie's token hash, the `admin_sign_in` ceremony and "not expired". A public sign-in or registration challenge never matches, and a replay always fails.
+   - **verifies** the assertion with SimpleWebAuthn against your configured `origins` and `rpId`, with `requireUserVerification: true`, the same user-handle and signature-counter checks as public sign-in.
+   - **resolves the user from the stored credential** - never from anything else the browser sends, and never from the public session cookie.
+   - **checks staff access right now** with `SessionAdminModel.checkIfUserIsAdmin()`. Someone whose access was removed gets `403 not_staff`, even though their passkey is still valid.
+   - only then calls `SessionAdminModel.createSessionByUserId()` - the same call the password form makes - which sets the `vitnode_auth_admin` cookie.
+
+The routes live under `users/passkeys` rather than `admin/` on purpose: every `/admin/*` API path demands an AdminCP session, which nobody has yet while signing in.
+
+## Sessions stay separate
+
+|                                | Public passkey sign-in (`/login`) | AdminCP passkey sign-in (`/admin`)     |
+| ------------------------------ | --------------------------------- | -------------------------------------- |
+| Challenge ceremony             | `authentication`                  | `admin_sign_in`                        |
+| Challenge lifetime             | 5 minutes                         | 2 minutes                              |
+| User verification              | Required                          | Required                               |
+| Staff access checked           | No                                | Yes, at sign-in time                   |
+| Creates                        | Public session (`vitnode_auth`)   | AdminCP session (`vitnode_auth_admin`) |
+| Reads the other area's session | No                                | No                                     |
+
+A public session never turns into an AdminCP session - not after a passkey sign-in, not after SSO, not after a password sign-in. Signing out of one area leaves the other alone, exactly as described in [Authentication](/docs/dev/advanced/auth).
+
+Social SSO never issues an AdminCP session either. SSO providers only sign people in to the public site, and the staff enrollment rule above means an SSO-only session can't be turned into an AdminCP passkey.
+
+Once signed in, an AdminCP session behaves like one started with a password: staff access is re-checked on every request, so revoking it ends the session on the next request.
+
+## Recovery
+
+- **Password stays.** The AdminCP password form is untouched. It's the way in for staff who haven't added a passkey yet, and the fallback when a passkey is lost.
+- **Lost the passkey?** Sign in to the AdminCP with your password, then add a new passkey in **Settings → Security** and remove the old one there.
+- **Forgot the password too?** Use **Forgot password?** on the public `/login` page, then sign in to the AdminCP with the new password.
+- The [last-recovery-method rule](/docs/dev/passkeys#keeping-members-locked-in-the-good-way) still applies, so you can't remove the last way into your account.
+
+## What people see
+
+| Message                        | Why                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Passkey sign-in cancelled      | The browser prompt was closed or timed out. Try again.                                                      |
+| That took a little too long    | The two-minute challenge expired, was already used, or the cookie was blocked. Start again.                 |
+| Passkey not recognized         | The passkey was removed, belongs to another RP ID, or failed verification (including no user verification). |
+| No AdminCP access              | The passkey is valid, but the account doesn't have AdminCP access right now.                                |
+| Passkeys aren't supported here | The browser or device can't use passkeys. The button is disabled and the password form still works.         |
+| Open the AdminCP first         | (Settings → Security) A staff account tried to add a passkey without an AdminCP session in that browser.    |
+
+## For developers
+
+Error codes (JSON body `{ error }`):
+
+| Status | Code                     | Route                            |
+| ------ | ------------------------ | -------------------------------- |
+| `400`  | `invalid_challenge`      | `/admin-sign-in`                 |
+| `403`  | `verification_failed`    | `/admin-sign-in`                 |
+| `403`  | `not_staff`              | `/admin-sign-in`                 |
+| `403`  | `admin_session_required` | `/register/options`, `/register` |
+| `404`  | `passkeys_disabled`      | all                              |
+
+On the frontend, `useAdminPasskeySignInAction` from `@vitnode/core/tanstack/admin` runs the ceremony, drops the AdminCP identity caches and navigates to the sanitized `returnTo` - the same things the AdminCP password form does. It leaves the public session cache alone, because nothing about the public session changed.
+
+If you registered your own auth transport with `setAuthTransport`, implement `startAdminPasskeySignIn` and `finishAdminPasskeySignIn` as well, and relay cookies on both. The challenge cookie is set by the first call and read by the second, and the second sets the AdminCP cookie. The server-side versions are exported as `startAdminPasskeySignInOnApi` and `finishAdminPasskeySignInOnApi` from `@vitnode/core/tanstack/auth/server`.

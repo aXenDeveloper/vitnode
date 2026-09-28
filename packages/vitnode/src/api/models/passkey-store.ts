@@ -8,7 +8,8 @@ import {
 } from "@/database/passkeys";
 import { core_users, core_users_sso } from "@/database/users";
 
-export type PasskeyCeremony = "authentication" | "registration";
+export type PasskeyCeremony =
+  "admin_sign_in" | "authentication" | "registration";
 
 export interface PasskeyRecord {
   aaguid: null | string;
@@ -88,8 +89,9 @@ type Db = Context["var"]["db"];
 
 const asChallenge = (
   row: typeof core_users_passkey_challenges.$inferSelect,
+  ceremony: PasskeyCeremony,
 ): PasskeyChallengeRecord => ({
-  ceremony: row.ceremony === "registration" ? "registration" : "authentication",
+  ceremony,
   challenge: row.challenge,
   expiresAt: row.expiresAt,
   tokenHash: row.tokenHash,
@@ -113,7 +115,7 @@ export const drizzlePasskeyStore = (db: Db): PasskeyStore => ({
       )
       .returning();
 
-    return row ? asChallenge(row) : null;
+    return row ? asChallenge(row, ceremony) : null;
   },
 
   createPasskey: async values => {

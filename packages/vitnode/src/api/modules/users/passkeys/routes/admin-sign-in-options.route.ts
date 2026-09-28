@@ -8,13 +8,13 @@ import {
   zodPasskeyAuthenticationOptionsSchema,
 } from "../schema";
 
-export const passkeyAuthenticationOptionsRoute = buildRoute({
+export const passkeyAdminSignInOptionsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:
-      "Start signing in with a passkey. No email is needed - the browser offers the passkeys it holds for this site.",
-    path: "/sign-in/options",
+      "Start signing in to the AdminCP with a passkey. Issues a fresh, two-minute, single-use challenge that only the AdminCP sign-in accepts.",
+    path: "/admin-sign-in/options",
     responses: {
       200: {
         content: {
@@ -30,7 +30,7 @@ export const passkeyAuthenticationOptionsRoute = buildRoute({
   handler: async c => {
     try {
       const options = await new PasskeyModel(c).authenticationOptions(
-        "authentication",
+        "admin_sign_in",
       );
 
       return c.json(options, 200);

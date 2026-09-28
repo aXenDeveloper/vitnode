@@ -437,7 +437,7 @@ export const globalMiddleware = ({
         // localhost, on a generated preview hostname and in production alike.
         cookieDomain: authorization?.cookieDomain,
         passkeys: passkeysMetadata,
-        password: { enabled: authorization?.password?.enabled ?? true },
+        password: { enabled: authorization?.password ?? true },
       },
       captcha,
       personalInformationFields: resolvePersonalInformationFields(

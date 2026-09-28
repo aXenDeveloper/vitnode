@@ -46,11 +46,7 @@ export const vitNodeApiConfig = buildApiConfig({
    */
   i18n: { ...vitNodeConfig.i18n, messages: appMessages },
   authorization: {
-    passkeys: {
-      rpName: 'VitNode',
-      rpId: process.env.VITNODE_PASSKEY_RP_ID,
-      origins: [process.env.VITNODE_WEB_URL ?? 'http://localhost:3000'],
-    },
+    passkeys: true,
   },
   dbProvider: drizzle({
     connection: POSTGRES_URL,

@@ -67,6 +67,13 @@ export type PasskeySignInResult =
   | { ok: false; reason: "access_denied" | "expired" | "server_error" }
   | { ok: true };
 
+export type AdminPasskeySignInResult =
+  | {
+      ok: false;
+      reason: "access_denied" | "expired" | "not_staff" | "server_error";
+    }
+  | { ok: true };
+
 export type SignOutResult =
   { ok: false; reason: "server_error" } | { ok: true };
 
@@ -144,6 +151,19 @@ export const passkeySignInResultFromStatus = (
   if (status === 403) return { ok: false, reason: "access_denied" };
 
   return { ok: false, reason: "server_error" };
+};
+
+const notStaffBodySchema = z.object({ error: z.literal("not_staff") });
+
+export const adminPasskeySignInResultFromStatus = (
+  status: number,
+  body?: unknown,
+): AdminPasskeySignInResult => {
+  if (status === 403 && notStaffBodySchema.safeParse(body).success) {
+    return { ok: false, reason: "not_staff" };
+  }
+
+  return passkeySignInResultFromStatus(status);
 };
 
 export const signOutResultFromStatus = (status: number): SignOutResult =>

@@ -108,7 +108,7 @@ export const MobileNavBar = ({
       >
         <nav
           aria-label={t("label")}
-          className="bg-popover text-popover-foreground pointer-events-auto flex w-full max-w-md items-center rounded-full p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.2)] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
+          className="bg-card/75 text-card-foreground dark:bg-background/75 dark:text-foreground pointer-events-auto flex w-full max-w-md items-center rounded-full p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.2)] backdrop-blur dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
         >
           <div className="relative flex min-w-0 flex-1" ref={containerRef}>
             <span

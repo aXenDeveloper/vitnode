@@ -65,8 +65,8 @@ export interface VitNodeApiConfig {
     cookieSecure?: boolean;
     deviceCookieExpires?: number;
     deviceCookieName?: string;
-    passkeys?: PasskeysConfig;
-    password?: { enabled?: boolean };
+    passkeys?: boolean | PasskeysConfig;
+    password?: boolean;
     ssoAdapters?: SSOApiPlugin[];
   };
   captcha?: {

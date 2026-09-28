@@ -1,6 +1,8 @@
 import { buildModule } from "@/api/lib/module";
 import { CONFIG_PLUGIN } from "@/config";
 
+import { passkeyAdminSignInOptionsRoute } from "./routes/admin-sign-in-options.route";
+import { passkeyAdminSignInVerifyRoute } from "./routes/admin-sign-in-verify.route";
 import { passkeyAuthenticationOptionsRoute } from "./routes/authentication-options.route";
 import { passkeyAuthenticationVerifyRoute } from "./routes/authentication-verify.route";
 import { deletePasskeyRoute } from "./routes/delete.route";
@@ -18,6 +20,8 @@ export const passkeysUserModule = buildModule({
     passkeyRegistrationVerifyRoute,
     passkeyAuthenticationOptionsRoute,
     passkeyAuthenticationVerifyRoute,
+    passkeyAdminSignInOptionsRoute,
+    passkeyAdminSignInVerifyRoute,
     renamePasskeyRoute,
     deletePasskeyRoute,
   ],

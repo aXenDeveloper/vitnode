@@ -30,8 +30,19 @@ import type {
 
 import { defaultPasskeyName, normalizePasskeyName } from "./passkey-names";
 import { drizzlePasskeyStore } from "./passkey-store";
+import { SessionAdminModel } from "./session-admin";
 
 export const PASSKEY_CHALLENGE_TTL_MS = 5 * 60_000;
+
+export const PASSKEY_ADMIN_CHALLENGE_TTL_MS = 2 * 60_000;
+
+const CHALLENGE_TTL_MS: Record<PasskeyCeremony, number> = {
+  admin_sign_in: PASSKEY_ADMIN_CHALLENGE_TTL_MS,
+  authentication: PASSKEY_CHALLENGE_TTL_MS,
+  registration: PASSKEY_CHALLENGE_TTL_MS,
+};
+
+export type PasskeySignInCeremony = Exclude<PasskeyCeremony, "registration">;
 
 const ZERO_AAGUID = "00000000-0000-0000-0000-000000000000";
 
@@ -101,6 +112,16 @@ export class PasskeyModel {
 
   protected readonly c: Context;
 
+  private async assertStaffEnrollmentAllowed(userId: number) {
+    const admin = new SessionAdminModel(this.c);
+    if (!(await admin.checkIfUserIsAdmin(userId))) return;
+
+    const adminUser = await admin.getUser();
+    if (adminUser?.id !== userId) {
+      throw new PasskeyError("admin_session_required", 403);
+    }
+  }
+
   private async consumeChallenge(
     ceremony: PasskeyCeremony,
     userId: null | number,
@@ -149,7 +170,7 @@ export class PasskeyModel {
     if (previous) await store.deleteChallenge(await hashSessionToken(previous));
 
     const token = randomToken();
-    const expiresAt = new Date(now.getTime() + PASSKEY_CHALLENGE_TTL_MS);
+    const expiresAt = new Date(now.getTime() + CHALLENGE_TTL_MS[ceremony]);
 
     await store.saveChallenge({
       ceremony,
@@ -172,7 +193,7 @@ export class PasskeyModel {
     );
   }
 
-  async authenticationOptions() {
+  async authenticationOptions(ceremony: PasskeySignInCeremony) {
     const { rpId } = this.enabledConfig();
     const now = new Date();
 
@@ -180,12 +201,12 @@ export class PasskeyModel {
 
     const options = await generateAuthenticationOptions({
       rpID: rpId,
-      timeout: PASSKEY_CHALLENGE_TTL_MS,
+      timeout: CHALLENGE_TTL_MS[ceremony],
       userVerification: "required",
     });
 
     await this.issueChallenge({
-      ceremony: "authentication",
+      ceremony,
       challenge: options.challenge,
       now,
       userId: null,
@@ -227,6 +248,7 @@ export class PasskeyModel {
 
   async registrationOptions(user: { email: string; id: number; name: string }) {
     const { rpId, rpName } = this.enabledConfig();
+    await this.assertStaffEnrollmentAllowed(user.id);
     const store = this.store;
     const now = new Date();
 
@@ -294,9 +316,10 @@ export class PasskeyModel {
 
   async verifyAuthentication(
     response: AuthenticationResponseJSON,
+    ceremony: PasskeySignInCeremony,
   ): Promise<{ userId: number }> {
     const { origins, rpId } = this.enabledConfig();
-    const challenge = await this.consumeChallenge("authentication", null);
+    const challenge = await this.consumeChallenge(ceremony, null);
     const store = this.store;
     const denied = new PasskeyError("verification_failed", 403);
 
@@ -321,7 +344,7 @@ export class PasskeyModel {
       requireUserVerification: true,
       response,
     }).catch((error: unknown) => {
-      this.warnInDevelopment("authentication", error);
+      this.warnInDevelopment(ceremony, error);
 
       return null;
     });
@@ -356,6 +379,7 @@ export class PasskeyModel {
   }): Promise<PublicPasskey> {
     const { origins, rpId } = this.enabledConfig();
     const challenge = await this.consumeChallenge("registration", userId);
+    await this.assertStaffEnrollmentAllowed(userId);
 
     if (!challenge.webauthnUserId) {
       throw new PasskeyError("invalid_challenge", 400);

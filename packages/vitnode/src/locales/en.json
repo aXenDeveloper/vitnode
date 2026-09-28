@@ -726,6 +726,10 @@
             "unsupported": {
               "title": "Passkeys aren't supported here",
               "desc": "This browser or device can't use passkeys. Please use another way to sign in."
+            },
+            "not_staff": {
+              "title": "No AdminCP access",
+              "desc": "Your passkey checks out, but this account can't open the AdminCP. Ask an administrator if you think that's a mistake."
             }
           }
         },
@@ -867,6 +871,10 @@
             "not_found": {
               "title": "Passkey not found",
               "desc": "It may have been removed from another device. The list is refreshed."
+            },
+            "admin_session_required": {
+              "title": "Open the AdminCP first",
+              "desc": "Your account has AdminCP access, so adding a passkey needs one extra check. Sign in to the AdminCP with your password in this browser, then try again."
             }
           }
         }
