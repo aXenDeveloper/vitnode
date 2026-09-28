@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactElement } from "react";
 
-import { createElement, useEffect, useState } from "react";
+import { createElement, useCallback, useState } from "react";
 
 import type { ContentEditRuntime, ContentZoneMount } from "./edit-context";
 
+import { sameContentZoneMount } from "./edit-context";
 import { contentZoneAttributes } from "./zone-meta";
 
 const CONTENTS: CSSProperties = { display: "contents" };
@@ -17,20 +18,25 @@ export const ContentZoneOutlet = ({
   mount,
   runtime,
 }: ContentZoneOutletProps): ReactElement => {
-  const [node, setNode] = useState<HTMLElement | null>(null);
-  const { id } = mount;
+  const [registeredMount, setRegisteredMount] = useState(mount);
 
-  useEffect(() => {
-    if (node) runtime.registerZone({ mount, node });
-  }, [mount, node, runtime]);
+  if (
+    registeredMount !== mount &&
+    !sameContentZoneMount(registeredMount, mount)
+  ) {
+    setRegisteredMount(mount);
+  }
 
-  useEffect(() => {
-    if (!node) return;
+  const register = useCallback(
+    (node: HTMLElement) => {
+      runtime.registerZone({ mount: registeredMount, node });
 
-    return () => {
-      runtime.releaseZone({ id, node });
-    };
-  }, [id, node, runtime]);
+      return () => {
+        runtime.releaseZone({ id: registeredMount.id, node });
+      };
+    },
+    [registeredMount, runtime],
+  );
 
   const transparent =
     runtime.preview && mount.as === undefined && mount.className === undefined;
@@ -41,7 +47,7 @@ export const ContentZoneOutlet = ({
       id: mount.id,
     }),
     className: mount.className,
-    ref: setNode,
+    ref: register,
     style: transparent ? CONTENTS : undefined,
   });
 };

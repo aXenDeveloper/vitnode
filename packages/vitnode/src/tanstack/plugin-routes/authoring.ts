@@ -3,7 +3,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import type {
   AuthoredPluginRouteOptions,
   PluginRouteBreadcrumbGroup,
-  PluginRouteBreadcrumbProps,
   PluginRouteContext,
   PluginRouteOptions,
 } from "@/routing";

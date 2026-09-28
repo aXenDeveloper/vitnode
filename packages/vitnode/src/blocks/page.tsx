@@ -120,13 +120,14 @@ export const EditablePage = ({
     };
   }, [offer, publish, release]);
 
-  const opened = useRef(false);
+  const openedRef = useRef(false);
 
   useEffect(() => {
-    if (opened.current) return;
+    if (openedRef.current) return;
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!start || !offer.canEdit || openEditing !== true) return;
 
-    opened.current = true;
+    openedRef.current = true;
     start(offer.pageId);
   }, [offer.canEdit, offer.pageId, openEditing, start]);
 

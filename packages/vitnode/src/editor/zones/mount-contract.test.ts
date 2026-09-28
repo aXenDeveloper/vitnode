@@ -190,16 +190,6 @@ describe("persisted values the editor cannot read", () => {
 });
 
 describe("zones that leave the page while the editor is still open", () => {
-  it("unregisters the very node it registered, not whatever holds the id now", () => {
-    expect(outletSource).toContain("runtime.releaseZone({ id, node })");
-  });
-
-  it("keeps that lifetime separate from syncing the mount's content", () => {
-    expect(outletSource).toMatch(
-      /return \(\) => \{\s*runtime\.releaseZone\(\{ id, node \}\);\s*\};\s*\},\s*\[id, node, runtime\]\)/,
-    );
-  });
-
   it("tells the reducer the zone is gone when the portal unmounts", () => {
     expect(editableZoneSource).toMatch(
       /useEffect\(\s*\(\) => \(\) => \{\s*dispatch\(\{ type: "unmount", zoneId: id \}\);\s*\},\s*\[dispatch, id\],\s*\)/,

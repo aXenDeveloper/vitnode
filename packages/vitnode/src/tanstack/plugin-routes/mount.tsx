@@ -14,7 +14,6 @@ import { PLUGIN_ROUTE_AREAS } from "@/routing";
 
 import type { RouteHeadOptions, RouteHeadResult } from "../metadata";
 import type { PluginRouteLoaderData } from "./loader-data";
-import type { PluginRouteModuleRef } from "./module-ref";
 import type { PluginRouteSpec } from "./specs";
 
 // Loaded for its `declare module` augmentation, which is what puts `breadcrumb`
