@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { getConfig } from "./get-config.js";
-import { appScope, packageLocaleFiles } from "./i18n-shared.js";
+import { appOwnedIds, appScope, packageLocaleFiles } from "./i18n-shared.js";
 import { findRepoRoot } from "./shared/file-utils.js";
 
 const CORE_PLUGIN_ID = "@vitnode/core";
@@ -95,7 +95,7 @@ export const i18nCheck = async (flag?: string) => {
   const appMessages = serverConfig?.messages ?? config.i18n?.messages ?? {};
   // Web and API plugins differ in everything but the id, which is all we need;
   // union across both configs so an API-only plugin is still checked.
-  const pluginIds = [
+  const packageIds = [
     ...new Set([
       CORE_PLUGIN_ID,
       ...[webConfig, apiConfig].flatMap(loaded =>
@@ -107,12 +107,14 @@ export const i18nCheck = async (flag?: string) => {
   ];
 
   const appFiles = readAppLocaleFiles(appDir);
+  const appIds = new Set(appOwnedIds(appFiles, packageIds));
+  const pluginIds = [...packageIds, ...appIds];
   const locales = [
     ...new Set([...declared, ...appFiles.map(file => file.locale)]),
   ].filter(locale => locale !== defaultLocale);
 
   console.log(
-    `\x1b[34m[VitNode]\x1b[0m Checking ${pluginIds.length} package(s) against ${locales.length || "no"} extra locale(s), default ${dim(defaultLocale)}.`,
+    `\x1b[34m[VitNode]\x1b[0m Checking ${packageIds.length} package(s) and ${appIds.size} app namespace(s) against ${locales.length || "no"} extra locale(s), default ${dim(defaultLocale)}.`,
   );
 
   let missingTotal = 0;
@@ -145,6 +147,17 @@ export const i18nCheck = async (flag?: string) => {
 
   for (const pluginId of pluginIds) {
     const baseKeys = keysFor(pluginId, defaultLocale);
+
+    if (!baseKeys && appIds.has(pluginId)) {
+      errors += 1;
+      problems += 1;
+      console.log(
+        red(
+          `  ${pluginId}: no "${defaultLocale}" messages - create src/locales/${pluginId}/${defaultLocale}.json, every other language is checked against it`,
+        ),
+      );
+      continue;
+    }
 
     if (!baseKeys) {
       // `packageLocaleFiles` returns paths only when the package resolves, so an

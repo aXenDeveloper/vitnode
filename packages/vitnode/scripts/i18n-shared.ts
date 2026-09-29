@@ -42,6 +42,17 @@ export const packageLocaleFiles = (
   return files;
 };
 
+export const appOwnedIds = (
+  appFiles: readonly { pluginId: string }[],
+  packageIds: readonly string[],
+): string[] => {
+  const packages = new Set(packageIds);
+
+  return [...new Set(appFiles.map(file => file.pluginId))]
+    .filter(pluginId => !packages.has(pluginId))
+    .sort((a, b) => a.localeCompare(b));
+};
+
 export const readJsonTree = (filePath: string): Record<string, unknown> => {
   if (!existsSync(filePath)) return {};
 

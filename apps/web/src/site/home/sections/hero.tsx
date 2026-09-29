@@ -23,17 +23,9 @@ export const HeroSection = () => {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate overflow-hidden -mt-16"
+      className="relative isolate overflow-hidden -mt-10"
       {...handlers}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20"
-        style={{
-          background:
-            'radial-gradient(45% 55% at 78% 10%, color-mix(in oklab, var(--primary) 20%, transparent), transparent 70%)',
-        }}
-      />
       <HeroIconField />
       <HeroStrands className="bottom-0 h-112 sm:h-136" />
 

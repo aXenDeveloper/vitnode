@@ -163,6 +163,29 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ---
 
+### Your app's own strings
+
+Copy that belongs to no package - your landing page, say - gets a namespace of its own. Pick an id no package uses, put the tree under it, and register it like any other file:
+
+```json title="apps/web/src/locales/site/en.json"
+{
+  "site": {
+    "home": { "title": "A home for your people" }
+  }
+}
+```
+
+```ts title="apps/web/src/locales/app.ts"
+export const appMessages: AppMessagesMap = {
+  en: { site: async () => await import('./site/en.json') },
+  pl: { site: async () => await import('./site/pl.json') },
+}
+```
+
+`i18n:check` treats it like a package: your default-locale file is the source of truth, and every other language is checked against it for missing and leftover keys. No default-locale file at all is an error - there would be nothing to translate from.
+
+---
+
 ## Translation Architecture
 
 | Source               | Role                                                        | Order                   |
