@@ -6,7 +6,7 @@ import type {
 
 export interface MemoryPasskeyAccount {
   hasPassword: boolean;
-  ssoAccounts: number;
+  ssoProviders: string[];
 }
 
 export const createMemoryPasskeyStore = (
@@ -60,19 +60,22 @@ export const createMemoryPasskeyStore = (
       await Promise.resolve();
     },
 
-    deletePasskey: async ({ canDelete, id, userId }) => {
+    deletePasskey: async ({ canDelete, id, ssoProviderIds, userId }) => {
       const passkey = passkeys.get(id);
       if (passkey?.userId !== userId) return Promise.resolve("not_found");
 
-      const account = accounts[userId] ?? {
+      const { hasPassword, ssoProviders } = accounts[userId] ?? {
         hasPassword: false,
-        ssoAccounts: 0,
+        ssoProviders: [],
       };
       const otherPasskeys = [...passkeys.values()].filter(
         other => other.userId === userId && other.id !== id,
       ).length;
+      const ssoAccounts = ssoProviders.filter(providerId =>
+        ssoProviderIds.includes(providerId),
+      ).length;
 
-      if (!canDelete({ ...account, otherPasskeys })) {
+      if (!canDelete({ hasPassword, otherPasskeys, ssoAccounts })) {
         return Promise.resolve("blocked");
       }
       passkeys.delete(id);

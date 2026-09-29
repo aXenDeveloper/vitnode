@@ -2,7 +2,10 @@ import { notFound } from "@tanstack/react-router";
 
 import type { PluginRoutePageProps } from "@/routing";
 
-import { middlewareConfigQueryOptions } from "@/tanstack/auth/middleware-config";
+import {
+  loadMiddlewareConfig,
+  MiddlewareConfigUnknownError,
+} from "@/tanstack/auth/middleware-config";
 import { PasskeysPanelContent } from "@/tanstack/passkeys/panel";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
@@ -21,10 +24,9 @@ const SecurityPage = ({ loaderData }: PluginRoutePageProps<SecurityData>) => (
 
 export const route = defineAuthenticatedRoute<SecurityData>({
   load: async ({ context }) => {
-    const config = await context.queryClient.query({
-      ...middlewareConfigQueryOptions(),
-      staleTime: "static",
-    });
+    const config = await loadMiddlewareConfig(context.queryClient);
+
+    if (!config.isKnown) throw new MiddlewareConfigUnknownError();
 
     // eslint-disable-next-line @typescript-eslint/only-throw-error
     if (!config.passkeys) throw notFound();

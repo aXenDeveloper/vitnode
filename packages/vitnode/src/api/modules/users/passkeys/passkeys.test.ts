@@ -25,6 +25,14 @@ const RP_ID = "example.com";
 
 type Authorization = EnvVariablesVitNode["core"]["authorization"];
 
+const GITHUB: Authorization["ssoAdapters"][number] = {
+  fetchToken: vi.fn(),
+  fetchUser: vi.fn(),
+  getUrl: () => "https://github.com/login/oauth/authorize",
+  id: "github",
+  name: "GitHub",
+};
+
 const AUTHORIZATION: Authorization = {
   adminCookieExpires: 1000 * 60 * 60 * 24,
   adminCookieName: "vitnode_auth_admin",
@@ -41,7 +49,7 @@ const AUTHORIZATION: Authorization = {
     rpName: "VitNode",
   },
   password: { enabled: true },
-  ssoAdapters: [],
+  ssoAdapters: [GITHUB],
 };
 
 const ALICE = { email: "alice@example.com", id: 1, name: "Alice" };
@@ -70,8 +78,8 @@ const json = (body: unknown): RequestInit => ({
 
 const harness = ({
   accounts = {
-    [ALICE.id]: { hasPassword: true, ssoAccounts: 0 },
-    [BOB.id]: { hasPassword: true, ssoAccounts: 0 },
+    [ALICE.id]: { hasPassword: true, ssoProviders: [] },
+    [BOB.id]: { hasPassword: true, ssoProviders: [] },
   },
   passkeys: initialPasskeys = AUTHORIZATION.passkeys,
 }: {
@@ -747,7 +755,7 @@ describe("passkey management", () => {
 
   it("keeps the last passkey of an account with no other way to sign in", async () => {
     const { alicePasskeyId, h } = await withPasskeys({
-      [ALICE.id]: { hasPassword: false, ssoAccounts: 0 },
+      [ALICE.id]: { hasPassword: false, ssoProviders: [] },
     });
     h.signInAs(ALICE);
 
@@ -762,7 +770,7 @@ describe("passkey management", () => {
 
   it("lets a passwordless account delete its last passkey when SSO is linked", async () => {
     const { alicePasskeyId, h } = await withPasskeys({
-      [ALICE.id]: { hasPassword: false, ssoAccounts: 1 },
+      [ALICE.id]: { hasPassword: false, ssoProviders: ["github"] },
     });
     h.signInAs(ALICE);
 
@@ -771,6 +779,21 @@ describe("passkey management", () => {
     });
 
     expect(response.status).toBe(200);
+  });
+
+  it("ignores SSO links to a provider that is no longer configured", async () => {
+    const { alicePasskeyId, h } = await withPasskeys({
+      [ALICE.id]: { hasPassword: false, ssoProviders: ["gitlab"] },
+    });
+    h.signInAs(ALICE);
+
+    const response = await h.request(`/${alicePasskeyId}`, {
+      method: "DELETE",
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "last_recovery_method" });
+    expect(h.passkeys.has(alicePasskeyId)).toBe(true);
   });
 
   it("closes every management route when passkeys are switched off", async () => {

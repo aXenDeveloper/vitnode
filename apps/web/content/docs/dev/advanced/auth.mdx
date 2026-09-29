@@ -46,7 +46,7 @@ export const vitNodeApiConfig = buildApiConfig({
 The AdminCP is the keys to the kingdom, so its session is deliberately short-lived. Staff are asked to sign in again when:
 
 - **They go quiet for an hour.** Every AdminCP request pushes the expiry an hour ahead, so an admin who keeps working is never interrupted. Leave the tab alone for an hour and it signs itself out and lands on the sign-in page, with a toast explaining why. Tune the window with `adminCookieExpires`.
-- **They close every AdminCP tab.** Open AdminCP tabs keep a heartbeat going. Open the AdminCP again after every tab was closed and VitNode ends the old session instead of letting it back in. A page reload, or opening one more AdminCP tab while another is still open, is not affected.
+- **They close every AdminCP tab.** Open AdminCP tabs keep a heartbeat going. Open the AdminCP again after every tab was closed and VitNode ends the old session instead of letting it back in. A page reload, or opening one more AdminCP tab while another is still open, is not affected. This check is skipped when `cookieDomain` is set: a browser can only see tabs on its own origin, so an AdminCP tab open on another subdomain would look closed.
 - **They close the browser.** The `vitnode_auth_admin` cookie has no expiry date, so the browser drops it when it shuts down.
 
 <Callout type="info" title="Leaving the AdminCP counts as closing it">

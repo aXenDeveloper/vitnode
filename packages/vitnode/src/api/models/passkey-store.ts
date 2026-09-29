@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, asc, count, eq, gt, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, lte, ne } from "drizzle-orm";
 
 import {
   core_users_passkey_challenges,
@@ -63,6 +63,7 @@ export interface PasskeyStore {
   deletePasskey: (args: {
     canDelete: (facts: PasskeyRecoveryFacts) => boolean;
     id: number;
+    ssoProviderIds: string[];
     userId: number;
   }) => Promise<DeletePasskeyOutcome>;
   findPasskeyByCredentialId: (
@@ -140,7 +141,7 @@ export const drizzlePasskeyStore = (db: Db): PasskeyStore => ({
       .where(lte(core_users_passkey_challenges.expiresAt, now));
   },
 
-  deletePasskey: async ({ canDelete, id, userId }) =>
+  deletePasskey: async ({ canDelete, id, ssoProviderIds, userId }) =>
     await db.transaction(async tx => {
       const [user] = await tx
         .select({ password: core_users.password })
@@ -170,10 +171,17 @@ export const drizzlePasskeyStore = (db: Db): PasskeyStore => ({
               ne(core_users_passkeys.id, id),
             ),
           ),
-        tx
-          .select({ value: count() })
-          .from(core_users_sso)
-          .where(eq(core_users_sso.userId, userId)),
+        ssoProviderIds.length > 0
+          ? tx
+              .select({ value: count() })
+              .from(core_users_sso)
+              .where(
+                and(
+                  eq(core_users_sso.userId, userId),
+                  inArray(core_users_sso.providerId, ssoProviderIds),
+                ),
+              )
+          : [{ value: 0 }],
       ]);
 
       const allowed = canDelete({

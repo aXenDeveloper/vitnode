@@ -8,6 +8,7 @@ import type { SessionUser } from "./session-cache";
 
 import {
   adminSessionCacheKey,
+  isAdminSessionExtensionDue,
   reviveSessionUser,
   SESSION_CACHE_TTL_SECONDS,
   sessionCacheKey,
@@ -170,4 +171,27 @@ describe("a user read back from the cache is the user that was written", () => {
       createdAt: null,
     });
   });
+});
+
+describe("an active admin session is always renewable", () => {
+  const now = 1_000_000;
+  const due = (idleTimeoutMs: number, elapsedMs: number) =>
+    isAdminSessionExtensionDue({
+      expiresAt: new Date(now + idleTimeoutMs - elapsedMs),
+      idleTimeoutMs,
+      now,
+    });
+
+  it("waits a minute between extensions of the default hour", () => {
+    expect(due(60 * 60_000, 30_000)).toBe(false);
+    expect(due(60 * 60_000, 61_000)).toBe(true);
+  });
+
+  it.each([60_000, 30_000, 5_000])(
+    "extends a %ims idle timeout before it runs out",
+    idleTimeoutMs => {
+      expect(due(idleTimeoutMs, 0)).toBe(false);
+      expect(due(idleTimeoutMs, idleTimeoutMs - 1)).toBe(true);
+    },
+  );
 });

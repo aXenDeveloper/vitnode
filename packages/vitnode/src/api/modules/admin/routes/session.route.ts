@@ -47,6 +47,7 @@ export const sessionAdminRoute = buildRoute({
               }),
               vitnode_version: z.string(),
               expiresAt: z.date(),
+              signOutWhenTabsClose: z.boolean(),
             }),
           },
         },
@@ -72,6 +73,8 @@ export const sessionAdminRoute = buildRoute({
       permissions,
       vitnode_version: CONFIG_PLUGIN.version,
       expiresAt,
+      signOutWhenTabsClose:
+        c.get("core").authorization.cookieDomain === undefined,
     });
   },
 });

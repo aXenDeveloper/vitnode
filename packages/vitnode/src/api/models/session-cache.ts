@@ -36,7 +36,10 @@ export const reviveAdminSession = (session: AdminSession): AdminSession => ({
   user: reviveSessionUser(session.user),
 });
 
-export const ADMIN_SESSION_EXTEND_INTERVAL_MS = 60_000;
+export const ADMIN_SESSION_MAX_EXTEND_INTERVAL_MS = 60_000;
+
+export const adminSessionExtendInterval = (idleTimeoutMs: number): number =>
+  Math.min(ADMIN_SESSION_MAX_EXTEND_INTERVAL_MS, idleTimeoutMs / 2);
 
 export const isAdminSessionExtensionDue = ({
   expiresAt,
@@ -47,4 +50,5 @@ export const isAdminSessionExtensionDue = ({
   idleTimeoutMs: number;
   now?: number;
 }): boolean =>
-  expiresAt.getTime() - now < idleTimeoutMs - ADMIN_SESSION_EXTEND_INTERVAL_MS;
+  idleTimeoutMs - (expiresAt.getTime() - now) >
+  adminSessionExtendInterval(idleTimeoutMs);

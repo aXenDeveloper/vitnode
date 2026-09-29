@@ -226,6 +226,9 @@ export class PasskeyModel {
           hasPassword: passwordEnabled && facts.hasPassword,
         }),
       id,
+      ssoProviderIds: this.c
+        .get("core")
+        .authorization.ssoAdapters.map(adapter => adapter.id),
       userId,
     });
 

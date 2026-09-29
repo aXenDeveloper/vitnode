@@ -6,7 +6,11 @@ import { useSSOCallback } from "@/views/auth/sso/callback/use-sso-callback";
 import { RouteMessages } from "../i18n/route-messages";
 import { useCompleteSsoAction, useLinkSsoAction } from "./actions";
 import { parseSsoCallback } from "./contract";
-import { ssoProvidersOf, useMiddlewareConfigQuery } from "./middleware-config";
+import {
+  authMethodsOf,
+  ssoProvidersOf,
+  useMiddlewareConfigQuery,
+} from "./middleware-config";
 import { parseInternalDestination, postAuthDestination } from "./redirects";
 import { SSO_CALLBACK_NAMESPACES } from "./sso-route";
 
@@ -53,7 +57,7 @@ export const SsoCallbackRouteContent = ({
         onLink={linkSso}
         providerId={providerId}
         providers={ssoProvidersOf(config)}
-        showResetPassword={config.isEmail}
+        showResetPassword={authMethodsOf(config).resetPassword}
         state={state}
       />
     </RouteMessages>

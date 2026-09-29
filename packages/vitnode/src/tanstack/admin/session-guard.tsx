@@ -24,6 +24,8 @@ export const AdminSessionGuard = () => {
 
   const expiresAt =
     access.status === "granted" ? access.session.expiresAt : undefined;
+  const signOutWhenTabsClose =
+    access.status === "granted" && access.session.signOutWhenTabsClose;
 
   const leaveExpiredSession = React.useEffectEvent(async () => {
     if (leavingRef.current) return;
@@ -74,6 +76,8 @@ export const AdminSessionGuard = () => {
   });
 
   React.useEffect(() => {
+    if (!signOutWhenTabsClose) return;
+
     const presence = {
       mounted: true,
       stopKeepingAlive: (): void => undefined,
@@ -95,7 +99,7 @@ export const AdminSessionGuard = () => {
       presence.mounted = false;
       presence.stopKeepingAlive();
     };
-  }, []);
+  }, [signOutWhenTabsClose]);
 
   React.useEffect(() => {
     if (access.status === "denied") {

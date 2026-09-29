@@ -64,6 +64,21 @@ export const middlewareConfigQueryOptions = () =>
     staleTime: MIDDLEWARE_STALE_TIME,
   });
 
+export const loadMiddlewareConfig = async (
+  queryClient: QueryClient,
+): Promise<MiddlewareConfigState> =>
+  await queryClient.query({
+    ...middlewareConfigQueryOptions(),
+    staleTime: query => (query.state.data?.isKnown ? "static" : 0),
+  });
+
+export class MiddlewareConfigUnknownError extends Error {
+  constructor() {
+    super("The deployment configuration could not be read.");
+    this.name = "MiddlewareConfigUnknownError";
+  }
+}
+
 export const useMiddlewareConfigQuery = () =>
   useSuspenseQuery(middlewareConfigQueryOptions());
 
