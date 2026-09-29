@@ -292,6 +292,16 @@
         "hint": "Wpisz co najmniej {count} znaki, aby wyszukać użytkowników.",
         "placeholder": "Szukaj stron i użytkowników...",
         "title": "Wyszukiwanie w panelu"
+      },
+      "session": {
+        "expired": {
+          "title": "Sesja panelu administracyjnego wygasła",
+          "desc": "Wylogowaliśmy Cię z powodu braku aktywności. Zaloguj się ponownie, aby kontynuować."
+        },
+        "tabs_closed": {
+          "title": "Zaloguj się ponownie",
+          "desc": "Wszystkie karty panelu administracyjnego zostały zamknięte, więc dla bezpieczeństwa wylogowaliśmy Cię."
+        }
       }
     },
     "navigation": {

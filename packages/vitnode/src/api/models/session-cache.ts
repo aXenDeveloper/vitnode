@@ -12,7 +12,7 @@ export const sessionCacheKey = (
 export const adminSessionCacheKey = (
   hashedToken: string,
   deviceId: number,
-): string => `session:admin:${deviceId}:${hashedToken}`;
+): string => `session:admin-idle:${deviceId}:${hashedToken}`;
 
 export const sessionCacheTtl = (expiresAt: Date): number =>
   Math.min(
@@ -25,3 +25,26 @@ export const reviveSessionUser = (user: SessionUser): SessionUser => ({
   createdAt: new Date(user.createdAt),
   birthday: user.birthday ? new Date(user.birthday) : null,
 });
+
+export interface AdminSession {
+  expiresAt: Date;
+  user: SessionUser;
+}
+
+export const reviveAdminSession = (session: AdminSession): AdminSession => ({
+  expiresAt: new Date(session.expiresAt),
+  user: reviveSessionUser(session.user),
+});
+
+export const ADMIN_SESSION_EXTEND_INTERVAL_MS = 60_000;
+
+export const isAdminSessionExtensionDue = ({
+  expiresAt,
+  idleTimeoutMs,
+  now = Date.now(),
+}: {
+  expiresAt: Date;
+  idleTimeoutMs: number;
+  now?: number;
+}): boolean =>
+  expiresAt.getTime() - now < idleTimeoutMs - ADMIN_SESSION_EXTEND_INTERVAL_MS;

@@ -12,6 +12,7 @@ export const readAdminSessionOnApi = async () =>
       method: "get",
       module: "admin",
       path: "/session",
+      args: { query: {} },
     });
 
     // See `default-transport`: the `200` arm is the only one with a body, and

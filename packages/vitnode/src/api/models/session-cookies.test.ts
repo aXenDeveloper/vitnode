@@ -205,6 +205,16 @@ describe("admin session cookie", () => {
   const remove = async (c: Context) =>
     await new SessionAdminModel(c).deleteSession();
 
+  it("ends with the browser session instead of carrying an expiry", async () => {
+    const cookie = named(
+      await setCookiesFrom({ act: create }),
+      AUTHORIZATION.adminCookieName,
+    );
+
+    expect(cookie.options.expires).toBe(undefined);
+    expect(cookie.options.maxAge).toBe(undefined);
+  });
+
   it.each(HOSTS)("is host-only on %s", async (_label, url) => {
     const cookie = named(
       await setCookiesFrom({ act: create, url }),

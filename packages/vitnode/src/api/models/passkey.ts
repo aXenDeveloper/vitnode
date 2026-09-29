@@ -116,8 +116,8 @@ export class PasskeyModel {
     const admin = new SessionAdminModel(this.c);
     if (!(await admin.checkIfUserIsAdmin(userId))) return;
 
-    const adminUser = await admin.getUser();
-    if (adminUser?.id !== userId) {
+    const adminSession = await admin.getSession({ extend: true });
+    if (adminSession?.user.id !== userId) {
       throw new PasskeyError("admin_session_required", 403);
     }
   }

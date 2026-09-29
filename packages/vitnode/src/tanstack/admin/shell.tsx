@@ -20,6 +20,7 @@ import { adminShellNamespaces } from "./intl";
 import { AdminNavProvider, useAdminNav } from "./nav";
 import { AdminPermissionsProvider } from "./permissions";
 import { AdminSearch } from "./search";
+import { AdminSessionGuard } from "./session-guard";
 import { AdminUserBar } from "./user-bar";
 
 export const AdminShellContent = ({
@@ -47,6 +48,7 @@ export const AdminShellContent = ({
   return (
     <RouteMessages namespaces={namespaces}>
       <AdminPermissionsProvider>
+        <AdminSessionGuard />
         <AdminNavProvider declarations={nav?.declarations}>
           <AdminShellFrame
             languageSwitcher={languageSwitcher}

@@ -5,6 +5,10 @@ import {
   adminSessionReadFromStatus,
 } from "./state";
 
+export interface AdminSessionReadOptions {
+  passive?: boolean;
+}
+
 /**
  * What one read of the admin session endpoint saw: the status, and the body if
  * the status was the one that carries a body.

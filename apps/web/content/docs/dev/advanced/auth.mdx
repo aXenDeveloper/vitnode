@@ -19,7 +19,7 @@ export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:6]
   authorization: {
     cookieExpires: 1000 * 60 * 60 * 24 * 30, // 30 days for public users
-    adminCookieExpires: 1000 * 60 * 60 * 8, // 8 hours for AdminCP
+    adminCookieExpires: 1000 * 60 * 30, // sign staff out after 30 idle minutes
     cookieDomain: ".yourdomain.com", // Optional cross-subdomain sharing
   },
 })
@@ -32,11 +32,25 @@ export const vitNodeApiConfig = buildApiConfig({
 | Session Type | Cookie Name | Default Lifetime | Storage Table | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | **Public Session** | `vitnode_auth` | 90 days | `core_sessions` | Frontend member authentication |
-| **Admin Session** | `vitnode_auth_admin` | 1 day | `core_admin_sessions` | High-privilege AdminCP access |
+| **Admin Session** | `vitnode_auth_admin` | 1 hour of inactivity | `core_admin_sessions` | High-privilege AdminCP access |
 | **Known Device** | `vitnode_device` | 1 year | `core_sessions_known_devices` | Device authorization tracking |
 
 <Callout type="info" title="Session Isolation">
   Signing out of the AdminCP does not terminate the user's public session, and vice versa. An administrator compromised in a public context cannot access the AdminCP without re-authenticating with staff credentials - a password or a user-verified passkey, checked against live staff access. Neither a public session nor social SSO ever becomes an AdminCP session.
+</Callout>
+
+---
+
+## AdminCP Session Timeout
+
+The AdminCP is the keys to the kingdom, so its session is deliberately short-lived. Staff are asked to sign in again when:
+
+- **They go quiet for an hour.** Every AdminCP request pushes the expiry an hour ahead, so an admin who keeps working is never interrupted. Leave the tab alone for an hour and it signs itself out and lands on the sign-in page, with a toast explaining why. Tune the window with `adminCookieExpires`.
+- **They close every AdminCP tab.** Open AdminCP tabs keep a heartbeat going. Open the AdminCP again after every tab was closed and VitNode ends the old session instead of letting it back in. A page reload, or opening one more AdminCP tab while another is still open, is not affected.
+- **They close the browser.** The `vitnode_auth_admin` cookie has no expiry date, so the browser drops it when it shuts down.
+
+<Callout type="info" title="Leaving the AdminCP counts as closing it">
+  Moving from the AdminCP to the public site in your only AdminCP tab stops the heartbeat. Come back within about 15 seconds and you are still signed in; any later and you sign in again. Open the public site in a new tab to keep your AdminCP session.
 </Callout>
 
 ---
@@ -100,8 +114,8 @@ The rules are per-provider, because they are only true per-provider:
       type: "number",
     },
     adminCookieExpires: {
-      default: "1 day",
-      description: "AdminCP session lifetime in milliseconds.",
+      default: "1 hour",
+      description: "How long an AdminCP session survives without any AdminCP activity, in milliseconds. Each request extends it.",
       type: "number",
     },
     cookieSecure: {

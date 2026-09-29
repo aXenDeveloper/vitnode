@@ -1417,6 +1417,16 @@
         "desc": "Search admin pages and users, or jump straight to a member.",
         "placeholder": "Search pages and users...",
         "hint": "Type at least {count} characters to search users."
+      },
+      "session": {
+        "expired": {
+          "title": "Your AdminCP session expired",
+          "desc": "You were signed out after a period of inactivity. Sign in again to pick up where you left off."
+        },
+        "tabs_closed": {
+          "title": "Please sign in again",
+          "desc": "All AdminCP tabs were closed, so we signed you out to keep your account safe."
+        }
       }
     },
     "advanced": {

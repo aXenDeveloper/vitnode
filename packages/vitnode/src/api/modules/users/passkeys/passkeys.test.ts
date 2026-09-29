@@ -96,11 +96,13 @@ const harness = ({
     "checkIfUserIsAdmin",
   ).mockImplementation(async userId => Promise.resolve(staff.has(userId)));
   let adminViewer: null | Viewer = null;
-  vi.spyOn(SessionAdminModel.prototype, "getUser").mockImplementation(
+  vi.spyOn(SessionAdminModel.prototype, "getSession").mockImplementation(
     async () =>
       Promise.resolve(
-        adminViewer as unknown as Awaited<
-          ReturnType<SessionAdminModel["getUser"]>
+        (adminViewer
+          ? { expiresAt: new Date(Date.now() + 60_000), user: adminViewer }
+          : null) as unknown as Awaited<
+          ReturnType<SessionAdminModel["getSession"]>
         >,
       ),
   );

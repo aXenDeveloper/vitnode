@@ -10,6 +10,7 @@ import type { AuthNavigate } from "../auth/actions";
 import { signInFormResult } from "../auth/screens";
 import { authTransport } from "../auth/transport";
 import { removeAdminIdentityQueries } from "./queries";
+import { markAdminTabAlive } from "./tab-presence";
 
 export const useAdminSignInAction = ({
   destination,
@@ -26,6 +27,7 @@ export const useAdminSignInAction = ({
     if (!result.ok) return signInFormResult(result);
 
     removeAdminIdentityQueries(queryClient);
+    markAdminTabAlive();
     await navigate(destination());
 
     return undefined;
@@ -61,6 +63,7 @@ export const useAdminPasskeySignInAction = ({
     }
 
     removeAdminIdentityQueries(queryClient);
+    markAdminTabAlive();
     await navigate(destination());
 
     return undefined;

@@ -11,6 +11,11 @@ export const sessionAdminRoute = buildRoute({
     method: "get",
     description: "Verify admin session",
     path: "/session",
+    request: {
+      query: z.object({
+        passive: z.literal("true").optional(),
+      }),
+    },
     responses: {
       200: {
         content: {
@@ -41,6 +46,7 @@ export const sessionAdminRoute = buildRoute({
                 ),
               }),
               vitnode_version: z.string(),
+              expiresAt: z.date(),
             }),
           },
         },
@@ -53,7 +59,8 @@ export const sessionAdminRoute = buildRoute({
   },
   handler: async c => {
     const user = c.get("admin")?.user;
-    if (!user) throw new HTTPException(403);
+    const expiresAt = c.get("adminSessionExpiresAt");
+    if (!(user && expiresAt)) throw new HTTPException(403);
 
     const permissions = await resolveStaffPermissions(c, {
       type: "admin",
@@ -64,6 +71,7 @@ export const sessionAdminRoute = buildRoute({
       user,
       permissions,
       vitnode_version: CONFIG_PLUGIN.version,
+      expiresAt,
     });
   },
 });

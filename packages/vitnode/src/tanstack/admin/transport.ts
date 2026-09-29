@@ -1,9 +1,12 @@
 import type { AdminSessionReadResult } from "./session-api";
+import type { AdminSessionReadOptions } from "./session-read";
 
 import { defaultAdminTransport } from "./default-transport";
 
 export interface AdminTransport {
-  readAdminSession: () => Promise<AdminSessionReadResult>;
+  readAdminSession: (
+    options?: AdminSessionReadOptions,
+  ) => Promise<AdminSessionReadResult>;
 }
 
 let registered: AdminTransport | undefined;
