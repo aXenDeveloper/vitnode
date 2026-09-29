@@ -1,7 +1,12 @@
 import type {
+  AdminPasskeySignInResult,
   ChangePasswordInput,
   ChangePasswordResult,
   CompleteSsoResult,
+  PasskeySignInInput,
+  PasskeySignInOptionsBody,
+  PasskeySignInResult,
+  PasskeySignInStartResult,
   PasswordResetRequestInput,
   PasswordResetRequestResult,
   SignInInput,
@@ -19,9 +24,12 @@ import type {
 
 import { callUsersApi, readJson, readText } from "./api-helpers";
 import {
+  adminPasskeySignInResultFromStatus,
   changePasswordResultFromStatus,
   completeSsoResultFromStatus,
   isUsableSessionStatus,
+  passkeySignInResultFromStatus,
+  passkeySignInStartResultFromStatus,
   passwordResetRequestResultFromStatus,
   SESSION_UNAVAILABLE,
   signInResultFromStatus,
@@ -45,7 +53,7 @@ export interface AuthApiJsonOrText<TBody> extends AuthApiJson<TBody> {
 }
 
 /**
- * The nine calls an auth transport makes, as requests rather than as results.
+ * The thirteen calls an auth transport makes, as requests rather than as results.
  *
  * A requester says *where* a call goes and *how* it travels - which fetcher,
  * and whether the answer's cookies may be relayed. Everything after the answer
@@ -62,6 +70,10 @@ export interface AuthApiRequester<TSession> {
     input: ChangePasswordInput,
   ) => Promise<AuthApiStatus>;
   completeSso: (input: SsoCallbackInput) => Promise<AuthApiJson<unknown>>;
+  finishAdminPasskeySignIn: (
+    input: PasskeySignInInput,
+  ) => Promise<AuthApiJson<unknown>>;
+  finishPasskeySignIn: (input: PasskeySignInInput) => Promise<AuthApiStatus>;
   linkSso: (input: SsoLinkInput) => Promise<AuthApiStatus>;
   readSession: () => Promise<AuthApiJson<TSession>>;
   requestPasswordReset: (
@@ -70,6 +82,8 @@ export interface AuthApiRequester<TSession> {
   signIn: (input: SignInInput) => Promise<AuthApiStatus>;
   signOut: (input: SignOutInput) => Promise<AuthApiStatus>;
   signUp: (input: SignUpInput) => Promise<AuthApiJsonOrText<unknown>>;
+  startAdminPasskeySignIn: () => Promise<AuthApiJson<PasskeySignInOptionsBody>>;
+  startPasskeySignIn: () => Promise<AuthApiJson<PasskeySignInOptionsBody>>;
   startSso: (input: SsoStartInput) => Promise<AuthApiJson<{ url?: unknown }>>;
 }
 
@@ -78,6 +92,12 @@ export interface AuthOperations<TSession> {
     input: ChangePasswordInput,
   ) => Promise<ChangePasswordResult>;
   completeSso: (input: SsoCallbackInput) => Promise<CompleteSsoResult>;
+  finishAdminPasskeySignIn: (
+    input: PasskeySignInInput,
+  ) => Promise<AdminPasskeySignInResult>;
+  finishPasskeySignIn: (
+    input: PasskeySignInInput,
+  ) => Promise<PasskeySignInResult>;
   linkSso: (input: SsoLinkInput) => Promise<SsoLinkResult>;
   readSession: () => Promise<TSession>;
   requestPasswordReset: (
@@ -86,11 +106,28 @@ export interface AuthOperations<TSession> {
   signIn: (input: SignInInput) => Promise<SignInResult>;
   signOut: (input: SignOutInput) => Promise<SignOutResult>;
   signUp: (input: SignUpInput) => Promise<SignUpResult>;
+  startAdminPasskeySignIn: () => Promise<PasskeySignInStartResult>;
+  startPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startSso: (input: SsoStartInput) => Promise<SsoStartResult>;
 }
 
 /** The `url` a start answer carries, with no assumption that it carries one. */
 const startUrlOf = (body: { url?: unknown }): unknown => body.url;
+
+const startPasskeyCeremony = async (
+  call: () => Promise<AuthApiJson<PasskeySignInOptionsBody>>,
+): Promise<PasskeySignInStartResult> => {
+  const response = await callUsersApi(call);
+
+  if (!response) return { ok: false, reason: "server_error" };
+  if (response.status !== 200) {
+    return passkeySignInStartResultFromStatus(response.status);
+  }
+
+  const body = await callUsersApi(async () => response.json());
+
+  return passkeySignInStartResultFromStatus(response.status, body ?? undefined);
+};
 
 export const createAuthOperations = <TSession>(
   request: AuthApiRequester<TSession>,
@@ -115,6 +152,29 @@ export const createAuthOperations = <TSession>(
     }
 
     return completeSsoResultFromStatus(response.status);
+  },
+
+  finishAdminPasskeySignIn: async data => {
+    const response = await callUsersApi(async () =>
+      request.finishAdminPasskeySignIn(data),
+    );
+
+    if (!response) return { ok: false, reason: "server_error" };
+    if (response.status === 403) {
+      return adminPasskeySignInResultFromStatus(403, await readJson(response));
+    }
+
+    return adminPasskeySignInResultFromStatus(response.status);
+  },
+
+  finishPasskeySignIn: async data => {
+    const response = await callUsersApi(async () =>
+      request.finishPasskeySignIn(data),
+    );
+
+    if (!response) return { ok: false, reason: "server_error" };
+
+    return passkeySignInResultFromStatus(response.status);
   },
 
   linkSso: async data => {
@@ -184,6 +244,12 @@ export const createAuthOperations = <TSession>(
 
     return signUpResultFromStatus(response.status);
   },
+
+  startAdminPasskeySignIn: async () =>
+    await startPasskeyCeremony(async () => request.startAdminPasskeySignIn()),
+
+  startPasskeySignIn: async () =>
+    await startPasskeyCeremony(async () => request.startPasskeySignIn()),
 
   startSso: async data => {
     const response = await callUsersApi(async () => request.startSso(data));

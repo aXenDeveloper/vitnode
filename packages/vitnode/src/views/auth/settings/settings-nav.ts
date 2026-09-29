@@ -17,6 +17,13 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: "/settings/security", key: "security" },
 ];
 
+export const visibleSettingsNavItems = ({
+  passkeys,
+}: {
+  passkeys: boolean;
+}): readonly SettingsNavItem[] =>
+  SETTINGS_NAV_ITEMS.filter(item => item.key !== "security" || passkeys);
+
 /** Whether one navigation item is the panel `pathname` is showing. */
 export const isSettingsNavItemActive = (
   item: SettingsNavItem,

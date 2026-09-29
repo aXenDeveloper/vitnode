@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  adminPasskeySignInResultFromStatus,
   completeSsoResultFromStatus,
   isProviderRedirectUrl,
   isUsableSessionStatus,
   parseSsoCallback,
+  passkeySignInResultFromStatus,
+  passkeySignInStartResultFromStatus,
   providerIdSchema,
   shouldSaveApiCookies,
   signInInputSchema,
@@ -37,6 +40,49 @@ describe("sign-in results", () => {
       });
     },
   );
+});
+
+describe("passkey sign-in results", () => {
+  const options = {
+    challenge: "Y2hhbGxlbmdl",
+    userVerification: "required" as const,
+  };
+
+  it("hands the browser the options the API issued", () => {
+    expect(passkeySignInStartResultFromStatus(200, options)).toEqual({
+      ok: true,
+      options,
+    });
+  });
+
+  it("reads a 404 as passkeys being switched off", () => {
+    expect(passkeySignInStartResultFromStatus(404)).toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+  });
+
+  it("refuses a 200 that carries no challenge", () => {
+    expect(
+      passkeySignInStartResultFromStatus(200, { error: "invalid_challenge" }),
+    ).toEqual({ ok: false, reason: "server_error" });
+  });
+
+  it("maps the verification answer", () => {
+    expect(passkeySignInResultFromStatus(201)).toEqual({ ok: true });
+    expect(passkeySignInResultFromStatus(400)).toEqual({
+      ok: false,
+      reason: "expired",
+    });
+    expect(passkeySignInResultFromStatus(403)).toEqual({
+      ok: false,
+      reason: "access_denied",
+    });
+    expect(passkeySignInResultFromStatus(500)).toEqual({
+      ok: false,
+      reason: "server_error",
+    });
+  });
 });
 
 describe("sign-out results", () => {
@@ -374,4 +420,34 @@ describe("reading a session response status", () => {
       expect(isUsableSessionStatus(status)).toBe(false);
     },
   );
+});
+
+describe("AdminCP passkey sign-in results", () => {
+  it("tells a valid passkey without staff access apart from a rejected one", () => {
+    expect(
+      adminPasskeySignInResultFromStatus(403, { error: "not_staff" }),
+    ).toEqual({
+      ok: false,
+      reason: "not_staff",
+    });
+    expect(
+      adminPasskeySignInResultFromStatus(403, { error: "verification_failed" }),
+    ).toEqual({ ok: false, reason: "access_denied" });
+    expect(adminPasskeySignInResultFromStatus(403)).toEqual({
+      ok: false,
+      reason: "access_denied",
+    });
+  });
+
+  it("maps the remaining statuses like public passkey sign-in", () => {
+    expect(adminPasskeySignInResultFromStatus(201)).toEqual({ ok: true });
+    expect(adminPasskeySignInResultFromStatus(400)).toEqual({
+      ok: false,
+      reason: "expired",
+    });
+    expect(adminPasskeySignInResultFromStatus(500)).toEqual({
+      ok: false,
+      reason: "server_error",
+    });
+  });
 });

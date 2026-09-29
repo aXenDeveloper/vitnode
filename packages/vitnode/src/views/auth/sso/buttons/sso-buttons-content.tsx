@@ -15,9 +15,11 @@ export type SSOSelectProvider = (providerId: string) => Promise<SSOStartResult>;
 export const SSOButtonsContent = ({
   onSelectProvider,
   providers,
+  showDivider = true,
 }: {
   onSelectProvider: SSOSelectProvider;
   providers: readonly SSOProvider[];
+  showDivider?: boolean;
 }) => {
   const t = useTranslations("core.auth.sso");
   const tErrors = useTranslations("core.global.errors");
@@ -50,15 +52,19 @@ export const SSOButtonsContent = ({
         ))}
       </div>
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
+      {showDivider ? (
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
 
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-card text-muted-foreground px-4">{t("or")}</span>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card text-muted-foreground px-4">
+              {t("or")}
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 };

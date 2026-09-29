@@ -10,8 +10,10 @@ import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
 
 import { DeviceModel } from "./device";
 import {
+  type AdminSession,
   adminSessionCacheKey,
-  reviveSessionUser,
+  isAdminSessionExtensionDue,
+  reviveAdminSession,
   sessionCacheTtl,
   type SessionUser,
 } from "./session-cache";
@@ -22,6 +24,64 @@ export class SessionAdminModel {
     this.c = c;
   }
   protected readonly c: Context;
+
+  private async extendSession({
+    deviceId,
+    hashedToken,
+    user,
+  }: {
+    deviceId: number;
+    hashedToken: string;
+    user: SessionUser;
+  }): Promise<AdminSession> {
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + this.c.get("core").authorization.adminCookieExpires,
+    );
+
+    await this.c
+      .get("db")
+      .update(core_admin_sessions)
+      .set({ expiresAt, lastSeen: now })
+      .where(
+        and(
+          eq(core_admin_sessions.token, hashedToken),
+          eq(core_admin_sessions.deviceId, deviceId),
+        ),
+      );
+
+    return { expiresAt, user };
+  }
+
+  private async findActiveSession(
+    hashedToken: string,
+    deviceId: number,
+  ): Promise<AdminSession | null> {
+    const [session] = await this.c
+      .get("db")
+      .select({
+        userId: core_admin_sessions.userId,
+        expiresAt: core_admin_sessions.expiresAt,
+      })
+      .from(core_admin_sessions)
+      .where(
+        and(
+          eq(core_admin_sessions.token, hashedToken),
+          eq(core_admin_sessions.deviceId, deviceId),
+          gt(core_admin_sessions.expiresAt, new Date()),
+        ),
+      )
+      .limit(1);
+
+    if (!session) return null;
+
+    const user = await new UserModel().getUserById({
+      id: session.userId,
+      c: this.c,
+    });
+
+    return user ? { expiresAt: session.expiresAt, user } : null;
+  }
 
   async checkIfUserIsAdmin(userId: number) {
     const user = await new UserModel().getUserById({ id: userId, c: this.c });
@@ -75,11 +135,6 @@ export class SessionAdminModel {
       this.c,
       this.c.get("core").authorization.adminCookieName,
       token,
-      {
-        expires: new Date(
-          Date.now() + this.c.get("core").authorization.adminCookieExpires,
-        ),
-      },
     );
 
     return { token };
@@ -112,7 +167,11 @@ export class SessionAdminModel {
     deleteAuthCookie(this.c, this.c.get("core").authorization.adminCookieName);
   }
 
-  async getUser() {
+  async getSession({
+    extend,
+  }: {
+    extend: boolean;
+  }): Promise<AdminSession | null> {
     const { authorization } = this.c.get("core");
     const token = getCookie(this.c, authorization.adminCookieName);
     if (!token) return null;
@@ -127,61 +186,43 @@ export class SessionAdminModel {
     // Fast path: skip the session + user lookups for a session resolved on a
     // recent request. Admin status is still re-checked live below so a revoked
     // admin loses access immediately, not when the cache expires.
-    const cached = await cache.getSystem<SessionUser>(cacheKey);
-    if (cached) {
-      const user = reviveSessionUser(cached);
-      if (!(await this.checkIfUserIsAdmin(user.id))) {
-        await this.deleteSession();
-
-        return null;
-      }
-
-      return user;
-    }
-
-    const [session] = await this.c
-      .get("db")
-      .select({
-        userId: core_admin_sessions.userId,
-        expiresAt: core_admin_sessions.expiresAt,
-      })
-      .from(core_admin_sessions)
-      .where(
-        and(
-          eq(core_admin_sessions.token, hashedToken),
-          eq(core_admin_sessions.deviceId, device.id),
-          gt(core_admin_sessions.expiresAt, new Date()),
-        ),
-      )
-      .limit(1);
+    const cached = await cache.getSystem<AdminSession>(cacheKey);
+    const session = cached
+      ? reviveAdminSession(cached)
+      : await this.findActiveSession(hashedToken, device.id);
 
     if (!session) {
-      deleteAuthCookie(
-        this.c,
-        this.c.get("core").authorization.adminCookieName,
-      );
+      deleteAuthCookie(this.c, authorization.adminCookieName);
 
       return null;
     }
 
-    const user = await new UserModel().getUserById({
-      id: session.userId,
-      c: this.c,
-    });
-
-    if (!user) return null;
-    const isStillAdmin = await this.checkIfUserIsAdmin(user.id);
-    if (!isStillAdmin) {
+    if (!(await this.checkIfUserIsAdmin(session.user.id))) {
       await this.deleteSession();
 
       return null;
     }
 
+    const current =
+      extend &&
+      isAdminSessionExtensionDue({
+        expiresAt: session.expiresAt,
+        idleTimeoutMs: authorization.adminCookieExpires,
+      })
+        ? await this.extendSession({
+            deviceId: device.id,
+            hashedToken,
+            user: session.user,
+          })
+        : session;
+
+    if (cached && current === session) return current;
+
     // Cap the TTL to the session's remaining lifetime so an expired session is
     // never served from cache.
-    const ttl = sessionCacheTtl(session.expiresAt);
-    if (ttl > 0) await cache.setSystem(cacheKey, user, ttl);
+    const ttl = sessionCacheTtl(current.expiresAt);
+    if (ttl > 0) await cache.setSystem(cacheKey, current, ttl);
 
-    return user;
+    return current;
   }
 }

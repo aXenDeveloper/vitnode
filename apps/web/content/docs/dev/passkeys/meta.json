@@ -1,0 +1,6 @@
+{
+  "title": "Passkeys",
+  "description": "Passwordless sign-in with WebAuthn passkeys - Face ID, Touch ID, Windows Hello or a security key",
+  "icon": "Fingerprint",
+  "pages": ["index", "using-passkeys", "admincp"]
+}

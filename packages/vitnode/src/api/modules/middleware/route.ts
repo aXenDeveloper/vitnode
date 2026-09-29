@@ -29,6 +29,8 @@ export const routeMiddlewareSchema = z.object({
     }),
   ),
   isEmail: z.boolean(),
+  passkeys: z.boolean(),
+  password: z.boolean(),
   navigation: z.array(zodPublicNavigationNodeSchema),
   bottomBar: z.array(zodPublicNavigationItemSchema),
   captcha: z
@@ -63,6 +65,8 @@ export const routeMiddleware = buildRoute({
       {
         ai: { models: c.get("ai").models() },
         isEmail: !!c.get("core").email?.adapter,
+        passkeys: c.get("core").authorization.passkeys.enabled,
+        password: c.get("core").authorization.password.enabled,
         navigation: await loadPublicNavigation(c),
         bottomBar: await loadPublicBottomBar(c),
         sso: sso.map(s => ({ id: s.id, name: s.name, icon: s.icon })),

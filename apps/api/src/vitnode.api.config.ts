@@ -94,6 +94,7 @@ export const vitNodeApiConfig = buildApiConfig({
   },
 
   authorization: {
+    passkeys: true,
     ssoAdapters: [
       DiscordSSOApiPlugin({
         clientId: process.env.DISCORD_CLIENT_ID,

@@ -292,6 +292,16 @@
         "hint": "Wpisz co najmniej {count} znaki, aby wyszukać użytkowników.",
         "placeholder": "Szukaj stron i użytkowników...",
         "title": "Wyszukiwanie w panelu"
+      },
+      "session": {
+        "expired": {
+          "title": "Sesja panelu administracyjnego wygasła",
+          "desc": "Wylogowaliśmy Cię z powodu braku aktywności. Zaloguj się ponownie, aby kontynuować."
+        },
+        "tabs_closed": {
+          "title": "Zaloguj się ponownie",
+          "desc": "Wszystkie karty panelu administracyjnego zostały zamknięte, więc dla bezpieczeństwa wylogowaliśmy Cię."
+        }
       }
     },
     "navigation": {
@@ -921,6 +931,76 @@
           "showRealName": "Pokazuj moje prawdziwe imię",
           "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim."
         },
+        "passkeys": {
+          "add": "Dodaj klucz dostępu",
+          "add_success": {
+            "desc": "„{name}” jest gotowy. Następnym razem wybierz „Zaloguj się kluczem dostępu” na stronie logowania.",
+            "title": "Dodano klucz dostępu"
+          },
+          "added": "Dodano",
+          "delete": {
+            "action": "Usuń klucz dostępu",
+            "confirm": "Usuń",
+            "desc": "Nie zalogujesz się już kluczem „{name}”. Może on nadal być widoczny w menedżerze haseł, dopóki go tam nie usuniesz.",
+            "success": "Usunięto klucz dostępu",
+            "success_desc": "Klucza „{name}” nie można już użyć do logowania.",
+            "title": "Usunąć ten klucz dostępu?"
+          },
+          "desc": "Loguj się odciskiem palca, twarzą lub blokadą ekranu zamiast hasła. Klucze dostępu są przechowywane na Twoich urządzeniach lub w menedżerze haseł i nie da się ich wyłudzić.",
+          "device_bound": "Tylko to urządzenie",
+          "empty": "Nie dodano jeszcze żadnego klucza dostępu.",
+          "errors": {
+            "already_registered": {
+              "desc": "To urządzenie lub menedżer haseł ma już klucz dostępu do Twojego konta.",
+              "title": "Już skonfigurowano"
+            },
+            "cancelled": {
+              "desc": "Okno zostało zamknięte przed utworzeniem klucza. Spróbuj ponownie, kiedy zechcesz.",
+              "title": "Nie dodano klucza dostępu"
+            },
+            "expired": {
+              "desc": "Żądanie wygasło lub nie udało się go zweryfikować. Spróbuj ponownie.",
+              "title": "Trwało to trochę za długo"
+            },
+            "failed": {
+              "desc": "Przeglądarka lub urządzenie zgłosiły problem. Spróbuj ponownie.",
+              "title": "Nie udało się utworzyć klucza dostępu"
+            },
+            "last_recovery_method": {
+              "desc": "To ostatni sposób dostępu do Twojego konta. Najpierw dodaj inny klucz dostępu lub ustaw hasło przez „Nie pamiętasz hasła?” na stronie logowania.",
+              "desc_passwordless": "To ostatni sposób dostępu do Twojego konta. Najpierw dodaj inny klucz dostępu, aby nadal móc się logować.",
+              "title": "Zachowaj sposób logowania"
+            },
+            "not_found": {
+              "desc": "Mógł zostać usunięty na innym urządzeniu. Lista została odświeżona.",
+              "title": "Nie znaleziono klucza dostępu"
+            },
+            "unavailable": {
+              "desc": "Ta strona nie przyjmuje teraz nowych kluczy dostępu.",
+              "title": "Klucze dostępu są wyłączone"
+            },
+            "unsupported": {
+              "desc": "Ta przeglądarka lub urządzenie nie potrafi tworzyć kluczy dostępu z blokadą ekranu lub biometrią.",
+              "title": "Klucze dostępu nie są tu obsługiwane"
+            },
+            "admin_session_required": {
+              "title": "Najpierw otwórz AdminCP",
+              "desc": "Twoje konto ma dostęp do AdminCP, więc dodanie klucza dostępu wymaga dodatkowego potwierdzenia. Zaloguj się do AdminCP hasłem w tej przeglądarce i spróbuj ponownie."
+            }
+          },
+          "last_used": "Ostatnio użyty",
+          "never_used": "Jeszcze nieużyty",
+          "rename": {
+            "action": "Zmień nazwę klucza dostępu",
+            "label": "Nazwa klucza dostępu",
+            "save": "Zapisz",
+            "success": "Zmieniono nazwę klucza dostępu",
+            "success_desc": "Teraz wyświetla się jako „{name}”."
+          },
+          "synced": "Synchronizowany",
+          "title": "Klucze dostępu",
+          "unsupported_hint": "Ta przeglądarka nie potrafi tworzyć kluczy dostępu. Użyj aktualnej wersji Chrome, Safari, Edge lub Firefox."
+        },
         "title": "Ustawienia"
       },
       "sign_in": {
@@ -936,12 +1016,50 @@
             "title": "Nieprawidłowe dane logowania"
           }
         },
+        "passkey": {
+          "action": "Zaloguj się kluczem dostępu",
+          "cancelled": {
+            "desc": "Nic się nie stało - spróbuj ponownie, kiedy zechcesz.",
+            "title": "Anulowano logowanie kluczem dostępu"
+          },
+          "errors": {
+            "expired": {
+              "desc": "Żądanie logowania wygasło. Spróbuj ponownie.",
+              "title": "Trwało to trochę za długo"
+            },
+            "failed": {
+              "desc": "Przeglądarka lub urządzenie zgłosiły problem. Spróbuj ponownie lub wybierz inny sposób logowania.",
+              "title": "Nie udało się użyć klucza dostępu"
+            },
+            "rejected": {
+              "desc": "Ten klucz dostępu nie jest powiązany z żadnym kontem lub został usunięty. Użyj innego klucza albo zaloguj się hasłem.",
+              "title": "Nie rozpoznano klucza dostępu"
+            },
+            "unavailable": {
+              "desc": "Ta strona nie przyjmuje teraz kluczy dostępu. Wybierz inny sposób logowania.",
+              "title": "Klucze dostępu są wyłączone"
+            },
+            "unsupported": {
+              "desc": "Ta przeglądarka lub urządzenie nie obsługuje kluczy dostępu. Wybierz inny sposób logowania.",
+              "title": "Klucze dostępu nie są tu obsługiwane"
+            },
+            "not_staff": {
+              "title": "Brak dostępu do AdminCP",
+              "desc": "Klucz dostępu jest prawidłowy, ale to konto nie może otworzyć AdminCP. Jeśli uważasz, że to pomyłka, skontaktuj się z administratorem."
+            }
+          },
+          "unsupported_hint": "Ta przeglądarka nie obsługuje kluczy dostępu. Zaloguj się adresem e-mail i hasłem."
+        },
         "password": {
           "label": "Hasło",
           "required": "Hasło jest wymagane.",
           "reset": "Nie pamiętasz hasła?"
         },
-        "submit": "Zaloguj się"
+        "submit": "Zaloguj się",
+        "unavailable": {
+          "desc": "Na tej stronie nie jest teraz włączony żaden sposób logowania. Zajrzyj później.",
+          "title": "Logowanie jest niedostępne"
+        }
       },
       "sign_up": {
         "already_have_account": "Masz już konto? <link>Zaloguj się</link>.",
@@ -976,6 +1094,10 @@
           "desc": "Akceptujesz nasze <link>dokumenty prawne i polityki</link>.",
           "label": "Akceptuję regulamin",
           "required": "Musisz zaakceptować regulamin."
+        },
+        "unavailable": {
+          "desc": "Ta strona nie przyjmuje teraz nowych kont. Zajrzyj później.",
+          "title": "Rejestracja jest niedostępna"
         },
         "username": {
           "exists": "Ta nazwa użytkownika jest już zajęta.",

@@ -41,6 +41,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "@dnd-kit/sortable",
   "@dnd-kit/utilities",
   "@ferrucc-io/emoji-picker",
+  "@simplewebauthn/browser",
   "@tanstack/react-form",
   "@tanstack/react-query",
   "@tiptap/extension-audio",

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardDescription } from "@/components/ui/card";
 
 import { AUTH_HREF } from "../auth-link";
@@ -8,10 +9,12 @@ import { WrapperSignUp } from "./wrapper";
 
 export const SignUpContent = ({
   form,
+  isUnavailable = false,
   signInHref = AUTH_HREF.signIn,
   sso,
 }: {
-  form: React.ReactNode;
+  form?: React.ReactNode;
+  isUnavailable?: boolean;
   signInHref?: string;
   sso?: React.ReactNode;
 }) => {
@@ -29,6 +32,13 @@ export const SignUpContent = ({
               </h1>
               <CardDescription>{t("desc")}</CardDescription>
             </div>
+
+            {isUnavailable ? (
+              <Alert>
+                <AlertTitle>{t("unavailable.title")}</AlertTitle>
+                <AlertDescription>{t("unavailable.desc")}</AlertDescription>
+              </Alert>
+            ) : null}
 
             {sso}
 

@@ -3,6 +3,7 @@ import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
 import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
+import type { PasskeysConfig } from "./api/lib/passkey-config";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { AIConfig } from "./api/models/ai";
 import type { EmailApiPlugin } from "./api/models/email";
@@ -64,6 +65,8 @@ export interface VitNodeApiConfig {
     cookieSecure?: boolean;
     deviceCookieExpires?: number;
     deviceCookieName?: string;
+    passkeys?: boolean | PasskeysConfig;
+    password?: boolean;
     ssoAdapters?: SSOApiPlugin[];
   };
   captcha?: {

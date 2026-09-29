@@ -227,6 +227,8 @@
     "@ferrucc-io/emoji-picker": "^0.1.2",
     "@hono/swagger-ui": "^0.6.1",
     "@inquirer/prompts": "^8.7.2",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
     "@tiptap/extension-audio": "^3.31.3",
     "@tiptap/extension-drag-handle": "^3.31.3",
     "@tiptap/extension-drag-handle-react": "^3.31.3",

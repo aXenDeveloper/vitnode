@@ -29,6 +29,8 @@ const AUTHORIZATION: Authorization = {
   cookieSecure: true,
   deviceCookieExpires: 1000 * 60 * 60 * 24 * 365,
   deviceCookieName: "vitnode_device",
+  passkeys: { enabled: false, problems: [] },
+  password: { enabled: true },
   ssoAdapters: [],
 };
 
@@ -202,6 +204,16 @@ describe("admin session cookie", () => {
     await new SessionAdminModel(c).createSessionByUserId(7);
   const remove = async (c: Context) =>
     await new SessionAdminModel(c).deleteSession();
+
+  it("ends with the browser session instead of carrying an expiry", async () => {
+    const cookie = named(
+      await setCookiesFrom({ act: create }),
+      AUTHORIZATION.adminCookieName,
+    );
+
+    expect(cookie.options.expires).toBe(undefined);
+    expect(cookie.options.maxAge).toBe(undefined);
+  });
 
   it.each(HOSTS)("is host-only on %s", async (_label, url) => {
     const cookie = named(

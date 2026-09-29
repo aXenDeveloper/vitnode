@@ -42,6 +42,7 @@ import { realtime } from "@/ws/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
+import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { WebSocketConfig } from "../lib/websocket";
@@ -64,6 +65,7 @@ import {
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
 import { collectNavigationPresets } from "../lib/navigation-presets";
+import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
 declare module "hono" {
@@ -98,6 +100,7 @@ export interface EnvVariablesVitNode {
       showRealName: boolean;
     };
   };
+  adminSessionExpiresAt: Date | null;
   ai: AIModel;
   cache: CacheModel;
   core: {
@@ -112,6 +115,8 @@ export interface EnvVariablesVitNode {
       cookieSecure: boolean;
       deviceCookieExpires: number;
       deviceCookieName: string;
+      passkeys: ResolvedPasskeysConfig;
+      password: { enabled: boolean };
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
@@ -362,6 +367,12 @@ export const globalMiddleware = ({
   const navigationMetadata: NavigationPreset[] =
     collectNavigationPresets(plugins);
 
+  const passkeysMetadata = resolvePasskeysConfig({
+    config: authorization?.passkeys,
+    rpNameFallback: metadata.shortTitle ?? metadata.title,
+    webOrigin: CONFIG.web.origin,
+  });
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -420,12 +431,13 @@ export const globalMiddleware = ({
         deviceCookieExpires:
           authorization?.deviceCookieExpires ?? 1000 * 60 * 60 * 24 * 365, // 1 year,
         adminCookieName: authorization?.adminCookieName ?? "vitnode_auth_admin",
-        adminCookieExpires:
-          authorization?.adminCookieExpires ?? 1000 * 60 * 60 * 24 * 1, // 1 day
+        adminCookieExpires: authorization?.adminCookieExpires ?? 1000 * 60 * 60,
         cookieSecure: authorization?.cookieSecure ?? true,
         // No default on purpose: absent means host-only, which is correct on
         // localhost, on a generated preview hostname and in production alike.
         cookieDomain: authorization?.cookieDomain,
+        passkeys: passkeysMetadata,
+        password: { enabled: authorization?.password ?? true },
       },
       captcha,
       personalInformationFields: resolvePersonalInformationFields(
@@ -459,6 +471,7 @@ export const globalMiddleware = ({
     const user = await new SessionModel(c).getUser();
     c.set("user", user);
     c.set("admin", null);
+    c.set("adminSessionExpiresAt", null);
     c.set("log", loggerMiddleware(c));
 
     await next();
@@ -467,11 +480,14 @@ export const globalMiddleware = ({
 
 export const globalAdminMiddleware = () => {
   return async (c: Context, next: Next) => {
-    const user = await new SessionAdminModel(c).getUser();
-    if (!user) throw new HTTPException(403);
-    c.set("admin", {
-      user,
+    const session = await new SessionAdminModel(c).getSession({
+      extend: c.req.query("passive") !== "true",
     });
+    if (!session) throw new HTTPException(403);
+    c.set("admin", {
+      user: session.user,
+    });
+    c.set("adminSessionExpiresAt", session.expiresAt);
 
     await next();
   };

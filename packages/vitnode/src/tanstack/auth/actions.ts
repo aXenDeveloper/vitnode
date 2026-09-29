@@ -4,10 +4,13 @@ import { useRouter } from "@tanstack/react-router";
 import type { ChangePasswordSubmit } from "@/views/auth/password-reset/change-password-form/change-password-form-content";
 import type { PasswordResetSubmit } from "@/views/auth/password-reset/form/password-reset-form-content";
 import type { SignInSubmit } from "@/views/auth/sign-in/form/sign-in-form-content";
+import type { PasskeySignInSubmit } from "@/views/auth/sign-in/passkey/passkey-sign-in-button";
 import type { SignUpSubmit } from "@/views/auth/sign-up/form/sign-up-form-content";
 import type { SSOSelectProvider } from "@/views/auth/sso/buttons/sso-buttons-content";
 import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-result";
 import type { SSOLinkSubmit } from "@/views/auth/sso/link/use-sso-link-form";
+
+import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
 
 import type { SsoCallbackInput } from "./contract";
 
@@ -53,6 +56,44 @@ export const useSignInAction = ({
     // private answer to be re-derived from the cookie when there is. Both
     // halves: the AdminCP's privileged entries, and this visitor's own files
     // and devices. See the long note on `useSignOutAction`.
+    removeAdminIdentityQueries(queryClient);
+    removeUserIdentityQueries(queryClient);
+
+    await invalidateSession(queryClient);
+    await navigate(destination());
+
+    return undefined;
+  };
+};
+
+export const usePasskeySignInAction = ({
+  destination,
+  navigate,
+}: {
+  destination: () => string;
+  navigate: AuthNavigate;
+}): PasskeySignInSubmit => {
+  const queryClient = useQueryClient();
+
+  return async () => {
+    const start = await authTransport().startPasskeySignIn();
+    if (!start.ok) return start.reason;
+
+    const ceremony = await getPasskeyInBrowser(start.options);
+    if (!ceremony.ok) {
+      return ceremony.failure === "already_registered"
+        ? "failed"
+        : ceremony.failure;
+    }
+
+    const result = await authTransport().finishPasskeySignIn({
+      response: ceremony.response,
+    });
+
+    if (!result.ok) {
+      return result.reason === "access_denied" ? "rejected" : result.reason;
+    }
+
     removeAdminIdentityQueries(queryClient);
     removeUserIdentityQueries(queryClient);
 

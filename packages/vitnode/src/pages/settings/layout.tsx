@@ -1,3 +1,4 @@
+import { middlewareConfigQueryOptions } from "@/tanstack/auth/middleware-config";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import { SettingsLayoutContent } from "@/tanstack/settings/layout";
@@ -9,8 +10,15 @@ const SettingsLayout = ({ children }: { children: React.ReactNode }) => (
 );
 
 export const route = defineAuthenticatedRoute({
-  load: async ({ context }) =>
-    await loadPageWidgets(context.queryClient, settingsPage),
+  load: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.query({
+        ...middlewareConfigQueryOptions(),
+        staleTime: "static",
+      }),
+      loadPageWidgets(context.queryClient, settingsPage),
+    ]);
+  },
   head: () => ({ robots: "noindex, nofollow" }),
 
   /** The first crumb of the trail; each panel adds its own after it. */

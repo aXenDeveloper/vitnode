@@ -6,7 +6,7 @@ import type { AuthNavigate } from "./actions";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { startSsoAction, useSignUpAction } from "./actions";
-import { ssoProvidersOf, useMiddlewareConfigQuery } from "./middleware-config";
+import { authMethodsOf, useMiddlewareConfigQuery } from "./middleware-config";
 import { postAuthDestination } from "./redirects";
 import { REGISTER_NAMESPACES } from "./register-route";
 
@@ -16,6 +16,7 @@ export interface RegisterRouteProps {
 
 export const RegisterRouteContent = ({ navigate }: RegisterRouteProps) => {
   const { data: config } = useMiddlewareConfigQuery();
+  const methods = authMethodsOf(config);
   const signUp = useSignUpAction({
     destination: () => postAuthDestination(undefined),
     navigate,
@@ -25,16 +26,20 @@ export const RegisterRouteContent = ({ navigate }: RegisterRouteProps) => {
     <RouteMessages namespaces={REGISTER_NAMESPACES}>
       <SignUpContent
         form={
-          <SignUpFormContent
-            captcha={config.captcha}
-            isEmail={config.isEmail}
-            onSignUp={signUp}
-          />
+          methods.password ? (
+            <SignUpFormContent
+              captcha={config.captcha}
+              isEmail={config.isEmail}
+              onSignUp={signUp}
+            />
+          ) : undefined
         }
+        isUnavailable={!methods.signUp}
         sso={
           <SSOButtonsContent
             onSelectProvider={startSsoAction}
-            providers={ssoProvidersOf(config)}
+            providers={methods.sso}
+            showDivider={methods.password}
           />
         }
       />

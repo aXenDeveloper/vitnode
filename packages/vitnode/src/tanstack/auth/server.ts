@@ -9,7 +9,8 @@ import { createAuthOperations } from "./transport-operations";
  * The server's own transport: the server fetcher, and the cookie relay.
  *
  * `allowSaveCookies: true` on exactly the flows whose answer carries the
- * session cookie - sign-in, sign-out, the three SSO steps and sign-up. A
+ * session cookie - sign-in, every passkey sign-in step, sign-out, the three SSO
+ * steps and sign-up. A
  * password reset request and a token-based password change never mint a
  * session, so neither has ever relayed a cookie and neither does here.
  */
@@ -34,6 +35,26 @@ const operations = createAuthOperations({
       method: "get",
       module: "users/sso",
       path: "/{providerId}/callback",
+    }),
+
+  finishAdminPasskeySignIn: async data =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      allowSaveCookies: true,
+      args: { body: data },
+      method: "post",
+      module: "users/passkeys",
+      path: "/admin-sign-in",
+    }),
+
+  finishPasskeySignIn: async data =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      allowSaveCookies: true,
+      args: { body: data },
+      method: "post",
+      module: "users/passkeys",
+      path: "/sign-in",
     }),
 
   linkSso: async data =>
@@ -98,6 +119,24 @@ const operations = createAuthOperations({
       path: "/sign_up",
     }),
 
+  startAdminPasskeySignIn: async () =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      allowSaveCookies: true,
+      method: "post",
+      module: "users/passkeys",
+      path: "/admin-sign-in/options",
+    }),
+
+  startPasskeySignIn: async () =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      allowSaveCookies: true,
+      method: "post",
+      module: "users/passkeys",
+      path: "/sign-in/options",
+    }),
+
   startSso: async data =>
     await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
@@ -111,10 +150,15 @@ const operations = createAuthOperations({
 
 export const changePasswordFromResetOnApi = operations.changePasswordFromReset;
 export const completeSsoOnApi = operations.completeSso;
+export const finishAdminPasskeySignInOnApi =
+  operations.finishAdminPasskeySignIn;
+export const finishPasskeySignInOnApi = operations.finishPasskeySignIn;
 export const linkSsoOnApi = operations.linkSso;
 export const readSessionOnApi = operations.readSession;
 export const requestPasswordResetOnApi = operations.requestPasswordReset;
 export const signInOnApi = operations.signIn;
 export const signOutOnApi = operations.signOut;
 export const signUpOnApi = operations.signUp;
+export const startAdminPasskeySignInOnApi = operations.startAdminPasskeySignIn;
+export const startPasskeySignInOnApi = operations.startPasskeySignIn;
 export const startSsoOnApi = operations.startSso;

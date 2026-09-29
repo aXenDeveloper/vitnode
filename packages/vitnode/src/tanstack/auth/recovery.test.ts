@@ -172,11 +172,29 @@ describe("the namespaces each recovery screen needs", () => {
  */
 describe("whether this deployment has password recovery at all", () => {
   it("follows the email adapter when the configuration was read", () => {
-    expect(passwordRecoveryAvailability({ isEmail: true, isKnown: true })).toBe(
-      "available",
-    );
     expect(
-      passwordRecoveryAvailability({ isEmail: false, isKnown: true }),
+      passwordRecoveryAvailability({
+        isEmail: true,
+        isKnown: true,
+        password: true,
+      }),
+    ).toBe("available");
+    expect(
+      passwordRecoveryAvailability({
+        isEmail: false,
+        isKnown: true,
+        password: true,
+      }),
+    ).toBe("disabled");
+  });
+
+  it("is off when password sign-in is switched off, email or not", () => {
+    expect(
+      passwordRecoveryAvailability({
+        isEmail: true,
+        isKnown: true,
+        password: false,
+      }),
     ).toBe("disabled");
   });
 
@@ -200,7 +218,11 @@ describe("whether this deployment has password recovery at all", () => {
     // `isKnown` decides on its own: even were the fallback to start guessing
     // `isEmail: true`, an unread configuration still may not answer "available".
     expect(
-      passwordRecoveryAvailability({ isEmail: true, isKnown: false }),
+      passwordRecoveryAvailability({
+        isEmail: true,
+        isKnown: false,
+        password: true,
+      }),
     ).toBe("unknown");
   });
 
@@ -211,6 +233,8 @@ describe("whether this deployment has password recovery at all", () => {
       knownMiddlewareConfig({
         ai: { models: [] },
         isEmail: false,
+        passkeys: false,
+        password: true,
         navigation: [],
         bottomBar: [],
         sso: [],
@@ -221,6 +245,8 @@ describe("whether this deployment has password recovery at all", () => {
         knownMiddlewareConfig({
           ai: { models: [] },
           isEmail: false,
+          passkeys: false,
+          password: true,
           navigation: [],
           bottomBar: [],
           sso: [],

@@ -1,0 +1,1 @@
+export const PASSKEY_NAME_MAX_LENGTH = 64;

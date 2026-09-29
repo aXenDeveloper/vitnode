@@ -1,10 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 
-import type {
-  AdminTablePage,
-  AdminTablePageInfo,
-} from "@/views/admin/table/params";
+import type { AdminTablePage } from "@/views/admin/table/params";
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 

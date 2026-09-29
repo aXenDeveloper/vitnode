@@ -9,6 +9,7 @@ import * as languages from "./languages";
 import * as logs from "./logs";
 import * as moderators from "./moderators";
 import * as navigation from "./navigation";
+import * as passkeys from "./passkeys";
 import * as queue from "./queue";
 import * as roles from "./roles";
 import * as search from "./search";
@@ -26,6 +27,7 @@ export const coreSchema = {
   ...logs,
   ...moderators,
   ...navigation,
+  ...passkeys,
   ...queue,
   ...roles,
   ...search,
@@ -49,6 +51,7 @@ export const coreRelations = defineRelations(coreSchema, r => ({
     }),
     secondary_roles: r.many.core_users_secondary_roles(),
     sso: r.many.core_users_sso(),
+    passkeys: r.many.core_users_passkeys(),
     confirm_email: r.one.core_users_confirm_emails(),
     forgot_password: r.one.core_users_forgot_password(),
   },
@@ -67,6 +70,13 @@ export const coreRelations = defineRelations(coreSchema, r => ({
   core_users_sso: {
     user: r.one.core_users({
       from: r.core_users_sso.userId,
+      to: r.core_users.id,
+    }),
+  },
+
+  core_users_passkeys: {
+    user: r.one.core_users({
+      from: r.core_users_passkeys.userId,
       to: r.core_users.id,
     }),
   },

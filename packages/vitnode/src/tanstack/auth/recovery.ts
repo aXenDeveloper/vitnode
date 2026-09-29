@@ -63,13 +63,15 @@ export type PasswordRecoveryAvailability = "available" | "disabled" | "unknown";
 export const passwordRecoveryAvailability = ({
   isEmail,
   isKnown,
+  password,
 }: {
   isEmail: boolean;
   isKnown: boolean;
+  password: boolean;
 }): PasswordRecoveryAvailability => {
   if (!isKnown) return "unknown";
 
-  return isEmail ? "available" : "disabled";
+  return isEmail && password ? "available" : "disabled";
 };
 
 export class PasswordRecoveryUnknownError extends Error {

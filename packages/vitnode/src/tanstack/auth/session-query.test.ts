@@ -22,6 +22,8 @@ const unreachable = () => {
 setAuthTransport({
   changePasswordFromReset: unreachable,
   completeSso: unreachable,
+  finishAdminPasskeySignIn: unreachable,
+  finishPasskeySignIn: unreachable,
   linkSso: unreachable,
   readSession: async () => {
     reads += 1;
@@ -34,6 +36,8 @@ setAuthTransport({
   signIn: unreachable,
   signOut: unreachable,
   signUp: unreachable,
+  startAdminPasskeySignIn: unreachable,
+  startPasskeySignIn: unreachable,
   startSso: unreachable,
 });
 

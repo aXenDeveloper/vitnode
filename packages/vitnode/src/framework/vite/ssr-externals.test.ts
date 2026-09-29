@@ -9,15 +9,22 @@ const externalsFor = async (
   readPluginIds = vi.fn(async () =>
     Promise.resolve(["@acme/blog", "@acme/docs"]),
   ),
-): Promise<{ external: string[]; readPluginIds: typeof readPluginIds }> => {
+): Promise<{
+  external: string[];
+  nitro: undefined | { traceDeps: string[] };
+  readPluginIds: typeof readPluginIds;
+}> => {
   const plugin = vitNodeSsrExternals({ appRoot: "/app", readPluginIds });
   const config = plugin.config as (
     userConfig: UserConfig,
     env: ConfigEnv,
-  ) => Promise<{ ssr: { external: string[] } }>;
-  const { ssr } = await config({}, { command, mode: "development" });
+  ) => Promise<{
+    nitro: undefined | { traceDeps: string[] };
+    ssr: { external: string[] };
+  }>;
+  const { nitro, ssr } = await config({}, { command, mode: "development" });
 
-  return { external: ssr.external, readPluginIds };
+  return { external: ssr.external, nitro, readPluginIds };
 };
 
 describe("what a VitNode app externalises from its SSR pass", () => {
@@ -48,5 +55,17 @@ describe("what a VitNode app externalises from its SSR pass", () => {
     const { readPluginIds } = await externalsFor("build");
 
     expect(readPluginIds).toHaveBeenCalledWith("/app");
+  });
+
+  it("keeps SimpleWebAuthn's server out of the Nitro bundle", async () => {
+    const { nitro } = await externalsFor("build");
+
+    expect(nitro?.traceDeps).toContain("@simplewebauthn/server");
+  });
+
+  it("leaves Nitro alone while the dev server runs", async () => {
+    const { nitro } = await externalsFor("serve");
+
+    expect(nitro).toBeUndefined();
   });
 });

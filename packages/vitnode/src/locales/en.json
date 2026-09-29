@@ -674,6 +674,10 @@
           "title": "Check your email",
           "desc": "We've sent a confirmation link to your email address",
           "check_spam": "If you don't see the email in your inbox, please check your spam folder."
+        },
+        "unavailable": {
+          "title": "Registration is unavailable",
+          "desc": "This site isn't accepting new accounts right now. Please check back later."
         }
       },
       "sign_in": {
@@ -694,7 +698,45 @@
             "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."
           }
         },
-        "submit": "Login"
+        "submit": "Login",
+        "passkey": {
+          "action": "Sign in with a passkey",
+          "unsupported_hint": "This browser can't use passkeys. Sign in with your email and password instead.",
+          "cancelled": {
+            "title": "Passkey sign-in cancelled",
+            "desc": "No worries - try again whenever you're ready."
+          },
+          "errors": {
+            "expired": {
+              "title": "That took a little too long",
+              "desc": "The sign-in request expired. Please try again."
+            },
+            "failed": {
+              "title": "Your passkey couldn't be used",
+              "desc": "Your browser or device reported a problem. Try again or use another way to sign in."
+            },
+            "rejected": {
+              "title": "Passkey not recognized",
+              "desc": "This passkey isn't linked to an account here, or it was removed. Try another passkey or sign in with your password."
+            },
+            "unavailable": {
+              "title": "Passkeys are turned off",
+              "desc": "This site doesn't accept passkeys right now. Please use another way to sign in."
+            },
+            "unsupported": {
+              "title": "Passkeys aren't supported here",
+              "desc": "This browser or device can't use passkeys. Please use another way to sign in."
+            },
+            "not_staff": {
+              "title": "No AdminCP access",
+              "desc": "Your passkey checks out, but this account can't open the AdminCP. Ask an administrator if you think that's a mistake."
+            }
+          }
+        },
+        "unavailable": {
+          "title": "Signing in is unavailable",
+          "desc": "This site has no sign-in method switched on right now. Please check back later."
+        }
       },
       "reset_password": {
         "title": "Reset Password",
@@ -764,6 +806,76 @@
             "desc": "You will be signed out of {os}. That device will need to sign in again.",
             "confirm": "Sign out",
             "success": "Device signed out successfully."
+          }
+        },
+        "passkeys": {
+          "title": "Passkeys",
+          "desc": "Sign in with your fingerprint, face or screen lock instead of typing a password. Passkeys live on your devices or in your password manager, and they can't be phished.",
+          "add": "Add a passkey",
+          "empty": "You haven't added a passkey yet.",
+          "added": "Added",
+          "last_used": "Last used",
+          "never_used": "Not used yet",
+          "synced": "Synced",
+          "device_bound": "This device only",
+          "unsupported_hint": "This browser can't create passkeys. Try a recent version of Chrome, Safari, Edge or Firefox.",
+          "add_success": {
+            "title": "Passkey added",
+            "desc": "“{name}” is ready. Next time, choose “Sign in with a passkey” on the login page."
+          },
+          "rename": {
+            "action": "Rename passkey",
+            "label": "Passkey name",
+            "save": "Save",
+            "success": "Passkey renamed",
+            "success_desc": "It now shows up as “{name}”."
+          },
+          "delete": {
+            "action": "Remove passkey",
+            "title": "Remove this passkey?",
+            "desc": "You won't be able to sign in with “{name}” anymore. It may still appear in your password manager until you delete it there too.",
+            "confirm": "Remove",
+            "success": "Passkey removed",
+            "success_desc": "“{name}” can no longer be used to sign in."
+          },
+          "errors": {
+            "cancelled": {
+              "title": "Passkey not added",
+              "desc": "The prompt was closed before a passkey was created. Try again whenever you like."
+            },
+            "already_registered": {
+              "title": "Already set up",
+              "desc": "This device or password manager already has a passkey for your account."
+            },
+            "expired": {
+              "title": "That took a little too long",
+              "desc": "The request expired or couldn't be verified. Please try again."
+            },
+            "failed": {
+              "title": "The passkey couldn't be created",
+              "desc": "Your browser or device reported a problem. Please try again."
+            },
+            "unavailable": {
+              "title": "Passkeys are turned off",
+              "desc": "This site doesn't accept new passkeys right now."
+            },
+            "unsupported": {
+              "title": "Passkeys aren't supported here",
+              "desc": "This browser or device can't create passkeys with screen lock or biometrics."
+            },
+            "last_recovery_method": {
+              "title": "Keep a way to sign in",
+              "desc": "This is the last way into your account. Add another passkey or set a password with “Forgot password?” on the login page first.",
+              "desc_passwordless": "This is the last way into your account. Add another passkey first so you can still sign in."
+            },
+            "not_found": {
+              "title": "Passkey not found",
+              "desc": "It may have been removed from another device. The list is refreshed."
+            },
+            "admin_session_required": {
+              "title": "Open the AdminCP first",
+              "desc": "Your account has AdminCP access, so adding a passkey needs one extra check. Sign in to the AdminCP with your password in this browser, then try again."
+            }
           }
         }
       }
@@ -1305,6 +1417,16 @@
         "desc": "Search admin pages and users, or jump straight to a member.",
         "placeholder": "Search pages and users...",
         "hint": "Type at least {count} characters to search users."
+      },
+      "session": {
+        "expired": {
+          "title": "Your AdminCP session expired",
+          "desc": "You were signed out after a period of inactivity. Sign in again to pick up where you left off."
+        },
+        "tabs_closed": {
+          "title": "Please sign in again",
+          "desc": "All AdminCP tabs were closed, so we signed you out to keep your account safe."
+        }
       }
     },
     "advanced": {

@@ -1,16 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardDescription } from "@/components/ui/card";
 
 import { AUTH_HREF } from "../auth-link";
 
 export const SignInContent = ({
   form,
+  isUnavailable = false,
+  passkey,
+  showSignUp = true,
   signUpHref = AUTH_HREF.signUp,
   sso,
 }: {
-  form: React.ReactNode;
+  form?: React.ReactNode;
+  isUnavailable?: boolean;
+  passkey?: React.ReactNode;
+  showSignUp?: boolean;
   signUpHref?: string;
   sso?: React.ReactNode;
 }) => {
@@ -28,20 +35,31 @@ export const SignInContent = ({
             <CardDescription>{t("desc")}</CardDescription>
           </div>
 
+          {isUnavailable ? (
+            <Alert>
+              <AlertTitle>{t("unavailable.title")}</AlertTitle>
+              <AlertDescription>{t("unavailable.desc")}</AlertDescription>
+            </Alert>
+          ) : null}
+
           {sso}
 
           {form}
+
+          {passkey}
         </div>
 
-        <div className="text-accent-foreground p-6 text-center text-sm">
-          {t.rich("do_not_have_account", {
-            link: text => (
-              <Link className="text-primary font-semibold" to={signUpHref}>
-                {text}
-              </Link>
-            ),
-          })}
-        </div>
+        {showSignUp ? (
+          <div className="text-accent-foreground p-6 text-center text-sm">
+            {t.rich("do_not_have_account", {
+              link: text => (
+                <Link className="text-primary font-semibold" to={signUpHref}>
+                  {text}
+                </Link>
+              ),
+            })}
+          </div>
+        ) : null}
       </Card>
     </div>
   );

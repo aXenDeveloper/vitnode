@@ -4,7 +4,7 @@ import type { PluginRoutePageProps } from "@/routing";
 import type { PasswordResetSearch } from "@/tanstack/auth/recovery";
 import type { PasswordResetRouteData } from "@/tanstack/auth/recovery-route";
 
-import { middlewareConfigQueryOptions } from "@/tanstack/auth/middleware-config";
+import { loadMiddlewareConfig } from "@/tanstack/auth/middleware-config";
 import {
   passwordRecoveryAvailability,
   PasswordRecoveryUnknownError,
@@ -37,10 +37,7 @@ export const route = defineRoute<PasswordResetRouteData, PasswordResetSearch>({
    */
   load: async ({ context, search }) => {
     const availability = passwordRecoveryAvailability(
-      await context.queryClient.query({
-        ...middlewareConfigQueryOptions(),
-        staleTime: "static",
-      }),
+      await loadMiddlewareConfig(context.queryClient),
     );
 
     // Not a 404: the route exists, the API could not say whether the flow does.

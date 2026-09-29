@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { cn } from "cn";
 import { ChevronLeftIcon } from "lucide-react";
 import React from "react";
@@ -27,15 +27,16 @@ export const SettingsShellContent = ({
   const t = useTranslations("core.auth.settings");
   const isRoot = isSettingsRootPath(pathname);
   const frameRef = React.useRef<HTMLDivElement>(null);
-  const shownPathnameRef = React.useRef(pathname);
+  const router = useRouter();
 
-  React.useEffect(() => {
-    if (shownPathnameRef.current === pathname) return;
-    shownPathnameRef.current = pathname;
-
-    if (isFocusVisible(document.activeElement)) return;
-    frameRef.current?.focus({ preventScroll: true });
-  }, [pathname]);
+  React.useEffect(
+    () =>
+      router.subscribe("onRendered", ({ pathChanged }) => {
+        if (!pathChanged || isFocusVisible(document.activeElement)) return;
+        frameRef.current?.focus({ preventScroll: true });
+      }),
+    [router],
+  );
 
   return (
     <div className="container mx-auto flex max-w-5xl flex-col gap-6 px-4">

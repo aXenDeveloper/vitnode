@@ -234,11 +234,11 @@ describe("every identity boundary drops the privileged cache", () => {
   it("the public auth actions clear on every identity change", () => {
     const code = sourceOf("../auth/actions.ts");
 
-    // Sign-in, SSO completion, an SSO identity linked with a password,
-    // sign-out and a verified sign-up: five call sites, one per flow that can
+    // Sign-in, passkey sign-in, SSO completion, an SSO identity linked with a
+    // password, sign-out and a verified sign-up: six call sites, one per flow that can
     // change who is at the keyboard. A password reset *request* is deliberately
     // not one - it mints no session and the visitor stays exactly who they were.
-    expect(code.split(CLEANUP).length - 1).toBe(5);
+    expect(code.split(CLEANUP).length - 1).toBe(6);
   });
 
   it("the public sign-in clears before it navigates", () => {

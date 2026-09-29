@@ -2,6 +2,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { ForgotPasswordTokenModel, PasswordModel } from "@/api/models/password";
 import { revokeAllSessionsForUser } from "@/api/models/session-revoke";
@@ -48,6 +49,7 @@ export const changePasswordRoute = buildRoute({
     },
   },
   handler: async c => {
+    assertPasswordSignInEnabled(c);
     const { password, userId, token } = c.req.valid("json");
 
     // The column holds a digest, never the token itself - see the reset route.

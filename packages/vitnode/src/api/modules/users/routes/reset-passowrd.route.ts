@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { createTranslator } from "use-intl";
 import { z } from "zod";
 
+import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { matchesEmail, pickAccountForEmail } from "@/api/lib/user-email-lookup";
 import { ForgotPasswordTokenModel } from "@/api/models/password";
@@ -38,6 +39,7 @@ export const resetPasswordRoute = buildRoute({
     },
   },
   handler: async c => {
+    assertPasswordSignInEnabled(c);
     const RESPONSE_TEXT = c.text("Email sent", 201);
     const { email } = c.req.valid("json");
     const candidates = await c
