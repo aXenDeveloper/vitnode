@@ -1,0 +1,24 @@
+{
+  "site": {
+    "home": {
+      "hero": {
+        "canary": "VitNode 2.0 is an early canary",
+        "description": "Publish content, bring members together and build the features your community needs on an open-source platform you control.",
+        "explore": "Explore what you can build",
+        "preview": {
+          "alt": "The AdminCP dashboard with a sidebar listing Core, Blog and Example plugin sections, a private notes widget and a send-notification widget.",
+          "members": "{count, plural, one {<strong>#</strong> member} other {<strong>#</strong> members}}",
+          "toast_meta": "Live toast · just now",
+          "toast_title": "Welcome aboard, {name}!"
+        },
+        "see_product": "See the product",
+        "title": "A home for <highlight>your people</highlight>, built around your idea.",
+        "trust": {
+          "agents": "Made for AI coding agents",
+          "license": "MIT licence",
+          "open_source": "Open source"
+        }
+      }
+    }
+  }
+}

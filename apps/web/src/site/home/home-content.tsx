@@ -1,3 +1,6 @@
+import { RouteMessages } from '@vitnode/core/tanstack/i18n'
+
+import { HOME_NAMESPACES } from '@/site/home/namespaces'
 import { AgentsSection } from '@/site/home/sections/agents'
 import { CommunitySection } from '@/site/home/sections/community'
 import { DevelopersSection } from '@/site/home/sections/developers'
@@ -16,23 +19,25 @@ import { MarketingPage } from '@/site/marketing/marketing-page'
 import { CanaryNotice } from '@/site/marketing/shared'
 
 export const HomeRouteContent = () => (
-  <MarketingPage>
-    <HeroSection />
-    <PoweringBySection />
-    <div className="container mx-auto px-4 pt-12 sm:px-6">
-      <CanaryNotice />
-    </div>
-    <OutcomesSection />
-    <FeaturesBentoSection />
-    <PluginsSection />
-    <ShowcaseSection />
-    <CommunitySection />
-    <AgentsSection />
-    <SecuritySection />
-    <DevelopersSection />
-    {/* <MakerSection /> */}
-    <PricingSection />
-    <FaqSection />
-    <FinalCtaSection />
-  </MarketingPage>
+  <RouteMessages namespaces={HOME_NAMESPACES}>
+    <MarketingPage>
+      <HeroSection />
+      <PoweringBySection />
+      <div className="container mx-auto px-4 pt-12 sm:px-6">
+        <CanaryNotice />
+      </div>
+      <OutcomesSection />
+      <FeaturesBentoSection />
+      <PluginsSection />
+      <ShowcaseSection />
+      <CommunitySection />
+      <AgentsSection />
+      <SecuritySection />
+      <DevelopersSection />
+      {/* <MakerSection /> */}
+      <PricingSection />
+      <FaqSection />
+      <FinalCtaSection />
+    </MarketingPage>
+  </RouteMessages>
 )

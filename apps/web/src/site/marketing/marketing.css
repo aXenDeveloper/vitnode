@@ -26,17 +26,6 @@
   }
 }
 
-@keyframes mk-pulse-ring {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(1.7);
-    opacity: 0;
-  }
-}
-
 @keyframes mk-breathe {
   0%,
   100% {
@@ -306,10 +295,6 @@
 .mk-anim-dash {
   stroke-dasharray: 6 10;
   animation: mk-dash 1.4s linear infinite;
-}
-
-.mk-anim-pulse-ring {
-  animation: mk-pulse-ring 3s ease-out infinite;
 }
 
 .mk-anim-breathe {
@@ -812,4 +797,73 @@
 
 .mk-anim-bot-block {
   animation: mk-bot-block 6s ease-in-out infinite;
+}
+
+@keyframes mk-sway {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-16px) scaleY(1.1);
+  }
+}
+
+.mk-anim-sway {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mk-sway 14s ease-in-out infinite;
+}
+
+@keyframes mk-flow {
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+
+.mk-anim-flow {
+  stroke-dasharray: 0.07 0.93;
+  animation: mk-flow 5s linear infinite;
+}
+
+@keyframes mk-enter-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.mk-enter-fade {
+  animation: mk-enter-fade 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes mk-enter-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+.mk-enter-pop {
+  animation: mk-enter-pop 500ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.mk-parallax {
+  transform: translate3d(
+    calc(var(--px, 0) * var(--depth, 10) * 1px),
+    calc(var(--py, 0) * var(--depth, 10) * 1px),
+    0
+  );
+  transition: transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-enter-fade,
+  .mk-enter-pop {
+    animation: none;
+  }
+
+  .mk-parallax {
+    transition: none;
+  }
 }
