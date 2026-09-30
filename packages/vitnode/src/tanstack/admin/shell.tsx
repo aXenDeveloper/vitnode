@@ -1,4 +1,4 @@
-import { useRouterState } from "@tanstack/react-router";
+import { Outlet, useRouterState } from "@tanstack/react-router";
 import React from "react";
 
 import type { AdminUserSearch } from "@/views/admin/layouts/search/search-users";
@@ -24,15 +24,10 @@ import { AdminSessionGuard } from "./session-guard";
 import { AdminUserBar } from "./user-bar";
 
 export const AdminShellContent = ({
-  children,
-  languageSwitcher,
   nav,
   onNavigate,
   searchUsers,
 }: {
-  children: React.ReactNode;
-  /** The host's language switcher, or nothing on a single-language install. */
-  languageSwitcher?: React.ReactNode;
   nav?: AdminNavBundle;
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;
@@ -50,12 +45,10 @@ export const AdminShellContent = ({
       <AdminPermissionsProvider>
         <AdminSessionGuard />
         <AdminNavProvider declarations={nav?.declarations}>
-          <AdminShellFrame
-            languageSwitcher={languageSwitcher}
-            onNavigate={onNavigate}
-            searchUsers={searchUsers}
-          >
-            <RouteGuardPending>{children}</RouteGuardPending>
+          <AdminShellFrame onNavigate={onNavigate} searchUsers={searchUsers}>
+            <RouteGuardPending>
+              <Outlet />
+            </RouteGuardPending>
           </AdminShellFrame>
         </AdminNavProvider>
       </AdminPermissionsProvider>
@@ -65,12 +58,10 @@ export const AdminShellContent = ({
 
 const AdminShellFrame = ({
   children,
-  languageSwitcher,
   onNavigate,
   searchUsers,
 }: {
   children: React.ReactNode;
-  languageSwitcher?: React.ReactNode;
   onNavigate?: (href: string) => void;
   searchUsers?: AdminUserSearch;
 }) => {
@@ -81,9 +72,7 @@ const AdminShellFrame = ({
 
   return (
     <SidebarProvider>
-      <SidebarAdminContent
-        userBar={<AdminUserBar languageSwitcher={languageSwitcher} />}
-      >
+      <SidebarAdminContent userBar={<AdminUserBar />}>
         <NavSidebarAdminContent nav={nav} pathname={pathname} />
       </SidebarAdminContent>
 

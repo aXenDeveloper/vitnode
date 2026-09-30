@@ -1,4 +1,5 @@
 import { blogPlugin } from '@vitnode/blog/config'
+import { LogoVitNodeBrand } from '@vitnode/core/components/logo-vitnode'
 import { buildConfig } from '@vitnode/core/vitnode.config'
 import { examplePlugin } from '@vitnode/example/config'
 
@@ -34,6 +35,7 @@ export const vitNodeConfig = buildConfig({
     },
     timeZone: 'UTC',
   },
+  logo: LogoVitNodeBrand,
   metadata: {
     shortTitle: 'VitNode',
     title: 'VitNode',

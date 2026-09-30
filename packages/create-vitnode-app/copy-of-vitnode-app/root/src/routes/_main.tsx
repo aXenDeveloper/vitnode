@@ -2,11 +2,11 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { MainBreadcrumb } from "@vitnode/core/tanstack/breadcrumb";
 import {
   loadMainShell,
+  MainHeader,
   ThemeLayoutContent,
 } from "@vitnode/core/tanstack/layout";
 
 import { MainFooter } from "@/components/main-footer";
-import { MainHeader } from "@/components/main-header";
 
 export const Route = createFileRoute("/_main")({
   loader: async ({ context }) => await loadMainShell(context),

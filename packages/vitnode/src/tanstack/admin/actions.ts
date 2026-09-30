@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 
 import type { SignInSubmit } from "@/views/auth/sign-in/form/sign-in-form-content";
 import type { PasskeySignInSubmit } from "@/views/auth/sign-in/passkey/passkey-sign-in-button";
 
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
 
-import type { AuthNavigate } from "../auth/actions";
-
+import { internalDestination } from "../auth/navigation";
 import { signInFormResult } from "../auth/screens";
 import { authTransport } from "../auth/transport";
 import { removeAdminIdentityQueries } from "./queries";
@@ -14,12 +14,11 @@ import { markAdminTabAlive } from "./tab-presence";
 
 export const useAdminSignInAction = ({
   destination,
-  navigate,
 }: {
   destination: () => string;
-  navigate: AuthNavigate;
 }): SignInSubmit => {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return async values => {
     const result = await authTransport().signIn({ ...values, isAdmin: true });
@@ -28,7 +27,7 @@ export const useAdminSignInAction = ({
 
     removeAdminIdentityQueries(queryClient);
     markAdminTabAlive();
-    await navigate(destination());
+    await router.navigate(internalDestination(destination()));
 
     return undefined;
   };
@@ -36,12 +35,11 @@ export const useAdminSignInAction = ({
 
 export const useAdminPasskeySignInAction = ({
   destination,
-  navigate,
 }: {
   destination: () => string;
-  navigate: AuthNavigate;
 }): PasskeySignInSubmit => {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return async () => {
     const start = await authTransport().startAdminPasskeySignIn();
@@ -64,7 +62,7 @@ export const useAdminPasskeySignInAction = ({
 
     removeAdminIdentityQueries(queryClient);
     markAdminTabAlive();
-    await navigate(destination());
+    await router.navigate(internalDestination(destination()));
 
     return undefined;
   };

@@ -12,6 +12,7 @@ import type { SearchProviderApiPlugin } from "./api/models/search";
 import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
 import type { VitNodeEditorConfig } from "./components/editor-provider";
+import type { VitNodeLogo } from "./components/logo-context";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type {
@@ -34,6 +35,7 @@ export interface VitNodeConfig<
   /** Editor settings shared by every `Editor` in the app. */
   editor?: VitNodeEditorConfig;
   i18n: VitNodeI18nConfig<AppLocales>;
+  logo?: VitNodeLogo;
   metadata: VitNodeMetadata;
   plugins: BuildPluginReturn[];
   theme?: Omit<

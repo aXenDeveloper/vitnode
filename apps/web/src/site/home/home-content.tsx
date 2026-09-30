@@ -11,7 +11,6 @@ import { HeroSection } from '@/site/home/sections/hero'
 import { IntegrationsSection } from '@/site/home/sections/integrations'
 import { OutcomesSection } from '@/site/home/sections/outcomes'
 import { PluginsSection } from '@/site/home/sections/plugins'
-import { PoweringBySection } from '@/site/home/sections/powering-by'
 import { PricingSection } from '@/site/home/sections/pricing'
 import { SecuritySection } from '@/site/home/sections/security'
 import { ShowcaseSection } from '@/site/home/sections/showcase'
@@ -22,7 +21,6 @@ export const HomeRouteContent = () => (
   <RouteMessages namespaces={HOME_NAMESPACES}>
     <MarketingPage>
       <HeroSection />
-      <PoweringBySection />
       <div className="container mx-auto px-4 pt-12 sm:px-6">
         <CanaryNotice />
       </div>

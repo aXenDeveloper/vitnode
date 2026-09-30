@@ -1,47 +1,6 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import {
-  ADMIN_ENTRY_PATH,
-  adminReturnToFor,
-  canEnterAdmin,
-  ensureAdminAccess,
-  loadAdminMessages,
-  preloadAdminAccess,
-} from '@vitnode/core/tanstack/admin'
-import { pageHead } from '@vitnode/core/tanstack/metadata'
+import { createFileRoute } from '@tanstack/react-router'
+import { adminLayoutRoute } from '@vitnode/core/tanstack/admin'
 
-import { AdminShell } from '@/components/admin-shell'
-
-export const Route = createFileRoute('/_admin')({
-  beforeLoad: async ({ context, location, preload }) => {
-    const access = preload
-      ? await preloadAdminAccess(context.queryClient)
-      : await ensureAdminAccess(context.queryClient)
-
-    if (!canEnterAdmin(access)) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({
-        search: { returnTo: adminReturnToFor(location) },
-        to: ADMIN_ENTRY_PATH,
-      } as unknown as Parameters<typeof redirect>[0])
-    }
-
-    return { adminAccess: access }
-  },
-
-  loader: async ({ context }) => {
-    const { adminNav } = await import('@/admin-nav.gen')
-
-    await loadAdminMessages({ ...context, namespaces: adminNav.namespaces })
-  },
-
-  head: () => pageHead({ robots: 'noindex, nofollow' }),
-  component: AdminLayout,
-})
-
-function AdminLayout() {
-  return (
-    <AdminShell>
-      <Outlet />
-    </AdminShell>
-  )
-}
+export const Route = createFileRoute('/_admin')(
+  adminLayoutRoute(async () => await import('@/admin-nav.gen')),
+)

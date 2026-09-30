@@ -5,14 +5,11 @@ import { useTranslations } from "use-intl";
 import { UserBarAdminContent } from "@/views/admin/layouts/user-bar/user-bar-content";
 
 import { useSignOutAction } from "../auth/actions";
+import { LanguageSwitcher } from "../layout/language-switcher";
 import { useAdminUser } from "./permissions";
 import { removeAdminIdentityQueries } from "./queries";
 
-export const AdminUserBar = ({
-  languageSwitcher,
-}: {
-  languageSwitcher?: React.ReactNode;
-}) => {
+export const AdminUserBar = () => {
   const user = useAdminUser();
   const signOut = useSignOutAction();
   const queryClient = useQueryClient();
@@ -36,7 +33,7 @@ export const AdminUserBar = ({
 
   return (
     <UserBarAdminContent
-      languageSwitcher={languageSwitcher}
+      languageSwitcher={<LanguageSwitcher />}
       onSignOut={handleSignOut}
       user={user}
     />

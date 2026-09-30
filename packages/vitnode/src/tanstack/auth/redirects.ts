@@ -1,8 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
-
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
-
-import type { AuthNavigate } from "./actions";
 
 import { sanitizeReturnTo } from "./return-to";
 
@@ -173,21 +169,5 @@ export const createAuthNavigation = ({
   const internalDestination = (href: string): InternalDestination =>
     parseInternalDestination(internalHref(href));
 
-  return {
-    internalDestination,
-    /**
-     * Navigate to a validated internal path.
-     *
-     * The browser half. `router.navigate` performs it, so the router's own
-     * blockers and dangerous-protocol checks run and nothing here reaches around
-     * the framework with `location.assign`.
-     */
-    useAppNavigate: (): AuthNavigate => {
-      const router = useRouter();
-
-      return async (href: string): Promise<void> => {
-        await router.navigate(internalDestination(href));
-      };
-    },
-  };
+  return { internalDestination };
 };

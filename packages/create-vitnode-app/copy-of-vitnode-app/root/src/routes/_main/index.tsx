@@ -1,6 +1,6 @@
-import type { LucideIcon } from "lucide-react";
-
 import type { RegisteredRouter } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
+import type { Messages } from "use-intl";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LogoVitNode } from "@vitnode/core/components/logo-vitnode";
@@ -10,6 +10,11 @@ import {
   VITNODE_WEBSITE_URL,
 } from "@vitnode/core/lib/docs-links";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import {
+  GLOBAL_NAMESPACE,
+  intlQueryOptions,
+  RouteMessages,
+} from "@vitnode/core/tanstack/i18n";
 import { pageHead } from "@vitnode/core/tanstack/metadata";
 import { cn } from "cn";
 import {
@@ -19,60 +24,80 @@ import {
   ShieldCheck,
   UserRoundPlus,
 } from "lucide-react";
+import { createTranslator, useTranslations } from "use-intl";
 
 const REGISTER_HREF = "/register";
 const ADMIN_HREF = "/admin";
+const HOME_NAMESPACES = [GLOBAL_NAMESPACE, "app.home"] as const;
 
 export const Route = createFileRoute("/_main/")({
-  head: () =>
+  loader: async ({ context: { locale, queryClient } }) => {
+    const { messages } = await queryClient.query({
+      ...intlQueryOptions({ locale, namespaces: HOME_NAMESPACES }),
+      staleTime: "static",
+    });
+    const t = createTranslator({
+      locale,
+      messages: messages as Messages,
+      namespace: "app.home.meta",
+    });
+
+    return { description: t("desc"), title: t("title") };
+  },
+  head: ({ loaderData }) =>
     pageHead({
-      description: "Your VitNode app is up and running.",
+      description: loaderData?.description,
       robots: "index, follow",
-      title: "Welcome",
+      title: loaderData?.title,
     }),
   component: HomeRoute,
 });
 
+type StepId = "admin" | "docs" | "register" | "website";
+
 interface NextStep {
-  description: string;
   external?: boolean;
   href: string;
   icon: LucideIcon;
-  title: string;
+  id: StepId;
 }
 
 const registerStep: NextStep = {
-  description:
-    "Create a member account. On a fresh install the first one becomes the administrator.",
   href: REGISTER_HREF,
   icon: UserRoundPlus,
-  title: "Register",
+  id: "register",
 };
 
 const sharedSteps: NextStep[] = [
   {
-    description: "Settings, members, roles, plugins and content live here.",
     href: ADMIN_HREF,
     icon: ShieldCheck,
-    title: "AdminCP",
+    id: "admin",
   },
   {
-    description: "Configuration, routing, plugins and deployment guides.",
     external: true,
     href: VITNODE_DOCS_URL,
     icon: BookOpen,
-    title: "Documentation",
+    id: "docs",
   },
   {
-    description: "Project website, release notes and community links.",
     external: true,
     href: VITNODE_WEBSITE_URL,
     icon: Globe,
-    title: "vitnode.com",
+    id: "website",
   },
 ];
 
 function HomeRoute() {
+  return (
+    <RouteMessages namespaces={HOME_NAMESPACES}>
+      <HomeContent />
+    </RouteMessages>
+  );
+}
+
+function HomeContent() {
+  const t = useTranslations("app.home");
   const { data } = useSessionQuery();
   const user = data?.user ?? null;
   const steps = user ? sharedSteps : [registerStep, ...sharedSteps];
@@ -84,13 +109,11 @@ function HomeRoute() {
 
         <div className="flex flex-col gap-3">
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Your VitNode app is running
+            {t("title")}
           </h1>
 
           <p className="text-muted-foreground mx-auto max-w-xl text-lg leading-relaxed text-pretty">
-            {user
-              ? `You are signed in as ${user.name}. Open the AdminCP to configure the site.`
-              : "Create an account or sign in, then open the AdminCP to configure the site. On a fresh install the first registered member becomes the administrator."}
+            {user ? t("desc.signed_in", { name: user.name }) : t("desc.guest")}
           </p>
         </div>
 
@@ -101,7 +124,7 @@ function HomeRoute() {
               to={REGISTER_HREF}
             >
               <UserRoundPlus />
-              Create an account
+              {t("create_account")}
             </Link>
           )}
 
@@ -116,14 +139,14 @@ function HomeRoute() {
             to={ADMIN_HREF}
           >
             <ShieldCheck />
-            Open AdminCP
+            {t("open_admin")}
           </Link>
         </div>
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-          Next steps
+          {t("next_steps")}
         </h2>
 
         <div
@@ -139,20 +162,16 @@ function HomeRoute() {
       </section>
 
       <p className="text-muted-foreground text-center text-sm text-pretty">
-        This page lives in <code>src/routes/_main/index.tsx</code>. Replace it
-        whenever you are ready.
+        {t.rich("replace_hint", {
+          code: chunks => <code>{chunks}</code>,
+        })}
       </p>
     </div>
   );
 }
 
-function NextStepCard({
-  description,
-  external = false,
-  href,
-  icon: Icon,
-  title,
-}: NextStep) {
+function NextStepCard({ external = false, href, icon: Icon, id }: NextStep) {
+  const t = useTranslations("app.home.steps");
   const className =
     "group bg-card hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-ring/50 flex flex-col gap-3 rounded-xl border p-5 transition-colors outline-none focus-visible:ring-3";
 
@@ -167,9 +186,9 @@ function NextStepCard({
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="font-medium">{title}</span>
+        <span className="font-medium">{t(`${id}.title`)}</span>
         <span className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {description}
+          {t(`${id}.desc`)}
         </span>
       </div>
     </>

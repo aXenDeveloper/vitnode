@@ -24,7 +24,7 @@ import { vitNodeConfig } from "@/vitnode.config";
 
 import appCss from "../styles.css?url";
 
-const { debug, editor, i18n, metadata, theme } = vitNodeConfig;
+const { debug, editor, i18n, logo, metadata, theme } = vitNodeConfig;
 
 export interface RootRouterContext {
   queryClient: QueryClient;
@@ -64,7 +64,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
 function RootComponent() {
   return (
     <VitNodeRootProviders
-      config={{ debug, editor, locales: i18n.locales, theme }}
+      config={{ debug, editor, locales: i18n.locales, logo, theme }}
     >
       <Outlet />
     </VitNodeRootProviders>
