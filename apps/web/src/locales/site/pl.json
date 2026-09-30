@@ -1,0 +1,24 @@
+{
+  "site": {
+    "home": {
+      "hero": {
+        "canary": "VitNode 2.0 to wczesna wersja canary",
+        "description": "Publikuj treści, łącz ludzi i twórz funkcje, których potrzebuje Twoja społeczność, na platformie open source, nad którą masz pełną kontrolę.",
+        "explore": "Odkryj, co możesz zbudować",
+        "preview": {
+          "alt": "Pulpit AdminCP z paskiem bocznym z sekcjami Core, Blog i wtyczki Example, widżetem prywatnych notatek i widżetem wysyłania powiadomień.",
+          "members": "{count, plural, one {<strong>#</strong> członek} few {<strong>#</strong> członkowie} many {<strong>#</strong> członków} other {<strong>#</strong> członka}}",
+          "toast_meta": "Komunikat na żywo · przed chwilą",
+          "toast_title": "Witaj na pokładzie, {name}!"
+        },
+        "see_product": "Zobacz produkt",
+        "title": "Dom dla <highlight>Twojej społeczności</highlight>, zbudowany wokół Twojego pomysłu.",
+        "trust": {
+          "agents": "Stworzony dla agentów AI do kodowania",
+          "license": "Licencja MIT",
+          "open_source": "Open source"
+        }
+      }
+    }
+  }
+}

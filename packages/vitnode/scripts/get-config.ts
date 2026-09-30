@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { createJiti } from "jiti";
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import type {
   VitNodeApiConfig,
@@ -112,6 +112,7 @@ export async function getConfig<T extends ConfigName = "config">({
     const configVarName = CONFIG_EXPORTS[type];
 
     const jiti = createJiti(import.meta.url, {
+      alias: { "@/": `${dirname(configPath)}/` },
       interopDefault: true,
     });
 

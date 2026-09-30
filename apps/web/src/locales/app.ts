@@ -10,8 +10,12 @@ import type { AppMessagesMap } from '@vitnode/core/lib/i18n/types'
  * API registers the same file through `vitnode.api.config.ts`.
  */
 export const appMessages: AppMessagesMap = {
+  en: {
+    site: async () => await import('./site/en.json'),
+  },
   pl: {
     '@vitnode/blog': async () => await import('./@vitnode/blog/pl.json'),
     '@vitnode/core': async () => await import('./@vitnode/core/pl.json'),
+    site: async () => await import('./site/pl.json'),
   },
 }

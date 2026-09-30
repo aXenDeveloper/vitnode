@@ -1,67 +1,88 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Bot, Scale, Server } from 'lucide-react'
+import { buttonVariants } from '@vitnode/core/components/ui/button'
+import { cn } from 'cn'
+import { ArrowRight, Bird, Bot, CodeXml, Scale } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 
-import { HeroOrbit } from '@/site/home/illustrations/hero-orbit'
-import { MarketingActions } from '@/site/marketing/shared'
+import { HeroIconField } from '@/site/home/illustrations/hero-icon-field'
+import { HeroPreview } from '@/site/home/illustrations/hero-preview'
+import { HeroStrands } from '@/site/home/illustrations/hero-strands'
+import { usePointerParallax } from '@/site/home/use-pointer-parallax'
+import { BUTTON } from '@/site/marketing/shared'
 
 const TRUST = [
-  { Icon: Scale, label: 'MIT licence, free forever' },
-  { Icon: Server, label: 'Self-host or bring your cloud' },
-  { Icon: Bot, label: 'Made for AI coding agents' },
-]
+  { Icon: CodeXml, key: 'open_source' },
+  { Icon: Scale, key: 'license' },
+  { Icon: Bot, key: 'agents' },
+] as const
 
-export const HeroSection = () => (
-  <section aria-labelledby="hero-title" className="relative overflow-hidden">
-    <div aria-hidden className="mk-grid absolute inset-0 -z-10" />
-    <div
-      aria-hidden
-      className="mk-anim-drift bg-primary/20 absolute top-0 left-1/2 -z-10 size-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-    />
+export const HeroSection = () => {
+  const t = useTranslations('site.home.hero')
+  const { handlers, targetRef } = usePointerParallax<HTMLDivElement>()
 
-    <div className="container mx-auto grid items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2 lg:py-28">
-      <div className="flex flex-col gap-6">
-        <Link
-          className="bg-primary/10 text-primary hover:bg-primary/15 inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-          params={{ _splat: 'dev' }}
-          to="/docs/$"
-        >
-          <span aria-hidden className="relative flex size-2">
-            <span className="bg-primary absolute inline-flex size-full animate-ping rounded-full opacity-75" />
-            <span className="bg-primary relative inline-flex size-2 rounded-full" />
-          </span>
-          VitNode 2.0 Canary · a very early build
-          <ArrowRight aria-hidden className="size-3.5" />
-        </Link>
+  return (
+    <section
+      aria-labelledby="hero-title"
+      className="relative isolate overflow-hidden -mt-10"
+      {...handlers}
+    >
+      <HeroIconField />
+      <HeroStrands className="bottom-0 h-112 sm:h-136" />
 
-        <h1
-          className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl"
-          id="hero-title"
-        >
-          Build the community <span className="text-primary">your people</span>{' '}
-          deserve.
-        </h1>
+      <div className="container mx-auto grid items-center gap-12 px-4 pt-16 pb-12 sm:px-6 sm:pt-24 lg:grid-cols-2 lg:py-28">
+        <div className="flex flex-col gap-6">
+          <p className="bg-primary/10 text-primary inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold">
+            <Bird aria-hidden className="size-3.5 shrink-0" />
+            {t('canary')}
+          </p>
 
-        <p className="text-muted-foreground max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-          VitNode is a free, open-source community framework. Members, roles,
-          content, real-time updates, search and an Admin Control Panel come in
-          the box. Your ideas go on top. Plugins hold it all together.
-        </p>
+          <h1
+            className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl"
+            id="hero-title"
+          >
+            {t.rich('title', {
+              highlight: (chunks) => (
+                <span className="text-primary">{chunks}</span>
+              ),
+            })}
+          </h1>
 
-        <MarketingActions />
+          <p className="text-muted-foreground max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+            {t('description')}
+          </p>
 
-        <ul className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          {TRUST.map(({ Icon, label }) => (
-            <li className="flex items-center gap-2" key={label}>
-              <Icon aria-hidden className="text-primary size-4" />
-              {label}
-            </li>
-          ))}
-        </ul>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              className={cn(buttonVariants({ size: 'lg' }), BUTTON)}
+              to="/solutions"
+            >
+              {t('explore')}
+              <ArrowRight aria-hidden />
+            </Link>
+
+            <a
+              className={cn(
+                buttonVariants({ size: 'lg', variant: 'outline' }),
+                BUTTON,
+              )}
+              href="#admincp"
+            >
+              {t('see_product')}
+            </a>
+          </div>
+
+          <ul className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {TRUST.map(({ Icon, key }) => (
+              <li className="flex items-center gap-2" key={key}>
+                <Icon aria-hidden className="text-primary size-4 shrink-0" />
+                {t(`trust.${key}`)}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <HeroPreview ref={targetRef} />
       </div>
-
-      <div className="flex justify-center lg:justify-end">
-        <HeroOrbit />
-      </div>
-    </div>
-  </section>
-)
+    </section>
+  )
+}
