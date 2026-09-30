@@ -66,21 +66,6 @@
     },
     "start": {
       "dependsOn": ["^start"]
-    },
-    "i18n:create": {
-      "dependsOn": ["^i18n:create"]
-    },
-    "i18n:check": {
-      "dependsOn": ["^i18n:check"]
-    },
-    "i18n:delete": {
-      "dependsOn": ["^i18n:delete"]
-    },
-    "i18n:update": {
-      "dependsOn": ["^i18n:update"]
-    },
-    "i18n:update:ai": {
-      "dependsOn": ["^i18n:update:ai"]
     }
   }
 }

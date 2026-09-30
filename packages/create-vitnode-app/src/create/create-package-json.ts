@@ -27,13 +27,27 @@ const eslintScripts = {
   lint: "eslint .",
   "lint:fix": "eslint . --fix",
 };
-const i18nScripts = {
-  "i18n:create": "vitnode i18n:create",
-  "i18n:check": "vitnode i18n:check",
-  "i18n:delete": "vitnode i18n:delete",
-  "i18n:update": "vitnode i18n:update",
-  "i18n:update:ai": "vitnode i18n:update:ai",
-};
+const i18nCommands = [
+  "i18n:create",
+  "i18n:check",
+  "i18n:delete",
+  "i18n:update",
+  "i18n:update:ai",
+] as const;
+const i18nScripts = Object.fromEntries(
+  i18nCommands.map(command => [command, `vitnode ${command}`]),
+);
+
+const runScript = (pm: string, script: string) =>
+  pm === "npm" ? `npm run ${script} --` : `${pm} run ${script}`;
+
+const i18nRootScripts = (pm: string, appDir: string) =>
+  Object.fromEntries(
+    i18nCommands.map(command => [
+      command,
+      `cd ${appDir} && ${runScript(pm, command)}`,
+    ]),
+  );
 
 const dockerDevScript = (appName: string) =>
   `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`;
@@ -57,6 +71,8 @@ export const rootScripts = (
   enableEslint: boolean,
   enableDocker: boolean,
   appName: string,
+  pm: string,
+  i18nAppDir: string,
 ) => ({
   "db:migrate": "turbo db:migrate",
   "db:prepare": "turbo db:prepare",
@@ -64,11 +80,7 @@ export const rootScripts = (
   dev: "turbo build:plugins && turbo db:prepare && turbo dev",
   build: "turbo build",
   start: "turbo start",
-  "i18n:create": "turbo i18n:create",
-  "i18n:check": "turbo i18n:check",
-  "i18n:delete": "turbo i18n:delete",
-  "i18n:update": "turbo i18n:update",
-  "i18n:update:ai": "turbo i18n:update:ai",
+  ...i18nRootScripts(pm, i18nAppDir),
   ...withIf(enableEslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
@@ -328,7 +340,13 @@ export const createPackageJSON = async ({
     const rootPkg: PackageJSON = {
       name: appName,
       private: true,
-      scripts: rootScripts(eslint, !!docker, appName),
+      scripts: rootScripts(
+        eslint,
+        !!docker,
+        appName,
+        packageManager,
+        isSingleApp ? "apps/web" : "apps/api",
+      ),
       devDependencies: {
         ...rootDevDeps(eslint),
         "@vitnode/config": vitnodeVersionRange,
