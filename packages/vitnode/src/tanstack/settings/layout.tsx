@@ -33,7 +33,6 @@ export const SettingsLayoutContent = ({
               pathname={pathname}
             />
           }
-          pathname={pathname}
         >
           {children}
         </SettingsShellContent>
