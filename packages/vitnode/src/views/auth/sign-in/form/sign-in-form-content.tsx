@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router";
+import { LockIcon, MailIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "use-intl";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useFormApi } from "@/components/ui/form";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   REVEAL_EXIT_TRANSITION,
@@ -16,9 +19,27 @@ import {
 } from "@/lib/motion";
 
 import { AUTH_HREF } from "../../auth-link";
+import { rememberEmail } from "../../remembered-email";
 import { type SignInSubmit, useSignInForm } from "./use-sign-in-form";
 
 export type { SignInSubmit };
+
+const ResetPasswordLink = ({ href }: { href: string }) => {
+  const t = useTranslations("core.auth.sign_in");
+  const { form } = useFormApi();
+
+  return (
+    <Link
+      className="text-primary hover:underline"
+      onClick={() => {
+        rememberEmail(form.getFieldValue("email"));
+      }}
+      to={href}
+    >
+      {t("password.reset")}
+    </Link>
+  );
+};
 
 export const SignInFormContent = ({
   onSignIn,
@@ -73,27 +94,36 @@ export const SignInFormContent = ({
           {
             id: "email",
             component: props => (
-              <AutoFormInput label={t("email.label")} {...props} />
+              <AutoFormInput
+                autoComplete="email"
+                inputMode="email"
+                label={t("email.label")}
+                {...props}
+              >
+                <InputGroupAddon>
+                  <MailIcon />
+                </InputGroupAddon>
+              </AutoFormInput>
             ),
           },
           {
             id: "password",
             component: props => (
               <AutoFormInput
+                autoComplete="current-password"
                 label={t("password.label")}
                 labelRight={
                   showResetPassword ? (
-                    <Link
-                      className="text-primary hover:underline"
-                      to={resetPasswordHref}
-                    >
-                      {t("password.reset")}
-                    </Link>
+                    <ResetPasswordLink href={resetPasswordHref} />
                   ) : undefined
                 }
                 type="password"
                 {...props}
-              />
+              >
+                <InputGroupAddon>
+                  <LockIcon />
+                </InputGroupAddon>
+              </AutoFormInput>
             ),
           },
         ]}

@@ -5,11 +5,12 @@ export interface PasswordResetFormMessages {
   invalidEmail: string;
 }
 
-export const createPasswordResetFormSchema = ({
-  invalidEmail,
-}: PasswordResetFormMessages) =>
+export const createPasswordResetFormSchema = (
+  { invalidEmail }: PasswordResetFormMessages,
+  { defaultEmail = "" }: { defaultEmail?: string } = {},
+) =>
   z.object({
-    email: z.email({ message: invalidEmail }).default(""),
+    email: z.email({ message: invalidEmail }).default(defaultEmail),
   });
 
 export type PasswordResetFormSchema = ReturnType<

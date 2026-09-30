@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import { Link } from "@tanstack/react-router";
+import { MailIcon, UserIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
@@ -11,6 +12,7 @@ import {
 } from "@/components/form/auto-form";
 import { AutoFormCheckbox } from "@/components/form/fields/checkbox";
 import { AutoFormInput } from "@/components/form/fields/input";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 
@@ -36,6 +38,7 @@ export const SignUpFormContent = ({
 
   return (
     <AutoForm
+      canSubmitWhenInvalid
       captcha={captcha}
       fields={[
         {
@@ -46,10 +49,15 @@ export const SignUpFormContent = ({
             return (
               <div className="space-y-2">
                 <AutoFormInput
+                  autoComplete="nickname"
                   field={field}
                   label={t("username.label")}
                   {...props}
-                />
+                >
+                  <InputGroupAddon>
+                    <UserIcon />
+                  </InputGroupAddon>
+                </AutoFormInput>
                 {value.length >= 3 && (
                   <div className="text-muted-foreground text-sm">
                     {t.rich("username.your_user_code", {
@@ -68,7 +76,16 @@ export const SignUpFormContent = ({
         {
           id: "email",
           component: props => (
-            <AutoFormInput label={t("email.label")} {...props} />
+            <AutoFormInput
+              autoComplete="email"
+              inputMode="email"
+              label={t("email.label")}
+              {...props}
+            >
+              <InputGroupAddon>
+                <MailIcon />
+              </InputGroupAddon>
+            </AutoFormInput>
           ),
         },
         {

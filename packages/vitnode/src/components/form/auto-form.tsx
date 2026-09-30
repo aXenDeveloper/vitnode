@@ -184,6 +184,7 @@ const emptySubmitMeta: FormSubmitMeta = {};
 export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   formSchema,
   mode,
+  canSubmitWhenInvalid,
   onSubmit: onSubmitProp,
   captcha,
   fields,
@@ -193,6 +194,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   children,
   ...props
 }: Omit<React.ComponentProps<"form">, "onSubmit"> & {
+  canSubmitWhenInvalid?: boolean;
   captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   fields: ItemAutoFormProps<T>[];
   formSchema: T;
@@ -216,6 +218,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   const inputParams = getZodInputParams(jsonSchema);
   const validator: AutoFormValidator<T> = formSchema;
   const form = useForm({
+    canSubmitWhenInvalid,
     defaultValues: getDefaults<T>(jsonSchema),
     onSubmit: async ({ formApi, meta, value }) => {
       const parsedValues = formSchema.safeParse(value);

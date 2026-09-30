@@ -1,12 +1,17 @@
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, LockIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
+import type { Input } from "@/components/ui/input";
 
 import { AutoFormLabel } from "@/components/form/common/label";
 import { FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Tooltip,
   TooltipContent,
@@ -54,31 +59,37 @@ export const PasswordInput = ({
 
       <TooltipProvider delay={0}>
         <Tooltip open={openTooltip}>
-          <TooltipTrigger
-            render={
-              <FormControl>
-                <Input
-                  type="password"
-                  {...field}
-                  maxLength={maxLength ?? props.maxLength}
-                  minLength={minLength ?? props.minLength}
-                  onBlur={e => {
-                    setOpenTooltip(false);
-                    field.onBlur();
-                    props.onBlur?.(e);
-                  }}
-                  onChange={e => {
-                    setOpenTooltip(true);
-                    field.onChange(e);
-                    props.onChange?.(e);
-                  }}
-                  pattern={pattern ?? props.pattern}
-                  value={field.value ?? ""}
-                  {...props}
-                />
-              </FormControl>
-            }
-          />
+          <InputGroup>
+            <TooltipTrigger
+              render={
+                <FormControl>
+                  <InputGroupInput
+                    autoComplete="new-password"
+                    type="password"
+                    {...field}
+                    maxLength={maxLength ?? props.maxLength}
+                    minLength={minLength ?? props.minLength}
+                    onBlur={e => {
+                      setOpenTooltip(false);
+                      field.onBlur();
+                      props.onBlur?.(e);
+                    }}
+                    onChange={e => {
+                      setOpenTooltip(true);
+                      field.onChange(e);
+                      props.onChange?.(e);
+                    }}
+                    pattern={pattern ?? props.pattern}
+                    value={field.value ?? ""}
+                    {...props}
+                  />
+                </FormControl>
+              }
+            />
+            <InputGroupAddon>
+              <LockIcon />
+            </InputGroupAddon>
+          </InputGroup>
           <TooltipContent
             className="flex flex-col gap-2 text-sm"
             sideOffset={8}
