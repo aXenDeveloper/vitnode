@@ -8,7 +8,7 @@ import { FaqSection } from '@/site/home/sections/faq'
 import { FeaturesBentoSection } from '@/site/home/sections/features-bento'
 import { FinalCtaSection } from '@/site/home/sections/final-cta'
 import { HeroSection } from '@/site/home/sections/hero'
-// import { MakerSection } from '@/site/home/sections/maker'
+import { IntegrationsSection } from '@/site/home/sections/integrations'
 import { OutcomesSection } from '@/site/home/sections/outcomes'
 import { PluginsSection } from '@/site/home/sections/plugins'
 import { PoweringBySection } from '@/site/home/sections/powering-by'
@@ -34,9 +34,9 @@ export const HomeRouteContent = () => (
       <AgentsSection />
       <SecuritySection />
       <DevelopersSection />
-      {/* <MakerSection /> */}
       <PricingSection />
       <FaqSection />
+      <IntegrationsSection />
       <FinalCtaSection />
     </MarketingPage>
   </RouteMessages>
