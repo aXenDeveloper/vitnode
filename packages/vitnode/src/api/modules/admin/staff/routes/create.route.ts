@@ -9,6 +9,10 @@ import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 
 import { staffPermissionModuleByType, staffTypeSchema } from "../lib/schema";
+import {
+  assertNotOwnStaffEntry,
+  assertStaffAssignableRole,
+} from "../lib/staff-entry-guards";
 
 const tableByType = {
   admin: core_admin_permissions,
@@ -51,8 +55,14 @@ export const createStaffAdminRoute = buildRoute({
         },
         description: "Staff entry created",
       },
+      400: {
+        description: "The default and guest roles cannot be given staff access",
+      },
       403: {
         description: "Access Denied",
+      },
+      404: {
+        description: "Role not found",
       },
       409: {
         content: {
@@ -75,6 +85,16 @@ export const createStaffAdminRoute = buildRoute({
 
     const { roleId, userId } = c.req.valid("json");
     const table = tableByType[type];
+
+    await assertNotOwnStaffEntry(
+      c,
+      { roleId, userId },
+      "You cannot create a staff entry that governs your own access.",
+    );
+
+    if (roleId) {
+      await assertStaffAssignableRole(c, roleId);
+    }
 
     // Prevent assigning the same role/user twice.
     const [existing] = await c

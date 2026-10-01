@@ -15,7 +15,7 @@ export const SidebarAdminContent = ({
   children: React.ReactNode;
   userBar?: React.ReactNode;
 }) => (
-  <Sidebar variant="inset" collapsible="icon">
+  <Sidebar collapsible="icon" variant="inset">
     <SidebarHeader className="flex h-16 flex-row items-center gap-2 border-b">
       <Link
         className="px-2 group-data-[collapsible=icon]:px-0"

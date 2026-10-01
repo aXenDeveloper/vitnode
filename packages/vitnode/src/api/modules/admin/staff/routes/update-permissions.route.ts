@@ -4,10 +4,7 @@ import { HTTPException } from "hono/http-exception";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
-import {
-  assertStaffPermission,
-  getUserRoleIds,
-} from "@/api/lib/check-staff-permission";
+import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { staffPermissionKey } from "@/api/lib/staff-permission";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
@@ -20,6 +17,11 @@ import {
   staffPermissionModuleByType,
   staffTypeSchema,
 } from "../lib/schema";
+import {
+  assertNotOwnStaffEntry,
+  assertStaffAssignableRole,
+  assertWithinStaffPrivilegeCeiling,
+} from "../lib/staff-entry-guards";
 
 const tableByType = {
   admin: core_admin_permissions,
@@ -60,6 +62,9 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
         },
         description: "Updated permissions",
       },
+      400: {
+        description: "The default and guest roles cannot be given staff access",
+      },
       403: {
         description: "Access Denied",
       },
@@ -97,6 +102,8 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
         protected: table.protected,
         userId: table.userId,
         roleId: table.roleId,
+        unrestricted: table.unrestricted,
+        permissions: table.permissions,
       })
       .from(table)
       .where(eq(table.id, entryId))
@@ -110,22 +117,24 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
       throw new HTTPException(403, { message: "Forbidden" });
     }
 
-    // An admin cannot edit the entry that governs their own access - their own
-    // user entry or an entry for any role they belong to (primary or
-    // secondary). This stops them from escalating their own permissions.
-    const currentUser = c.get("admin")?.user;
-    const currentUserRoleIds = currentUser
-      ? await getUserRoleIds(c, currentUser)
-      : [];
-    const isSelf =
-      currentUser != null &&
-      ((entry.userId != null && entry.userId === currentUser.id) ||
-        (entry.roleId != null && currentUserRoleIds.includes(entry.roleId)));
-    if (isSelf) {
-      throw new HTTPException(403, {
-        message: "You cannot edit your own staff permissions.",
-      });
+    await assertNotOwnStaffEntry(
+      c,
+      entry,
+      "You cannot edit your own staff permissions.",
+    );
+
+    if (entry.roleId != null) {
+      await assertStaffAssignableRole(c, entry.roleId);
     }
+
+    await assertWithinStaffPrivilegeCeiling(c, {
+      type,
+      current: {
+        unrestricted: entry.unrestricted,
+        permissions: entry.permissions,
+      },
+      requested: { unrestricted, permissions },
+    });
 
     // Only persist permissions that actually exist in the catalog for this
     // staff type - silently drops anything unknown/forged. Also record each

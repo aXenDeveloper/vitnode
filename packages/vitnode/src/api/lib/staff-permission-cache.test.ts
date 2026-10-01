@@ -3,7 +3,7 @@ import type { Context } from "hono";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { StaffPermissionSet } from "./permission-staff";
+import type { ResolvedStaffPermissionSet } from "./permission-staff";
 
 import { resolveStaffPermissions } from "./check-staff-permission";
 import {
@@ -96,9 +96,10 @@ describe("staff permission cache", () => {
 
   it("round-trips a permission set", async () => {
     const c = context(cache);
-    const value: StaffPermissionSet = {
+    const value: ResolvedStaffPermissionSet = {
       root: false,
       permissions: [MODERATOR_PERMISSION],
+      staff: true,
     };
 
     await writeStaffPermissions(c, { type: "admin", userId: 1 }, value);
@@ -114,7 +115,7 @@ describe("staff permission cache", () => {
     await writeStaffPermissions(
       c,
       { type: "admin", userId: 1 },
-      { root: true, permissions: [] },
+      { root: true, permissions: [], staff: true },
     );
 
     expect(
@@ -128,7 +129,7 @@ describe("staff permission cache", () => {
     await writeStaffPermissions(
       c,
       { type: "admin", userId: 1 },
-      { root: true, permissions: [] },
+      { root: true, permissions: [], staff: true },
     );
 
     expect(
@@ -143,7 +144,7 @@ describe("staff permission cache", () => {
       await writeStaffPermissions(
         c,
         { type: "admin", userId },
-        { root: true, permissions: [] },
+        { root: true, permissions: [], staff: true },
       );
     }
 
@@ -163,12 +164,12 @@ describe("staff permission cache", () => {
       await writeStaffPermissions(
         c,
         { type: "admin", userId },
-        { root: true, permissions: [] },
+        { root: true, permissions: [], staff: true },
       );
       await writeStaffPermissions(
         c,
         { type: "moderator", userId },
-        { root: true, permissions: [] },
+        { root: true, permissions: [], staff: true },
       );
     }
 
@@ -192,12 +193,12 @@ describe("staff permission cache", () => {
       await writeStaffPermissions(
         c,
         { type: "admin", userId: 1 },
-        { root: true, permissions: [] },
+        { root: true, permissions: [], staff: true },
       );
       await writeStaffPermissions(
         c,
         { type: "admin", userId: 2 },
-        { root: true, permissions: [] },
+        { root: true, permissions: [], staff: true },
       );
 
       await invalidateStaffEntry(c, { roleId: null, userId: 1 });
@@ -216,7 +217,7 @@ describe("staff permission cache", () => {
       await writeStaffPermissions(
         c,
         { type: "admin", userId: 2 },
-        { root: true, permissions: [] },
+        { root: true, permissions: [], staff: true },
       );
 
       await invalidateStaffEntry(c, { roleId: 5, userId: null });
@@ -232,9 +233,10 @@ describe("resolveStaffPermissions", () => {
   it("queries the database once and serves the rest from the cache", async () => {
     const cache = fakeCache();
     const first = fakeDb(oneStaffEntry());
-    const expected: StaffPermissionSet = {
+    const expected: ResolvedStaffPermissionSet = {
       root: false,
       permissions: [MODERATOR_PERMISSION],
+      staff: true,
     };
 
     const one = await resolveStaffPermissions(context(cache, first.db), {
@@ -277,9 +279,10 @@ describe("resolveStaffPermissions", () => {
 
   it("resolves from the database on every call without Redis", async () => {
     const cache = fakeCache({ configured: false });
-    const expected: StaffPermissionSet = {
+    const expected: ResolvedStaffPermissionSet = {
       root: false,
       permissions: [MODERATOR_PERMISSION],
+      staff: true,
     };
 
     for (const attempt of [0, 1]) {
@@ -303,7 +306,7 @@ describe("resolveStaffPermissions", () => {
       user: USER,
     });
 
-    expect(one).toEqual({ root: true, permissions: [] });
+    expect(one).toEqual({ root: true, permissions: [], staff: true });
 
     const second = fakeDb([]);
     const two = await resolveStaffPermissions(context(cache, second.db), {
@@ -311,7 +314,7 @@ describe("resolveStaffPermissions", () => {
       user: USER,
     });
 
-    expect(two).toEqual({ root: true, permissions: [] });
+    expect(two).toEqual({ root: true, permissions: [], staff: true });
     expect(second.state.selects).toBe(0);
   });
 });

@@ -41,9 +41,13 @@ export const withRolesAdminListFields = <TRole extends { id: number }>({
     namesByRoleId.set(word.itemId, forRole);
   }
 
-  const usersCountByRoleId = new Map<number, number>(
-    userCounts.map(item => [item.roleId, item.total]),
-  );
+  const usersCountByRoleId = new Map<number, number>();
+  for (const item of userCounts) {
+    usersCountByRoleId.set(
+      item.roleId,
+      (usersCountByRoleId.get(item.roleId) ?? 0) + item.total,
+    );
+  }
 
   return roles.map(role => ({
     ...role,

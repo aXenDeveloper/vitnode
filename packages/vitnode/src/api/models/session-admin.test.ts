@@ -4,9 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
+import { hashSessionToken } from "@/api/lib/session-token";
 import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
+import { core_moderators_permissions } from "@/database/moderators";
+import { core_roles } from "@/database/roles";
 import { core_sessions_known_devices } from "@/database/sessions";
-import { core_users } from "@/database/users";
+import { core_users, core_users_secondary_roles } from "@/database/users";
+import { createTestCache } from "@/tests/cache";
+import { createMemoryDb } from "@/tests/memory-db";
 
 import type { AdminSession } from "./session-cache";
 
@@ -216,5 +221,167 @@ describe("admin session idle timeout", () => {
     expect(
       setCookies.some(cookie => cookie.startsWith("vitnode_auth_admin=;")),
     ).toBe(true);
+  });
+});
+
+const ROOT_ROLE = 1;
+const MEMBER_ROLE = 3;
+const STAFF_ROLE = 4;
+const USER_ID = 7;
+const DEVICE_ID = 3;
+
+type StaffShape =
+  | "admin entry via a secondary role"
+  | "member"
+  | "moderator only"
+  | "root via a secondary role"
+  | "zero-permission admin entry";
+
+const staffTables = (
+  shape: StaffShape,
+): [unknown, Record<string, unknown>[]][] => {
+  const entry = (row: Record<string, unknown>) => ({
+    permissions: [],
+    roleId: null,
+    unrestricted: false,
+    userId: null,
+    ...row,
+  });
+  const secondaryRoleId: Partial<Record<StaffShape, number>> = {
+    "admin entry via a secondary role": STAFF_ROLE,
+    "root via a secondary role": ROOT_ROLE,
+  };
+  const admin: Partial<Record<StaffShape, Record<string, unknown>[]>> = {
+    "admin entry via a secondary role": [entry({ roleId: STAFF_ROLE })],
+    "zero-permission admin entry": [entry({ userId: USER_ID })],
+  };
+  const moderator: Partial<Record<StaffShape, Record<string, unknown>[]>> = {
+    "moderator only": [entry({ unrestricted: true, userId: USER_ID })],
+  };
+  const secondary = secondaryRoleId[shape];
+
+  return [
+    [
+      core_users,
+      [
+        {
+          email: "admin@example.com",
+          id: USER_ID,
+          name: "Test",
+          roleId: MEMBER_ROLE,
+        },
+      ],
+    ],
+    [
+      core_users_secondary_roles,
+      secondary === undefined ? [] : [{ roleId: secondary, userId: USER_ID }],
+    ],
+    [
+      core_roles,
+      [
+        { id: ROOT_ROLE, root: true },
+        { id: MEMBER_ROLE, root: false },
+        { id: STAFF_ROLE, root: false },
+      ],
+    ],
+    [core_admin_permissions, admin[shape] ?? []],
+    [core_moderators_permissions, moderator[shape] ?? []],
+    [core_sessions_known_devices, [{ id: DEVICE_ID, publicId: "device" }]],
+  ];
+};
+
+const runAsAdminModel = async <T>(
+  tables: [unknown, Record<string, unknown>[]][],
+  run: (model: SessionAdminModel) => Promise<T>,
+) => {
+  const memory = createMemoryDb(tables);
+  const app = new Hono();
+  let result: { error: unknown } | { value: T } = { error: undefined };
+
+  app.all("*", async c => {
+    c.set("core", {
+      authorization: AUTHORIZATION,
+    } as unknown as EnvVariablesVitNode["core"]);
+    c.set("db", memory.db as unknown as EnvVariablesVitNode["db"]);
+    c.set("cache", createTestCache());
+    c.set("ipAddress", "203.0.113.7");
+
+    try {
+      result = { value: await run(new SessionAdminModel(c)) };
+    } catch (error) {
+      result = { error };
+    }
+
+    return c.body(null, 204);
+  });
+
+  await app.request("https://vitnode.com/api/x", {
+    headers: { cookie: "vitnode_auth_admin=token; vitnode_device=device" },
+  });
+
+  return { memory, result };
+};
+
+const admitted: StaffShape[] = [
+  "root via a secondary role",
+  "admin entry via a secondary role",
+  "zero-permission admin entry",
+];
+
+const refused: StaffShape[] = ["moderator only", "member"];
+
+describe("who may hold an AdminCP session", () => {
+  it.each(admitted)("opens one for a user with %s", async shape => {
+    const { memory, result } = await runAsAdminModel(
+      staffTables(shape),
+      async model => await model.createSessionByUserId(USER_ID),
+    );
+
+    expect(result).toMatchObject({ value: { token: expect.any(String) } });
+    expect(memory.rows(core_admin_sessions)).toHaveLength(1);
+  });
+
+  it.each(refused)("refuses one to a %s user", async shape => {
+    const { memory, result } = await runAsAdminModel(
+      staffTables(shape),
+      async model => await model.createSessionByUserId(USER_ID),
+    );
+
+    expect(result).toMatchObject({ error: { status: 403 } });
+    expect(memory.rows(core_admin_sessions)).toHaveLength(0);
+  });
+
+  const withOpenSession = async (shape: StaffShape) => [
+    ...staffTables(shape),
+    [
+      core_admin_sessions,
+      [
+        {
+          deviceId: DEVICE_ID,
+          expiresAt: new Date(Date.now() + 10 * 60_000),
+          token: await hashSessionToken("token"),
+          userId: USER_ID,
+        },
+      ],
+    ] satisfies [unknown, Record<string, unknown>[]],
+  ];
+
+  it.each(admitted)("keeps an open session for a user with %s", async shape => {
+    const { result } = await runAsAdminModel(
+      await withOpenSession(shape),
+      async model => await model.getSession({ extend: false }),
+    );
+
+    expect(result).toMatchObject({ value: { user: { id: USER_ID } } });
+  });
+
+  it.each(refused)("ends an open session of a %s user", async shape => {
+    const { memory, result } = await runAsAdminModel(
+      await withOpenSession(shape),
+      async model => await model.getSession({ extend: false }),
+    );
+
+    expect(result).toEqual({ value: null });
+    expect(memory.rows(core_admin_sessions)).toHaveLength(0);
   });
 });

@@ -4,14 +4,16 @@ import type { CacheModel } from "@/api/lib/cache";
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
+  ResolvedStaffPermissionSet,
   StaffPermissionSet,
 } from "@/api/lib/permission-staff";
 
 import { writeStaffPermissions } from "@/api/lib/staff-permission-cache";
 
-export const ROOT_STAFF_PERMISSIONS: StaffPermissionSet = {
+export const ROOT_STAFF_PERMISSIONS: ResolvedStaffPermissionSet = {
   permissions: [],
   root: true,
+  staff: true,
 };
 
 export const grantStaffPermissions = async (
@@ -21,7 +23,8 @@ export const grantStaffPermissions = async (
     type = "admin",
     userId,
   }: {
-    permissions: PermissionsStaffArgs[] | StaffPermissionSet;
+    permissions:
+      PermissionsStaffArgs[] | (StaffPermissionSet & { staff?: boolean });
     type?: PermissionStaffType;
     userId: number;
   },
@@ -33,6 +36,8 @@ export const grantStaffPermissions = async (
   await writeStaffPermissions(
     context,
     { type, userId },
-    Array.isArray(permissions) ? { permissions, root: false } : permissions,
+    Array.isArray(permissions)
+      ? { permissions, root: false, staff: true }
+      : { staff: true, ...permissions },
   );
 };

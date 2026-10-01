@@ -1,18 +1,12 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/lib/route";
-import {
-  adminSessionCacheKey,
-  sessionCacheKey,
-} from "@/api/models/session-cache";
+import { revokeSessions } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
-import {
-  core_sessions,
-  core_sessions_known_devices,
-} from "@/database/sessions";
+import { core_sessions_known_devices } from "@/database/sessions";
 
 export const revokeDeviceRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -75,25 +69,7 @@ export const revokeDeviceRoute = buildRoute({
       return c.json({ error: "Device not found" }, 404);
     }
 
-    const where = and(
-      eq(core_sessions.userId, user.id),
-      eq(core_sessions.deviceId, device.id),
-    );
-
-    const sessions = await db
-      .select({ token: core_sessions.token })
-      .from(core_sessions)
-      .where(where);
-
-    await db.delete(core_sessions).where(where);
-
-    const cache = c.get("cache");
-    await cache.deleteSystem(
-      sessions.flatMap(({ token }) => [
-        sessionCacheKey(token, device.id),
-        adminSessionCacheKey(token, device.id),
-      ]),
-    );
+    await revokeSessions(c, { deviceId: device.id, userId: user.id });
 
     return c.body(null, 200);
   },

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import type {
   PermissionStaffType,
-  StaffPermissionSet,
+  ResolvedStaffPermissionSet,
 } from "./permission-staff";
 
 export const STAFF_PERMISSIONS_CACHE_TTL_SECONDS = 60;
@@ -19,22 +19,24 @@ const readEpoch = async (c: Context): Promise<string> =>
 const permissionsKey = (
   epoch: string,
   { type, userId }: { type: PermissionStaffType; userId: number },
-): string => `staff-permissions:${epoch}:${type}:${userId}`;
+): string => `staff-permissions:v2:${epoch}:${type}:${userId}`;
 
 /** The cached resolution, or `null` on a miss, without Redis, or on error. */
 export const readStaffPermissions = async (
   c: Context,
   args: { type: PermissionStaffType; userId: number },
-): Promise<null | StaffPermissionSet> =>
+): Promise<null | ResolvedStaffPermissionSet> =>
   await c
     .get("cache")
-    .getSystem<StaffPermissionSet>(permissionsKey(await readEpoch(c), args));
+    .getSystem<ResolvedStaffPermissionSet>(
+      permissionsKey(await readEpoch(c), args),
+    );
 
 /** Stores one resolution for {@link STAFF_PERMISSIONS_CACHE_TTL_SECONDS}. */
 export const writeStaffPermissions = async (
   c: Context,
   args: { type: PermissionStaffType; userId: number },
-  value: StaffPermissionSet,
+  value: ResolvedStaffPermissionSet,
 ): Promise<void> => {
   await c
     .get("cache")

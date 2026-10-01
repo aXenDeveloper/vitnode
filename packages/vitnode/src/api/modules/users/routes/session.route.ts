@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { isStaff } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
-import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionRoute = buildRoute({
@@ -47,16 +47,13 @@ export const sessionRoute = buildRoute({
   },
   handler: async c => {
     const user = c.get("user");
-    const admin = new SessionAdminModel(c);
+    if (!user) return c.json({ user: null });
 
-    return c.json({
-      user: user
-        ? {
-            ...user,
-            isAdmin: await admin.checkIfUserIsAdmin(user.id),
-            isModerator: false, // TODO: implement moderator role
-          }
-        : null,
-    });
+    const [isAdmin, isModerator] = await Promise.all([
+      isStaff(c, { type: "admin", userId: user.id }),
+      isStaff(c, { type: "moderator", userId: user.id }),
+    ]);
+
+    return c.json({ user: { ...user, isAdmin, isModerator } });
   },
 });

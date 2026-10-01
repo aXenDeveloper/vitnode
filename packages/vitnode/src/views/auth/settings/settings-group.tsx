@@ -22,9 +22,7 @@ export const SettingsGroup = ({
 }) => (
   <div className="flex flex-col gap-2">
     {title ? (
-      <h3 className="text-muted-foreground text-sm font-medium">
-        {title}
-      </h3>
+      <h3 className="text-muted-foreground text-sm font-medium">{title}</h3>
     ) : null}
     <ul className="bg-card ring-foreground/10 divide-y overflow-hidden rounded-md shadow-xs ring-1">
       {children}

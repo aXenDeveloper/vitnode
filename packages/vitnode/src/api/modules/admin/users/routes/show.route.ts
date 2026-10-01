@@ -1,12 +1,12 @@
 import { z } from "@hono/zod-openapi";
 
+import { isStaff } from "@/api/lib/check-staff-permission";
 import { resolveUserRoles, userRoleSchema } from "@/api/lib/resolve-user-roles";
 import { buildRoute } from "@/api/lib/route";
 import {
   resolveUserImagePolicy,
   zodUserImagePolicy,
 } from "@/api/lib/user-images";
-import { SessionAdminModel } from "@/api/models/session-admin";
 import { UserModel } from "@/api/models/user";
 import { CONFIG_PLUGIN } from "@/config";
 
@@ -82,7 +82,7 @@ export const showUserAdminRoute = buildRoute({
 
     const [roles, isAdmin, imagePolicy] = await Promise.all([
       resolveUserRoles(c, user),
-      new SessionAdminModel(c).checkIfUserIsAdmin(user.id),
+      isStaff(c, { type: "admin", userId: user.id }),
       resolveUserImagePolicy(c, user, { ignoreAllow: true }),
     ]);
 

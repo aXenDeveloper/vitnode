@@ -1,5 +1,5 @@
 ---
-name: upgrade-npm-packages
+name: vitnode-upgrade-npm-packages
 description: A skill that helps users upgrade their npm packages to the latest versions.
 ---
 

@@ -66,9 +66,7 @@ describe("the public and admin session caches cannot collide", () => {
     expect(admin.startsWith(user)).toBe(false);
   });
 
-  it("shares the session: namespace so a revocation can name both", () => {
-    // `revoke-device.route.ts` deletes both keys for one device in a single
-    // call, which is only possible because they are built from the same inputs.
+  it("shares the session: namespace", () => {
     expect(sessionCacheKey(TOKEN_A, 1).startsWith("session:")).toBe(true);
     expect(adminSessionCacheKey(TOKEN_A, 1).startsWith("session:")).toBe(true);
   });
