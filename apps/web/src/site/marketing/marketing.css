@@ -868,14 +868,79 @@
   }
 }
 
+.mk-integration-comb {
+  --hex-w: 3.25rem;
+  --hex-gap: calc(var(--hex-w) * 0.1);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (width >= 40rem) {
+  .mk-integration-comb {
+    --hex-w: 5.5rem;
+  }
+}
+
+@media (width >= 64rem) {
+  .mk-integration-comb {
+    --hex-w: 7rem;
+  }
+}
+
+.mk-integration-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hex-gap);
+}
+
+.mk-integration-column + .mk-integration-column {
+  margin-left: calc(var(--hex-w) * -0.25 + var(--hex-gap) * 0.8660254);
+}
+
+.mk-integration-tile {
+  display: grid;
+  width: var(--hex-w);
+  aspect-ratio: 100 / 86.6;
+  pointer-events: none;
+}
+
+.mk-integration-tile > * {
+  grid-area: 1 / 1;
+}
+
+.mk-integration-tile:focus-visible {
+  outline: none;
+}
+
+.mk-integration-hit path {
+  fill: transparent;
+  pointer-events: all;
+}
+
 .mk-integration-face {
-  border: 1px solid var(--border);
-  background-color: var(--card);
+  display: grid;
+  place-items: center;
   transition:
     translate 220ms cubic-bezier(0.23, 1, 0.32, 1),
     scale 150ms ease-out,
-    border-color 150ms ease-out,
-    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+    filter 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.mk-integration-face > * {
+  grid-area: 1 / 1;
+}
+
+.mk-integration-outline path {
+  fill: var(--card);
+  stroke: var(--border);
+  transition: stroke 150ms ease-out;
+}
+
+.mk-integration-tile:focus-visible .mk-integration-outline path {
+  stroke: var(--ring);
+  stroke-width: 2;
 }
 
 .mk-integration-mark {
@@ -885,9 +950,13 @@
 @media (hover: hover) and (pointer: fine) {
   .mk-integration-tile:hover .mk-integration-face {
     translate: 0 -4px;
-    border-color: color-mix(in oklch, var(--brand) 45%, transparent);
-    box-shadow: 0 14px 28px -14px
-      color-mix(in oklch, var(--brand) 55%, transparent);
+    filter: drop-shadow(
+      0 8px 10px color-mix(in oklch, var(--brand) 30%, transparent)
+    );
+  }
+
+  .mk-integration-tile:hover .mk-integration-outline path {
+    stroke: color-mix(in oklch, var(--brand) 45%, transparent);
   }
 
   .mk-integration-tile:hover .mk-integration-mark {
@@ -901,7 +970,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mk-integration-face,
-  .mk-integration-mark {
+  .mk-integration-mark,
+  .mk-integration-outline path {
     transition: none;
   }
 
