@@ -10,6 +10,7 @@ import type {
   PasswordResetSubmitValues,
 } from "./schema";
 
+import { readRememberedEmail } from "../../remembered-email";
 import {
   createPasswordResetFormSchema,
   passwordResetFormOutcome,
@@ -30,9 +31,10 @@ export const usePasswordResetForm = ({
   const tErrors = useTranslations("core.global.errors");
   const [sentEmail, setSentEmail] = React.useState("");
 
-  const formSchema = createPasswordResetFormSchema({
-    invalidEmail: t("email.invalid"),
-  });
+  const formSchema = createPasswordResetFormSchema(
+    { invalidEmail: t("email.invalid") },
+    { defaultEmail: readRememberedEmail() },
+  );
 
   const onSubmit: AutoFormOnSubmit<PasswordResetFormSchema> = async (
     { email },

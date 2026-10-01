@@ -1,0 +1,42 @@
+{
+  "app": {
+    "home": {
+      "meta": {
+        "title": "Welcome",
+        "desc": "Your VitNode app is up and running."
+      },
+      "title": "Your VitNode app is running",
+      "desc": {
+        "signed_in": "You are signed in as {name}. Open the AdminCP to configure the site.",
+        "guest": "Create an account or sign in, then open the AdminCP to configure the site. On a fresh install the first registered member becomes the administrator."
+      },
+      "create_account": "Create an account",
+      "open_admin": "Open AdminCP",
+      "next_steps": "Next steps",
+      "steps": {
+        "register": {
+          "title": "Register",
+          "desc": "Create a member account. On a fresh install the first one becomes the administrator."
+        },
+        "admin": {
+          "title": "AdminCP",
+          "desc": "Settings, members, roles, plugins and content live here."
+        },
+        "docs": {
+          "title": "Documentation",
+          "desc": "Configuration, routing, plugins and deployment guides."
+        },
+        "website": {
+          "title": "vitnode.com",
+          "desc": "Project website, release notes and community links."
+        }
+      },
+      "replace_hint": "This page lives in <code>src/routes/_main/index.tsx</code>. Replace it whenever you are ready."
+    },
+    "footer": {
+      "powered_by": "Powered by <link>VitNode</link>",
+      "docs": "Docs",
+      "sponsor": "Sponsor"
+    }
+  }
+}

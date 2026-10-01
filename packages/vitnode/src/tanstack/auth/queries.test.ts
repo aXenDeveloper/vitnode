@@ -247,7 +247,7 @@ describe("every public identity boundary drops the private cache", () => {
     const code = actionsSource();
 
     expect(code.indexOf(CLEANUP)).toBeLessThan(
-      code.indexOf("await navigate(destination())"),
+      code.indexOf("await router.navigate(internalDestination(destination()))"),
     );
   });
 

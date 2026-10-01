@@ -7,6 +7,8 @@ export {
 } from "./breadcrumb";
 export { defaultAdminTransport } from "./default-transport";
 export * from "./intl";
+export type { AdminNavModule } from "./layout-route";
+export { adminLayoutRoute } from "./layout-route";
 export { AdminNavProvider, useAdminNav, useAdminSearchNavItems } from "./nav";
 export * from "./permissions";
 export { removeAdminIdentityQueries, removeAdminShellQueries } from "./queries";

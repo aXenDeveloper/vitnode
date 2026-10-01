@@ -3,8 +3,6 @@ import { PasskeySignInButton } from "@/views/auth/sign-in/passkey/passkey-sign-i
 import { SignInContent } from "@/views/auth/sign-in/sign-in-content";
 import { SSOButtonsContent } from "@/views/auth/sso/buttons/sso-buttons-content";
 
-import type { AuthNavigate } from "./actions";
-
 import { RouteMessages } from "../i18n/route-messages";
 import {
   startSsoAction,
@@ -20,21 +18,18 @@ import {
 import { postAuthDestination } from "./redirects";
 
 export interface LoginRouteProps {
-  navigate: AuthNavigate;
   /** Where the visitor was heading before a guard sent them here. */
   returnTo?: string;
 }
 
-export const LoginRouteContent = ({ navigate, returnTo }: LoginRouteProps) => {
+export const LoginRouteContent = ({ returnTo }: LoginRouteProps) => {
   const { data: config } = useMiddlewareConfigQuery();
   const methods = authMethodsOf(config);
   const signIn = useSignInAction({
     destination: () => postAuthDestination(returnTo),
-    navigate,
   });
   const passkeySignIn = usePasskeySignInAction({
     destination: () => postAuthDestination(returnTo),
-    navigate,
   });
 
   return (

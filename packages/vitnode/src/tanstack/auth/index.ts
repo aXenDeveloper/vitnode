@@ -6,7 +6,7 @@ export { loadLoginRoute, LOGIN_NAMESPACES } from "./login-route";
 export type { LoginRouteProps } from "./login-screen";
 export { LoginRouteContent } from "./login-screen";
 export * from "./middleware-config";
-export { internalDestination, useAppNavigate } from "./navigation";
+export { internalDestination } from "./navigation";
 export { removeUserIdentityQueries } from "./queries";
 export * from "./recovery";
 export type { PasswordResetRouteData } from "./recovery-route";
@@ -18,7 +18,6 @@ export {
 } from "./recovery-screen";
 export * from "./redirects";
 export { loadRegisterRoute, REGISTER_NAMESPACES } from "./register-route";
-export type { RegisterRouteProps } from "./register-screen";
 export { RegisterRouteContent } from "./register-screen";
 export * from "./return-to";
 export * from "./route-search";

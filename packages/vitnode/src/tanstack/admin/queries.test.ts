@@ -210,7 +210,7 @@ describe("every identity boundary drops the privileged cache", () => {
 
     expect(code).toContain(CLEANUP);
     expect(code.indexOf(CLEANUP)).toBeLessThan(
-      code.indexOf("await navigate(destination())"),
+      code.indexOf("await router.navigate(internalDestination(destination()))"),
     );
   });
 
@@ -245,7 +245,7 @@ describe("every identity boundary drops the privileged cache", () => {
     const code = sourceOf("../auth/actions.ts");
 
     expect(code.indexOf(CLEANUP)).toBeLessThan(
-      code.indexOf("await navigate(destination())"),
+      code.indexOf("await router.navigate(internalDestination(destination()))"),
     );
   });
 

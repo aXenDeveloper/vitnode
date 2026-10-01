@@ -15,6 +15,7 @@ import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
 import type { SsoCallbackInput } from "./contract";
 
 import { removeAdminIdentityQueries } from "../admin/queries";
+import { internalDestination } from "./navigation";
 import { removeUserIdentityQueries } from "./queries";
 import {
   anonymousSession,
@@ -34,16 +35,13 @@ import {
 import { shouldRefreshSessionAfterSignUp } from "./sign-up-session";
 import { authTransport } from "./transport";
 
-export type AuthNavigate = (href: string) => Promise<void>;
-
 export const useSignInAction = ({
   destination,
-  navigate,
 }: {
   destination: () => string;
-  navigate: AuthNavigate;
 }): SignInSubmit => {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return async values => {
     const result = await authTransport().signIn(values);
@@ -60,7 +58,7 @@ export const useSignInAction = ({
     removeUserIdentityQueries(queryClient);
 
     await invalidateSession(queryClient);
-    await navigate(destination());
+    await router.navigate(internalDestination(destination()));
 
     return undefined;
   };
@@ -68,12 +66,11 @@ export const useSignInAction = ({
 
 export const usePasskeySignInAction = ({
   destination,
-  navigate,
 }: {
   destination: () => string;
-  navigate: AuthNavigate;
 }): PasskeySignInSubmit => {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return async () => {
     const start = await authTransport().startPasskeySignIn();
@@ -98,7 +95,7 @@ export const usePasskeySignInAction = ({
     removeUserIdentityQueries(queryClient);
 
     await invalidateSession(queryClient);
-    await navigate(destination());
+    await router.navigate(internalDestination(destination()));
 
     return undefined;
   };
@@ -188,12 +185,11 @@ export const useSignOutAction = () => {
 
 export const useSignUpAction = ({
   destination,
-  navigate,
 }: {
   destination: () => string;
-  navigate: AuthNavigate;
 }): SignUpSubmit => {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return async values => {
     const result = await authTransport().signUp(values);
@@ -207,7 +203,7 @@ export const useSignUpAction = ({
       removeAdminIdentityQueries(queryClient);
       removeUserIdentityQueries(queryClient);
       await invalidateSession(queryClient);
-      await navigate(destination());
+      await router.navigate(internalDestination(destination()));
     }
 
     return signUpFormResult(result);

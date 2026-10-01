@@ -3,6 +3,8 @@
 @import "tw-animate-css";
 @import "@vitnode/core/styles/tiptap.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root:not(.dark) {
   color-scheme: light;
   --background: oklch(0.96 0.007 264);

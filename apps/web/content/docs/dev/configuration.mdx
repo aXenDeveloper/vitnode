@@ -9,10 +9,10 @@ import { Callout } from 'fumadocs-ui/components/callout'
 A VitNode app has two configuration files, and the line between them is one
 question: **may a browser hold this?**
 
-| File                           | Holds                                                 | Reached by                                       |
-| :----------------------------- | :---------------------------------------------------- | :----------------------------------------------- |
-| `src/vitnode.config.ts`        | locales, metadata, theme, `debug`, enabled plugin ids | the browser, the server, **and your Vite build** |
-| `src/vitnode.server.config.ts` | message loaders                                       | the server only                                  |
+| File                           | Holds                                                       | Reached by                                       |
+| :----------------------------- | :---------------------------------------------------------- | :----------------------------------------------- |
+| `src/vitnode.config.ts`        | locales, metadata, logo, theme, `debug`, enabled plugin ids | the browser, the server, **and your Vite build** |
+| `src/vitnode.server.config.ts` | message loaders                                             | the server only                                  |
 
 ---
 
@@ -20,6 +20,7 @@ question: **may a browser hold this?**
 
 ```ts title="apps/web/src/vitnode.config.ts"
 import { blogPlugin } from '@vitnode/blog/config'
+import { LogoVitNodeBrand } from '@vitnode/core/components/logo-vitnode'
 import { buildConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeConfig = buildConfig({
@@ -32,6 +33,7 @@ export const vitNodeConfig = buildConfig({
     ],
     timeZone: 'UTC',
   },
+  logo: LogoVitNodeBrand,
   metadata: {
     shortTitle: 'VitNode',
     title: 'VitNode',
@@ -45,7 +47,7 @@ export const vitNodeConfig = buildConfig({
 
 Three very different readers depend on this file:
 
-1. **The document shell** renders `metadata`, `theme` and `debug` - in the
+1. **The document shell** renders `metadata`, `logo`, `theme` and `debug` - in the
    browser as well as on the server.
 2. **The locale runtime** derives routing from `i18n`.
 3. **Your Vite build** loads it with `jiti` while Vite is still resolving its
@@ -56,7 +58,7 @@ Three very different readers depend on this file:
   Because of reader 3, this file is executed at build time; because of reader 1
   it is bundled for a browser. So it holds plain data and plugin *identity* -
   never a `() => import(...)` message loader, and never a module that reaches a
-  database.
+  database. The one exception is `logo`: a small, self-contained component.
 </Callout>
 
 `buildConfig` keeps `locales` a tuple of literal types, so a `Locale` derived
@@ -66,6 +68,37 @@ against the list right beside it:
 ```ts title="apps/web/src/vitnode.config.ts"
 export type Locale = (typeof vitNodeConfig.i18n.locales)[number]['code']
 ```
+
+### Logo
+
+`logo` is the component the site header shows in its home link. Leave it out
+and you get the VitNode logo - which is lovely, but it is probably not your
+brand.
+
+```tsx title="src/components/logo.tsx"
+export const Logo = () => (
+  <img
+    alt="Acme"
+    className="h-8 w-auto"
+    height={32}
+    src="/logo.svg"
+    width={96}
+  />
+)
+```
+
+```ts title="src/vitnode.config.ts"
+import { Logo } from '@/components/logo'
+
+export const vitNodeConfig = buildConfig({
+  // ...
+  logo: Logo,
+})
+```
+
+Pass the component itself, not `<Logo />`. Keep it lean: your Vite build
+executes this file too, so a logo that imports half your UI makes every
+regeneration pass slower.
 
 ### Enabled plugins
 

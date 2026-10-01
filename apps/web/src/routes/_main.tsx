@@ -2,10 +2,10 @@ import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { MainBreadcrumb } from '@vitnode/core/tanstack/breadcrumb'
 import {
   loadMainShell,
+  MainHeader,
   ThemeLayoutContent,
 } from '@vitnode/core/tanstack/layout'
 
-import { MainHeader } from '@/components/main-header'
 import { SiteFooter } from '@/site/marketing/footer'
 
 const MainLayout = () => (

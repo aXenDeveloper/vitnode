@@ -6,6 +6,8 @@ import type { VitNodeConfig } from "@/vitnode.config";
 import { EditWidgetsHost } from "@/blocks/edit-widgets-host";
 import { EditorConfigProvider } from "@/components/editor-provider";
 import { LanguagesProvider } from "@/components/languages-provider";
+import { LogoContext } from "@/components/logo-context";
+import { LogoVitNodeBrand } from "@/components/logo-vitnode";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +17,7 @@ import { RateLimitListener } from "./rate-limit-listener";
 
 export interface VitNodeProvidersConfig extends Pick<
   VitNodeConfig,
-  "debug" | "editor" | "theme"
+  "debug" | "editor" | "logo" | "theme"
 > {
   locales: LocaleConfig[];
 }
@@ -23,12 +25,14 @@ export interface VitNodeProvidersConfig extends Pick<
 export const VitNodeProviders = ({
   children,
   toaster,
-  config: { debug, editor, locales, theme },
+  config: { debug, editor, locales, logo: Logo = LogoVitNodeBrand, theme },
 }: {
   children: React.ReactNode;
   config: VitNodeProvidersConfig;
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
+  const logo = React.useMemo(() => <Logo />, [Logo]);
+
   React.useEffect(() => {
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!(debug && CONFIG.node_development)) return;
@@ -52,7 +56,9 @@ export const VitNodeProviders = ({
       <TooltipProvider>
         <LanguagesProvider languages={locales}>
           <EditorConfigProvider config={editor}>
-            <EditWidgetsHost>{children}</EditWidgetsHost>
+            <LogoContext value={logo}>
+              <EditWidgetsHost>{children}</EditWidgetsHost>
+            </LogoContext>
           </EditorConfigProvider>
         </LanguagesProvider>
       </TooltipProvider>

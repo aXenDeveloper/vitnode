@@ -1,9 +1,8 @@
-import { useAppNavigate } from "../tanstack/auth/navigation";
 import { loadRegisterRoute } from "../tanstack/auth/register-route";
 import { RegisterRouteContent } from "../tanstack/auth/register-screen";
 import { defineRoute } from "../tanstack/plugin-routes";
 
-const RegisterPage = () => <RegisterRouteContent navigate={useAppNavigate()} />;
+const RegisterPage = () => <RegisterRouteContent />;
 
 export const route = defineRoute<undefined>({
   load: async ({ context }) => {

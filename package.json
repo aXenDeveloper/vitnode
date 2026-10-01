@@ -15,11 +15,11 @@
     "lint:fix": "turbo lint:fix",
     "test": "turbo test",
     "test:types": "turbo test:types",
-    "i18n:create": "turbo i18n:create",
-    "i18n:check": "turbo i18n:check",
-    "i18n:delete": "turbo i18n:delete",
-    "i18n:update": "turbo i18n:update",
-    "i18n:update:ai": "turbo i18n:update:ai"
+    "i18n:create": "cd apps/api && pnpm run i18n:create",
+    "i18n:check": "cd apps/api && pnpm run i18n:check",
+    "i18n:delete": "cd apps/api && pnpm run i18n:delete",
+    "i18n:update": "cd apps/api && pnpm run i18n:update",
+    "i18n:update:ai": "cd apps/api && pnpm run i18n:update:ai"
   },
   "devDependencies": {
     "@types/node": "^26.5.1",

@@ -1,6 +1,6 @@
 import type z from "zod";
 
-import { MailCheckIcon } from "lucide-react";
+import { MailCheckIcon, MailIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 
 import {
@@ -87,7 +88,16 @@ export const PasswordResetFormContent = ({
             {
               id: "email",
               component: props => (
-                <AutoFormInput {...props} label={tSignUp("email.label")} />
+                <AutoFormInput
+                  {...props}
+                  autoComplete="email"
+                  inputMode="email"
+                  label={tSignUp("email.label")}
+                >
+                  <InputGroupAddon>
+                    <MailIcon />
+                  </InputGroupAddon>
+                </AutoFormInput>
               ),
             },
           ]}

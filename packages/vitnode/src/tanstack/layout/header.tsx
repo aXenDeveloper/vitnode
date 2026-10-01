@@ -11,7 +11,7 @@ import type {
 } from "@/lib/navigation";
 import type { HeaderNavTranslate } from "@/views/layouts/theme/header/header-nav";
 
-import { LogoVitNodeBrand } from "@/components/logo-vitnode";
+import { useLogo } from "@/components/logo-context";
 import { HeaderLayoutContent } from "@/views/layouts/theme/header/header-content";
 import {
   headerNavItemsFrom,
@@ -49,13 +49,8 @@ const headerNavTranslator = (
   };
 };
 
-export const Header = ({
-  logo = <LogoVitNodeBrand />,
-  user,
-}: {
-  logo?: React.ReactNode;
-  user?: React.ReactNode;
-}) => {
+export const Header = ({ user }: { user?: React.ReactNode }) => {
+  const logo = useLogo();
   const locale = useLocale();
   const t = useTranslations("core.global");
   const { data: config } = useMiddlewareConfigQuery();

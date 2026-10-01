@@ -3,13 +3,12 @@ import type { LoginSearch } from "@/tanstack/auth/route-search";
 
 import { loadLoginRoute } from "@/tanstack/auth/login-route";
 import { LoginRouteContent } from "@/tanstack/auth/login-screen";
-import { useAppNavigate } from "@/tanstack/auth/navigation";
 import { defineRoute } from "@/tanstack/plugin-routes";
 
 const LoginPage = ({
   search,
 }: PluginRoutePageProps<undefined, LoginSearch>) => (
-  <LoginRouteContent navigate={useAppNavigate()} returnTo={search.returnTo} />
+  <LoginRouteContent returnTo={search.returnTo} />
 );
 
 export const route = defineRoute<undefined, LoginSearch>({

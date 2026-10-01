@@ -3,16 +3,12 @@ import type { AdminSignInSearch } from "@/tanstack/admin/sign-in-search";
 
 import { AdminSignInRouteContent } from "@/tanstack/admin/sign-in-screen";
 import { loadAuthCard } from "@/tanstack/auth/login-route";
-import { useAppNavigate } from "@/tanstack/auth/navigation";
 import { defineRoute } from "@/tanstack/plugin-routes";
 
 const AdminSignInPage = ({
   search,
 }: PluginRoutePageProps<undefined, AdminSignInSearch>) => (
-  <AdminSignInRouteContent
-    navigate={useAppNavigate()}
-    returnTo={search.returnTo}
-  />
+  <AdminSignInRouteContent returnTo={search.returnTo} />
 );
 
 export const route = defineRoute<undefined, AdminSignInSearch>({
