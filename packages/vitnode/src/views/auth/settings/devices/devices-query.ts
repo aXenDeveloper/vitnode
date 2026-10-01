@@ -8,6 +8,8 @@ import { fetcher } from "@/tanstack/fetcher";
 export const DEVICE_TYPES = ["desktop", "tablet", "mobile"] as const;
 export type DeviceType = (typeof DEVICE_TYPES)[number];
 
+export type DeviceSessionKind = "admin" | "user";
+
 export interface Device {
   browser: string;
   deviceType: DeviceType;
@@ -18,6 +20,7 @@ export interface Device {
   lastSeen: Date | string;
   os: string;
   publicId: string;
+  sessionKinds: DeviceSessionKind[];
 }
 
 /** The list route's whole response. */

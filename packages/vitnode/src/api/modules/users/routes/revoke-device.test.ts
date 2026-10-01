@@ -83,4 +83,49 @@ describe("revoking a device", () => {
       user: 200,
     });
   });
+
+  it("ends an AdminCP session on a device with no user session", async () => {
+    const OFFICE = { id: 5, publicId: "office" };
+    const adminOnlyOnOffice = fakeSession(7, OFFICE, ["admin"]);
+    const { app, probe, rowsFor } = await createSessionWorld({
+      sessions: [onPhone, adminOnlyOnOffice],
+    });
+    app.openapi(revokeDeviceRoute.route, revokeDeviceRoute.handler);
+    expect(await probe(adminOnlyOnOffice)).toEqual({ admin: 200, user: 401 });
+
+    const response = await app.request(`/devices/${OFFICE.publicId}`, {
+      headers: { cookie: sessionCookies(onPhone, "user") },
+      method: "DELETE",
+    });
+
+    expect(response.status).toBe(200);
+    expect(rowsFor(adminOnlyOnOffice)).toEqual({ admin: 0, user: 0 });
+    expect(await probe(adminOnlyOnOffice)).toEqual({ admin: 401, user: 401 });
+  });
+
+  it("answers 404 for another user's device, as for an unknown one, and ends nothing", async () => {
+    const TABLET = { id: 6, publicId: "tablet" };
+    const someoneElseOnTablet = fakeSession(8, TABLET);
+    const { app, probe, rowsFor } = await createSessionWorld({
+      sessions: [onPhone, someoneElseOnTablet],
+    });
+    app.openapi(revokeDeviceRoute.route, revokeDeviceRoute.handler);
+    const revoke = async (publicId: string) =>
+      await app.request(`/devices/${publicId}`, {
+        headers: { cookie: sessionCookies(onPhone, "user") },
+        method: "DELETE",
+      });
+
+    const foreign = await revoke(TABLET.publicId);
+    const unknown = await revoke("nobody-has-this");
+
+    expect(foreign.status).toBe(404);
+    expect(unknown.status).toBe(404);
+    expect(await foreign.json()).toEqual(await unknown.json());
+    expect(rowsFor(someoneElseOnTablet)).toEqual({ admin: 1, user: 1 });
+    expect(await probe(someoneElseOnTablet)).toEqual({
+      admin: 200,
+      user: 200,
+    });
+  });
 });

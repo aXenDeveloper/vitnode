@@ -1,4 +1,6 @@
 // @vitest-environment node
+import type { Table } from "drizzle-orm";
+
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
@@ -11,7 +13,7 @@ import { core_roles } from "@/database/roles";
 import { core_sessions_known_devices } from "@/database/sessions";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 import { createTestCache } from "@/tests/cache";
-import { createMemoryDb } from "@/tests/memory-db";
+import { createMemoryDb, type MemoryRow } from "@/tests/memory-db";
 
 import type { AdminSession } from "./session-cache";
 
@@ -237,9 +239,7 @@ type StaffShape =
   | "root via a secondary role"
   | "zero-permission admin entry";
 
-const staffTables = (
-  shape: StaffShape,
-): [unknown, Record<string, unknown>[]][] => {
+const staffTables = (shape: StaffShape): [Table, MemoryRow[]][] => {
   const entry = (row: Record<string, unknown>) => ({
     permissions: [],
     roleId: null,
@@ -291,7 +291,7 @@ const staffTables = (
 };
 
 const runAsAdminModel = async <T>(
-  tables: [unknown, Record<string, unknown>[]][],
+  tables: [Table, MemoryRow[]][],
   run: (model: SessionAdminModel) => Promise<T>,
 ) => {
   const memory = createMemoryDb(tables);
@@ -363,7 +363,7 @@ describe("who may hold an AdminCP session", () => {
           userId: USER_ID,
         },
       ],
-    ] satisfies [unknown, Record<string, unknown>[]],
+    ] satisfies [Table, MemoryRow[]],
   ];
 
   it.each(admitted)("keeps an open session for a user with %s", async shape => {

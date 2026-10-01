@@ -803,6 +803,8 @@
           "last_active": "Last active",
           "ip_address": "IP address",
           "session_expires": "Session expires",
+          "admin_session": "AdminCP",
+          "admin_session_desc": "Signed in to the AdminCP on this device. Signing it out ends that session too.",
           "empty": "No active devices.",
           "revoke": {
             "action": "Sign out device",

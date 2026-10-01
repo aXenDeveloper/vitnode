@@ -5,7 +5,6 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { describe, expect, it } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
-import type { StubQuery } from "@/tests/query-stub";
 
 import { core_admin_permissions } from "@/database/admins";
 import { core_languages_words } from "@/database/languages";
@@ -13,7 +12,7 @@ import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 import { createTestCache } from "@/tests/cache";
-import { createQueryStub } from "@/tests/query-stub";
+import { createMemoryDb } from "@/tests/memory-db";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { listRolesAdminRoute } from "./list.route";
@@ -50,41 +49,43 @@ const ROOT_ROLE = 1;
 const MODERATOR_ROLE = 2;
 const MEMBER_ROLE = 3;
 
-const answer = (query: StubQuery): unknown[] => {
-  if (query.table === core_roles) {
-    if (query.selection && "count" in query.selection) return [{ count: 3 }];
+const userRow = (id: number, roleId: number) => ({ id, roleId });
 
-    return [
-      roleRow(MEMBER_ROLE),
-      roleRow(MODERATOR_ROLE),
-      roleRow(ROOT_ROLE, true),
-    ];
-  }
-  if (query.table === core_languages_words) return [];
-  if (query.table === core_users) {
-    return [
-      { roleId: MEMBER_ROLE, total: 4 },
-      { roleId: ROOT_ROLE, total: 1 },
-    ];
-  }
-  if (query.table === core_users_secondary_roles) {
-    return [
-      { roleId: MEMBER_ROLE, total: 2 },
-      { roleId: MODERATOR_ROLE, total: 3 },
-    ];
-  }
-  if (query.table === core_admin_permissions) return [];
-  if (query.table === core_moderators_permissions) {
-    return [{ roleId: MODERATOR_ROLE }];
-  }
-
-  throw new Error("unexpected query");
-};
+const seed = () =>
+  createMemoryDb([
+    [
+      core_roles,
+      [roleRow(ROOT_ROLE, true), roleRow(MODERATOR_ROLE), roleRow(MEMBER_ROLE)],
+    ],
+    [core_languages_words, []],
+    [
+      core_users,
+      [
+        userRow(ADMIN.id, ROOT_ROLE),
+        userRow(2, MEMBER_ROLE),
+        userRow(3, MEMBER_ROLE),
+        userRow(4, MEMBER_ROLE),
+        userRow(5, MEMBER_ROLE),
+      ],
+    ],
+    [
+      core_users_secondary_roles,
+      [
+        { roleId: MEMBER_ROLE, userId: ADMIN.id },
+        { roleId: MEMBER_ROLE, userId: 2 },
+        { roleId: MODERATOR_ROLE, userId: 2 },
+        { roleId: MODERATOR_ROLE, userId: 3 },
+        { roleId: MODERATOR_ROLE, userId: 4 },
+      ],
+    ],
+    [core_admin_permissions, []],
+    [core_moderators_permissions, [{ id: 1, roleId: MODERATOR_ROLE }]],
+  ]);
 
 const list = async (permissions: PermissionsStaffArgs[]) => {
   const cache = createTestCache();
   await grantStaffPermissions(cache, { permissions, userId: ADMIN.id });
-  const { db } = createQueryStub(answer);
+  const { db } = seed();
   const app = new OpenAPIHono();
 
   app.use("*", async (c, next) => {
@@ -140,7 +141,17 @@ describe("roles list", () => {
 
     expect(
       Object.fromEntries(edges.map(role => [role.id, role.usersCount])),
-    ).toEqual({ [MEMBER_ROLE]: 6, [MODERATOR_ROLE]: 3, [ROOT_ROLE]: 1 });
+    ).toEqual({ [MEMBER_ROLE]: 5, [MODERATOR_ROLE]: 3, [ROOT_ROLE]: 1 });
+  });
+
+  it("lists the roles in the requested order", async () => {
+    const edges = await edgesOf(await list([permission("roles", "can_view")]));
+
+    expect(edges.map(role => role.id)).toEqual([
+      MEMBER_ROLE,
+      MODERATOR_ROLE,
+      ROOT_ROLE,
+    ]);
   });
 
   it("marks root and moderator roles as granting admin", async () => {

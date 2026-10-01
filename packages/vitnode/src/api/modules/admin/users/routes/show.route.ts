@@ -42,7 +42,7 @@ export const showUserAdminRoute = buildRoute({
               secondaryRoles: z.array(userRoleSchema),
               birthday: z.date().nullable(),
               language: z.string(),
-              isAdmin: z.boolean(),
+              isStaff: z.boolean(),
               imagePolicy: zodUserImagePolicy,
             }),
           },
@@ -80,12 +80,21 @@ export const showUserAdminRoute = buildRoute({
       return c.json({ error: "User not found" }, 404);
     }
 
-    const [roles, isAdmin, imagePolicy] = await Promise.all([
+    const [roles, adminStaff, moderatorStaff, imagePolicy] = await Promise.all([
       resolveUserRoles(c, user),
       isStaff(c, { type: "admin", userId: user.id }),
+      isStaff(c, { type: "moderator", userId: user.id }),
       resolveUserImagePolicy(c, user, { ignoreAllow: true }),
     ]);
 
-    return c.json({ ...user, imagePolicy, isAdmin, ...roles }, 200);
+    return c.json(
+      {
+        ...user,
+        imagePolicy,
+        isStaff: adminStaff || moderatorStaff,
+        ...roles,
+      },
+      200,
+    );
   },
 });

@@ -3,13 +3,12 @@ import type { Context } from "hono";
 import { describe, expect, it } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
-import type { StubQuery } from "@/tests/query-stub";
 
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
 import { createTestCache } from "@/tests/cache";
-import { createQueryStub } from "@/tests/query-stub";
+import { createMemoryDb } from "@/tests/memory-db";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { assertCanManageAdminRole } from "./assert-manage-admin-role";
@@ -40,14 +39,12 @@ const manage = async (
     userId: ADMIN.id,
   });
 
-  const staffByTable = new Map<unknown, boolean | undefined>([
-    [core_admin_permissions, staff.admin],
-    [core_moderators_permissions, staff.moderator],
-    [core_roles, staff.root],
+  const entry = { id: 1, roleId: ROLE_ID };
+  const { db } = createMemoryDb([
+    [core_roles, [{ id: ROLE_ID, root: staff.root ?? false }]],
+    [core_admin_permissions, staff.admin ? [entry] : []],
+    [core_moderators_permissions, staff.moderator ? [entry] : []],
   ]);
-  const { db } = createQueryStub((query: StubQuery) =>
-    staffByTable.get(query.table) ? [{ id: ROLE_ID }] : [],
-  );
   const values: Record<string, unknown> = { admin: { user: ADMIN }, cache, db };
 
   await assertCanManageAdminRole(

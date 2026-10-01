@@ -10,7 +10,6 @@ import type {
   StaffPermissionSet,
 } from "@/api/lib/permission-staff";
 import type { buildRoute } from "@/api/lib/route";
-import type { StubQuery } from "@/tests/query-stub";
 
 import { normalizePermissionStaffModules } from "@/api/lib/permission-staff";
 import { core_admin_permissions } from "@/database/admins";
@@ -18,7 +17,7 @@ import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
 import { core_users_secondary_roles } from "@/database/users";
 import { createTestCache } from "@/tests/cache";
-import { createQueryStub } from "@/tests/query-stub";
+import { createMemoryDb } from "@/tests/memory-db";
 import {
   grantStaffPermissions,
   ROOT_STAFF_PERMISSIONS,
@@ -70,6 +69,7 @@ const CATALOG = [
 
 const CALLER = { id: 1, roleId: 10 };
 const CALLER_SECONDARY_ROLE_ID = 11;
+const TARGET_ROLE_ID = 20;
 
 interface Entry {
   id: number;
@@ -91,30 +91,16 @@ const entryFor = (overrides: Partial<Entry> = {}): Entry => ({
   id: 5,
   permissions: [],
   protected: false,
-  roleId: 20,
+  roleId: TARGET_ROLE_ID,
   unrestricted: false,
   userId: null,
   ...overrides,
 });
 
-const answerFor =
-  ({ entry, role }: { entry?: Entry; role: null | TargetRole }) =>
-  (query: StubQuery): unknown[] => {
-    if (query.table === core_users_secondary_roles) {
-      return [{ roleId: CALLER_SECONDARY_ROLE_ID }];
-    }
-    if (query.table === core_roles) return role ? [role] : [];
-    if (query.kind === "insert") return [{ id: 77 }];
-    if (query.kind === "update") return entry ? [{ id: entry.id }] : [];
-    if (
-      query.table === core_admin_permissions ||
-      query.table === core_moderators_permissions
-    ) {
-      return entry ? [entry] : [];
-    }
-
-    throw new Error("unexpected query");
-  };
+const tableByType = {
+  admin: core_admin_permissions,
+  moderator: core_moderators_permissions,
+} as const;
 
 const appFor = async (
   built: ReturnType<typeof buildRoute>,
@@ -138,13 +124,28 @@ const appFor = async (
       userId: CALLER.id,
     });
   }
-  const { db, executed } = createQueryStub(answerFor({ entry, role }));
+  const memory = createMemoryDb([
+    [
+      core_roles,
+      [
+        { ...ORDINARY_ROLE, id: CALLER.roleId, root: false },
+        { ...ORDINARY_ROLE, id: CALLER_SECONDARY_ROLE_ID, root: false },
+        ...(role ? [{ ...role, id: TARGET_ROLE_ID, root: false }] : []),
+      ],
+    ],
+    [
+      core_users_secondary_roles,
+      [{ roleId: CALLER_SECONDARY_ROLE_ID, userId: CALLER.id }],
+    ],
+    [core_admin_permissions, entry ? [entry] : []],
+    [core_moderators_permissions, entry ? [entry] : []],
+  ]);
   const app = new OpenAPIHono();
 
   app.use("*", async (c, next) => {
     c.set("admin", { user: CALLER } as unknown as Context["var"]["admin"]);
     c.set("cache", cache);
-    c.set("db", db as unknown as Context["var"]["db"]);
+    c.set("db", memory.db as unknown as Context["var"]["db"]);
     c.set("core", {
       permissionStaff: CATALOG,
     } as unknown as Context["var"]["core"]);
@@ -152,10 +153,10 @@ const appFor = async (
   });
   app.openapi(built.route, built.handler);
 
-  const updates = () => executed.filter(query => query.kind === "update");
-  const inserts = () => executed.filter(query => query.kind === "insert");
+  const storedEntries = (type: PermissionStaffType = "admin") =>
+    memory.rows(tableByType[type]);
 
-  return { app, inserts, updates };
+  return { app, storedEntries };
 };
 
 const patch = async (
@@ -182,37 +183,49 @@ const post = async (
 
 describe("updating a staff entry", () => {
   it("refuses unrestricted access from a non-root administrator", async () => {
-    const { app, updates } = await appFor(updatePermissionsStaffAdminRoute, {
-      entry: entryFor(),
-      grants: { admin: MANAGE_ADMINS },
-    });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor(),
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
 
     const res = await patch(app, { permissions: [], unrestricted: true });
 
     expect(res.status).toBe(403);
-    expect(updates()).toHaveLength(0);
+    expect(storedEntries()).toEqual([entryFor()]);
   });
 
   it("lets a root administrator grant unrestricted access", async () => {
-    const { app, updates } = await appFor(updatePermissionsStaffAdminRoute, {
-      entry: entryFor(),
-      grants: { admin: ROOT_STAFF_PERMISSIONS },
-    });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor({ permissions: [VIEW_ADMINS] }),
+        grants: { admin: ROOT_STAFF_PERMISSIONS },
+      },
+    );
 
     const res = await patch(app, { permissions: [], unrestricted: true });
 
     expect(res.status).toBe(200);
-    expect(updates()[0]?.values).toEqual({
-      permissions: [],
-      unrestricted: true,
-    });
+    expect(storedEntries()).toEqual([
+      expect.objectContaining({
+        id: entryFor().id,
+        permissions: [],
+        unrestricted: true,
+      }),
+    ]);
   });
 
   it("refuses a permission the caller does not hold", async () => {
-    const { app, updates } = await appFor(updatePermissionsStaffAdminRoute, {
-      entry: entryFor(),
-      grants: { admin: MANAGE_ADMINS },
-    });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor(),
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
 
     const res = await patch(app, {
       permissions: [VIEW_ADMINS, VIEW_USERS],
@@ -220,14 +233,17 @@ describe("updating a staff entry", () => {
     });
 
     expect(res.status).toBe(403);
-    expect(updates()).toHaveLength(0);
+    expect(storedEntries()).toEqual([entryFor()]);
   });
 
   it("grants a subset of the caller's own permissions", async () => {
-    const { app } = await appFor(updatePermissionsStaffAdminRoute, {
-      entry: entryFor(),
-      grants: { admin: MANAGE_ADMINS },
-    });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor(),
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
 
     const res = await patch(app, {
       permissions: [VIEW_ADMINS, CREATE_ADMINS],
@@ -239,6 +255,12 @@ describe("updating a staff entry", () => {
       permissions: [VIEW_ADMINS, CREATE_ADMINS],
       unrestricted: false,
     });
+    expect(storedEntries()).toEqual([
+      expect.objectContaining({
+        permissions: [VIEW_ADMINS, CREATE_ADMINS],
+        unrestricted: false,
+      }),
+    ]);
   });
 
   it("keeps a permission the entry already had", async () => {
@@ -284,57 +306,64 @@ describe("updating a staff entry", () => {
   ])(
     "refuses to grant anything to an entry for the %s role",
     async (_label, role) => {
-      const { app, updates } = await appFor(updatePermissionsStaffAdminRoute, {
-        entry: entryFor(),
-        grants: { admin: ROOT_STAFF_PERMISSIONS },
-        role,
-      });
+      const { app, storedEntries } = await appFor(
+        updatePermissionsStaffAdminRoute,
+        {
+          entry: entryFor(),
+          grants: { admin: ROOT_STAFF_PERMISSIONS },
+          role,
+        },
+      );
 
       const res = await patch(app, { permissions: [], unrestricted: true });
 
       expect(res.status).toBe(400);
-      expect(updates()).toHaveLength(0);
+      expect(storedEntries()).toEqual([entryFor()]);
     },
   );
 });
 
 describe("creating a staff entry", () => {
   it("creates an entry for an ordinary role", async () => {
-    const { app, inserts } = await appFor(createStaffAdminRoute, {
+    const { app, storedEntries } = await appFor(createStaffAdminRoute, {
       grants: { admin: MANAGE_ADMINS },
     });
 
-    const res = await post(app, { roleId: 20 });
+    const res = await post(app, { roleId: TARGET_ROLE_ID });
 
     expect(res.status).toBe(201);
-    expect(inserts()).toHaveLength(1);
+    const stored = storedEntries();
+    expect(stored).toEqual([
+      expect.objectContaining({ roleId: TARGET_ROLE_ID, userId: null }),
+    ]);
+    expect(await res.json()).toEqual({ id: stored[0]?.id });
   });
 
   it.each([
     ["default", { default: true, guest: false }],
     ["guest", { default: false, guest: true }],
   ])("refuses the %s role", async (_label, role) => {
-    const { app, inserts } = await appFor(createStaffAdminRoute, {
+    const { app, storedEntries } = await appFor(createStaffAdminRoute, {
       grants: { admin: ROOT_STAFF_PERMISSIONS },
       role,
     });
 
-    const res = await post(app, { roleId: 20 });
+    const res = await post(app, { roleId: TARGET_ROLE_ID });
 
     expect(res.status).toBe(400);
-    expect(inserts()).toHaveLength(0);
+    expect(storedEntries()).toEqual([]);
   });
 
   it("refuses a role that does not exist", async () => {
-    const { app, inserts } = await appFor(createStaffAdminRoute, {
+    const { app, storedEntries } = await appFor(createStaffAdminRoute, {
       grants: { admin: ROOT_STAFF_PERMISSIONS },
       role: null,
     });
 
-    const res = await post(app, { roleId: 20 });
+    const res = await post(app, { roleId: TARGET_ROLE_ID });
 
     expect(res.status).toBe(404);
-    expect(inserts()).toHaveLength(0);
+    expect(storedEntries()).toEqual([]);
   });
 
   it.each([
@@ -342,23 +371,24 @@ describe("creating a staff entry", () => {
     ["the caller's primary role", { roleId: CALLER.roleId }],
     ["the caller's secondary role", { roleId: CALLER_SECONDARY_ROLE_ID }],
   ])("refuses an entry for %s", async (_label, body) => {
-    const { app, inserts } = await appFor(createStaffAdminRoute, {
+    const { app, storedEntries } = await appFor(createStaffAdminRoute, {
       grants: { admin: ROOT_STAFF_PERMISSIONS },
     });
 
     const res = await post(app, body);
 
     expect(res.status).toBe(403);
-    expect(inserts()).toHaveLength(0);
+    expect(storedEntries()).toEqual([]);
   });
 
   it("refuses a moderator entry for the caller's own role", async () => {
-    const { app } = await appFor(createStaffAdminRoute, {
+    const { app, storedEntries } = await appFor(createStaffAdminRoute, {
       grants: { admin: [CREATE_MODERATORS] },
     });
 
     expect(
       (await post(app, { roleId: CALLER.roleId }, "moderator")).status,
     ).toBe(403);
+    expect(storedEntries("moderator")).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, count, eq, or } from "drizzle-orm";
+import { and, count, eq, or, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { emailAliases, matchesEmail } from "@/api/lib/user-email-lookup";
@@ -10,21 +10,22 @@ import { core_users } from "@/database/users";
 import { canonicalizeEmail } from "@/lib/email-canonical";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 
+type SignUpDatabase = Omit<Context["var"]["db"], "$client">;
+
+const SIGN_UP_LOCK_KEY = "core_users:sign_up";
+
 const getDefaultData = async (
   c: Context,
+  db: SignUpDatabase,
 ): Promise<{
   emailVerified: boolean;
   roleId: number;
 }> => {
-  const [countUsers] = await c
-    .get("db")
-    .select({ count: count() })
-    .from(core_users);
+  const [countUsers] = await db.select({ count: count() }).from(core_users);
 
   // If no users, return root group
   if (countUsers.count === 0) {
-    const [defaultRole] = await c
-      .get("db")
+    const [defaultRole] = await db
       .select({
         id: core_roles.id,
       })
@@ -44,8 +45,7 @@ const getDefaultData = async (
     };
   }
 
-  const [defaultRole] = await c
-    .get("db")
+  const [defaultRole] = await db
     .select({
       id: core_roles.id,
     })
@@ -112,32 +112,34 @@ export const signUp = async (
     });
   }
 
-  const defaults = await getDefaultData(c);
-  const emailVerified = emailVerifiedByCaller ?? defaults.emailVerified;
-  const [data] = await c
-    .get("db")
-    .insert(core_users)
-    .values({
-      email,
-      name,
-      nameCode: convertToNameSEO,
-      // TODO: Handle newsletter only if email is allowed
-      newsletter,
-      password: hashedPassword,
-      avatarColor: generateAvatarColor(name),
-      roleId: defaults.roleId,
-      emailVerified,
-      ipAddress: c.get("ipAddress"),
-      // TODO: Handle language
-    })
-    .returning();
+  const data = await c.get("db").transaction(async tx => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${SIGN_UP_LOCK_KEY}))`,
+    );
+
+    const defaults = await getDefaultData(c, tx);
+    const [inserted] = await tx
+      .insert(core_users)
+      .values({
+        email,
+        name,
+        nameCode: convertToNameSEO,
+        // TODO: Handle newsletter only if email is allowed
+        newsletter,
+        password: hashedPassword,
+        avatarColor: generateAvatarColor(name),
+        roleId: defaults.roleId,
+        emailVerified: emailVerifiedByCaller ?? defaults.emailVerified,
+        ipAddress: c.get("ipAddress"),
+        // TODO: Handle language
+      })
+      .returning();
+
+    return inserted;
+  });
 
   const { password: _, ...user } = data;
 
-  // The insert above runs on `c.get("db")` (auto-commit), so the row is
-  // committed here - even when a caller (e.g. the SSO callback) wraps this in
-  // `db.transaction`. If this insert ever moves onto a `tx` handle, the emit
-  // must move after that transaction returns.
   await c.get("events").emit("user.created", {
     userId: data.id,
     email: data.email,

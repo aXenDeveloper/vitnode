@@ -65,33 +65,33 @@ describe("a user id out of the URL", () => {
 describe("who may edit a user", () => {
   it("needs can_edit at all", () => {
     expect(
-      canEditAdminUser(EMPTY_STAFF_PERMISSION_SET, { isAdmin: false }),
+      canEditAdminUser(EMPTY_STAFF_PERMISSION_SET, { isStaff: false }),
     ).toBe(false);
     expect(
-      canEditAdminUser(permissionSet("can_edit"), { isAdmin: false }),
+      canEditAdminUser(permissionSet("can_edit"), { isStaff: false }),
     ).toBe(true);
   });
 
-  it("needs can_edit_admin as well when the target is an administrator", () => {
-    expect(canEditAdminUser(permissionSet("can_edit"), { isAdmin: true })).toBe(
+  it("needs can_edit_admin as well when the target is staff, admin or moderator", () => {
+    expect(canEditAdminUser(permissionSet("can_edit"), { isStaff: true })).toBe(
       false,
     );
     expect(
       canEditAdminUser(permissionSet("can_edit", "can_edit_admin"), {
-        isAdmin: true,
+        isStaff: true,
       }),
     ).toBe(true);
   });
 
   it("does not let can_edit_admin stand in for can_edit", () => {
     expect(
-      canEditAdminUser(permissionSet("can_edit_admin"), { isAdmin: false }),
+      canEditAdminUser(permissionSet("can_edit_admin"), { isStaff: false }),
     ).toBe(false);
   });
 
   it("lets root through both gates", () => {
     expect(
-      canEditAdminUser({ permissions: [], root: true }, { isAdmin: true }),
+      canEditAdminUser({ permissions: [], root: true }, { isStaff: true }),
     ).toBe(true);
   });
 
@@ -108,7 +108,7 @@ describe("who may edit a user", () => {
           ],
           root: false,
         },
-        { isAdmin: false },
+        { isStaff: false },
       ),
     ).toBe(false);
   });

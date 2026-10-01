@@ -3,6 +3,7 @@ import { and, count, eq, inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
+import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { assertCanAssignPrimaryRole } from "@/api/modules/admin/users/lib/assert-edit-user-permission";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_languages_words } from "@/database/languages";
@@ -129,14 +130,18 @@ export const deleteRoleAdminRoute = buildRoute({
       await assertCanAssignPrimaryRole(c, targetRoleId);
     }
 
-    await db.transaction(async tx => {
-      if (targetRoleId != null) {
-        const members = await tx
-          .select({ id: core_users.id })
-          .from(core_users)
-          .where(eq(core_users.roleId, roleId));
-        const memberIds = members.map(member => member.id);
+    const affectedUserIds = await db.transaction(async tx => {
+      const members = await tx
+        .select({ id: core_users.id })
+        .from(core_users)
+        .where(eq(core_users.roleId, roleId));
+      const secondaryHolders = await tx
+        .select({ userId: core_users_secondary_roles.userId })
+        .from(core_users_secondary_roles)
+        .where(eq(core_users_secondary_roles.roleId, roleId));
+      const memberIds = members.map(member => member.id);
 
+      if (targetRoleId != null) {
         await tx
           .update(core_users)
           .set({ roleId: targetRoleId })
@@ -170,11 +175,23 @@ export const deleteRoleAdminRoute = buildRoute({
         );
 
       await tx.delete(core_roles).where(eq(core_roles.id, roleId));
+
+      return [
+        ...new Set([
+          ...memberIds,
+          ...secondaryHolders.map(holder => holder.userId),
+        ]),
+      ];
     });
 
     // Every member of the deleted role was just reassigned, and the staff
     // entries that pointed at it are gone with it.
     await invalidateAllStaffPermissions(c);
+    await Promise.all(
+      affectedUserIds.map(
+        async userId => await invalidateSessionCacheForUser(c, userId),
+      ),
+    );
 
     await c.get("events").emit("role.deleted", { roleId });
 

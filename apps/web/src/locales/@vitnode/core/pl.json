@@ -884,6 +884,8 @@
       "settings": {
         "devices": {
           "active_now": "Aktywne teraz",
+          "admin_session": "AdminCP",
+          "admin_session_desc": "Zalogowano do AdminCP na tym urządzeniu. Wylogowanie urządzenia zakończy również tę sesję.",
           "browser_on_os": "{browser} na {os}",
           "current_device": "To urządzenie",
           "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",

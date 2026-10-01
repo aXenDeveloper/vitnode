@@ -23,7 +23,7 @@ import {
 import { core_users } from "@/database/users";
 
 import { createTestCache } from "./cache";
-import { createFakeDb, type FakeRow } from "./fake-db";
+import { createMemoryDb, type MemoryRow } from "./memory-db";
 
 export const SESSION_AUTHORIZATION = {
   adminCookieExpires: 1000 * 60 * 60,
@@ -43,12 +43,16 @@ const MEMBER_ROLE_ID = 2;
 
 export interface FakeDevice {
   id: number;
+  lastSeen?: Date;
   publicId: string;
 }
+
+export type FakeSessionKind = "admin" | "user";
 
 export interface FakeSession {
   adminToken: string;
   device: FakeDevice;
+  kinds: FakeSessionKind[];
   userId: number;
   userToken: string;
 }
@@ -56,9 +60,11 @@ export interface FakeSession {
 export const fakeSession = (
   userId: number,
   device: FakeDevice,
+  kinds: FakeSessionKind[] = ["user", "admin"],
 ): FakeSession => ({
   adminToken: `admin-${userId}-${device.publicId}`,
   device,
+  kinds,
   userId,
   userToken: `user-${userId}-${device.publicId}`,
 });
@@ -76,7 +82,7 @@ export const createSessionWorld = async ({
   extraTables = [],
   sessions,
 }: {
-  extraTables?: [Table, FakeRow[]][];
+  extraTables?: [Table, readonly object[]][];
   sessions: FakeSession[];
 }) => {
   const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
@@ -92,8 +98,16 @@ export const createSessionWorld = async ({
   ];
   const userIds = [...new Set(sessions.map(({ userId }) => userId))];
 
-  const { db, rowsOf } = createFakeDb([
-    [core_sessions_known_devices, devices.map(device => ({ ...device }))],
+  const { db, rows } = createMemoryDb([
+    [
+      core_sessions_known_devices,
+      devices.map(device => ({
+        ipAddress: "203.0.113.7",
+        lastSeen: new Date(0),
+        userAgent: "node",
+        ...device,
+      })),
+    ],
     [
       core_users,
       userIds.map(id => ({
@@ -116,21 +130,25 @@ export const createSessionWorld = async ({
     ],
     [
       core_sessions,
-      hashed.map(({ device, userHash, userId }) => ({
-        deviceId: device.id,
-        expiresAt,
-        token: userHash,
-        userId,
-      })),
+      hashed
+        .filter(({ kinds }) => kinds.includes("user"))
+        .map(({ device, userHash, userId }) => ({
+          deviceId: device.id,
+          expiresAt,
+          token: userHash,
+          userId,
+        })),
     ],
     [
       core_admin_sessions,
-      hashed.map(({ adminHash, device, userId }) => ({
-        deviceId: device.id,
-        expiresAt,
-        token: adminHash,
-        userId,
-      })),
+      hashed
+        .filter(({ kinds }) => kinds.includes("admin"))
+        .map(({ adminHash, device, userId }) => ({
+          deviceId: device.id,
+          expiresAt,
+          token: adminHash,
+          userId,
+        })),
     ],
     ...extraTables,
   ]);
@@ -192,14 +210,14 @@ export const createSessionWorld = async ({
   };
 
   const rowsFor = (session: FakeSession) => {
-    const owns = (row: FakeRow) =>
+    const owns = (row: MemoryRow) =>
       row.userId === session.userId && row.deviceId === session.device.id;
 
     return {
-      admin: rowsOf(core_admin_sessions).filter(owns).length,
-      user: rowsOf(core_sessions).filter(owns).length,
+      admin: rows(core_admin_sessions).filter(owns).length,
+      user: rows(core_sessions).filter(owns).length,
     };
   };
 
-  return { app, cache, isCached, probe, rowsFor, rowsOf };
+  return { app, cache, isCached, probe, rows, rowsFor };
 };
