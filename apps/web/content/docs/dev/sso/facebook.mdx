@@ -242,17 +242,22 @@ permissions than you expected.
 
 | Setting       | Value                                                      |
 | ------------- | ---------------------------------------------------------- |
-| Authorize URL | `https://www.facebook.com/v22.0/dialog/oauth`              |
-| Token URL     | `https://graph.facebook.com/v22.0/oauth/access_token`      |
-| Profile URL   | `https://graph.facebook.com/v22.0/me?fields=id,name,email` |
+| Authorize URL | `https://www.facebook.com/v26.0/dialog/oauth`              |
+| Token URL     | `https://graph.facebook.com/v26.0/oauth/access_token`      |
+| Profile URL   | `https://graph.facebook.com/v26.0/me`                      |
 | Scopes        | `public_profile,email`                                     |
 | Provider id   | `facebook`                                                 |
-| Fields read   | `id`, `name`, `email`                                      |
+| Fields read   | `id`, `name`, `email`, `first_name`, `last_name`, `picture.width(512).height(512){url,is_silhouette}` |
 
 The account name VitNode creates comes from Facebook's `name` field, stripped of
 characters that cannot appear in a profile URL. The Graph API version is pinned
-to `v22.0` in the adapter, so a Meta version bump never changes what this
-install sends.
+to `v26.0` in the adapter (`FACEBOOK_GRAPH_VERSION`), so a Meta version bump
+never changes what this install sends.
+
+`first_name`, `last_name` and `picture` are default public profile fields, so
+[Connected accounts](/docs/dev/sso/connected-accounts) can import them without
+asking for anything beyond `public_profile`. The default silhouette picture
+counts as no avatar.
 
 ## Gotchas
 

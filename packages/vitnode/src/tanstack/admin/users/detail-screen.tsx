@@ -43,7 +43,7 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const permissions = useAdminStaffPermissions();
 
   return (
-    <div className="p-4">
+    <div className="p-6">
       <UserDetailContent
         canEdit={canEditAdminUser(permissions, { isAdmin: user.isAdmin })}
         onRemoveImage={async (userId, kind) => {

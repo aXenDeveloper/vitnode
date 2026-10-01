@@ -38,7 +38,7 @@ core event as for one of your own.
 
 ## Core events (`@vitnode/core`)
 
-Twelve names, all declared in `VitNodeEvents` in
+Fourteen names, all declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
 the write it describes has committed.
 
@@ -47,7 +47,9 @@ the write it describes has committed.
 | `user.created`        | `{ userId, email, name, emailVerified }` | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                            |
 | `user.updated`        | `{ userId, email, name }`                | A user is edited in the AdminCP (profile fields and/or role assignments)                             |
 | `user.deleted`        | `{ userId, email }`                      | Never - the name is declared for plugins, core has no deletion flow                                  |
-| `user.sso.linked`     | `{ userId, email, providerId }`          | A visitor proves an existing account is theirs with its password and an SSO identity is linked to it |
+| `user.sso.linked`     | `{ userId, email, providerId }`          | An SSO identity is linked to an existing account - at login with its password, or from **Settings → Connected accounts** |
+| `user.sso.unlinked`   | `{ userId, providerId }`                 | A member disconnects a provider in **Settings → Connected accounts**                                 |
+| `user.sso.profile_synced` | `{ userId, providerId, fields, trigger }` | Profile fields were copied from a provider - by **Sync now**, **Import** or an opted-in sign-in     |
 | `user.passkey.created` | `{ userId, passkeyId }`                 | A member adds a [passkey](/docs/dev/passkeys) in **Settings → Security**                              |
 | `user.passkey.updated` | `{ userId, passkeyId, name }`           | A member renames one of their passkeys                                                               |
 | `user.passkey.deleted` | `{ userId, passkeyId }`                 | A member removes one of their passkeys                                                               |
@@ -178,10 +180,16 @@ same two triggers.
 </Accordion>
 <Accordion title="user.sso.linked">
 
-Emitted by `SSOModel.link` after the `core_users_sso` row is committed - the
-moment a social identity that arrived with an already-registered email is tied
-to that account. It does not fire on the first sign-in through a provider (that
-is a `user.created`) or on a later sign-in through an identity that is already
+Emitted after the `core_users_sso` row is committed, from two places:
+
+- `SSOModel.link` - a social identity that arrived with an already-registered
+  email is tied to that account once its password checks out;
+- `SsoConnectionModel.callback` - a signed-in member connects a provider from
+  [Connected accounts](/docs/dev/sso/connected-accounts). The provider's email
+  may differ from the account's; `email` is always the VitNode account's.
+
+It does not fire on the first sign-in through a provider (that is a
+`user.created`) or on a later sign-in through an identity that is already
 linked.
 
 <TypeTable
@@ -204,6 +212,60 @@ linked.
 
 **A listener would** notify the account owner that a new sign-in method was
 added, or audit-log the link with the envelope's `actor`.
+
+</Accordion>
+<Accordion title="user.sso.unlinked">
+
+Emitted by `SsoConnectionModel.disconnect` after the connection and its profile
+sync settings are deleted. Nothing is revoked at the provider - the member still
+has to remove the app there if they want to.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the account that lost the connection.',
+      type: 'number',
+    },
+    providerId: {
+      description: "The adapter's id, e.g. 'google'.",
+      type: 'string',
+    },
+  }}
+/>
+
+**A listener would** email the member that a sign-in method was removed.
+
+</Accordion>
+<Accordion title="user.sso.profile_synced">
+
+Emitted when at least one profile field actually changed because of a provider.
+Fields that were missing, not allowed or already equal are left out, and an
+avatar that failed to download never counts. A name change also emits
+`user.updated`, and an avatar change emits `user.avatar.updated`.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the account that was updated.',
+      type: 'number',
+    },
+    providerId: {
+      description: 'The provider the values came from.',
+      type: 'string',
+    },
+    fields: {
+      description: 'The fields that changed.',
+      type: "('avatar' | 'firstName' | 'lastName')[]",
+    },
+    trigger: {
+      description:
+        "`'sync'` for Sync now in settings, `'import'` for Import, `'sign_in'` for an opted-in sign-in through the provider.",
+      type: "'import' | 'sign_in' | 'sync'",
+    },
+  }}
+/>
+
+**A listener would** refresh a search index or a cached member card.
 
 </Accordion>
 <Accordion title="user.deleted (declared, never emitted)">

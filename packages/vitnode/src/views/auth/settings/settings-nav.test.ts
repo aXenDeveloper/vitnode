@@ -14,4 +14,18 @@ describe("visibleSettingsNavItems", () => {
       visibleSettingsNavItems({ passkeys: false }).map(item => item.key),
     ).toEqual(["overview", "devices"]);
   });
+
+  it("shows Connected accounts only while an SSO provider is configured", () => {
+    expect(
+      visibleSettingsNavItems({
+        passkeys: false,
+        sso: [{ id: "google", name: "Google" }],
+      }).map(item => item.key),
+    ).toEqual(["overview", "devices", "sso"]);
+    expect(
+      visibleSettingsNavItems({ passkeys: false, sso: [] }).map(
+        item => item.key,
+      ),
+    ).toEqual(["overview", "devices"]);
+  });
 });

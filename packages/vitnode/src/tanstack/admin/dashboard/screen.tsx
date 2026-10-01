@@ -41,7 +41,7 @@ export const AdminDashboardRouteContent = ({
   vitnodeVersion,
 }: AdminDashboardRouteProps) => (
   <RouteMessages namespaces={ADMIN_DASHBOARD_NAMESPACES}>
-    <div className="p-4">
+    <div className="p-6">
       <AdminDashboardBoard
         pluginWidgets={pluginWidgets}
         vitnodeVersion={vitnodeVersion}

@@ -21,7 +21,7 @@ export const ContentAdminRouteContent = ({
   title,
 }: ContentAdminRouteProps) => (
   <RouteMessages namespaces={namespaces}>
-    <div className="p-4">
+    <div className="p-6">
       {/*
        * The content type's own heading belongs to the **list**.
        *

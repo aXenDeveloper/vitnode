@@ -7,6 +7,7 @@ import {
   setUserImage,
   zodUserImageKind,
 } from "@/api/lib/user-images";
+import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const uploadUserImageRoute = buildRoute({
@@ -80,6 +81,13 @@ export const uploadUserImageRoute = buildRoute({
       );
     }
 
+    if (kind === "avatar") {
+      await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
+        fields: ["avatar"],
+        userId: user.id,
+      });
+    }
+
     try {
       const stored = await setUserImage(c, {
         file,
@@ -88,7 +96,7 @@ export const uploadUserImageRoute = buildRoute({
         userId: user.id,
       });
 
-      return c.json(stored, 200);
+      return c.json({ url: stored.url }, 200);
     } catch (error) {
       if (error instanceof HTTPException && error.status === 400) {
         return c.json({ error: error.message }, 400);

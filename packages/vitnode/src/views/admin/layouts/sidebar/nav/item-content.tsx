@@ -8,6 +8,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -39,7 +46,7 @@ export const ItemNavAdminContent = ({
   isOpenInNewTab,
   pathname,
 }: ItemNavAdminContentProps) => {
-  const { toggleSidebar } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isMobile = useIsMobile();
   const { activeChild, hasActiveChild, isActive } = navItemActivity(pathname, {
     href,
@@ -82,6 +89,45 @@ export const ItemNavAdminContent = ({
         >
           {content}
         </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
+
+  if (state === "collapsed" && !isMobile) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <SidebarMenuButton
+            isActive={isActive || hasActiveChild}
+            render={<DropdownMenuTrigger />}
+            tooltip={title}
+          >
+            {content}
+          </SidebarMenuButton>
+          <DropdownMenuContent
+            align="start"
+            className="w-auto min-w-48"
+            side="right"
+            sideOffset={8}
+          >
+            <DropdownMenuLabel>{title}</DropdownMenuLabel>
+            {items.map((item: AdminNavSubItem) => (
+              <DropdownMenuItem
+                className="data-current:bg-accent data-current:font-medium"
+                data-current={item.href === activeChild || undefined}
+                key={item.href}
+                render={
+                  <AdminLink
+                    href={item.href}
+                    {...externalProps(item.isOpenInNewTab)}
+                  />
+                }
+              >
+                {item.title}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarMenuItem>
     );
   }

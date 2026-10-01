@@ -51,6 +51,7 @@ import {
 } from "./tanstack/search/namespaces";
 import { normalizeSearchRouteSearch } from "./tanstack/search/route-search";
 import { SETTINGS_NAMESPACES } from "./tanstack/settings/route";
+import { normalizeSsoSettingsSearch } from "./tanstack/sso-connections/route-search";
 
 /**
  * Every URL `@vitnode/core` owns, as the same kind of declaration a plugin
@@ -142,6 +143,12 @@ export const routes = defineRoutes([
       page("devices", {
         component: lazy(() => import("./pages/settings/devices")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
+
+      page("sso", {
+        component: lazy(() => import("./pages/settings/sso")),
+        pendingComponent: FormPendingSkeleton,
+        search: normalizeSsoSettingsSearch,
       }),
     ],
   }),

@@ -38,7 +38,7 @@ export const PasskeysContent = ({
       aria-labelledby={`${hintId}-title`}
       className="flex flex-col gap-2"
     >
-      <div className="flex flex-col gap-1 px-4">
+      <div className="flex flex-col gap-1">
         <h2
           className="text-foreground text-base font-semibold text-balance"
           id={`${hintId}-title`}

@@ -82,7 +82,9 @@ For example: `https://your-domain.com/login/sso/google`.
 When a user signs in via SSO:
 1. **Known Identity**: The provider account was linked before, so the user is signed straight into it.
 2. **Existing Email Match**: An account already uses that address. The visitor is asked for that account's password; once it checks out, the provider identity is linked to the account and they are signed in. From then on that provider signs them straight in (case 1). A social login can never take over an account on its own - the password is what proves ownership.
-3. **New Visitor**: A new user is created with their social display name, email, and avatar.
+3. **New Visitor**: A new user is created with their social display name and email. Avatar and real name stay empty until the member imports them from [Connected accounts](/docs/dev/sso/connected-accounts).
+
+Signed-in members can also connect more providers, import their avatar and name, and disconnect accounts in **Settings → Connected accounts** - see [Connected Accounts](/docs/dev/sso/connected-accounts).
 
 ### SSO confirms the email
 

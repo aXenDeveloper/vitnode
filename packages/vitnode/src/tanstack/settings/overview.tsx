@@ -5,6 +5,7 @@ import type { UpdatePersonalInformation } from "@/views/auth/settings/overview/p
 
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
+import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 
 import { invalidateSession, sessionQueryOptions } from "../auth/session-query";
@@ -31,7 +32,13 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
       const result = await updatePersonalInformationInBrowser(input);
 
       if (result.data) {
-        await Promise.all([invalidateSession(queryClient), refresh()]);
+        await Promise.all([
+          invalidateSession(queryClient),
+          queryClient.invalidateQueries({
+            queryKey: SSO_CONNECTIONS_IDENTITY_ROOT,
+          }),
+          refresh(),
+        ]);
       }
 
       return result;

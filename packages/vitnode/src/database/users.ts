@@ -1,10 +1,17 @@
+import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   camelCase,
+  check,
+  foreignKey,
   index,
   primaryKey,
+  unique,
 } from "drizzle-orm/pg-core";
 
+import type { SsoOperationIntent, SsoProfileField } from "@/lib/sso-profile";
+
+import { SSO_OPERATION_INTENTS, SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
 import {
   USER_FIRST_NAME_MAX_LENGTH,
   USER_HEADLINE_MAX_LENGTH,
@@ -98,6 +105,14 @@ export const core_users_sso = camelCase.table.withRLS(
       .notNull(),
     providerId: t.varchar({ length: 255 }).notNull(),
     providerAccountId: t.varchar({ length: 255 }).notNull(),
+    providerEmail: t.varchar({ length: 255 }),
+    providerUsername: t.varchar({ length: 255 }),
+    syncOnSignIn: t.boolean().notNull().default(false),
+    avatarSourceUrl: t.varchar({ length: 2048 }),
+    avatarSha256: t.varchar({ length: 64 }),
+    avatarFileId: t.integer().references((): AnyPgColumn => core_files.id, {
+      onDelete: "set null",
+    }),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t
       .timestamp()
@@ -105,7 +120,81 @@ export const core_users_sso = camelCase.table.withRLS(
       .defaultNow()
       .$onUpdate(() => new Date()),
   }),
-  t => [index("core_users_sso_user_id_idx").on(t.userId)],
+  t => [
+    index("core_users_sso_user_id_idx").on(t.userId),
+    unique("core_users_sso_provider_account_key").on(
+      t.providerId,
+      t.providerAccountId,
+    ),
+    unique("core_users_sso_user_provider_key").on(t.userId, t.providerId),
+  ],
+);
+
+const inList = (values: readonly string[]) =>
+  sql.raw(values.map(value => `'${value}'`).join(", "));
+
+export const core_users_sso_profile_sources = camelCase.table.withRLS(
+  "core_users_sso_profile_sources",
+  t => ({
+    userId: t
+      .integer()
+      .references(() => core_users.id, { onDelete: "cascade" })
+      .notNull(),
+    field: t.varchar({ length: 32 }).$type<SsoProfileField>().notNull(),
+    providerId: t.varchar({ length: 255 }).notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [
+    primaryKey({ columns: [t.userId, t.field] }),
+    foreignKey({
+      name: "core_users_sso_profile_sources_connection_fkey",
+      columns: [t.userId, t.providerId],
+      foreignColumns: [core_users_sso.userId, core_users_sso.providerId],
+    }).onDelete("cascade"),
+    check(
+      "core_users_sso_profile_sources_field_check",
+      sql`${t.field} IN (${inList(SSO_PROFILE_FIELDS)})`,
+    ),
+  ],
+);
+
+export const core_users_sso_operations = camelCase.table.withRLS(
+  "core_users_sso_operations",
+  t => ({
+    id: t.serial().primaryKey(),
+    tokenHash: t.varchar({ length: 64 }).unique(),
+    userId: t
+      .integer()
+      .references(() => core_users.id, { onDelete: "cascade" })
+      .notNull(),
+    providerId: t.varchar({ length: 255 }).notNull(),
+    intent: t.varchar({ length: 16 }).$type<SsoOperationIntent>().notNull(),
+    fields: t
+      .varchar({ length: 32 })
+      .$type<SsoProfileField>()
+      .array()
+      .notNull()
+      .default(sql`'{}'::varchar[]`),
+    providerAccountId: t.varchar({ length: 255 }),
+    preview: t.jsonb().$type<{
+      avatarUrl: null | string;
+      firstName: null | string;
+      lastName: null | string;
+    }>(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    expiresAt: t.timestamp().notNull(),
+  }),
+  t => [
+    index("core_users_sso_operations_user_provider_idx").on(
+      t.userId,
+      t.providerId,
+    ),
+    index("core_users_sso_operations_expires_at_idx").on(t.expiresAt),
+    check(
+      "core_users_sso_operations_intent_check",
+      sql`${t.intent} IN (${inList(SSO_OPERATION_INTENTS)})`,
+    ),
+  ],
 );
 
 export const core_users_confirm_emails = camelCase.table.withRLS(

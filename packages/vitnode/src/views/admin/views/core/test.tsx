@@ -72,7 +72,7 @@ export const TestView = () => {
   });
 
   return (
-    <div className="p-4">
+    <div className="p-6">
       <Card className="p-6">
         <Editor value="<p>Hello World! 🌎️</p>" />
         <EditorContent content="<h2>Test header v2</h2><p>Hello World! 🌎️das d alfjnasjf kas djksa fkja sfj AFKJ afj AFJKNAJSKGNSAKFLMSAKLDNASFJNKJnjkdasnfjnas fjknsa fjknsafkjn askjfnkajsgnasjkfnskjanf kjans fjknasjkf naskjf naskjnf kjasn kfjans fjkas kfjnas jknfkasjn fkajsnf jnasfjkangaskjfnajsdnlaskmcdasjfnjskafnsajknfcksajdnasjkfnjkasn cfjksanfjckasnjcnaskjcnaksjcnaksjcnakjcnasjkn</p>" />

@@ -46,7 +46,7 @@ export const AdminCronRouteContent = ({
 
   return (
     <RouteMessages namespaces={ADMIN_CRON_NAMESPACES}>
-      <div className="p-4">
+      <div className="p-6">
         <PageTitle desc={description} h1={title} />
 
         <DataTableNavigationProvider value={navigation}>

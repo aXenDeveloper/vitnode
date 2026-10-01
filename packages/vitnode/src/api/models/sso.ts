@@ -5,7 +5,11 @@ import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import crypto from "node:crypto";
 
+import type { EnvVitNode } from "@/api/middlewares/global.middleware";
+import type { SsoProfileField } from "@/lib/sso-profile";
+
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
+import { isUniqueViolation } from "@/api/lib/db-errors";
 import { isPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { ensureServerSecret } from "@/api/lib/server-secret";
 import { ssoConfirmsEmail } from "@/api/lib/sso-email-confirmation";
@@ -20,12 +24,22 @@ import { normalizeEmailAddress } from "@/lib/email-canonical";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 
 import { PasswordModel } from "./password";
+import { SsoConnectionModel, ssoIdentityOf } from "./sso-connection";
 import {
   createSsoLinkToken,
   SSO_LINK_SECRET_NAME,
   verifySsoLinkToken,
 } from "./sso-link-token";
 import { UserModel } from "./user";
+
+export interface SSOProviderUser {
+  avatarUrl?: null | string;
+  email: string;
+  firstName?: null | string;
+  id: string;
+  lastName?: null | string;
+  username: string;
+}
 
 export interface SSOApiPlugin {
   fetchToken: (
@@ -34,11 +48,12 @@ export interface SSOApiPlugin {
   fetchUser: (args: {
     access_token: string;
     token_type: string;
-  }) => Promise<{ email: string; id: string; username: string }>;
+  }) => Promise<SSOProviderUser>;
   getUrl: (props: { state: string }) => string;
   icon?: string;
   id: string;
   name: string;
+  profileFields?: readonly SsoProfileField[];
 }
 
 export type SSOCallbackOutcome =
@@ -54,12 +69,12 @@ export const getRedirectUri = (code: string) =>
   new URL(`${CONFIG.web.href}login/sso/${code}`).toString();
 
 export class SSOModel {
-  constructor(c: Context) {
+  constructor(c: Context<EnvVitNode>) {
     this.c = c;
     this.plugins = c.get("core").authorization.ssoAdapters;
   }
 
-  private readonly c: Context;
+  private readonly c: Context<EnvVitNode>;
   private readonly plugins: SSOApiPlugin[];
 
   private readonly signUpUser = async ({
@@ -85,11 +100,16 @@ export class SSOModel {
       },
       c,
     );
-    await c.get("db").insert(core_users_sso).values({
-      userId: data.id,
-      providerId: providerId,
-      providerAccountId: user.id,
-    });
+    await c
+      .get("db")
+      .insert(core_users_sso)
+      .values({
+        userId: data.id,
+        providerId: providerId,
+        providerAccountId: user.id,
+        providerEmail: user.email,
+        providerUsername: user.username.slice(0, 255),
+      });
 
     return { userId: data.id };
   };
@@ -125,11 +145,12 @@ export class SSOModel {
     const ssoToken = await provider.fetchToken(code);
     const userFromProvider = await provider.fetchUser(ssoToken);
     const userFromSSO = {
-      ...userFromProvider,
       email: normalizeEmailAddress(userFromProvider.email),
+      id: userFromProvider.id,
+      username: userFromProvider.username,
     };
 
-    return await this.c.get("db").transaction(async tx => {
+    const outcome = await this.c.get("db").transaction(async tx => {
       const [dataSSOFromDb] = await tx
         .select({
           userId: core_users_sso.userId,
@@ -168,14 +189,14 @@ export class SSOModel {
             c: this.c,
           });
 
-          return { kind: "signed_in", userId: signUpUser.userId };
+          return { kind: "signed_in", userId: signUpUser.userId } as const;
         }
 
         return {
           email: userWithEmail.email,
           hasPassword:
             isPasswordSignInEnabled(this.c) && userWithEmail.password !== null,
-          kind: "link_required",
+          kind: "link_required" as const,
           linkToken: await this.mintLinkToken({
             email: userFromSSO.email,
             providerAccountId: userFromSSO.id,
@@ -198,8 +219,20 @@ export class SSOModel {
           .where(eq(core_users.id, dataSSOFromDb.userId));
       }
 
-      return { kind: "signed_in", userId: dataSSOFromDb.userId };
+      return { kind: "returning", userId: dataSSOFromDb.userId } as const;
     });
+
+    if (outcome.kind === "returning") {
+      await new SsoConnectionModel(this.c).afterSignIn({
+        identity: ssoIdentityOf(provider, userFromProvider),
+        providerId,
+        userId: outcome.userId,
+      });
+
+      return { kind: "signed_in", userId: outcome.userId };
+    }
+
+    return outcome;
   }
 
   async encryptState() {
@@ -279,45 +312,74 @@ export class SSOModel {
       throw new HTTPException(403);
     }
 
-    await this.c.get("db").transaction(async tx => {
-      const [existing] = await tx
-        .select({ userId: core_users_sso.userId })
-        .from(core_users_sso)
-        .where(
-          and(
-            eq(core_users_sso.providerId, providerId),
-            eq(core_users_sso.providerAccountId, offer.providerAccountId),
-          ),
-        )
-        .limit(1);
+    await this.c
+      .get("db")
+      .transaction(async tx => {
+        const [existing] = await tx
+          .select({ userId: core_users_sso.userId })
+          .from(core_users_sso)
+          .where(
+            and(
+              eq(core_users_sso.providerId, providerId),
+              eq(core_users_sso.providerAccountId, offer.providerAccountId),
+            ),
+          )
+          .limit(1);
 
-      if (existing && existing.userId !== user.id) {
-        throw new HTTPException(409, {
-          message: "Provider account already linked",
-        });
-      }
+        if (existing && existing.userId !== user.id) {
+          throw new HTTPException(409, {
+            message: "Provider account already linked",
+          });
+        }
 
-      if (!existing) {
-        await tx.insert(core_users_sso).values({
-          userId: user.id,
-          providerId,
-          providerAccountId: offer.providerAccountId,
-        });
-      }
+        if (!existing) {
+          const [otherAccount] = await tx
+            .select({ userId: core_users_sso.userId })
+            .from(core_users_sso)
+            .where(
+              and(
+                eq(core_users_sso.userId, user.id),
+                eq(core_users_sso.providerId, providerId),
+              ),
+            )
+            .limit(1);
 
-      if (
-        ssoConfirmsEmail({
-          accountEmail: user.email,
-          emailVerified: user.emailVerified,
-          providerEmail: offer.email,
-        })
-      ) {
-        await tx
-          .update(core_users)
-          .set({ emailVerified: true })
-          .where(eq(core_users.id, user.id));
-      }
-    });
+          if (otherAccount) {
+            throw new HTTPException(409, {
+              message: "Another account from this provider is already linked",
+            });
+          }
+
+          await tx.insert(core_users_sso).values({
+            userId: user.id,
+            providerId,
+            providerAccountId: offer.providerAccountId,
+            providerEmail: offer.email,
+          });
+        }
+
+        if (
+          ssoConfirmsEmail({
+            accountEmail: user.email,
+            emailVerified: user.emailVerified,
+            providerEmail: offer.email,
+          })
+        ) {
+          await tx
+            .update(core_users)
+            .set({ emailVerified: true })
+            .where(eq(core_users.id, user.id));
+        }
+      })
+      .catch((error: unknown) => {
+        if (isUniqueViolation(error)) {
+          throw new HTTPException(409, {
+            message: "Provider account already linked",
+          });
+        }
+
+        throw error;
+      });
 
     await this.c.get("events").emit("user.sso.linked", {
       email: user.email,

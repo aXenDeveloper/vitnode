@@ -6,7 +6,7 @@ const FACT_IDS = Array.from({ length: 3 }, (_, i) => `s-fact-${i}`);
 export const DevicesListSkeleton = () => (
   <div aria-hidden className="flex flex-col gap-2">
     <Skeleton className="ms-4 h-5 w-28" />
-    <div className="bg-card ring-foreground/10 divide-y overflow-hidden rounded-xl shadow-xs ring-1">
+    <div className="bg-card ring-foreground/10 divide-y overflow-hidden rounded-md shadow-xs ring-1">
       {ROW_IDS.map(id => (
         <div className="flex items-start gap-3 px-4 py-3" key={id}>
           <Skeleton className="size-10 shrink-0 rounded-lg" />

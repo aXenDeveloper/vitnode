@@ -1,0 +1,1 @@
+ALTER TABLE "core_users_sso_operations" DROP CONSTRAINT "core_users_sso_operations_intent_check", ADD CONSTRAINT "core_users_sso_operations_intent_check" CHECK ("intent" IN ('link', 'import', 'sync', 'preview'));

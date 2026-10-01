@@ -5,6 +5,8 @@
   "pages": [
     "index",
     "icons",
+    "connected-accounts",
+    "using-connected-accounts",
     "---Providers---",
     "google",
     "discord",

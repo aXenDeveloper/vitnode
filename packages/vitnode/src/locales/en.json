@@ -632,6 +632,9 @@
               "desc": "Start the sign-in again and connect the account within ten minutes."
             }
           }
+        },
+        "connection": {
+          "pending": "Finishing up with {provider}…"
         }
       },
       "sign_up": {
@@ -762,7 +765,8 @@
         "nav": {
           "overview": "Overview",
           "devices": "Devices",
-          "security": "Security"
+          "security": "Security",
+          "sso": "Connected accounts"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -876,6 +880,154 @@
               "title": "Open the AdminCP first",
               "desc": "Your account has AdminCP access, so adding a passkey needs one extra check. Sign in to the AdminCP with your password in this browser, then try again."
             }
+          }
+        },
+        "sso": {
+          "desc": "Sign in with accounts you already have, and choose which profile fields they keep up to date. Your email address here never changes.",
+          "empty": "No sign-in providers are set up on this site yet.",
+          "account_unknown": "No email shared",
+          "connected_at": "Connected",
+          "unavailable_desc": "No longer offered on this site",
+          "status": {
+            "not_connected": "Not connected"
+          },
+          "connect": {
+            "action": "Connect",
+            "aria": "Connect {provider}",
+            "success": "Account connected",
+            "success_desc": "You can now sign in with {provider}. Your profile hasn't changed."
+          },
+          "disconnect": {
+            "action": "Disconnect",
+            "title": "Disconnect {provider}?",
+            "desc": "You won't be able to sign in with this {provider} account anymore, and its sync settings are removed. Your avatar and name stay as they are.",
+            "provider_note": "This only removes the connection here. {provider} keeps listing this site as a connected app until you remove it there.",
+            "confirm": "Disconnect",
+            "success": "Account disconnected",
+            "success_desc": "{provider} is no longer connected to your account."
+          },
+          "import": {
+            "aria": "{action} from {provider}",
+            "title": "Import from {provider}",
+            "desc": "Pick what to bring over. You'll confirm it's you at {provider}, then review the values before anything changes.",
+            "fields_legend": "Fields to import",
+            "redirect_note": "You'll hop over to {provider} and come right back.",
+            "continue": "Continue to {provider}",
+            "pick_one": "Pick at least one field to import.",
+            "action_all": "Import avatar and name",
+            "action_avatar": "Import avatar",
+            "action_name": "Import name"
+          },
+          "preview": {
+            "title": "Review your import from {provider}",
+            "desc": "Nothing has changed yet. Choose which values to use.",
+            "current": "Now",
+            "incoming": "From {provider}",
+            "empty_value": "Not set",
+            "missing": "{provider} didn't share this, so yours stays as it is.",
+            "not_allowed": "Your role can't change this field.",
+            "sourced_elsewhere": "Currently updates from {source} on sign-in. Importing it here switches it to manual.",
+            "nothing": "{provider} didn't share any of the fields you picked. Nothing will change.",
+            "apply": "Import selected",
+            "discard": "Discard",
+            "loading": "Loading the import preview",
+            "success": "Profile updated",
+            "success_desc": "Imported from {provider}: {fields}.",
+            "unchanged": "Everything already matched, so nothing changed.",
+            "avatar_failed": "The avatar couldn't be downloaded, so your current one stays.",
+            "manual_note": "Now managed manually: {fields}."
+          },
+          "fields": {
+            "avatar": "Avatar",
+            "avatar_desc": "Your profile picture, copied into this site.",
+            "firstName": "First name",
+            "firstName_desc": "Importing it doesn't turn on “Show my real name”.",
+            "lastName": "Last name",
+            "lastName_desc": "Importing it doesn't turn on “Show my real name”."
+          },
+          "sync": {
+            "manual_edit_note": "Editing a field yourself switches it back to manual, so a sync never overwrites it.",
+            "footer": "Sync now confirms it's you at the provider and brings you straight back. You stay signed in.",
+            "on_sign_in": "Also update from {provider} when I sign in with it",
+            "on_sign_in_short": "On sign-in",
+            "sync_now": "Sync now",
+            "sync_now_aria": "Sync now from {provider}",
+            "synced": "Profile synced",
+            "synced_desc": "Updated from {provider}: {fields}.",
+            "up_to_date": "Everything already matches {provider}, so nothing changed."
+          },
+          "errors": {
+            "access_denied": {
+              "title": "Connection cancelled",
+              "desc": "{provider} didn't give permission, so nothing changed."
+            },
+            "account_taken": {
+              "title": "Already used by another member",
+              "desc": "This {provider} account is connected to a different account here. Sign in with it and disconnect it there first."
+            },
+            "provider_already_connected": {
+              "title": "Already connected",
+              "desc": "You already have a {provider} account connected. Disconnect it first to use a different one."
+            },
+            "account_mismatch": {
+              "title": "That's a different account",
+              "desc": "You signed in to a different {provider} account than the connected one, so nothing was imported."
+            },
+            "invalid_state": {
+              "title": "This request has expired",
+              "desc": "Start again from Connected accounts. Each request works once, within ten minutes."
+            },
+            "provider_error": {
+              "title": "{provider} didn't answer",
+              "desc": "We couldn't read your {provider} account. Please try again in a moment."
+            },
+            "provider_not_found": {
+              "title": "Provider unavailable",
+              "desc": "This sign-in provider isn't available anymore."
+            },
+            "not_connected": {
+              "title": "Not connected",
+              "desc": "This account isn't connected anymore. The list is refreshed."
+            },
+            "invalid_fields": {
+              "title": "Nothing to import",
+              "desc": "Pick at least one field this provider can share."
+            },
+            "invalid_source": {
+              "title": "Couldn't save",
+              "desc": "One of the chosen accounts isn't connected anymore. The list is refreshed."
+            },
+            "preview_not_found": {
+              "title": "This import has expired",
+              "desc": "Start it again from Connected accounts."
+            },
+            "unauthenticated": {
+              "title": "Sign in again",
+              "desc": "Your session ended before {provider} finished. Sign in and try again."
+            },
+            "last_sign_in_method": {
+              "title": "Keep a way to sign in",
+              "desc": "This is the last way into your account.",
+              "hint_password": "Set a password with “Forgot password?” on the login page.",
+              "hint_passkey": "Add a passkey under Security.",
+              "hint_connect_other": "Or connect another account here first."
+            },
+            "nothing_to_sync": {
+              "title": "Nothing to sync",
+              "desc": "Check at least one field to keep up to date from {provider}."
+            }
+          },
+          "value_not_set": "Not set",
+          "groups": {
+            "accounts": "Sign-in accounts",
+            "profile": "Profile",
+            "sync": "Sync"
+          },
+          "source": {
+            "manual": "Manual",
+            "from": "From {provider}",
+            "saved_from": "{field} now follows {provider}",
+            "saved_manual": "{field} is now manual"
           }
         }
       }

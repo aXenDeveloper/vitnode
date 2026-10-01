@@ -9,6 +9,22 @@ import { getRedirectUri } from "@/api/models/sso";
 
 import { DISCORD_ICON } from "./icons";
 
+const DISCORD_AVATAR_HASH = /^(?:a_)?[\da-f]{16,64}$/i;
+
+const discordAvatarUrl = ({
+  avatar,
+  id,
+}: {
+  avatar?: null | string;
+  id: string;
+}): null | string => {
+  if (!(avatar && DISCORD_AVATAR_HASH.test(avatar) && /^\d+$/.test(id))) {
+    return null;
+  }
+
+  return `https://cdn.discordapp.com/avatars/${id}/${avatar}.png?size=512`;
+};
+
 export const DiscordSSOApiPlugin = ({
   clientId = "",
   clientSecret = "",
@@ -23,6 +39,7 @@ export const DiscordSSOApiPlugin = ({
     email: z.string(),
     username: z.string(),
     verified: z.boolean(),
+    avatar: z.string().nullable().optional(),
   });
   const tokenSchema = z.object({
     access_token: z.string(),
@@ -91,7 +108,12 @@ export const DiscordSSOApiPlugin = ({
         });
       }
 
-      return data;
+      return {
+        avatarUrl: discordAvatarUrl(data),
+        email: data.email,
+        id: data.id,
+        username: data.username,
+      };
     },
     getUrl: ({ state }) => {
       if (!clientId) {
@@ -110,5 +132,6 @@ export const DiscordSSOApiPlugin = ({
     icon: DISCORD_ICON,
     id,
     name: "Discord",
+    profileFields: ["avatar"],
   };
 };
