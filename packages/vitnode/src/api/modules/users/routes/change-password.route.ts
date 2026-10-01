@@ -5,7 +5,7 @@ import { z } from "zod";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { ForgotPasswordTokenModel, PasswordModel } from "@/api/models/password";
-import { revokeAllSessionsForUser } from "@/api/models/session-revoke";
+import { revokeSessions } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 
@@ -92,7 +92,7 @@ export const changePasswordRoute = buildRoute({
     // is doing it because the old credential is not trusted any more, and every
     // session opened with it is exactly as untrusted - including the attacker's,
     // which would otherwise outlive the reset by up to ninety days.
-    await revokeAllSessionsForUser(c, userId);
+    await revokeSessions(c, { userId });
 
     return c.text("Password changed", 201);
   },

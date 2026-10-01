@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 
 import type { UserImageEditor } from "@/views/profile/images/types";
 
+import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import {
   removeOwnUserImage,
   uploadOwnUserImage,
@@ -28,7 +29,13 @@ export const useOwnUserImageEditor = ({
   });
 
   const settle = React.useCallback(async () => {
-    await Promise.all([invalidateSession(queryClient), refresh?.()]);
+    await Promise.all([
+      invalidateSession(queryClient),
+      queryClient.invalidateQueries({
+        queryKey: SSO_CONNECTIONS_IDENTITY_ROOT,
+      }),
+      refresh?.(),
+    ]);
   }, [queryClient, refresh]);
 
   return React.useMemo(() => {

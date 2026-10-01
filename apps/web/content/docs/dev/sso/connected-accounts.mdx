@@ -1,0 +1,132 @@
+---
+title: Connected Accounts
+description: Let members connect Google, Discord, Facebook or custom SSO accounts from Settings, import their avatar and name, and keep them in sync on sign-in.
+icon: Link
+---
+
+import { TypeTable } from "fumadocs-ui/components/type-table"
+
+**Settings → Connected accounts** (`/settings/sso`) is where a signed-in member manages their SSO accounts. It shows up in the settings menu as soon as at least one [SSO adapter](/docs/dev/sso) is configured - no extra setup, no extra redirect URIs.
+
+// Image prompt: A settings page titled "Connected accounts" with three grouped lists - "Sign-in accounts" (Google with an email and "Connected Mar 14", Discord, Facebook with a Connect button), "Profile" (Avatar, First name, Last name rows, each with its current value and a "From Google" / "Manual" dropdown) and "Sync" (Google · First name, an "On sign-in" switch and a "Sync now" button), light theme, blue accents.
+
+The page uses the same grouped rows as the rest of Settings, in three groups:
+
+- **Sign-in accounts** - every configured provider with the connected account and date. **Connect**, **Import avatar and name** (a one-time copy after a preview, labelled with what the provider shares) and **Disconnect** live here.
+- **Profile** - shown once a connected account can supply something. One row per field it can supply: the value the member has now, and a dropdown choosing where it comes from (**Manual**, or a connected account that can supply it). Changes save immediately.
+- **Sync** - shown once a field follows an account. One row per account with the fields it covers, an **On sign-in** switch and **Sync now**, which confirms it's the member at the provider and updates those fields right away. They stay signed in; no sign-out, no new session.
+
+Only the avatar, first name and last name are ever imported. Email, username, display name, language, birthday, phone and headline are never touched. A provider's email is shown as connection info and nothing more.
+
+## How connecting works
+
+1. The member selects **Connect**. `POST /users/sso/connections/{providerId}/authorize` stores a short-lived, single-use **state** bound to that member, that provider and the `link` intent - only its SHA-256 hash is kept, in `core_users_sso_operations`.
+2. The browser goes to the provider and comes back to the usual callback, `/login/sso/{providerId}`. That page recognises a settings state and calls the authenticated `POST /users/sso/connections/{providerId}/callback` instead of the public sign-in.
+3. The state is spent the moment it is looked up - even a failed attempt burns it - and it must still be fresh (ten minutes), for the same provider, the same intent and the **currently signed-in member**. Anything else is a `400 invalid_state`.
+4. The provider account is linked to the member. Accounts are never merged by email.
+5. The member lands back on `/settings/sso` with a toast.
+
+A provider account already linked to someone else answers `409 account_taken`. A member can have **one account per provider**; a second one answers `409 provider_already_connected`. Both rules are unique constraints on `core_users_sso`, so two racing requests can't sneak past them.
+
+Connecting never creates a session - public or AdminCP - and never changes the profile.
+
+<Callout type="info">
+  The public sign-in and the login-time "Connect *Provider* to your account"
+  password flow work exactly as before. See [How Accounts Link](/docs/dev/sso#how-accounts-link).
+</Callout>
+
+## Disconnecting
+
+`DELETE /users/sso/connections/{providerId}` removes the connection and its sync settings (the profile sources cascade). Values already imported stay on the profile.
+
+It refuses with `409 last_sign_in_method` when nothing else could sign the member in. What counts:
+
+| Method             | Counts when                                                        |
+| ------------------ | ------------------------------------------------------------------ |
+| Password           | password sign-in is enabled **and** the member has a password      |
+| Passkeys           | passkeys are enabled **and** the member has at least one           |
+| Other SSO accounts | the provider is still configured in `ssoAdapters`                  |
+
+The check and the delete run in one transaction that locks the member's row - the same lock passkey removal takes - so two parallel requests can't remove the last two methods at once.
+
+Disconnecting doesn't revoke anything at the provider. The page says so, and members remove the app in their provider account themselves.
+
+## Import now
+
+1. The member picks fields the adapter supports and selects **Continue**. The state now also carries the `import` intent and the chosen fields.
+2. After the provider round trip, VitNode checks it's the **same provider account** that is connected (`409 account_mismatch` otherwise) and stores a ten-minute preview of just those fields.
+3. `/settings/sso?import={providerId}` shows current values next to the new ones. The member confirms a subset, and `POST .../{providerId}/import` applies it. The preview works once.
+
+A fresh round trip every time means no provider tokens are ever stored.
+
+## Sync now
+
+Each field - `avatar`, `firstName`, `lastName` - has at most one source (`core_users_sso_profile_sources`, primary key `userId + field`). Different fields can use different providers. Picking a source in a field's dropdown moves the field to that account.
+
+**Sync now** starts a round trip with the `sync` intent. The server - not the browser - decides which fields it covers: the ones sourced from that provider when the round trip starts (`400 nothing_to_sync` if there are none). On the way back it checks it's the same provider account (`409 account_mismatch`), re-reads the sources so a field made manual in the meantime is skipped, applies the values and answers with a per-field result. The member stays on `/settings/sso` with a toast, still signed in. No token is stored, and no session is created.
+
+## Sync on sign-in
+
+When the **On sign-in** switch is on, every sign-in through that provider refreshes the same fields automatically. It's optional - Sync now works without it. There's no polling and no background job.
+
+The rules that keep this predictable:
+
+- Connecting an account doesn't copy anything. Existing connections start as manual with sign-in updates off.
+- A missing or empty value from the provider never erases a local one.
+- Sync now and sign-in updates only ever touch fields sourced from that provider.
+- Editing a field yourself - `PATCH /users/me`, an avatar upload or removal, or staff changing the avatar in the AdminCP - switches that field back to manual.
+- Importing a field that syncs from a different provider switches it to manual too, and the response lists it in `manualFields`.
+- Role limits still apply: personal information rules for names, avatar upload permission and size for the avatar. Importing names never turns on `showRealName`.
+- Anything that goes wrong during a sign-in sync is swallowed - the member is still signed in.
+
+## Avatars
+
+Imported avatars go through the normal avatar pipeline (`setUserImage`), so storage, image processing, file ownership and cleanup of the previous avatar are the same as an upload. The download (`downloadRemoteImage`) only speaks HTTPS, resolves the host and refuses private, loopback, link-local and reserved addresses - again at connect time, and again after every redirect (three at most) - caps the size at the role's limit (5 MB hard cap), and trusts the bytes, not the `Content-Type`: only real JPEG, PNG or WebP files under 8192 × 8192 pass.
+
+The URL and a SHA-256 of the last imported picture are kept on the connection, so the same avatar isn't downloaded again while it's still shown, or stored twice when a provider hands out a new URL for the same image. A failed download leaves the current avatar alone.
+
+## API
+
+All routes live under `users/sso/connections`, need a signed-in member, and use the public session only.
+
+| Method   | Path                      | Does                                      |
+| -------- | ------------------------- | ----------------------------------------- |
+| `GET`    | `/`                       | Providers, connections, sources, sign-in summary |
+| `PUT`    | `/preferences`            | Field sources and sync toggles            |
+| `POST`   | `/{providerId}/authorize` | Starts a `link`, `import` or `sync` round trip |
+| `POST`   | `/{providerId}/callback`  | Finishes it (`sync` answers with `results`) |
+| `GET`    | `/{providerId}/import`    | The pending import preview                |
+| `POST`   | `/{providerId}/import`    | Applies selected preview fields           |
+| `DELETE` | `/{providerId}/import`    | Discards the preview                      |
+| `DELETE` | `/{providerId}`           | Disconnects                               |
+
+```ts title="Calling it from your own UI"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
+
+const res = await fetcher({
+  plugin: "@vitnode/core",
+  method: "get",
+  module: "users/sso/connections",
+  path: "/",
+})
+```
+
+Mutations take JSON bodies, which the browser can't send cross-site without a CORS preflight, on top of the API's CSRF middleware. Provider tokens never leave the server and never reach logs or events.
+
+## Events
+
+- [`user.sso.linked`](/docs/dev/events/built-in-events) - a provider was connected.
+- [`user.sso.unlinked`](/docs/dev/events/built-in-events) - a provider was disconnected.
+- [`user.sso.profile_synced`](/docs/dev/events/built-in-events) - profile fields changed because of a provider.
+
+## Adapter support
+
+Which fields a provider can supply comes from the adapter's `profileFields`. The page tells "this provider can't provide it" apart from "this provider didn't send it this time".
+
+| Adapter  | Avatar | First name | Last name |
+| -------- | ------ | ---------- | --------- |
+| Google   | ✓      | ✓          | ✓         |
+| Discord  | ✓      | -          | -         |
+| Facebook | ✓      | ✓          | ✓         |
+
+Discord has no real-name fields, and VitNode never guesses a first and last name from a username or a full name. For your own provider, see [Custom SSO Adapter](/docs/dev/sso/custom-adapter#profile-data).

@@ -13,6 +13,11 @@ import {
   passkeysQueryKey,
 } from "@/views/auth/settings/passkeys/passkeys-query";
 import {
+  SSO_CONNECTIONS_IDENTITY_ROOT,
+  ssoConnectionsQueryKey,
+  ssoImportPreviewQueryKey,
+} from "@/views/auth/settings/sso/sso-connections-query";
+import {
   MY_FILES_IDENTITY_ROOT,
   myFilesQueryKey,
   myFilesQueryRoot,
@@ -39,6 +44,9 @@ const ALICE_DEVICES = [...devicesQueryKey(ALICE)];
 const BOB_DEVICES = [...devicesQueryKey(BOB)];
 const ALICE_PASSKEYS = [...passkeysQueryKey(ALICE)];
 const BOB_PASSKEYS = [...passkeysQueryKey(BOB)];
+const ALICE_SSO = [...ssoConnectionsQueryKey(ALICE)];
+const ALICE_SSO_PREVIEW = [...ssoImportPreviewQueryKey(ALICE, "google")];
+const BOB_SSO = [...ssoConnectionsQueryKey(BOB)];
 
 const SESSION = [...SESSION_QUERY_KEY];
 const INTL = ["vitnode", "intl", "en", ["core.global"]];
@@ -58,6 +66,9 @@ const seeded = (): QueryClient => {
     BOB_DEVICES,
     ALICE_PASSKEYS,
     BOB_PASSKEYS,
+    ALICE_SSO,
+    ALICE_SSO_PREVIEW,
+    BOB_SSO,
     SESSION,
     INTL,
     MIDDLEWARE,
@@ -100,6 +111,13 @@ describe("the identity roots prefix the keys they collect", () => {
 
   it("covers every visitor's passkey list", () => {
     expect(ALICE_PASSKEYS.slice(0, 2)).toEqual([...PASSKEYS_IDENTITY_ROOT]);
+  });
+
+  it("covers every visitor's connected accounts and import previews", () => {
+    expect(ALICE_SSO.slice(0, 2)).toEqual([...SSO_CONNECTIONS_IDENTITY_ROOT]);
+    expect(ALICE_SSO_PREVIEW.slice(0, 2)).toEqual([
+      ...SSO_CONNECTIONS_IDENTITY_ROOT,
+    ]);
   });
 
   /**
@@ -145,6 +163,16 @@ describe("removeUserIdentityQueries", () => {
 
     expect(held(queryClient, ALICE_PASSKEYS)).toBe(false);
     expect(held(queryClient, BOB_PASSKEYS)).toBe(false);
+  });
+
+  it("drops every visitor's connected accounts and import previews", () => {
+    const queryClient = seeded();
+
+    removeUserIdentityQueries(queryClient);
+
+    expect(held(queryClient, ALICE_SSO)).toBe(false);
+    expect(held(queryClient, ALICE_SSO_PREVIEW)).toBe(false);
+    expect(held(queryClient, BOB_SSO)).toBe(false);
   });
 
   /**

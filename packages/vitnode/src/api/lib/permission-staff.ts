@@ -60,3 +60,7 @@ export interface StaffPermissionSet {
   permissions: PermissionsStaffArgs[];
   root: boolean;
 }
+
+export interface ResolvedStaffPermissionSet extends StaffPermissionSet {
+  staff: boolean;
+}

@@ -3,6 +3,7 @@ import { MonitorIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
+import { Badge } from "@/components/ui/badge";
 
 import type { Device } from "./devices-query";
 import type { RevokeDevice } from "./devices-revoke";
@@ -66,9 +67,16 @@ export const DeviceItem = ({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <span className="text-foreground text-sm font-medium wrap-anywhere">
-          {t("browser_on_os", { browser: device.browser, os: device.os })}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-foreground text-sm font-medium wrap-anywhere">
+            {t("browser_on_os", { browser: device.browser, os: device.os })}
+          </span>
+          {device.sessionKinds.includes("admin") ? (
+            <Badge title={t("admin_session_desc")} variant="outline">
+              {t("admin_session")}
+            </Badge>
+          ) : null}
+        </div>
         <dl className="flex flex-col gap-1 text-sm sm:grid sm:grid-cols-3 sm:gap-x-6">
           {facts.map(({ label, value }) => (
             <div

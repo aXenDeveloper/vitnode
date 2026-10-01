@@ -39,8 +39,7 @@ export interface AdminUserDetail {
   emailVerified: boolean;
   id: number;
   imagePolicy: UserImagePolicy;
-  /** Whether this user holds administrator access, from the staff tables. */
-  isAdmin: boolean;
+  isStaff: boolean;
   language: string;
   name: string;
   nameCode: string;
@@ -93,22 +92,10 @@ export const adminUserQueryOptions = ({
     staleTime: RECORD_STALE_TIME,
   });
 
-/**
- * May this administrator edit this user?
- *
- * Two permissions, and the second one only sometimes: `users:can_edit` is the
- * baseline, and editing somebody who is *themselves* an administrator
- * additionally needs `users:can_edit_admin`. That is the rule the API enforces
- * on write (`assertCanEditAdminTarget`), stated here so the detail screen
- * applies the same one.
- *
- * Pure: the permission set goes in, a boolean comes out. It decides what is
- * *shown*; the API decides what is allowed.
- */
 export const canEditAdminUser = (
   permissions: StaffPermissionSet,
-  { isAdmin }: { isAdmin: boolean },
+  { isStaff }: { isStaff: boolean },
 ): boolean =>
   hasStaffPermission(permissions, ADMIN_USER_PERMISSIONS.edit) &&
-  (!isAdmin ||
+  (!isStaff ||
     hasStaffPermission(permissions, ADMIN_USER_PERMISSIONS.editAdmin));

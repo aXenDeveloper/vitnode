@@ -36,7 +36,7 @@ export const AdminIntegrationsRouteContent = ({
 
   return (
     <RouteMessages namespaces={ADMIN_INTEGRATIONS_NAMESPACES}>
-      <div className="p-4">
+      <div className="p-6">
         <PageTitle desc={description} h1={title} />
 
         <IntegrationsContent

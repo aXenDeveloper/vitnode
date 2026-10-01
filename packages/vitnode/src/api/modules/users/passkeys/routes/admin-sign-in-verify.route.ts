@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 
+import { isStaff } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
 import { SessionAdminModel } from "@/api/models/session-admin";
@@ -50,11 +51,10 @@ export const passkeyAdminSignInVerifyRoute = buildRoute({
         response,
         "admin_sign_in",
       );
-      const admin = new SessionAdminModel(c);
-      if (!(await admin.checkIfUserIsAdmin(userId))) {
+      if (!(await isStaff(c, { live: true, type: "admin", userId }))) {
         throw new PasskeyError("not_staff", 403);
       }
-      await admin.createSessionByUserId(userId);
+      await new SessionAdminModel(c).createSessionByUserId(userId);
 
       return c.json({ id: userId }, 201);
     } catch (error) {

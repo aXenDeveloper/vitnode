@@ -16,6 +16,7 @@ import { getCookie } from "hono/cookie";
 import type { PasskeyErrorCode } from "@/api/modules/users/passkeys/schema";
 
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
+import { isStaff } from "@/api/lib/check-staff-permission";
 import { describeError } from "@/api/lib/error-details";
 import { isPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { hashSessionToken } from "@/api/lib/session-token";
@@ -113,10 +114,11 @@ export class PasskeyModel {
   protected readonly c: Context;
 
   private async assertStaffEnrollmentAllowed(userId: number) {
-    const admin = new SessionAdminModel(this.c);
-    if (!(await admin.checkIfUserIsAdmin(userId))) return;
+    if (!(await isStaff(this.c, { live: true, type: "admin", userId }))) return;
 
-    const adminSession = await admin.getSession({ extend: true });
+    const adminSession = await new SessionAdminModel(this.c).getSession({
+      extend: true,
+    });
     if (adminSession?.user.id !== userId) {
       throw new PasskeyError("admin_session_required", 403);
     }

@@ -31,6 +31,7 @@ export const GitHubSSOApiPlugin = ({
   return {
     id,
     name: "GitHub",
+    profileFields: ["avatar"],
     // 1. Build Authorization URL
     getUrl: ({ state }) =>
       `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user,user:email&state=${state}`,
@@ -135,14 +136,46 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
       type: "(code: string) => Promise<{ access_token: string; token_type: string }>",
     },
     fetchUser: {
-      description: "Fetches user profile (id, email, username, avatarUrl). Return only an email the provider has verified - VitNode treats it as confirmed and will mark a matching unconfirmed account verified. The built-in adapters reject unverified addresses with a 400.",
+      description: "Fetches the user profile: id, email, username, and optionally avatarUrl, firstName and lastName. Return only an email the provider has verified - VitNode treats it as confirmed and will mark a matching unconfirmed account verified. The built-in adapters reject unverified addresses with a 400.",
       required: true,
-      type: "(token: TokenResponse) => Promise<SSOUser>",
+      type: "(token: TokenResponse) => Promise<SSOProviderUser>",
+    },
+    profileFields: {
+      description: "Which profile fields the provider can supply for Connected accounts: 'avatar', 'firstName', 'lastName'. Leave it out and nothing is ever imported from this adapter.",
+      required: false,
+      type: "readonly ('avatar' | 'firstName' | 'lastName')[]",
     },
   }}
 />
 
 See [Provider Icons](/docs/dev/sso/icons) for the accepted `icon` formats, and for registering a React component instead.
+
+## Profile data
+
+[Connected accounts](/docs/dev/sso/connected-accounts) can import a member's avatar, first name and last name from your provider. Two steps:
+
+1. Declare what the provider can supply in `profileFields`.
+2. Return those values from `fetchUser` as `avatarUrl`, `firstName` and `lastName`.
+
+```ts
+fetchUser: async ({ access_token, token_type }) => {
+  // ...
+  return {
+    id: String(user.id),
+    email: primaryEmail,
+    username: user.login,
+    avatarUrl: user.avatar_url ?? null,
+  }
+},
+profileFields: ["avatar"],
+```
+
+All three are optional, so adapters written before this still work - they just have nothing to import. A few rules keep imports honest:
+
+- Return `null` (or leave it out) when the provider has no value. VitNode never erases a member's value with an empty one.
+- Only send separate first and last names the provider actually has. Don't split a full name - `"Mary Ann Smith"` has no safe answer.
+- `avatarUrl` must be `https`. VitNode downloads and re-stores it itself, with SSRF protection and size and type checks, so you don't have to.
+- Don't add scopes just for profile data. If a field needs extra permission, leave it out of `profileFields`.
 
 ## Built-in SSO Adapters
 

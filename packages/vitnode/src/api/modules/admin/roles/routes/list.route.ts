@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { and, count, eq, ilike, inArray } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import {
@@ -10,9 +10,11 @@ import {
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_languages_words } from "@/database/languages";
+import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
-import { core_users } from "@/database/users";
+import { core_users, core_users_secondary_roles } from "@/database/users";
 
+import { assertCanListRoles } from "../lib/assert-can-list-roles";
 import { withRolesAdminListFields } from "./list-mapping";
 
 const rolesAdminListSchema = z.object({
@@ -44,9 +46,6 @@ const rolesAdminListSchema = z.object({
       createdAt: z.date(),
       updatedAt: z.date(),
       usersCount: z.number(),
-      // A role grants admin access when it has a row in
-      // `core_admin_permissions`. Editing/deleting such roles needs the
-      // elevated `can_edit_admin` / `can_delete_admin` permission.
       grantsAdmin: z.boolean(),
     }),
   ),
@@ -81,6 +80,8 @@ export const listRolesAdminRoute = buildRoute({
     },
   },
   handler: async c => {
+    await assertCanListRoles(c);
+
     const query = c.req.valid("query");
     const search = query.search?.trim();
 
@@ -165,7 +166,7 @@ export const listRolesAdminRoute = buildRoute({
             ),
           )
       : [];
-    const userCounts = roleIds.length
+    const primaryCounts = roleIds.length
       ? await c
           .get("db")
           .select({
@@ -176,15 +177,45 @@ export const listRolesAdminRoute = buildRoute({
           .where(inArray(core_users.roleId, roleIds))
           .groupBy(core_users.roleId)
       : [];
-    // Roles with a `core_admin_permissions` row grant admin access.
-    const adminRoles = roleIds.length
+    const secondaryCounts = roleIds.length
       ? await c
           .get("db")
-          .selectDistinct({ roleId: core_admin_permissions.roleId })
-          .from(core_admin_permissions)
-          .where(inArray(core_admin_permissions.roleId, roleIds))
+          .select({
+            roleId: core_users_secondary_roles.roleId,
+            total: count(),
+          })
+          .from(core_users_secondary_roles)
+          .innerJoin(
+            core_users,
+            eq(core_users.id, core_users_secondary_roles.userId),
+          )
+          .where(
+            and(
+              inArray(core_users_secondary_roles.roleId, roleIds),
+              ne(core_users.roleId, core_users_secondary_roles.roleId),
+            ),
+          )
+          .groupBy(core_users_secondary_roles.roleId)
       : [];
-    const adminRoleIds = new Set(adminRoles.map(row => row.roleId));
+    const [adminEntryRoles, moderatorEntryRoles] = roleIds.length
+      ? await Promise.all([
+          c
+            .get("db")
+            .selectDistinct({ roleId: core_admin_permissions.roleId })
+            .from(core_admin_permissions)
+            .where(inArray(core_admin_permissions.roleId, roleIds)),
+          c
+            .get("db")
+            .selectDistinct({ roleId: core_moderators_permissions.roleId })
+            .from(core_moderators_permissions)
+            .where(inArray(core_moderators_permissions.roleId, roleIds)),
+        ])
+      : [[], []];
+    const adminRoleIds = new Set<null | number>([
+      ...data.edges.filter(role => role.root).map(role => role.id),
+      ...adminEntryRoles.map(row => row.roleId),
+      ...moderatorEntryRoles.map(row => row.roleId),
+    ]);
 
     return c.json({
       pageInfo: data.pageInfo,
@@ -192,7 +223,7 @@ export const listRolesAdminRoute = buildRoute({
         adminRoleIds,
         names,
         roles: data.edges,
-        userCounts,
+        userCounts: [...primaryCounts, ...secondaryCounts],
       }),
     });
   },

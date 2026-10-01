@@ -6,12 +6,12 @@ import { HTTPException } from "hono/http-exception";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
-import { core_users_secondary_roles } from "@/database/users";
+import { core_users, core_users_secondary_roles } from "@/database/users";
 
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
-  StaffPermissionSet,
+  ResolvedStaffPermissionSet,
 } from "./permission-staff";
 
 import { hasStaffPermission, staffPermissionKey } from "./staff-permission";
@@ -25,9 +25,14 @@ const tableByType = {
   moderator: core_moderators_permissions,
 } as const;
 
+interface StaffUser {
+  id: number;
+  roleId: number;
+}
+
 export const getUserRoleIds = async (
   c: Context,
-  user: { id: number; roleId: number },
+  user: StaffUser,
 ): Promise<number[]> => {
   const secondary = await c
     .get("db")
@@ -40,11 +45,8 @@ export const getUserRoleIds = async (
 
 const loadStaffPermissions = async (
   c: Context,
-  {
-    type,
-    user,
-  }: { type: PermissionStaffType; user: { id: number; roleId: number } },
-): Promise<StaffPermissionSet> => {
+  { type, user }: { type: PermissionStaffType; user: StaffUser },
+): Promise<ResolvedStaffPermissionSet> => {
   const roleIds = await getUserRoleIds(c, user);
 
   const rootRoles = await c
@@ -55,7 +57,7 @@ const loadStaffPermissions = async (
     .limit(1);
 
   if (rootRoles.length > 0) {
-    return { root: true, permissions: [] };
+    return { root: true, permissions: [], staff: true };
   }
 
   const table = tableByType[type];
@@ -69,7 +71,7 @@ const loadStaffPermissions = async (
     .where(or(eq(table.userId, user.id), inArray(table.roleId, roleIds)));
 
   if (entries.some(entry => entry.unrestricted)) {
-    return { root: true, permissions: [] };
+    return { root: true, permissions: [], staff: true };
   }
 
   const seen = new Set<string>();
@@ -83,23 +85,63 @@ const loadStaffPermissions = async (
     }
   }
 
-  return { root: false, permissions };
+  return { root: false, permissions, staff: entries.length > 0 };
+};
+
+const loadAndCacheStaffPermissions = async (
+  c: Context,
+  args: { type: PermissionStaffType; user: StaffUser },
+): Promise<ResolvedStaffPermissionSet> => {
+  const resolved = await loadStaffPermissions(c, args);
+  await writeStaffPermissions(
+    c,
+    { type: args.type, userId: args.user.id },
+    resolved,
+  );
+
+  return resolved;
 };
 
 export const resolveStaffPermissions = async (
   c: Context,
+  { type, user }: { type: PermissionStaffType; user: StaffUser },
+): Promise<ResolvedStaffPermissionSet> =>
+  (await readStaffPermissions(c, { type, userId: user.id })) ??
+  (await loadAndCacheStaffPermissions(c, { type, user }));
+
+const findStaffUser = async (
+  c: Context,
+  userId: number,
+): Promise<null | StaffUser> => {
+  const [user] = await c
+    .get("db")
+    .select({ id: core_users.id, roleId: core_users.roleId })
+    .from(core_users)
+    .where(eq(core_users.id, userId))
+    .limit(1);
+
+  return user ?? null;
+};
+
+export const isStaff = async (
+  c: Context,
   {
+    live = false,
     type,
-    user,
-  }: { type: PermissionStaffType; user: { id: number; roleId: number } },
-): Promise<StaffPermissionSet> => {
-  const cached = await readStaffPermissions(c, { type, userId: user.id });
-  if (cached) return cached;
+    userId,
+  }: { live?: boolean; type: PermissionStaffType; userId: number },
+): Promise<boolean> => {
+  const cached = live ? null : await readStaffPermissions(c, { type, userId });
+  if (cached) return cached.staff;
 
-  const resolved = await loadStaffPermissions(c, { type, user });
-  await writeStaffPermissions(c, { type, userId: user.id }, resolved);
+  const user = await findStaffUser(c, userId);
+  if (!user) return false;
 
-  return resolved;
+  const resolved = live
+    ? await loadStaffPermissions(c, { type, user })
+    : await loadAndCacheStaffPermissions(c, { type, user });
+
+  return resolved.staff;
 };
 
 export const checkStaffPermission = async (

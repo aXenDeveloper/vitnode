@@ -27,12 +27,16 @@ export const GoogleSSOApiPlugin = ({
     email: z.string(),
     name: z.string(),
     verified_email: z.boolean(),
+    given_name: z.string().optional(),
+    family_name: z.string().optional(),
+    picture: z.string().optional(),
   });
 
   return {
     icon: GOOGLE_ICON,
     id,
     name: "Google",
+    profileFields: ["avatar", "firstName", "lastName"],
     fetchToken: async code => {
       if (!(clientId && clientSecret)) {
         throw new Error("Missing Google client ID or secret");
@@ -92,7 +96,11 @@ export const GoogleSSOApiPlugin = ({
       }
 
       return {
-        ...data,
+        avatarUrl: data.picture ?? null,
+        email: data.email,
+        firstName: data.given_name ?? null,
+        id: data.id,
+        lastName: data.family_name ?? null,
         username: data.name,
       };
     },

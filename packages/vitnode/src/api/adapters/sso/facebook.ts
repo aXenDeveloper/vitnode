@@ -9,6 +9,11 @@ import { getRedirectUri } from "@/api/models/sso";
 
 import { FACEBOOK_ICON } from "./icons";
 
+export const FACEBOOK_GRAPH_VERSION = "v26.0";
+
+const FACEBOOK_USER_FIELDS =
+  "id,name,email,first_name,last_name,picture.width(512).height(512){url,is_silhouette}";
+
 export const FacebookSSOApiPlugin = ({
   clientId,
   clientSecret,
@@ -26,19 +31,30 @@ export const FacebookSSOApiPlugin = ({
     id: z.string(),
     name: z.string(),
     email: z.string(),
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
+    picture: z
+      .object({
+        data: z.object({
+          is_silhouette: z.boolean().optional(),
+          url: z.string().optional(),
+        }),
+      })
+      .optional(),
   });
 
   return {
     icon: FACEBOOK_ICON,
     id,
     name: "Facebook",
+    profileFields: ["avatar", "firstName", "lastName"],
     fetchToken: async code => {
       if (!(clientId && clientSecret)) {
         throw new Error("Missing Facebook client ID or secret");
       }
 
       const url = new URL(
-        "https://graph.facebook.com/v22.0/oauth/access_token",
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token`,
       );
       url.searchParams.set("code", code);
       url.searchParams.set("redirect_uri", redirectUri);
@@ -65,8 +81,10 @@ export const FacebookSSOApiPlugin = ({
     },
 
     fetchUser: async ({ access_token }) => {
-      const url = new URL("https://graph.facebook.com/v22.0/me");
-      url.searchParams.set("fields", "id,name,email");
+      const url = new URL(
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me`,
+      );
+      url.searchParams.set("fields", FACEBOOK_USER_FIELDS);
       url.searchParams.set("access_token", access_token);
       const res = await fetch(url.toString());
       if (!res.ok) {
@@ -86,7 +104,17 @@ export const FacebookSSOApiPlugin = ({
         });
       }
 
-      return { ...userData, username: userData.name };
+      const picture = userData.picture?.data;
+
+      return {
+        avatarUrl:
+          picture?.is_silhouette === false ? (picture.url ?? null) : null,
+        email: userData.email,
+        firstName: userData.first_name ?? null,
+        id: userData.id,
+        lastName: userData.last_name ?? null,
+        username: userData.name,
+      };
     },
 
     getUrl: ({ state }) => {
@@ -94,7 +122,9 @@ export const FacebookSSOApiPlugin = ({
         throw new Error("Missing Facebook client ID");
       }
 
-      const url = new URL("https://www.facebook.com/v22.0/dialog/oauth");
+      const url = new URL(
+        `https://www.facebook.com/${FACEBOOK_GRAPH_VERSION}/dialog/oauth`,
+      );
       url.searchParams.set("client_id", clientId);
       url.searchParams.set("redirect_uri", redirectUri);
       url.searchParams.set("scope", "public_profile,email");

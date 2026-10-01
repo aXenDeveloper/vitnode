@@ -15,9 +15,12 @@ export const SidebarAdminContent = ({
   children: React.ReactNode;
   userBar?: React.ReactNode;
 }) => (
-  <Sidebar variant="floating">
+  <Sidebar collapsible="icon" variant="inset">
     <SidebarHeader className="flex h-16 flex-row items-center gap-2 border-b">
-      <Link className="px-2" to="/admin/core">
+      <Link
+        className="px-2 group-data-[collapsible=icon]:px-0"
+        to="/admin/core"
+      >
         <LogoVitNode className="size-8" small />
       </Link>
     </SidebarHeader>

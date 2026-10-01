@@ -61,7 +61,7 @@ The check runs at both steps, so an AdminCP session that expires or is signed ou
    - **consumes** the challenge atomically, scoped to the cookie's token hash, the `admin_sign_in` ceremony and "not expired". A public sign-in or registration challenge never matches, and a replay always fails.
    - **verifies** the assertion with SimpleWebAuthn against your configured `origins` and `rpId`, with `requireUserVerification: true`, the same user-handle and signature-counter checks as public sign-in.
    - **resolves the user from the stored credential** - never from anything else the browser sends, and never from the public session cookie.
-   - **checks staff access right now** with `SessionAdminModel.checkIfUserIsAdmin()`. Someone whose access was removed gets `403 not_staff`, even though their passkey is still valid.
+   - **checks staff access right now**, skipping the cache, and counting the user's primary role, every secondary role and any root role. Someone whose access was removed gets `403 not_staff`, even though their passkey is still valid.
    - only then calls `SessionAdminModel.createSessionByUserId()` - the same call the password form makes - which sets the `vitnode_auth_admin` cookie.
 
 The routes live under `users/passkeys` rather than `admin/` on purpose: every `/admin/*` API path demands an AdminCP session, which nobody has yet while signing in.

@@ -54,7 +54,7 @@ export const AdminRolesRouteContent = ({
 
   return (
     <RouteMessages namespaces={ADMIN_ROLES_NAMESPACES}>
-      <div className="p-4">
+      <div className="p-6">
         <PageTitle desc={description} h1={title}>
           <AdminStaffPermissionGate {...ADMIN_ROLE_PERMISSIONS.create}>
             <CreateRoleAction onSave={onSave} onSaved={onSaved} />

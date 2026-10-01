@@ -54,7 +54,7 @@ export const AdminDebugRouteContent = ({
 
   return (
     <RouteMessages namespaces={ADMIN_DEBUG_NAMESPACES}>
-      <div className="p-4">
+      <div className="p-6">
         <PageTitle desc={description} h1={title}>
           <AdminPermissionGate
             module={DEBUG_MODULE}

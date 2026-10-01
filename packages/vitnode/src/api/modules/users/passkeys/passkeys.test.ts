@@ -2,6 +2,7 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
@@ -9,6 +10,10 @@ import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 import { PasskeyModel } from "@/api/models/passkey";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
+import { core_admin_permissions } from "@/database/admins";
+import { core_roles } from "@/database/roles";
+import { core_users } from "@/database/users";
+import { createMemoryDb } from "@/tests/memory-db";
 import {
   createMemoryPasskeyStore,
   type MemoryPasskeyAccount,
@@ -54,6 +59,7 @@ const AUTHORIZATION: Authorization = {
 
 const ALICE = { email: "alice@example.com", id: 1, name: "Alice" };
 const BOB = { email: "bob@example.com", id: 2, name: "Bob" };
+const MEMBER_ROLE_ID = 3;
 
 type Viewer = typeof ALICE;
 
@@ -98,11 +104,14 @@ const harness = ({
   const createAdminSession = vi
     .spyOn(SessionAdminModel.prototype, "createSessionByUserId")
     .mockResolvedValue({ token: "admin-token" });
-  const staff = new Set<number>();
-  vi.spyOn(
-    SessionAdminModel.prototype,
-    "checkIfUserIsAdmin",
-  ).mockImplementation(async userId => Promise.resolve(staff.has(userId)));
+  const memoryDb = createMemoryDb([
+    [
+      core_users,
+      [ALICE, BOB].map(user => ({ ...user, roleId: MEMBER_ROLE_ID })),
+    ],
+    [core_roles, [{ id: MEMBER_ROLE_ID, root: false }]],
+    [core_admin_permissions, []],
+  ]);
   let adminViewer: null | Viewer = null;
   vi.spyOn(SessionAdminModel.prototype, "getSession").mockImplementation(
     async () =>
@@ -123,6 +132,7 @@ const harness = ({
       authorization: { ...AUTHORIZATION, passkeys, password },
     } as EnvVariablesVitNode["core"]);
     c.set("user", viewer as unknown as Context["var"]["user"]);
+    c.set("db", memoryDb.db as unknown as Context["var"]["db"]);
     c.set("events", { emit } as unknown as Context["var"]["events"]);
     await next();
   });
@@ -164,11 +174,18 @@ const harness = ({
     disablePasswordSignIn: () => {
       password = { enabled: false };
     },
-    grantStaff: (user: Viewer) => {
-      staff.add(user.id);
+    grantStaff: async (user: Viewer) => {
+      await memoryDb.db.insert(core_admin_permissions).values({
+        permissions: [],
+        roleId: null,
+        unrestricted: false,
+        userId: user.id,
+      });
     },
-    revokeStaff: (user: Viewer) => {
-      staff.delete(user.id);
+    revokeStaff: async (user: Viewer) => {
+      await memoryDb.db
+        .delete(core_admin_permissions)
+        .where(eq(core_admin_permissions.userId, user.id));
     },
     signInToAdminAs: (user: null | Viewer) => {
       adminViewer = user;
@@ -860,7 +877,7 @@ const enrolled = async ({ asStaff = true }: { asStaff?: boolean } = {}) => {
   const h = harness();
   const authenticator = newAuthenticator();
   if (asStaff) {
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInToAdminAs(ALICE);
   }
   h.signInAs(ALICE);
@@ -901,7 +918,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("starts an AdminCP session for a staff member's passkey", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
 
     const response = await adminSignIn(h, authenticator);
 
@@ -925,7 +942,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses a staff member whose access was removed after enrolling", async () => {
     const { authenticator, h } = await enrolled();
-    h.revokeStaff(ALICE);
+    await h.revokeStaff(ALICE);
 
     const response = await adminSignIn(h, authenticator);
 
@@ -936,7 +953,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses an assertion made without user verification", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
 
     const response = await adminSignIn(h, authenticator, {
       userVerified: false,
@@ -950,7 +967,7 @@ describe("AdminCP passkey sign-in", () => {
   it("refuses a challenge older than two minutes", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     const options = await startAdminSignIn(h);
     const assertion = authenticator.getAssertion({
       challenge: options.challenge,
@@ -969,7 +986,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses a reused AdminCP challenge", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     const options = await startAdminSignIn(h);
     const cookies = h.cookies();
     const assertion = authenticator.getAssertion({
@@ -994,7 +1011,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses a public sign-in challenge presented to the AdminCP", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     const options = await startSignIn(h);
     const assertion = authenticator.getAssertion({
       challenge: options.challenge,
@@ -1020,7 +1037,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses an AdminCP challenge presented to public sign-in", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     const options = await startAdminSignIn(h);
     const assertion = authenticator.getAssertion({
       challenge: options.challenge,
@@ -1043,7 +1060,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses a registration challenge presented to the AdminCP", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInAs(ALICE);
     h.signInToAdminAs(ALICE);
     const registration = await startRegistration(h);
@@ -1070,7 +1087,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses an assertion from the wrong origin", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
 
     const response = await adminSignIn(h, authenticator, {
       origin: "https://admin.evil.example",
@@ -1082,7 +1099,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("refuses an assertion for the wrong RP ID", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
 
     const response = await adminSignIn(h, authenticator, {
       rpId: "evil.example",
@@ -1094,7 +1111,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("never turns a public session into an AdminCP session", async () => {
     const { h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInAs(ALICE);
 
     const withoutChallenge = await h.request(
@@ -1108,7 +1125,7 @@ describe("AdminCP passkey sign-in", () => {
 
   it("keeps public passkey sign-in public, even for staff", async () => {
     const { authenticator, h } = await enrolled();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
 
     const response = await signIn(h, authenticator);
 
@@ -1132,7 +1149,7 @@ describe("AdminCP passkey sign-in", () => {
 describe("staff passkey enrollment", () => {
   it("asks staff to open the AdminCP before adding a passkey", async () => {
     const h = harness();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInAs(ALICE);
 
     const response = await h.request("/register/options", { method: "POST" });
@@ -1144,7 +1161,7 @@ describe("staff passkey enrollment", () => {
 
   it("refuses an AdminCP session that belongs to someone else", async () => {
     const h = harness();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInAs(ALICE);
     h.signInToAdminAs(BOB);
 
@@ -1155,7 +1172,7 @@ describe("staff passkey enrollment", () => {
 
   it("refuses to save the passkey when the AdminCP session ended mid-ceremony", async () => {
     const h = harness();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInAs(ALICE);
     h.signInToAdminAs(ALICE);
     const options = await startRegistration(h);
@@ -1177,7 +1194,7 @@ describe("staff passkey enrollment", () => {
 
   it("lets staff with their own AdminCP session add a passkey", async () => {
     const h = harness();
-    h.grantStaff(ALICE);
+    await h.grantStaff(ALICE);
     h.signInAs(ALICE);
     h.signInToAdminAs(ALICE);
 

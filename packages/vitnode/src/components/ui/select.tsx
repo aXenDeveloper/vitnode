@@ -90,7 +90,7 @@ function SelectContent({
         <SelectScrollUpButton />
         <SelectPrimitive.Popup
           className={cn(
-            "bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 relative z-50 max-h-(--available-height) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md p-1 shadow-md ring-1 duration-100",
+            "bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 relative z-50 max-h-(--available-height) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg p-1 shadow-lg ring-1 duration-100",
             className,
           )}
           data-slot="select-content"
@@ -161,7 +161,7 @@ function SelectScrollUpButton({
   return (
     <SelectPrimitive.ScrollUpArrow
       className={cn(
-        "bg-popover inset-x-0 top-0 z-10 flex cursor-default items-center justify-center rounded-t-md py-1 [&_svg:not([class*='size-'])]:size-4",
+        "bg-popover inset-x-0 top-0 z-10 flex cursor-default items-center justify-center rounded-t-lg py-1 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="select-scroll-up-button"
@@ -179,7 +179,7 @@ function SelectScrollDownButton({
   return (
     <SelectPrimitive.ScrollDownArrow
       className={cn(
-        "bg-popover inset-x-0 bottom-0 z-10 flex cursor-default items-center justify-center rounded-b-md py-1 [&_svg:not([class*='size-'])]:size-4",
+        "bg-popover inset-x-0 bottom-0 z-10 flex cursor-default items-center justify-center rounded-b-lg py-1 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="select-scroll-down-button"

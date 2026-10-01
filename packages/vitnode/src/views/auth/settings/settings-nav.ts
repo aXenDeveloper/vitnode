@@ -3,7 +3,7 @@ import { normalizeUrl } from "@/lib/utils";
 /** Where the settings screens are rooted, and the overview panel's own URL. */
 export const SETTINGS_ROOT_HREF = "/settings";
 
-export type SettingsNavKey = "devices" | "overview" | "security";
+export type SettingsNavKey = "devices" | "overview" | "security" | "sso";
 
 export interface SettingsNavItem {
   href: string;
@@ -15,14 +15,21 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: SETTINGS_ROOT_HREF, key: "overview" },
   { href: "/settings/devices", key: "devices" },
   { href: "/settings/security", key: "security" },
+  { href: "/settings/sso", key: "sso" },
 ];
 
 export const visibleSettingsNavItems = ({
   passkeys,
+  sso = [],
 }: {
   passkeys: boolean;
+  sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
-  SETTINGS_NAV_ITEMS.filter(item => item.key !== "security" || passkeys);
+  SETTINGS_NAV_ITEMS.filter(
+    item =>
+      (item.key !== "security" || passkeys) &&
+      (item.key !== "sso" || sso.length > 0),
+  );
 
 /** Whether one navigation item is the panel `pathname` is showing. */
 export const isSettingsNavItemActive = (

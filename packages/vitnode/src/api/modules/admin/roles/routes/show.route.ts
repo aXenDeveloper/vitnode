@@ -36,11 +36,6 @@ const roleAdminSchema = z.object({
 
 export const showRoleAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  // `list` is deliberately ungated - a role *picker* has to work for an
-  // administrator who cannot open the roles screen - but that rationale does not
-  // reach one role's full record, which is the edit screen's read and nothing
-  // else's. `can_edit` depends on `can_view` in the catalog, so every role that
-  // could already open this screen still can.
   adminStaffPermission: { module: "roles", permission: "can_view" },
   route: {
     method: "get",

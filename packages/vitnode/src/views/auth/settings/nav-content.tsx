@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import {
   KeyRoundIcon,
+  LinkIcon,
   MenuIcon,
   MonitorSmartphoneIcon,
   UserRoundIcon,
@@ -30,6 +31,7 @@ const ICONS: Record<
   devices: MonitorSmartphoneIcon,
   overview: UserRoundIcon,
   security: KeyRoundIcon,
+  sso: LinkIcon,
 };
 
 const SettingsNavList = ({
@@ -56,7 +58,7 @@ const SettingsNavList = ({
         {activeIndex >= 0 ? (
           <span
             aria-hidden="true"
-            className="bg-muted before:bg-primary pointer-events-none absolute inset-s-3 inset-e-0 top-0 h-10 translate-y-[calc(var(--active)*100%)] rounded-md transition-[translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] before:absolute before:inset-y-2 before:-inset-s-3 before:w-1 before:rounded-full motion-reduce:transition-none"
+            className="bg-card ring-foreground/5 dark:bg-muted before:bg-primary pointer-events-none absolute inset-s-3 inset-e-0 top-0 h-10 translate-y-[calc(var(--active)*100%)] rounded-md shadow-xs ring-1 transition-[translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] before:absolute before:inset-y-2 before:-inset-s-3 before:w-1 before:rounded-full motion-reduce:transition-none dark:shadow-none dark:ring-0"
           />
         ) : null}
         {items.map(item => {
@@ -72,7 +74,7 @@ const SettingsNavList = ({
                   "focus-visible:ring-ring/50 relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset",
                   isActive
                     ? "text-foreground"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-muted/50",
                 )}
                 onClick={onNavigate}
                 to={item.href}

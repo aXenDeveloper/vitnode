@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { randomUUID } from "node:crypto";
 
 import type { NavigationLocation } from "@/lib/navigation";
+import type { SsoProfileField } from "@/lib/sso-profile";
 
 import type { EventListenerConfig } from "../lib/events";
 
@@ -70,6 +71,16 @@ export interface VitNodeEvents {
   };
   "user.sso.linked": {
     email: string;
+    providerId: string;
+    userId: number;
+  };
+  "user.sso.profile_synced": {
+    fields: SsoProfileField[];
+    providerId: string;
+    trigger: "import" | "sign_in" | "sync";
+    userId: number;
+  };
+  "user.sso.unlinked": {
     providerId: string;
     userId: number;
   };

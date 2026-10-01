@@ -1,12 +1,12 @@
 import { z } from "@hono/zod-openapi";
 
+import { isStaff } from "@/api/lib/check-staff-permission";
 import { resolveUserRoles, userRoleSchema } from "@/api/lib/resolve-user-roles";
 import { buildRoute } from "@/api/lib/route";
 import {
   resolveUserImagePolicy,
   zodUserImagePolicy,
 } from "@/api/lib/user-images";
-import { SessionAdminModel } from "@/api/models/session-admin";
 import { UserModel } from "@/api/models/user";
 import { CONFIG_PLUGIN } from "@/config";
 
@@ -42,7 +42,7 @@ export const showUserAdminRoute = buildRoute({
               secondaryRoles: z.array(userRoleSchema),
               birthday: z.date().nullable(),
               language: z.string(),
-              isAdmin: z.boolean(),
+              isStaff: z.boolean(),
               imagePolicy: zodUserImagePolicy,
             }),
           },
@@ -80,12 +80,21 @@ export const showUserAdminRoute = buildRoute({
       return c.json({ error: "User not found" }, 404);
     }
 
-    const [roles, isAdmin, imagePolicy] = await Promise.all([
+    const [roles, adminStaff, moderatorStaff, imagePolicy] = await Promise.all([
       resolveUserRoles(c, user),
-      new SessionAdminModel(c).checkIfUserIsAdmin(user.id),
+      isStaff(c, { type: "admin", userId: user.id }),
+      isStaff(c, { type: "moderator", userId: user.id }),
       resolveUserImagePolicy(c, user, { ignoreAllow: true }),
     ]);
 
-    return c.json({ ...user, imagePolicy, isAdmin, ...roles }, 200);
+    return c.json(
+      {
+        ...user,
+        imagePolicy,
+        isStaff: adminStaff || moderatorStaff,
+        ...roles,
+      },
+      200,
+    );
   },
 });

@@ -222,7 +222,7 @@ export const setUserImage = async (
     maxBytes,
     userId,
   }: { file: File; kind: UserImageKind; maxBytes: number; userId: number },
-): Promise<{ url: string }> => {
+): Promise<{ id: number; url: string }> => {
   const previousId = await currentImageId(c, userId, kind);
 
   const stored = await c.get("storage").upload({
@@ -254,7 +254,7 @@ export const setUserImage = async (
   await discardFile(c, previousId === stored.id ? null : previousId);
   await afterImageChange(c, { fileId: stored.id, kind, userId });
 
-  return { url: stored.url };
+  return { id: stored.id, url: stored.url };
 };
 
 export const removeUserImage = async (

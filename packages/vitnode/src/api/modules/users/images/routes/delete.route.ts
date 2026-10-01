@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/lib/route";
 import { removeUserImage, zodUserImageKind } from "@/api/lib/user-images";
+import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const deleteUserImageRoute = buildRoute({
@@ -32,6 +33,12 @@ export const deleteUserImageRoute = buildRoute({
     }
 
     const { kind } = c.req.valid("param");
+    if (kind === "avatar") {
+      await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
+        fields: ["avatar"],
+        userId: user.id,
+      });
+    }
     await removeUserImage(c, { kind, userId: user.id });
 
     return c.body(null, 200);

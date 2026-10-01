@@ -53,15 +53,6 @@ export type UserHeaderMenuItemKey =
  * and sign-out - which is not a link and so is not here - a third that the
  * component always appends. An empty group is never returned, so the component
  * can put a separator after every one of them without ever drawing a stray rule.
- *
- * ## Only `isAdmin` branches
- *
- * `isModerator` exists in the session response and is hardcoded `false` (see
- * `session.route.ts`: `// TODO: implement moderator role`), and the `/mod_cp`
- * page it used to link to does not exist in either application. So the item was
- * unreachable copy pointing at a 404, and it is deliberately not carried over -
- * there is no moderator role to model yet, and a menu that renders one would
- * start linking to a missing page the day the API answers `true`.
  */
 export const userHeaderMenu = (
   user: UserHeaderUser,

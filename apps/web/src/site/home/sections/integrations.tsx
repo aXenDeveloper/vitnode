@@ -7,14 +7,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@vitnode/core/components/ui/tooltip'
-import { HardDrive, Mail, ShieldCheck, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
+import {
+  AmazonS3Mark,
+  NodemailerMark,
+  PostgreSQLElephant,
+  ReCaptchaMark,
+} from '@/site/home/sections/logos/integration-logos'
 import { INTEGRATION_MARKS } from '@/site/home/sections/logos/integration-marks'
 import { MarketingSection, TextLink } from '@/site/marketing/shared'
 
 type Destination = { docs: string } | { href: string }
 
-type Logo = { glyph: LucideIcon } | { mark: string }
+type Logo =
+  | { glyph: LucideIcon }
+  | { logo: React.ElementType<{ className: string }> }
+  | { mark: string }
 
 type Integration = Destination &
   Logo & {
@@ -60,7 +69,7 @@ const DRIZZLE: Integration = {
 const POSTGRESQL: Integration = {
   color: '#4169e1',
   docs: 'dev/search',
-  mark: INTEGRATION_MARKS.postgresql,
+  logo: PostgreSQLElephant,
   name: 'PostgreSQL',
   role: 'Database and search',
 }
@@ -74,17 +83,17 @@ const TAILWIND: Integration = {
 }
 
 const NODEMAILER: Integration = {
-  color: '#0e9f6e',
+  color: '#22b573',
   docs: 'dev/email/nodemailer',
-  glyph: Mail,
+  logo: NodemailerMark,
   name: 'Nodemailer',
   role: 'Email',
 }
 
 const S3: Integration = {
-  color: '#ec7211',
+  color: '#e25444',
   docs: 'dev/storage/s3-r2',
-  glyph: HardDrive,
+  logo: AmazonS3Mark,
   name: 'S3 / R2',
   role: 'Storage',
 }
@@ -116,7 +125,7 @@ const TURNSTILE: Integration = {
 const RECAPTCHA: Integration = {
   color: '#4285f4',
   docs: 'dev/captcha/recaptcha',
-  glyph: ShieldCheck,
+  logo: ReCaptchaMark,
   name: 'Google reCAPTCHA',
   role: 'Captcha',
 }
@@ -147,13 +156,58 @@ const COLUMNS: Integration[][] = [
   [NODE_CRON],
 ]
 
-const TILE =
-  'mk-integration-tile focus-visible:outline-ring block size-11 touch-manipulation rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 sm:size-18 sm:rounded-2xl lg:size-24 lg:rounded-3xl'
+const TILE = 'mk-integration-tile touch-manipulation'
+
+type Point = readonly [number, number]
+
+const HEX_RADIUS = 50
+const HEX_HEIGHT = HEX_RADIUS * Math.sqrt(3)
+const HEX_VIEW_BOX = `${-HEX_RADIUS} ${-HEX_HEIGHT / 2} ${HEX_RADIUS * 2} ${HEX_HEIGHT}`
+
+const towards = ([x, y]: Point, [toX, toY]: Point, distance: number) => {
+  const length = Math.hypot(toX - x, toY - y)
+
+  return `${(x + ((toX - x) / length) * distance).toFixed(2)} ${(y + ((toY - y) / length) * distance).toFixed(2)}`
+}
+
+const roundedHexagonPath = (radius: number, cornerRadius: number) => {
+  const points = Array.from({ length: 6 }, (_, index): Point => {
+    const angle = (Math.PI / 3) * index
+
+    return [radius * Math.cos(angle), radius * Math.sin(angle)]
+  })
+
+  return `${points
+    .map((point, index) => {
+      const previous = points[(index + points.length - 1) % points.length]
+      const next = points[(index + 1) % points.length]
+
+      return `${index === 0 ? 'M' : 'L'}${towards(point, previous, cornerRadius)}Q${point[0].toFixed(2)} ${point[1].toFixed(2)} ${towards(point, next, cornerRadius)}`
+    })
+    .join('')}Z`
+}
+
+const HEX_PATH = roundedHexagonPath(HEX_RADIUS, 10)
+
+const Hexagon = ({ className }: { className: string }) => (
+  <svg
+    aria-hidden
+    className={className}
+    viewBox={HEX_VIEW_BOX}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d={HEX_PATH} vectorEffect="non-scaling-stroke" />
+  </svg>
+)
 
 const TileFace = ({ integration }: { integration: Integration }) => (
-  <span className="mk-integration-face flex size-full items-center justify-center rounded-[inherit] text-(--brand)">
-    <IntegrationMark integration={integration} />
-  </span>
+  <>
+    <Hexagon className="mk-integration-hit size-full" />
+    <span className="mk-integration-face text-(--brand)">
+      <Hexagon className="mk-integration-outline size-full overflow-visible" />
+      <IntegrationMark integration={integration} />
+    </span>
+  </>
 )
 
 const IntegrationMark = ({ integration }: { integration: Integration }) => {
@@ -161,6 +215,8 @@ const IntegrationMark = ({ integration }: { integration: Integration }) => {
 
   if ('glyph' in integration)
     return <integration.glyph aria-hidden className={className} />
+
+  if ('logo' in integration) return <integration.logo className={className} />
 
   return (
     <svg
@@ -245,14 +301,11 @@ export const IntegrationsSection = () => (
     <TooltipProvider delay={200}>
       <div
         aria-label="Tools VitNode is built on and integrates with"
-        className="flex items-center justify-center gap-1.5 sm:gap-3 lg:gap-4"
+        className="mk-integration-comb"
         role="list"
       >
         {COLUMNS.map((column) => (
-          <div
-            className="flex flex-col gap-1.5 sm:gap-3 lg:gap-4"
-            key={column[0].name}
-          >
+          <div className="mk-integration-column" key={column[0].name}>
             {column.map((integration) => (
               <div key={integration.name} role="listitem">
                 <IntegrationTile integration={integration} />

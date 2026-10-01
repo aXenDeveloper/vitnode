@@ -884,6 +884,8 @@
       "settings": {
         "devices": {
           "active_now": "Aktywne teraz",
+          "admin_session": "AdminCP",
+          "admin_session_desc": "Zalogowano do AdminCP na tym urządzeniu. Wylogowanie urządzenia zakończy również tę sesję.",
           "browser_on_os": "{browser} na {os}",
           "current_device": "To urządzenie",
           "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",
@@ -906,7 +908,8 @@
         "nav": {
           "devices": "Urządzenia",
           "overview": "Przegląd",
-          "security": "Bezpieczeństwo"
+          "security": "Bezpieczeństwo",
+          "sso": "Połączone konta"
         },
         "overview": {
           "accountTitle": "Konto",
@@ -1001,7 +1004,155 @@
           "title": "Klucze dostępu",
           "unsupported_hint": "Ta przeglądarka nie potrafi tworzyć kluczy dostępu. Użyj aktualnej wersji Chrome, Safari, Edge lub Firefox."
         },
-        "title": "Ustawienia"
+        "title": "Ustawienia",
+        "sso": {
+          "desc": "Loguj się kontami, które już masz, i wybierz, które pola profilu mają aktualizować. Twój adres e-mail tutaj się nie zmienia.",
+          "empty": "Na tej stronie nie skonfigurowano jeszcze żadnych dostawców logowania.",
+          "account_unknown": "Brak udostępnionego e-maila",
+          "connected_at": "Połączono",
+          "unavailable_desc": "Nie jest już dostępne na tej stronie",
+          "status": {
+            "not_connected": "Niepołączone"
+          },
+          "connect": {
+            "action": "Połącz",
+            "aria": "Połącz {provider}",
+            "success": "Konto połączone",
+            "success_desc": "Możesz teraz logować się przez {provider}. Twój profil się nie zmienił."
+          },
+          "disconnect": {
+            "action": "Odłącz",
+            "title": "Odłączyć {provider}?",
+            "desc": "Nie zalogujesz się już tym kontem {provider}, a jego ustawienia synchronizacji zostaną usunięte. Twój awatar i imię zostają bez zmian.",
+            "provider_note": "To usuwa tylko połączenie tutaj. {provider} nadal pokazuje tę stronę jako połączoną aplikację, dopóki jej tam nie usuniesz.",
+            "confirm": "Odłącz",
+            "success": "Konto odłączone",
+            "success_desc": "{provider} nie jest już połączony z Twoim kontem."
+          },
+          "import": {
+            "aria": "{action} z {provider}",
+            "title": "Import z {provider}",
+            "desc": "Wybierz, co przenieść. Potwierdzisz tożsamość w {provider}, a potem przejrzysz wartości, zanim cokolwiek się zmieni.",
+            "fields_legend": "Pola do importu",
+            "redirect_note": "Na chwilę przejdziesz do {provider} i od razu wrócisz.",
+            "continue": "Przejdź do {provider}",
+            "pick_one": "Wybierz co najmniej jedno pole do importu.",
+            "action_all": "Importuj awatar i imię",
+            "action_avatar": "Importuj awatar",
+            "action_name": "Importuj imię i nazwisko"
+          },
+          "preview": {
+            "title": "Sprawdź import z {provider}",
+            "desc": "Nic się jeszcze nie zmieniło. Wybierz, których wartości użyć.",
+            "current": "Teraz",
+            "incoming": "Z {provider}",
+            "empty_value": "Nie ustawiono",
+            "missing": "{provider} tego nie udostępnił, więc Twoja wartość zostaje.",
+            "not_allowed": "Twoja rola nie może zmieniać tego pola.",
+            "sourced_elsewhere": "Obecnie aktualizuje się z {source} przy logowaniu. Import tutaj przełączy je na tryb ręczny.",
+            "nothing": "{provider} nie udostępnił żadnego z wybranych pól. Nic się nie zmieni.",
+            "apply": "Importuj zaznaczone",
+            "discard": "Odrzuć",
+            "loading": "Wczytywanie podglądu importu",
+            "success": "Profil zaktualizowany",
+            "success_desc": "Zaimportowano z {provider}: {fields}.",
+            "unchanged": "Wszystko już się zgadzało, więc nic się nie zmieniło.",
+            "avatar_failed": "Nie udało się pobrać awatara, więc zostaje obecny.",
+            "manual_note": "Teraz zarządzane ręcznie: {fields}."
+          },
+          "fields": {
+            "avatar": "Awatar",
+            "avatar_desc": "Twoje zdjęcie profilowe, skopiowane na tę stronę.",
+            "firstName": "Imię",
+            "firstName_desc": "Import nie włącza opcji „Pokazuj moje prawdziwe imię”.",
+            "lastName": "Nazwisko",
+            "lastName_desc": "Import nie włącza opcji „Pokazuj moje prawdziwe imię”."
+          },
+          "sync": {
+            "manual_edit_note": "Samodzielna edycja pola przełącza je na tryb ręczny, więc synchronizacja go nie nadpisze.",
+            "footer": "Synchronizacja potwierdzi Twoją tożsamość u dostawcy i od razu wróci tutaj. Pozostajesz zalogowany.",
+            "on_sign_in": "Aktualizuj też z {provider} przy logowaniu przez to konto",
+            "on_sign_in_short": "Przy logowaniu",
+            "sync_now": "Synchronizuj",
+            "sync_now_aria": "Synchronizuj teraz z {provider}",
+            "synced": "Profil zsynchronizowany",
+            "synced_desc": "Zaktualizowano z {provider}: {fields}.",
+            "up_to_date": "Wszystko już zgadza się z {provider}, więc nic się nie zmieniło."
+          },
+          "errors": {
+            "access_denied": {
+              "title": "Połączenie anulowane",
+              "desc": "{provider} nie udzielił zgody, więc nic się nie zmieniło."
+            },
+            "account_taken": {
+              "title": "Używane przez innego użytkownika",
+              "desc": "To konto {provider} jest połączone z innym kontem tutaj. Zaloguj się nim i najpierw je tam odłącz."
+            },
+            "provider_already_connected": {
+              "title": "Już połączono",
+              "desc": "Masz już połączone konto {provider}. Odłącz je, aby użyć innego."
+            },
+            "account_mismatch": {
+              "title": "To inne konto",
+              "desc": "Zalogowano się do innego konta {provider} niż połączone, więc nic nie zaimportowano."
+            },
+            "invalid_state": {
+              "title": "To żądanie wygasło",
+              "desc": "Zacznij od nowa w Połączonych kontach. Każde żądanie działa raz, przez dziesięć minut."
+            },
+            "provider_error": {
+              "title": "{provider} nie odpowiada",
+              "desc": "Nie udało się odczytać konta {provider}. Spróbuj ponownie za chwilę."
+            },
+            "provider_not_found": {
+              "title": "Dostawca niedostępny",
+              "desc": "Ten dostawca logowania nie jest już dostępny."
+            },
+            "not_connected": {
+              "title": "Niepołączone",
+              "desc": "To konto nie jest już połączone. Lista została odświeżona."
+            },
+            "invalid_fields": {
+              "title": "Nic do zaimportowania",
+              "desc": "Wybierz co najmniej jedno pole, które ten dostawca udostępnia."
+            },
+            "invalid_source": {
+              "title": "Nie udało się zapisać",
+              "desc": "Jedno z wybranych kont nie jest już połączone. Lista została odświeżona."
+            },
+            "preview_not_found": {
+              "title": "Ten import wygasł",
+              "desc": "Zacznij go ponownie w Połączonych kontach."
+            },
+            "unauthenticated": {
+              "title": "Zaloguj się ponownie",
+              "desc": "Sesja wygasła, zanim {provider} skończył. Zaloguj się i spróbuj ponownie."
+            },
+            "last_sign_in_method": {
+              "title": "Zachowaj sposób logowania",
+              "desc": "To ostatni sposób wejścia na Twoje konto.",
+              "hint_password": "Ustaw hasło przez „Nie pamiętasz hasła?” na stronie logowania.",
+              "hint_passkey": "Dodaj klucz dostępu w sekcji Bezpieczeństwo.",
+              "hint_connect_other": "Albo najpierw połącz tutaj inne konto."
+            },
+            "nothing_to_sync": {
+              "title": "Nic do synchronizacji",
+              "desc": "Zaznacz co najmniej jedno pole do aktualizacji z {provider}."
+            }
+          },
+          "value_not_set": "Nie ustawiono",
+          "groups": {
+            "accounts": "Konta logowania",
+            "profile": "Profil",
+            "sync": "Synchronizacja"
+          },
+          "source": {
+            "manual": "Ręcznie",
+            "from": "Z {provider}",
+            "saved_from": "{field}: teraz z {provider}",
+            "saved_manual": "{field}: teraz ręcznie"
+          }
+        }
       },
       "sign_in": {
         "desc": "Witaj ponownie! Zaloguj się na swoje konto.",
@@ -1141,7 +1292,10 @@
           "submit": "Połącz i zaloguj się",
           "title": "Połącz <provider></provider> ze swoim kontem"
         },
-        "or": "Lub kontynuuj przez e-mail"
+        "or": "Lub kontynuuj przez e-mail",
+        "connection": {
+          "pending": "Kończymy z {provider}…"
+        }
       }
     },
     "editor": {

@@ -244,10 +244,15 @@ permissions than you expected.
 | Profile URL   | `https://www.googleapis.com/oauth2/v1/userinfo` |
 | Scopes        | `openid profile email`                          |
 | Provider id   | `google`                                        |
-| Fields read   | `id`, `email`, `name`, `verified_email`         |
+| Fields read   | `id`, `email`, `name`, `verified_email`, `given_name`, `family_name`, `picture` |
 
 The account name VitNode creates comes from Google's `name` field, stripped of
 characters that cannot appear in a profile URL.
+
+`given_name`, `family_name` and `picture` come with the `profile` scope Google
+already asks for, so [Connected accounts](/docs/dev/sso/connected-accounts) can
+import all three with no extra permission. Google never guarantees them - an
+account without one simply has nothing to import for that field.
 
 ## Gotchas
 

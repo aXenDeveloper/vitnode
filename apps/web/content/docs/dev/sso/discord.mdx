@@ -195,10 +195,17 @@ permissions.
 | Profile URL   | `https://discord.com/api/users/@me`    |
 | Scopes        | `identify email`                       |
 | Provider id   | `discord`                              |
-| Fields read   | `id`, `email`, `username`              |
+| Fields read   | `id`, `email`, `username`, `avatar`    |
 
 Both scopes are required: `identify` for the id and username, `email` for the
 address the account is created with.
+
+The `avatar` hash becomes
+`https://cdn.discordapp.com/avatars/{id}/{avatar}.png?size=512`, which
+[Connected accounts](/docs/dev/sso/connected-accounts) can import. A member
+still on Discord's default avatar has none. Discord has no first or last name,
+and VitNode doesn't guess one from `username` or `global_name`, so only the
+avatar is offered.
 
 ## Gotchas
 

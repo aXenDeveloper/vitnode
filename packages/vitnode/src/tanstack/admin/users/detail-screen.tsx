@@ -43,9 +43,9 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const permissions = useAdminStaffPermissions();
 
   return (
-    <div className="p-4">
+    <div className="p-6">
       <UserDetailContent
-        canEdit={canEditAdminUser(permissions, { isAdmin: user.isAdmin })}
+        canEdit={canEditAdminUser(permissions, user)}
         onRemoveImage={async (userId, kind) => {
           await onRemoveImage(userId, kind);
           toast.success(t(`${kind}.removed`), {

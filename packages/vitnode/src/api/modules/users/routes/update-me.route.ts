@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import { resolvePersonalInfoPolicy } from "@/api/lib/personal-info-policy";
 import { buildRoute } from "@/api/lib/route";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
+import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 import {
@@ -147,6 +148,12 @@ export const updateMeRoute = buildRoute({
       throw new HTTPException(401, { message: "Unauthorized" });
     }
 
+    await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
+      fields: (["firstName", "lastName"] as const).filter(
+        field => field in values,
+      ),
+      userId: user.id,
+    });
     await invalidateSessionCacheForUser(c, user.id);
     await c.get("events").emit("user.updated", {
       userId: user.id,

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import { removeUserImage, zodUserImageKind } from "@/api/lib/user-images";
+import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
@@ -58,6 +59,12 @@ export const deleteUserImageAdminRoute = buildRoute({
     }
 
     await assertCanEditAdminTarget(c, userId);
+    if (kind === "avatar") {
+      await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
+        fields: ["avatar"],
+        userId: user.id,
+      });
+    }
     await removeUserImage(c, { kind, userId: user.id });
 
     return c.body(null, 200);

@@ -1,12 +1,13 @@
 import type { Context } from "hono";
 
-import { and, eq, gt, or } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
+import { isStaff } from "@/api/lib/check-staff-permission";
 import { hashSessionToken } from "@/api/lib/session-token";
-import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
+import { core_admin_sessions } from "@/database/admins";
 
 import { DeviceModel } from "./device";
 import {
@@ -83,28 +84,8 @@ export class SessionAdminModel {
     return user ? { expiresAt: session.expiresAt, user } : null;
   }
 
-  async checkIfUserIsAdmin(userId: number) {
-    const user = await new UserModel().getUserById({ id: userId, c: this.c });
-    if (!user) return false;
-
-    const [permission] = await this.c
-      .get("db")
-      .select()
-      .from(core_admin_permissions)
-      .where(
-        or(
-          eq(core_admin_permissions.userId, user.id),
-          eq(core_admin_permissions.roleId, user.roleId),
-        ),
-      )
-      .limit(1);
-
-    return !!permission;
-  }
-
   async createSessionByUserId(userId: number) {
-    const isAdmin = await this.checkIfUserIsAdmin(userId);
-    if (!isAdmin) {
+    if (!(await isStaff(this.c, { live: true, type: "admin", userId }))) {
       throw new HTTPException(403, { message: "Forbidden" });
     }
 
@@ -197,7 +178,13 @@ export class SessionAdminModel {
       return null;
     }
 
-    if (!(await this.checkIfUserIsAdmin(session.user.id))) {
+    if (
+      !(await isStaff(this.c, {
+        live: true,
+        type: "admin",
+        userId: session.user.id,
+      }))
+    ) {
       await this.deleteSession();
 
       return null;
