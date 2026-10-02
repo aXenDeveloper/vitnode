@@ -1,0 +1,186 @@
+---
+title: Empty
+description: Friendly empty states for lists, tables and searches that have nothing to show yet - with an icon, a clear message and a next step.
+icon: PackageOpen
+---
+
+## Preview
+
+<Preview name="empty" />
+
+## Usage
+
+```ts
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@vitnode/core/components/ui/empty'
+```
+
+```tsx
+<Empty>
+  <EmptyHeader>
+    <EmptyMedia variant="icon">
+      <FolderCode />
+    </EmptyMedia>
+    <EmptyTitle>No projects yet</EmptyTitle>
+    <EmptyDescription>
+      You haven't created any projects yet. Start a fresh one or import an
+      existing repository.
+    </EmptyDescription>
+  </EmptyHeader>
+  <EmptyContent>
+    <Button>Create project</Button>
+  </EmptyContent>
+</Empty>
+```
+
+Reach for `Empty` whenever a screen would otherwise show... nothing. A blank
+table, a fresh dashboard, a search with zero hits. The AdminCP uses it for an
+empty dashboard (with an "Edit" button to add widgets) and for navigation lists
+that have no items yet.
+
+## Anatomy
+
+- `Empty` - the centered wrapper. It grows to fill its parent (`flex-1`).
+- `EmptyHeader` - groups the media, title and description.
+- `EmptyMedia` - an icon, avatar or small illustration.
+- `EmptyTitle` - one short line that says what's missing.
+- `EmptyDescription` - why it's empty and what to do about it. Links inside it
+  are underlined automatically.
+- `EmptyContent` - actions, a search box or anything else the user can act on.
+
+## Media
+
+`EmptyMedia` has two variants. `icon` wraps the icon in a soft muted tile and
+sizes it for you. `default` adds no styling, so it's the one for avatars and
+illustrations.
+
+```tsx
+<EmptyMedia variant="icon">
+  <Inbox />
+</EmptyMedia>
+```
+
+<Preview name="empty-avatar" />
+
+```tsx
+<EmptyMedia>
+  <Avatar size="lg">
+    <AvatarImage alt="" src={user.avatar} />
+    <AvatarFallback>AL</AvatarFallback>
+  </Avatar>
+</EmptyMedia>
+```
+
+## Outline
+
+`Empty` already has a dashed border style - it just needs a width. Add `border`
+for a drop-zone look, or `border-2` when it sits alone on a page, like the
+AdminCP dashboard.
+
+<Preview name="empty-outline" />
+
+```tsx
+<Empty className="border">...</Empty>
+```
+
+## No results
+
+A search that finds nothing deserves its own empty state - not the same one as
+"you have no data". Echo the query back and offer a way out, like clearing the
+search.
+
+<Preview name="empty-search" />
+
+```tsx
+{results.length === 0 ? (
+  <Empty className="border p-6 md:p-8">
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <SearchX />
+      </EmptyMedia>
+      <EmptyTitle>No integrations found</EmptyTitle>
+      <EmptyDescription>
+        Nothing matches "{query}". Check the spelling or try a shorter search.
+      </EmptyDescription>
+    </EmptyHeader>
+    <EmptyContent>
+      <Button onClick={() => setQuery('')} size="sm" variant="outline">
+        Clear search
+      </Button>
+    </EmptyContent>
+  </Empty>
+) : (
+  <ResultsList results={results} />
+)}
+```
+
+## Inside a card or sidebar
+
+The default `p-12` is generous on purpose. On phones, `p-6 md:p-12` gives the
+copy room to breathe. In tight spots - a card, a sidebar, a popover - shrink the
+padding and the text:
+
+```tsx
+<Empty className="p-6">
+  <EmptyHeader>
+    <EmptyTitle className="text-sm">No widgets yet</EmptyTitle>
+    <EmptyDescription className="text-xs">
+      Widgets from your plugins will show up here.
+    </EmptyDescription>
+  </EmptyHeader>
+</Empty>
+```
+
+## Writing good empty states
+
+An empty state is a tiny piece of onboarding, so make every word count:
+
+- **Say what's missing.** "No projects yet" beats "Nothing here".
+- **Say why.** Is it brand new, filtered out, or did the search miss?
+- **Give the next step.** One primary action, and maybe a secondary one. If the
+  user can't do anything about it, a clear description is enough.
+- **Keep it short.** One title line, one or two sentences. Nobody reads an essay
+  about an empty table.
+- **Skip the blame.** "No results for 'xylphone'" is fine. "You typed it wrong"
+  is not.
+
+## Accessibility
+
+- `EmptyTitle` renders a `div`. If the empty state replaces a whole page
+  section, give the title a heading role so it shows up in the outline:
+  `<EmptyTitle aria-level={2} role="heading">`.
+- Icons in `EmptyMedia` are decorative - the title already says it all. Use
+  `alt=""` on avatar images for the same reason.
+- When results change while the user types, announce the count in a
+  `role="status"` region (a `sr-only` paragraph works great) so screen reader
+  users know the list just went empty.
+- Use real `Button`s for actions, so they're reachable by keyboard.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+All parts accept the regular `div` props, including `className`.
+
+### EmptyMedia
+
+<TypeTable
+  type={{
+    variant: {
+      description:
+        '`icon` wraps the child in a muted tile and sizes the icon. `default` renders it as is.',
+      type: 'default | icon',
+      default: 'default',
+    },
+  }}
+/>
+
+## API Reference
+
+[shadcn/ui - Empty](https://ui.shadcn.com/docs/components/base/empty)

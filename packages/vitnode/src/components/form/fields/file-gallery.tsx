@@ -200,7 +200,7 @@ export const FileGallery = ({
   };
 
   const list = (
-    <ul className="flex flex-col gap-2" data-slot="file-list">
+    <ul className="not-prose flex flex-col gap-2" data-slot="file-list">
       {rows.map(row => {
         const name = rowName(row);
 

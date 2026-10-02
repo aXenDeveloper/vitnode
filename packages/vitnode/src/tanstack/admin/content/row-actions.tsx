@@ -131,6 +131,7 @@ const PublishRowAction = ({
               <span className="text-foreground font-bold">{title}</span>
             ),
           })}
+          icon={<Icon />}
           onSubmit={async ({ onClose }) => {
             const result = await setContentPublication(queryClient, {
               action,
@@ -398,6 +399,7 @@ const ContentRowActionsMenu = ({
             ),
           })}
           finalFocus={triggerRef}
+          icon={<Trash2Icon />}
           onOpenChange={closePanel}
           onSubmit={async ({ onClose }) => {
             const result = await deleteContentRow(queryClient, {

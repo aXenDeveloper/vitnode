@@ -1,6 +1,7 @@
 ---
 title: Combobox
 description: Select from a list of options with a search input.
+icon: ChevronsUpDown
 ---
 
 ## Preview
@@ -157,6 +158,135 @@ export function ComboboxBasic() {
 
 </Tabs>
 
+## Groups and clear button
+
+<Preview name="combobox-groups" />
+
+Give options a `group` and they're sorted under headings - handy once a list
+gets long enough to scroll. `showClear` adds an × that empties the field in one
+click.
+
+```tsx
+<AutoFormCombobox
+  {...props}
+  label="Timezone"
+  labels={[
+    { group: "Europe", label: "London", value: "europe-london" },
+    { group: "Europe", label: "Warsaw", value: "europe-warsaw" },
+    { group: "Americas", label: "New York", value: "america-new-york" },
+  ]}
+  showClear
+/>
+```
+
+Groups appear in the order they first show up in `labels`, and options without
+a `group` gather at the top with no heading.
+
+## Multiple
+
+<Preview name="combobox-multiple" />
+
+Pass `multiple` and use an array in the schema. Picked options pop in as
+chips, and removing one shrinks it away while the rest slide over to close the
+gap - the box keeps its width and simply wraps onto a new line when it's full.
+With reduced motion turned on, chips just appear and disappear.
+
+### Limit visible chips
+
+Picked a dozen tags? Set `maxVisibleChips` and only the first few show, followed
+by a "+N more" chip that counts the rest. Every pick is still saved - the
+limit is purely visual.
+
+```tsx
+<AutoFormCombobox {...props} labels={topics} maxVisibleChips={3} multiple />
+```
+
+Keyboard tips: <kbd>Backspace</kbd> in an empty search removes the last chip,
+and <kbd>Escape</kbd> with the list closed clears every pick - that's the
+standard combobox pattern, so it's worth knowing before you press it twice.
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+```ts
+const formSchema = z.object({
+  topics: z
+    .array(z.enum(["news", "guides", "releases"]))
+    .min(1, "Pick at least one topic")
+    .max(3, "Three topics is plenty"),
+});
+```
+
+```tsx
+<AutoFormCombobox
+  {...props}
+  label="Topics"
+  labels={[
+    { value: "news", label: "News" },
+    { value: "guides", label: "Guides" },
+    { value: "releases", label: "Releases" },
+  ]}
+  multiple
+/>
+```
+
+`.min()` and `.max()` on the array become the validation messages, and
+`fetchData` works with `multiple` too - the value is then an array of
+`{ value, label }` objects.
+
+  </Tab>
+
+  <Tab value="Manual">
+
+```tsx
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from "@vitnode/core/components/ui/combobox";
+
+export function ComboboxMultiple() {
+  const anchor = useComboboxAnchor();
+
+  return (
+    <Combobox items={frameworks} multiple>
+      <ComboboxChips ref={anchor}>
+        <ComboboxValue>
+          {(values: string[]) => (
+            <>
+              {values.map(value => (
+                <ComboboxChip key={value}>{value}</ComboboxChip>
+              ))}
+              <ComboboxChipsInput placeholder="Add a framework" />
+            </>
+          )}
+        </ComboboxValue>
+      </ComboboxChips>
+      <ComboboxContent anchor={anchor}>
+        <ComboboxEmpty>No items found.</ComboboxEmpty>
+        <ComboboxList>
+          {item => (
+            <ComboboxItem key={item} value={item}>
+              {item}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  );
+}
+```
+
+  </Tab>
+</Tabs>
+
 ## Props
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
@@ -187,8 +317,8 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
     },
     labels: {
       description:
-        "An array of options for the combobox, each with a value and label. Used for static options.",
-      type: "Array<{ value: string; label: string }>",
+        "An array of options for the combobox, each with a value, label and optional group heading. Used for static options.",
+      type: "Array<{ value: string; label: string; group?: string }>",
       default: "[]",
     },
     placeholder: {
@@ -205,6 +335,17 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       description: "Whether the combobox is disabled.",
       type: "boolean",
       default: "false",
+    },
+    showClear: {
+      description: "Shows a button that clears the selection.",
+      type: "boolean",
+      default: "false",
+    },
+    maxVisibleChips: {
+      description:
+        "With `multiple`, shows only this many chips plus a \"+N more\" chip for the rest.",
+      type: "number",
+      default: "",
     },
     multiple: {
       description:

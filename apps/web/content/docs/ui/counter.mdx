@@ -1,0 +1,129 @@
+---
+title: Counter
+description: A plus/minus number picker whose digits roll into place, plus the SlidingNumber behind it.
+icon: Calculator
+---
+
+## Preview
+
+<Preview name="counter" />
+
+## Usage
+
+```ts
+import { Counter } from '@vitnode/core/components/ui/counter'
+```
+
+```tsx
+const [quantity, setQuantity] = React.useState(1)
+
+<Counter max={10} min={1} onValueChange={setQuantity} value={quantity} />
+```
+
+Each digit rolls on its own, the short way round: going from 9 to 10 rolls the
+last digit forward to 0 while a new 1 slides in, instead of spinning back
+through every number. The buttons give a tiny press, and a button is disabled
+once you hit `min` or `max`, so nobody wonders why clicking does nothing.
+
+Leave out `value` and use `defaultValue` if you only care about changes:
+
+```tsx
+<Counter defaultValue={2} onValueChange={value => save(value)} />
+```
+
+## Steps and limits
+
+`step` sets how far one click goes. A step that would jump past a limit stops
+right at it - with `max={10}` and `step={5}`, 8 goes to 10, not 13.
+
+```tsx
+<Counter max={100} min={0} step={5} />
+```
+
+## Sliding number
+
+<Preview name="counter-sliding-number" />
+
+The rolling digits are their own component, so you can animate any number -
+stats, prices, likes - without the buttons:
+
+```ts
+import { SlidingNumber } from '@vitnode/core/components/ui/sliding-number'
+```
+
+```tsx
+<SlidingNumber className="text-5xl font-semibold" value={downloads} />
+```
+
+It takes the font size and colour of its surroundings and always uses
+tabular figures, so digits don't wobble as they change. It handles whole
+numbers, positive or negative.
+
+## In a form
+
+Counter is a standalone control. In an AutoForm, the
+[number field](/docs/ui/auto-form) is still the way to collect a number that
+gets saved.
+
+## Accessibility
+
+- The buttons are labelled "Decrease" and "Increase" in the user's language.
+- Screen readers hear the new value after every click, without the rolling
+  digits - those are hidden from assistive tech.
+- Give the counter a name with `aria-label` or `aria-labelledby`, so "Increase"
+  has context: increase _what_?
+- With reduced motion turned on, digits change instantly.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Counter
+
+<TypeTable
+  type={{
+    value: {
+      description: 'The current value (controlled).',
+      type: 'number',
+    },
+    defaultValue: {
+      description: 'The starting value when uncontrolled.',
+      type: 'number',
+      default: '0',
+    },
+    onValueChange: {
+      description: 'Called with the new value after a click.',
+      type: '(value: number) => void',
+    },
+    min: {
+      description: 'The lowest allowed value.',
+      type: 'number',
+    },
+    max: {
+      description: 'The highest allowed value.',
+      type: 'number',
+    },
+    step: {
+      description: 'How much one click adds or removes.',
+      type: 'number',
+      default: '1',
+    },
+    disabled: {
+      description: 'Disables both buttons.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+### SlidingNumber
+
+<TypeTable
+  type={{
+    value: {
+      description: 'The whole number to show.',
+      type: 'number',
+      required: true,
+    },
+  }}
+/>

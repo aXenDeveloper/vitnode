@@ -85,6 +85,7 @@ export const PaginationDataTable = ({
       : {
           "aria-disabled": true as const,
           className: "pointer-events-none opacity-50",
+          role: "link",
           tabIndex: -1,
         };
 
@@ -125,6 +126,7 @@ export const PaginationDataTable = ({
       : {
           "aria-disabled": true as const,
           className: "pointer-events-none opacity-50",
+          role: "link",
           tabIndex: -1,
         };
 

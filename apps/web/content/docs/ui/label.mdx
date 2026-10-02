@@ -1,0 +1,124 @@
+---
+title: Label
+description: An accessible text label for form controls - click it and the control it names responds.
+icon: TextInitial
+---
+
+## Preview
+
+<Preview name="label" />
+
+## Usage
+
+```ts
+import { Label } from '@vitnode/core/components/ui/label'
+```
+
+```tsx
+<Label htmlFor="email">Email</Label>
+<Input id="email" type="email" />
+```
+
+`Label` is a styled native `<label>`. Point `htmlFor` at the control's `id` and
+the browser handles the rest: the whole label becomes a click target, and
+screen readers announce the text when the control gets focus.
+
+## Using AutoForm? You already have labels
+
+[AutoForm](/docs/ui/auto-form) fields render their own label (`AutoFormLabel`)
+from the `label` prop, wired to the right `id`, with an "Optional" hint when the
+schema says so. Don't add a `Label` next to an AutoForm field - you'd just get
+two.
+
+```tsx
+<AutoFormInput label="Email" {...props} />
+```
+
+Reach for `Label` when you build a control by hand: a settings toggle outside a
+form, a custom picker, a filter bar. For a full field layout with description
+and error message, see [Field](/docs/ui/field) - `FieldLabel` is built on top
+of this component.
+
+## With a checkbox
+
+Put the control first and the label after it. The gap and alignment are built
+in, so clicking anywhere on the text toggles the checkbox.
+
+```tsx
+<div className="flex items-center gap-3">
+  <Checkbox id="terms" />
+  <Label htmlFor="terms">I promise I read the terms</Label>
+</div>
+```
+
+## Wrapping the control
+
+No `id` handy? Wrap the control instead - a `<label>` is associated with the
+control inside it automatically.
+
+```tsx
+<Label>
+  <Checkbox />
+  Remember me
+</Label>
+```
+
+## Disabled controls
+
+Disable the control and the label follows along: it dims and shows a
+`not-allowed` cursor, so nobody wonders why clicking it does nothing.
+
+```tsx
+<div className="flex items-center gap-3">
+  <Checkbox disabled id="newsletter" />
+  <Label htmlFor="newsletter">Weekly newsletter (coming soon)</Label>
+</div>
+```
+
+This works when the control comes **before** the label as a sibling and has the
+`peer` class - VitNode's `Checkbox`, `Switch` and `RadioGroupItem` already do.
+`Label` reacts to both a native `disabled` attribute and the `data-disabled`
+attribute Base UI puts on its controls.
+
+Label sits somewhere else? Put `group` and `data-disabled="true"` on a shared
+parent instead - that is what [Field](/docs/ui/field) does for you.
+
+## Accessibility
+
+- Always associate the label with its control, either with `htmlFor` + `id` or
+  by wrapping the control. A label floating next to an input is just text to a
+  screen reader.
+- Keep the visible text meaningful. "Email" beats "Field 1", and placeholders
+  are not labels - they vanish the moment someone starts typing.
+- The label is part of the hit area. That makes small controls like checkboxes
+  much easier to tap on a phone, so keep the text next to the control rather
+  than far away.
+- `select-none` stops accidental text selection when someone clicks the label
+  quickly a few times.
+
+## Props
+
+Accepts every prop of the native `<label>` element.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    htmlFor: {
+      description: 'The `id` of the control this label describes.',
+      type: 'string',
+    },
+    children: {
+      description: 'The label text. It can also wrap the control itself.',
+      type: 'React.ReactNode',
+    },
+    className: {
+      description: 'Extra classes merged with the default styles.',
+      type: 'string',
+    },
+  }}
+/>
+
+## API Reference
+
+[MDN - The Label element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label)

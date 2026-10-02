@@ -50,6 +50,7 @@ export const FilesBulkActions = ({
           ? t("bulk_delete.in_use.revisions.desc", { count: ids.length })
           : t("bulk_delete.desc", { count: ids.length })
       }
+      icon={<Trash2Icon />}
       onOpenChange={open => {
         if (!open) setHeldByRevisions([]);
       }}

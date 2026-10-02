@@ -100,7 +100,7 @@ function AttachmentTitle({
   return (
     <span
       className={cn(
-        "group-data-[state=processing]/attachment:shimmer group-data-[state=uploading]/attachment:shimmer block max-w-full min-w-0 truncate font-medium",
+        "group-data-[state=processing]/attachment:shimmer group-data-[state=uploading]/attachment:shimmer motion-reduce:shimmer-none block max-w-full min-w-0 truncate font-medium",
         className,
       )}
       data-slot="attachment-title"
@@ -186,7 +186,7 @@ function AttachmentGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "scroll-fade-x flex min-w-0 snap-x snap-mandatory scroll-px-1 scrollbar-none gap-3 overflow-x-auto overscroll-x-contain py-1 *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start",
+        "scroll-fade-x no-scrollbar flex min-w-0 snap-x snap-mandatory scroll-px-1 gap-3 overflow-x-auto overscroll-x-contain py-1 *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start",
         className,
       )}
       data-slot="attachment-group"

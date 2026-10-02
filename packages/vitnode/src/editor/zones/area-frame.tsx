@@ -271,6 +271,7 @@ export const EditableAreaFrame = ({
                     </Button>
                   </span>
                 }
+                icon={<Trash2Icon />}
                 onOpenChange={setConfirming}
                 onSubmit={({ onClose }) => {
                   onClose();

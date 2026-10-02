@@ -1,0 +1,215 @@
+---
+title: Pagination
+description: Page numbers, previous and next links, and an ellipsis for when there are more pages than anyone wants to click through.
+icon: ChevronsLeftRightEllipsis
+---
+
+## Preview
+
+<Preview name="pagination" />
+
+<Callout title="Building a table?">
+  The [Data Table](/docs/ui/data-table) already paginates for you - page
+  numbers, page size and URL state included. Reach for `Pagination` directly
+  when you render your own list, feed or gallery.
+</Callout>
+
+## Usage
+
+```ts
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@vitnode/core/components/ui/pagination'
+```
+
+```tsx
+<Pagination>
+  <PaginationContent>
+    <PaginationItem>
+      <PaginationPrevious href="?page=1" />
+    </PaginationItem>
+    <PaginationItem>
+      <PaginationLink href="?page=1">1</PaginationLink>
+    </PaginationItem>
+    <PaginationItem>
+      <PaginationLink href="?page=2" isActive>
+        2
+      </PaginationLink>
+    </PaginationItem>
+    <PaginationItem>
+      <PaginationLink href="?page=3">3</PaginationLink>
+    </PaginationItem>
+    <PaginationItem>
+      <PaginationEllipsis />
+    </PaginationItem>
+    <PaginationItem>
+      <PaginationNext href="?page=3" />
+    </PaginationItem>
+  </PaginationContent>
+</Pagination>
+```
+
+Every link renders a real `<a>`, so pages stay crawlable and middle-click still
+opens a new tab. `PaginationPrevious` and `PaginationNext` hide their text below
+the `sm` breakpoint and keep just the chevron, which also flips in RTL
+languages.
+
+## With router links
+
+`PaginationLink` takes any anchor prop. Keep a real `href` for crawlers and new
+tabs, then let TanStack Router handle the click so the page does not reload:
+
+```tsx
+import { useNavigate } from '@tanstack/react-router'
+
+const navigate = useNavigate()
+
+const goTo = (page: number) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+  event.preventDefault()
+  void navigate({ to: '.', search: prev => ({ ...prev, page }) })
+}
+
+<PaginationLink href={`?page=${page}`} isActive={page === current} onClick={goTo(page)}>
+  {page}
+</PaginationLink>
+```
+
+## Ellipsis
+
+Twelve pages do not need twelve buttons. Show the first page, the last page and
+the one you are on, and let `PaginationEllipsis` stand in for the rest. A tiny
+helper keeps the window at five slots, so the row never jumps around:
+
+```tsx
+type PageSlot = 'ellipsis-end' | 'ellipsis-start' | number
+
+const range = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, step) => from + step)
+
+const pageWindow = (current: number, total: number): PageSlot[] => {
+  if (total <= 5) return range(1, total)
+  if (current <= 3) return [1, 2, 3, 'ellipsis-end', total]
+  if (current >= total - 2) {
+    return [1, 'ellipsis-start', ...range(total - 2, total)]
+  }
+
+  return [1, 'ellipsis-start', current, 'ellipsis-end', total]
+}
+```
+
+```tsx
+{pageWindow(page, total).map(slot => (
+  <PaginationItem key={slot}>
+    {typeof slot === 'number' ? (
+      <PaginationLink href={`?page=${slot}`} isActive={slot === page}>
+        {slot}
+      </PaginationLink>
+    ) : (
+      <PaginationEllipsis />
+    )}
+  </PaginationItem>
+))}
+```
+
+## Small screens
+
+Even five numbers get crowded on a phone. Give every number's `PaginationItem`
+`className="hidden sm:block"` and show a "Page 2 of 12" line between the arrows
+instead - the same trick the [Data Table](/docs/ui/data-table) uses:
+
+```tsx
+<PaginationItem className="sm:hidden">
+  <span className="text-muted-foreground px-2 text-sm">
+    Page {page} of {total}
+  </span>
+</PaginationItem>
+```
+
+## Disabled ends
+
+There is no page zero (we checked). On the first and last page, drop the `href`
+so the keyboard skips the link, and add `role="link"` with `aria-disabled` so
+screen readers still hear it as an unavailable link:
+
+```tsx
+<PaginationPrevious
+  {...(page > 1
+    ? { href: `?page=${page - 1}` }
+    : { 'aria-disabled': true, className: 'pointer-events-none', role: 'link' })}
+/>
+```
+
+## Custom labels
+
+The previous and next labels are translated out of the box. Pass `text` when
+your feed deserves something more specific:
+
+```tsx
+<PaginationPrevious href="?page=1" text="Newer posts" />
+<PaginationNext href="?page=3" text="Older posts" />
+```
+
+## Accessibility
+
+- `Pagination` is a `nav` landmark labelled "pagination", so screen reader users
+  can jump straight to it.
+- The active link gets `aria-current="page"`, which is announced as the current
+  page.
+- `PaginationPrevious` and `PaginationNext` keep a translated label ("Previous
+  page", "Next page") even when only the chevron is visible.
+- Page links are plain anchors named by their number, so "2" is read as
+  "link, 2" rather than a generic "Go to page".
+- `PaginationEllipsis` is hidden from assistive technology - it is decoration,
+  not a link.
+- Announce page changes that do not reload the page, for example with an
+  `aria-live="polite"` "Page 2 of 12" line like in the preview.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### PaginationLink
+
+<TypeTable
+  type={{
+    href: {
+      description: 'Where the link goes. Leave it out for a disabled end.',
+      type: 'string',
+    },
+    isActive: {
+      description:
+        'Marks the current page with `aria-current="page"` and the outline style.',
+      type: 'boolean',
+      default: 'false',
+    },
+    size: {
+      description: 'The size of the underlying button.',
+      type: 'default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg',
+      default: 'icon',
+    },
+  }}
+/>
+
+### PaginationPrevious / PaginationNext
+
+Accept every `PaginationLink` prop, plus:
+
+<TypeTable
+  type={{
+    text: {
+      description: 'The visible label, shown from the `sm` breakpoint up.',
+      type: 'string',
+      default: '"Previous" / "Next" (translated)',
+    },
+  }}
+/>
+
+## API Reference
+
+[shadcn/ui - Pagination](https://ui.shadcn.com/docs/components/base/pagination)

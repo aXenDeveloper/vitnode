@@ -1,0 +1,213 @@
+---
+title: Message
+description: Lay out a chat message with an avatar, sender name, timestamp, footer actions and start or end alignment.
+icon: MessagesSquare
+---
+
+## Preview
+
+<Preview name="message" />
+
+## Usage
+
+```ts
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@vitnode/core/components/ui/avatar'
+import { Bubble, BubbleContent } from '@vitnode/core/components/ui/bubble'
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from '@vitnode/core/components/ui/message'
+```
+
+```tsx
+<Message>
+  <MessageAvatar>
+    <Avatar>
+      <AvatarImage alt="VitNode assistant" src="/logo_vitnode_icon.svg" />
+      <AvatarFallback>VN</AvatarFallback>
+    </Avatar>
+  </MessageAvatar>
+  <MessageContent>
+    <Bubble variant="muted">
+      <BubbleContent>How can I help you today?</BubbleContent>
+    </Bubble>
+  </MessageContent>
+</Message>
+```
+
+`Message` owns the row: who is talking, which side they sit on, and what goes
+above or below. The actual speech bubble is a [Bubble](/docs/ui/bubble) - the
+two are designed to be best friends.
+
+## Composition
+
+```text
+MessageGroup
+└── Message
+    ├── MessageAvatar
+    └── MessageContent
+        ├── MessageHeader
+        ├── Bubble / Attachment
+        └── MessageFooter
+```
+
+## Alignment
+
+Set `align="end"` for messages the current user sent. The avatar swaps sides,
+and every bubble, attachment, header and footer inside `MessageContent` moves to
+the end - no need to set `align` on each `Bubble`.
+
+```tsx
+<Message align="end">
+  <MessageContent>
+    <Bubble>
+      <BubbleContent>Sent by me, obviously.</BubbleContent>
+    </Bubble>
+  </MessageContent>
+</Message>
+```
+
+`start` and `end` are logical, so in right-to-left languages the sides flip on
+their own.
+
+## Avatar
+
+`MessageAvatar` sticks to the bottom of the message, next to the last bubble.
+When the message has a `MessageFooter`, the avatar lifts up so it lines up with
+the bubble instead of the footer.
+
+## Group
+
+Wrap consecutive messages from the same sender in `MessageGroup` to tighten the
+spacing. Give the earlier messages an empty `MessageAvatar` so their bubbles line
+up with the one that shows the avatar.
+
+```tsx
+<MessageGroup>
+  <Message>
+    <MessageAvatar />
+    <MessageContent>
+      <Bubble variant="muted">
+        <BubbleContent>First thought.</BubbleContent>
+      </Bubble>
+    </MessageContent>
+  </Message>
+  <Message>
+    <MessageAvatar>
+      <Avatar>
+        <AvatarFallback>AV</AvatarFallback>
+      </Avatar>
+    </MessageAvatar>
+    <MessageContent>
+      <Bubble variant="muted">
+        <BubbleContent>Second thought, now with a face.</BubbleContent>
+      </Bubble>
+    </MessageContent>
+  </Message>
+</MessageGroup>
+```
+
+Need several bubbles inside a single message instead? Use
+[`BubbleGroup`](/docs/ui/bubble#grouping) inside `MessageContent`.
+
+## Header and footer
+
+`MessageHeader` is the spot for a sender name and timestamp. `MessageFooter`
+holds metadata such as a read receipt and follows the message to its side.
+
+```tsx
+<Message>
+  <MessageContent>
+    <MessageHeader className="gap-1.5">
+      <span className="text-foreground">Ava</span>
+      <time dateTime="2026-10-02T09:41">9:41 AM</time>
+    </MessageHeader>
+    <Bubble variant="muted">
+      <BubbleContent>Did the plugin build pass?</BubbleContent>
+    </Bubble>
+    <MessageFooter>Read</MessageFooter>
+  </MessageContent>
+</Message>
+```
+
+## Actions
+
+Put message-level actions such as copy, retry or feedback in the footer.
+
+```tsx
+<MessageFooter>
+  <Button aria-label="Copy message" size="icon-xs" variant="ghost">
+    <Copy />
+  </Button>
+</MessageFooter>
+```
+
+## Attachments
+
+Drop an [Attachment](/docs/ui/attachment) next to the bubble inside
+`MessageContent`. It aligns with the message like everything else.
+
+```tsx
+<Message align="end">
+  <MessageContent>
+    <Attachment>
+      <AttachmentMedia>
+        <FileText />
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>build-log.txt</AttachmentTitle>
+        <AttachmentDescription>TXT · 12 KB</AttachmentDescription>
+      </AttachmentContent>
+    </Attachment>
+    <Bubble>
+      <BubbleContent>Log attached.</BubbleContent>
+    </Bubble>
+  </MessageContent>
+</Message>
+```
+
+## Accessibility
+
+- `Message` is a layout wrapper with no role of its own. Put `role="log"` and an
+  `aria-label` on the conversation container so new messages are announced
+  politely.
+- Alignment only tells sighted users who is speaking. Name the sender in text
+  too: a visible `MessageHeader`, or one with `className="sr-only"` for your own
+  messages.
+- Wrap timestamps in `<time dateTime="...">` so they stay machine-readable
+  while showing a friendly format.
+- Give `AvatarImage` an `alt` with the sender's name. If a `MessageHeader`
+  already names them, mark the `MessageAvatar` `aria-hidden="true"` so screen
+  readers do not hear the name twice.
+- Icon-only footer actions need an `aria-label`.
+- For "someone is typing" hints, use a [Marker](/docs/ui/marker) with
+  `role="status"`.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Message
+
+<TypeTable
+  type={{
+    align: {
+      description:
+        'Which side of the conversation the message sits on. Bubbles, attachments, header and footer inside follow it.',
+      type: 'start | end',
+      default: 'start',
+    },
+  }}
+/>
+
+`MessageGroup`, `MessageAvatar`, `MessageContent`, `MessageHeader` and
+`MessageFooter` accept every `div` prop, including `className`.
+
+## API Reference
+
+[shadcn/ui - Message](https://ui.shadcn.com/docs/components/base/message)

@@ -1,0 +1,270 @@
+---
+title: Number Field
+description: A number input with plus and minus buttons, keyboard stepping, min/max clamping, Intl formatting and drag-to-scrub labels.
+icon: Diff
+---
+
+## Preview
+
+<Preview name="number-field" />
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+<Preview name="number-field-auto-form" />
+
+```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormNumber } from '@vitnode/core/components/form/fields/number'
+```
+
+```ts
+const formSchema = z.object({
+  guests: z.number().int().min(1).max(12).default(2),
+})
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'guests',
+      component: props => (
+        <AutoFormNumber
+          {...props}
+          label="Guests"
+          max={12}
+          min={1}
+          unitLabel="people"
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+The form stores a real `number`, not a string. Clearing the input stores
+`null`, so pair it with `.optional()` or a `default` when empty is allowed.
+Pass `min`/`max` to the field as well as the schema - the schema validates,
+the props clamp the buttons and the arrow keys.
+
+Need an "unlimited" checkbox next to it? That's
+[Nullable Number](/docs/ui/nullable-number).
+
+  </Tab>
+
+  <Tab value="Manual">
+
+```ts
+import {
+  NumberField,
+  NumberFieldDecrement,
+  NumberFieldGroup,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from '@vitnode/core/components/ui/number-field'
+```
+
+```tsx
+const [value, setValue] = React.useState<number | null>(2)
+
+<NumberField max={8} min={0} onValueChange={setValue} value={value}>
+  <NumberFieldGroup>
+    <NumberFieldDecrement />
+    <NumberFieldInput aria-label="Coffees per day" />
+    <NumberFieldIncrement />
+  </NumberFieldGroup>
+</NumberField>
+```
+
+Prefer uncontrolled? Swap `value` for `defaultValue` and listen with
+`onValueCommitted`, which fires once the user is done (on blur, or when the
+button is released) instead of on every keystroke.
+
+  </Tab>
+</Tabs>
+
+## Min, max and step
+
+- `min` / `max` - the buttons, arrow keys and scrubbing stop at the limits, and
+  the button that would cross one is disabled. A typed value is clamped on blur.
+- `step` - how much one click or arrow press moves the value (default `1`).
+- `largeStep` - used with <kbd>Shift</kbd> held (default `10`).
+- `smallStep` - used with <kbd>Alt</kbd> (default `0.1`).
+- `snapOnStep` - snap to the nearest multiple of the step instead of adding it
+  to whatever was typed.
+
+```tsx
+<NumberField largeStep={50} max={500} min={0} step={5}>
+  …
+</NumberField>
+```
+
+## Formatting
+
+`format` takes [`Intl.NumberFormatOptions`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat#options),
+so currencies, percentages and units come for free. The value stays a plain
+number - `0.15` shows as `15%`, and typing `20%` gives you `0.2` back.
+
+<Preview name="number-field-format" />
+
+```tsx
+<NumberField defaultValue={19.99} format={{ style: 'currency', currency: 'USD' }}>
+  …
+</NumberField>
+
+<NumberField
+  defaultValue={0.15}
+  format={{ style: 'percent' }}
+  max={1}
+  min={0}
+  step={0.01}
+>
+  …
+</NumberField>
+```
+
+Numbers are formatted in the current app locale, so Polish users see `12 345`
+and English users see `12,345`. Pass `locale` to override it.
+
+## Scrub area
+
+Wrap the label in `NumberFieldScrubArea` and the label becomes a slider: drag
+it left or right to change the value, like in a design tool. Give it the same
+`htmlFor` as the field's `id` so clicking the label still focuses the input.
+
+```tsx
+const id = React.useId()
+
+<NumberField id={id} max={8} min={0}>
+  <NumberFieldScrubArea htmlFor={id} label="Coffees per day" />
+  <NumberFieldGroup>
+    <NumberFieldDecrement />
+    <NumberFieldInput />
+    <NumberFieldIncrement />
+  </NumberFieldGroup>
+</NumberField>
+```
+
+Want the mouse wheel to change the value while the input is focused? Add
+`allowWheelScrub`.
+
+## Sizes
+
+<Preview name="number-field-sizes" />
+
+```tsx
+<NumberField size="sm">…</NumberField>
+<NumberField>…</NumberField>
+<NumberField size="lg">…</NumberField>
+```
+
+## Disabled and read-only
+
+`disabled` dims the whole field and ignores every interaction. `readOnly`
+keeps the value readable and focusable but locks the buttons and the keys.
+
+## Accessibility
+
+- The input stays a text field (so formatted values like `$19.99` work) with
+  `inputMode` set, so phones open the right keyboard.
+- <kbd>Arrow Up</kbd> / <kbd>Arrow Down</kbd> step by `step`, hold
+  <kbd>Shift</kbd> for `largeStep` or <kbd>Alt</kbd> for `smallStep`.
+  <kbd>Home</kbd> / <kbd>End</kbd> jump to `min` / `max` when set.
+- The plus and minus buttons are labelled "Increase" and "Decrease" in the
+  user's language and are skipped by <kbd>Tab</kbd> - the keyboard already has
+  the arrow keys. On touch screens their hit area grows to 44px.
+- Name the input with a label (`htmlFor` + `id`), a scrub area, or
+  `aria-label`. `AutoFormNumber` does it for you.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    value: {
+      description: 'The number (controlled). `null` means empty.',
+      type: 'number | null',
+    },
+    defaultValue: {
+      description: 'The starting number when uncontrolled.',
+      type: 'number',
+    },
+    onValueChange: {
+      description: 'Called on every change - typing, buttons, keys, scrubbing.',
+      type: '(value: number | null) => void',
+    },
+    onValueCommitted: {
+      description:
+        'Called once the change is final - on blur, or when a button or scrub is released.',
+      type: '(value: number | null) => void',
+    },
+    min: {
+      description: 'The lowest allowed value.',
+      type: 'number',
+    },
+    max: {
+      description: 'The highest allowed value.',
+      type: 'number',
+    },
+    step: {
+      description: 'Amount for one click or arrow press.',
+      type: 'number | "any"',
+      default: '1',
+    },
+    largeStep: {
+      description: 'Amount with Shift held.',
+      type: 'number',
+      default: '10',
+    },
+    smallStep: {
+      description: 'Amount with Alt held.',
+      type: 'number',
+      default: '0.1',
+    },
+    format: {
+      description: 'How the value is displayed.',
+      type: 'Intl.NumberFormatOptions',
+    },
+    locale: {
+      description: 'Locale used for formatting and parsing.',
+      type: 'Intl.LocalesArgument',
+      default: 'the app locale',
+    },
+    size: {
+      description: 'Height of the field.',
+      type: '"sm" | "default" | "lg"',
+      default: '"default"',
+    },
+    allowWheelScrub: {
+      description: 'Change the value with the mouse wheel while focused.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'Ignores every interaction.',
+      type: 'boolean',
+      default: 'false',
+    },
+    readOnly: {
+      description: 'Shows the value but blocks changes.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+`AutoFormNumber` takes all of the props above except `value`,
+`defaultValue` and `onValueChange` (the form owns those), plus `label`,
+`description`, `placeholder` and `unitLabel`.
+
+## API Reference
+
+[Base UI - Number Field](https://base-ui.com/react/components/number-field)

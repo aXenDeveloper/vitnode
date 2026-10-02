@@ -1,0 +1,121 @@
+---
+title: Copy Button
+description: A button that copies text to the clipboard, with a smooth icon swap and a check mark that draws itself.
+icon: Copy
+---
+
+## Preview
+
+<Preview name="copy-button" />
+
+## Usage
+
+```ts
+import { CopyButton } from '@vitnode/core/components/ui/copy-button'
+```
+
+```tsx
+<CopyButton content="Hello world!" />
+```
+
+Click it and the copy icon blurs away while a check mark draws itself in - the
+same stroke animation as the [Checkbox](/docs/ui/checkbox). After `delay`
+milliseconds it quietly goes back to the copy icon, ready for round two.
+
+## With a label
+
+Pass children to show text next to the icon. The text becomes the button's
+accessible name, so screen readers hear what you see.
+
+```tsx
+<CopyButton content={inviteLink} variant="secondary">
+  Copy invite link
+</CopyButton>
+```
+
+## Icon only
+
+Without children the button renders as an icon. It labels itself "Copy" and
+"Copied" out of the box, but a specific label is friendlier when there are a few
+copy buttons on one screen:
+
+```tsx
+<CopyButton
+  aria-label="Copy install command"
+  content="pnpm create vitnode-app@canary"
+  size="icon-sm"
+  variant="ghost"
+/>
+```
+
+## Controlled
+
+Own the copied state with `copied` and `onCopiedChange` - handy when something
+else on the page should react to the copy.
+
+```tsx
+const [copied, setCopied] = React.useState(false)
+
+<CopyButton
+  content={apiKey}
+  copied={copied}
+  onCopiedChange={setCopied}
+/>
+```
+
+## Accessibility
+
+- A polite live region announces "Copied" after a successful copy, so the
+  change is not just a visual one.
+- With reduced motion turned on, the icons simply fade and the check mark shows
+  up fully drawn.
+- If the browser blocks clipboard access (for example on a non-HTTPS page), an
+  error toast explains what happened instead of failing silently.
+- Calling `event.preventDefault()` inside your own `onClick` skips the copy.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    content: {
+      description: 'The text written to the clipboard.',
+      type: 'string',
+      required: true,
+    },
+    copied: {
+      description: 'Controls the copied state.',
+      type: 'boolean',
+    },
+    onCopiedChange: {
+      description:
+        'Called with `true` after a successful copy and with `false` when the button resets.',
+      type: '(copied: boolean) => void',
+    },
+    delay: {
+      description: 'How long the check mark stays, in milliseconds.',
+      type: 'number',
+      default: '3000',
+    },
+    variant: {
+      description: 'The variant of the button.',
+      type: 'default | secondary | outline | ghost | link | success | warning | destructive',
+      default: 'outline',
+    },
+    size: {
+      description:
+        'The size of the button. Defaults to `icon` without children and `default` with them.',
+      type: 'default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg',
+    },
+    'aria-label': {
+      description:
+        'Overrides the accessible name. Without children it defaults to "Copy" / "Copied".',
+      type: 'string',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - Button](https://base-ui.com/react/components/button#api-reference)

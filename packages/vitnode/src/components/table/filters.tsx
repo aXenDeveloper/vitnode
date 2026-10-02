@@ -105,7 +105,12 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
               orientation="vertical"
             />
             {isAsync || selectedStaticOptions.length > 2 ? (
-              <Badge>{t("selected_count", { count: selected.length })}</Badge>
+              <Badge>
+                {t.rich("selected_count", {
+                  count: selected.length,
+                  number: chunks => <>{chunks}</>,
+                })}
+              </Badge>
             ) : (
               selectedStaticOptions.map(option => (
                 <Badge key={option.value}>{option.label}</Badge>

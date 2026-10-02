@@ -1,0 +1,42 @@
+---
+title: Search
+description: Let people search the table - the term lives in the URL, so the API does the heavy lifting.
+icon: TextSearch
+---
+
+## Preview
+
+<Preview name="data-table-search" withoutBackground />
+
+## Usage
+
+Set the `search` prop to `true` to render a search input above the table. You can optionally customize the placeholder with `searchPlaceholder`.
+
+```tsx
+<DataTable
+  id="users-table"
+  // [!code ++]
+  search
+  // [!code ++]
+  searchPlaceholder="Search users..."
+  columns={[
+    { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'email', header: 'Email' },
+  ]}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{
+    defaultOrder: {
+      column: 'name',
+      order: 'asc',
+    },
+  }}
+/>
+```
+
+The input writes the term to the `?search=` query parameter (debounced) and reloads the page, so it works out of the box with server-side data fetching. The columns that are actually searched are defined on the API route.
+
+<Callout type="info" title="Configure the API route">
+  Enabling `search` only renders the input. You must also tell the backend which
+  columns to search across - see the [Search](/docs/dev/database/search) guide.
+</Callout>

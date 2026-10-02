@@ -1,6 +1,7 @@
 ---
 title: Tooltip
 description: A tooltip component for displaying additional information on hover or focus.
+icon: MessageCircleMore
 ---
 
 ## Preview
@@ -40,6 +41,49 @@ import { PlayIcon } from "lucide-react";
   </Button>
 </TooltipWithContent>
 ```
+
+## Group
+
+<Preview name="tooltip-group" />
+
+Got a toolbar full of icon buttons? Wrap it in `TooltipGroup` and use
+`TooltipGroupTrigger` for each button. They all share one tooltip, so moving
+from button to button glides it over - resizing to fit the new text, which
+slides in from the direction you came from - instead of closing and opening
+again every time.
+
+```ts
+import {
+  TooltipGroup,
+  TooltipGroupTrigger,
+} from "@vitnode/core/components/ui/tooltip";
+```
+
+```tsx
+<TooltipGroup>
+  <div aria-label="Formatting" role="toolbar">
+    <TooltipGroupTrigger
+      content="Bold"
+      render={<Button aria-label="Bold" size="icon-sm" variant="ghost" />}
+    >
+      <BoldIcon />
+    </TooltipGroupTrigger>
+    <TooltipGroupTrigger
+      content="Italic"
+      render={<Button aria-label="Italic" size="icon-sm" variant="ghost" />}
+    >
+      <ItalicIcon />
+    </TooltipGroupTrigger>
+  </div>
+</TooltipGroup>
+```
+
+`TooltipGroup` takes `side`, `sideOffset` and `align`, just like
+`TooltipContent`. With reduced motion turned on, the tooltip jumps straight to
+the next button instead of gliding.
+
+A tooltip is a hint, not a label - icon buttons still need their own
+`aria-label`, as above.
 
 ## API Reference
 

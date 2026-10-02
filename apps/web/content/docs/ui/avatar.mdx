@@ -1,0 +1,127 @@
+---
+title: Avatar
+description: Profile pictures with a graceful fallback, status badges and groups that lift on hover.
+icon: CircleUserRound
+---
+
+## Preview
+
+<Preview name="avatar" />
+
+## Usage
+
+```ts
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@vitnode/core/components/ui/avatar'
+```
+
+```tsx
+<Avatar>
+  <AvatarImage alt="Ada Lovelace" src={user.avatarUrl} />
+  <AvatarFallback>AL</AvatarFallback>
+</Avatar>
+```
+
+The fallback shows while the image loads and stays if it never arrives - so a
+broken link turns into tidy initials instead of a sad empty circle.
+
+## Sizes
+
+```tsx
+<Avatar size="sm" />
+<Avatar />
+<Avatar size="lg" />
+```
+
+## Badge
+
+Add `AvatarBadge` for a status dot. It takes any background colour, so pick a
+semantic one:
+
+```tsx
+<Avatar>
+  <AvatarImage alt="Ada Lovelace" src={user.avatarUrl} />
+  <AvatarFallback>AL</AvatarFallback>
+  <AvatarBadge className="bg-success" />
+</Avatar>
+```
+
+A coloured dot alone doesn't tell everyone that someone is online - say it in
+text somewhere too, or give the badge an `aria-label`.
+
+## Group
+
+Stack avatars with `AvatarGroup`. Wrap each one in `AvatarGroupItem` to make it
+lift on hover and show the person's name in a tooltip, and finish with
+`AvatarGroupCount` for everyone who didn't fit:
+
+```tsx
+import {
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarGroupItem,
+} from '@vitnode/core/components/ui/avatar'
+```
+
+```tsx
+<AvatarGroup>
+  {users.map(user => (
+    <AvatarGroupItem key={user.id} label={user.name}>
+      <Avatar>
+        <AvatarImage alt={user.name} src={user.avatarUrl} />
+        <AvatarFallback>{user.initials}</AvatarFallback>
+      </Avatar>
+    </AvatarGroupItem>
+  ))}
+  <AvatarGroupCount>+3</AvatarGroupCount>
+</AvatarGroup>
+```
+
+All items in a group share one tooltip, so moving along the stack glides it
+from face to face instead of blinking a new one open each time.
+
+Plain `Avatar`s work inside `AvatarGroup` too, when you want a quiet stack with
+no hover effect.
+
+## Accessibility
+
+- Always pass `alt` to `AvatarImage` - the person's name is usually perfect.
+- An `AvatarGroupItem` with a `label` can be focused with the keyboard, and the
+  tooltip appears on focus as well as on hover.
+- With reduced motion turned on, avatars in a group stay put and only the
+  tooltip appears.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Avatar
+
+<TypeTable
+  type={{
+    size: {
+      description: 'The size of the avatar.',
+      type: '"sm" | "default" | "lg"',
+      default: '"default"',
+    },
+  }}
+/>
+
+### AvatarGroupItem
+
+<TypeTable
+  type={{
+    label: {
+      description:
+        'Shown in a tooltip on hover and focus. Without it, the avatar still lifts but is not focusable.',
+      type: 'ReactNode',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - Avatar](https://base-ui.com/react/components/avatar)

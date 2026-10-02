@@ -1,6 +1,7 @@
 ---
 title: Dialog
 description: Display content in a modal dialog.
+icon: AppWindow
 ---
 
 ## Preview
@@ -25,22 +26,31 @@ import {
 
 ```tsx
 <Dialog>
-  <DialogTrigger render={<Button variant="outline">Open</Button>} />
+  <DialogTrigger render={<Button variant="outline">Share</Button>} />
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>Are you absolutely sure?</DialogTitle>
+      <DialogTitle>Share this page</DialogTitle>
       <DialogDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
+        Anyone with the link can read it - no account needed.
       </DialogDescription>
     </DialogHeader>
+    <div className="flex items-center gap-2">
+      <Input aria-label="Page link" readOnly value={link} />
+      <CopyButton aria-label="Copy link" content={link} />
+    </div>
     <DialogFooter>
-      <DialogClose render={<Button variant="outline">Cancel</Button>} />
-      <Button variant="destructive">Yes, delete account</Button>
+      <DialogClose render={<Button>Done</Button>} />
     </DialogFooter>
   </DialogContent>
 </Dialog>
 ```
+
+## Dialog or Alert Dialog?
+
+Use a Dialog for friendly, low-stakes tasks - sharing, quick edits, previews.
+Asking someone to confirm something they can't undo? Reach for the
+[Alert Dialog](/docs/ui/alert-dialog) instead: it can't be dismissed by clicking
+outside, so nobody deletes anything by accident.
 
 ## API Reference
 

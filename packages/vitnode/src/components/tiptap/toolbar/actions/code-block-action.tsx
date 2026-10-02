@@ -3,9 +3,9 @@ import { CodeSquareIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Toggle } from "@/components/ui/toggle";
-import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useToolbarEditor } from "../use-toolbar-editor";
+import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const CodeBlockAction = () => {
@@ -17,7 +17,7 @@ export const CodeBlockAction = () => {
   });
 
   return (
-    <TooltipWithContent
+    <ToolbarTooltip
       text={
         <>
           {t("code_block")}
@@ -36,6 +36,6 @@ export const CodeBlockAction = () => {
           <CodeSquareIcon />
         </Toggle>
       </div>
-    </TooltipWithContent>
+    </ToolbarTooltip>
   );
 };

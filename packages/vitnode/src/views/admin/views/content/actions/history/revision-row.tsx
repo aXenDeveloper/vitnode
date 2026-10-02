@@ -15,7 +15,7 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
 import { contentRevisionQueryOptions } from "../editorial-query";
@@ -209,6 +209,7 @@ export const RevisionRow = ({
                   ),
                   version: revision.version,
                 })}
+                icon={<RotateCcwIcon />}
                 onSubmit={async ({ onClose }) => {
                   const mutation = await transport.restoreRevision(
                     contentTypeId,
@@ -282,7 +283,7 @@ export const RevisionRow = ({
               </p>
             ) : (
               <div className="text-muted-foreground flex justify-center py-2">
-                <Loader small />
+                <Spinner />
               </div>
             )}
           </div>

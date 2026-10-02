@@ -32,6 +32,7 @@ export const DeletePasskeyButton = ({
       <Tooltip>
         <ConfirmActionAlertDialog
           description={t("delete.desc", { name })}
+          icon={<Trash2Icon />}
           onSubmit={async ({ onClose }) => {
             const result = await onDelete({ id });
 

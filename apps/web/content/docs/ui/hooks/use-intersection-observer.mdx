@@ -1,0 +1,98 @@
+---
+title: useIntersectionObserver
+description: Find out when an element scrolls into view - perfect for lazy loading, infinite feeds and "seen" tracking.
+icon: ScanEye
+---
+
+## Usage
+
+```ts
+import { useIntersectionObserver } from '@vitnode/core/hooks/use-intersection-observer'
+```
+
+```tsx
+export const ExampleComponent = () => {
+  const ref = React.useRef<HTMLDivElement>(null)
+  const entry = useIntersectionObserver(ref, { threshold: 0.5 }) // [!code ++]
+
+  return (
+    <div ref={ref}>
+      {entry?.isIntersecting ? 'I can see you!' : 'Nobody is looking...'}
+    </div>
+  )
+}
+```
+
+The hook returns the latest
+[`IntersectionObserverEntry`](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserverEntry),
+or `undefined` until the browser reports the first one. Besides
+`isIntersecting` you also get `intersectionRatio`, `boundingClientRect` and
+friends.
+
+## Load once, then stop watching
+
+Set `freezeOnceVisible` and the hook stops observing the first time the element
+shows up. Handy for lazy loading or a one-off entrance animation - no point
+paying for an observer that has nothing left to do.
+
+```tsx
+const entry = useIntersectionObserver(ref, {
+  freezeOnceVisible: true,
+  rootMargin: '200px',
+})
+
+return <div ref={ref}>{entry?.isIntersecting ? <HeavyChart /> : null}</div>
+```
+
+A positive `rootMargin` starts loading a little before the element is on
+screen, so people rarely catch it loading.
+
+## Inside a scroll container
+
+By default the hook watches the viewport. To watch a scrollable element
+instead, pass it as `root` - store it with a callback ref so the hook picks it
+up once it mounts:
+
+```tsx
+const [root, setRoot] = React.useState<HTMLDivElement | null>(null)
+const entry = useIntersectionObserver(targetRef, { root })
+
+return (
+  <div className="h-48 overflow-y-auto" ref={setRoot}>
+    ...
+  </div>
+)
+```
+
+## Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    threshold: {
+      description:
+        'How much of the element (0 to 1) has to be visible. Pass an array to get an update at each step.',
+      type: 'number | number[]',
+      default: '0',
+    },
+    rootMargin: {
+      description: 'Grows or shrinks the area that counts as visible, like CSS margin.',
+      type: 'string',
+      default: '"0%"',
+    },
+    root: {
+      description: 'The scroll container to watch. `null` means the viewport.',
+      type: 'Element | null',
+      default: 'null',
+    },
+    freezeOnceVisible: {
+      description: 'Stop observing after the element is visible for the first time.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+On the server, and in the rare browser without `IntersectionObserver`, the hook
+simply returns `undefined`.

@@ -1,6 +1,7 @@
 ---
 title: Card
 description: Display content in a card layout.
+icon: RectangleHorizontal
 ---
 
 ## Preview
@@ -31,7 +32,80 @@ import {
     This is the content of the card. You can put any content here.
   </CardContent>
   <CardFooter>
-    <CardAction>Action Button</CardAction>
+    <Button variant="outline">Action</Button>
   </CardFooter>
 </Card>
+```
+
+`CardFooter` comes with a top border and a soft background out of the box, so it always reads as the "what now?" part of the card.
+
+## Header with border
+
+Add `border-b` to `CardHeader` and it picks up matching bottom padding on its own.
+
+<Preview name="card-header-border" />
+
+```tsx
+<CardHeader className="border-b">
+  <CardTitle>Header with Border</CardTitle>
+  <CardDescription>This is a card with a header that has a bottom border.</CardDescription>
+</CardHeader>
+```
+
+## Header and footer
+
+Combine a bordered header with the footer for a card split into three clear parts.
+
+<Preview name="card-header-footer" />
+
+```tsx
+<Card>
+  <CardHeader className="border-b">
+    <CardTitle>Header with Border</CardTitle>
+  </CardHeader>
+  <CardContent>...</CardContent>
+  <CardFooter>
+    <Button className="w-full" variant="outline">
+      Action
+    </Button>
+  </CardFooter>
+</Card>
+```
+
+## Border separation
+
+Drop the card padding and let the content draw the lines. `CardAction` keeps the header button on the right.
+
+<Preview name="card-border-separation" />
+
+```tsx
+<Card className="gap-0 p-0">
+  <CardHeader className="flex items-center justify-between px-4 py-2">
+    <CardTitle>Header</CardTitle>
+    <CardAction>
+      <Button variant="outline">Action</Button>
+    </CardAction>
+  </CardHeader>
+  <CardContent className="border-y px-4 py-3">...</CardContent>
+  <CardFooter className="border-none px-4 py-3">
+    <Button className="w-full" variant="outline">
+      Action
+    </Button>
+  </CardFooter>
+</Card>
+```
+
+## With a link
+
+A slim footer is a nice home for a "read more" style link.
+
+<Preview name="card-link" />
+
+```tsx
+<CardFooter className="py-2">
+  <a className={cn(buttonVariants({ variant: 'link' }), 'px-0')} href="/guide">
+    See our guideline
+    <ExternalLinkIcon aria-hidden="true" />
+  </a>
+</CardFooter>
 ```

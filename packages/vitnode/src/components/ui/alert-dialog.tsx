@@ -82,16 +82,20 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  size = "default",
   ...props
-}: AlertDialogPrimitive.Popup.Props) {
+}: AlertDialogPrimitive.Popup.Props & {
+  size?: "default" | "sm";
+}) {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Popup
         className={cn(
-          "dark:bg-background bg-card fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border p-6 shadow-xl transition-all duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 sm:max-w-lg",
+          "group/alert-dialog-content dark:bg-background bg-card fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border p-6 shadow-xl transition-all duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm",
           className,
         )}
+        data-size={size}
         data-slot="alert-dialog-content"
         {...props}
       />
@@ -106,7 +110,7 @@ function AlertDialogHeader({
   return (
     <div
       className={cn(
-        "grid grid-rows-[auto_1fr] gap-1.5 has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
+        "grid grid-rows-[auto_1fr] gap-1.5 group-data-[size=sm]/alert-dialog-content:place-items-center group-data-[size=sm]/alert-dialog-content:text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
         className,
       )}
       data-slot="alert-dialog-header"
@@ -122,7 +126,7 @@ function AlertDialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
+        "bg-muted/50 -mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-xl border-t px-6 py-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="alert-dialog-footer"
@@ -138,14 +142,14 @@ function AlertDialogFooterSkeleton({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "bg-muted/50 -mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-xl border-t px-6 py-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="alert-dialog-footer"
       {...props}
     >
-      <Skeleton className="h-9 sm:w-24" />
-      <Skeleton className="h-9 sm:w-24" />
+      <Skeleton className="h-9 group-data-[size=sm]/alert-dialog-content:w-full sm:w-24" />
+      <Skeleton className="h-9 group-data-[size=sm]/alert-dialog-content:w-full sm:w-24" />
     </div>
   );
 }
@@ -156,7 +160,7 @@ function AlertDialogMedia({
   return (
     <div
       className={cn(
-        "bg-muted mb-2 inline-flex size-16 items-center justify-center rounded-md sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
+        "bg-muted mb-2 inline-flex size-16 items-center justify-center rounded-lg group-data-[size=sm]/alert-dialog-content:size-12 sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8 group-data-[size=sm]/alert-dialog-content:*:[svg:not([class*='size-'])]:size-6",
         className,
       )}
       data-slot="alert-dialog-media"

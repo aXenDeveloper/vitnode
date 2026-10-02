@@ -1,0 +1,303 @@
+---
+title: Command
+description: A fast, composable command menu with search, groups and keyboard navigation - the "just type it" escape hatch for your app.
+icon: Command
+---
+
+## Preview
+
+<Preview name="command" />
+
+## Usage
+
+```ts
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from '@vitnode/core/components/ui/command'
+```
+
+```tsx
+<Command>
+  <CommandInput placeholder="Type a command or search..." />
+  <CommandList>
+    <CommandEmpty>No results found.</CommandEmpty>
+    <CommandGroup heading="Suggestions">
+      <CommandItem>Calendar</CommandItem>
+      <CommandItem>Search Emoji</CommandItem>
+    </CommandGroup>
+  </CommandList>
+</Command>
+```
+
+Start typing and the list filters itself, ranking the best matches first.
+Groups with nothing left to show politely step aside. It is built on
+[cmdk](https://cmdk.paco.me), so every cmdk prop works here too.
+
+## Groups and separators
+
+Wrap related items in a `CommandGroup` with a `heading`, and drop a
+`CommandSeparator` between groups when they need some breathing room.
+
+```tsx
+<CommandGroup heading="Suggestions">
+  <CommandItem>Calendar</CommandItem>
+</CommandGroup>
+<CommandSeparator />
+<CommandGroup heading="Settings">
+  <CommandItem>Profile</CommandItem>
+</CommandGroup>
+```
+
+## Icons and shortcuts
+
+Icons go first and are sized for you. `CommandShortcut` pushes a hint to the
+end of the row. It is just a label - wiring the actual shortcut is up to you.
+
+```tsx
+<CommandItem>
+  <UserIcon />
+  <span>Profile</span>
+  <CommandShortcut>⌘P</CommandShortcut>
+</CommandItem>
+```
+
+## Empty state
+
+`CommandEmpty` only shows up when the search matches nothing. Make it helpful,
+or at least make it kind.
+
+```tsx
+<CommandEmpty>No results found.</CommandEmpty>
+```
+
+## Selecting and disabling items
+
+`onSelect` fires on click and on <kbd>Enter</kbd>. Add `disabled` to keep an
+item visible but out of reach - the keyboard skips it too.
+
+```tsx
+<CommandItem onSelect={() => router.navigate({ to: '/settings' })}>
+  Settings
+</CommandItem>
+<CommandItem disabled>Calculator</CommandItem>
+```
+
+Items are matched by their text. Give an item a `value` when the text is not
+unique, and `keywords` when people might search for it by another name:
+
+```tsx
+<CommandItem keywords={['theme', 'night']} value="toggle-dark-mode">
+  Toggle dark mode
+</CommandItem>
+```
+
+## Dialog
+
+<Preview name="command-dialog" />
+
+`CommandDialog` puts the whole thing in a [Dialog](/docs/ui/dialog), with a
+screen-reader-only title and description baked in. Pass a `Command` as its
+child and control it with `open` and `onOpenChange`.
+
+```tsx
+const [open, setOpen] = React.useState(false)
+
+React.useEffect(() => {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key.toLowerCase() !== 'j') return
+    if (!event.metaKey && !event.ctrlKey) return
+    if (event.altKey || event.shiftKey || event.defaultPrevented) return
+
+    event.preventDefault()
+    setOpen((prev) => !prev)
+  }
+
+  window.addEventListener('keydown', handleKeyDown)
+
+  return () => window.removeEventListener('keydown', handleKeyDown)
+}, [])
+
+<CommandDialog onOpenChange={setOpen} open={open}>
+  <Command>
+    <CommandInput placeholder="What do you need?" />
+    <CommandList>
+      <CommandEmpty>Nothing here. Try fewer letters?</CommandEmpty>
+      <CommandGroup heading="Actions">
+        <CommandItem onSelect={() => setOpen(false)}>Sign out</CommandItem>
+      </CommandGroup>
+    </CommandList>
+  </Command>
+</CommandDialog>
+```
+
+<Callout title="Why ⌘J and not ⌘K?">
+  This docs site already uses <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> for search, and
+  so does the AdminCP. Two dialogs fighting over one shortcut is nobody's idea
+  of fun, so the demo listens for <kbd>⌘J</kbd> / <kbd>Ctrl+J</kbd> instead.
+  Pick whatever is free in your app, and always remove the listener on unmount.
+  Heads-up: once the palette is open, <kbd>Ctrl+J</kbd> moves down a row
+  instead of closing it - <kbd>Escape</kbd> is the way out.
+</Callout>
+
+Show the shortcut next to the trigger with the `Kbd` component:
+
+```tsx
+import { Kbd, KbdGroup } from '@vitnode/core/components/ui/kbd'
+
+<KbdGroup>
+  <Kbd>⌘</Kbd>
+  <Kbd>J</Kbd>
+</KbdGroup>
+```
+
+## Your own filtering
+
+Fetching results from an API? Turn the built-in filter off with
+`shouldFilter={false}` and render whatever your query returns. The AdminCP
+search works exactly like that.
+
+```tsx
+<Command shouldFilter={false}>
+  <CommandInput onValueChange={setSearch} value={search} />
+  <CommandList>
+    {users.map(user => (
+      <CommandItem key={user.id} value={user.id}>
+        {user.name}
+      </CommandItem>
+    ))}
+  </CommandList>
+</Command>
+```
+
+## Accessibility
+
+- The input is a `combobox` and the list a `listbox`, so screen readers announce
+  the highlighted option as you move through it.
+- <kbd>↑</kbd> / <kbd>↓</kbd> move between items, <kbd>Home</kbd> /{' '}
+  <kbd>End</kbd> jump to the ends and <kbd>Enter</kbd> selects. Set `loop` to
+  wrap around at the edges.
+- <kbd>Ctrl+N</kbd> / <kbd>Ctrl+J</kbd> and <kbd>Ctrl+P</kbd> /{' '}
+  <kbd>Ctrl+K</kbd> also move up and down while the menu has focus. Pass
+  `vimBindings={false}` if those keys mean something else in your app.
+- `CommandDialog` traps focus, closes on <kbd>Escape</kbd> and gives the dialog
+  an accessible name through its `title` and `description`.
+- Give a standalone `Command` a `label` so the input has a name too.
+
+## Props
+
+### Command
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    label: {
+      description: 'Accessible label for the command menu input.',
+      type: 'string',
+    },
+    shouldFilter: {
+      description:
+        'Turn off the built-in filtering and sorting when you filter the items yourself.',
+      type: 'boolean',
+      default: 'true',
+    },
+    filter: {
+      description:
+        'Custom ranking function. Return `0` to hide an item and a higher number to rank it higher.',
+      type: '(value: string, search: string, keywords?: string[]) => number',
+    },
+    value: {
+      description: 'Controls the highlighted item.',
+      type: 'string',
+    },
+    onValueChange: {
+      description: 'Called when the highlighted item changes.',
+      type: '(value: string) => void',
+    },
+    loop: {
+      description: 'Wrap the keyboard selection around at the top and bottom.',
+      type: 'boolean',
+      default: 'false',
+    },
+    vimBindings: {
+      description: 'Enable the `Ctrl+N/J/P/K` navigation shortcuts.',
+      type: 'boolean',
+      default: 'true',
+    },
+  }}
+/>
+
+### CommandDialog
+
+<TypeTable
+  type={{
+    open: {
+      description: 'Controls whether the dialog is open.',
+      type: 'boolean',
+    },
+    onOpenChange: {
+      description: 'Called when the dialog opens or closes.',
+      type: '(open: boolean) => void',
+    },
+    title: {
+      description: 'Screen-reader-only dialog title.',
+      type: 'string',
+      default: '"Command Palette"',
+    },
+    description: {
+      description: 'Screen-reader-only dialog description.',
+      type: 'string',
+      default: '"Search for a command to run..."',
+    },
+    showCloseButton: {
+      description: 'Show the close button in the corner.',
+      type: 'boolean',
+      default: 'false',
+    },
+    className: {
+      description: 'Classes for the dialog content.',
+      type: 'string',
+    },
+  }}
+/>
+
+### CommandItem
+
+<TypeTable
+  type={{
+    onSelect: {
+      description: 'Called when the item is clicked or chosen with Enter.',
+      type: '(value: string) => void',
+    },
+    value: {
+      description:
+        'A unique value used for filtering and selection. Defaults to the text content.',
+      type: 'string',
+    },
+    keywords: {
+      description: 'Extra words the item should match.',
+      type: 'string[]',
+    },
+    disabled: {
+      description: 'Keep the item visible but not selectable.',
+      type: 'boolean',
+      default: 'false',
+    },
+    forceMount: {
+      description: 'Always render the item, even when it does not match.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+## API Reference
+
+[cmdk](https://github.com/pacocoursey/cmdk#parts-and-styling)

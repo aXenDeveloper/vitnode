@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 const ContentMoreActionSystemLogs = React.lazy(async () =>
@@ -50,7 +50,13 @@ export const MoreActionSystemLogs = (
           </DialogDescription>
         </DialogHeader>
 
-        <React.Suspense fallback={<Loader />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <ContentMoreActionSystemLogs {...props} />
         </React.Suspense>
       </DialogContent>

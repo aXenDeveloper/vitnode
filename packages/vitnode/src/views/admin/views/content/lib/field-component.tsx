@@ -13,6 +13,7 @@ import { AutoFormFile } from "@/components/form/fields/file";
 import { AutoFormFiles } from "@/components/form/fields/files";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
+import { AutoFormNumber } from "@/components/form/fields/number";
 import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
 import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
@@ -160,12 +161,11 @@ export const ContentField = ({
           {...props}
         />
       ) : (
-        <AutoFormInput
+        <AutoFormNumber
           label={spec.label}
           max={spec.max}
           min={spec.min}
           step={spec.integer ? 1 : "any"}
-          type="number"
           {...props}
         />
       );

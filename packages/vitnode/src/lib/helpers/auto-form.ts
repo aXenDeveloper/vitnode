@@ -138,6 +138,9 @@ export function getZodInputParams(
         fieldParams.itemParams = {
           "": getZodInputParams({ properties: { "": items } }, [])[""],
         };
+        if (items.enum) {
+          fieldParams.enum = items.enum;
+        }
       }
       extractedParams[key] = fieldParams;
     } else {

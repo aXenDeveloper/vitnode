@@ -83,6 +83,7 @@ const StaffRowActions = ({
       {canDelete && (
         <ConfirmActionAlertDialog
           description={t("delete.desc")}
+          icon={<Trash2Icon />}
           onSubmit={async ({ onClose }) => {
             const result = await onDelete({ id: row.id, type });
             if ("error" in result) {

@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
@@ -148,7 +148,13 @@ const WidgetSettingsSection = ({ widget }: { widget: DashboardWidgetView }) => {
 
   return (
     <WidgetSettingsDialogContext value={value}>
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
         <SettingsForm form={form} />
       </React.Suspense>
     </WidgetSettingsDialogContext>

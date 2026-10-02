@@ -922,6 +922,7 @@
 .mk-integration-face {
   display: grid;
   place-items: center;
+  filter: drop-shadow(0 8px 10px rgb(from var(--brand) r g b / 0));
   transition:
     translate 220ms cubic-bezier(0.23, 1, 0.32, 1),
     scale 150ms ease-out,
@@ -950,9 +951,7 @@
 @media (hover: hover) and (pointer: fine) {
   .mk-integration-tile:hover .mk-integration-face {
     translate: 0 -4px;
-    filter: drop-shadow(
-      0 8px 10px color-mix(in oklch, var(--brand) 30%, transparent)
-    );
+    filter: drop-shadow(0 8px 10px rgb(from var(--brand) r g b / 0.3));
   }
 
   .mk-integration-tile:hover .mk-integration-outline path {

@@ -9,8 +9,8 @@ import { humanizeIconName } from "@/lib/emoji-icon";
 
 import { Button } from "./button";
 import { EmojiIcon } from "./emoji-icon";
-import { Loader } from "./loader";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Spinner } from "./spinner";
 
 const EmojiIconPickerPanel = React.lazy(async () =>
   import("./emoji-icon-picker-panel").then(module => ({
@@ -78,7 +78,9 @@ export const EmojiIconPicker = ({
           <React.Suspense
             fallback={
               <div className="flex h-108 items-center justify-center">
-                <Loader />
+                <div className="flex items-center justify-center">
+                  <Spinner size="xl" />
+                </div>
               </div>
             }
           >

@@ -8,8 +8,8 @@ import { colorToHslString } from "@/lib/colors";
 import { Button } from "./button";
 import { ColorPresetPicker } from "./color-preset-picker";
 import { Input } from "./input";
-import { Loader } from "./loader";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Spinner } from "./spinner";
 
 // react-colorful only ships in the bundle once the picker is actually opened.
 const HslStringColorPicker = React.lazy(async () => ({
@@ -59,7 +59,9 @@ export const ColorPicker = ({
         <React.Suspense
           fallback={
             <div className="flex size-50 items-center justify-center">
-              <Loader />
+              <div className="flex items-center justify-center">
+                <Spinner size="xl" />
+              </div>
             </div>
           }
         >

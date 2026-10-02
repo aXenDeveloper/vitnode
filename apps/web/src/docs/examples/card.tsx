@@ -1,6 +1,6 @@
+import { Button } from '@vitnode/core/components/ui/button'
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -10,16 +10,23 @@ import {
 
 export default function CardExample() {
   return (
-    <Card>
+    <Card className="w-full max-w-xs">
       <CardHeader>
-        <CardTitle>Card Title</CardTitle>
-        <CardDescription>Card Description</CardDescription>
+        <CardTitle>Default Card</CardTitle>
+        <CardDescription>
+          This card uses the default size variant.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        This is the content of the card. You can put any content here.
+        <p>
+          The card component supports a size prop that defaults to
+          &quot;default&quot; for standard spacing and sizing.
+        </p>
       </CardContent>
       <CardFooter>
-        <CardAction>Action Button</CardAction>
+        <Button className="w-full" variant="outline">
+          Action
+        </Button>
       </CardFooter>
     </Card>
   )

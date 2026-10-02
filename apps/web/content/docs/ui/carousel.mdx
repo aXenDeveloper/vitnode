@@ -1,0 +1,226 @@
+---
+title: Carousel
+description: A swipeable carousel with motion and keyboard support, built on Embla Carousel.
+icon: GalleryHorizontal
+---
+
+## Preview
+
+<Preview name="carousel" />
+
+## Usage
+
+```ts
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@vitnode/core/components/ui/carousel'
+```
+
+```tsx
+<Carousel>
+  <CarouselContent>
+    <CarouselItem>...</CarouselItem>
+    <CarouselItem>...</CarouselItem>
+    <CarouselItem>...</CarouselItem>
+  </CarouselContent>
+  <CarouselPrevious />
+  <CarouselNext />
+</Carousel>
+```
+
+Swipe it, drag it, or click the arrows - [Embla Carousel](https://www.embla-carousel.com)
+does the heavy lifting, so the motion feels like a native app and not a slideshow
+from 2009.
+
+By default the arrows sit just outside the slides, so leave some room around
+the carousel (for example `px-12`). On narrow screens, move them into a row of
+their own with `static translate-y-0`, like the preview does.
+
+## Sizes
+
+Each `CarouselItem` takes the full width. Change it with a `basis-*` class -
+responsive ones included.
+
+```tsx
+<Carousel opts={{ align: 'start' }}>
+  <CarouselContent>
+    <CarouselItem className="basis-1/2 lg:basis-1/3">...</CarouselItem>
+    <CarouselItem className="basis-1/2 lg:basis-1/3">...</CarouselItem>
+    <CarouselItem className="basis-1/2 lg:basis-1/3">...</CarouselItem>
+  </CarouselContent>
+</Carousel>
+```
+
+## Spacing
+
+The gap between slides comes from a padding on `CarouselItem` and a matching
+negative margin on `CarouselContent`. Change both together. They use logical
+properties, so right-to-left layouts get the same gap on the correct side.
+
+```tsx
+<Carousel>
+  <CarouselContent className="-ms-2 md:-ms-4">
+    <CarouselItem className="ps-2 md:ps-4">...</CarouselItem>
+    <CarouselItem className="ps-2 md:ps-4">...</CarouselItem>
+    <CarouselItem className="ps-2 md:ps-4">...</CarouselItem>
+  </CarouselContent>
+</Carousel>
+```
+
+## Orientation
+
+Set `orientation="vertical"` to scroll up and down. Give `CarouselContent` a
+fixed height, and use `-mt-*` / `pt-*` for spacing instead.
+
+```tsx
+<Carousel orientation="vertical" opts={{ align: 'start' }}>
+  <CarouselContent className="-mt-1 h-52">
+    <CarouselItem className="basis-1/2 pt-1">...</CarouselItem>
+    <CarouselItem className="basis-1/2 pt-1">...</CarouselItem>
+    <CarouselItem className="basis-1/2 pt-1">...</CarouselItem>
+  </CarouselContent>
+  <CarouselPrevious />
+  <CarouselNext />
+</Carousel>
+```
+
+## Options
+
+`opts` goes straight to Embla. A few favourites: `loop` for an endless ride,
+`align` to snap slides to the `start`, `center` or `end`, and `dragFree` for a
+free-scrolling feel.
+
+```tsx
+<Carousel opts={{ align: 'start', loop: true }}>...</Carousel>
+```
+
+For a right-to-left page, tell Embla too - the layout flips on its own, but the
+scroll math needs the hint:
+
+```tsx
+<Carousel dir="rtl" opts={{ direction: 'rtl' }}>
+  ...
+</Carousel>
+```
+
+## API
+
+Grab the Embla instance with `setApi` to build your own controls, such as the
+dots and the "slide x of y" counter.
+
+```tsx
+import type { CarouselApi } from '@vitnode/core/components/ui/carousel'
+
+const [api, setApi] = React.useState<CarouselApi>()
+const [current, setCurrent] = React.useState(0)
+
+React.useEffect(() => {
+  if (!api) return
+
+  const onSelect = () => {
+    setCurrent(api.selectedScrollSnap())
+  }
+
+  api.on('select', onSelect)
+
+  return () => {
+    api.off('select', onSelect)
+  }
+}, [api])
+
+<Carousel setApi={setApi}>
+  <CarouselContent>...</CarouselContent>
+</Carousel>
+<p>
+  Slide {current + 1} of {api?.scrollSnapList().length ?? 0}
+</p>
+```
+
+`api.scrollTo(index)` jumps to a slide, which is all a dot button needs.
+Building a control inside the carousel? `useCarousel()` hands you `api`,
+`scrollPrev`, `scrollNext`, `canScrollPrev` and `canScrollNext` without any
+prop drilling.
+
+## Plugins
+
+Pass Embla plugins through `plugins`. Autoplay, for example:
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install Embla Autoplay'>
+
+```bash tab="bun"
+bun i embla-carousel-autoplay
+```
+
+```bash tab="pnpm"
+pnpm i embla-carousel-autoplay
+```
+
+```bash tab="npm"
+npm i embla-carousel-autoplay
+```
+
+</Tabs>
+
+```tsx
+import Autoplay from 'embla-carousel-autoplay'
+
+export const Slideshow = () => (
+  <Carousel plugins={[Autoplay({ delay: 4000, stopOnInteraction: true })]}>
+    ...
+  </Carousel>
+)
+```
+
+Keep `stopOnInteraction` on, and skip autoplay for people who prefer reduced
+motion - nobody likes chasing a slide that runs away.
+
+## Accessibility
+
+- The root is a `region` with `aria-roledescription="carousel"`; give it an
+  `aria-label` that says what is inside.
+- Every slide is a `group` with `aria-roledescription="slide"`. Labels like
+  `aria-label="2 of 5"` help screen readers keep count.
+- The arrow buttons are labelled "Previous" and "Next" in the current language
+  and turn disabled when there is nowhere left to go.
+- With focus inside the carousel, the left and right arrow keys move between
+  slides.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    opts: {
+      description:
+        'Options passed to Embla Carousel, such as `loop`, `align` or `dragFree`.',
+      type: 'EmblaOptionsType',
+    },
+    orientation: {
+      description: 'The scroll direction. Sets Embla `axis` for you.',
+      type: 'horizontal | vertical',
+      default: 'horizontal',
+    },
+    plugins: {
+      description: 'Embla plugins, for example autoplay.',
+      type: 'EmblaPluginType[]',
+    },
+    setApi: {
+      description: 'Called with the Embla instance once the carousel is ready.',
+      type: '(api: CarouselApi) => void',
+    },
+  }}
+/>
+
+`CarouselPrevious` and `CarouselNext` accept every [Button](/docs/ui/button)
+prop and default to `variant="outline"` with `size="icon-sm"`.
+
+## API Reference
+
+[Embla Carousel - API](https://www.embla-carousel.com/api/)

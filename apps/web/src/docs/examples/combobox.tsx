@@ -9,6 +9,7 @@ export default function ComboboxExample() {
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
           id: 'type',

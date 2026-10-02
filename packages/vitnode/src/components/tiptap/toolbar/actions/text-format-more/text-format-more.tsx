@@ -26,10 +26,10 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipWithContent } from "@/components/ui/tooltip";
 import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
 
 import { useToolbarEditor } from "../../use-toolbar-editor";
+import { ToolbarTooltip } from "../utils/toolbar-tooltip";
 
 const ALIGNMENTS = [
   { value: "left", icon: <AlignLeftIcon />, shortcut: "L" },
@@ -81,7 +81,7 @@ export const TextFormatMore = () => {
 
   return (
     <DropdownMenu>
-      <TooltipWithContent text={t("text_format_more.label")}>
+      <ToolbarTooltip text={t("text_format_more.label")}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -96,7 +96,7 @@ export const TextFormatMore = () => {
         >
           <EllipsisIcon />
         </DropdownMenuTrigger>
-      </TooltipWithContent>
+      </ToolbarTooltip>
 
       <DropdownMenuContent className="min-w-60">
         {marks.map(mark => (

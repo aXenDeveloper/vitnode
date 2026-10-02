@@ -1,0 +1,157 @@
+---
+title: Shimmer
+description: A Tailwind CSS utility that sweeps a soft highlight across text - the universal sign for "hang on, I'm working on it".
+icon: Sparkles
+---
+
+## Preview
+
+<Preview name="shimmer" />
+
+## Usage
+
+Shimmer is a Tailwind CSS utility, not a React component - there is nothing to
+import. It ships with the `shadcn` package, and VitNode apps already pull it in
+from `src/styles.css`:
+
+```css
+@import 'shadcn/tailwind.css';
+```
+
+Add it to any text element:
+
+```tsx
+<p className="shimmer text-muted-foreground">Generating response...</p>
+```
+
+The highlight is derived from `currentColor`, so it works on muted text, brand
+colors and everything in between. In dark mode it brightens on its own to stay
+visible. It's pure CSS: the text is painted with `background-clip: text` and
+the highlight loops across it every two seconds.
+
+| Class                     | What it does                                       |
+| ------------------------- | -------------------------------------------------- |
+| `shimmer`                 | Turns the effect on                                |
+| `shimmer-color-<color>`   | Sets the highlight color, opacity modifier allowed |
+| `shimmer-duration-<ms>`   | Length of one sweep in milliseconds (default 2000) |
+| `shimmer-spread-<number>` | Width of the highlight band on the spacing scale   |
+| `shimmer-angle-<number>`  | Tilt of the band in degrees (default 20)           |
+| `shimmer-reverse`         | Sweeps the other way                               |
+| `shimmer-once`            | Plays a single sweep instead of looping            |
+| `shimmer-none`            | Renders the text normally                          |
+
+## With a status line
+
+Shimmer pairs nicely with a `Spinner` and the [Marker](/docs/ui/marker)
+component for "the assistant is busy" moments:
+
+```tsx
+import {
+  Marker,
+  MarkerContent,
+  MarkerIcon,
+} from '@vitnode/core/components/ui/marker'
+import { Spinner } from '@vitnode/core/components/ui/spinner'
+
+<Marker role="status">
+  <MarkerIcon>
+    <Spinner />
+  </MarkerIcon>
+  <MarkerContent className="shimmer">Thinking...</MarkerContent>
+</Marker>
+```
+
+## Variants
+
+<Preview name="shimmer-variants" />
+
+### Color
+
+Use any theme color, with an optional opacity modifier, or an arbitrary value:
+
+```tsx
+<p className="shimmer shimmer-color-success">Generating response...</p>
+<p className="shimmer shimmer-color-success/60">Generating response...</p>
+<p className="shimmer shimmer-color-[#378ADD]">Generating response...</p>
+```
+
+### Duration
+
+```tsx
+<p className="shimmer shimmer-duration-1000">In a hurry...</p>
+```
+
+### Spread
+
+The band is `calc(3ch + 40px)` wide by default, so it scales with the font
+size. Set it on the spacing scale or with any length or percentage:
+
+```tsx
+<p className="shimmer shimmer-spread-24">Generating response...</p>
+<p className="shimmer shimmer-spread-[30%]">Generating response...</p>
+```
+
+### Angle
+
+```tsx
+<p className="shimmer shimmer-angle-45">Generating response...</p>
+```
+
+### Reverse
+
+The sweep follows the reading direction out of the box (right to left in RTL).
+`shimmer-reverse` flips it manually:
+
+```tsx
+<p className="shimmer shimmer-reverse">Generating response...</p>
+```
+
+### Play once
+
+`shimmer-once` plays a single sweep - a nice little "done!" when streaming
+finishes. Combine it with `shimmer-duration-<ms>` to set how long it takes, and
+change the element's `key` to play it again:
+
+```tsx
+<p className="shimmer shimmer-once shimmer-duration-1100" key={replays}>
+  Response generated.
+</p>
+```
+
+### Turning it off
+
+`shimmer-none` works in any class order, so it plays well with breakpoints and
+state variants:
+
+```tsx
+<p className="shimmer md:shimmer-none">Generating response...</p>
+```
+
+## Browser support
+
+Shimmer uses relative color syntax and `color-mix()`, which every current
+browser supports. In older browsers the highlight gradient can be dropped and
+the text may render transparent. If you need to support them, apply the class
+only where it works:
+
+```tsx
+<p className="supports-[color:oklch(from_white_l_c_h)]:shimmer">
+  Generating response...
+</p>
+```
+
+## Accessibility
+
+- With reduced motion turned on, the animation stops and the text renders
+  normally - no setup needed. That rule targets the plain `shimmer` class, so
+  if you apply it through a variant (`group-hover:shimmer`), add
+  `motion-reduce:shimmer-none` yourself.
+- Shimmer is decoration, not a loading signal. Screen readers and reduced-motion
+  users never see it, so pair it with real text inside `role="status"` - like
+  "Thinking..." in the examples above.
+- Keep it on short status text. A whole paragraph sparkling away is more disco
+  than progress.
+
+## Reference
+
+[shadcn/ui - shimmer](https://ui.shadcn.com/docs/utils/shimmer)

@@ -1,6 +1,7 @@
 ---
 title: Alert Dialog
 description: Display important messages to users in a modal dialog.
+icon: MessageSquareWarning
 ---
 
 A modal dialog that interrupts the user with important content and expects a
@@ -30,10 +31,10 @@ import { Button } from '@vitnode/core/components/ui/button';
 
 ```tsx
 <AlertDialog>
-  <AlertDialogTrigger render={<Button variant="outline">Show Dialog</Button>} />
+  <AlertDialogTrigger render={<Button variant="destructive">Delete account</Button>} />
   <AlertDialogContent>
     <AlertDialogHeader>
-      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+      <AlertDialogTitle>Delete your account?</AlertDialogTitle>
       <AlertDialogDescription>
         This action cannot be undone. This will permanently delete your account
         and remove your data from our servers.
@@ -41,7 +42,7 @@ import { Button } from '@vitnode/core/components/ui/button';
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction>Continue</AlertDialogAction>
+      <AlertDialogAction variant="destructive">Delete account</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
 </AlertDialog>

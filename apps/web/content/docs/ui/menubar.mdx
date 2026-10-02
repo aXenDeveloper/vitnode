@@ -1,0 +1,246 @@
+---
+title: Menubar
+description: A desktop-style menu bar with File, Edit and View menus, shortcuts, submenus, checkbox and radio items.
+icon: PanelTopOpen
+---
+
+## Preview
+
+<Preview name="menubar" />
+
+## Usage
+
+```ts
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarSeparator,
+  MenubarShortcut,
+  MenubarTrigger,
+} from '@vitnode/core/components/ui/menubar'
+```
+
+```tsx
+<Menubar>
+  <MenubarMenu>
+    <MenubarTrigger>File</MenubarTrigger>
+    <MenubarContent className="w-56">
+      <MenubarItem>
+        New tab
+        <MenubarShortcut>⌘T</MenubarShortcut>
+      </MenubarItem>
+      <MenubarItem>New window</MenubarItem>
+      <MenubarSeparator />
+      <MenubarItem>Print...</MenubarItem>
+    </MenubarContent>
+  </MenubarMenu>
+  <MenubarMenu>
+    <MenubarTrigger>Edit</MenubarTrigger>
+    <MenubarContent className="w-56">
+      <MenubarItem>Undo</MenubarItem>
+      <MenubarItem>Redo</MenubarItem>
+    </MenubarContent>
+  </MenubarMenu>
+</Menubar>
+```
+
+Every `MenubarMenu` is one menu in the bar: a trigger plus its content. Open one
+and the bar remembers - hover the next trigger and it opens straight away, just
+like the menu bar at the top of your desktop. Handy for editors, dashboards and
+anything else with more commands than buttons.
+
+## Submenus
+
+Nest a `MenubarSub` to tuck related actions one level deeper. It opens on hover,
+on click, or with the arrow keys.
+
+```tsx
+import {
+  MenubarSub,
+  MenubarSubContent,
+  MenubarSubTrigger,
+} from '@vitnode/core/components/ui/menubar'
+
+<MenubarSub>
+  <MenubarSubTrigger>Share</MenubarSubTrigger>
+  <MenubarSubContent className="w-44">
+    <MenubarItem>Email link</MenubarItem>
+    <MenubarItem>Messages</MenubarItem>
+  </MenubarSubContent>
+</MenubarSub>
+```
+
+## Checkbox and radio items
+
+Use `MenubarCheckboxItem` for independent toggles and a `MenubarRadioGroup`
+when exactly one option can win. Both work controlled or uncontrolled.
+
+```tsx
+import {
+  MenubarCheckboxItem,
+  MenubarLabel,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+} from '@vitnode/core/components/ui/menubar'
+
+const [showBookmarks, setShowBookmarks] = React.useState(true)
+const [profile, setProfile] = React.useState('benoit')
+
+<MenubarCheckboxItem
+  checked={showBookmarks}
+  onCheckedChange={setShowBookmarks}
+>
+  Always show bookmarks bar
+</MenubarCheckboxItem>
+<MenubarSeparator />
+<MenubarLabel inset>Switch profile</MenubarLabel>
+<MenubarRadioGroup value={profile} onValueChange={setProfile}>
+  <MenubarRadioItem value="andy">Andy</MenubarRadioItem>
+  <MenubarRadioItem value="benoit">Benoit</MenubarRadioItem>
+</MenubarRadioGroup>
+```
+
+The check mark sits at the start of the row. Add `inset` to plain items, labels
+and sub-triggers in the same menu so their text lines up with the checked ones.
+
+## Shortcuts
+
+`MenubarShortcut` shows a keyboard hint at the end of an item. It is only a
+label - wire the actual key binding yourself, otherwise it is a promise you are
+not keeping.
+
+```tsx
+<MenubarItem>
+  Undo
+  <MenubarShortcut>⌘Z</MenubarShortcut>
+</MenubarItem>
+```
+
+## Destructive items
+
+Set `variant="destructive"` for actions you cannot take back, so they look the
+part.
+
+```tsx
+<MenubarItem variant="destructive">Close all windows</MenubarItem>
+```
+
+## Accessibility
+
+- The bar is a single tab stop. Once a trigger has focus, the left and right
+  arrows move between menus, and when a menu is open they move the open menu
+  with you.
+- Inside a menu, the up and down arrows move between items, the right arrow
+  opens a submenu, typing a letter jumps to a matching item and `Escape`
+  closes the menu and returns focus to its trigger.
+- Shortcuts are labels only. Screen readers read them as part of the item, but
+  pressing the keys does nothing until you bind them.
+- Disabled items stay visible and are announced as disabled, so nobody wonders
+  where "Force reload" went.
+- A menu bar is a desktop pattern. On small screens keep it short, or offer the
+  same actions in a [Dropdown Menu](/docs/ui/dropdown-menu).
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Menubar
+
+<TypeTable
+  type={{
+    loopFocus: {
+      description:
+        'Whether arrow keys wrap from the last menu back to the first.',
+      type: 'boolean',
+      default: 'true',
+    },
+    modal: {
+      description:
+        'Whether an open menu locks page scroll and blocks outside clicks.',
+      type: 'boolean',
+      default: 'true',
+    },
+    orientation: {
+      description: 'Which arrow keys move between menus.',
+      type: 'horizontal | vertical',
+      default: 'horizontal',
+    },
+    disabled: {
+      description: 'Disables every menu in the bar.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+### MenubarContent
+
+<TypeTable
+  type={{
+    side: {
+      description:
+        'Which side of the trigger the menu prefers. It flips when there is no room.',
+      type: 'top | bottom | left | right | inline-start | inline-end',
+      default: 'bottom',
+    },
+    align: {
+      description: 'How the menu aligns against the trigger.',
+      type: 'start | center | end',
+      default: 'start',
+    },
+    sideOffset: {
+      description: 'Distance from the trigger in pixels.',
+      type: 'number',
+      default: '8',
+    },
+    alignOffset: {
+      description: 'Shift along the alignment axis in pixels.',
+      type: 'number',
+      default: '-4',
+    },
+  }}
+/>
+
+### MenubarItem
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The look of the item.',
+      type: 'default | destructive',
+      default: 'default',
+    },
+    inset: {
+      description:
+        'Adds start padding so the text lines up with checkbox and radio items.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'Shows the item but makes it non-interactive.',
+      type: 'boolean',
+      default: 'false',
+    },
+    closeOnClick: {
+      description: 'Whether clicking the item closes the menu.',
+      type: 'boolean',
+      default: 'true',
+    },
+    onClick: {
+      description:
+        'Called when the item is chosen with a click, tap or the keyboard.',
+      type: '(event) => void',
+    },
+  }}
+/>
+
+`MenubarCheckboxItem` takes `checked`, `defaultChecked` and `onCheckedChange`;
+`MenubarRadioGroup` takes `value`, `defaultValue` and `onValueChange`. Both item
+types accept `inset` and `disabled` too. `MenubarMenu` takes `open`,
+`defaultOpen` and `onOpenChange` when you want to drive a single menu yourself.
+
+## API Reference
+
+[Base UI - Menubar](https://base-ui.com/react/components/menubar#api-reference)

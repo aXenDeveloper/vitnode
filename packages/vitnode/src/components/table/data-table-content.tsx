@@ -1,8 +1,10 @@
 import { cn } from "cn";
 import React from "react";
 
+import type { ExpandableDataTable } from "./expansion";
 import type { FilterDataTable } from "./filters";
 import type { PaginationDataTable } from "./pagination";
+import type { ReorderableDataTable } from "./reorder";
 import type { SearchDataTable } from "./search";
 
 import { Skeleton } from "../ui/skeleton";
@@ -64,6 +66,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
       title?: string;
     };
     edges: T[];
+    expandable?: ExpandableDataTable<T>;
     filters?: FilterDataTable[];
     header?: React.ReactNode;
     id: string;
@@ -74,6 +77,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
         order: "asc" | "desc";
       };
     };
+    reorderable?: ReorderableDataTable<T>;
     rowOpens?: (row: T) => void;
     search?: boolean;
   };

@@ -202,6 +202,20 @@ describe("auto-form helpers", () => {
       expect(result.role).toHaveProperty("required", true);
     });
 
+    it("exposes the enum of an array of enums on the array field", () => {
+      const zodSchema = z.object({
+        tags: z.array(z.enum(["news", "guides", "releases"])),
+      });
+
+      const result = getZodInputParams(z.toJSONSchema(zodSchema));
+
+      expect(result.tags).toHaveProperty("enum", [
+        "news",
+        "guides",
+        "releases",
+      ]);
+    });
+
     it("should handle complex password validation", () => {
       const zodSchema = z.object({
         password: z

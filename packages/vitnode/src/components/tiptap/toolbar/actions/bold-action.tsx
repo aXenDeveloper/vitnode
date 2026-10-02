@@ -3,9 +3,9 @@ import { BoldIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Toggle } from "@/components/ui/toggle";
-import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useToolbarEditor } from "../use-toolbar-editor";
+import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const BoldAction = () => {
@@ -21,7 +21,7 @@ export const BoldAction = () => {
   });
 
   return (
-    <TooltipWithContent
+    <ToolbarTooltip
       text={
         <>
           {t("bold")} <TooltipShortcut>+B</TooltipShortcut>
@@ -39,6 +39,6 @@ export const BoldAction = () => {
           <BoldIcon />
         </Toggle>
       </div>
-    </TooltipWithContent>
+    </ToolbarTooltip>
   );
 };

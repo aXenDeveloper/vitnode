@@ -1,0 +1,273 @@
+---
+title: Draggable Rows
+description: Drag rows into a new order with mouse, touch or keyboard - and save it on your backend.
+icon: GripVertical
+---
+
+## Preview
+
+<Preview name="data-table-reorderable" withoutBackground />
+
+## Usage
+
+When the order of rows _is_ the data - a backlog, homepage sections, FAQ entries - pass `reorderable`. Each row grows a grip handle; grab it and drag the row where it belongs. The other rows slide out of the way, and the dropped row glides into its new spot.
+
+```tsx
+<DataTable
+  id="backlog-table"
+  // [!code ++]
+  reorderable={{
+    // [!code ++]
+    getRowLabel: (task) => task.title,
+    // [!code ++]
+    onReorder: async (ids) => await saveOrder(ids),
+    // [!code ++]
+  }}
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{
+    defaultOrder: {
+      column: 'position',
+      order: 'asc',
+    },
+  }}
+/>
+```
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    onReorder: {
+      description:
+        'Called after a drop with every row id on the page in its new order, plus which row moved and where. Return a promise to save it - if it rejects, the rows jump back and an error toast explains what happened.',
+      required: true,
+      type: `(ids: number[], details: {
+        activeId: number;
+        overId: number;
+        from: number;
+        to: number;
+      }) => void | Promise<void>`,
+    },
+    getRowLabel: {
+      description:
+        'What the handle is called out loud - "Reorder Fix the login redirect loop" beats "Reorder row 1". Defaults to the row position.',
+      required: false,
+      type: '(row: T) => string',
+    },
+    disabled: {
+      description:
+        'Shows the handles but locks them, for example while a person lacks the permission to reorder.',
+      required: false,
+      type: 'boolean',
+    },
+  }}
+/>
+
+What you get for free:
+
+- **Optimistic order.** The table moves the row the moment you drop it and calls `onReorder` in the background. If the promise rejects, it rolls back and shows an error toast - no stale "did it save?" moment.
+- **Only the handle drags.** Links, buttons and `rowOpens` clicks in the rest of the row keep working exactly as before.
+- **Mouse, touch and keyboard.** On touch, press and hold the handle for a moment so scrolling the page still scrolls the page. With a keyboard, focus a handle, press Space, move with the arrow keys and press Space again (Escape cancels). Screen readers hear where the row is the whole time.
+- **Expandable rows travel along.** An open detail panel belongs to its row, so it moves with it during the drag.
+- **Selection is untouched.** With `bulkActions` the handle sits first, then the checkbox.
+- **Reduced motion is respected.** Rows swap places without sliding when the system asks for less motion.
+
+<Callout type="warn" title="Reordering pauses while the view is filtered">
+  The handles are disabled while a search, a filter or a sort other than
+  `order.defaultOrder` is active - dragging a row in a filtered view would
+  shuffle rows nobody can see. Hovering a disabled handle says so. Make the
+  table's `defaultOrder` your stored order (for example `position` ascending) so
+  the default view is the one that can be rearranged.
+</Callout>
+
+## Saving the order on the backend
+
+The table hands you ids; making them stick is three small pieces. VitNode's own navigation admin does the same thing in `packages/vitnode/src/api/modules/admin/navigation/routes/reorder.route.ts` - peek there for a production version.
+
+<Steps>
+<Step>
+
+#### Add a `position` column and sort by it
+
+```ts title="plugins/tasks/src/database/tasks.ts"
+import { camelCase, index } from 'drizzle-orm/pg-core'
+
+export const tasks = camelCase.table.withRLS(
+  'tasks',
+  (t) => ({
+    id: t.serial().primaryKey(),
+    title: t.varchar({ length: 255 }).notNull(),
+    // [!code ++]
+    position: t.integer().notNull().default(0),
+    createdAt: t.timestamp().notNull().defaultNow(),
+  }),
+  // [!code ++]
+  (t) => [index('tasks_position_idx').on(t.position)],
+)
+```
+
+The list route orders by it, so the default view is the stored order:
+
+```ts
+withPagination({
+  // ...
+  // [!code ++]
+  orderBy: { column: tasks.position, order: 'asc' },
+})
+```
+
+</Step>
+<Step>
+
+#### Accept the new order in an admin route
+
+The route takes the ids of one page, in their new order, and hands those rows the positions they already had between them. That keeps pagination honest: reordering page 3 never touches page 1. New admin APIs always need a staff permission:
+
+```ts title="plugins/tasks/src/api/modules/admin/tasks/routes/reorder.route.ts"
+import { z } from '@hono/zod-openapi'
+import { buildRoute } from '@vitnode/core/api/lib/route'
+import { eq, inArray } from 'drizzle-orm'
+
+import { CONFIG_PLUGIN } from '@/const'
+import { tasks } from '@/database/tasks'
+
+const zodReorderTasksSchema = z.object({
+  ids: z.array(z.number().int()).min(1).max(100),
+})
+
+export const reorderTasksRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  // [!code ++]
+  adminStaffPermission: { module: 'tasks', permission: 'can_reorder' },
+  route: {
+    method: 'post',
+    path: '/reorder',
+    description: 'Save the order of one page of tasks (Admin only)',
+    request: {
+      body: {
+        required: true,
+        content: { 'application/json': { schema: zodReorderTasksSchema } },
+      },
+    },
+    responses: {
+      200: { description: 'Tasks reordered' },
+      400: {
+        content: {
+          'application/json': { schema: z.object({ error: z.string() }) },
+        },
+        description: 'The ids are duplicated or unknown',
+      },
+      403: { description: 'Access Denied' },
+    },
+  },
+  handler: async (c) => {
+    const { ids } = c.req.valid('json')
+    const db = c.get('db')
+
+    if (new Set(ids).size !== ids.length) {
+      return c.json({ error: 'A task appears twice in the new order' }, 400)
+    }
+
+    const current = await db
+      .select({ id: tasks.id, position: tasks.position })
+      .from(tasks)
+      .where(inArray(tasks.id, ids))
+
+    if (current.length !== ids.length) {
+      return c.json({ error: 'The new order names an unknown task' }, 400)
+    }
+
+    const slots = current.map((row) => row.position).sort((a, b) => a - b)
+
+    // [!code ++:8]
+    await db.transaction(async (tx) => {
+      for (const [index, id] of ids.entries()) {
+        await tx
+          .update(tasks)
+          .set({ position: slots[index] })
+          .where(eq(tasks.id, id))
+      }
+    })
+
+    return c.body(null, 200)
+  },
+})
+```
+
+Register the route in its module and declare the permission in the plugin's API config:
+
+```ts title="plugins/tasks/src/config.api.ts"
+export const tasksApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    // [!code ++:8]
+    permissionStaff: {
+      admin: {
+        tasks: [
+          'can_view',
+          { permission: 'can_reorder', dependsOn: ['can_view'] },
+        ],
+      },
+    },
+    modules: [adminModule],
+  })
+```
+
+<Callout type="info" title="Give new rows a position">
+  Rows that all share `position: 0` sort unpredictably. When you insert a task,
+  set its `position` to the current maximum plus one.
+</Callout>
+
+</Step>
+<Step>
+
+#### Call it from `onReorder`
+
+Throwing from `onReorder` is all the table needs to roll back and show its error toast. On success, invalidate the list so every other view of it catches up:
+
+```tsx title="plugins/tasks/src/views/admin/tasks-table.tsx"
+import { useQueryClient } from '@tanstack/react-query'
+import { DataTable } from '@vitnode/core/components/table/data-table'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+import { tasksQueryKey } from './tasks-query'
+
+export const TasksTable = ({ data }: { data: TasksPage }) => {
+  const queryClient = useQueryClient()
+
+  return (
+    <DataTable
+      id="tasks-table"
+      columns={columns}
+      edges={data.edges}
+      pageInfo={data.pageInfo}
+      order={{ defaultOrder: { column: 'position', order: 'asc' } }}
+      reorderable={{
+        getRowLabel: (task) => task.title,
+        onReorder: async (ids) => {
+          // [!code ++:7]
+          const res = await fetcher({
+            plugin: '@acme/tasks',
+            method: 'post',
+            module: 'admin/tasks',
+            path: '/reorder',
+            args: { body: { ids } },
+          })
+
+          if (!res.ok) {
+            throw new Error('Saving the order failed')
+          }
+
+          // [!code ++]
+          await queryClient.invalidateQueries({ queryKey: tasksQueryKey })
+        },
+      }}
+    />
+  )
+}
+```
+
+</Step>
+</Steps>
