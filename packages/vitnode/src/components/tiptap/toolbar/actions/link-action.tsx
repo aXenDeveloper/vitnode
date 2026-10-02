@@ -11,9 +11,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Toggle } from "@/components/ui/toggle";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useToolbarEditor } from "../use-toolbar-editor";
-import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 
 export const LinkAction = () => {
   const t = useTranslations("core.global.editor.link");
@@ -49,7 +49,7 @@ export const LinkAction = () => {
 
   return (
     <Popover onOpenChange={onOpenChange} open={open}>
-      <ToolbarTooltip text={t("label")}>
+      <TooltipWithContent text={t("label")}>
         <PopoverTrigger
           render={
             <Toggle
@@ -62,7 +62,7 @@ export const LinkAction = () => {
         >
           <LinkIcon />
         </PopoverTrigger>
-      </ToolbarTooltip>
+      </TooltipWithContent>
 
       <PopoverContent align="start" className="w-80">
         <form

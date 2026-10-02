@@ -1,6 +1,6 @@
 ---
 title: Shimmer
-description: A Tailwind CSS utility that sweeps a soft highlight across text - the universal sign for "hang on, I'm working on it".
+description: A Tailwind CSS utility that sweeps a soft highlight across text, the universal sign for "hang on, I'm working on it".
 icon: Sparkles
 ---
 
@@ -10,8 +10,8 @@ icon: Sparkles
 
 ## Usage
 
-Shimmer is a Tailwind CSS utility, not a React component - there is nothing to
-import. It ships with the `shadcn` package, and VitNode apps already pull it in
+Shimmer is a Tailwind CSS utility, not a React component, so there is nothing
+to import. It ships with the `shadcn` package, and VitNode apps already pull it in
 from `src/styles.css`:
 
 ```css
@@ -26,7 +26,7 @@ Add it to any text element:
 
 The highlight is derived from `currentColor`, so it works on muted text, brand
 colors and everything in between. In dark mode it brightens on its own to stay
-visible. It's pure CSS: the text is painted with `background-clip: text` and
+visible. It's pure CSS. The text is painted with `background-clip: text` and
 the highlight loops across it every two seconds.
 
 | Class                     | What it does                                       |
@@ -108,7 +108,7 @@ The sweep follows the reading direction out of the box (right to left in RTL).
 
 ### Play once
 
-`shimmer-once` plays a single sweep - a nice little "done!" when streaming
+`shimmer-once` plays a single sweep, a nice little "done!" when streaming
 finishes. Combine it with `shimmer-duration-<ms>` to set how long it takes, and
 change the element's `key` to play it again:
 
@@ -143,11 +143,11 @@ only where it works:
 ## Accessibility
 
 - With reduced motion turned on, the animation stops and the text renders
-  normally - no setup needed. That rule targets the plain `shimmer` class, so
+  normally, with no setup needed. That rule targets the plain `shimmer` class, so
   if you apply it through a variant (`group-hover:shimmer`), add
   `motion-reduce:shimmer-none` yourself.
 - Shimmer is decoration, not a loading signal. Screen readers and reduced-motion
-  users never see it, so pair it with real text inside `role="status"` - like
+  users never see it, so pair it with real text inside `role="status"`, like
   "Thinking..." in the examples above.
 - Keep it on short status text. A whole paragraph sparkling away is more disco
   than progress.

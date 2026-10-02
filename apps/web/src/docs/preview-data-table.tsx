@@ -15,14 +15,13 @@ type LocalData<T extends DataTableTMin> = Pick<
   'edges' | 'pageInfo'
 >
 
-export function DataTable<T extends DataTableTMin>({
-  resolve,
-  ...props
-}:
-  | (DataTableProps<T> & { resolve?: undefined })
-  | (Omit<DataTableProps<T>, 'edges' | 'pageInfo'> & {
-      resolve: (params: URLSearchParams) => LocalData<T>
-    })) {
+export function DataTable<T extends DataTableTMin>(
+  props:
+    | (DataTableProps<T> & { resolve?: undefined })
+    | (Omit<DataTableProps<T>, 'edges' | 'pageInfo'> & {
+        resolve: (params: URLSearchParams) => LocalData<T>
+      }),
+) {
   const [search, setSearch] = React.useState('')
 
   const navigation = React.useMemo<DataTableNavigation>(
@@ -37,10 +36,13 @@ export function DataTable<T extends DataTableTMin>({
 
   return (
     <DataTableNavigationProvider value={navigation}>
-      {resolve ? (
-        <ContentDataTable<T> {...props} {...resolve(navigation.searchParams)} />
+      {props.resolve ? (
+        <ContentDataTable<T>
+          {...props}
+          {...props.resolve(navigation.searchParams)}
+        />
       ) : (
-        <ContentDataTable<T> {...(props as DataTableProps<T>)} />
+        <ContentDataTable<T> {...props} />
       )}
     </DataTableNavigationProvider>
   )

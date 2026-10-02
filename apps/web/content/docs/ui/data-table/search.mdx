@@ -1,6 +1,6 @@
 ---
 title: Search
-description: Let people search the table - the term lives in the URL, so the API does the heavy lifting.
+description: Let people search the table. The term lives in the URL, so the API does the heavy lifting.
 icon: TextSearch
 ---
 
@@ -10,7 +10,7 @@ icon: TextSearch
 
 ## Usage
 
-Set the `search` prop to `true` to render a search input above the table. You can optionally customize the placeholder with `searchPlaceholder`.
+Set the `search` prop to `true` to render a search input above the table. Change the placeholder with `searchPlaceholder`.
 
 ```tsx
 <DataTable
@@ -34,7 +34,7 @@ Set the `search` prop to `true` to render a search input above the table. You ca
 />
 ```
 
-The input writes the term to the `?search=` query parameter (debounced) and reloads the page, so it works out of the box with server-side data fetching. The columns that are actually searched are defined on the API route.
+The input writes the term to the `?search=` query parameter (debounced), and the route loads the matching rows from the API. The API route decides which columns are searched.
 
 <Callout type="info" title="Configure the API route">
   Enabling `search` only renders the input. You must also tell the backend which

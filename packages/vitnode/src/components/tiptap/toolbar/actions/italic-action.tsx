@@ -3,9 +3,9 @@ import { ItalicIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Toggle } from "@/components/ui/toggle";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useToolbarEditor } from "../use-toolbar-editor";
-import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const ItalicAction = () => {
@@ -21,7 +21,7 @@ export const ItalicAction = () => {
   });
 
   return (
-    <ToolbarTooltip
+    <TooltipWithContent
       text={
         <>
           {t("italic")}
@@ -40,6 +40,6 @@ export const ItalicAction = () => {
           <ItalicIcon />
         </Toggle>
       </div>
-    </ToolbarTooltip>
+    </TooltipWithContent>
   );
 };

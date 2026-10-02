@@ -162,7 +162,7 @@ export function ComboboxBasic() {
 
 <Preview name="combobox-groups" />
 
-Give options a `group` and they're sorted under headings - handy once a list
+Give options a `group` and they're sorted under headings. Handy once a list
 gets long enough to scroll. `showClear` adds an × that empties the field in one
 click.
 
@@ -188,22 +188,22 @@ a `group` gather at the top with no heading.
 
 Pass `multiple` and use an array in the schema. Picked options pop in as
 chips, and removing one shrinks it away while the rest slide over to close the
-gap - the box keeps its width and simply wraps onto a new line when it's full.
+gap. The box keeps its width and wraps onto a new line when it's full.
 With reduced motion turned on, chips just appear and disappear.
 
 ### Limit visible chips
 
 Picked a dozen tags? Set `maxVisibleChips` and only the first few show, followed
-by a "+N more" chip that counts the rest. Every pick is still saved - the
-limit is purely visual.
+by a "+N more" chip that counts the rest. Every pick is still saved. The
+limit is only visual.
 
 ```tsx
 <AutoFormCombobox {...props} labels={topics} maxVisibleChips={3} multiple />
 ```
 
-Keyboard tips: <kbd>Backspace</kbd> in an empty search removes the last chip,
-and <kbd>Escape</kbd> with the list closed clears every pick - that's the
-standard combobox pattern, so it's worth knowing before you press it twice.
+Press <kbd>Backspace</kbd> in an empty search to remove the last chip, or
+<kbd>Escape</kbd> with the list closed to clear every pick. That's the
+standard combobox pattern, and worth knowing before you hit Escape twice.
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
@@ -231,7 +231,7 @@ const formSchema = z.object({
 ```
 
 `.min()` and `.max()` on the array become the validation messages, and
-`fetchData` works with `multiple` too - the value is then an array of
+`fetchData` works with `multiple` too. The value is then an array of
 `{ value, label }` objects.
 
   </Tab>

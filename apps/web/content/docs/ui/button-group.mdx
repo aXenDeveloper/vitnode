@@ -27,7 +27,7 @@ import {
 ```
 
 The group squashes the inner borders and rounds only the outer corners, so a
-handful of buttons reads as one control. No extra props on the buttons - they
+handful of buttons reads as one control. The buttons need no extra props. They
 just know they are in a group.
 
 ## Orientation
@@ -48,8 +48,8 @@ map, less great for a full sentence.
 
 ## Nested groups
 
-Put groups inside a group and they get a small gap between them - the classic
-toolbar look.
+Put groups inside a group and they get a small gap between them. That's the
+classic toolbar look.
 
 ```tsx
 <ButtonGroup aria-label="Message actions">
@@ -68,8 +68,8 @@ toolbar look.
 ## Separator
 
 Outline buttons already have borders to divide them. Variants without a border,
-like `secondary`, look like one big blob - add a `ButtonGroupSeparator` between
-them.
+like `secondary`, merge into one big blob, so add a `ButtonGroupSeparator`
+between them.
 
 ```tsx
 <ButtonGroup aria-label="Text alignment">
@@ -85,7 +85,7 @@ them.
 
 ## With text
 
-`ButtonGroupText` renders a non-interactive segment, perfect for a counter or a
+`ButtonGroupText` renders a non-interactive segment, like a counter or a
 prefix. Use `render` to swap the element, for example to a `<label>`.
 
 ```tsx
@@ -117,8 +117,8 @@ snug on the end.
 ## With dropdown menu
 
 Pair a button with a [Dropdown Menu](/docs/ui/dropdown-menu) trigger to build a
-split button: the main action on the left, the "but also..." options on the
-right.
+split button, with the main action on the left and the "but also..." options on
+the right.
 
 ```tsx
 <ButtonGroup>
@@ -141,7 +141,7 @@ right.
 
 ## Sizes
 
-The group follows the size of its buttons - use the same `size` on every button
+The group follows the size of its buttons. Use the same `size` on every button
 in it so the heights match.
 
 ```tsx
@@ -159,14 +159,14 @@ in it so the heights match.
 
 - The group renders with `role="group"`. Give it an `aria-label` (or
   `aria-labelledby`) so screen readers announce what the buttons are for.
-- Icon-only buttons need their own `aria-label` - the `Button` types will remind
+- Icon-only buttons need their own `aria-label`. The `Button` types will remind
   you if you forget.
 - A focused button is lifted above its neighbours, so the focus ring is never
   hidden behind the next segment.
 - Borders and corners use logical properties, so groups flip correctly in
   right-to-left languages.
-- Need a single selected option, like a segmented control? Reach for
-  [Toggle Group](/docs/ui/toggle-group) instead - it handles the pressed state
+- Need a single selected option, like a segmented control? Use
+  [Toggle Group](/docs/ui/toggle-group) instead. It handles the pressed state
   for you.
 
 ## Props

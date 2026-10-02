@@ -6,7 +6,7 @@ import { useTranslations } from "use-intl";
 import { Button } from "./button";
 import { SlidingNumber } from "./sliding-number";
 
-export const clampCounterValue = (value: number, min: number, max: number) =>
+const clampCounterValue = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
 function Counter({

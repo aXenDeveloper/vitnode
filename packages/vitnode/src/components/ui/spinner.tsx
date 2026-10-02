@@ -49,4 +49,4 @@ function Spinner(props: SpinnerProps) {
   );
 }
 
-export { Spinner, spinnerVariants };
+export { Spinner };

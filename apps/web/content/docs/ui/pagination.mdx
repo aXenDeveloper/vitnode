@@ -121,7 +121,7 @@ const pageWindow = (current: number, total: number): PageSlot[] => {
 
 Even five numbers get crowded on a phone. Give every number's `PaginationItem`
 `className="hidden sm:block"` and show a "Page 2 of 12" line between the arrows
-instead - the same trick the [Data Table](/docs/ui/data-table) uses:
+instead. The [Data Table](/docs/ui/data-table) uses the same trick:
 
 ```tsx
 <PaginationItem className="sm:hidden">
@@ -165,7 +165,7 @@ your feed deserves something more specific:
   page", "Next page") even when only the chevron is visible.
 - Page links are plain anchors named by their number, so "2" is read as
   "link, 2" rather than a generic "Go to page".
-- `PaginationEllipsis` is hidden from assistive technology - it is decoration,
+- `PaginationEllipsis` is hidden from assistive technology. It is decoration,
   not a link.
 - Announce page changes that do not reload the page, for example with an
   `aria-live="polite"` "Page 2 of 12" line like in the preview.

@@ -1,6 +1,6 @@
 ---
 title: Copy Button
-description: A button that copies text to the clipboard, with a smooth icon swap and a check mark that draws itself.
+description: A button that copies text to the clipboard, then swaps its icon for a check mark that draws itself.
 icon: Copy
 ---
 
@@ -18,9 +18,9 @@ import { CopyButton } from '@vitnode/core/components/ui/copy-button'
 <CopyButton content="Hello world!" />
 ```
 
-Click it and the copy icon blurs away while a check mark draws itself in - the
-same stroke animation as the [Checkbox](/docs/ui/checkbox). After `delay`
-milliseconds it quietly goes back to the copy icon, ready for round two.
+Click it and the copy icon blurs away while a check mark draws itself in, with
+the same stroke animation as the [Checkbox](/docs/ui/checkbox). After `delay`
+milliseconds it goes back to the copy icon, ready for round two.
 
 ## With a label
 
@@ -37,7 +37,7 @@ accessible name, so screen readers hear what you see.
 
 Without children the button renders as an icon. It labels itself "Copy" and
 "Copied" out of the box, but a specific label is friendlier when there are a few
-copy buttons on one screen:
+copy buttons on one screen.
 
 ```tsx
 <CopyButton
@@ -50,8 +50,8 @@ copy buttons on one screen:
 
 ## Controlled
 
-Own the copied state with `copied` and `onCopiedChange` - handy when something
-else on the page should react to the copy.
+Own the copied state with `copied` and `onCopiedChange` when something else on
+the page should react to the copy.
 
 ```tsx
 const [copied, setCopied] = React.useState(false)
@@ -65,8 +65,8 @@ const [copied, setCopied] = React.useState(false)
 
 ## Accessibility
 
-- A polite live region announces "Copied" after a successful copy, so the
-  change is not just a visual one.
+- A polite live region announces "Copied" after a successful copy, so screen
+  reader users hear the change too.
 - With reduced motion turned on, the icons simply fade and the check mark shows
   up fully drawn.
 - If the browser blocks clipboard access (for example on a non-HTTPS page), an

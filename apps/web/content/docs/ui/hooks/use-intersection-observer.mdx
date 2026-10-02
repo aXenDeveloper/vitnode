@@ -1,6 +1,6 @@
 ---
 title: useIntersectionObserver
-description: Find out when an element scrolls into view - perfect for lazy loading, infinite feeds and "seen" tracking.
+description: Find out when an element scrolls into view. Use it for lazy loading, infinite feeds and "seen" tracking.
 icon: ScanEye
 ---
 
@@ -32,7 +32,7 @@ friends.
 ## Load once, then stop watching
 
 Set `freezeOnceVisible` and the hook stops observing the first time the element
-shows up. Handy for lazy loading or a one-off entrance animation - no point
+shows up. Handy for lazy loading or a one-off entrance animation, since there's no point
 paying for an observer that has nothing left to do.
 
 ```tsx
@@ -50,7 +50,7 @@ screen, so people rarely catch it loading.
 ## Inside a scroll container
 
 By default the hook watches the viewport. To watch a scrollable element
-instead, pass it as `root` - store it with a callback ref so the hook picks it
+instead, pass it as `root`. Store it with a callback ref so the hook picks it
 up once it mounts:
 
 ```tsx
@@ -95,4 +95,4 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 />
 
 On the server, and in the rare browser without `IntersectionObserver`, the hook
-simply returns `undefined`.
+returns `undefined`.

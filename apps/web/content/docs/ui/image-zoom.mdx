@@ -1,6 +1,6 @@
 ---
 title: Image Zoom
-description: Click an image and it grows smoothly from its spot on the page to fill the screen.
+description: Click an image and it grows from its spot on the page to fill the screen.
 icon: ZoomIn
 ---
 
@@ -41,7 +41,7 @@ zooms in:
 
 ## Styling
 
-- `className` styles the clickable wrapper - use it for layout and visibility
+- `className` styles the clickable wrapper. Use it for layout and visibility
   (`hidden dark:block` for theme-specific screenshots).
 - `imageClassName` styles the image on the page: size, border, rounded corners.
 
@@ -51,7 +51,7 @@ The zoomed image always fits the screen without cropping.
 
 - The image is a real button, so it works with the keyboard and screen readers
   announce that it opens a dialog.
-- `alt` is required - it labels the image on the page and names the zoomed view.
+- `alt` is required. It labels the image on the page and names the zoomed view.
 - Focus is trapped while zoomed and returns to the image when you close it.
 - With reduced motion turned on, the image appears zoomed instantly instead of
   gliding.

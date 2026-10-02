@@ -1,6 +1,6 @@
 ---
 title: Draggable Rows
-description: Drag rows into a new order with mouse, touch or keyboard - and save it on your backend.
+description: Drag rows into a new order with mouse, touch or keyboard, then save it on your backend.
 icon: GripVertical
 ---
 
@@ -10,7 +10,7 @@ icon: GripVertical
 
 ## Usage
 
-When the order of rows _is_ the data - a backlog, homepage sections, FAQ entries - pass `reorderable`. Each row grows a grip handle; grab it and drag the row where it belongs. The other rows slide out of the way, and the dropped row glides into its new spot.
+When the order of rows _is_ the data, like a backlog or a list of FAQ entries, pass `reorderable`. Each row grows a grip handle. Grab it and drag the row where it belongs. The other rows slide out of the way, and the dropped row glides into its new spot.
 
 ```tsx
 <DataTable
@@ -67,7 +67,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 What you get for free:
 
-- **Optimistic order.** The table moves the row the moment you drop it and calls `onReorder` in the background. If the promise rejects, it rolls back and shows an error toast - no stale "did it save?" moment.
+- **Optimistic order.** The table moves the row the moment you drop it and calls `onReorder` in the background. If the promise rejects, it rolls back and shows an error toast, so nobody is left wondering "did it save?"
 - **Only the handle drags.** Links, buttons and `rowOpens` clicks in the rest of the row keep working exactly as before.
 - **Mouse, touch and keyboard.** On touch, press and hold the handle for a moment so scrolling the page still scrolls the page. With a keyboard, focus a handle, press Space, move with the arrow keys and press Space again (Escape cancels). Screen readers hear where the row is the whole time.
 - **Expandable rows travel along.** An open detail panel belongs to its row, so it moves with it during the drag.
@@ -84,7 +84,7 @@ What you get for free:
 
 ## Saving the order on the backend
 
-The table hands you ids; making them stick is three small pieces. VitNode's own navigation admin does the same thing in `packages/vitnode/src/api/modules/admin/navigation/routes/reorder.route.ts` - peek there for a production version.
+The table hands you ids. Making them stick takes three small pieces. VitNode's own navigation admin does the same thing, so peek at `packages/vitnode/src/api/modules/admin/navigation/routes/reorder.route.ts` for a production version.
 
 <Steps>
 <Step>

@@ -32,9 +32,8 @@ import {
 </Carousel>
 ```
 
-Swipe it, drag it, or click the arrows - [Embla Carousel](https://www.embla-carousel.com)
-does the heavy lifting, so the motion feels like a native app and not a slideshow
-from 2009.
+Swipe it, drag it or click the arrows. [Embla Carousel](https://www.embla-carousel.com)
+does the heavy lifting, so it moves like a native app and not a slideshow from 2009.
 
 By default the arrows sit just outside the slides, so leave some room around
 the carousel (for example `px-12`). On narrow screens, move them into a row of
@@ -42,7 +41,7 @@ their own with `static translate-y-0`, like the preview does.
 
 ## Sizes
 
-Each `CarouselItem` takes the full width. Change it with a `basis-*` class -
+Each `CarouselItem` takes the full width. Change it with a `basis-*` class,
 responsive ones included.
 
 ```tsx
@@ -98,7 +97,7 @@ free-scrolling feel.
 <Carousel opts={{ align: 'start', loop: true }}>...</Carousel>
 ```
 
-For a right-to-left page, tell Embla too - the layout flips on its own, but the
+For a right-to-left page, tell Embla too. The layout flips on its own, but the
 scroll math needs the hint:
 
 ```tsx
@@ -178,7 +177,7 @@ export const Slideshow = () => (
 ```
 
 Keep `stopOnInteraction` on, and skip autoplay for people who prefer reduced
-motion - nobody likes chasing a slide that runs away.
+motion. Nobody likes chasing a slide that runs away.
 
 ## Accessibility
 

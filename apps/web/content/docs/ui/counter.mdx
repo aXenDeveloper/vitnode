@@ -34,7 +34,7 @@ Leave out `value` and use `defaultValue` if you only care about changes:
 ## Steps and limits
 
 `step` sets how far one click goes. A step that would jump past a limit stops
-right at it - with `max={10}` and `step={5}`, 8 goes to 10, not 13.
+right at it. With `max={10}` and `step={5}`, 8 goes to 10, not 13.
 
 ```tsx
 <Counter max={100} min={0} step={5} />
@@ -44,8 +44,8 @@ right at it - with `max={10}` and `step={5}`, 8 goes to 10, not 13.
 
 <Preview name="counter-sliding-number" />
 
-The rolling digits are their own component, so you can animate any number -
-stats, prices, likes - without the buttons:
+The rolling digits are their own component, so you can animate any number,
+like a download count or a price, without the buttons:
 
 ```ts
 import { SlidingNumber } from '@vitnode/core/components/ui/sliding-number'
@@ -68,10 +68,10 @@ gets saved.
 ## Accessibility
 
 - The buttons are labelled "Decrease" and "Increase" in the user's language.
-- Screen readers hear the new value after every click, without the rolling
-  digits - those are hidden from assistive tech.
+- Screen readers hear the new value after every click. The rolling digits
+  themselves are hidden from assistive tech.
 - Give the counter a name with `aria-label` or `aria-labelledby`, so "Increase"
-  has context: increase _what_?
+  has context. Increase _what_?
 - With reduced motion turned on, digits change instantly.
 
 ## Props

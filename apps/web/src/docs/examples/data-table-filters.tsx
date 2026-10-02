@@ -53,6 +53,7 @@ export default function DataTableFiltersExample() {
       resolve={(params) =>
         resolveLocalTable(demoUsers, params, {
           defaultOrder,
+          sortBy: { name: (row) => row.name },
           filters: { role: (row) => row.role, status: (row) => row.status },
         })
       }

@@ -13,11 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { BLOCK_COMMANDS } from "../../block-commands";
 import { useToolbarEditor } from "../use-toolbar-editor";
 import { AudioDialog } from "./audio-action";
-import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 
 const INSERT_COMMANDS = BLOCK_COMMANDS.filter(
   command => command.group === "insert" || command.id === "quote",
@@ -31,7 +31,7 @@ export const InsertAction = () => {
   return (
     <>
       <DropdownMenu>
-        <ToolbarTooltip text={t("insert.label")}>
+        <TooltipWithContent text={t("insert.label")}>
           <DropdownMenuTrigger
             render={
               <Button
@@ -45,7 +45,7 @@ export const InsertAction = () => {
             <PlusIcon />
             <ChevronDownIcon className="text-muted-foreground" />
           </DropdownMenuTrigger>
-        </ToolbarTooltip>
+        </TooltipWithContent>
 
         <DropdownMenuContent align="end" className="min-w-64">
           <DropdownMenuGroup>

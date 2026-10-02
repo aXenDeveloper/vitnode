@@ -1,6 +1,6 @@
 ---
 title: Chart
-description: Beautiful, themeable charts built on Recharts - bar, area, line and friends, with tooltips and legends that match the rest of your UI.
+description: Bar, area, line and any other Recharts chart, with tooltips, legends and colours that follow your theme.
 icon: ChartColumn
 ---
 
@@ -132,7 +132,7 @@ to that one chart. Use it anywhere Recharts takes a colour:
 ```
 
 It works in Tailwind classes too, for example `fill-(--color-desktop)`. Two or
-three colours per chart is plenty - your readers have eyes, not a rainbow
+three colours per chart is plenty. Your readers have eyes, not a rainbow
 decoder ring.
 
 ## Area chart
@@ -248,19 +248,19 @@ import {
 <ChartLegend content={<ChartLegendContent />} />
 ```
 
-Use `nameKey` to read legend labels from another key - handy for pie charts,
-where each slice is a row in your data rather than a series.
+Use `nameKey` to read legend labels from another key. That's handy for pie
+charts, where each slice is a row in your data rather than a series.
 
 ## Accessibility
 
 - `accessibilityLayer` adds ARIA attributes and keyboard support. Tab to a
-  chart, then use the arrow keys to move between points - the tooltip follows
+  chart and use the arrow keys to move between points. The tooltip follows
   along. It is on by default in Recharts 3, but writing it out makes the
   intent clear.
 - Give each chart a `title` and a `desc`. Recharts renders them as the SVG's
   `<title>` and `<desc>`, so screen readers get more than "graphic".
 - Keep a visible heading next to the chart (a `CardTitle` works well), and
-  never rely on colour alone - labels in the tooltip and legend tell series
+  never rely on colour alone. Labels in the tooltip and legend tell series
   apart for everyone.
 
 ## API Reference

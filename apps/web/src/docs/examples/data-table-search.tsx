@@ -25,6 +25,7 @@ export default function DataTableSearchExample() {
       resolve={(params) =>
         resolveLocalTable(demoUsers, params, {
           defaultOrder,
+          sortBy: { name: (row) => row.name },
           searchIn: (row) => `${row.name} ${row.email}`,
         })
       }

@@ -39,8 +39,8 @@ import {
 ```
 
 Right-click the trigger with a mouse, or press and hold it on a phone or
-tablet. The menu opens right where your cursor (or finger) is - no button
-required, no hunting around.
+tablet. The menu opens right where your cursor or finger is, so there's no
+button to find first.
 
 ## Submenus
 
@@ -101,8 +101,8 @@ one.
 ## Shortcuts
 
 `ContextMenuShortcut` shows a keyboard hint at the end of an item. It is only a
-label - wire the actual key binding yourself, otherwise it is a promise you are
-not keeping.
+label. Wire up the actual key binding yourself, or it's a promise you aren't
+keeping.
 
 ```tsx
 <ContextMenuItem>
@@ -125,12 +125,12 @@ part.
 
 ## Accessibility
 
-- Context menus are hidden by nature: nothing on screen says "right-click me".
-  Every action inside one must also be reachable another way, such as a
+- Context menus are hidden by nature, since nothing on screen says "right-click
+  me". Every action inside one must also be reachable another way, such as a
   toolbar, a [Dropdown Menu](/docs/ui/dropdown-menu) or a keyboard shortcut.
   Treat the context menu as a shortcut, never as the only door.
 - The trigger is a plain, non-focusable area, so keyboard users cannot open
-  the menu at all - one more reason for the rule above. Once it is open,
+  the menu at all. One more reason for the rule above. Once it is open,
   arrow keys move between items, the right arrow opens a submenu, typing a
   letter jumps to a matching item and `Escape` closes it.
 - On touch devices a long-press opens the menu, and the trigger sets

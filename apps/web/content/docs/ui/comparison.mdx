@@ -1,6 +1,6 @@
 ---
 title: Comparison
-description: A before/after slider - drag the handle to reveal one image over another.
+description: A before/after slider. Drag the handle to reveal one image over another.
 icon: Columns2
 ---
 
@@ -36,8 +36,9 @@ the `Comparison` a size or an aspect ratio and both pictures line up.
 
 ## Hover mode
 
-With `mode="hover"` the handle follows the pointer - no clicking needed. Nice
-for quick, playful comparisons; for anything precise, stick with dragging.
+With `mode="hover"` the handle follows the pointer, no clicking needed. It's
+nice for quick, playful comparisons, but for anything precise, stick with
+dragging.
 
 ```tsx
 <Comparison mode="hover">...</Comparison>
@@ -59,7 +60,7 @@ for quick, playful comparisons; for anything precise, stick with dragging.
 ## Custom handle
 
 `ComparisonHandle` draws a line with a grip by default. Pass children to draw
-your own - it already follows the slider for you.
+your own, and the handle still moves with the slider.
 
 ```tsx
 <ComparisonHandle>
@@ -69,11 +70,11 @@ your own - it already follows the slider for you.
 
 ## Accessibility
 
-- The whole comparison is a slider: focus it with <kbd>Tab</kbd>, then use the
+- The whole comparison is a slider. Focus it with <kbd>Tab</kbd>, then use the
   arrow keys (5% a step, 10% with <kbd>Shift</kbd>), <kbd>Home</kbd> and
   <kbd>End</kbd>.
 - Screen readers hear the position as a percentage. Name the slider with
-  `aria-label` - "Light and dark theme" says more than the default.
+  `aria-label`. "Light and dark theme" says more than the default.
 - The images are decorative inside the slider (`alt=""`); describe what's being
   compared in the label or a caption.
 - Dragging sideways never blocks scrolling the page up and down on phones.

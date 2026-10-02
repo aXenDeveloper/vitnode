@@ -1,6 +1,6 @@
 ---
 title: Empty
-description: Friendly empty states for lists, tables and searches that have nothing to show yet - with an icon, a clear message and a next step.
+description: Empty states for lists, tables and searches that have nothing to show yet, with an icon, a short message and a next step.
 icon: PackageOpen
 ---
 
@@ -46,13 +46,14 @@ that have no items yet.
 
 ## Anatomy
 
-- `Empty` - the centered wrapper. It grows to fill its parent (`flex-1`).
-- `EmptyHeader` - groups the media, title and description.
-- `EmptyMedia` - an icon, avatar or small illustration.
-- `EmptyTitle` - one short line that says what's missing.
-- `EmptyDescription` - why it's empty and what to do about it. Links inside it
-  are underlined automatically.
-- `EmptyContent` - actions, a search box or anything else the user can act on.
+- `Empty` is the centered wrapper. It grows to fill its parent (`flex-1`).
+- `EmptyHeader` groups the media, title and description.
+- `EmptyMedia` holds an icon, avatar or small illustration.
+- `EmptyTitle` is one short line that says what's missing.
+- `EmptyDescription` says why it's empty and what to do about it. Links inside
+  it are underlined automatically.
+- `EmptyContent` holds actions, a search box or anything else the user can act
+  on.
 
 ## Media
 
@@ -79,7 +80,7 @@ illustrations.
 
 ## Outline
 
-`Empty` already has a dashed border style - it just needs a width. Add `border`
+`Empty` already has a dashed border style. It just needs a width. Add `border`
 for a drop-zone look, or `border-2` when it sits alone on a page, like the
 AdminCP dashboard.
 
@@ -91,8 +92,8 @@ AdminCP dashboard.
 
 ## No results
 
-A search that finds nothing deserves its own empty state - not the same one as
-"you have no data". Echo the query back and offer a way out, like clearing the
+A search that finds nothing needs its own empty state, not the same one as "you
+have no data". Echo the query back and offer a way out, like clearing the
 search.
 
 <Preview name="empty-search" />
@@ -123,8 +124,8 @@ search.
 ## Inside a card or sidebar
 
 The default `p-12` is generous on purpose. On phones, `p-6 md:p-12` gives the
-copy room to breathe. In tight spots - a card, a sidebar, a popover - shrink the
-padding and the text:
+copy room to breathe. In tight spots like a card, a sidebar or a popover, shrink
+the padding and the text:
 
 ```tsx
 <Empty className="p-6">
@@ -139,7 +140,7 @@ padding and the text:
 
 ## Writing good empty states
 
-An empty state is a tiny piece of onboarding, so make every word count:
+An empty state is a tiny piece of onboarding. Five rules for writing one:
 
 - **Say what's missing.** "No projects yet" beats "Nothing here".
 - **Say why.** Is it brand new, filtered out, or did the search miss?
@@ -155,7 +156,8 @@ An empty state is a tiny piece of onboarding, so make every word count:
 - `EmptyTitle` renders a `div`. If the empty state replaces a whole page
   section, give the title a heading role so it shows up in the outline:
   `<EmptyTitle aria-level={2} role="heading">`.
-- Icons in `EmptyMedia` are decorative - the title already says it all. Use
+- Icons in `EmptyMedia` are decorative, since the title already says what's
+  missing. Use
   `alt=""` on avatar images for the same reason.
 - When results change while the user types, announce the count in a
   `role="status"` region (a `sr-only` paragraph works great) so screen reader

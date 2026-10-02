@@ -51,8 +51,8 @@ const formSchema = z.object({
 
 The form stores a real `number`, not a string. Clearing the input stores
 `null`, so pair it with `.optional()` or a `default` when empty is allowed.
-Pass `min`/`max` to the field as well as the schema - the schema validates,
-the props clamp the buttons and the arrow keys.
+Pass `min`/`max` to the field as well as the schema. The schema validates,
+and the props clamp the buttons and the arrow keys.
 
 Need an "unlimited" checkbox next to it? That's
 [Nullable Number](/docs/ui/nullable-number).
@@ -92,12 +92,12 @@ button is released) instead of on every keystroke.
 
 ## Min, max and step
 
-- `min` / `max` - the buttons, arrow keys and scrubbing stop at the limits, and
-  the button that would cross one is disabled. A typed value is clamped on blur.
-- `step` - how much one click or arrow press moves the value (default `1`).
-- `largeStep` - used with <kbd>Shift</kbd> held (default `10`).
-- `smallStep` - used with <kbd>Alt</kbd> (default `0.1`).
-- `snapOnStep` - snap to the nearest multiple of the step instead of adding it
+- `min` / `max` stop the buttons, arrow keys and scrubbing at the limits, and
+  disable the button that would cross one. A typed value is clamped on blur.
+- `step` is how much one click or arrow press moves the value (default `1`).
+- `largeStep` is used with <kbd>Shift</kbd> held (default `10`).
+- `smallStep` is used with <kbd>Alt</kbd> (default `0.1`).
+- `snapOnStep` snaps to the nearest multiple of the step instead of adding it
   to whatever was typed.
 
 ```tsx
@@ -110,7 +110,7 @@ button is released) instead of on every keystroke.
 
 `format` takes [`Intl.NumberFormatOptions`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat#options),
 so currencies, percentages and units come for free. The value stays a plain
-number - `0.15` shows as `15%`, and typing `20%` gives you `0.2` back.
+number. `0.15` shows as `15%`, and typing `20%` gives you `0.2` back.
 
 <Preview name="number-field-format" />
 
@@ -135,7 +135,7 @@ and English users see `12,345`. Pass `locale` to override it.
 
 ## Scrub area
 
-Wrap the label in `NumberFieldScrubArea` and the label becomes a slider: drag
+Wrap the label in `NumberFieldScrubArea` and the label becomes a slider. Drag
 it left or right to change the value, like in a design tool. Give it the same
 `htmlFor` as the field's `id` so clicking the label still focuses the input.
 
@@ -178,8 +178,8 @@ keeps the value readable and focusable but locks the buttons and the keys.
   <kbd>Shift</kbd> for `largeStep` or <kbd>Alt</kbd> for `smallStep`.
   <kbd>Home</kbd> / <kbd>End</kbd> jump to `min` / `max` when set.
 - The plus and minus buttons are labelled "Increase" and "Decrease" in the
-  user's language and are skipped by <kbd>Tab</kbd> - the keyboard already has
-  the arrow keys. On touch screens their hit area grows to 44px.
+  user's language and are skipped by <kbd>Tab</kbd>, since the keyboard already
+  has the arrow keys. On touch screens their hit area grows to 44px.
 - Name the input with a label (`htmlFor` + `id`), a scrub area, or
   `aria-label`. `AutoFormNumber` does it for you.
 

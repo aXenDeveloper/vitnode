@@ -1,6 +1,6 @@
 ---
 title: Data Table
-description: A table component with sorting, filtering, and pagination compatible with VitNode API.
+description: A table with sorting, filtering and pagination that works with the VitNode API.
 icon: Table
 ---
 
@@ -17,7 +17,7 @@ import {
 } from '@vitnode/core/components/table/data-table'
 ```
 
-Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe - it only accepts a `keyof T`, just like TanStack Table. A **display column** (for actions, selection, etc.) has no `accessorKey` and instead requires a string `id`.
+Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe. It only accepts a `keyof T`, just like TanStack Table. A **display column**, for actions or selection, has no `accessorKey` and requires a string `id` instead.
 
 ```tsx
 const columns: ColumnDef<User>[] = [
@@ -179,9 +179,9 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
   }}
 />
 
-## Cell Renderer
+## Cell renderer
 
-You can customize how each cell is rendered using the `cell` property. The renderer function receives the current row data and all table data as parameters.
+The `cell` property controls how each cell renders. Its function receives the current row and all the table data.
 
 ```tsx
 <DataTable
@@ -214,9 +214,9 @@ You can customize how each cell is rendered using the `cell` property. The rende
 />
 ```
 
-### Order Configuration
+### Order configuration
 
-If you want to enable sorting on specific columns, you can specify them in the `columns` property.
+To enable sorting on specific columns, list them in the `columns` property.
 
 ```tsx
 order={{
@@ -229,9 +229,9 @@ order={{
 }}
 ```
 
-## Column Alignment
+## Column alignment
 
-Use the `align` property to control the horizontal alignment of a column's header and cells. It accepts `"left"` (default), `"center"`, or `"right"`. This is handy for numeric values and action buttons.
+Use the `align` property to control the horizontal alignment of a column's header and cells. It accepts `"left"` (default), `"center"`, or `"right"`. Right alignment suits numbers and action buttons.
 
 ```tsx
 columns={[
@@ -252,16 +252,16 @@ columns={[
 
 Each feature has its own page with a live preview:
 
-- [Search](/docs/ui/data-table/search) - a debounced search box that writes to the URL.
-- [Filters](/docs/ui/data-table/filters) - faceted multi-select filters, static or async.
-- [Pagination](/docs/ui/data-table/pagination) - numbered pages and a rows-per-page select.
-- [Bulk Actions](/docs/ui/data-table/bulk-actions) - select rows and act on all of them at once.
-- [Expandable Rows](/docs/ui/data-table/expandable-rows) - a detail panel under each row.
-- [Draggable Rows](/docs/ui/data-table/draggable-rows) - reorder rows and save the order on your backend.
+- [Search](/docs/ui/data-table/search): a debounced search box that writes to the URL.
+- [Filters](/docs/ui/data-table/filters): faceted multi-select filters, static or async.
+- [Pagination](/docs/ui/data-table/pagination): numbered pages and a rows-per-page select.
+- [Bulk Actions](/docs/ui/data-table/bulk-actions): select rows and act on all of them at once.
+- [Expandable Rows](/docs/ui/data-table/expandable-rows): a detail panel under each row.
+- [Draggable Rows](/docs/ui/data-table/draggable-rows): reorder rows and save the order on your backend.
 
 ## Complete Example
 
-Here's a complete example showing how to use the `DataTable` component in a page:
+Here's `DataTable` wired into a full page:
 
 ```tsx
 import {

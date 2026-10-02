@@ -1,6 +1,6 @@
 ---
 title: Attachment
-description: File uploads with drag and drop, progress, previews and errors - from a single avatar to a sortable gallery.
+description: Upload one file or a sortable gallery, with drag and drop, progress, previews and errors.
 icon: Paperclip
 ---
 
@@ -25,8 +25,8 @@ import { AutoFormFile } from '@vitnode/core/components/form/fields/file'
 import { AutoFormFiles } from '@vitnode/core/components/form/fields/files'
 ```
 
-The form stores **file ids**, not the files themselves - a number for a single
-file and an array of numbers for many:
+The form stores **file ids**, not the files themselves. One file is a number,
+many files are an array of numbers:
 
 ```ts
 const formSchema = z.object({
@@ -125,37 +125,39 @@ const uploadFile = async (file: File): Promise<AutoFormFileValue> => {
 }
 ```
 
-When editing something that already has files, pass them in so the field can
-show their names and previews: `file={existing}` on `AutoFormFile`, or
-`files={existing}` on `AutoFormFiles`.
+Editing something that already has files? Pass them in with `file={existing}`
+on `AutoFormFile` or `files={existing}` on `AutoFormFiles`, and the field shows
+their names and previews.
 
 ## Limits
 
 Both fields check files **before** uploading, so nobody waits for a 2 GB video
 just to hear it was too big:
 
-- `maxBytes` - the largest accepted file, required.
-- `allowedExtensions` - lowercase with a leading dot, like `['.pdf', '.png']`.
-- `allowedMimeTypes` - for example `['image/png', 'application/pdf']`.
+- `maxBytes` sets the largest accepted file. It is required.
+- `allowedExtensions` takes lowercase extensions with a leading dot, like
+  `['.pdf', '.png']`.
+- `allowedMimeTypes` takes MIME types, for example
+  `['image/png', 'application/pdf']`.
 
-`AutoFormFiles` also takes `maxItems` and `minItems`. Files can be reordered by
-dragging or with the keyboard; pass `ordered={false}` when the order doesn't
+`AutoFormFiles` also takes `maxItems` and `minItems`. People can reorder files
+by dragging or with the keyboard. Pass `ordered={false}` when the order doesn't
 matter.
 
-Your server should check the same limits again - the browser only saves people
-a wasted upload, it can't stop someone determined.
+Check the same limits again on your server. The browser check saves people a
+wasted upload, but it can't stop someone determined.
 
 ## States
 
 Set `state` on `Attachment` to match what the file is doing:
 
-| State        | Looks like                                     |
-| ------------ | ---------------------------------------------- |
-| `done`       | The default - a finished file                  |
-| `idle`       | Dashed border, waiting for a file              |
-| `uploading`  | Shimmering title, dimmed preview               |
-| `processing` | Same as uploading, for server-side work        |
-| `error`      | Red border and description - say what went wrong |
+| State        | Looks like                                       |
+| ------------ | ------------------------------------------------ |
+| `done`       | The default, a finished file                     |
+| `idle`       | Dashed border, waiting for a file                |
+| `uploading`  | Shimmering title, dimmed preview                 |
+| `processing` | Same as uploading, for server-side work          |
+| `error`      | Red border and description. Say what went wrong. |
 
 ## Layouts
 
@@ -164,13 +166,13 @@ Set `state` on `Attachment` to match what the file is doing:
 - `size="sm"` or `size="xs"` shrink it for chat composers and tight lists.
 - Wrap several in `AttachmentGroup` for a horizontally scrolling row that fades
   out at the edges.
-- `AttachmentTrigger` makes the whole attachment clickable - render it as a link
-  to open the file.
+- `AttachmentTrigger` makes the whole attachment clickable. Render it as a link to
+  open the file.
 
 ## Accessibility
 
 - Give every `AttachmentAction` an `aria-label` that names the file, like
-  "Remove report.pdf" - "Remove" alone is a riddle when there are five files.
+  "Remove report.pdf". "Remove" alone is a riddle when there are five files.
 - Previews in `AttachmentMedia` are decorative next to the file name, so
   `alt=""` is right.
 - The AutoForm fields announce reordering to screen readers and show every

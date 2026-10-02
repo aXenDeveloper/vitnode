@@ -27,8 +27,8 @@ import {
 </Marker>
 ```
 
-A marker is the quiet line between messages - "Switched branch", "Today",
-"Thinking...". It pairs nicely with [Bubble](/docs/ui/bubble) when you build a
+A marker is the quiet line between messages, like "Switched branch", "Today"
+or "Thinking...". It pairs nicely with [Bubble](/docs/ui/bubble) when you build a
 chat thread, and it is just as happy in an activity feed.
 
 ```text
@@ -61,7 +61,7 @@ Pick a `variant` to change how the marker sits in the flow.
 | `separator` | A centered label with a divider line on each side.   |
 | `border`    | A default marker with a bottom border under the row. |
 
-Keep separator labels short - a date or a few words. The divider lines take the
+Keep separator labels short, like a date or a few words. The divider lines take the
 leftover space, so a long label leaves them nothing to work with.
 
 ## With an icon
@@ -99,7 +99,7 @@ import { Spinner } from '@vitnode/core/components/ui/spinner'
 ## Links and buttons
 
 The root is polymorphic. Pass `render` to turn a marker into a link or a
-button - links get an underline for free.
+button. Links get an underline for free.
 
 ```tsx
 <Marker render={<a href="/admin/plugins" />}>
@@ -128,8 +128,8 @@ button - links get an underline for free.
   `role="status"` for live progress, `render` with an `a` or `button` when it is
   clickable, nothing at all for a simple note.
 - A labeled separator needs no role. The lines are decorative pseudo-elements and
-  the label is read as ordinary text. Do not add `role="separator"` - it would
-  hide the label from assistive tech.
+  the label is read as ordinary text. Do not add `role="separator"`, because it
+  would hide the label from assistive tech.
 - `MarkerIcon` is `aria-hidden`, so the meaning lives in `MarkerContent`. For an
   icon-only marker, give the root an `aria-label`.
 - Wrap a whole thread in an element with `role="log"` so new messages and

@@ -1,6 +1,6 @@
 ---
 title: Label
-description: An accessible text label for form controls - click it and the control it names responds.
+description: An accessible text label for form controls. Click it and the control it names responds.
 icon: TextInitial
 ---
 
@@ -20,15 +20,15 @@ import { Label } from '@vitnode/core/components/ui/label'
 ```
 
 `Label` is a styled native `<label>`. Point `htmlFor` at the control's `id` and
-the browser handles the rest: the whole label becomes a click target, and
+the browser handles the rest. The whole label becomes a click target, and
 screen readers announce the text when the control gets focus.
 
 ## Using AutoForm? You already have labels
 
 [AutoForm](/docs/ui/auto-form) fields render their own label (`AutoFormLabel`)
 from the `label` prop, wired to the right `id`, with an "Optional" hint when the
-schema says so. Don't add a `Label` next to an AutoForm field - you'd just get
-two.
+schema says so. Don't add a `Label` next to an AutoForm field, or you'll end up
+with two.
 
 ```tsx
 <AutoFormInput label="Email" {...props} />
@@ -36,8 +36,8 @@ two.
 
 Reach for `Label` when you build a control by hand: a settings toggle outside a
 form, a custom picker, a filter bar. For a full field layout with description
-and error message, see [Field](/docs/ui/field) - `FieldLabel` is built on top
-of this component.
+and error message, see [Field](/docs/ui/field). Its `FieldLabel` is built on
+top of this component.
 
 ## With a checkbox
 
@@ -53,7 +53,7 @@ in, so clicking anywhere on the text toggles the checkbox.
 
 ## Wrapping the control
 
-No `id` handy? Wrap the control instead - a `<label>` is associated with the
+No `id` handy? Wrap the control instead. A `<label>` is associated with the
 control inside it automatically.
 
 ```tsx
@@ -65,7 +65,7 @@ control inside it automatically.
 
 ## Disabled controls
 
-Disable the control and the label follows along: it dims and shows a
+Disable the control and the label follows along. It dims and shows a
 `not-allowed` cursor, so nobody wonders why clicking it does nothing.
 
 ```tsx
@@ -76,12 +76,12 @@ Disable the control and the label follows along: it dims and shows a
 ```
 
 This works when the control comes **before** the label as a sibling and has the
-`peer` class - VitNode's `Checkbox`, `Switch` and `RadioGroupItem` already do.
+`peer` class. VitNode's `Checkbox`, `Switch` and `RadioGroupItem` already do.
 `Label` reacts to both a native `disabled` attribute and the `data-disabled`
 attribute Base UI puts on its controls.
 
 Label sits somewhere else? Put `group` and `data-disabled="true"` on a shared
-parent instead - that is what [Field](/docs/ui/field) does for you.
+parent instead. [Field](/docs/ui/field) does exactly that for you.
 
 ## Accessibility
 
@@ -89,7 +89,7 @@ parent instead - that is what [Field](/docs/ui/field) does for you.
   by wrapping the control. A label floating next to an input is just text to a
   screen reader.
 - Keep the visible text meaningful. "Email" beats "Field 1", and placeholders
-  are not labels - they vanish the moment someone starts typing.
+  are not labels. They vanish the moment someone starts typing.
 - The label is part of the hit area. That makes small controls like checkboxes
   much easier to tap on a phone, so keep the text next to the control rather
   than far away.

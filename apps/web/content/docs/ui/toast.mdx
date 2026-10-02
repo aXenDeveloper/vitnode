@@ -1,6 +1,6 @@
 ---
 title: Toast
-description: Short, friendly notifications that pop into the top-right corner - in five colours, with icons, avatars and actions.
+description: Short, friendly notifications that pop into the top-right corner, with five colours, icons, avatars and actions.
 icon: BellRing
 ---
 
@@ -25,8 +25,8 @@ toast('Event has been created', {
 
 ## Variants
 
-Each variant tints the icon, the title and the action button, while the card
-itself stays neutral - so a toast never shouts louder than it has to.
+Each variant tints the icon, the title and the action button. The card
+itself stays neutral, so a toast never shouts louder than it has to.
 
 ```ts
 toast('Event has been created') // default
@@ -38,10 +38,10 @@ toast.error('Storage is full')
 
 Pick the variant by what happened, not by the colour you fancy:
 
-- `success` - something finished the way the user hoped.
-- `info` - worth knowing, nothing to worry about.
-- `warning` - nothing broke yet, but the user should take a look.
-- `error` - it failed, and the description should say what to do next.
+- `success` when something finished the way the user hoped.
+- `info` for things worth knowing, nothing to worry about.
+- `warning` when nothing broke yet, but the user should take a look.
+- `error` when it failed. The description should say what to do next.
 
 After a create, edit or delete, show a toast with a `description` so people
 know exactly what changed.
@@ -63,7 +63,7 @@ quieter button.
 
 ## With an avatar
 
-Swap the icon for a picture with `ToastAvatar` - great for anything a person
+Swap the icon for a picture with `ToastAvatar`. It suits anything a person
 did, like an invite, a mention or a new message. Without a `src`, or while the
 image is still loading, it shows the first letter of `alt`.
 
@@ -78,12 +78,12 @@ toast('Ada Lovelace invited you', {
 })
 ```
 
-Any other element works as `icon` as well - a custom Lucide icon, an emoji or
+Any other element works as `icon` as well, such as a custom Lucide icon, an emoji or
 your own badge.
 
 ## Message with actions
 
-For anything that reads like a message - a reply, a mention, an invite - use
+For anything that reads like a message, such as a reply, a mention or an invite, use
 `ToastMessage` with `toast.custom`. It lays out an avatar, the sender, a
 timestamp, the text and a row of buttons underneath.
 
@@ -109,7 +109,7 @@ toast.custom(
 )
 ```
 
-Give message toasts a longer `duration` than the usual few seconds - people
+Give message toasts a longer `duration` than the usual few seconds. People
 need time to read, and to decide whether to reply.
 
 ## Loading and promises
@@ -158,7 +158,7 @@ toast('Saved', {
   can jump to the toasts with <kbd>Alt</kbd> + <kbd>T</kbd>.
 - The close button appears on hover and keyboard focus, and is always visible on
   touch screens.
-- Colour is never the only signal - every variant has its own icon too.
+- Colour is never the only signal, since every variant has its own icon too.
 
 ## Documentation
 

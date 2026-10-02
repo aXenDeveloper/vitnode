@@ -18,7 +18,6 @@ import { useTranslations } from "use-intl";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import { useDirection } from "./direction";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 export interface CascaderOption {
@@ -31,8 +30,7 @@ export interface CascaderOption {
 const COLUMN_WIDTH = 224;
 const PANEL_TRANSITION = { type: "spring", duration: 0.3, bounce: 0 } as const;
 
-export const isCascaderBranch = (option: CascaderOption) =>
-  !!option.children?.length;
+const isCascaderBranch = (option: CascaderOption) => !!option.children?.length;
 
 export const findCascaderPath = (
   options: readonly CascaderOption[],
@@ -170,7 +168,7 @@ const DRILL_VARIANTS = {
   exit: (offset: number) => ({ opacity: 0, x: `${offset * -40}%` }),
 };
 
-const isRtl = (element: HTMLElement) =>
+const isRtl = (element: Element) =>
   getComputedStyle(element).direction === "rtl";
 
 const panelOf = (element: Element) =>
@@ -250,11 +248,9 @@ function Cascader({
   const [direction, setDirection] = React.useState<-1 | 1>(1);
   const [query, setQuery] = React.useState("");
   const [levelHeight, setLevelHeight] = React.useState<null | number>(null);
-  const textDirection = useDirection();
   const columns = cascaderColumns(options, activePath);
   const results = searchable && query ? searchCascader(options, query) : null;
   const transition = shouldReduceMotion ? { duration: 0 } : PANEL_TRANSITION;
-  const slideOffset = textDirection === "rtl" ? -direction : direction;
   const selectedValues = new Set(selectedPath.map(option => option.value));
 
   const handleOpenChange = (next: boolean) => {
@@ -285,15 +281,16 @@ function Cascader({
   const openBranch = (
     level: number,
     option: CascaderOption,
-    focusPanel: Element | null,
+    panel: Element | null,
+    focusNext: boolean,
   ) => {
-    setDirection(1);
+    setDirection(panel && isRtl(panel) ? -1 : 1);
     setActivePath(current => [...current.slice(0, level), option.value]);
-    if (focusPanel) focusLater(focusPanel, level + 1, "first");
+    if (focusNext) focusLater(panel, level + 1, "first");
   };
 
   const goBack = (panel: Element | null) => {
-    setDirection(-1);
+    setDirection(panel && isRtl(panel) ? 1 : -1);
     focusLater(panel, Math.max(0, activePath.length - 1), "active");
     setActivePath(current => current.slice(0, -1));
   };
@@ -306,7 +303,7 @@ function Cascader({
     if (option.disabled) return;
 
     if (isCascaderBranch(option)) {
-      openBranch(level, option, isDrill ? panel : null);
+      openBranch(level, option, panel, isDrill);
 
       return;
     }
@@ -355,7 +352,7 @@ function Cascader({
 
         if (event.key === forward && isCascaderBranch(option)) {
           event.preventDefault();
-          openBranch(level, option, panel);
+          openBranch(level, option, panel, true);
         } else if (event.key === backward && level > 0) {
           event.preventDefault();
           if (isDrill) {
@@ -409,7 +406,7 @@ function Cascader({
             typeof level === "number" &&
             !isActive
           ) {
-            openBranch(level, option, null);
+            openBranch(level, option, null, false);
           }
         }}
         role="option"
@@ -510,15 +507,11 @@ function Cascader({
           initial={false}
           transition={transition}
         >
-          <AnimatePresence
-            custom={slideOffset}
-            initial={false}
-            mode="popLayout"
-          >
+          <AnimatePresence custom={direction} initial={false} mode="popLayout">
             <PresentColumn
               animate="center"
               className="w-full"
-              custom={slideOffset}
+              custom={direction}
               exit="exit"
               initial="enter"
               key={activePath.slice(0, level).join("/") || "root"}

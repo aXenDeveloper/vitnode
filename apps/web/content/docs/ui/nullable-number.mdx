@@ -1,6 +1,6 @@
 ---
 title: Nullable Number
-description: Numeric field paired with a checkbox that toggles the value to null - for "unlimited", "never", "no limit", and similar.
+description: A number field with a checkbox that toggles the value to null, for answers like "unlimited", "never" or "no limit".
 icon: Hash
 ---
 
@@ -9,7 +9,7 @@ icon: Hash
 <Preview name="nullable-number" />
 
 It builds on [Number Field](/docs/ui/number-field), so you get the plus and
-minus buttons, arrow-key stepping and min/max clamping for free - plus one
+minus buttons, arrow-key stepping and min/max clamping for free. On top sits one
 checkbox for when the honest answer is "no limit".
 
 ## Usage
@@ -56,13 +56,12 @@ const formSchema = z.object({
 
 ## Adapting the labels
 
-The three label props are plain text, so the same field works for any domain -
-an unlimited storage cap, a session that never expires, an uncapped rate limit,
-and so on:
+The three label props are plain text, so the same field fits an unlimited
+storage cap, a session that never expires or an uncapped rate limit:
 
-- `unitLabel` - shown right after the input (e.g. `kB`, `minutes`, `%`).
-- `orLabel` - an optional connector rendered before the checkbox (e.g. `or`).
-- `toggleLabel` - the checkbox label; checking it sets the value to `null`.
+- `unitLabel` is shown right after the input (e.g. `kB`, `minutes`, `%`).
+- `orLabel` is an optional connector rendered before the checkbox (e.g. `or`).
+- `toggleLabel` is the checkbox label. Checking it sets the value to `null`.
 
 ```tsx
 <AutoFormNullableNumber
@@ -77,7 +76,7 @@ and so on:
 Any other props (`min`, `max`, `step`, `largeStep`, `format`, `placeholder`,
 …) are forwarded to the underlying
 [Number Field](/docs/ui/number-field#props). Validation comes from the Zod
-schema, while `min` / `max` on the field clamp the buttons and arrow keys - so
+schema, and `min` / `max` on the field clamp the buttons and arrow keys, so
 pass them in both places.
 
 ```tsx

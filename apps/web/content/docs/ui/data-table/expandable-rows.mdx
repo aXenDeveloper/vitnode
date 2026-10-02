@@ -1,6 +1,6 @@
 ---
 title: Expandable Rows
-description: Rows that open a detail panel underneath, sliding smoothly open and closed.
+description: Rows that slide open a detail panel right underneath them.
 icon: UnfoldVertical
 ---
 
@@ -10,7 +10,7 @@ icon: UnfoldVertical
 
 ## Usage
 
-Some rows have more to say than a cell can hold - an order's line items, a job's error log, a user's last logins. Pass `expandable` and every row grows a chevron that slides a detail panel open right underneath it. No modal, no new page, no losing your place.
+Some rows have more to say than a cell can hold, like an order's line items or a job's error log. Pass `expandable` and each row gets a chevron that slides a detail panel open right underneath it. Rows that `canExpand` rules out get no chevron. The panel opens in place, so nobody loses their spot in the list.
 
 ```tsx
 <DataTable
@@ -64,7 +64,7 @@ A few things the table handles for you:
 - **Several rows can be open at once.** Open state lives in the component, not the URL, and it is dropped for rows that leave the page when you paginate, search or filter.
 - **It is a real button.** The chevron is a `<button>` with `aria-expanded` and `aria-controls`, so Enter and Space work and screen readers announce "Expand row" / "Collapse row". Row clicks from `rowOpens` keep working, because a click on a button never counts as a row click.
 - **It plays nice with `bulkActions`.** The chevron column sits right after the selection checkbox.
-- **The motion is polite.** The panel eases its height and opacity open in about 300 ms, and with "reduce motion" turned on it simply fades - no sliding around.
+- **The motion is polite.** The panel eases its height and opacity open in about 300 ms, and with "reduce motion" turned on it only fades.
 
 <Callout type="info" title="Keep the panel light on data">
   `render` runs on the client as soon as a row opens. If the detail needs data

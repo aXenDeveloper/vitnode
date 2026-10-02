@@ -10,9 +10,9 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useToolbarEditor } from "../use-toolbar-editor";
-import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 
 export const ColorAction = () => {
   const t = useTranslations("core.global.editor.color");
@@ -38,7 +38,7 @@ export const ColorAction = () => {
 
   return (
     <Popover>
-      <ToolbarTooltip text={t("label")}>
+      <TooltipWithContent text={t("label")}>
         <PopoverTrigger
           render={
             <Button
@@ -55,7 +55,7 @@ export const ColorAction = () => {
             style={{ backgroundColor: activeColor || "currentColor" }}
           />
         </PopoverTrigger>
-      </ToolbarTooltip>
+      </TooltipWithContent>
 
       <PopoverContent className="w-auto gap-3">
         <PopoverTitle>{t("label")}</PopoverTitle>

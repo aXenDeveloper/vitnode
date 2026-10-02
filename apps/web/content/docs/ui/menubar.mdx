@@ -46,9 +46,9 @@ import {
 </Menubar>
 ```
 
-Every `MenubarMenu` is one menu in the bar: a trigger plus its content. Open one
-and the bar remembers - hover the next trigger and it opens straight away, just
-like the menu bar at the top of your desktop. Handy for editors, dashboards and
+Every `MenubarMenu` is one menu in the bar, made of a trigger and its content.
+Open one and the bar remembers. Hover the next trigger and it opens straight
+away, just like the menu bar at the top of your desktop. Handy for editors, dashboards and
 anything else with more commands than buttons.
 
 ## Submenus
@@ -108,8 +108,8 @@ and sub-triggers in the same menu so their text lines up with the checked ones.
 ## Shortcuts
 
 `MenubarShortcut` shows a keyboard hint at the end of an item. It is only a
-label - wire the actual key binding yourself, otherwise it is a promise you are
-not keeping.
+label. Wire up the actual key binding yourself, or it is a promise you are not
+keeping.
 
 ```tsx
 <MenubarItem>
@@ -237,8 +237,8 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 />
 
 `MenubarCheckboxItem` takes `checked`, `defaultChecked` and `onCheckedChange`;
-`MenubarRadioGroup` takes `value`, `defaultValue` and `onValueChange`. Both item
-types accept `inset` and `disabled` too. `MenubarMenu` takes `open`,
+`MenubarRadioGroup` takes `value`, `defaultValue` and `onValueChange`.
+`MenubarCheckboxItem` and `MenubarRadioItem` both accept `inset` and `disabled`. `MenubarMenu` takes `open`,
 `defaultOpen` and `onOpenChange` when you want to drive a single menu yourself.
 
 ## API Reference

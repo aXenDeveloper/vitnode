@@ -1,6 +1,6 @@
 ---
 title: Field
-description: Layout primitives for labels, descriptions, errors and groups of controls - the building blocks behind every AutoForm field.
+description: Layout components for labels, descriptions, errors and groups of controls. AutoForm builds every field out of them.
 icon: ListChecks
 ---
 
@@ -36,9 +36,9 @@ import {
 ## Should I use this for my form?
 
 Probably not directly. In VitNode, forms are built with
-[AutoForm](/docs/ui/auto-form), and AutoForm already lays every field out with
-these primitives - labels, descriptions and error messages included. You get
-validation, ids and ARIA wiring for free.
+[AutoForm](/docs/ui/auto-form), and AutoForm already uses these components for
+every field's label, description and error message. You get validation, ids and
+ARIA wiring for free.
 
 Reach for `Field` when you are:
 
@@ -78,7 +78,7 @@ checkboxes, switches and other compact controls that sit next to their label:
 ```
 
 Put the control first for a checkbox on the left, or last for a switch on the
-right - the layout follows the markup.
+right. The layout follows the markup.
 
 ### Responsive
 
@@ -105,7 +105,7 @@ fold:
 
 Wrap related fields in a `FieldSet` with a `FieldLegend`. Screen readers read
 the legend before each field inside, so "Mentions" becomes "Notifications,
-Mentions" - context without extra words on screen.
+Mentions". The context costs no extra words on screen.
 
 ```tsx
 <FieldSet>
@@ -129,9 +129,9 @@ Need a divider with words? Pass children: `<FieldSeparator>or</FieldSeparator>`.
 
 ## Choice cards
 
-Wrap a whole `Field` in a `FieldLabel` and the label becomes a card - the full
-card is clickable, it highlights when its control is checked, and it shows a
-focus ring when you tab into it. Use `FieldTitle` for the card's title, since
+Wrap a whole `Field` in a `FieldLabel` and the label becomes a card. The full
+card is clickable, highlights when its control is checked and shows a focus
+ring when you tab into it. Use `FieldTitle` for the card's title, since
 it already lives inside a label.
 
 <Preview name="field-choice-card" />
@@ -167,9 +167,9 @@ render a `FieldError`:
 </Field>
 ```
 
-`FieldError` also takes an `errors` array - duplicates are removed, a single
-message renders as text and several render as a list. It renders nothing when
-there is nothing to say.
+`FieldError` also takes an `errors` array. It drops duplicates, renders a single
+message as text and several as a list. It renders nothing when there is nothing
+to say.
 
 ```tsx
 <FieldError errors={[{ message: 'Too short' }, { message: 'Too short' }]} />
@@ -181,12 +181,12 @@ A custom AutoForm field is just a `component` function. Combine `Field` for the
 layout with AutoForm's own helpers and your field gets the same ids, ARIA and
 error handling as the built-in ones:
 
-- `AutoFormLabel` - a `FieldLabel` already pointed at the control, with the
+- `AutoFormLabel` is a `FieldLabel` already pointed at the control, with the
   "optional" hint.
-- `AutoFormDesc` - the description text.
-- `FormControl` - passes `id`, `aria-invalid` and `aria-describedby` to the
+- `AutoFormDesc` renders the description text.
+- `FormControl` passes `id`, `aria-invalid` and `aria-describedby` to the
   control inside it.
-- `FormMessage` - a `FieldError` showing the field's validation errors.
+- `FormMessage` is a `FieldError` showing the field's validation errors.
 
 ```tsx
 import type { ItemAutoFormComponentProps } from '@vitnode/core/components/form/auto-form'
@@ -237,7 +237,7 @@ export const AutoFormSettingSwitch = ({
 
 ## Accessibility
 
-- Every control needs a label: give the control an `id` and the `FieldLabel` a
+- Every control needs a label. Give the control an `id` and the `FieldLabel` a
   matching `htmlFor`. Clicking the label then focuses or toggles the control.
 - `Field` renders `role="group"`, so the control, its label and its help text
   are announced together.

@@ -1,6 +1,6 @@
 ---
 title: Tooltip
-description: A tooltip component for displaying additional information on hover or focus.
+description: A small hint that shows extra information on hover or focus.
 icon: MessageCircleMore
 ---
 
@@ -24,9 +24,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@vitnode/core/component
 </Tooltip>
 ```
 
-### Faster Tooltips
+### Shorter tooltips
 
-If you don't need custom props for components like `TooltipTrigger` or `TooltipContent`, you can use the `TooltipWithContent` component to enable faster tooltips.
+If you don't need custom props on `TooltipTrigger` or `TooltipContent`, `TooltipWithContent` does the same job in one component.
 
 ```ts
 import { Button } from "@vitnode/core/components/ui/button";
@@ -48,9 +48,9 @@ import { PlayIcon } from "lucide-react";
 
 Got a toolbar full of icon buttons? Wrap it in `TooltipGroup` and use
 `TooltipGroupTrigger` for each button. They all share one tooltip, so moving
-from button to button glides it over - resizing to fit the new text, which
-slides in from the direction you came from - instead of closing and opening
-again every time.
+from button to button glides it over instead of closing and opening it again
+every time. It resizes to fit the new text, and the text slides in from the
+direction you came from.
 
 ```ts
 import {
@@ -82,7 +82,7 @@ import {
 `TooltipContent`. With reduced motion turned on, the tooltip jumps straight to
 the next button instead of gliding.
 
-A tooltip is a hint, not a label - icon buttons still need their own
+A tooltip is a hint, not a label, so icon buttons still need their own
 `aria-label`, as above.
 
 ## API Reference

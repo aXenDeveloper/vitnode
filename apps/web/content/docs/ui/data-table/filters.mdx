@@ -90,7 +90,7 @@ When the set of options is small and known ahead of time, pass them directly via
 
 ## Async filters
 
-When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server. The universal fetcher answers from the browser here, with the visitor's own cookies:
+When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs, debounced, as the user types and should return results already filtered and capped by the server. The universal fetcher answers from the browser here, with the visitor's own cookies:
 
 ```tsx title="search-roles.tsx"
 import type { FilterOption } from '@vitnode/core/components/table/filters'

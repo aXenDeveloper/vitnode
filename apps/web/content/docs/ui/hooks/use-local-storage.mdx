@@ -18,7 +18,7 @@ export const ExampleComponent = () => {
 }
 ```
 
-It works just like `useState`: pass a key and a default value, get the value and
+It works like `useState`. Pass a key and a default value, and get the value and
 a setter back. Values are saved as JSON, so numbers, booleans, arrays and plain
 objects all come back exactly as you stored them.
 
@@ -43,7 +43,7 @@ const [filters, setFilters, resetFilters] = useLocalStorage('filters', [])
 
 ## Good to know
 
-- **Synced everywhere.** Every component using the same key updates together -
+- **Synced everywhere.** Every component using the same key updates together,
   in this tab and in any other tab of your site.
 - **Server-safe.** During server rendering the hook returns the default value,
   then switches to the stored one in the browser without a hydration mismatch.

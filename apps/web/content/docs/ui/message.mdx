@@ -41,7 +41,7 @@ import {
 ```
 
 `Message` owns the row: who is talking, which side they sit on, and what goes
-above or below. The actual speech bubble is a [Bubble](/docs/ui/bubble) - the
+above or below. The speech bubble itself is a [Bubble](/docs/ui/bubble). The
 two are designed to be best friends.
 
 ## Composition
@@ -60,7 +60,7 @@ MessageGroup
 
 Set `align="end"` for messages the current user sent. The avatar swaps sides,
 and every bubble, attachment, header and footer inside `MessageContent` moves to
-the end - no need to set `align` on each `Bubble`.
+the end, so you don't need to set `align` on each `Bubble`.
 
 ```tsx
 <Message align="end">

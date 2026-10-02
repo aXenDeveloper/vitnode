@@ -19,8 +19,7 @@ import { Kbd, KbdGroup } from '@vitnode/core/components/ui/kbd'
 ```
 
 `Kbd` renders a real `<kbd>` element, so browsers, search engines and assistive
-tech all know it is a key - not just a tiny gray box that happens to look like
-one.
+tech all know it is a key, not a tiny gray box that happens to look like one.
 
 ## Shortcuts
 
@@ -35,7 +34,7 @@ and stays a `<kbd>` too, which is exactly how HTML describes a key combo.
 ```
 
 Prefer a visible plus sign? Drop it between the keys and hide it from screen
-readers, they already hear two keys:
+readers, since they already hear two keys:
 
 ```tsx
 <KbdGroup>
@@ -104,9 +103,9 @@ Pair it with an [Input Group](/docs/ui/input-group) addon for the classic
 
 Showing ⌘ to a Windows user is a small betrayal. Detect the platform on the
 client, but render the same thing on the server and during hydration, or React
-will complain about mismatched HTML. `useSyncExternalStore` does exactly that:
-the third argument is used for the server render and hydration, then React
-switches to the real value.
+will complain about mismatched HTML. `useSyncExternalStore` does exactly that.
+React uses its third argument for the server render and hydration, then switches
+to the real value.
 
 ```tsx
 const subscribeToNothing = () => () => {}
@@ -140,8 +139,8 @@ No `useEffect` plus `setState` dance required.
   An `aria-label` on a plain `<kbd>` is not reliably read out, so visually
   hidden text is the safer bet. `title` adds a hover hint for sighted users.
 - `Kbd` has `pointer-events-none` and `select-none`. It is a hint, not a
-  control - if pressing the key should do something, listen for the key
-  itself (and put the action on a real button).
+  control. If pressing the key should do something, listen for the key itself
+  (and put the action on a real button).
 - Do not make a shortcut the only way to do something. Mouse, touch and
   keyboard users should all get there.
 

@@ -29,7 +29,7 @@ import {
 ```
 
 A group always fills its parent with an inline `height: 100%`, so a height
-class on the group itself is ignored - give the **parent** a height instead.
+class on the group itself is ignored. Give the **parent** a height instead.
 Otherwise your beautiful layout is only as tall as its text, which is very
 minimalist but not very useful.
 
@@ -63,8 +63,8 @@ meant to be grabbed.
 
 ## Sizes
 
-`defaultSize`, `minSize` and `maxSize` accept a few units. Mind the type -
-it changes the meaning:
+`defaultSize`, `minSize` and `maxSize` accept a few units, and the type
+changes the meaning:
 
 - a **string** without a unit is a percentage: `"30"` and `"30%"` are the same;
 - a **number** is pixels: `minSize={180}` means 180px, not 180%;
@@ -101,8 +101,8 @@ Need a toggle button? Pass `panelRef` and call `collapse()`, `expand()` or
 
 ## Persisting the layout
 
-The group takes a `defaultLayout` - a map of panel `id` to percentage - and
-reports every finished resize through `onLayoutChanged`. Wire both to storage
+The group's `defaultLayout` maps each panel `id` to a percentage, and
+`onLayoutChanged` reports every finished resize. Wire both to storage
 and the layout survives a reload. Give every panel a stable `id`, since that is
 what the saved layout is keyed by.
 
@@ -149,8 +149,8 @@ export const RememberedLayout = () => {
 ```
 
 `useSyncExternalStore` with a server snapshot of `null` keeps server rendering
-happy: the server renders the default sizes and the browser swaps in the saved
-ones. Prefer `meta.requestedLayout` when saving - it is the layout the user
+happy. The server renders the default sizes, and the browser swaps in the saved
+ones. Prefer `meta.requestedLayout` when saving. It is the layout the user
 asked for, before a small screen squeezed it to fit the constraints.
 
 ## Accessibility
@@ -158,8 +158,8 @@ asked for, before a small screen squeezed it to fit the constraints.
 - Every handle is a focusable `role="separator"` with `aria-valuenow`,
   `aria-valuemin`, `aria-valuemax` and `aria-controls` pointing at the panel it
   resizes.
-- Arrow keys resize by 5% - left and right in a horizontal group, up and down in
-  a vertical one.
+- Arrow keys resize by 5%, left and right in a horizontal group and up and down
+  in a vertical one.
 - `Home` and `End` push the panel to its minimum or maximum size.
 - `Enter` collapses or expands a `collapsible` panel.
 - `F6` jumps to the next handle in the group (`Shift + F6` goes back).

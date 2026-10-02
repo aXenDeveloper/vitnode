@@ -1,6 +1,6 @@
 ---
 title: Item
-description: A flexible row for lists, settings and menus - media, a title, a description and actions, all lined up without the CSS headache.
+description: A row for lists, settings and menus that lines up media, a title, a description and actions without the CSS headache.
 icon: LayoutList
 ---
 
@@ -43,16 +43,17 @@ right" rows. `Item` is that row, built once, so you can stop rebuilding it.
 
 ## Anatomy
 
-- `Item` - the row itself. Flexbox, wraps when it has to.
-- `ItemMedia` - an icon, avatar or image on the start side. With a description
-  present it aligns itself to the top of the text.
-- `ItemContent` - stacks the title and description and takes the free space.
-- `ItemTitle` - one line, truncated if it gets chatty.
-- `ItemDescription` - up to two lines of muted text. Links inside are
+- `Item` is the row itself. Flexbox, wraps when it has to.
+- `ItemMedia` holds an icon, avatar or image on the start side. With a
+  description present it aligns itself to the top of the text.
+- `ItemContent` stacks the title and description and takes the free space.
+- `ItemTitle` is one line, truncated if it gets chatty.
+- `ItemDescription` shows up to two lines of muted text. Links inside are
   underlined automatically.
-- `ItemActions` - buttons, badges or a chevron on the end side.
-- `ItemHeader` / `ItemFooter` - full-width rows above and below the content.
-- `ItemGroup` / `ItemSeparator` - a list of items and a line between them.
+- `ItemActions` holds buttons, badges or a chevron on the end side.
+- `ItemHeader` and `ItemFooter` are full-width rows above and below the content.
+- `ItemGroup` wraps a list of items, and `ItemSeparator` draws a line between
+  them.
 
 ## Variants
 
@@ -69,9 +70,9 @@ adds a soft background.
 
 ## Sizes
 
-`default`, `sm` and `xs` shrink the padding and the gaps. `ItemMedia` with the
-`image` variant shrinks along with them, and `xs` also uses smaller description
-text.
+Going from `default` to `sm` to `xs` shrinks the padding and the gaps.
+`ItemMedia` with the `image` variant shrinks along with them, and `xs` also uses
+smaller description text.
 
 <Preview name="item-sizes" />
 
@@ -85,9 +86,9 @@ text.
 
 `ItemMedia` comes in three flavours:
 
-- `default` - no styling at all, perfect for an `Avatar`.
-- `icon` - sizes a bare SVG icon to `size-4`.
-- `image` - a rounded square that crops an `img` to fit.
+- `default` adds no styling at all, which suits an `Avatar`.
+- `icon` sizes a bare SVG icon to `size-4`.
+- `image` is a rounded square that crops an `img` to fit.
 
 ```tsx
 <ItemMedia variant="image">
@@ -97,8 +98,8 @@ text.
 
 ## As a link
 
-Pass an element to `render` and the whole row becomes that element - an
-`<a>`, a router `Link`, a `<button>`, whatever you need. Rendered as a link it
+Pass an element to `render` and the whole row becomes that element, whether
+that's an `<a>`, a router `Link` or a `<button>`. Rendered as a link it
 picks up a hover background for free.
 
 <Preview name="item-link" />
@@ -124,7 +125,7 @@ everything you see.
 ## Groups
 
 Wrap items in `ItemGroup` to stack them, and drop an `ItemSeparator` between
-them when they need some breathing room.
+them when you want a line in between.
 
 <Preview name="item-group" />
 
@@ -161,8 +162,8 @@ or a timestamp can sit above or below the main content.
   `role="listitem"`, and an `aria-label` on the group helps screen readers
   announce what the list is about.
 - Keep one interactive element per row. Either the whole row is a link or
-  button (via `render`), or it holds buttons in `ItemActions` - never a button
-  inside a link.
+  button (via `render`), or it holds buttons in `ItemActions`. Never put a
+  button inside a link.
 - Icon-only buttons in `ItemActions` need an `aria-label` that names the row,
   for example "Invite Ada Lovelace" rather than just "Invite".
 - Decorative icons such as a trailing chevron get `aria-hidden`. Links that

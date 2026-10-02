@@ -1,6 +1,6 @@
 ---
 title: Avatar
-description: Profile pictures with a graceful fallback, status badges and groups that lift on hover.
+description: Profile pictures with a fallback for missing images, status badges and groups that lift on hover.
 icon: CircleUserRound
 ---
 
@@ -25,7 +25,7 @@ import {
 </Avatar>
 ```
 
-The fallback shows while the image loads and stays if it never arrives - so a
+The fallback shows while the image loads and stays if it never arrives. A
 broken link turns into tidy initials instead of a sad empty circle.
 
 ## Sizes
@@ -49,7 +49,7 @@ semantic one:
 </Avatar>
 ```
 
-A coloured dot alone doesn't tell everyone that someone is online - say it in
+A coloured dot alone doesn't tell everyone that someone is online. Say it in
 text somewhere too, or give the badge an `aria-label`.
 
 ## Group
@@ -88,7 +88,7 @@ no hover effect.
 
 ## Accessibility
 
-- Always pass `alt` to `AvatarImage` - the person's name is usually perfect.
+- Always pass `alt` to `AvatarImage`. The person's name is usually perfect.
 - An `AvatarGroupItem` with a `label` can be focused with the keyboard, and the
   tooltip appears on focus as well as on hover.
 - With reduced motion turned on, avatars in a group stay put and only the

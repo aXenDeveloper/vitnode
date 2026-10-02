@@ -3,9 +3,9 @@ import { ListChecksIcon, ListIcon, ListOrderedIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Toggle } from "@/components/ui/toggle";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useToolbarEditor } from "../use-toolbar-editor";
-import { ToolbarTooltip } from "./utils/toolbar-tooltip";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const ListAction = () => {
@@ -24,7 +24,7 @@ export const ListAction = () => {
 
   return (
     <>
-      <ToolbarTooltip
+      <TooltipWithContent
         text={
           <>
             {t("bullet_list")}
@@ -43,9 +43,9 @@ export const ListAction = () => {
             <ListIcon />
           </Toggle>
         </div>
-      </ToolbarTooltip>
+      </TooltipWithContent>
 
-      <ToolbarTooltip
+      <TooltipWithContent
         text={
           <>
             {t("ordered_list")}
@@ -64,9 +64,9 @@ export const ListAction = () => {
             <ListOrderedIcon />
           </Toggle>
         </div>
-      </ToolbarTooltip>
+      </TooltipWithContent>
 
-      <ToolbarTooltip
+      <TooltipWithContent
         text={
           <>
             {t("task_list")}
@@ -85,7 +85,7 @@ export const ListAction = () => {
             <ListChecksIcon />
           </Toggle>
         </div>
-      </ToolbarTooltip>
+      </TooltipWithContent>
     </>
   );
 };

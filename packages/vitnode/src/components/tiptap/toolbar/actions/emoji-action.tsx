@@ -9,8 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
-
-import { ToolbarTooltip } from "./utils/toolbar-tooltip";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 const EmojiPicker = React.lazy(async () =>
   import("./emoji/emoji-picker").then(module => ({
@@ -24,7 +23,7 @@ export const EmojiAction = () => {
 
   return (
     <Popover onOpenChange={setOpen} open={open}>
-      <ToolbarTooltip text={t("label")}>
+      <TooltipWithContent text={t("label")}>
         <PopoverTrigger
           render={
             <Button aria-label={t("label")} size="icon-sm" variant="ghost" />
@@ -32,7 +31,7 @@ export const EmojiAction = () => {
         >
           <SmilePlusIcon />
         </PopoverTrigger>
-      </ToolbarTooltip>
+      </TooltipWithContent>
 
       <PopoverContent className="w-76 gap-0 p-0">
         <React.Suspense

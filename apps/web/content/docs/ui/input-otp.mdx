@@ -48,7 +48,7 @@ const formSchema = z.object({
 />
 ```
 
-The schema does the setup for you: `.length(6)` decides how many slots there
+The schema does the setup for you. `.length(6)` decides how many slots there
 are, and `.regex()` becomes the input's `pattern`, so letters never even make it
 into a digits-only code.
 
@@ -95,7 +95,7 @@ password managers and the "fill code from SMS" suggestion on phones
 ## Groups
 
 `AutoFormInputOTP` builds the slots for you. Codes of 6 or more characters with
-an even length are split in half with a separator (`123-456`), anything else
+an even length are split in half with a separator (`123-456`). Anything else
 stays in one group. Pass `groups` to pick your own split:
 
 ```tsx
@@ -105,8 +105,8 @@ stays in one group. Pass `groups` to pick your own split:
 
 ## Submit when complete
 
-`onComplete` fires once every slot is filled - perfect for verifying the code
-without making people hunt for a button. It works on both `AutoFormInputOTP`
+`onComplete` fires once every slot is filled, so you can verify the code without
+making people hunt for a button. It works on both `AutoFormInputOTP`
 and `InputOTP`.
 
 ```tsx
@@ -138,7 +138,7 @@ import { setFormFieldError } from '@vitnode/core/components/ui/form'
 ```
 
 Using `InputOTP` on its own? Set `aria-invalid` on it and link your message
-with `aria-describedby` - colour alone never tells the whole story.
+with `aria-describedby`. Red slots mean nothing to a screen reader.
 
 ## Only digits (manual)
 
@@ -165,7 +165,7 @@ import {
   input for you.
 - Using `InputOTP` directly? Pass it an `id`, point a `<Label htmlFor>` at it
   and describe where the code was sent with `aria-describedby`.
-- Slots and separators are hidden from screen readers - the real input already
+- Slots and separators are hidden from screen readers. The real input already
   announces the value, so nobody hears every digit twice.
 
 ## Props

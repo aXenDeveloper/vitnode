@@ -1,6 +1,6 @@
 ---
 title: Pagination
-description: Numbered pages, a rows-per-page select and a "Showing 21–30 of 380" range - all from pageInfo.
+description: Numbered pages, a rows-per-page select and a "Showing 21–30 of 380" range, all built from pageInfo.
 icon: BookCopy
 ---
 
@@ -10,10 +10,10 @@ icon: BookCopy
 
 ## Usage
 
-The table renders its own pager from `pageInfo` — numbered pages with a first/last
-anchor and an ellipsis in between, a rows-per-page select, and a
-"Showing 21–30 of 380" range. You wire up nothing: pass `pageInfo` through and it
-appears.
+The table renders its own pager from `pageInfo`. You get numbered pages with a
+first/last anchor and an ellipsis in between, a rows-per-page select, and a
+"Showing 21–30 of 380" range. There's nothing to wire up. Pass `pageInfo` through
+and the pager appears.
 
 Each page is a real link (`?page=3`), so middle-click and "open in new tab" work,
 while a plain click stays a client-side navigation. On phones the numbers collapse

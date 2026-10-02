@@ -12,8 +12,7 @@ import { useTranslations } from "use-intl";
 const KEY_STEP = 5;
 const SHIFT_KEY_STEP = 10;
 
-export const clampPosition = (value: number) =>
-  Math.min(100, Math.max(0, value));
+const clampPosition = (value: number) => Math.min(100, Math.max(0, value));
 
 export const positionFromPointer = (
   clientX: number,

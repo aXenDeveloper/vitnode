@@ -1,6 +1,6 @@
 ---
 title: Command
-description: A fast, composable command menu with search, groups and keyboard navigation - the "just type it" escape hatch for your app.
+description: A command menu with search, groups and keyboard navigation. It's the "just type it" escape hatch for your app.
 icon: Command
 ---
 
@@ -36,7 +36,7 @@ import {
 </Command>
 ```
 
-Start typing and the list filters itself, ranking the best matches first.
+Start typing and the list filters itself and ranks the best matches first.
 Groups with nothing left to show politely step aside. It is built on
 [cmdk](https://cmdk.paco.me), so every cmdk prop works here too.
 
@@ -58,7 +58,7 @@ Wrap related items in a `CommandGroup` with a `heading`, and drop a
 ## Icons and shortcuts
 
 Icons go first and are sized for you. `CommandShortcut` pushes a hint to the
-end of the row. It is just a label - wiring the actual shortcut is up to you.
+end of the row. It is just a label. Wiring up the actual shortcut is your job.
 
 ```tsx
 <CommandItem>
@@ -80,7 +80,7 @@ or at least make it kind.
 ## Selecting and disabling items
 
 `onSelect` fires on click and on <kbd>Enter</kbd>. Add `disabled` to keep an
-item visible but out of reach - the keyboard skips it too.
+item visible but out of reach. The keyboard skips it too.
 
 ```tsx
 <CommandItem onSelect={() => router.navigate({ to: '/settings' })}>

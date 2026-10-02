@@ -17,7 +17,10 @@ export default function DataTablePaginationExample() {
       id="docs-pagination-table"
       order={{ columns: ['id', 'name'], defaultOrder }}
       resolve={(params) =>
-        resolveLocalTable(demoUsers, params, { defaultOrder })
+        resolveLocalTable(demoUsers, params, {
+          defaultOrder,
+          sortBy: { id: (row) => row.id, name: (row) => row.name },
+        })
       }
     />
   )

@@ -10,15 +10,15 @@ icon: Blend
 
 ## Usage
 
-Scroll Fade is a Tailwind CSS utility, not a React component - there is nothing
-to import. It ships with the `shadcn` package, and VitNode apps already pull it
+Scroll Fade is a Tailwind CSS utility, not a React component, so there is
+nothing to import. It ships with the `shadcn` package, and VitNode apps already pull it
 in from `src/styles.css`:
 
 ```css
 @import 'shadcn/tailwind.css';
 ```
 
-Add the class to the element that actually scrolls - the one with
+Add the class to the element that actually scrolls, the one with
 `overflow-y-auto` or `overflow-x-auto`:
 
 ```tsx
@@ -30,12 +30,12 @@ The fade follows the scroll position:
 - At rest, the start edge is crisp and the end edge fades to hint that there is
   more below.
 - Mid-scroll, both edges fade.
-- At the end, the end edge sharpens - you have reached the bottom, congrats.
+- At the end, the end edge sharpens. You have reached the bottom, congrats.
 - If the content does not overflow, nothing fades, so you can sprinkle it on any
   list without checking first.
 
 It works with `mask-image`, so it dissolves the content itself instead of
-painting a gradient on top. No colors to match, it just works on any
+painting a gradient on top. There are no colors to match, so it works on any
 background.
 
 | Class              | Fades                                                      |
@@ -135,14 +135,14 @@ state variant:
 ## Browser support
 
 The scroll-aware part is built on CSS scroll-driven animations
-(`animation-timeline: scroll()`) - no JavaScript, no scroll listeners. Browsers
+(`animation-timeline: scroll()`), with no JavaScript and no scroll listeners. Browsers
 without scroll-driven animations get a static fade on every edge the class
-covers, all the time, even at the very top. Content is never hidden, it just
+covers, all the time, even at the very top. Content is never hidden. It just
 loses the "you're at the end" polish.
 
 ## Accessibility
 
-- The fade is purely visual. Every item is still in the DOM and reachable - it
+- The fade is purely visual. Every item is still in the DOM and reachable. It
   only looks softer near the edges.
 - A scroll container without focusable children cannot be scrolled with a
   keyboard unless it can take focus. Give it `tabIndex={0}`, `role="region"`

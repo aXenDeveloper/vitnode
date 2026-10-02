@@ -13,9 +13,10 @@ interface LocalTableOptions<T> {
   defaultOrder?: TableOrder
   filters?: Record<string, (row: T) => string>
   searchIn?: (row: T) => string
+  sortBy?: Record<string, (row: T) => number | string>
 }
 
-const compare = (a: unknown, b: unknown) =>
+const compare = (a: number | string, b: number | string) =>
   typeof a === 'number' && typeof b === 'number'
     ? a - b
     : String(a).localeCompare(String(b))
@@ -23,7 +24,12 @@ const compare = (a: unknown, b: unknown) =>
 export const resolveLocalTable = <T extends { id: number }>(
   rows: readonly T[],
   params: URLSearchParams,
-  { defaultOrder, filters = {}, searchIn }: LocalTableOptions<T> = {},
+  {
+    defaultOrder,
+    filters = {},
+    searchIn,
+    sortBy = {},
+  }: LocalTableOptions<T> = {},
 ) => {
   const term = readTableSearch(params).trim().toLowerCase()
   let result = [...rows]
@@ -41,14 +47,12 @@ export const resolveLocalTable = <T extends { id: number }>(
 
   if (defaultOrder) {
     const { column, order } = readTableOrder(params, defaultOrder)
+    const read = sortBy[column]
     const direction = order === 'asc' ? 1 : -1
-    result.sort(
-      (a, b) =>
-        compare(
-          (a as Record<string, unknown>)[column],
-          (b as Record<string, unknown>)[column],
-        ) * direction,
-    )
+
+    if (read) {
+      result.sort((a, b) => compare(read(a), read(b)) * direction)
+    }
   }
 
   const pageSize = readTablePageSize(params)

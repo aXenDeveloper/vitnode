@@ -5,8 +5,6 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 
-import { Skeleton } from "./skeleton";
-
 const AlertDialogContext = React.createContext<{
   open: boolean;
   setOpen?: (value: boolean) => void;
@@ -135,24 +133,6 @@ function AlertDialogFooter({
   );
 }
 
-function AlertDialogFooterSkeleton({
-  className,
-  ...props
-}: Omit<React.ComponentProps<"div">, "children">) {
-  return (
-    <div
-      className={cn(
-        "bg-muted/50 -mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-xl border-t px-6 py-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
-        className,
-      )}
-      data-slot="alert-dialog-footer"
-      {...props}
-    >
-      <Skeleton className="h-9 group-data-[size=sm]/alert-dialog-content:w-full sm:w-24" />
-      <Skeleton className="h-9 group-data-[size=sm]/alert-dialog-content:w-full sm:w-24" />
-    </div>
-  );
-}
 function AlertDialogMedia({
   className,
   ...props
@@ -248,7 +228,6 @@ export {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogFooterSkeleton,
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogOverlay,
