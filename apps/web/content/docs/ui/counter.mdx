@@ -56,8 +56,9 @@ import { SlidingNumber } from '@vitnode/core/components/ui/sliding-number'
 ```
 
 It takes the font size and colour of its surroundings and always uses
-tabular figures, so digits don't wobble as they change. It handles whole
-numbers, positive or negative.
+tabular figures, so digits don't wobble as they change. It handles positive
+and negative numbers, decimals included (up to 6 places), so `step={0.5}` on a
+`Counter` shows `0.5`, not a fib.
 
 ## In a form
 
@@ -121,7 +122,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     value: {
-      description: 'The whole number to show.',
+      description: 'The number to show. Decimals beyond 6 places are rounded.',
       type: 'number',
       required: true,
     },

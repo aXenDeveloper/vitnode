@@ -34,7 +34,6 @@ const latestObserver = () => FakeIntersectionObserver.instances.at(-1);
 
 describe("useIntersectionObserver", () => {
   const element = document.createElement("div");
-  const ref = { current: element };
 
   beforeEach(() => {
     FakeIntersectionObserver.instances = [];
@@ -47,7 +46,7 @@ describe("useIntersectionObserver", () => {
 
   it("observes the element with the given options", () => {
     renderHook(() =>
-      useIntersectionObserver(ref, { rootMargin: "20px", threshold: 0.5 }),
+      useIntersectionObserver(element, { rootMargin: "20px", threshold: 0.5 }),
     );
 
     expect(latestObserver()?.observed).toEqual([element]);
@@ -57,8 +56,27 @@ describe("useIntersectionObserver", () => {
     });
   });
 
+  it("waits for the element to mount and follows it when it is replaced", () => {
+    const replacement = document.createElement("div");
+    const { rerender } = renderHook(
+      ({ target }: { target: Element | null }) =>
+        useIntersectionObserver(target),
+      { initialProps: { target: null as Element | null } },
+    );
+
+    expect(FakeIntersectionObserver.instances).toHaveLength(0);
+
+    rerender({ target: element });
+    const first = latestObserver();
+    expect(first?.observed).toEqual([element]);
+
+    rerender({ target: replacement });
+    expect(first?.disconnect).toHaveBeenCalled();
+    expect(latestObserver()?.observed).toEqual([replacement]);
+  });
+
   it("returns the latest entry", () => {
-    const { result } = renderHook(() => useIntersectionObserver(ref));
+    const { result } = renderHook(() => useIntersectionObserver(element));
 
     expect(result.current).toBeUndefined();
 
@@ -75,7 +93,7 @@ describe("useIntersectionObserver", () => {
 
   it("does not re-create the observer for a new threshold array", () => {
     const { rerender } = renderHook(() =>
-      useIntersectionObserver(ref, { threshold: [0, 0.5, 1] }),
+      useIntersectionObserver(element, { threshold: [0, 0.5, 1] }),
     );
 
     rerender();
@@ -85,7 +103,7 @@ describe("useIntersectionObserver", () => {
 
   it("stops observing once visible when freezeOnceVisible is set", () => {
     const { result } = renderHook(() =>
-      useIntersectionObserver(ref, { freezeOnceVisible: true }),
+      useIntersectionObserver(element, { freezeOnceVisible: true }),
     );
     const observer = latestObserver();
 
@@ -99,7 +117,7 @@ describe("useIntersectionObserver", () => {
   });
 
   it("disconnects on unmount", () => {
-    const { unmount } = renderHook(() => useIntersectionObserver(ref));
+    const { unmount } = renderHook(() => useIntersectionObserver(element));
 
     unmount();
 
@@ -109,7 +127,7 @@ describe("useIntersectionObserver", () => {
   it("does nothing when the browser has no IntersectionObserver", () => {
     vi.unstubAllGlobals();
 
-    const { result } = renderHook(() => useIntersectionObserver(ref));
+    const { result } = renderHook(() => useIntersectionObserver(element));
 
     expect("IntersectionObserver" in window).toBe(false);
     expect(result.current).toBeUndefined();

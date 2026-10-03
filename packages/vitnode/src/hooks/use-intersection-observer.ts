@@ -8,7 +8,7 @@ interface UseIntersectionObserverOptions {
 }
 
 export function useIntersectionObserver(
-  elementRef: React.RefObject<Element | null>,
+  target: Element | null,
   {
     threshold = 0,
     root = null,
@@ -23,9 +23,7 @@ export function useIntersectionObserver(
     : String(threshold);
 
   React.useEffect(() => {
-    const node = elementRef.current;
-
-    if (!node || isFrozen || !("IntersectionObserver" in window)) return;
+    if (!target || isFrozen || !("IntersectionObserver" in window)) return;
 
     const observer = new IntersectionObserver(
       ([nextEntry]) => {
@@ -34,12 +32,12 @@ export function useIntersectionObserver(
       { root, rootMargin, threshold: thresholdKey.split(",").map(Number) },
     );
 
-    observer.observe(node);
+    observer.observe(target);
 
     return () => {
       observer.disconnect();
     };
-  }, [elementRef, isFrozen, root, rootMargin, thresholdKey]);
+  }, [target, isFrozen, root, rootMargin, thresholdKey]);
 
   return entry;
 }

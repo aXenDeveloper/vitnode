@@ -174,4 +174,48 @@ describe("Cascader", () => {
       screen.getByRole("button", { name: "core.global.select_option" }),
     ).toBeTruthy();
   });
+
+  it("moves between enabled options with the arrow keys, skipping disabled ones", async () => {
+    render(
+      <Cascader
+        options={[
+          { disabled: true, label: "Closed", value: "closed" },
+          { label: "Alpha", value: "alpha" },
+          { label: "Beta", value: "beta" },
+        ]}
+      />,
+    );
+
+    openCascader();
+    const alpha = await screen.findByRole("option", { name: "Alpha" });
+    const beta = screen.getByRole("option", { name: "Beta" });
+    alpha.focus();
+
+    fireEvent.keyDown(alpha, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(beta);
+
+    fireEvent.keyDown(beta, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(beta);
+
+    fireEvent.keyDown(beta, { key: "ArrowUp" });
+    expect(document.activeElement).toBe(alpha);
+  });
+
+  it("treats an empty string as a selected value", () => {
+    render(
+      <Cascader
+        defaultValue=""
+        options={[
+          { label: "None", value: "" },
+          { label: "Alpha", value: "alpha" },
+        ]}
+        showClear
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "None" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "core.global.clear" }),
+    ).toBeTruthy();
+  });
 });

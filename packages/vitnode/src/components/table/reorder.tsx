@@ -58,6 +58,7 @@ export const useRowOrderDataTable = <T extends DataTableTMin>({
   const serverIds = edges.map(row => row.id);
   const serverKey = serverIds.join(",");
   const [override, setOverride] = React.useState<null | RowOrderOverride>(null);
+  const unfailedAttemptsRef = React.useRef<RowOrderOverride[]>([]);
   const ids = override?.key === serverKey ? override.ids : serverIds;
   const byId = new Map(edges.map(row => [row.id, row]));
   const rows = ids.flatMap(id => {
@@ -71,7 +72,7 @@ export const useRowOrderDataTable = <T extends DataTableTMin>({
     if (!move || !onReorder) return;
 
     const attempt: RowOrderOverride = { ids: move.ids, key: serverKey };
-    const previous = override;
+    unfailedAttemptsRef.current = [...unfailedAttemptsRef.current, attempt];
     setOverride(attempt);
 
     const persist = async () => {
@@ -82,8 +83,16 @@ export const useRowOrderDataTable = <T extends DataTableTMin>({
           overId: move.overId,
           to: move.to,
         });
+        const position = unfailedAttemptsRef.current.indexOf(attempt);
+        if (position > 0) {
+          unfailedAttemptsRef.current =
+            unfailedAttemptsRef.current.slice(position);
+        }
       } catch {
-        setOverride(current => (current === attempt ? previous : current));
+        unfailedAttemptsRef.current = unfailedAttemptsRef.current.filter(
+          pending => pending !== attempt,
+        );
+        setOverride(unfailedAttemptsRef.current.at(-1) ?? null);
         toast.error(t("reorder_failed"), {
           description: t("reorder_failed_desc"),
         });

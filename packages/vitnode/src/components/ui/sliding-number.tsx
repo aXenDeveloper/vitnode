@@ -12,6 +12,10 @@ import React from "react";
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ROLL_SPRING = { stiffness: 220, damping: 22, mass: 0.4 };
 const PLACE_TRANSITION = { type: "spring", duration: 0.35, bounce: 0 } as const;
+const PLAIN_NUMBER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 6,
+  useGrouping: false,
+});
 
 export const digitFaceOffset = (face: number, rolled: number) => {
   const current = ((rolled % 10) + 10) % 10;
@@ -21,9 +25,18 @@ export const digitFaceOffset = (face: number, rolled: number) => {
 };
 
 export const numberPlaces = (value: number) => {
-  const length = String(Math.trunc(Math.abs(value))).length;
+  const [integer = "0", fraction = ""] = PLAIN_NUMBER.format(
+    Math.abs(value),
+  ).split(".");
 
-  return Array.from({ length }, (_, index) => 10 ** (length - index - 1));
+  return {
+    exponents: Array.from(
+      { length: integer.length + fraction.length },
+      (_, index) => integer.length - index - 1,
+    ),
+    fractionDigits: fraction.length,
+    scaled: Number(integer + fraction),
+  };
 };
 
 const DigitFace = ({
@@ -47,9 +60,17 @@ const DigitFace = ({
   );
 };
 
-const DigitRoller = ({ place, value }: { place: number; value: number }) => {
+const DigitRoller = ({
+  exponent,
+  fractionDigits,
+  scaled,
+}: {
+  exponent: number;
+  fractionDigits: number;
+  scaled: number;
+}) => {
   const shouldReduceMotion = useReducedMotion();
-  const target = Math.floor(Math.abs(value) / place);
+  const target = Math.floor(scaled / 10 ** (exponent + fractionDigits));
   const rolled = useSpring(target, ROLL_SPRING);
 
   React.useEffect(() => {
@@ -80,7 +101,7 @@ function SlidingNumber({
   value: number;
 }) {
   const shouldReduceMotion = useReducedMotion();
-  const places = numberPlaces(value);
+  const { exponents, fractionDigits, scaled } = numberPlaces(value);
 
   return (
     <span
@@ -95,20 +116,25 @@ function SlidingNumber({
         aria-hidden="true"
         className="inline-flex items-center leading-none"
       >
-        {value < 0 && <span>-</span>}
+        {value < 0 && scaled > 0 && <span>-</span>}
         <AnimatePresence initial={false}>
-          {places.map(place => (
+          {exponents.map(exponent => (
             <motion.span
               animate={{ opacity: 1, width: "auto" }}
               className="inline-flex overflow-hidden"
               exit={{ opacity: 0, width: 0 }}
               initial={{ opacity: 0, width: 0 }}
-              key={place}
+              key={exponent}
               transition={
                 shouldReduceMotion ? { duration: 0 } : PLACE_TRANSITION
               }
             >
-              <DigitRoller place={place} value={value} />
+              {exponent === -1 && <span>.</span>}
+              <DigitRoller
+                exponent={exponent}
+                fractionDigits={fractionDigits}
+                scaled={scaled}
+              />
             </motion.span>
           ))}
         </AnimatePresence>

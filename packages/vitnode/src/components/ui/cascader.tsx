@@ -174,25 +174,26 @@ const isRtl = (element: Element) =>
 const panelOf = (element: Element) =>
   element.closest("[data-slot=cascader-panel]");
 
-const focusOption = (
-  panel: Element | null,
-  level: number | string,
-  pick: "active" | "first" | "last" | number,
-) => {
-  const options = [
+const enabledOptions = (panel: Element | null, level: number | string) =>
+  [
     ...(panel?.querySelectorAll<HTMLButtonElement>(
       `[data-cascader-level="${level}"]:not([disabled])`,
     ) ?? []),
   ].filter(option => !option.closest("[inert]"));
+
+const focusOption = (
+  panel: Element | null,
+  level: number | string,
+  pick: "active" | "first" | "last",
+) => {
+  const options = enabledOptions(panel, level);
   const target =
     pick === "first"
       ? options[0]
       : pick === "last"
         ? options.at(-1)
-        : pick === "active"
-          ? (options.find(option => option.dataset.active === "true") ??
-            options[0])
-          : options[pick];
+        : (options.find(option => option.dataset.active === "true") ??
+          options[0]);
 
   target?.focus();
 };
@@ -240,7 +241,7 @@ function Cascader({
     React.useState(defaultValue);
   const value = valueProp === undefined ? uncontrolledValue : valueProp;
   const selectedPath = React.useMemo(
-    () => (value ? findCascaderPath(options, value) : []),
+    () => (value === null ? [] : findCascaderPath(options, value)),
     [options, value],
   );
   const [open, setOpen] = React.useState(false);
@@ -315,28 +316,28 @@ function Cascader({
   const handleOptionKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
     level: number | string,
-    index: number,
     option: CascaderOption,
-    count: number,
   ) => {
     const rtl = isRtl(event.currentTarget);
     const forward = rtl ? "ArrowLeft" : "ArrowRight";
     const backward = rtl ? "ArrowRight" : "ArrowLeft";
     const panel = panelOf(event.currentTarget);
+    const siblings = enabledOptions(panel, level);
+    const position = siblings.indexOf(event.currentTarget);
 
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        focusOption(panel, level, Math.min(count - 1, index + 1));
+        siblings[Math.min(siblings.length - 1, position + 1)]?.focus();
         break;
       case "ArrowUp":
         event.preventDefault();
-        if (index === 0 && searchable) {
+        if (position <= 0 && searchable) {
           panel
             ?.querySelector<HTMLInputElement>("[data-cascader-search]")
             ?.focus();
         } else {
-          focusOption(panel, level, Math.max(0, index - 1));
+          siblings[Math.max(0, position - 1)]?.focus();
         }
         break;
       case "End":
@@ -368,7 +369,6 @@ function Cascader({
     option: CascaderOption,
     level: number | string,
     index: number,
-    count: number,
     label: React.ReactNode,
     onSelect: (panel: Element | null) => void,
   ) => {
@@ -396,7 +396,7 @@ function Cascader({
           onSelect(panelOf(event.currentTarget));
         }}
         onKeyDown={event => {
-          handleOptionKeyDown(event, level, index, option, count);
+          handleOptionKeyDown(event, level, option);
         }}
         onMouseEnter={() => {
           if (
@@ -436,16 +436,9 @@ function Cascader({
       role="listbox"
     >
       {column.map((option, index) =>
-        renderOption(
-          option,
-          level,
-          index,
-          column.length,
-          option.label,
-          panel => {
-            choose(level, option, panel);
-          },
-        ),
+        renderOption(option, level, index, option.label, panel => {
+          choose(level, option, panel);
+        }),
       )}
     </div>
   );
@@ -482,7 +475,6 @@ function Cascader({
               leaf,
               "search",
               index,
-              results.length,
               path.map(node => node.label).join(separator),
               () => {
                 commit(path);

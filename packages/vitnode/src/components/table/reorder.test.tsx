@@ -213,6 +213,73 @@ describe("useRowOrderDataTable", () => {
     );
   });
 
+  it("goes back to the saved order when two overlapping drops both fail", async () => {
+    const saves = [
+      Promise.withResolvers<undefined>(),
+      Promise.withResolvers<undefined>(),
+    ];
+    const onReorder = vi
+      .fn()
+      .mockReturnValueOnce(saves[0].promise)
+      .mockReturnValueOnce(saves[1].promise);
+    const { result } = renderHook(() =>
+      useRowOrderDataTable({ edges, onReorder }),
+    );
+
+    act(() => {
+      result.current.reorder(1, 3);
+    });
+    act(() => {
+      result.current.reorder(2, 3);
+    });
+    expect(result.current.rows.map(row => row.id)).toEqual([3, 2, 1]);
+
+    await act(async () => {
+      saves[0].reject(new Error("offline"));
+      await saves[0].promise.catch(() => undefined);
+    });
+    expect(result.current.rows.map(row => row.id)).toEqual([3, 2, 1]);
+
+    await act(async () => {
+      saves[1].reject(new Error("offline"));
+      await saves[1].promise.catch(() => undefined);
+    });
+    expect(result.current.rows.map(row => row.id)).toEqual([1, 2, 3]);
+  });
+
+  it("keeps an earlier drop that is still saving when a later one fails", async () => {
+    const saves = [
+      Promise.withResolvers<undefined>(),
+      Promise.withResolvers<undefined>(),
+    ];
+    const onReorder = vi
+      .fn()
+      .mockReturnValueOnce(saves[0].promise)
+      .mockReturnValueOnce(saves[1].promise);
+    const { result } = renderHook(() =>
+      useRowOrderDataTable({ edges, onReorder }),
+    );
+
+    act(() => {
+      result.current.reorder(1, 3);
+    });
+    act(() => {
+      result.current.reorder(2, 3);
+    });
+
+    await act(async () => {
+      saves[1].reject(new Error("offline"));
+      await saves[1].promise.catch(() => undefined);
+    });
+    expect(result.current.rows.map(row => row.id)).toEqual([2, 3, 1]);
+
+    await act(async () => {
+      saves[0].resolve(undefined);
+      await saves[0].promise;
+    });
+    expect(result.current.rows.map(row => row.id)).toEqual([2, 3, 1]);
+  });
+
   it("follows the server again once it sends a new order", () => {
     const { rerender, result } = renderHook(
       ({ rows }) => useRowOrderDataTable({ edges: rows, onReorder: vi.fn() }),

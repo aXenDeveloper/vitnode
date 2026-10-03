@@ -12,11 +12,11 @@ import { useIntersectionObserver } from '@vitnode/core/hooks/use-intersection-ob
 
 ```tsx
 export const ExampleComponent = () => {
-  const ref = React.useRef<HTMLDivElement>(null)
-  const entry = useIntersectionObserver(ref, { threshold: 0.5 }) // [!code ++]
+  const [element, setElement] = React.useState<HTMLDivElement | null>(null)
+  const entry = useIntersectionObserver(element, { threshold: 0.5 }) // [!code ++]
 
   return (
-    <div ref={ref}>
+    <div ref={setElement}>
       {entry?.isIntersecting ? 'I can see you!' : 'Nobody is looking...'}
     </div>
   )
@@ -29,6 +29,10 @@ or `undefined` until the browser reports the first one. Besides
 `isIntersecting` you also get `intersectionRatio`, `boundingClientRect` and
 friends.
 
+Pass the element itself, kept in state through a callback ref, not a
+`useRef`. That way the hook notices when the element mounts late or gets
+swapped for a new one, and starts watching the right node.
+
 ## Load once, then stop watching
 
 Set `freezeOnceVisible` and the hook stops observing the first time the element
@@ -36,12 +40,12 @@ shows up. Handy for lazy loading or a one-off entrance animation, since there's 
 paying for an observer that has nothing left to do.
 
 ```tsx
-const entry = useIntersectionObserver(ref, {
+const entry = useIntersectionObserver(element, {
   freezeOnceVisible: true,
   rootMargin: '200px',
 })
 
-return <div ref={ref}>{entry?.isIntersecting ? <HeavyChart /> : null}</div>
+return <div ref={setElement}>{entry?.isIntersecting ? <HeavyChart /> : null}</div>
 ```
 
 A positive `rootMargin` starts loading a little before the element is on
@@ -50,12 +54,11 @@ screen, so people rarely catch it loading.
 ## Inside a scroll container
 
 By default the hook watches the viewport. To watch a scrollable element
-instead, pass it as `root`. Store it with a callback ref so the hook picks it
-up once it mounts:
+instead, pass it as `root`. Store it the same way as the element:
 
 ```tsx
 const [root, setRoot] = React.useState<HTMLDivElement | null>(null)
-const entry = useIntersectionObserver(targetRef, { root })
+const entry = useIntersectionObserver(element, { root })
 
 return (
   <div className="h-48 overflow-y-auto" ref={setRoot}>

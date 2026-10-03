@@ -2,13 +2,15 @@ import React from "react";
 
 type SetLocalStorageValue<T> = (value: ((previous: T) => T) | T) => void;
 
-const memoryFallback = new Map<string, string>();
+const memoryFallback = new Map<string, null | string>();
 
 const readRaw = (key: string): null | string => {
+  if (memoryFallback.has(key)) return memoryFallback.get(key) ?? null;
+
   try {
     return window.localStorage.getItem(key);
   } catch {
-    return memoryFallback.get(key) ?? null;
+    return null;
   }
 };
 
@@ -19,12 +21,9 @@ const writeRaw = (key: string, raw: null | string) => {
     } else {
       window.localStorage.setItem(key, raw);
     }
+    memoryFallback.delete(key);
   } catch {
-    if (raw === null) {
-      memoryFallback.delete(key);
-    } else {
-      memoryFallback.set(key, raw);
-    }
+    memoryFallback.set(key, raw);
   }
 
   window.dispatchEvent(new StorageEvent("storage", { key }));

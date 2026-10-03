@@ -105,4 +105,34 @@ describe("useLocalStorage", () => {
 
     expect(result.current[0]).toBe("b");
   });
+
+  it("shows the in-memory value when storage is readable but full", () => {
+    window.localStorage.setItem("full", '"stored"');
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("QuotaExceededError");
+      });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("QuotaExceededError");
+    });
+    const { result } = renderHook(() => useLocalStorage("full", "default"));
+
+    act(() => {
+      result.current[1]("updated");
+    });
+    expect(result.current[0]).toBe("updated");
+
+    act(() => {
+      result.current[2]();
+    });
+    expect(result.current[0]).toBe("default");
+
+    setItem.mockRestore();
+    act(() => {
+      result.current[1]("saved");
+    });
+    expect(result.current[0]).toBe("saved");
+    expect(window.localStorage.getItem("full")).toBe('"saved"');
+  });
 });
