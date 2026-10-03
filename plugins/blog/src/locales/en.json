@@ -16,7 +16,8 @@
           "coverImageAlt": "Cover image alt text",
           "status": "Status",
           "publishedAt": "Published",
-          "updatedAt": "Updated"
+          "updatedAt": "Updated",
+          "excerpt": "Excerpt"
         }
       },
       "category": {
@@ -35,13 +36,86 @@
         "content": {
           "label": "Content"
         },
-        "form": {
-          "publish": "Publish",
-          "cover": {
-            "title": "Cover image"
+        "editor": {
+          "heading": "Article editor",
+          "title": {
+            "placeholder": "Article title"
           },
-          "settings": {
-            "title": "Article settings"
+          "excerpt": {
+            "placeholder": "One or two sentences that make someone click.",
+            "hint": "Shown on the blog list and as the search result description."
+          },
+          "alt": {
+            "placeholder": "What the image shows",
+            "hint": "Read aloud by screen readers instead of the image."
+          },
+          "counter": {
+            "title": "Search results show about {max} characters.",
+            "excerpt": "Search results show about {max} characters.",
+            "coverImageAlt": "Screen readers read about {max} characters before pausing."
+          },
+          "translate": {
+            "button": "Translate",
+            "menu": "Translate from {language} into",
+            "complete": "Complete",
+            "missing": "{count, plural, one {# field missing} other {# fields missing}}",
+            "outdated": "Outdated",
+            "active": "Translating into {language}",
+            "exit": "Stop translating",
+            "source": "{language} · source",
+            "target": "{language}",
+            "field": "Translate",
+            "field_again": "Translate again",
+            "slug": "Generate from title",
+            "missing_fields": "Translate missing fields",
+            "outdated_banner": "The {language} version changed after this translation was last saved.",
+            "update_all": "Update all with AI",
+            "dismiss": "Dismiss",
+            "empty_source": "No {language} text yet.",
+            "status": {
+              "done": "Translated",
+              "missing": "Missing",
+              "unavailable": "Nothing to translate"
+            },
+            "field_into": "Translate into {language}"
+          },
+          "ai": {
+            "write_excerpt": "Write with AI",
+            "translating": "Translating…",
+            "writing": "Writing…",
+            "done": "Done. Read it through before you save.",
+            "error": "The AI request did not finish. Try again in a moment.",
+            "not_configured": "No AI model is configured for this site."
+          },
+          "publish": {
+            "open": "Ready to publish: {done} of {total} checks done",
+            "title": "Ready to publish",
+            "checks": {
+              "title": "Title fits search results",
+              "title_detail": "{languages}: longer than {max} characters.",
+              "excerpt": "Excerpt in every language",
+              "excerpt_detail": "Missing in {languages}.",
+              "cover": "Cover image",
+              "cover_detail": "Shown on the blog list and when the article is shared.",
+              "alt": "Cover alt text in every language",
+              "alt_detail": "Missing in {languages}.",
+              "translations": "Translations complete",
+              "translations_detail": "{language}: {count, plural, one {# field} other {# fields}} missing",
+              "outdated": "Translations up to date",
+              "outdated_detail": "{languages} changed less recently than {source}.",
+              "open": "Open {language}",
+              "write": "Write with AI"
+            },
+            "previews": {
+              "title": "Previews",
+              "language": "Preview language",
+              "search": "Search result",
+              "social": "Social card",
+              "fallback": "{language} readers see the {source} text for missing fields.",
+              "no_cover": "Add a cover image to see the social card."
+            },
+            "details": "Details",
+            "cover": "Cover image"
           }
         }
       },

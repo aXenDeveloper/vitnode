@@ -37,8 +37,14 @@ const MultiLangTextarea = ({
   > & {
     isOptional?: boolean;
   }) => {
-  const { languages, selected, setSelected, currentValue, setValue } =
-    useMultiLangField(field);
+  const {
+    canSelect,
+    languages,
+    selected,
+    setSelected,
+    currentValue,
+    setValue,
+  } = useMultiLangField(field);
   const { maxLength, minLength } = getMultiLangConstraints(itemParams);
 
   return (
@@ -49,7 +55,7 @@ const MultiLangTextarea = ({
             {label}
           </AutoFormLabel>
         )}
-        {languages.length > 1 && (
+        {canSelect && (
           <MultiLangSelect
             languages={languages}
             onSelect={setSelected}

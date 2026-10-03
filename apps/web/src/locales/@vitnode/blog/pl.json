@@ -5,13 +5,86 @@
         "content": {
           "label": "Treść"
         },
-        "form": {
-          "cover": {
-            "title": "Obraz wyróżniający"
+        "editor": {
+          "heading": "Edytor artykułu",
+          "title": {
+            "placeholder": "Tytuł artykułu"
           },
-          "publish": "Publikacja",
-          "settings": {
-            "title": "Ustawienia artykułu"
+          "excerpt": {
+            "placeholder": "Jedno lub dwa zdania, które zachęcą do kliknięcia.",
+            "hint": "Widoczna na liście wpisów i jako opis w wynikach wyszukiwania."
+          },
+          "alt": {
+            "placeholder": "Co przedstawia obraz",
+            "hint": "Czytany przez czytniki ekranu zamiast obrazu."
+          },
+          "counter": {
+            "title": "Wyniki wyszukiwania pokazują około {max} znaków.",
+            "excerpt": "Wyniki wyszukiwania pokazują około {max} znaków.",
+            "coverImageAlt": "Czytniki ekranu czytają około {max} znaków przed pauzą."
+          },
+          "translate": {
+            "button": "Tłumacz",
+            "menu": "Tłumacz z języka {language} na",
+            "complete": "Gotowe",
+            "missing": "{count, plural, one {brakuje # pola} few {brakuje # pól} many {brakuje # pól} other {brakuje # pola}}",
+            "outdated": "Nieaktualne",
+            "active": "Tłumaczenie na {language}",
+            "exit": "Zakończ tłumaczenie",
+            "source": "{language} · źródło",
+            "target": "{language}",
+            "field": "Przetłumacz",
+            "field_again": "Przetłumacz ponownie",
+            "field_into": "Przetłumacz na {language}",
+            "slug": "Utwórz z tytułu",
+            "missing_fields": "Przetłumacz brakujące pola",
+            "outdated_banner": "Wersja {language} zmieniła się po ostatnim zapisaniu tego tłumaczenia.",
+            "update_all": "Zaktualizuj wszystko z AI",
+            "dismiss": "Ukryj",
+            "empty_source": "Brak tekstu w wersji {language}.",
+            "status": {
+              "done": "Przetłumaczone",
+              "missing": "Brak",
+              "unavailable": "Nie ma czego tłumaczyć"
+            }
+          },
+          "ai": {
+            "write_excerpt": "Napisz z AI",
+            "translating": "Tłumaczenie…",
+            "writing": "Pisanie…",
+            "done": "Gotowe. Przeczytaj przed zapisaniem.",
+            "error": "Zapytanie do AI nie zakończyło się. Spróbuj ponownie za chwilę.",
+            "not_configured": "Ta strona nie ma skonfigurowanego modelu AI."
+          },
+          "publish": {
+            "open": "Gotowość do publikacji: {done} z {total}",
+            "title": "Gotowe do publikacji",
+            "checks": {
+              "title": "Tytuł mieści się w wynikach wyszukiwania",
+              "title_detail": "{languages}: dłuższy niż {max} znaków.",
+              "excerpt": "Zajawka w każdym języku",
+              "excerpt_detail": "Brakuje w: {languages}.",
+              "cover": "Obraz wyróżniający",
+              "cover_detail": "Widoczny na liście wpisów i przy udostępnianiu artykułu.",
+              "alt": "Tekst alternatywny w każdym języku",
+              "alt_detail": "Brakuje w: {languages}.",
+              "translations": "Tłumaczenia kompletne",
+              "translations_detail": "{language}: {count, plural, one {brakuje # pola} few {brakuje # pól} many {brakuje # pól} other {brakuje # pola}}",
+              "outdated": "Tłumaczenia aktualne",
+              "outdated_detail": "{languages} zmieniano dawniej niż wersję {source}.",
+              "open": "Otwórz: {language}",
+              "write": "Napisz z AI"
+            },
+            "previews": {
+              "title": "Podgląd",
+              "language": "Język podglądu",
+              "search": "Wynik wyszukiwania",
+              "social": "Karta społecznościowa",
+              "fallback": "Czytelnicy w języku {language} zobaczą tekst w wersji {source} w brakujących polach.",
+              "no_cover": "Dodaj obraz wyróżniający, aby zobaczyć kartę społecznościową."
+            },
+            "details": "Szczegóły",
+            "cover": "Obraz wyróżniający"
           }
         }
       },
@@ -46,7 +119,8 @@
           "publishedAt": "Opublikowano",
           "status": "Status",
           "title": "Tytuł",
-          "updatedAt": "Zaktualizowano"
+          "updatedAt": "Zaktualizowano",
+          "excerpt": "Zajawka"
         },
         "label": "{count, plural, one {Artykuł} few {Artykuły} many {Artykułów} other {Artykułu}}",
         "title": "Artykuły"

@@ -20,6 +20,7 @@ import {
 } from "@/lib/helpers/multi-lang";
 
 import { useMultiLangDefaultLanguage } from "./multi-lang-default-language";
+import { useMultiLangLanguage } from "./multi-lang-language";
 
 export { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 export type {
@@ -38,6 +39,7 @@ export const useMultiLangField = (
   const languages = useLanguages();
   const locale = useLocale();
   const defaultLanguage = useMultiLangDefaultLanguage();
+  const lockedLanguage = useMultiLangLanguage();
   const { value } = field;
   const [selected, setSelected] = React.useState(() =>
     pickLangCode({
@@ -49,15 +51,18 @@ export const useMultiLangField = (
     }),
   );
 
+  const language = lockedLanguage ?? selected;
+
   const setValue = (newValue: string) => {
-    field.onChange(upsertLangValue(value, selected, newValue));
+    field.onChange(upsertLangValue(value, language, newValue));
   };
 
   return {
+    canSelect: lockedLanguage === null && languages.length > 1,
     languages,
-    selected,
+    selected: language,
     setSelected,
-    currentValue: getLangValue(value, selected),
+    currentValue: getLangValue(value, language),
     setValue,
   };
 };

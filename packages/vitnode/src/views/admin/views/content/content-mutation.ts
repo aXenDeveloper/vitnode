@@ -13,6 +13,7 @@ export interface TranslationRow {
   locale: string;
   publishedAt?: null | string;
   status?: string;
+  updatedAt?: null | string;
   values: Record<string, unknown>;
   version: number;
 }

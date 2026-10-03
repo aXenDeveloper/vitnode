@@ -6,11 +6,14 @@ import { CONFIG_PLUGIN } from "@/const";
 import { categoryContent } from "@/database/categories";
 import { postContent } from "@/database/posts";
 
+import { aiAdminModule } from "./ai/ai.admin.module";
+
 export const adminModule = buildModule({
   pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [],
   modules: [
+    aiAdminModule,
     buildContentAdminModule({
       pluginId: CONFIG_PLUGIN.pluginId,
       contentTypes: [categoryContent, postContent],

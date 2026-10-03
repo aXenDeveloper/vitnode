@@ -445,8 +445,10 @@ const ContentFormFields = ({
           layout={renderedFields => (
             <ContentFormProvider
               value={{
+                defaultLocale: spec.defaultLocale,
                 fieldNames: spec.fields.map(field => field.name),
                 fields: renderedFields,
+                files,
                 header: presentation === "page" ? header : undefined,
                 localizedFieldNames: localizedFields,
                 mode: data ? "edit" : "create",
@@ -459,6 +461,11 @@ const ContentFormFields = ({
                 },
                 singular,
                 title,
+                translations: opened.map(row => ({
+                  locale: row.locale,
+                  status: row.status,
+                  updatedAt: row.updatedAt,
+                })),
               }}
             >
               {Layout ? (
