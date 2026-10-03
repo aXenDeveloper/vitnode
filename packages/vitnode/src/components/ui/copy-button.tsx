@@ -3,10 +3,13 @@ import type { VariantProps } from "class-variance-authority";
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cn } from "cn";
 import { CopyIcon } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
+
+import { MotionFeatures } from "@/components/motion-features";
 
 import { buttonVariants } from "./button";
 
@@ -56,10 +59,7 @@ const useIconMotion = () => {
 const CopiedCheck = ({
   initial,
   transition,
-}: Pick<
-  React.ComponentProps<typeof motion.path>,
-  "initial" | "transition"
->) => (
+}: Pick<React.ComponentProps<typeof m.path>, "initial" | "transition">) => (
   <svg
     aria-hidden="true"
     fill="none"
@@ -69,7 +69,7 @@ const CopiedCheck = ({
     strokeWidth={2}
     viewBox="0 0 24 24"
   >
-    <motion.path
+    <m.path
       animate={{ pathLength: 1 }}
       d={checkPath}
       initial={initial}
@@ -128,7 +128,7 @@ function CopyButton({
   const stateLabel = isCopied ? t("copied") : t("copy");
 
   return (
-    <>
+    <MotionFeatures>
       <ButtonPrimitive
         aria-label={ariaLabel ?? (hasLabel ? undefined : stateLabel)}
         className={cn(
@@ -151,7 +151,7 @@ function CopyButton({
         {...props}
       >
         <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
+          <m.span
             animate={iconMotion.visible}
             className="flex items-center justify-center"
             data-icon={hasLabel ? "inline-start" : undefined}
@@ -166,14 +166,14 @@ function CopyButton({
             ) : (
               <CopyIcon aria-hidden="true" />
             )}
-          </motion.span>
+          </m.span>
         </AnimatePresence>
         {children}
       </ButtonPrimitive>
       <span aria-live="polite" className="sr-only" role="status">
         {isCopied ? t("copied") : ""}
       </span>
-    </>
+    </MotionFeatures>
   );
 }
 

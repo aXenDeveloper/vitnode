@@ -7,21 +7,21 @@ import type { EmojiIconValue } from "@/lib/emoji-icon";
 
 import { humanizeIconName } from "@/lib/emoji-icon";
 
+import type { EmojiIconPickerKind } from "./emoji-icon-picker-kinds";
+
 import { Button } from "./button";
 import { EmojiIcon } from "./emoji-icon";
+import { EMOJI_ICON_PICKER_KINDS } from "./emoji-icon-picker-kinds";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Spinner } from "./spinner";
+
+export type { EmojiIconPickerKind } from "./emoji-icon-picker-kinds";
 
 const EmojiIconPickerPanel = React.lazy(async () =>
   import("./emoji-icon-picker-panel").then(module => ({
     default: module.EmojiIconPickerPanel,
   })),
 );
-
-/** Both kinds, unless a caller narrows it - see the `allow` prop. */
-export const EMOJI_ICON_PICKER_KINDS = ["emoji", "icon"] as const;
-
-export type EmojiIconPickerKind = (typeof EMOJI_ICON_PICKER_KINDS)[number];
 
 export const EmojiIconPicker = ({
   allow = EMOJI_ICON_PICKER_KINDS,

@@ -1,7 +1,10 @@
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { cn } from "cn";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
+
+import { MotionFeatures } from "@/components/motion-features";
 
 import {
   Tooltip,
@@ -115,7 +118,7 @@ function AvatarGroupItem({
   const lift = shouldReduceMotion ? undefined : { y: "-25%" };
 
   const item = (
-    <motion.div
+    <m.div
       className={cn(
         "focus-visible:ring-ring/50 *:data-[slot=avatar]:ring-background relative rounded-full outline-none hover:z-10 focus-visible:z-10 focus-visible:ring-3 *:data-[slot=avatar]:ring-2",
         className,
@@ -128,20 +131,26 @@ function AvatarGroupItem({
       whileTap={lift}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 
-  if (!label) return item;
+  if (!label) return <MotionFeatures>{item}</MotionFeatures>;
 
   if (isInTooltipGroup) {
-    return <TooltipGroupTrigger content={label} render={item} />;
+    return (
+      <MotionFeatures>
+        <TooltipGroupTrigger content={label} render={item} />
+      </MotionFeatures>
+    );
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger render={item} />
-      <TooltipContent sideOffset={8}>{label}</TooltipContent>
-    </Tooltip>
+    <MotionFeatures>
+      <Tooltip>
+        <TooltipTrigger render={item} />
+        <TooltipContent sideOffset={8}>{label}</TooltipContent>
+      </Tooltip>
+    </MotionFeatures>
   );
 }
 

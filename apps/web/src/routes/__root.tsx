@@ -20,6 +20,7 @@ import { VitNodeRootProviders } from '@vitnode/core/tanstack/layout'
 
 import type { Locale } from '@/vitnode.config'
 
+import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 import { vitNodeConfig } from '@/vitnode.config'
 
 import appCss from '../styles.css?url'
@@ -35,9 +36,15 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
     locale: resolveLocale<Locale>(publicPathnameOf(location)),
   }),
   component: RootComponent,
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...intlQueryOptions({ locale: context.locale }),
+      staleTime: 'static',
+    })
+  },
   head: () => ({
     links: [
-      { href: appCss, rel: 'stylesheet' },
+      { href: withoutHmrTimestamp(appCss), rel: 'stylesheet' },
 
       {
         href: '/favicon.ico',
@@ -55,12 +62,6 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       { title: metadata.title },
     ],
   }),
-  loader: async ({ context }) => {
-    await context.queryClient.query({
-      ...intlQueryOptions({ locale: context.locale }),
-      staleTime: 'static',
-    })
-  },
   shellComponent: RootDocument,
 })
 

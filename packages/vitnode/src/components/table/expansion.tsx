@@ -1,9 +1,11 @@
 import { cn } from "cn";
 import { ChevronRightIcon } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import { MotionFeatures } from "../motion-features";
 import { Button } from "../ui/button";
 import { TableCell, TableRow } from "../ui/table";
 
@@ -28,8 +30,9 @@ export const useRowExpansionDataTable = ({
 
   if (pageKey !== prevPageKey) {
     setPrevPageKey(pageKey);
+    const visibleIds = new Set(rowIds);
     setExpanded(current => {
-      const next = current.filter(id => rowIds.includes(id));
+      const next = current.filter(id => visibleIds.has(id));
 
       return next.length === current.length ? current : next;
     });
@@ -106,20 +109,22 @@ export function ExpandedRowDataTable({
   return (
     <TableRow className="bg-muted/30 hover:bg-muted/30">
       <TableCell className="p-0! whitespace-normal" colSpan={colSpan}>
-        <motion.div
-          animate={{ height: "auto", opacity: 1 }}
-          className="sticky start-0 w-[100cqi] overflow-hidden"
-          data-testid="table-expanded-row"
-          exit={collapsed}
-          id={id}
-          initial={collapsed}
-          transition={{
-            height: { type: "spring", duration: 0.3, bounce: 0 },
-            opacity: { duration: 0.2, ease: "easeOut" },
-          }}
-        >
-          <div className="px-4 py-4 sm:px-6">{children}</div>
-        </motion.div>
+        <MotionFeatures>
+          <m.div
+            animate={{ height: "auto", opacity: 1 }}
+            className="sticky start-0 w-[100cqi] overflow-hidden"
+            data-testid="table-expanded-row"
+            exit={collapsed}
+            id={id}
+            initial={collapsed}
+            transition={{
+              height: { type: "spring", duration: 0.3, bounce: 0 },
+              opacity: { duration: 0.2, ease: "easeOut" },
+            }}
+          >
+            <div className="px-4 py-4 sm:px-6">{children}</div>
+          </m.div>
+        </MotionFeatures>
       </TableCell>
     </TableRow>
   );

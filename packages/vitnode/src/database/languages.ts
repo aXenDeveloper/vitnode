@@ -17,10 +17,7 @@ export const core_languages = camelCase.table.withRLS(
       .$onUpdate(() => new Date()),
     time24: t.boolean().notNull().default(false),
   }),
-  t => [
-    index("core_languages_code_idx").on(t.code),
-    index("core_languages_name_idx").on(t.name),
-  ],
+  t => [index("core_languages_name_idx").on(t.name)],
 );
 
 export const core_languages_words = camelCase.table.withRLS(
@@ -39,5 +36,13 @@ export const core_languages_words = camelCase.table.withRLS(
     tableName: t.varchar({ length: 255 }).notNull(),
     variable: t.varchar({ length: 255 }).notNull(),
   }),
-  t => [index("core_languages_words_lang_code_idx").on(t.languageCode)],
+  t => [
+    index("core_languages_words_lang_code_idx").on(t.languageCode),
+    index("core_languages_words_lookup_idx").on(
+      t.tableName,
+      t.pluginCode,
+      t.variable,
+      t.itemId,
+    ),
+  ],
 );

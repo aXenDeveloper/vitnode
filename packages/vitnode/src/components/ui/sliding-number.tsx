@@ -1,44 +1,21 @@
 import { cn } from "cn";
 import {
   AnimatePresence,
-  motion,
   type MotionValue,
   useReducedMotion,
   useSpring,
   useTransform,
 } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
+
+import { MotionFeatures } from "@/components/motion-features";
+
+import { digitFaceOffset, numberPlaces } from "./sliding-number-utils";
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ROLL_SPRING = { stiffness: 220, damping: 22, mass: 0.4 };
 const PLACE_TRANSITION = { type: "spring", duration: 0.35, bounce: 0 } as const;
-const PLAIN_NUMBER = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 6,
-  useGrouping: false,
-});
-
-export const digitFaceOffset = (face: number, rolled: number) => {
-  const current = ((rolled % 10) + 10) % 10;
-  const offset = (10 + face - current) % 10;
-
-  return offset > 5 ? offset - 10 : offset;
-};
-
-export const numberPlaces = (value: number) => {
-  const [integer = "0", fraction = ""] = PLAIN_NUMBER.format(
-    Math.abs(value),
-  ).split(".");
-
-  return {
-    exponents: Array.from(
-      { length: integer.length + fraction.length },
-      (_, index) => integer.length - index - 1,
-    ),
-    fractionDigits: fraction.length,
-    scaled: Number(integer + fraction),
-  };
-};
-
 const DigitFace = ({
   face,
   rolled,
@@ -51,12 +28,12 @@ const DigitFace = ({
   });
 
   return (
-    <motion.span
+    <m.span
       className="absolute inset-0 flex items-center justify-center"
       style={{ y }}
     >
       {face}
-    </motion.span>
+    </m.span>
   );
 };
 
@@ -104,42 +81,44 @@ function SlidingNumber({
   const { exponents, fractionDigits, scaled } = numberPlaces(value);
 
   return (
-    <span
-      className={cn("inline-flex items-center tabular-nums", className)}
-      data-slot="sliding-number"
-      {...props}
-    >
-      <span className="sr-only" data-slot="sliding-number-value">
-        {value}
-      </span>
+    <MotionFeatures>
       <span
-        aria-hidden="true"
-        className="inline-flex items-center leading-none"
+        className={cn("inline-flex items-center tabular-nums", className)}
+        data-slot="sliding-number"
+        {...props}
       >
-        {value < 0 && scaled > 0 && <span>-</span>}
-        <AnimatePresence initial={false}>
-          {exponents.map(exponent => (
-            <motion.span
-              animate={{ opacity: 1, width: "auto" }}
-              className="inline-flex overflow-hidden"
-              exit={{ opacity: 0, width: 0 }}
-              initial={{ opacity: 0, width: 0 }}
-              key={exponent}
-              transition={
-                shouldReduceMotion ? { duration: 0 } : PLACE_TRANSITION
-              }
-            >
-              {exponent === -1 && <span>.</span>}
-              <DigitRoller
-                exponent={exponent}
-                fractionDigits={fractionDigits}
-                scaled={scaled}
-              />
-            </motion.span>
-          ))}
-        </AnimatePresence>
+        <span className="sr-only" data-slot="sliding-number-value">
+          {value}
+        </span>
+        <span
+          aria-hidden="true"
+          className="inline-flex items-center leading-none"
+        >
+          {value < 0 && scaled > 0 && <span>-</span>}
+          <AnimatePresence initial={false}>
+            {exponents.map(exponent => (
+              <m.span
+                animate={{ opacity: 1, width: "auto" }}
+                className="inline-flex overflow-hidden"
+                exit={{ opacity: 0, width: 0 }}
+                initial={{ opacity: 0, width: 0 }}
+                key={exponent}
+                transition={
+                  shouldReduceMotion ? { duration: 0 } : PLACE_TRANSITION
+                }
+              >
+                {exponent === -1 && <span>.</span>}
+                <DigitRoller
+                  exponent={exponent}
+                  fractionDigits={fractionDigits}
+                  scaled={scaled}
+                />
+              </m.span>
+            ))}
+          </AnimatePresence>
+        </span>
       </span>
-    </span>
+    </MotionFeatures>
   );
 }
 

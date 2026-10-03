@@ -6,8 +6,11 @@ import {
   REGEXP_ONLY_DIGITS,
   REGEXP_ONLY_DIGITS_AND_CHARS,
 } from "input-otp";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
+
+import { MotionFeatures } from "@/components/motion-features";
 
 const slotValueHidden = { opacity: 0, y: 8, scale: 0.8 };
 const slotValueVisible = { opacity: 1, y: 0, scale: 1 };
@@ -66,20 +69,22 @@ function InputOTPSlot({
       data-slot="input-otp-slot"
       {...props}
     >
-      <AnimatePresence initial={false}>
-        {char ? (
-          <motion.span
-            animate={slotValueVisible}
-            className="origin-bottom"
-            data-slot="input-otp-slot-value"
-            initial={shouldReduceMotion ? false : slotValueHidden}
-            key={char}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {char}
-          </motion.span>
-        ) : null}
-      </AnimatePresence>
+      <MotionFeatures>
+        <AnimatePresence initial={false}>
+          {char ? (
+            <m.span
+              animate={slotValueVisible}
+              className="origin-bottom"
+              data-slot="input-otp-slot-value"
+              initial={shouldReduceMotion ? false : slotValueHidden}
+              key={char}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {char}
+            </m.span>
+          ) : null}
+        </AnimatePresence>
+      </MotionFeatures>
       {hasFakeCaret ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="animate-caret-blink bg-foreground h-4 w-0.5 rounded-full" />

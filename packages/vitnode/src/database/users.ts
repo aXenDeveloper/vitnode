@@ -61,9 +61,6 @@ export const core_users = camelCase.table.withRLS(
     }),
   }),
   t => [
-    index("core_users_name_code_idx").on(t.nameCode),
-    index("core_users_name_idx").on(t.name),
-    index("core_users_email_idx").on(t.email),
     index("core_users_avatar_id_idx").on(t.avatarId),
     index("core_users_cover_id_idx").on(t.coverId),
     index("core_users_created_at_id_idx").on(t.createdAt, t.id),
@@ -89,7 +86,6 @@ export const core_users_secondary_roles = camelCase.table.withRLS(
   }),
   t => [
     primaryKey({ columns: [t.userId, t.roleId] }),
-    index("core_users_secondary_roles_user_id_idx").on(t.userId),
     index("core_users_secondary_roles_role_id_idx").on(t.roleId),
   ],
 );

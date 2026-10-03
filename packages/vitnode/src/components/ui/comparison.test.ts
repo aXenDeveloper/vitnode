@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { positionFromKey, positionFromPointer } from "./comparison";
+import { positionFromKey, positionFromPointer } from "./comparison-utils";
 
 describe("positionFromPointer", () => {
   it("turns the pointer x into a percentage of the width", () => {

@@ -15,11 +15,13 @@ export const core_logs = camelCase.table.withRLS(
     path: t.text().notNull().default("localhost"),
     userAgent: t.text(),
     statusCode: t.integer().notNull().default(500),
-    userId: t.bigint({ mode: "number" }).references(() => core_users.id, {
+    userId: t.integer().references(() => core_users.id, {
       onDelete: "set null",
       onUpdate: "cascade",
     }),
-    test123: t.boolean().notNull().default(false),
   }),
-  t => [index("core_logs_created_at_id_idx").on(t.createdAt, t.id)],
+  t => [
+    index("core_logs_created_at_id_idx").on(t.createdAt, t.id),
+    index("core_logs_user_id_idx").on(t.userId),
+  ],
 );

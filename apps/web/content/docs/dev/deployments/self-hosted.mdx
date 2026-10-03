@@ -60,6 +60,10 @@ VITNODE_WEB_URL=https://example.com
 # Required if anything schedules cron. A long random string.
 CRON_SECRET=change_me_to_a_long_random_secret_string
 
+# How many proxies sit in front of the app: 1 behind the Nginx config below,
+# 0 when the app is exposed directly. See the rate limiter docs.
+VITNODE_TRUSTED_PROXY_HOPS=1
+
 # Optional: Shared Cache & Realtime
 REDIS_URL=redis://localhost:6379
 REDIS_PASSWORD=change_me_redis_password

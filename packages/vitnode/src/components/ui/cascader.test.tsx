@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { Cascader } from "./cascader";
 import {
-  Cascader,
   cascaderColumns,
   type CascaderOption,
   findCascaderPath,
   searchCascader,
-} from "./cascader";
+} from "./cascader-utils";
 
 const places: CascaderOption[] = [
   {
@@ -125,15 +125,20 @@ describe("Cascader", () => {
     expect(await screen.findByRole("option", { name: "Asia" })).toBeTruthy();
   });
 
-  it("marks the open branch as expanded in the columns layout", async () => {
+  it("marks the open branch as current and points it at its column in the columns layout", async () => {
     render(<Cascader layout="columns" options={places} />);
 
     openCascader();
     const europe = await screen.findByRole("option", { name: "Europe" });
-    expect(europe.getAttribute("aria-expanded")).toBe("false");
+    expect(europe.getAttribute("aria-current")).toBeNull();
+    expect(europe.getAttribute("aria-controls")).toBeNull();
 
     fireEvent.click(europe);
-    expect(europe.getAttribute("aria-expanded")).toBe("true");
+
+    const column = await screen.findByRole("listbox", { name: "Europe" });
+    expect(europe.getAttribute("aria-current")).toBe("true");
+    expect(europe.getAttribute("aria-controls")).toBe(column.id);
+    expect(europe.hasAttribute("aria-expanded")).toBe(false);
   });
 
   it("picks a search result straight away", async () => {

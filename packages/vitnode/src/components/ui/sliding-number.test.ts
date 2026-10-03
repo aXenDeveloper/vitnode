@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { digitFaceOffset, numberPlaces } from "./sliding-number";
+import { digitFaceOffset, numberPlaces } from "./sliding-number-utils";
 
 describe("digitFaceOffset", () => {
   it("puts the current digit in view and its neighbours above and below", () => {

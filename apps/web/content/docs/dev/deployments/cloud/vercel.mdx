@@ -50,6 +50,12 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
+Most pooled strings run in transaction mode (the Supabase pooler on port
+`6543`, PgBouncer with `pool_mode = transaction`). Those need `prepare: false`
+in the same object, or queries start failing with `prepared statement "..." does
+not exist`. The [Connection pool](/docs/dev/database#connection-pool) section
+has the details and a sizing rule.
+
 </Step>
 <Step>
 
@@ -64,6 +70,7 @@ the browser bundle and cannot be changed afterwards without building again.
 | `VITNODE_WEB_URL`            | Your production origin. Email links, SSO callbacks and password-reset links use it.                     |
 | `CRON_SECRET`                | Required if anything schedules cron. A long random string.                                              |
 | `REDIS_URL` `REDIS_PASSWORD` | Strongly recommended - see the rate-limiter gotcha below.                                               |
+| `VITNODE_TRUSTED_PROXY_HOPS` | `1`. Vercel's edge is the one proxy in front of your app, so the rate limiter sees real visitor IPs.    |
 | `VITNODE_API_URL`            | Leave it unset. The single app answers `/api/*` itself, and both halves work that out from the request. |
 
 <Callout type="warn" title="Do not set VITNODE_API_URL on preview deployments">

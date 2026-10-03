@@ -1,4 +1,4 @@
-import type { Announcements, UniqueIdentifier } from "@dnd-kit/core";
+import type { Announcements } from "@dnd-kit/core";
 
 import {
   closestCenter,
@@ -28,7 +28,7 @@ import { AttachmentAction } from "@/components/ui/attachment";
 
 import type { AutoFormFileValue } from "./file-shared";
 
-import { moveFileId } from "./file-order";
+import { fileGalleryDrop } from "./file-order";
 import { FileCard, FileCardSkeleton } from "./file-shared";
 
 /** One row of the gallery: a file the form holds, or an upload still running. */
@@ -80,23 +80,6 @@ const RemoveAction = ({
       <XIcon />
     </AttachmentAction>
   );
-};
-
-export const fileGalleryDrop = (
-  ids: readonly number[],
-  {
-    active,
-    over,
-  }: {
-    active: { id: UniqueIdentifier };
-    over: null | { id: UniqueIdentifier };
-  },
-): null | number[] => {
-  if (!over || active.id === over.id) return null;
-
-  const next = moveFileId(ids, Number(active.id), Number(over.id));
-
-  return next.some((id, at) => id !== ids[at]) ? next : null;
 };
 
 const SortableFileRow = ({

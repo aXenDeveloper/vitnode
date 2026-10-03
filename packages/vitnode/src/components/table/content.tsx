@@ -1,35 +1,23 @@
 import { cn } from "cn";
-import { SearchXIcon } from "lucide-react";
-import { AnimatePresence } from "motion/react";
 import React from "react";
 
 import type {
-  AlignDataTable,
   ColumnDef,
   DataTableProps,
   DataTableTMin,
 } from "./data-table-content";
 
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia } from "../ui/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
+import { Table, TableBody } from "../ui/table";
 import { TooltipGroup } from "../ui/tooltip";
+import { HeadRowDataTable } from "./content-head";
+import { EmptyBodyDataTable, RowDataTable } from "./content-row";
 import {
-  ExpandedRowDataTable,
   ExpandHeaderDataTable,
   ExpandToggleDataTable,
   useRowExpansionDataTable,
 } from "./expansion";
 import { FiltersDataTable } from "./filters";
 import { useDataTableUrl } from "./navigation";
-import { NoResultsDataTable } from "./no-results";
-import { OrderTableHeadDataTable } from "./order-table-head";
 import { PaginationDataTable } from "./pagination";
 import {
   ReorderHandleDataTable,
@@ -42,25 +30,140 @@ import { isTableInStoredOrder } from "./reorder-state";
 import { SearchDataTable } from "./search";
 import {
   BulkActionsDataTable,
-  RowSelectableDataTable,
   SelectAllDataTable,
   SelectionProviderDataTable,
   SelectRowDataTable,
 } from "./selection";
-import { readTableOrder } from "./url-state";
 
-/**
- * ALIGNMENT WITHOUT LEAVING TABLE LAYOUT. This was `flex`, which takes a cell
- * out of the row: two adjacent aligned columns were then wrapped in one
- * anonymous cell and rendered one above the other. Measured at 1440 with
- * Matched beside Checked on `/app/narrations`; the styleguide sample aligns a
- * single column, which is why it had never shown.
- */
-const alignClassName = (align?: AlignDataTable) =>
-  cn({
-    "text-center": align === "center",
-    "text-right": align === "right",
-  });
+interface ExpansionColumnDataTable<T extends DataTableTMin> {
+  canExpand: (row: T) => boolean;
+  expandedIdOf: (row: T) => string;
+  isExpanded: (id: number) => boolean;
+  toggle: (id: number) => void;
+}
+
+const reorderColumn = <T extends DataTableTMin>(): ColumnDef<T> => ({
+  id: "reorder",
+  header: <ReorderHeaderDataTable />,
+  className: "w-8",
+  cell: () => <ReorderHandleDataTable />,
+});
+
+const selectColumn = <T extends DataTableTMin>(): ColumnDef<T> => ({
+  id: "select",
+  header: <SelectAllDataTable />,
+  className: "w-8",
+  cell: ({ row }) => <SelectRowDataTable id={row.id} />,
+});
+
+const expandColumn = <T extends DataTableTMin>({
+  canExpand,
+  expandedIdOf,
+  isExpanded,
+  toggle,
+}: ExpansionColumnDataTable<T>): ColumnDef<T> => ({
+  id: "expand",
+  header: <ExpandHeaderDataTable />,
+  className: "w-8",
+  cell: ({ row }) =>
+    canExpand(row) ? (
+      <ExpandToggleDataTable
+        controls={expandedIdOf(row)}
+        expanded={isExpanded(row.id)}
+        onToggle={() => toggle(row.id)}
+      />
+    ) : null,
+});
+
+const withControlColumns = <T extends DataTableTMin>({
+  columns,
+  expansion,
+  reorderable,
+  selectable,
+}: {
+  columns: ColumnDef<T>[];
+  expansion?: ExpansionColumnDataTable<T>;
+  reorderable: boolean;
+  selectable: boolean;
+}): ColumnDef<T>[] => [
+  ...(reorderable ? [reorderColumn<T>()] : []),
+  ...(selectable ? [selectColumn<T>()] : []),
+  ...(expansion ? [expandColumn(expansion)] : []),
+  ...columns,
+];
+
+const ToolbarDataTable = ({
+  filters,
+  search,
+  searchPlaceholder,
+}: Pick<
+  DataTableProps<DataTableTMin>,
+  "filters" | "search" | "searchPlaceholder"
+>) => {
+  if (!search && !filters?.length) {
+    return null;
+  }
+
+  return (
+    <div className="border-foreground/10 flex flex-wrap items-center gap-2 border-b px-4 py-3">
+      <div className="w-full min-w-0 flex-1">
+        {search && <SearchDataTable searchPlaceholder={searchPlaceholder} />}
+      </div>
+      {filters && filters.length > 0 && <FiltersDataTable filters={filters} />}
+    </div>
+  );
+};
+
+const ReorderableBodyDataTable = <T extends DataTableTMin>({
+  filters,
+  order,
+  renderRow,
+  reorder,
+  reorderable,
+  rows,
+  searchParams,
+}: Pick<DataTableProps<T>, "filters" | "order"> & {
+  renderRow: (row: T) => React.ReactNode;
+  reorder: (activeId: number, overId: number) => void;
+  reorderable: NonNullable<DataTableProps<T>["reorderable"]>;
+  rows: T[];
+  searchParams: URLSearchParams;
+}) => {
+  const isReorderDisabled =
+    reorderable.disabled === true ||
+    !isTableInStoredOrder(searchParams, {
+      defaultOrder: {
+        column: String(order.defaultOrder.column),
+        order: order.defaultOrder.order,
+      },
+      filterIds: filters?.map(filter => filter.id) ?? [],
+    });
+  const rowLabelOf = (id: number) => {
+    const row = rows.find(item => item.id === id);
+
+    return row ? reorderable.getRowLabel?.(row) : undefined;
+  };
+
+  return (
+    <ReorderProviderDataTable
+      ids={rows.map(row => row.id)}
+      labelOf={rowLabelOf}
+      onMove={reorder}
+    >
+      {rows.map((row, index) => (
+        <SortableRowGroupDataTable
+          disabled={isReorderDisabled}
+          id={row.id}
+          key={row.id}
+          label={reorderable.getRowLabel?.(row)}
+          position={index + 1}
+        >
+          {renderRow(row)}
+        </SortableRowGroupDataTable>
+      ))}
+    </ReorderProviderDataTable>
+  );
+};
 
 export function ContentDataTable<T extends DataTableTMin>({
   bulkActions,
@@ -92,183 +195,63 @@ export function ContentDataTable<T extends DataTableTMin>({
   const canExpand = (row: T) =>
     expandable !== undefined && (expandable.canExpand?.(row) ?? true);
   const expandedIdOf = (row: T) => `${expandedBaseId}expanded-${row.id}`;
-  // WHICH COLUMN THE LIST IS ORDERED BY, SAID AND NOT ONLY DRAWN. The arrow on
-  // the active header is the whole of what states the order once a surface
-  // stops carrying an "Ordered" control beside its list, and an arrow is not
-  // read out.
-  const ordered = readTableOrder(searchParams, {
-    column: String(order.defaultOrder.column),
-    order: order.defaultOrder.order,
+  const allColumns = withControlColumns({
+    columns,
+    expansion: expandable
+      ? {
+          canExpand,
+          expandedIdOf,
+          isExpanded: expansion.isExpanded,
+          toggle: expansion.toggle,
+        }
+      : undefined,
+    reorderable: Boolean(reorderable),
+    selectable: Boolean(bulkActions),
   });
-  const sortStateOf = (
-    column: ColumnDef<T>,
-  ): "ascending" | "descending" | "none" | undefined => {
-    if (
-      column.accessorKey == null ||
-      !order.columns?.includes(column.accessorKey)
-    ) {
-      return undefined;
-    }
-    if (ordered.column !== String(column.accessorKey)) {
-      return "none";
-    }
 
-    return ordered.order === "asc" ? "ascending" : "descending";
-  };
-  const hasToolbar = Boolean(search) || Boolean(filters?.length);
-  const isReorderDisabled =
-    reorderable?.disabled === true ||
-    !isTableInStoredOrder(searchParams, {
-      defaultOrder: {
-        column: String(order.defaultOrder.column),
-        order: order.defaultOrder.order,
-      },
-      filterIds: filters?.map(filter => filter.id) ?? [],
-    });
-  const rowLabelOf = (id: number) => {
-    const row = rows.find(item => item.id === id);
+  const renderRow = (row: T) => (
+    <RowDataTable
+      columns={allColumns}
+      expandable={expandable}
+      expanded={canExpand(row) && expansion.isExpanded(row.id)}
+      expandedId={expandedIdOf(row)}
+      row={row}
+      rowOpens={rowOpens}
+      rows={rows}
+      selectable={Boolean(bulkActions)}
+    />
+  );
 
-    return row ? reorderable?.getRowLabel?.(row) : undefined;
-  };
-  const allColumns: ColumnDef<T>[] = [
-    ...(reorderable
-      ? [
-          {
-            id: "reorder",
-            header: <ReorderHeaderDataTable />,
-            className: "w-8",
-            cell: () => <ReorderHandleDataTable />,
-          },
-        ]
-      : []),
-    ...(bulkActions
-      ? [
-          {
-            id: "select",
-            header: <SelectAllDataTable />,
-            className: "w-8",
-            cell: ({ row }: { row: T }) => <SelectRowDataTable id={row.id} />,
-          },
-        ]
-      : []),
-    ...(expandable
-      ? [
-          {
-            id: "expand",
-            header: <ExpandHeaderDataTable />,
-            className: "w-8",
-            cell: ({ row }: { row: T }) =>
-              canExpand(row) ? (
-                <ExpandToggleDataTable
-                  controls={expandedIdOf(row)}
-                  expanded={expansion.isExpanded(row.id)}
-                  onToggle={() => expansion.toggle(row.id)}
-                />
-              ) : null,
-          },
-        ]
-      : []),
-    ...columns,
-  ];
-
-  const renderRow = (row: T) => {
-    const cells = allColumns.map(column => {
-      const columnKey = column.id ?? String(column.accessorKey);
-      const content = column.cell
-        ? column.cell({ allData: rows, row })
-        : column.accessorKey != null
-          ? String(row[column.accessorKey])
-          : "";
-
+  const renderBody = () => {
+    if (rows.length === 0) {
       return (
-        <TableCell
-          // The column's own class reaches the cell as well as the
-          // head. It reached the head alone, so a caller could
-          // neither align a value under its own header nor let a
-          // long name wrap, and both had to be redone on an element
-          // inside the cell.
-          className={cn(alignClassName(column.align), column.className)}
-          key={`${row.id}_${columnKey}`}
-        >
-          {content}
-        </TableCell>
+        <EmptyBodyDataTable
+          colSpan={allColumns.length}
+          customNoResults={customNoResults}
+        />
       );
-    });
+    }
 
-    const detail = expandable && (
-      <AnimatePresence initial={false}>
-        {canExpand(row) && expansion.isExpanded(row.id) && (
-          <ExpandedRowDataTable
-            colSpan={allColumns.length}
-            id={expandedIdOf(row)}
-            key="expanded"
-          >
-            {expandable.render(row)}
-          </ExpandedRowDataTable>
-        )}
-      </AnimatePresence>
-    );
-
-    if (bulkActions) {
+    if (reorderable) {
       return (
-        <>
-          <RowSelectableDataTable id={row.id}>{cells}</RowSelectableDataTable>
-          {detail}
-        </>
+        <ReorderableBodyDataTable
+          filters={filters}
+          order={order}
+          renderRow={renderRow}
+          reorder={reorder}
+          reorderable={reorderable}
+          rows={rows}
+          searchParams={searchParams}
+        />
       );
     }
 
     return (
-      <>
-        <TableRow
-          className={
-            rowOpens
-              ? "focus-visible:bg-muted/50 focus-visible:outline-ring cursor-pointer focus-visible:outline-1"
-              : undefined
-          }
-          onClick={
-            rowOpens
-              ? event => {
-                  // A control inside the row answers for itself,
-                  // and a reader who has selected text in a cell
-                  // was reading it rather than asking to leave.
-                  if (
-                    (event.target as HTMLElement).closest(
-                      "a,button,input,select,textarea,[role=checkbox]",
-                    )
-                  ) {
-                    return;
-                  }
-                  if (window.getSelection()?.toString()) {
-                    return;
-                  }
-                  rowOpens(row);
-                }
-              : undefined
-          }
-          onKeyDown={
-            rowOpens
-              ? event => {
-                  if (
-                    (event.target as HTMLElement).closest(
-                      "a,button,input,select,textarea,[role=checkbox]",
-                    )
-                  ) {
-                    return;
-                  }
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    rowOpens(row);
-                  }
-                }
-              : undefined
-          }
-          tabIndex={rowOpens ? 0 : undefined}
-        >
-          {cells}
-        </TableRow>
-        {detail}
-      </>
+      <TableBody>
+        {rows.map(row => (
+          <React.Fragment key={row.id}>{renderRow(row)}</React.Fragment>
+        ))}
+      </TableBody>
     );
   };
 
@@ -280,18 +263,11 @@ export function ContentDataTable<T extends DataTableTMin>({
         </div>
       )}
 
-      {hasToolbar && (
-        <div className="border-foreground/10 flex flex-wrap items-center gap-2 border-b px-4 py-3">
-          <div className="w-full min-w-0 flex-1">
-            {search && (
-              <SearchDataTable searchPlaceholder={searchPlaceholder} />
-            )}
-          </div>
-          {filters && filters.length > 0 && (
-            <FiltersDataTable filters={filters} />
-          )}
-        </div>
-      )}
+      <ToolbarDataTable
+        filters={filters}
+        search={search}
+        searchPlaceholder={searchPlaceholder}
+      />
 
       {/* THE TABLE SCROLLS, NEVER THE PAGE. `<main>` is `flex-1` with
           `min-width: auto`, so a table wider than the shell grows the page
@@ -322,89 +298,13 @@ export function ContentDataTable<T extends DataTableTMin>({
               props.className,
             )}
           >
-            <TableHeader className="bg-muted/60">
-              <TableRow>
-                {allColumns.map(column => {
-                  const columnKey = column.id ?? String(column.accessorKey);
-                  const isOrderable =
-                    column.accessorKey != null &&
-                    Boolean(order.columns?.includes(column.accessorKey));
+            <HeadRowDataTable
+              columns={allColumns}
+              order={order}
+              searchParams={searchParams}
+            />
 
-                  return (
-                    <TableHead
-                      aria-sort={sortStateOf(column)}
-                      className={cn(
-                        alignClassName(column.align),
-                        column.className,
-                      )}
-                      key={columnKey}
-                    >
-                      {isOrderable && column.accessorKey ? (
-                        <OrderTableHeadDataTable
-                          align={column.align}
-                          id={column.accessorKey}
-                          order={order}
-                        >
-                          {column.header}
-                        </OrderTableHeadDataTable>
-                      ) : (
-                        column.header
-                      )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            </TableHeader>
-
-            {rows.length === 0 ? (
-              <TableBody>
-                <TableRow className="hover:bg-transparent">
-                  <TableCell
-                    className="!p-0 whitespace-normal"
-                    colSpan={allColumns.length}
-                  >
-                    <Empty data-testid="table-no-results">
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                          {customNoResults?.icon ?? <SearchXIcon />}
-                        </EmptyMedia>
-                        <NoResultsDataTable
-                          description={customNoResults?.description}
-                          title={customNoResults?.title}
-                        />
-                      </EmptyHeader>
-                      {customNoResults?.footer ?? (
-                        <EmptyContent>{customNoResults?.footer}</EmptyContent>
-                      )}
-                    </Empty>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            ) : reorderable ? (
-              <ReorderProviderDataTable
-                ids={rowIds}
-                labelOf={rowLabelOf}
-                onMove={reorder}
-              >
-                {rows.map((row, index) => (
-                  <SortableRowGroupDataTable
-                    disabled={isReorderDisabled}
-                    id={row.id}
-                    key={row.id}
-                    label={reorderable.getRowLabel?.(row)}
-                    position={index + 1}
-                  >
-                    {renderRow(row)}
-                  </SortableRowGroupDataTable>
-                ))}
-              </ReorderProviderDataTable>
-            ) : (
-              <TableBody>
-                {rows.map(row => (
-                  <React.Fragment key={row.id}>{renderRow(row)}</React.Fragment>
-                ))}
-              </TableBody>
-            )}
+            {renderBody()}
           </Table>
         </div>
       </div>

@@ -36,6 +36,10 @@ import {
 import type { AdminNavigationFormProps } from "./navigation-form-content";
 import type { AdminNavigationItem } from "./navigation-query";
 
+import {
+  isNavigationLocationFull,
+  usedNavigationPresetKeys,
+} from "./navigation-availability";
 import { presetLabelSource, useNavigationTranslate } from "./navigation-labels";
 
 const AdminNavigationFormContent = React.lazy(async () =>
@@ -44,31 +48,10 @@ const AdminNavigationFormContent = React.lazy(async () =>
   })),
 );
 
-export const usedNavigationPresetKeys = (
-  items: readonly AdminNavigationItem[],
-  except?: number,
-): string[] =>
-  items.flatMap(item =>
-    item.kind === "preset" &&
-    item.pluginId &&
-    item.presetId &&
-    item.id !== except
-      ? [navigationPresetKey(item.pluginId, item.presetId)]
-      : [],
-  );
-
 interface NavigationCreateChoice {
   kind: NavigationKind;
   preset?: NavigationPreset;
 }
-
-export const isNavigationLocationFull = (
-  location: NavigationLocation,
-  items: readonly AdminNavigationItem[],
-): boolean =>
-  location === "bottom_bar" &&
-  items.filter(item => item.parentId === null).length >=
-    NAVIGATION_BOTTOM_BAR_MAX_ITEMS;
 
 export interface NavigationCreateDialogProps {
   items: AdminNavigationItem[];

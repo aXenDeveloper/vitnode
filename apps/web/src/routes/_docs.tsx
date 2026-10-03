@@ -6,10 +6,13 @@ import { DocsShellPendingSkeleton } from '@/docs/pending'
 import { DOCS_STALE_TIME } from '@/docs/shared'
 import { DocsShellContent } from '@/docs/shell-content'
 import { getDocsPageTree } from '@/docs/transport'
+import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 
 export const Route = createFileRoute('/_docs')({
   loader: async () => ({ pageTree: await getDocsPageTree() }),
-  head: () => ({ links: [{ href: docsCss, rel: 'stylesheet' }] }),
+  head: () => ({
+    links: [{ href: withoutHmrTimestamp(docsCss), rel: 'stylesheet' }],
+  }),
   staleTime: DOCS_STALE_TIME,
   component: DocsShell,
   pendingComponent: DocsShellPendingSkeleton,

@@ -1,42 +1,17 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
 import { XIcon } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import { MotionFeatures } from "@/components/motion-features";
+
+import { fitZoomedRect, zoomOrigin } from "./image-zoom-utils";
+
 const ZOOM_TRANSITION = { type: "spring", duration: 0.4, bounce: 0 } as const;
 const ZOOMED = { scale: 1, x: 0, y: 0 };
-
-interface Rect {
-  height: number;
-  left: number;
-  top: number;
-  width: number;
-}
-
-export const fitZoomedRect = (
-  aspectRatio: number,
-  viewport: { height: number; padding: number; width: number },
-): Rect => {
-  const maxWidth = viewport.width - viewport.padding * 2;
-  const maxHeight = viewport.height - viewport.padding * 2;
-  const width = Math.min(maxWidth, maxHeight * aspectRatio);
-  const height = width / aspectRatio;
-
-  return {
-    height,
-    left: (viewport.width - width) / 2,
-    top: (viewport.height - height) / 2,
-    width,
-  };
-};
-
-export const zoomOrigin = (from: Rect, to: Rect) => ({
-  scale: from.width / to.width,
-  x: from.left - to.left,
-  y: from.top - to.top,
-});
 
 const measureZoom = (image: HTMLImageElement) => {
   const thumb = image.getBoundingClientRect();
@@ -90,81 +65,83 @@ function ImageZoom({
   };
 
   return (
-    <DialogPrimitive.Root
-      onOpenChange={next => {
-        if (next) {
-          open();
+    <MotionFeatures>
+      <DialogPrimitive.Root
+        onOpenChange={next => {
+          if (next) {
+            open();
 
-          return;
-        }
+            return;
+          }
 
-        close();
-      }}
-      open={zoom !== null}
-    >
-      <DialogPrimitive.Trigger
-        className={cn(
-          "focus-visible:ring-ring/50 relative block cursor-zoom-in rounded-md outline-none focus-visible:ring-3",
-          className,
-        )}
-        data-slot="image-zoom"
+          close();
+        }}
+        open={zoom !== null}
       >
-        <img
-          alt={alt}
-          className={cn(zoom && "invisible", imageClassName)}
-          ref={thumbRef}
-          src={src}
-        />
-      </DialogPrimitive.Trigger>
-
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop
+        <DialogPrimitive.Trigger
           className={cn(
-            "bg-background/80 fixed inset-0 z-50 backdrop-blur-md transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none",
-            isClosing && "opacity-0",
+            "focus-visible:ring-ring/50 relative block cursor-zoom-in rounded-md outline-none focus-visible:ring-3",
+            className,
           )}
-        />
-        <DialogPrimitive.Popup
-          aria-label={alt}
-          className="fixed inset-0 z-50 cursor-zoom-out outline-none"
-          data-slot="image-zoom-popup"
-          onClick={close}
+          data-slot="image-zoom"
         >
-          {zoom && (
-            <motion.img
-              alt={alt}
-              animate={isClosing ? zoom.origin : ZOOMED}
-              className="absolute rounded-md object-contain shadow-xl"
-              initial={shouldReduceMotion ? false : zoom.origin}
-              onAnimationComplete={() => {
-                if (isClosing) setZoom(null);
-              }}
-              src={zoomSrc ?? src}
-              style={{
-                height: zoom.target.height,
-                left: zoom.target.left,
-                originX: 0,
-                originY: 0,
-                top: zoom.target.top,
-                width: zoom.target.width,
-              }}
-              transition={
-                shouldReduceMotion ? { duration: 0 } : ZOOM_TRANSITION
-              }
-            />
-          )}
-          <DialogPrimitive.Close
-            aria-label={t("close")}
+          <img
+            alt={alt}
+            className={cn(zoom && "invisible", imageClassName)}
+            ref={thumbRef}
+            src={src}
+          />
+        </DialogPrimitive.Trigger>
+
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Backdrop
             className={cn(
-              "bg-foreground/70 text-background focus-visible:ring-ring/50 absolute end-4 top-4 flex size-10 cursor-pointer items-center justify-center rounded-full transition-opacity outline-none focus-visible:ring-3",
+              "bg-background/80 fixed inset-0 z-50 backdrop-blur-md transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none",
               isClosing && "opacity-0",
             )}
+          />
+          <DialogPrimitive.Popup
+            aria-label={alt}
+            className="fixed inset-0 z-50 cursor-zoom-out outline-none"
+            data-slot="image-zoom-popup"
+            onClick={close}
           >
-            <XIcon className="size-5" />
-          </DialogPrimitive.Close>
-        </DialogPrimitive.Popup>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+            {zoom && (
+              <m.img
+                alt={alt}
+                animate={isClosing ? zoom.origin : ZOOMED}
+                className="absolute rounded-md object-contain shadow-xl"
+                initial={shouldReduceMotion ? false : zoom.origin}
+                onAnimationComplete={() => {
+                  if (isClosing) setZoom(null);
+                }}
+                src={zoomSrc ?? src}
+                style={{
+                  height: zoom.target.height,
+                  left: zoom.target.left,
+                  originX: 0,
+                  originY: 0,
+                  top: zoom.target.top,
+                  width: zoom.target.width,
+                }}
+                transition={
+                  shouldReduceMotion ? { duration: 0 } : ZOOM_TRANSITION
+                }
+              />
+            )}
+            <DialogPrimitive.Close
+              aria-label={t("close")}
+              className={cn(
+                "bg-foreground/70 text-background focus-visible:ring-ring/50 absolute end-4 top-4 flex size-10 cursor-pointer items-center justify-center rounded-full transition-opacity outline-none focus-visible:ring-3",
+                isClosing && "opacity-0",
+              )}
+            >
+              <XIcon className="size-5" />
+            </DialogPrimitive.Close>
+          </DialogPrimitive.Popup>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    </MotionFeatures>
   );
 }
 

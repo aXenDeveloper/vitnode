@@ -100,10 +100,12 @@ export class SessionModel {
     );
     if (!token) return null;
 
-    const device = await new DeviceModel(this.c).getExistingDeviceId();
+    const [device, hashedToken] = await Promise.all([
+      new DeviceModel(this.c).getExistingDeviceId(),
+      hashSessionToken(token),
+    ]);
     if (!device) return null;
 
-    const hashedToken = await hashSessionToken(token);
     const cache = this.c.get("cache");
     const cacheKey = sessionCacheKey(hashedToken, device.id);
 

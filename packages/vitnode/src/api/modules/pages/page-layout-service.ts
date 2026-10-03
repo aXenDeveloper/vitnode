@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { eq, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { randomUUID } from "node:crypto";
 
 import type { RegisteredEditablePage } from "@/api/lib/editable-pages";
 import type { ContentNode } from "@/blocks/types";
@@ -273,13 +274,60 @@ const selectPageLayout = async (
   return { pageId: row.pageId, updatedAt: row.updatedAt, zones: row.zones };
 };
 
+export const PAGE_LAYOUT_CACHE_TTL_SECONDS = 60 * 60;
+
+const pageLayoutGenerationKey = (pageId: string): string =>
+  `page_layout:generation:${pageId}`;
+
+const pageLayoutCacheKey = (pageId: string, generation: string): string =>
+  `page_layout:${generation}:${pageId}`;
+
+const readPageLayoutGeneration = async (
+  c: Context,
+  pageId: string,
+): Promise<string> =>
+  (await c.get("cache").get<string>(pageLayoutGenerationKey(pageId))) ?? "0";
+
+interface CachedPageLayout {
+  row: null | (Omit<PageLayoutRow, "updatedAt"> & { updatedAt: string });
+}
+
+const toCachedPageLayout = (row: null | PageLayoutRow): CachedPageLayout => ({
+  row: row === null ? null : { ...row, updatedAt: row.updatedAt.toISOString() },
+});
+
+const fromCachedPageLayout = ({
+  row,
+}: CachedPageLayout): null | PageLayoutRow =>
+  row === null ? null : { ...row, updatedAt: new Date(row.updatedAt) };
+
 export const readPageLayout = async (
   c: Context,
   pageId: string,
-): Promise<null | PageLayoutRow> => await selectPageLayout(c.get("db"), pageId);
+): Promise<null | PageLayoutRow> => {
+  const generation = await readPageLayoutGeneration(c, pageId);
 
-export const savePageLayout = async (
+  return fromCachedPageLayout(
+    await c
+      .get("cache")
+      .remember(
+        pageLayoutCacheKey(pageId, generation),
+        PAGE_LAYOUT_CACHE_TTL_SECONDS,
+        async () =>
+          toCachedPageLayout(await selectPageLayout(c.get("db"), pageId)),
+      ),
+  );
+};
+
+export const expirePageLayoutCache = async (
   c: Context,
+  pageId: string,
+): Promise<void> => {
+  await c.get("cache").set(pageLayoutGenerationKey(pageId), randomUUID());
+};
+
+const writePageLayout = async (
+  db: Context["var"]["db"],
   {
     expectedZones,
     page,
@@ -290,7 +338,7 @@ export const savePageLayout = async (
     zones: PageLayoutZones;
   },
 ): Promise<PageLayoutSave> =>
-  await c.get("db").transaction(async (tx): Promise<PageLayoutSave> => {
+  await db.transaction(async (tx): Promise<PageLayoutSave> => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${page.id}))`);
 
     const current = await selectPageLayout(tx, page.id);
@@ -356,3 +404,18 @@ export const savePageLayout = async (
 
     return { changed, row };
   });
+
+export const savePageLayout = async (
+  c: Context,
+  save: {
+    expectedZones: PageLayoutZones;
+    page: AnyEditablePageDefinition;
+    zones: PageLayoutZones;
+  },
+): Promise<PageLayoutSave> => {
+  try {
+    return await writePageLayout(c.get("db"), save);
+  } finally {
+    await expirePageLayoutCache(c, save.page.id);
+  }
+};
