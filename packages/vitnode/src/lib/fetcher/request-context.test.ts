@@ -5,6 +5,7 @@ import {
   CAPTCHA_TOKEN_HEADER,
   FORWARDED_IP_FALLBACK,
   FORWARDED_USER_AGENT_FALLBACK,
+  resolveVisitorIp,
 } from "./request-context";
 
 describe("buildForwardedHeaders", () => {
@@ -61,5 +62,53 @@ describe("buildForwardedHeaders", () => {
       "x-forwarded-for",
       CAPTCHA_TOKEN_HEADER,
     ]);
+  });
+});
+
+describe("resolveVisitorIp", () => {
+  it("uses the socket address and ignores the header when no proxy is trusted", () => {
+    expect(
+      resolveVisitorIp({
+        forwardedFor: "9.9.9.9",
+        socketAddress: "203.0.113.7",
+        trustedProxyHops: 0,
+      }),
+    ).toBe("203.0.113.7");
+  });
+
+  it("takes the address the trusted proxy saw, not the hops a client prepended", () => {
+    expect(
+      resolveVisitorIp({
+        forwardedFor: "9.9.9.9, 203.0.113.7",
+        socketAddress: "10.0.0.1",
+        trustedProxyHops: 1,
+      }),
+    ).toBe("203.0.113.7");
+  });
+
+  it("walks back one hop per trusted proxy", () => {
+    expect(
+      resolveVisitorIp({
+        forwardedFor: "9.9.9.9, 203.0.113.7, 10.0.0.2",
+        socketAddress: "10.0.0.1",
+        trustedProxyHops: 2,
+      }),
+    ).toBe("203.0.113.7");
+  });
+
+  it("stops at the furthest hop when the chain is shorter than the trusted proxies", () => {
+    expect(
+      resolveVisitorIp({
+        forwardedFor: "203.0.113.7",
+        socketAddress: "10.0.0.1",
+        trustedProxyHops: 3,
+      }),
+    ).toBe("203.0.113.7");
+  });
+
+  it("knows nothing without a socket address", () => {
+    expect(
+      resolveVisitorIp({ forwardedFor: "9.9.9.9", trustedProxyHops: 1 }),
+    ).toBeUndefined();
   });
 });

@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { eq, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { randomUUID } from "node:crypto";
 
 import type { RegisteredEditablePage } from "@/api/lib/editable-pages";
 import type { ContentNode } from "@/blocks/types";
@@ -275,8 +276,17 @@ const selectPageLayout = async (
 
 export const PAGE_LAYOUT_CACHE_TTL_SECONDS = 60 * 60;
 
-export const pageLayoutCacheKey = (pageId: string): string =>
-  `page_layout:${pageId}`;
+const pageLayoutGenerationKey = (pageId: string): string =>
+  `page_layout:generation:${pageId}`;
+
+const pageLayoutCacheKey = (pageId: string, generation: string): string =>
+  `page_layout:${generation}:${pageId}`;
+
+const readPageLayoutGeneration = async (
+  c: Context,
+  pageId: string,
+): Promise<string> =>
+  (await c.get("cache").get<string>(pageLayoutGenerationKey(pageId))) ?? "0";
 
 interface CachedPageLayout {
   row: null | (Omit<PageLayoutRow, "updatedAt"> & { updatedAt: string });
@@ -294,23 +304,26 @@ const fromCachedPageLayout = ({
 export const readPageLayout = async (
   c: Context,
   pageId: string,
-): Promise<null | PageLayoutRow> =>
-  fromCachedPageLayout(
+): Promise<null | PageLayoutRow> => {
+  const generation = await readPageLayoutGeneration(c, pageId);
+
+  return fromCachedPageLayout(
     await c
       .get("cache")
       .remember(
-        pageLayoutCacheKey(pageId),
+        pageLayoutCacheKey(pageId, generation),
         PAGE_LAYOUT_CACHE_TTL_SECONDS,
         async () =>
           toCachedPageLayout(await selectPageLayout(c.get("db"), pageId)),
       ),
   );
+};
 
 export const expirePageLayoutCache = async (
   c: Context,
   pageId: string,
 ): Promise<void> => {
-  await c.get("cache").delete(pageLayoutCacheKey(pageId));
+  await c.get("cache").set(pageLayoutGenerationKey(pageId), randomUUID());
 };
 
 const writePageLayout = async (

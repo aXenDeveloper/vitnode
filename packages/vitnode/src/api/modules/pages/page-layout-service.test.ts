@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ContentNode } from "@/blocks/types";
 import type { PageLayoutZones } from "@/database/page-layouts";
@@ -194,6 +194,7 @@ const harness = (zones?: PageLayoutZones, pageId: string = page.id) => {
     c: {
       get: (key: string) => (key === "cache" ? cache : db),
     } as unknown as Context,
+    cache,
     stored: () => row,
     written,
   };
@@ -332,6 +333,27 @@ describe("the cached read", () => {
     });
 
     expect(await readPageLayout(c, page.id)).toBeNull();
+  });
+
+  it("does not let a read that started before a save remember the old layout", async () => {
+    const { c, cache } = harness({ sidebar: [quote("s1", "Stored")] });
+    const remember = cache.set.bind(cache);
+
+    vi.spyOn(cache, "set").mockImplementationOnce(async (...args) => {
+      await savePageLayout(c, {
+        expectedZones: { sidebar: [quote("s1", "Stored")] },
+        page,
+        zones: { sidebar: [quote("s1", "Saved")] },
+      });
+      await remember(...args);
+    });
+
+    expect((await readPageLayout(c, page.id))?.zones).toEqual({
+      sidebar: [quote("s1", "Stored")],
+    });
+    expect((await readPageLayout(c, page.id))?.zones).toEqual({
+      sidebar: [quote("s1", "Saved")],
+    });
   });
 
   it("does not remember a row it refused", async () => {

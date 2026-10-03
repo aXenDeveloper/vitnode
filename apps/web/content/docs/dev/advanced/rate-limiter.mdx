@@ -70,11 +70,22 @@ export const vitNodeApiConfig = buildApiConfig({
 
 When your web app renders a page on the server, it calls the API itself - so the API sees the **web server's** address, not your visitor's. Every server-rendered request then lands in the same bucket, and 80 requests a minute disappears fast on a busy site.
 
-The API never believes a plain `X-Forwarded-For` header (anyone can type one). Instead, the web server signs the visitor address it forwards with a key derived from your `CRON_SECRET` - the secret the web app and the API already share - and the API checks that signature before trusting it.
+The API never believes a plain `X-Forwarded-For` header (anyone can type one). Instead, the web server works out the visitor's address, signs it with a key derived from your `CRON_SECRET` - the secret the web app and the API already share - and the API checks that signature before trusting it.
 
-- Nothing to configure: set the same `CRON_SECRET` in both apps (you need it there anyway) and server-rendered requests are limited per visitor.
-- The API trusts the forwarded address only when the signature matches and is less than 5 minutes old, and uses the hop closest to your web server.
+- Set the same `CRON_SECRET` in both apps (you need it there anyway).
+- Tell the web app how many proxies sit in front of it with `VITNODE_TRUSTED_PROXY_HOPS`. It skips exactly that many hops from the right of `X-Forwarded-For` and ignores everything further left, because a visitor can write whatever they like there.
+- The API trusts the forwarded address only when the signature matches and is less than 5 minutes old.
 - While `CRON_SECRET` is unset or still a published placeholder, nothing is trusted: the API keys every request on the connection address.
+
+| Setup                                                     | `VITNODE_TRUSTED_PROXY_HOPS` |
+| --------------------------------------------------------- | ---------------------------- |
+| Web app exposed directly, no proxy (default)              | `0`                          |
+| One reverse proxy (Nginx, Caddy, a load balancer, Vercel) | `1`                          |
+| A CDN in front of your reverse proxy                      | `2`                          |
+
+<Callout type="warn" title="Count your proxies, not your hopes">
+  A number higher than the proxies you actually run lets visitors choose their own address again. With the default `0`, every server-rendered request behind a proxy shares the proxy's bucket, so the limit is safe but tight.
+</Callout>
 
 <Callout type="warn" title="One secret, two jobs">
   Anyone holding `CRON_SECRET` can trigger cron jobs and pick any IP address the rate limiter will believe. Use a long random value and rotate it in both apps together.
