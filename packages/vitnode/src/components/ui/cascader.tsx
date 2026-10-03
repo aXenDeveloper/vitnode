@@ -41,53 +41,10 @@ const DRILL_VARIANTS = {
   exit: (offset: number) => ({ opacity: 0, x: `${offset * -40}%` }),
 };
 
-const assignRef = <T,>(ref: React.Ref<T> | undefined, value: null | T) => {
-  if (typeof ref === "function") {
-    ref(value);
-  } else if (ref) {
-    ref.current = value;
-  }
-};
-
-const PresentColumn = ({
-  children,
-  className,
-  onHeightChange,
-  ref,
-  ...props
-}: React.ComponentProps<typeof m.div> & {
-  onHeightChange?: (height: number) => void;
-}) => {
+const PresentColumn = (props: React.ComponentProps<typeof m.div>) => {
   const isPresent = useIsPresent();
-  const observesHeight = isPresent && !!onHeightChange;
 
-  return (
-    <m.div
-      className={className}
-      inert={!isPresent}
-      ref={(node: HTMLDivElement | null) => {
-        assignRef(ref, node);
-        if (!node || !observesHeight || typeof ResizeObserver === "undefined") {
-          return;
-        }
-
-        const observer = new ResizeObserver(([entry]) => {
-          onHeightChange(
-            entry?.borderBoxSize[0]?.blockSize ?? node.offsetHeight,
-          );
-        });
-        observer.observe(node);
-
-        return () => {
-          observer.disconnect();
-          assignRef(ref, null);
-        };
-      }}
-      {...props}
-    >
-      {children}
-    </m.div>
-  );
+  return <m.div inert={!isPresent} {...props} />;
 };
 
 interface CascaderProps {
@@ -162,7 +119,6 @@ const useCascader = ({
   const [activePath, setActivePath] = React.useState<string[]>([]);
   const [direction, setDirection] = React.useState<-1 | 1>(1);
   const [query, setQuery] = React.useState("");
-  const [levelHeight, setLevelHeight] = React.useState<null | number>(null);
   const columns = cascaderColumns(options, activePath);
 
   const handleOpenChange = (next: boolean) => {
@@ -234,7 +190,6 @@ const useCascader = ({
     goBack,
     handleOpenChange,
     isDrill,
-    levelHeight,
     open,
     openBranch,
     placeholder,
@@ -244,7 +199,6 @@ const useCascader = ({
     selectedPath,
     selectedValues: new Set(selectedPath.map(option => option.value)),
     separator,
-    setLevelHeight,
     setQuery,
     transition: shouldReduceMotion ? { duration: 0 } : PANEL_TRANSITION,
     value,
@@ -428,12 +382,7 @@ const CascaderDrillView = ({ cascader }: { cascader: CascaderController }) => {
 
   return (
     <MotionFeatures>
-      <m.div
-        animate={{ height: cascader.levelHeight ?? "auto" }}
-        className="relative overflow-hidden"
-        initial={false}
-        transition={transition}
-      >
+      <div className="relative overflow-hidden">
         <AnimatePresence custom={direction} initial={false} mode="popLayout">
           <PresentColumn
             animate="center"
@@ -442,7 +391,6 @@ const CascaderDrillView = ({ cascader }: { cascader: CascaderController }) => {
             exit="exit"
             initial="enter"
             key={activePath.slice(0, level).join("/") || "root"}
-            onHeightChange={cascader.setLevelHeight}
             transition={transition}
             variants={DRILL_VARIANTS}
           >
@@ -468,7 +416,7 @@ const CascaderDrillView = ({ cascader }: { cascader: CascaderController }) => {
             />
           </PresentColumn>
         </AnimatePresence>
-      </m.div>
+      </div>
     </MotionFeatures>
   );
 };
@@ -479,12 +427,7 @@ const CascaderColumnsView = ({
   cascader: CascaderController;
 }) => (
   <MotionFeatures>
-    <m.div
-      animate={{ width: cascader.columns.length * COLUMN_WIDTH }}
-      className="flex max-w-(--available-width) overflow-x-auto overflow-y-hidden"
-      initial={false}
-      transition={cascader.transition}
-    >
+    <div className="flex max-w-(--available-width) overflow-x-auto overflow-y-hidden">
       <AnimatePresence initial={false}>
         {cascader.columns.map((column, level) => (
           <PresentColumn
@@ -500,7 +443,7 @@ const CascaderColumnsView = ({
           </PresentColumn>
         ))}
       </AnimatePresence>
-    </m.div>
+    </div>
   </MotionFeatures>
 );
 
