@@ -1,6 +1,6 @@
 ---
 title: Color
-description: Color picker field with a preset palette and a free-form picker, both storing HSL.
+description: A color picker field with a preset palette, a free-form picker and a text input, storing HSL strings.
 icon: Pipette
 ---
 
@@ -14,25 +14,24 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormColor } from "@vitnode/core/components/form/fields/color";
-```
 
 ```ts
-const formSchema = z.object({
-  color: z.string().default('hsl(240, 80%, 60%)'),
-})
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormColor } from '@vitnode/core/components/form/fields/color'
 ```
 
 ```tsx
+const formSchema = z.object({
+  color: z.string().default('hsl(215, 81%, 52%)'),
+})
+
 <AutoForm
   formSchema={formSchema}
   fields={[
     {
       id: 'color',
-      component: (props) => <AutoFormColor {...props} label="Color" />,
+      component: props => <AutoFormColor {...props} label="Category color" />,
     },
   ]}
 />
@@ -41,69 +40,61 @@ const formSchema = z.object({
   </Tab>
 
   <Tab value="Manual">
-```ts
-import { ColorPicker } from "@vitnode/core/components/ui/color-picker";
-```
 
-The `ColorPicker` is controlled - pass the current `value` (an HSL string) and
-handle `onChange`, which receives the new HSL string:
+```ts
+import { ColorPicker } from '@vitnode/core/components/ui/color-picker'
+```
 
 ```tsx
-const [color, setColor] = useState('hsl(240, 80%, 60%)')
+const [color, setColor] = React.useState('hsl(215, 81%, 52%)')
 
-;<ColorPicker value={color} onChange={setColor} />
+<ColorPicker onChange={setColor} value={color} />
 ```
+
+`ColorPicker` is controlled: `onChange` gets the new color string.
 
   </Tab>
 </Tabs>
 
 ## Preset palette
 
-The popover opens with a grid of preset swatches - eight hues (gray, red,
-orange, yellow, green, teal, blue and purple) in three tones each. Click one and
-the field stores it as an HSL string, for example `hsl(215, 81%, 52%)`. The
-swatches form a single radio group, so arrow keys move between them and the
-selected one shows a check mark.
+<Preview name="color-presets" />
 
-The first swatch is the default, and it carries no color of its own. It renders
-in the current theme's text color and stores an empty value, which is how you
-say "no color" without leaving the palette.
+A default swatch plus seven hues and gray, in up to three tones. The default
+stores `""` and renders in the theme's text color. Every tone keeps 3:1
+contrast on light and dark backgrounds, and a unit test enforces it.
 
-The three tone rows were picked in OKLCH, so they step evenly to the eye rather
-than just on paper, and then written out as HSL - the format the picker itself
-speaks. Every tone keeps at least a 3:1 contrast ratio against both the light
-and the dark theme background, so a color chosen by an author in one theme stays
-readable for a reader in the other. A unit test enforces that, so keep it in
-mind if you fork the palette.
+For the palette alone, use `ColorPresetPicker`. The values live in
+`@vitnode/core/components/ui/color-presets`.
 
-The presets live in `@vitnode/core/components/ui/color-presets`, and the
-standalone swatch grid ships as `ColorPresetPicker` from
-`@vitnode/core/components/ui/color-preset-picker` if you want the palette
-without the free-form picker:
-
-```tsx
+```ts
 import { ColorPresetPicker } from '@vitnode/core/components/ui/color-preset-picker'
-
-;<ColorPresetPicker value={color} onChange={setColor} />
 ```
 
-<Callout type="info" title="Output format">
-  Both the presets and the free-form picker store an HSL string such as
-  `hsl(215, 81%, 52%)`, and the two stay in sync - click a preset and the
-  picker's handle moves onto that color. The text field below takes any CSS
-  color you paste into it, so the stored value is whatever you type there. Hex,
-  `rgb(...)`, `hsl(...)` and `oklch(...)` all show up on the picker; anything
-  else leaves it parked on black until you drag it. The picker is powered by
-  [react-colorful](https://github.com/omgovich/react-colorful) and is
-  lazy-loaded, so its bundle only ships once the popover is opened.
-</Callout>
+```tsx
+<ColorPresetPicker onChange={setColor} value={color} />
+```
 
-<Callout type="info" title="Editor text color">
-  The rich text editor's text color toolbar action uses the same preset palette
-  and nothing else - no free-form picker. Its popover is titled "Text color" and
-  ends with a "Remove color" button, disabled while the selection has no color.
-  The default swatch clears the color the same way.
-</Callout>
+The swatches are one radio group, so arrow keys move between them.
+
+## Output format
+
+Presets and the picker store HSL, like `hsl(215, 81%, 52%)`. The text input
+stores any CSS color you type. Hex, `rgb()`, `hsl()` and `oklch()` move the
+picker; anything else parks it on black.
+
+[react-colorful](https://github.com/omgovich/react-colorful) loads only when the
+popover opens.
+
+## Clearing
+
+`allowRemoveColor` adds a "Remove" button that sets `""`. The
+[preview](#preview) has it on.
+
+## Editor text color
+
+The [editor](/docs/ui/editor)'s text color action uses the same preset palette,
+with no free-form picker. Its popover ends with a "Remove color" button.
 
 ## Props
 
@@ -111,27 +102,19 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
-    label: {
-      description: 'The label displayed above the field.',
-      type: 'string',
-      default: '',
-    },
-    description: {
-      description: 'A short description displayed below the field.',
-      type: 'string',
-      default: '',
-    },
+    label: { description: 'Label above the field.', type: 'string' },
+    description: { description: 'Help text below the field.', type: 'string' },
     placeholder: {
-      description:
-        'Text shown on the trigger button when no color is selected.',
+      description: 'Trigger text when empty, and the text input placeholder.',
       type: 'string',
-      default: '',
+      default: '"Pick a color"',
     },
     allowRemoveColor: {
-      description:
-        "Show a 'Remove' button in the picker to clear the value back to an empty string.",
+      description: 'Show a "Remove" button that clears the value to `""`.',
       type: 'boolean',
       default: 'false',
     },
   }}
 />
+
+Other props, like `disabled`, go to the trigger button.

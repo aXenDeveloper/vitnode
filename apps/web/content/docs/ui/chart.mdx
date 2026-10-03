@@ -1,18 +1,16 @@
 ---
 title: Chart
-description: Bar, area, line and any other Recharts chart, with tooltips, legends and colours that follow your theme.
+description: Bar, area, line and pie charts built with plain Recharts, plus tooltips, legends and colors that follow your theme.
 icon: ChartColumn
 ---
-
-## Preview
 
 <Preview name="chart" />
 
 ## Installation
 
-The chart components wrap [Recharts](https://recharts.github.io/), and you
-build the chart itself with Recharts components. Add it to your app next to
-`@vitnode/core`:
+You write plain [Recharts](https://recharts.github.io/) and borrow only the
+container, tooltip and legend from VitNode. New Recharts chart types work the
+day they ship.
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
@@ -46,12 +44,6 @@ import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 ```
 
 ```tsx
-const chartData = [
-  { month: 'January', desktop: 186, mobile: 80 },
-  { month: 'February', desktop: 305, mobile: 200 },
-  { month: 'March', desktop: 237, mobile: 120 },
-]
-
 const chartConfig = {
   desktop: { label: 'Desktop', color: 'var(--chart-1)' },
   mobile: { label: 'Mobile', color: 'var(--chart-2)' },
@@ -68,99 +60,64 @@ const chartConfig = {
 </ChartContainer>
 ```
 
-We don't hide Recharts behind a wrapper of our own. You write plain Recharts and
-borrow only what you need: the container, the tooltip and the legend. When
-Recharts ships a new chart type, you can use it the same day.
-
-`ChartContainer` sizes the chart responsively and defaults to a 16:9 box
-(`aspect-video`). Pass a `className` such as `aspect-square` or `h-64 w-full`
-to change it.
+`ChartContainer` is responsive and defaults to `aspect-video`. Change the box
+with `className`, for example `aspect-square` or `h-64 w-full`.
 
 ## Chart config
 
-The config is where the chart's words and colours live, kept apart from your
-data. Each key matches a `dataKey` in your data:
+Each config key matches a `dataKey` in your data. The config holds the words
+and colors, so your data stays clean.
 
 ```tsx
-import { Monitor, Smartphone } from 'lucide-react'
-
 const chartConfig = {
-  desktop: {
-    label: 'Desktop',
-    icon: Monitor,
-    color: 'var(--chart-1)',
-  },
+  desktop: { label: 'Desktop', icon: Monitor, color: 'var(--chart-1)' },
   mobile: {
     label: 'Mobile',
-    icon: Smartphone,
-    theme: {
-      light: 'var(--chart-2)',
-      dark: 'var(--chart-4)',
-    },
+    theme: { light: 'var(--chart-2)', dark: 'var(--chart-4)' },
   },
 } satisfies ChartConfig
 ```
 
-- `label` is what the tooltip and legend show, so `desktop` reads as "Desktop".
-- `icon` swaps the colour swatch in the tooltip and legend for an icon.
-- `color` sets one colour for both themes. Use `theme` instead when light and
-  dark need different colours.
+- `label` is what the tooltip and legend show.
+- `icon` replaces the color swatch in the tooltip and legend.
+- `color` works in both themes. Use `theme` when light and dark need different
+  colors.
 
-## Theming
+## Colors
 
-Your theme ships five chart colours, `--chart-1` to `--chart-5`, with values
-for light and dark mode. Use them in the config and the charts follow the
-theme on their own:
-
-```css
-:root {
-  --chart-1: oklch(0.52 0.2 264);
-  --chart-2: oklch(0.52 0.128 155);
-}
-
-.dark {
-  --chart-1: oklch(0.7 0.14 264);
-  --chart-2: oklch(0.758 0.153 155);
-}
-```
-
-For each config key, `ChartContainer` creates a `--color-<key>` variable, scoped
-to that one chart. Use it anywhere Recharts takes a colour:
+For every config key, `ChartContainer` creates a `--color-<key>` variable
+scoped to that chart. Use it anywhere Recharts takes a color, or in Tailwind as
+`fill-(--color-desktop)`.
 
 ```tsx
 <Bar dataKey="desktop" fill="var(--color-desktop)" />
 ```
 
-It works in Tailwind classes too, for example `fill-(--color-desktop)`. Two or
-three colours per chart is plenty. Your readers have eyes, not a rainbow
-decoder ring.
+Pick from `--chart-1` to `--chart-5` in order: blue, orange, gray, green, red.
+They have light and dark values, so charts follow the theme. Two or three per
+chart is plenty. See [Colors](/docs/ui/colors#chart-palette).
 
 ## Area chart
 
 <Preview name="chart-area" />
 
-Stack areas with the same `stackId`, and add a fade with a `linearGradient`
-that uses the chart's colour variables:
+Stack areas with a shared `stackId`. Fade them with a `linearGradient` that
+reads the chart's color variables.
 
 ```tsx
-<AreaChart accessibilityLayer data={chartData} title="Plugin installs">
-  <defs>
-    <linearGradient id="fill-downloads" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="5%" stopColor="var(--color-downloads)" stopOpacity={0.8} />
-      <stop offset="95%" stopColor="var(--color-downloads)" stopOpacity={0.1} />
-    </linearGradient>
-  </defs>
-  <CartesianGrid vertical={false} />
-  <XAxis dataKey="month" tickLine={false} axisLine={false} />
-  <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
-  <Area
-    dataKey="downloads"
-    type="natural"
-    stackId="installs"
-    fill="url(#fill-downloads)"
-    stroke="var(--color-downloads)"
-  />
-</AreaChart>
+<defs>
+  <linearGradient id="fill-downloads" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stopColor="var(--color-downloads)" stopOpacity={0.8} />
+    <stop offset="95%" stopColor="var(--color-downloads)" stopOpacity={0.1} />
+  </linearGradient>
+</defs>
+<Area
+  dataKey="downloads"
+  type="natural"
+  stackId="installs"
+  fill="url(#fill-downloads)"
+  stroke="var(--color-downloads)"
+/>
 ```
 
 ## Line chart
@@ -168,43 +125,53 @@ that uses the chart's colour variables:
 <Preview name="chart-line" />
 
 ```tsx
-<LineChart accessibilityLayer data={chartData} title="API response time">
-  <CartesianGrid vertical={false} />
-  <XAxis dataKey="day" tickLine={false} axisLine={false} />
-  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
-  <Line
-    dataKey="responseTime"
-    type="monotone"
-    stroke="var(--color-responseTime)"
-    strokeWidth={2}
-  />
-</LineChart>
+<Line
+  dataKey="responseTime"
+  type="monotone"
+  stroke="var(--color-responseTime)"
+  strokeWidth={2}
+/>
+```
+
+## Pie chart
+
+<Preview name="chart-pie" />
+
+Each slice is a row, not a series. Put the color on the row with `fill`, and
+pass `nameKey` so the tooltip and legend find the right label.
+
+```tsx
+const chartData = [
+  { category: 'general', threads: 412, fill: 'var(--color-general)' },
+  { category: 'support', threads: 286, fill: 'var(--color-support)' },
+]
+
+<ChartTooltip content={<ChartTooltipContent hideLabel nameKey="category" />} />
+<Pie data={chartData} dataKey="threads" nameKey="category" />
+<ChartLegend content={<ChartLegendContent nameKey="category" />} />
 ```
 
 ## Tooltip
 
-`ChartTooltip` is the Recharts `Tooltip`, and `ChartTooltipContent` gives it a
-look that matches the rest of VitNode. It reads labels, icons and colours from
-your chart config.
+`ChartTooltip` is the Recharts `Tooltip`. `ChartTooltipContent` styles it and
+reads labels, icons and colors from your config. Hover the previews to compare
+`dashed` (bar), `dot` (area) and `line` (line).
 
 ```tsx
 <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
 ```
-
-Hover over the previews above to see all three indicators: `dashed` in the bar
-chart, `dot` in the area chart and `line` in the line chart.
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     indicator: {
-      description: 'The shape next to each value.',
+      description: 'Shape next to each value.',
       type: "'dot' | 'line' | 'dashed'",
       default: "'dot'",
     },
     hideLabel: {
-      description: 'Hides the tooltip heading, for example the month.',
+      description: 'Hides the heading, such as the month.',
       type: 'boolean',
       default: 'false',
     },
@@ -214,19 +181,19 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       default: 'false',
     },
     labelKey: {
-      description: 'The config or data key used for the tooltip heading.',
+      description: 'Config or data key for the heading.',
       type: 'string',
     },
     nameKey: {
-      description: 'The config or data key used for the name of each value.',
+      description: 'Config or data key for each value name.',
       type: 'string',
     },
     labelFormatter: {
-      description: 'Formats the tooltip heading.',
+      description: 'Formats the heading.',
       type: '(label, payload) => ReactNode',
     },
     formatter: {
-      description: 'Renders each row yourself, replacing the default layout.',
+      description: 'Renders each row yourself.',
       type: '(value, name, item, index, payload) => ReactNode',
     },
   }}
@@ -234,34 +201,46 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 ## Legend
 
-`ChartLegend` is the Recharts `Legend`, and `ChartLegendContent` renders the
-labels and colours (or icons) from your config:
+`ChartLegend` is the Recharts `Legend`. `ChartLegendContent` renders labels and
+swatches (or icons) from your config.
 
 ```tsx
 import {
   ChartLegend,
   ChartLegendContent,
 } from '@vitnode/core/components/ui/chart'
+
+;<ChartLegend content={<ChartLegendContent />} />
 ```
 
-```tsx
-<ChartLegend content={<ChartLegendContent />} />
-```
-
-Use `nameKey` to read legend labels from another key. That's handy for pie
-charts, where each slice is a row in your data rather than a series.
+<TypeTable
+  type={{
+    nameKey: {
+      description: 'Config or data key for each label.',
+      type: 'string',
+    },
+    hideIcon: {
+      description: 'Shows the color swatch even when the config has an icon.',
+      type: 'boolean',
+      default: 'false',
+    },
+    verticalAlign: {
+      description: 'Puts the padding on the side facing the chart.',
+      type: "'top' | 'middle' | 'bottom'",
+      default: "'bottom'",
+    },
+  }}
+/>
 
 ## Accessibility
 
-- `accessibilityLayer` adds ARIA attributes and keyboard support. Tab to a
-  chart and use the arrow keys to move between points. The tooltip follows
-  along. It is on by default in Recharts 3, but writing it out makes the
-  intent clear.
+- `accessibilityLayer` adds ARIA attributes and keyboard support: Tab to the
+  chart, then arrow keys move between points. It is on by default in Recharts
+  3, but writing it out shows intent.
 - Give each chart a `title` and a `desc`. Recharts renders them as the SVG's
-  `<title>` and `<desc>`, so screen readers get more than "graphic".
-- Keep a visible heading next to the chart (a `CardTitle` works well), and
-  never rely on colour alone. Labels in the tooltip and legend tell series
-  apart for everyone.
+  `<title>` and `<desc>`.
+- Keep a visible heading next to the chart, like a `CardTitle`. Never rely on
+  color alone: tooltip and legend labels tell series apart.
 
 ## API Reference
 

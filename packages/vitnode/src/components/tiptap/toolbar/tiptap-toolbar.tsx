@@ -17,11 +17,13 @@ import { LinkAction } from "./actions/link-action";
 import { ListAction } from "./actions/list-action";
 import { TableAction } from "./actions/table-action";
 import { TextFormatMore } from "./actions/text-format-more/text-format-more";
+import { useRovingToolbar } from "./use-roving-toolbar";
 import { ToolbarEditorContext } from "./use-toolbar-editor";
 
 export const TipTapToolbar = ({ editor }: { editor: Editor }) => {
   const t = useTranslations("core.global.editor");
   const contextValue = useMemo(() => ({ editor }), [editor]);
+  const { onFocus, onKeyDown, ref: toolbarRef } = useRovingToolbar();
 
   return (
     <ToolbarEditorContext value={contextValue}>
@@ -29,6 +31,9 @@ export const TipTapToolbar = ({ editor }: { editor: Editor }) => {
         <div
           aria-label={t("toolbar")}
           className="bg-card sticky top-0 z-10 flex items-center gap-0.5 overflow-x-auto rounded-t-md border-b p-1 *:data-[slot=separator]:mx-1 *:data-[slot=separator]:h-5 sm:flex-wrap"
+          onFocus={onFocus}
+          onKeyDown={onKeyDown}
+          ref={toolbarRef}
           role="toolbar"
         >
           <HeadingsAction />

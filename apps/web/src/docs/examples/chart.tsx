@@ -40,7 +40,7 @@ const shortMonth = (month: string) => month.slice(0, 3)
 
 export default function ChartExample() {
   return (
-    <Card className="w-full">
+    <Card className="not-prose w-full">
       <CardHeader>
         <CardTitle>Visitors</CardTitle>
         <CardDescription>January - June 2026</CardDescription>

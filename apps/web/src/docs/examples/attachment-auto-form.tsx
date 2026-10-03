@@ -1,4 +1,7 @@
-import type { AutoFormFileValue } from '@vitnode/core/components/form/fields/file'
+import type {
+  AutoFormFileValue,
+  FileUploadOptions,
+} from '@vitnode/core/components/form/fields/file'
 
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormFile } from '@vitnode/core/components/form/fields/file'
@@ -7,13 +10,25 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 const MAX_BYTES = 5 * 1024 * 1024
+const UPLOAD_STEPS = 20
+const STEP_MS = 120
 
 let nextFileId = 1
 
-const fakeUpload = async (file: File): Promise<AutoFormFileValue> => {
-  await new Promise((resolve) => {
-    setTimeout(resolve, 1200)
-  })
+const fakeUpload = async (
+  file: File,
+  { onProgress, signal }: FileUploadOptions,
+): Promise<AutoFormFileValue> => {
+  for (let step = 1; step <= UPLOAD_STEPS; step++) {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(resolve, STEP_MS)
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer)
+        reject(new Error('Upload cancelled'))
+      })
+    })
+    onProgress(step / UPLOAD_STEPS)
+  }
 
   return {
     id: nextFileId++,
@@ -32,6 +47,7 @@ export default function AttachmentAutoFormExample() {
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
           id: 'avatar',

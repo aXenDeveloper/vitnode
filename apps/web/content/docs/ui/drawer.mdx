@@ -1,6 +1,6 @@
 ---
 title: Drawer
-description: A component for displaying content in a sliding panel.
+description: A sliding panel you can swipe away, from the bottom or any other edge. Built for phones, fine on desktop.
 icon: PanelBottom
 ---
 
@@ -20,28 +20,72 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from '@vitnode/core/components/ui/drawer';
+} from '@vitnode/core/components/ui/drawer'
 ```
 
 ```tsx
 <Drawer>
-  <DrawerTrigger>Open</DrawerTrigger>
+  <DrawerTrigger asChild>
+    <Button variant="outline">Report post</Button>
+  </DrawerTrigger>
   <DrawerContent>
     <DrawerHeader>
-      <DrawerTitle>Are you absolutely sure?</DrawerTitle>
-      <DrawerDescription>This action cannot be undone.</DrawerDescription>
+      <DrawerTitle>What's wrong with this post?</DrawerTitle>
+      <DrawerDescription>Moderators see your report.</DrawerDescription>
     </DrawerHeader>
-
     <DrawerFooter>
-      <Button>Submit</Button>
       <DrawerClose asChild>
-        <Button variant="outline">Cancel</Button>
+        <Button variant="ghost">Cancel</Button>
       </DrawerClose>
     </DrawerFooter>
   </DrawerContent>
 </Drawer>
 ```
 
-## Documentation
+`DrawerTrigger` and `DrawerClose` take `asChild` or Base UI's `render` to use
+your own button. Wrap wide content in `mx-auto max-w-sm` so it doesn't stretch
+across a desktop.
 
-[Vaul - Documentation](https://vaul.emilkowal.ski/getting-started)
+## Direction and swipe
+
+<Preview name="drawer-direction" />
+
+`direction` picks the edge: `bottom` (default), `top`, `left` or `right`. Swipe
+toward that edge to close. A quick flick closes it even from a short drag, a
+slow nudge springs back, and the backdrop fades as you drag.
+
+```tsx
+<Drawer direction="right">...</Drawer>
+```
+
+Bottom drawers get a grab handle and stop at 80% of the screen height. With
+reduced motion on, the drawer opens and closes instantly, but dragging still
+follows your finger.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    direction: {
+      description: 'Edge the drawer slides in from and swipes back to.',
+      type: '"bottom" | "top" | "left" | "right"',
+      default: '"bottom"',
+    },
+    'DrawerTrigger.asChild': {
+      description: 'Render the child element as the trigger.',
+      type: 'boolean',
+      default: 'false',
+    },
+    'DrawerClose.asChild': {
+      description: 'Render the child element as the close button.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - Drawer](https://base-ui.com/react/components/drawer)

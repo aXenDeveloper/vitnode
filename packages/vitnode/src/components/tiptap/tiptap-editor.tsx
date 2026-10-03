@@ -4,8 +4,8 @@ import { useTranslations } from "use-intl";
 
 import { useEditorConfig } from "@/components/editor-provider";
 
-import { Spinner } from "../ui/spinner";
 import { TipTapDragHandle } from "./drag-handle";
+import { EditorSkeleton } from "./editor-skeleton";
 import { createTipTapExtensions } from "./extension";
 import { TipTapToolbar } from "./toolbar/tiptap-toolbar";
 
@@ -19,7 +19,23 @@ export type TipTapEditorProps = Omit<
   value?: string;
 };
 
+const textboxAttributesOf = ({
+  describedBy,
+  invalid,
+  labelledBy,
+}: {
+  describedBy?: string;
+  invalid?: React.AriaAttributes["aria-invalid"];
+  labelledBy?: string;
+}): Record<string, string> => ({
+  ...(labelledBy ? { "aria-labelledby": labelledBy } : {}),
+  ...(describedBy ? { "aria-describedby": describedBy } : {}),
+  ...(invalid === true || invalid === "true" ? { "aria-invalid": "true" } : {}),
+});
+
 export const TipTapEditor = ({
+  "aria-describedby": describedBy,
+  "aria-labelledby": labelledBy,
   className,
   disableScroll,
   placeholder,
@@ -41,6 +57,11 @@ export const TipTapEditor = ({
           "max-w-full min-h-40 py-4 ps-10 pe-4 text-base focus:outline-none md:text-sm",
         role: "textbox",
         "aria-multiline": "true",
+        ...textboxAttributesOf({
+          describedBy,
+          invalid: props["aria-invalid"],
+          labelledBy,
+        }),
       },
     },
     content: value,
@@ -50,18 +71,13 @@ export const TipTapEditor = ({
     },
   });
 
-  if (!editor)
-    return (
-      <div className="flex items-center justify-center">
-        <Spinner size="xl" />
-      </div>
-    );
+  if (!editor) return <EditorSkeleton className={className} />;
 
   return (
     <div
       className={cn(
-        "bg-card focus-within:border-ring focus-within:ring-ring/50 relative w-full rounded-md border shadow-xs transition-[border-color,box-shadow] duration-150 focus-within:ring-3",
-        { "max-h-80 overflow-hidden overflow-y-scroll": !disableScroll },
+        "bg-card focus-within:border-ring focus-within:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 ease-fluid relative w-full rounded-md border shadow-xs transition-[border-color,box-shadow] duration-150 focus-within:ring-3 aria-invalid:ring-3 motion-reduce:transition-none",
+        { "max-h-80 overflow-hidden overflow-y-auto": !disableScroll },
         className,
       )}
       onBlur={onBlur}

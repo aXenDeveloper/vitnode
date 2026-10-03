@@ -1,6 +1,6 @@
 ---
 title: Toggle
-description: A toggle component for switching between two states.
+description: A two-state button that stays pressed, for on/off options like bold text, pinning a topic or watching a thread.
 icon: Bold
 ---
 
@@ -11,16 +11,111 @@ icon: Bold
 ## Usage
 
 ```ts
-import { Bold } from 'lucide-react';
-
-import { Toggle } from '@vitnode/core/components/ui/toggle';
+import { Toggle } from '@vitnode/core/components/ui/toggle'
 ```
 
 ```tsx
-<Toggle aria-label="Toggle italic">
-  <Bold className="size-4" />
+<Toggle aria-label="Bold">
+  <BoldIcon />
 </Toggle>
 ```
+
+A toggle is a button with memory. Screen readers hear it as pressed or not
+pressed, thanks to `aria-pressed`.
+
+## Controlled
+
+```tsx
+<Toggle onPressedChange={setIsWatching} pressed={isWatching}>
+  Watch thread
+</Toggle>
+```
+
+Pair `pressed` with `onPressedChange`, or use `defaultPressed` when you don't
+need the state.
+
+## Outline
+
+<Preview name="toggle-outline" />
+
+The `outline` variant adds a border, so the toggle reads as a control even when
+it's off.
+
+```tsx
+<Toggle aria-label="Pin topic" variant="outline">
+  <PinIcon />
+</Toggle>
+```
+
+## Sizes
+
+<Preview name="toggle-sizes" />
+
+## With text
+
+<Preview name="toggle-text" />
+
+Put `data-icon="inline-start"` (or `inline-end`) on the icon to tighten the
+padding on that side.
+
+```tsx
+<Toggle variant="outline">
+  <BookmarkIcon data-icon="inline-start" />
+  Bookmark
+</Toggle>
+```
+
+## Disabled
+
+<Preview name="toggle-disabled" />
+
+```tsx
+<Toggle disabled>Lock topic</Toggle>
+```
+
+## Accessibility
+
+- Icon-only toggles need an `aria-label`.
+- Keep the label the same in both states. "Bold" pressed says it all;
+  swapping it to "Not bold" confuses screen readers.
+- Need several related toggles? Use [Toggle Group](/docs/ui/toggle-group).
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'Visual style.',
+      type: 'default | outline',
+      default: 'default',
+    },
+    size: {
+      description: 'Height and padding.',
+      type: 'sm | default | lg',
+      default: 'default',
+    },
+    pressed: {
+      description: 'Controlled pressed state.',
+      type: 'boolean',
+    },
+    defaultPressed: {
+      description: 'Initial pressed state when uncontrolled.',
+      type: 'boolean',
+      default: 'false',
+    },
+    onPressedChange: {
+      description: 'Called when the pressed state changes.',
+      type: '(pressed: boolean, eventDetails) => void',
+    },
+    disabled: {
+      description: 'Blocks interaction.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
 
 ## API Reference
 

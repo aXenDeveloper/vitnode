@@ -9,6 +9,10 @@ import {
   type BlockCommand,
   matchBlockCommands,
 } from "../block-commands";
+import {
+  SUGGESTION_POPUP_CLASS,
+  useActiveDescendant,
+} from "../suggestion-popup";
 
 export interface SlashCommandListRef {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
@@ -19,17 +23,21 @@ export const SlashCommandList = ({
   query,
   command,
   ref,
+  textbox,
 }: {
   command: (item: BlockCommand) => void;
   commands: BlockCommand[];
   query: string;
   ref?: React.Ref<SlashCommandListRef>;
+  textbox?: HTMLElement;
 }) => {
   const t = useTranslations("core.global.editor.blocks");
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [renderedQuery, setRenderedQuery] = React.useState(query);
   const listRef = React.useRef<HTMLDivElement>(null);
   const groupId = React.useId();
+  const listId = `${groupId}-list`;
+  const optionIdOf = (item: BlockCommand) => `${groupId}-option-${item.id}`;
   const items = matchBlockCommands({
     commands,
     query,
@@ -68,6 +76,13 @@ export const SlashCommandList = ({
     },
   }));
 
+  const activeItem = items.at(activeIndex);
+  useActiveDescendant({
+    activeId: activeItem ? optionIdOf(activeItem) : undefined,
+    listId,
+    textbox,
+  });
+
   React.useEffect(() => {
     listRef.current
       ?.querySelector("[data-active='true']")
@@ -76,7 +91,13 @@ export const SlashCommandList = ({
 
   if (items.length === 0) {
     return (
-      <div className="bg-popover text-muted-foreground ring-foreground/10 w-72 rounded-lg p-3 text-sm shadow-md ring-1">
+      <div
+        className={cn(
+          SUGGESTION_POPUP_CLASS,
+          "text-muted-foreground p-3 text-sm",
+        )}
+        role="status"
+      >
         {t("empty")}
       </div>
     );
@@ -85,7 +106,11 @@ export const SlashCommandList = ({
   return (
     <div
       aria-label={t("label")}
-      className="bg-popover text-popover-foreground ring-foreground/10 animate-in fade-in-0 zoom-in-95 flex max-h-80 w-72 origin-top-left flex-col gap-1 overflow-y-auto rounded-lg p-1 shadow-md ring-1 duration-100 motion-reduce:animate-none"
+      className={cn(
+        SUGGESTION_POPUP_CLASS,
+        "flex max-h-80 flex-col gap-1 overflow-y-auto p-1",
+      )}
+      id={listId}
       ref={listRef}
       role="listbox"
     >
@@ -118,6 +143,7 @@ export const SlashCommandList = ({
                     isActive && "bg-accent text-accent-foreground",
                   )}
                   data-active={isActive}
+                  id={optionIdOf(item)}
                   key={item.id}
                   onClick={() => command(item)}
                   onMouseEnter={() => setActiveIndex(index)}

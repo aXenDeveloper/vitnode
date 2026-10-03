@@ -18,13 +18,12 @@ import { Kbd, KbdGroup } from '@vitnode/core/components/ui/kbd'
 <Kbd>Esc</Kbd>
 ```
 
-`Kbd` renders a real `<kbd>` element, so browsers, search engines and assistive
-tech all know it is a key, not a tiny gray box that happens to look like one.
+`Kbd` renders a real `<kbd>`, so browsers and assistive tech know it's a key.
 
 ## Shortcuts
 
-Wrap the keys of a combination in `KbdGroup`. It lines them up with a small gap
-and stays a `<kbd>` too, which is exactly how HTML describes a key combo.
+`KbdGroup` wraps a combination. It's a `<kbd>` too, which is how HTML
+describes a key combo.
 
 ```tsx
 <KbdGroup>
@@ -33,8 +32,8 @@ and stays a `<kbd>` too, which is exactly how HTML describes a key combo.
 </KbdGroup>
 ```
 
-Prefer a visible plus sign? Drop it between the keys and hide it from screen
-readers, since they already hear two keys:
+Want a visible plus? Hide it from screen readers, since they already hear two
+keys:
 
 ```tsx
 <KbdGroup>
@@ -44,10 +43,12 @@ readers, since they already hear two keys:
 </KbdGroup>
 ```
 
-## Inside a button
+## In buttons, tooltips and inputs
 
-Hint at the shortcut right on the action. `Kbd` sizes itself to the text, so it
-fits small buttons without extra classes.
+`Kbd` sizes itself to fit small buttons. Inside a [Tooltip](/docs/ui/tooltip)
+it switches to a translucent style that stays readable in both themes. Next to
+an [Input Group](/docs/ui/input-group) addon, it makes the classic "press ⌘ K
+to search" field. No props needed for any of them.
 
 ```tsx
 <Button size="sm" variant="outline">
@@ -56,56 +57,11 @@ fits small buttons without extra classes.
 </Button>
 ```
 
-## Inside a tooltip
-
-In a [Tooltip](/docs/ui/tooltip) the keys switch to a translucent style that
-stays readable on the dark tooltip background, in both themes. No props needed.
-
-```tsx
-<TooltipWithContent
-  text={
-    <>
-      Save changes
-      <KbdGroup>
-        <Kbd>Ctrl</Kbd>
-        <Kbd>S</Kbd>
-      </KbdGroup>
-    </>
-  }
->
-  <Button aria-label="Save" size="icon-sm" variant="outline">
-    <SaveIcon />
-  </Button>
-</TooltipWithContent>
-```
-
-## Inside an input
-
-Pair it with an [Input Group](/docs/ui/input-group) addon for the classic
-"press ⌘ K to search" field.
-
-```tsx
-<InputGroup>
-  <InputGroupInput aria-label="Search" placeholder="Search..." />
-  <InputGroupAddon>
-    <SearchIcon />
-  </InputGroupAddon>
-  <InputGroupAddon align="inline-end">
-    <KbdGroup>
-      <Kbd>Ctrl</Kbd>
-      <Kbd>K</Kbd>
-    </KbdGroup>
-  </InputGroupAddon>
-</InputGroup>
-```
-
 ## ⌘ on Mac, Ctrl everywhere else
 
-Showing ⌘ to a Windows user is a small betrayal. Detect the platform on the
-client, but render the same thing on the server and during hydration, or React
-will complain about mismatched HTML. `useSyncExternalStore` does exactly that.
-React uses its third argument for the server render and hydration, then switches
-to the real value.
+Detect the platform on the client, but render the same thing on the server and
+during hydration. `useSyncExternalStore` does both: its third argument is used
+for the server and hydration, then React switches to the real value.
 
 ```tsx
 const subscribeToNothing = () => () => {}
@@ -120,14 +76,11 @@ const useIsApple = () =>
 const ModifierKey = () => (useIsApple() ? <Kbd>⌘</Kbd> : <Kbd>Ctrl</Kbd>)
 ```
 
-No `useEffect` plus `setState` dance required.
-
 ## Accessibility
 
-- Keep the `<kbd>` element. It tells assistive tech "this is a key", which a
-  styled `<span>` never will.
-- Do not rely on symbols alone. Screen readers announce ⌘ or ⇧ inconsistently,
-  if at all, so pair each symbol with a readable name:
+- Keep the `<kbd>` element. A styled `<span>` doesn't say "this is a key".
+- Screen readers announce ⌘ and ⇧ inconsistently. Pair each symbol with
+  visually hidden text, since `aria-label` on a `<kbd>` isn't reliably read:
 
   ```tsx
   <Kbd title="Command">
@@ -136,17 +89,13 @@ No `useEffect` plus `setState` dance required.
   </Kbd>
   ```
 
-  An `aria-label` on a plain `<kbd>` is not reliably read out, so visually
-  hidden text is the safer bet. `title` adds a hover hint for sighted users.
-- `Kbd` has `pointer-events-none` and `select-none`. It is a hint, not a
-  control. If pressing the key should do something, listen for the key itself
-  (and put the action on a real button).
-- Do not make a shortcut the only way to do something. Mouse, touch and
-  keyboard users should all get there.
+- `Kbd` is a hint, not a control (`pointer-events-none`, `select-none`). Put
+  the action on a real button and listen for the key itself.
+- Never make a shortcut the only way to do something.
 
 ## Props
 
-Both components accept every prop of the native element they render.
+Both components accept every native `<kbd>` prop.
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
@@ -157,9 +106,8 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       type: "React.ComponentProps<'kbd'>",
     },
     KbdGroup: {
-      description:
-        'A key combination. Renders `<kbd data-slot="kbd-group">` around the keys.',
-      type: "React.ComponentProps<'div'>",
+      description: 'A key combination. Renders `<kbd data-slot="kbd-group">`.',
+      type: "React.ComponentProps<'kbd'>",
     },
   }}
 />

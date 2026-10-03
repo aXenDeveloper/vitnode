@@ -21,11 +21,9 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { z } from 'zod'
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormCascader } from '@vitnode/core/components/form/fields/cascader'
-```
 
-```ts
 const formSchema = z.object({
-  office: z.string('Pick an office to continue'),
+  office: z.string({ error: 'Pick an office to continue' }),
   backupOffice: z.string().optional(),
 })
 ```
@@ -36,7 +34,7 @@ const formSchema = z.object({
   fields={[
     {
       id: 'office',
-      component: props => (
+      component: (props) => (
         <AutoFormCascader
           {...props}
           label="Office"
@@ -49,21 +47,24 @@ const formSchema = z.object({
 />
 ```
 
-The form stores the **value of the picked leaf** (`"krakow"`), not the whole
-path. Optional fields get a clear button automatically.
+The form stores the **picked leaf's value** (`"krakow"`), not the path. Optional
+fields get a clear button automatically.
 
   </Tab>
 
   <Tab value="Manual">
 
-```ts
-import { Cascader } from '@vitnode/core/components/ui/cascader'
-```
-
 ```tsx
+import { Cascader } from '@vitnode/core/components/ui/cascader'
+
 const [office, setOffice] = React.useState<string | null>(null)
 
-<Cascader onValueChange={setOffice} options={locations} value={office} />
+<Cascader
+  aria-labelledby="office-label"
+  onValueChange={setOffice}
+  options={locations}
+  value={office}
+/>
 ```
 
   </Tab>
@@ -71,8 +72,8 @@ const [office, setOffice] = React.useState<string | null>(null)
 
 ## Options
 
-Options are a plain tree. Anything with `children` is a branch that opens the
-next column; anything without is a leaf you can pick.
+A plain tree. An option with `children` is a branch that opens the next level;
+one without is a pickable leaf.
 
 ```ts
 import type { CascaderOption } from '@vitnode/core/components/ui/cascader'
@@ -96,57 +97,50 @@ const locations: CascaderOption[] = [
 ]
 ```
 
-`onValueChange` hands you the full path too, for when you need "Europe / Poland"
-as well as the city:
+Need "Europe / Poland" too? `onValueChange` also gets the full path:
 
 ```tsx
 <Cascader
-  onValueChange={(value, path) => {
-    console.log(value, path.map(option => option.label))
-  }}
+  onValueChange={(value, path) => setTrail(path.map((option) => option.label))}
   options={locations}
 />
 ```
 
 ## Search
 
-`searchable` adds a search box that looks through every leaf at once. Type
-"krak" and "Europe / Poland / Kraków" is one click away. Accents don't matter,
-so "sao" finds São Paulo.
+`searchable` adds a box that searches every leaf at once. Type "krak" in the
+preview and "Europe / Poland / Kraków" is one click away. Accents don't matter:
+"sao" finds São Paulo.
 
-## Drill down or columns
+## Columns
 
-By default, clicking a branch **replaces the list** with its children. The
-next level slides in, and a back button at the top takes you up again. The popup
-stays the width of the field, wherever it sits.
+<Preview name="cascader-columns" />
 
-Prefer to see every level at once? `layout="columns"` opens each level in a new
-column beside the last one, and the popup widens to make room:
+By default a branch **replaces the list** with its children, with a back button
+on top. The popup stays the field's width.
+
+`layout="columns"` shows each level in a new column, and the popup widens to
+fit. Add `expandTrigger="hover"` to open branches on hover. Phones always drill
+down: there's no room for columns at 375px.
 
 ```tsx
-<Cascader layout="columns" options={locations} />
+<Cascader expandTrigger="hover" layout="columns" options={locations} />
 ```
 
-In the columns layout you can also open branches on hover with
-`expandTrigger="hover"`. On phones the cascader always drills down, because there's
-no room for columns on a 375px screen.
-
-## Transitions
-
-Each level slides in from the direction you moved, forward when you go deeper
-and back when you return. In the columns layout, the popup's width animates as
-columns open. With reduced motion turned on, everything switches instantly.
+Levels slide in from the direction you moved. The popup's height (drill) or
+width (columns) animates with them, mirrored in RTL. Reduced motion switches
+everything instantly.
 
 ## Accessibility
 
-- Every level is a listbox you can drive with the keyboard: arrow up and down
-  to move, arrow right (left in RTL) or <kbd>Enter</kbd> to open a branch,
-  arrow left to go back, <kbd>Home</kbd> / <kbd>End</kbd> to jump, and
-  <kbd>Escape</kbd> to close.
-- Branches tell screen readers whether they're open, and the picked path is
-  marked as selected.
-- Give the cascader a label. `AutoFormCascader` does it for you, and a
-  standalone `Cascader` needs `aria-labelledby`.
+- Each level is a keyboard listbox: <kbd>↑</kbd> <kbd>↓</kbd> move,
+  <kbd>→</kbd> (<kbd>←</kbd> in RTL) or <kbd>Enter</kbd> opens a branch,
+  <kbd>←</kbd> goes back, <kbd>Home</kbd> / <kbd>End</kbd> jump,
+  <kbd>Escape</kbd> closes.
+- Branches announce whether they're open, and the picked path is marked
+  selected.
+- Label it. `AutoFormCascader` does it for you; a standalone `Cascader` needs
+  `aria-labelledby`.
 
 ## Props
 
@@ -160,11 +154,11 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       required: true,
     },
     value: {
-      description: 'The picked leaf value (controlled).',
+      description: 'Picked leaf value (controlled).',
       type: 'string | null',
     },
     defaultValue: {
-      description: 'The starting value when uncontrolled.',
+      description: 'Starting value when uncontrolled.',
       type: 'string | null',
       default: 'null',
     },
@@ -173,35 +167,40 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       type: '(value: string | null, path: CascaderOption[]) => void',
     },
     searchable: {
-      description: 'Adds a search box that finds leaves across the whole tree.',
+      description: 'Adds a search box across every leaf.',
       type: 'boolean',
       default: 'false',
     },
     layout: {
-      description:
-        'Drill into one level at a time, or show every level side by side. Phones always drill down.',
+      description: 'One level at a time, or every level side by side.',
       type: '"drill" | "columns"',
       default: '"drill"',
     },
     expandTrigger: {
-      description:
-        'In the columns layout, open branches on click or as soon as the pointer is over them.',
+      description: 'Columns layout: open branches on click or on hover.',
       type: '"click" | "hover"',
       default: '"click"',
     },
     showClear: {
-      description: 'Shows a button that clears the value.',
+      description:
+        'Shows a clear button. AutoForm turns it on for optional fields.',
       type: 'boolean',
       default: 'false',
     },
     separator: {
-      description: 'Placed between labels in the trigger and in search results.',
+      description: 'Between labels in the trigger and search results.',
       type: 'string',
       default: '" / "',
     },
     placeholder: {
       description: 'Shown while nothing is picked.',
       type: 'string',
+      default: '"Select an option"',
+    },
+    disabled: {
+      description: 'Disables the trigger.',
+      type: 'boolean',
+      default: 'false',
     },
   }}
 />

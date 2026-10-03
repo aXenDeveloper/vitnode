@@ -27,7 +27,9 @@ export const ContentConfirmAction = ({
   return (
     <form action={formAction} onSubmit={event => event.stopPropagation()}>
       <AlertDialogFooter>
-        <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+        <AlertDialogCancel disabled={isLoading}>
+          {t("cancel")}
+        </AlertDialogCancel>
         <Button isLoading={isLoading} type="submit" variant={submitVariant}>
           {textSubmit ?? t("confirm")}
         </Button>

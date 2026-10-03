@@ -1,6 +1,6 @@
 ---
 title: Tooltip
-description: A small hint that shows extra information on hover or focus.
+description: A small hint on hover or focus, with a half-second delay, warm-up between neighbours and a gliding group mode for toolbars.
 icon: MessageCircleMore
 ---
 
@@ -11,52 +11,93 @@ icon: MessageCircleMore
 ## Usage
 
 ```ts
-import { Button } from "@vitnode/core/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@vitnode/core/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@vitnode/core/components/ui/tooltip'
 ```
 
 ```tsx
 <Tooltip>
-  <TooltipTrigger render={<Button variant="outline">Hover</Button>} />
-  <TooltipContent>
-    <p>Add to library</p>
-  </TooltipContent>
+  <TooltipTrigger
+    render={
+      <Button aria-label="Bookmark thread" size="icon" variant="outline">
+        <BookmarkIcon />
+      </Button>
+    }
+  />
+  <TooltipContent>Bookmark thread</TooltipContent>
 </Tooltip>
 ```
 
-### Shorter tooltips
+A tooltip is a hint, not a label. Icon buttons still need their own
+`aria-label`.
 
-If you don't need custom props on `TooltipTrigger` or `TooltipContent`, `TooltipWithContent` does the same job in one component.
+## Shorter syntax
+
+`TooltipWithContent` does the same in one component when you don't need props
+on the trigger.
 
 ```ts
-import { Button } from "@vitnode/core/components/ui/button";
-import { TooltipWithContent } from "@vitnode/core/components/ui/tooltip";
-import { PlayIcon } from "lucide-react";
+import { TooltipWithContent } from '@vitnode/core/components/ui/tooltip'
 ```
 
 ```tsx
-<TooltipWithContent text="Now">
-  <Button variant="ghost" size="icon" aria-label="Now">
-    <PlayIcon />
+<TooltipWithContent text="Reply">
+  <Button aria-label="Reply" size="icon" variant="ghost">
+    <MessageSquareIcon />
   </Button>
 </TooltipWithContent>
+```
+
+## Delay and warm-up
+
+<Preview name="tooltip-delay" />
+
+Tooltips wait 500ms, so they don't flash as the cursor passes by. Once one is
+open, its neighbours open instantly. Hover the left row, then slide along it.
+
+VitNode already mounts a `TooltipProvider` for the whole app. Wrap a section in
+another one to change its timing:
+
+```tsx
+<TooltipProvider delay={0}>
+  <Toolbar />
+</TooltipProvider>
+```
+
+## Side and shortcuts
+
+<Preview name="tooltip-side" />
+
+`TooltipContent` takes `side` (default `top`), `align` and `sideOffset`
+(default `8`). Drop a `Kbd` inside to show a shortcut. It restyles itself for
+the dark tooltip.
+
+```tsx
+<TooltipContent side="right">
+  Save draft
+  <KbdGroup>
+    <Kbd>⌘</Kbd>
+    <Kbd>S</Kbd>
+  </KbdGroup>
+</TooltipContent>
 ```
 
 ## Group
 
 <Preview name="tooltip-group" />
 
-Got a toolbar full of icon buttons? Wrap it in `TooltipGroup` and use
-`TooltipGroupTrigger` for each button. They all share one tooltip, so moving
-from button to button glides it over instead of closing and opening it again
-every time. It resizes to fit the new text, and the text slides in from the
-direction you came from.
+In a toolbar, wrap the buttons in `TooltipGroup` and use `TooltipGroupTrigger`.
+They share one tooltip that glides from button to button, resizes to fit and
+slides the text in from the direction you came.
 
 ```ts
 import {
   TooltipGroup,
   TooltipGroupTrigger,
-} from "@vitnode/core/components/ui/tooltip";
+} from '@vitnode/core/components/ui/tooltip'
 ```
 
 ```tsx
@@ -68,22 +109,43 @@ import {
     >
       <BoldIcon />
     </TooltipGroupTrigger>
-    <TooltipGroupTrigger
-      content="Italic"
-      render={<Button aria-label="Italic" size="icon-sm" variant="ghost" />}
-    >
-      <ItalicIcon />
-    </TooltipGroupTrigger>
   </div>
 </TooltipGroup>
 ```
 
-`TooltipGroup` takes `side`, `sideOffset` and `align`, just like
-`TooltipContent`. With reduced motion turned on, the tooltip jumps straight to
-the next button instead of gliding.
+`TooltipGroup` takes `side`, `sideOffset` and `align`. A `TooltipWithContent`
+without extra props joins the group on its own. With reduced motion on, the
+tooltip jumps instead of gliding.
 
-A tooltip is a hint, not a label, so icon buttons still need their own
-`aria-label`, as above.
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    'TooltipProvider.delay': {
+      description: 'Wait before opening, in milliseconds.',
+      type: 'number',
+      default: '500',
+    },
+    'TooltipProvider.timeout': {
+      description:
+        'Hover another trigger within this many ms of a close and it skips the delay.',
+      type: 'number',
+      default: '400',
+    },
+    'TooltipWithContent.text': {
+      description: 'Tooltip content.',
+      type: 'ReactNode',
+      required: true,
+    },
+    'TooltipGroupTrigger.content': {
+      description: 'Tooltip content for this trigger.',
+      type: 'ReactNode',
+      required: true,
+    },
+  }}
+/>
 
 ## API Reference
 

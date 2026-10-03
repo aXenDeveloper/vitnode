@@ -328,14 +328,14 @@ describe("localization validation", () => {
     ).toThrow(/admin.list.orderableFields names the localized field "title"/);
   });
 
-  it("still refuses to search a localized field from the admin list", () => {
-    expect(() =>
+  it("lets the admin list search a localized field it names", () => {
+    expect(
       localized({
         admin: {
           list: { searchableFields: ["title"] },
         },
-      }),
-    ).toThrow(/admin.list.searchableFields names the localized field "title"/);
+      }).admin.list.searchableFields,
+    ).toEqual(["title"]);
   });
 
   it("rejects a localized field named in an index", () => {

@@ -10,7 +10,7 @@ icon: KeyRound
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
@@ -21,16 +21,11 @@ import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormInputOTP } from '@vitnode/core/components/form/fields/input-otp'
 ```
 
-```ts
-const formSchema = z.object({
-  code: z
-    .string()
-    .length(6, 'Enter all 6 digits')
-    .regex(/^\d+$/, 'Only digits, please'),
-})
-```
-
 ```tsx
+const formSchema = z.object({
+  code: z.string().length(6, 'Enter all 6 digits').regex(/^\d+$/, 'Only digits, please'),
+})
+
 <AutoForm
   formSchema={formSchema}
   fields={[
@@ -39,8 +34,8 @@ const formSchema = z.object({
       component: props => (
         <AutoFormInputOTP
           {...props}
-          label="Verify your account"
           description="We sent a 6-digit code to your email."
+          label="Verify your account"
         />
       ),
     },
@@ -48,9 +43,7 @@ const formSchema = z.object({
 />
 ```
 
-The schema does the setup for you. `.length(6)` decides how many slots there
-are, and `.regex()` becomes the input's `pattern`, so letters never even make it
-into a digits-only code.
+`.length(6)` sets the slot count and `.regex()` becomes the `pattern`.
 
   </Tab>
 
@@ -84,40 +77,46 @@ import {
   </Tab>
 </Tabs>
 
-Each new character rises into its slot with a quick fade and scale. Values that
-are already there when the input mounts (like a code restored from state) show
-up instantly, and with reduced motion turned on nothing moves at all.
+One real `<input>` sits underneath, so paste, password managers and SMS
+autofill just work.
 
-Under the hood there is a single real `<input>`, so pasting a whole code,
-password managers and the "fill code from SMS" suggestion on phones
-(`autocomplete="one-time-code"`) all work out of the box.
+## Groups and patterns
 
-## Groups
+<Preview name="input-otp-groups" />
 
-`AutoFormInputOTP` builds the slots for you. Codes of 6 or more characters with
-an even length are split in half with a separator (`123-456`). Anything else
-stays in one group. Pass `groups` to pick your own split:
+`AutoFormInputOTP` halves even codes of 6+ characters and keeps the rest in
+one group. Pass `groups` to choose.
 
 ```tsx
-<AutoFormInputOTP {...props} groups={[4]} label="PIN" />
 <AutoFormInputOTP {...props} groups={[2, 2, 2]} label="Backup code" />
 ```
 
-## Submit when complete
+Without a schema, set `pattern`. Common regexes are re-exported:
 
-`onComplete` fires once every slot is filled, so you can verify the code without
-making people hunt for a button. It works on both `AutoFormInputOTP`
-and `InputOTP`.
+```ts
+import { REGEXP_ONLY_DIGITS } from '@vitnode/core/components/ui/input-otp'
+```
 
 ```tsx
-<AutoFormInputOTP {...props} onComplete={code => verify(code)} />
+<InputOTP maxLength={4} pattern={REGEXP_ONLY_DIGITS}>
+  …
+</InputOTP>
+```
+
+`REGEXP_ONLY_CHARS` and `REGEXP_ONLY_DIGITS_AND_CHARS` too.
+
+## Submit when complete
+
+`onComplete` fires when every slot is filled, on both components.
+
+```tsx
+<AutoFormInputOTP {...props} onComplete={(code) => verify(code)} />
 ```
 
 ## Wrong code
 
-A wrong code usually comes back from your API, not from the schema. Set it on
-the field with `setFormFieldError` and every slot turns red, with the message
-underneath:
+A wrong code comes from your API. `setFormFieldError` turns every slot red
+and shows the message. Try it in the [preview](#preview).
 
 ```ts
 import { setFormFieldError } from '@vitnode/core/components/ui/form'
@@ -128,71 +127,42 @@ import { setFormFieldError } from '@vitnode/core/components/ui/form'
   formSchema={formSchema}
   onSubmit={async (values, form) => {
     const res = await verifyCode(values.code)
-
-    if (!res.ok) {
-      setFormFieldError(form, 'code', "That code doesn't match.")
-    }
+    if (!res.ok) setFormFieldError(form, 'code', "That code doesn't match.")
   }}
   fields={[...]}
 />
 ```
 
-Using `InputOTP` on its own? Set `aria-invalid` on it and link your message
-with `aria-describedby`. Red slots mean nothing to a screen reader.
-
-## Only digits (manual)
-
-Without a schema, restrict what can be typed with `pattern`. The common patterns
-are re-exported, so you don't need to install `input-otp` yourself:
-
-```ts
-import {
-  REGEXP_ONLY_CHARS,
-  REGEXP_ONLY_DIGITS,
-  REGEXP_ONLY_DIGITS_AND_CHARS,
-} from '@vitnode/core/components/ui/input-otp'
-```
-
-```tsx
-<InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS}>
-  ...
-</InputOTP>
-```
-
 ## Accessibility
 
-- `AutoFormInputOTP` wires the label, description and error message to the
-  input for you.
-- Using `InputOTP` directly? Pass it an `id`, point a `<Label htmlFor>` at it
-  and describe where the code was sent with `aria-describedby`.
-- Slots and separators are hidden from screen readers. The real input already
-  announces the value, so nobody hears every digit twice.
+- `AutoFormInputOTP` wires the label, description and error to the input.
+- With `InputOTP` alone, add an `id` and a `<Label htmlFor>`. Link help text
+  and errors with `aria-describedby`, and set `aria-invalid` on errors.
+- Slots are hidden from screen readers, so no digit is read twice.
+- Characters animate in, except with reduced motion.
 
 ## Props
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-`AutoFormInputOTP` accepts every `InputOTP` prop (except `value` and
-`children`, which the form owns) plus:
+`AutoFormInputOTP` takes every `InputOTP` prop except `value` and `children`,
+plus:
 
 <TypeTable
   type={{
-    label: {
-      description: 'The label shown above the slots.',
-      type: 'ReactNode',
-    },
+    label: { description: 'Label above the slots.', type: 'ReactNode' },
     description: {
-      description: 'Helper text shown below the slots.',
+      description: 'Help text below the slots.',
       type: 'ReactNode',
     },
     groups: {
       description:
-        'How many slots each group has. Defaults to two halves for even lengths of 6+, otherwise one group.',
+        'Slots per group. Default: two halves for even lengths of 6+, else one group.',
       type: 'number[]',
     },
     maxLength: {
       description:
-        'How many characters the code has. Defaults to the schema `.length()` / `.max()`, then 6.',
+        'Code length. Default: the schema `.length()` / `.max()`, then 6.',
       type: 'number',
     },
     onChange: {
@@ -205,13 +175,10 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
     },
     pattern: {
       description:
-        'A regular expression the value must match. Defaults to the schema `.regex()`.',
+        'Regex the value must match. Default: the schema `.regex()`.',
       type: 'string',
     },
-    disabled: {
-      description: 'Disables the input.',
-      type: 'boolean',
-    },
+    disabled: { description: 'Disables the input.', type: 'boolean' },
   }}
 />
 

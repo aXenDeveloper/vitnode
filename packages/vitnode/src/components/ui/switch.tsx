@@ -6,7 +6,7 @@ import React from "react";
 
 import { MotionFeatures } from "@/components/motion-features";
 
-const THUMB_SPRING = { type: "spring", stiffness: 300, damping: 25 } as const;
+const THUMB_SPRING = { type: "spring", duration: 0.3, bounce: 0 } as const;
 
 function Switch({
   className,
@@ -21,7 +21,7 @@ function Switch({
     <MotionFeatures withLayoutAndDrag>
       <SwitchPrimitive.Root
         className={cn(
-          "peer group/switch focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 relative inline-flex shrink-0 items-center justify-start rounded-full border border-transparent shadow-xs transition-[color,background-color,box-shadow] outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 aria-invalid:ring-3 data-checked:justify-end data-disabled:cursor-not-allowed data-disabled:opacity-50 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px]",
+          "peer group/switch focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 relative inline-flex shrink-0 items-center justify-start rounded-full border border-transparent shadow-xs transition-[color,background-color,box-shadow] outline-none after:absolute after:-inset-x-3 after:-inset-y-3.5 focus-visible:ring-3 aria-invalid:ring-3 data-checked:justify-end data-disabled:cursor-not-allowed data-disabled:opacity-50 data-[size=default]:h-4.5 data-[size=default]:w-8 data-[size=sm]:h-3.5 data-[size=sm]:w-6",
           className,
         )}
         data-size={size}

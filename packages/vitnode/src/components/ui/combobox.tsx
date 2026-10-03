@@ -28,12 +28,15 @@ function ComboboxTrigger({
 }: ComboboxPrimitive.Trigger.Props) {
   return (
     <ComboboxPrimitive.Trigger
-      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
+      className={cn(
+        "group/combobox-trigger [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
       data-slot="combobox-trigger"
       {...props}
     >
       {children}
-      <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4" />
+      <ChevronDownIcon className="text-muted-foreground ease-fluid pointer-events-none size-4 transition-transform duration-200 group-data-popup-open/combobox-trigger:rotate-180 motion-reduce:transition-none" />
     </ComboboxPrimitive.Trigger>
   );
 }
@@ -111,7 +114,7 @@ function ComboboxContent({
       >
         <ComboboxPrimitive.Popup
           className={cn(
-            "group/combobox-content bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-lg shadow-lg ring-1 duration-100 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none",
+            "group/combobox-content bg-popover text-popover-foreground ring-foreground/10 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 ease-fluid relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-lg shadow-lg ring-1 transition-[opacity,scale] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none motion-reduce:transition-none",
             className,
           )}
           data-chips={!!anchor}
@@ -144,7 +147,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       className={cn(
-        "data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 pointer-coarse:py-2.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="combobox-item"
@@ -239,7 +242,7 @@ const CHIP_HIDDEN = { opacity: 0, scale: 0.6 };
 const CHIP_VISIBLE = { opacity: 1, scale: 1 };
 
 const chipClassName =
-  "bg-muted text-foreground flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-sm px-1.5 text-xs font-medium whitespace-nowrap has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0";
+  "bg-muted text-foreground flex h-5.5 w-fit items-center justify-center gap-1 rounded-sm px-1.5 text-xs font-medium whitespace-nowrap has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0";
 
 function ComboboxChipList({ children }: { children: React.ReactNode }) {
   return (

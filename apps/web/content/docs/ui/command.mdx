@@ -36,63 +36,38 @@ import {
 </Command>
 ```
 
-Start typing and the list filters itself and ranks the best matches first.
-Groups with nothing left to show politely step aside. It is built on
-[cmdk](https://cmdk.paco.me), so every cmdk prop works here too.
+Type and the list filters itself, best matches first. Empty groups hide. Built
+on [cmdk](https://cmdk.paco.me), so every cmdk prop works.
 
-## Groups and separators
+## Groups, icons and shortcuts
 
-Wrap related items in a `CommandGroup` with a `heading`, and drop a
-`CommandSeparator` between groups when they need some breathing room.
+`CommandGroup` takes a `heading`, and `CommandSeparator` splits groups. Icons go
+first and are sized for you. `CommandShortcut` is only a label: bind the keys
+yourself.
 
 ```tsx
-<CommandGroup heading="Suggestions">
-  <CommandItem>Calendar</CommandItem>
+<CommandGroup heading="Settings">
+  <CommandItem>
+    <UserIcon />
+    <span>Profile</span>
+    <CommandShortcut>⌘P</CommandShortcut>
+  </CommandItem>
 </CommandGroup>
 <CommandSeparator />
-<CommandGroup heading="Settings">
-  <CommandItem>Profile</CommandItem>
-</CommandGroup>
 ```
 
-## Icons and shortcuts
+`CommandEmpty` shows only when nothing matches. Make it kind.
 
-Icons go first and are sized for you. `CommandShortcut` pushes a hint to the
-end of the row. It is just a label. Wiring up the actual shortcut is your job.
+## Selecting items
 
-```tsx
-<CommandItem>
-  <UserIcon />
-  <span>Profile</span>
-  <CommandShortcut>⌘P</CommandShortcut>
-</CommandItem>
-```
-
-## Empty state
-
-`CommandEmpty` only shows up when the search matches nothing. Make it helpful,
-or at least make it kind.
-
-```tsx
-<CommandEmpty>No results found.</CommandEmpty>
-```
-
-## Selecting and disabling items
-
-`onSelect` fires on click and on <kbd>Enter</kbd>. Add `disabled` to keep an
-item visible but out of reach. The keyboard skips it too.
+`onSelect` fires on click and <kbd>Enter</kbd>. `disabled` keeps an item
+visible but skipped. Items match by their text: add `value` when the text isn't
+unique, and `keywords` for other names people might type.
 
 ```tsx
 <CommandItem onSelect={() => router.navigate({ to: '/settings' })}>
   Settings
 </CommandItem>
-<CommandItem disabled>Calculator</CommandItem>
-```
-
-Items are matched by their text. Give an item a `value` when the text is not
-unique, and `keywords` when people might search for it by another name:
-
-```tsx
 <CommandItem keywords={['theme', 'night']} value="toggle-dark-mode">
   Toggle dark mode
 </CommandItem>
@@ -102,9 +77,9 @@ unique, and `keywords` when people might search for it by another name:
 
 <Preview name="command-dialog" />
 
-`CommandDialog` puts the whole thing in a [Dialog](/docs/ui/dialog), with a
-screen-reader-only title and description baked in. Pass a `Command` as its
-child and control it with `open` and `onOpenChange`.
+`CommandDialog` wraps a `Command` in a [Dialog](/docs/ui/dialog) with a
+screen-reader-only title and description. Control it with `open` and
+`onOpenChange`, and bind a shortcut yourself.
 
 ```tsx
 const [open, setOpen] = React.useState(false)
@@ -116,7 +91,7 @@ React.useEffect(() => {
     if (event.altKey || event.shiftKey || event.defaultPrevented) return
 
     event.preventDefault()
-    setOpen((prev) => !prev)
+    setOpen(prev => !prev)
   }
 
   window.addEventListener('keydown', handleKeyDown)
@@ -127,49 +102,34 @@ React.useEffect(() => {
 <CommandDialog onOpenChange={setOpen} open={open}>
   <Command>
     <CommandInput placeholder="What do you need?" />
-    <CommandList>
-      <CommandEmpty>Nothing here. Try fewer letters?</CommandEmpty>
-      <CommandGroup heading="Actions">
-        <CommandItem onSelect={() => setOpen(false)}>Sign out</CommandItem>
-      </CommandGroup>
-    </CommandList>
+    <CommandList>...</CommandList>
   </Command>
 </CommandDialog>
 ```
 
 <Callout title="Why ⌘J and not ⌘K?">
-  This docs site already uses <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> for search, and
-  so does the AdminCP. Two dialogs fighting over one shortcut is nobody's idea
-  of fun, so the demo listens for <kbd>⌘J</kbd> / <kbd>Ctrl+J</kbd> instead.
-  Pick whatever is free in your app, and always remove the listener on unmount.
-  Heads-up: once the palette is open, <kbd>Ctrl+J</kbd> moves down a row
-  instead of closing it - <kbd>Escape</kbd> is the way out.
+  The docs search and the AdminCP already own <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>,
+  so the demo uses <kbd>⌘J</kbd> / <kbd>Ctrl+J</kbd>. Pick a free key and remove
+  the listener on unmount. Inside the open palette <kbd>Ctrl+J</kbd> moves down
+  a row, so <kbd>Escape</kbd> is the way out.
 </Callout>
 
-Show the shortcut next to the trigger with the `Kbd` component:
-
-```tsx
-import { Kbd, KbdGroup } from '@vitnode/core/components/ui/kbd'
-
-<KbdGroup>
-  <Kbd>⌘</Kbd>
-  <Kbd>J</Kbd>
-</KbdGroup>
-```
+Show the shortcut next to the trigger with [`Kbd`](/docs/ui/kbd), like the demo.
 
 ## Your own filtering
 
-Fetching results from an API? Turn the built-in filter off with
-`shouldFilter={false}` and render whatever your query returns. The AdminCP
-search works exactly like that.
+<Preview name="command-async" />
+
+Searching an API? Set `shouldFilter={false}` and render what your query returns.
+The AdminCP search works this way.
 
 ```tsx
-<Command shouldFilter={false}>
+<Command label="Search members" shouldFilter={false}>
   <CommandInput onValueChange={setSearch} value={search} />
   <CommandList>
-    {users.map(user => (
-      <CommandItem key={user.id} value={user.id}>
-        {user.name}
+    {members.map((member) => (
+      <CommandItem key={member.id} value={member.id}>
+        {member.name}
       </CommandItem>
     ))}
   </CommandList>
@@ -179,16 +139,13 @@ search works exactly like that.
 ## Accessibility
 
 - The input is a `combobox` and the list a `listbox`, so screen readers announce
-  the highlighted option as you move through it.
-- <kbd>↑</kbd> / <kbd>↓</kbd> move between items, <kbd>Home</kbd> /{' '}
-  <kbd>End</kbd> jump to the ends and <kbd>Enter</kbd> selects. Set `loop` to
-  wrap around at the edges.
-- <kbd>Ctrl+N</kbd> / <kbd>Ctrl+J</kbd> and <kbd>Ctrl+P</kbd> /{' '}
-  <kbd>Ctrl+K</kbd> also move up and down while the menu has focus. Pass
-  `vimBindings={false}` if those keys mean something else in your app.
-- `CommandDialog` traps focus, closes on <kbd>Escape</kbd> and gives the dialog
-  an accessible name through its `title` and `description`.
-- Give a standalone `Command` a `label` so the input has a name too.
+  the highlighted option.
+- <kbd>↑</kbd> / <kbd>↓</kbd> move, <kbd>Home</kbd> / <kbd>End</kbd> jump to the
+  ends, <kbd>Enter</kbd> selects. `loop` wraps at the edges.
+- <kbd>Ctrl+N</kbd> / <kbd>Ctrl+J</kbd> and <kbd>Ctrl+P</kbd> /<kbd>Ctrl+K</kbd>
+  also move. Turn them off with `vimBindings={false}`.
+- Give a standalone `Command` a `label` so the input has a name.
+  `CommandDialog` traps focus and closes on <kbd>Escape</kbd>.
 
 ## Props
 

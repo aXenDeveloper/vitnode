@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from "use-intl";
 type NumberFieldSize = "default" | "lg" | "sm";
 
 const stepperButtonClassName =
-  "text-muted-foreground hover:bg-muted hover:text-foreground relative flex shrink-0 cursor-pointer items-center justify-center px-2.5 transition-colors outline-none select-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent group-data-[size=lg]/number-field:px-3 group-data-[size=sm]/number-field:px-2 pointer-coarse:after:absolute pointer-coarse:after:top-1/2 pointer-coarse:after:left-1/2 pointer-coarse:after:size-11 pointer-coarse:after:-translate-1/2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 group-data-[size=sm]/number-field:[&_svg:not([class*='size-'])]:size-3.5";
+  "text-muted-foreground hover:bg-muted hover:text-foreground relative flex shrink-0 cursor-pointer items-center justify-center px-2.5 transition-colors outline-none select-none active:bg-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent group-data-[size=lg]/number-field:px-3 group-data-[size=sm]/number-field:px-2 pointer-coarse:after:absolute pointer-coarse:after:top-1/2 pointer-coarse:after:left-1/2 pointer-coarse:after:size-11 pointer-coarse:after:-translate-1/2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-150 [&_svg]:ease-out active:[&_svg]:scale-90 motion-reduce:[&_svg]:transition-none [&_svg:not([class*='size-'])]:size-4 group-data-[size=sm]/number-field:[&_svg:not([class*='size-'])]:size-3.5";
 
 function NumberField({
   className,
@@ -54,7 +54,7 @@ function NumberFieldInput({
   return (
     <NumberFieldPrimitive.Input
       className={cn(
-        "placeholder:text-muted-foreground w-full min-w-0 flex-1 bg-transparent px-2 text-center text-base tabular-nums outline-none group-data-[size=sm]/number-field:text-sm disabled:cursor-not-allowed md:text-sm",
+        "placeholder:text-muted-foreground w-full min-w-0 flex-1 bg-transparent px-2 text-center text-base tabular-nums outline-none disabled:cursor-not-allowed md:text-sm",
         className,
       )}
       data-slot="number-field-input"

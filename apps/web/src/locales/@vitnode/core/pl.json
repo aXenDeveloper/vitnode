@@ -1587,7 +1587,8 @@
         "placeholder": "Wybierz emoji lub ikonę",
         "remove": "Usuń",
         "search_emoji": "Szukaj emoji…",
-        "search_icons": "Szukaj ikon…"
+        "search_icons": "Szukaj ikon…",
+        "skin_tone": "Odcień skóry"
       },
       "errors": {
         "400": {
@@ -1630,12 +1631,22 @@
         "drop": "Przeciągnij plik tutaj",
         "errors": {
           "too_large": "Ten plik ma {size}. Maksimum to {max}.",
-          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}."
+          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}.",
+          "upload_failed": "Przesyłanie nie zostało ukończone. Sprawdź połączenie i spróbuj ponownie."
         },
         "max_size": "Maksymalny rozmiar pliku: {size}",
         "remove": "Usuń plik",
         "replace": "Zmień plik",
-        "uploading": "Przesyłanie..."
+        "uploading": "Przesyłanie...",
+        "cancel_upload": "Anuluj przesyłanie",
+        "cancel_upload_named": "Anuluj przesyłanie {name}",
+        "upload_progress_named": "Przesyłanie {name}",
+        "retry": "Spróbuj ponownie",
+        "retry_named": "Prześlij {name} ponownie",
+        "dismiss_named": "Odrzuć {name}",
+        "removed": "Plik usunięty",
+        "removed_desc": "{name} zniknął z tego pola. Zmiana planów? Cofnij to.",
+        "undo": "Cofnij"
       },
       "go_back": "Wróć",
       "go_to_next_page": "Przejdź do następnej strony",
@@ -1677,11 +1688,15 @@
       "optional": "Opcjonalne",
       "or": "lub",
       "pick_color": "Wybierz kolor",
+      "color_value": "Wartość koloru",
       "preferences": "Preferencje",
       "previous": "Wstecz",
       "previous_page": "Poprzednia strona",
+      "more_pages": "Więcej stron",
+      "pagination": "Paginacja",
       "register": "Zarejestruj się",
       "remove": "Usuń",
+      "remove_named": "Usuń {name}",
       "results_not_found": "Brak wyników",
       "save": "Zapisz",
       "search_placeholder": "Szukaj...",
@@ -1706,7 +1721,8 @@
         "mod_cp": "Panel moderatora",
         "my_profile": "Mój profil",
         "settings": "Ustawienia"
-      }
+      },
+      "tab_has_errors": "Zawiera błędy"
     },
     "navigation": {
       "discover": {

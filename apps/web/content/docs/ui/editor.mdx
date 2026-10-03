@@ -1,6 +1,6 @@
 ---
 title: Editor
-description: Rich text editor built on TipTap for editing and rendering HTML content.
+description: Rich text editor built on TipTap with a one-row toolbar, slash commands, emoji, panels and task lists, storing plain HTML.
 icon: PenLine
 ---
 
@@ -8,26 +8,24 @@ icon: PenLine
 
 <Preview name="editor" />
 
+Type <kbd>/</kbd> for blocks or <kbd>:</kbd> for emoji. Your fingers never leave
+the keyboard, and your coffee stays safe.
+
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
-```
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormEditor } from '@vitnode/core/components/form/fields/editor'
 
-```ts
 const formSchema = z.object({
-  content: z
-    .string()
-    .min(1, "Content is required")
-    .default("<p>Write your content here...</p>"),
-});
+  content: z.string().min(1, 'Write something first'),
+})
 ```
 
 ```tsx
@@ -35,14 +33,8 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "content",
-      component: props => (
-        <AutoFormEditor
-          {...props}
-          description="Rich text content powered by the Editor."
-          label="Content"
-        />
-      ),
+      id: 'content',
+      component: (props) => <AutoFormEditor {...props} label="Announcement" />,
     },
   ]}
 />
@@ -52,171 +44,181 @@ const formSchema = z.object({
 
   <Tab value="Manual">
 
-```ts
-import { Editor } from "@vitnode/core/components/ui/editor";
-```
-
-The `Editor` is uncontrolled by default - pass `value` as the initial HTML and
-listen for changes with `onChange`, which receives the current HTML string:
+`value` is the initial HTML. `onChange` gets the current HTML on every edit.
 
 ```tsx
-const [content, setContent] = useState("<p>Hello World! 🌎️</p>");
+import { Editor } from '@vitnode/core/components/ui/editor'
 
-<Editor value={content} onChange={setContent} />;
+const [content, setContent] = useState('<p>Hello World! 🌎️</p>')
+
+;<Editor onChange={setContent} value={content} />
 ```
 
   </Tab>
 </Tabs>
 
-## Writing in the editor
+## Toolbar
 
-The toolbar keeps the everyday tools one click away and tucks the rest into
-menus, so it fits on a single row even in a narrow form:
+One row, even in a narrow form. Everyday tools sit up front, the rest in menus:
 
-- **Text style** - paragraph or heading 1–4.
-- **Bold** and **italic**, plus a **…** menu with underline, strikethrough,
-  inline code, text alignment and _Clear formatting_.
-- **Text color**, **lists** (bulleted, numbered and task lists), **link**,
-  **emoji**, **table** and **code block**.
-- **+ Insert** - quotes, code blocks, tables, dividers, emoji, audio and panels.
+- **Text style**: paragraph or heading 1–4.
+- **Bold**, **italic** and **…**: underline, strikethrough, inline code,
+  alignment, _Clear formatting_.
+- **Text color**, **lists** (bulleted, numbered, task), **link**, **emoji**,
+  **table**, **code block**.
+- **+ Insert**: quote, code block, table, divider, emoji, audio and panels.
 
-{/* Image prompt: A clean light-mode screenshot of a rich text editor inside an admin form. A single-row toolbar reads "Paragraph ▾ | B I … A | lists | link emoji table code | + ▾", and below it an open slash menu lists "Info panel", "Success panel" and "Error panel" with small icons and one-line hints. Neutral grays, blue accent. */}
+## Slash commands
 
-### Slash commands
+Type <kbd>/</kbd>, keep typing to filter (`/tab` finds _Table_), pick with the
+arrow keys and <kbd>Enter</kbd>. Search matches translated names and English
+keywords, so `/table` works in every language.
 
-Type <kbd>/</kbd> anywhere to insert a block without reaching for the mouse.
-Keep typing to filter (`/tab` finds _Table_), move with the arrow keys and
-press <kbd>Enter</kbd>. Your fingers never leave the keyboard - your coffee
-stays safe.
+## Emoji
 
-The menu searches both the translated block names and English keywords, so
-`/table` works in every language.
+Type <kbd>:</kbd> and a few letters (`:rocket`) to get suggestions, or use the
+toolbar picker. Add your own emoji for every editor in `vitnode.config.ts`:
 
-### Panels
+```ts title="src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  editor: {
+    emojis: [
+      {
+        label: 'VitNode',
+        emojis: [
+          { name: 'vitnode', src: '/logo.svg', tags: ['logo', 'brand'] },
+        ],
+      },
+    ],
+  },
+})
+```
 
-Panels are callouts for things readers should not miss, styled like the
-callouts in these docs:
+`name` is the shortcode (`:vitnode:`), `tags` are extra search words, and
+`label` heads the section in the picker.
 
-| Panel   | Use it for                   |
-| ------- | ---------------------------- |
-| Info    | Useful context               |
-| Warning | Something to double-check    |
-| Error   | A blocker or a real risk     |
-| Success | What went right              |
+## Panels
 
-A panel with one paragraph shows it as a muted description. Add a second
-paragraph and the first one becomes the title - no extra button, just press
-<kbd>Enter</kbd>.
+<Preview name="editor-panels" />
 
-Pick one from **+ Insert** or with `/panel`. Choosing the same panel again
-removes it; choosing another kind switches the color. Panels are stored as
-plain HTML (`<div data-panel="info">`), so `EditorContent` renders them with
-no extra setup.
+Callouts in four kinds: `info`, `warning`, `error`, `success`. One paragraph is
+a muted note. Add a second and the first becomes the title.
 
-### Task lists
+Insert one from **+ Insert** or `/panel`. Picking the same kind again removes
+it; another kind switches the color. Panels are saved as plain HTML,
+`<div class="tiptap-panel" data-panel="info">`, so `EditorContent` renders them
+as is.
 
-Task lists store each item's checkbox state, so a list of acceptance criteria
-stays ticked after you save. Start one from the toolbar, from `/task`, or by
-typing `[ ]` at the start of a line.
+## Task lists
 
-### Keyboard shortcuts
+Each item stores its checkbox state, so acceptance criteria stay ticked after
+saving. Start one from the toolbar, `/task`, or type `[ ]` at the start of a
+line.
 
-| Action           | Shortcut                                             |
-| ---------------- | ---------------------------------------------------- |
-| Submit the form  | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>      |
-| Bold / italic    | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>B</kbd> / <kbd>I</kbd> |
-| Underline        | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>U</kbd>          |
-| Bulleted list    | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>8</kbd> |
-| Numbered list    | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>7</kbd> |
-| Task list        | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>9</kbd> |
-| Undo / redo      | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Z</kbd> / <kbd>Shift</kbd> + <kbd>Z</kbd> |
+## Keyboard shortcuts
 
-<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> submits the form the editor
-sits in, exactly like pressing the submit button. Outside a form it does
-nothing.
+| Action          | Shortcut                                                                      |
+| --------------- | ----------------------------------------------------------------------------- |
+| Submit the form | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>                               |
+| Bold / italic   | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>B</kbd> / <kbd>I</kbd>                    |
+| Underline       | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>U</kbd>                                   |
+| Bulleted list   | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>8</kbd>                |
+| Numbered list   | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>7</kbd>                |
+| Task list       | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>9</kbd>                |
+| Undo / redo     | <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Z</kbd> / <kbd>Shift</kbd> + <kbd>Z</kbd> |
+
+<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> submits the surrounding form,
+like its submit button. Outside a form it does nothing.
+
+## Accessibility
+
+- The toolbar is one tab stop. <kbd>←</kbd> <kbd>→</kbd> move between buttons,
+  <kbd>Home</kbd> / <kbd>End</kbd> jump to the ends.
+- In AutoForm, the writing area is named by the label, described by the
+  description and error, and outlined red when invalid.
+- The `/` and `:` menus announce the highlighted option, and open upward when
+  there's no room below.
+- A same-size placeholder holds the spot while the editor loads, so the page
+  doesn't jump.
 
 ## Multi-language
 
-Set the `multiLang` prop to edit the content in every enabled language. A
-language **select** (shown only when more than one language is enabled) switches
-which language you are editing - it does **not** change the app-wide locale,
-only the content inside this editor.
-
-The value becomes an array matching the `core_languages_words` table:
+Add `multiLang` to edit the content in every enabled language. A language select
+(shown with two or more languages) switches the language being edited, not the
+app locale.
 
 ```ts
-[
-  { languageCode: "en", value: "<p>Hello</p>" },
-  { languageCode: "pl", value: "<p>Cześć</p>" },
-];
-```
-
-Declare the field with the `multiLangValueSchema` helper and enable `multiLang`:
-
-```ts
-import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+import { multiLangValueSchema } from '@vitnode/core/lib/helpers/multi-lang'
 
 const formSchema = z.object({
   content: multiLangValueSchema({ minLength: 1 }).min(1),
-});
+})
 ```
 
 ```tsx
-{
-  id: "content",
-  component: props => <AutoFormEditor {...props} label="Content" multiLang />,
-}
+<AutoFormEditor {...props} label="Content" multiLang />
 ```
 
-Persist the array on the backend with `saveLanguageWords`. See
-[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
-
-## Rendering Content
-
-Use `EditorContent` to render the stored HTML as read-only content outside of
-the editor (e.g. on a public page):
+The value becomes `{ languageCode, value }[]`, matching `core_languages_words`:
 
 ```ts
-import { EditorContent } from "@vitnode/core/components/ui/editor-content";
+const value = [
+  { languageCode: 'en', value: '<p>Hello</p>' },
+  { languageCode: 'pl', value: '<p>Cześć</p>' },
+]
 ```
 
+Save it with `saveLanguageWords`. See
+[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
+
+## Rendering content
+
+<Preview name="editor-content" />
+
+`EditorContent` renders stored HTML read-only, for public pages. It sanitizes
+the HTML first, so a sneaky `<script>` never runs.
+
 ```tsx
-<EditorContent content="<h2>Title</h2><p>Hello World! 🌎️</p>" />
+import { EditorContent } from '@vitnode/core/components/ui/editor-content'
+
+;<EditorContent content={post.content} />
 ```
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     value: {
-      description: "Initial HTML content rendered inside the editor.",
-      type: "string",
+      description: 'Initial HTML content.',
+      type: 'string',
       default: '""',
     },
     onChange: {
-      description:
-        "Called on every change with the current content as an HTML string.",
-      type: "(value: string) => void",
-      default: "",
+      description: 'Called on every change with the current HTML.',
+      type: '(value: string) => void',
+    },
+    placeholder: {
+      description: 'Shown while the editor is empty.',
+      type: 'string',
+      default: '"Write something…"',
     },
     disableScroll: {
       description:
-        "Disables the internal max-height scroll area so the editor grows with its content.",
-      type: "boolean",
-      default: "false",
+        'Removes the max-height scroll area so the editor grows with its content.',
+      type: 'boolean',
+      default: 'false',
     },
     className: {
-      description: "Additional classes applied to the editor wrapper.",
-      type: "string",
-      default: "",
+      description: 'Extra classes for the editor wrapper.',
+      type: 'string',
     },
     multiLang: {
       description:
-        "Edit the content per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
-      type: "boolean",
-      default: "false",
+        'AutoFormEditor only. Edit per language; the value becomes { languageCode, value }[].',
+      type: 'boolean',
+      default: 'false',
     },
   }}
 />

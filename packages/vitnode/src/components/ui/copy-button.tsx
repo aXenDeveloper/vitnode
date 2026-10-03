@@ -84,7 +84,7 @@ function CopyButton({
   className,
   content,
   copied,
-  delay = 3000,
+  delay = 2000,
   onClick,
   onCopiedChange,
   size,
@@ -93,6 +93,7 @@ function CopyButton({
 }: CopyButtonProps) {
   const t = useTranslations("core.global");
   const [uncontrolledCopied, setUncontrolledCopied] = React.useState(false);
+  const [copyCount, setCopyCount] = React.useState(0);
   const isCopied = copied ?? uncontrolledCopied;
   const iconMotion = useIconMotion();
 
@@ -113,12 +114,13 @@ function CopyButton({
     return () => {
       clearTimeout(timer);
     };
-  }, [isCopied, delay]);
+  }, [isCopied, delay, copyCount]);
 
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(content);
       setCopied(true);
+      setCopyCount(count => count + 1);
     } catch {
       toast.error(t("errors.title"), { description: t("copy_failed") });
     }

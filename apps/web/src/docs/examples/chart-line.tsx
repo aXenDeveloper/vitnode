@@ -35,7 +35,7 @@ const shortDay = (day: string) => day.slice(0, 3)
 
 export default function ChartLineExample() {
   return (
-    <Card className="w-full">
+    <Card className="not-prose w-full">
       <CardHeader>
         <CardTitle>API response time</CardTitle>
         <CardDescription>Median in milliseconds, last week</CardDescription>

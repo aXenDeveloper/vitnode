@@ -162,7 +162,7 @@ export function BulkActionsDataTable({
             initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
           >
-            <div className="bg-popover text-popover-foreground pointer-events-auto flex max-w-full items-center gap-1 rounded-lg border p-1.5 shadow-lg">
+            <div className="bg-popover text-popover-foreground pointer-events-auto flex max-w-full items-center gap-1 rounded-xl border p-1.5 shadow-lg">
               <span className="px-2 text-sm font-medium whitespace-nowrap">
                 {t.rich("selected_count", {
                   count: selected.length,

@@ -53,7 +53,7 @@ const OpenableRowDataTable = <T extends DataTableTMin>({
 
   return (
     <TableRow
-      className="focus-visible:bg-muted/50 focus-visible:outline-ring cursor-pointer focus-visible:outline-1"
+      className="focus-visible:bg-muted/50 focus-visible:outline-ring active:not-has-[:is(a,button,input,label,select,textarea):active]:bg-muted cursor-pointer focus-visible:outline-1"
       onClick={event => {
         // A control inside the row answers for itself,
         // and a reader who has selected text in a cell

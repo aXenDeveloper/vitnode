@@ -38,26 +38,18 @@ import {
 </ContextMenu>
 ```
 
-Right-click the trigger with a mouse, or press and hold it on a phone or
-tablet. The menu opens right where your cursor or finger is, so there's no
-button to find first.
+Right-click the trigger, or long-press it on touch. The menu opens right under
+your cursor or finger.
 
 ## Submenus
 
-Nest a `ContextMenuSub` to tuck the rarely used stuff one level deeper. It opens
-on hover, on click, or with the arrow keys.
+Nest a `ContextMenuSub` for the rarely used stuff. It opens on hover, click or
+the right arrow.
 
 ```tsx
-import {
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-} from '@vitnode/core/components/ui/context-menu'
-
 <ContextMenuSub>
   <ContextMenuSubTrigger>More tools</ContextMenuSubTrigger>
   <ContextMenuSubContent className="w-48">
-    <ContextMenuItem>Save page as...</ContextMenuItem>
     <ContextMenuItem>Developer tools</ContextMenuItem>
   </ContextMenuSubContent>
 </ContextMenuSub>
@@ -65,78 +57,50 @@ import {
 
 ## Checkbox and radio items
 
-Use `ContextMenuCheckboxItem` for independent toggles and a
-`ContextMenuRadioGroup` when exactly one option can win. Both work controlled or
-uncontrolled, just like their form siblings.
+`ContextMenuCheckboxItem` toggles on its own, items in a
+`ContextMenuRadioGroup` pick one. Both work controlled or uncontrolled.
 
 ```tsx
-import {
-  ContextMenuCheckboxItem,
-  ContextMenuLabel,
-  ContextMenuRadioGroup,
-  ContextMenuRadioItem,
-} from '@vitnode/core/components/ui/context-menu'
-
-const [showBookmarks, setShowBookmarks] = React.useState(true)
-const [person, setPerson] = React.useState('pedro')
-
-<ContextMenuCheckboxItem
-  checked={showBookmarks}
-  onCheckedChange={setShowBookmarks}
->
+<ContextMenuCheckboxItem checked={showBookmarks} onCheckedChange={setShowBookmarks}>
   Show bookmarks bar
 </ContextMenuCheckboxItem>
-<ContextMenuSeparator />
-<ContextMenuLabel>People</ContextMenuLabel>
-<ContextMenuRadioGroup value={person} onValueChange={setPerson}>
+<ContextMenuRadioGroup onValueChange={setPerson} value={person}>
   <ContextMenuRadioItem value="pedro">Pedro Duarte</ContextMenuRadioItem>
-  <ContextMenuRadioItem value="colm">Colm Tuite</ContextMenuRadioItem>
 </ContextMenuRadioGroup>
 ```
 
-The check mark sits at the end of the row. Add `inset` to items, labels and
-sub-triggers without an icon so their text lines up with the ones that have
-one.
+The check mark sits at the start of the row, like in the
+[Dropdown Menu](/docs/ui/dropdown-menu). Add `inset` to plain items, labels and
+sub-triggers in the same menu so their text lines up.
 
-## Shortcuts
+## Shortcuts and destructive items
 
-`ContextMenuShortcut` shows a keyboard hint at the end of an item. It is only a
-label. Wire up the actual key binding yourself, or it's a promise you aren't
-keeping.
-
-```tsx
-<ContextMenuItem>
-  Save page as...
-  <ContextMenuShortcut>⇧⌘S</ContextMenuShortcut>
-</ContextMenuItem>
-```
-
-## Destructive items
-
-Set `variant="destructive"` for actions you cannot take back, so they look the
-part.
+`ContextMenuShortcut` is only a label: bind the keys yourself. Use
+`variant="destructive"` for actions you can't take back.
 
 ```tsx
 <ContextMenuItem variant="destructive">
   <Trash2Icon />
   Delete
+  <ContextMenuShortcut>⌘⌫</ContextMenuShortcut>
 </ContextMenuItem>
 ```
 
+## Always offer another way
+
+<Preview name="context-menu-fallback" />
+
+Nothing on screen says "right-click me", and keyboard users can't open a
+context menu at all. Put every action somewhere visible too, like the `⋯`
+[Dropdown Menu](/docs/ui/dropdown-menu) on each row above.
+
 ## Accessibility
 
-- Context menus are hidden by nature, since nothing on screen says "right-click
-  me". Every action inside one must also be reachable another way, such as a
-  toolbar, a [Dropdown Menu](/docs/ui/dropdown-menu) or a keyboard shortcut.
-  Treat the context menu as a shortcut, never as the only door.
-- The trigger is a plain, non-focusable area, so keyboard users cannot open
-  the menu at all. One more reason for the rule above. Once it is open,
-  arrow keys move between items, the right arrow opens a submenu, typing a
-  letter jumps to a matching item and `Escape` closes it.
-- On touch devices a long-press opens the menu, and the trigger sets
-  `select-none` so holding it does not start a text selection.
-- Disabled items stay visible and are announced as disabled, so nobody wonders
-  where "Forward" went.
+- Once open, arrow keys move between items, right opens a submenu, a letter
+  jumps to a match and <kbd>Escape</kbd> closes it.
+- The trigger sets `select-none`, so a long-press doesn't start a text
+  selection. Rows grow to a 44px tap target on touch screens.
+- Reduced motion turns the scale-in off.
 
 ## Props
 
@@ -151,7 +115,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       type: 'boolean',
     },
     defaultOpen: {
-      description: 'Whether the menu is open on the first render.',
+      description: 'Open on the first render.',
       type: 'boolean',
       default: 'false',
     },
@@ -172,20 +136,19 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     side: {
-      description:
-        'Which side of the cursor the menu prefers. It flips when there is no room.',
+      description: 'Preferred side of the cursor. Flips when there is no room.',
       type: 'top | bottom | left | right | inline-start | inline-end',
       default: 'bottom',
     },
     align: {
-      description: 'How the menu aligns against the cursor on the chosen side.',
+      description: 'Alignment against the cursor.',
       type: 'start | center | end',
       default: 'start',
     },
     sideOffset: {
-      description: 'Distance from the cursor in pixels.',
+      description: 'Gap from the cursor in pixels.',
       type: 'number',
-      default: '0',
+      default: '4',
     },
     alignOffset: {
       description: 'Shift along the alignment axis in pixels.',
@@ -205,22 +168,22 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       default: 'default',
     },
     inset: {
-      description: 'Adds start padding so the text lines up with items that have an icon.',
+      description: 'Start padding to line up with checkbox and radio items.',
       type: 'boolean',
       default: 'false',
     },
     disabled: {
-      description: 'Shows the item but makes it non-interactive.',
+      description: 'Visible but not interactive.',
       type: 'boolean',
       default: 'false',
     },
     closeOnClick: {
-      description: 'Whether clicking the item closes the menu.',
+      description: 'Close the menu when the item is chosen.',
       type: 'boolean',
       default: 'true',
     },
     onClick: {
-      description: 'Called when the item is chosen with a click, tap or the keyboard.',
+      description: 'Called on click, tap or keyboard select.',
       type: '(event) => void',
     },
   }}

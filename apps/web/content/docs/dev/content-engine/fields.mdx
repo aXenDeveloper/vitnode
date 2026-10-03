@@ -205,7 +205,7 @@ Field descriptors accept these standard attributes:
 
 Configure how administrators search and sort the AdminCP data table:
 
-- **`admin.list.searchableFields`**: Array of shared `text`, `textarea`, or `slug` fields searchable via the table search input.
+- **`admin.list.searchableFields`**: Array of `text`, `textarea`, or `slug` fields searchable via the table search input. A localized field matches its value in any language.
 - **`admin.list.orderableFields`**: Array of shared scalar columns administrators can click to sort. System columns (`id`, `createdAt`, `updatedAt`) and publication columns (`status`, `publishedAt`) are always allowed.
 - **`admin.list.defaultOrderBy`**: The column name string to sort by initially (e.g. `'updatedAt'`).
 - **`admin.list.defaultOrder`**: Sort direction (`'asc' | 'desc'`).

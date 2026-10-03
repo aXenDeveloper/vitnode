@@ -1,6 +1,6 @@
 ---
 title: Scroll Area
-description: Container for scrollable content with custom scrollbars.
+description: A vertical scroll container with a scrollbar that fades in on use and soft edges that hint at more content.
 icon: ScrollText
 ---
 
@@ -12,31 +12,24 @@ icon: ScrollText
 
 ```ts
 import { ScrollArea } from '@vitnode/core/components/ui/scroll-area'
-import { Separator } from '@vitnode/core/components/ui/separator'
-import React from 'react'
 ```
 
 ```tsx
-const tags = Array.from({ length: 50 }).map(
-  (_, i, a) => `v1.2.0-beta.${a.length - i}`,
-)
-
-export function ScrollAreaDemo() {
-  return (
-    <ScrollArea className="h-72 w-48 rounded-md border">
-      <div className="p-6">
-        <h4 className="mb-4 text-sm leading-none font-medium">Tags</h4>
-        {tags.map((tag) => (
-          <React.Fragment key={tag}>
-            <div className="text-sm">{tag}</div>
-            <Separator className="my-2" />
-          </React.Fragment>
-        ))}
-      </div>
-    </ScrollArea>
-  )
-}
+<ScrollArea className="h-72 w-56 rounded-lg border">
+  <ul className="flex flex-col divide-y p-4">...</ul>
+</ScrollArea>
 ```
+
+Give it a fixed height. Everything taller than that scrolls.
+
+## Behaviour
+
+- The scrollbar stays hidden until you scroll or hover, then fades out again.
+- The top or bottom edge fades whenever there's more to scroll that way.
+- The edge fade drops while the viewport has keyboard focus, so the focus ring
+  is never masked.
+- It only renders a vertical scrollbar, and the edge fade is vertical too. For
+  horizontal rows, use [Scroll Fade](/docs/ui/scroll-fade).
 
 ## API Reference
 

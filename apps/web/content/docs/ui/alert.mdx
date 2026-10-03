@@ -1,6 +1,6 @@
 ---
 title: Alert
-description: Display a short, important message to users.
+description: Show a short, important message with a colored bar, a matching icon and the right ARIA role.
 icon: CircleAlert
 ---
 
@@ -15,87 +15,94 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from "@vitnode/core/components/ui/alert";
+} from '@vitnode/core/components/ui/alert'
 ```
 
 ```tsx
 <Alert variant="warning">
-  <AlertTitle>Plugins need a workspace</AlertTitle>
+  <AlertTitle>Cron adapter missing</AlertTitle>
   <AlertDescription>
-    Run the generator from a repository with turbo.json.
+    Scheduled jobs won&apos;t run until you configure one.
   </AlertDescription>
 </Alert>
 ```
 
-The alert looks just like the callouts in these docs - and like the panels in
-the [Editor](/docs/ui/editor#panels), so a warning reads the same everywhere.
-Every variant brings its own icon, so you only write the words.
+Alerts match the callouts in these docs and the
+[Editor](/docs/ui/editor#panels) panels, so a warning reads the same
+everywhere.
 
 ## Variants
 
-- `default` - neutral, for notes that are neither good nor bad news.
-- `info` - useful context (blue).
-- `success` - something finished and it went well (green).
-- `warning` - a non-blocking caution the user should act on (amber).
-- `destructive` - an error or a failed action (red).
+- `default` - a neutral note. No icon, just the bar.
+- `info` - useful context.
+- `success` - something finished and went well.
+- `warning` - a non-blocking caution worth acting on.
+- `destructive` - an error or a failed action.
+
+Every variant except `default` brings its own icon.
+
+## Screen readers
+
+`warning` and `destructive` get `role="alert"`, so screen readers interrupt to
+read them. The rest use `role="status"` and wait their turn. For a static hint
+that's on the page from the start, pass `role="note"`:
 
 ```tsx
-<Alert variant="success">
-  <AlertTitle>Changes saved</AlertTitle>
-  <AlertDescription>Your settings have been updated.</AlertDescription>
+<Alert role="note" variant="warning">
+  <AlertTitle>Exports run nightly</AlertTitle>
 </Alert>
 ```
 
 ## Custom icon
 
-Pass any icon to `icon` to replace the variant's default one, or `null` to show
-none at all:
+<Preview name="alert-icon" />
+
+Pass any icon to `icon`, or `null` for none.
 
 ```tsx
-import { HardDriveIcon } from "lucide-react";
-
 <Alert icon={<HardDriveIcon />} variant="info">
   <AlertTitle>Storage is connected</AlertTitle>
-</Alert>;
+</Alert>
 ```
 
 ## Dismissible
 
-Wrap a control in `AlertAction` to pin it to the top-right corner, e.g. a close
-button. The alert reserves space for it automatically.
+<Preview name="alert-dismissible" />
+
+`AlertAction` pins a control to the top end corner, and the alert makes room
+for it.
 
 ```tsx
-import { AlertAction } from "@vitnode/core/components/ui/alert";
-import { Button } from "@vitnode/core/components/ui/button";
-import { XIcon } from "lucide-react";
-
 <Alert variant="warning">
-  <AlertTitle>Heads up</AlertTitle>
-  <AlertDescription>Something needs your attention.</AlertDescription>
+  <AlertTitle>Maintenance tonight at 22:00</AlertTitle>
   <AlertAction>
-    <Button aria-label="Dismiss" size="icon" variant="ghost">
+    <Button aria-label="Dismiss" size="icon-sm" variant="ghost">
       <XIcon />
     </Button>
   </AlertAction>
-</Alert>;
+</Alert>
 ```
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     variant: {
-      description: "The visual style of the alert, including its default icon.",
-      type: "default | info | success | warning | destructive",
-      default: "default",
+      description: 'Color, icon and default role.',
+      type: 'default | info | success | warning | destructive',
+      default: 'default',
     },
     icon: {
-      description:
-        "Replaces the variant's icon. Pass null to render the alert without one.",
-      type: "ReactNode",
-      default: "the variant's icon",
+      description: "Replaces the variant's icon. null hides it.",
+      type: 'ReactNode',
+      default: "the variant's icon (none for default)",
+    },
+    role: {
+      description: 'Overrides the ARIA role.',
+      type: 'AriaRole',
+      default: 'alert for warning and destructive, status otherwise',
     },
   }}
 />

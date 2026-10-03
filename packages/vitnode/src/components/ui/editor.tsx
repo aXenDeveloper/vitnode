@@ -2,7 +2,7 @@ import React from "react";
 
 import type { TipTapEditorProps } from "@/components/tiptap/tiptap-editor";
 
-import { Spinner } from "./spinner";
+import { EditorSkeleton } from "@/components/tiptap/editor-skeleton";
 
 const TipTapEditor = React.lazy(async () =>
   import("@/components/tiptap/tiptap-editor").then(module => ({
@@ -21,21 +21,10 @@ export const Editor = (props: TipTapEditorProps) => {
     getIsHydratedOnServer,
   );
 
-  if (!isHydrated)
-    return (
-      <div className="flex items-center justify-center">
-        <Spinner size="xl" />
-      </div>
-    );
+  if (!isHydrated) return <EditorSkeleton className={props.className} />;
 
   return (
-    <React.Suspense
-      fallback={
-        <div className="flex items-center justify-center">
-          <Spinner size="xl" />
-        </div>
-      }
-    >
+    <React.Suspense fallback={<EditorSkeleton className={props.className} />}>
       <TipTapEditor {...props} />
     </React.Suspense>
   );

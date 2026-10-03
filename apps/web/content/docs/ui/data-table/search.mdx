@@ -10,33 +10,23 @@ icon: TextSearch
 
 ## Usage
 
-Set the `search` prop to `true` to render a search input above the table. Change the placeholder with `searchPlaceholder`.
-
 ```tsx
-<DataTable
+<ContentDataTable
   id="users-table"
-  // [!code ++]
+  // [!code ++:2]
   search
-  // [!code ++]
   searchPlaceholder="Search users..."
-  columns={[
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'email', header: 'Email' },
-  ]}
+  columns={columns}
   edges={data.edges}
   pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: 'name',
-      order: 'asc',
-    },
-  }}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
 />
 ```
 
-The input writes the term to the `?search=` query parameter (debounced), and the route loads the matching rows from the API. The API route decides which columns are searched.
+The input writes `?search=` to the URL 500ms after typing stops. Terms shorter
+than 3 characters clear it. Your route then loads the matching rows.
 
 <Callout type="info" title="Configure the API route">
-  Enabling `search` only renders the input. You must also tell the backend which
-  columns to search across - see the [Search](/docs/dev/database/search) guide.
+  `search` only renders the input. The API route decides which columns are
+  searched. See the [Search](/docs/dev/database/search) guide.
 </Callout>

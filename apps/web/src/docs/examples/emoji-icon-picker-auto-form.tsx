@@ -1,9 +1,10 @@
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormEmojiIcon } from '@vitnode/core/components/form/fields/emoji-icon'
 import { EMOJI_ICON_MAX_LENGTH } from '@vitnode/core/lib/emoji-icon'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
-export default function EmojiIconAutoFormExample() {
+export default function EmojiIconPickerAutoFormExample() {
   const formSchema = z.object({
     prefix: z
       .string()
@@ -24,8 +25,9 @@ export default function EmojiIconAutoFormExample() {
       ]}
       formSchema={formSchema}
       onSubmit={(values) => {
-        // eslint-disable-next-line no-console
-        console.log(values)
+        toast.success('Prefix saved', {
+          description: values.prefix || 'No prefix',
+        })
       }}
     />
   )

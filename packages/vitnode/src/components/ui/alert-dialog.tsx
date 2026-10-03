@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
+import { modalScrimClassName } from "@/components/ui/modal-scrim";
 
 const AlertDialogContext = React.createContext<{
   open: boolean;
@@ -69,7 +70,8 @@ function AlertDialogOverlay({
   return (
     <AlertDialogPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/30 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/60",
+        modalScrimClassName,
+        "duration-200 data-ending-style:duration-150",
         className,
       )}
       data-slot="alert-dialog-overlay"
@@ -90,7 +92,7 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Popup
         className={cn(
-          "group/alert-dialog-content dark:bg-background bg-card fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border p-6 shadow-xl transition-all duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm",
+          "group/alert-dialog-content bg-popover text-popover-foreground ease-fluid fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border p-6 shadow-xl transition-[opacity,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm",
           className,
         )}
         data-size={size}
@@ -156,7 +158,7 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       className={cn(
-        "font-heading text-lg font-medium sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
+        "font-heading text-lg leading-tight font-semibold text-balance sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
         className,
       )}
       data-slot="alert-dialog-title"
@@ -181,43 +183,53 @@ function AlertDialogDescription({
   );
 }
 
+type AlertDialogButtonSize = "default" | "lg" | "sm" | "xs";
+
 function AlertDialogAction({
+  children,
   className,
   variant = "default",
   size = "default",
   ...props
 }: AlertDialogPrimitive.Close.Props &
-  Pick<React.ComponentProps<typeof Button>, "size" | "variant">) {
+  Pick<React.ComponentProps<typeof Button>, "variant"> & {
+    size?: AlertDialogButtonSize;
+  }) {
   const t = useTranslations("core.global");
 
   return (
     <AlertDialogPrimitive.Close
       className={cn(className)}
       data-slot="alert-dialog-action"
-      render={
-        <Button aria-label={t("confirm")} size={size} variant={variant} />
-      }
+      render={<Button size={size} variant={variant} />}
       {...props}
-    />
+    >
+      {children ?? t("confirm")}
+    </AlertDialogPrimitive.Close>
   );
 }
 
 function AlertDialogCancel({
+  children,
   className,
   variant = "outline",
   size = "default",
   ...props
 }: AlertDialogPrimitive.Close.Props &
-  Pick<React.ComponentProps<typeof Button>, "size" | "variant">) {
+  Pick<React.ComponentProps<typeof Button>, "variant"> & {
+    size?: AlertDialogButtonSize;
+  }) {
   const t = useTranslations("core.global");
 
   return (
     <AlertDialogPrimitive.Close
       className={cn(className)}
       data-slot="alert-dialog-cancel"
-      render={<Button aria-label={t("cancel")} size={size} variant={variant} />}
+      render={<Button size={size} variant={variant} />}
       {...props}
-    />
+    >
+      {children ?? t("cancel")}
+    </AlertDialogPrimitive.Close>
   );
 }
 

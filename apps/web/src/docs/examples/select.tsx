@@ -1,41 +1,39 @@
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormSelect } from '@vitnode/core/components/form/fields/select'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 export default function SelectExample() {
   const formSchema = z.object({
-    options: z.enum(['option1', 'option2', 'option3']).default('option1'),
+    visibility: z.enum(['public', 'members', 'staff']).default('public'),
   })
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
-          id: 'options',
+          id: 'visibility',
           component: (props) => (
             <AutoFormSelect
               {...props}
-              description="Choose one of the options."
-              label="Select an option"
+              description="Who can read threads in this category."
+              label="Visibility"
               labels={[
-                {
-                  value: 'option1',
-                  label: 'Option 1',
-                },
-                {
-                  value: 'option2',
-                  label: 'Option 2',
-                },
-                {
-                  value: 'option3',
-                  label: 'Option 3',
-                },
+                { value: 'public', label: 'Everyone' },
+                { value: 'members', label: 'Signed-in members' },
+                { value: 'staff', label: 'Staff only' },
               ]}
             />
           ),
         },
       ]}
       formSchema={formSchema}
+      onSubmit={(values) => {
+        toast.success('Category updated', {
+          description: `Visibility: ${values.visibility}`,
+        })
+      }}
     />
   )
 }

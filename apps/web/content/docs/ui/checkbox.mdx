@@ -1,6 +1,6 @@
 ---
 title: Checkbox
-description: Toggle between checked and unchecked states.
+description: A checkbox for yes-or-no choices like accepting rules or picking items, with checked, indeterminate, disabled and invalid states.
 icon: SquareCheck
 ---
 
@@ -10,23 +10,21 @@ icon: SquareCheck
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox";
-```
+```tsx
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox'
+import { z } from 'zod'
 
-```ts
 const formSchema = z.object({
-  acceptTerms: z.boolean().refine(val => val, {
-    message: "You must accept the terms and conditions",
+  acceptRules: z.boolean().refine((value) => value, {
+    message: 'You need to accept the rules to join',
   }),
-});
+})
 ```
 
 ```tsx
@@ -34,12 +32,9 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "acceptTerms",
-      component: props => (
-        <AutoFormCheckbox
-          {...props}
-          label="I accept the terms and conditions"
-        />
+      id: 'acceptRules',
+      component: (props) => (
+        <AutoFormCheckbox {...props} label="I accept the community rules" />
       ),
     },
   ]}
@@ -47,36 +42,64 @@ const formSchema = z.object({
 ```
 
   </Tab>
-
   <Tab value="Manual">
-```ts
-import { Checkbox } from '@vitnode/core/components/ui/checkbox';
+
+```tsx
+import { Checkbox } from '@vitnode/core/components/ui/checkbox'
+import { Label } from '@vitnode/core/components/ui/label'
 ```
 
 ```tsx
-<Checkbox onCheckedChange={onCheckedChange} checked={checked} />
+<Label>
+  <Checkbox checked={checked} onCheckedChange={setChecked} />
+  Pin this thread
+</Label>
 ```
 
   </Tab>
 </Tabs>
 
+## States
+
+<Preview name="checkbox-states" />
+
+- `indeterminate` draws a dash, for "some selected".
+- `disabled` dims it. Add `data-disabled` to the parent [Field](/docs/ui/field)
+  to dim the label too.
+- `aria-invalid` turns it red. Point `aria-describedby` at the error.
+
+```tsx
+<Field data-invalid orientation="horizontal">
+  <Checkbox aria-describedby="rules-error" aria-invalid id="rules" />
+  <FieldContent>
+    <FieldLabel htmlFor="rules">I have read the community rules</FieldLabel>
+    <FieldError id="rules-error">Tick this one to post.</FieldError>
+  </FieldContent>
+</Field>
+```
+
+Every checkbox needs a label. The hit area reaches beyond the box, so it's
+easy to tap on a phone.
+
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+`AutoFormCheckbox` also accepts every [Base UI Checkbox](https://base-ui.com/react/components/checkbox#api-reference) prop.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description:
-        "The label for the checkbox. This is displayed next to the checkbox.",
-      type: "string",
-      default: "",
+      description: 'Shown next to the checkbox.',
+      type: 'ReactNode',
+    },
+    labelRight: {
+      description: "Content pinned to the label's right edge.",
+      type: 'ReactNode',
     },
     description: {
-      description:
-        "A short description of the checkbox. This is displayed below the checkbox.",
-      type: "string",
-      default: "",
+      description: 'Shown below the label.',
+      type: 'ReactNode',
     },
   }}
 />

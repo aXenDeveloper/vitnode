@@ -1,6 +1,6 @@
 ---
 title: Popover
-description: A popover component for displaying additional content on user interaction.
+description: A small floating panel anchored to a button, for quick actions, previews and short forms.
 icon: MessageSquare
 ---
 
@@ -11,20 +11,99 @@ icon: MessageSquare
 ## Usage
 
 ```ts
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from '@vitnode/core/components/ui/button'
 import {
   Popover,
   PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
   PopoverTrigger,
-} from '@vitnode/core/components/ui/popover';
+} from '@vitnode/core/components/ui/popover'
 ```
 
 ```tsx
 <Popover>
-  <PopoverTrigger render={<Button variant="outline">Open</Button>} />
-  <PopoverContent>Place content for the popover here.</PopoverContent>
+  <PopoverTrigger render={<Button variant="outline">Invite</Button>} />
+  <PopoverContent>
+    <PopoverHeader>
+      <PopoverTitle>Invite friends</PopoverTitle>
+      <PopoverDescription>The link works for 7 days.</PopoverDescription>
+    </PopoverHeader>
+  </PopoverContent>
 </Popover>
 ```
+
+`PopoverContent` is `w-72` with a `gap-4` column, so stacked children space
+themselves. Override the width with `className`.
+
+## With a form
+
+<Preview name="popover-form" />
+
+Drop an `AutoForm` in for quick edits. Control `open` so you can close it after
+a successful submit.
+
+```tsx
+const [open, setOpen] = React.useState(false)
+
+<Popover onOpenChange={setOpen} open={open}>
+  <PopoverTrigger render={<Button variant="outline">Add link</Button>} />
+  <PopoverContent align="start" className="w-80">
+    <AutoForm
+      fields={fields}
+      formSchema={formSchema}
+      onSubmit={values => {
+        insertLink(values)
+        setOpen(false)
+      }}
+    />
+  </PopoverContent>
+</Popover>
+```
+
+Longer forms belong in a [Dialog](/docs/ui/dialog), which also guards unsaved
+changes.
+
+## Position
+
+<Preview name="popover-side" />
+
+Set `side` and `align` on `PopoverContent`. It flips when there's no room and
+grows out of the trigger.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    side: {
+      description: 'Preferred side of the trigger.',
+      type: '"top" | "right" | "bottom" | "left" | "inline-start" | "inline-end"',
+      default: '"bottom"',
+    },
+    align: {
+      description: 'Alignment against the trigger.',
+      type: '"start" | "center" | "end"',
+      default: '"center"',
+    },
+    sideOffset: {
+      description: 'Gap from the trigger in pixels.',
+      type: 'number',
+      default: '4',
+    },
+    alignOffset: {
+      description: 'Shift along the alignment axis in pixels.',
+      type: 'number',
+      default: '0',
+    },
+    anchor: {
+      description: 'Position against another element instead of the trigger.',
+      type: 'Element | RefObject<Element>',
+    },
+  }}
+/>
 
 ## API Reference
 

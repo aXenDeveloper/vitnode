@@ -32,45 +32,49 @@ export default function ScrollFadeExample() {
           </p>
         </div>
         <div className="has-focus-visible:ring-ring/50 rounded-lg has-focus-visible:ring-3">
-          <ul
+          <div
             aria-label="Topics"
-            className="scroll-fade-x no-scrollbar flex gap-2 overflow-x-auto overscroll-x-contain py-1 outline-none"
+            className="scroll-fade-x no-scrollbar overflow-x-auto overscroll-x-contain py-1 outline-none"
             role="region"
             tabIndex={0}
           >
-            {topics.map((topic) => (
-              <li
-                className="bg-secondary text-secondary-foreground shrink-0 rounded-full px-3 py-1 text-sm"
-                key={topic}
-              >
-                {topic}
-              </li>
-            ))}
-          </ul>
+            <ul className="flex w-max gap-2">
+              {topics.map((topic) => (
+                <li
+                  className="bg-secondary text-secondary-foreground shrink-0 rounded-full px-3 py-1 text-sm"
+                  key={topic}
+                >
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">Latest releases</h3>
         <div className="has-focus-visible:ring-ring/50 rounded-lg has-focus-visible:ring-3">
-          <ul
+          <div
             aria-label="Latest releases"
-            className="scroll-fade-x scroll-fade-16 no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain outline-none"
+            className="scroll-fade-x scroll-fade-16 no-scrollbar snap-x snap-mandatory overflow-x-auto overscroll-x-contain outline-none"
             role="region"
             tabIndex={0}
           >
-            {releases.map((release) => (
-              <li
-                className="bg-background flex w-36 shrink-0 snap-start flex-col gap-1 rounded-lg border p-3"
-                key={release.name}
-              >
-                <span className="text-sm font-medium">{release.name}</span>
-                <span className="text-muted-foreground font-mono text-xs">
-                  {release.version}
-                </span>
-              </li>
-            ))}
-          </ul>
+            <ul className="flex w-max gap-3">
+              {releases.map((release) => (
+                <li
+                  className="bg-background flex w-36 shrink-0 snap-start flex-col gap-1 rounded-lg border p-3"
+                  key={release.name}
+                >
+                  <span className="text-sm font-medium">{release.name}</span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    {release.version}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
     </div>

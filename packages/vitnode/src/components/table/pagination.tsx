@@ -183,7 +183,7 @@ const NumberedPaginationDataTable = ({
         </PaginationItem>
 
         <PaginationItem className="sm:hidden">
-          <span className="text-muted-foreground px-2 text-sm">
+          <span className="text-muted-foreground px-2 text-sm tabular-nums">
             {t("page_of", { page, total: totalPages })}
           </span>
         </PaginationItem>
@@ -288,7 +288,10 @@ export const PaginationDataTable = ({
         isPending && "pointer-events-none opacity-60",
       )}
     >
-      <p aria-live="polite" className="text-muted-foreground text-sm">
+      <p
+        aria-live="polite"
+        className="text-muted-foreground text-sm tabular-nums"
+      >
         <RangeSummaryDataTable
           count={count}
           page={page}

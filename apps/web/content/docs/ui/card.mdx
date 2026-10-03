@@ -1,16 +1,14 @@
 ---
 title: Card
-description: Display content in a card layout.
+description: A surface that groups a title, content and actions into one tidy block.
 icon: RectangleHorizontal
 ---
-
-## Preview
 
 <Preview name="card" />
 
 ## Usage
 
-```tsx
+```ts
 import {
   Card,
   CardAction,
@@ -19,93 +17,103 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@vitnode/core/components/ui/card';
+} from '@vitnode/core/components/ui/card'
 ```
 
 ```tsx
 <Card>
   <CardHeader>
-    <CardTitle>Card Title</CardTitle>
-    <CardDescription>Card Description</CardDescription>
+    <CardTitle>Weekly digest</CardTitle>
+    <CardDescription>Sent every Monday at 9:00</CardDescription>
   </CardHeader>
-  <CardContent>
-    This is the content of the card. You can put any content here.
-  </CardContent>
+  <CardContent>A roundup of the top threads.</CardContent>
   <CardFooter>
-    <Button variant="outline">Action</Button>
+    <Button variant="outline">Preview email</Button>
   </CardFooter>
 </Card>
 ```
 
-`CardFooter` comes with a top border and a soft background out of the box, so it always reads as the "what now?" part of the card.
+`CardFooter` has a top border and a soft background, so it always reads as the
+"what now?" part. An `img` as the first or last child goes edge to edge with
+rounded corners.
+
+## Size
+
+<Preview name="card-size" />
+
+`size="sm"` drops the spacing from 24px to 16px and shrinks the title. Use it in
+dense grids and sidebars.
+
+```tsx
+<Card size="sm">...</Card>
+```
 
 ## Header with border
 
-Add `border-b` to `CardHeader` and it picks up matching bottom padding on its own.
-
 <Preview name="card-header-border" />
 
+Add `border-b` to `CardHeader` and it gets matching bottom padding.
+
 ```tsx
-<CardHeader className="border-b">
-  <CardTitle>Header with Border</CardTitle>
-  <CardDescription>This is a card with a header that has a bottom border.</CardDescription>
-</CardHeader>
+<CardHeader className="border-b">...</CardHeader>
 ```
 
 ## Header and footer
 
-Combine a bordered header with the footer for a card split into three clear parts.
-
 <Preview name="card-header-footer" />
 
-```tsx
-<Card>
-  <CardHeader className="border-b">
-    <CardTitle>Header with Border</CardTitle>
-  </CardHeader>
-  <CardContent>...</CardContent>
-  <CardFooter>
-    <Button className="w-full" variant="outline">
-      Action
-    </Button>
-  </CardFooter>
-</Card>
-```
+A bordered header plus the footer splits the card into three parts.
 
 ## Border separation
 
-Drop the card padding and let the content draw the lines. `CardAction` keeps the header button on the right.
-
 <Preview name="card-border-separation" />
+
+Drop the card padding and let the content draw the lines. `CardAction` keeps a
+header button on the end side.
 
 ```tsx
 <Card className="gap-0 p-0">
-  <CardHeader className="flex items-center justify-between px-4 py-2">
-    <CardTitle>Header</CardTitle>
+  <CardHeader className="items-center px-4 py-2">
+    <CardTitle>Reports</CardTitle>
     <CardAction>
-      <Button variant="outline">Action</Button>
+      <Button size="sm" variant="outline">
+        Filter
+      </Button>
     </CardAction>
   </CardHeader>
   <CardContent className="border-y px-4 py-3">...</CardContent>
-  <CardFooter className="border-none px-4 py-3">
-    <Button className="w-full" variant="outline">
-      Action
-    </Button>
-  </CardFooter>
+  <CardFooter className="border-none px-4 py-3">...</CardFooter>
 </Card>
 ```
 
 ## With a link
 
-A slim footer is a nice home for a "read more" style link.
-
 <Preview name="card-link" />
+
+A slim footer is a good home for a "read more" link.
 
 ```tsx
 <CardFooter className="py-2">
   <a className={cn(buttonVariants({ variant: 'link' }), 'px-0')} href="/guide">
-    See our guideline
-    <ExternalLinkIcon aria-hidden="true" />
+    Read the guide
   </a>
 </CardFooter>
 ```
+
+## Props
+
+All parts take regular `div` props.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Card
+
+<TypeTable
+  type={{
+    size: {
+      description: 'Spacing inside the card: 24px or 16px.',
+      type: 'default | sm',
+      default: 'default',
+    },
+  }}
+/>

@@ -68,7 +68,7 @@ const QuantityStepper = () => {
 
 export default function ButtonGroupExample() {
   return (
-    <Card className="flex w-full flex-col items-center gap-6 p-6 md:p-8">
+    <Card className="not-prose flex w-full flex-col items-center gap-6 p-6 md:p-8">
       <ButtonGroup
         aria-label="Message actions"
         className="flex-wrap justify-center"

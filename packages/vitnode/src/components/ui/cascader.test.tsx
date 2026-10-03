@@ -70,6 +70,14 @@ describe("cascader helpers", () => {
 describe("Cascader", () => {
   beforeEach(() => {
     vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        disconnect() {}
+        observe() {}
+        unobserve() {}
+      },
+    );
+    vi.stubGlobal(
       "matchMedia",
       vi.fn(() => ({
         addEventListener: vi.fn(),

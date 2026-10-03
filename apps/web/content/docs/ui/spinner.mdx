@@ -1,10 +1,8 @@
 ---
 title: Spinner
-description: A little spinning circle that says "hold on, it's coming". It comes in four sizes and any colour.
+description: A little spinning circle that says "hold on, it's coming", in four sizes and any color.
 icon: Loader
 ---
-
-## Preview
 
 <Preview name="spinner" />
 
@@ -15,32 +13,25 @@ import { Spinner } from '@vitnode/core/components/ui/spinner'
 ```
 
 ```tsx
-<Spinner />
+<Spinner size="lg" className="text-primary" />
 ```
 
-## Sizes
+It takes the text color around it, so a color change is one `text-*` class.
 
 | Size      | Pixels | Good for                          |
 | --------- | ------ | --------------------------------- |
 | `sm`      | 12     | Badges, dense rows                |
 | `default` | 16     | Buttons, inputs, inline with text |
 | `lg`      | 24     | Cards and panels                  |
-| `xl`      | 40     | A whole page or section loading   |
-
-```tsx
-<Spinner size="xl" />
-```
-
-It takes the text colour of its surroundings, so `className="text-primary"`
-(or `text-success`, `text-destructive`...) is all a colour change needs.
+| `xl`      | 40     | A whole page or section           |
 
 ## In buttons
 
 <Preview name="spinner-buttons" />
 
-For a button that's busy, prefer `isLoading` on the [Button](/docs/ui/button).
-It swaps the label for a spinner, disables the button and announces "Loading".
-Put a `Spinner` in by hand when you want to keep the label visible:
+Prefer `isLoading` on [Button](/docs/ui/button). It swaps the label for a
+spinner, disables the button and announces "Loading". Add a `Spinner` by hand
+to keep the label visible.
 
 ```tsx
 <Button disabled>
@@ -54,37 +45,17 @@ Put a `Spinner` in by hand when you want to keep the label visible:
 <Preview name="spinner-inline" />
 
 ```tsx
-<Badge variant="secondary">
-  <Spinner aria-hidden="true" />
-  Syncing
-</Badge>
-
-<InputGroup>
-  <InputGroupInput aria-label="Search" />
-  <InputGroupAddon align="inline-end">
-    <Spinner aria-label="Searching" />
-  </InputGroupAddon>
-</InputGroup>
+<InputGroupAddon align="inline-end">
+  <Spinner aria-label="Searching" />
+</InputGroupAddon>
 ```
 
 ## Loading states
 
 <Preview name="spinner-states" />
 
-Inside an [Empty](/docs/ui/empty) state, or laid over a card that's fetching
-fresh data:
-
-```tsx
-<Card aria-busy="true" className="relative overflow-hidden">
-  ...
-  <div className="bg-background/70 absolute inset-0 flex items-center justify-center backdrop-blur-xs">
-    <Spinner size="lg" />
-  </div>
-</Card>
-```
-
-Showing a whole section while it loads? Center an `xl` spinner. VitNode does
-the same for Suspense fallbacks across the AdminCP:
+Put it in an [Empty](/docs/ui/empty) state, or over a card that's refreshing.
+For a Suspense fallback, center an `xl` spinner, like the AdminCP does.
 
 ```tsx
 <Suspense
@@ -98,17 +69,16 @@ the same for Suspense fallbacks across the AdminCP:
 </Suspense>
 ```
 
-If you know roughly what's coming, a [Skeleton](/docs/ui/skeleton) of that
-shape usually feels faster than a spinner.
+Know what's coming? A [Skeleton](/docs/ui/skeleton) of that shape usually feels
+faster.
 
 ## Accessibility
 
-- A spinner is a `status` and is labelled "Loading" in the user's language.
-  Pass `aria-label` for something more specific, like "Searching".
-- When text right next to it already says what's happening ("Uploading..."), or
-  the button announces it, hide the spinner with `aria-hidden="true"` so screen
-  readers don't hear it twice.
-- Mark the container that's loading with `aria-busy="true"`.
+- A spinner has `role="status"` and the label "Loading", translated. Pass
+  `aria-label` for something specific, like "Searching".
+- If nearby text already says what's happening, add `aria-hidden="true"` so
+  screen readers don't hear it twice.
+- Mark the loading container with `aria-busy="true"`.
 
 ## Props
 

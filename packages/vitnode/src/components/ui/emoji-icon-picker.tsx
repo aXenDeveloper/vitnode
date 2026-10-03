@@ -77,7 +77,12 @@ export const EmojiIconPicker = ({
         <PopoverContent className="w-76 gap-0 p-0">
           <React.Suspense
             fallback={
-              <div className="flex h-108 items-center justify-center">
+              <div
+                className={cn(
+                  "flex items-center justify-center",
+                  allow.length > 1 ? "h-108" : "h-94",
+                )}
+              >
                 <div className="flex items-center justify-center">
                   <Spinner size="xl" />
                 </div>
@@ -100,7 +105,7 @@ export const EmojiIconPicker = ({
       {canRemove ? (
         <Button
           aria-label={t("remove")}
-          className="text-muted-foreground absolute end-1 size-7"
+          className="text-muted-foreground absolute end-1 size-7 after:absolute after:-inset-1 pointer-coarse:after:-inset-2"
           onClick={() => onChange(undefined)}
           size="icon"
           type="button"

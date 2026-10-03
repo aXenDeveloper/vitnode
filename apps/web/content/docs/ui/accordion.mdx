@@ -1,6 +1,6 @@
 ---
 title: Accordion
-description: A component that allows users to expand and collapse sections of content.
+description: Stacked sections that expand and collapse, for FAQs, rules and settings groups, built on Base UI.
 icon: Rows3
 ---
 
@@ -16,54 +16,42 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@vitnode/core/components/ui/accordion';
+} from '@vitnode/core/components/ui/accordion'
 ```
 
 ```tsx
-<Accordion className="w-full" defaultValue={['item-1']}>
-  <AccordionItem value="item-1">
-    <AccordionTrigger>Product Information</AccordionTrigger>
-    <AccordionContent className="flex flex-col gap-4 text-balance">
-      <p>
-        Our flagship product combines cutting-edge technology with sleek design.
-        Built with premium materials, it offers unparalleled performance and
-        reliability.
-      </p>
-      <p>
-        Key features include advanced processing capabilities, and an intuitive
-        user interface designed for both beginners and experts.
-      </p>
-    </AccordionContent>
-  </AccordionItem>
-  <AccordionItem value="item-2">
-    <AccordionTrigger>Shipping Details</AccordionTrigger>
-    <AccordionContent className="flex flex-col gap-4 text-balance">
-      <p>
-        We offer worldwide shipping through trusted courier partners. Standard
-        delivery takes 3-5 business days, while express shipping ensures
-        delivery within 1-2 business days.
-      </p>
-      <p>
-        All orders are carefully packaged and fully insured. Track your shipment
-        in real-time through our dedicated tracking portal.
-      </p>
-    </AccordionContent>
-  </AccordionItem>
-  <AccordionItem value="item-3">
-    <AccordionTrigger>Return Policy</AccordionTrigger>
-    <AccordionContent className="flex flex-col gap-4 text-balance">
-      <p>
-        We stand behind our products with a comprehensive 30-day return policy.
-        If you&apos;re not completely satisfied, simply return the item in its
-        original condition.
-      </p>
-      <p>
-        Our hassle-free return process includes free return shipping and full
-        refunds processed within 48 hours of receiving the returned item.
-      </p>
+<Accordion defaultValue={['register']}>
+  <AccordionItem value="register">
+    <AccordionTrigger>How do I create an account?</AccordionTrigger>
+    <AccordionContent>
+      <p>Click Sign up in the top bar and fill in your email.</p>
     </AccordionContent>
   </AccordionItem>
 </Accordion>
+```
+
+`defaultValue` and `value` are arrays of item values, even when only one item
+can be open.
+
+## Multiple
+
+<Preview name="accordion-multiple" />
+
+By default, opening an item closes the others. `multiple` lets several stay
+open.
+
+```tsx
+<Accordion defaultValue={['kind', 'search']} multiple>
+```
+
+## Find in page
+
+With `hiddenUntilFound`, closed panels stay in the DOM and the browser's
+
+<kbd>Ctrl</kbd> + <kbd>F</kbd> can find and open them. Great for long FAQs.
+
+```tsx
+<Accordion hiddenUntilFound>
 ```
 
 ## API Reference

@@ -284,7 +284,7 @@ export function SortableRowGroupDataTable({
         className={cn(
           "[&:last-child>tr:last-child]:border-0 [&:last-child>tr:last-child>td]:border-b-0 [&>tr>td]:border-b",
           isDragging &&
-            "bg-card ring-foreground/10 relative z-10 shadow-lg ring-1",
+            "bg-card ring-foreground/10 relative z-10 shadow-lg ring-1 motion-safe:scale-101",
         )}
         data-dragging={isDragging ? "" : undefined}
         data-slot="table-row-group"

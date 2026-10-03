@@ -10,49 +10,63 @@ icon: Sparkles
 
 ## Usage
 
-Shimmer is a Tailwind CSS utility, not a React component, so there is nothing
-to import. It ships with the `shadcn` package, and VitNode apps already pull it in
-from `src/styles.css`:
+Shimmer is a Tailwind utility, not a component, so there's nothing to import.
+It ships with the `shadcn` package, which VitNode apps already load in
+`src/styles.css`:
 
 ```css
 @import 'shadcn/tailwind.css';
 ```
 
-Add it to any text element:
-
 ```tsx
 <p className="shimmer text-muted-foreground">Generating response...</p>
 ```
 
-The highlight is derived from `currentColor`, so it works on muted text, brand
-colors and everything in between. In dark mode it brightens on its own to stay
-visible. It's pure CSS. The text is painted with `background-clip: text` and
-the highlight loops across it every two seconds.
+The highlight comes from `currentColor`, so it works on any text color, and it
+brightens on its own in dark mode. One sweep takes two seconds, then loops.
 
-| Class                     | What it does                                       |
-| ------------------------- | -------------------------------------------------- |
-| `shimmer`                 | Turns the effect on                                |
-| `shimmer-color-<color>`   | Sets the highlight color, opacity modifier allowed |
-| `shimmer-duration-<ms>`   | Length of one sweep in milliseconds (default 2000) |
-| `shimmer-spread-<number>` | Width of the highlight band on the spacing scale   |
-| `shimmer-angle-<number>`  | Tilt of the band in degrees (default 20)           |
-| `shimmer-reverse`         | Sweeps the other way                               |
-| `shimmer-once`            | Plays a single sweep instead of looping            |
-| `shimmer-none`            | Renders the text normally                          |
+## Variants
+
+<Preview name="shimmer-variants" />
+
+| Class                     | What it does                                                     |
+| ------------------------- | ---------------------------------------------------------------- |
+| `shimmer`                 | Turns the effect on                                              |
+| `shimmer-color-<color>`   | Highlight color: theme color, `/opacity` or `[#378ADD]`          |
+| `shimmer-duration-<ms>`   | One sweep in milliseconds (default 2000)                         |
+| `shimmer-spread-<number>` | Band width on the spacing scale, or `[30%]` (default 3ch + 40px) |
+| `shimmer-angle-<number>`  | Band tilt in degrees (default 20)                                |
+| `shimmer-reverse`         | Sweeps against the reading direction                             |
+| `shimmer-once`            | Plays a single sweep                                             |
+| `shimmer-none`            | Turns it off, in any class order                                 |
+
+The sweep follows the reading direction, so it runs right to left in RTL.
+
+## Play once
+
+`shimmer-once` makes a nice "done!" when streaming finishes. Change the
+element's `key` to replay it.
+
+```tsx
+<p className="shimmer shimmer-once shimmer-duration-1100" key={replays}>
+  Response generated.
+</p>
+```
+
+## Turning it off
+
+`shimmer-none` wins regardless of class order, so it works with breakpoints and
+state variants:
+
+```tsx
+<p className="shimmer md:shimmer-none">Generating response...</p>
+```
 
 ## With a status line
 
-Shimmer pairs nicely with a `Spinner` and the [Marker](/docs/ui/marker)
-component for "the assistant is busy" moments:
+Pair it with a `Spinner` and a [Marker](/docs/ui/marker):
 
 ```tsx
-import {
-  Marker,
-  MarkerContent,
-  MarkerIcon,
-} from '@vitnode/core/components/ui/marker'
-import { Spinner } from '@vitnode/core/components/ui/spinner'
-
 <Marker role="status">
   <MarkerIcon>
     <Spinner />
@@ -61,77 +75,10 @@ import { Spinner } from '@vitnode/core/components/ui/spinner'
 </Marker>
 ```
 
-## Variants
-
-<Preview name="shimmer-variants" />
-
-### Color
-
-Use any theme color, with an optional opacity modifier, or an arbitrary value:
-
-```tsx
-<p className="shimmer shimmer-color-success">Generating response...</p>
-<p className="shimmer shimmer-color-success/60">Generating response...</p>
-<p className="shimmer shimmer-color-[#378ADD]">Generating response...</p>
-```
-
-### Duration
-
-```tsx
-<p className="shimmer shimmer-duration-1000">In a hurry...</p>
-```
-
-### Spread
-
-The band is `calc(3ch + 40px)` wide by default, so it scales with the font
-size. Set it on the spacing scale or with any length or percentage:
-
-```tsx
-<p className="shimmer shimmer-spread-24">Generating response...</p>
-<p className="shimmer shimmer-spread-[30%]">Generating response...</p>
-```
-
-### Angle
-
-```tsx
-<p className="shimmer shimmer-angle-45">Generating response...</p>
-```
-
-### Reverse
-
-The sweep follows the reading direction out of the box (right to left in RTL).
-`shimmer-reverse` flips it manually:
-
-```tsx
-<p className="shimmer shimmer-reverse">Generating response...</p>
-```
-
-### Play once
-
-`shimmer-once` plays a single sweep, a nice little "done!" when streaming
-finishes. Combine it with `shimmer-duration-<ms>` to set how long it takes, and
-change the element's `key` to play it again:
-
-```tsx
-<p className="shimmer shimmer-once shimmer-duration-1100" key={replays}>
-  Response generated.
-</p>
-```
-
-### Turning it off
-
-`shimmer-none` works in any class order, so it plays well with breakpoints and
-state variants:
-
-```tsx
-<p className="shimmer md:shimmer-none">Generating response...</p>
-```
-
 ## Browser support
 
-Shimmer uses relative color syntax and `color-mix()`, which every current
-browser supports. In older browsers the highlight gradient can be dropped and
-the text may render transparent. If you need to support them, apply the class
+Shimmer needs relative color syntax and `color-mix()`, which every current
+browser has. Older ones may render the text transparent. To be safe, apply it
 only where it works:
 
 ```tsx
@@ -142,15 +89,13 @@ only where it works:
 
 ## Accessibility
 
-- With reduced motion turned on, the animation stops and the text renders
-  normally, with no setup needed. That rule targets the plain `shimmer` class, so
-  if you apply it through a variant (`group-hover:shimmer`), add
+- Reduced motion stops the animation automatically, but only for the plain
+  `shimmer` class. Behind a variant (`group-hover:shimmer`), add
   `motion-reduce:shimmer-none` yourself.
-- Shimmer is decoration, not a loading signal. Screen readers and reduced-motion
-  users never see it, so pair it with real text inside `role="status"`, like
-  "Thinking..." in the examples above.
-- Keep it on short status text. A whole paragraph sparkling away is more disco
-  than progress.
+- Shimmer is decoration, not a loading signal. Put real text inside
+  `role="status"`, like "Thinking...".
+- Keep it on short status text. A whole sparkling paragraph is more disco than
+  progress.
 
 ## Reference
 

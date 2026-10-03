@@ -71,6 +71,46 @@ describe("CopyButton", () => {
     expect(screen.getByRole("status").textContent).toBe("");
   });
 
+  it("restarts the delay when clicked again while copied", async () => {
+    stubClipboard(async () => {});
+    render(<CopyButton content="hello" delay={1000} />);
+
+    await clickAndFlush(screen.getByRole("button"));
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    await clickAndFlush(screen.getByRole("button"));
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    expect(
+      screen.getByRole("button", { name: "core.global.copied" }),
+    ).toBeTruthy();
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(
+      screen.getByRole("button", { name: "core.global.copy" }),
+    ).toBeTruthy();
+  });
+
+  it("goes back to the copy state after two seconds by default", async () => {
+    stubClipboard(async () => {});
+    render(<CopyButton content="hello" />);
+
+    await clickAndFlush(screen.getByRole("button"));
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(
+      screen.getByRole("button", { name: "core.global.copy" }),
+    ).toBeTruthy();
+  });
+
   it("shows an error toast when the clipboard rejects", async () => {
     stubClipboard(async () => Promise.reject(new Error("denied")));
     const toastError = vi.spyOn(toast, "error");

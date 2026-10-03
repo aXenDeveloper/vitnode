@@ -60,7 +60,7 @@ export default function CarouselExample() {
   return (
     <Carousel
       aria-label="VitNode screenshots"
-      className="flex w-full flex-col gap-4"
+      className="not-prose flex w-full flex-col gap-4"
       opts={{ loop: true }}
       setApi={setApi}
     >
@@ -96,7 +96,7 @@ export default function CarouselExample() {
       </CarouselContent>
 
       <div className="flex items-center justify-between gap-4">
-        <CarouselPrevious className="static translate-y-0" />
+        <CarouselPrevious className="static" />
         <div className="flex items-center gap-1">
           {SLIDES.map(({ title }, index) => (
             <button
@@ -118,7 +118,7 @@ export default function CarouselExample() {
             </button>
           ))}
         </div>
-        <CarouselNext className="static translate-y-0" />
+        <CarouselNext className="static" />
       </div>
     </Carousel>
   )

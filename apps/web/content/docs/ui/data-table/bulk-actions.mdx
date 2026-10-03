@@ -10,23 +10,38 @@ icon: CheckCheck
 
 ## Usage
 
-Pass `bulkActions` to let a person act on several rows at once. That one prop turns selection on. The table grows a leading checkbox column, with a checkbox per row and one in the header that ticks the whole page. While anything is ticked, a bar floats at the bottom centre of the viewport with the count, your actions and a button to clear the selection.
+Passing `bulkActions` turns selection on. Each row gets a checkbox, and the
+header checkbox ticks the whole page. While anything is ticked, a bar floats at
+the bottom of the viewport with the count, your actions and a clear button.
 
-Your actions read the ticked ids with the `useDataTableSelection` hook. They are rendered inside the bar, which lives inside the table's selection provider, so nothing has to be threaded through props:
+```tsx
+<ContentDataTable
+  id="users-table"
+  // [!code ++]
+  bulkActions={<DeleteBulkAction />}
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+Actions render inside the bar, so they read the ticked ids with
+`useDataTableSelection()`. No props to thread through.
 
 ```tsx title="delete-bulk-action.tsx"
-'use client'
-
 import { useDataTableSelection } from '@vitnode/core/components/table/selection'
 import { Button } from '@vitnode/core/components/ui/button'
 
 export const DeleteBulkAction = () => {
-  // [!code ++]
   const { clear, selected } = useDataTableSelection()
 
   return (
     <Button
-      onClick={() => deleteUsersAction({ ids: selected })}
+      onClick={async () => {
+        await deleteUsers(selected)
+        clear()
+      }}
       variant="destructive"
     >
       <Trash2Icon />
@@ -36,80 +51,56 @@ export const DeleteBulkAction = () => {
 }
 ```
 
-```tsx
-<DataTable
-  id="users-table"
-  // [!code ++]
-  bulkActions={<DeleteBulkAction />}
-  columns={[
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'email', header: 'Email' },
-  ]}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: 'name',
-      order: 'asc',
-    },
-  }}
-/>
-```
+## Selection is per page
 
-## What the hook returns
+Selection only covers the rows on screen. When paging, search or a filter
+brings different rows, ticks on rows that left are dropped. A bulk action never
+touches a row nobody can see.
+
+After a partial success, revalidate. Rows that were refused stay on screen and
+stay ticked, so the bar points at the work that's left.
+
+<Callout type="warn" title="There is no bulk endpoint">
+  `bulkActions` hands you ids, nothing more. If your action loops a single-row
+  endpoint, cap the fan-out and report outcomes per reason, so a partial success
+  can say so.
+</Callout>
+
+## useDataTableSelection
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     selected: {
-      description: 'The ticked row ids, in the order they were ticked.',
-      required: true,
+      description: 'Ticked row ids, in the order they were ticked.',
       type: 'number[]',
     },
     isSelected: {
-      description: 'Whether one row id is ticked.',
-      required: true,
+      description: 'Whether one row is ticked.',
       type: '(id: number) => boolean',
     },
     allSelected: {
       description: 'Every row on the page is ticked.',
-      required: true,
       type: 'boolean',
     },
     someSelected: {
-      description:
-        "Some but not all rows are ticked - the header checkbox's indeterminate state.",
-      required: true,
+      description: 'Some but not all rows are ticked.',
       type: 'boolean',
     },
     toggle: {
       description: 'Ticks or unticks one row.',
-      required: true,
       type: '(id: number) => void',
     },
     toggleAll: {
       description: 'Ticks or unticks every row on the page.',
-      required: true,
       type: '(next: boolean) => void',
     },
     clear: {
-      description: 'Unticks everything, which hides the bar.',
-      required: true,
+      description: 'Unticks everything and hides the bar.',
       type: '() => void',
     },
   }}
 />
 
-## Selection is per page
-
-The selection only ever covers the rows currently on screen. Whenever the server sends a different set of row ids, because someone paged, searched or changed a filter, the selection is pruned to what is still there. Paging away empties it on its own, and a bulk action can never touch a row nobody can see.
-
-Pruning also keeps a partly successful action easy to read. Revalidate after deleting 3 of 5 rows, and the 2 that were refused stay on screen _and_ stay ticked, so the bar still points at exactly the work that is left.
-
-<Callout type="warn" title="Bulk actions run per row">
-  There is no bulk endpoint behind `bulkActions` - it hands you ids, and what
-  you do with them is yours. When your action loops the single-row endpoint, cap
-  the fan-out and report the outcomes per reason rather than as one pass/fail,
-  so a run that partly succeeded can say so.
-</Callout>
+The hook throws outside a table with `bulkActions`.

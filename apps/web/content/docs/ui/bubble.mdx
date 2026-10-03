@@ -1,6 +1,6 @@
 ---
 title: Bubble
-description: Chat-style message bubbles with variants, alignment, grouping, reactions and clickable suggestions.
+description: Chat-style message bubbles with seven variants, start or end alignment, grouping, reactions and clickable suggestions.
 icon: MessageCircleMore
 ---
 
@@ -25,42 +25,19 @@ import {
 </Bubble>
 ```
 
-A bubble shrinks to fit its text and never grows past 80% of the row, so short
-replies stay short and long ones wrap politely.
-
-## Composition
-
-```text
-BubbleGroup
-├── Bubble
-│   ├── BubbleContent
-│   └── BubbleReactions
-└── Bubble
-    └── BubbleContent
-```
+A bubble shrinks to fit its text and never grows past 80% of the row. New
+bubbles grow in from their tail corner; with reduced motion they only fade.
 
 ## Variants
 
-```tsx
-<Bubble variant="muted">
-  <BubbleContent>Quiet, supporting content.</BubbleContent>
-</Bubble>
-```
+<Preview name="bubble-variants" />
 
-| Variant       | Use it for                                               |
-| ------------- | -------------------------------------------------------- |
-| `default`     | A strong primary bubble, usually the current user.       |
-| `secondary`   | The standard neutral bubble.                             |
-| `muted`       | Lower-emphasis replies.                                  |
-| `tinted`      | A soft bubble derived from your primary color.           |
-| `outline`     | A bordered bubble for suggestions or rich content.       |
-| `ghost`       | Unframed, full-width content such as assistant answers.  |
-| `destructive` | Errors and failed actions.                               |
+`default` is usually the current user, `secondary` the standard reply. `ghost`
+drops the frame and takes the full width.
 
 ## Alignment
 
-Messages you sent go on the right, everything else on the left, like every
-chat app you have ever used.
+Your messages go on the end side, everyone else's on the start.
 
 ```tsx
 <Bubble align="end">
@@ -70,8 +47,8 @@ chat app you have ever used.
 
 ## Grouping
 
-Wrap consecutive bubbles from the same sender in `BubbleGroup` to tighten the
-spacing between them. Set `align` on each `Bubble`, not on the group.
+`BubbleGroup` tightens the spacing between consecutive bubbles from one
+sender. Set `align` on each `Bubble`, not on the group.
 
 ```tsx
 <BubbleGroup>
@@ -86,24 +63,22 @@ spacing between them. Set `align` on each `Bubble`, not on the group.
 
 ## Reactions
 
-`BubbleReactions` pins a small pill to the bubble's edge. Move it with `side`
-(`top` or `bottom`) and `align` (`start` or `end`). It overlaps the bubble, so
-leave a bit more `gap` between rows.
+<Preview name="bubble-reactions" />
+
+`BubbleReactions` pins a pill to the bubble's edge. It overlaps the bubble, so
+leave extra `gap` between rows.
 
 ```tsx
-<Bubble variant="muted">
-  <BubbleContent>Tests passed on the first try.</BubbleContent>
-  <BubbleReactions aria-label="Reactions: rocket, eyes" role="img">
-    <span>🚀</span>
-    <span>👀</span>
-  </BubbleReactions>
-</Bubble>
+<BubbleReactions aria-label="Reactions: rocket, eyes" role="img" side="top">
+  <span>🚀</span>
+  <span>👀</span>
+</BubbleReactions>
 ```
 
 ## Links and buttons
 
-Use `render` on `BubbleContent` to turn a bubble into a real link or button,
-such as a quick reply suggestion.
+Use `render` on `BubbleContent` to make a bubble a real link or button, like a
+quick-reply suggestion.
 
 ```tsx
 <Bubble variant="outline">
@@ -115,33 +90,18 @@ such as a quick reply suggestion.
 
 ## Use with Message
 
-Need an avatar, a sender name or a read receipt? Wrap bubbles in a
-[Message](/docs/ui/message). Set `align="end"` on the `Message` once and every
-bubble inside follows it to the end side.
-
-```tsx
-<Message align="end">
-  <MessageContent>
-    <Bubble>
-      <BubbleContent>No need to align me twice.</BubbleContent>
-    </Bubble>
-    <MessageFooter>Read</MessageFooter>
-  </MessageContent>
-</Message>
-```
+For an avatar, sender name or read receipt, wrap bubbles in a
+[Message](/docs/ui/message). Bubbles inside follow the message's `align`.
 
 ## Accessibility
 
-- `Bubble` is just the visual surface. Put conversation semantics such as
-  `role="log"` and an `aria-label` on the surrounding container.
-- A row of emoji reads poorly on a screen reader ("plus eight", anyone?). Give
-  `BubbleReactions` `role="img"` and a descriptive `aria-label` so it is
-  announced once. When reactions are interactive, render buttons with labels
-  instead.
-- Clickable bubbles should be a real `<button>` or `<a>` via `render`. They get
-  a visible focus ring and take their accessible name from the text.
-- Variants signal tone with color, so keep the meaning in the text too,
-  especially for `destructive` bubbles.
+- `Bubble` is only the visual surface. Put `role="log"` and an `aria-label` on
+  the conversation container.
+- Give `BubbleReactions` `role="img"` and an `aria-label`, so screen readers
+  announce it once instead of reading every emoji. Interactive reactions should
+  be labelled buttons.
+- Clickable bubbles must be a real `<button>` or `<a>` via `render`.
+- Variants signal tone with color, so keep the meaning in the text too.
 
 ## Props
 
@@ -152,12 +112,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     variant: {
-      description: 'The visual treatment of the bubble.',
+      description: 'Visual treatment.',
       type: 'default | secondary | muted | tinted | outline | ghost | destructive',
       default: 'default',
     },
     align: {
-      description: 'Which side of the conversation the bubble sits on.',
+      description: 'Which side of the conversation it sits on.',
       type: 'start | end',
       default: 'start',
     },
@@ -169,7 +129,8 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     render: {
-      description: 'Renders the content as another element, such as a link or a button.',
+      description:
+        'Renders the content as another element, like a link or button.',
       type: 'ReactElement | function',
     },
   }}
@@ -180,12 +141,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     side: {
-      description: 'The edge of the bubble the reactions are anchored to.',
+      description: 'Edge of the bubble the reactions sit on.',
       type: 'top | bottom',
       default: 'bottom',
     },
     align: {
-      description: 'The inline alignment of the reactions.',
+      description: 'Inline position along that edge.',
       type: 'start | end',
       default: 'end',
     },

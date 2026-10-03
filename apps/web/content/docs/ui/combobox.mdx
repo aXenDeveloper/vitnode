@@ -1,6 +1,6 @@
 ---
 title: Combobox
-description: Select from a list of options with a search input.
+description: Pick one or many options from a searchable list, with groups, chips and async server search.
 icon: ChevronsUpDown
 ---
 
@@ -10,21 +10,21 @@ icon: ChevronsUpDown
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-<Tabs items={['Auto Form', 'Async Auto Form', 'Manual']}>
+<Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
-```
+Options come from the `z.enum`. `labels` gives each value a readable name.
 
 ```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormCombobox } from '@vitnode/core/components/form/fields/combobox'
+
 const formSchema = z.object({
-  type: z.enum(["option-one", "option-two"]),
-});
+  category: z.enum(['general', 'support']),
+})
 ```
 
 ```tsx
@@ -32,21 +32,14 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "type",
-      component: props => (
+      id: 'category',
+      component: (props) => (
         <AutoFormCombobox
           {...props}
-          description="Select an option from the list"
-          label="Type"
+          label="Category"
           labels={[
-            {
-              value: "option-one",
-              label: "Option One",
-            },
-            {
-              value: "option-two",
-              label: "Option Two",
-            },
+            { value: 'general', label: 'General discussion' },
+            { value: 'support', label: 'Help & support' },
           ]}
         />
       ),
@@ -57,67 +50,9 @@ const formSchema = z.object({
 
   </Tab>
 
-  <Tab value="Async Auto Form">
-
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-```
-
-```ts
-const formSchema = z.object({
-  categoryId: z.object({ value: z.string(), label: z.string() }),
-});
-```
-
-```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "categoryId",
-      component: props => (
-        <AutoFormCombobox
-          {...props}
-          fetchData={async ({ search }) => {
-            const res = await fetcher({
-              plugin: "@acme/blog",
-              path: "/",
-              method: "get",
-              module: "categories",
-              args: {
-                query: {
-                  search,
-                },
-              },
-            });
-            const data = await res.json();
-
-            return data.edges.map(category => ({
-              label: getLangValue(category.titleTranslations, locale),
-              value: category.id.toString(),
-            }));
-          }}
-          id="categoryId"
-          label="Category"
-          placeholder="Select a category"
-          searchPlaceholder="Search categories"
-        />
-      ),
-    },
-  ]}
-/>
-```
-
-  </Tab>
-
   <Tab value="Manual">
 
 ```tsx
-"use client";
-
 import {
   Combobox,
   ComboboxContent,
@@ -125,238 +60,221 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@vitnode/core/components/ui/combobox";
+} from '@vitnode/core/components/ui/combobox'
 
-const frameworks = [
-  "Next.js",
-  "SvelteKit",
-  "Nuxt.js",
-  "Remix",
-  "Astro",
-] as const;
+const categories = ['General', 'Support', 'Showcase']
 
-export function ComboboxBasic() {
-  return (
-    <Combobox items={frameworks}>
-      <ComboboxInput placeholder="Select a framework" />
-      <ComboboxContent>
-        <ComboboxEmpty>No items found.</ComboboxEmpty>
-        <ComboboxList>
-          {item => (
-            <ComboboxItem key={item} value={item}>
-              {item}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  );
-}
+;<Combobox items={categories}>
+  <ComboboxInput placeholder="Pick a category" />
+  <ComboboxContent>
+    <ComboboxEmpty>No categories found.</ComboboxEmpty>
+    <ComboboxList>
+      {(item) => (
+        <ComboboxItem key={item} value={item}>
+          {item}
+        </ComboboxItem>
+      )}
+    </ComboboxList>
+  </ComboboxContent>
+</Combobox>
 ```
 
   </Tab>
-
 </Tabs>
 
 ## Groups and clear button
 
 <Preview name="combobox-groups" />
 
-Give options a `group` and they're sorted under headings. Handy once a list
-gets long enough to scroll. `showClear` adds an × that empties the field in one
-click.
+Give options a `group` to sort them under headings. Groups follow the order they
+first appear in `labels`; ungrouped options sit at the top. `showClear` adds an
+× that empties the field.
 
 ```tsx
 <AutoFormCombobox
   {...props}
-  label="Timezone"
   labels={[
-    { group: "Europe", label: "London", value: "europe-london" },
-    { group: "Europe", label: "Warsaw", value: "europe-warsaw" },
-    { group: "Americas", label: "New York", value: "america-new-york" },
+    { group: 'Europe', label: 'Warsaw', value: 'europe-warsaw' },
+    { group: 'Americas', label: 'New York', value: 'america-new-york' },
   ]}
   showClear
 />
 ```
 
-Groups appear in the order they first show up in `labels`, and options without
-a `group` gather at the top with no heading.
+## Async search
+
+<Preview name="combobox-async" />
+
+`fetchData` loads options from your API as people type (debounced by 500ms). It
+needs a stable `id` and a `queryKey` for caching. Each picked value is a
+`{ value, label }` object, not a string.
+
+```tsx
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const formSchema = z.object({
+  moderators: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .min(1)
+    .default([]),
+})
+
+;<AutoFormCombobox
+  {...props}
+  fetchData={async ({ search }) => {
+    const res = await fetcher({
+      plugin: '@acme/forum',
+      method: 'get',
+      module: 'members',
+      path: '/',
+      args: { query: { search } },
+    })
+    const data = await res.json()
+
+    return data.edges.map((member) => ({
+      label: member.name,
+      value: member.id.toString(),
+    }))
+  }}
+  id="moderators"
+  multiple
+  queryKey={['forum', 'members']}
+  renderItem={(item) => <UserRow name={item.label} />}
+  searchPlaceholder="Find a member..."
+/>
+```
+
+`renderItem` customizes each async option, like adding an avatar.
 
 ## Multiple
 
 <Preview name="combobox-multiple" />
 
-Pass `multiple` and use an array in the schema. Picked options pop in as
-chips, and removing one shrinks it away while the rest slide over to close the
-gap. The box keeps its width and wraps onto a new line when it's full.
-With reduced motion turned on, chips just appear and disappear.
+Add `multiple` and use an array in the schema. Picks become chips, and the box
+wraps when full. `.min()` and `.max()` on the array become the validation
+messages.
 
-### Limit visible chips
-
-Picked a dozen tags? Set `maxVisibleChips` and only the first few show, followed
-by a "+N more" chip that counts the rest. Every pick is still saved. The
-limit is only visual.
+```ts
+const formSchema = z.object({
+  topics: z
+    .array(z.enum(['news', 'guides', 'releases']))
+    .min(1, 'Pick at least one topic')
+    .max(3, 'Three topics is plenty'),
+})
+```
 
 ```tsx
 <AutoFormCombobox {...props} labels={topics} maxVisibleChips={3} multiple />
 ```
 
-Press <kbd>Backspace</kbd> in an empty search to remove the last chip, or
-<kbd>Escape</kbd> with the list closed to clear every pick. That's the
-standard combobox pattern, and worth knowing before you hit Escape twice.
+- `maxVisibleChips` shows the first few chips plus "+N more". Every pick is
+  still saved.
+- `renderChip` customizes each chip.
+- <kbd>Backspace</kbd> in an empty search removes the last chip.
+  <kbd>Escape</kbd> with the list closed clears every pick, so mind that second
+  Escape.
+- Reduced motion turns off the chip and chevron animations.
 
-<Tabs items={['Auto Form', 'Manual']}>
-  <Tab value="Auto Form">
-
-```ts
-const formSchema = z.object({
-  topics: z
-    .array(z.enum(["news", "guides", "releases"]))
-    .min(1, "Pick at least one topic")
-    .max(3, "Three topics is plenty"),
-});
-```
+For a manual multi-select, wrap chips in `ComboboxChips` and anchor the popup to
+it:
 
 ```tsx
-<AutoFormCombobox
-  {...props}
-  label="Topics"
-  labels={[
-    { value: "news", label: "News" },
-    { value: "guides", label: "Guides" },
-    { value: "releases", label: "Releases" },
-  ]}
-  multiple
-/>
+const anchor = useComboboxAnchor()
+
+;<Combobox items={frameworks} multiple>
+  <ComboboxChips ref={anchor}>
+    <ComboboxValue>
+      {(values: string[]) => (
+        <>
+          {values.map((value) => (
+            <ComboboxChip key={value}>{value}</ComboboxChip>
+          ))}
+          <ComboboxChipsInput placeholder="Add a framework" />
+        </>
+      )}
+    </ComboboxValue>
+  </ComboboxChips>
+  <ComboboxContent anchor={anchor}>
+    <ComboboxList>
+      {(item) => (
+        <ComboboxItem key={item} value={item}>
+          {item}
+        </ComboboxItem>
+      )}
+    </ComboboxList>
+  </ComboboxContent>
+</Combobox>
 ```
-
-`.min()` and `.max()` on the array become the validation messages, and
-`fetchData` works with `multiple` too. The value is then an array of
-`{ value, label }` objects.
-
-  </Tab>
-
-  <Tab value="Manual">
-
-```tsx
-import {
-  Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxChipsInput,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxValue,
-  useComboboxAnchor,
-} from "@vitnode/core/components/ui/combobox";
-
-export function ComboboxMultiple() {
-  const anchor = useComboboxAnchor();
-
-  return (
-    <Combobox items={frameworks} multiple>
-      <ComboboxChips ref={anchor}>
-        <ComboboxValue>
-          {(values: string[]) => (
-            <>
-              {values.map(value => (
-                <ComboboxChip key={value}>{value}</ComboboxChip>
-              ))}
-              <ComboboxChipsInput placeholder="Add a framework" />
-            </>
-          )}
-        </ComboboxValue>
-      </ComboboxChips>
-      <ComboboxContent anchor={anchor}>
-        <ComboboxEmpty>No items found.</ComboboxEmpty>
-        <ComboboxList>
-          {item => (
-            <ComboboxItem key={item} value={item}>
-              {item}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  );
-}
-```
-
-  </Tab>
-</Tabs>
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description: "The label for the combobox, displayed above the input.",
-      type: "string",
-      default: "",
+      description: 'Shown above the input.',
+      type: 'ReactNode',
     },
     description: {
-      description:
-        "An optional description for the combobox, displayed below the input.",
-      type: "string",
-      default: "",
+      description: 'Shown below the input.',
+      type: 'ReactNode',
+    },
+    labels: {
+      description: 'Readable label and optional group for each enum value.',
+      type: '{ value: string; label: string; group?: string }[]',
+      default: '[]',
+    },
+    placeholder: {
+      description: 'Input placeholder.',
+      type: 'string',
+      default: '"Select an option"',
     },
     fetchData: {
       description:
-        "Callback to load options based on the search query. When provided, the combobox switches to async search.",
-      type: "(params: { search: string }) => Promise<Array<{ value: string; label: string }>> | Array<{ value: string; label: string }>",
-      default: "",
+        'Loads options for the search text. Turns on async search and requires `id` and `queryKey`.',
+      type: '({ search }) => { value: string; label: string }[] | Promise<...>',
     },
     id: {
-      description: "Stable id for query caching and list updates.",
-      type: "string",
-      default: "",
+      description: 'Stable id. Required with `fetchData`.',
+      type: 'string',
     },
-    labels: {
+    queryKey: {
       description:
-        "An array of options for the combobox, each with a value, label and optional group heading. Used for static options.",
-      type: "Array<{ value: string; label: string; group?: string }>",
-      default: "[]",
-    },
-    placeholder: {
-      description: "Placeholder text for the combobox input.",
-      type: "string",
-      default: "Select an option",
+        'TanStack Query key prefix for cached results. Required with `fetchData`.',
+      type: 'readonly unknown[]',
     },
     searchPlaceholder: {
-      description: "Placeholder text for the search input within the combobox.",
-      type: "string",
-      default: "Search...",
-    },
-    disabled: {
-      description: "Whether the combobox is disabled.",
-      type: "boolean",
-      default: "false",
-    },
-    showClear: {
-      description: "Shows a button that clears the selection.",
-      type: "boolean",
-      default: "false",
-    },
-    maxVisibleChips: {
       description:
-        "With `multiple`, shows only this many chips plus a \"+N more\" chip for the rest.",
-      type: "number",
-      default: "",
+        'Input placeholder with `fetchData`. Falls back to `placeholder`.',
+      type: 'string',
+    },
+    renderItem: {
+      description: 'Custom content for each `fetchData` option.',
+      type: '(item: { value: string; label: string }) => ReactNode',
     },
     multiple: {
-      description:
-        "Whether multiple selections are allowed. Not used when fetchData is provided.",
-      type: "boolean",
-      default: "false",
+      description: 'Allows many picks, shown as chips. Works with `fetchData`.',
+      type: 'boolean',
+      default: 'false',
+    },
+    maxVisibleChips: {
+      description: 'With `multiple`, shows this many chips plus "+N more".',
+      type: 'number',
+    },
+    renderChip: {
+      description: 'With `multiple`, custom content for each chip.',
+      type: '(item: { value: string; label: string }) => ReactNode',
     },
     showClear: {
-      description: "Whether to show a clear button when a value is selected.",
-      type: "boolean",
-      default: "false",
+      description: 'Single select only. Shows a button that clears the value.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'Disables the combobox.',
+      type: 'boolean',
+      default: 'false',
     },
   }}
 />

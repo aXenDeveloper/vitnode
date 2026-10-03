@@ -8,17 +8,15 @@ import {
 
 export default function CardHeaderBorderExample() {
   return (
-    <Card className="w-full max-w-xs">
+    <Card className="not-prose w-full max-w-xs">
       <CardHeader className="border-b">
-        <CardTitle>Header with Border</CardTitle>
-        <CardDescription>
-          This is a card with a header that has a bottom border.
-        </CardDescription>
+        <CardTitle>Community rules</CardTitle>
+        <CardDescription>Last updated in March</CardDescription>
       </CardHeader>
       <CardContent>
-        <p>
-          The header has a border-b class applied, creating a visual separation
-          between the header and content sections.
+        <p className="leading-relaxed">
+          Be kind, stay on topic and search before you post. Moderators may
+          close duplicate threads.
         </p>
       </CardContent>
     </Card>

@@ -8,7 +8,7 @@ import {
 
 export default function TabsLineDemo() {
   return (
-    <Tabs className="w-full" defaultValue="posts">
+    <Tabs className="not-prose w-full" defaultValue="posts">
       <TabsList variant="line">
         <TabsTrigger value="posts">Posts</TabsTrigger>
         <TabsTrigger value="comments">Comments</TabsTrigger>

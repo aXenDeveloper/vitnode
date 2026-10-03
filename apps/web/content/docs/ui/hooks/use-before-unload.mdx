@@ -1,30 +1,66 @@
 ---
 title: useBeforeUnload
-description: A custom hook to handle the beforeunload event in React applications
+description: Warn people before they close the tab or reload the page with unsaved changes, using the browser's beforeunload prompt.
 icon: DoorOpen
 ---
 
-## Example
+## Preview
 
-```tsx
-import { useBeforeUnload } from '@vitnode/core/hooks/use-before-unload';
+<Preview name="hook-use-before-unload" />
+
+## Usage
+
+```ts
+import { useBeforeUnload } from '@vitnode/core/hooks/use-before-unload'
 ```
 
 ```tsx
-export const CustomMessageExample = () => {
-  const [isEditing, setIsEditing] = useState(false);
+const [isDirty, setIsDirty] = React.useState(false)
 
-  // [!code ++:4]
-  useBeforeUnload(
-    isEditing,
-    'You have unsaved changes. Are you sure you want to leave?',
-  );
-
-  return (
-    <div>
-      <button onClick={() => setIsEditing(true)}>Start editing</button>
-      <p>Note: Modern browsers may not show the custom message</p>
-    </div>
-  );
-};
+useBeforeUnload(isDirty)
 ```
+
+While `enabled` is `true`, closing the tab, reloading or typing a new address
+makes the browser ask "Leave site?". Set it back to `false` once the changes are
+saved.
+
+## Check at the last moment
+
+Pass a function and the hook calls it only when someone tries to leave. Handy
+when the dirty state lives in a ref that doesn't re-render:
+
+```tsx
+const hasUnsavedChanges = React.useRef(false)
+
+useBeforeUnload(() => hasUnsavedChanges.current)
+```
+
+## Good to know
+
+- **The browser writes the message.** Modern browsers ignore custom text.
+  `message` only matters for old ones.
+- **In-app navigation isn't covered.** Clicking a router `Link` doesn't unload
+  the page, so no prompt.
+- **Use it sparingly.** A prompt on every page teaches people to click "Leave"
+  without reading.
+
+## Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    enabled: {
+      description:
+        'Whether to warn. A function is called when someone tries to leave.',
+      type: 'boolean | (() => boolean)',
+      default: 'true',
+    },
+    message: {
+      description: 'Text for older browsers. Modern browsers show their own.',
+      type: 'string',
+    },
+  }}
+/>
+
+The hook returns nothing.

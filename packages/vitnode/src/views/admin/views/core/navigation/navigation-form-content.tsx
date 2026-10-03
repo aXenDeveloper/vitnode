@@ -553,7 +553,7 @@ export const AdminNavigationFormContent = ({
   if (surface === "sheet") {
     return (
       <AutoForm
-        className="flex min-h-0 flex-1 flex-col space-y-0"
+        className="flex min-h-0 flex-1 flex-col gap-0"
         fields={fields}
         formSchema={formSchema}
         layout={rendered => (

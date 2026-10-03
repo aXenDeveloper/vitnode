@@ -1,6 +1,12 @@
 import { cn } from "cn";
 import { GripVerticalIcon } from "lucide-react";
-import { type MotionValue, useMotionValue, useTransform } from "motion/react";
+import {
+  animate,
+  type MotionValue,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from "motion/react";
 import * as m from "motion/react-m";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -12,6 +18,8 @@ import {
   positionFromKey,
   positionFromPointer,
 } from "./comparison-utils";
+
+const GLIDE_TRANSITION = { type: "spring", duration: 0.25, bounce: 0 } as const;
 
 const ComparisonContext = React.createContext<null | {
   mode: "drag" | "hover";
@@ -43,22 +51,34 @@ function Comparison({
   const t = useTranslations("core.global");
   const position = useMotionValue(clampPosition(defaultPosition));
   const [valueNow, setValueNow] = React.useState(() => position.get());
-  const isDraggingRef = React.useRef(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
-  const moveTo = (next: number) => {
-    position.set(next);
+  const commit = (next: number) => {
     setValueNow(next);
     onPositionChange?.(next);
   };
 
-  const moveToPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    moveTo(
-      positionFromPointer(
-        event.clientX,
-        event.currentTarget.getBoundingClientRect(),
-      ),
+  const glideTo = (next: number) => {
+    animate(
+      position,
+      next,
+      shouldReduceMotion ? { duration: 0 } : GLIDE_TRANSITION,
     );
+    commit(next);
   };
+
+  const followTo = (next: number) => {
+    position.stop();
+    position.set(next);
+    commit(next);
+  };
+
+  const pointerPosition = (event: React.PointerEvent<HTMLDivElement>) =>
+    positionFromPointer(
+      event.clientX,
+      event.currentTarget.getBoundingClientRect(),
+    );
 
   const contextValue = React.useMemo(
     () => ({ mode, position }),
@@ -77,10 +97,11 @@ function Comparison({
           aria-valuenow={rounded}
           aria-valuetext={`${rounded}%`}
           className={cn(
-            "focus-visible:ring-ring/50 relative isolate w-full touch-pan-y overflow-hidden outline-none select-none focus-visible:ring-3",
+            "group/comparison focus-visible:ring-ring/50 relative isolate w-full touch-pan-y overflow-hidden outline-none select-none focus-visible:ring-3",
             mode === "drag" && "cursor-ew-resize",
             className,
           )}
+          data-dragging={isDragging || undefined}
           data-slot="comparison"
           onKeyDown={event => {
             const next = positionFromKey(
@@ -91,23 +112,25 @@ function Comparison({
             if (next === null) return;
 
             event.preventDefault();
-            moveTo(next);
+            glideTo(next);
           }}
           onPointerCancel={() => {
-            isDraggingRef.current = false;
+            setIsDragging(false);
           }}
           onPointerDown={event => {
             if (mode !== "drag") return;
 
-            isDraggingRef.current = true;
+            setIsDragging(true);
             event.currentTarget.setPointerCapture(event.pointerId);
-            moveToPointer(event);
+            glideTo(pointerPosition(event));
           }}
           onPointerMove={event => {
-            if (mode === "hover" || isDraggingRef.current) moveToPointer(event);
+            if (mode === "hover" || isDragging) {
+              followTo(pointerPosition(event));
+            }
           }}
           onPointerUp={() => {
-            isDraggingRef.current = false;
+            setIsDragging(false);
           }}
           role="slider"
           tabIndex={0}
@@ -150,29 +173,33 @@ function ComparisonHandle({
   ...props
 }: React.ComponentProps<typeof m.div>) {
   const { mode, position } = useComparison();
-  const left = useTransform(position, value => `${value}%`);
+  const x = useTransform(position, value => `${value}%`);
 
   return (
     <m.div
       aria-hidden="true"
-      className={cn(
-        "pointer-events-none absolute top-0 z-10 flex h-full w-10 -translate-x-1/2 items-center justify-center",
-        className,
-      )}
-      data-slot="comparison-handle"
-      style={{ left }}
-      {...props}
+      className="pointer-events-none absolute inset-0 z-10"
+      style={{ x }}
     >
-      {children ?? (
-        <>
-          <div className="bg-foreground/70 absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 shadow-sm" />
-          {mode === "drag" && (
-            <div className="bg-background text-foreground ring-foreground/20 relative flex items-center justify-center rounded-md px-0.5 py-1 shadow-sm ring-1">
-              <GripVerticalIcon className="size-4" />
-            </div>
-          )}
-        </>
-      )}
+      <m.div
+        className={cn(
+          "absolute inset-y-0 left-0 flex w-10 -translate-x-1/2 items-center justify-center",
+          className,
+        )}
+        data-slot="comparison-handle"
+        {...props}
+      >
+        {children ?? (
+          <>
+            <div className="bg-foreground/70 absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 shadow-sm" />
+            {mode === "drag" && (
+              <div className="bg-background text-foreground ring-foreground/20 ease-fluid relative flex items-center justify-center rounded-md px-0.5 py-1 shadow-sm ring-1 transition-[scale,box-shadow] duration-150 group-data-dragging/comparison:scale-110 group-data-dragging/comparison:shadow-md motion-reduce:transition-none">
+                <GripVerticalIcon className="size-4" />
+              </div>
+            )}
+          </>
+        )}
+      </m.div>
     </m.div>
   );
 }

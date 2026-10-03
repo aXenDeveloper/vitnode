@@ -1,6 +1,6 @@
 ---
 title: Toast
-description: Short, friendly notifications that pop into the top-right corner, with five colours, icons, avatars and actions.
+description: Short notifications that pop into the top-right corner, with five variants, actions, avatars, message toasts and promise states.
 icon: BellRing
 ---
 
@@ -10,93 +10,79 @@ icon: BellRing
 
 ## Usage
 
-VitNode already mounts the toaster for you, so all you need is the `toast`
-function from [Sonner](https://sonner.emilkowal.ski/):
+VitNode mounts the toaster for you. Call `toast` from
+[Sonner](https://sonner.emilkowal.ski/):
 
 ```ts
 import { toast } from 'sonner'
-```
 
-```ts
-toast('Event has been created', {
-  description: 'Sunday, December 03, 2023 at 9:00 AM',
+toast.success('Post published', {
+  description: 'Your reply is live in "Login fails after reset".',
 })
 ```
 
 ## Variants
 
-Each variant tints the icon, the title and the action button. The card
-itself stays neutral, so a toast never shouts louder than it has to.
+A variant tints the icon, title and action button. The card stays neutral.
 
 ```ts
-toast('Event has been created') // default
-toast.info('You have 2 credits left') // primary colour
-toast.success('Your plan has been upgraded')
-toast.warning('You are running low on storage')
-toast.error('Storage is full')
+toast('Thread moved')
+toast.info('Maintenance tonight')
+toast.success('Post published')
+toast.warning('Running low on storage')
+toast.error('Could not save the post')
 ```
 
-Pick the variant by what happened, not by the colour you fancy:
+- `success`: it worked the way the user hoped.
+- `info`: good to know, nothing to worry about.
+- `warning`: nothing broke yet, but take a look.
+- `error`: it failed. Say what to do next in the `description`.
 
-- `success` when something finished the way the user hoped.
-- `info` for things worth knowing, nothing to worry about.
-- `warning` when nothing broke yet, but the user should take a look.
-- `error` when it failed. The description should say what to do next.
+After a create, edit or delete, always add a `description` saying what changed.
 
-After a create, edit or delete, show a toast with a `description` so people
-know exactly what changed.
+## Actions
 
-## With an action
+<Preview name="toast-action" />
+
+`action` adds a button in the variant's colour. `cancel` adds a quieter second
+one.
 
 ```ts
-toast.error('Storage is full', {
-  description: 'Remove some files to free up space.',
-  action: {
-    label: 'Remove',
-    onClick: () => openFileManager(),
-  },
+toast('Thread archived', {
+  action: { label: 'Undo', onClick: () => restoreThread(id) },
 })
 ```
 
-The action button takes the variant's colour too. Add `cancel` for a second,
-quieter button.
+## Avatars and messages
 
-## With an avatar
+<Preview name="toast-avatar" />
 
-Swap the icon for a picture with `ToastAvatar`. It suits anything a person
-did, like an invite, a mention or a new message. Without a `src`, or while the
-image is still loading, it shows the first letter of `alt`.
-
-```ts
-import { ToastAvatar } from '@vitnode/core/components/ui/sonner'
-```
+`ToastAvatar` swaps the icon for a picture, for things a person did. Without a
+`src`, or while loading, it shows the first letter of `alt`. Any element works
+as `icon`.
 
 ```tsx
+import { ToastAvatar, ToastMessage } from '@vitnode/core/components/ui/sonner'
+
 toast('Ada Lovelace invited you', {
-  description: 'Join the "Docs writers" group to start editing.',
   icon: <ToastAvatar alt="Ada Lovelace" src={user.avatarUrl} />,
 })
 ```
 
-Any other element works as `icon` as well, such as a custom Lucide icon, an emoji or
-your own badge.
-
-## Message with actions
-
-For anything that reads like a message, such as a reply, a mention or an invite, use
-`ToastMessage` with `toast.custom`. It lays out an avatar, the sender, a
-timestamp, the text and a row of buttons underneath.
-
-```ts
-import { ToastMessage } from '@vitnode/core/components/ui/sonner'
-```
+For replies, mentions and DMs, render `ToastMessage` with `toast.custom`. It
+lays out avatar, sender, time, text and buttons. Give it a longer `duration`:
+people need time to read and decide.
 
 ```tsx
 toast.custom(
-  id => (
+  (id) => (
     <ToastMessage
       actions={[
-        { label: 'Dismiss', onClick: () => toast.dismiss(id), variant: 'outline' },
+        {
+          label: 'Dismiss',
+          onClick: () => toast.dismiss(id),
+          variant: 'outline',
+        },
         { label: 'Reply', onClick: () => openReply(message) },
       ]}
       avatar={{ alt: 'Alex Johnson', src: user.avatarUrl }}
@@ -109,13 +95,11 @@ toast.custom(
 )
 ```
 
-Give message toasts a longer `duration` than the usual few seconds. People
-need time to read, and to decide whether to reply.
+## Promises
 
-## Loading and promises
+<Preview name="toast-promise" />
 
-`toast.promise` shows a spinner while the promise runs, then swaps to the
-success or error variant on its own:
+`toast.promise` spins while the promise runs, then switches to success or error.
 
 ```ts
 toast.promise(publishArticle(), {
@@ -125,40 +109,32 @@ toast.promise(publishArticle(), {
 })
 ```
 
-## Placement
+## Placement and styles
 
-Toasts show up in the **top-right** corner. To move them, pass `toaster` to
-`VitNodeProviders`:
+Toasts live in the **top-right** corner and stretch full width on phones.
+`VitNodeRootProviders` in `src/routes/__root.tsx` takes a `toaster` prop to
+move them (`top-left`, `top-center`, `bottom-left`, `bottom-center`,
+`bottom-right`):
 
 ```tsx
-<VitNodeProviders config={config} toaster={{ position: 'bottom-center' }}>
+<VitNodeRootProviders config={config} toaster={{ position: 'bottom-center' }}>
   {children}
-</VitNodeProviders>
+</VitNodeRootProviders>
 ```
 
-Available positions: `top-left`, `top-center`, `top-right`, `bottom-left`,
-`bottom-center` and `bottom-right`. On phones the toast stretches across the
-screen, whatever you choose.
-
-## Custom styles
-
-Pass `classNames` to a single toast to restyle it. Your classes are merged with
-the defaults, not swapped for them:
+Pass `classNames` to restyle one toast. Your classes merge with the defaults:
 
 ```ts
-toast('Saved', {
-  classNames: { title: 'font-semibold' },
-})
+toast('Saved', { classNames: { title: 'font-semibold' } })
 ```
 
 ## Accessibility
 
-- Toasts are announced to screen readers through a polite live region.
-- Hovering a toast pauses its timer, so nobody has to race it. Keyboard users
-  can jump to the toasts with <kbd>Alt</kbd> + <kbd>T</kbd>.
-- The close button appears on hover and keyboard focus, and is always visible on
-  touch screens.
-- Colour is never the only signal, since every variant has its own icon too.
+- Toasts are announced through a polite live region.
+- Hovering pauses the timer. <kbd>Alt</kbd> + <kbd>T</kbd> jumps to the toasts.
+- The close button shows on hover and focus, always on touch, with a hit area
+  up to 44px.
+- Every variant has its own icon, so colour is never the only signal.
 
 ## Documentation
 

@@ -10,22 +10,20 @@ import {
 
 export default function CardExample() {
   return (
-    <Card className="w-full max-w-xs">
+    <Card className="not-prose w-full max-w-xs">
       <CardHeader>
-        <CardTitle>Default Card</CardTitle>
-        <CardDescription>
-          This card uses the default size variant.
-        </CardDescription>
+        <CardTitle>Weekly digest</CardTitle>
+        <CardDescription>Sent every Monday at 9:00</CardDescription>
       </CardHeader>
       <CardContent>
-        <p>
-          The card component supports a size prop that defaults to
-          &quot;default&quot; for standard spacing and sizing.
+        <p className="leading-relaxed">
+          A roundup of the top threads, new members and unanswered questions
+          from your community.
         </p>
       </CardContent>
       <CardFooter>
         <Button className="w-full" variant="outline">
-          Action
+          Preview email
         </Button>
       </CardFooter>
     </Card>

@@ -19,7 +19,7 @@ const ColorPresetSwatch = ({ preset }: { preset: ColorPreset }) => {
     <RadioPrimitive.Root
       aria-label={t(preset.id)}
       className={cn(
-        "border-border/60 focus-visible:ring-ring/50 data-checked:ring-ring data-checked:ring-offset-background flex aspect-square w-full cursor-pointer items-center justify-center rounded-md border transition-transform outline-none hover:scale-110 focus-visible:ring-3 data-checked:ring-2 data-checked:ring-offset-1",
+        "border-border/60 focus-visible:ring-ring/50 data-checked:ring-ring data-checked:ring-offset-background ease-fluid flex aspect-square w-full cursor-pointer items-center justify-center rounded-md border transition-transform duration-150 outline-none focus-visible:ring-3 data-checked:ring-2 data-checked:ring-offset-1 motion-safe:hover:scale-110 motion-safe:active:scale-95",
         !preset.value && "bg-foreground text-background",
         preset.value &&
           (prefersDarkCheckMark(preset.value) ? "text-gray-950" : "text-white"),
@@ -48,7 +48,10 @@ export const ColorPresetPicker = ({
   return (
     <RadioGroupPrimitive
       aria-label={t("label")}
-      className={cn("grid w-50 grid-cols-8 gap-1", className)}
+      className={cn(
+        "grid w-56 grid-cols-6 gap-1.5 sm:w-50 sm:grid-cols-8 sm:gap-1",
+        className,
+      )}
       onValueChange={(next: unknown) => {
         if (typeof next === "string") onChange?.(getColorPresetValue(next));
       }}

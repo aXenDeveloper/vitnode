@@ -1,18 +1,156 @@
 ---
 title: Introduction
-description: Welcome to the VitNode documentation!
+description: The VitNode UI library - accessible React components built on Base UI and Tailwind CSS v4, with design tokens, motion rules and dark mode included.
 icon: Power
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+VitNode UI is the component library behind every VitNode screen, from the
+AdminCP to your plugin pages. It gives you buttons, dialogs, forms, tables
+and around seventy other pieces that share one set of colors, type, spacing and
+motion, so a plugin looks like it belongs without extra effort.
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+## Use a component
 
-## What is Next?
+Every component lives in `@vitnode/core`, which your app already depends on.
+Import it from `@vitnode/core/components/ui/<name>`:
+
+```tsx
+import { Button } from '@vitnode/core/components/ui/button'
+
+export const PublishButton = () => <Button>Publish post</Button>
+```
+
+There's nothing to install and no copy-paste step. Components are styled with
+[design tokens](#foundations), so they follow your theme and switch to dark
+mode automatically.
+
+## What it's built on
+
+- **[Base UI](https://base-ui.com)** (`@base-ui/react`) for the behavior:
+  focus management, keyboard support, ARIA and positioning.
+- **[shadcn/ui](https://ui.shadcn.com)** in its `base-vega` style for the
+  starting point of each component's look.
+- **[Tailwind CSS v4](https://tailwindcss.com)** for styling, driven by CSS
+  variables.
+- **[Motion](https://motion.dev)** for the few animations that need springs,
+  like rolling numbers, the switch thumb and image zoom.
+
+## Design principles
+
+Inspired by Apple's Human Interface Guidelines (we're not affiliated, we just
+like how their stuff feels):
+
+- **Respond on press.** Everything reacts the moment your pointer goes down.
+  [Motion](/docs/ui/motion)
+- **Move with purpose.** Short, interruptible, no bounce for fun.
+  [Motion](/docs/ui/motion)
+- **Respect people's settings.** Reduced motion, reduced transparency and
+  touch-sized targets. [Accessibility](/docs/ui/accessibility)
+- **Sweat the details.** Steady numbers and nested corners.
+  [Typography](/docs/ui/typography) · [Radius & Elevation](/docs/ui/elevation)
+
+## Foundations
+
+Components never hardcode a color, size or curve. They read shared tokens from
+your app's `src/styles.css`, and each foundation has its own page full of live
+examples.
+
+import {
+  Accessibility,
+  Layers,
+  Palette,
+  Ruler,
+  Shapes,
+  Type,
+  Waves,
+} from 'lucide-react'
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.vercel.app" />
+  <Card
+    icon={<Palette />}
+    title="Colors"
+    href="/docs/ui/colors"
+    description="Semantic OKLCH tokens for surfaces, brand, status and charts."
+  />
+  <Card
+    icon={<Type />}
+    title="Typography"
+    href="/docs/ui/typography"
+    description="System font, type scale with built-in tracking, hierarchy."
+  />
+  <Card
+    icon={<Waves />}
+    title="Motion"
+    href="/docs/ui/motion"
+    description="Press feedback, interruptible transitions, springs, reduced motion."
+  />
+  <Card
+    icon={<Ruler />}
+    title="Spacing & Layout"
+    href="/docs/ui/spacing"
+    description="Spacing scale, gap rules, breakpoints and line length."
+  />
+  <Card
+    icon={<Layers />}
+    title="Radius & Elevation"
+    href="/docs/ui/elevation"
+    description="One radius variable, concentric corners and soft shadows."
+  />
+  <Card
+    icon={<Shapes />}
+    title="Icons"
+    href="/docs/ui/icons"
+    description="Lucide sizes, icons in buttons, labels and brand logos."
+  />
+  <Card
+    icon={<Accessibility />}
+    title="Accessibility"
+    href="/docs/ui/accessibility"
+    description="Focus rings, touch targets, contrast and announcements."
+  />
+</Cards>
+
+## Popular components
+
+<Cards>
+  <Card
+    title="Button"
+    href="/docs/ui/button"
+    description="Actions in every variant, from primary to destructive."
+  />
+  <Card
+    title="Dialog"
+    href="/docs/ui/dialog"
+    description="Focused tasks in a modal window."
+  />
+  <Card
+    title="Auto Form"
+    href="/docs/ui/auto-form"
+    description="Forms generated from a Zod schema, with validation."
+  />
+  <Card
+    title="Data Table"
+    href="/docs/ui/data-table"
+    description="Search, filters, pagination and bulk actions."
+  />
+  <Card
+    title="Select"
+    href="/docs/ui/select"
+    description="Pick one option from a list."
+  />
+  <Card
+    title="Toast"
+    href="/docs/ui/toast"
+    description="Quick feedback after a create, edit or delete."
+  />
+  <Card
+    title="Sheet"
+    href="/docs/ui/sheet"
+    description="A side panel for details and secondary forms."
+  />
+  <Card
+    title="Editor"
+    href="/docs/ui/editor"
+    description="Rich text editing for posts and pages."
+  />
 </Cards>

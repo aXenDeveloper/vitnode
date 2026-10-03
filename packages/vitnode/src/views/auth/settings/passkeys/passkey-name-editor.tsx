@@ -62,7 +62,7 @@ export const PasskeyNameEditor = ({
 
   return (
     <AutoForm
-      className="flex flex-col gap-3 space-y-0 px-4 py-4"
+      className="flex flex-col gap-3 px-4 py-4"
       fields={[
         {
           component: props => (

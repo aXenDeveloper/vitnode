@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowUp, ChevronsUpDown } from "lucide-react";
 import React from "react";
 
 import type {
@@ -36,7 +36,14 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
   if (isPending) {
     icon = <Spinner />;
   } else if (isActive) {
-    icon = current.order === "asc" ? <ArrowUp /> : <ArrowDown />;
+    icon = (
+      <ArrowUp
+        className={cn(
+          "ease-fluid transition-transform duration-200 motion-reduce:transition-none",
+          current.order === "desc" && "rotate-180",
+        )}
+      />
+    );
   } else {
     icon = <ChevronsUpDown />;
   }

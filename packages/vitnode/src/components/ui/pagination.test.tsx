@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -85,5 +86,22 @@ describe("Pagination", () => {
     expect(
       screen.getByRole("link", { name: "core.global.next_page" }).textContent,
     ).toBe("Older posts");
+  });
+
+  it("names the navigation landmark with translated text", () => {
+    renderPagination();
+
+    expect(
+      screen.getByRole("navigation", { name: "core.global.pagination" }),
+    ).toBeTruthy();
+  });
+
+  it("announces skipped pages to screen readers", () => {
+    render(<PaginationEllipsis />);
+
+    expect(screen.getByText("core.global.more_pages")).toBeTruthy();
+    expect(
+      screen.getByText("core.global.more_pages").closest("[aria-hidden]"),
+    ).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 ---
 title: Dropdown Menu
-description: A dropdown menu component for building interactive menus in your application.
+description: A menu of actions or options that opens from a button, with shortcuts, submenus, checkbox and radio items.
 icon: EllipsisVertical
 ---
 
@@ -14,72 +14,151 @@ icon: EllipsisVertical
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger
-} from "@vitnode/core/components/ui/dropdown-menu";
+  DropdownMenuTrigger,
+} from '@vitnode/core/components/ui/dropdown-menu'
 ```
 
 ```tsx
 <DropdownMenu>
-  <DropdownMenuTrigger render={<Button variant="outline" />}>
-    Open
-  </DropdownMenuTrigger>
-  <DropdownMenuContent className="w-56" align="start">
+  <DropdownMenuTrigger render={<Button variant="outline">Open</Button>} />
+  <DropdownMenuContent className="w-56">
     <DropdownMenuLabel>My Account</DropdownMenuLabel>
-    <DropdownMenuGroup>
-      <DropdownMenuItem>
-        Profile
-        <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
-      </DropdownMenuItem>
-      <DropdownMenuItem>
-        Billing
-        <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-      </DropdownMenuItem>
-      <DropdownMenuItem>
-        Settings
-        <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-      </DropdownMenuItem>
-      <DropdownMenuItem>
-        Keyboard shortcuts
-        <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-      </DropdownMenuItem>
-    </DropdownMenuGroup>
-    <DropdownMenuSeparator />
-    <DropdownMenuGroup>
-      <DropdownMenuItem>Team</DropdownMenuItem>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>Invite users</DropdownMenuSubTrigger>
-        <DropdownMenuSubContent>
-          <DropdownMenuItem>Email</DropdownMenuItem>
-          <DropdownMenuItem>Message</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>More...</DropdownMenuItem>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-      <DropdownMenuItem>
-        New Team
-        <DropdownMenuShortcut>⌘+T</DropdownMenuShortcut>
-      </DropdownMenuItem>
-    </DropdownMenuGroup>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem>GitHub</DropdownMenuItem>
-    <DropdownMenuItem>Support</DropdownMenuItem>
-    <DropdownMenuItem disabled>API</DropdownMenuItem>
-    <DropdownMenuSeparator />
     <DropdownMenuItem>
-      Log out
-      <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+      Profile
+      <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
     </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem>Log out</DropdownMenuItem>
   </DropdownMenuContent>
 </DropdownMenu>
 ```
+
+The menu matches the trigger's width (at least `min-w-36`). Set a width with
+`className` when the trigger is small. `DropdownMenuShortcut` is only a label:
+bind the keys yourself.
+
+Nest `DropdownMenuSub`, `DropdownMenuSubTrigger` and `DropdownMenuSubContent`
+for a submenu. It opens on hover, click or the right arrow.
+
+## Icon trigger and destructive items
+
+<Preview name="dropdown-menu-actions" />
+
+An icon-only trigger needs an `aria-label`. Use `align="end"` when the trigger
+sits at the end of a row, and `variant="destructive"` for actions you can't
+take back.
+
+```tsx
+<DropdownMenuTrigger
+  render={
+    <Button aria-label="Post actions" size="icon-sm" variant="ghost">
+      <EllipsisIcon />
+    </Button>
+  }
+/>
+<DropdownMenuContent align="end">
+  <DropdownMenuItem variant="destructive">
+    <Trash2Icon />
+    Delete
+  </DropdownMenuItem>
+</DropdownMenuContent>
+```
+
+## Checkbox and radio items
+
+<Preview name="dropdown-menu-checkboxes" />
+
+`DropdownMenuCheckboxItem` toggles on its own. Items in a
+`DropdownMenuRadioGroup` pick one. The check mark sits at the start of the row,
+like in the [Context Menu](/docs/ui/context-menu) and
+[Menubar](/docs/ui/menubar). Add `inset` to labels and plain items in the same
+menu so their text lines up.
+
+```tsx
+<DropdownMenuCheckboxItem checked={showPinned} onCheckedChange={setShowPinned}>
+  Pinned threads
+</DropdownMenuCheckboxItem>
+<DropdownMenuRadioGroup onValueChange={setSort} value={sort}>
+  <DropdownMenuRadioItem value="latest">Latest activity</DropdownMenuRadioItem>
+</DropdownMenuRadioGroup>
+```
+
+## Accessibility
+
+- Arrow keys move between items, typing a letter jumps to a match and
+  <kbd>Escape</kbd> closes the menu and returns focus to the trigger.
+- Rows grow to a 44px tap target on touch screens. Long menus scroll without
+  dragging the page.
+- The menu scales in from its trigger in 150ms and leaves in 100ms. Reduced
+  motion turns that off.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### DropdownMenuContent
+
+<TypeTable
+  type={{
+    side: {
+      description:
+        'Preferred side of the trigger. Flips when there is no room.',
+      type: '"top" | "right" | "bottom" | "left" | "inline-start" | "inline-end"',
+      default: '"bottom"',
+    },
+    align: {
+      description: 'Alignment against the trigger.',
+      type: '"start" | "center" | "end"',
+      default: '"start"',
+    },
+    sideOffset: {
+      description: 'Gap from the trigger in pixels.',
+      type: 'number',
+      default: '4',
+    },
+    alignOffset: {
+      description: 'Shift along the alignment axis in pixels.',
+      type: 'number',
+      default: '0',
+    },
+  }}
+/>
+
+`DropdownMenuSubContent` opens to the `right` with `alignOffset={-4}`, so its
+first item lines up with the sub-trigger.
+
+### DropdownMenuItem
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The look of the item.',
+      type: '"default" | "destructive"',
+      default: '"default"',
+    },
+    inset: {
+      description: 'Start padding to line up with checkbox and radio items.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'Visible but not interactive.',
+      type: 'boolean',
+      default: 'false',
+    },
+    closeOnClick: {
+      description: 'Close the menu when the item is chosen.',
+      type: 'boolean',
+      default: 'true',
+    },
+  }}
+/>
+
+`DropdownMenuLabel` and `DropdownMenuSubTrigger` accept `inset` too.
 
 ## API Reference
 

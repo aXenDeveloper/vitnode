@@ -19,7 +19,7 @@ function Command({
   return (
     <CommandPrimitive
       className={cn(
-        "bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-xl! p-1",
+        "bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-xl p-1",
         className,
       )}
       data-slot="command"
@@ -45,7 +45,7 @@ function CommandDialog({
     <Dialog {...props}>
       <DialogContent
         className={cn(
-          "top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl! p-0 sm:max-h-[calc(66.667vh-5rem)]",
+          "top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 sm:max-h-[calc(66.667vh-5rem)]",
           className,
         )}
         showCloseButton={showCloseButton}
@@ -66,7 +66,7 @@ function CommandInput({
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
     <div className="p-1 pb-0" data-slot="command-input-wrapper">
-      <InputGroup className="border-input/30 bg-input/30 h-8! rounded-lg! shadow-none! *:data-[slot=input-group-addon]:ps-2!">
+      <InputGroup className="border-input/30 bg-input/30 h-8 rounded-lg shadow-none">
         <CommandPrimitive.Input
           className={cn(
             "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
@@ -149,7 +149,7 @@ function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        "group/command-item data-selected:bg-muted data-selected:text-foreground data-selected:**:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group/command-item data-selected:bg-muted data-selected:text-foreground data-selected:**:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-md data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 pointer-coarse:py-2.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="command-item"

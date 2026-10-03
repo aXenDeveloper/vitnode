@@ -1,6 +1,6 @@
 ---
 title: Separator
-description: A simple horizontal line to separate content.
+description: A thin horizontal or vertical line that separates content, with the right separator semantics built in.
 icon: SeparatorHorizontal
 ---
 
@@ -11,27 +11,30 @@ icon: SeparatorHorizontal
 ## Usage
 
 ```ts
-import { Separator } from '@vitnode/core/components/ui/separator';
+import { Separator } from '@vitnode/core/components/ui/separator'
 ```
 
 ```tsx
-<div>
-  <div className="space-y-1">
-    <h4 className="text-sm leading-none font-medium">Base UI</h4>
-    <p className="text-muted-foreground text-sm">
-      An open-source UI component library.
-    </p>
-  </div>
-  <Separator className="my-4" />
-  <div className="flex h-5 items-center space-x-4 text-sm">
-    <div>Blog</div>
-    <Separator orientation="vertical" />
-    <div>Docs</div>
-    <Separator orientation="vertical" />
-    <div>Source</div>
-  </div>
+<Separator />
+```
+
+## Vertical
+
+`orientation="vertical"` draws a vertical line at the parent's full height, so
+give the row a height:
+
+```tsx
+<div className="flex h-5 items-center gap-4">
+  <span>Forum</span>
+  <Separator orientation="vertical" />
+  <span>Blog</span>
 </div>
 ```
+
+## Accessibility
+
+It renders `role="separator"` with the matching `aria-orientation`, so screen
+readers know where one group ends.
 
 ## API Reference
 

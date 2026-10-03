@@ -106,7 +106,7 @@ const toFormFieldError = (error: unknown): FormFieldError | undefined => {
   return undefined;
 };
 
-const areErrorsRevealed = (
+const areFieldErrorsRevealed = (
   mode: FormMode,
   meta: AnyFieldApi["state"]["meta"],
   submissionAttempts: number,
@@ -132,7 +132,7 @@ const toFormFieldState = (
   submissionAttempts: number,
 ): FormFieldState => {
   const { meta } = field.state;
-  const errors = areErrorsRevealed(mode, meta, submissionAttempts)
+  const errors = areFieldErrorsRevealed(mode, meta, submissionAttempts)
     ? meta.errors
         .map(toFormFieldError)
         .filter(error => error !== undefined)
@@ -198,7 +198,7 @@ function Form({
   className,
   disableBeforeUnload,
   form,
-  mode = "onSubmit",
+  mode = "onTouched",
   ...props
 }: Omit<React.ComponentProps<"form">, "onSubmit"> & {
   disableBeforeUnload?: boolean;
@@ -224,7 +224,7 @@ function Form({
   return (
     <FormContext value={context}>
       <form
-        className={cn("space-y-8", className)}
+        className={cn("flex flex-col gap-8", className)}
         onSubmit={event => {
           event.preventDefault();
           event.stopPropagation();
@@ -277,6 +277,14 @@ const FormField = ({
   );
 };
 
+const formDescriptionIdOf = (name: string) => `${name}-form-item-description`;
+
+const useFormDescriptionId = (): string | undefined => {
+  const fieldContext = React.use(FormFieldContext);
+
+  return fieldContext ? formDescriptionIdOf(fieldContext.name) : undefined;
+};
+
 const useFormField = () => {
   const fieldContext = React.use(FormFieldContext);
 
@@ -289,7 +297,7 @@ const useFormField = () => {
   return {
     id,
     formItemId: `${id}-form-item`,
-    formDescriptionId: `${id}-form-item-description`,
+    formDescriptionId: formDescriptionIdOf(id),
     formMessageId: `${id}-form-item-message`,
     ...fieldContext,
   };
@@ -315,16 +323,17 @@ function FormControl({ children, ...props }: React.ComponentProps<"div">) {
 }
 
 function FormMessage(props: React.ComponentProps<typeof FieldError>) {
-  const { errors } = useFormField();
+  const { errors, formMessageId } = useFormField();
 
   if (!errors.length) {
     return null;
   }
 
-  return <FieldError errors={errors} {...props} />;
+  return <FieldError errors={errors} id={formMessageId} {...props} />;
 }
 
 export {
+  areFieldErrorsRevealed,
   Form,
   FormControl,
   FormField,
@@ -333,5 +342,6 @@ export {
   removeFormFieldValue,
   setFormFieldError,
   useFormApi,
+  useFormDescriptionId,
   useFormField,
 };

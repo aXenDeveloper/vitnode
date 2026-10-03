@@ -32,6 +32,7 @@ const UserAvatar = ({
 }) =>
   user.avatarColor ? (
     <Avatar
+      alt=""
       size={size}
       user={{
         avatarColor: user.avatarColor,

@@ -1,10 +1,8 @@
 ---
 title: Marker
-description: Inline status lines, system notes, bordered rows and labeled separators for conversations and activity feeds.
+description: Inline status lines, system notes, bordered rows and labeled separators for chat threads and activity feeds.
 icon: Flag
 ---
-
-## Preview
 
 <Preview name="marker" />
 
@@ -27,68 +25,60 @@ import {
 </Marker>
 ```
 
-A marker is the quiet line between messages, like "Switched branch", "Today"
-or "Thinking...". It pairs nicely with [Bubble](/docs/ui/bubble) when you build a
-chat thread, and it is just as happy in an activity feed.
-
-```text
-Marker
-├── MarkerIcon
-└── MarkerContent
-```
+A marker is the quiet line between messages: "Switched branch", "Today",
+"Thinking...". It pairs well with [Bubble](/docs/ui/bubble) in a chat thread.
 
 ## Variants
 
-Pick a `variant` to change how the marker sits in the flow.
+<Preview name="marker-variants" />
+
+`default` is an inline note. `separator` centers a label between two lines.
+`border` adds a line under the row.
 
 ```tsx
-<Marker>
-  <MarkerContent>A default marker for inline notes.</MarkerContent>
-</Marker>
-
 <Marker variant="separator">
-  <MarkerContent>Today</MarkerContent>
-</Marker>
-
-<Marker variant="border">
-  <MarkerContent>A border marker for row boundaries.</MarkerContent>
+  <MarkerContent>Yesterday</MarkerContent>
 </Marker>
 ```
 
-| Variant     | What it looks like                                   |
-| ----------- | ---------------------------------------------------- |
-| `default`   | An inline line of muted text for notes and actions.  |
-| `separator` | A centered label with a divider line on each side.   |
-| `border`    | A default marker with a bottom border under the row. |
+Keep separator labels short. The lines only get the space the label leaves.
 
-Keep separator labels short, like a date or a few words. The divider lines take the
-leftover space, so a long label leaves them nothing to work with.
+## Tones
 
-## With an icon
+<Preview name="marker-tones" />
 
-Wrap any icon in `MarkerIcon`. It is sized to match the text and hidden from
-screen readers, so the content does the talking. Add `flex-col` to stack the
-icon above the text:
+Set `tone` when the note carries good or bad news. Colors match `Alert` and
+`Badge`, mixed toward the foreground to stay readable in both themes.
 
 ```tsx
-<Marker className="flex-col">
+<Marker tone="success">
   <MarkerIcon>
-    <BookOpenCheck />
+    <CircleCheck />
   </MarkerIcon>
-  <MarkerContent>Syncing completed</MarkerContent>
+  <MarkerContent>Build passed</MarkerContent>
 </Marker>
+```
+
+Color is a bonus, not the message. Pair it with an icon or words.
+
+## Stacked icon
+
+<Preview name="marker-stacked" />
+
+`MarkerIcon` sizes any icon to the text. Add `flex-col` to put it above the
+text.
+
+```tsx
+<Marker className="flex-col">...</Marker>
 ```
 
 ## Status and shimmer
 
-For something that is still happening, set `role="status"` so the update gets
-announced, drop a `Spinner` in the icon slot and give the
-text the `shimmer` utility for that "working on it" glow.
+For work in progress, set `role="status"`, put a `Spinner` in the icon slot and
+add the `shimmer` utility to the text. See the last line of the preview.
 
 ```tsx
-import { Spinner } from '@vitnode/core/components/ui/spinner'
-
-;<Marker role="status">
+<Marker role="status">
   <MarkerIcon>
     <Spinner />
   </MarkerIcon>
@@ -98,8 +88,8 @@ import { Spinner } from '@vitnode/core/components/ui/spinner'
 
 ## Links and buttons
 
-The root is polymorphic. Pass `render` to turn a marker into a link or a
-button. Links get an underline for free.
+Pass `render` to turn the marker into a link or a button. Links get an
+underline for free.
 
 ```tsx
 <Marker render={<a href="/admin/plugins" />}>
@@ -107,33 +97,21 @@ button. Links get an underline for free.
 </Marker>
 
 <Marker
-  render={
-    <button
-      className="hover:text-foreground transition-colors"
-      onClick={revert}
-      type="button"
-    />
-  }
+  render={<button className="hover:text-foreground" onClick={revert} type="button" />}
 >
-  <MarkerIcon>
-    <RotateCcw />
-  </MarkerIcon>
   <MarkerContent>Revert this change</MarkerContent>
 </Marker>
 ```
 
 ## Accessibility
 
-- A marker is a plain `div` by default. Choose the semantics from what it does:
-  `role="status"` for live progress, `render` with an `a` or `button` when it is
-  clickable, nothing at all for a simple note.
-- A labeled separator needs no role. The lines are decorative pseudo-elements and
-  the label is read as ordinary text. Do not add `role="separator"`, because it
-  would hide the label from assistive tech.
-- `MarkerIcon` is `aria-hidden`, so the meaning lives in `MarkerContent`. For an
-  icon-only marker, give the root an `aria-label`.
-- Wrap a whole thread in an element with `role="log"` so new messages and
-  markers are announced in order.
+- A marker is a plain `div`. Add `role="status"` for live progress, `render` an
+  `a` or `button` when it's clickable, and nothing for a plain note.
+- Don't add `role="separator"` to a labeled separator. It would hide the label
+  from assistive tech. The lines are decorative pseudo-elements.
+- `MarkerIcon` is `aria-hidden`. Give an icon-only marker an `aria-label`.
+- Wrap a thread in `role="log"` so new messages and markers are announced in
+  order.
 
 ## Props
 
@@ -144,17 +122,21 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     variant: {
-      description: 'How the marker sits between the surrounding content.',
+      description: 'How the marker sits between content.',
       type: 'default | separator | border',
       default: 'default',
     },
+    tone: {
+      description: 'Text color, shared with Alert and Badge.',
+      type: 'neutral | info | success | warning | destructive',
+      default: 'neutral',
+    },
     render: {
-      description:
-        'Replaces the root element, for example with an `a` or a `button`.',
+      description: 'Replaces the root element, such as an `a` or `button`.',
       type: 'ReactElement | ((props, state) => ReactElement)',
     },
     role: {
-      description: 'Use `status` for markers that announce live progress.',
+      description: 'Use `status` for live progress.',
       type: 'AriaRole',
     },
   }}
@@ -162,8 +144,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 ### MarkerIcon and MarkerContent
 
-Both render a `span` and accept every standard `span` prop, including
-`className`.
+Both render a `span` and take every `span` prop.
 
 ## API Reference
 

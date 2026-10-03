@@ -256,7 +256,7 @@ export function ContentDataTable<T extends DataTableTMin>({
   };
 
   const table = (
-    <div className="bg-card text-card-foreground ring-foreground/10 overflow-hidden rounded-md shadow-xs ring-1">
+    <div className="bg-card text-card-foreground ring-foreground/10 overflow-hidden rounded-xl shadow-xs ring-1">
       {header !== undefined && (
         <div className="border-foreground/10 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
           {header}

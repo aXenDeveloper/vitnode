@@ -15,6 +15,17 @@ type LocalData<T extends DataTableTMin> = Pick<
   'edges' | 'pageInfo'
 >
 
+function ResolvedDataTable<T extends DataTableTMin>({
+  resolve,
+  searchParams,
+  ...props
+}: Omit<DataTableProps<T>, 'edges' | 'pageInfo'> & {
+  resolve: (params: URLSearchParams) => LocalData<T>
+  searchParams: URLSearchParams
+}) {
+  return <ContentDataTable<T> {...props} {...resolve(searchParams)} />
+}
+
 export function DataTable<T extends DataTableTMin>(
   props:
     | (DataTableProps<T> & { resolve?: undefined })
@@ -37,9 +48,9 @@ export function DataTable<T extends DataTableTMin>(
   return (
     <DataTableNavigationProvider value={navigation}>
       {props.resolve ? (
-        <ContentDataTable<T>
+        <ResolvedDataTable<T>
           {...props}
-          {...props.resolve(navigation.searchParams)}
+          searchParams={navigation.searchParams}
         />
       ) : (
         <ContentDataTable<T> {...props} />

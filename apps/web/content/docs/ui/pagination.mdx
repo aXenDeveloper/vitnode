@@ -1,6 +1,6 @@
 ---
 title: Pagination
-description: Page numbers, previous and next links, and an ellipsis for when there are more pages than anyone wants to click through.
+description: Crawlable page links with previous and next buttons, an ellipsis for long ranges and a compact mode for phones.
 icon: ChevronsLeftRightEllipsis
 ---
 
@@ -9,9 +9,8 @@ icon: ChevronsLeftRightEllipsis
 <Preview name="pagination" />
 
 <Callout title="Building a table?">
-  The [Data Table](/docs/ui/data-table) already paginates for you - page
-  numbers, page size and URL state included. Reach for `Pagination` directly
-  when you render your own list, feed or gallery.
+  [Data Table](/docs/ui/data-table) already paginates, URL state included. Use
+  `Pagination` for your own lists, feeds and galleries.
 </Callout>
 
 ## Usage
@@ -43,9 +42,6 @@ import {
       </PaginationLink>
     </PaginationItem>
     <PaginationItem>
-      <PaginationLink href="?page=3">3</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
       <PaginationEllipsis />
     </PaginationItem>
     <PaginationItem>
@@ -55,36 +51,34 @@ import {
 </Pagination>
 ```
 
-Every link renders a real `<a>`, so pages stay crawlable and middle-click still
-opens a new tab. `PaginationPrevious` and `PaginationNext` hide their text below
-the `sm` breakpoint and keep just the chevron, which also flips in RTL
-languages.
+Every link is a real `<a>`, so pages stay crawlable and middle-click opens a new
+tab. Below `sm`, previous and next shrink to a chevron that flips in RTL.
 
 ## With router links
 
-`PaginationLink` takes any anchor prop. Keep a real `href` for crawlers and new
-tabs, then let TanStack Router handle the click so the page does not reload:
+Keep the `href` for crawlers, and let TanStack Router handle the click:
 
 ```tsx
-import { useNavigate } from '@tanstack/react-router'
-
 const navigate = useNavigate()
 
 const goTo = (page: number) => (event: React.MouseEvent<HTMLAnchorElement>) => {
   event.preventDefault()
-  void navigate({ to: '.', search: prev => ({ ...prev, page }) })
+  void navigate({ to: '.', search: (prev) => ({ ...prev, page }) })
 }
 
-<PaginationLink href={`?page=${page}`} isActive={page === current} onClick={goTo(page)}>
+;<PaginationLink
+  href={`?page=${page}`}
+  isActive={page === current}
+  onClick={goTo(page)}
+>
   {page}
 </PaginationLink>
 ```
 
 ## Ellipsis
 
-Twelve pages do not need twelve buttons. Show the first page, the last page and
-the one you are on, and let `PaginationEllipsis` stand in for the rest. A tiny
-helper keeps the window at five slots, so the row never jumps around:
+Show the first page, the last page and the current one. `PaginationEllipsis`
+covers the rest. This helper keeps five slots, so the row never jumps:
 
 ```tsx
 type PageSlot = 'ellipsis-end' | 'ellipsis-start' | number
@@ -104,24 +98,25 @@ const pageWindow = (current: number, total: number): PageSlot[] => {
 ```
 
 ```tsx
-{pageWindow(page, total).map(slot => (
-  <PaginationItem key={slot}>
-    {typeof slot === 'number' ? (
-      <PaginationLink href={`?page=${slot}`} isActive={slot === page}>
-        {slot}
-      </PaginationLink>
-    ) : (
-      <PaginationEllipsis />
-    )}
-  </PaginationItem>
-))}
+{
+  pageWindow(page, total).map((slot) => (
+    <PaginationItem key={slot}>
+      {typeof slot === 'number' ? (
+        <PaginationLink href={`?page=${slot}`} isActive={slot === page}>
+          {slot}
+        </PaginationLink>
+      ) : (
+        <PaginationEllipsis />
+      )}
+    </PaginationItem>
+  ))
+}
 ```
 
 ## Small screens
 
-Even five numbers get crowded on a phone. Give every number's `PaginationItem`
-`className="hidden sm:block"` and show a "Page 2 of 12" line between the arrows
-instead. The [Data Table](/docs/ui/data-table) uses the same trick:
+Shrink the preview to phone width: the numbers give way to "Page 2 of 12". Add
+`hidden sm:block` to each number's item, plus one item for the phone line:
 
 ```tsx
 <PaginationItem className="sm:hidden">
@@ -133,42 +128,41 @@ instead. The [Data Table](/docs/ui/data-table) uses the same trick:
 
 ## Disabled ends
 
-There is no page zero (we checked). On the first and last page, drop the `href`
-so the keyboard skips the link, and add `role="link"` with `aria-disabled` so
-screen readers still hear it as an unavailable link:
+There is no page zero (we checked). Drop the `href` so the keyboard skips the
+link, and add `role="link"` with `aria-disabled` so screen readers hear it as
+unavailable:
 
 ```tsx
 <PaginationPrevious
   {...(page > 1
     ? { href: `?page=${page - 1}` }
-    : { 'aria-disabled': true, className: 'pointer-events-none', role: 'link' })}
+    : {
+        'aria-disabled': true,
+        className: 'pointer-events-none',
+        role: 'link',
+      })}
 />
 ```
 
 ## Custom labels
 
-The previous and next labels are translated out of the box. Pass `text` when
-your feed deserves something more specific:
+<Preview name="pagination-labels" />
+
+`text` replaces the translated "Previous" / "Next". Pass a matching
+`aria-label` too, or screen readers still announce "Previous page".
 
 ```tsx
-<PaginationPrevious href="?page=1" text="Newer posts" />
-<PaginationNext href="?page=3" text="Older posts" />
+<PaginationNext aria-label="Older posts" href="?page=3" text="Older posts" />
 ```
 
 ## Accessibility
 
-- `Pagination` is a `nav` landmark labelled "pagination", so screen reader users
-  can jump straight to it.
-- The active link gets `aria-current="page"`, which is announced as the current
-  page.
-- `PaginationPrevious` and `PaginationNext` keep a translated label ("Previous
-  page", "Next page") even when only the chevron is visible.
-- Page links are plain anchors named by their number, so "2" is read as
-  "link, 2" rather than a generic "Go to page".
-- `PaginationEllipsis` is hidden from assistive technology. It is decoration,
-  not a link.
-- Announce page changes that do not reload the page, for example with an
-  `aria-live="polite"` "Page 2 of 12" line like in the preview.
+- `Pagination` is a `nav` landmark with a translated "Pagination" label.
+- The active link gets `aria-current="page"`.
+- Previous and next keep their translated label when only the chevron shows.
+- `PaginationEllipsis` hides its icon and reads "More pages" to screen readers.
+- Announce page changes that don't reload, for example with an
+  `aria-live="polite"` line like the preview's "1-3 of 36".
 
 ## Props
 
@@ -179,17 +173,17 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     href: {
-      description: 'Where the link goes. Leave it out for a disabled end.',
+      description: 'Link target. Leave it out for a disabled end.',
       type: 'string',
     },
     isActive: {
       description:
-        'Marks the current page with `aria-current="page"` and the outline style.',
+        'Current page: adds `aria-current="page"` and the outline style.',
       type: 'boolean',
       default: 'false',
     },
     size: {
-      description: 'The size of the underlying button.',
+      description: 'Size of the underlying button.',
       type: 'default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg',
       default: 'icon',
     },
@@ -198,12 +192,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 ### PaginationPrevious / PaginationNext
 
-Accept every `PaginationLink` prop, plus:
+Every `PaginationLink` prop, plus:
 
 <TypeTable
   type={{
     text: {
-      description: 'The visible label, shown from the `sm` breakpoint up.',
+      description: 'Visible label, shown from `sm` up.',
       type: 'string',
       default: '"Previous" / "Next" (translated)',
     },

@@ -7,29 +7,29 @@ import {
   CardTitle,
 } from '@vitnode/core/components/ui/card'
 import { cn } from 'cn'
-import { ExternalLinkIcon } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 
 export default function CardLinkExample() {
   return (
-    <Card className="w-full max-w-xs gap-2 pt-5">
+    <Card className="not-prose w-full max-w-xs">
       <CardHeader>
-        <CardTitle>Need a help in Claim?</CardTitle>
+        <CardTitle>New to plugins?</CardTitle>
       </CardHeader>
-      <CardContent className="mb-2">
-        <p>
-          Go to this step by step guideline process on how to certify for your
-          weekly benefits:
+      <CardContent>
+        <p className="leading-relaxed">
+          Build your first VitNode plugin in about ten minutes, coffee included.
         </p>
       </CardContent>
       <CardFooter className="py-2">
         <a
           className={cn(buttonVariants({ variant: 'link' }), 'px-0')}
-          href="https://vitnode.com"
+          href="https://vitnode.com/docs"
           rel="noopener noreferrer"
           target="_blank"
         >
-          See our guideline
-          <ExternalLinkIcon aria-hidden="true" />
+          Read the guide
+          <ExternalLink aria-hidden="true" />
+          <span className="sr-only">(opens in a new tab)</span>
         </a>
       </CardFooter>
     </Card>

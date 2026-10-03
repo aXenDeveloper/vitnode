@@ -1,6 +1,6 @@
 ---
 title: Data Table
-description: A table with sorting, filtering and pagination that works with the VitNode API.
+description: A typed table with sorting, search, filters and pagination that keeps its state in the URL and reads its rows from the VitNode API.
 icon: Table
 ---
 
@@ -11,103 +11,175 @@ icon: Table
 ## Usage
 
 ```ts
-import {
-  type ColumnDef,
-  DataTable,
-} from '@vitnode/core/components/table/data-table'
-```
+import type { ColumnDef } from '@vitnode/core/components/table/data-table-content'
 
-Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe. It only accepts a `keyof T`, just like TanStack Table. A **display column**, for actions or selection, has no `accessorKey` and requires a string `id` instead.
+import { ContentDataTable } from '@vitnode/core/components/table/content'
+```
 
 ```tsx
 const columns: ColumnDef<User>[] = [
   { accessorKey: 'name', header: 'Name' },
   { accessorKey: 'email', header: 'Email' },
-  { accessorKey: 'role', header: 'Role' },
   { accessorKey: 'status', header: 'Status', align: 'center' },
   {
     id: 'actions',
     header: '',
     align: 'right',
-    cell: () => (
-      <Button size="sm" variant="outline">
-        Edit
-      </Button>
-    ),
+    cell: ({ row }) => <EditUserButton id={row.id} />,
   },
 ]
 
-;<DataTable
+<ContentDataTable
   id="users-table"
   columns={columns}
   edges={data.edges}
   pageInfo={data.pageInfo}
-  order={{
-    defaultOrder: {
-      column: 'name',
-      order: 'asc',
-    },
-  }}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
 />
 ```
 
-<Callout type="info" title="Type-safe columns">
-  `accessorKey` autocompletes and is checked against the row type `T` - passing
-  a key that doesn't exist on `T` is a compile-time error. Use `id` (a plain
-  `string`) for display columns that aren't backed by a data field.
-</Callout>
+Every row needs a numeric `id`. Render the table inside a
+`DataTableNavigationProvider`, or its controls throw.
+
+## Connect it to the URL
+
+The table never talks to the router. Search, filters, sorting and the pager all
+hand a new query string to `navigate`, and the table renders whatever
+`searchParams` says.
+
+```tsx
+import type { DataTableNavigation } from '@vitnode/core/components/table/navigation'
+
+import { DataTableNavigationProvider } from '@vitnode/core/components/table/navigation'
+
+const navigation = React.useMemo<DataTableNavigation>(
+  () => ({
+    searchParams: new URLSearchParams(search),
+    navigate: async nextSearch => {
+      await navigate({
+        resetScroll: false,
+        search: Object.fromEntries(new URLSearchParams(nextSearch)),
+      })
+    },
+  }),
+  [navigate, search],
+)
+
+<DataTableNavigationProvider value={navigation}>
+  <ContentDataTable {...props} />
+</DataTableNavigationProvider>
+```
+
+The route's loader then fetches the page those params describe:
+
+```ts
+const res = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'admin/users',
+  path: '/list',
+  args: { query: search },
+  withPagination: true,
+})
+```
+
+## Columns
+
+An **accessor column** binds to a field with `accessorKey`, which only accepts
+`keyof T`, so typos fail at compile time. A **display column** (actions,
+badges) has no field and needs a string `id`.
+
+`cell` replaces the default text and gets `{ row, allData }`. `align` sets
+`'left'` (default), `'center'` or `'right'` for the header and cells. Right
+suits numbers and actions.
+
+## Sorting
+
+List sortable columns in `order.columns`. Clicking a header flips between
+ascending and descending and writes `?orderBy=&order=` to the URL.
+`defaultOrder` applies when the URL says nothing.
+
+```tsx
+order={{
+  columns: ['name', 'createdAt'],
+  defaultOrder: { column: 'createdAt', order: 'desc' },
+}}
+```
+
+## Clickable rows
+
+`rowOpens` makes the whole row a target. It's focusable, and Enter or Space
+opens it too. Clicks on links, buttons and inputs inside the row are ignored.
+
+```tsx
+rowOpens={user => navigate({ to: `/admin/core/users/${user.id}` })}
+```
+
+## Features
+
+<Cards>
+  <Card
+    title="Search"
+    href="/docs/ui/data-table/search"
+    description="A debounced search box that writes to the URL."
+  />
+  <Card
+    title="Filters"
+    href="/docs/ui/data-table/filters"
+    description="Faceted multi-select filters, static or async."
+  />
+  <Card
+    title="Pagination"
+    href="/docs/ui/data-table/pagination"
+    description="Numbered pages and a rows-per-page select."
+  />
+  <Card
+    title="Bulk actions"
+    href="/docs/ui/data-table/bulk-actions"
+    description="Tick rows and act on all of them at once."
+  />
+  <Card
+    title="Expandable rows"
+    href="/docs/ui/data-table/expandable-rows"
+    description="A detail panel under each row."
+  />
+  <Card
+    title="Draggable rows"
+    href="/docs/ui/data-table/draggable-rows"
+    description="Reorder rows and save the order."
+  />
+</Cards>
+
+## API
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
+    id: {
+      description: 'DOM id of the table.',
+      required: true,
+      type: 'string',
+    },
     columns: {
       description:
-        'Array of column definitions. Accessor columns bind to data via a type-safe accessorKey (keyof T); display columns (e.g. actions) use a string id instead.',
+        'Accessor columns (`accessorKey: keyof T`) or display columns (`id: string`).',
       required: true,
-      type: `ColumnDef<T>[] where ColumnDef<T> is:
-        // accessor column
-        {
-          accessorKey: keyof T;
-          header: ReactNode;
-          id?: string;
-          align?: 'left' | 'center' | 'right';
-          className?: string;
-          cell?: (props: { row: T; allData: T[] }) => ReactNode;
-        }
-        // or display column
-        {
-          id: string;
-          header: ReactNode;
-          align?: 'left' | 'center' | 'right';
-          className?: string;
-          cell?: (props: { row: T; allData: T[] }) => ReactNode;
-        }`,
+      type: `ColumnDef<T>[]`,
     },
     edges: {
-      description: 'Data to be displayed in the table',
+      description: 'The rows of the current page.',
       required: true,
-      type: 'Array',
-    },
-    order: {
-      description: 'Column sorting configuration',
-      required: true,
-      type: `{
-        columns?: string[];
-        defaultOrder: {
-          column: string;
-          order: 'asc' | 'desc';
-        };
-      }`,
+      type: 'T[]',
     },
     pageInfo: {
-      description:
-        'Pagination information from the API. Pass it straight through — the table renders numbered pages and a "Showing 21–30 of 380" range from it.',
+      description: 'Pagination info from the API, passed straight through.',
       required: true,
       type: `{
         count: number;
         totalCount: number;
         totalPages: number;
+        pageSize: number;
         currentPage: number | null;
         hasNextPage: boolean;
         hasPreviousPage: boolean;
@@ -115,207 +187,56 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
         endCursor: string | null;
       }`,
     },
+    order: {
+      description: 'Sortable columns and the default sort.',
+      required: true,
+      type: `{
+        columns?: (keyof T)[];
+        defaultOrder: { column: keyof T; order: 'asc' | 'desc' };
+      }`,
+    },
+    rowOpens: {
+      description: 'Makes each row clickable and keyboard-focusable.',
+      type: '(row: T) => void',
+    },
+    header: {
+      description: 'A band above the toolbar, for a title or actions.',
+      type: 'ReactNode',
+    },
+    customNoResults: {
+      description: 'Replaces the empty state.',
+      type: `{
+        title?: string;
+        description?: string;
+        icon?: ReactNode;
+        footer?: ReactNode;
+      }`,
+    },
     search: {
-      description:
-        'Renders a search input above the table. Requires the API route to define the searchable columns.',
-      required: false,
+      description: 'Shows a search input.',
       type: 'boolean',
     },
     searchPlaceholder: {
-      description: 'Custom placeholder text for the search input',
-      required: false,
+      description: 'Placeholder for the search input.',
       type: 'string',
     },
+    filters: {
+      description: 'Faceted filters.',
+      type: 'FilterDataTable[]',
+    },
     bulkActions: {
-      description:
-        'Actions for the rows a person ticked, rendered in a bar that floats at the bottom centre of the viewport. Passing this turns row selection on: the table grows a leading checkbox column, and the nodes here read the ticked ids with useDataTableSelection().',
-      required: false,
+      description: 'Turns on row selection.',
       type: 'ReactNode',
     },
     expandable: {
-      description:
-        'Turns on expandable rows: a chevron column that opens a detail panel under its row. See Expandable rows below.',
-      required: false,
-      type: `{
-        render: (row: T) => ReactNode;
-        canExpand?: (row: T) => boolean;
-        defaultExpanded?: number[];
-      }`,
+      description: 'Turns on detail panels.',
+      type: 'ExpandableDataTable<T>',
     },
     reorderable: {
-      description:
-        'Turns on drag-and-drop row ordering with a grip handle per row. See Draggable rows below.',
-      required: false,
-      type: `{
-        onReorder: (ids: number[], details: {
-          activeId: number;
-          overId: number;
-          from: number;
-          to: number;
-        }) => void | Promise<void>;
-        getRowLabel?: (row: T) => string;
-        disabled?: boolean;
-      }`,
-    },
-    filters: {
-      description:
-        'Renders one or more faceted multi-select dropdowns above the table. Each filter controls its own URL query parameter.',
-      required: false,
-      type: `{
-        id: string;
-        label: string;
-        options?: {
-          value: string;
-          label: ReactNode;
-          keywords?: string[];
-        }[];
-        onSearch?: (search: string) => Promise<{
-          value: string;
-          label: ReactNode;
-          keywords?: string[];
-        }[]>;
-      }[]`,
+      description: 'Turns on drag-and-drop ordering.',
+      type: 'ReorderableDataTable<T>',
     },
   }}
 />
 
-## Cell renderer
-
-The `cell` property controls how each cell renders. Its function receives the current row and all the table data.
-
-```tsx
-<DataTable
-  id="users-table"
-  columns={[
-    {
-      accessorKey: 'id',
-      header: 'Id',
-      // [!code ++]
-      cell: ({ row, allData }) => (
-        // [!code ++]
-        <span>
-          // [!code ++]
-          {row.id} - all data {allData.length}
-          // [!code ++]
-        </span>
-        // [!code ++]
-      ),
-    },
-    { accessorKey: 'createdAt', header: 'Created at' },
-  ]}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{
-    columns: ['createdAt', 'id'],
-    defaultOrder: {
-      order: 'desc',
-    },
-  }}
-/>
-```
-
-### Order configuration
-
-To enable sorting on specific columns, list them in the `columns` property.
-
-```tsx
-order={{
-  // [!code ++]
-  columns: ['createdAt', 'id', 'name'],
-  defaultOrder: {
-    column: 'createdAt',
-    order: 'desc',
-  }
-}}
-```
-
-## Column alignment
-
-Use the `align` property to control the horizontal alignment of a column's header and cells. It accepts `"left"` (default), `"center"`, or `"right"`. Right alignment suits numbers and action buttons.
-
-```tsx
-columns={[
-  { accessorKey: "name", header: "Name" },
-  // [!code ++]
-  { accessorKey: "status", header: "Status", align: "center" },
-  {
-    id: "actions",
-    header: "",
-    // [!code ++]
-    align: "right",
-    cell: ({ row }) => <RowActions id={row.id} />,
-  },
-]}
-```
-
-## Features
-
-Each feature has its own page with a live preview:
-
-- [Search](/docs/ui/data-table/search): a debounced search box that writes to the URL.
-- [Filters](/docs/ui/data-table/filters): faceted multi-select filters, static or async.
-- [Pagination](/docs/ui/data-table/pagination): numbered pages and a rows-per-page select.
-- [Bulk Actions](/docs/ui/data-table/bulk-actions): select rows and act on all of them at once.
-- [Expandable Rows](/docs/ui/data-table/expandable-rows): a detail panel under each row.
-- [Draggable Rows](/docs/ui/data-table/draggable-rows): reorder rows and save the order on your backend.
-
-## Complete Example
-
-Here's `DataTable` wired into a full page:
-
-```tsx
-import {
-  DataTable,
-  SearchParamsDataTable,
-} from '@vitnode/core/components/table/data-table'
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
-
-export const UsersView = async ({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParamsDataTable>
-}) => {
-  const query = await searchParams
-  const res = await fetcher({
-    plugin: '@vitnode/core',
-    path: '/list',
-    method: 'get',
-    module: 'admin/users',
-    args: {
-      query,
-    },
-    withPagination: true,
-  })
-  const data = await res.json()
-
-  return (
-    <DataTable
-      id="users-table"
-      columns={[
-        {
-          accessorKey: 'id',
-          header: 'ID',
-        },
-        {
-          accessorKey: 'username',
-          header: 'Username',
-          cell: ({ row }) => (
-            <span className="font-medium">{row.username}</span>
-          ),
-        },
-        { accessorKey: 'email', header: 'Email' },
-        { accessorKey: 'createdAt', header: 'Created at' },
-      ]}
-      edges={data.edges}
-      order={{
-        columns: ['id', 'username', 'email', 'createdAt'],
-        defaultOrder: {
-          column: 'createdAt',
-          order: 'desc',
-        },
-      }}
-      pageInfo={data.pageInfo}
-    />
-  )
-}
-```
+Other props go to the underlying `Table`.

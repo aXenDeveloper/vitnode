@@ -4,8 +4,6 @@ description: A row for lists, settings and menus that lines up media, a title, a
 icon: LayoutList
 ---
 
-## Preview
-
 <Preview name="item" />
 
 ## Usage
@@ -38,57 +36,38 @@ import {
 </Item>
 ```
 
-Every app ends up with a dozen slightly different "icon, text, button on the
-right" rows. `Item` is that row, built once, so you can stop rebuilding it.
+Every app grows a dozen "icon, text, button on the right" rows. `Item` is that
+row, built once.
 
-## Anatomy
-
-- `Item` is the row itself. Flexbox, wraps when it has to.
-- `ItemMedia` holds an icon, avatar or image on the start side. With a
-  description present it aligns itself to the top of the text.
-- `ItemContent` stacks the title and description and takes the free space.
-- `ItemTitle` is one line, truncated if it gets chatty.
-- `ItemDescription` shows up to two lines of muted text. Links inside are
-  underlined automatically.
-- `ItemActions` holds buttons, badges or a chevron on the end side.
-- `ItemHeader` and `ItemFooter` are full-width rows above and below the content.
-- `ItemGroup` wraps a list of items, and `ItemSeparator` draws a line between
-  them.
+- `ItemContent` stacks title and description and takes the free space.
+- `ItemTitle` is one line and truncates.
+- `ItemDescription` shows up to two muted lines. Links inside get underlined.
+- `ItemActions` holds buttons, badges or a chevron at the end.
 
 ## Variants
-
-`default` has no border or background, `outline` adds a border, and `muted`
-adds a soft background.
 
 <Preview name="item-variants" />
 
 ```tsx
-<Item variant="default" />
-<Item variant="outline" />
-<Item variant="muted" />
+<Item variant="muted">...</Item>
 ```
 
 ## Sizes
 
-Going from `default` to `sm` to `xs` shrinks the padding and the gaps.
-`ItemMedia` with the `image` variant shrinks along with them, and `xs` also uses
-smaller description text.
-
 <Preview name="item-sizes" />
 
+`sm` and `xs` shrink padding and gaps. Image media shrinks too, and `xs` also
+uses smaller description text.
+
 ```tsx
-<Item size="sm" variant="outline">
-  ...
-</Item>
+<Item size="sm">...</Item>
 ```
 
 ## Media
 
-`ItemMedia` comes in three flavours:
+<Preview name="item-media" />
 
-- `default` adds no styling at all, which suits an `Avatar`.
-- `icon` sizes a bare SVG icon to `size-4`.
-- `image` is a rounded square that crops an `img` to fit.
+With a description present, media aligns to the top of the text.
 
 ```tsx
 <ItemMedia variant="image">
@@ -98,11 +77,11 @@ smaller description text.
 
 ## As a link
 
-Pass an element to `render` and the whole row becomes that element, whether
-that's an `<a>`, a router `Link` or a `<button>`. Rendered as a link it
-picks up a hover background for free.
-
 <Preview name="item-link" />
+
+Pass an element to `render`, such as an `<a>`, a router `Link` or a `<button>`.
+Put the row's content inside it so the link wraps everything. Links get a hover
+background.
 
 ```tsx
 <Item
@@ -119,15 +98,11 @@ picks up a hover background for free.
 />
 ```
 
-Put the row's content inside the rendered element, as above, so the link wraps
-everything you see.
-
 ## Groups
 
-Wrap items in `ItemGroup` to stack them, and drop an `ItemSeparator` between
-them when you want a line in between.
-
 <Preview name="item-group" />
+
+`ItemGroup` stacks items. `ItemSeparator` draws a line between them.
 
 ```tsx
 <ItemGroup aria-label="Team members">
@@ -139,10 +114,9 @@ them when you want a line in between.
 
 ## Header and footer
 
-`ItemHeader` and `ItemFooter` take the full width of the row, so a status badge
-or a timestamp can sit above or below the main content.
-
 <Preview name="item-header" />
+
+`ItemHeader` and `ItemFooter` span the full width, above or below the content.
 
 ```tsx
 <Item variant="outline">
@@ -158,17 +132,15 @@ or a timestamp can sit above or below the main content.
 
 ## Accessibility
 
-- `ItemGroup` renders with `role="list"`. Give every `Item` inside it
-  `role="listitem"`, and an `aria-label` on the group helps screen readers
-  announce what the list is about.
-- Keep one interactive element per row. Either the whole row is a link or
-  button (via `render`), or it holds buttons in `ItemActions`. Never put a
-  button inside a link.
-- Icon-only buttons in `ItemActions` need an `aria-label` that names the row,
-  for example "Invite Ada Lovelace" rather than just "Invite".
-- Decorative icons such as a trailing chevron get `aria-hidden`. Links that
-  open a new tab say so with `sr-only` text.
-- Rows rendered as links or buttons show the focus ring on keyboard focus.
+- `ItemGroup` has `role="list"`. Give each `Item` `role="listitem"` and the
+  group an `aria-label`.
+- One interactive element per row: either the whole row is a link or button,
+  or it holds buttons in `ItemActions`. Never a button inside a link.
+- Icon-only buttons need an `aria-label` that names the row, like "Invite Ada
+  Lovelace", not "Invite".
+- Decorative icons get `aria-hidden`. Links that open a new tab say so in
+  `sr-only` text.
+- Rows rendered as links or buttons show a focus ring.
 
 ## Props
 
@@ -184,13 +156,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       default: 'default',
     },
     size: {
-      description: 'Padding and gap between the parts of the row.',
+      description: 'Padding and gaps.',
       type: 'default | sm | xs',
       default: 'default',
     },
     render: {
-      description:
-        'Replaces the `div` with your own element, such as a link or a button.',
+      description: 'Replaces the `div`, such as with a link or button.',
       type: 'ReactElement | ((props, state) => ReactElement)',
     },
   }}
@@ -201,7 +172,8 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     variant: {
-      description: 'How the media is styled.',
+      description:
+        '`default` adds no styles, `icon` sizes an SVG, `image` crops an `img` to a rounded square.',
       type: 'default | icon | image',
       default: 'default',
     },

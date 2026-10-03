@@ -1,6 +1,6 @@
 ---
 title: Button Group
-description: Glue related buttons, inputs and menus together into one tidy row (or column) with shared borders and rounded ends.
+description: Glue related buttons, inputs and menus into one tidy row or column with shared borders and rounded ends.
 icon: Group
 ---
 
@@ -26,36 +26,31 @@ import {
 </ButtonGroup>
 ```
 
-The group squashes the inner borders and rounds only the outer corners, so a
-handful of buttons reads as one control. The buttons need no extra props. They
-just know they are in a group.
+Inner borders merge and only the outer corners stay round. The buttons need no
+extra props.
 
 ## Orientation
-
-Set `orientation="vertical"` to stack the buttons. Great for zoom controls on a
-map, less great for a full sentence.
 
 ```tsx
 <ButtonGroup aria-label="Zoom" orientation="vertical">
   <Button aria-label="Zoom in" size="icon-sm" variant="outline">
-    <ZoomIn />
+    <ZoomInIcon />
   </Button>
   <Button aria-label="Zoom out" size="icon-sm" variant="outline">
-    <ZoomOut />
+    <ZoomOutIcon />
   </Button>
 </ButtonGroup>
 ```
 
 ## Nested groups
 
-Put groups inside a group and they get a small gap between them. That's the
-classic toolbar look.
+Groups inside a group get a small gap between them, the classic toolbar look.
 
 ```tsx
 <ButtonGroup aria-label="Message actions">
   <ButtonGroup>
     <Button aria-label="Go back" size="icon" variant="outline">
-      <ArrowLeft />
+      <ArrowLeftIcon />
     </Button>
   </ButtonGroup>
   <ButtonGroup>
@@ -67,58 +62,56 @@ classic toolbar look.
 
 ## Separator
 
-Outline buttons already have borders to divide them. Variants without a border,
-like `secondary`, merge into one big blob, so add a `ButtonGroupSeparator`
-between them.
+Borderless variants like `secondary` blur into one blob. Put a
+`ButtonGroupSeparator` between them.
 
 ```tsx
 <ButtonGroup aria-label="Text alignment">
   <Button aria-label="Align left" size="icon" variant="secondary">
-    <AlignLeft />
+    <AlignLeftIcon />
   </Button>
   <ButtonGroupSeparator />
   <Button aria-label="Align center" size="icon" variant="secondary">
-    <AlignCenter />
+    <AlignCenterIcon />
   </Button>
 </ButtonGroup>
 ```
 
+Inside a vertical group, use `<ButtonGroupSeparator orientation="horizontal" />`.
+
 ## With text
 
-`ButtonGroupText` renders a non-interactive segment, like a counter or a
-prefix. Use `render` to swap the element, for example to a `<label>`.
+`ButtonGroupText` is a non-interactive segment, like a counter. Use `render`
+to swap the element, for example to a `<label>`.
 
 ```tsx
 <ButtonGroup aria-label="Quantity">
   <Button aria-label="Decrease quantity" size="icon" variant="outline">
-    <Minus />
+    <MinusIcon />
   </Button>
   <ButtonGroupText aria-live="polite">{quantity}</ButtonGroupText>
   <Button aria-label="Increase quantity" size="icon" variant="outline">
-    <Plus />
+    <PlusIcon />
   </Button>
 </ButtonGroup>
 ```
 
 ## With input
 
-An `Input` inside a group stretches to fill the free space, so the button stays
-snug on the end.
+An `Input` stretches to fill the free space.
 
 ```tsx
 <ButtonGroup className="w-full max-w-sm">
   <Input aria-label="Search members" placeholder="Search members..." />
   <Button aria-label="Search" size="icon" variant="outline">
-    <Search />
+    <SearchIcon />
   </Button>
 </ButtonGroup>
 ```
 
-## With dropdown menu
+## Split button
 
-Pair a button with a [Dropdown Menu](/docs/ui/dropdown-menu) trigger to build a
-split button, with the main action on the left and the "but also..." options on
-the right.
+Pair a button with a [Dropdown Menu](/docs/ui/dropdown-menu) trigger.
 
 ```tsx
 <ButtonGroup>
@@ -126,12 +119,16 @@ the right.
   <DropdownMenu>
     <DropdownMenuTrigger
       render={
-        <Button aria-label="More snooze options" size="icon" variant="outline" />
+        <Button
+          aria-label="More snooze options"
+          size="icon"
+          variant="outline"
+        />
       }
     >
-      <ChevronDown />
+      <ChevronDownIcon />
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="w-48">
+    <DropdownMenuContent align="end">
       <DropdownMenuItem>Later today</DropdownMenuItem>
       <DropdownMenuItem>Next week</DropdownMenuItem>
     </DropdownMenuContent>
@@ -141,33 +138,17 @@ the right.
 
 ## Sizes
 
-The group follows the size of its buttons. Use the same `size` on every button
-in it so the heights match.
-
-```tsx
-<ButtonGroup>
-  <Button size="sm" variant="outline">
-    Small
-  </Button>
-  <Button aria-label="Add" size="icon-sm" variant="outline">
-    <Plus />
-  </Button>
-</ButtonGroup>
-```
+The group follows its buttons. Use the same `size` on all of them so heights
+match.
 
 ## Accessibility
 
-- The group renders with `role="group"`. Give it an `aria-label` (or
-  `aria-labelledby`) so screen readers announce what the buttons are for.
-- Icon-only buttons need their own `aria-label`. The `Button` types will remind
-  you if you forget.
-- A focused button is lifted above its neighbours, so the focus ring is never
-  hidden behind the next segment.
-- Borders and corners use logical properties, so groups flip correctly in
-  right-to-left languages.
-- Need a single selected option, like a segmented control? Use
-  [Toggle Group](/docs/ui/toggle-group) instead. It handles the pressed state
-  for you.
+- The group has `role="group"`. Give it an `aria-label` or `aria-labelledby`.
+- Icon-only buttons need their own `aria-label`.
+- A focused button lifts above its neighbours, so the focus ring never hides.
+- Borders and corners flip correctly in right-to-left languages.
+- Need a selected state, like a segmented control? Use
+  [Toggle Group](/docs/ui/toggle-group).
 
 ## Props
 
@@ -183,11 +164,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       default: 'horizontal',
     },
     'aria-label': {
-      description: 'Describes what the group of buttons does.',
-      type: 'string',
-    },
-    className: {
-      description: 'Extra classes for the group wrapper.',
+      description: 'Describes what the group does.',
       type: 'string',
     },
   }}
@@ -198,12 +175,9 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     render: {
-      description: 'Replaces the default `<div>`, for example with a `<label>`.',
+      description:
+        'Replaces the default `<div>`, for example with a `<label>`.',
       type: 'ReactElement | (props, state) => ReactElement',
-    },
-    className: {
-      description: 'Extra classes for the text segment.',
-      type: 'string',
     },
   }}
 />
@@ -214,16 +188,14 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
   type={{
     orientation: {
       description:
-        'Direction of the line. Use `horizontal` inside a vertical group.',
+        'Direction of the line. Use `horizontal` in a vertical group.',
       type: 'horizontal | vertical',
       default: 'vertical',
     },
-    className: {
-      description: 'Extra classes for the separator.',
-      type: 'string',
-    },
   }}
 />
+
+All parts accept `className`.
 
 ## API Reference
 

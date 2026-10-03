@@ -10,22 +10,18 @@ icon: BookCopy
 
 ## Usage
 
-The table renders its own pager from `pageInfo`. You get numbered pages with a
-first/last anchor and an ellipsis in between, a rows-per-page select, and a
-"Showing 21–30 of 380" range. There's nothing to wire up. Pass `pageInfo` through
-and the pager appears.
+There's nothing to wire up. Pass `pageInfo` from the API and the table renders
+numbered pages, a rows-per-page select (10, 20, 30 or 40) and a "Showing 21–30
+of 380" range.
 
-Each page is a real link (`?page=3`), so middle-click and "open in new tab" work,
-while a plain click stays a client-side navigation. On phones the numbers collapse
-to a "Page 3 of 38" label between the arrows, because forty tap targets do not fit
-on a 390px screen.
+- **Pages are real links.** `?page=3` works with middle-click and "open in new
+  tab", while a plain click stays client-side.
+- **Phones get a label.** Below `sm`, the numbers collapse to "Page 3 of 38"
+  between the arrows.
+- **Filters and page size reset to page one.** The old page no longer means
+  what it did.
+- **Too far lands on the last page.** The API clamps a page past the end, so
+  stale links still show rows.
 
-Two details worth knowing:
-
-- **Changing the page size or a filter returns you to page one.** A filter changes
-  which rows exist, so the page you were on no longer means what it meant.
-- **A page past the end lands on the last page**, not on an empty table. Stale
-  links and hand-typed numbers stay useful.
-
-The API does the counting. See [Pagination](/docs/dev/database/pagination) for the
-route side, including the index your ordered column needs.
+The API does the counting. See [Pagination](/docs/dev/database/pagination) for
+the route side, including the index your sorted column needs.

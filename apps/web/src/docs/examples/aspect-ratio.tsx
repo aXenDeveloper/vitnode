@@ -5,7 +5,7 @@ import adminDashboardLight from '@/site/home/assets/admin-dashboard-light-800.we
 
 export default function AspectRatioExample() {
   return (
-    <figure className="flex w-full flex-col gap-2">
+    <figure className="not-prose flex w-full flex-col gap-2">
       <AspectRatio
         className="bg-muted overflow-hidden rounded-lg border"
         ratio={16 / 9}

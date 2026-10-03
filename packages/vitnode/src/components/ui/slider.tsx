@@ -49,7 +49,7 @@ function Slider({
         </SliderPrimitive.Track>
         {Array.from({ length: _values.length }, (_, index) => (
           <SliderPrimitive.Thumb
-            className="border-primary ring-ring/50 block size-4 shrink-0 rounded-full border bg-white shadow-sm transition-[color,box-shadow] select-none hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+            className="border-primary ring-ring/50 bg-background relative block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow,scale] duration-150 ease-out select-none after:absolute after:-inset-3.5 hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden active:scale-110 data-disabled:pointer-events-none data-disabled:opacity-50 data-dragging:scale-110 data-dragging:ring-4 motion-reduce:transition-none"
             data-slot="slider-thumb"
             key={index}
           />

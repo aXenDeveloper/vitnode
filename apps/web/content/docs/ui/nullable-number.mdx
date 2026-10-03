@@ -1,6 +1,6 @@
 ---
 title: Nullable Number
-description: A number field with a checkbox that toggles the value to null, for answers like "unlimited", "never" or "no limit".
+description: A number field with a checkbox that sets the value to null, for answers like "unlimited", "never" or "no limit".
 icon: Hash
 ---
 
@@ -8,34 +8,32 @@ icon: Hash
 
 <Preview name="nullable-number" />
 
-It builds on [Number Field](/docs/ui/number-field), so you get the plus and
-minus buttons, arrow-key stepping and min/max clamping for free. On top sits one
-checkbox for when the honest answer is "no limit".
+A [Number Field](/docs/ui/number-field) plus one checkbox, for when the honest
+answer is "no limit".
 
 ## Usage
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormNullableNumber } from "@vitnode/core/components/form/fields/nullable-number";
-```
-
-```ts
-const formSchema = z.object({
-  max_members: z.number().int().min(1).nullable().default(10),
-});
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormNullableNumber } from '@vitnode/core/components/form/fields/nullable-number'
 ```
 
 ```tsx
+const formSchema = z.object({
+  max_members: z.number().int().min(1).nullable().default(10),
+})
+
 <AutoForm
   formSchema={formSchema}
   fields={[
     {
-      id: "max_members",
+      id: 'max_members',
       component: props => (
         <AutoFormNullableNumber
           {...props}
           label="Maximum members"
+          min={1}
           toggleLabel="Unlimited"
         />
       ),
@@ -44,82 +42,63 @@ const formSchema = z.object({
 />
 ```
 
-<Callout type="info" title="Value shape">
-  The field value is `number | null`. A number is whatever is typed in the
-  input (clearing it gives `0`); `null` means the checkbox is checked and the
-  number field is disabled. Back it
-  with a `z.number().nullable()` schema, and keep it optional or give it a
-  `default` when the field can be
-  [hidden](/docs/ui/auto-form#conditional-fields) so it never blocks submission.
-  Unchecking the box restores the last number you entered.
-</Callout>
+## Value
 
-## Adapting the labels
+The value is `number | null`. Checking the box stores `null` and disables the
+input. Unchecking it restores the last number. Clearing the input stores `0`.
 
-The three label props are plain text, so the same field fits an unlimited
-storage cap, a session that never expires or an uncapped rate limit:
+Back it with `z.number().nullable()`. If the field can be
+[hidden](/docs/ui/auto-form#conditional-fields), add a `default` so it never
+blocks submission.
 
-- `unitLabel` is shown right after the input (e.g. `kB`, `minutes`, `%`).
-- `orLabel` is an optional connector rendered before the checkbox (e.g. `or`).
-- `toggleLabel` is the checkbox label. Checking it sets the value to `null`.
+## Labels
+
+The second field in the preview uses all three labels:
 
 ```tsx
 <AutoFormNullableNumber
   {...props}
   label="Auto-logout"
-  unitLabel="minutes"
   orLabel="or"
   toggleLabel="Never"
+  unitLabel="minutes"
 />
 ```
 
-Any other props (`min`, `max`, `step`, `largeStep`, `format`, `placeholder`,
-…) are forwarded to the underlying
-[Number Field](/docs/ui/number-field#props). Validation comes from the Zod
-schema, and `min` / `max` on the field clamp the buttons and arrow keys, so
-pass them in both places.
-
-```tsx
-<AutoFormNullableNumber
-  {...props}
-  label="Upload limit"
-  min={0}
-  step={512}
-  toggleLabel="Unlimited"
-  unitLabel="kB"
-/>
-```
+Every other prop (`min`, `max`, `step`, `format`, `placeholder`…) goes to the
+[Number Field](/docs/ui/number-field#props). Pass `min`/`max` here and in the
+schema: the schema validates, the props clamp the buttons and keys.
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
+    toggleLabel: {
+      description: 'Checkbox label. Checking it sets the value to `null`.',
+      type: 'React.ReactNode',
+      required: true,
+    },
     label: {
-      description: "The label displayed above the field.",
-      type: "React.ReactNode",
-      default: "",
+      description: 'Label above the field.',
+      type: 'React.ReactNode',
     },
     description: {
-      description: "A short description displayed below the field.",
-      type: "React.ReactNode",
-      default: "",
-    },
-    toggleLabel: {
-      description:
-        "Label for the checkbox. Checking it sets the value to null and disables the input. Required.",
-      type: "React.ReactNode",
+      description: 'Help text below the field.',
+      type: 'React.ReactNode',
     },
     unitLabel: {
-      description: "Optional unit shown right after the input.",
-      type: "React.ReactNode",
-      default: "",
+      description: 'Unit right after the input, like `kB` or `minutes`.',
+      type: 'React.ReactNode',
     },
     orLabel: {
-      description: "Optional connector text rendered before the checkbox.",
-      type: "React.ReactNode",
-      default: "",
+      description: 'Connector before the checkbox, like `or`.',
+      type: 'React.ReactNode',
+    },
+    placeholder: {
+      description: 'Placeholder of the empty input.',
+      type: 'string',
     },
   }}
 />

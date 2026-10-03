@@ -32,7 +32,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 export type { CascaderOption } from "./cascader-utils";
 
-const COLUMN_WIDTH = 224;
 const PANEL_TRANSITION = { type: "spring", duration: 0.3, bounce: 0 } as const;
 
 const DRILL_VARIANTS = {
@@ -45,6 +44,27 @@ const PresentColumn = (props: React.ComponentProps<typeof m.div>) => {
   const isPresent = useIsPresent();
 
   return <m.div inert={!isPresent} {...props} />;
+};
+
+const useMeasuredHeight = () => {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [height, setHeight] = React.useState<"auto" | number>("auto");
+
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new ResizeObserver(() => {
+      setHeight(element.offsetHeight);
+    });
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return { height, ref };
 };
 
 interface CascaderProps {
@@ -239,7 +259,7 @@ const CascaderOptionItem = ({
       aria-current={isActive || undefined}
       aria-selected={isSelected}
       className={cn(
-        "hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground data-[active=true]:bg-accent/60 flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-start text-sm outline-none disabled:pointer-events-none disabled:opacity-50",
+        "hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground active:bg-accent data-[active=true]:bg-accent/60 flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-start text-sm outline-none disabled:pointer-events-none disabled:opacity-50 pointer-coarse:py-2.5",
         isSelected && !isBranch && "font-medium",
       )}
       data-active={isActive || (isSelected && !isBranch)}
@@ -258,9 +278,14 @@ const CascaderOptionItem = ({
           searchable: cascader.searchable,
         });
       }}
-      onMouseEnter={() => {
+      onMouseEnter={event => {
         if (opensOnHover && isColumnLevel && !isActive) {
-          cascader.openBranch(level, option, null, false);
+          cascader.openBranch(
+            level,
+            option,
+            panelOf(event.currentTarget),
+            false,
+          );
         }
       }}
       role="option"
@@ -379,44 +404,52 @@ const CascaderDrillView = ({ cascader }: { cascader: CascaderController }) => {
   const parent = columns[level - 1]?.find(
     node => node.value === activePath[level - 1],
   );
+  const { height, ref } = useMeasuredHeight();
 
   return (
     <MotionFeatures>
-      <div className="relative overflow-hidden">
-        <AnimatePresence custom={direction} initial={false} mode="popLayout">
-          <PresentColumn
-            animate="center"
-            className="w-full"
-            custom={direction}
-            exit="exit"
-            initial="enter"
-            key={activePath.slice(0, level).join("/") || "root"}
-            transition={transition}
-            variants={DRILL_VARIANTS}
-          >
-            {parent && (
-              <button
-                className="hover:bg-accent text-muted-foreground focus-visible:bg-accent flex w-full items-center gap-1 border-b px-2 py-2 text-start text-sm outline-none"
-                onClick={event => {
-                  cascader.goBack(panelOf(event.currentTarget));
-                }}
-                type="button"
-              >
-                <ChevronLeftIcon className="size-4 rtl:rotate-180" />
-                <span className="sr-only">{t("go_back")}: </span>
-                <span className="text-foreground truncate font-medium">
-                  {parent.label}
-                </span>
-              </button>
-            )}
-            <CascaderColumn
-              cascader={cascader}
-              column={columns[level] ?? []}
-              level={level}
-            />
-          </PresentColumn>
-        </AnimatePresence>
-      </div>
+      <m.div
+        animate={{ height }}
+        className="overflow-hidden"
+        initial={false}
+        transition={transition}
+      >
+        <div className="relative" ref={ref}>
+          <AnimatePresence custom={direction} initial={false} mode="popLayout">
+            <PresentColumn
+              animate="center"
+              className="w-full"
+              custom={direction}
+              exit="exit"
+              initial="enter"
+              key={activePath.slice(0, level).join("/") || "root"}
+              transition={transition}
+              variants={DRILL_VARIANTS}
+            >
+              {parent && (
+                <button
+                  className="hover:bg-accent text-muted-foreground focus-visible:bg-accent flex w-full items-center gap-1 border-b px-2 py-2 text-start text-sm outline-none"
+                  onClick={event => {
+                    cascader.goBack(panelOf(event.currentTarget));
+                  }}
+                  type="button"
+                >
+                  <ChevronLeftIcon className="size-4 rtl:rotate-180" />
+                  <span className="sr-only">{t("go_back")}: </span>
+                  <span className="text-foreground truncate font-medium">
+                    {parent.label}
+                  </span>
+                </button>
+              )}
+              <CascaderColumn
+                cascader={cascader}
+                column={columns[level] ?? []}
+                level={level}
+              />
+            </PresentColumn>
+          </AnimatePresence>
+        </div>
+      </m.div>
     </MotionFeatures>
   );
 };
@@ -432,11 +465,10 @@ const CascaderColumnsView = ({
         {cascader.columns.map((column, level) => (
           <PresentColumn
             animate={{ opacity: 1, x: 0 }}
-            className="shrink-0 border-e last:border-e-0"
-            exit={{ opacity: 0, x: -8 }}
-            initial={{ opacity: 0, x: -8 }}
+            className="w-56 shrink-0 border-e last:border-e-0"
+            exit={{ opacity: 0, x: -8 * cascader.direction }}
+            initial={{ opacity: 0, x: -8 * cascader.direction }}
             key={["root", ...cascader.activePath.slice(0, level)].join("/")}
-            style={{ width: COLUMN_WIDTH }}
             transition={cascader.transition}
           >
             <CascaderColumn cascader={cascader} column={column} level={level} />
@@ -543,12 +575,17 @@ const CascaderTrigger = ({
                 .join(cascader.separator)
             : (cascader.placeholder ?? t("select_option"))}
         </span>
-        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0" />
+        <ChevronDownIcon
+          className={cn(
+            "text-muted-foreground ease-fluid pointer-events-none size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
+            cascader.open && "rotate-180",
+          )}
+        />
       </PopoverTrigger>
       {canClear && (
         <button
           aria-label={t("clear")}
-          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 absolute end-8 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-sm outline-none focus-visible:ring-3"
+          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 active:bg-muted absolute inset-y-0 end-8 my-auto flex size-6 items-center justify-center rounded-sm outline-none after:absolute after:-inset-2 focus-visible:ring-3 pointer-coarse:after:-inset-2.5"
           onClick={() => {
             cascader.commit([]);
           }}

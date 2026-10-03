@@ -54,7 +54,7 @@ function Counter({
     >
       <Button
         aria-label={t("decrease")}
-        className="transition-transform active:scale-90 motion-reduce:transition-none"
+        className="rounded-sm transition-[background-color,color,scale] active:not-aria-[haspopup]:not-in-data-[slot=button-group]:scale-95"
         disabled={disabled || current <= min}
         onClick={() => {
           change(-1);
@@ -66,14 +66,14 @@ function Counter({
       </Button>
       <output
         aria-live="polite"
-        className="flex min-w-8 justify-center px-1 text-sm font-medium"
+        className="flex min-w-8 justify-center px-1 text-sm font-medium tabular-nums"
         data-slot="counter-value"
       >
         <SlidingNumber value={current} />
       </output>
       <Button
         aria-label={t("increase")}
-        className="transition-transform active:scale-90 motion-reduce:transition-none"
+        className="rounded-sm transition-[background-color,color,scale] active:not-aria-[haspopup]:not-in-data-[slot=button-group]:scale-95"
         disabled={disabled || current >= max}
         onClick={() => {
           change(1);

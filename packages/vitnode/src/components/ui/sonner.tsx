@@ -19,7 +19,7 @@ type ToastClassNames = NonNullable<
 
 const toastClassNames: ToastClassNames = {
   toast: cn(
-    "group/toast bg-popover text-popover-foreground flex w-(--width) items-start gap-3 rounded-2xl border p-4 shadow-lg",
+    "group/toast bg-popover text-popover-foreground ring-foreground/10 flex w-(--width) items-start gap-3 rounded-xl p-4 shadow-lg ring-1",
     "focus-visible:ring-ring/50 focus-visible:ring-3",
     "*:transition-opacity *:duration-200 data-[expanded=false]:data-[front=false]:*:opacity-0 motion-reduce:*:transition-none",
   ),
@@ -45,7 +45,7 @@ const toastClassNames: ToastClassNames = {
   cancelButton:
     "bg-secondary text-secondary-foreground hover:bg-muted inline-flex h-7 shrink-0 cursor-pointer items-center self-center rounded-md px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
   closeButton: cn(
-    "bg-popover text-muted-foreground hover:text-foreground absolute -end-1.5 -top-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full border shadow-xs transition-opacity duration-150 outline-none [&>svg]:size-3",
+    "bg-popover text-muted-foreground hover:text-foreground absolute -end-1.5 -top-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full border shadow-xs transition-opacity duration-150 outline-none after:absolute after:-inset-2 pointer-coarse:after:-inset-3 [&>svg]:size-3",
     "focus-visible:ring-ring/50 opacity-0 group-focus-within/toast:opacity-100 group-hover/toast:opacity-100 focus-visible:ring-3 motion-reduce:transition-none pointer-coarse:opacity-100",
   ),
 };

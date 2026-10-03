@@ -12,9 +12,11 @@ import { useTranslations } from "use-intl";
 import { buttonVariants } from "@/components/ui/button";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+  const t = useTranslations("core.global");
+
   return (
     <nav
-      aria-label="pagination"
+      aria-label={t("pagination")}
       className={cn("mx-auto flex w-full justify-center", className)}
       data-slot="pagination"
       role="navigation"
@@ -56,6 +58,7 @@ function PaginationLink({
       aria-current={isActive ? "page" : undefined}
       className={cn(
         buttonVariants({ size, variant: isActive ? "outline" : "ghost" }),
+        size === "icon" && "w-auto min-w-9 px-2 tabular-nums",
         className,
       )}
       data-active={isActive}
@@ -109,9 +112,10 @@ function PaginationEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const t = useTranslations("core.global");
+
   return (
     <span
-      aria-hidden
       className={cn(
         "flex size-9 items-center justify-center [&_svg:not([class*='size-'])]:size-4",
         className,
@@ -119,8 +123,8 @@ function PaginationEllipsis({
       data-slot="pagination-ellipsis"
       {...props}
     >
-      <MoreHorizontalIcon />
-      <span className="sr-only">More pages</span>
+      <MoreHorizontalIcon aria-hidden="true" />
+      <span className="sr-only">{t("more_pages")}</span>
     </span>
   );
 }

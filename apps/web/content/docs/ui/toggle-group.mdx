@@ -1,6 +1,6 @@
 ---
 title: Toggle Group
-description: A toggle group component for selecting multiple options.
+description: A set of toggles for picking one option, like a date range, or several, like text formatting.
 icon: TextAlignCenter
 ---
 
@@ -11,27 +11,116 @@ icon: TextAlignCenter
 ## Usage
 
 ```ts
-import { Bold, Italic, Underline } from 'lucide-react';
-
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from '@vitnode/core/components/ui/toggle-group';
+} from '@vitnode/core/components/ui/toggle-group'
 ```
 
 ```tsx
-<ToggleGroup variant="outline" multiple>
-  <ToggleGroupItem value="bold" aria-label="Toggle bold">
-    <Bold className="size-4" />
+<ToggleGroup aria-label="Text formatting" multiple variant="outline">
+  <ToggleGroupItem aria-label="Bold" value="bold">
+    <BoldIcon />
   </ToggleGroupItem>
-  <ToggleGroupItem value="italic" aria-label="Toggle italic">
-    <Italic className="size-4" />
-  </ToggleGroupItem>
-  <ToggleGroupItem value="strikethrough" aria-label="Toggle strikethrough">
-    <Underline className="size-4" />
+  <ToggleGroupItem aria-label="Italic" value="italic">
+    <ItalicIcon />
   </ToggleGroupItem>
 </ToggleGroup>
 ```
+
+`variant` and `size` go on the group, and every item follows.
+
+## Single selection
+
+<Preview name="toggle-group-single" />
+
+Leave out `multiple` and only one item can be pressed. The pressed background
+glides between items, and jumps when the visitor prefers reduced motion.
+
+```tsx
+<ToggleGroup defaultValue={['week']} variant="outline">
+  <ToggleGroupItem value="day">Day</ToggleGroupItem>
+  <ToggleGroupItem value="week">Week</ToggleGroupItem>
+  <ToggleGroupItem value="month">Month</ToggleGroupItem>
+</ToggleGroup>
+```
+
+The value is always an array, even in single mode. Clicking the pressed item
+empties it, so ignore empty arrays in `onValueChange` when one option must stay
+picked:
+
+```tsx
+<ToggleGroup
+  onValueChange={(next) => {
+    if (next.length > 0) setValue(next);
+  }}
+  value={value}
+>
+```
+
+## Spacing and orientation
+
+<Preview name="toggle-group-layout" />
+
+`spacing` pulls the items apart on the spacing scale. At `0` (the default) they
+share borders. `orientation="vertical"` stacks them.
+
+```tsx
+<ToggleGroup spacing={2} variant="outline">...</ToggleGroup>
+<ToggleGroup orientation="vertical" variant="outline">...</ToggleGroup>
+```
+
+## Accessibility
+
+- Give the group an `aria-label` and every icon-only item its own.
+- Arrow keys move focus between items, and <kbd>Space</kbd> or <kbd>Enter</kbd>
+  presses one.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    multiple: {
+      description: 'Allow more than one pressed item.',
+      type: 'boolean',
+      default: 'false',
+    },
+    value: {
+      description: 'Controlled pressed values.',
+      type: 'string[]',
+    },
+    defaultValue: {
+      description: 'Initial pressed values when uncontrolled.',
+      type: 'string[]',
+    },
+    onValueChange: {
+      description: 'Called with the new pressed values.',
+      type: '(value: string[], eventDetails) => void',
+    },
+    variant: {
+      description: 'Visual style for every item.',
+      type: 'default | outline',
+      default: 'default',
+    },
+    size: {
+      description: 'Size for every item.',
+      type: 'sm | default | lg',
+      default: 'default',
+    },
+    spacing: {
+      description: 'Gap between items on the spacing scale. 0 joins them.',
+      type: 'number',
+      default: '0',
+    },
+    orientation: {
+      description: 'Lays items out in a row or a column.',
+      type: 'horizontal | vertical',
+      default: 'horizontal',
+    },
+  }}
+/>
 
 ## API Reference
 

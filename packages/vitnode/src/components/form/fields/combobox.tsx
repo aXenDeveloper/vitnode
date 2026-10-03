@@ -306,6 +306,22 @@ const ComboboxChipValues = ({
   );
 };
 
+const isEmptyAsyncItem = (value: unknown) =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  typeof (value as Partial<ComboboxAsyncItem>).value !== "string";
+
+const toComboboxValue = <Value,>(
+  value: Value,
+  multiple: boolean,
+): never[] | null | Value => {
+  if (multiple) return Array.isArray(value) ? value : [];
+  if (value === undefined || isEmptyAsyncItem(value)) return null;
+
+  return value;
+};
+
 export const AutoFormCombobox = ({
   label,
   field,
@@ -348,7 +364,7 @@ export const AutoFormCombobox = ({
     queryKey,
     searchPlaceholder,
   });
-  const comboboxValue = field.value ?? (multiple ? [] : null);
+  const comboboxValue = toComboboxValue(field.value, multiple);
   const invalid = otherProps?.["aria-invalid"] ?? false;
   const onComboboxValueChange: ComboboxOnValueChange = (value, event) => {
     field.onChange(value);

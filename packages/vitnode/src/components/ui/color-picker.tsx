@@ -66,12 +66,14 @@ export const ColorPicker = ({
           }
         >
           <HslStringColorPicker
+            className="[&_.react-colorful\_\_last-control]:rounded-b-md! [&_.react-colorful\_\_saturation]:rounded-t-md!"
             color={colorToHslString(value) ?? FALLBACK_PICKER_COLOR}
             onChange={onChange}
           />
         </React.Suspense>
 
         <Input
+          aria-label={t("color_value")}
           className="w-full"
           onChange={event => onChange?.(event.target.value)}
           placeholder={placeholder ?? "hsl(215, 81%, 52%)"}

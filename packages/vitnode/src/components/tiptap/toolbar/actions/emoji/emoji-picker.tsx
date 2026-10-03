@@ -4,6 +4,12 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { useEditorConfig } from "@/components/editor-provider";
+import {
+  EMOJI_PICKER_EMOJI_SIZE,
+  EMOJI_PICKER_EMOJIS_PER_ROW,
+  EMOJI_PICKER_INPUT_CLASS,
+  EMOJI_PICKER_LIST_HEIGHT,
+} from "@/components/ui/emoji-picker";
 
 import {
   customEmojiToPickerSections,
@@ -11,12 +17,9 @@ import {
 } from "../../../emoji/custom-emoji";
 import { useToolbarEditor } from "../../use-toolbar-editor";
 
-const EMOJIS_PER_ROW = 9;
-const EMOJI_SIZE = 30;
-const LIST_HEIGHT = 288;
-
 export const EmojiPicker = ({ onSelect }: { onSelect: () => void }) => {
   const t = useTranslations("core.global.editor.emoji");
+  const tPicker = useTranslations("core.global.emoji_icon_picker");
   const { editor } = useToolbarEditor();
   const { emojis } = useEditorConfig();
   const customSections = React.useMemo(
@@ -37,8 +40,8 @@ export const EmojiPicker = ({ onSelect }: { onSelect: () => void }) => {
     <Picker
       className="h-auto w-full rounded-none border-0 bg-transparent shadow-none focus:ring-0"
       customSections={customSections}
-      emojiSize={EMOJI_SIZE}
-      emojisPerRow={EMOJIS_PER_ROW}
+      emojiSize={EMOJI_PICKER_EMOJI_SIZE}
+      emojisPerRow={EMOJI_PICKER_EMOJIS_PER_ROW}
       onEmojiSelect={selected => {
         const shortcode =
           shortcodeOf(selected) ??
@@ -57,13 +60,13 @@ export const EmojiPicker = ({ onSelect }: { onSelect: () => void }) => {
       <Picker.Header className="px-2 pt-2 pb-1">
         <Picker.Input
           autoFocus
-          className="bg-muted text-foreground focus:ring-ring h-8 focus:ring-2"
+          className={EMOJI_PICKER_INPUT_CLASS}
           placeholder={t("search")}
         />
       </Picker.Header>
 
       <Picker.Group>
-        <Picker.List containerHeight={LIST_HEIGHT} />
+        <Picker.List containerHeight={EMOJI_PICKER_LIST_HEIGHT} />
       </Picker.Group>
 
       <div className="flex min-h-11 items-center gap-1 border-t px-2 py-1">
@@ -117,7 +120,13 @@ export const EmojiPicker = ({ onSelect }: { onSelect: () => void }) => {
           }}
         </Picker.Preview>
 
-        <Picker.SkinTone />
+        <div
+          aria-label={tPicker("skin_tone")}
+          className="shrink-0"
+          role="group"
+        >
+          <Picker.SkinTone />
+        </div>
       </div>
     </Picker>
   );

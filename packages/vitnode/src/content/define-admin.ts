@@ -195,7 +195,6 @@ export const resolveAdmin = <TFields>(
   // is not one, and a query cannot pretend otherwise.
   for (const [label, names] of [
     ["admin.list.orderableFields", admin.list?.orderableFields],
-    ["admin.list.searchableFields", admin.list?.searchableFields],
     [
       "admin.list.defaultOrderBy",
       admin.list?.defaultOrderBy === undefined
@@ -211,6 +210,7 @@ export const resolveAdmin = <TFields>(
   // The presentation surfaces. Localized names are welcome; a group or a
   // collection still is not, because neither is one cell or one title.
   for (const [label, names] of [
+    ["admin.list.searchableFields", admin.list?.searchableFields],
     [
       "admin.list.columns",
       admin.list?.columns?.filter(
@@ -249,7 +249,7 @@ export const resolveAdmin = <TFields>(
     id,
     "admin.list.searchableFields",
     searchableFields,
-    new Set(columnFieldNames),
+    new Set(displayFieldNames),
   );
   const notSearchable = searchableFields.find(
     name => !EXPLICIT_SEARCHABLE_KINDS.has(fields[name].kind),

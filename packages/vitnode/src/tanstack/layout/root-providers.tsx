@@ -13,16 +13,18 @@ import { RealtimeListeners } from "../realtime/realtime-listeners";
 export const VitNodeRootProviders = ({
   children,
   config,
+  toaster,
 }: {
   children: React.ReactNode;
   config: VitNodeProvidersConfig;
+  toaster?: React.ComponentProps<typeof VitNodeProviders>["toaster"];
 }) => {
   const router = useRouter();
 
   return (
     <LucideIconCollectorContext.Provider value={lucideIconCollectorOf(router)}>
       <RouteMessages>
-        <VitNodeProviders config={config}>
+        <VitNodeProviders config={config} toaster={toaster}>
           <VitNodeWebSocketProvider>
             <RealtimeListeners />
             {children}

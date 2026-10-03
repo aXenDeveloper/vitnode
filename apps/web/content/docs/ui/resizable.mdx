@@ -1,6 +1,6 @@
 ---
 title: Resizable
-description: Resizable panel groups and layouts with draggable, keyboard-friendly handles.
+description: Resizable panel groups with draggable, keyboard-friendly handles, collapsible panels and layouts that survive a reload.
 icon: SquareSplitHorizontal
 ---
 
@@ -28,34 +28,25 @@ import {
 </div>
 ```
 
-A group always fills its parent with an inline `height: 100%`, so a height
-class on the group itself is ignored. Give the **parent** a height instead.
-Otherwise your beautiful layout is only as tall as its text, which is very
-minimalist but not very useful.
+The group sets an inline `height: 100%`, so a height class on it is ignored.
+Give the **parent** a height instead.
 
-Groups nest: drop a `ResizablePanelGroup` inside a `ResizablePanel` to split it
-again, like the sidebar + content + terminal combo in the preview.
+Groups nest: put a `ResizablePanelGroup` inside a `ResizablePanel` to split it
+again, like the terminal in the preview.
 
 ## Vertical
-
-Set `orientation="vertical"` to stack panels on top of each other.
 
 <Preview name="resizable-vertical" />
 
 ```tsx
 <ResizablePanelGroup orientation="vertical">
-  <ResizablePanel defaultSize="30%">Header</ResizablePanel>
-  <ResizableHandle />
-  <ResizablePanel>Content</ResizablePanel>
-</ResizablePanelGroup>
 ```
 
 ## With handle
 
-Pass `withHandle` to show a small grip on the divider, so people know it is
-meant to be grabbed.
-
 <Preview name="resizable-handle" />
+
+`withHandle` adds a grip, so people know the divider can be grabbed.
 
 ```tsx
 <ResizableHandle withHandle />
@@ -63,50 +54,37 @@ meant to be grabbed.
 
 ## Sizes
 
-`defaultSize`, `minSize` and `maxSize` accept a few units, and the type
-changes the meaning:
+The value's type decides the unit:
 
-- a **string** without a unit is a percentage: `"30"` and `"30%"` are the same;
-- a **number** is pixels: `minSize={180}` means 180px, not 180%;
-- other CSS units work too: `"12rem"`, `"20vw"`, `"200px"`.
+- a **string** without a unit is a percentage: `"30"` equals `"30%"`;
+- a **number** is pixels: `minSize={180}` is 180px, not 180%;
+- other CSS units work too: `"12rem"`, `"20vw"`.
 
 ```tsx
-<ResizablePanelGroup>
-  <ResizablePanel defaultSize="25%" maxSize="40%" minSize={180}>
-    Sidebar
-  </ResizablePanel>
-  <ResizableHandle />
-  <ResizablePanel minSize="30%">Content</ResizablePanel>
-</ResizablePanelGroup>
+<ResizablePanel defaultSize="25%" maxSize="40%" minSize={180}>
 ```
 
-Panels without a `defaultSize` share whatever space is left. Double-click a
-handle to snap its panel back to its `defaultSize`.
+Panels without `defaultSize` share the leftover space. Double-click a handle to
+reset its panel to `defaultSize`.
 
 ## Collapsible
 
-Mark a panel `collapsible` and it snaps to `collapsedSize` (default `0%`) once
-it is dragged below its `minSize`. Drag it back out to expand it again.
-
 <Preview name="resizable-collapsible" />
+
+A `collapsible` panel snaps to `collapsedSize` once dragged below `minSize`.
+For a toggle button, call `collapse()` or `expand()` on its `panelRef`.
 
 ```tsx
 <ResizablePanel collapsedSize="8%" collapsible defaultSize="35%" minSize="25%">
-  Sidebar
-</ResizablePanel>
 ```
-
-Need a toggle button? Pass `panelRef` and call `collapse()`, `expand()` or
-`isCollapsed()` on it.
 
 ## Persisting the layout
 
-The group's `defaultLayout` maps each panel `id` to a percentage, and
-`onLayoutChanged` reports every finished resize. Wire both to storage
-and the layout survives a reload. Give every panel a stable `id`, since that is
-what the saved layout is keyed by.
-
 <Preview name="resizable-persist" />
+
+`defaultLayout` takes a map of panel `id` to percentage. `onLayoutChanged`
+fires after every finished resize. Wire both to storage, and give each panel a
+stable `id`.
 
 ```tsx
 const storageKey = 'my-layout'
@@ -148,23 +126,20 @@ export const RememberedLayout = () => {
 }
 ```
 
-`useSyncExternalStore` with a server snapshot of `null` keeps server rendering
-happy. The server renders the default sizes, and the browser swaps in the saved
-ones. Prefer `meta.requestedLayout` when saving. It is the layout the user
-asked for, before a small screen squeezed it to fit the constraints.
+The `null` server snapshot keeps SSR happy: the server renders default sizes,
+then the browser swaps in the saved ones. Save `meta.requestedLayout` when it
+exists. It's what the user asked for, before a small screen squeezed it.
 
 ## Accessibility
 
-- Every handle is a focusable `role="separator"` with `aria-valuenow`,
-  `aria-valuemin`, `aria-valuemax` and `aria-controls` pointing at the panel it
-  resizes.
-- Arrow keys resize by 5%, left and right in a horizontal group and up and down
-  in a vertical one.
-- `Home` and `End` push the panel to its minimum or maximum size.
+- Each handle is a focusable `role="separator"` with `aria-valuenow`,
+  `aria-valuemin`, `aria-valuemax` and `aria-controls`.
+- Arrow keys resize by 5% along the group's orientation.
+- `Home` and `End` jump to the minimum or maximum size.
 - `Enter` collapses or expands a `collapsible` panel.
-- `F6` jumps to the next handle in the group (`Shift + F6` goes back).
-- Touch dragging only claims the resize direction, so content inside a panel
-  still scrolls the other way.
+- `F6` moves to the next handle, `Shift + F6` to the previous one.
+- Touch dragging only claims the resize axis, so panels still scroll the other
+  way.
 
 ## Props
 
@@ -175,23 +150,20 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     orientation: {
-      description: 'The direction panels are laid out and resized in.',
+      description: 'Direction panels are laid out and resized in.',
       type: '"horizontal" | "vertical"',
       default: '"horizontal"',
     },
     defaultLayout: {
-      description:
-        'Initial layout as a map of panel id to percentage (0-100). Use it to restore a saved layout.',
+      description: 'Initial layout as panel id → percentage (0-100).',
       type: 'Record<string, number>',
     },
     onLayoutChange: {
-      description:
-        'Called on every layout change, including each pointer move while dragging.',
+      description: 'Fires on every change, including each drag move.',
       type: '(layout: Layout) => void',
     },
     onLayoutChanged: {
-      description:
-        'Called once a resize is finished (pointer released or key pressed). The best place to save a layout.',
+      description: 'Fires once a resize finishes. The place to save a layout.',
       type: '(layout: Layout, meta: { isUserInteraction: boolean; requestedLayout?: Layout }) => void',
     },
     disabled: {
@@ -200,11 +172,11 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       default: 'false',
     },
     groupRef: {
-      description: 'Imperative API with `getLayout()` and `setLayout(layout)`.',
+      description: 'Imperative API: `getLayout()`, `setLayout(layout)`.',
       type: 'Ref<GroupImperativeHandle>',
     },
     id: {
-      description: 'Unique id of the group. Falls back to `useId`.',
+      description: 'Unique group id. Falls back to `useId`.',
       type: 'string | number',
     },
   }}
@@ -215,48 +187,45 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     id: {
-      description:
-        'Unique id of the panel inside its group. Required to persist a layout.',
+      description: 'Unique id inside the group. Required to persist a layout.',
       type: 'string | number',
     },
     defaultSize: {
-      description:
-        'Initial size. Strings are percentages, numbers are pixels. Remaining space is shared when omitted.',
+      description: 'Initial size. Strings are percentages, numbers are pixels.',
       type: 'string | number',
     },
     minSize: {
-      description: 'Smallest size the panel can be resized to.',
+      description: 'Smallest allowed size.',
       type: 'string | number',
       default: '"0%"',
     },
     maxSize: {
-      description: 'Largest size the panel can be resized to.',
+      description: 'Largest allowed size.',
       type: 'string | number',
       default: '"100%"',
     },
     collapsible: {
-      description: 'Lets the panel collapse when dragged below `minSize`.',
+      description: 'Collapses when dragged below `minSize`.',
       type: 'boolean',
       default: 'false',
     },
     collapsedSize: {
-      description: 'Size of the panel when collapsed.',
+      description: 'Size when collapsed.',
       type: 'string | number',
       default: '"0%"',
     },
     disabled: {
-      description:
-        'The panel cannot be resized, directly or by resizing a neighbour.',
+      description: 'Cannot be resized, directly or by a neighbour.',
       type: 'boolean',
       default: 'false',
     },
     onResize: {
-      description: 'Called with the new size whenever the panel resizes.',
+      description: 'Fires with the new size on every resize.',
       type: '(size: { asPercentage: number; inPixels: number }) => void',
     },
     panelRef: {
       description:
-        'Imperative API with `collapse()`, `expand()`, `getSize()`, `isCollapsed()` and `resize(size)`.',
+        'Imperative API: `collapse()`, `expand()`, `getSize()`, `isCollapsed()`, `resize(size)`.',
       type: 'Ref<PanelImperativeHandle>',
     },
   }}
@@ -267,18 +236,17 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     withHandle: {
-      description: 'Shows a visible grip in the middle of the divider.',
+      description: 'Shows a grip in the middle of the divider.',
       type: 'boolean',
       default: 'false',
     },
     disabled: {
-      description: 'This handle cannot be used to resize its panels.',
+      description: 'This handle cannot resize its panels.',
       type: 'boolean',
       default: 'false',
     },
     disableDoubleClick: {
-      description:
-        'Stops a double-click from resetting the panels to their default sizes.',
+      description: 'Stops double-click from resetting to default sizes.',
       type: 'boolean',
       default: 'false',
     },

@@ -10,6 +10,7 @@ import { markerVariants } from "./marker-variants";
 function Marker({
   className,
   variant = "default",
+  tone = "neutral",
   render,
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof markerVariants>) {
@@ -17,7 +18,7 @@ function Marker({
     defaultTagName: "div",
     props: mergeProps<"div">(
       {
-        className: cn(markerVariants({ variant }), className),
+        className: cn(markerVariants({ variant, tone }), className),
       },
       props,
     ),
@@ -25,6 +26,7 @@ function Marker({
     state: {
       slot: "marker",
       variant,
+      tone,
     },
   });
 }

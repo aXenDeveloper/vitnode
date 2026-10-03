@@ -9,19 +9,18 @@ import {
 
 export default function CardHeaderFooterExample() {
   return (
-    <Card className="w-full max-w-xs">
+    <Card className="not-prose w-full max-w-xs">
       <CardHeader className="border-b">
-        <CardTitle>Header with Border</CardTitle>
+        <CardTitle>Pending approval</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>
-          The footer has a top border and a soft background, creating a visual
-          separation between the content and footer sections.
+        <p className="leading-relaxed">
+          3 new members are waiting for a moderator to approve their accounts.
         </p>
       </CardContent>
       <CardFooter>
         <Button className="w-full" variant="outline">
-          Action
+          Review members
         </Button>
       </CardFooter>
     </Card>

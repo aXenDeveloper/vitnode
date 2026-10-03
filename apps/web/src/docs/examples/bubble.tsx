@@ -13,7 +13,7 @@ export default function BubbleExample() {
   return (
     <Card
       aria-label="Chat with the VitNode assistant"
-      className="flex w-full flex-col gap-8 px-4 py-8 sm:px-6"
+      className="not-prose flex w-full flex-col gap-8 px-4 py-8 sm:px-6"
       role="log"
     >
       <Bubble align="end">

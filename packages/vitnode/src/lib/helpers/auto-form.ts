@@ -173,3 +173,17 @@ export function getNestedParam(
       obj,
     );
 }
+
+export function isRequiredPath(
+  jsonSchema: undefined | z.core.JSONSchema.JSONSchema,
+  path: string,
+): boolean {
+  const [key, ...rest] = path.split(".");
+  const property = key ? jsonSchema?.properties?.[key] : undefined;
+  if (!key || property === undefined || typeof property === "boolean") {
+    return false;
+  }
+  if (rest.length > 0) return isRequiredPath(property, rest.join("."));
+
+  return jsonSchema?.required?.includes(key) ?? false;
+}

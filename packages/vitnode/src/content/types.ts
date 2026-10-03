@@ -647,8 +647,11 @@ export interface ContentAdminListConfig<
    * enabled - are always allowed and need no entry here.
    */
   orderableFields?: ScalarColumnFieldKeys<TFields>[];
-  /** Only shared `text` and `textarea` fields may be searched. */
-  searchableFields?: ScalarColumnFieldKeys<TFields>[];
+  /**
+   * `text`, `textarea` and `slug` fields the list's search box matches. A
+   * localized field matches its value in any language.
+   */
+  searchableFields?: ScalarDisplayFieldKeys<TFields>[];
   thumbnailField?: ContentSingleFileFieldKeys<TFields>;
 }
 

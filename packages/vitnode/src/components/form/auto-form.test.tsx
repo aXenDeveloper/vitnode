@@ -1,12 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import z from "zod";
 
 import type { ItemAutoFormComponentProps } from "./auto-form";
 
-import { FormMessage } from "../ui/form";
+import { FormControl, FormMessage } from "../ui/form";
 import { AutoForm } from "./auto-form";
+import { AutoFormDesc } from "./common/desc";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const LabelContext = React.createContext("first label");
 
@@ -73,6 +78,7 @@ const RequiredTitleField = ({ field }: ItemAutoFormComponentProps) => (
     <input
       aria-label="title"
       name={field.name}
+      onBlur={field.onBlur}
       onChange={field.onChange}
       value={String(field.value ?? "")}
     />
@@ -81,17 +87,49 @@ const RequiredTitleField = ({ field }: ItemAutoFormComponentProps) => (
 );
 
 describe("a form that can be submitted while invalid", () => {
-  it("keeps the submit button disabled by default", () => {
+  it("keeps the submit button enabled, reveals the errors and focuses the first invalid field", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <AutoForm
+        fields={[{ id: "title", component: RequiredTitleField }]}
+        formSchema={requiredSchema}
+        onSubmit={onSubmit}
+      />,
+    );
+    const submit = screen.getByRole("button", { name: "core.global.submit" });
+
+    expect(submit).toHaveProperty("disabled", false);
+    expect(screen.queryByText("title is required")).toBeNull();
+
+    fireEvent.click(submit);
+
+    expect(await screen.findByText("title is required")).toBeDefined();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText("title"));
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("shows a field's error once it has been left, then keeps it live", async () => {
     render(
       <AutoForm
         fields={[{ id: "title", component: RequiredTitleField }]}
         formSchema={requiredSchema}
       />,
     );
+    const input = screen.getByLabelText("title");
 
-    expect(
-      screen.getByRole("button", { name: "core.global.submit" }),
-    ).toHaveProperty("disabled", true);
+    fireEvent.change(input, { target: { value: "Hello" } });
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.queryByText("title is required")).toBeNull();
+
+    fireEvent.blur(input);
+    expect(await screen.findByText("title is required")).toBeDefined();
+
+    fireEvent.change(input, { target: { value: "Hello again" } });
+    await waitFor(() => {
+      expect(screen.queryByText("title is required")).toBeNull();
+    });
   });
 
   it("reveals the errors on click without calling onSubmit", async () => {
@@ -137,5 +175,121 @@ describe("a form that can be submitted while invalid", () => {
         expect.anything(),
       );
     });
+  });
+});
+
+const DescribedTitleField = ({ field }: ItemAutoFormComponentProps) => (
+  <>
+    <label htmlFor="title-form-item">title</label>
+    <FormControl>
+      <input
+        name={field.name}
+        onBlur={field.onBlur}
+        onChange={field.onChange}
+        value={String(field.value ?? "")}
+      />
+    </FormControl>
+    <AutoFormDesc>Shown on the card</AutoFormDesc>
+    <FormMessage />
+  </>
+);
+
+const describedTextOf = (element: HTMLElement) =>
+  (element.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .map(id => document.getElementById(id)?.textContent)
+    .filter(Boolean);
+
+describe("a field control described by its description and message", () => {
+  it("points aria-describedby at the description, then the error too", async () => {
+    render(
+      <AutoForm
+        fields={[{ id: "title", component: DescribedTitleField }]}
+        formSchema={requiredSchema}
+      />,
+    );
+    const input = screen.getByLabelText("title");
+
+    expect(describedTextOf(input)).toEqual(["Shown on the card"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "core.global.submit" }));
+
+    await waitFor(() => {
+      expect(describedTextOf(input)).toEqual([
+        "Shown on the card",
+        "title is required",
+      ]);
+    });
+  });
+});
+
+const tabbedSchema = z.object({
+  title: z.string().default("Hello"),
+  slug: z.string().min(1, { message: "slug is required" }).default(""),
+});
+
+const SlugField = ({ field }: ItemAutoFormComponentProps) => (
+  <>
+    <input
+      aria-label="slug"
+      name={field.name}
+      onChange={field.onChange}
+      value={String(field.value ?? "")}
+    />
+    <FormMessage />
+  </>
+);
+
+describe("a tabbed form with an invalid field on another tab", () => {
+  it("marks the tab, switches to it and focuses the field", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        disconnect() {}
+        observe() {}
+        unobserve() {}
+      },
+    );
+    render(
+      <AutoForm
+        fields={[
+          { id: "title", component: RequiredTitleField, tab: "general" },
+          { id: "slug", component: SlugField, tab: "advanced" },
+        ]}
+        formSchema={tabbedSchema}
+        tabs={[
+          { label: "General", value: "general" },
+          { label: "Advanced", value: "advanced" },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByText("core.global.tab_has_errors")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "core.global.submit" }));
+
+    expect(await screen.findByText("core.global.tab_has_errors")).toBeDefined();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText("slug"));
+    });
+    expect(
+      screen
+        .getByRole("tab", { name: /Advanced/ })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+  });
+});
+
+describe("the submit button's accessible name", () => {
+  it("matches its visible label", () => {
+    render(
+      <AutoForm
+        fields={[{ id: "title", component: TitleField }]}
+        formSchema={formSchema}
+        submitButtonProps={{ children: "Save category" }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Save category" })).toBeDefined();
   });
 });

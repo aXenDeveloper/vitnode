@@ -15,17 +15,14 @@ import { CopyButton } from '@vitnode/core/components/ui/copy-button'
 ```
 
 ```tsx
-<CopyButton content="Hello world!" />
+<CopyButton content="pnpm create vitnode-app@canary" />
 ```
 
-Click it and the copy icon blurs away while a check mark draws itself in, with
-the same stroke animation as the [Checkbox](/docs/ui/checkbox). After `delay`
-milliseconds it goes back to the copy icon, ready for round two.
+The check stays for `delay` (2000ms). Each new copy restarts the timer.
 
 ## With a label
 
-Pass children to show text next to the icon. The text becomes the button's
-accessible name, so screen readers hear what you see.
+Children show next to the icon and become the accessible name.
 
 ```tsx
 <CopyButton content={inviteLink} variant="secondary">
@@ -35,14 +32,13 @@ accessible name, so screen readers hear what you see.
 
 ## Icon only
 
-Without children the button renders as an icon. It labels itself "Copy" and
-"Copied" out of the box, but a specific label is friendlier when there are a few
-copy buttons on one screen.
+Without children it's labelled "Copy" / "Copied". With several on a screen,
+give each its own `aria-label`.
 
 ```tsx
 <CopyButton
   aria-label="Copy install command"
-  content="pnpm create vitnode-app@canary"
+  content={command}
   size="icon-sm"
   variant="ghost"
 />
@@ -50,28 +46,22 @@ copy buttons on one screen.
 
 ## Controlled
 
-Own the copied state with `copied` and `onCopiedChange` when something else on
-the page should react to the copy.
+<Preview name="copy-button-controlled" />
+
+Use `copied` and `onCopiedChange` when the page should react.
 
 ```tsx
 const [copied, setCopied] = React.useState(false)
 
-<CopyButton
-  content={apiKey}
-  copied={copied}
-  onCopiedChange={setCopied}
-/>
+<CopyButton content={inviteLink} copied={copied} onCopiedChange={setCopied} />
 ```
 
 ## Accessibility
 
-- A polite live region announces "Copied" after a successful copy, so screen
-  reader users hear the change too.
-- With reduced motion turned on, the icons simply fade and the check mark shows
-  up fully drawn.
-- If the browser blocks clipboard access (for example on a non-HTTPS page), an
-  error toast explains what happened instead of failing silently.
-- Calling `event.preventDefault()` inside your own `onClick` skips the copy.
+- A polite live region announces "Copied".
+- With reduced motion, icons just fade and the check appears fully drawn.
+- A blocked clipboard (say, on plain HTTP) shows an error toast.
+- `event.preventDefault()` in your own `onClick` skips the copy.
 
 ## Props
 
@@ -80,37 +70,32 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     content: {
-      description: 'The text written to the clipboard.',
+      description: 'Text written to the clipboard.',
       type: 'string',
       required: true,
     },
-    copied: {
-      description: 'Controls the copied state.',
-      type: 'boolean',
-    },
+    copied: { description: 'Controls the copied state.', type: 'boolean' },
     onCopiedChange: {
-      description:
-        'Called with `true` after a successful copy and with `false` when the button resets.',
+      description: '`true` after a copy, `false` when the button resets.',
       type: '(copied: boolean) => void',
     },
     delay: {
-      description: 'How long the check mark stays, in milliseconds.',
+      description: 'How long the check stays, in ms. Restarts on each copy.',
       type: 'number',
-      default: '3000',
+      default: '2000',
     },
     variant: {
-      description: 'The variant of the button.',
-      type: 'default | secondary | outline | ghost | link | success | warning | destructive',
+      description: 'Button variant.',
+      type: 'default | secondary | outline | ghost | hover | link | success | warning | destructive',
       default: 'outline',
     },
     size: {
       description:
-        'The size of the button. Defaults to `icon` without children and `default` with them.',
+        'Button size. Default: `icon` without children, `default` with.',
       type: 'default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg',
     },
     'aria-label': {
-      description:
-        'Overrides the accessible name. Without children it defaults to "Copy" / "Copied".',
+      description: 'Accessible name. Without children: "Copy" / "Copied".',
       type: 'string',
     },
   }}

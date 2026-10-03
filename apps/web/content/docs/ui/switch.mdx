@@ -1,6 +1,6 @@
 ---
 title: Switch
-description: Toggle between checked and unchecked states.
+description: An on/off toggle for settings that take effect right away, in two sizes with disabled and invalid states, plus nested AutoForm fields.
 icon: ToggleRight
 ---
 
@@ -10,23 +10,19 @@ icon: ToggleRight
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormSwitch } from "@vitnode/core/components/form/fields/switch";
-```
+```tsx
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormSwitch } from '@vitnode/core/components/form/fields/switch'
+import { z } from 'zod'
 
-```ts
 const formSchema = z.object({
-  acceptTerms: z.boolean().refine(val => val, {
-    message: "You must accept the terms and conditions",
-  }),
-});
+  maintenance: z.boolean().default(false),
+})
 ```
 
 ```tsx
@@ -34,9 +30,9 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "acceptTerms",
-      component: props => (
-        <AutoFormSwitch {...props} label="I accept the terms and conditions" />
+      id: 'maintenance',
+      component: (props) => (
+        <AutoFormSwitch {...props} label="Maintenance mode" />
       ),
     },
   ]}
@@ -44,18 +40,68 @@ const formSchema = z.object({
 ```
 
   </Tab>
-
   <Tab value="Manual">
-```ts
-import { Switch } from '@vitnode/core/components/ui/switch';
+
+```tsx
+import { Switch } from '@vitnode/core/components/ui/switch'
 ```
 
 ```tsx
-<Switch checked={value} onCheckedChange={onChange} />
+<Switch aria-label="Maintenance mode" checked={on} onCheckedChange={setOn} />
 ```
 
   </Tab>
 </Tabs>
+
+## States
+
+<Preview name="switch-states" />
+
+- `size="sm"` fits dense lists. The default is `"default"`.
+- `disabled` dims it. Add `data-disabled` to the parent [Field](/docs/ui/field)
+  to dim the label too.
+- `aria-invalid` adds a red ring. Point `aria-describedby` at the error.
+
+```tsx
+<Field orientation="horizontal">
+  <FieldLabel htmlFor="compact">Compact thread list</FieldLabel>
+  <Switch id="compact" size="sm" />
+</Field>
+```
+
+## Nested fields
+
+`AutoFormSwitch` can reveal the settings it controls in the same card. See
+[Auto Form - Nested fields](/docs/ui/auto-form#nested-fields).
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    size: {
+      description: 'Track and thumb size.',
+      type: '"default" | "sm"',
+      default: '"default"',
+    },
+    label: {
+      description: 'AutoFormSwitch only. Shown next to the switch.',
+      type: 'ReactNode',
+    },
+    labelRight: {
+      description: "AutoFormSwitch only. Pinned to the label's right edge.",
+      type: 'ReactNode',
+    },
+    description: {
+      description: 'AutoFormSwitch only. Shown below the label.',
+      type: 'ReactNode',
+    },
+  }}
+/>
+
+Every [Base UI Switch](https://base-ui.com/react/components/switch#api-reference)
+prop works too.
 
 ## API Reference
 

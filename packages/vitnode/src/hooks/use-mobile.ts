@@ -1,23 +1,21 @@
 import React from "react";
 
 const MOBILE_BREAKPOINT = 768;
+const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
+
+const subscribe = (onStoreChange: () => void) => {
+  const mql = window.matchMedia(MOBILE_QUERY);
+  mql.addEventListener("change", onStoreChange);
+
+  return () => {
+    mql.removeEventListener("change", onStoreChange);
+  };
+};
+
+const getSnapshot = () => window.matchMedia(MOBILE_QUERY).matches;
+
+const getServerSnapshot = () => false;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
-    undefined,
-  );
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
-    mql.addEventListener("change", onChange);
-    // eslint-disable-next-line react-hooks/set-state-in-effect, react-you-might-not-need-an-effect/no-initialize-state, @eslint-react/set-state-in-effect, react-you-might-not-need-an-effect/no-external-store-subscription
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  return !!isMobile;
+  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

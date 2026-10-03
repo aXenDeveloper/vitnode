@@ -15,12 +15,12 @@ function BubbleGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const bubbleVariants = cva(
-  "group/bubble relative flex w-fit max-w-4/5 min-w-0 flex-col gap-1 group-data-[align=end]/message:self-end data-[align=end]:self-end data-[variant=ghost]:max-w-full",
+  "group/bubble ease-fluid relative flex w-fit max-w-4/5 min-w-0 origin-bottom-left flex-col gap-1 transition-[opacity,scale,translate] duration-200 group-data-[align=end]/message:origin-bottom-right group-data-[align=end]/message:self-end data-[align=end]:origin-bottom-right data-[align=end]:self-end data-[variant=ghost]:max-w-full starting:translate-y-1 starting:scale-95 starting:opacity-0 motion-reduce:transition-opacity motion-reduce:starting:translate-y-0 motion-reduce:starting:scale-100 rtl:origin-bottom-right rtl:group-data-[align=end]/message:origin-bottom-left rtl:data-[align=end]:origin-bottom-left",
   {
     variants: {
       variant: {
         default:
-          "*:data-[slot=bubble-content]:bg-primary *:data-[slot=bubble-content]:text-primary-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-primary/80",
+          "*:data-[slot=bubble-content]:bg-primary *:data-[slot=bubble-content]:text-primary-foreground dark:*:data-[slot=bubble-content]:bg-[color-mix(in_oklab,var(--primary),var(--background)_15%)] [&>[data-slot=bubble-content]:is(button,a):hover]:bg-primary/80",
         secondary:
           "*:data-[slot=bubble-content]:bg-secondary *:data-[slot=bubble-content]:text-secondary-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
         muted:
@@ -32,7 +32,7 @@ const bubbleVariants = cva(
         ghost:
           "border-none *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted [&>[data-slot=bubble-content]:is(button,a):hover]:text-foreground dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted/50",
         destructive:
-          "*:data-[slot=bubble-content]:bg-destructive/10 *:data-[slot=bubble-content]:text-destructive dark:*:data-[slot=bubble-content]:bg-destructive/20 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/20 dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/30",
+          "*:data-[slot=bubble-content]:bg-destructive/10 *:data-[slot=bubble-content]:text-[color-mix(in_oklab,var(--destructive),var(--foreground)_20%)] dark:*:data-[slot=bubble-content]:bg-destructive/20 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/20 dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/30",
       },
     },
     defaultVariants: {
@@ -71,7 +71,7 @@ function BubbleContent({
     props: mergeProps<"div">(
       {
         className: cn(
-          "[button,a]:focus-visible:border-ring [button,a]:focus-visible:ring-ring/50 w-fit max-w-full min-w-0 overflow-hidden rounded-xl border border-transparent px-3 py-2 text-sm leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end [button]:text-left [button,a]:transition-colors [button,a]:outline-none [button,a]:focus-visible:ring-3",
+          "[button,a]:focus-visible:border-ring [button,a]:focus-visible:ring-ring/50 w-fit max-w-full min-w-0 overflow-hidden rounded-xl border border-transparent px-3 py-2 text-sm leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end [button]:text-start [button,a]:transition-colors [button,a]:outline-none [button,a]:focus-visible:ring-3",
           className,
         ),
       },
@@ -93,8 +93,8 @@ const bubbleReactionsVariants = cva(
         bottom: "bottom-0 translate-y-3/4",
       },
       align: {
-        start: "left-3",
-        end: "right-3",
+        start: "start-3",
+        end: "end-3",
       },
     },
     defaultVariants: {

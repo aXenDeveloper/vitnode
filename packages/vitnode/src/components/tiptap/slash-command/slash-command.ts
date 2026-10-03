@@ -4,6 +4,10 @@ import Suggestion from "@tiptap/suggestion";
 
 import { BLOCK_COMMANDS, type BlockCommand } from "../block-commands";
 import {
+  mountSuggestionPopup,
+  SUGGESTION_POPUP_WRAPPER_CLASS,
+} from "../suggestion-popup";
+import {
   SlashCommandList,
   type SlashCommandListRef,
 } from "./slash-command-list";
@@ -38,21 +42,23 @@ export const SlashCommand = Extension.create<{ commands: BlockCommand[] }>({
           return {
             onStart: props => {
               component = new ReactRenderer(SlashCommandList, {
-                className: "z-50",
+                className: SUGGESTION_POPUP_WRAPPER_CLASS,
                 editor: props.editor,
                 props: {
                   command: props.command,
                   commands: props.items,
                   query: props.query,
+                  textbox: props.editor.view.dom,
                 },
               });
-              unmount = props.mount(component.element);
+              unmount = mountSuggestionPopup(props.mount, component.element);
             },
             onUpdate: props => {
               component?.updateProps({
                 command: props.command,
                 commands: props.items,
                 query: props.query,
+                textbox: props.editor.view.dom,
               });
             },
             onKeyDown: props => component?.ref?.onKeyDown(props) ?? false,

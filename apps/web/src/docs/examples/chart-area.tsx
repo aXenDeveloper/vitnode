@@ -40,7 +40,7 @@ const shortMonth = (month: string) => month.slice(0, 3)
 
 export default function ChartAreaExample() {
   return (
-    <Card className="w-full">
+    <Card className="not-prose w-full">
       <CardHeader>
         <CardTitle>Plugin installs</CardTitle>
         <CardDescription>Fresh downloads and upgrades, stacked</CardDescription>

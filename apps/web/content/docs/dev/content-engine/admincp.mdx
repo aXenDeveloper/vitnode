@@ -63,6 +63,31 @@ export const postContentType = defineContentType({
 
 System columns (`createdAt`, `updatedAt`, `status`, `publishedAt`) are always orderable and do not need to be listed in `orderableFields`.
 
+### Searching the list
+
+Any `text`, `textarea` or `slug` field in `searchableFields` gets matched by the search box above the table, and that includes localized ones. A localized field matches in **every** language, so searching "kot" finds the article whose Polish title is "Kot w butach", even when you're browsing the list in English.
+
+```ts title="plugins/blog/src/content/post.ts"
+admin: {
+  list: {
+    columns: ["title", "authorId", "status"],
+    searchableFields: ["title"], // [!code ++]
+  },
+},
+```
+
+Leave `searchableFields` out and the list searches the shared text fields only, or shows no search box when there aren't any.
+
+### Bulk actions
+
+Tick a few rows and a bar slides up from the bottom of the screen with **Publish**, **Unpublish** and **Delete**. There's nothing to configure: every content type gets the bar, and each button only shows up when it makes sense.
+
+- Publish and Unpublish need `publication` enabled and the `can_publish` permission.
+- Delete needs the `can_delete` permission.
+- An administrator with neither gets no checkboxes at all.
+
+Every action asks for confirmation first and runs record by record through the same routes as the row buttons. Events, search indexing and revisions behave exactly as if you'd clicked each row yourself. If some records can't be changed (someone edited one after the page loaded, or a category still has articles), the rest go through anyway. A toast tells you how many were skipped, and those rows stay ticked so you can see what's left.
+
 ### People and tags as columns
 
 A to-many `field.user()` or `field.relation()` can be a column too. Authors are listed by name with their role's color and prefix, and relations show up as badges. The whole page is resolved in one go rather than once per row, so a list of fifty articles doesn't turn into fifty extra queries.

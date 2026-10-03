@@ -2,11 +2,23 @@ import { cn } from "cn";
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+} from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
+
+import {
+  carouselStepFromKey,
+  isEditableTarget,
+  isRtlElement,
+} from "./carousel-utils";
 
 type CarouselApi = UseEmblaCarouselType[1];
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
@@ -50,9 +62,12 @@ function Carousel({
   children,
   ...props
 }: CarouselProps & React.ComponentProps<"div">) {
+  const shouldReduceMotion = useReducedMotion();
   const [carouselRef, api] = useEmblaCarousel(
     {
+      duration: 20,
       ...opts,
+      ...(shouldReduceMotion && { duration: 0 }),
       axis: orientation === "horizontal" ? "x" : "y",
     },
     plugins,
@@ -76,18 +91,25 @@ function Carousel({
     api?.scrollNext();
   }, [api]);
 
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        scrollPrev();
-      } else if (event.key === "ArrowRight") {
-        event.preventDefault();
-        scrollNext();
-      }
-    },
-    [scrollPrev, scrollNext],
-  );
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || isEditableTarget(event.target)) return;
+
+    const step = carouselStepFromKey({
+      isRtl: opts?.direction
+        ? opts.direction === "rtl"
+        : isRtlElement(event.currentTarget),
+      key: event.key,
+      orientation,
+    });
+    if (step === null) return;
+
+    event.preventDefault();
+    if (step === 1) {
+      scrollNext();
+    } else {
+      scrollPrev();
+    }
+  };
 
   React.useEffect(() => {
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
@@ -104,7 +126,8 @@ function Carousel({
     api.on("select", onSelect);
 
     return () => {
-      api?.off("select", onSelect);
+      api.off("reInit", onSelect);
+      api.off("select", onSelect);
     };
   }, [api, onSelect]);
 
@@ -126,7 +149,7 @@ function Carousel({
         aria-roledescription="carousel"
         className={cn("relative", className)}
         data-slot="carousel"
-        onKeyDownCapture={handleKeyDown}
+        onKeyDown={handleKeyDown}
         role="region"
         {...props}
       >
@@ -190,8 +213,8 @@ function CarouselPrevious({
       className={cn(
         "absolute touch-manipulation rounded-full",
         orientation === "horizontal"
-          ? "-inset-s-12 top-1/2 -translate-y-1/2"
-          : "inset-s-1/2 -top-12 -translate-x-1/2 rotate-90 rtl:translate-x-1/2",
+          ? "inset-y-0 -inset-s-12 my-auto"
+          : "inset-x-0 -top-12 mx-auto",
         className,
       )}
       data-slot="carousel-previous"
@@ -201,7 +224,11 @@ function CarouselPrevious({
       variant={variant}
       {...props}
     >
-      <ChevronLeftIcon className="rtl:rotate-180" />
+      {orientation === "horizontal" ? (
+        <ChevronLeftIcon className="rtl:rotate-180" />
+      ) : (
+        <ChevronUpIcon />
+      )}
     </Button>
   );
 }
@@ -221,8 +248,8 @@ function CarouselNext({
       className={cn(
         "absolute touch-manipulation rounded-full",
         orientation === "horizontal"
-          ? "-inset-e-12 top-1/2 -translate-y-1/2"
-          : "inset-s-1/2 -bottom-12 -translate-x-1/2 rotate-90 rtl:translate-x-1/2",
+          ? "inset-y-0 -inset-e-12 my-auto"
+          : "inset-x-0 -bottom-12 mx-auto",
         className,
       )}
       data-slot="carousel-next"
@@ -232,7 +259,11 @@ function CarouselNext({
       variant={variant}
       {...props}
     >
-      <ChevronRightIcon className="rtl:rotate-180" />
+      {orientation === "horizontal" ? (
+        <ChevronRightIcon className="rtl:rotate-180" />
+      ) : (
+        <ChevronDownIcon />
+      )}
     </Button>
   );
 }

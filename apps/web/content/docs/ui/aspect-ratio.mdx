@@ -1,6 +1,6 @@
 ---
 title: Aspect Ratio
-description: Keep images, videos and embeds at the right shape, whatever the width.
+description: Keep images, videos and embeds at the right shape at any width, without layout shift while they load.
 icon: Ratio
 ---
 
@@ -17,25 +17,22 @@ import { AspectRatio } from '@vitnode/core/components/ui/aspect-ratio'
 ```tsx
 <AspectRatio className="overflow-hidden rounded-lg" ratio={16 / 9}>
   <img
-    alt="A mountain at sunrise"
+    alt="Forum dashboard"
     className="size-full object-cover"
-    src="/images/mountain.webp"
+    src="/dashboard.webp"
   />
 </AspectRatio>
 ```
 
-The box takes the full width it is given and works out its height from
-`ratio`, so the page doesn't jump around while the image loads. Give the child
-`size-full` and `object-cover` to fill the box without stretching.
+The box fills its width and derives its height from `ratio`, so nothing jumps
+while the image loads. `size-full object-cover` fills it without stretching.
 
 ## Common ratios
 
-| Ratio    | Good for                       |
-| -------- | ------------------------------ |
-| `16 / 9` | Videos, hero images, banners   |
-| `4 / 3`  | Photos, product shots          |
-| `1`      | Avatars, thumbnails, galleries |
-| `9 / 16` | Phone screenshots, stories     |
+<Preview name="aspect-ratio-ratios" />
+
+`ratio` is width divided by height: `16 / 9` for video, `4 / 3` for photos, `1`
+for avatars, `9 / 16` for phone screenshots.
 
 ## Video embed
 
@@ -49,6 +46,8 @@ The box takes the full width it is given and works out its height from
   />
 </AspectRatio>
 ```
+
+Give every `iframe` a `title`, so screen readers can name it.
 
 ## Props
 
@@ -64,4 +63,4 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
   }}
 />
 
-Every other prop goes straight to the underlying `div`.
+Every other prop goes to the underlying `div`.

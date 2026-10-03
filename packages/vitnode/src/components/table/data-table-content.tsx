@@ -103,7 +103,7 @@ export const DataTableSkeleton = ({
     // The surface the table settles into, band for band — see `ContentDataTable`.
     <div className="bg-card ring-foreground/10 overflow-hidden rounded-xl shadow-xs ring-1">
       {header && (
-        <div className="border-foreground/10 flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+        <div className="border-foreground/10 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-8 w-40" />
         </div>
@@ -111,13 +111,19 @@ export const DataTableSkeleton = ({
 
       {toolbar && (
         <div className="border-foreground/10 flex flex-wrap items-center gap-2 border-b px-4 py-3">
-          <Skeleton className="h-9 w-full sm:w-80" />
+          <Skeleton className="h-9 min-w-0 flex-1" />
           <Skeleton className="h-9 w-24" />
         </div>
       )}
 
       <div>
-        <Table className="min-w-full [&_td]:px-4 [&_td]:py-3 sm:[&_td]:px-6 [&_th]:px-4 sm:[&_th]:px-6">
+        <Table
+          className={cn(
+            "min-w-full [&_td]:px-3 [&_td]:py-3 [&_th]:px-3",
+            "[&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6",
+            "[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6",
+          )}
+        >
           <TableHeader className="bg-muted/60">
             <TableRow>
               {headerIds.map((hid, i) => (
@@ -153,15 +159,17 @@ export const DataTableSkeleton = ({
         </Table>
       </div>
 
-      <div className="border-foreground/10 flex w-full flex-col-reverse items-center justify-between gap-4 border-t px-4 py-3 sm:flex-row sm:gap-8 sm:px-6">
-        <Skeleton className="h-4 w-24" />
+      <div className="border-foreground/10 flex w-full flex-col gap-4 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex h-5 items-center">
+          <Skeleton className="h-4 w-40" />
+        </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8">
-          <Skeleton className="h-8 w-[4.5rem]" />
+        <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end sm:gap-6">
+          <Skeleton className="h-8 w-18" />
 
-          <div className="flex items-center space-x-2">
-            <Skeleton className="size-8" />
-            <Skeleton className="size-8" />
+          <div className="flex items-center gap-1">
+            <Skeleton className="size-9 sm:w-24" />
+            <Skeleton className="size-9 sm:w-20" />
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { AttachmentAction } from "@/components/ui/attachment";
+import { Button } from "@/components/ui/button";
 import { FormControl, FormMessage } from "@/components/ui/form";
 import {
   fileAcceptAttribute,
@@ -14,6 +15,7 @@ import { formatBytes } from "@/lib/format-bytes";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { AutoFormFileValue } from "./file-shared";
+import type { FileUploadOptions } from "./file-upload-queue";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
@@ -27,6 +29,7 @@ import {
 } from "./file-shared";
 
 export type { AutoFormFileValue } from "./file-shared";
+export type { FileUploadOptions } from "./file-upload-queue";
 
 export interface AutoFormFileProps extends ItemAutoFormComponentProps {
   allowedExtensions?: readonly string[];
@@ -34,7 +37,10 @@ export interface AutoFormFileProps extends ItemAutoFormComponentProps {
   file?: AutoFormFileValue | null;
   label?: React.ReactNode;
   maxBytes: number;
-  onUpload: (file: File) => Promise<AutoFormFileValue>;
+  onUpload: (
+    file: File,
+    options: FileUploadOptions,
+  ) => Promise<AutoFormFileValue>;
 }
 
 export const AutoFormFile = ({
@@ -59,6 +65,8 @@ export const AutoFormFile = ({
   const failureMessage = useUploadFailureMessage();
   const [rejected, setRejected] = React.useState<null | string>(null);
   const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
+  const [progress, setProgress] = React.useState<null | number>(null);
+  const controllerRef = React.useRef<AbortController | null>(null);
 
   const [resolved] = resolveFormFiles(field.value, [initialFile, ...uploaded]);
   const file = resolved?.file ?? null;
@@ -68,7 +76,23 @@ export const AutoFormFile = ({
   const accept = fileAcceptAttribute(constraints);
 
   const upload = useMutation({
-    mutationFn: onUpload,
+    mutationFn: async (chosen: File) => {
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      setProgress(null);
+
+      const stored = await onUpload(chosen, {
+        onProgress: fraction => {
+          if (!controller.signal.aborted) {
+            setProgress(Math.min(1, Math.max(0, fraction)));
+          }
+        },
+        signal: controller.signal,
+      });
+      controller.signal.throwIfAborted();
+
+      return stored;
+    },
     retry: false,
     onSuccess: stored => {
       setUploaded(current => [...current, stored]);
@@ -113,6 +137,16 @@ export const AutoFormFile = ({
 
     setRejected(null);
     upload.mutate(chosen);
+  };
+
+  const cancel = () => {
+    controllerRef.current?.abort();
+    upload.reset();
+    setProgress(null);
+  };
+
+  const retry = () => {
+    if (upload.variables) upload.mutate(upload.variables);
   };
 
   const remove = () => {
@@ -164,14 +198,34 @@ export const AutoFormFile = ({
           ) : (
             <FileDropzone
               accept={accept}
+              onCancel={cancel}
               onPick={files => pick(files[0])}
               pending={upload.isPending}
+              progress={progress}
               promptLabel={t("drop")}
               state={state}
             />
           )}
 
-          {errorMessage !== null && <FileError>{errorMessage}</FileError>}
+          {errorMessage !== null && (
+            <FileError
+              action={
+                rejected === null && upload.isError ? (
+                  <Button
+                    onClick={retry}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <RotateCcwIcon aria-hidden />
+                    {t("retry")}
+                  </Button>
+                ) : null
+              }
+            >
+              {errorMessage}
+            </FileError>
+          )}
         </div>
       </FormControl>
 

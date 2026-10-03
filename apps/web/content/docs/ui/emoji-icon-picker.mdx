@@ -1,12 +1,12 @@
 ---
 title: Emoji & Icon Picker
-description: One picker with segmented emoji and icon modes that returns a discriminated value you can store in a single column.
+description: One picker for an emoji or a Lucide icon that stores the choice as a single short string, like emoji:🚀 or icon:rocket.
 icon: FaceSlightlySmiling
 ---
 
 ## Preview
 
-<Preview name="emoji-icon-auto-form" />
+<Preview name="emoji-icon-picker-auto-form" />
 
 ## Usage
 
@@ -16,13 +16,13 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
   <Tab value="Auto Form">
 
+The field stores the serialized string, so a plain `z.string()` does the job.
+
 ```ts
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormEmojiIcon } from '@vitnode/core/components/form/fields/emoji-icon'
 import { EMOJI_ICON_MAX_LENGTH } from '@vitnode/core/lib/emoji-icon'
-```
 
-```ts
 const formSchema = z.object({
   prefix: z.string().max(EMOJI_ICON_MAX_LENGTH).default(''),
 })
@@ -35,7 +35,7 @@ const formSchema = z.object({
     {
       id: 'prefix',
       component: (props) => (
-        <AutoFormEmojiIcon allowRemove label="Prefix" {...props} />
+        <AutoFormEmojiIcon {...props} allowRemove label="Prefix" />
       ),
     },
   ]}
@@ -46,15 +46,15 @@ const formSchema = z.object({
 
   <Tab value="Standalone">
 
-```ts
-import { EmojiIconPicker } from '@vitnode/core/components/ui/emoji-icon-picker'
-import type { EmojiIconValue } from '@vitnode/core/lib/emoji-icon'
-```
+<Preview name="emoji-icon-picker-standalone" />
 
 ```tsx
+import { EmojiIconPicker } from '@vitnode/core/components/ui/emoji-icon-picker'
+import type { EmojiIconValue } from '@vitnode/core/lib/emoji-icon'
+
 const [icon, setIcon] = useState<EmojiIconValue | undefined>()
 
-;<EmojiIconPicker allowRemove onChange={setIcon} value={icon} />
+<EmojiIconPicker allowRemove onChange={setIcon} value={icon} />
 ```
 
   </Tab>
@@ -63,18 +63,17 @@ const [icon, setIcon] = useState<EmojiIconValue | undefined>()
 
 ## The value
 
-The component speaks in a discriminated union, so you always know which mode the
-answer came from:
-
 ```ts
 type EmojiIconValue =
-  | { type: 'emoji'; value: string } // value: "🚀"
-  | { type: 'icon'; value: string } // value: "rocket", a Lucide name
+  { type: 'emoji'; value: string } | { type: 'icon'; value: string }
 ```
 
-For storage that union collapses into one short string - `emoji:🚀` or
-`icon:rocket` - which fits in a single `varchar(64)` column and survives a round
-trip through JSON without any schema gymnastics:
+An emoji value is the character (`🚀`). An icon value is a kebab-case
+[Lucide](https://lucide.dev/icons) name (`shield-check`), readable in the
+database and portable to any Lucide renderer.
+
+For storage, serialize it to `emoji:🚀` or `icon:rocket`. It fits a
+`varchar(64)` column.
 
 ```ts
 import {
@@ -82,19 +81,18 @@ import {
   serializeEmojiIcon,
 } from '@vitnode/core/lib/emoji-icon'
 
-serializeEmojiIcon({ type: 'icon', value: 'rocket' }) // "icon:rocket"
-parseEmojiIcon('emoji:🚀') // { type: "emoji", value: "🚀" }
-parseEmojiIcon('icon:../../etc/passwd') // undefined
+serializeEmojiIcon({ type: 'icon', value: 'rocket' })
+parseEmojiIcon('emoji:🚀')
+parseEmojiIcon('icon:../../etc/passwd')
 ```
 
-`parseEmojiIcon` is the validator as well as the reader. It returns `undefined`
-for anything that is not exactly one emoji or one Lucide icon name, so a value
-that came from a request body is safe to render without a second check.
+These return `"icon:rocket"`, `{ type: 'emoji', value: '🚀' }` and `undefined`.
+`parseEmojiIcon` is also the validator: anything that isn't exactly one emoji or
+one icon name comes back `undefined`.
 
 <Callout type="warn" title="Validate on the server too">
-  The picker can only produce valid values, but a request body can say anything.
-  Run the incoming string through `parseEmojiIcon` before you write it, exactly
-  as the roles API does:
+  The picker only produces valid values. A request body can say anything, so
+  parse it before you write it:
 
 ```ts
 prefix: serializeEmojiIcon(parseEmojiIcon(body.prefix)) || null
@@ -104,80 +102,55 @@ prefix: serializeEmojiIcon(parseEmojiIcon(body.prefix)) || null
 
 ## Rendering a stored value
 
-`EmojiIcon` takes a parsed value and renders the right thing - a text glyph for
-an emoji, an SVG for an icon:
+<Preview name="emoji-icon-picker-render" />
+
+`EmojiIcon` renders a parsed value: a glyph for an emoji, an SVG for an icon.
+An invalid value renders nothing.
 
 ```tsx
 import { EmojiIcon } from '@vitnode/core/components/ui/emoji-icon'
-import { parseEmojiIcon } from '@vitnode/core/lib/emoji-icon'
 
 ;<EmojiIcon value={parseEmojiIcon(role.prefix)} />
 ```
 
-If you only ever deal with icon names, reach for `DynamicIcon` instead:
-
-```tsx
-import { DynamicIcon } from '@vitnode/core/components/ui/dynamic-icon'
-
-;<DynamicIcon className="size-5" name="shield-check" />
-```
-
-`DynamicIcon` is server-rendered with no Suspense boundary around it, so the
-SVG is already in the first HTML and never pops in after hydration. The server
-keeps every Lucide icon warm in memory, and only the handful of icons a page
-actually rendered ride along to the browser inside the router's dehydrated
-state - the browser bundle never ships the icon library. On a client-side
-navigation an icon that is not cached yet renders a same-size placeholder and
-swaps in once its tiny chunk arrives.
-
-All of that hangs off one line in `getRouter()`, which the scaffold already
-includes:
+Only icon names? Use [`DynamicIcon`](/docs/ui/icons#icons-by-name). Icons
+rendered on the server arrive in the first HTML, and the browser never ships the
+whole icon library. That needs one line in `getRouter()`, already in the
+scaffold:
 
 ```tsx title="src/router.tsx"
 import { setupLucideIconSsr } from '@vitnode/core/tanstack/icons'
 
-const router = createTanStackRouter({ routeTree })
-
-// [!code ++]
 setupLucideIconSsr({ router })
-setupRouterSsrQueryIntegration({ queryClient, router })
 ```
 
-Skip it and `DynamicIcon` still works - it just goes back to fetching icons in
-the browser after the page has loaded.
+Without it, `DynamicIcon` still works but loads icons in the browser after the
+page renders.
 
-Both are decorative by default (`aria-hidden`), because they sit next to the
-text they illustrate. If an icon is the only content of a control, give that
-control its own `aria-label`.
+Both are `aria-hidden`, since they decorate nearby text. An icon-only control
+needs its own `aria-label`.
 
 ## Role prefixes
 
-Every role has a **Prefix** field on the General tab of its edit dialog. Whatever
-you pick there is rendered in front of the role name and in front of the name of
-every member of that role, wherever `RoleFormat` or `UserFormat` appears:
+A role's **Prefix** field (General tab of its edit dialog) uses this picker. The
+prefix shows before the role name and before every member's name wherever
+`RoleFormat` or `UserFormat` renders. It arrives as `role.prefix`
+(`null | string`), and both components parse it for you.
 
 ```tsx
-<UserFormat format user={user} /> // 🚀 Ada Lovelace
+<UserFormat format user={user} />
 ```
 
-The role payload carries it as `role.prefix`, a `null | string` in the stored
-format above. Nothing else has to change - both components parse it themselves
-and render nothing when it is empty.
+## Performance and keyboard
 
-## Performance
-
-The panel is code-split twice over. The trigger button is all that ships with
-your page; the emoji data and the segmented panel load when the popover opens,
-and the ~1750 Lucide icons load only when someone switches to the **Icon** tab.
-The icon grid is virtualized, so the size of the icon set does not show up in
-scroll performance.
-
-<Callout type="info" title="Icon names">
-  Names are the kebab-case ones from
-  [lucide.dev/icons](https://lucide.dev/icons): `shield-check`,
-  `arrow-up-right`, `volume-2`. That is what gets stored, so a value stays
-  readable in the database and portable to any other Lucide renderer.
-</Callout>
+- Only the trigger ships with your page. Emoji data loads when the popover
+  opens, and the ~1750 icons load only when someone opens the **Icon** tab.
+- The icon grid is virtualized, so its size doesn't hurt scrolling.
+- The grid is one tab stop. Arrows move (up and down jump a row),
+  <kbd>Home</kbd> / <kbd>End</kbd> go to the row's ends, <kbd>Enter</kbd> or
+  <kbd>Space</kbd> picks.
+- The emoji picker here and in the editor toolbar share grid size, search and
+  skin tone switch.
 
 ## Props
 
@@ -188,51 +161,61 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     value: {
-      description:
-        'The current selection. Leave it `undefined` for an empty picker.',
+      description: 'The current selection.',
       type: 'EmojiIconValue | undefined',
       default: 'undefined',
     },
     onChange: {
       description:
-        'Called with the new selection, or `undefined` when it is cleared. Picking a value closes the popover.',
+        'Called with the new selection, or `undefined` when cleared. Picking closes the popover.',
       type: '(value: EmojiIconValue | undefined) => void',
-      default: '',
+      required: true,
+    },
+    allow: {
+      description: 'Which tabs to offer. One kind shows that picker alone.',
+      type: "readonly ('emoji' | 'icon')[]",
+      default: "['emoji', 'icon']",
     },
     allowRemove: {
-      description:
-        'Show a clear button in the panel header once something is selected.',
+      description: 'Shows a clear button once something is picked.',
       type: 'boolean',
       default: 'false',
     },
     placeholder: {
-      description: 'Text shown on the trigger while nothing is selected.',
+      description: 'Trigger text while nothing is picked.',
       type: 'string',
       default: '"Pick an emoji or icon"',
     },
   }}
 />
 
+Other `button` props go to the trigger. `AutoFormEmojiIcon` takes the same props
+except `value` and `onChange`.
+
 ### EmojiPicker and IconPicker
 
-Both halves are exported on their own if you only need one of them. They render
-the bare panel - no popover, no trigger - so you can drop either into a dialog,
-a sidebar or a toolbar:
+<Preview name="emoji-icon-picker-panels" />
+
+The bare panels, with no popover or trigger. Drop them into a dialog, sidebar or
+toolbar.
 
 ```tsx
 import { EmojiPicker } from '@vitnode/core/components/ui/emoji-picker'
 import { IconPicker } from '@vitnode/core/components/ui/icon-picker'
 
-;<IconPicker onSelect={(name) => console.log(name)} />
+;<IconPicker onSelect={setIcon} value={icon} />
 ```
 
 <TypeTable
   type={{
     onSelect: {
-      description:
-        'Called with the picked emoji character, or the picked Lucide icon name.',
+      description: 'Called with the emoji character or the Lucide icon name.',
       type: '(value: string) => void',
-      default: '',
+      required: true,
+    },
+    value: {
+      description: 'IconPicker only. Highlights the current icon.',
+      type: 'string',
     },
     height: {
       description: 'Height of the scrollable list, in pixels.',
@@ -240,7 +223,7 @@ import { IconPicker } from '@vitnode/core/components/ui/icon-picker'
       default: '288',
     },
     autoFocus: {
-      description: 'Focus the search input on mount.',
+      description: 'Focuses the search input on mount.',
       type: 'boolean',
       default: 'false',
     },

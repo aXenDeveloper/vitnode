@@ -72,7 +72,6 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "sonner",
   "use-debounce",
   "use-intl",
-  "vaul",
   "zod",
 ] as const;
 

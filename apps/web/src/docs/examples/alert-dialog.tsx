@@ -15,20 +15,19 @@ export default function AlertDialogExample() {
   return (
     <AlertDialog>
       <AlertDialogTrigger
-        render={<Button variant="destructive">Delete account</Button>}
+        render={<Button variant="destructive">Delete thread</Button>}
       />
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+          <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete your
-            account and remove your data from our servers.
+            All 42 replies go with it. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction variant="destructive">
-            Delete account
+            Delete thread
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

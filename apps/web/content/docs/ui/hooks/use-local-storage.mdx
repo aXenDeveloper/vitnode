@@ -4,6 +4,10 @@ description: Like useState, but the value survives page reloads and stays in syn
 icon: HardDrive
 ---
 
+## Preview
+
+<Preview name="hook-use-local-storage" />
+
 ## Usage
 
 ```ts
@@ -11,48 +15,37 @@ import { useLocalStorage } from '@vitnode/core/hooks/use-local-storage'
 ```
 
 ```tsx
-export const ExampleComponent = () => {
-  const [name, setName] = useLocalStorage('name', '') // [!code ++]
+const [name, setName] = useLocalStorage('name', '')
 
-  return <input onChange={e => setName(e.target.value)} value={name} />
-}
+return <input onChange={(e) => setName(e.target.value)} value={name} />
 ```
 
-It works like `useState`. Pass a key and a default value, and get the value and
-a setter back. Values are saved as JSON, so numbers, booleans, arrays and plain
-objects all come back exactly as you stored them.
+Pass a key and a default, get the value and a setter, just like `useState`.
+Values are stored as JSON, so numbers, booleans, arrays and plain objects come
+back as you saved them.
 
-## Update from the previous value
+## Update and reset
 
-The setter also takes a function, which always receives the freshest value:
-
-```ts
-const [count, setCount] = useLocalStorage('count', 0)
-
-setCount(previous => previous + 1)
-```
-
-## Reset
-
-The third item removes the key from storage, and the hook goes back to the
-default value:
+The setter takes a function that gets the freshest value. The third item
+removes the key and falls back to the default.
 
 ```ts
-const [filters, setFilters, resetFilters] = useLocalStorage('filters', [])
+const [count, setCount, resetCount] = useLocalStorage('count', 0)
+
+setCount((previous) => previous + 1)
+resetCount()
 ```
 
 ## Good to know
 
 - **Synced everywhere.** Every component using the same key updates together,
-  in this tab and in any other tab of your site.
-- **Server-safe.** During server rendering the hook returns the default value,
-  then switches to the stored one in the browser without a hydration mismatch.
-- **No crashes.** A broken stored value falls back to the default. When storage
-  is blocked (some private windows) or full, the value lives in memory for the
-  session instead.
-- **Only for nice-to-haves.** Local storage lives in one browser on one device.
-  Use it for things like a collapsed panel or a draft, never for data that has
-  to reach the server or other people.
+  in this tab and in other tabs.
+- **Server-safe.** The server renders the default, then the browser switches to
+  the stored value without a hydration mismatch.
+- **No crashes.** A broken stored value falls back to the default. Blocked or
+  full storage keeps the value in memory for the session.
+- **Nice-to-haves only.** Storage lives in one browser on one device. Use it for
+  a collapsed panel or a draft, never for data the server needs.
 
 ## Returns
 
@@ -61,15 +54,15 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     '[0] value': {
-      description: 'The stored value, or the default when nothing is stored.',
+      description: 'The stored value, or the default.',
       type: 'T',
     },
     '[1] setValue': {
-      description: 'Saves a new value, or a function that gets the previous one.',
+      description: 'Saves a value, or a function of the previous one.',
       type: '(value: T | ((previous: T) => T)) => void',
     },
     '[2] removeValue': {
-      description: 'Removes the key and goes back to the default value.',
+      description: 'Removes the key and goes back to the default.',
       type: '() => void',
     },
   }}
